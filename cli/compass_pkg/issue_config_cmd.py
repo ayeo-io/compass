@@ -284,12 +284,13 @@ def _check_adoptable(task_dir, slug, held, adopt):
     if found.state == "proposal":
         raise CompassError(
             f"generation {adopt} of {slug} holds only a proposal, not a generation. Apply "
-            f"it with `compass approach evaluate --write --reason \"...\"`")
+            f"it with `{effective.evaluate_command(task_dir)} --reason \"...\"`")
     if found.state != "complete-unreferenced":
         raise CompassError(
             f"generation {adopt} of {slug} is {found.state} ({found.detail}) and cannot be "
-            f"adopted. Nothing was written. Run `compass issue configure --discard {adopt}` "
-            f"to remove it, or `compass approach evaluate --write` to write it again")
+            f"adopted. Nothing was written. Run "
+            f"`{effective.configure_command(task_dir, '--discard', adopt)}` to remove it, "
+            f"or `{effective.evaluate_command(task_dir)}` to write it again")
 
 
 def reassess_plan(manifest, task_dir, args):
@@ -308,14 +309,16 @@ def reassess_plan(manifest, task_dir, args):
     if reset and proposal:
         raise CompassError(
             f"--reset-config cannot run while a change is proposed for {slug} (generation "
-            f"{proposal.number}). Run `compass issue configure --discard` to drop the "
-            f"proposal, or reassess without --reset-config to apply it; nothing was written")
+            f"{proposal.number}). Run `{effective.configure_command(task_dir, '--discard')}` "
+            f"to drop the proposal, or reassess without --reset-config to apply it; "
+            f"nothing was written")
     if proposal:
         why = _stale(proposal, held, manifest)
         if why:
             raise CompassError(
                 f"the proposal in generation {proposal.number} of {slug} is stale: {why}. "
-                f"Nothing was written. Run `compass issue configure --discard`, then "
+                f"Nothing was written. Run "
+                f"`{effective.configure_command(task_dir, '--discard')}`, then "
                 f"propose the change again")
         if proposal.overlay:
             manifest["config"] = copy.deepcopy(proposal.overlay)

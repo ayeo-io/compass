@@ -508,8 +508,8 @@ def test_cr_12_a_folder_that_holds_a_generation_is_not_overwritten_by_a_proposal
     before = sorted(p.name for p in fx.gen(task_dir, 2).iterdir())
     code, out, err = fx.configure(root, *TIGHTER)
     assert code == 2, out + err
-    assert "compass issue configure --commit 2" in out + err
-    assert "compass issue configure --discard 2" in out + err
+    assert "compass issue configure --issue feature --commit 2" in out + err
+    assert "compass issue configure --issue feature --discard 2" in out + err
     assert sorted(p.name for p in fx.gen(task_dir, 2).iterdir()) == before
 
 

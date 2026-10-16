@@ -384,7 +384,7 @@ assessment before anything prints, even when the configuration is equal. A
 route accepted at the old assessment cannot carry onto a spike assessment by
 a reassess that changes nothing else.
 
-1. **The proposal.** A pending proposal becomes the manifest's `config:` in the manifest it writes. It is stale, and the reassess refuses it, when `base_generation` is not the generation in force or `base_config_digest` is not the digest of the manifest's `config:` now. The message names `compass issue configure --discard`.
+1. **The proposal.** A pending proposal becomes the manifest's `config:` in the manifest it writes. It is stale, and the reassess refuses it, when `base_generation` is not the generation in force or `base_config_digest` is not the digest of the manifest's `config:` now. The message names `compass issue configure --issue <slug> --discard`.
 2. **`--reset-config`.** It removes `config:` from the manifest it writes. It refuses while a proposal is pending, because it cannot be both applied and dropped.
 3. **Waivers.** Each issue waiver in the generation in force is re-checked. It is invalidated when the parent value of a waived field changed since the approval was given, or when the overlay now sets a waived field to another value. The waiver's entry is left out of the resolution, so the field reverts to the parent's value, and `records.yml` marks the waiver and the approval record behind it `invalidated` with the reason. The manifest's `config:` still holds the entry. The command prints why (the parent value moved, with the old and new value) and the two ways out: approve it again with a new `human-approval` record that names the new values, or remove the entry from `config:`. A later reassess refuses the entry with the same account until one of those is done, because the approval names the values it saw. The waiver is valid again if the parent value returns to what the approval named: the next reassess stores it as `valid`.
 
@@ -434,6 +434,11 @@ and nothing else. When the folder held a `proposed.yml`, the proposal is
 applied as the manifest's `config:` first, as the interrupted reassess would
 have done. Any other case refuses and writes nothing: the message names the
 files that no longer match, and `--discard`.
+
+Every refusal that prints a `compass issue configure` or `compass approach
+evaluate --write` command names the issue with `--issue <slug>`. The pointer
+can name another issue, and the command run without `--issue` would act on
+that one.
 
 Give `--commit` the `--reason` the interrupted reassess should have recorded:
 `compass issue configure --commit --reason "..."`. The reason of the

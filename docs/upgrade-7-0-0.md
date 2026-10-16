@@ -67,7 +67,7 @@ Compass now writes the status, ticks and counts in an issue's documents from the
 
 ### What `compass issue migrate` does
 
-`compass issue migrate` (a dry run) lists, for each issue, what it would write. `--apply` writes it, and needs `--i-have-a-copy` where git does not track the work root or `docs/compass`. It only adds lines and records:
+`compass issue migrate` (a dry run) lists, for each issue, what it would write. `--apply` writes it, and needs `--i-have-a-copy` where git could not restore an issue folder under the work root or `docs/compass` (see **Copy first** below). It only adds lines and records:
 
 1. It inserts an empty `dod` marker pair after the Definition of Done section of the verification report, and moves the report's registry digest so it keeps its status.
 2. It writes `meets`, `defers` and `page_ticks` records from the boxes of that section. A tag naming an id the manifest does not hold, or evidence of a type the list does not accept, writes no record. The item stays open and the report names the issue, the item and the id. A ticked box becomes a page tick, which counts as met on the page and is never a person's approval for `G5`.
@@ -139,7 +139,7 @@ For each issue, in this order:
 
 1. It plans every move first. Two plain review files that claim one round stop that issue: it is left byte for byte as it was, and the report names it. The other issues go on.
 2. It sets the generated page aside, renames the filenames earlier releases retired and brings the manifest keys up to date, as before.
-3. It re-points a registered `design` to `technical-design` and `prd` to `intent`, keeping each entry's id, status and path. It removes the `recommendation` entry and leaves its file. An entry the 6.x migrate registered under a review filename (`review` with no round, `review-2`, `integrated-review-3`) becomes the round its file becomes, keeping its id, status and approval. Where that round is already registered, by an earlier 7.0.0 run, the two entries become one, so each file keeps one entry. The merged entry keeps the later approval and the id of the entry that held it. When only one entry is approved, it keeps that approval and id. When neither is, it keeps the round entry's id and status, the more current record. Two entries whose files both exist are not merged: the report names both files for you to settle. The dry run and the apply name the id and approval kept and the id and approval dropped. An entry whose file is gone and that no document maps to is left, and the report says what to do.
+3. It re-points a registered `design` to `technical-design` and `prd` to `intent`, keeping each entry's id, status and path. It removes the `recommendation` entry and leaves its file. An entry the 6.x migrate registered under a review filename (`review` with no round, `review-2`, `integrated-review-3`) becomes the round its file becomes, keeping its id, status and approval. Where that round is already registered, by an earlier 7.0.0 run, the two entries become one, so each file keeps one entry. The merged entry keeps the later approval and the id of the entry that held it. When only one entry is approved, it keeps that approval and id. When neither is, it keeps the round entry's id and status, the more current record. Two entries whose files both exist are not merged. The pair is left as it is, entries and files, until a person settles it: no step registers, moves or renames either file, and every run names both files for you to settle. The dry run and the apply name the id and approval kept and the id and approval dropped. An entry whose file is gone and that no document maps to is left, and the report says what to do.
 4. It registers each document it moves before it moves it, the delivery-approach record first and then each review round in order. A file named for a kind is registered under that kind, unless the kind is already registered at another file that exists: that path is kept, the file is left where it is, and the report names both. A review round is renamed `review-<n>.md`: a plain `review-<n>` keeps its number, a bare `review` is round 1 when that is free, and the other review names (`verify-*`, `integrated-review-*`, `security-review`, `review-claims`) take the next free numbers.
 5. It rewrites each manifest path that named a moved file: evidence, subtasks and gate evidence.
 6. It removes the compatibility pointer beside the manifest when the registered record exists. A file there without the pointer's marker line is left and reported.
@@ -148,9 +148,9 @@ For each issue, in this order:
 
 Then the steps of the rendered-blocks section above run: the Definition of Done records, the status of done issues and the generation pin.
 
-The dry run lists each move, rename, registration, re-point, pointer removal and stub rename, then the totals: documents by target kind, files left on the not-an-artifact list, unmapped files, pointers to remove and maps to rename. It writes nothing. A second `--apply` reports nothing to do. A migrate stopped part way finishes on the next `--apply`, and every issue stays workable in between, because the registry names the new path before the file moves.
+The dry run lists each move, rename, registration, re-point, pointer removal and stub rename, then the totals: documents by target kind, files left on the not-an-artifact list, unmapped files, pointers to remove and maps to rename. It writes nothing. It runs the apply's registry steps on a copy of each manifest held in memory, so it lists a change only where `--apply` would make it. A dry run after `--apply` reports what a second `--apply` would do: nothing, on a migrated archive. A document in both places, beside the manifest and in `docs/compass`, is a change on the run that registers the copy in `docs/compass`; on every later run it is an item for you, naming both copies, until you delete one. A second `--apply` reports nothing to do. A migrate stopped part way finishes on the next `--apply`, and every issue stays workable in between, because the registry names the new path before the file moves.
 
-**Copy first.** `--apply` renames files in `docs/compass/` as well as `.compass/work/`. Where git does not track a folder, it refuses without `--i-have-a-copy`, naming every folder it cannot restore in one refusal. Nothing a person wrote is deleted: renames and moves keep the bytes, and the three things removed are in your copy: each pointer, the one `recommendation` entry, and a registry entry that merges into another entry for the same file. A merged entry can hold an older approval; the migrate keeps the newer approval and names the dropped entry's id and approval in its report, in the dry run as well as the apply.
+**Copy first.** `--apply` renames files in `docs/compass/` as well as `.compass/work/`. Without `--i-have-a-copy`, the check judges each issue folder under both, and needs every file in it that the migrate can change committed and unchanged: the manifest, each file the rename map names, every `.md` file directly in the folder, and every file the registry names inside the issue folder, in a subfolder too. A file counts when the blob HEAD holds for it equals the bytes on disk. A staged file that is not committed, or a committed file edited since, does not count, because `git reset --hard` would delete the first and put back old bytes for the second. Files directly under `.compass/work/` or `docs/compass/`, and registered files outside both, are not judged. Outside a git repository (no `.git` in the folder or above it) the check passes; inside one, a git call that fails, or a git that cannot be run, refuses. The check refuses in one refusal, naming each root it cannot restore, with a count and the first five folders. Nothing a person wrote is deleted: renames and moves keep the bytes, and the three things removed are in your copy: each pointer, the one `recommendation` entry, and a registry entry that merges into another entry for the same file. A merged entry can hold an older approval; the migrate keeps the newer approval and names the dropped entry's id and approval in its report, in the dry run as well as the apply.
 
 ### What to do
 
@@ -409,3 +409,39 @@ The assessment no longer reads a role. The claims gate and the intent-fidelity b
 | `retired_rules` | `governance/legacy-views.yml` | Each retired rule id and its replacement |
 | `M-WHEN-RETIRED`, `M-WHEN-DOCUMENTS`, `M-RETIRED` | lint and migrate codes | A condition that reads `role`, a check or gate condition that reads `artifacts_any`, and an edited retired rule |
 | `artifacts` | the classifier's grid JSON | The document kinds the grid crosses |
+
+## Approving inside Claude Code, and delegated approvals
+
+A person approves or rejects by typing `/compass:approve` or `/compass:reject` in the Claude Code session they are in. They never open a terminal or copy a command. A person can also let one named agent approve for them, for at most 24 hours and a stated scope, and review what it approved. GitHub issue #571 is fixed: the guardrail `G5` sign-off can be recorded on a project with no configuration of its own. The decisions are `architecture/decisions/ADR-068-a-person-approves-inside-claude-code-through-an-event-the-model-cannot-raise.md` and `architecture/decisions/ADR-069-a-person-can-delegate-approvals-to-a-named-agent-for-a-stated-time-and-scope.md`.
+
+### What breaks
+
+- **`compass evidence add --type human-approval` is refused.** It wrote a record with no subject, decision or approver, which no check could count. The refusal names the three approval paths.
+- **An in-flight issue whose only guardrail `G5` sign-off is withdrawn fails.** `human-approval-present` is version 1.2.0: it skips a record that an `approval-withdrawal` names. A landed issue is reported, never failed.
+- **The plugin registers two new hooks.** `UserPromptExpansion` runs `hooks/prompt-approval.sh` for the four approval commands, and `UserPromptSubmit` runs `hooks/approval-summary.sh`, which only displays. A Claude Code version without `UserPromptExpansion` falls back to the terminal command.
+
+### What changes
+
+- **The agent asks; Compass shows; the person answers.** The agent runs `compass evidence request` with the subject. At the end of its turn Compass shows the request in its own words. The person types `/compass:approve` or `/compass:reject <reason>`, and the hook records the answer through the same writer as the terminal command, with `via: prompt`.
+- **`compass evidence approve` at a terminal still works.** Its records hold `via: terminal`. It is the only path on a host without a person-only approval event, such as Codex.
+- **A rejected document stays in draft until its file changes.** This amends ADR-050 decision 2.
+- **Delegation.** `/compass:delegate <agent> until <time>` lets one named agent, such as `compass:architect`, approve with `compass evidence approve ... --delegated --as <agent>`. `g5` is covered only when typed, after the person types back a code shown to them. `/compass:revoke` ends it. Each delegated approval names the person, the agent and the delegation; the person sees a summary until they mark it reviewed, and `/compass:reject <record id>` overrules one.
+
+### What to do
+
+1. Update the Compass plugin, so the new hooks and commands are registered.
+2. Put `owner: <your id>` in `compass.yml`, or set `COMPASS_APPROVER` before starting Claude Code: the prompt hook names the approver from them.
+3. Replace scripts that ran `compass evidence add --type human-approval` with `compass evidence request` and the person's `/compass:approve`, or `compass evidence approve` at a terminal.
+
+### New keys and verbs
+
+| Name | Where | Meaning |
+|---|---|---|
+| `compass evidence request` | a verb | Ask a person for an approval |
+| `/compass:approve`, `/compass:reject` | commands a person types | Answer the request Compass showed |
+| `/compass:delegate`, `/compass:revoke` | commands a person types | Start or end a delegation |
+| `compass evidence approve --delegated --as` | flags | Record an approval under a delegation |
+| `via` | an approval record | `prompt`, `terminal` or `delegation` |
+| `approval-withdrawal` | an evidence type | Withdraws a delegated guardrail `G5` sign-off |
+| `.compass/delegations/DL-<n>.yml` | a file | One delegation |
+| `approval-requests/` | the issue's folder under `.compass/work/` | Pending and closed requests |

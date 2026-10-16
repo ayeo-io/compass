@@ -76,6 +76,8 @@ The receipt's value is what it *won't* hide. The verdict markers and overall ver
 | `status: fail` | `[ FAIL ]` | FAILED - does not satisfy its own gates |
 | `status: pending` | `[ PENDING ]` | not yet landed (header reads `IN PROGRESS`) |
 
+An evidence line of type `human-approval` is followed by a line that says how the record was made: "via a terminal", "via a typed prompt", "via <agent> under <delegation>", or "written without a Compass command" when the record holds no `via` (`approval_records.provenance`).
+
 The receipt lists owed follow-ups in a *Follow-ups* section and counts them in the verdict: "landed with caveats - N follow-up(s) owed".
 
 When any list check is active, the receipt adds a *Stage lists* section before the verdict. It shows each entry and exit list with whether it is due, and each check with its state: `pass`, `fail`, `nothing-to-check` or `pending`. A deterministic check shows `pending`, because the receipt does not run checks. The shipped checks are active only where the capability `entry-exit-evaluation` is on, so a project that has not turned it on and added no list check gets no section (`docs/entry-exit-evaluation.md`).

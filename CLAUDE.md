@@ -186,6 +186,13 @@ moment, before it is sent, not afterwards. Four parts:
 Keep each section short and put a snippet under the point it belongs to. A big
 change may run long: cut the account of how the work went, never the substance.
 
+## Naming an issue
+
+Refer to a backlog item or bug by its GitHub issue number, while working and
+when reporting. In a table or a question to a person, write `#N [title]`, or
+`owner/repo#N [title]` for another repository. Never use an internal row id,
+such as D272.
+
 ## When you are unsure
 
 Re-read the delivery-approach record (`delivery-approach.md`). It was written

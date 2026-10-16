@@ -153,6 +153,7 @@ earlier one. Warnings never stop it and never fail it.
 | `W-APPROVER-NOT-ALLOWED` | error | The approver is not in the allowed list |
 | `W-APPROVAL-MISSING` | error | An issue waiver's `approved_by` is not a record in the issue's evidence |
 | `W-APPROVAL-TYPE` | error | That record is not a `human-approval` |
+| `W-APPROVAL-WITHDRAWN` | error | An `approval-withdrawal` record withdraws that approval |
 | `W-APPROVAL-DECISION` | error | The record does not hold `decision: approved` |
 | `W-APPROVAL-FIELDS` | error | The record lacks `approver`, `role`, `scope` or `timestamp` |
 | `W-APPROVAL-WAIVER` | error | The record does not approve this waiver's entry and values |

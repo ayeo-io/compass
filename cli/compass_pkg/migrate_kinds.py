@@ -200,6 +200,10 @@ class Plan:
     rekinds: list = field(default_factory=list)       # Rekind: a stem-named entry and its target
     rekind_problems: list = field(default_factory=list)  # what a person must do, one line each
     registry_after: list | None = None                # the registry once the rekinds are made
+    # Every move the plan made before any was held back. Step 3 reads these, so a
+    # stem entry still finds the file it maps to.
+    rekind_moves: list = field(default_factory=list)
+    held_pairs: list = field(default_factory=list)    # HeldPair: two entries for a person to settle
 
 
 def load_manifest(task_dir):
@@ -246,15 +250,18 @@ def depth_of(data):
     return DEPTH_THOROUGH if mode == DEPTH_THOROUGH else DEPTH_LIGHTWEIGHT
 
 
-def plan_issue(task_dir, rename_v1=None, pointer_marker="<!-- compass: moved -->", stays=()):
+def plan_issue(task_dir, rename_v1=None, pointer_marker="<!-- compass: moved -->", stays=(),
+               data=None):
     """What the migrate does for one issue. It reads and writes nothing.
 
     `rename_v1` is the v1-to-current filename map: a name it renames is read as its
-    new name, because the migrate renames those files first. Raises `RoundCollision`
-    when two plain review files claim one round, before anything is written."""
+    new name, because the migrate renames those files first. `data` is the manifest
+    to plan against, when it is not the one on disk: the dry run passes the manifest
+    it has edited in memory. Raises `RoundCollision` when two plain review files
+    claim one round, before anything is written."""
     slug = os.path.basename(os.path.normpath(task_dir))
     plan = Plan(slug)
-    data = load_manifest(task_dir)
+    data = load_manifest(task_dir) if data is None else data
     if data is None:
         return plan
     task_abs = os.path.abspath(task_dir)
@@ -367,9 +374,26 @@ def plan_issue(task_dir, rename_v1=None, pointer_marker="<!-- compass: moved -->
     plan.stub = stub_map(task_dir, data, project, plan)
     plan.adopted_map = adopted_map(data, project, plan)
     after = copy.deepcopy(registry)
-    plan.rekinds, plan.rekind_problems = rekind_entries(
-        after, plan.moves + [m for m, _note in plan.both_places], project, catalogue)
+    plan.rekind_moves = plan.moves + [m for m, _note in plan.both_places]
+    plan.rekinds, plan.rekind_problems, plan.held_pairs = rekind_entries(
+        after, plan.rekind_moves, project, catalogue)
     plan.registry_after = after
+    # A pair reported for a person stays as it is, entries and files. A move with the
+    # pair's kind and round would point the held entry at the stem entry's file, and
+    # the next run would merge the two; a move of either file would change it.
+    for pair in plan.held_pairs:
+        def held(move, pair=pair):
+            return (move.kind, move.round) == (pair.kind, pair.round) \
+                or {move.old_rel, move.new_rel} & {pair.stem_path, pair.held_path}
+        plan.moves = [m for m in plan.moves if not held(m)]
+        plan.both_places = [(m, note) for m, note in plan.both_places if not held(m)]
+    # A document in both places is registered once, by its both-places entry, so the
+    # run that registers it says it is in both places. The copy in the documents
+    # folder would otherwise register first, and the both-places line would never be
+    # true on an apply.
+    both = {(m.kind, m.round, m.new_rel) for m, _note in plan.both_places}
+    plan.moves = [m for m in plan.moves
+                  if m.moves or (m.kind, m.round, m.new_rel) not in both]
     return plan
 
 
@@ -453,15 +477,29 @@ def _may_merge(stem, held, project):
         and not held.get("approved_by")
 
 
+@dataclass(frozen=True)
+class HeldPair:
+    """Two entries the merge step reports for a person: the stem entry and the entry
+    already at its kind and round name two files that both exist. The plan holds back
+    both entries and both files. Paths are project-relative, as the entries hold them."""
+    stem_id: object
+    held_id: object
+    kind: str
+    round: int | None
+    stem_path: str
+    held_path: str
+
+
 def rekind_entries(entries, moves, project, catalogue):
     """Move each stem-named entry in `entries` onto the kind and round its document
-    becomes, in place. Returns ([Rekind], [problem line]).
+    becomes, in place. Returns ([Rekind], [problem line], [HeldPair]).
 
     With no entry at that kind and round, the stem entry is re-pointed: its kind and
     round change and it keeps everything else. With one, the stem entry's id, status
     and approval move onto it and the stem entry is removed, so each file keeps one
-    entry. The register step then points the entry at the file's new path."""
-    done, problems = [], []
+    entry. The register step then points the entry at the file's new path. Two
+    entries whose files both exist are left as they are and returned as a HeldPair."""
+    done, problems, pairs = [], [], []
     for stem in [e for e in entries if is_stem_entry(e, catalogue)]:
         target = _target_of(stem, entries, moves, project, catalogue)
         if target is None:
@@ -488,6 +526,8 @@ def rekind_entries(entries, moves, project, catalogue):
                 "files that both exist - keep one entry, remove the other, and re-run"
                 % (stem.get("id"), old_kind, stem.get("path"), held.get("id"),
                    Rekind(None, old_kind, kind, number, True).label, held.get("path")))
+            pairs.append(HeldPair(stem.get("id"), held.get("id"), kind, number,
+                                  str(stem.get("path")), str(held.get("path"))))
             continue
         held_id = held.get("id")
         stem_said = _record_of("the stem entry's", stem)
@@ -505,7 +545,7 @@ def rekind_entries(entries, moves, project, catalogue):
         entries.remove(stem)
         done.append(Rekind(stem.get("id"), old_kind, kind, number, True,
                            held_id, kept, dropped))
-    return done, problems
+    return done, problems, pairs
 
 
 def _approved(entry):

@@ -158,6 +158,7 @@ _RECEIPT_EVIDENCE_EXTRAS = {
     "test-run": ("scenario",),
     "manual-review": ("reviewer",),
     "human-approval": ("approver", "role", "decision"),
+    "approval-withdrawal": ("withdraws", "by"),
     "spike-conclusion": ("decision", "next_task"),
 }
 
@@ -448,13 +449,19 @@ def _receipt_render(task, slug, route_readings, gate_requirements=None,
             else:
                 proves = ", ".join(f"{k}: {ev.get(k)}"
                                    for k in extras if ev.get(k) is not None)
+            # How an approval record was made goes on a line of its own under
+            # the row, so the column width never cuts it (ADR-068 decision 7).
+            note = ""
+            if etype == "human-approval":
+                from compass_pkg import approval_records
+                note = approval_records.provenance(ev)
             if not proves:
                 # No scenario behind it - a baseline, a review, a sweep. The
                 # filename is what it is called, so use that rather than
                 # leaving the column blank: "mutation-proof-group-A" reads.
                 stem = pathlib.PurePosixPath(str(ev.get("path", ""))).stem
                 proves = stem.replace("-", " ").replace("_", " ")
-            rows.append((eid, etype, proves))
+            rows.append((eid, etype, proves, note))
 
         # Issue-level records - baselines, reviews, sweeps - have no scenario
         # behind them. Per-scenario records first, then the issue-level ones,
@@ -469,10 +476,12 @@ def _receipt_render(task, slug, route_readings, gate_requirements=None,
         # the rows actually present rather than a guessed constant.
         type_w = max((len(r[1]) for r in rows), default=0)
         proves_w = max(4, _RECEIPT_LINE_CAP - 2 - id_w - 2 - 2 - type_w)
-        for eid, etype, proves in rows:
+        for eid, etype, proves, note in rows:
             shown = proves if len(proves) <= proves_w else proves[:proves_w - 1] + "\u2026"
             lines.append(_receipt_truncate(
                 f"  {eid:<{id_w}}  {shown:<{proves_w}}  {etype}"))
+            if note:
+                lines.append(_receipt_truncate(f"  {'':<{id_w}}  {note}"))
     lines.append("")
 
     # 5b. follow-ups (rendered only when any exist)

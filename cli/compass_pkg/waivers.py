@@ -242,6 +242,13 @@ def check_approval(waiver, names, registry, described):
     if record.get("type") != "human-approval":
         return [_fault("W-APPROVAL-TYPE", wid,
                        f"{ref} is a {record.get('type')} record, not a human-approval")]
+    withdrawn = next((r.get("id") for r in registry if isinstance(r, dict)
+                      and r.get("type") == "approval-withdrawal"
+                      and r.get("withdraws") == ref), None)
+    if withdrawn:
+        # ADR-069 decision 6: a person withdrew this approval.
+        return [_fault("W-APPROVAL-WITHDRAWN", wid,
+                       f"{ref} was withdrawn by {withdrawn}")]
     if record.get("decision") != "approved":
         return [_fault("W-APPROVAL-DECISION", wid,
                        f"{ref} does not hold decision: approved")]

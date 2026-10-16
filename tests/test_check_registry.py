@@ -71,8 +71,9 @@ def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
         # dod-evidence-typed moved to 2.0.0: its verdict on a ticked page with no record changed.
         # human-approval-present moved to 1.1.0: it counts only an approval given for
         # guardrail `G5`, and its corpus verdicts held, so the major stayed (ADR-066).
+        # It moved to 1.2.0 when a withdrawn sign-off stopped counting (ADR-069).
         assert entry.version == {"dod-evidence-typed": "2.0.0",
-                                 "human-approval-present": "1.1.0"}.get(name, "1.0.0"), name
+                                 "human-approval-present": "1.2.0"}.get(name, "1.0.0"), name
         assert isinstance(entry.params_spec, dict), name
         assert set(entry.tighter) <= set(entry.params_spec), name
         for param in entry.params_spec:

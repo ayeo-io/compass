@@ -1063,6 +1063,10 @@ _TAIL_ARGV = {
     "changed-file add": ["changed-file", "add", "src/a.py", "--scenario", "TRC-1"],
     "evidence add": ["evidence", "add", "EV-9", "--type", "artifact",
                      "--path", "manifest.yml"],
+    # A request for the sign-off of guardrail `G5` needs no human check or
+    # document, so the fixture issue takes one.
+    "evidence request": ["evidence", "request", "--guardrail", "G5",
+                         "--scope", "the refund migration"],
     # The gate's accepted evidence type is checked at write time, so the
     # record this points at has to be a test-run, not the artifact above.
     "gate pass": ["gate", "pass", "verify.correctness", "--evidence", "EV-T"],

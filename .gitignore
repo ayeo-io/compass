@@ -47,6 +47,9 @@
 # The lock a manifest write holds, which the pre-tool hook tries without waiting
 # when it records a session (any depth, for the same reason).
 .manifest.lock
+# The lock an approval, a request or a delegation holds while it writes (any
+# depth, for the same reason).
+.approval.lock
 
 *.log
 

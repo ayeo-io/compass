@@ -55,7 +55,8 @@ An item of the Definition of Done is met by a record in the manifest, never by a
 tick on the page: `compass gate pass ... --meets <item>` or `compass evidence
 add ... --meets <item>` records evidence, `compass follow-up add FU-<id>
 --defers <item> --summary "..."` carries the item to ship, and a person ticks
-an item with `compass evidence approve --check <item>`. `dod-evidence-typed`
+an item by typing `/compass:approve` for a `compass evidence request --check
+<item>`, or with `compass evidence approve --check <item>` at a terminal. `dod-evidence-typed`
 fails an item with no record. `compass issue render` writes the list and each
 item's state into the verification report.
 
@@ -65,8 +66,9 @@ item's state into the verification report.
 implement stage. Each one moves the documents of earlier stages that are still
 `draft` and have a path: to `approved` (with `approved_by` naming the command),
 or to `awaiting-approval` when the document has a human check. A person
-approves that document with `compass evidence approve --artifact <kind>`. That
-approval is recorded as `artifact-approval`, which no gate accepts and the
+approves that document by typing `/compass:approve` for a `compass evidence
+request --artifact <kind>`, or with `compass evidence approve --artifact <kind>`
+at a terminal. That approval is recorded as `artifact-approval`, which no gate accepts and the
 sign-off check of `G5` never reads.
 
 `compass acceptance record --release-note "<text>"` also stores the issue's

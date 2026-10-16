@@ -300,67 +300,6 @@ def plan_issue_dir(task_dir, problems=None, totals=None):
     return notes
 
 
-def _work_root_is_recoverable(root):
-    """Could `git reset --hard` put back what `--apply` is about to move?
-
-    Only where the work root is TRACKED. In a project using Compass it is, and
-    the reset is a complete undo. In this framework's own repository
-    `.compass/work/` is gitignored, so git has nothing to restore and a reset
-    undoes everything EXCEPT the thing that moved.
-
-    Returns (recoverable, why). `recoverable` is True when git holds a copy, or
-    when there is no git repository at all - outside a repository there is no
-    undo to promise and no false promise to correct, and refusing there would
-    stop the verb working in a plain directory.
-    """
-    import subprocess
-    try:
-        inside = subprocess.run(
-            ["git", "rev-parse", "--is-inside-work-tree"],
-            capture_output=True, text=True, timeout=30)
-    except (OSError, subprocess.SubprocessError):
-        return True, "git is not available, so there is no undo to promise"
-    if inside.returncode != 0 or inside.stdout.strip() != "true":
-        return True, "not a git repository"
-    try:
-        tracked = subprocess.run(["git", "ls-files", "--", root],
-                                 capture_output=True, text=True, timeout=60)
-    except (OSError, subprocess.SubprocessError):
-        return True, "git could not be asked"
-    if tracked.returncode == 0 and tracked.stdout.strip():
-        return True, "the work root is tracked, so `git reset --hard` restores it"
-    return False, ("%s is not tracked by git - it is gitignored, so "
-                   "`git reset --hard` would restore everything except the "
-                   "documents this moves" % root)
-
-
-def _docs_are_recoverable(root):
-    """Could `git reset --hard` put back the documents `--apply` is about to rename
-    and move under `docs/compass/`? The same question as for the work root, asked
-    of the documents folder: yes where git tracks it, or there is nothing in it,
-    or there is no repository. Returns (recoverable, why, folder)."""
-    import subprocess
-    project = _project_root(root)
-    folder = os.path.join(project, "docs", "compass")
-    held = any(files for _d, _s, files in os.walk(folder)) if os.path.isdir(folder) else False
-    if not held:
-        return True, "there is no documents folder to lose", folder
-    try:
-        inside = subprocess.run(["git", "-C", project, "rev-parse", "--is-inside-work-tree"],
-                                capture_output=True, text=True, timeout=30)
-        if inside.returncode != 0 or inside.stdout.strip() != "true":
-            return True, "not a git repository", folder
-        tracked = subprocess.run(["git", "-C", project, "ls-files", "--", "docs/compass"],
-                                 capture_output=True, text=True, timeout=60)
-    except (OSError, subprocess.SubprocessError):
-        return True, "git could not be asked", folder
-    if tracked.returncode == 0 and tracked.stdout.strip():
-        return True, "docs/compass/ is tracked, so `git reset --hard` restores it", folder
-    return False, ("docs/compass/ is not tracked by git - it is gitignored or new, so "
-                   "`git reset --hard` would restore everything except the documents this "
-                   "renames and moves"), "docs/compass"
-
-
 def _print_open_items(open_items):
     """What migration could not record from the pages, one line each. They are reported on
     every run, because the items stay open until a person records them."""
@@ -415,22 +354,17 @@ def cmd_migrate(args):
     if apply_mode and not getattr(args, "i_have_a_copy", False):
         # Both folders are asked, so one refusal names every copy a person must
         # take. Naming only the first would send them back with a copy of one.
-        lost = []
-        recoverable, why = _work_root_is_recoverable(root)
-        if not recoverable:
-            lost.append((why, root))
-        recoverable, why, folder = _docs_are_recoverable(root)
-        if not recoverable:
-            lost.append((why, folder))
+        docs = os.path.join(_project_root(root), "docs", "compass")
+        shown = os.path.relpath(docs)
+        if os.path.isabs(root) or shown.startswith(os.pardir):
+            shown = docs
+        from compass_pkg import migrate_copy_check as check
+        in_work, in_docs = check.registered_files(root, docs, _project_root(root))
+        lost = [found for found in (check.unrestorable_folders(root, None, in_work),
+                                    check.unrestorable_folders(docs, shown, in_docs))
+                if found.unrestorable]
         if lost:
-            raise CompassError(
-                "this would change records that cannot be put back: %s.\n\n"
-                "Nothing was changed. Take a copy first:\n%s\n\n"
-                "then re-run with --i-have-a-copy. The flag says you have "
-                "the copy; it does not switch the check off." % (
-                    "; and ".join(why for why, _f in lost),
-                    "\n".join("    cp -R %s <somewhere outside the repository>" % folder
-                              for _why, folder in lost)))
+            raise CompassError(check.refusal(lost))
     dirs = [e for e in sorted(os.listdir(root))
             if os.path.isdir(os.path.join(root, e))]
 
@@ -776,11 +710,20 @@ def _find_entry(entries, kind, number):
 
 def _register(task_dir, move, data=None):
     """Point the registry entry of a move's kind (and round) at its new path,
-    adding the entry when there is none. Returns True when the manifest changed."""
-    manifest = manifest_path(task_dir)
+    adding the entry when there is none, and write the manifest. Returns True when
+    the manifest changed."""
     data = data if data is not None else migrate_kinds.load_manifest(task_dir)
-    if data is None:
+    if data is None or not _register_in(data, move):
         return False
+    _write_manifest_data(manifest_path(task_dir), data)
+    return True
+
+
+def _register_in(data, move):
+    """The registration of `_register` on a manifest held in memory; it reads and
+    writes no file. The dry run calls it on a copy and the apply on the manifest it
+    then writes, so both decide alike whether a registration changes the registry.
+    Returns True when `data` changed."""
     entries = data.get("artifacts")
     if not isinstance(entries, list):
         entries = data["artifacts"] = []
@@ -801,7 +744,6 @@ def _register(task_dir, move, data=None):
         entry["path"] = move.new_rel
         if move.renamed:
             entry["reason"] = move.reason
-    _write_manifest_data(manifest, data)
     return True
 
 
@@ -862,12 +804,19 @@ def _rekind_note(rekind, would):
         rekind.label)
 
 
-def _plan_problems(plan, problems):
-    """What a person must look at, one line each. The same on a dry run and an apply."""
+def _plan_problems(plan, problems, unchanged_both=()):
+    """What a person must look at, one line each. The same on a dry run and an apply.
+    `unchanged_both` are the documents in both places whose registration changed
+    nothing: the registry already names the copy under docs/compass/, and the copy
+    beside the manifest is still there for a person to compare."""
     if problems is None:
         return
     for line in plan.rekind_problems:
         problems.append("%s: %s" % (plan.slug, line))
+    for move in unchanged_both:
+        problems.append("%s: %s is in both places - %s and %s; the registry names %s. Compare "
+                        "the two, keep one and delete the other"
+                        % (plan.slug, move.name, move.old_rel, move.new_rel, move.new_rel))
     for where, name in plan.unmapped:
         problems.append("%s: %s (%s) is unmapped - no row of the mapping table names it, so it "
                         "was left where it is" % (plan.slug, name, where))
@@ -886,23 +835,68 @@ def _plan_problems(plan, problems):
                         "has fewer than two subtasks" % (plan.slug, plan.adopted_map))
 
 
-def _make_plan(task_dir):
+def _make_plan(task_dir, data=None):
     return migrate_kinds.plan_issue(task_dir, artifact_name_map(), POINTER_MARKER,
-                                    STAYS_BESIDE_THE_MANIFEST)
+                                    STAYS_BESIDE_THE_MANIFEST, data=data)
+
+
+def _registry_step3(task_dir, data, plan, would):
+    """Step 3 of the apply on the manifest `data`, in place: move each stem-named entry
+    onto its kind and round, re-point `design` and `prd`, and drop `recommendation`.
+    It reads and writes no file, so the dry run runs it on a copy and the apply on the
+    manifest it then writes. Returns the change notes, in the tense `would` chooses."""
+    notes = []
+    if plan.rekinds:
+        done, _problems, _pairs = migrate_kinds.rekind_entries(
+            data.get("artifacts"), plan.rekind_moves, _project_root(task_dir),
+            migrate_kinds.shipped_catalogue())
+        notes.extend(_rekind_note(r, would) for r in done)
+    if plan.repoints or plan.dropped:
+        wanted = {entry_id: (old, new) for entry_id, old, new in plan.repoints}
+        kept = []
+        for entry in data.get("artifacts") or []:
+            if isinstance(entry, dict) and entry.get("kind") in migrate_kinds.DROPPED_KINDS:
+                notes.append("%s the %s registry entry; its file stays where it is"
+                             % ("would remove" if would else "removed", entry.get("kind")))
+                continue
+            if isinstance(entry, dict) and entry.get("id") in wanted \
+                    and entry.get("kind") == wanted[entry.get("id")][0]:
+                old, new = wanted[entry["id"]]
+                entry["kind"] = new
+                notes.append("%s the registry entry %s to %s"
+                             % ("would re-point" if would else "re-pointed", old, new))
+            kept.append(entry)
+        data["artifacts"] = kept
+    return notes
+
+
+def _simulate(task_dir, plan):
+    """The apply's registry steps, run on a copy of the manifest held in memory.
+
+    Step 3 runs first, then the plan is made again against the edited copy, as the
+    apply makes it again from disk, and each registration runs in the apply's order
+    against a registry the earlier ones have changed. Returns (step 3 notes, the second
+    plan, [(move, changed)], [(move, note, changed)]). A folder with no manifest the
+    plan can read is left alone, as the apply leaves it."""
+    data = migrate_kinds.load_manifest(task_dir)
+    if data is None:
+        return [], plan, [], []
+    data = copy.deepcopy(data)
+    notes = _registry_step3(task_dir, data, plan, True)
+    second = _make_plan(task_dir, data=data)
+    moves = [(move, _register_in(data, move)) for move in second.moves]
+    both = [(move, note, _register_in(data, move)) for move, note in second.both_places]
+    return notes, second, moves, both
 
 
 def plan_relocations(task_dir, problems=None, totals=None):
-    """Dry-run notes for the relocation half. Writes nothing."""
-    plan = _make_plan(task_dir)
-    data = dict(migrate_kinds.load_manifest(task_dir) or {}, artifacts=plan.registry_after or [])
-    counted = [m for m in plan.moves if m.moves or _needs_register(data, m)]
-    notes = [_rekind_note(r, True) for r in plan.rekinds]
+    """Dry-run notes for the relocation half. Writes nothing. A change line is printed
+    only where the apply's own registry steps, run in memory, change something."""
+    notes, plan, moves, both = _simulate(task_dir, _make_plan(task_dir))
+    counted = [m for m, changed in moves if m.moves or changed]
     notes += [_move_note(m, True) for m in counted]
-    notes += [note for _m, note in plan.both_places]
-    for _id, old, new in plan.repoints:
-        notes.append("would re-point the registry entry %s to %s" % (old, new))
-    for _id, kind in plan.dropped:
-        notes.append("would remove the %s registry entry; its file stays where it is" % kind)
+    notes += [note for _m, note, changed in both if changed]
+    counted += [m for m, _note, changed in both if changed]
     moving = {os.path.join(_project_root(task_dir), m.old_rel): m.new_rel for m in plan.moves if m.moves}
     notes += ["would repoint the manifest fields that cite %s" % name
               for name in _stale_names(task_dir, moving)]
@@ -915,7 +909,7 @@ def plan_relocations(task_dir, problems=None, totals=None):
                      % (os.path.basename(plan.stub["from"]), os.path.basename(plan.stub["to"])))
         if totals is not None:
             totals.stubs += 1
-    _plan_problems(plan, problems)
+    _plan_problems(plan, problems, [m for m, _note, changed in both if not changed])
     _count(totals, plan, counted)
     return notes
 
@@ -941,28 +935,8 @@ def relocate_documents(task_dir, problems=None, totals=None):
     data = migrate_kinds.load_manifest(task_dir)
     if data is None:
         return notes
-    if plan.rekinds:
-        entries = data.get("artifacts")
-        done, _problems = migrate_kinds.rekind_entries(
-            entries, plan.moves + [m for m, _note in plan.both_places], project,
-            migrate_kinds.shipped_catalogue())
-        notes.extend(_rekind_note(r, False) for r in done)
-        _write_manifest_data(manifest, data)
-    if plan.repoints or plan.dropped:
-        wanted = {entry_id: (old, new) for entry_id, old, new in plan.repoints}
-        kept = []
-        for entry in data.get("artifacts") or []:
-            if isinstance(entry, dict) and entry.get("kind") in migrate_kinds.DROPPED_KINDS:
-                notes.append("removed the %s registry entry; its file stays where it is"
-                             % entry.get("kind"))
-                continue
-            if isinstance(entry, dict) and entry.get("id") in wanted \
-                    and entry.get("kind") == wanted[entry.get("id")][0]:
-                old, new = wanted[entry["id"]]
-                entry["kind"] = new
-                notes.append("re-pointed the registry entry %s to %s" % (old, new))
-            kept.append(entry)
-        data["artifacts"] = kept
+    notes.extend(_registry_step3(task_dir, data, plan, False))
+    if plan.rekinds or plan.repoints or plan.dropped:
         _write_manifest_data(manifest, data)
     step.STEP_HOOK(slug, "repoint")
     plan = _make_plan(task_dir)
@@ -983,9 +957,13 @@ def relocate_documents(task_dir, problems=None, totals=None):
         step.STEP_HOOK(slug, "move")
         if moved or changed:
             notes.append(_move_note(move, False))
+    unchanged_both = []
     for move, note in plan.both_places:
         if _register(task_dir, move):
             notes.append(note)
+            counted.append(move)
+        else:
+            unchanged_both.append(move)
         step.STEP_HOOK(slug, "register")
     for name in _repoint_references(task_dir):
         notes.append("repointed the manifest fields that cited %s" % name)
@@ -1004,7 +982,7 @@ def relocate_documents(task_dir, problems=None, totals=None):
         if totals is not None:
             totals.stubs += 1
     step.STEP_HOOK(slug, "stub")
-    _plan_problems(plan, problems)
+    _plan_problems(plan, problems, unchanged_both)
     _count(totals, plan, counted)
     return notes
 

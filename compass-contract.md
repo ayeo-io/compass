@@ -27,6 +27,11 @@ carry on with it rather than assessing again.
 Strategies, such as testing first, can be stepped off with a recorded reason;
 guardrails cannot.
 
+**Approvals.** Approve only under a delegation naming you, with `compass
+evidence approve --delegated --as <you>`. Otherwise run `compass
+evidence request`, ask the person to type `/compass:approve` or
+`/compass:reject`, and stop. Never create, extend or revoke a delegation.
+
 **Evidence, not assertion.** Use the CLI: `compass tdd-red -- <cmd>` records a
 failing test, `compass tdd-green -- <cmd>` a passing one, and `compass check`
 runs the guardrails against what is on disk.

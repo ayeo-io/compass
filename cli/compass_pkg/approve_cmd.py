@@ -31,112 +31,38 @@ A record holds the issue, the issue's generation and the time, which the verb
 stamps itself, so a person cannot record an approval for another issue or
 generation by mistake.
 
+The records are written by `approvals.record`, which the Claude Code prompt
+hook also calls (ADR-068 decision 4), so both paths write the same records. A
+record from this verb holds `via: terminal`.
+
 The verb needs a terminal on its standard input. An approval is a person's act,
-and an agent session has no terminal, so it cannot call the verb. The verb also
+and an agent session has no terminal, so it cannot call the verb; the refusal
+tells the agent to ask with `compass evidence request` instead. The verb also
 refuses the approver `agent`. Nothing else guards the record: anyone who can
 write `manifest.yml` can add one by hand.
 """
-# DEPENDENCY: standard library (os, sys); compass_pkg.approval_records,
-# core, effective, terminal.
+# DEPENDENCY: standard library (os, sys); compass_pkg.approval_records, approvals,
+# core, terminal.
 from __future__ import annotations
 
 import os
 import sys
 
-from compass_pkg import approval_records, effective
-from compass_pkg.core import (CompassError, issue_arg, load_manifest, now_iso,
-                              resolve_issue_dir, save_manifest)
+from compass_pkg import approval_records, approvals
+from compass_pkg.core import CompassError, issue_arg, resolve_issue_dir
 from compass_pkg.terminal import say
 
 DECISIONS = approval_records.DECISIONS
 ARTIFACT_APPROVAL = approval_records.ARTIFACT_APPROVAL
-#: A person's answer to one checkpoint hand-off. Kept apart from
-#: `human-approval` so that no reader of that type, `human-approval-present`
-#: (the check of guardrail `G5`), a human check or a waiver, meets it.
-CHECKPOINT_APPROVAL = "checkpoint-approval"
+CHECKPOINT_APPROVAL = approvals.CHECKPOINT_APPROVAL
+
+#: The provenance of a record this verb writes (ADR-068 decision 7).
+TERMINAL = {"via": "terminal"}
 
 
 def _terminal_attached():
     """True when a person can type: standard input is a terminal."""
     return sys.stdin.isatty()
-
-
-def _text(value):
-    return " ".join(str(value or "").split())
-
-
-def _approver(text):
-    """The approver's name, or a refusal: empty, or an agent."""
-    name = _text(text)
-    if not name:
-        raise CompassError("compass evidence approve: --approver must name the person "
-                           "who approves.")
-    if name.lower() == "agent" or name.lower().startswith("agent:"):
-        raise CompassError("compass evidence approve: an agent cannot approve. An approval "
-                           "is a person's; give that person's id with --approver.")
-    return name
-
-
-def _check_of(view, check_id):
-    if view is None:
-        raise CompassError("compass evidence approve: this issue has no configuration to "
-                           "read its checks from. Run `compass approach evaluate --write`.")
-    checks = view.config.get("checks") or {}
-    check = checks.get(check_id)
-    approvable = sorted(name for name, body in checks.items()
-                        if isinstance(body, dict) and body.get("kind") == "human"
-                        and body.get("approvers"))
-    known = (f"the human checks that list approvers are {', '.join(approvable)}"
-             if approvable else "it configures no human check that lists approvers")
-    if not isinstance(check, dict):
-        raise CompassError(f"compass evidence approve: no such check '{check_id}' in this "
-                           f"issue's configuration; {known}.")
-    if check.get("kind") != "human":
-        raise CompassError(f"compass evidence approve: '{check_id}' is a {check.get('kind')} "
-                           f"check, not a human check. Only a human check takes an approval.")
-    if not check.get("approvers"):
-        # An item of the Definition of Ready or Done is ticked by a person even when
-        # its check lists no approvers (the declared approvers, or the owner, tick it).
-        from compass_pkg import item_records
-        if item_records.unlisted_problem(view, check_id, "compass evidence approve") is None:
-            return check
-        raise CompassError(f"compass evidence approve: '{check_id}' lists no approvers and is "
-                           f"not an item of this issue's Definition of Ready or Done, so an "
-                           f"approval would not be read; {known}.")
-    return check
-
-
-def _may_tick(task_dir, approver, check_id):
-    """Who may tick an item whose check lists no approvers: a name in any
-    `approvers:` list of the project file, else its owner."""
-    from compass_pkg import decisions_taken
-    declared, owner = decisions_taken.project_approvers(task_dir)
-    if declared:
-        if approval_records.approver_listed(declared, approver, owner):
-            return
-        raise CompassError(
-            f"compass evidence approve: {approver} is not among the approvers this project "
-            f"declares ({', '.join(sorted(set(declared)))}), so the tick of '{check_id}' "
-            f"would not count.")
-    if approval_records.approver_listed([approval_records.OWNER], approver, owner):
-        return
-    raise CompassError(
-        f"compass evidence approve: this project declares no approvers, so only its owner may "
-        f"tick '{check_id}'" + (f" ({owner})." if owner else
-                              "; it declares no owner either, so add `owner:` or an "
-                              "`approvers:` list to compass.yml."))
-
-
-def _numbered(task, check_id):
-    """The next number for a record of the check, and an evidence id no entry
-    already uses."""
-    taken = {e.get("id") for e in task.get("evidence") or [] if isinstance(e, dict)}
-    number = 1 + len([e for e in task.get("evidence") or []
-                      if isinstance(e, dict) and e.get("type") == "human-approval"
-                      and e.get("check") == check_id])
-    while f"EV-APPROVAL-{check_id}-{number}" in taken:
-        number += 1
-    return number, f"EV-APPROVAL-{check_id}-{number}"
 
 
 def _checks_for(args):
@@ -148,254 +74,89 @@ def _checks_for(args):
                            "--guardrail, --artifact, --decisions or --checkpoint.")
 
 
-def _guardrail_form(args):
-    """Refuse a `--guardrail` call the form cannot record, before anything is
-    read: a guardrail other than `G5`, or a rejection."""
-    value = args.guardrail
-    if value != approval_records.G5:
-        raise CompassError(f"compass evidence approve: --guardrail takes `G5` only, not "
-                           f"'{value}'; `G5` is the only guardrail with a sign-off. Nothing "
-                           f"was written.")
-    if args.decision != approval_records.APPROVED:
-        raise CompassError(f"compass evidence approve: `--guardrail G5` records an approval "
-                           f"only, not --decision {args.decision}. A rejected record would "
-                           f"not withdraw an earlier sign-off. Nothing was written.")
+def answer_of(args, provenance):
+    """The `approvals.Answer` an argparse namespace of this verb gives."""
+    _checks_for(args)
+    for form in ("check", "guardrail", "artifact", "checkpoint"):
+        value = getattr(args, form, None)
+        if value:
+            return approvals.Answer(form, value, args.decision, args.approver, args.role,
+                                    args.scope or "", provenance)
+    return approvals.Answer("decisions", None, args.decision, args.approver, args.role,
+                            args.scope or "", provenance)
 
 
 def cmd_evidence_approve(args):
+    if getattr(args, "delegated", False):
+        return _delegated(args)
+    if getattr(args, "as_agent", None):
+        raise CompassError("compass evidence approve: --as names the agent of a delegated "
+                           "approval, so it needs --delegated.")
     if not _terminal_attached():
         raise CompassError("compass evidence approve: this needs a terminal on standard "
                            "input. An approval is a person's act, so run the command "
-                           "yourself in a terminal; an agent session cannot record one.")
-    _checks_for(args)
-    if args.decision not in DECISIONS:
-        raise CompassError(f"compass evidence approve: the decision must be one of "
-                           f"{' or '.join(DECISIONS)}, not '{args.decision}'.")
-    guardrail = getattr(args, "guardrail", None)
-    if guardrail:
-        _guardrail_form(args)
-    approver = _approver(args.approver)
-    role, scope = _text(args.role), _text(args.scope)
-    required = ((("--role", role), ("--scope", scope)) if args.check or guardrail
-                else (("--role", role),))
-    for flag, value in required:
-        if not value:
-            raise CompassError(f"compass evidence approve: {flag} must not be empty; a "
-                               f"record says in what role and for what the person approved.")
-    args.approver, args.role, args.scope = approver, role, scope
-    if args.artifact:
-        return _approve_artifact(args)
-    if args.decisions:
-        from compass_pkg import decisions_taken
-        return decisions_taken.approve_set(args)
-    if getattr(args, "checkpoint", None):
-        return _approve_checkpoint(args)
-    if guardrail:
-        return _approve_guardrail(args)
-    return _approve_check(args)
-
-
-def _approve_guardrail(args):
-    """Register the sign-off of guardrail `G5`. It names no other subject, so
-    `human-approval-present` counts it and no human check, item or waiver
-    reads it. No approver list is checked: guardrail `G5` lists none."""
+                           "yourself in a terminal; an agent session cannot record one. "
+                           "An agent asks for an approval with `compass evidence request`.")
+    missing = [flag for flag, value in (("--approver", args.approver), ("--role", args.role))
+               if value is None]
+    if missing:
+        raise CompassError(f"compass evidence approve: the following arguments are required: "
+                           f"{', '.join(missing)}.")
+    answer = approvals.checked(answer_of(args, TERMINAL))
     task_dir = resolve_issue_dir(args.task)
-    task, task_path = load_manifest(task_dir)
-    taken = {e.get("id") for e in task.get("evidence") or [] if isinstance(e, dict)}
-    number = 1 + len([e for e in task.get("evidence") or []
-                      if isinstance(e, dict) and e.get("type") == "human-approval"
-                      and e.get("decision") in DECISIONS
-                      and approval_records.gives_g5(e)])
-    while f"EV-APPROVAL-G5-{number}" in taken:
-        number += 1
-    evidence_id = f"EV-APPROVAL-G5-{number}"
-    entry = {"id": evidence_id, "type": "human-approval", "guardrail": approval_records.G5,
-             "approver": args.approver, "role": args.role, "scope": args.scope,
-             "decision": approval_records.APPROVED,
-             "timestamp": now_iso().replace("+00:00", "Z"),
-             "issue": os.path.basename(os.path.normpath(task_dir)),
-             "generation": task.get("generation")}
-    task.setdefault("evidence", []).append(entry)
-    save_manifest(task, task_path)
-    return say(args, f"compass evidence approve: guardrail `G5` - signed off by {args.approver} "
-                     f"recorded as {evidence_id}.",
-               detail=[f"record     : {evidence_id} in manifest.yml evidence",
-                       f"issue      : {entry['issue']}",
-                       f"generation : {approval_records.shown(entry['generation'])}"],
-               guardrail=approval_records.G5, answer=entry["decision"],
-               evidence_id=evidence_id, approver=args.approver, role=args.role,
-               scope=args.scope, issue=entry["issue"], generation=entry["generation"],
-               at=entry["timestamp"])
+    with approvals.lock(task_dir):
+        done = approvals.record(task_dir, answer)
+    if done.note:
+        print(done.note)
+    return say(args, done.outcome, detail=done.detail, **done.data)
 
 
-def _checkpoint_approver(task_dir, approver):
-    """Refuse a name that may not answer a checkpoint: a name in any
-    `approvers:` list of the project file, else its owner. Returns the line to
-    print when the project declares neither, so any person may answer."""
-    from compass_pkg import decisions_taken
-    declared, owner = decisions_taken.project_approvers(task_dir)
-    if not declared and not owner:
-        return ("compass evidence approve: this project declares no approvers or owner, "
-                "so any person may answer a checkpoint.")
-    allowed = declared or [approval_records.OWNER]
-    if approval_records.approver_listed(allowed, approver, owner):
-        return None
-    named = (f"it declares {', '.join(sorted(set(declared)))}" if declared
-             else f"its owner is {owner}")
-    raise CompassError(f"compass evidence approve: {approver} is not an approver of this "
-                       f"project ({named}), so the answer would not count. Nothing was "
-                       f"written.")
-
-
-def _approve_checkpoint(args):
-    from compass_pkg import checkpoint_outcomes, next_cmd
-    verb = "compass evidence approve"
-    stage = args.checkpoint
+def _delegated(args):
+    """An agent's approval under a delegation a person typed (ADR-069). It needs
+    no terminal: the delegation is the person's decision. The record names the
+    person as `approver`, the agent and the delegation. The pre-tool hook has
+    already checked that `--as` is the agent Claude Code reports."""
+    from compass_pkg import delegations
+    agent = " ".join(str(args.as_agent or "").split())
+    if not agent:
+        raise CompassError("compass evidence approve: --delegated needs --as <agent>, the "
+                           "agent's full name, such as compass:architect.")
+    if args.approver or args.role:
+        raise CompassError("compass evidence approve: a delegated approval names the person "
+                           "who delegated; give no --approver or --role.")
     if args.decision != approval_records.APPROVED:
-        raise CompassError(f"{verb}: --checkpoint records an approval only, not "
-                           f"--decision {args.decision}. To send the issue back, say so at "
-                           f"the {stage} hand-off. Nothing was written.")
+        raise CompassError("compass evidence approve: a delegation never covers a rejection. "
+                           "Tell the person what you found, and stop.")
+    draft = answer_of(args, {})
     task_dir = resolve_issue_dir(args.task)
-    task, task_path = load_manifest(task_dir)
-    checkpoint_outcomes.refuse_unjudged(task, task_dir, verb)
-    checkpoint_outcomes.refuse_stage(task, stage, verb)
-    if stage not in next_cmd._stages_on_record(next_cmd._typed(task), task_dir):
-        raise CompassError(f"{verb}: {stage} has not run: its record is not written, so "
-                           f"there is no hand-off to answer yet. Nothing was written.")
-    note = _checkpoint_approver(task_dir, args.approver)
-    stamp = now_iso().replace("+00:00", "Z")
-    taken = {e.get("id") for e in task.get("evidence") or [] if isinstance(e, dict)}
-    number = 1
-    while f"EV-CHECKPOINT-{stage}-{number}" in taken:
-        number += 1
-    evidence_id = f"EV-CHECKPOINT-{stage}-{number}"
-    entry = {"id": evidence_id, "type": CHECKPOINT_APPROVAL, "checkpoint": stage,
-             "approver": args.approver, "role": args.role,
-             "scope": args.scope or f"the {stage} hand-off",
-             "decision": approval_records.APPROVED, "timestamp": stamp,
-             "issue": os.path.basename(os.path.normpath(task_dir)),
-             "generation": task.get("generation")}
-    task.setdefault("evidence", []).append(entry)
-    checkpoint_outcomes.set_outcome(task, {
-        "stage": stage, "outcome": checkpoint_outcomes.WAITED, "by": args.approver,
-        "at": stamp, "evidence": evidence_id})
-    save_manifest(task, task_path)
-    if note:
-        print(note)
-    return say(args, f"{verb}: the {stage} checkpoint - answered by {args.approver}, "
-                     f"recorded as {evidence_id}.",
-               detail=[f"record     : {evidence_id} in manifest.yml evidence",
-                       f"outcome    : {stage} -> waited"],
-               checkpoint=stage, answer=entry["decision"], evidence_id=evidence_id,
-               approver=args.approver, role=args.role, scope=entry["scope"],
-               issue=entry["issue"], generation=entry["generation"], at=stamp)
-
-
-def _stamp(task, task_dir, evidence_id, **fields):
-    """A record of the new type, with the issue, generation and time the verb
-    stamps."""
-    entry = {"id": evidence_id, "type": ARTIFACT_APPROVAL}
-    entry.update({k: v for k, v in fields.items() if v not in (None, "")})
-    entry.update(issue=os.path.basename(os.path.normpath(task_dir)),
-                 generation=task.get("generation"))
-    return entry
-
-
-def _approve_artifact(args):
-    from compass_pkg import artifact_status
-
-    kind = args.artifact
-    if args.decision != approval_records.APPROVED:
-        raise CompassError("compass evidence approve: --artifact records an approval only. "
-                           f"To send {kind} back, run `compass issue artifact set {kind} "
-                           "--status draft`.")
-    task_dir = resolve_issue_dir(args.task)
-    task, task_path = load_manifest(task_dir)
-    entry = next((a for a in task.get("artifacts") or []
-                  if isinstance(a, dict) and a.get("kind") == kind), None)
-    if entry is None:
-        raise CompassError(f"compass evidence approve: '{kind}' is not a document this issue "
-                           f"registered.")
-    if entry.get("status") != artifact_status.AWAITING:
-        raise CompassError(
-            f"compass evidence approve: {kind} reads {entry.get('status')}, not "
-            f"awaiting-approval, so there is nothing to approve. A document with a human "
-            f"check moves to awaiting-approval when the stage after it records its work; "
-            f"to ask for approval now, run `compass issue artifact set {kind} --status "
-            f"awaiting-approval`.")
-    view = effective.view_or_legacy(task_dir)
-    checks = artifact_status.human_checks(view, kind)
-    owner = approval_records.project_owner(task_dir)
-    for check_id in checks:
-        listed = [str(one) for one in (view.config["checks"][check_id].get("approvers") or [])]
-        if listed and not approval_records.approver_listed(listed, args.approver, owner):
-            raise CompassError(
-                f"compass evidence approve: {args.approver} is not an approver of "
-                f"'{check_id}', which {kind} carries, so the record would not count. "
-                f"{approval_records.listing(check_id, listed, owner)}.")
-    stamp = now_iso().replace("+00:00", "Z")
-    taken = {e.get("id") for e in task.get("evidence") or [] if isinstance(e, dict)}
-    number = 1
-    for check_id in checks or [None]:
-        while f"EV-APPROVAL-ARTIFACT-{kind}-{number}" in taken:
-            number += 1
-        evidence_id = f"EV-APPROVAL-ARTIFACT-{kind}-{number}"
-        taken.add(evidence_id)
-        task.setdefault("evidence", []).append(_stamp(
-            task, task_dir, evidence_id, artifact=kind, check=check_id,
-            approver=args.approver, role=args.role, decision=args.decision,
-            timestamp=stamp, scope=args.scope))
-    artifact_status.clear_approver(entry)
-    entry.update(status=artifact_status.APPROVED, approved_by=args.approver, approved_at=stamp)
-    save_manifest(task, task_path)
-    ids = [e["id"] for e in task["evidence"][-(len(checks) or 1):]]
-    return say(args, f"compass evidence approve: {kind} - approved by {args.approver} "
-                     f"recorded as {', '.join(ids)}.",
-               detail=[f"record     : {', '.join(ids)} in manifest.yml evidence",
-                       f"document   : {kind} -> approved by {args.approver}"],
-               artifact=kind, answer=args.decision, evidence_id=ids[0], evidence_ids=ids,
-               approver=args.approver, role=args.role, scope=args.scope or None,
-               at=stamp, status=artifact_status.APPROVED)
-
-
-def _approve_check(args):
-    check_id = args.check
-    task_dir = resolve_issue_dir(args.task)
-    task, task_path = load_manifest(task_dir)
-    approver, role, scope = args.approver, args.role, args.scope
-    check = _check_of(effective.view_or_legacy(task_dir), check_id)
-    owner = approval_records.project_owner(task_dir)
-    if check.get("approvers"):
-        listed = [str(one) for one in check["approvers"]]
-        if not approval_records.approver_listed(listed, approver, owner):
-            raise CompassError(f"compass evidence approve: {approver} is not an approver of "
-                               f"'{check_id}', so the record would not count. "
-                               f"{approval_records.listing(check_id, listed, owner)}.")
-    else:
-        _may_tick(task_dir, approver, check_id)
-    number, evidence_id = _numbered(task, check_id)
-    entry = {"id": evidence_id, "type": "human-approval", "check": check_id,
-             "approver": approver, "role": role, "scope": scope, "decision": args.decision,
-             "timestamp": now_iso().replace("+00:00", "Z"),
-             "issue": os.path.basename(os.path.normpath(task_dir)),
-             "generation": task.get("generation")}
-    task.setdefault("evidence", []).append(entry)
-    save_manifest(task, task_path)
-    return say(args, f"compass evidence approve: {check_id} - {args.decision} by {approver} "
-                     f"recorded as {evidence_id}.",
-               detail=[f"record     : {evidence_id} in manifest.yml evidence",
-                       f"issue      : {entry['issue']}",
-                       f"generation : {approval_records.shown(entry['generation'])}"],
-               check=check_id, answer=args.decision, evidence_id=evidence_id,
-               approver=approver, role=role, scope=scope, issue=entry["issue"],
-               generation=entry["generation"], at=entry["timestamp"])
+    # The delegation lock, taken inside the issue lock in the order the prompt
+    # hook takes them, keeps a /compass:revoke or another use from landing
+    # between the check and the count.
+    with approvals.lock(task_dir), delegations.locked(os.path.dirname(os.path.dirname(task_dir))):
+        delegation = delegations.authorise(task_dir, draft.form, draft.value, agent)
+        provenance = {"via": "delegation", "approved_by_agent": agent,
+                      "delegation": delegation["id"],
+                      "session_id": os.environ.get("CLAUDE_CODE_SESSION_ID", "")}
+        answer = approvals.checked(approvals.Answer(
+            draft.form, draft.value, approval_records.APPROVED,
+            delegation["delegated_by"], delegation.get("role") or "owner", draft.scope,
+            provenance))
+        done = approvals.record(task_dir, answer)
+        delegations.record_use(task_dir, delegation, agent, done, done.outcome)
+    if done.note:
+        print(done.note)
+    return say(args, done.outcome + f" Under {delegation['id']}, by {agent}.",
+               detail=done.detail, **done.data)
 
 
 def register(evidence_subs):
     """Add `approve` to the `evidence` group."""
     p = evidence_subs.add_parser(
         "approve", help="record a person's approval of a human check, a document or the "
-                        "decisions taken for the person")
+                        "decisions taken for the person",
+        # No abbreviated flag: the pre-tool hook recognises `--delegated` by name,
+        # and a prefix such as `--deleg` must not reach the delegated path unseen.
+        allow_abbrev=False)
     form = p.add_mutually_exclusive_group(required=True)
     form.add_argument("--check", help="id of the human check")
     form.add_argument("--guardrail", metavar=approval_records.G5,
@@ -409,11 +170,20 @@ def register(evidence_subs):
                       help="answer the hand-off of this checkpoint stage (assess, define, "
                            "refine or plan)")
     issue_arg(p)
-    p.add_argument("--approver", required=True, help="the approver's person id")
-    p.add_argument("--role", required=True, help="the role the approver acts in")
+    p.add_argument("--approver", help="the approver's person id; required unless --delegated")
+    p.add_argument("--role", help="the role the approver acts in; required unless --delegated")
+    p.add_argument("--delegated", action="store_true",
+                   help="record as the agent a person delegated to (/compass:delegate); "
+                        "needs --as and no terminal")
+    p.add_argument("--as", dest="as_agent", metavar="AGENT",
+                   help="with --delegated: the agent's full name, as Claude Code reports it")
     p.add_argument("--scope", default="",
                    help="what the approval covers; required with --check and --guardrail")
     p.add_argument("--decision", default="approved", choices=DECISIONS,
                    help="approved (default) or rejected; a later rejection withdraws an "
                         "approval")
     p.set_defaults(func=cmd_evidence_approve, output_kind="hand-off")
+    # `compass evidence request`, which asks for what this verb records, is
+    # registered beside it so the entry point stays thin.
+    from compass_pkg import approval_requests
+    approval_requests.register(evidence_subs)

@@ -36,6 +36,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import select
 import sys
 
 # The budget, and why each number is what it is.
@@ -670,6 +671,23 @@ def was_handled():
     return _HANDLED["mode"]
 
 
+def _stdout_is_closed_pipe():
+    """True when the reader of stdout has closed its end of the pipe.
+
+    A flush does not show this: the failed write has already dropped the
+    buffered text, so a later flush succeeds. Poll the descriptor instead. The
+    kernel reports an error (Linux) or hang-up (macOS) on the write end once
+    no reader is left. Where poll is missing, assume stdout is the pipe.
+    """
+    try:
+        poller = select.poll()
+        poller.register(sys.stdout.fileno(), select.POLLOUT)
+        events = poller.poll(0)
+    except (AttributeError, OSError, ValueError):
+        return True
+    return any(ev & (select.POLLERR | select.POLLHUP) for _fd, ev in events)
+
+
 def run_with_mode(args, fn):
     """Run a verb, and exit quietly if the reader closes our output pipe.
 
@@ -683,6 +701,10 @@ def run_with_mode(args, fn):
     try:
         return _run_with_mode(args, fn)
     except BrokenPipeError:
+        # Only a closed stdout is a quiet exit. The same error from a socket
+        # or a child process is a real fault, so re-raise it.
+        if not _stdout_is_closed_pipe():
+            raise
         try:
             os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
         except (OSError, ValueError):

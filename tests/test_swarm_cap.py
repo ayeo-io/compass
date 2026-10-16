@@ -73,6 +73,46 @@ def _run(repo, slug):
 _PROSE = "RP-CAP-001 (`blast_radius: critical`) - not matched; blast radius is contained."
 
 
+@pytest.mark.parametrize("ceiling,requested,risk,exit_code,cap", [
+    (2, 3, "contained", 1, 2),
+    (2, 2, "contained", 0, 2),
+    (9, 7, "contained", 1, 6),
+    (10**50, 7, "contained", 1, 6),
+    (5, 2, "critical", 1, 1),
+    (None, 3, "contained", 0, 6),
+])
+def test_stored_issue_ceiling_limits_provisioning(tmp_path, ceiling, requested, risk, exit_code, cap):
+    import yaml
+    repo = _repo(tmp_path)
+    td = _task(repo, "stored", risk=risk)
+    with (td / "manifest.yml").open("a") as stream:
+        stream.write(yaml.safe_dump({"subtask_ceiling": ceiling}))
+    _route(td)
+    _map(td, "stored", requested)
+    result = _run(repo, "stored")
+    assert result.returncode == exit_code, result.stdout + result.stderr
+    if exit_code:
+        assert f"cap is {cap}" in result.stderr
+        assert "WOULD create worktree" not in result.stdout
+    else:
+        assert f"route cap {cap}" in result.stdout
+
+
+@pytest.mark.parametrize("ceiling", [0, -1, True, "2"])
+def test_invalid_stored_issue_ceiling_refuses(tmp_path, ceiling):
+    import yaml
+    repo = _repo(tmp_path)
+    td = _task(repo, "invalid", risk="contained")
+    with (td / "manifest.yml").open("a") as stream:
+        stream.write(yaml.safe_dump({"subtask_ceiling": ceiling}))
+    _route(td)
+    _map(td, "invalid", 1)
+    result = _run(repo, "invalid")
+    assert result.returncode != 0
+    assert "subtask_ceiling" in result.stderr
+    assert "WOULD create worktree" not in result.stdout
+
+
 def test_did_not_fire_note_caps_to_one_today(tmp_path):
     """`TRC-R4-1` (regression guard): a delivery-approach.md 'did-not-fire'
     note quoting `blast_radius: critical` no longer collapses the cap - the

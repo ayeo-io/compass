@@ -387,7 +387,7 @@ The catalogue gives a document kind a word limit per depth, `compass check` refu
 
 1. Nothing for issues already assessed. An issue adopts the word limits, the check and the kind at its next `compass approach evaluate --write`. An issue with no stored generation, a closed issue and an issue whose catalogue has no word limit are never judged.
 2. On the full approach, write `low-level-design/U<n>.md` for each unit at plan and register it with `compass issue artifact set low-level-design --unit U<n> --status draft --path <file>`.
-3. Keep a technical design at or under 6,000 words at thorough. Move each unit's signatures, contracts, file plan and tests to its low-level design.
+3. Aim for a technical design within its limit of 4,000 words at thorough. `issue lint` notes a design over 4,000, and `compass check` refuses one over 6,000. Move each unit's signatures, contracts, file plan and tests to its low-level design.
 
 ### New keys, flags and kinds
 

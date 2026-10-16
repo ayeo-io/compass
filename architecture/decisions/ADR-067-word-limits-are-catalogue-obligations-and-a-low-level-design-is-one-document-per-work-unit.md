@@ -9,7 +9,7 @@ superseded_by: ''
 
 ## Context
 
-Full-approach designs reached a median of 46,494 bytes over 7 issues (PRD 35, 10 October 2026). PRD 35 requirement DS-6 asks for a word limit per document kind and depth, a lint finding over the limit, and a `compass check` refusal of a design far over it at plan exit. DS-7 asks for a low-level design per work unit on the full approach.
+On 10 October 2026 full-approach designs reached a median of 46,494 bytes over 7 issues. The requirement asks for three things. A document kind gets a word limit per depth. A document over its limit is a lint finding, and `compass check` refuses a design far over its limit at plan exit. On the full approach, each work unit gets a low-level design of its own.
 
 Four earlier decisions bound the answer:
 
@@ -18,7 +18,7 @@ Four earlier decisions bound the answer:
 - **ADR-054.** A catalogue `file` knows one placeholder, `<n>`, for rounds. Rounds have a latest; work units do not.
 - **ADR-033 and the locked guardrails.** The `G2` and `G4` guardrails and the `assess`, `verify` and `ship` stages are locked. A check in a stage list changes the `plan-exit` block of every archived issue.
 
-compass:architect ruled the boundaries for jed72 on 2026-10-15 (AD-1 to AD-9 in the issue `word-ceilings-and-lld`).
+compass:architect ruled the boundaries below for jed72 on 2026-10-15, while the issue was being defined.
 
 ## Decision
 
@@ -40,12 +40,12 @@ compass:architect ruled the boundaries for jed72 on 2026-10-15 (AD-1 to AD-9 in 
 
 | Alternative | Why considered | Why rejected |
 |---|---|---|
-| A bare `ceiling` key, as DS-6 writes it | The PRD's wording | "Ceiling" already names subtask and loop limits (ADR-044) |
-| The check in `stages.plan.exit` | Plan exit is where DS-6 places it | Every archived `plan-exit` block goes stale |
+| A bare `ceiling` key | The requirement's wording | "Ceiling" already names subtask and loop limits (ADR-044) |
+| The check in `stages.plan.exit` | Plan exit is where the requirement places it | Every archived `plan-exit` block goes stale |
 | The check in a gate | Gates already run at the `verify` stage | `G2` and `G4` are locked |
 | Units as rounds (`low-level-design-<n>.md`) | Reuses ADR-054 | "Round" gains a second meaning, and the latest-round default is wrong for units |
 | One registry entry for the whole folder | Fewer entries | The registry, approval and digest readers expect one file per entry |
-| A pass when every unit has a file | DS-6's "unless the overflow has moved" | A stub file per unit would pass a design that kept its overflow |
+| A pass when every unit has a file | The requirement's "unless the overflow has moved" | A stub file per unit would pass a design that kept its overflow |
 | The limit filled into earlier generations | One catalogue for all | Earlier-generation issues would be judged by rules they were not stored with |
 
 ## Consequences

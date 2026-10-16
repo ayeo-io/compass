@@ -589,8 +589,9 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # Re-pinned for `artifacts.word_ceiling`, an obligation fact compared by identity
 # for a kind both sides owe (issue `word-ceilings-and-lld`): a change to a document's
 # word limit is `incomparable`, which version 6 read as `equivalent`, so the version
-# is now 7.
-VERDICT_SOURCE_PIN = "74d8c738615589c1"
+# is now 7. Re-pinned again in the same issue for the merged `Obligations` docstring;
+# no verdict moves, so the version stays 7.
+VERDICT_SOURCE_PIN = "d1fcc12b7789e843"
 
 
 def _verdict_source_digest():

@@ -590,6 +590,10 @@ def test_crt_7_already_tested_job_shape():
 # request's check runs and its timeline (issues read covers the timeline).
 READ_GRANT = {"contents": "read", "pull-requests": "read", "checks": "read",
               "issues": "read"}
+# self-check also reads the pull request's workflow runs and their jobs on a
+# title or body edit, because the check-runs API lists no check run for a job
+# still waiting on the jobs it needs (ayeo-io/compass#578, run 38849230839).
+SELF_CHECK_GRANT = {**READ_GRANT, "actions": "read"}
 
 REQUIRED = ["self-check", "check-mutation", "bdd-adapter", "bdd-adapter-behave",
             "bdd-adapter-cucumber-js", "bdd-adapter-godog"]
@@ -698,16 +702,23 @@ def test_crt_12_pr_text_workflow():
     assert "secrets" not in (WORKFLOWS / "pr-text.yml").read_text(encoding="utf-8")
 
 
+# The one job allowed more than 45 minutes: on a title or body edit,
+# compass.yml's self-check waits up to 55 minutes for the head's suite run,
+# whose shards alone may take 45.
+LONGER_TIMEOUTS = {("compass.yml", "self-check"): 60}
+
+
 def _timeout_problems(paths) -> list[str]:
     problems = []
     for path in paths:
         doc = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
         for jid, job in (doc.get("jobs") or {}).items():
             value = job.get("timeout-minutes")
+            most = LONGER_TIMEOUTS.get((Path(path).name, jid), 45)
             if not (isinstance(value, int) and not isinstance(value, bool)
-                    and 5 <= value <= 45):
+                    and 5 <= value <= most):
                 problems.append(f"{Path(path).name}: job {jid} has timeout-minutes "
-                                f"{value!r}, not a whole number from 5 to 45")
+                                f"{value!r}, not a whole number from 5 to {most}")
     return problems
 
 
@@ -748,7 +759,7 @@ def test_crt_15_token_stays_read_only():
         jobs = _load(name)["jobs"]
         granted = {jid: job["permissions"] for jid, job in jobs.items()
                    if "permissions" in job}
-        expected = ({"already-tested": READ_GRANT, "self-check": READ_GRANT}
+        expected = ({"already-tested": READ_GRANT, "self-check": SELF_CHECK_GRANT}
                     if name == "compass.yml" else {})
         assert granted == expected, (name, granted)
         for jid, job in jobs.items():
@@ -836,13 +847,20 @@ def test_crt_21_base_change_reruns_the_suite():
     step = earlier[0]
     assert shlex.split(step["run"]) == [
         "python3", "scripts/ci-already-tested.py", "--repo", "$REPO",
-        "--pull-request", "$NUMBER", "--head", "$HEAD", "--this-run", "$RUN_ID"]
+        "--pull-request", "$NUMBER", "--head", "$HEAD", "--this-run", "$RUN_ID",
+        "--wait-minutes", "55"]
     assert step["env"] == {"GH_TOKEN": "${{ github.token }}",
                            "REPO": "${{ github.repository }}",
                            "NUMBER": "${{ github.event.pull_request.number }}",
                            "HEAD": "${{ github.event.pull_request.head.sha }}",
                            "RUN_ID": "${{ github.run_id }}"}
-    assert self_check["permissions"] == READ_GRANT
+    assert self_check["permissions"] == SELF_CHECK_GRANT
+    # The text-edit step waits up to 55 minutes for the head's suite run, so
+    # the job may run 60; the aggregate step keeps a 5-minute limit.
+    assert self_check["timeout-minutes"] == 60
+    for step in self_check["steps"]:
+        if step not in earlier:
+            assert step.get("timeout-minutes") == 5, step
 
     # A title edit has a group of its own; a base change shares the push's.
     group = doc["concurrency"]["group"]

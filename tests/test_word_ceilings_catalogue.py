@@ -8,7 +8,6 @@ units call: `word_ceiling.count_words`, `word_ceiling.limit` and
 """
 from __future__ import annotations
 
-import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -190,10 +189,11 @@ def test_the_classifier_compares_a_word_limit_by_identity():
     unowed = {"schema": 1, "artifacts": {"review": {"set": {
         "word_ceiling": {"thorough": 900}}}}}
     assert verdict(unowed) == "equivalent"
-    # Version 6 is the release line's (ADR-065) and version 7 the removal of the role
-    # dimension; the word limit is version 8.
+    # Version 6 is the release line's (ADR-065); the word-limit comparison arrived
+    # in version 8. A later comparison raises the version again, so this pins only
+    # the floor.
     from compass_pkg import classify as module
-    assert module.CLASSIFIER_VERSION == 8
+    assert module.CLASSIFIER_VERSION >= 8
 
 
 def test_a_project_that_narrows_the_sections_keeps_a_passing_lint(tmp_path):
@@ -217,16 +217,13 @@ def test_wcl_11_kind_declared_no_approach(tmp_path):
     assert (lld["stage"], lld["owner"], lld["stands_for"]) == ("plan", "planner", "lld")
     assert lld["sections"] == {"thorough": LLD_HEADINGS}
     assert "word_ceiling" not in lld
-    # approaches.yml is byte for byte as on main where this branch started.
-    base = subprocess.run(["git", "merge-base", "HEAD", "origin/main"], cwd=ROOT,
-                          capture_output=True, text=True)
-    if base.returncode != 0:
-        pytest.skip("origin/main is not available, so there is no base to compare with")
-    path = "governance/presets/default/approaches.yml"
-    before = subprocess.run(["git", "show", f"{base.stdout.strip()}:{path}"], cwd=ROOT,
-                            capture_output=True)
-    assert before.returncode == 0, before.stderr
-    assert (ROOT / path).read_bytes() == before.stdout
+    # No approach owes it: no shipped approach lists the kind among its artifacts.
+    # (This compared approaches.yml with the merge base, which any later change to an
+    # approach broke, such as full dropping verify.claims for ADR-070.)
+    approaches = yaml.safe_load((ROOT / "governance" / "presets" / "default"
+                                 / "approaches.yml").read_text(encoding="utf-8"))["approaches"]
+    assert not [name for name, body in approaches.items()
+                if "low-level-design" in (body.get("artifacts") or {})]
     # A full issue's evaluate registers no low-level design.
     root, task_dir = _fixture(tmp_path, "full", risk="critical", size="large")
     code, out, err = _evaluate(root, *_justify_all(_manifest_of(task_dir)["assessment"]))

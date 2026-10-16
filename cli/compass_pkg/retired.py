@@ -11,7 +11,8 @@ command says it the same way.
 `RULES` must equal the `retired_rules` table in `governance/legacy-views.yml`,
 which `compass policy migrate` reads; a test holds the two equal.
 """
-# DEPENDENCY: standard library only. Imported by compass_pkg.routing,
+# DEPENDENCY: standard library; compass_pkg.classify, read lazily by
+# `condition_findings`. Imported by compass_pkg.routing,
 # compass_pkg.justifications, compass_pkg.quick_fix_cmd, compass_pkg.preset_test,
 # compass_pkg.policy_lint, compass_pkg.merge, compass_pkg.migrate and
 # compass_pkg.policy_migrate.
@@ -59,3 +60,30 @@ def rule_line(rule_id):
     if new:
         return f"{rule_id} was retired at {RELEASE}; {new} replaces it"
     return f"{rule_id} was retired at {RELEASE}, with no replacement"
+
+
+def condition_findings(config):
+    """`(code, path, message)` for each `when` of a rule, check or gate that reads a
+    retired dimension the configuration does not declare (it would match only 6.x
+    manifests), and each check or gate `when` that reads `artifacts_any`, which only
+    a rule's evaluation fills. `compass policy lint` reports them."""
+    from compass_pkg import classify     # classify reaches this module through routing
+    out = []
+    for catalogue in ("rules", "checks", "gates"):
+        hint = "artifacts_any, or a label" if catalogue == "rules" else "a label"
+        for entry_id, entry in (config.get(catalogue) or {}).items():
+            nested = (entry.get("rules") or {}) if catalogue == "rules" else {"": entry}
+            for rule_id, rule in (nested.items() if isinstance(nested, dict) else ()):
+                for key in ("when", "blocking_when", "applies_when"):
+                    atoms = classify.atoms_of(rule.get(key) if isinstance(rule, dict) else None)
+                    path = ".".join(x for x in (catalogue, entry_id, "rules" if rule_id else "",
+                                                rule_id, key) if x)
+                    named = {a[1] for a in atoms if a[0] in ("in", "at_least")
+                             and a[1] in DIMENSIONS} - set(config.get("dimensions") or {})
+                    out += [("M-WHEN-RETIRED", path, f"reads {d}, which is not an assessment "
+                             f"dimension from {RELEASE}; read {hint}, or declare it")
+                            for d in sorted(named)]
+                    if catalogue != "rules" and any(a[0] == "artifacts_any" for a in atoms):
+                        out.append(("M-WHEN-DOCUMENTS", path,
+                                    "reads artifacts_any, which only a rule reads"))
+    return out

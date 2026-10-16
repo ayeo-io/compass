@@ -19,7 +19,7 @@ public contract (`docs/policy-lint.md`), and `tests/test_policy_lint.py` pins
 both.
 """
 # DEPENDENCY: standard library (dataclasses, datetime, json, os, re);
-# compass_pkg.atomic_io, catalogue_check, catalogue_spec, check_registry, classify,
+# compass_pkg.atomic_io, catalogue_check, catalogue_spec, check_registry,
 # documents_present, layers, locks, merge, retired, waivers, word_map, core.
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from compass_pkg import catalogue_check, classify, documents_present, layers, locks
+from compass_pkg import catalogue_check, documents_present, layers, locks
 from compass_pkg import merge, parent_states, parents, waivers
 from compass_pkg import catalogue_spec as spec
 from compass_pkg import retired, word_map
@@ -675,33 +675,10 @@ def _readiness_findings(state):
     return out
 
 
-def _retired_conditions(state):
-    """A `when` reading a retired dimension the configuration does not declare, and a
-    check or gate `when` reading `artifacts_any`, which only rules read (ADR-070)."""
-    out, config = [], state["config"]
-    for catalogue in ("rules", "checks", "gates"):
-        hint = "artifacts_any, or a label" if catalogue == "rules" else "a label"
-        for entry_id, entry in (config.get(catalogue) or {}).items():
-            nested = (entry.get("rules") or {}) if catalogue == "rules" else {"": entry}
-            for rule_id, rule in (nested.items() if isinstance(nested, dict) else ()):
-                for key in ("when", "blocking_when", "applies_when"):
-                    atoms = classify.atoms_of(rule.get(key) if isinstance(rule, dict) else None)
-                    path = ".".join(x for x in (catalogue, entry_id, "rules" if rule_id else "",
-                                                rule_id, key) if x)
-                    named = {a[1] for a in atoms if a[0] in ("in", "at_least")
-                             and a[1] in retired.DIMENSIONS} - set(config.get("dimensions") or {})
-                    found = [("M-WHEN-RETIRED", f"reads {d}, which is not an assessment dimension from "
-                              f"{retired.RELEASE}; read {hint}, or declare it") for d in sorted(named)]
-                    if catalogue != "rules" and any(a[0] == "artifacts_any" for a in atoms):
-                        found.append(("M-WHEN-DOCUMENTS", "reads artifacts_any, which only a rule reads"))
-                    out += [_finding("resolved", code, _layer_of(state, path), path, message)
-                            for code, message in found]
-    return out
-
-
 def _resolved_group(state):
     out = _unknown_references(state) + _effect_targets(state) + _list_kinds(state)
-    out += _retired_conditions(state)
+    out += [_finding("resolved", code, _layer_of(state, path), path, message)
+            for code, path, message in retired.condition_findings(state["config"])]
     out += _readiness_findings(state)
     out += _weight_ties(state) + _hit_policies(state)
     out += [_finding("resolved", code, _layer_of(state, path), path, message)

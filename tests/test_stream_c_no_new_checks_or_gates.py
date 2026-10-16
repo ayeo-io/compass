@@ -118,6 +118,11 @@ BASELINE_EVIDENCE_TYPES = {
     # `human-approval-present` never reads it, so it cannot clear `G5`; a
     # separate type keeps that locked check unchanged.
     "checkpoint-approval",
+    # Added by approve-inside-claude-code (ADR-069 decision 6). A person's
+    # withdrawal of a guardrail `G5` sign-off made under a delegation, written
+    # only by `/compass:reject <record id>`. No gate accepts it; it only stops
+    # the withdrawn record counting for `human-approval-present` in flight.
+    "approval-withdrawal",
 }
 
 # The legitimate set of gate names in gate_evidence_requirements after landing.

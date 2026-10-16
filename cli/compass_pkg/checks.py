@@ -760,11 +760,6 @@ def _check_inbound_backfills(task_dir, this_slug):
     return problems
 
 
-#: How a person records the sign-off of guardrail `G5`, for a failure detail.
-_G5_HOW = ("run `compass evidence approve --guardrail G5` with `--approver <name> --role "
-           "<role> --scope <text>` in a terminal")
-
-
 def _earlier_rule_passes(approved):
     """The verdict of `human-approval-present` 1.0.0: the first approved
     `human-approval` record, whatever it was given for, holds all four
@@ -778,12 +773,15 @@ def _check_human_approval(task, task_dir):
     # touches irreversible surface (the routing policy sets its approach to
     # initiative at least). This check counts only a `human-approval` record
     # given for `G5` (ADR-066): approved, naming no other subject, and holding
-    # the needed structured fields. It cites the first that counts.
+    # the needed structured fields. It cites the first that counts. 1.2.0 skips a
+    # withdrawn record; the landed floor reads them all (ADR-069 decision 6).
     registry = task.get("evidence") or []
     approvals = [e for e in registry if isinstance(e, dict)
                  and e.get("type") == "human-approval"]
     approved = [a for a in approvals if a.get("decision") == "approved"]
-    ok, detail = _judge_g5_approval(task, approved)
+    standing, note = approval_records.not_withdrawn(approved, registry)
+    ok, detail = _judge_g5_approval(task, standing)
+    detail = f"{note}; {detail}" if note and not ok else detail
     if ok or status_words.is_in_flight(task) or not _earlier_rule_passes(approved):
         return ok, detail
     return True, (f"{detail} - the issue has landed and the earlier rule passes it (the "
@@ -808,7 +806,7 @@ def _judge_g5_approval(task, approved):
                        "(which the "
                        "router defines as: can lose data, lose money, breach "
                        "auth/privacy, or resist a clean rollback). A person "
-                       f"records the sign-off: {_G5_HOW}.")
+                       f"records the sign-off: {approval_records.G5_HOW}.")
     counting = [a for a in approved if approval_records.gives_g5(a)]
     if not counting:
         first = approved[0]
@@ -816,7 +814,8 @@ def _judge_g5_approval(task, approved):
         aside = (f" ({others} other approved record(s) also set aside)" if others else "")
         return False, (f"no approval was given for guardrail `G5`: {first.get('id', '?')} was "
                        f"given for {approval_records.subject_of(first)}, not for guardrail "
-                       f"`G5`{aside}. A person records the sign-off: {_G5_HOW}.")
+                       f"`G5`{aside}. A person records the sign-off: "
+                       f"{approval_records.G5_HOW}.")
     a = counting[0]
     missing = [k for k in approval_records.REQUIRED if not a.get(k)]
     if missing:
@@ -825,7 +824,8 @@ def _judge_g5_approval(task, approved):
                        f"evidence entry must record who approved, in what role, "
                        f"the scope, and when.")
     return True, (f"approval on record: {a.get('id', '?')} by {a.get('approver')} "
-                  f"({a.get('role')}) - scope: {a.get('scope')}")
+                  f"{approval_records.provenance(a)} ({a.get('role')}) - scope: "
+                  f"{a.get('scope')}")
 
 
 def _check_backfills_paid(task, task_dir):

@@ -564,6 +564,7 @@
           },
           "type": {
             "enum": [
+              "approval-withdrawal",
               "artifact",
               "artifact-approval",
               "checkpoint-approval",

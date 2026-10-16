@@ -40,7 +40,19 @@
 #
 # I/O CONTRACT
 #   stdin : JSON session-stop payload (unused - we inspect disk state).
+#   stdout: {"systemMessage": ...} when an approval request of the session's
+#           issue has not been shown yet (below). Claude Code shows it to the
+#           person under the reply; the model does not see it (measured on
+#           Claude Code 2.1.300, ADR-068).
 #   exit  : always 0. Warnings go to stderr. This hook never blocks a stop.
+#
+# APPROVAL REQUESTS (ADR-068 decision 1)
+#   Each pending request of the session's issue (COMPASS_ISSUE, else the
+#   pointer) that has not been shown is shown once, in Compass's words, and
+#   stamped with the time and the digest shown. The prompt hook records only
+#   a request whose digest still equals the one shown, so an approval binds to
+#   what Compass showed, not to what the agent said. A display that cannot be
+#   built is left out: the prompt hook still blocks an unshown request.
 # =============================================================================
 
 set -euo pipefail
@@ -372,5 +384,20 @@ for TASK_DIR in "$WORK_DIR"/*/; do
   TASK_DIR="${TASK_DIR%/}"
   _nudge_scope_bloat "$TASK_DIR"
 done
+
+# --- approval requests the person has not seen ------------------------------
+# The only output on stdout: Claude Code reads it as the hook's JSON.
+compass_python - "$COMPASS_DIR" 2>/dev/null <<'PYEOF' || true
+import json
+import os
+import sys
+
+import compass_pkg                      # noqa: F401 - puts vendor on sys.path
+from compass_pkg import approval_requests
+
+text = approval_requests.stop_message(sys.argv[1], os.environ)
+if text:
+    print(json.dumps({"systemMessage": text}))
+PYEOF
 
 exit 0

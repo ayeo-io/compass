@@ -272,6 +272,34 @@ def test_agf_9_approve_guardrail_refusals(tmp_path, argv, terminal, cause):
     assert _manifest_path(root).read_bytes() == before
 
 
+# --- the agent runs the terminal verb from its shell (`TRC-D7`) ---------------------------
+
+def test_d7_terminal_refusal_names_request(tmp_path):
+    root = _project(tmp_path, [DOD])
+    before = _manifest_path(root).read_bytes()
+    code, out, err = _approve(root, "--guardrail", "G5", "--approver", "jed72",
+                              "--role", "owner", "--scope", "x", terminal=False)
+    assert code != 0, out + err
+    assert "needs a terminal" in out + err, out + err
+    assert "compass evidence request" in out + err, out + err
+    assert _manifest_path(root).read_bytes() == before
+
+
+# --- evidence add refuses a human-approval record (`TRC-G2`) ------------------------------
+
+def test_g2_evidence_add_refuses_human_approval(tmp_path):
+    root = _project(tmp_path, [DOD])
+    (root / ".compass" / "work" / SLUG / "evidence").mkdir(exist_ok=True)
+    (root / ".compass" / "work" / SLUG / "evidence" / "note.md").write_text("# note\n")
+    before = _manifest_path(root).read_bytes()
+    code, out, err = _run(root, "evidence", "add", "--issue", SLUG, "EV-NOTE",
+                          "--type", "human-approval", "--path", "evidence/note.md")
+    assert code != 0, out + err
+    for needle in ("/compass:approve", "delegat", "compass evidence approve"):
+        assert needle in out + err, (needle, out + err)
+    assert _manifest_path(root).read_bytes() == before
+
+
 # --- AGF-10: no landed issue in the archive newly fails ----------------------------------
 
 def _rule_1_0_0(task):
@@ -344,17 +372,18 @@ def test_agf_11_major_1_and_locked_entries_unchanged():
             == digest, f"{section}.{key} changed"
 
 
-# --- AGF-17: version 1.1.0, and a generation that recorded 1.0.0 is judged ---------------
+# --- AGF-17: version 1.2.0 (ADR-069 moved it on from 1.1.0), and a generation that ------
+# --- recorded 1.0.0 is judged -----------------------------------------------------------
 
 def test_agf_17_version_1_1_0_within_major_1(tmp_path):
     from compass_pkg.check_registry import REGISTRY
     from impl_versions_support import record_versions
-    assert REGISTRY[CHECK].version == "1.1.0"
+    assert REGISTRY[CHECK].version == "1.2.0"
     lock = yaml.safe_load((ROOT / "tests" / "fixtures" / "impls" / "versions.lock.yml")
                           .read_text(encoding="utf-8"))["implementations"][CHECK]
-    assert str(lock["version"]) == "1.1.0"
+    assert str(lock["version"]) == "1.2.0"
     page = (ROOT / "docs" / "check-implementations.md").read_text(encoding="utf-8")
-    assert f"### `{CHECK}` (version 1.1.0)" in page
+    assert f"### `{CHECK}` (version 1.2.0)" in page
     root = _project(tmp_path, [G5])
     record_versions(root / ".compass" / "work" / SLUG, implementations={CHECK: "1.0.0"})
     _, row = _check_row(root)
@@ -494,8 +523,8 @@ def test_agf_16_guardrail_form_refuses_rejected(tmp_path):
 
 # The functions under cli/ that build a `human-approval` record holding a
 # decision. A new one must be added here, so its test is written with it.
-KNOWN_WRITERS = {("compass_pkg/approve_cmd.py", "_approve_check"),
-                 ("compass_pkg/approve_cmd.py", "_approve_guardrail")}
+KNOWN_WRITERS = {("compass_pkg/approvals.py", "_record_check"),
+                 ("compass_pkg/approvals.py", "_record_guardrail")}
 
 
 def _writers():
@@ -525,8 +554,10 @@ def test_agf_18_every_writer_names_a_subject(tmp_path):
     assert approval_records.SUBJECT_KEYS == (
         "check", "waiver", "checkpoint", "artifact", "decisions")
     assert checks.approval_records is approval_records
+    from compass_pkg import approvals
     assert approve_cmd.approval_records is approval_records
-    for module in (checks, approve_cmd):
+    assert approvals.approval_records is approval_records
+    for module in (checks, approvals):
         source = Path(module.__file__).read_text(encoding="utf-8")
         assert "approval_records.gives_g5" in source, module.__name__
     assert _writers() == KNOWN_WRITERS
@@ -535,14 +566,14 @@ def test_agf_18_every_writer_names_a_subject(tmp_path):
         return (any(k in record for k in approval_records.SUBJECT_KEYS)
                 or record.get("guardrail") == "G5")
 
-    # _approve_guardrail
+    # _record_guardrail
     root = _project(tmp_path / "g5")
     code, out, err = _approve(root, "--guardrail", "G5", "--approver", "jed72",
                               "--role", "maintainer", "--scope", "x")
     assert code == 0, out + err
     assert subject_named(_manifest(root)["evidence"][-1])
 
-    # _approve_check
+    # _record_check
     from test_human_checks import SIGN_OFF, _approve as approve_check, _cli_project
     from test_generation_store import _manifest as manifest_of
     (tmp_path / "check").mkdir()
@@ -552,12 +583,5 @@ def test_agf_18_every_writer_names_a_subject(tmp_path):
     record = manifest_of(task_dir)["evidence"][-1]
     assert record["type"] == "human-approval" and subject_named(record)
 
-    # `compass evidence add --type human-approval` writes a record with no
-    # decision, which no approval reader counts.
-    (root / ".compass" / "work" / SLUG / "evidence").mkdir(exist_ok=True)
-    (root / ".compass" / "work" / SLUG / "evidence" / "note.md").write_text("# note\n")
-    code, out, err = _run(root, "evidence", "add", "--issue", SLUG, "EV-NOTE",
-                          "--type", "human-approval", "--path", "evidence/note.md")
-    assert code == 0, out + err
-    added = [e for e in _manifest(root)["evidence"] if e["id"] == "EV-NOTE"]
-    assert added and "decision" not in added[0]
+    # `compass evidence add --type human-approval` is refused (`TRC-G2`), so it
+    # is not a writer.

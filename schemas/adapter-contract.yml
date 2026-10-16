@@ -63,6 +63,10 @@ capabilities:
     obligation: 3
     claude-code: {status: full, path: .github/workflows/compass.yml}
     codex: {status: full, path: ci/README.md}
+  - capability: Person-only approval event
+    obligation: 4
+    claude-code: {status: full, path: hooks/prompt-approval.sh}
+    codex: {status: none, reason: "Terminal only: Codex lists no command-expansion event, and its UserPromptSubmit hook is not shown to fire only for a person's typed command, so a Codex user approves with compass evidence approve in their own terminal."}
   - capability: Install surface (`bin/compass`, `.claude-plugin/`)
     obligation: 3
     claude-code: {status: full, path: .claude-plugin/plugin.json}

@@ -95,7 +95,9 @@ _ENTRIES = (
     _entry("dod-evidence-typed", _check_dod_evidence_typed, version="2.0.0"),
     # 1.1.0: counts only an approval given for guardrail `G5`, with the earlier rule as
     # the floor of a landed issue; the corpus verdicts hold, so the major stays (ADR-066).
-    _entry("human-approval-present", _check_human_approval, version="1.1.0"),
+    # 1.2.0: a record an `approval-withdrawal` names no longer counts while the issue is
+    # in flight; the landed floor and the corpus verdicts hold (ADR-069 decision 6).
+    _entry("human-approval-present", _check_human_approval, version="1.2.0"),
     _entry("backfills-paid", _check_backfills_paid),
     _entry("spike-conclusion-present", _check_spike_conclusion_present),
     _entry("spike-no-production-changes", _check_spike_no_production_changes),

@@ -235,6 +235,13 @@ large change may run long - cut the account of how the work went, never the
 substance. Each heading answers a question the reader already has, which is
 what shows any jargon.
 
+## Naming an issue
+
+Refer to a backlog item or bug by its GitHub issue number, while working and
+when reporting. In a table or a question to a person, write `#N [title]`, or
+`owner/repo#N [title]` for another repository. Never use an internal row id,
+such as D272.
+
 ## State on disk
 
 All issue state is files, not conversation:

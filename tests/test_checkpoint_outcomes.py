@@ -372,7 +372,7 @@ def test_arc_1_person_answers_a_checkpoint(tmp_path):
     assert {k: v for k, v in record.items() if k not in ("id", "timestamp")} == {
         "type": "checkpoint-approval", "checkpoint": "define", "approver": "jed72",
         "role": "product-owner", "scope": "the define hand-off", "decision": "approved",
-        "issue": SLUG, "generation": before["generation"]}, record
+        "issue": SLUG, "generation": before["generation"], "via": "terminal"}, record
     assert "check" not in record
     _utc(record["timestamp"])
     assert not [e for e in after["evidence"] if e.get("type") == "human-approval"]

@@ -147,10 +147,22 @@ except BaseException:  # noqa: BLE001 - the contract must still reach the sessio
 if readiness:
     contract = contract.rstrip("\n") + "\n\n" + readiness + "\n"
 
-print(json.dumps({
+# Approvals made under a delegation that the person has not reviewed are
+# shown to the person, never recorded here (ADR-069 decision 5). A summary
+# that cannot be built is left out.
+try:
+    from compass_pkg import delegations
+    review = delegations.review_summary(sys.argv[2])
+except BaseException:  # noqa: BLE001 - the contract must still reach the session
+    review = ""
+
+out = {
     "hookSpecificOutput": {
         "hookEventName": "SessionStart",
         "additionalContext": contract,
     }
-}))
+}
+if review:
+    out["systemMessage"] = review
+print(json.dumps(out))
 PY

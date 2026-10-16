@@ -133,7 +133,8 @@ def clear_approver(entry):
     entry.pop("approved_at", None)
 
 
-def stage_exit(task, view, stage, by, when=None, include_own=False, earlier=True):
+def stage_exit(task, view, stage, by, when=None, include_own=False, earlier=True,
+               task_dir=None):
     """Move the documents the record of `stage` leaves behind. Mutates the manifest
     and returns `[{kind, from, to}]` for each entry moved.
 
@@ -141,7 +142,12 @@ def stage_exit(task, view, stage, by, when=None, include_own=False, earlier=True
     own; `include_own` also moves those `stage` owns (a `verify` gate pass and the
     ship exit do). The `verify` stage's own documents move only once every `verify`
     gate has passed (`verify_gates_passed`); until then they read `draft`. A
-    quick fix is left to `compass quick-fix finish`."""
+    quick fix is left to `compass quick-fix finish`.
+
+    A document a person rejected (`/compass:reject`) holds `rejected_digest`,
+    and stays `draft` while its file still has that digest (ADR-068 decision 6,
+    amending ADR-050 decision 2). Without `task_dir` the file cannot be read,
+    so such a document stays `draft`."""
     if task.get("delivery_approach") == APPROACH_QUICK_FIX:
         return []
     when = when or now()
@@ -150,6 +156,8 @@ def stage_exit(task, view, stage, by, when=None, include_own=False, earlier=True
     moved = []
     for entry in task.get("artifacts") or []:
         if not isinstance(entry, dict) or entry.get("status") != DRAFT or not entry.get("path"):
+            continue
+        if entry.get("rejected_digest") and still_rejected(task, task_dir, entry):
             continue
         kind = entry.get("kind")
         owner = _rank(order, owning_stage(view, kind))
@@ -164,6 +172,16 @@ def stage_exit(task, view, stage, by, when=None, include_own=False, earlier=True
             _set_approved(entry, by, when)
         moved.append({"kind": kind, "from": DRAFT, "to": entry["status"]})
     return moved
+
+
+def still_rejected(task, task_dir, entry):
+    """True while a rejected document's file has the digest it was rejected
+    at, or when the file cannot be read to tell."""
+    if task_dir is None:
+        return True
+    from compass_pkg import artifact_cmd
+    now_digest = artifact_cmd._own_digest(task, task_dir, entry)
+    return now_digest is None or now_digest == entry.get("rejected_digest")
 
 
 def approve_documents(task, by, when=None):
@@ -194,7 +212,8 @@ def record_stage(task_dir, stage, by, include_own=False, earlier=True):
         view = effective.view_or_legacy(task_dir)
     except Exception:                                   # noqa: BLE001 - no configuration, no human checks
         view = None
-    moved = stage_exit(task, view, stage, by, include_own=include_own, earlier=earlier)
+    moved = stage_exit(task, view, stage, by, include_own=include_own, earlier=earlier,
+                       task_dir=task_dir)
     if moved:
         save_manifest(task, path)
     return moved

@@ -65,6 +65,11 @@ FIXTURES = {
     "waits-for-issue": dict(slug="a" * 40, target="src/app.py", tool="Edit",
                             dependency="b" * 40, until="done", more=" (and 4 more)",
                             state="done (not-planned)"),
+    "approval-request-protected": dict(
+        target=".compass/work/feature/approval-requests/pending/1.yml", tool="Edit"),
+    "delegation-protected": dict(target=".compass/delegations/DL-1.yml", tool="Write"),
+    "delegation-caller-mismatch": dict(named="compass:architect", caller="compass:builder"),
+    "transcript-protected": dict(target="/Users/x/.claude/projects/-p/s.jsonl", tool="Read"),
     # The longest form: a 40-character slug and all four checkpoint stages
     # with no outcome, so the 60-word cap is checked where it is tightest.
     "checkpoint-no-outcome": {"slug": "a" * 40, "stages": "assess, define, refine and plan",

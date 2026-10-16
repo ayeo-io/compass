@@ -399,3 +399,21 @@ A person approves or rejects by typing `/compass:approve` or `/compass:reject` i
 | `approval-withdrawal` | an evidence type | Withdraws a delegated guardrail `G5` sign-off |
 | `.compass/delegations/DL-<n>.yml` | a file | One delegation |
 | `approval-requests/` | the issue's folder under `.compass/work/` | Pending and closed requests |
+
+## Shell writes through a variable, and `tee`, `cp` and `mv` targets
+
+The pre-tool hook reads more exactly which files a Bash command writes. `docs/safety-contract.md` describes the behaviour, under "Shell-write detection is best-effort".
+
+### What breaks
+
+- **More `cp` and `mv` shapes are refused without a failing test on record.** The hook used to take the last word of each line. It now takes the last argument of each `cp` or `mv`, so these are refused when the destination is production code: `sudo cp a.ts src/app.ts`, `(cp a.ts src/app.ts)`, `cp a.ts src/app.ts 2>&1` and `cp a.ts src/app.ts; echo done`.
+
+### What changes
+
+- **A variable the command sets is expanded.** `S=/tmp/scratch && cat > $S/plant.ts` is judged at `/tmp/scratch/plant.ts`, outside the project, and allowed. A variable whose value the command does not state for certain is judged inside the project, as before.
+- **`tee` writes only its own arguments.** `node src/cmp.ts | tee out.txt` no longer counts as a write to `src/cmp.ts`.
+- **A file read after `cp` or `mv` is not a target.** `cp a b && grep x src/app.ts` no longer counts as a write to `src/app.ts`.
+
+### What to do
+
+Nothing. A command that is now refused needs a failing test on record, as an Edit of the same file does.

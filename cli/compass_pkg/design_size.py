@@ -108,7 +108,7 @@ def work_units(text):
         return []
     units = []
     for row in found[0][1]:
-        cell = section_checks._value(row[0] if row else "")
+        cell = section_checks.cell_value(row[0] if row else "")
         if cell and cell not in units:
             units.append(cell)
     return units
@@ -168,7 +168,7 @@ def _check_design_within_word_ceiling(task, task_dir):
     entry = _registered(task, DESIGN_KIND)[0]
     depth = entry.get("depth")
     limit = word_ceiling.limit(_view(task_dir), DESIGN_KIND, depth)
-    text, unreadable = section_checks._read(task_dir, entry)
+    text, unreadable = section_checks.read_registered(task_dir, entry)
     if text is None:
         return False, unreadable
     count = word_ceiling.count_words(text)
@@ -201,7 +201,7 @@ def _word_limit_notes(task, task_dir):
             continue
         depth = entry.get("depth")
         limit = word_ceiling.limit(_view(task_dir), entry["kind"], depth)
-        text, _ = section_checks._read(task_dir, entry)
+        text, _ = section_checks.read_registered(task_dir, entry)
         if text is None:
             continue
         count = word_ceiling.count_words(text)
@@ -217,7 +217,7 @@ def _missing_unit_notes(task, task_dir):
 
     if declines(task, task_dir, DESIGN_KIND) or not _is_full(task, task_dir):
         return []
-    text, _ = section_checks._read(task_dir, _registered(task, DESIGN_KIND)[0])
+    text, _ = section_checks.read_registered(task_dir, _registered(task, DESIGN_KIND)[0])
     if text is None:
         return []
     kind = artifact_kinds.entry(_view(task_dir), LLD_KIND)

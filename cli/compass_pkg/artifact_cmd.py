@@ -51,6 +51,7 @@ def cmd_issue_artifact_path(args):
     unit = getattr(args, "unit", None)
     if unit is not None:
         _refuse_unit_name(unit)
+        _refuse_unit_on_kind(task_dir, kind)
     else:
         units = _registered_units(task_dir, kind)
         if len(units) > 1:
@@ -83,6 +84,18 @@ def _refuse_unit_name(unit):
 
     if not artifact_kinds.UNIT_PATTERN.fullmatch(str(unit)):
         raise CompassError("--unit %r is not a work unit. A unit is %s." % (unit, UNIT_RULE))
+
+
+def _refuse_unit_on_kind(task_dir, kind):
+    """Refuse `--unit` on a kind the catalogue gives no document per work unit, as
+    `issue artifact set` does."""
+    from compass_pkg import artifact_kinds
+
+    spec = artifact_kinds.entry(_view_or_none(task_dir), kind) or artifact_kinds.shipped().get(kind)
+    if spec is not None and not artifact_kinds.per_unit(spec) and not _registered_units(
+            task_dir, kind):
+        raise CompassError("%s has no document per work unit, so --unit does not apply to it."
+                           % kind)
 
 
 def _registered_units(task_dir, kind):
@@ -444,6 +457,7 @@ def cmd_issue_artifact(args):
             decision, " -> " + next_issue if next_issue else ""))
     return say(args, "compass issue artifact set: %s -> %s" % (_label(entry), entry["status"]),
                detail=detail + recorded + artifact_status.moved_line(moved),
-               kind=args.kind, round=entry.get("round"), status=entry["status"],
+               kind=args.kind, round=entry.get("round"), unit=entry.get("unit"),
+               status=entry["status"],
                reason=entry.get("reason"), approved_by=entry.get("approved_by"),
                approved_at=entry.get("approved_at"), moved=moved)

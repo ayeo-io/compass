@@ -71,7 +71,7 @@ It declines, with the verdict `nothing-to-check`, when the first of five conditi
 |---|---|---|
 | 1 | The manifest has no `generation` key | `no-generation` |
 | 2 | The issue is closed | `closed` |
-| 3 | No `technical-design` is registered with a path | `not-registered` |
+| 3 | No `technical-design` is registered with a path, as on a quick fix or a spike | `not-registered`, `quick-fix` and `spike` |
 | 4 | The catalogue of the issue's generation has no `word_ceiling` for the design at its depth | `no-ceiling` |
 | 5 | Plan exit is not yet due: the current stage is `plan` or earlier | `before-plan-exit` |
 
@@ -164,7 +164,9 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `no-ceiling` | nothing-to-check | an open issue on a generation whose catalogue has no word_ceiling for the design, with a 7,000-word design |
 | `no-generation` | nothing-to-check | an issue with no generation key, whose 7,000-word design names 3 units |
 | `not-registered` | nothing-to-check | an open issue on a generation that declares the check, with the design not registered with a path |
+| `quick-fix` | nothing-to-check | an open quick fix at implement, which registers no design |
 | `restored` | pass | the same issue with a design of 6,000 words, at the threshold |
+| `spike` | nothing-to-check | an open spike at implement, which registers no design |
 
 ### `dod-evidence-typed` (version 2.0.0)
 

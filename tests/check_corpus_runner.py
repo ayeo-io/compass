@@ -598,9 +598,10 @@ def _sized_design(words):
 
 
 def _sized(root, words, *, generation=True, closed=False, registered=True, ceiling=True,
-           stage="implement"):
+           stage="implement", approach="full"):
     """A full issue at `stage` registering a technical design of `words` words at
-    thorough. `ceiling` false stores a catalogue whose design has no word_ceiling."""
+    thorough. `ceiling` false stores a catalogue whose design has no word_ceiling.
+    Another `approach`, a quick fix or a spike, owes no design and registers none."""
     from compass_pkg import effective
     from compass_pkg.core import load_manifest
 
@@ -623,8 +624,9 @@ def _sized(root, words, *, generation=True, closed=False, registered=True, ceili
         "assessment": {"risk": "cross-cutting", "familiarity": "brownfield-mapped",
                        "size": "large", "goal": "delivery", "role": "engineer",
                        "labels": []},
-        "delivery_approach": "full", "current_phase": stage, "evidence": [],
-        "scenarios": [_scenario(title="Export is fast")], "artifacts": [entry]})
+        "delivery_approach": approach, "current_phase": stage, "evidence": [],
+        "scenarios": [_scenario(title="Export is fast")],
+        "artifacts": [entry] if approach == "full" else []})
     if generation:
         effective.commit_generation(str(task_dir), load_manifest(str(task_dir))[0])
     if closed:
@@ -646,6 +648,10 @@ SIZE_CASES = {
                    "the design, with a 7,000-word design", {"ceiling": False}),
     "before-plan-exit": ("an open issue at the plan stage, with a 7,000-word design",
                          {"stage": "plan"}),
+    "quick-fix": ("an open quick fix at implement, which registers no design",
+                  {"approach": "quick-fix"}),
+    "spike": ("an open spike at implement, which registers no design",
+              {"approach": "spike"}),
 }
 
 for _name, (_, _options) in SIZE_CASES.items():

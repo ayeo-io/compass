@@ -3780,8 +3780,8 @@ _GROWING_REACH = {
     #    archive sample's check verdicts captured at the base commit, plain JSON;
     # 112 with the nine manifests and stored catalogues of tests/fixtures/design-size-archive/,
     #    which hold key-value lines and no prose;
-    # 119 with the 7 check-corpus case labels of design-within-word-ceiling.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 119),
+    # 121 with the 9 check-corpus case labels of design-within-word-ceiling.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 121),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

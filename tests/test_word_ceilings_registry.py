@@ -97,13 +97,30 @@ def test_wcl_12_one_entry_per_unit(tmp_path):
         lines = [line for line in page.splitlines() if entry_id in line]
         assert len(lines) == 1 and f"low-level-design/{unit}.md" in lines[0], (unit, lines)
         assert entry_id in html and f"low-level-design {unit}" in html, unit
+        # The board lists each unit once in the issue's Documents section.
+        items = [line for line in html.split('<li class="document">') if entry_id in line]
+        assert len(items) == 1 and f"low-level-design {unit}" in items[0], (unit, items)
         # The receipt keeps each line to one screen width, so the path can be cut short.
         lines = [line for line in receipt.splitlines() if entry_id in line]
         assert len(lines) == 1 and f"low-level-design {unit}" in lines[0], (unit, receipt)
 
     # Issue lint lists neither unit file as a stray document.
     code, out, err = _cli(root, "issue", "lint", "--issue", SLUG)
-    assert "low-level-design" not in out + err, out + err
+    assert code == 0 and "low-level-design" not in out + err, out + err
+
+
+def test_wcl_12_unit_flag_edges(tmp_path):
+    root, task_dir = _full(tmp_path)
+    path = _doc(root, "low-level-design/U3.md", "# Low-level design U3\n")
+    # The --json output names the unit it registered.
+    code, out, err = _cli(root, "issue", "artifact", "set", KIND, "--issue", SLUG, "--unit",
+                          "U3", "--status", "draft", "--path", path, "--json")
+    assert code == 0, out + err
+    assert json.loads(out)["unit"] == "U3", out
+    # artifact-path refuses --unit on a kind with no document per unit, as set does.
+    code, out, err = _cli(root, "issue", "artifact-path", "technical-design", "--unit", "U1",
+                          "--issue", SLUG)
+    assert code != 0 and "--unit" in out + err, out + err
 
 
 def test_wcl_12_each_unit_keeps_its_own_digest(tmp_path):

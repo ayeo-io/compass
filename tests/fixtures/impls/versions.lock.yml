@@ -31,7 +31,7 @@ implementations:
     verdict_digest: 135069d070419a5861e8a4693bd0be2979076b5f97afb2c1669a44c9a9f159a0
     version: 1.0.0
   design-within-word-ceiling:
-    verdict_digest: 5c1dd9f94efc086a7bf5522c4966590301a7a5387f0f072a42b23a43da6ef5a0
+    verdict_digest: a9dad9171ccb7e7c48197ef40ab987cc62ccce86200cc1d40df9d887be30bb99
     version: 1.0.0
   dod-evidence-typed:
     verdict_digest: ed4b25b3f2949cc152fe8e7808fbd7dfb9879d29b051d68943830149194b7b3d

@@ -56,7 +56,9 @@ import sys
 from datetime import datetime
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
-NUMBER = re.compile(r"^[1-9][0-9]{0,9}$")
+# A run id or pull-request number. GitHub Actions run ids passed 10 digits
+# in October 2026; 19 digits is the most a signed 64-bit id holds.
+NUMBER = re.compile(r"^[1-9][0-9]{0,18}$")
 # The timeline events that mean the pull request's base branch changed: a
 # person retargeted it, or GitHub did when the old base was merged and
 # deleted.

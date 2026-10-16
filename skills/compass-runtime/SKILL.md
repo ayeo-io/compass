@@ -96,6 +96,10 @@ and a reader knows where their evidence went without guessing.
 
 The full set is in `agents/`. The files in `agents/` are the authority.
 
+An agent has Bash when its instructions run a `compass` verb. Only
+`product-owner` and `product-marketer` have no shell; the calling session runs
+their verbs. No agent edits `manifest.yml` by hand (`tests/test_agent_tools.py`).
+
 ## Worktrees and multiagent
 
 Only the `orchestrator` agent creates worktrees (`scripts/multiagent.sh`) and
@@ -143,11 +147,10 @@ An issue's documents are in `docs/compass/<created>-<issue-slug>/`, where
 The manifest's `artifacts:` registry holds each document's status. The stage
 commands move it: a command that writes the record of a stage approves the
 `draft` documents of earlier stages (`approved_by` names the command), or sets
-`awaiting-approval` for a document with a human check. Ask with `compass
-evidence request --artifact <kind>`; the person approves by typing
-`/compass:approve`, or with `compass evidence approve --artifact <kind>` at a
-terminal. `compass ship-commit`
-refuses a document that is not approved.
+`awaiting-approval` for a document with a human check. Ask with `compass evidence
+request --artifact <kind>`; the person types `/compass:approve` (or runs `compass
+evidence approve --artifact <kind>` at a terminal). `compass ship-commit` refuses a
+document that is not approved.
 
 A regular issue owes `intent.md` at depth `lightweight`: the router drafts it
 at assess and the spec author corrects it at define. Every issue whose stored

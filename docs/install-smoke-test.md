@@ -4,6 +4,25 @@ Use this checklist after installing Compass or changing its installation.
 Run it in a scratch Git repository so the test issue does not enter a real
 project.
 
+Run the checklist separately for each runtime. Keep the host version, framework
+revision, OS, installation method, hook trust state, raw output and expected
+versus observed result. Use `passed`, `failed`, `unsupported` or `unmeasured`
+for each case. The [adapter behaviour guide](adapter-conformance.md) explains
+why local subprocess results cannot fill native or independent acceptance.
+
+| Step | Claude Code | Codex |
+|---|---|---|
+| Install | Marketplace or source commands below. | Follow [Codex installation](codex.md); review hook trust in the host. |
+| Start an issue | Run `/compass:assess` below. | Load `compass:compass` and ask it to assess the scratch change. |
+| Inspect records | Check the manifest, documents and CLI verdict below. | Check the same shared records and verdict. |
+| Check hooks | Try the edit in the actual host. | Try the edit in the actual host; discovered but untrusted hooks do not prove enforcement. |
+| Uninstall/reinstall | Use the source commands below. | Use the Codex installer's uninstall and reinstall commands in its guide. |
+| Resume | Reopen the host and continue from recorded state. | Reopen the host and continue; record cold start and compaction separately. |
+
+For independent acceptance, another person must install Compass and complete a
+scratch issue. Record the tester's identity. An author's temporary configuration
+is a local installation check, not an independent or clean-machine result.
+
 ## 1. Check the prerequisites
 
 ```bash

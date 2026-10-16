@@ -47,6 +47,13 @@ builds on wave 1. A map with no `Wave` column is one wave.
 
 ## Step 1 - provision a wave
 
+The provisioner reads the issue's stored `subtask_ceiling`, computed by the
+kit. Each wave must fit that ceiling. The configured maximum can lower it,
+and critical risk still caps provisioning at one. A missing or null ceiling
+keeps the assessment/configuration fallback for older records. A malformed
+stored ceiling refuses provisioning before any worktree is created. The
+script does not recompute the delivery approach.
+
 ```
 scripts/multiagent.sh <slug>             # wave 1, or the only wave
 scripts/multiagent.sh <slug> --wave 2    # a later wave

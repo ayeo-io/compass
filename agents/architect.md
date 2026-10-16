@@ -1,7 +1,7 @@
 ---
 name: architect
 description: "Architect perspective: boundary risks, invariants and candidate decision records for an issue."
-tools: Read, Glob, Grep, Write, Edit
+tools: Read, Glob, Grep, Write, Edit, Bash
 model: sonnet
 ---
 

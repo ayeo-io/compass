@@ -1,6 +1,6 @@
 ---
 description: Write the technical design and check it against governance
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # /compass:plan

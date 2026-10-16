@@ -16,44 +16,58 @@
 
 adapters:
   - claude-code
+  - codex
 
 capabilities:
   - capability: Always-loaded operating instructions
     obligation: 4
     claude-code: {status: full, path: hooks/session-start.sh}
+    codex: {status: partial, path: adapters/codex/runtime.py, note: "Shared contract injection needs trusted hooks. Payload integration is tested; native host lifecycle and compaction are unmeasured."}
   - capability: Intent-triggered assessment
     obligation: 1
     claude-code: {status: full, path: compass-contract.md}
+    codex: {status: partial, path: adapters/codex/INSTRUCTIONS.md, note: "Instructions tell the agent to assess; intent recognition depends on the model following them."}
   - capability: User commands or stage interface
     obligation: 2
     claude-code: {status: full, path: commands/}
+    codex: {status: full, path: adapters/codex/skills/compass/SKILL.md}
   - capability: Kit CLI invocation
     obligation: 3
     claude-code: {status: full, path: bin/compass}
+    codex: {status: full, path: cli/compass}
   - capability: Pre-action enforcement
     obligation: 4
     claude-code: {status: full, path: hooks/pre-tool.sh}
+    codex: {status: partial, path: adapters/codex/runtime.py, note: "Patch targets and shell payloads reach shared checks. Untrusted or timed-out hooks and unsupported host tool paths can allow unchecked actions."}
   - capability: Post-action issue logging
     obligation: 6
     claude-code: {status: full, path: hooks/post-tool.sh}
+    codex: {status: partial, path: adapters/codex/runtime.py, note: "Patch targets reach the shared edit logger. Shell edits and specialised tool paths are not logged as file edits."}
   - capability: Session-end status check
     obligation: 4
     claude-code: {status: full, path: hooks/stop.sh}
+    codex: {status: partial, path: adapters/codex/runtime.py, note: "Shared stop advice is emitted on stderr. Native Codex presentation is unmeasured; it is advisory."}
   - capability: Role entry points
     obligation: 5
     claude-code: {status: full, path: commands/intent.md}
+    codex: {status: full, path: adapters/codex/skills/compass/SKILL.md}
   - capability: Distinct agent contexts
     obligation: 7
     claude-code: {status: full, path: agents/}
+    codex: {status: partial, path: adapters/codex/INSTRUCTIONS.md, note: "Shared personas can be passed to available Codex delegation tools. Without delegation the adapter records solo delivery; Claude model metadata is not used."}
   - capability: Isolated parallel workspaces
     obligation: 7
     claude-code: {status: full, path: skills/worktree-multiagent/SKILL.md}
+    codex: {status: partial, path: skills/worktree-multiagent/SKILL.md, note: "The shared worktree procedure remains available. Native Codex parallel delivery is not yet demonstrated; record a solo plan when isolation is unavailable."}
   - capability: CI integration
     obligation: 3
     claude-code: {status: full, path: .github/workflows/compass.yml}
+    codex: {status: full, path: ci/README.md}
   - capability: Person-only approval event
     obligation: 4
     claude-code: {status: full, path: hooks/prompt-approval.sh}
+    codex: {status: none, reason: "Terminal only: Codex lists no command-expansion event, and its UserPromptSubmit hook is not shown to fire only for a person's typed command, so a Codex user approves with compass evidence approve in their own terminal."}
   - capability: Install surface (`bin/compass`, `.claude-plugin/`)
     obligation: 3
     claude-code: {status: full, path: .claude-plugin/plugin.json}
+    codex: {status: partial, path: adapters/codex/install.py, note: "Project installation and native CLI 0.162.1 marketplace installation, skill discovery and hook discovery are tested in isolated homes. A complete native pipeline and external fresh-machine installation remain unmeasured."}

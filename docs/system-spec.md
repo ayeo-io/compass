@@ -4125,3 +4125,31 @@ Regular issues now owe a short intent with four sections: Problem, Desired outco
 - `IRL-29` release notes prints a name from the names key as its code
 - `IRL-30` The documented quick-fix commands land a fresh quick fix
 - `IRL-31` The merge with the named document sections keeps both features
+
+### word-ceilings-and-lld (completed 2026-10-16)
+
+A document kind can now carry a word limit per depth, compass check refuses a technical design more than 1.5 times over its limit once plan is over, and the full approach keeps one low-level design per work unit, registered with --unit.
+
+- `WCL-1` The catalogue carries the two word limits
+- `WCL-2` policy lint refuses a malformed word limit or filename
+- `WCL-3` Words are counted from the visible text only
+- `WCL-4` issue lint reports a document over its limit
+- `WCL-5` A document at its limit, or a kind with no limit, gets no note
+- `WCL-6` Lightweight depth uses the lightweight limit
+- `WCL-7` compass check refuses a design far over its limit after plan
+- `WCL-8` The refusal starts above 1.5 times the limit and judges only the design
+- `WCL-9` Unit files do not lift the refusal; a shorter design does
+- `WCL-10` The refusal waits until plan exit is due
+- `WCL-11` The kind is declared and no approach registers it
+- `WCL-12` artifact set registers one entry per unit
+- `WCL-13` template show prints the low-level design and the linked work-unit table
+- `WCL-14` issue lint reports a full issue's work unit with no low-level design
+- `WCL-15` The distribution map is unchanged
+- `WCL-16` A full fixture with three units meets the PRD measure
+- `WCL-17` An issue on an earlier stored generation gets no note and no refusal
+- `WCL-18` Every rule declines on an archived shape
+- `WCL-19` The archive sweep finds no new failure and no new lint note
+- `WCL-20` This issue reassesses onto the new catalogue and its own documents pass
+- `WCL-21` The script measures design sizes on a fixture and changes nothing
+- `WCL-22` The regular median stays within 1.5 times 2,577 bytes on the re-rendered archive
+- `WCL-23` The check, the field and the kind are declared and documented

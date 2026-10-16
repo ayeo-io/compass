@@ -660,6 +660,18 @@ def test_mas_10_guide_and_adr_state_the_rules():
     assert "a reported pair stays as it is" in body, body
 
 
+def test_mas_18_guide_names_git_clean_to_undo_an_apply():
+    # `git reset --hard` alone leaves the moved copies behind as untracked
+    # files, so the guide must name `git clean` too, warn what it deletes,
+    # and offer a dry run limited to the two folders the migrate touches.
+    guide = _flat(ROOT / "docs" / "upgrade-7-0-0.md")
+    copy_first = guide.split("**Copy first.**", 1)[1].split("###", 1)[0]
+    assert "`git reset --hard`" in copy_first, copy_first
+    assert "`git clean -fd -- .compass/work docs/compass`" in copy_first, copy_first
+    assert "removes every untracked file" in copy_first, copy_first
+    assert "`git clean -n -d -- .compass/work docs/compass`" in copy_first, copy_first
+
+
 # --- the real archive is never touched ---------------------------------------------------
 
 

@@ -524,6 +524,10 @@ def test_d2_repairs_change_only_retired_names():
     `agents/product-owner.md` and `agents/product-marketer.md` (one more `##`
     heading each) gained the section saying they have no shell.
 
+    One more was re-baselined by `hook-expands-variables`:
+    `docs/safety-contract.md` (list_items 51 -> 53) gained the two conditions
+    under which the pre-tool hook expands a variable in a Bash write target.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

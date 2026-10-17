@@ -4,7 +4,7 @@ A file over its target passes the test and pytest prints a warning naming the
 file, its size and the target. Each test below lowers one target to 1 and
 runs the real size test, which must warn and not fail.
 
-Scenario id: TRC-001 (issue `size-caps-as-targets`).
+Scenario id: `TRC-001` (issue `size-caps-as-targets`).
 """
 from __future__ import annotations
 

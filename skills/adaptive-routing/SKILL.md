@@ -1,6 +1,6 @@
 ---
 name: adaptive-routing
-description: Reading the three scored dimensions, two switches and domain labels for the CLI. Load at the assess stage.
+description: Reading the three scored dimensions for the CLI. Load at the assess stage.
 ---
 
 # Adaptive Routing

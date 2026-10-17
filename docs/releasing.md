@@ -611,6 +611,17 @@ without running the suite; on a text-only edit `compass.yml` runs only
 ruleset must list `pr-text` as a required check: until it does, the check
 runs and shows a failure, but does not block a merge.
 
+### The automatic review
+
+`.github/workflows/claude-review.yml` reviews a pull request with Claude
+against `CLAUDE.md` and the review rules that match the changed files. It
+is turned off: no pull request starts it, and a run started by hand skips
+(`governance/decisions/2026-10-03-ci-review-manual-only.md`). Its `rules`
+step checks out the base branch and runs that branch's
+`compass review-rule list --rules <base>/governance/review-rules.yml
+--changed-files <files>`. A pull request therefore cannot change the rules
+or the CLI it is reviewed against.
+
 ### Timeouts
 
 Every job in every workflow has `timeout-minutes`: about twice the job's

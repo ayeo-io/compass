@@ -87,7 +87,7 @@ jobs:
             exit 1
           fi
           if [ -f "$BASE/governance/review-rules.yml" ] && [ "${#files[@]}" -gt 0 ]; then
-            text=$(python3 "$BASE"/cli/compass policy review-rules \
+            text=$(python3 "$BASE"/cli/compass review-rule list \
               --rules "$BASE/governance/review-rules.yml" --changed-files "${files[@]}")
           else
             text="The base branch has no review rules for these files."

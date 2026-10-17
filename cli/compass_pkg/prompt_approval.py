@@ -18,8 +18,9 @@ nothing recorded. For one of the four it refuses, writing nothing, when:
   `.compass/current-task`, refusing a pointer another session moved. It never
   guesses the most recently changed issue;
 - no approver can be named: `COMPASS_APPROVER`, else the project's `owner:`;
-- a record already holds this input's `prompt_id`, so one typed command is
-  recorded once.
+- the input has no `prompt_id`, or a record already holds it, so one typed
+  command is recorded once. `/compass:revoke` is exempt from the missing
+  `prompt_id`: it only ends delegations, and a person can always end one.
 
 `/compass:approve [n]` and `/compass:reject [n] <reason>` answer one pending,
 current, shown request of the session's issue. Compass shows a request at the
@@ -251,10 +252,16 @@ def resolve_approver(task_dir, env):
 
 
 def _refuse_used_prompt(session):
-    """One typed command is answered once: refuse a `prompt_id` already on a
-    record or a closed request."""
-    if not session.prompt_id:
-        return
+    """One typed command is answered once: refuse an input with no
+    `prompt_id`, which could not be told from a repeat, and a `prompt_id`
+    already on a record or a closed request. `delegations.handle_delegate`
+    compares the delegation files under its own lock."""
+    if not session.prompt_id.strip():
+        if session.command == "revoke":
+            return
+        raise Refused(f"Compass: Claude Code sent /compass:{session.command} with no prompt "
+                      f"id, so Compass cannot tell it from a repeat of a command already "
+                      f"answered. Nothing was written. Type the command again.")
     task, _ = load_manifest(session.task_dir)
     for entry in task.get("evidence") or []:
         if isinstance(entry, dict) and entry.get("prompt_id") == session.prompt_id:

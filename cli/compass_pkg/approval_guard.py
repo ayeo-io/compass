@@ -6,23 +6,42 @@
 - **Request files.** Edit or Write on a file under an issue's
   `approval-requests/`, or a Bash command that names that folder or the
   prompt hook's entry point, gives `approval-request-protected`.
-- **Delegation files.** Edit or Write under `.compass/delegations/`, or a
-  Bash command that names that folder, gives `delegation-protected`.
+- **Delegation files.** Edit or Write under `.compass/delegations/`, Read or
+  Grep that names that folder by path or by Grep glob, or a Bash command that
+  names it, gives `delegation-protected`. The folder holds the salt and hash
+  of the code that confirms a g5 delegation.
 - **The session transcript.** Claude Code writes a hook's block message to
   the session's transcript file (measured on Claude Code 2.1.301), and the
   block message is where the person sees the code that confirms a g5
-  delegation. So Read or Grep on the transcript's folder, or a Bash command
-  that names it or a `.claude*/projects` folder, gives
-  `transcript-protected`.
-- **A delegated approval's caller.** A Bash command that runs `compass
-  evidence approve` with `--delegated` (or any flag that starts `--del`) must
-  name the caller with `--as`, and the caller must be the agent Claude Code
-  reports: `main` only when the input has neither `agent_type` nor
-  `agent_id`, otherwise the exact `agent_type`, plugin prefix included. An
-  `agent_id` with no or an empty `agent_type` is refused, because Claude
-  Code's own internal agents report that shape (the host measurement on
-  Claude Code 2.1.300, ADR-069). Anything else gives
-  `delegation-caller-mismatch`.
+  delegation. So `transcript-protected` is given for:
+  - Read or Grep on the transcript's folder, inside it, or on any folder
+    above it, with `~` and `$HOME` expanded and a relative path joined to
+    the call's `cwd`; a Grep with no path searches its `cwd`;
+  - Read, Grep, Edit or Write, or a Bash command, that names a
+    `.claude*/projects` folder, a configuration folder directly under the
+    home folder (`~/.claude*`, ending there) or `CLAUDE_CONFIG_DIR`. A
+    project's own `.claude` folder does not count;
+  - a Bash word that names the transcript's folder or a folder above it,
+    such as `~`, once `~`, `~<name>` and `$HOME` are expanded. A word with a
+    glob counts by the folder before the glob.
+- **A delegated approval's caller.** A Bash command is a delegated approval
+  when one of its words is `approve` and one is `--delegated`, a prefix of
+  it of five characters or more, or `--delegated=...`; the earlier rule,
+  `evidence approve` beside any word that starts `--del`, also counts. The
+  words are read twice: as the shell splits the command, and again with
+  every word that holds a space split once more, to any depth, so `bash -c`,
+  `eval` and a pipe into `sh` are read too. Either reading must name the
+  caller with
+  `--as`, and every `--as` must be the agent Claude Code reports: `main`
+  only when the input has neither `agent_type` nor `agent_id`, otherwise the
+  exact `agent_type`, plugin prefix included. An `agent_id` with no or an
+  empty `agent_type` is refused, because Claude Code's own internal agents
+  report that shape (the host measurement on Claude Code 2.1.300, ADR-069).
+  Anything else gives `delegation-caller-mismatch`.
+
+Each check ignores letter case, because macOS opens a path in any case. The
+earlier guard's checks run first, in its order and case, so a call it refused
+keeps its refusal code.
 
 The Bash checks match text, as the hook's other Bash checks do. They stop the
 agent's ordinary use, not a deliberate workaround such as a variable that
@@ -42,7 +61,15 @@ DELEGATION_FOLDER = ".compass/delegations"
 EDIT_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 READ_TOOLS = ("Read", "Grep")
 #: A Claude Code configuration folder's transcripts, however it is spelled.
+#: macOS opens a path in any letter case, so each check also runs on the
+#: lower-cased text, after the earlier guard's checks.
 TRANSCRIPTS = re.compile(r"\.claude[\w.-]*/projects(?:/|\b)|CLAUDE_CONFIG_DIR")
+#: A shell glob or brace character: a word holding one names every path it
+#: expands to.
+GLOB = re.compile(r"[*?\[{]")
+#: How deep a command nested in quoted words is read, such as
+#: `bash -c "bash -c '...'"`.
+NESTING = 8
 
 
 def _path(text):
@@ -63,25 +90,74 @@ def caller(event):
 
 
 def _words(command):
+    # shlex does not read ANSI-C quoting, so `$'approve'` would keep its `$`.
+    # Dropping the `$` reads the word as the quoted text the shell runs.
+    command = re.sub(r"\$(?=['\"])", "", command)
     try:
         return shlex.split(command)
     except ValueError:
         return command.split()
 
 
-def _as_value(words):
+def _nested_words(command):
+    """The command's words, then the words of each word that holds a space,
+    such as the argument of `bash -c` or `eval`, read again to `NESTING`."""
+    found = []
+    level = [command]
+    for _ in range(NESTING):
+        following = []
+        for text in level:
+            words = _words(text)
+            found.extend(words)
+            following.extend(w for w in words if re.search(r"\s", w))
+        if not following:
+            break
+        level = following
+    return found
+
+
+def _as_values(words):
+    """Every value given to `--as`: the CLI keeps the last one."""
+    values = []
     for i, word in enumerate(words):
         if word == "--as" and i + 1 < len(words):
-            return words[i + 1]
-        if word.startswith("--as="):
-            return word[len("--as="):]
+            values.append(words[i + 1])
+        elif word.startswith("--as="):
+            values.append(word[len("--as="):])
+    return values
+
+
+def _delegated_flag(word):
+    """`--delegated`, a prefix of it of five characters or more, or
+    `--delegated=...`; not an unrelated flag such as `--delimiter`."""
+    return (len(word) >= 5 and "--delegated".startswith(word)) or word.startswith(
+        "--delegated=")
+
+
+def _delegated_approve(words, earlier=False):
+    """True for a command that may run a delegated `compass evidence approve`:
+    a word, or a part of one cut at a shell operator, is `approve`, and a
+    word is the `--delegated` flag. With `earlier`, the rule of the earlier
+    guard also counts: `evidence approve` and any word that starts `--del`."""
+    if earlier and any(a == "evidence" and b == "approve" for a, b in zip(words, words[1:])) \
+            and any(w.startswith("--del") for w in words):
+        return True
+    runs = any(part == "approve" for w in words for part in re.split(r"[;&|()<>`]+", w))
+    return runs and any(_delegated_flag(w) for w in words)
+
+
+def _caller_mismatch(command, who):
+    """`(named, caller)` when a delegated approval does not name its caller.
+    The top-level words keep the earlier guard's rule, so nothing it refused
+    is allowed now."""
+    for words, earlier in ((_words(command), True), (_nested_words(command), False)):
+        if not _delegated_approve(words, earlier):
+            continue
+        values = _as_values(words)
+        wrong = [v for v in values if v != who]
+        if not values or who is None or wrong:
+            return (wrong[0] if wrong else values[0] if values else None), who
     return None
-
-
-def _delegated_approve(words):
-    """True for a command that runs `compass evidence approve` delegated."""
-    runs = any(a == "evidence" and b == "approve" for a, b in zip(words, words[1:]))
-    return runs and any(w.startswith("--del") for w in words)
 
 
 def _transcript_folder(event):
@@ -89,9 +165,93 @@ def _transcript_folder(event):
     return os.path.dirname(_path(path)) if path else ""
 
 
+def _home():
+    return os.environ.get("HOME") or os.path.expanduser("~")
+
+
+def _config_folder():
+    """A configuration folder directly under the home folder, as a word ends:
+    `~/.claude-x`, `$HOME/.claude-x/` or `<home>/.claude-x/*`. A project's
+    own `.claude` folder, or a file in either, does not match."""
+    home = re.escape(_path(_home()).rstrip("/"))
+    return re.compile(r"(?:~|\$\{?HOME\}?|%s)/+\.claude[\w.-]*/*\*?"
+                      r"(?=$|[\s\"'`;|&()<>])" % home, re.I)
+
+
 def _names_transcript(text, folder):
     text = _path(text)
-    return bool(TRANSCRIPTS.search(text)) or bool(folder and folder in text)
+    lower = text.lower()
+    return (bool(TRANSCRIPTS.search(text)) or bool(folder and folder in text)
+            or bool(TRANSCRIPTS.search(lower)) or bool(folder and folder.lower() in lower)
+            or bool(_config_folder().search(text)))
+
+
+def _expand_home(text):
+    """`~`, `~/...`, `~<name>`, `$HOME` and `${HOME}` at the start of a path,
+    expanded."""
+    for lead in ("~", "${HOME}", "$HOME"):
+        if text == lead or text.startswith(lead + "/"):
+            return _home() + text[len(lead):]
+    if text.startswith("~"):
+        return _path(os.path.expanduser(text))
+    return text
+
+
+def _norm(path):
+    """`os.path.normpath`, with leading slashes collapsed (POSIX keeps `//`)
+    and in lower case, since macOS opens a path in any case."""
+    return re.sub(r"^/+", "/", os.path.normpath(path)).lower()
+
+
+def _resolved(text, cwd):
+    """A Read or Grep path as the tool reads it: home expanded, relative to
+    the call's working folder, normalised."""
+    text = _expand_home(_path(text))
+    if not os.path.isabs(text):
+        text = os.path.join(_path(cwd) or os.getcwd(), text)
+    return _norm(text)
+
+
+def _above_or_in(path, folder):
+    """True when `path` is `folder`, inside it or a folder above it."""
+    if not folder:
+        return False
+    folder = _norm(folder)
+    if path == "/" or path == folder:
+        return True
+    return folder.startswith(path + "/") or path.startswith(folder + "/")
+
+
+def _word_above(word, folder):
+    """True when a Bash word names the transcript's folder, a path inside it
+    or a folder above it, once the shell has removed its quotes. A word with
+    a glob or brace character counts by the folder before the first one,
+    since it can expand to the transcript: `~/.claude-x/*/s.jsonl`.
+    The root folder alone is left out: `/` is also an argument of `tr`,
+    `cut` and `expr`, and the safety contract states the gap."""
+    path = _expand_home(_path(word))
+    glob = GLOB.search(path)
+    if glob:
+        path = path[:glob.start()].rpartition("/")[0]
+    path = re.sub(r"(?:/\*?|/\.)+$", "", path)
+    if not folder or not path.startswith("/"):
+        return False
+    path, folder = _norm(path), _norm(folder)
+    return path != "/" and (folder == path or folder.startswith(path + "/")
+                            or path.startswith(folder + "/"))
+
+
+def _in_delegations(tool_input, cwd):
+    target = _path(tool_input.get("file_path") or tool_input.get("path"))
+    if target:
+        resolved = _resolved(target, cwd) + "/"
+        if (f"/{DELEGATION_FOLDER}/" in resolved
+                or f"{DELEGATION_FOLDER}/" in target.lower() + "/"):
+            return target
+    pattern = _path(tool_input.get("glob"))
+    if "delegations" in pattern.lower():
+        return f"{target or cwd} with glob {pattern}"
+    return ""
 
 
 def check(event):
@@ -102,37 +262,68 @@ def check(event):
         return None
     folder = _transcript_folder(event)
     if tool in READ_TOOLS:
+        cwd = str(event.get("cwd") or "")
         target = _path(tool_input.get("file_path") or tool_input.get("path"))
-        if target and _names_transcript(target, folder):
+        if target and (_names_transcript(target, folder)
+                       or _config_folder().search(_resolved(target, cwd))):
             return "transcript-protected", {"target": target, "tool": tool}
+        named = _in_delegations(tool_input, cwd)
+        if named:
+            return "delegation-protected", {"target": named, "tool": tool}
+        # A Grep with no path searches its working folder.
+        searched = target or (cwd if tool == "Grep" else "")
+        if searched and _above_or_in(_resolved(searched, cwd), folder):
+            return "transcript-protected", {"target": searched, "tool": tool}
         return None
     if tool in EDIT_TOOLS:
         target = _path(tool_input.get("file_path") or tool_input.get("path")
                        or tool_input.get("notebook_path"))
-        if f"/{REQUEST_FOLDER}/" in target and ".compass/" in target:
-            return "approval-request-protected", {"target": target, "tool": tool}
-        if f"{DELEGATION_FOLDER}/" in target:
-            return "delegation-protected", {"target": target, "tool": tool}
-        if _names_transcript(target, folder):
-            return "transcript-protected", {"target": target, "tool": tool}
+        # The earlier guard's checks first, in its order, so a call it refused
+        # keeps its code; then the same checks in any letter case.
+        for path in (target, target.lower()):
+            if f"/{REQUEST_FOLDER}/" in path and ".compass/" in path:
+                return "approval-request-protected", {"target": target, "tool": tool}
+            if f"{DELEGATION_FOLDER}/" in path:
+                return "delegation-protected", {"target": target, "tool": tool}
+            if _names_transcript(path, folder):
+                return "transcript-protected", {"target": target, "tool": tool}
         return None
     if tool != "Bash":
         return None
     command = str(tool_input.get("command") or "")
+    text = _path(command)
+    # The earlier guard's checks run first, in its order and letter case, so a
+    # call it refused keeps the code it was refused with. The checks this
+    # issue added follow.
     if REQUEST_FOLDER in command or HOOK_ENTRY in command:
         return "approval-request-protected", {
             "target": "a command naming approval requests", "tool": tool}
     if DELEGATION_FOLDER in command:
         return "delegation-protected", {
             "target": "a command naming .compass/delegations", "tool": tool}
-    if _names_transcript(command, folder):
+    if TRANSCRIPTS.search(text) or (folder and folder in text):
         return "transcript-protected", {
             "target": "a command naming a session transcript", "tool": tool}
-    words = _words(command)
-    if _delegated_approve(words):
-        named = _as_value(words)
-        who = caller(event)
-        if named is None or who is None or named != who:
-            return "delegation-caller-mismatch", {
-                "named": named or "no --as", "caller": who or "an agent with no agent type"}
+    found = _caller_mismatch(command, caller(event))
+    if found:
+        named, who = found
+        return "delegation-caller-mismatch", {
+            "named": named or "no --as", "caller": who or "an agent with no agent type"}
+    lower = command.lower()
+    if REQUEST_FOLDER in lower or HOOK_ENTRY in lower:
+        return "approval-request-protected", {
+            "target": "a command naming approval requests", "tool": tool}
+    if DELEGATION_FOLDER in lower:
+        return "delegation-protected", {
+            "target": "a command naming .compass/delegations", "tool": tool}
+    if TRANSCRIPTS.search(_path(lower)) or (folder and folder.lower() in lower):
+        return "transcript-protected", {
+            "target": "a command naming a session transcript", "tool": tool}
+    if _config_folder().search(text):
+        return "transcript-protected", {
+            "target": "a command naming a Claude Code configuration folder", "tool": tool}
+    if any(_word_above(w, folder) for w in _nested_words(command)):
+        return "transcript-protected", {
+            "target": "a command naming a folder above the session transcript",
+            "tool": tool}
     return None

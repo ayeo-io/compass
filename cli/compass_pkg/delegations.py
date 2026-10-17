@@ -20,10 +20,15 @@ At most five are in force at once. A delegation that covers `g5` takes effect
 only when the person types back a code the hook showed them in its block
 message (`confirm`), because a prompt suggestion accepted with Tab lets the
 model word the first command (measured on Claude Code 2.1.300; the owner's
-answer of 2026-10-15). Only a hash of the code is stored. Claude Code also
-writes the block message to the session transcript (measured on 2.1.301), so
-the pre-tool hook refuses the agent's tools on the transcript
+answer of 2026-10-15). The code is 64 bits, 16 hex characters shown in
+groups of four, so its salted hash cannot be searched within the
+confirmation window. Only the hash is stored. Claude Code also writes the
+block message to the session transcript (measured on 2.1.301), so the
+pre-tool hook refuses the agent's tools on the transcript and on this folder
 (`approval_guard`).
+
+Each typed `/compass:delegate` is used once: a prompt id that a delegation,
+or a delegation waiting for its code, already holds is refused.
 
 The named agent approves with `compass evidence approve <form> --delegated
 --as <agent>` (`authorise`, then `record_use`). The record's `approver` is the
@@ -55,6 +60,8 @@ FOLDER = "delegations"
 MAX_HOURS = 24
 MAX_IN_FORCE = 5
 CONFIRM_MINUTES = 10
+#: The confirmation code's length in bytes: 64 bits, 16 hex characters.
+CODE_BYTES = 8
 DEFAULT_FORMS = ("checks", "documents", "checkpoints", "decisions")
 FORMS = ("g5",) + DEFAULT_FORMS
 KEYWORDS = ("until", "on", "for", "labels", "max")
@@ -276,11 +283,45 @@ def _confirmation(body):
         f"it, with `compass evidence approve ... --delegated --as {body['agent']}`.")
 
 
+def _refuse_used_prompt(compass_dir, prompt_id):
+    """Refuse a prompt id that a delegation file, or a delegation waiting for
+    its code, already holds, so a replayed command writes nothing."""
+    from compass_pkg.prompt_approval import Refused
+    for body in all_delegations(compass_dir):
+        if prompt_id in (body.get("prompt_id"), body.get("requested_prompt_id")):
+            raise Refused(f"Compass: this typed command was already answered "
+                          f"({body.get('id')}). Nothing more was written.")
+    where = folder(compass_dir)
+    for name in sorted(os.listdir(where)) if os.path.isdir(where) else []:
+        if not re.fullmatch(r"confirm-.+\.yml", name):
+            continue
+        try:
+            waiting = load_yaml(os.path.join(where, name))
+        except CompassError:
+            continue
+        held = (waiting.get("delegation") or {}) if isinstance(waiting, dict) else {}
+        if isinstance(held, dict) and held.get("prompt_id") == prompt_id:
+            raise Refused("Compass: this typed command was already answered (a delegation "
+                          "waits for its code). Nothing more was written.")
+
+
+def _show_code(code):
+    return "-".join(code[i:i + 4] for i in range(0, len(code), 4))
+
+
+def _typed_code(text):
+    """The code as typed, without hyphens and in lower case, or '' when it is
+    not 16 hex characters."""
+    code = str(text or "").replace("-", "").lower()
+    return code if re.fullmatch(r"[0-9a-f]{%d}" % (CODE_BYTES * 2), code) else ""
+
+
 def handle_delegate(session):
     compass_dir = os.path.dirname(os.path.dirname(session.task_dir))
     now = _now()
     words = session.args.split()
     with _lock(compass_dir):
+        _refuse_used_prompt(compass_dir, session.prompt_id)
         if words[:1] == ["confirm"]:
             return _confirm(compass_dir, session, words[1] if len(words) > 1 else "", now)
         body = parse(session.args, session, now)
@@ -288,7 +329,7 @@ def handle_delegate(session):
             raise _refused(f"five delegations are in force, the most allowed. Type "
                            f"/compass:revoke DL-<n> to end one first.")
         if "g5" in body["forms"]:
-            code = secrets.token_hex(4)
+            code = secrets.token_hex(CODE_BYTES)
             salt = secrets.token_hex(8)
             _write(_confirm_path(compass_dir, session.session_id),
                    {"session_id": session.session_id, "created_at": _iso(now),
@@ -298,13 +339,17 @@ def handle_delegate(session):
                 f"Compass: this delegation would let {body['agent']} sign off irreversible "
                 f"work, such as an archive migration or a release tag, until "
                 f"{_local(_parse_iso(body['until']))}. Nothing is written until you "
-                f"confirm. To confirm, type /compass:delegate confirm {code} in this "
+                f"confirm. To confirm, type /compass:delegate confirm {_show_code(code)} in this "
                 f"session within {CONFIRM_MINUTES} minutes.")
         return _confirmation(_write_delegation(compass_dir, body))
 
 
 def _confirm(compass_dir, session, code, now):
     path = _confirm_path(compass_dir, session.session_id)
+    # A code that is not 16 hex characters is refused before its hash is
+    # compared, so a code from a confirmation file an earlier version wrote,
+    # 8 characters long, never confirms.
+    code = _typed_code(code)
     try:
         waiting = load_yaml(path) if os.path.isfile(path) else None
     except CompassError:
@@ -320,7 +365,8 @@ def _confirm(compass_dir, session, code, now):
     if len(in_force(compass_dir, now)) >= MAX_IN_FORCE:
         raise _refused("five delegations are in force, the most allowed.")
     os.remove(path)
-    body = dict(waiting["delegation"], prompt_id=session.prompt_id)
+    body = dict(waiting["delegation"], prompt_id=session.prompt_id,
+                requested_prompt_id=waiting["delegation"].get("prompt_id"))
     if _parse_iso(body["until"]) <= now:
         raise _refused("the end time of that delegation has passed.")
     return _confirmation(_write_delegation(compass_dir, body))

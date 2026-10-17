@@ -58,8 +58,8 @@ code from a refusal you hit.
 ### `delegation-protected`
 
 **Blocked:** {target} (tool: {tool})
-**Why:** a delegation is a person's decision, written only from a typed /compass:delegate.
-**Fix:** ask the person to type /compass:delegate or /compass:revoke; never write a delegation yourself.
+**Why:** a delegation is a person's decision, written only from a typed /compass:delegate, and its folder holds the check for the code that confirms one.
+**Fix:** ask the person to type /compass:delegate or /compass:revoke; never read or write a delegation file yourself.
 
 ### `no-acceptance-criteria`
 

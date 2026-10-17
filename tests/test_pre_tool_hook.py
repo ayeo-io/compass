@@ -387,8 +387,11 @@ def test_f2_transcript_holds_the_code_and_is_protected():
     the g5 confirmation code, is written to the session transcript (measured
     on Claude Code 2.1.301), so the agent's tools may not read it."""
     project, _ = _guarded_project()
+    # The configuration folder sits outside the project, as on a real machine:
+    # a Grep over a folder that holds the transcript is refused.
+    config = Path(tempfile.mkdtemp(prefix="compass-config-"))
     try:
-        folder = project / ".claude-test-config" / "projects" / "-tmp-proj"
+        folder = config / ".claude-test-config" / "projects" / "-tmp-proj"
         folder.mkdir(parents=True)
         transcript = folder / "sess.jsonl"
         transcript.write_text('{"content": "code 1a2b3c4d"}\n', encoding="utf-8")
@@ -412,3 +415,4 @@ def test_f2_transcript_holds_the_code_and_is_protected():
             assert r.returncode == 0, (tool, tool_input, r.stderr)
     finally:
         shutil.rmtree(project, ignore_errors=True)
+        shutil.rmtree(config, ignore_errors=True)

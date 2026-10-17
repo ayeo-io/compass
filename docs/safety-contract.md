@@ -95,7 +95,14 @@ What holds the boundary, and what does not:
   and desktop sessions were not measured, so only `sdk-` is refused.
 - A prompt suggestion accepted with Tab can submit arguments the model
   worded. The approval binds to the request Compass showed, and a g5
-  delegation needs the typed-back code.
+  delegation needs the typed-back code. The code is 64 bits, 16 hex
+  characters in groups of four, so its salted hash cannot be searched within
+  the 10-minute window.
+- Each typed command is recorded once. The hook refuses `/compass:approve`,
+  `/compass:reject` and `/compass:delegate` when the input has no
+  `prompt_id`, and refuses a `prompt_id` that a record, a closed request or a
+  delegation already holds. `/compass:revoke` needs no `prompt_id`: it only
+  ends delegations.
 - The guarantee is as strong as the terminal check, and no stronger: a
   process running as the same operating system user can still write a
   record, a request or a delegation file, pipe forged input into the hook,
@@ -113,25 +120,55 @@ A person's answer to a checkpoint hand-off (`compass evidence approve
 never meets this approval.
 
 The pre-tool hook refuses the agent's tool calls on approval state
-(`cli/compass_pkg/approval_guard.py`):
+(`cli/compass_pkg/approval_guard.py`). Each path check ignores letter case,
+because macOS opens a path in any case.
 
 - Edit or Write on an issue's `approval-requests/` files, and a Bash command
   that names that folder or `hooks/prompt-approval.sh`
   (`approval-request-protected`);
-- Edit or Write under `.compass/delegations/`, and a Bash command that names
-  that folder (`delegation-protected`);
+- Edit, Write, Read or Grep under `.compass/delegations/`, a Grep whose glob
+  names `delegations`, and a Bash command that names that folder
+  (`delegation-protected`). A Grep over the whole project still reaches the
+  folder; the 64-bit code is what keeps the stored hash useless;
 - a delegated approval whose `--as` is not exactly the agent Claude Code
-  reports (`delegation-caller-mismatch`). The call is the main agent only
-  when the hook input has neither `agent_type` nor `agent_id`, and the CLI
-  takes no abbreviated flag, so `--deleg` cannot pass unseen;
-- Read or Grep on the session transcript, and a Bash command that names it or
-  a `.claude*/projects` folder (`transcript-protected`). Claude Code writes a
-  hook's block message to the transcript (measured on 2.1.301), and the block
+  reports (`delegation-caller-mismatch`). A Bash command counts as one when
+  a word is `approve` and a word is `--delegated`, a prefix of it of five
+  characters or more, or `--delegated=...`; the earlier rule, `evidence
+  approve` beside any word that starts `--del`, also counts. The words of
+  `bash -c`, `sh -c`, `eval` or a quoted command piped into a shell are read
+  too. Every `--as` must name the caller, since the CLI keeps the last one.
+  The call is the main agent only when the hook input has neither
+  `agent_type` nor `agent_id`, and the CLI takes no abbreviated flag, so
+  `--deleg` cannot pass unseen. A command that only quotes a delegated
+  approval, such as a commit message, needs a matching `--as` too;
+- Read or Grep on the session transcript's folder, inside it or on any
+  folder above it, such as the configuration folder or the home folder
+  (`transcript-protected`). A relative path is read from the call's `cwd`,
+  and a Grep with no path searches its `cwd`. A Bash command is refused when
+  it names the transcript, a `.claude*/projects` folder, a configuration
+  folder directly under the home folder (such as `~/.claude-ayeo`), or a
+  folder above the transcript, such as `~`, `~<name>` or `$HOME`, once the
+  shell's quotes are removed. A word with a glob or a brace counts by the
+  folder before it, so a `cat` of a glob under `~/.claude-ayeo` is refused. So are `ls ~` and `cd ~`. A
+  project's own `.claude` folder is not refused. Claude Code writes a hook's
+  block message to the transcript (measured on 2.1.301), and the block
   message is where the person sees the code that confirms a g5 delegation.
+  The hook reads a Grep's path with or without `jq`.
 
 The Bash checks match text, so they stop the agent's ordinary use and not a
-deliberate workaround. A process running as the same operating system user
-can still write these files, or `manifest.yml`.
+deliberate workaround. These still reach the transcript or run a delegated
+approval as another agent, as they did before this check:
+
+- the root folder alone, such as `grep -r x /`, or a glob in the first
+  folder of a path, such as `/U*/...`, because `/` is also an argument of
+  `tr`, `cut` and `expr`;
+- a relative Bash path, such as `grep -r x ../..`, or a bare `cd` followed
+  by a relative path: the check does not know the shell's working folder;
+- a command assembled at run time: a variable, a script written with Write
+  and then run, or a list passed to Python's `subprocess`.
+
+A process running as the same operating system user can still write these
+files, or `manifest.yml`.
 
 How each record was made shows, and is never judged. A record holds `via`:
 `terminal`, `prompt` or `delegation`. The detail of `human-approval-present`

@@ -9,7 +9,7 @@
 #
 # Two kinds are removed: text shaped like a known credential, and the value
 # of any environment variable whose name says it is a key, token, secret or
-# password. Matching shapes is a fixed list: it catches the common forms,
+# password. Only values are removed, never a key name. Matching shapes is a fixed list: it catches the common forms,
 # not every one, which is why the environment values are removed as well.
 #
 # DEPENDENCY: standard library (os, re).
@@ -25,14 +25,22 @@ MARK = "[REDACTED]"
 #: Credential shapes: Anthropic and GitHub tokens, AWS access key ids,
 #: bearer tokens, and `key=value` or `key: value` pairs whose key names a
 #: secret. The pair keeps its key and loses its value.
+#:
+#: A pair's key must end in the secret word (`password`, `GITHUB_TOKEN`,
+#: `client_secret`) and its value must be on the same line. Otherwise a key
+#: that only contains the word, such as `secret-scan-declared` or
+#: `input_tokens`, would lose its value or the key on the next line, and a
+#: record copied to the delivery record would no longer equal its source.
+_SECRET_KEY = (r"(?:api|secret|access|private)[_-]?key|token|secret"
+               r"|password|passwd")
 _SHAPES = (
     re.compile(r"sk-ant-[A-Za-z0-9_-]{8,}"),
     re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{8,}"),
     re.compile(r"\bgithub_pat_[A-Za-z0-9_]{8,}"),
     re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
     re.compile(r"(?i)(\bbearer\s+)[A-Za-z0-9._~+/=-]{8,}"),
-    re.compile(r"(?i)(\b[\w-]*(?:api[_-]?key|token|secret|password)[\w-]*"
-               r"[\"']?\s*[:=]\s*[\"']?)[^\s\"',;]{4,}"),
+    re.compile(r"(?i)(\b(?:[\w-]*[_-])?(?:" + _SECRET_KEY + r")"
+               r"[\"']?[ \t]*[:=][ \t]*[\"']?)[^\s\"',;]{4,}"),
 )
 
 #: An environment variable whose name contains one of these words holds a

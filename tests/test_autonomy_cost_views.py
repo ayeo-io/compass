@@ -392,16 +392,14 @@ def test_arc_23_record_carries_fields_and_no_new_names(tmp_path):
                  if e.get("type") == "checkpoint-approval"}
     waited = [e for e in copied["checkpoint_outcomes"] if e["outcome"] == "waited"]
     assert waited and all(e["by"] == approvers[e["evidence"]] for e in waited), waited
-    # The record holds only copies of files under the configured paths, each
-    # passed through `redact` as `record.py` writes it. The readiness catalogue
-    # in a generation's provenance has a key with "secret" in its name, so a
-    # byte-for-byte comparison would fail on the redaction alone.
-    from compass_pkg.redact import redact
+    # The record holds only copies of files under the configured paths, and
+    # each copy equals its source. The readiness catalogue in a generation's
+    # provenance has a key with "secret" in its name: redaction must leave it.
     for path in sorted(clone.rglob("*")):
         relative = path.relative_to(clone)
         if path.is_file() and ".git" not in relative.parts:
             source = root / relative
-            assert source.is_file() and path.read_text(encoding="utf-8") == redact(
+            assert source.is_file() and path.read_text(encoding="utf-8") == (
                 source.read_text(encoding="utf-8")), str(relative)
 
     # A record that lists only docs/compass holds neither field.

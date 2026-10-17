@@ -131,10 +131,18 @@ def _handle(event, env, plugin_root):
                       f"(CLAUDE_CODE_ENTRYPOINT is {entrypoint}), so nothing was written. "
                       f"Type it in your own Claude Code session.")
     session = _session(event, env, command, entrypoint)
-    with approvals.lock(session.task_dir):
+    # `/compass:approve` with nothing pending marks delegated approvals
+    # reviewed on other issues too. Every issue lock it may need is taken
+    # here, with the session's own, in one sorted order: holding the own lock
+    # while waiting for another issue's let two sessions wait on each other.
+    held = [session.task_dir]
+    if command == "approve" and not session.args:
+        from compass_pkg import delegations
+        held += delegations.review_dirs(os.path.dirname(os.path.dirname(session.task_dir)))
+    with approvals.lock_all(held):
         _refuse_used_prompt(session)
         if command == "approve":
-            return _approve(session)
+            return _approve(session, held)
         if command == "reject":
             return _reject(session)
         from compass_pkg import delegations
@@ -383,7 +391,7 @@ def _parse_number(args):
     return None, args
 
 
-def _approve(session):
+def _approve(session, held=()):
     number = None
     if session.args:
         if not session.args.isdigit():
@@ -392,7 +400,7 @@ def _approve(session):
     elif not _pending(session)[0]:
         # Nothing is waiting: the command marks delegated approvals reviewed.
         from compass_pkg import delegations
-        reviewed = delegations.mark_reviewed(session)
+        reviewed = delegations.mark_reviewed(session, held)
         if reviewed is not None:
             return reviewed
     request = _choose(session, number)

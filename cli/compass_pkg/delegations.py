@@ -543,32 +543,39 @@ def review_summary(compass_dir):
     return "\n".join(lines)
 
 
-@contextlib.contextmanager
-def _held():
-    """The session's own issue: its approval lock is already held."""
-    yield
+def review_dirs(compass_dir):
+    """The issue folders that hold a delegated approval not yet reviewed: the
+    issue locks `/compass:approve` with nothing pending must hold."""
+    return sorted({row[0] for row in unreviewed(compass_dir)})
 
 
-def mark_reviewed(session):
+def mark_reviewed(session, held):
     """`/compass:approve` with no request pending: mark every delegated approval
-    reviewed. None when there is nothing to review."""
+    reviewed. None when there is nothing to review.
+
+    `held` names the issue folders whose approval locks the caller holds,
+    taken in one sorted order with the session's own (`approvals.lock_all`).
+    Taking another lock here, while holding the session's own, let two
+    sessions on two issues wait for each other for ever. An approval on an
+    issue outside `held`, made after the caller took its locks, is left for
+    the next `/compass:approve`; the review summary still shows it."""
     from compass_pkg.core import save_manifest
     from compass_pkg.prompt_approval import HookResult
     compass_dir = os.path.dirname(os.path.dirname(session.task_dir))
-    rows = unreviewed(compass_dir)
+    locked_dirs = {os.path.realpath(d) for d in held}
+    rows = [row for row in unreviewed(compass_dir)
+            if os.path.realpath(row[0]) in locked_dirs]
     if not rows:
         return None
     stamp = _iso(_now())
     ids = []
     for task_dir in sorted({row[0] for row in rows}):
-        own = os.path.abspath(task_dir) == os.path.abspath(session.task_dir)
-        with (_held() if own else approvals.lock(task_dir)):
-            task, path = load_manifest(task_dir)
-            for record in task.get("evidence") or []:
-                if _waiting(record):
-                    record.update(reviewed_by=session.approver, reviewed_at=stamp)
-                    ids.append(record.get("id"))
-            save_manifest(task, path)
+        task, path = load_manifest(task_dir)
+        for record in task.get("evidence") or []:
+            if _waiting(record):
+                record.update(reviewed_by=session.approver, reviewed_at=stamp)
+                ids.append(record.get("id"))
+        save_manifest(task, path)
     return HookResult(False, f"Compass: marked {len(ids)} delegated approval(s) reviewed by "
                              f"{session.approver}: {', '.join(ids)}.",
                       f"The person reviewed the delegated approvals {', '.join(ids)}.")

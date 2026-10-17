@@ -72,7 +72,7 @@ A session is matched to an issue only through the `usage.session` its manifest r
 
 ## Credentials
 
-The runner reads no credential. It passes its own environment to `claude` unchanged. Everything it writes or prints passes through `cli/compass_pkg/redact.py` first, which replaces Anthropic, GitHub, AWS and bearer tokens, `key=value` secrets, and the value of any environment variable whose name contains KEY, TOKEN, SECRET or PASSWORD.
+The runner reads no credential. It passes its own environment to `claude` unchanged. Everything it writes or prints passes through `cli/compass_pkg/redact.py` first, which replaces Anthropic, GitHub, AWS and bearer tokens, `key=value` secrets, and the value of any environment variable whose name contains KEY, TOKEN, SECRET or PASSWORD. It replaces values only, never a key name. A `key=value` or `key: value` pair counts as a secret only when its key ends in a secret word, such as `password`, `GITHUB_TOKEN` or `client_secret`, and its value is on the same line. When such a key's value is empty or a YAML block scalar (`|`, `>-` and the like), the more-indented lines after it are replaced too, up to the next line at the key's indentation or less. A key that only contains the word, such as `secret-scan-declared` or `input_tokens`, keeps its value, so `compass record sync` copies a landed record that equals its source.
 
 ## Code
 

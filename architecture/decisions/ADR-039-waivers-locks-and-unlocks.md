@@ -93,7 +93,7 @@ This narrows ADR-033's list in two places. A shipped delivery approach and an as
 
 - A departure from the shipped default always carries a name and a reason, where today's `waived:` carries a reason only.
 - A parent patch that does not touch a waived field asks for no re-approval. A list-valued field compares as a whole list, so adding one item to a waived list invalidates the waiver.
-- Migrated `waived:` entries have no approval. They are read as `approved_by: LEGACY` and reported as "no approval recorded" until 7.0.0.
+- Migrated `waived:` entries have no approval. They are read as `approved_by: LEGACY` and reported as "no approval recorded", with a warning, until 8.0.0. From 8.0.0 a LEGACY waiver is an error (`waivers.LEGACY_READ_UNTIL`).
 - `docs/safety-contract.md` does not yet state that `human-approval` evidence is not authenticated. It must state that, and that the same limit applies to waivers.
 - A pin moved by a pulled commit already matches HEAD, so lint does not re-check its waivers.
 
@@ -103,4 +103,4 @@ This narrows ADR-033's list in two places. A shipped delivery approach and an as
 - ADR-036: an issue runs against a stored generation.
 - ADR-037: configuration changes are classified by effect.
 - `cli/compass_pkg/governance.py:166-182` (today's `waived:`); `cli/compass_pkg/checks.py:740-775` (`human-approval-present`); `governance/guardrails.yml:268-273` (G5).
-- Ledger: `governance/decisions/2026-10-06-locks-allow-tightening-and-g5-is-hard.md`, `2026-10-06-hook-coverage-is-not-verifiable.md`, `2026-10-06-lint-rechecks-a-hand-edited-pin.md`, `2026-10-06-legacy-waivers-readable-until-7-0-0.md`.
+- Ledger: `governance/decisions/2026-10-06-locks-allow-tightening-and-g5-is-hard.md`, `2026-10-06-hook-coverage-is-not-verifiable.md`, `2026-10-06-lint-rechecks-a-hand-edited-pin.md`, `2026-10-06-legacy-waivers-readable-until-7-0-0.md`, superseded by `2026-10-17-legacy-waivers-readable-until-8-0-0.md`.

@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import statistics
 import subprocess
 import sys
 import time
@@ -477,6 +478,127 @@ class TestNextNoFrame:
 
 
 # ---------------------------------------------------------------------------
+# The latency measurement resists runner noise and still fails a slowdown
+# ---------------------------------------------------------------------------
+
+def measure_interleaved(names, rounds, run):
+    """Median time in ms of each named command, over `rounds` interleaved
+    rounds.
+
+    Each round runs every command once, rotating which goes first. A load
+    burst on a shared runner then slows all of them alike rather than the one
+    whose block it lands in, and no command is always the first call after a
+    pause. One warm-up round runs first and is discarded, because the first
+    calls pay for a cold file cache.
+
+    `run(name, first_in_round)` runs one command and returns seconds.
+    """
+    times = {name: [] for name in names}
+    for i in range(rounds + 1):
+        shift = i % len(names)
+        order = names[shift:] + names[:shift]
+        for position, name in enumerate(order):
+            elapsed = run(name, position == 0)
+            if i:
+                times[name].append(elapsed)
+    return {name: statistics.median(t) * 1000 for name, t in times.items()}
+
+
+def latency_ratio(medians):
+    """The cost of `compass next` above bare Python start-up, as a multiple of
+    the reference command's cost above the same start-up."""
+    marginal = medians["next"] - medians["baseline"]
+    reference = medians["reference"] - medians["baseline"]
+    return marginal / max(reference, 1.0)
+
+
+def judge_latency(measure, *, limit, borderline, ratio_of=lambda m: m):
+    """Pass, or fail, a latency measurement, measuring once more only when
+    the first ratio is borderline.
+
+    A borderline ratio is at the limit or above but below `limit +
+    borderline`. Runner noise moves the ratio by a few hundredths, so a
+    second measurement settles it. A real slowdown fails both. A ratio past
+    the borderline band fails at once. Returns the verdict and every
+    measurement taken.
+    """
+    measured = [measure()]
+    ratio = ratio_of(measured[0])
+    if ratio < limit:
+        return "pass", measured
+    if ratio >= limit + borderline:
+        return "fail", measured
+    measured.append(measure())
+    return ("pass" if ratio_of(measured[-1]) < limit else "fail"), measured
+
+
+class FakeRunner:
+    """Stands in for running a command: each call costs the command's fixed
+    time, scaled by a load factor that depends on when the call happens."""
+
+    def __init__(self, costs_ms, load=lambda call: 1.0, first_in_round_ms=0.0):
+        self.costs_ms = costs_ms
+        self.load = load
+        self.first_in_round_ms = first_in_round_ms
+        self.calls = 0
+        self.order = []
+
+    def __call__(self, name, first_in_round):
+        cost = self.costs_ms[name] * self.load(self.calls)
+        if first_in_round:
+            cost += self.first_in_round_ms
+        self.calls += 1
+        self.order.append(name)
+        return cost / 1000
+
+
+class TestLatencyMeasurement:
+    COSTS = {"baseline": 30.0, "reference": 90.0, "next": 120.0}
+    TRUE_RATIO = (120.0 - 30.0) / (90.0 - 30.0)   # 1.5
+
+    def test_a_load_burst_does_not_move_the_ratio(self):
+        # The burst slows every call in the middle 40% of the measurement.
+        # Measured in blocks, it would land on one command and move the ratio.
+        rounds = 20
+        total_calls = (rounds + 1) * 3
+        burst = range(int(total_calls * 0.3), int(total_calls * 0.7))
+        run = FakeRunner(self.COSTS, load=lambda c: 1.6 if c in burst else 1.0)
+        medians = measure_interleaved(list(self.COSTS), rounds, run)
+        ratio = latency_ratio(medians)
+        assert abs(ratio - self.TRUE_RATIO) / self.TRUE_RATIO < 0.02, medians
+
+    def test_the_first_call_in_a_round_does_not_favour_one_command(self):
+        run = FakeRunner(self.COSTS, first_in_round_ms=25.0)
+        medians = measure_interleaved(list(self.COSTS), 21, run)
+        assert abs(latency_ratio(medians) - self.TRUE_RATIO) < 0.02, medians
+
+    def test_the_rounds_are_interleaved_and_the_warm_up_is_discarded(self):
+        run = FakeRunner(self.COSTS)
+        measure_interleaved(list(self.COSTS), 4, run)
+        assert run.calls == 15
+        # Each round runs every command once, in a rotated order.
+        rounds = [run.order[i:i + 3] for i in range(0, 15, 3)]
+        assert all(sorted(r) == sorted(self.COSTS) for r in rounds)
+        assert len({tuple(r) for r in rounds}) == 3
+
+    def test_a_planted_delay_raises_the_ratio_past_the_limit(self):
+        slow = dict(self.COSTS, next=self.COSTS["next"] + 50.0)
+        ratio = latency_ratio(measure_interleaved(list(slow), 20, FakeRunner(slow)))
+        assert ratio >= TestNextLatency.MAX_RATIO
+
+    @pytest.mark.parametrize("ratios, verdict, attempts", [
+        ([1.60], "pass", 1),            # within the limit: measured once
+        ([1.85, 1.70], "pass", 2),      # borderline, then within: noise
+        ([1.85, 1.83], "fail", 2),      # borderline twice: a real slowdown
+        ([2.30], "fail", 1),            # well past the limit: no second chance
+    ])
+    def test_only_a_borderline_ratio_is_measured_again(self, ratios, verdict, attempts):
+        results = iter(ratios)
+        got, measured = judge_latency(lambda: next(results), limit=1.8, borderline=0.2)
+        assert (got, len(measured)) == (verdict, attempts)
+
+
+# ---------------------------------------------------------------------------
 # Next stays within its latency budget, relative to a reference command (`TRC-C10`)
 # ---------------------------------------------------------------------------
 
@@ -489,15 +611,22 @@ class TestNextLatency:
     # so a fixed 200ms limit failed on slow runners for a reason it does not
     # care about.
     #
-    # Measured on a development machine: reference about 60ms, `compass next`
-    # about 92ms above start-up, ratio 1.4 to 1.55. On a GitHub runner:
-    # reference 128ms, `compass next` 195ms, ratio 1.53. A fixed 50ms delay
-    # adds less to the ratio on a slow runner (about 0.4 there, against 0.9
-    # here), so the limit is set from the runner: 1.8 fails the delay there
-    # (1.92) and leaves 0.25 above the ratio today's code gives on either
-    # machine. The ratio fails at the limit or above. The absolute ceiling
-    # stops a large regression on a fast machine.
+    # The three commands run in interleaved rounds (`measure_interleaved`), so
+    # a load burst on a shared runner slows all three alike. A ratio from the
+    # limit up to the limit plus BORDERLINE is measured once more
+    # (`judge_latency`), and fails only if the second ratio is also at the
+    # limit or above.
+    #
+    # A fixed 50ms delay adds about 0.4 to the ratio on a GitHub runner: it
+    # failed there at 1.92 when the ratio was 1.53. So the limit stays at 1.8.
+    # By 16 October 2026 the ratio on GitHub runners was 1.72 to 1.78, because
+    # the CLI loads every command module at start-up and has gained modules.
+    # The same delay on top of that is past the borderline band, so it fails
+    # without a second measurement. The absolute ceiling stops a large
+    # regression on a fast machine.
     MAX_RATIO = 1.8
+    BORDERLINE = 0.2
+    ROUNDS = 20
     CEILING_MS = 400
     REFERENCE = (
         "import sys; sys.path.insert(0, {vendor!r})\n"
@@ -522,42 +651,54 @@ class TestNextLatency:
         task_body["current_phase"] = "build"
         make_task(project, "test-task", task_body, STANDARD_ROUTE_MD)
 
-        def measure(cmd):
-            times = []
-            for _ in range(20):
-                t0 = time.monotonic()
-                subprocess.run(cmd, cwd=str(project), capture_output=True,
-                               timeout=15)
-                times.append(time.monotonic() - t0)
-            times.sort()
-            return times[len(times) // 2] * 1000   # median
-
         vendor = str(Path(CLI_PATH).parent / "vendor")
-        baseline_ms = measure([sys.executable, "-c", "pass"])
-        reference_ms = measure(
-            [sys.executable, "-c", self.REFERENCE.format(vendor=vendor)]
-        ) - baseline_ms
-        total_ms = measure([sys.executable, str(CLI_PATH), "next"])
-        marginal_ms = total_ms - baseline_ms
-        ratio = marginal_ms / max(reference_ms, 1.0)
+        commands = {
+            "baseline": [sys.executable, "-c", "pass"],
+            "reference": [sys.executable, "-c",
+                          self.REFERENCE.format(vendor=vendor)],
+            "next": [sys.executable, str(CLI_PATH), "next"],
+        }
 
-        line = (
-            f"compass next latency: marginal {marginal_ms:.1f}ms "
-            f"(total {total_ms:.1f}ms, bare python {baseline_ms:.1f}ms), "
-            f"reference {reference_ms:.1f}ms, ratio {ratio:.2f} "
-            f"(limit {self.MAX_RATIO}), ceiling {self.CEILING_MS}ms"
-        )
+        def run(name, first_in_round):
+            t0 = time.monotonic()
+            subprocess.run(commands[name], cwd=str(project),
+                           capture_output=True, timeout=15)
+            return time.monotonic() - t0
+
         # pytest hides captured output unless a test fails. Suspending the
         # capture while printing puts the figures in the CI log on a pass.
         capture = request.config.pluginmanager.getplugin("capturemanager")
-        with capture.global_and_fixture_disabled():
-            print("\n" + line, flush=True)
 
-        assert marginal_ms < self.CEILING_MS, (
-            f"{line} - exceeds the absolute ceiling (TRC-C10 / BF-1)."
+        def measure():
+            medians = measure_interleaved(list(commands), self.ROUNDS, run)
+            ratio = latency_ratio(medians)
+            marginal_ms = medians["next"] - medians["baseline"]
+            reference_ms = medians["reference"] - medians["baseline"]
+            line = (
+                f"compass next latency: marginal {marginal_ms:.1f}ms "
+                f"(total {medians['next']:.1f}ms, "
+                f"bare python {medians['baseline']:.1f}ms), "
+                f"reference {reference_ms:.1f}ms, ratio {ratio:.2f} "
+                f"(limit {self.MAX_RATIO}, borderline below "
+                f"{self.MAX_RATIO + self.BORDERLINE:.1f}), "
+                f"ceiling {self.CEILING_MS}ms"
+            )
+            with capture.global_and_fixture_disabled():
+                print("\n" + line, flush=True)
+            return {"ratio": ratio, "marginal_ms": marginal_ms, "line": line}
+
+        verdict, measured = judge_latency(
+            measure, limit=self.MAX_RATIO, borderline=self.BORDERLINE,
+            ratio_of=lambda m: m["ratio"],
         )
-        assert ratio < self.MAX_RATIO, (
-            f"{line} - compass next is slow relative to the reference "
+        lines = "; then ".join(m["line"] for m in measured)
+        last = measured[-1]
+
+        assert last["marginal_ms"] < self.CEILING_MS, (
+            f"{lines} - exceeds the absolute ceiling (TRC-C10 / BF-1)."
+        )
+        assert verdict == "pass", (
+            f"{lines} - compass next is slow relative to the reference "
             "command (TRC-C10 / BF-1). Investigate the performance path."
         )
 

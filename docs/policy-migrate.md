@@ -143,6 +143,30 @@ waiver:
   approved_by: UNAPPROVED
 ```
 
+A 5.x project records each framework rule it chose not to adopt under
+`routing_guardrails.waived:` in its copied routing policy, as an `id` and a
+`reason`. An entry whose loosening those records explain gets a `LEGACY`
+waiver instead, which keeps each reason under its id and has no
+`approved_on` (ADR-039):
+
+```yaml
+waiver:
+  reason: 'RP-FLOOR-001: We run every issue through assess by hand.'
+  approved_by: LEGACY
+```
+
+The records explain an entry when removing the waived ids from the base
+release changes it, and the copy's entry is neither looser than that entry nor
+incomparable with it. Both are judged in the base release with only that entry
+swapped, as every entry is. An entry that also loosens something no record
+names keeps the `UNAPPROVED` stub, so a `LEGACY` waiver never excuses a
+loosening nobody recorded. The reason names each id the entry's change needs
+removed. A `waived:` entry with no `id` or a blank `reason` records no
+decision and explains nothing. Lint reads a `LEGACY` waiver as the warning
+`W-LEGACY` ("no approval recorded"), which does not block. A waiver never
+excuses a lock refusal, so removing a guardrail the framework locks still
+blocks with `K-LOCK-REFUSED`.
+
 The command does not invent an approval or a date. It then lints the file as
 the project layer over the preset, with `policy_lint`. Every lint error is
 reported. An edit that loosens an entry the framework locks is a lock refusal
@@ -507,7 +531,7 @@ reassess), and the `compass.yml` it would write.
 | `base_release` | object or null | `release` (a tag, `current`, or null for `as-built`) and `chosen_by` (`version`, `fewest-entries` or `as-built`). Null when there is no copy of the governance files, and on a resumed run |
 | `sources` | list | Each file read, as `path` and `digest` (SHA-256 of its bytes), in this order: the routing policy, the guardrails, the old settings file. A resumed run lists the old settings file only |
 | `adopted` | list | Each default that moved from the base release to the current default, as `catalogue`, `id` and `operation` |
-| `overlay` | object | `counts` (`add`, `set`, `replace`, `remove`) and `entries`, each with `catalogue`, `id`, `operation` and `waiver` (`UNAPPROVED` for a stub, else null) |
+| `overlay` | object | `counts` (`add`, `set`, `replace`, `remove`) and `entries`, each with `catalogue`, `id`, `operation` and `waiver` (`UNAPPROVED` for a stub, `LEGACY` for a waiver migrated from `waived:`, else null) |
 | `settings` | object | `moved` (each with `key` and `to`), `state` (the keys that go to `state.yml`), `dropped` (each with `key` and `reason`) and `unread` |
 | `equivalence` | object or null | The classifier's verdict on the copy against the base release plus the overlay: `result`, `reason`, `points` (grid points evaluated) and `scan`. Null when there is no copy of the governance files, or the overlay did not merge |
 | `behaviour` | object or null | The classifier's verdict on the copy against the migrated configuration: `result`, `reason`, `points` and `changed` (points that differ). Null in the same cases |
@@ -634,7 +658,6 @@ for a list position.
 ## What it does not do
 
 - It has no `--undo` and no `--adopt-defaults`.
-- It does not turn a copied `waived:` entry into a `LEGACY` waiver. The removal gets an `UNAPPROVED` stub like any other.
 - It does not remove the governance copies.
 - It does not run the six compatibility contracts. The classifier is the proof it gives.
 - It does not call `compass policy diff`. The dry run classifies directly with `classify.classify`.

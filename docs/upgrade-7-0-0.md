@@ -572,3 +572,17 @@ Guardrail 5 (`G5`, "a human signs off on the irreversible") asks for a person's 
    ```
 
 3. Run `compass policy lint` to check the file.
+
+## A copied `waived:` entry migrates to a `LEGACY` waiver
+
+`compass policy migrate` keeps the reason a 5.x project recorded under `routing_guardrails.waived:` in its copied routing policy. `docs/policy-migrate.md` describes the rule, under "Waiver stubs, lock refusals and the lint".
+
+### What changes
+
+- **A removal the copy recorded gets a `LEGACY` waiver, not an `UNAPPROVED` stub.** The waiver holds each recorded reason under its rule id, with `approved_by: LEGACY` and no `approved_on`. Lint reads it as the warning `W-LEGACY`, so it no longer blocks `--apply`. A lock refusal still does: removing a guardrail the framework locks, such as `G1`, gets a `LEGACY` waiver and stays blocked with `K-LOCK-REFUSED`.
+- **An entry that also loosens something no record names keeps the stub** and still blocks, as does a `waived:` entry with no `id` or a blank `reason`.
+- **The JSON report's `waiver` field can be `LEGACY`**, and the text report marks the entry `(LEGACY waiver, no approval recorded)`.
+
+### What to do
+
+Nothing. To clear the warning, the project's `owner` replaces `LEGACY` with an approver's name and adds `approved_on`.

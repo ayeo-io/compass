@@ -142,7 +142,7 @@ earlier one. Warnings never stop it and never fail it.
 | `W-REASON` | error | A waiver has no reason |
 | `W-APPROVED-BY` | error | A waiver has no `approved_by` |
 | `W-UNAPPROVED` | error | `approved_by` is `UNAPPROVED` |
-| `W-LEGACY` | warning | `approved_by: LEGACY`: no approval is recorded |
+| `W-LEGACY` | warning before 8.0.0, error from 8.0.0 | `approved_by: LEGACY`: no approval is recorded. Lint accepts the shape through every 7.x release, and from 8.0.0 the waiver no longer excuses its departure |
 | `W-LEGACY-DATED` | error | A `LEGACY` waiver carries `approved_on` |
 | `W-LEGACY-ISSUE` | error | An issue waiver uses `LEGACY` |
 | `W-APPROVED-ON-MISSING` | error | A project waiver has no `approved_on` |

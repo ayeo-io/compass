@@ -128,6 +128,22 @@ def test_wv_1_a_legacy_waiver_is_accepted_with_a_warning_and_unapproved_is_not()
     assert "W-UNAPPROVED" in _codes(_shape(fx.severity_layer(unapproved)))
 
 
+@pytest.mark.parametrize("version, level", [
+    ("6.0.1", "warning"), ("7.0.0", "warning"), ("7.9.9", "warning"),
+    ("8.0.0", "error"), ("8.1.0", "error")])
+def test_wv_1_a_legacy_waiver_is_read_until_8_0_0(monkeypatch, version, level):
+    # From 7.0.0 `compass policy migrate` writes LEGACY waivers, so lint reads
+    # them for the whole 7.x line (governance/decisions,
+    # legacy-waivers-readable-until-8-0-0).
+    api = _api()
+    assert api.LEGACY_READ_UNTIL == (8, 0, 0)
+    monkeypatch.setattr(api, "COMPASS_VERSION", version)
+    legacy = fx.project_waiver(approved_by="LEGACY", approved_on=None)
+    [finding] = _shape(fx.severity_layer(legacy))
+    assert (finding.code, finding.level) == ("W-LEGACY", level)
+    assert "8.0.0" in finding.message
+
+
 # --- WV-2: authority -------------------------------------------------------------
 
 def _waiver(scope, **over):

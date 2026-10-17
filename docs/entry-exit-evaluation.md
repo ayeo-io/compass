@@ -362,6 +362,15 @@ does not cover the issue, its generation, the form or the labels. The
 pre-tool hook also refuses the call when `--as` is not exactly the agent
 Claude Code reports.
 
+The person sees each delegated approval in a summary until they mark it
+reviewed. `/compass:approve` with nothing pending marks every one reviewed,
+on every issue a delegation names. The prompt hook takes the approval lock
+of each of those issues, with the session's own, in one sorted order before
+it marks anything (`approvals.lock_all`). So two sessions that type it on
+two issues at once never each hold one lock while waiting for the other's.
+An approval recorded on another issue after the hook took its locks stays in
+the summary for the next `/compass:approve`.
+
 ### `compass evidence request`
 
 An agent asks a person for an approval with this command. It never records

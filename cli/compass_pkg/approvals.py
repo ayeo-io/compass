@@ -117,6 +117,12 @@ def lock(task_dir):
         yield
 
 
+def lock_all(task_dirs):
+    """Hold the approval lock of every issue in `task_dirs` while the block
+    runs, taken in one sorted order (`atomic_io.locked_all`)."""
+    return atomic_io.locked_all(os.path.join(d, LOCK) for d in task_dirs)
+
+
 def text(value):
     """A value as one line, with runs of white space made single spaces."""
     return " ".join(str(value or "").split())

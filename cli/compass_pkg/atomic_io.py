@@ -120,6 +120,20 @@ def locked(lock_path):
             fcntl.flock(fh, fcntl.LOCK_UN)
 
 
+@contextlib.contextmanager
+def locked_all(lock_paths):
+    """Hold exclusive locks on every path in `lock_paths` while the block
+    runs. The locks are taken one at a time in sorted order of their real
+    paths, each path once. A caller that needs more than one lock must take
+    them all here: two callers that each held one lock and then waited for
+    the other's would wait for ever, because `locked` has no timeout."""
+    unique = sorted({os.path.realpath(os.fspath(p)) for p in lock_paths})
+    with contextlib.ExitStack() as stack:
+        for path in unique:
+            stack.enter_context(locked(path))
+        yield
+
+
 class _StrictLoader(yaml.SafeLoader):
     """A safe loader that refuses a mapping holding the same key twice."""
 

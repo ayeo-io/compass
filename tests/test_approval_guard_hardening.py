@@ -393,7 +393,7 @@ def test_d2_bash_naming_config_or_home_refused(guarded, home):
         r = _hook(guarded, "Bash", {"command": command}, env, **common)
         assert _refused(r, "transcript-protected"), (command, r.returncode, r.stderr)
     for command in ("ls ~/dev/projects-list", "cat ~/.claude-x/settings.json",
-                    f"ls {home_dir}/dev", "echo $HOME/dev", "ls /tmp", "git status",
+                    f"ls {home_dir}/dev", "echo $HOME/dev", "ls /usr/share", "git status",
                     "tr / _ < notes.txt", "ls ./.claude", f"ls -la {guarded}/.claude/",
                     "cp settings.json ./.claude/", "curl -s https://example.com/x"):
         r = _hook(guarded, "Bash", {"command": command}, env, **common)

@@ -78,7 +78,9 @@ def test_an_empty_queue_says_so(tmp_path):
     root = tmp_path / "proj"
     (root / ".compass" / "work").mkdir(parents=True)
     out = _digest(root)
-    assert "No queued issues." in out
+    # The digest names the stored hold, `backlog`, because "queued" is retired (ADR-044).
+    assert "No backlog issues." in out
+    assert "queued" not in out
 
 
 def test_the_release_guide_asks_about_the_queue():

@@ -89,7 +89,7 @@ routing_guardrails:
 
   # floors - a matching assessment value forces the delivery approach to be AT LEAST a given weight,
   # and/or forces specific stages/skills back to thorough weight.
-  # Route weight order for force_minimum_route: spike < quick-fix < regular
+  # Approach weight order for force_minimum_route: spike < quick-fix < regular
   # < hotfix < full. The evaluator raises the candidate to the max.
   # NOTE: six of the entries below carry RP-REQUIRE ids because they attach a
   # gate and raise no minimum - they are not floors. The block name lags its
@@ -119,7 +119,7 @@ routing_guardrails:
   # These three are "the default guardrails in review form": every delivery
   # approach's route_shape already includes them, and listing them here means a
   # future custom or tuned approach still cannot drop them. NOTE what is NOT
-  # here: verify.regression is route-scoped (quick fix, being atomic+trivial,
+  # here: verify.regression is approach-scoped (quick fix, being atomic+trivial,
   # does not run it - that is quick fix's whole point), and verify.claims is
   # document-scoped (added by RP-ART-001 when the issue has positioning.md).
   # Immovable means immovable *everywhere* - keep the set to what genuinely is.
@@ -137,7 +137,7 @@ routing_guardrails:
 # -----------------------------------------------------------------------------
 # Assessment vocabulary - the legal values the assessment may take. The evaluator
 # rejects a value outside this vocabulary (a misclassification should fail
-# loudly, not route silently).
+# loudly, not pick an approach silently).
 # -----------------------------------------------------------------------------
 assessment_vocabulary:
 <<assessment_vocabulary>>
@@ -147,20 +147,20 @@ assessment_vocabulary:
 # is a hand-off where the session stops: assess step 7 (confirm the approach)
 # and the define, refine and plan hand-offs. `autonomy:` in `compass.yml`
 # (or `.compass/config.yml` in a project without one) sets it, default
-# balanced; the evaluator looks up the route here and
-# writes the result to the manifest as `checkpoints:`. A stage the route
+# balanced; the evaluator looks up the approach here and
+# writes the result to the manifest as `checkpoints:`. A stage the approach
 # collapses or skips has no hand-off, so it never waits whatever this says.
 # Only the four checkpoint stages can be named: the setting never changes a
 # gate, evidence, the pre-tool hook, `compass check`, guardrail 5 or the
 # sign-off the domain labels bring. A policy without this block, or a
-# value or route left out of it, waits at every hand-off the route runs.
+# value or approach left out of it, waits at every hand-off the approach runs.
 # Added 2026-10-03, issue #329.
 # -----------------------------------------------------------------------------
 autonomy_checkpoints:
 <<autonomy_checkpoints>>
 
 # -----------------------------------------------------------------------------
-# Route shapes - the machine-readable mirror of the five reference delivery approaches. The
+# Approach shapes - the machine-readable mirror of the five reference delivery approaches. The
 # approaches/*.md files are the human-readable canonical descriptions; this is what
 # `compass approach evaluate` reads to emit the per-stage weight, gate set, and
 # subtask ceiling once the final delivery approach is known. The weight ladder for
@@ -291,7 +291,7 @@ ENTRY_COMMENTS = {
         '# domain labels gets the same skill as advice instead (RP-ADV-002).',
     ],
     ('RP-REQUIRE-005', 'id'): [
-        '# Artifacts are a routed output like gates. A dimension the shape does not',
+        '# Artifacts are an output of the approach, like gates. A dimension the shape does not',
         '# know about can earn a document the same way it earns a gate - which is',
         '# what stops the artifact set being "whatever this shape always writes".',
     ],
@@ -313,10 +313,10 @@ ENTRY_COMMENTS = {
         '# acceptance-criteria.md and verification-report.md would repeat - a',
         '# stated criterion before the code (`G2`) and a recorded green after it',
         '# (`G1`). So "a quick fix writes delivery-approach.md and nothing else" is',
-        '# a routed decision a check can read, not a convention.',
+        '# a decision of the approach that a check can read, not a convention.',
     ],
     (APPROACH_REGULAR, 'artifacts'): [
-        '# A multiagent breakdown reads a distribution map, so this route earns one.',
+        '# A multiagent breakdown reads a distribution map, so this approach earns one.',
     ],
     (APPROACH_HOTFIX, 'stages'): [
         '# The `ship:` value on the `stages` line below is a stage-weight enum the evaluator',
@@ -359,7 +359,7 @@ ENTRY_COMMENTS = {
 
 # A comment on the same line as a value, as (spaces before it, the comment).
 INLINE_COMMENTS = {
-    ('RP-ART-001', 'gate'): (16, "# adds the claims gate to the route's set"),
+    ('RP-ART-001', 'gate'): (16, "# adds the claims gate to the approach's set"),
     ('gate_evidence_requirements', GATE_VERIFY_CLARITY): (7, '# inherently judgement - and now visibly so'),
     ('gate_evidence_requirements', GATE_SPIKE_CONCLUDE): (14, '# SPECIFIC: a generic artifact will not do'),
     ('gate_evidence_requirements', GATE_VERIFY_ANALYZE): (14, '# SPECIFIC: advisory command-output does NOT clear this gate'),

@@ -90,7 +90,7 @@ def checkpoint_table_errors(p):
     if table is None:
         return []
     if not isinstance(table, dict):
-        return ["`autonomy_checkpoints:` must map each autonomy value to its routes"]
+        return ["`autonomy_checkpoints:` must map each autonomy value to its approaches"]
     errs = []
     for value, routes in table.items():
         if value not in AUTONOMY_VALUES:
@@ -98,16 +98,16 @@ def checkpoint_table_errors(p):
                         f"'{value}'; the values are {', '.join(AUTONOMY_VALUES)}")
             continue
         if not isinstance(routes, dict):
-            errs.append(f"`autonomy_checkpoints.{value}` must map each route to a list")
+            errs.append(f"`autonomy_checkpoints.{value}` must map each approach to a list")
             continue
         seen = {}
         for route in routes:
             name = canonical_shape(route)
             if name not in CHECKPOINT_ROUTES:
-                errs.append(f"`autonomy_checkpoints.{value}` names an unknown route "
-                            f"'{route}'; the routes are {', '.join(CHECKPOINT_ROUTES)}")
+                errs.append(f"`autonomy_checkpoints.{value}` names an unknown approach "
+                            f"'{route}'; the approaches are {', '.join(CHECKPOINT_ROUTES)}")
             elif name in seen:
-                errs.append(f"`autonomy_checkpoints.{value}` names route '{name}' "
+                errs.append(f"`autonomy_checkpoints.{value}` names approach '{name}' "
                             f"twice, as '{seen[name]}' and '{route}'")
             else:
                 seen[name] = route

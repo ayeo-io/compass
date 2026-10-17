@@ -368,7 +368,7 @@
     },
     "route_shapes": {
       "type": "object",
-      "description": "The machine mirror of the five reference approaches. A policy copied before the routes were renamed keys them by the old names, read as the new ones.",
+      "description": "The machine mirror of the five reference approaches. A policy copied before the approaches were renamed keys them by the old names, read as the new ones.",
       "anyOf": [
         {
           "required": [
@@ -422,7 +422,7 @@
     },
     "autonomy_checkpoints": {
       "type": "object",
-      "description": "Autonomy value -> route -> the checkpoint stages that wait for a person. Only assess, define, refine and plan can be named.",
+      "description": "Autonomy value -> approach -> the checkpoint stages that wait for a person. Only assess, define, refine and plan can be named.",
       "additionalProperties": false,
       "properties": {
         "controlled": {

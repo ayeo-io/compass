@@ -78,7 +78,7 @@
 - [x] **Traceability ids assigned** - `TRC-001`…`TRC-005`, all present in
       `acceptance-criteria.md` and `manifest.yml`.
 - [x] **Affected surface named** - `delivery-approach.md` §4 and the upcoming `technical-design.md` §4
-      name the middleware, the route wiring, and the config addition.
+      name the middleware, the endpoint wiring, and the config addition.
 - [x] **No open questions** - the ambiguity ledger above is fully resolved.
 - [x] **Delivery approach still fits** - nothing in refine changed the size or
       risk. Feature still fits; no re-assessment needed.

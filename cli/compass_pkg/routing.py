@@ -133,7 +133,7 @@ def canonical_view(policy):
             new = name(key)
             if new in merged:
                 raise CompassError(
-                    f"`{where}` names route '{new}' twice, as '{seen[new]}' "
+                    f"`{where}` names approach '{new}' twice, as '{seen[new]}' "
                     f"and '{key}'. Keep one of them.")
             merged[new], seen[new] = value, key
         return merged
@@ -343,7 +343,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
                                                 fl["require_phase"])
             required_phases.add(required)
             changed.append(f"stage '{display_stage(required)}' "
-                           f"forced full-weight")
+                           f"forced to thorough")
         if fl.get("require_skill"):
             required_skills.add(fl["require_skill"])
             changed.append(f"skill '{fl['require_skill']}' required")
@@ -855,7 +855,7 @@ def cmd_route_evaluate(args):
                             issue=view.evaluator_issue() if view is not None else None)
     if result.get("renamed_routes"):
         sys.stderr.write(
-            "compass: governance/routing-policy.yml uses old route names ("
+            "compass: governance/routing-policy.yml uses old approach names ("
             + ", ".join(f"{old} -> {canonical_shape(old)}"
                         for old in result["renamed_routes"])
             + "); they are read as the new names. Rename them in the file; "

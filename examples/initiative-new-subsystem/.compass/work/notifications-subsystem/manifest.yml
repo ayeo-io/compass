@@ -19,7 +19,7 @@ policy_rules_fired:
   kind: floor
   rationale: Domain risk overrides size. A one-line auth change is not small.
   changed:
-  - route raised standard -> expedition
+  - approach raised standard -> expedition
 - id: RP-ROLE-002
   kind: role_rule
   rationale: Built-the-thing-right and built-the-right-thing are different checks.

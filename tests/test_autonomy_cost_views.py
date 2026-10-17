@@ -197,6 +197,8 @@ def test_arc_6_landed_issues_are_not_judged(tmp_path):
     assert {p: p.read_bytes() for p in manifests} == manifests
 
     # `ship-commit` lands each issue in flight as the base commit lands it.
+    # The captured stdout says "issue marked done.", because the status word
+    # "landed" is retired (ADR-044). The capture was edited to match, word for word.
     ships = json.loads((FIXTURES / "ships.json").read_text(encoding="utf-8"))
     assert ship_listed(tmp_path / "ship-a") == ships["flight-listed"]
     assert ship_listed(tmp_path / "ship-b", keep_checkpoints=False) == ships["flight-nokey"]

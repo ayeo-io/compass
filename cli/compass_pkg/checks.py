@@ -869,7 +869,7 @@ def _check_spike_no_production_changes(task, task_dir):
         return False, (f"a Spike must not list production changed_files "
                        f"(found: {paths}). Exploration code stays on a scratch "
                        f"branch; if the finding is acted on, a fresh "
-                       f"assessment owns the code under a real route's "
+                       f"assessment owns the code under a real approach's "
                        f"guardrails. This is the safety model - a Spike "
                        f"cannot silently become delivery.")
     return True, "no production changed_files (correct - a Spike ships nothing)"

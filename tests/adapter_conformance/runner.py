@@ -272,7 +272,8 @@ class Adapter:
                      "--status", "draft", "--path", str(path.relative_to(self.project)))
         result = self.command(["bash", str(ROOT / "scripts/multiagent.sh"), self.slug, "--dry-run"],
                               check=False)
-        reported = re.search(r"(?:route cap |cap is )(\d+)", result.stdout + result.stderr)
+        # multiagent.sh prints "approach cap N", because "route" is a verb only (ADR-044).
+        reported = re.search(r"(?:approach cap |cap is )(\d+)", result.stdout + result.stderr)
         reported_cap = int(reported[1]) if reported else None
         if result.returncode == 0 and "WOULD create worktree" in result.stdout:
             actual = "allow"

@@ -16,10 +16,10 @@ Design decisions honoured:
   - One line output (TRC-C4).
 
 Output format chosen (devlog entry):
-  "<NextPhase> [gate: <next-gate>][ | <phase> collapsed on this route]"
+  "<NextPhase> [gate: <next-gate>][ | <phase> collapsed in this approach]"
   Examples:
     "Define [gate: verify.correctness]"
-    "Plan [gate: verify.correctness] | Define collapsed on this route"
+    "Plan [gate: verify.correctness] | Define collapsed in this approach"
     "all phases complete"   <- when the issue has landed
   This is deliberately plain (no colour escapes) so it is clear in a terminal
   and in logged output.

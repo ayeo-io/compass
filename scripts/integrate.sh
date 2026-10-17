@@ -167,7 +167,7 @@ while IFS= read -r line; do
 done < "$MAP"
 
 if [ "${#SUBTASKS[@]}" -eq 0 ]; then
-  echo "integrate.sh: no subtasks in distribution-map.md. If the route is solo," >&2
+  echo "integrate.sh: no subtasks in distribution-map.md. If the approach is solo," >&2
   echo "              the issue lands with ship-commit - integrate.sh is not needed." >&2
   exit 1
 fi

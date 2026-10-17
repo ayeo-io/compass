@@ -84,7 +84,7 @@ The delivery approach is the full approach. The policy-rules section of
 
 The engineer sees *why* a typo fix got the full approach. Because the
 delivery approach is advisory until confirmed, they can discuss it - but they
-cannot have it silently routed light. A floor is a routing rule in the
+cannot have it silently given a light approach. A floor is a routing rule in the
 configuration in force (`compass policy show`); overriding it would mean
 changing the project's `compass.yml`, not overriding a delivery approach.
 

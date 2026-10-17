@@ -366,4 +366,5 @@ def test_scf6_the_safety_contract_states_the_symlink_ignored_and_hook_cases():
                     .read_text(encoding="utf-8").split()).lower()
     assert "a traced symlink is not checked" in flat
     assert "an untracked file git ignores changes neither id and is not checked" in flat
-    assert "not marked landed" in flat
+    # The contract says "marked done", because the stored state is `done` (ADR-044).
+    assert "not marked done" in flat

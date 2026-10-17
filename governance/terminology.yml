@@ -1389,3 +1389,16 @@ retired_in_output:
   - name: spine
     whole_word: true
     replacement: manifest
+  # The status words and the stage word ADR-044 retired, as the CLI's own
+  # messages still printed them in 6.0.x. `landed` alone stays legal: "the
+  # commit landed" is the ordinary verb. Only the status phrase is retired.
+  - name: marked landed
+    replacement: marked done
+  - name: full-weight
+    whole_word: true
+    replacement: thorough
+  - name: queued
+    whole_word: true
+    replacement: backlog
+  - name: assess, build and ship
+    replacement: assess, implement and ship

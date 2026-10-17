@@ -266,7 +266,7 @@ def _say(done):
 # What git says when the host cannot be reached at all. A refusal by a host that
 # answered (an unknown repository, a login that failed) is not in this list, so a
 # caller can tell "try again online" from "this will not work online either".
-_UNREACHABLE = re.compile(
+_UNREACHABLE = re.compile(  # vocabulary-scan: allow - route in git's own network error, matched as written
     r"could not resolve host|temporary failure in name resolution|name or service not known"
     r"|failed to connect|could not connect|connection (?:timed out|refused|reset)"
     r"|operation timed out|network is unreachable|no route to host"

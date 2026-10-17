@@ -711,7 +711,7 @@ def diff_text(document):
     gone = document["replay"]["unreadable"]
     note = _wrapped("unreadable manifests (not replayed): ", ", ".join(gone)) if gone else []
     if not document["differs"]:
-        return lines + ["no difference: the two configurations route and check alike"] + note
+        return lines + ["no difference: the two configurations give the same approach and checks"] + note
     lines += _wrapped("classification: ", f"{classification['result']} - "
                       f"{classification['reason']}", "  ")
     lines += _set_lines(document) + note

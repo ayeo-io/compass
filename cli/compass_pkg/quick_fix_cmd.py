@@ -87,7 +87,7 @@ def register(sub, issue_arg):
     """Add `compass quick-fix start|finish` to the top-level parser."""
     p = sub.add_parser(
         "quick-fix",
-        help="assess, build and ship a quick fix in two calls instead of a dozen")
+        help="assess, implement and ship a quick fix in two calls instead of a dozen")
     subs = p.add_subparsers(dest="subcmd", required=True)
 
     st = subs.add_parser(

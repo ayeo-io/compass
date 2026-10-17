@@ -253,7 +253,7 @@ records a person's answer to one. ADR-063 owns the decision.
 - **When it refuses.** It exits 2 with no change for an issue whose manifest
   holds no `checkpoint_outcomes` key (it was assessed before outcomes were
   recorded, so it is not judged), a stage that is not a checkpoint stage, a
-  stage the route collapses or skips, a stage whose own record is not written
+  stage the approach collapses or skips, a stage whose own record is not written
   yet (`compass next` does not count it done), the decision `rejected`, and a
   name that may not answer.
 - **What it never clears.** No check reads `checkpoint-approval`:
@@ -420,8 +420,8 @@ A check is skipped in two cases:
 not apply to an approach. A list does not depend on the stage's mode.
 
 A third case is not a skip. When a `human` check's document is missing and the
-approach the issue was routed to does not list that document kind among its
-artifacts, the route owes no such document, and the row is nothing to check,
+approach the issue was given does not list that document kind among its
+artifacts, the approach owes no such document, and the row is nothing to check,
 for example "quick-fix owes no verification-report". The artifact set is read
 from the configuration, so a project that adds `verification-report` to an
 approach makes the Definition of Done owed there. Note that the shipped regular
@@ -431,7 +431,7 @@ requirements review has nothing to check for the Definition of Ready.
 ## A check that an approach does not owe
 
 A `when` on a check reads the assessment. Evaluation adds one derived key,
-`ships`, whether the approach the issue was routed to ships. Each Definition of
+`ships`, whether the approach the issue was given ships. Each Definition of
 Done check in the shipped default says `when: {ships: true}`, so a spike, which
 does not ship, owes none of them and a delivery owes all seven. A project can
 use `ships` in the `when` or `blocking_when` of its own checks and in the

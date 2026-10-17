@@ -31,7 +31,7 @@ A person answers a hand-off at a terminal:
 
 `compass evidence approve --checkpoint <stage> --approver <name> --role <role> [--scope <text>]`
 
-- The command refuses the approver `agent`, and a rejected decision. It needs `--role`, and the stage must be one the route runs and must have its own record.
+- The command refuses the approver `agent`, and a rejected decision. It needs `--role`, and the stage must be one the approach runs and must have its own record.
 - Who may answer follows the rule `compass evidence approve --decisions` applies: a name in an `approvers:` list of the project file, else the project's `owner`. A project that declares neither accepts any name that is not an agent, and the command prints one line saying so.
 - It writes one `checkpoint-approval` record and the `waited` outcome that cites it. `compass evidence add --type checkpoint-approval` is refused.
 
@@ -40,7 +40,7 @@ An agent records a hand-off that autonomy passed:
 `compass issue checkpoint add <stage> --outcome skipped --by <agent>`
 
 - It writes no evidence record and no devlog line.
-- It refuses a listed checkpoint, a stage that already holds `waited`, a stage that is not a checkpoint stage, a stage the route collapses or skips, a `--by` that is not an agent, and `--outcome waited`. Each refusal exits 2 and writes nothing.
+- It refuses a listed checkpoint, a stage that already holds `waited`, a stage that is not a checkpoint stage, a stage the approach collapses or skips, a `--by` that is not an agent, and `--outcome waited`. Each refusal exits 2 and writes nothing.
 - A repeat for a stage already `skipped` exits 0 and leaves the manifest bytes unchanged.
 
 Both commands refuse an issue that is not judged (see below) and write nothing.
@@ -115,7 +115,7 @@ The stage ends are:
 
 An end later than the end of a later stage is dropped, because a person can answer a checkpoint after later work.
 
-- The route's stages are walked in order from a cursor that starts where counting starts: the earliest start of the issue's sessions. A stage with an end after the cursor gets the window from the cursor to its end. A stage without one holds `measured: false` with the reason `no-window`, and its requests fall in the next window.
+- The approach's stages are walked in order from a cursor that starts where counting starts: the earliest start of the issue's sessions. A stage with an end after the cursor gets the window from the cursor to its end. A stage without one holds `measured: false` with the reason `no-window`, and its requests fall in the next window.
 - Requests at or after the last end are `unattributed`. `total` is every request in the span, and the stages and `unattributed` add up to it for every count.
 - A window that another issue's span overlaps, where that issue records the same session, is marked `shared: true`, and so is `total`. Work on another issue that ended before counting starts overlaps no window.
 
@@ -130,7 +130,7 @@ Every reader calls the functions of `cli/compass_pkg/autonomy_cost.py`, so the r
 | autonomous issue | A measurable issue with no `waited` outcome. |
 | human judgement count | The `waited` outcomes plus the human checks whose approval `approval_records.judge` passes. The unit is checkpoints and human checks. |
 | guardrailed count | The gates with status `pass` and at least one evidence id that names a typed record in `evidence:`. The unit is gates. |
-| autonomous count | The stages the route ran (weight not `skipped`, `collapsed` or `none`) with no `waited` outcome and no passed gate. A gate belongs to the stage its id starts with, such as `verify.` for `verify.correctness`. The unit is stages. |
+| autonomous count | The stages the approach ran (weight not `skipped`, `collapsed` or `none`) with no `waited` outcome and no passed gate. A gate belongs to the stage its id starts with, such as `verify.` for `verify.correctness`. The unit is stages. |
 | complete usage | A `usage` block with `recorded` not false, a numeric `total.cost_usd` and no stage marked `shared`. A quick fix's block has no total: every measured stage needs a numeric `cost_usd`, none may be shared, and the cost is their sum. |
 
 The three bands count unlike things, so each is printed with its unit and they are never added together. When the issue's configuration cannot be read, its bands are not counted: the issue is left out of the band totals and counted as not measurable for them.

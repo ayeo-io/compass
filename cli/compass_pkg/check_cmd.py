@@ -179,7 +179,7 @@ CHECK_GUIDANCE = {
     "spike-no-production-changes": {
         "why": "A Spike's safety model is that it ships nothing - graduating to delivery must be a fresh assessment, not a silent merge.",
         "do": 'Move the production edits to a delivery issue; a spike ships nothing.',
-        "fix": "Empty `changed_files:` in this Spike's manifest.yml. If the finding is worth keeping, run `/compass:assess` to start a new delivery issue that owns the code under a real route.",
+        "fix": "Empty `changed_files:` in this Spike's manifest.yml. If the finding is worth keeping, run `/compass:assess` to start a new delivery issue that owns the code under a real delivery approach.",
     },
     "dod-evidence-typed": {
         "why": "The evidence-not-assertion guardrail: the Definition of Done is a typed gate. Every item must be met by a record in the manifest - evidence, a person's approval or a filed follow-up. A tick on a page and a narrative note in devlog.md do not count.",

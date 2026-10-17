@@ -304,7 +304,7 @@ downstream silently.
 Notice what the intent document is *not*: it is not "add a CSV export
 button." That is a solution. The intent document states the outcome, and
 the difference matters - see the routing deep dive for how the same literal
-request routes differently depending on the intent document behind it.
+request gets a different approach depending on the intent document behind it.
 
 ### Assess - now with an intent document
 
@@ -375,7 +375,7 @@ audience - reads the voice & positioning strategies in
 - **`launch-readiness.md`** - the claims ledger: every claim, its backing
   scenario, and that scenario's verification status.
 
-### How this shapes the route, and the gate at ship time
+### How this shapes the approach, and the gate at ship time
 
 A `positioning.md` on disk turns on the `claims` review dimension and -
 per the artifact rule RP-ART-001 - **blocks shipping until every claim in `positioning.md`
@@ -445,9 +445,9 @@ yes. Outside a
 Compass project, the line is empty. The line fits the terminal width that
 Claude Code passes in `COLUMNS`, and assumes 80 columns when it is not set.
 
-## See the route in your terminal
+## See the approach in your terminal
 
-When you run `compass next` in a terminal, it shows the issue's route as a
+When you run `compass next` in a terminal, it shows the issue's approach as a
 rail, with the current stage marked:
 
 ```text

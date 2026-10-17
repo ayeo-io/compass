@@ -77,7 +77,7 @@ preference that has not been tested.
 > - **Alternatives considered:** Streaming the response, which keeps one request
 >   but leaves a partial file on disconnect and does not fix the underlying
 >   40-to-90-second build. Raising the gateway timeout, which moves the ceiling
->   without removing it and slows every other route behind the same proxy.
+>   without removing it and slows every other endpoint behind the same proxy.
 > - **Consequences:** Commits us to a job store and a polling endpoint. Clients
 >   must handle a two-step flow, so the API is no longer a single call.
 > - **Governance tie:** the tested-before-ship guardrail (`G1`) - the job path needs its own test surface.

@@ -111,8 +111,9 @@ def test_terminal_py_has_no_empty_comment_line():
 
 def test_next_cmd_py_documents_the_format_it_prints():
     text = _read("cli/compass_pkg/next_cmd.py")
-    assert "<phase> is collapsed on this route" not in text
-    assert "<phase> collapsed on this route" in text
+    assert "<phase> is collapsed in this approach" not in text
+    # The format says "approach", because "route" is a verb only (ADR-044).
+    assert "<phase> collapsed in this approach" in text
 
 
 def test_checks_py_names_the_spec_file_once():

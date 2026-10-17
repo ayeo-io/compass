@@ -246,7 +246,8 @@ def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(relea
     # The old route names are read, with a notice on standard error that says
     # what to rename, and the files themselves are not rewritten.
     after = _cli(CLI, root, "approach", "evaluate", "--issue", "add-farewell")
-    assert "old route names" in after.stderr and "expedition -> full" in after.stderr
+    # The notice says "approach", because "route" is a verb only (ADR-044).
+    assert "old approach names" in after.stderr and "expedition -> full" in after.stderr
     policy = _cli(CLI, root, "policy", "lint")
     assert policy.returncode == 0, policy.stdout + policy.stderr
     assert (root / ".compass" / "config.yml").read_bytes() == config

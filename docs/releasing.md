@@ -336,10 +336,10 @@ with the version hidden.
    only shows up once the tarball is unpacked somewhere else.
 
 9. **Check the queue against this release.** Run `compass flow --digest`
-   and read its queue ageing line and table. For each queued issue that
+   and read its queue ageing line and table. For each backlog issue that
    touches what this release changes, either pull it in or say why it
    waits. Put the answer in the release notes under
-   "Queued against this release", or write "None" there. A queued fix
+   "Queued against this release", or write "None" there. A backlog fix
    with its recommendation already written is the case this step exists
    for.
 

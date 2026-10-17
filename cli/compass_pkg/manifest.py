@@ -654,8 +654,8 @@ def cmd_land_commit(args):
                              if isinstance(g, dict) and g.get("status") != "pass"]
                     if unmet:
                         landed_note = (
-                            "\n  NOT marked landed: %d gate(s) have not "
-                            "passed (%s).\n  The commit stands - landed means "
+                            "\n  NOT marked done: %d gate(s) have not "
+                            "passed (%s).\n  The commit stands - done means "
                             "every gate passed, not only that the commit "
                             "exists. Clear the gates and "
                             "re-run, or set status by hand if this issue "
@@ -672,7 +672,7 @@ def cmd_land_commit(args):
                             f"compass ship-commit: committed"
                             f"{' (after one retry)' if retried else ''}. HEAD "
                             f"{head_before[:8]} -> {head_after[:8]}\n  NOT "
-                            f"marked landed: a hook put path(s) outside the "
+                            f"marked done: a hook put path(s) outside the "
                             f"issue's declared scope in the commit:\n    "
                             + "\n    ".join(stray_after)
                             + "\n  Move them out of this commit, then ship "
@@ -687,7 +687,7 @@ def cmd_land_commit(args):
                             f"compass ship-commit: committed"
                             f"{' (after one retry)' if retried else ''}. HEAD "
                             f"{head_before[:8]} -> {head_after[:8]}\n  NOT "
-                            f"marked landed: the commit holds issue file(s) "
+                            f"marked done: the commit holds issue file(s) "
                             f"that differ from what the green tested - a "
                             f"hook changed them during the commit:\n    "
                             + "\n    ".join(changed or ["(not narrowed)"])
@@ -705,17 +705,17 @@ def cmd_land_commit(args):
                         # against its tree after HEAD has moved on.
                         task["land_commit"] = head_after
                         issue_usage.save_landed(task, task_dir, task_path)
-                        landed_note = "\n  issue marked landed."
+                        landed_note = "\n  issue marked done."
                         # ADR-026: ship-commit is the one step that derives
                         # the living spec, and only for an issue it has just
-                        # marked landed.
+                        # marked done.
                         landed_note += _derive_and_commit_living_spec(
                             cwd, os.path.basename(str(task_dir).rstrip("/")))
         except CompassError:
             pass  # status update is best-effort; the commit already succeeded
 
     suffix = " (after one retry)" if retried else ""
-    if "issue marked landed" in landed_note:
+    if "issue marked done" in landed_note:
         # ADR-031: every landing updates the delivery record, when the
         # project names one. A failed sync fails ship loudly: the commit
         # stands, but a record that silently stopped syncing is the loss
@@ -742,13 +742,13 @@ def cmd_land_commit(args):
             _print_waiting(task_dir)
             sys.stderr.write(
                 f"compass ship-commit: the commit landed and the issue is "
-                f"marked landed, but the delivery record did not sync: "
+                f"marked done, but the delivery record did not sync: "
                 f"{exc}\nFix the cause, then run `compass record sync` from "
                 f"the main checkout.\n")
             return 2
     print(f"compass ship-commit: committed{suffix}. "
           f"HEAD {head_before[:8]} -> {head_after[:8]}" + landed_note)
-    if "issue marked landed" in landed_note:
+    if "issue marked done" in landed_note:
         _print_waiting(task_dir)
     return 0
 

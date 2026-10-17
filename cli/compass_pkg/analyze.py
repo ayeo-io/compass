@@ -333,7 +333,7 @@ def _analyze_task(task_dir: str, project_root: str | None = None) -> dict:
             "subject": "intent.md",
             "detail": (
                 f"intent.md is absent but the define stage is '{specify_weight}' - "
-                f"a full-weight define stage requires a brief."
+                f"a thorough define stage needs intent.md."
             ),
         })
 

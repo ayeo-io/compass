@@ -851,10 +851,10 @@ def reading_matches(when, assessment, orders=None):
 
     Keys are otherwise ANDed, so `any_of` alongside another key means "that
     key AND one of these". `any_of` exists because a rule sometimes has to
-    fire on genuinely alternative conditions - the human-sign-off guardrail
-    applies to the four irreversible domains OR to critical risk, and
-    expressing that as separate rules would split one rule into two that can
-    come to disagree.
+    fire on genuinely alternative conditions - a project can make the
+    human-sign-off guardrail apply to the four irreversible labels OR to
+    critical risk, and expressing that as separate rules would split one rule
+    into two that can come to disagree.
     """
     for key, val in (when or {}).items():
         key = WHEN_KEY_MAP.get(key, key)

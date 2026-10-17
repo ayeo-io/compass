@@ -541,6 +541,38 @@ Nothing. The command is new, and it writes only when you pass `--apply`.
 | `--words` | `compass policy migrate` | Rewrite the project's configuration in the 6.0.0 words |
 | `--i-have-a-copy` | `compass policy migrate --words --apply` | Write files git cannot restore |
 
+## Guardrail 5 triggers on the irreversible labels
+
+Guardrail 5 (`G5`, "a human signs off on the irreversible") asks for a person's sign-off only when an issue carries `auth`, `payments`, `personal-data` or `migrations`. Critical risk on its own no longer asks for one. The decision is `governance/decisions/2026-10-12-guardrail-5-triggers-on-the-irreversible-labels.md`.
+
+### What breaks
+
+- **A critical-risk issue with none of the four labels ships without a sign-off.** `compass check` reports `G5` as not applicable for it. Before 7.0.0 it failed `human-approval-present` until a person signed off.
+
+### What changes
+
+- **The trigger.** `G5`'s `when` in the default preset is `labels_any: [auth, payments, personal-data, migrations]`. The check `human-approval-present` and its hard lock do not change.
+- **The documents.** `docs/safety-contract.md` section 5, `governance/guardrails.md` and the guardrail's statement name the same four cases. `governance/guardrails.yml` moves to version 1.33.0.
+- **Assess names the labels.** When risk is critical and the trigger does not match, `compass approach evaluate` adds a line under "Pay attention to" that names the labels. Apply one when the change is one of those.
+- **Stored issues keep their trigger.** An issue's generation holds the trigger it was committed with, so an issue assessed before 7.0.0 still needs the sign-off at critical risk until it is re-assessed. A project that copied `governance/` keeps the trigger in its own `guardrails.yml`. `compass policy migrate` carries that trigger into the new `compass.yml` as a `set` on `G5`, so migrating keeps the sign-off at critical risk.
+
+### What to do
+
+1. Check open critical-risk issues for a change to auth, payments, personal data or a migration, and add the label to any that are.
+2. To keep the sign-off on every critical-risk change, add this to `compass.yml`. The lock allows it because it is stricter than the default; a trigger that drops a label is refused.
+
+   ```yaml
+   gates:
+     G5:
+       set:
+         when:
+           any_of:
+           - labels_any: [auth, payments, personal-data, migrations]
+           - {risk: critical}
+   ```
+
+3. Run `compass policy lint` to check the file.
+
 ## A copied `waived:` entry migrates to a `LEGACY` waiver
 
 `compass policy migrate` keeps the reason a 5.x project recorded under `routing_guardrails.waived:` in its copied routing policy. `docs/policy-migrate.md` describes the rule, under "Waiver stubs, lock refusals and the lint".

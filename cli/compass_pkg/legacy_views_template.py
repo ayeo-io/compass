@@ -346,15 +346,14 @@ ENTRY_COMMENTS = {
         '# could vouch for one another.',
     ],
     (GATE_G5, 'applies_when'): [
-        '# Fires on either arm, because the statement above names CONSEQUENCES while',
-        '# a tag list names domains, and those are not the same set. A change that',
-        '# can lose data - a backup/restore path, a destructive cleanup job, a',
-        '# retention policy, a storage migration written in application code - may',
-        '# carry none of the four tags and still be exactly what this guardrail is',
-        '# for. `critical` is defined in the router rubric as "Failure can lose',
-        '# data, lose money, breach auth/privacy, or cannot be cleanly rolled',
-        '# back": the same four consequences. The routing policy floors both arms',
-        '# heavily, so the checkpoint has a home either way.',
+        '# Fires on the four labels only. Their change is the one a merge cannot',
+        '# undo: a migration can lose data that cannot be restored, and auth,',
+        '# payments and personal data reach people outside the repository.',
+        '# Critical risk alone does not fire it: critical-risk code that carries',
+        '# none of the labels can be reverted at merge, and CI and review gate',
+        '# it (governance decision 2026-10-12, guardrail-5-triggers-on-the-',
+        '# irreversible-labels). A project that wants critical risk too sets',
+        '# `G5.when` back in compass.yml; the lock allows a stricter trigger.',
     ],
 }
 

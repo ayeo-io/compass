@@ -807,18 +807,6 @@ _register(Rule(
             "the abstract concept the word table retires - renaming the "
             "prose here would contradict the code two lines down."),
         Exemption(
-            "tests/test_g5_trigger.py",
-            "removed a committed default credential, read `blast_radius: critical`",
-            "a literal quote of the manifest field the incident actually "
-            "read at the time, kept in backticks by the audit's own "
-            "ruling (batch 8, tests/test_g5_trigger.py note: "
-            "\"`blast_radius: critical` in backticks stays\")."),
-        Exemption(
-            "tests/test_g5_trigger.py",
-            "`blast_radius`, so the delivery approach stayed heavy",
-            "the same literal field-name quote as the exemption above, "
-            "continued onto its own wrapped line."),
-        Exemption(
             "tests/test_route_selection.py",
             "swarm=8",
             "one of the literal keys of `RETIRED_ORCHESTRATION_CEILING` "

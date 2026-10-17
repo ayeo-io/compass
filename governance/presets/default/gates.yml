@@ -60,16 +60,15 @@ gates:
   G5:
     kind: guardrail
     name: A human signs off on the irreversible
-    statement: 'A change that can lose data, move money, or breach auth or privacy gets an explicit human
-      checkpoint before it lands.
+    statement: 'A change labelled auth, payments, personal-data or migrations gets an explicit human checkpoint
+      before it lands: it can breach auth, move money, expose personal data or lose data that cannot be
+      restored.
 
       '
     stage: ship
     applies_to: {ships: true}
     when:
-      any_of:
-      - labels_any: [auth, payments, personal-data, migrations]
-      - {risk: critical}
+      labels_any: [auth, payments, personal-data, migrations]
     checks: [human-approval-present]
     locked: hard
   S1:

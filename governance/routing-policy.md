@@ -107,6 +107,11 @@ The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
 The `verify.governance` immovable gate is what makes `G5` (a human signs off
 on the irreversible) hold: a change labelled with an irreversible surface is
 floored to the full approach, where the human checkpoint is part of the gate set.
+From 7.0.0 the checkpoint's trigger is those four labels only. Critical risk
+still floors an issue to the full approach and every other gate, but it does
+not bring the sign-off on its own, so `compass approach evaluate` names the
+four labels when risk is critical and none is set
+(`governance/guardrails.md`).
 
 ---
 

@@ -710,7 +710,10 @@ def test_ob_6_a_guardrail_gate_follows_applies_to_and_when(preset_config):
     assert "G1" in delivery.gate_set and "S1" not in delivery.gate_set
     assert "S1" in spike.gate_set and "G1" not in spike.gate_set
     assert "G5" not in delivery.gate_set
-    assert "G5" in obligations(preset_config, _assessment(risk="critical")).gate_set
+    # Critical risk alone no longer brings `G5`; one of its four labels does
+    # (governance decision 2026-10-12-guardrail-5-triggers-on-the-irreversible-labels).
+    assert "G5" not in obligations(preset_config, _assessment(risk="critical")).gate_set
+    assert "G5" in obligations(preset_config, _assessment(labels=["migrations"])).gate_set
 
 
 def test_ob_6_statement_is_compared_for_human_and_judged_checks_only(preset_config):

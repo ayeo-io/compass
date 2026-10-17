@@ -32,7 +32,7 @@
 # schemas/guardrails.schema.json.
 # =============================================================================
 
-version: 1.32.0
+version: 1.33.0
 # -----------------------------------------------------------------------------
 # Named checks - the mechanical checks `compass check` knows how to run. Each
 # guardrail below references one or more of these by name. The check reads
@@ -296,22 +296,19 @@ defaults:
   - id: G5
     name: "A human signs off on the irreversible"
     statement: >
-      A change that can lose data, move money, or breach auth or privacy
-      gets an explicit human checkpoint before it lands.
+      A change labelled auth, payments, personal-data or migrations gets an
+      explicit human checkpoint before it lands: it can breach auth, move
+      money, expose personal data or lose data that cannot be restored.
     checks: [human-approval-present]
-    # Fires on either arm, because the statement above names CONSEQUENCES while
-    # a tag list names domains, and those are not the same set. A change that
-    # can lose data - a backup/restore path, a destructive cleanup job, a
-    # retention policy, a storage migration written in application code - may
-    # carry none of the four tags and still be exactly what this guardrail is
-    # for. `critical` is defined in the router rubric as "Failure can lose
-    # data, lose money, breach auth/privacy, or cannot be cleanly rolled
-    # back": the same four consequences. The routing policy floors both arms
-    # heavily, so the checkpoint has a home either way.
-    applies_when:
-      any_of:
-        - touches_any: [auth, payments, personal-data, migrations]
-        - blast_radius: critical
+    # Fires on the four labels only. Their change is the one a merge cannot
+    # undo: a migration can lose data that cannot be restored, and auth,
+    # payments and personal data reach people outside the repository.
+    # Critical risk alone does not fire it: critical-risk code that carries
+    # none of the labels can be reverted at merge, and CI and review gate
+    # it (governance decision 2026-10-12, guardrail-5-triggers-on-the-
+    # irreversible-labels). A project that wants critical risk too sets
+    # `G5.when` back in compass.yml; the lock allows a stricter trigger.
+    applies_when: { touches_any: [auth, payments, personal-data, migrations] }
     checked_at: [land]
 
 # -----------------------------------------------------------------------------

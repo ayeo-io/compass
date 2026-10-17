@@ -137,6 +137,11 @@
       "operation": "set"
     },
     {
+      "catalogue": "gates",
+      "id": "G5",
+      "operation": "set"
+    },
+    {
       "catalogue": "artifacts",
       "id": "spike-conclusion",
       "operation": "add"

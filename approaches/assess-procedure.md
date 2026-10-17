@@ -110,6 +110,11 @@ force; if it is still a spike, leave the marker in place.
    a hotfix. Write these into the manifest's `assessment:` block. The assessment
    is the only part of the computation that is judgement - everything below
    is mechanism.
+   Apply `auth`, `payments`, `personal-data` or `migrations` whenever the
+   change is one of those: these labels, not the risk, bring the sign-off of
+   guardrail 5 (`G5`). Critical risk alone does not. When risk is critical
+   and none of them is set, `compass approach evaluate` names them under "Pay
+   attention to"; check whether the change is one of them before you go on.
 3. **Compute the delivery approach - this is the mechanism.** First run
    `compass approach evaluate --issue <slug>` without `--write`. When the
    approach it prints owes an `intent` (regular at `lightweight`, full at

@@ -52,16 +52,22 @@ findings into production work.
 
 ### 5. Irreversible work needs recorded human approval
 
-Human approvals are needed for:
+Human approvals are needed for an issue labelled:
 
-- auth and access-control changes;
-- payments or movement of money;
-- personal data and privacy;
-- migrations; and
-- any critical-risk change that can lose data, lose money, breach auth or
-  privacy, or resist clean rollback.
+- `auth` - auth and access-control changes;
+- `payments` - payments or movement of money;
+- `personal-data` - personal data and privacy; or
+- `migrations` - migrations, which can lose data that cannot be restored.
 
 The evidence records the approver, role, decision, time, scope and conditions.
+
+From 7.0.0, critical risk on its own does not need an approval. Critical-risk
+code that carries none of the four labels can be reverted at merge, and CI,
+review and the other guardrails still gate it. Assess names the four labels
+when risk is critical and none is set. A project that wants an approval for
+every critical-risk change adds critical risk back to the trigger in its
+`compass.yml` (`docs/upgrade-7-0-0.md`); the lock allows a stricter trigger.
+An issue assessed before 7.0.0 keeps the trigger stored with it.
 
 Only a `human-approval` record given for guardrail `G5` meets this approval. A
 record that names another subject - a `check`, `waiver`, `checkpoint`,

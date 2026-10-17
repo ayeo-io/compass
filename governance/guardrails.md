@@ -78,13 +78,27 @@ the Definition of Done.
 **A change that cannot be cleanly undone gets an explicit human checkpoint
 before it lands.**
 
-- Applies to anything that can lose data, move money, or breach auth or
-  privacy.
+- Applies to an issue labelled `auth`, `payments`, `personal-data` or
+  `migrations`: a change that can breach auth, move money, expose personal
+  data or lose data that cannot be restored.
 - No delivery approach removes this.
 
 The routing policy (`routing-policy.md`) is what makes sure such changes are
 *routed* to where the checkpoint happens; this guardrail is what makes the
 checkpoint non-negotiable.
+
+Critical risk alone does not bring the sign-off (governance decision
+`2026-10-12-guardrail-5-triggers-on-the-irreversible-labels`). Critical-risk
+code that carries none of the four labels can be reverted at merge, and CI,
+review and the other guardrails gate it. `compass approach evaluate` names
+the labels when risk is critical and none is set, so an unlabelled migration
+is named at assess. A project that wants the sign-off on every critical-risk
+change sets the trigger to the four labels or `risk: critical` in
+`compass.yml`; `docs/upgrade-7-0-0.md` prints the block. The hard lock refuses
+a looser trigger but allows this stricter one.
+
+An issue keeps the trigger stored in its generation, so an issue assessed
+before 7.0.0 still needs the sign-off at critical risk.
 
 Its check, `human-approval-present`, reads only evidence of the type
 `human-approval`. A person's approval of a document or of a set of decisions

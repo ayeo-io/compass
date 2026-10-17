@@ -351,11 +351,14 @@ def test_agf_10_no_landed_issue_newly_fails():
 
 # The sha256 of each locked entry as JSON with sorted keys, read at main 5079cef6
 # before this change. They must not move: the change is to the implementation only.
+# The `G5` entry moved once since, deliberately: issue g5-irreversible-labels
+# narrowed its trigger to the four labels and restated its statement (governance
+# decision 2026-10-12-guardrail-5-triggers-on-the-irreversible-labels).
 LOCKED = {
     ("checks.yml", "checks", CHECK):
         "0e3e2224bc64929a923573284b7590543b134e743e6b74eb273ea4c2737f0572",
     ("gates.yml", "gates", "G5"):
-        "e33c524704a884fd1fbd81227f52de0fabb8d1af0dbeb458b353f2b94fcd0292",
+        "23b9cbbdcfaa8b76d1141fbdfacd35324f98d6a8d058cf709ff3d429776989af",
 }
 
 

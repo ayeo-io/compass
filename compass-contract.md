@@ -66,5 +66,4 @@ cannot follow, and stop once you have said it.
 something is staged by mistake, say so and stop; do not retry a refused
 unstage. A lint fix never weakens an assertion; re-run affected tests.
 
-**Settle edge cases before scenarios.** Read
-`skills/bdd-specification/SKILL.md`.
+**Settle edge cases before scenarios** (`bdd-specification` skill).

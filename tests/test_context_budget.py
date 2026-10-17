@@ -55,7 +55,7 @@ NEW_RULES = {
     "staging by path": "Stage each file by its path",
     "staging no compass": "never `.compass/`",
     "lint fix": "A lint fix never weakens an assertion",
-    "edge cases heading": "**Settle edge cases before scenarios.**",
+    "edge cases heading": "**Settle edge cases before scenarios**",
 }
 
 # Raised from 2,250 by the one line that asks the agent to record friction it
@@ -68,7 +68,7 @@ NEW_RULES = {
 #
 # Raised to 2,750 by the staging, lint-fix and edge-case rules (issue
 # `contract-handoff-and-staging-rules`), net of the passages tightened to
-# make room: 2,718 characters measured, rounded up to the next 50. The
+# make room: 2,704 characters measured, rounded up to the next 50. The
 # sign-off rule is the approval rule above, so it adds nothing. These rules
 # apply at moments a session cannot predict, in any stage including a quick
 # fix, which reads only its own command and skill, so the rules must be
@@ -208,12 +208,14 @@ def test_contract_states_lint_fix_rule():
 
 
 def test_contract_states_id_and_header_rule():
-    """The contract keeps the heading and points at the skill that holds the
+    """The contract keeps the heading and names the skill that holds the
     rule (a pointer, because the full text put the resident words over the
-    900-word ceiling)."""
+    900-word ceiling). It names the skill, not a path: the contract is loaded
+    in every project, where the plugin's `skills/` folder is not on disk."""
     text = _contract_flat()
-    assert "**Settle edge cases before scenarios.**" in text
-    assert "skills/bdd-specification/SKILL.md" in text
+    assert "**Settle edge cases before scenarios**" in text
+    assert "(`bdd-specification` skill)" in text
+    assert "skills/bdd-specification/SKILL.md" not in text
     skill = _flat((ROOT / "skills" / "bdd-specification" / "SKILL.md")
                   .read_text(encoding="utf-8"))
     assert "id or header field" in skill
@@ -267,9 +269,9 @@ def test_contract_budget_can_fail():
 
 def test_rule_four_pointer_keeps_heading():
     text = _contract_flat()
-    assert "**Settle edge cases before scenarios.**" in text
-    skill = ROOT / "skills" / "bdd-specification" / "SKILL.md"
-    if "skills/bdd-specification/SKILL.md" in text:
-        body = skill.read_text(encoding="utf-8")
-        assert "Reproduce a reported bug on current code" in _flat(body)
-        assert len(body.splitlines()) <= 200
+    assert "**Settle edge cases before scenarios**" in text
+    assert "(`bdd-specification` skill)" in text
+    body = (ROOT / "skills" / "bdd-specification" / "SKILL.md").read_text(
+        encoding="utf-8")
+    assert "Reproduce a reported bug on current code" in _flat(body)
+    assert len(body.splitlines()) <= 200

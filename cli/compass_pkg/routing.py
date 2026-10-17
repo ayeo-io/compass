@@ -454,8 +454,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     waived = {_stage_key_renames().get(s, s) for s in issue.get("waived_stages") or ()}
     for stage, mode in (issue.get("stage_modes") or {}).items():
         stage = _stage_key_renames().get(stage, stage)
-        # Only the candidate's stages and a waived stage take an override (the
-        # reassess lints the waiver when the issue's layer or assessment changes).
+        # Only the candidate's stages and a waived stage take an override.
         if stage in phases and (final == candidate or stage in waived):
             phases[stage] = applied[stage] = mode
         else:

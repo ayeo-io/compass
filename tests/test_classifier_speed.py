@@ -611,7 +611,7 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # waived breakdown is now refused as incomparable unless its approval is valid,
 # where version 9 saw no effect. The version is now 10. Pinned on top of the
 # `model-tier-from-assessment` source above.
-VERDICT_SOURCE_PIN = "8aa4656d72490025"
+VERDICT_SOURCE_PIN = "e0233412f088703b"
 
 
 def _verdict_source_digest():

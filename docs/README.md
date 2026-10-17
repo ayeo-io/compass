@@ -75,6 +75,7 @@ same commit.
 | `tests/adapter_conformance/`, `tests/test_adapter_behaviour.py` | `docs/adapter-conformance.md` |
 | `hooks/`, `compass-contract.md`, `cli/compass_pkg/approval_guard.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/tip_scope.py` | `docs/safety-contract.md` |
+| `cli/compass_pkg/manifest_store.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
 | `cli/compass_pkg/release_line.py` | `docs/release-line.md` |
 | `cli/compass_pkg/release_notes.py`, `cli/compass_pkg/shipped_issues.py` | `docs/release-notes.md` |

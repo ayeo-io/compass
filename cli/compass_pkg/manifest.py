@@ -34,7 +34,7 @@ import fnmatch
 import re as _re
 from compass_pkg import checkpoint_outcomes, documents_present, issue_usage, release_line, status_words
 from compass_pkg.terminal import say
-from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
+from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
 from compass_pkg.tip_scope import tip_own_paths
 from compass_pkg.binding import changes_paths, declared_test_paths, _changes_id_at, _newest_bound_record
@@ -374,7 +374,7 @@ def cmd_land_commit(args):
         try:
             head_task_dir = resolve_issue_dir(args.task)
             head_task_path = manifest_path(head_task_dir)
-            head_task = normalize_spine(load_yaml(head_task_path))
+            head_task = load_manifest(head_task_dir)[0]  # its landing save merges
         except CompassError as exc:
             raise CompassError(
                 f"compass ship-commit: nothing staged to land, and issue "
@@ -648,7 +648,7 @@ def cmd_land_commit(args):
             task_dir = resolve_issue_dir(args.task)
             task_path = manifest_path(task_dir)
             if os.path.isfile(task_path):
-                task = normalize_spine(load_yaml(task_path))
+                task = load_manifest(task_dir)[0]  # its landing save merges
                 if isinstance(task, dict):
                     unmet = [g.get("id", "?") for g in (task.get("gates") or [])
                              if isinstance(g, dict) and g.get("status") != "pass"]

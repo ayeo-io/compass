@@ -552,6 +552,13 @@ def test_d2_repairs_change_only_retired_names():
     (list_items 20 -> 21) gained the bullet saying critical risk alone does
     not bring the sign-off.
 
+    One more was re-baselined by `manifest-writes-atomic-and-locked`:
+    `docs/safety-contract.md` (list_items 62 -> 70) gained the eight rules by
+    which every command saves an issue's manifest: the atomic replace, the
+    read without a lock, the merge, the conflict, the merge of records by
+    `id`, the merge of other lists, which mappings are merged, and the two
+    writers that write the file themselves.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

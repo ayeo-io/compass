@@ -218,6 +218,45 @@ not tracked. Writes are locked, so two sessions at once keep both records,
 and a `.gitignore` in `.compass/` keeps the table out of every project's
 commits.
 
+`compass` commands save an issue's `manifest.yml` through
+`core.save_manifest`, which `manifest_store.py` implements. The two writes
+that do not are named in the last item below.
+
+- The save writes a temporary file in the same folder and renames it over the
+  manifest. A reader sees the old manifest or the new one, never an empty or
+  partial file.
+- Reading a manifest takes no lock, so the pre-tool hook, which reads a
+  manifest on every tool call, never waits for a writer. A load records the
+  bytes it read. The record goes when nothing holds the manifest any more.
+- Under `.manifest.lock`, the save reads the file again. When another save
+  changed it after this command's load, the save merges this command's
+  changes into the file as it is now. The command's manifest then holds the
+  merged result, so its next save keeps both commands' changes. The merge
+  updates the command's own nested records rather than replacing them, so a
+  record the command still holds stays part of the manifest.
+- When both changed the same value to different values, the save stops with
+  an error that names the key, and writes nothing. Run the command again. A
+  value of another type, such as `true` for `1`, counts as a different value.
+- A list of records that each carry a distinct `id`, such as `gates` or
+  `evidence`, merges record by record, matched by `id`. A record one command
+  removed stays removed when the other left it alone. When the other command
+  changed it, the save stops with an error, as for any value both changed.
+  The result keeps this command's order of records. A record only the other
+  command added goes after the record it follows in the other's list.
+- Any other list merges position by position. A position both commands changed
+  differently is a conflict. Items each added at the end are all kept, and an
+  item both added is kept once. A list one command shortened while the other
+  changed it is a conflict.
+- A save merges only a manifest that `load_manifest` or
+  `manifest_store.load_file` returned, or a copy of one. A test fails when a
+  function in the CLI assigns the result of `load_yaml` to the name it then
+  passes to `save_manifest`; it does not follow a mapping through other
+  functions. A save of a mapping built any other way, such as the new
+  manifest `compass quick-fix start` writes, overwrites the file.
+- The hook's session record and the release-line write do not go through
+  `save_manifest`. Each holds the same lock, reads the file again inside it and
+  replaces the file atomically.
+
 ## Deliberate limits
 
 ### Compass does not prove correctness
@@ -449,9 +488,9 @@ manifest.
   cannot run - leaves the manifest as it was and no temporary file behind, and
   the hook judges the call as before. Recording never refuses a call. A broken
   install still refuses through the hook's other readers.
-- A session that makes no tool call the hook sees is not recorded, and a
-  command that loaded the manifest before the hook wrote can drop the id when
-  it saves. The next call then records it again.
+- A session that makes no tool call the hook sees is not recorded. A command
+  that loaded the manifest before the hook wrote keeps the id when it saves:
+  the save merges the hook's change.
 
 ### Shell-write detection is best-effort
 

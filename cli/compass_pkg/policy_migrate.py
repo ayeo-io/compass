@@ -582,16 +582,22 @@ def _derive(root, made, settings):
     base = _release_config(release)
     made.base_release = {"release": None if chosen_by == "as-built" else release["tag"],
                          "chosen_by": chosen_by}
+    parent, _meta = policy_lint.load_parent()
+    parent_config = merge.resolve([parent])[0]
     current = _release_config(shipped_releases.current())
+    # The current legacy files name only the documents an approach or a rule
+    # owes, so a document the shipped preset still declares, such as the UI
+    # contract once the role rules went, is missing from them. The project
+    # extends that preset, so such an entry is not removed.
     made.adopted = [{k: op[k] for k in ("catalogue", "id", "operation")}
-                    for op in overlay_between(base, current)[1]]
+                    for op in overlay_between(base, current)[1]
+                    if op["operation"] != "remove"
+                    or op["id"] not in (parent_config.get(op["catalogue"]) or {})]
     overlay, ops = overlay_between(base, legacy)
     made.ops = ops
     made.blocked += _retired_edits(overlay)
     base_views = legacy_adapter.legacy_views(*_release_files(release))
     made.blocked += _unexpressed(base_views, legacy_adapter.legacy_views(policy, guardrails))
-    parent, _meta = policy_lint.load_parent()
-    parent_config = merge.resolve([parent])[0]
     try:
         migrated = merge.resolve([parent, _project_layer(_layer_document(overlay))])[0]
         faithful = merge.apply(base, overlay, "project", "project")[0]

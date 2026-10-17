@@ -148,11 +148,6 @@
     },
     {
       "catalogue": "artifacts",
-      "id": "ui-contract",
-      "operation": "remove"
-    },
-    {
-      "catalogue": "artifacts",
       "id": "verification-note",
       "operation": "add"
     },

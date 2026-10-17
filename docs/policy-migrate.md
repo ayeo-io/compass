@@ -109,7 +109,9 @@ The one exception to the `compass.yml` refusals is the interrupted run above.
 
 Defaults that moved since the base release are **adopted** without a waiver.
 They are listed in the report and in `adopted`, as entry and operation, from the
-base release to the current default. An entry the project also edited keeps its
+base release to the current default. An entry the shipped preset still declares
+is never listed as removed, even where the current legacy files no longer name
+it: the UI contract is one. An entry the project also edited keeps its
 edit for the fields it edited. The report also gives the `behaviour`: the
 classifier's verdict on the copy against the migrated configuration, and how
 many grid points differ. Adopting a default can change behaviour; that is
@@ -388,11 +390,6 @@ reassess), and the `compass.yml` it would write.
       "catalogue": "artifacts",
       "id": "spike-conclusion",
       "operation": "add"
-    },
-    {
-      "catalogue": "artifacts",
-      "id": "ui-contract",
-      "operation": "remove"
     },
     {
       "catalogue": "artifacts",

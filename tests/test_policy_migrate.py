@@ -642,6 +642,27 @@ def test_PM_13_the_report_names_the_base_release_and_what_the_default_adds(tmp_p
     assert "an issue with no stored generation is judged by it at once" in out
 
 
+# --- PM-16 ------------------------------------------------------------------------
+
+@pytest.mark.parametrize("tag", ["v5.0.0", "v6.0.1"])
+def test_PM_16_the_adopted_list_removes_nothing_the_shipped_preset_keeps(tmp_path, tag):
+    # The current legacy files no longer name the UI contract, because the role
+    # rules that added it are gone, but the shipped preset still declares it.
+    root = _project(tmp_path)
+    _copy_release(root, tag)
+    made = _plan(root)
+    from compass_pkg import merge, policy_lint
+    preset = merge.resolve([policy_lint.load_parent()[0]])[0]
+    assert "ui-contract" in preset["artifacts"]
+    kept = [a for a in made.adopted if a["operation"] == "remove"
+            and a["id"] in (preset.get(a["catalogue"]) or {})]
+    assert kept == [], kept
+    assert {"catalogue": "dimensions", "id": "role", "operation": "remove"} in made.adopted
+    code, out, err = _run(root, "policy", "migrate")
+    assert code == 0, out + err
+    assert "artifacts.ui-contract" not in out
+
+
 # --- PM-14 ------------------------------------------------------------------------
 
 PROJECT_GUARDRAIL = """project:

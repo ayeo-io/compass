@@ -1,6 +1,6 @@
 ---
 name: adaptive-routing
-description: Reading the four assessment dimensions for the CLI. Load at the assess stage.
+description: Reading the three scored dimensions for the CLI. Load at the assess stage.
 ---
 
 # Adaptive Routing
@@ -10,9 +10,12 @@ holds the rules; this skill says how to apply them.
 
 ## The mental model
 
-You are not picking a process. You are computing one. The four dimensions are
-four independent questions, and the delivery approach is their composition - heavier where
-they read high, lighter where they read low. The composition is **biased** by
+You are not picking a process. You are computing one. The assessment has
+three scored dimensions (`risk`, `familiarity`, `size`), two switches (`goal`,
+`urgency`) and any domain labels. The three scored dimensions are three
+independent questions, and the delivery approach is their composition -
+heavier where they read high, lighter where they read low. A switch leans the
+approach towards a reference shape. A domain label raises the floor. The composition is **biased** by
 the routing strategies and **bounded** by the routing guardrails, both in
 `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md` (an unmigrated 5.x project
 runs on its own copied `governance/`). The five reference shapes
@@ -67,6 +70,11 @@ treat a project without a `compass.yml` as missing a prerequisite.
   `medium` has one or two design decisions; `large` has real architecture and
   is plausibly parallelisable.
 
+**The switches** - *`goal` and `urgency` are read, not scored.* Either can
+be left out. `goal: exploration` leans towards spike; `urgency: live-defect`
+on an atomic or small change leans towards hotfix. Each one you set still
+needs a `--justify`. Domain labels need none.
+
 **Goal** - *the actual outcome, not the literal request.*
 - Read `intent.md` if it exists. "Add a CSV export" under an `intent.md` that says "let
   finance self-serve" may need filters, scheduling, and permissions - the
@@ -75,8 +83,8 @@ treat a project without a `compass.yml` as missing a prerequisite.
   and gates through the artifact rules. That is the framework working, not overhead.
 - One goal value is **exploration** - "I cannot frame this well
   enough to deliver it yet." Exploration composes towards the **spike** delivery approach the
-  way live-defect urgency composes towards hotfix. Still score all four
-  dimensions; the goal is what selects the shape. See "Composing a spike"
+  way live-defect urgency composes towards hotfix. Still score all three
+  dimensions; the switch is what selects the shape. See "Composing a spike"
   in `composition.md`.
 
 If you cannot justify a value in one honest line, **ask the human.** An
@@ -84,9 +92,10 @@ unjustified guess is worse than a question, every time.
 
 ## Composing and constraining
 
-The CLI does both. You read the four dimensions and run
+The CLI does both. You score the three dimensions, read the two switches and
+the domain labels, and run
 `compass approach evaluate --write --justify DIM="<why>"`, with one
-`--justify` for each new or changed value; it composes the first approach and
+`--justify` for each new or changed dimension or switch; it composes the first approach and
 applies the floors, caps, immovable gates and artifact rules. That split is the
 determinism boundary and it is the point of the whole design: judgement
 produces the assessment, mechanism produces the approach.

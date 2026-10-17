@@ -6,6 +6,6 @@
     "test": "cucumber-js"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "^13.2.1"
+    "@cucumber/cucumber": "^13.3.0"
   }
 }

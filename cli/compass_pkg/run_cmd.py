@@ -39,7 +39,7 @@ import sys
 import time
 
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, docs_dir,
-                              find_upwards, load_manifest, load_yaml,
+                              find_upwards, load_manifest,
                               manifest_path, now_iso, resolve_issue_dir,
                               save_manifest)
 from compass_pkg import host_launch, status_words
@@ -167,9 +167,11 @@ def _done(task, stage, task_dir):
 
 
 def _read(task_dir):
-    """The manifest, or None when it cannot be read as a mapping."""
+    """The manifest, or None when it cannot be read as a mapping. Read through
+    `manifest_store.load_file`, so the run's save merges a change saved since."""
+    from compass_pkg import manifest_store
     try:
-        task = load_yaml(manifest_path(task_dir))
+        task = manifest_store.load_file(manifest_path(task_dir))
     except Exception:                                   # noqa: BLE001
         return None
     return task if isinstance(task, dict) else None

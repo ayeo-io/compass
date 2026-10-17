@@ -74,7 +74,7 @@ The pre-tool hook appends the session id to `usage.sessions` the first time it j
 - The write tries the per-issue `.manifest.lock` once, without waiting. If another process holds it, nothing is written and the id is recorded on a later call.
 - It inserts the id by text, checks that the parsed result changed nothing else, and replaces the file atomically after comparing the bytes on disk with the bytes it read. If they changed, it merges again, up to three times.
 - Any fault allows the edit with exit 0 and leaves the manifest as it was. The record never refuses an edit.
-- `core.save_manifest` holds the same lock while it writes, so the hook never replaces a manifest a command is writing. A writer that does not take the lock is merged, not excluded.
+- `core.save_manifest` holds the same lock while it writes, so the hook never replaces a manifest a command is writing. A command that loaded the manifest before the hook wrote keeps the id: its save merges the hook's change (`docs/safety-contract.md`, guarantee 7).
 
 ## Usage at ship
 

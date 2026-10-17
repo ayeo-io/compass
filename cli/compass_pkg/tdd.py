@@ -35,7 +35,8 @@ import fnmatch
 import re as _re
 from compass_pkg.terminal import say
 from compass_pkg import project_settings
-from compass_pkg.core import CompassError, find_upwards, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
+from compass_pkg.core import CompassError, find_upwards, load_manifest, manifest_path, now_iso, resolve_issue_dir, save_manifest
+from compass_pkg.manifest_store import load_file as load_manifest_file
 from compass_pkg import pytest_report
 from compass_pkg.binding import declared_test_paths, ids_for
 from compass_pkg.red_first import (
@@ -810,7 +811,7 @@ def _upsert_test_run_evidence(task_dir, scenario, rel_path,
     if not os.path.isfile(task_path):
         return  # no manifest.yml - assess has not run; nothing to update
     try:
-        task = load_yaml(task_path)
+        task = load_manifest_file(task_path)
     except CompassError:
         return
     if not isinstance(task, dict):

@@ -318,11 +318,11 @@ def cmd_issue_artifact(args):
     `--decision` on the spike conclusion also writes the evidence record the
     check `spike-conclusion-present` reads.
     """
-    from compass_pkg import artifact_kinds
+    from compass_pkg import artifact_kinds, manifest_store
 
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     path = manifest_path(task_dir)
-    task = load_yaml(path)
+    task = manifest_store.load_file(path)  # read as load_yaml does; its saves merge
     arts = [a for a in (task.get("artifacts") or []) if isinstance(a, dict)]
     view = _view_or_none(task_dir)
     known = artifact_kinds.catalogue(view)

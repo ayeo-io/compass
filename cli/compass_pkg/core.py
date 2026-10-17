@@ -43,7 +43,7 @@ from compass_pkg.project_settings import CompassError  # noqa: E402,F401
 from compass_pkg.stable_ids import (  # noqa: E402
     APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, STAGE_ASSESS, STAGE_DEFINE, STAGE_IDS,
     STAGE_PLAN, STAGE_REFINE)
-from compass_pkg import atomic_io, word_map  # noqa: E402
+from compass_pkg import manifest_store, word_map  # noqa: E402
 
 
 # --- small helpers -----------------------------------------------------------
@@ -343,7 +343,7 @@ def load_manifest(task_dir):
             f"no manifest.yml in {task_dir} - has the issue been assessed? "
             f"The manifest is what every command reads."
         )
-    task = load_yaml(path)
+    task, data = manifest_store.read(path)
     # schema_version compatibility: a major mismatch is unsafe to silently run
     # against - the shape may have changed. Same major is OK (additive); absent
     # is OK in 1.0 for back-compat with pre-versioned files.
@@ -359,7 +359,9 @@ def load_manifest(task_dir):
                 f"'{COMPASS_SCHEMA_VERSION}' (and reads 1.x by key "
                 f"normalisation). Update Compass, or migrate the manifest.yml."
             )
-    return normalize_spine(task), path
+    task = normalize_spine(task)
+    task = manifest_store.track(task, path, data)  # the version a save merges against
+    return task, path
 
 
 # The 1.x -> 2.0 manifest key map. Read-side only: every loader normalises to
@@ -656,10 +658,8 @@ def prepare_manifest_write(task, path):
 
 MANIFEST_LOCK = ".manifest.lock"  # held while a manifest is written (session_record.py)
 def save_manifest(task, path):
-    with atomic_io.locked(os.path.join(os.path.dirname(os.path.abspath(path)), MANIFEST_LOCK)):
-        task = prepare_manifest_write(task, path)
-        with open(path, "w", encoding="utf-8") as fh:
-            yaml.safe_dump(task, fh, sort_keys=False, default_flow_style=False)
+    """Replace the manifest atomically, keeping changes saved since it was loaded."""
+    manifest_store.save(task, path, MANIFEST_LOCK, prepare_manifest_write, normalize_spine)
 
 
 # --- architecture loading (assess) --------------------------------------------

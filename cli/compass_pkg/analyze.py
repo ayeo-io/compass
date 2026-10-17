@@ -519,7 +519,9 @@ def _upsert_analyze_evidence_registry(task_dir: str, ev_id: str,
     if not os.path.isfile(task_path):
         return
     try:
-        task = normalize_spine(load_yaml(task_path))
+        # Through load_manifest, so the save merges a change saved meanwhile.
+        from compass_pkg.core import load_manifest
+        task, _ = load_manifest(task_dir)
     except CompassError:
         return
     if not isinstance(task, dict):

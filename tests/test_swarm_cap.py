@@ -95,7 +95,8 @@ def test_stored_issue_ceiling_limits_provisioning(tmp_path, ceiling, requested, 
         assert f"cap is {cap}" in result.stderr
         assert "WOULD create worktree" not in result.stdout
     else:
-        assert f"route cap {cap}" in result.stdout
+        # multiagent.sh says "approach cap", because "route" is a verb only (ADR-044).
+        assert f"approach cap {cap}" in result.stdout
 
 
 @pytest.mark.parametrize("ceiling", [0, -1, True, "2"])
@@ -135,7 +136,8 @@ def test_cap_from_readings_ignores_prose(tmp_path):
     _map(td, "t2", 5)
     r = _run(repo, "t2")
     assert r.returncode == 0, r.stdout + r.stderr
-    assert "route cap 6" in (r.stdout + r.stderr), r.stdout + r.stderr
+    # The script says "approach cap", because "route" is a verb only (ADR-044).
+    assert "approach cap 6" in (r.stdout + r.stderr), r.stdout + r.stderr
 
 
 def test_critical_reading_caps_to_one(tmp_path):

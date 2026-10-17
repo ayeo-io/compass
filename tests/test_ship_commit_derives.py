@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -179,6 +180,25 @@ def test_ship_commit_derives_for_a_solo_issue(cli_path, tmp_path):
     assert slug in spec_path.read_text(encoding="utf-8")
 
 
+def test_rwp_5_ship_commit_says_the_issue_is_marked_done(cli_path, tmp_path):
+    """The stored state is `done` (ADR-044), so the message names it, and
+    the refusal over a pending gate names it too."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    _open_issue(repo, "solo-issue", topology="solo")
+    r = _run_ship_commit(cli_path, repo, "-m", "land solo", "--issue", "solo-issue")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "issue marked done." in r.stdout, r.stdout
+    assert "marked landed" not in r.stdout, r.stdout
+
+    _open_issue(repo, "gate-pending", gates_pass=False, file_name="other.txt")
+    r = _run_ship_commit(cli_path, repo, "-m", "attempt", "--issue", "gate-pending")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert re.search(r"NOT marked done: \d+ gate\(s\) have not passed", r.stdout), r.stdout
+    assert "marked landed" not in r.stdout, r.stdout
+
+
 def test_ship_commit_does_not_derive_when_a_gate_has_not_passed(cli_path, tmp_path):
     """The commit still stands, but a gate that has not passed keeps the
     issue off 'landed' - and an issue not marked landed is not derived."""
@@ -197,7 +217,7 @@ def test_ship_commit_does_not_derive_when_a_gate_has_not_passed(cli_path, tmp_pa
 
     assert not (repo / "docs" / "system-spec.md").exists(), (
         "docs/system-spec.md must not be derived for an issue that was "
-        "not marked landed")
+        "not marked done")
     subjects = _log_subjects(repo, since=h0)
     assert not any(s.startswith("Re-derive the living spec") for s in subjects), subjects
 

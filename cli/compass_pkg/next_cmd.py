@@ -53,7 +53,7 @@ from compass_pkg.core import (CompassError, artifact_path, canonical_shape, load
 # and the .red marker for a red the manifest does not list.
 #
 # The plain line, which is all piped output and the model ever see:
-#   "<NextPhase> [gate: <gate-id>][ | <phase> collapsed on this route]"
+#   "<NextPhase> [gate: <gate-id>][ | <phase> collapsed in this approach]"
 # When the issue has landed:
 #   "all phases complete"
 # When delivery-approach.md is missing:
@@ -399,7 +399,7 @@ def cmd_next(args):
     if unmet:
         parts.append("entry not met: " + ", ".join(unmet))
     if collapsed:
-        parts.append(f"{', '.join(collapsed)} collapsed on this route")
+        parts.append(f"{', '.join(collapsed)} collapsed in this approach")
     # The issues this one waits for (ADR-062). Faults in `depends_on` are not
     # named here: the line stays one line, and `compass issue lint` names them.
     blocked = _dependency_block(task, task_dir, next_phase)

@@ -1009,8 +1009,9 @@ def _text(document):
 
 def test_pd_9_identical_configurations_print_one_line_after_the_heading():
     lines = _text(_diff())
+    # The line names the approach, because "route" is a verb only (ADR-044).
     assert lines == ["compass policy diff: before -> after",
-                     "no difference: the two configurations route and check alike"]
+                     "no difference: the two configurations give the same approach and checks"]
 
 
 def test_pd_9_the_text_shows_the_verdict_the_sets_and_the_first_changes():

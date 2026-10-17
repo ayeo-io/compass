@@ -162,3 +162,84 @@ def test_the_retired_names_come_from_terminology():
         # block would pass the equality above and catch nothing.
         printed = f"run {entry['name']} to finish"
         assert RETIRED_IN_OUTPUT[entry["name"]].search(printed), entry["name"]
+
+
+# ---------------------------------------------------------------------------
+# The second walk: every prose literal, wherever it is printed from.
+#
+# The walk above reads only the arguments of a writer call. A message built
+# into a variable first ("issue marked landed" in ship-commit), a line a
+# function returns for its caller to print (the flow digest), and an argparse
+# help string are all printed, and none of them is a writer's argument. So
+# this walk reads every string literal under cli/ that has a space in it -
+# a single token is a machine value - and is not a docstring, which is never
+# printed.
+# ---------------------------------------------------------------------------
+
+def _docstring_ids(tree: ast.AST) -> set[int]:
+    ids = set()
+    for node in ast.walk(tree):
+        body = getattr(node, "body", None)
+        if (isinstance(node, (ast.Module, ast.FunctionDef,
+                              ast.AsyncFunctionDef, ast.ClassDef))
+                and body and isinstance(body[0], ast.Expr)
+                and isinstance(body[0].value, ast.Constant)
+                and isinstance(body[0].value.value, str)):
+            ids.add(id(body[0].value))
+    return ids
+
+
+def _prose_literals(src: str):
+    """(line, text) for each prose literal in one module's source."""
+    tree = ast.parse(src)
+    lines = src.splitlines()
+    docs = _docstring_ids(tree)
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Constant) and isinstance(node.value, str)):
+            continue
+        if id(node) in docs or " " not in node.value:
+            continue
+        window = "\n".join(lines[max(0, node.lineno - 1):node.lineno + 3])
+        if ALLOW.search(window):
+            continue
+        yield node.lineno, node.value
+
+
+def _retired_phrase_hits(rel, src):
+    return [f"{rel}:{line}: names {name!r} -> {text[:70]!r}"
+            for line, text in _prose_literals(src)
+            for name, pattern in RETIRED_IN_OUTPUT.items()
+            if pattern.search(text)]
+
+
+def test_rwp_4_no_prose_string_in_the_cli_names_a_retired_phrase():
+    hits = []
+    for path in _modules():
+        hits += _retired_phrase_hits(path.relative_to(ROOT),
+                                     path.read_text(encoding="utf-8"))
+    assert not hits, (
+        "a CLI string names retired vocabulary, so the tool teaches a word it "
+        "has retired:\n  " + "\n  ".join(sorted(hits)))
+
+
+def test_rwp_4_a_planted_phrase_is_reported_wherever_the_string_is_built():
+    """A message built first, a returned line and a help string - the three
+    shapes the writer walk cannot see - each go through the same walk."""
+    planted = (
+        'def ship():\n'
+        '    note = "\\n  issue marked landed."\n'
+        '    print("done" + note)\n'
+        'def digest():\n'
+        '    return "No queued issues."\n'
+        'def floor():\n'
+        '    return "stage forced full-weight"\n'
+        'def parser(sub):\n'
+        '    sub.add_parser("quick-fix", help="assess, build and ship a fix")\n'
+    )
+    hits = _retired_phrase_hits("planted.py", planted)
+    for name in ("marked landed", "queued", "full-weight",
+                 "assess, build and ship"):
+        assert any(repr(name) in h for h in hits), (name, hits)
+    clean = ('def f():\n    """The issue marked landed is queued."""\n'
+             '    return "the commit landed and the queue is empty"\n')
+    assert _retired_phrase_hits("clean.py", clean) == []

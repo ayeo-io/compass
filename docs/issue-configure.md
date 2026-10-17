@@ -44,9 +44,9 @@ assessment the project will see (ADR-037).
 
 What follows from judging at the point:
 
-- A route pick is accepted when the issue owes at least as much with it as without it at its own assessment. `--route spike` on a delivery issue is refused by a lock at that assessment. A spike issue that picks `full` is refused by a lock, because it would lose `spike.conclude`.
-- Nothing is accepted or refused by the name or weight of a route. `full` has no subtask ceiling, and no ceiling is the loosest, so `full` on a `regular` issue is refused as incomparable on `approaches.subtask_ceiling`. A route pick that is incomparable or looser at the point is refused, and a route pick has no waiver in 6.0.0.
-- A route pick is compared field by field, never as a heavier or lighter route. A pick that raises a ceiling, or changes a mode the stage ranks leave unordered, is a mixed change and is refused, even when it also tightens other fields. The refusal ends with the fields that make it mixed: `fields that are looser or cannot be compared: ...`. Combine the pick with a flag that removes each of them. On a `regular` issue, `--route regular --ceiling subtask_ceiling=1` is a pure tightening and is accepted.
+- An approach pick is accepted when the issue owes at least as much with it as without it at its own assessment. `--route spike` on a delivery issue is refused by a lock at that assessment. A spike issue that picks `full` is refused by a lock, because it would lose `spike.conclude`.
+- Nothing is accepted or refused by the name or weight of an approach. `full` has no subtask ceiling, and no ceiling is the loosest, so `full` on a `regular` issue is refused as incomparable on `approaches.subtask_ceiling`. An approach pick that is incomparable or looser at the point is refused, and an approach pick has no waiver in 6.0.0.
+- An approach pick is compared field by field, never as a heavier or lighter approach. A pick that raises a ceiling, or changes a mode the stage ranks leave unordered, is a mixed change and is refused, even when it also tightens other fields. The refusal ends with the fields that make it mixed: `fields that are looser or cannot be compared: ...`. Combine the pick with a flag that removes each of them. On a `regular` issue, `--route regular --ceiling subtask_ceiling=1` is a pure tightening and is accepted.
 - `--route regular` on a `quick-fix` issue cannot be fixed that way. It is refused naming `approaches.subtask_ceiling` (1 to 2, looser), `approaches.stages (breakdown)` (skipped against multiagent, unranked) and `approaches.artifacts` (a different set), and adding `--ceiling subtask_ceiling=1` clears only the first.
 - A stage mode already in force is accepted: `--mode refine=collapsed` on a `quick-fix` issue, where refine is already collapsed, loosens nothing. On a `regular` issue it loosens `refine` and is refused without a waiver.
 
@@ -380,8 +380,8 @@ because whether it commits depends on the computed outcome, so an adoption of
 such a folder can still refuse after the result prints. The exception is an
 issue with a `config:` layer whose stored `assessment` differs from the
 `evaluated_assessment` of the last write: its layer is linted at the new
-assessment before anything prints, even when the configuration is equal. A
-route accepted at the old assessment cannot carry onto a spike assessment by
+assessment before anything prints, even when the configuration is equal. An
+approach accepted at the old assessment cannot carry onto a spike assessment by
 a reassess that changes nothing else.
 
 1. **The proposal.** A pending proposal becomes the manifest's `config:` in the manifest it writes. It is stale, and the reassess refuses it, when `base_generation` is not the generation in force or `base_config_digest` is not the digest of the manifest's `config:` now. The message names `compass issue configure --issue <slug> --discard`.

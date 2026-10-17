@@ -30,6 +30,20 @@ MAP_READERS = ("scripts/multiagent.sh", "scripts/integrate.sh",
                "cli/compass_pkg/multiagent_check.py")
 
 
+# The two scripts' variable names and messages say "approach" where they said
+# "route", because "route" is a verb only (ADR-044, issue
+# `retired-words-in-prose-and-output`). The map is read the same way, so the
+# comparison undoes that rename only.
+_RENAMED = ((b"APPROACH_DOC", b"ROUTE"), (b"approach cap", b"route cap"),
+            (b"If the approach is solo", b"If the route is solo"))
+
+
+def _unrenamed(data):
+    for new, old in _RENAMED:
+        data = data.replace(new, old)
+    return data
+
+
 def _origin_main(rel):
     """The bytes of `rel` on origin/main, or a skip when that ref is absent."""
     run = subprocess.run(["git", "show", "origin/main:%s" % rel], cwd=ROOT,
@@ -88,7 +102,8 @@ def test_wcl_15_distribution_map_unchanged():
     before = _artifacts(_origin_main("governance/presets/default/artifacts.yml"))
     assert now["distribution-map"] == before["distribution-map"]
     for reader in MAP_READERS:
-        assert (ROOT / reader).read_bytes() == _origin_main(reader), reader
+        assert _unrenamed((ROOT / reader).read_bytes()) == _unrenamed(
+            _origin_main(reader)), reader
     # Unit is still the first column of the design's Work units table, which the
     # distribution map is read from.
     text = (ROOT / "templates" / "technical-design.md").read_text(encoding="utf-8")

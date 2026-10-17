@@ -9,13 +9,13 @@
 
 Add a `RateLimitMiddleware` to the existing request pipeline, positioned after
 the auth middleware (so the client id is already resolved) and before the
-route handler. The middleware reads a per-client request count for the current
+endpoint handler. The middleware reads a per-client request count for the current
 fixed window from a shared store, compares it to the configured limit, and
 either passes the request through (incrementing the count) or short-circuits
 with a 429 carrying a `Retry-After` header.
 
 Order of work: the middleware and its store come first (TRC-001…`TRC-005` all
-depend on it), then the route wiring on `/search`, then the config keys. The
+depend on it), then the endpoint wiring on `/search`, then the config keys. The
 five scenarios are built one at a time, red→green→refactor, in the order they
 appear in `acceptance-criteria.md` - `TRC-001` establishes the pass-through path,
 `TRC-002` the reject path, and the rest layer on.

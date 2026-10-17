@@ -190,10 +190,19 @@ def test_vr_g2_the_alias_check_reports_a_section_that_says_too_little():
 
 TERMINOLOGY = ROOT / "governance" / "terminology.yml"
 GLOSSARY = ROOT / "docs" / "glossary.md"
-# The route-noun guard covers only these three directories. Widening it to
-# docs/, governance/ and the other scanned surfaces is a larger sweep, owed
-# before 7.0.0 and tracked in the repository's issue #524.
-SCAN_ROOTS = ("commands", "skills", "agents")
+# Where the route-noun guard reads. The first three were the original scope;
+# the other seven were added before 7.0.0 (public issue #524).
+SCAN_ROOTS = ("commands", "skills", "agents", "governance", "docs", "schemas",
+              "cli", "hooks", "scripts", "examples")
+# Paths under the roots the guard does not read, each a record of its day or
+# a derived file. Rewriting a dated record would change what it says was
+# decided, and several decision files carry the word in their own names.
+ROUTE_EXEMPT = {
+    "governance/decisions/": "dated decision records, kept as decided",
+    "docs/compass/": "issue records, written while each issue ran",
+    "docs/system-spec.md": "derived at ship time; hand-editing it is forbidden",
+    "cli/vendor/": "third-party code, not our vocabulary",
+}
 
 
 def _terms() -> dict:
@@ -328,24 +337,70 @@ def test_vr_g7_the_fallback_tables_equal_the_file_with_the_file_unreadable(
 
 # --- "route" is a verb only in the prose that teaches ------------------------
 
-ROUTE_RE = re.compile(r"\b(?:route|routes|routed|off-route)\b", re.I)
+# Not after a word character, a hyphen, `/` or `.`: `--route` is a flag,
+# `mis-route` an enum value, `src/api/routes/` a path, and
+# `force_minimum_route` an identifier - machine names that ADR-044 leaves
+# alone. `off-route` is listed whole so the hyphen rule does not hide it.
+ROUTE_RE = re.compile(r"(?<![\w/.-])(?:off-route|route|routes|routed)(?!\w)",
+                      re.I)
 ROUTE_MARKER = "vocabulary-scan: allow - route is a verb here"
+CODE_SPAN = re.compile(r"`[^`]+`")
 
 
-def route_hits(text: str, name: str) -> list[str]:
-    """Lines that use the word without the reviewed-verb marker."""
+# A marker whose reason is about this word: the reviewed-verb marker, or any
+# reason that starts with "route".
+ROUTE_MARKER_RE = re.compile(r"vocabulary-scan:\s*allow\s*-\s*route\b")
+
+
+def _marked(raw: list[str], lineno: int) -> bool:
+    """A reasoned marker on the line itself, or a route marker on the line
+    before. Another word's marker on the line before does not count: it was
+    written for that word, not for this one. The raw lines are read, not the
+    scanned text, because a Python marker sits in a comment and the scan
+    drops comments."""
+    from allow_marker import ALLOW_MARKER_RE
+    line = raw[lineno - 1] if 0 < lineno <= len(raw) else ""
+    before = raw[lineno - 2] if 1 < lineno <= len(raw) + 1 else ""
+    return bool(ALLOW_MARKER_RE.search(line) or ROUTE_MARKER_RE.search(line)
+                or ROUTE_MARKER_RE.search(before))
+
+
+def route_hits(text: str, name: str, units=None) -> list[str]:
+    """Lines that use the word without a marker. `units` are the
+    (line, text) pairs to read; by default every line of `text`."""
+    raw = text.splitlines()
+    if units is None:
+        units = list(enumerate(raw, 1))
     return [f"{name}:{n}: {line.strip()[:80]}"
-            for n, line in enumerate(text.splitlines(), 1)
-            if ROUTE_RE.search(line) and ROUTE_MARKER not in line]
+            for n, line in units
+            if ROUTE_RE.search(CODE_SPAN.sub(" ", line)) and not _marked(raw, n)]
+
+
+def _route_files() -> list[Path]:
+    """Every tracked file under the scan roots, less the declared exemptions."""
+    listed = subprocess.run(["git", "ls-files", "-z", *SCAN_ROOTS], cwd=ROOT,
+                            capture_output=True, text=True, check=True).stdout
+    return [ROOT / rel for rel in sorted(filter(None, listed.split("\0")))
+            if not rel.startswith(tuple(ROUTE_EXEMPT))]
+
+
+def _route_units(path: Path) -> list[tuple[int, str]]:
+    """The positions the terminology scan reads, less its exempt regions:
+    string literals in Python, values in YAML, descriptions in JSON."""
+    from test_terminology import _region_exempt_linenos, _scan_units
+    rel = str(path.relative_to(ROOT))
+    raw = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    exempt = _region_exempt_linenos(rel, raw)
+    return [(n, t) for n, t in _scan_units(path) if n not in exempt]
 
 
 def test_vr_g8_every_use_of_route_in_shipped_prose_carries_the_marker():
     hits = []
-    for top in SCAN_ROOTS:
-        for path in sorted((ROOT / top).rglob("*.md")):
-            hits += route_hits(path.read_text(encoding="utf-8"),
-                               str(path.relative_to(ROOT)))
-    assert hits == [], "route is a verb only; mark a verb use:\n" + "\n".join(hits)
+    for path in _route_files():
+        text = path.read_text(encoding="utf-8", errors="replace")
+        hits += route_hits(text, str(path.relative_to(ROOT)), _route_units(path))
+    assert hits == [], ("route is a verb only; rewrite the noun or mark a "
+                        "verb use:\n" + "\n".join(hits))
 
 
 def test_vr_g8_a_planted_noun_fails_and_a_marked_verb_passes():
@@ -355,6 +410,60 @@ def test_vr_g8_a_planted_noun_fails_and_a_marked_verb_passes():
     assert route_hits("It routed the work.\n", "sample.md")
     verb = f"Run assess; it routes a spike. <!-- {ROUTE_MARKER} -->\n"
     assert route_hits(verb, "sample.md") == []
+
+
+def test_rwp_2_a_planted_noun_fails_in_each_widened_folder(tmp_path, monkeypatch):
+    """Each file type goes through the same reader the guard uses, so a
+    reader that silently returns nothing fails here."""
+    import test_terminology
+    monkeypatch.setattr(test_terminology, "REPO_ROOT", tmp_path)
+    planted = {
+        "docs/a.md": "Pick the route first.\n",
+        "cli/a.py": 'print("the route runs no hand-off")\n',
+        "hooks/a.sh": 'echo "the route is solo" >&2\n',
+        "schemas/a.json": '{"description": "A route name."}\n',
+        "examples/a.yml": "why: the route earns one\n",
+    }
+    for rel, body in planted.items():
+        path = tmp_path / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body, encoding="utf-8")
+        assert route_hits(body, rel, test_terminology._scan_units(path)), rel
+    machine = ("Pass `--route regular` to it.\n"
+               "It takes --route NAME.\n"
+               "The handler is in src/api/routes/search.py.\n"
+               "The friction value mis-route and force_minimum_route stay.\n"
+               "The approach the work was given.\n")
+    assert route_hits(machine, "docs/b.md") == []
+    comment = tmp_path / "cli" / "b.py"
+    comment.write_text("# the route was renamed\nx = 1\n", encoding="utf-8")
+    assert route_hits(comment.read_text(), "cli/b.py",
+                      test_terminology._scan_units(comment)) == []
+
+
+def test_rwp_2_another_words_marker_on_the_line_before_does_not_excuse_a_noun():
+    """A marker written for another word covers its own line only. On the
+    line before, only a marker whose reason starts with "route" counts, so a
+    marker cannot excuse a route noun it was never written for."""
+    other = ("<!-- vocabulary-scan: allow - names the banned term this pattern retires -->\n"
+             "Pick the route first.\n")
+    assert route_hits(other, "docs/c.md") == ["docs/c.md:2: Pick the route first."]
+    same_line = ("Pick the route first. "
+                 "<!-- vocabulary-scan: allow - quotes the retired noun -->\n")
+    assert route_hits(same_line, "docs/c.md") == []
+    above = ("# vocabulary-scan: allow - route in git's own error text\n"
+             "Pick the route first.\n")
+    assert route_hits(above, "docs/c.md") == []
+
+
+def test_rwp_3_history_and_derived_files_are_not_read():
+    names = {str(p.relative_to(ROOT)) for p in _route_files()}
+    assert not any(n.startswith(tuple(ROUTE_EXEMPT)) for n in names)
+    assert all(reason.strip() for reason in ROUTE_EXEMPT.values())
+    # The roots really are read: a file from each widened folder is listed.
+    for top in ("governance", "docs", "schemas", "cli", "hooks", "scripts",
+                "examples"):
+        assert any(n.startswith(top + "/") for n in names), top
 
 
 # --- the glossary paragraph on check, gate, guardrail and obligation ---------

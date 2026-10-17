@@ -317,7 +317,7 @@ def _cmd_calibration_friction(args, tasks):
               f"{len(agg['below_threshold'])} item(s)")
     print()
     print("Advisory only. Claude or a human reads these and drafts targeted "
-          "changes to\ngovernance/ or the routes - the loop never edits "
+          "changes to\ngovernance/ or the approaches - the loop never edits "
           "governance itself (ADR-001).")
     return 0
 
@@ -748,7 +748,7 @@ def cmd_calibration(args):
     for r in sorted(dist, key=lambda x: (weights.get(x, 99), x)):
         print(f"  {display_shape(r):<12}: {dist[r]}")
     if no_route:
-        print(f"  (no route)  : {len(no_route)}  <- assessment did not "
+        print(f"  (no approach): {len(no_route)}  <- assessment did not "
               f"complete: {', '.join(no_route)}")
     print()
     pct = round(100 * reframed_tasks / len(tasks))
@@ -762,7 +762,7 @@ def cmd_calibration(args):
         if sideways:
             print(f"    sideways                      : {sideways}")
         if unweighed:
-            print(f"    unweighed (a route with no weight in routing-policy.yml): "
+            print(f"    unweighed (an approach with no weight in routing-policy.yml): "
                   f"{sum(unweighed.values())}")
             for k, v in sorted(unweighed.items()):
                 print(f"      {_display_transition(k)} : {v}")
@@ -796,7 +796,7 @@ def cmd_calibration(args):
         print("  delivery-approach reference docs.")
     elif downs >= 2 and downs > ups * 2:
         print(f"  {downs} down re-assessments vs {ups} up - a lean toward OVER-sizing.")
-        print("  Assessment is reading risk high; the routes may be heavier")
+        print("  Assessment is reading risk high; the approaches may be heavier")
         print("  than the work warrants. Review routing-policy.yml.")
     else:
         print(f"  {ups} up / {downs} down - roughly balanced, re-assessment rate "

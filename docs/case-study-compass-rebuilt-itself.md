@@ -17,7 +17,7 @@ below is not - more on what that means at the end.
 
 ## The rename, and the ratchet that drove it
 
-Compass 1.x had grown its own private vocabulary - "route" for what
+Compass 1.x had grown its own private vocabulary - "route" for what <!-- vocabulary-scan: allow - quotes the retired noun this sentence explains -->
 everyone else calls a delivery approach, "frame" for triage, and so on.
 The v2 rewrite replaced it with the industry's words, one word per
 concept, frozen as `governance/terminology.yml` (commit `681766c`): 49

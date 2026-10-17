@@ -8,7 +8,7 @@
 ## 1. Approach
 
 A new `src/notifications/` module tree with four parts: `dispatch.py` (turns an
-event into a notification and routes it), `store.py` (the durable store),
+event into a notification and sends it on), `store.py` (the durable store),
 `preferences.py` (resolves whether a category reaches a user), and `api.py`
 (the read/mark-read/update-preferences surface). One new table,
 `migrations/0042_notifications.sql`, holds both notifications and per-user
@@ -77,7 +77,7 @@ branch from it), then the two subtasks run in parallel.
 
 | Area | Result | Evidence / note |
 |---|---|---|
-| Guardrails (`G1`-`G5` + project) | pass | `G1`/`G2`/`G3`: all six scenarios stated, and the requirements review closed before implement, each with a planned test and a `TRC-id`; `changed_files` will trace back. `G4`: every gate cleared with pasted evidence in `verification-report.md`. **`G5`: applies** - the issue `labels: [migrations]`; a human signs off `migrations/0042` before ship, recorded as a `human-approval` evidence entry in `manifest.yml`. The plan routes that sign-off into ship explicitly. |
+| Guardrails (`G1`-`G5` + project) | pass | `G1`/`G2`/`G3`: all six scenarios stated, and the requirements review closed before implement, each with a planned test and a `TRC-id`; `changed_files` will trace back. `G4`: every gate cleared with pasted evidence in `verification-report.md`. **`G5`: applies** - the issue `labels: [migrations]`; a human signs off `migrations/0042` before ship, recorded as a `human-approval` evidence entry in `manifest.yml`. The plan puts that sign-off into ship explicitly. |
 | Method strategies (`S1`-`S4` + project) | followed | `S1` BDD, `S2` TDD apply per subtask. `S3` simplest-thing honoured in `DD-1`, `DD-2`, `DD-3`. No deviation. |
 | Product strategies | followed | The plan delivers `intent.md`'s outcome - durable, tunable, security-protected in-app notifications - and stays inside the v1 cut. "Depth for existing users" honoured: category preferences over the existing event types, no breadth grab. |
 | Voice & positioning strategies | n/a | No marketer in play for this issue - the launch is a separate later issue. `verify.claims` exists in the gate set but has no claims to check. |
@@ -103,7 +103,7 @@ written.
 ## Gate
 
 - [x] Every scenario in `acceptance-criteria.md` is covered by a work unit - U1 covers `TRC-001`…003, U2 covers `TRC-004`…006, U0 is the shared foundation.
-- [x] Governance check passes - every guardrail clears with evidence; `G5`'s ship sign-off is routed in; no strategy deviation to record.
+- [x] Governance check passes - every guardrail clears with evidence; `G5`'s ship sign-off is part of ship; no strategy deviation to record.
 - [x] Parallel work is possible - `distribution-map.md` written next.
 
 Next stage: **breakdown** (`/compass:breakdown`) - runs `scripts/multiagent.sh` with the distribution map.

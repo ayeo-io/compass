@@ -12,7 +12,7 @@
 |---|---|---|
 | **Risk:** | contained | One endpoint and a new middleware. If the limit is wrong it returns a 429 too eagerly or too late - annoying, recoverable, observable; it does not corrupt or lose anything. |
 | **Familiarity:** | brownfield-mapped | The request pipeline and middleware chain are documented and already have a test harness; this adds one well-understood link to a known chain. |
-| **Size:** | standard | A new middleware, a config addition, and a route wiring change - several files, a couple of design decisions (storage backend, window algorithm), about two days. |
+| **Size:** | standard | A new middleware, a config addition, and an endpoint wiring change - several files, a couple of design decisions (storage backend, window algorithm), about two days. |
 | **Goal & role** | engineer | An engineer hardening a public endpoint after an incident review. No intent.md - the incident write-up is the intent. |
 
 **Domain tags (`labels:`):** none - the limiter reads a client id that auth already resolved; it does not itself touch auth, payments, personal data, or migrations.
@@ -68,7 +68,7 @@ No routing guardrail fired. Candidate delivery approach stands.
 
 | Stage / check | Action | Safe to skip / collapse because… |
 |---|---|---|
-| Breakdown | skipped | The three work units (middleware, route wiring, config) all touch `rate_limit.py` or depend on it. They are not independent - disjoint code is one of the two independence tests and it fails. Solo is correct, not a shortcut. |
+| Breakdown | skipped | The three work units (middleware, endpoint wiring, config) all touch `rate_limit.py` or depend on it. They are not independent - disjoint code is one of the two independence tests and it fails. Solo is correct, not a shortcut. |
 | Dedicated orchestrator agent | skipped | Standing feature de-scope: at solo/≤3 subtasks the lead builder integrates; a separate orchestrator is overhead. |
 
 Note what is *not* in this ledger: refine is not skipped - a feature's spec is a feature set, and there was real ambiguity to resolve (`requirements-review.md`). The requirements review is *light*, never absent, on a feature.

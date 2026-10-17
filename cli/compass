@@ -207,7 +207,7 @@ def build_parser():
 
     pan = sub.add_parser(
         "analyze",
-        help="cross-artifact consistency check - orphaned scenarios, route "
+        help="cross-artifact consistency check - orphaned scenarios, approach "
              "disagreements, and orphan claims (advisory or gate-clearing "
              "depending on whether verify.analyze is in the issue's gate set)",
     )
@@ -221,7 +221,7 @@ def build_parser():
     pcal.add_argument(
         "--impact", action="store_true",
         help="process-impact signal: lead time, land frequency, change-fail and "
-             "restore time, attributed to route and gate set (advisory)")
+             "restore time, attributed to approach and gate set (advisory)")
     pcal.add_argument(
         "--friction",
         action="store_true",

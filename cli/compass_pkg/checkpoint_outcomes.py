@@ -152,8 +152,8 @@ def refuse_stage(task, stage, verb):
         weight = ((task.get("stages") or {}).get(stage)
                   if isinstance(task.get("stages"), dict) else None)
         raise CompassError(
-            f"{verb}: the route runs no {stage} hand-off ({stage} is "
-            f"{weight or 'not on the route'}), so it takes no outcome. Nothing was written.")
+            f"{verb}: the approach runs no {stage} hand-off ({stage} is "
+            f"{weight or 'not in the approach'}), so it takes no outcome. Nothing was written.")
 
 
 def cmd_checkpoint_add(args):

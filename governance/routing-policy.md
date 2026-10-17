@@ -144,7 +144,7 @@ routing_strategies:
     - "When size is genuinely unclear, estimate up - it is cheaper to
        collapse a stage that turned out easy than to discover mid-implementation
        that the approach was too light."
-    - "Prefer the lightest route that still clears the routing guardrails and
+    - "Prefer the lightest delivery approach that still clears the routing guardrails and
        the applicable gates. Process weight is a cost; spend it where it buys safety."
 ```
 
@@ -156,10 +156,10 @@ A checkpoint is a stage hand-off where a session stops and waits for a
 person: assess step 7 (confirm the approach), and the define, refine and plan
 hand-offs. `compass.yml` (or `.compass/config.yml` in a project without one) sets `autonomy: controlled | balanced |
 autonomous` (balanced when left out). The `autonomy_checkpoints:` table maps
-each value and route to the checkpoints that wait, and the evaluator writes
+each value and approach to the checkpoints that wait, and the evaluator writes
 the answer into the manifest as `checkpoints:`.
 
-| Route | controlled | balanced | autonomous |
+| Approach | controlled | balanced | autonomous |
 |---|---|---|---|
 | quick fix | assess | none | none |
 | regular | assess, define, refine, plan | define, plan | none |
@@ -167,7 +167,7 @@ the answer into the manifest as `checkpoints:`.
 | hotfix | assess, define | none | none |
 | spike | assess | none | none |
 
-- A stage the route collapses or skips has no hand-off, so it never waits.
+- A stage the approach collapses or skips has no hand-off, so it never waits.
 - A hand-off that does not wait still writes its document, shows its
   summary, names the setting and records its outcome with `compass issue
   checkpoint add <stage> --outcome skipped --by <agent>`. A person's answer to
@@ -202,11 +202,11 @@ the answer into the manifest as `checkpoints:`.
   checkpoint, and `compass check` never reads it. Every `--write` records the
   readiness summary in the manifest's `readiness:` key. `docs/readiness.md`
   holds the signals and the record.
-- A policy without the table, or a table that leaves out a value or a
-  route, waits at every hand-off the route runs. Only a route listed with an
-  empty list never waits. Route keys are the current route names, and a
+- A policy without the table, or a table that leaves out a value or an
+  approach, waits at every hand-off the approach runs. Only an approach listed with an
+  empty list never waits. Approach keys are the current approach names, and a
   retired name (`express`, `standard`, `expedition`, or `feature` and
-  `initiative` before 5 October 2026) is read as its current one; an unknown route, or one route named twice, is refused.
+  `initiative` before 5 October 2026) is read as its current one; an unknown approach, or one approach named twice, is refused.
 
 ## Schema reference
 
@@ -367,7 +367,7 @@ for one resolved configuration and one assessment: stage modes, entry and
 exit checks, the gate set with each gate's checks and accepted evidence
 types, artifacts and their depth, required skills, blocked stages, required
 artifacts, checkpoints for each autonomy value, ceilings and each active
-check's compared fields. It does not route. `policy_adapter` turns the merged
+check's compared fields. It computes no approach. `policy_adapter` turns the merged
 catalogues into the dictionary `evaluate_route` takes, and the evaluator
 answers. `compass approach evaluate` reads the same resolved configuration: an
 issue's stored generation, or else the `compass.yml` over the shipped default,
@@ -408,9 +408,9 @@ three guards go when the evaluator takes the catalogue form.
 Two replays tie the new path to today's behaviour, and each has a planted
 fault that makes it fail:
 
-- The adapted preset routes the 1,200 assessments of the compatibility
-  baseline, their label subsets and the archive assessments as today's policy
-  does. The two values the catalogues spell differently differ in spelling
+- The adapted preset gives the 1,200 assessments of the compatibility
+  baseline, their label subsets and the archive assessments the approach
+  today's policy gives them. The two values the catalogues spell differently differ in spelling
   only: a document is its id (`intent`, not `intent.md`) and a stage is its
   current name (`ship`, not `land`). The replay takes the stage names from the
   table in `core`.
@@ -566,7 +566,7 @@ The measures taken, in this order, and the ones not allowed:
   classification is scanned again, and a function passed as `tighter` is never
   stored. `Classification.from_json` reads a stored document back.
 - **One evaluator call for each side at a point.** The evaluator copies none of
-  the policy it routes (`routing.canonical_view`), routes once for all autonomy
+  the policy it reads (`routing.canonical_view`), evaluates once for all autonomy
   values (only the checkpoints differ, `routing.route_checkpoints`), and the
   scan builds each side's policy once (`obligations.Preparation`).
   Points where both sides owe the same are not compared field by field.

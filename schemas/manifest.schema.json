@@ -106,7 +106,7 @@
     },
     "tracked_at": {
       "type": "string",
-      "description": "Optional. URL of the public issue tracking this work. The archive under .compass/work/ is not published, so a queued issue that anyone outside the repository needs to see is raised as a GitHub issue and linked from here."
+      "description": "Optional. URL of the public issue tracking this work. The archive under .compass/work/ is not published, so a backlog issue that anyone outside the repository needs to see is raised as a GitHub issue and linked from here."
     },
     "land_timestamp": {
       "type": "string",
@@ -486,7 +486,7 @@
       }
     },
     "delivery_approach": {
-      "description": "The final delivery approach; filled by `compass approach evaluate --write`. A route name, or an old name read through cli/migrate-map.yml.",
+      "description": "The final delivery approach; filled by `compass approach evaluate --write`. An approach name, or an old name read through cli/migrate-map.yml.",
       "anyOf": [
         {
           "enum": [

@@ -309,7 +309,7 @@ counts it, so a link pointed elsewhere after the green is not reported.
 `compass ship-commit` judges the staged files right before each commit.
 A git hook can still stage a file during the commit itself; when the new
 commit then differs from what the green tested, the commit stands but
-the issue is not marked landed, and `ship-commit` names the files and
+the issue is not marked done, and `ship-commit` names the files and
 exits non-zero.
 
 With nothing staged, `compass ship-commit --issue <slug>` lands at HEAD

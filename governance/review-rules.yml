@@ -46,7 +46,7 @@ rules:
                     "approaches/*", "hooks/*"]
     enforces: S11
     rule: >
-      Before recommending a change to how a stage, gate or route behaves,
+      Before recommending a change to how a stage, gate or approach behaves,
       check it against governance/routing-policy.yml, governance/guardrails.yml
       and governance/decisions/. When the recommendation contradicts one of
       them, report the conflict with the file and line it contradicts; do not

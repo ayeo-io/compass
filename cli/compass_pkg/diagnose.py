@@ -286,7 +286,7 @@ def _deviations(task_dir, m, stages, shown, records):
             continue                    # a solo run writes no subtasks
         if stage == STAGE_IMPLEMENT and spike:
             continue                    # a spike records no red
-        out.append(f"{stage} ran in the route ({weight}) but has no record")
+        out.append(f"{stage} ran in the approach ({weight}) but has no record")
     declared = any(r[0] == "acceptance" for r in records) or os.path.isfile(
         os.path.join(task_dir, "evidence", "acceptance-baseline.json"))
     reds = [r for r in records if r[0] == "red"]
@@ -337,7 +337,7 @@ def cmd_issue_diagnose(args):
         weight = stages.get(stage)
         weight_text = str(weight) if weight not in (None, "") else "not set"
         if weight is None or str(weight) in _NOT_RUN:
-            lines.append(f"  {stage:<10} {weight_text:<20} skipped by the route")
+            lines.append(f"  {stage:<10} {weight_text:<20} skipped by the approach")
         else:
             lines.append(f"  {stage:<10} {weight_text:<20} "
                          + (", ".join(shown[stage]) if shown[stage] else "no record"))

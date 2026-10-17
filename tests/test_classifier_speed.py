@@ -146,7 +146,8 @@ def test_cs_1_two_names_for_one_route_are_still_refused(policy):
     from compass_pkg.routing import evaluate_route
     bad = copy.deepcopy(policy)
     bad["route_shapes"]["standard"] = copy.deepcopy(bad["route_shapes"]["regular"])
-    with pytest.raises(CompassError, match="names route 'regular' twice"):
+    # The message says "approach", because "route" is a verb only (ADR-044).
+    with pytest.raises(CompassError, match="names approach 'regular' twice"):
         evaluate_route(copy.deepcopy(ASSESSMENT), bad)
 
 
@@ -596,7 +597,12 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # policy does not declare (ADR-070); the version is now 9, version 7 never released.
 # Re-pinned for issue `g5-irreversible-labels`, for the `reading_matches` docstring
 # only; no verdict moves, so the version stays 9.
-VERDICT_SOURCE_PIN = "3d50f8d0c3bdf966"
+# Re-pinned for issue `retired-words-in-prose-and-output`: seven printed
+# strings changed wording only - four in `policy.checkpoint_table_errors`, one
+# each in `obligations`, `routing.canonical_routes` and `routing.evaluate_route`
+# ("forced to thorough"). They say "approach" for "route" and "thorough" for
+# "full-weight" (ADR-044); no verdict moves, so the version stays 9.
+VERDICT_SOURCE_PIN = "1333e6f12c620fdf"
 
 
 def _verdict_source_digest():

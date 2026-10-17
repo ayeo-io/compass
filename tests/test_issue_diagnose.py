@@ -115,7 +115,8 @@ def test_each_stage_names_the_record_that_shows_it(tmp_path):
     assert "plan" in stages and "technical-design.md" in stages
     assert "implement" in stages and "red-A.json" in stages
     assert "ship" in stages and "abc1234" in stages
-    assert "breakdown" in stages and "skipped by the route" in stages
+    # The message says "approach", because "route" is a verb only (ADR-044).
+    assert "breakdown" in stages and "skipped by the approach" in stages
     gates = _section(r.stdout, "Gates")
     assert "verify.correctness" in gates and "pass" in gates and "EV-T-A" in gates
 
@@ -350,7 +351,8 @@ def test_a_gap_before_a_later_record_is_a_deviation_on_an_active_issue(tmp_path)
     m["status"] = "active"
     m["artifacts"] = [a for a in m["artifacts"] if a["kind"] != "technical-design"]
     _save(root, m)
-    assert "plan ran in the route" in _deviations_of(root)
+    # The message says "approach", because "route" is a verb only (ADR-044).
+    assert "plan ran in the approach" in _deviations_of(root)
 
 
 def test_an_omitted_document_is_shown_with_its_reason(tmp_path):
@@ -499,5 +501,5 @@ def test_an_issue_landed_through_another_points_there(tmp_path):
     m["landed_by"] = [{"issue": "other-issue"}]
     _save(root, m)
     dev = _deviations_of(root)
-    assert "implement ran in the route" not in dev
+    assert "implement ran in the approach" not in dev
     assert "landed through other-issue" in dev

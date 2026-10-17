@@ -421,14 +421,14 @@ The assessment no longer reads a role. The claims gate and the intent-fidelity b
 - **Presence is read at every evaluation.** A document counts when its registry entry names a path that exists, or its file is in the issue's documents folder. It is never written into the manifest's `assessment:` block. A document written after the last evaluation takes effect at the next one.
 - **A recorded role is not read.** A manifest that holds `assessment.role` evaluates and checks as before, without it.
 - **An issue with a stored 6.x generation keeps its role rules** until it is re-assessed. **A project on copied 6.x governance keeps them** until it runs `compass policy migrate`.
-- **An issue with no stored generation, in a project with a `compass.yml`, takes the new default at once.** A recorded role no longer routes it, and on the full approach it no longer owes `verify.claims`.
+- **An issue with no stored generation, in a project with a `compass.yml`, takes the new default at once.** A recorded role no longer changes its approach, and on the full approach it no longer owes `verify.claims`.
 - **`--justify role=` and `compass quick-fix start --role` are accepted and ignored until 8.0.0.** Each prints a notice on standard error and records nothing. Evaluating an issue whose manifest records a role prints the same notice.
 - **A landing refuses an artifact rule the approach does not hold.** When a document is on disk whose artifact rule adds a gate or asks for a document and the last evaluation did not fire it, such as a `positioning.md` written after assess, `compass ship-commit` and `compass quick-fix finish` refuse with `artifact-rule-not-applied` and name the `compass approach evaluate --issue <slug> --write` that applies it.
 - **Assess drafts the intent before it writes the approach**, so RP-ART-002 fires on a regular or full issue (`approaches/assess-procedure.md`, step 3).
 - **`compass issue migrate` lists each recorded `assessment.role` as no longer read**, in the dry run and on `--apply`, and leaves the field in place.
 - **`compass preset test` reads a fixture that records a role without it**, and notes that it did.
 - **The classifier crosses the documents a condition names, as it crosses labels.** The grid JSON of `compass policy diff --json` and `compass policy migrate --json` gains `artifacts`. The cap of eight named labels is unchanged, and a grid names at most four documents.
-- **The bias ids move.** The role bias RP-BIAS-002 is gone, so the bias that was RP-BIAS-003 is now RP-BIAS-002. Biases route nothing; a `compass.yml` that edited one of the two ids edits a different bias text now.
+- **The bias ids move.** The role bias RP-BIAS-002 is gone, so the bias that was RP-BIAS-003 is now RP-BIAS-002. Biases change no approach; a `compass.yml` that edited one of the two ids edits a different bias text now.
 
 ### What to do
 

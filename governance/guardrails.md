@@ -84,7 +84,7 @@ before it lands.**
 - No delivery approach removes this.
 
 The routing policy (`routing-policy.md`) is what makes sure such changes are
-*routed* to where the checkpoint happens; this guardrail is what makes the
+*routed* to where the checkpoint happens; this guardrail is what makes the <!-- vocabulary-scan: allow - route is a verb here -->
 checkpoint non-negotiable.
 
 Critical risk alone does not bring the sign-off (governance decision
@@ -349,11 +349,11 @@ decides the rules. `compass policy lint` reports a refused change as
   it applies to every assessment the project will see
   (`architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md`,
   the amendment of 2026-10-08). Nothing is accepted or refused by the name or
-  weight of a route: the field table decides at that point. Naming `full`
+  weight of an approach: the field table decides at that point. Naming `full`
   over `regular` is incomparable on the subtask ceiling, and a spike issue
   that picks `full` loses `spike.conclude` and is refused by a lock. The lint
   also runs on an unchanged configuration when the issue's stored assessment
-  changed, so a route accepted at one assessment cannot carry onto a spike by
+  changed, so an approach accepted at one assessment cannot carry onto a spike by
   a reassess that changes nothing else.
 - **More than eight named labels is still refused, but only the labels a locked
   entry can read are counted.** The scan keeps a label only where it can reach
@@ -374,7 +374,7 @@ decides the rules. `compass policy lint` reports a refused change as
   keeps its labels, so a doubtful case makes the count larger and never smaller.
   `enforce(..., scan="full")` counts every label in the layer. It is the
   reference that `tests/test_locks_footprint_scan.py` compares the footprint scan
-  with: both give the same refusals on every lock test case and every route
+  with: both give the same refusals on every lock test case and every approach
   tried against the shipped policy.
 - **A configuration the evaluator rejects** is refused as well, because no
   lock can be shown to hold. An unlock cannot help. The configuration needs

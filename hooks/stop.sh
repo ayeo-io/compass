@@ -141,17 +141,17 @@ import shlex
 import sys
 import compass_pkg                      # noqa: F401 - puts vendor on sys.path
 from compass_pkg.core import artifact_path
-for var, name in (("ROUTE", "delivery-approach.md"),
+for var, name in (("APPROACH_DOC", "delivery-approach.md"),
                   ("SPEC", "acceptance-criteria.md"),
                   ("VREPORT", "verification-report.md")):
     print("%s=%s" % (var, shlex.quote(artifact_path(sys.argv[1], name))))
 PYEOF
 )" || true
-  : "${ROUTE:=}" "${SPEC:=}" "${VREPORT:=}"
+  : "${APPROACH_DOC:=}" "${SPEC:=}" "${VREPORT:=}"
   RED_MARKER="$TASK_DIR/.red"
 
   # --- 1. the delivery-approach record missing on in-progress work ----------
-  if [ ! -f "$ROUTE" ]; then
+  if [ ! -f "$APPROACH_DOC" ]; then
     # A work dir with no delivery-approach record and no other artifacts may
     # just be an empty scaffold; but if anything else is in it, work started
     # without the assess stage.

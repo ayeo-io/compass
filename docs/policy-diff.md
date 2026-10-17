@@ -27,7 +27,7 @@ generation) and ADR-037 (a change is classified by its effect).
 
 Classification says whether `B` owes less. Replay says where. A change to a
 check's wording, or to a value no rule reads, is `equivalent` and replays no
-change. A change to which approach an assessment routes to can be
+change. A change to which approach an assessment gets can be
 `equivalent` by obligations and still replays a change to `approach`.
 
 ## References

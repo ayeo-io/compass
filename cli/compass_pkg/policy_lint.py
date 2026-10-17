@@ -411,7 +411,7 @@ def _weight_ties(state):
         path = f"approaches.{blamed}.weight"
         out.append(_finding("resolved", "M-WEIGHT-TIE", _layer_of(state, path), path,
                             f"approaches {', '.join(sorted(ids))} have the same weight "
-                            f"{weight}; a route is picked by weight, so each needs its own"))
+                            f"{weight}; an approach is picked by weight, so each needs its own"))
     return out
 
 

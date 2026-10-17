@@ -29,6 +29,9 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
+# The golden says "collapsed in this approach" where it said "collapsed on this
+# route", because "route" is a verb only (ADR-044). The capture was edited to
+# match, word for word.
 GOLDEN = ROOT / "tests" / "fixtures" / "next-golden.json"
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 

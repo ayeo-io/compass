@@ -122,8 +122,8 @@ def _shapes(approaches):
         if name not in EVALUATOR_APPROACHES:
             raise CompassError(
                 f"approach '{name}' is not one the evaluator knows "
-                f"({', '.join(EVALUATOR_APPROACHES)}), so it would be routed "
-                f"as no approach at all")
+                f"({', '.join(EVALUATOR_APPROACHES)}), so it would get "
+                f"no approach at all")
         if entry.get("ships", EVALUATOR_APPROACHES[name]) != EVALUATOR_APPROACHES[name]:
             raise CompassError(
                 f"approach '{name}' sets ships to {entry['ships']!r}, but the "

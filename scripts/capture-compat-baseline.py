@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Capture the routing compatibility baseline (contracts 1 and 2) once.
 
-The configuration rewrite must route a project with no configuration
-exactly as the release it started from. This writes what that release does:
+The configuration rewrite must give a project with no configuration
+the approach the release it started from gives it. This writes what that release does:
 the evaluator's result for every closed assessment, a digest for every
 assessment with every subset of the labels a routing predicate names, the
 full result for each assessment the archive sample records, and what each

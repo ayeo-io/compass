@@ -288,7 +288,9 @@ def test_vr_c16_queue_ageing_counts_a_backlog_hold_with_no_parked_reason(tmp_pat
     from compass_pkg import flow
     _board(tmp_path, a={"status": "backlog"}, b={"status": "backlog", "parked_reason": "x"})
     top, _table = flow.queue_ageing(str(tmp_path / ".compass" / "work"))
-    assert "No queued issues" not in top
+    # The digest says "backlog", because "queued" is retired (ADR-044). The old
+    # phrase here would pass whatever the count.
+    assert "No backlog issues" not in top
 
 
 def test_vr_c16_the_living_spec_keeps_only_completed_issues(tmp_path):

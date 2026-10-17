@@ -28,7 +28,7 @@
 
 ## 2026-03-07 10:00 - Plan
 
-- **Event:** Full `technical-design.md` + `distribution-map.md`. Three design decisions recorded - `DD-1` (fixed security category), `DD-2` (idempotency key), `DD-3` (write-before-deliver durability). Governance check passed, including how `G5`'s migration sign-off is routed into ship. Two independent subtasks + a shared U0 foundation (`migrations/0042`).
+- **Event:** Full `technical-design.md` + `distribution-map.md`. Three design decisions recorded - `DD-1` (fixed security category), `DD-2` (idempotency key), `DD-3` (write-before-deliver durability). Governance check passed, including how `G5`'s migration sign-off reaches ship. Two independent subtasks + a shared U0 foundation (`migrations/0042`).
 - **Artifact:** `technical-design.md`, `distribution-map.md`.
 - **Next:** breakdown.
 
@@ -46,7 +46,7 @@
 
 ## 2026-03-11 15:20 - note: orchestrator intervention
 
-- **Event:** The orchestrator flagged subtask-1 and subtask-2 both about to add a route to `api.py` with the same path prefix in incompatible ways.
+- **Event:** The orchestrator flagged subtask-1 and subtask-2 both about to add an endpoint to `api.py` with the same path prefix in incompatible ways.
 - **Detail:** Resolved before collision - the orchestrator had subtask-2 rebase onto subtask-1's `api.py` router skeleton, then both added their own endpoints under it. This is the multiagent machinery doing the job a pair (no orchestrator) could not.
 
 ## 2026-03-13 14:50 - Verify

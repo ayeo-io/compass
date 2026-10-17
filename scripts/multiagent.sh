@@ -145,12 +145,12 @@ else
   exit 1
 fi
 
-ROUTE="$(issue_doc_path "$TASK_SLUG" "delivery-approach" || true)"
-if [ -z "$ROUTE" ] || [ ! -f "$ROUTE" ]; then
+APPROACH_DOC="$(issue_doc_path "$TASK_SLUG" "delivery-approach" || true)"
+if [ -z "$APPROACH_DOC" ] || [ ! -f "$APPROACH_DOC" ]; then
   # vocabulary-scan: allow - reads the retired artifact name for old archives
-  ROUTE="$TASK_DIR/route.md"
+  APPROACH_DOC="$TASK_DIR/route.md"
 fi
-[ -f "$ROUTE" ] || { echo "multiagent.sh: no delivery-approach.md for issue '$TASK_SLUG' - run /compass:assess first." >&2; exit 1; }
+[ -f "$APPROACH_DOC" ] || { echo "multiagent.sh: no delivery-approach.md for issue '$TASK_SLUG' - run /compass:assess first." >&2; exit 1; }
 [ -f "$TASK_YML" ] || { echo "multiagent.sh: no manifest.yml for issue '$TASK_SLUG' - the worktree cap is read from structured assessment, not delivery-approach.md prose. Run /compass:assess." >&2; exit 1; }
 
 # --- config: worktree_root + max_worktrees ----------------------------------
@@ -345,7 +345,7 @@ done < "$MAP"
 SUBTASK_COUNT="${#SUBTASKS[@]}"
 if [ "$SUBTASK_COUNT" -eq 0 ]; then
   echo "multiagent.sh: distribution-map.md lists no subtasks (no 'subtask-N' rows in §3; 'stream-N' is also read, for maps written before the rename)." >&2  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
-  echo "          If the route is solo, breakdown is a no-op - do not run multiagent.sh." >&2
+  echo "          If the approach is solo, breakdown is a no-op - do not run multiagent.sh." >&2
   exit 1
 fi
 # The map's total, kept apart from SUBTASK_COUNT: the wave block below
@@ -461,7 +461,7 @@ BASE_BRANCH="$(git -C "$PROJECT_DIR" rev-parse --abbrev-ref HEAD)"
 echo "Compass multiagent - issue '$TASK_SLUG'"
 echo "  base branch:    $BASE_BRANCH"
 echo "  worktree root:  $WORKTREE_ROOT"
-echo "  subtasks:        $SUBTASK_COUNT   (config max $MAX_WORKTREES, route cap $CAP)"
+echo "  subtasks:        $SUBTASK_COUNT   (config max $MAX_WORKTREES, approach cap $CAP)"
 [ -n "$WAVE_REQUESTED" ] && echo "  wave:            $WAVE_REQUESTED of $WAVE_MAX"
 echo ""
 

@@ -331,7 +331,8 @@ def test_arc_4_skip_refusals(tmp_path):
     done = run(root, "issue", "checkpoint", "add", "refine", "--outcome", "skipped",
                "--by", "builder", "--issue", slug)
     assert done.returncode == 2, done
-    assert "the route runs no refine hand-off" in done.stderr, done.stderr
+    # The message says "approach", because "route" is a verb only (ADR-044).
+    assert "the approach runs no refine hand-off" in done.stderr, done.stderr
     assert manifest_file(root, slug).read_bytes() == before
 
     # An issue assessed before outcomes were recorded is not judged: the verb
@@ -398,8 +399,9 @@ def test_arc_2_approve_checkpoint_refusals(tmp_path):
         ("not listed", dict(stage="define", approver="sam"),
          "sam is not an approver of this project"),
         ("not a checkpoint", dict(stage="implement"), "'implement' is not a checkpoint stage"),
+        # The message says "approach", because "route" is a verb only (ADR-044).
         ("quick fix refine", dict(stage="refine", slug=slug),
-         "the route runs no refine hand-off"),
+         "the approach runs no refine hand-off"),
         ("plan not run", dict(stage="plan"), "plan has not run"),
         ("rejected", dict(stage="define", extra=("--decision", "rejected")),
          "--checkpoint records an approval only"),
@@ -633,6 +635,8 @@ def test_arc_5_landing_refuses_a_checkpoint_with_no_outcome(tmp_path, monkeypatc
     assert_no_gh_call(root)
 
     # An issue that is not judged lands exactly as the base commit lands it.
+    # The captured stdout says "issue marked done.", because the status word
+    # "landed" is retired (ADR-044). The capture was edited to match, word for word.
     captured = json.loads((FIXTURES / "base-ship-commit-not-judged.json").read_text())
     assert ship_not_judged(tmp_path / "not-judged") == captured
     _quick_fix_refused(tmp_path / "quick-fix")

@@ -3,6 +3,7 @@ name: builder
 description: Runs red-green-refactor for its assigned scenarios in one worktree, or solo; never touches a sibling worktree.
 tools: Read, Glob, Grep, Write, Edit, Bash, Skill, Monitor
 model: sonnet
+effort: medium
 ---
 
 You are a Builder. You own the implement stage for one subtask of work. On a multiagent you

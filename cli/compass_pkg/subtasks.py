@@ -28,7 +28,8 @@
 # path stays inside the project.
 #
 # DEPENDENCY: standard library (hashlib, os, re, subprocess),
-# compass_pkg.core and compass_pkg.loop_ceilings.
+# compass_pkg.core, compass_pkg.loop_ceilings, compass_pkg.stable_ids and
+# compass_pkg.model_tiers (the tier of a dispatch).
 # =============================================================================
 """`compass issue subtask`: record, resume and package a multiagent run."""
 from __future__ import annotations
@@ -43,6 +44,7 @@ from compass_pkg.core import (CompassError, docs_dir, find_upwards,
                               save_manifest)
 from compass_pkg.loop_ceilings import (LOOP_CEILINGS_FROM, loop_ceilings,
                                        on_or_after)
+from compass_pkg.stable_ids import MODEL_TIERS, STAGE_IMPLEMENT
 
 #: dispatched - a builder has its brief; reported - its result is recorded;
 #: reviewing - a review of the latest package is under way; integrating -
@@ -183,17 +185,38 @@ def cmd_subtask_add(args):
                            f"recorded. Use `update --attempt` to dispatch it again.")
     brief = _inside(root, args.brief, "brief")
     base = _commit(root, args.base or "HEAD", "base")
-    subtasks.append({"id": args.id, "brief": brief, "base_sha": base,
-                     "model": args.model, "budget": _count(args.budget, "budget"),
-                     "status": "dispatched", "attempts": 1,
-                     "dispatched_at": now_iso()})
+    from compass_pkg import model_tiers
+    # A tier is recorded only when it decides the model: given with --tier, or
+    # taken from the implement seat when --model is not given. A model named
+    # without --tier is not counted as any tier by `compass retro --models`. The
+    # record keeps the model the call passed, and `inherit` only when it passed
+    # none.
+    tier = getattr(args, "tier", None)
+    if tier is None and not args.model:
+        tier = model_tiers.seat_tier(task, STAGE_IMPLEMENT)
+    model = args.model or (model_tiers.resolve(tier, root) if tier else None)
+    if model is None:
+        raise CompassError("compass issue subtask: give --model, or --tier: the manifest "
+                           "records no tier for the implement seat to take one from.")
+    entry = {"id": args.id, "brief": brief, "base_sha": base,
+             "model": model, "budget": _count(args.budget, "budget"),
+             "status": "dispatched", "attempts": 1,
+             "dispatched_at": now_iso()}
+    if tier:
+        # One tier for each try: `compass retro --models` reads the first.
+        entry["tiers"] = [tier]
+        floor = (model_tiers.seat_entry(task, STAGE_IMPLEMENT) or {}).get("effort")
+        effort = model_tiers.resolve_effort(tier, floor, root)
+        if effort:
+            entry["effort"] = effort
+    subtasks.append(entry)
     save_manifest(task, path)
     # Dispatching a subtask is the record of the breakdown stage (ADR-050).
     from compass_pkg import artifact_status
     moved = artifact_status.record_stage(task_dir, artifact_status.STAGE_BREAKDOWN,
                                          artifact_status.BY_SUBTASK_ADD)
     print(f"compass issue subtask: {args.id} dispatched from {base[:12]} "
-          f"({args.model}, budget {args.budget}).")
+          f"({model}" + (f", tier {tier}" if tier else "") + f", budget {args.budget}).")
     for line in artifact_status.moved_line(moved):
         print(f"  {line}")
     return 0
@@ -277,8 +300,30 @@ def cmd_subtask_update(args):
     # error that caused the refusal among it - is still recorded, or the
     # repeat count could be kept below its ceiling by asking again.
     refusal = attempt_refusal(s, ceilings) if args.attempt else None
+    if getattr(args, "model", None) and not refusal:
+        # The model the call passed for this try, such as the session's model
+        # family for a tier that maps to `inherit`. A refused try never ran.
+        s["model"] = args.model
     if args.attempt and not refusal:
         s["attempts"] = _int(s.get("attempts"), 0) + 1
+        tiers = s.get("tiers")
+        if isinstance(tiers, list) and tiers:
+            # The second try is dispatched one tier up; later ones keep the
+            # tier the last one had. The first try is cheap, and a failed try
+            # moves up a tier, which is what lets the default builder tier be low.
+            from compass_pkg import model_tiers
+            last = tiers[-1]
+            tier = model_tiers.raised(last) if s["attempts"] == 2 else last
+            tiers.append(tier)
+            s["model"] = getattr(args, "model", None) or model_tiers.resolve(tier, root)
+            floor = (model_tiers.seat_entry(task, STAGE_IMPLEMENT) or {}).get("effort")
+            effort = model_tiers.resolve_effort(tier, floor, root)
+            if effort:
+                s["effort"] = effort
+            if tier != last:
+                print(f"compass issue subtask: {args.id} attempt {s['attempts']} is "
+                      f"dispatched one tier up: {last} -> {tier} ({s['model']}"
+                      + (f", effort {s['effort']}" if s.get("effort") else "") + ").")
     findings = s.setdefault("findings", [])
     if args.finding:
         findings.append({"text": args.finding, "resolved": False})
@@ -466,7 +511,11 @@ def register(issue_subparsers, issue_arg):
                     "not exist and a base that is not a commit.")
     a.add_argument("id")
     a.add_argument("--brief", required=True, help="the brief file the builder is handed")
-    a.add_argument("--model", required=True, help="the model the dispatch uses")
+    a.add_argument("--model", help="the model the dispatch uses (default: the model "
+                                    "the tier maps to in the `models` setting)")
+    a.add_argument("--tier", choices=MODEL_TIERS,
+                   help="the model tier of the dispatch (default: the tier the "
+                        "manifest records for the implement seat)")
     a.add_argument("--budget", required=True, type=int, help="tokens the dispatch may use")
     a.add_argument("--base", help="the commit the builder starts from (default: HEAD)")
     issue_arg(a)
@@ -501,6 +550,8 @@ def register(issue_subparsers, issue_arg):
                    help="the try this cost belongs to; without it, a cost "
                         "given with --attempt belongs to the try before the "
                         "new one, otherwise to the current try")
+    u.add_argument("--model", help="the model the call passed for this try; recorded "
+                                    "instead of the name its tier maps to")
     u.add_argument("--attempt", action="store_true",
                    help="count another attempt; refused past the attempt or "
                         "repeated-error ceiling")

@@ -84,6 +84,18 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 <!-- compass:render gate-set -->
 <!-- /compass:render -->
 
+### Model tiers
+
+<!-- Written by `compass issue render` from the manifest's `models`: one row per seat
+     whose stage runs, with its tier, the rule that set it and the floors for that seat
+     that did not fire. A seat is a stage, or `review`, the reviewer in the verify stage.
+     A person overrides a tier through the issue's `config:` layer (`compass issue
+     configure --from-file` with a `rules:` overlay, then `compass approach evaluate
+     --write --reason`), recorded under Human overrides. -->
+
+<!-- compass:render model-tiers -->
+<!-- /compass:render -->
+
 ### Multiagent orchestration
 
 - Orchestration: {{solo \| pair (2-3 subtasks) \| multiagent (4+ subtasks)}}

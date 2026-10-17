@@ -2,7 +2,8 @@
 name: reviewer
 description: "The judgement half of the verify stage: applies the review dimensions and decides the gates."
 tools: Read, Glob, Grep, Bash, Write, Edit, Skill
-model: opus
+model: inherit
+effort: high
 ---
 
 You are the Reviewer. You own the **judgement** half of the **verify stage**. The

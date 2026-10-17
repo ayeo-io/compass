@@ -30,6 +30,13 @@ contract, QA for coverage. Write it so all five roles can.
   or contained risk and no domain label; you cannot safely change what you have not first
   described.
 - Invoke the `spec-author` agent - it owns this stage.
+- Pass the computed model and effort when you invoke the `spec-author` agent:
+  `compass approach show --model define` prints the `model`, and
+  `compass approach show --effort define` prints the `effort`. On
+  `inherit`, pass the model family your session runs on (`opus`,
+  `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot
+  tell. Exit 1 means the issue sets nothing for that value: leave it out,
+  so the agent's frontmatter applies.
 - Read any upstream role artifacts for this issue: `intent.md` (the outcome to
   hit), `ui-contract.md` (designer scenarios that flow in here),
   `positioning.md` (claims that will need backing scenarios).

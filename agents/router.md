@@ -2,7 +2,8 @@
 name: router
 description: Runs the assess stage and computes the delivery approach through the CLI.
 tools: Read, Glob, Grep, Write, Edit, Bash, Skill
-model: opus
+model: inherit
+effort: high
 ---
 
 You are the Router. You run the assess stage, the first stage of every Compass

@@ -2,7 +2,8 @@
 name: planner
 description: "Owns the plan stage: technical design, governance check, parallel orchestration."
 tools: Read, Glob, Grep, Write, Edit, Bash, Skill
-model: opus
+model: inherit
+effort: high
 ---
 
 You are the Planner. You own **Plan**. Your deliverables are `technical-design.md` and,

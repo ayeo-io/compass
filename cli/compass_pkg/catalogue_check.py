@@ -19,7 +19,7 @@ What this does not check yet: whether an entry is complete enough to add
 (the merge), and whether a value loosens its parent (the classifier).
 """
 # DEPENDENCY: standard library (copy, datetime, re); compass_pkg.catalogue_spec;
-# compass_pkg.vocabulary. It does not import compass_pkg.waivers: the list of
+# compass_pkg.stable_ids; compass_pkg.vocabulary. It does not import compass_pkg.waivers: the list of
 # modules that may is pinned, so the one date reader it needs is written here.
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ import datetime
 import re
 
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import vocabulary
+from compass_pkg import stable_ids, vocabulary
 
 _ID = re.compile(spec.ID_PATTERN)
 
@@ -500,6 +500,17 @@ def schema():
         "record": {"description": top["record"], "type": "object"},
         "project": {"description": top["project"], "type": "object"},
         "prices": {"description": top["prices"], "type": "object"},
+        "models": {"description": top["models"], "type": "object",
+                   "properties": {t: {"description": top[f"models.{t}"], "type": ["string", "object"],
+                                      "properties": {
+                                          "model": {"description": "The model name.",
+                                                    "type": "string"},
+                                          "effort": {"description": "The effort level: `low`, `medium`, `high`, "
+                                                                    "`xhigh` or `max`.",
+                                                     "enum": list(stable_ids.EFFORT_LEVELS)}},
+                                      "additionalProperties": False}
+                                  for t in reversed(stable_ids.MODEL_TIERS)},
+                   "additionalProperties": False},
         "multiagent": {"description": top["multiagent"], "type": "object"},
         "preset_index": {"description": top["preset_index"], "type": "string"},
         "github_labels": {"description": top["github_labels"], "type": "object",

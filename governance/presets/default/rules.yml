@@ -218,6 +218,71 @@ rules:
         rationale: 'Unmapped ground on a small change - before editing, write a test that pins what the
           code does now where the change touches it, so the change cannot break behaviour nobody wrote
           down. Advice, not a floor: a larger, riskier or domain-labelled unmapped change meets RP-FLOOR-002.'
+  model_tiers:
+    kind: model-tiers
+    hit: {tier: max}
+    rules:
+      RP-TIER-001:
+        order: 1
+        then: {seat: assess, tier: strong}
+        rationale: Assessment is judgement, and a wrong reading is the most expensive mistake to find
+          later.
+      RP-TIER-002:
+        order: 2
+        then: {seat: define, tier: strong}
+        rationale: The scenarios are judgement; an ambiguous one is found only at verify.
+      RP-TIER-003:
+        order: 3
+        then: {seat: refine, tier: strong}
+        rationale: Resolving ambiguity is judgement, and the last review before design.
+      RP-TIER-004:
+        order: 4
+        then: {seat: plan, tier: strong}
+        rationale: Design decisions are judgement, and the cheapest point to change one.
+      RP-TIER-005:
+        order: 5
+        then: {seat: breakdown, tier: strong}
+        rationale: 'The orchestrator resolves collisions and conflicts: small in tokens, large in consequence.'
+      RP-TIER-006:
+        order: 6
+        then: {seat: implement, tier: standard}
+        rationale: The spec and design are written, and the builder works against a red test.
+      RP-TIER-007:
+        order: 7
+        then: {seat: verify, tier: fast}
+        rationale: The verifier runs commands and records their output; it takes no judgement.
+      RP-TIER-008:
+        order: 8
+        then: {seat: review, tier: strong}
+        rationale: The shipped default keeps the reviewer strong, so a cheaper builder's work is checked
+          by the strong model.
+      RP-TIER-009:
+        order: 9
+        then: {seat: ship, tier: fast}
+        rationale: The ship commit, the receipt and the release line are mechanical.
+  model_floors:
+    kind: model-floors
+    hit: {tier: max, effort: max}
+    rules:
+      RP-MODEL-001:
+        order: 1
+        when: {risk: critical}
+        then: {seat: implement, tier: strong, effort: high}
+        rationale: A critical change is built by the strong model at high effort; a mistake there costs
+          the most.
+      RP-MODEL-002:
+        order: 2
+        when:
+          familiarity: [greenfield, brownfield-unmapped]
+          size: [medium, large, product]
+        then: {seat: implement, tier: strong}
+        rationale: Unmapped or new ground above small has no written behaviour for a cheaper builder to
+          lean on.
+      RP-MODEL-003:
+        order: 3
+        when: {urgency: live-defect}
+        then: {seat: implement, tier: strong}
+        rationale: A live defect is fixed once, under pressure, by the strong model.
   biases:
     kind: biases
     hit: {}

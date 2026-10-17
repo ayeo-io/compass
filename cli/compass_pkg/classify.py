@@ -103,6 +103,11 @@ def atoms_of(when):
     return out
 
 
+#: Rule-set kinds whose conditions decide no obligation. The model tiers are a cost
+#: choice the classifier does not compare, so their conditions add no point to a grid.
+UNCOMPARED_RULE_KINDS = ("model-tiers", "model-floors")
+
+
 def collect_atoms(*documents, label_site=None):
     """The atoms of every condition anywhere in the given configurations and
     issue layers, without repeats, in document order. The walk does not know
@@ -123,6 +128,8 @@ def collect_atoms(*documents, label_site=None):
 
     def walk(node, path):
         if isinstance(node, dict):
+            if node.get("kind") in UNCOMPARED_RULE_KINDS:
+                return
             for key, value in node.items():
                 if key in WHEN_KEYS and isinstance(value, dict):
                     atoms = atoms_of(value)

@@ -174,21 +174,50 @@ def test_trc_d2_only_two_new_public_cli_verbs():
 # ---------------------------------------------------------------------------
 # No fixed-tier ladder is shipped (`TRC-D3`)
 # Source-of-truth: governance/routing-policy.yml - no `tier`, `level`, or
-# equivalent vocabulary; the four assessment dimensions remain
+# equivalent process vocabulary, outside the `model_rules` block, which names
+# the model each seat runs on; the four assessment dimensions remain
 # risk/familiarity/size/intent (`BR-012`).
 # ---------------------------------------------------------------------------
+#: The two lists the `model_rules` block may hold, and the keys a rule in them may hold.
+MODEL_RULE_LISTS = {"default_tiers", "floors"}
+MODEL_RULE_KEYS = {"id", "when", "seat", "tier", "effort", "rationale"}
+
+
+def model_rules_problems(policy):
+    """Why a routing policy's `model_rules` block could hold a process ladder: a
+    list other than the two, or a rule key other than the six."""
+    model_rules = policy.get("model_rules") or {}
+    problems = [f"model_rules holds {sorted(set(model_rules) - MODEL_RULE_LISTS)}; it may hold "
+                f"only default_tiers and floors"] if set(model_rules) - MODEL_RULE_LISTS else []
+    for name in sorted(MODEL_RULE_LISTS & set(model_rules)):
+        for rule in model_rules[name] or []:
+            extra = sorted(set(rule) - MODEL_RULE_KEYS)
+            if extra:
+                problems.append(f"model rule {rule.get('id')} holds {extra}; a model rule "
+                                f"names only a seat, a model tier and an effort")
+    return problems
+
+
 def test_trc_d3_no_tier_ladder_in_routing_policy():
     """governance/routing-policy.yml has no `tier` or `level`
     vocabulary; the four assessment dimensions are unchanged (`TRC-D3`)."""
     text = (ROOT / "governance" / "routing-policy.yml").read_text(encoding="utf-8")
-    # Hard prohibition - no "tier:" or "level:" keys anywhere
+    # The `model_rules` block names a model tier per seat (which model runs a
+    # stage), not a process tier a person picks from a menu: it changes no
+    # stage, gate or approach. It is checked on its own below, and the rest of
+    # the file keeps the hard prohibition.
+    policy = yaml.safe_load(text)
+    problems = model_rules_problems(policy)
+    assert not problems, "\n".join(problems)
+    start = text.find("\nmodel_rules:\n")
+    rest = text if start < 0 else text[:start] + text[text.index("\n# ----", start + 1):]
+    # Hard prohibition - no "tier:" or "level:" keys anywhere else
     for forbidden in ("tier:", "level:"):
-        assert forbidden not in text, (
+        assert forbidden not in rest, (
             f"routing-policy.yml must not introduce '{forbidden}' - would be a tier-ladder"
         )
     # Reading vocabulary keys: the dimensions + urgency. Role left the
     # assessment at 7.0.0 (ADR-070); nothing took its place.
-    policy = yaml.safe_load(text)
     vocab = policy.get("assessment_vocabulary", {})
     expected_dims = {"risk", "familiarity", "size", "goal", "urgency", "labels_common"}
     assert set(vocab.keys()) == expected_dims, (

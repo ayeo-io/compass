@@ -135,6 +135,20 @@ routing_guardrails:
 <<artifact_rules>>
 
 # -----------------------------------------------------------------------------
+# MODEL RULES - which model tier each seat runs on. A seat is a stage, or the
+# reviewer in the verify stage (`review`). The tiers are fast < standard <
+# strong; `models:` in compass.yml maps each to a model name. `default_tiers`
+# gives each seat its tier; a `floors` rule whose `when` matches raises it, and
+# never lowers it. The evaluator writes the result to the manifest's `models:`
+# key, and `compass approach show --model <seat>` prints the name to pass.
+# -----------------------------------------------------------------------------
+model_rules:
+  default_tiers:
+<<model_default_tiers>>
+  floors:
+<<model_floors>>
+
+# -----------------------------------------------------------------------------
 # Assessment vocabulary - the legal values the assessment may take. The evaluator
 # rejects a value outside this vocabulary (a misclassification should fail
 # loudly, not pick an approach silently).

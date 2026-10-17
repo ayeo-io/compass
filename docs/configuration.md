@@ -56,7 +56,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 
 - **What counts as a settings key in the old file:** `mode`, `autonomy`,
   `allow_project_commands`, `enforcement`, `record`, `project`, `prices`,
-  `multiagent`, `preset_index`, `governance_drift` and `github_labels`. The three keys the
+  `models`, `multiagent`, `preset_index`, `governance_drift` and `github_labels`. The three keys the
   multiagent scripts read, `worktree_root`, `max_worktrees` and `test_command`,
   also count when they sit outside `multiagent:` and `project:`, because the
   scripts find them at any depth in the old file.
@@ -87,6 +87,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `enforcement` | Extra paths the pre-tool hook guards | `code_globs`: a list of patterns | none |
 | `record` | Where the delivery record is kept | `remote`, `paths`, `names_key` | no record |
 | `prices` | Dollars per million tokens, to price a quick fix's usage | a mapping from model name | no cost recorded |
+| `models` | The model and effort of each model tier (see `models` below) | `strong`, `standard`, `fast`: a model name, or `{model, effort}` | `strong` inherit at high, `standard` sonnet at medium, `fast` haiku at low |
 | `multiagent` | Where multiagent worktrees go | `worktree_root`, `max_worktrees` | `../.compass-worktrees`, 6 |
 | `allow_project_commands` | Lets `compass check` and `compass readiness` run commands the project declares | `true`, `false` | `false` |
 | `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
@@ -168,6 +169,42 @@ neither guard nor exempt, and only when the project has a settings file. A
 project with neither file costs the hook no Python start for that edit. It
 reads `initialised` only when it is about to refuse an edit, to say who
 initialised the project.
+
+### `models`
+
+The routing policy gives each seat of an issue a model tier
+(`governance/routing-policy.md`, "Model tiers"). This setting maps each tier
+to the model, and optionally the effort, a stage command passes when it
+invokes an agent. The shipped mapping is:
+
+```yaml
+models:
+  strong:   {model: inherit, effort: high}   # the session's model
+  standard: {model: sonnet,  effort: medium}
+  fast:     {model: haiku,   effort: low}
+```
+
+- A key you leave out keeps its default, so `models: {standard: opus}`
+  changes only the standard tier.
+- A bare string, such as `standard: opus`, changes the builder's model, and
+  leaves the tier with no effort. A floor can still raise the seat's effort.
+- An effort is `low`, `medium`, `high`, `xhigh` or `max`; another value is
+  refused. Which levels a model accepts depends on the model.
+- `compass approach show --effort <seat>` prints the higher of the tier's
+  effort and a floor's effort, or exits 1 when neither sets one.
+- Claude Code applies an effort in this order: the
+  `CLAUDE_CODE_EFFORT_LEVEL` environment variable, then the effort an Agent
+  call passes, then the agent's frontmatter `effort`, then the session's
+  effort. So `CLAUDE_CODE_EFFORT_LEVEL` overrides what Compass computes.
+  Passing `effort` per call needs Claude Code v2.1.292 or later; an older
+  version uses the frontmatter effort.
+- `inherit` means the model the session runs on. A caller passes its own
+  session's model family for it.
+- A key that is not one of the three tiers is refused, and the message names
+  the tiers.
+- `compass approach show --model <seat>` reads this setting each time it runs, so a
+  change applies to every open issue. `prices` is keyed by the model name, so
+  costing keeps working when a name changes.
 
 ### `multiagent`
 

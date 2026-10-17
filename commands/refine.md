@@ -65,6 +65,13 @@ is for. The same split is written from the other side in
 ## Setup
 
 - Load `bdd-specification`; the `spec-author` agent owns this continuation.
+- Pass the computed model and effort when you invoke the `spec-author` agent:
+  `compass approach show --model refine` prints the `model`, and
+  `compass approach show --effort refine` prints the `effort`. On
+  `inherit`, pass the model family your session runs on (`opus`,
+  `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot
+  tell. Exit 1 means the issue sets nothing for that value: leave it out,
+  so the agent's frontmatter applies.
 - Run `compass policy show` for the rules in force, and read the reasons in
   `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md` and `strategies.md` - the
   spec is QA'd against the guardrails and the applicable strategies. An

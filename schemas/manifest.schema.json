@@ -217,6 +217,15 @@
           "model": {
             "type": "string"
           },
+          "tiers": {
+            "type": "array",
+            "items": {"enum": ["fast", "standard", "strong"]},
+            "description": "The model tier of each try, first to last. The second try is one tier above the first."
+          },
+          "effort": {
+            "enum": ["low", "medium", "high", "xhigh", "max"],
+            "description": "The effort of the latest try: the higher of its tier's effort and the implement seat's floor effort."
+          },
           "budget": {
             "type": "integer",
             "description": "Tokens the dispatch may use.",
@@ -1210,6 +1219,23 @@
         "detail": {"type": "string"}
       },
       "description": "Optional. The repository's readiness when the issue was last assessed, from the per-checkout readiness record (ADR-060). `measured` holds the score, the number of readiness signals, floor_met, the absent signal ids and measured_at; `not-measured` holds a reason of missing, stale or unreadable and a detail. Written by every `compass approach evaluate --write`; it is not part of the generation, so a new measurement never forces a new generation. Absent on an issue assessed before 7.0.0, which reads as not measured."
+    },
+    "models": {
+      "type": "object",
+      "description": "The model tier of each seat whose stage runs, from the routing policy's model_rules; filled by approach evaluate. `compass approach show --model <seat>` resolves a tier to a model name.",
+      "propertyNames": {"enum": ["assess", "define", "refine", "plan", "breakdown", "implement", "verify", "review", "ship"]},
+      "additionalProperties": {
+        "type": "object",
+        "required": ["tier", "by"],
+        "additionalProperties": false,
+        "properties": {
+          "tier": {"enum": ["fast", "standard", "strong"]},
+          "by": {"type": "string", "description": "The rule that set the tier."},
+          "effort": {"enum": ["low", "medium", "high", "xhigh", "max"], "description": "The effort a floor raised the seat to; the tier's own effort comes from the models setting."},
+          "effort_by": {"type": "string", "description": "The floor that raised the effort."},
+          "not_fired": {"type": "array", "items": {"type": "string"}, "description": "The floors for the seat that did not match."}
+        }
+      }
     },
     "checkpoints": {
       "type": "array",

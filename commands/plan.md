@@ -25,6 +25,13 @@ engineering plan stage.)
   self-review the author owes the reviewer before the design is handed over.
 - Load the `governance-check` skill.
 - Invoke the `planner` agent - it owns this stage.
+- Pass the computed model and effort when you invoke the `planner` agent:
+  `compass approach show --model plan` prints the `model`, and
+  `compass approach show --effort plan` prints the `effort`. On
+  `inherit`, pass the model family your session runs on (`opus`,
+  `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot
+  tell. Exit 1 means the issue sets nothing for that value: leave it out,
+  so the agent's frontmatter applies.
 - If an `intent.md` exists, this is where the **intent-fidelity gate** lands: the
   spec must be checked against `intent.md` before the design completes. Invoke
   `product-owner` to run it.

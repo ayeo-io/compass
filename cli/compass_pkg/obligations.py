@@ -20,7 +20,7 @@ different thing and raises.
 # _stage_key_renames),
 # compass_pkg.loop_ceilings (the ceiling names) and compass_pkg.routing
 # (evaluate_route, RoutingConflict, prepare_policy, route_checkpoints), and
-# compass_pkg.stable_ids (the approach ids).
+# compass_pkg.stable_ids (the approach ids), and compass_pkg.model_tiers (model_rules).
 # Only compass_pkg.classify, compass_pkg.effective and compass_pkg.replay import this module.
 from __future__ import annotations
 
@@ -32,6 +32,7 @@ from compass_pkg.stable_ids import APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUIC
 from compass_pkg.core import (CompassError, _stage_key_renames, canonical_shape,
                               reading_matches)
 from compass_pkg.loop_ceilings import CEILINGS
+from compass_pkg import model_tiers
 from compass_pkg.routing import (RoutingConflict, evaluate_route, prepare_policy,
                                  route_checkpoints)
 
@@ -45,7 +46,8 @@ _LEGACY_EFFECT = {"force_minimum_approach": "force_minimum_route",
 # it, and for an effect not listed. The evaluator does not read a declared
 # policy yet, so a rule set that declares another is refused until it does.
 BUILT_IN_HIT = {"force_minimum_approach": "max", "lean_toward": "first",
-                "max_worktrees": "min", "limit": "min"}
+                "max_worktrees": "min", "limit": "min", "tier": "max",
+                "effort": "max"}
 DEFAULT_HIT = "collect"
 
 # The approaches the evaluator knows, and whether each ships. It names the
@@ -213,6 +215,7 @@ def policy_adapter(config):
     table = _checkpoints(config.get("approaches") or {})
     if table:
         policy["autonomy_checkpoints"] = table
+    policy.update(model_tiers.policy_block(config.get("rules") or {}))
     ranks = _ranks(config.get("stages") or {})
     if ranks is not None:
         policy["stage_mode_ranks"] = ranks

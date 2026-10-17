@@ -6,7 +6,9 @@
 - `policy-rules`: the policy line, the generation and a row per rule that fired;
 - `stage-weights`: a row per stage, in stage order, with the mode the manifest records;
 - `gate-set`: the gates in the manifest's order, and beside an added gate the rules that
-  added it.
+  added it;
+- `model-tiers`: a row per seat, in seat order, with the tier the manifest records, the
+  rule that set it and the floors for that seat that did not fire.
 
 Each takes a `RenderInputs` snapshot and the project-relative path of the document, and
 returns a `Part`, as the renderers in `block_renderers` do. `block_renderers` registers
@@ -102,9 +104,33 @@ def gate_set(inputs, doc_rel):
     return Part(OWN, lines)
 
 
+def model_tiers(inputs, doc_rel):
+    from compass_pkg.model_tiers import SEATS
+    models = inputs.task.get("models")
+    if not isinstance(models, dict) or not models:
+        return Part(OWN, ["No model tiers recorded: the agents run on their frontmatter "
+                          "model."])
+    order = [s for s in SEATS if s in models] + [s for s in models if s not in SEATS]
+    lines = ["| Seat | Tier | Set by | Floor effort | Floors that did not fire |",
+             "|---|---|---|---|---|"]
+    for seat in order:
+        entry = models[seat] if isinstance(models[seat], dict) else {}
+        not_fired = entry.get("not_fired") or []
+        effort = ("%s (%s)" % (entry["effort"], entry.get("effort_by") or "?")
+                  if entry.get("effort") else "none")
+        lines.append("| %s | %s | %s | %s | %s |" % (
+            rb.cell(seat), rb.cell(entry.get("tier") or "?"), rb.cell(entry.get("by") or "?"),
+            rb.cell(effort),
+            rb.cell(", ".join(str(r) for r in not_fired)) if not_fired else "none"))
+    lines += ["", "`compass approach show --model <seat>` and `--effort <seat>` print the model "
+              "and the effort a seat runs on, from the `models` setting and the floors."]
+    return Part(OWN, lines)
+
+
 RENDERERS = {
     "assessment": assessment,
     "policy-rules": policy_rules,
     "stage-weights": stage_weights,
     "gate-set": gate_set,
+    "model-tiers": model_tiers,
 }

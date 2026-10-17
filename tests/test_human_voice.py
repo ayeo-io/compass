@@ -37,6 +37,8 @@ from pathlib import Path
 
 import pytest
 
+from size_targets import warn_if_over
+
 
 REPO_ROOT = Path(__file__).parent.parent
 REFERENCE = REPO_ROOT / "skills" / "compass-runtime" / "writing-voice.md"
@@ -539,6 +541,11 @@ def test_trc_d1_the_clarity_dimension_names_the_tells_as_judgement():
 
 REFERENCE_PATH = "skills/compass-runtime/writing-voice.md"
 
+# The larger of the two Writing voice sections (AGENTS.md, 546 words) plus a
+# small margin. A target, not a limit, since issue `size-caps-as-targets`: a
+# section over it passes and pytest warns.
+VOICE_WORD_TARGET = 560
+
 def _evidence_gates_text():
     """Reads SKILL.md and its sibling files.
 
@@ -573,7 +580,7 @@ def test_trc_b1_claude_md_and_agents_md_carry_the_voice_paragraph():
         assert REFERENCE_PATH in section, (
             f"{name}'s voice paragraph must name the reference by path"
         )
-        # The cap exists because these files load on every run, so every
+        # The target exists because these files load on every run, so every
         # word costs attention every time.
         #
         # The section carries two things a writer must have in front of
@@ -583,13 +590,8 @@ def test_trc_b1_claude_md_and_agents_md_carry_the_voice_paragraph():
         # or metaphor, one word for one thing, "must" / "can" / "do not",
         # and the table of shorter words.
         #
-        # 560 is the larger of the two sections (AGENTS.md, 546 words) plus
-        # a small margin, not a round number. A later change that needs
-        # more words must raise the cap here, and say why.
-        words = len(section.split())
-        assert words <= 560, (
-            f"{name}'s voice paragraph is {words} words; must be <=560"
-        )
+        warn_if_over(f"{name}'s Writing voice section", len(section.split()),
+                     VOICE_WORD_TARGET, "words")
         assert "### Pair" not in section, (
             f"{name} must not copy the before/after pairs"
         )

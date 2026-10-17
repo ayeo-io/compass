@@ -16,12 +16,18 @@ import re
 
 import pytest
 
+from size_targets import warn_if_over
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 #: Words per token, the ratio this project has used since the instruction-volume
 #: work. Recorded here rather than inlined so the two files cannot disagree
 #: about the conversion while both claiming to measure the same thing.
 TOKENS_PER_WORD = 1.35
+
+# A target, not a limit, since issue `size-caps-as-targets`: a contract
+# over it passes and pytest warns.
+CONTRACT_WORD_TARGET = 450
 
 
 def _words(path):
@@ -247,11 +253,10 @@ def test_trc_f5_the_contract_is_measured_separately_and_reported():
     """The contract is resident too, and hiding it inside one number is how a
     target gets met by choosing what to count."""
     contract = ROOT / "compass-contract.md"
-    contract_words = _words(contract)
-    assert contract_words <= 450, (
-        f"compass-contract.md is {contract_words} words. It is injected on "
-        f"every session start, so it is resident cost even though the intake's "
-        f"description target does not include it.")
+    # It is injected on every session start, so it is resident cost even
+    # though the intake's description target does not include it.
+    warn_if_over("compass-contract.md", _words(contract), CONTRACT_WORD_TARGET,
+                 "words")
 
 
 # ---------------------------------------------------------------------------

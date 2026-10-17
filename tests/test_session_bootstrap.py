@@ -24,6 +24,8 @@ from pathlib import Path
 
 import pytest
 
+from size_targets import warn_if_over
+
 ROOT = Path(__file__).resolve().parent.parent
 # Named so it cannot collide: a bare `contract.md` is a substring of
 # `docs/safety-contract.md` and `templates/ui-contract.md`, and a test that
@@ -38,8 +40,10 @@ AGENTS_MD = ROOT / "AGENTS.md"
 # Raised from 400 by the approval rule (issue `approve-inside-claude-code`,
 # ADR-068 and ADR-069): the agent must know before it acts that it records an
 # approval only under a delegation and otherwise asks. Decided by
-# compass:architect under jed72's overnight delegation.
-MAX_CONTRACT_WORDS = 420
+# compass:architect under jed72's overnight delegation. Since issue
+# `size-caps-as-targets` the number is a target: a contract over it passes
+# and pytest warns.
+CONTRACT_WORD_TARGET = 420
 
 
 # ---------------------------------------------------------------------------
@@ -131,11 +135,10 @@ def test_sb_a2_the_contract_is_short_enough_to_always_carry():
     assert CONTRACT.exists(), (
         "there is no single contract file - the contract still exists only as "
         "prose inside CLAUDE.md and the compass-runtime skill")
+    # It is injected on every session start, so a contract nobody can afford
+    # to carry is the same as no contract.
     words = len(CONTRACT.read_text(encoding="utf-8").split())
-    assert words <= MAX_CONTRACT_WORDS, (
-        f"the contract is {words} words against a {MAX_CONTRACT_WORDS} ceiling. "
-        "It is injected on every session start, clear and compact, so a "
-        "contract nobody can afford to carry is the same as no contract.")
+    warn_if_over("compass-contract.md", words, CONTRACT_WORD_TARGET, "words")
 
 
 def test_sb_a3_the_hook_is_silent_outside_a_compass_project(tmp_path):

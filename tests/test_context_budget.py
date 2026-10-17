@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from size_targets import OverTarget, warn_if_over
+
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACT = ROOT / "compass-contract.md"
 
@@ -73,7 +75,11 @@ NEW_RULES = {
 # apply at moments a session cannot predict, in any stage including a quick
 # fix, which reads only its own command and skill, so the rules must be
 # resident in the contract.
-CONTRACT_BUDGET = 2750
+#
+# Since issue `size-caps-as-targets` the number is a target, not a limit:
+# a contract over it passes and pytest warns, so the growth shows in every
+# run without blocking a rule the owner agreed to.
+CONTRACT_TARGET = 2750
 
 # Set from the rewrite of 2026-10-04 (2,581, 1,476, 1,436 and 1,216
 # characters at 80 columns), with a little room; before it, 2,805, 1,643,
@@ -121,7 +127,7 @@ def missing_rules(text):
 def test_tc_1_the_contract_keeps_every_rule_within_its_budget():
     text = CONTRACT.read_text(encoding="utf-8")
     assert missing_rules(text) == []
-    assert len(text) <= CONTRACT_BUDGET, len(text)
+    warn_if_over("compass-contract.md", len(text), CONTRACT_TARGET, "characters")
 
 
 def test_tc_1_deleting_any_rule_is_caught():
@@ -238,14 +244,8 @@ def test_each_rule_phrase_pin_can_fail():
 
 def _budget_comment():
     source = Path(__file__).read_text(encoding="utf-8")
-    start = source.index("CONTRACT_BUDGET = ")
+    start = source.index("CONTRACT_TARGET = ")
     return source[:start].rsplit("\n\n", 1)[-1]
-
-
-def test_contract_budget_is_measured_length_rounded_up():
-    length = len(CONTRACT.read_text(encoding="utf-8"))
-    assert length <= CONTRACT_BUDGET, length
-    assert CONTRACT_BUDGET == -(-length // 50) * 50, (length, CONTRACT_BUDGET)
 
 
 def test_contract_budget_comment_states_reason():
@@ -255,16 +255,12 @@ def test_contract_budget_comment_states_reason():
     assert "resident" in comment
 
 
-def assert_within_budget(text):
-    assert len(text) <= CONTRACT_BUDGET, f"{len(text)} > {CONTRACT_BUDGET}"
-
-
-def test_contract_budget_can_fail():
+def test_contract_target_warns_and_does_not_fail():
     text = CONTRACT.read_text(encoding="utf-8")
-    longer = text + "x" * (CONTRACT_BUDGET - len(text) + 1)
-    with pytest.raises(AssertionError) as caught:
-        assert_within_budget(longer)
-    assert f"{CONTRACT_BUDGET + 1} > {CONTRACT_BUDGET}" in str(caught.value)
+    longer = text + "x" * (CONTRACT_TARGET - len(text) + 1)
+    with pytest.warns(OverTarget, match=f"{CONTRACT_TARGET + 1} characters"):
+        warn_if_over("compass-contract.md", len(longer), CONTRACT_TARGET,
+                     "characters")
 
 
 def test_rule_four_pointer_keeps_heading():

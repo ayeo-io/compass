@@ -139,7 +139,10 @@ the final approach - overrides are recorded in `delivery-approach.md` too, with 
 What cannot be overridden: an `immovable_gate`, or a `floor` (a routing
 rule is governance speaking; changing it means a reviewed change to the
 project's `compass.yml`, not overriding an approach, and a loosening needs a
-waiver that the project's owner approves).
+waiver that the project's owner approves). An issue can keep a lower mode for
+a stage a floor did not name, on the approach the floor raised, only with an
+issue waiver the project owner approved
+(`${CLAUDE_PLUGIN_ROOT}/governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md`).
 
 ---
 

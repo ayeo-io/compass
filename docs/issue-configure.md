@@ -26,7 +26,13 @@ generation after the one in force.
 subtask ceiling from the configuration the issue runs against and from the
 issue's own layer: the approach it names, the stage modes it sets and the
 subtask ceiling it sets. The layer applies before the floors, caps and role
-rules, so a floor still raises an approach the issue named too low. A
+rules, so a floor still raises an approach the issue named too low. A floor
+that raises the approach drops the stage modes the issue set, except a stage
+whose entry carries an issue waiver: that mode holds on the raised approach,
+unless the floor names the stage. The waiver needs a `human-approval` record
+that names `stages.<id>` and the mode, with `from: null`, because a stage entry
+holds no mode of its own in the parent. Without a valid approval the reassess
+is refused (`governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md`). A
 read-only evaluation uses the stored generation's layer, or the manifest's
 `config:` for an issue with no generation. A write commits the layer it
 computed from. The lint refuses a layer that loosens a lock when the

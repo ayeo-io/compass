@@ -606,7 +606,12 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # model tier and effort, the policy adapter reads the model-tier rule sets, and the grid
 # leaves out their conditions, because the classifier compares no tier. No verdict moves
 # (MT-28), so the version stays 9.
-VERDICT_SOURCE_PIN = "615ed12a689e9ba2"
+# Re-pinned for issue `owner-reassess-overrides-label-floor`: on an approach a floor
+# raised, a stage whose issue entry holds a waiver keeps the issue's mode, so a
+# waived breakdown is now refused as incomparable unless its approval is valid,
+# where version 9 saw no effect. The version is now 10. Pinned on top of the
+# `model-tier-from-assessment` source above.
+VERDICT_SOURCE_PIN = "8aa4656d72490025"
 
 
 def _verdict_source_digest():

@@ -462,6 +462,108 @@ def _stub():
     return {"reason": STUB_REASON, "approved_by": UNAPPROVED}
 
 
+# Where a copied `waived:` id can name a rule or a guardrail: the lists
+# `governance.drift` reads for missing rules, then the named groups of the
+# guardrails file it reads for missing checks. The first number is the file:
+# 0 for the routing policy, 1 for the guardrails.
+WAIVABLE_LISTS = (
+    (0, ("routing_guardrails", "floors")), (0, ("routing_guardrails", "caps")),
+    (0, ("routing_guardrails", "loop_ceilings")), (0, ("routing_guardrails", "immovable_gates")),
+    (0, ("routing_guardrails", "artifact_rules")), (0, ("routing_guardrails", "role_rules")),
+    (0, ("routing_strategies", "default_shapes")),
+    (0, ("routing_strategies", "advisory_strategies")),
+    (1, ("defaults",)), (1, ("spike_guardrails",)))
+WAIVABLE_GROUPS = ("checks", "evidence_types", "gate_evidence_requirements")
+
+
+def _recorded_waivers(policy):
+    """`{id: reason}` for each entry of the copy's `routing_guardrails.waived`
+    that `governance.drift` accepts: a string id and a reason that is not
+    blank. Any other entry records no decision, so it explains nothing."""
+    held = (policy.get("routing_guardrails") or {}).get("waived") or []
+    out = {}
+    for entry in held if isinstance(held, list) else []:
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str) and entry["id"] \
+                and isinstance(entry.get("reason"), str) and entry["reason"].strip():
+            out[entry["id"]] = entry["reason"].strip()
+    return out
+
+
+def _without(files, ids):
+    """The base release's legacy files with each id in `ids` removed: the
+    release as the project said, in `waived:`, that it would run it."""
+    out = copy.deepcopy(files)
+    for index, path in WAIVABLE_LISTS:
+        parent = out[index]
+        for key in path[:-1]:
+            parent = parent.get(key) if isinstance(parent, dict) else None
+        held = parent.get(path[-1]) if isinstance(parent, dict) else None
+        if isinstance(held, list):
+            parent[path[-1]] = [r for r in held
+                                if not (isinstance(r, dict) and r.get("id") in ids)]
+    for group in WAIVABLE_GROUPS:
+        held = out[1].get(group)
+        if isinstance(held, dict):
+            out[1][group] = {k: v for k, v in held.items() if k not in ids}
+    return out
+
+
+def _legacy_waiver(release, legacy, op, recorded, cache):
+    """The `LEGACY` waiver for an entry that needs an excuse, or None.
+
+    The entry gets one when the recorded `waived:` entries alone explain its
+    loosening: removing the waived ids from the base release changes the
+    entry, and the copy's entry is neither looser than that entry nor
+    incomparable with it. Both are judged in the base release with only this
+    entry swapped, as `_needs_excuse` judges an entry. Judged inside the
+    waived release instead, a removed gate would stop owing its checks, and
+    an unrecorded change to one of them would compare as equal. A loosening
+    nobody recorded keeps the `UNAPPROVED` stub: a LEGACY waiver carries only
+    a decision the project wrote down (ADR-039)."""
+    if not recorded:
+        return None
+    files = _release_files(release)
+
+    def config(ids):
+        key = tuple(sorted(ids))
+        if key not in cache:
+            cache[key] = _convert(*_without(files, set(ids)), "the waived base release")
+        return cache[key]
+
+    def entry(conf):
+        return (conf.get(op["catalogue"]) or {}).get(op["id"])
+
+    def swapped(body):
+        out = copy.deepcopy(base)
+        table = out.setdefault(op["catalogue"], {})
+        if body is None:
+            table.pop(op["id"], None)
+        else:
+            table[op["id"]] = copy.deepcopy(body)
+        return out
+
+    base = config(())
+    waived = config(recorded)
+    if entry(waived) == entry(base):
+        return None
+    try:
+        verdict = classify.classify(swapped(entry(waived)), swapped(entry(legacy)),
+                                    early_exit=True).result
+    except CompassError:
+        return None
+    if verdict in waivers.REFUSED:
+        return None
+    # An id is named when removing it alone changes the entry, or when the
+    # entry needs it removed with the others (a check two waived gates held).
+    named = [i for i in sorted(recorded)
+             if entry(config([i])) != entry(base)
+             or entry(config(set(recorded) - {i})) != entry(waived)]
+    if not named:
+        return None
+    return {"reason": "; ".join(f"{i}: {recorded[i]}" for i in named),
+            "approved_by": waivers.LEGACY}
+
+
 def _verdict(parent, child, **names):
     shown = classify.classify(parent, child, **names).to_json()
     return shown, {"result": shown["result"], "reason": shown["reason"],
@@ -499,9 +601,11 @@ def _derive(root, made, settings):
         return False
     try:
         if classify.classify(base, faithful, early_exit=True).result in waivers.REFUSED:
+            recorded, cache = _recorded_waivers(policy), {}
             for op in _needs_excuse(base, overlay, ops):
-                overlay[op["catalogue"]][op["id"]]["waiver"] = _stub()
-                op["waiver"] = UNAPPROVED
+                waiver = _legacy_waiver(release, legacy, op, recorded, cache) or _stub()
+                overlay[op["catalogue"]][op["id"]]["waiver"] = waiver
+                op["waiver"] = waiver["approved_by"]
         made.doc = _layer_document(overlay, settings)
         shown, made.equivalence = _verdict(legacy, faithful, parent_name="copy",
                                            child_name="base plus overlay")
@@ -758,6 +862,10 @@ def _base_lines(made):
     return lines
 
 
+_WAIVER_NOTE = {UNAPPROVED: " (waiver stub, UNAPPROVED)",
+                waivers.LEGACY: " (LEGACY waiver, no approval recorded)"}
+
+
 def report_text(made, mode):
     lines = [_heading(made, mode)]
     if made.result == "nothing-to-migrate":
@@ -771,7 +879,7 @@ def report_text(made, mode):
         if made.ops:
             lines.append(f"  overlay: {len(made.ops)} entries")
             lines += [f"    {o['operation']:<8}{o['catalogue']}.{o['id']}"
-                      + (" (waiver stub, UNAPPROVED)" if o["waiver"] else "")
+                      + _WAIVER_NOTE.get(o["waiver"], "")
                       for o in made.ops]
         else:
             lines.append("  overlay: none - the copy has no local edit")

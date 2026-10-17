@@ -15,22 +15,28 @@ later lint, update and reassess steps call `check`, `describe`,
 `recheck` and `attribute`. The CLI checks that a name is in a list and that a
 date is not in the future; it never authenticates the person.
 """
-# DEPENDENCY: standard library (copy, datetime, collections);
+# DEPENDENCY: standard library (copy, datetime, re, collections);
 # compass_pkg.catalogue_spec, compass_pkg.classify (the classify function)
-# and compass_pkg.core (CompassError, only). Only compass_pkg.locks imports this module (its unlock check).
+# and compass_pkg.core (CompassError and COMPASS_VERSION, only). Only compass_pkg.locks imports this module (its unlock check).
 from __future__ import annotations
 
 import copy
 import datetime
+import re
 from collections import namedtuple
 
 from compass_pkg import catalogue_spec as spec
 from compass_pkg.classify import classify as _classify
-from compass_pkg.core import CompassError
+from compass_pkg.core import COMPASS_VERSION, CompassError
 
 OPERATIONS = ("set", "replace", "remove")
 LEGACY = "LEGACY"
 UNAPPROVED = "UNAPPROVED"
+# From 7.0.0 `compass policy migrate` writes a LEGACY waiver for each rule a
+# project recorded under `waived:`, so lint reads the shape, with a warning,
+# for the whole 7.x line. From 8.0.0 it is an error. Decision:
+# governance/decisions/2026-10-17-legacy-waivers-readable-until-8-0-0.md.
+LEGACY_READ_UNTIL = (8, 0, 0)
 # What a waiver writes. `covers` is not here on purpose: the covered revision
 # is derived, so a written one is a fault.
 WRITTEN = {"project": ("reason", "approved_by", "approved_on"),
@@ -142,8 +148,15 @@ def check_shape(waiver, today):
             out.append(_fault("W-LEGACY-DATED", wid,
                               "a LEGACY waiver has no approved_on"))
         else:
-            out.append(_fault("W-LEGACY", wid, "no approval recorded: migrated from a "
-                              "waived entry", "warning"))
+            until = ".".join(str(n) for n in LEGACY_READ_UNTIL)
+            if _version(COMPASS_VERSION) < LEGACY_READ_UNTIL:
+                out.append(_fault("W-LEGACY", wid, "no approval recorded: migrated from a "
+                                  f"waived entry; lint reads LEGACY until {until}, so "
+                                  "record a dated approval before then", "warning"))
+            else:
+                out.append(_fault("W-LEGACY", wid, "no approval recorded: LEGACY was "
+                                  f"read until {until}; record approved_by and "
+                                  "approved_on"))
         return out
     if "approved_on" not in body or body["approved_on"] is None:
         if approver != UNAPPROVED:
@@ -159,6 +172,15 @@ def check_shape(waiver, today):
                           f"approved_on {given.isoformat()} is later than today "
                           f"({today.isoformat()})"))
     return out
+
+
+def _version(text):
+    """`(major, minor, patch)` from a version string such as `7.1.0rc1`."""
+    parts = []
+    for piece in str(text).split(".")[:3]:
+        digits = re.match(r"\d*", piece).group()
+        parts.append(int(digits) if digits else 0)
+    return tuple(parts + [0] * (3 - len(parts)))
 
 
 def allowed_approvers(waiver, project, parent):

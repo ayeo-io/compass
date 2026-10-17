@@ -543,6 +543,11 @@ def test_d2_repairs_change_only_retired_names():
     `docs/safety-contract.md` (list_items 53 -> 59) gained the list of
     Bash write shapes the pre-tool hook does not detect.
 
+    One more was re-baselined by `approval-guard-hardening`:
+    `docs/safety-contract.md` (list_items 59 -> 63) gained the bullet on one
+    record per typed command and the list of Bash spellings the approval
+    guard does not refuse.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

@@ -83,6 +83,22 @@ and the things it does not claim.
   inline tags - `(evidence: EV-id)` or `(follow-up: FU-id)`. A bare unchecked
   box fails `compass check`.
 
+## Commits and sign-off
+
+These repeat three rules of `compass-contract.md` for this repository. A test
+(`tests/test_contract_claude_md_drift.py`) fails when the two files differ.
+
+- **Approvals.** Approve only under a delegation naming you. Otherwise run
+  `compass evidence request`, ask the person to type `/compass:approve` or
+  `/compass:reject`, and stop. An unattended session ends there.
+- **Commit only what you mean to.** Stage each file by its path, never
+  `.compass/`, and check the staged list and commit authors. If
+  something is staged by mistake, say so and stop; do not retry a refused
+  unstage.
+- `.compass/private/` and issue state (`.compass/work/<slug>/` and
+  `docs/compass/<date>-<slug>/`) stay untracked. Do not force-add them.
+- A lint fix never weakens an assertion; re-run affected tests.
+
 ## Roles
 
 - Five roles, four of them non-engineering, each with its own entry point into

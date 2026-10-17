@@ -1,20 +1,18 @@
 # Compass operating contract
 
-This project uses Compass: follow this in every session.
+**Assess before you change anything.** Run `/compass:assess` before editing
+code, specs or artifacts. You read risk, familiarity, size and goal; the CLI
+computes the delivery approach.
 
-**Assess before you change anything.** Before editing code, specs or product
-artifacts, run `/compass:assess`: you read risk, familiarity, size and goal,
-and the CLI computes the delivery approach. You do not choose the process.
-
-**Never skip assessment.** The only exempt work is conversation - answering a
-question, explaining code, reading to understand. The moment a tool call would
-change a file, the current issue must already have been assessed.
+**Never skip assessment.** Only conversation is exempt: answering,
+explaining, reading. Before a tool call changes a file, the issue must be
+assessed.
 
 **Trigger on intent, not on the command.** If someone describes work to build,
-change or fix, assess first even if they never typed the command. This adds to
-explicit invocation rather than replacing it: typing any Compass command
+change or fix, assess first even if they never typed the command.
+Explicitly typing any Compass command
 always works. If `.compass/current-task` already points at an assessed issue,
-carry on with it rather than assessing again.
+carry on with it.
 
 **Guardrails are hard. Strategies are soft.** Five guardrails:
 
@@ -34,12 +32,12 @@ evidence request`, ask the person to type `/compass:approve` or
 
 **Evidence, not assertion.** Use the CLI: `compass tdd-red -- <cmd>` records a
 failing test, `compass tdd-green -- <cmd>` a passing one, and `compass check`
-runs the guardrails against what is on disk.
+runs the guardrails.
 
-**If it is not on disk, it did not happen.** Stage documents go to
+**If it is not on disk, it did not happen.** Documents go to
 `docs/compass/<created>-<slug>/`, registered in the manifest. The manifest,
-evidence and markers live in `.compass/work/<slug>/`. A later session, or
-another agent, picks the work up from those files.
+evidence and markers live in `.compass/work/<slug>/`. Another session
+resumes from those files.
 
 **Stages, in order**, each with a `/compass:*` command:
 
@@ -62,3 +60,10 @@ will recur, run `compass issue friction` with evidence and a one-line fix.
 
 **Write for someone with no context.** Why before what, no reference a reader
 cannot follow, and stop once you have said it.
+
+**Commit only what you mean to.** Stage each file by its path, never
+`.compass/`, and check the staged list and commit authors. If
+something is staged by mistake, say so and stop; do not retry a refused
+unstage. A lint fix never weakens an assertion; re-run affected tests.
+
+**Settle edge cases before scenarios** (`bdd-specification` skill).

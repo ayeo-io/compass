@@ -1,22 +1,24 @@
 # Assess - the sizing rubric
 
-Assess is the component that runs at the start of every issue. It reads four assessment
-dimensions, applies the routing rules in force (`compass policy show`; an unmigrated 5.x
-project runs on its own copied `governance/` until `compass policy migrate`),
-and writes `delivery-approach.md`. This
-file is its rubric. The `adaptive-routing` skill is the procedural companion;
-this is the reference.
+Assess is the component that runs at the start of every issue. It reads three
+scored dimensions, two switches and any domain labels. It applies the routing
+rules in force (`compass policy show`; an unmigrated 5.x project runs on its
+own copied `governance/` until `compass policy migrate`), and writes
+`delivery-approach.md`. This file is its rubric. The `adaptive-routing`
+skill is the procedural companion; this is the reference.
 
-Assess does not pick an approach from a list. Assess scores four dimensions;
-`compass approach evaluate` composes and constrains the approach, and
-explains the result. The five reference shapes in this directory are common
+Assess does not pick an approach from a list. Assess scores three dimensions
+and reads two switches; `compass approach evaluate` composes and constrains
+the approach, and explains the result. The five reference shapes in this directory are common
 shapes the composition lands near - not a menu.
 
 ---
 
-## Step 1 - Score the four dimensions
+## Step 1 - Score the three dimensions and read the switches
 
-For each dimension, the assess stage assigns a value and writes a one-line
+The three scored dimensions are `risk`, `familiarity` and `size`. The
+evaluator refuses an assessment without any one of them. For each dimension,
+and for each switch it sets, the assess stage assigns a value and writes a one-line
 justification. If it cannot justify a value, it asks the human rather than
 guessing - an unjustified value is worse than a question.
 
@@ -55,11 +57,28 @@ When unsure, the assess stage estimates *up* - it is cheaper to collapse a
 stage that turned out easy than to discover mid-implementation that the
 approach was too light.
 
-### Goal - *what outcome are they after?*
+### The two switches and the domain labels - *what selects a shape, and what raises the floor?*
 
-Goal is `delivery` or `exploration`. Role is not an assessment dimension. The
-product owner, product marketer, designer and QA are perspectives a session
-consults. The documents on disk bring the gates:
+The two switches are `goal` and `urgency`. Neither is scored, and either can
+be left out. One value of each leans the approach towards a reference shape,
+and a later routing rule can still raise it:
+
+`goal` is `delivery` or `exploration`. `goal: exploration` leans towards the
+spike shape (`RP-SHAPE-001`).
+
+`urgency` is `none` or `live-defect`. `urgency: live-defect` on an atomic or
+small change leans towards the hotfix shape (`RP-SHAPE-002`).
+
+The domain labels are an open list of tags, such as `auth`, `payments`,
+`personal-data` and `migrations`. They are not scored and need no
+justification. Those four raise the approach to at least full
+(`RP-FLOOR-003`), add the `verify.analyze` and `verify.architecture` gates
+and bring the guardrail 5 sign-off. Critical risk alone does not bring that
+sign-off.
+
+Role is not an assessment dimension. The product owner, product marketer,
+designer and QA are perspectives a session consults. The documents on disk
+bring the gates:
 
 | Document present | What it changes |
 |---|---|
@@ -73,7 +92,7 @@ more than a button. Assess reads `intent.md` if one exists.
 One goal value is **exploration** - "I cannot frame this well
 enough to deliver it yet." An `exploration` goal composes towards the **Spike**
 approach (see `approaches/spike.md`), the way live-defect urgency composes towards
-Hotfix. Assess still scores all four dimensions; the goal is what selects
+Hotfix. Assess still scores all three dimensions; the switch is what selects
 the shape.
 
 ---
@@ -86,7 +105,8 @@ You do not compose the approach. Run:
 compass approach evaluate --issue <slug> --write --justify risk="<why>" --justify size="<why>" ...
 ```
 
-Each assessed dimension needs a `--justify` when its value is new or changed.
+Each scored dimension, and each switch you set, needs a `--justify` when its
+value is new or changed. Domain labels need none.
 
 It applies the routing rules in force (the shipped default preset plus the
 project's `compass.yml`) to the assessment you just recorded - composing the
@@ -105,7 +125,7 @@ the path `compass issue artifact-path delivery-approach` prints, in
 artifact set`; on a quick fix, `compass quick-fix start` does both. The
 pre-tool hook finds it through the registry. It contains:
 
-- the four dimension assessment, each with its one-line justification;
+- the three scored dimensions and any switches, each with its one-line justification;
 - the composed candidate approach;
 - every routing rule that fired and what it changed;
 - the final approach: per-stage weight, the gate set, the multiagent orchestration;

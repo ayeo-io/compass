@@ -185,9 +185,6 @@ KEPT_MARKERS = (
     # The 5.0.0 upgrade notes name the command a reader of that release ran,
     # beside its new name; tests/test_upgrade_notes_5_0_0.py needs the old one.
     ("docs/releasing.md", "run compass migrate"),
-    # The review workflow runs the base branch's CLI, which holds only the old
-    # spelling until this change merges. The alias keeps it working on both.
-    (".github/workflows/claude-review.yml", "compass policy review-rules"),
 )
 
 

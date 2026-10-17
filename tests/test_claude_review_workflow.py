@@ -120,7 +120,7 @@ def test_the_rules_and_the_cli_come_from_the_base_branch():
     run = _step("rules")["run"]
     assert 'git fetch --depth=1 origin "$BASE_REF"' in run, run
     assert "git worktree add" in run and "FETCH_HEAD" in run, run
-    assert re.search(r'"\$BASE"/cli/compass policy review-rules', run), run
+    assert re.search(r'"\$BASE"/cli/compass review-rule list', run), run
     assert '--rules "$BASE/governance/review-rules.yml"' in run, run
     assert "gh api --paginate" in run and "/pulls/$PR_NUMBER/files" in run, run
 

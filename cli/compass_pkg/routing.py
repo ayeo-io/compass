@@ -902,6 +902,10 @@ def cmd_route_evaluate(args):
         if result["required_artifacts"]:
             _concerns.append("documents required: "
                              + ", ".join(result["required_artifacts"]))
+        from compass_pkg import g5_label_prompt
+        _g5_prompt = g5_label_prompt.prompt(view, readings)
+        if _g5_prompt:
+            _concerns.append(_g5_prompt)
         if readiness is not None and autonomy == "autonomous":
             _concerns.append(
                 "evaluate --write would be refused: "

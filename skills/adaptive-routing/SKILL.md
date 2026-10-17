@@ -38,6 +38,10 @@ treat a project without a `compass.yml` as missing a prerequisite.
 **risk** - *consequence, never effort.*
 - The sign of `critical`: can this lose data, lose money, breach auth/privacy,
   or resist a clean rollback? If yes, it is critical even if it is one line.
+- Critical risk alone does not bring the human sign-off of guardrail 5
+  (`G5`); the labels do. When the change is one of them, apply `auth`,
+  `payments`, `personal-data` or `migrations` as well as the risk. A
+  migration that can lose data is labelled `migrations`, whatever its risk.
 - The sign of `trivial`: is the worst case cosmetic, instantly obvious, and
   instantly reversible - with no data, money, auth, or other team touched?
 - The common mistake: scoring risk by how hard the change is. A hard

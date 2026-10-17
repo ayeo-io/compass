@@ -1,20 +1,16 @@
-"""`G5` applies whenever a change can lose data, move money, or breach auth
-or privacy - the four consequences its statement names - not only when a
-listed domain matches (`auth`, `payments`, `personal-data`, `migrations`).
-A change that added backup and restore for Postgres and object storage, and
-removed a committed default credential, read `blast_radius: critical`
-because it could lose data, but `G5` reported "not applicable" because none
-of the four listed domains matched by name. The routing floors also read
-`blast_radius`, so the delivery approach stayed heavy - initiative, nine
-gates - while the human checkpoint was dropped without a message. It still
-looked well-governed.
+"""`G5`'s trigger, read from a project that copied the framework's governance.
 
-`critical` is defined in the router rubric as "can this lose data, lose
-money, breach auth/privacy, or resist a clean rollback" - the same four
-consequences `G5`'s statement names. The definitions already agreed; only
-the trigger did not.
-
-Scenarios: g5-trigger-matches-statement/acceptance-criteria.md (SCN-A1..F2).
+History. `G5` first applied only to the four labels `auth`, `payments`,
+`personal-data` and `migrations`. A change that added backup and restore was
+assessed at risk `critical` but carried none of them, so issue
+`g5-trigger-matches-statement` (SCN-A1..F2) added a critical-risk arm. On
+2026-10-12 jed72 decided to drop that arm again ("yes narrow guardrail 5"):
+critical-risk code that carries none of the labels can be reverted at merge,
+and CI and review gate it. The labels carry the irreversibility, so they are
+the trigger (governance decision
+`2026-10-12-guardrail-5-triggers-on-the-irreversible-labels`, issue
+`g5-irreversible-labels`, GIL-4 and GIL-6). A project that wants the arm puts
+it back in `compass.yml`.
 """
 
 # These tests read the per-check detail (name, PASS/FAIL, reason) that
@@ -102,21 +98,21 @@ def _g5_line(out):
 
 
 # ---------------------------------------------------------------------------
-# Group A - the widened trigger
+# Group A - the trigger is the four labels
 # ---------------------------------------------------------------------------
 
-def test_scn_a1_critical_blast_radius_requires_an_approval(tmp_path):
+def test_scn_a1_critical_blast_radius_alone_does_not_require_an_approval(tmp_path):
     root = _project(tmp_path, blast="critical", touches=["infra"])
     result = _check(root)
     combined = result.stdout + result.stderr
-    assert "not applicable" not in _g5_line(combined), (
-        f"G5 skipped a change that can lose data:\n{combined}")
-    assert "FAIL human-approval-present" in combined, combined
-    assert result.returncode != 0, combined
+    assert "not applicable" in _g5_line(combined), (
+        f"G5 applied to critical risk with no irreversible label:\n{combined}")
+    assert "FAIL human-approval-present" not in combined, combined
+    assert result.returncode == 0, combined
 
 
 def test_scn_a2_a_recorded_approval_clears_g5(tmp_path):
-    root = _project(tmp_path, blast="critical", touches=["infra"], approval=True)
+    root = _project(tmp_path, blast="critical", touches=["migrations"], approval=True)
     result = _check(root)
     assert "FAIL human-approval-present" not in result.stdout, result.stdout
     assert result.returncode == 0, result.stdout
@@ -169,11 +165,10 @@ def test_scn_b3_any_of_composes_with_siblings_as_an_and():
 # ---------------------------------------------------------------------------
 
 def test_scn_c1_a_landed_task_is_reported_not_failed(tmp_path):
-    """A widened trigger applies to issues already under way. Re-failing an
-    issue that landed under the narrower one demands a checkpoint for a
-    decision already taken, which nobody can act on (ADR-006, backward
-    compatibility is non-negotiable)."""
-    root = _project(tmp_path, blast="critical", touches=["infra"],
+    """A landed issue cleared the gates in force when it landed. Re-failing it
+    demands a checkpoint for a decision already taken, which nobody can act on
+    (ADR-006, backward compatibility is non-negotiable)."""
+    root = _project(tmp_path, blast="contained", touches=["payments"],
                     status="landed")
     result = _check(root)
     assert "FAIL human-approval-present" not in result.stdout, (
@@ -186,20 +181,22 @@ def test_scn_c1_a_landed_task_is_reported_not_failed(tmp_path):
 # Failure modes - the published guarantee must match the mechanism
 # ---------------------------------------------------------------------------
 
-def test_scn_f1_the_safety_contract_names_critical_blast_radius():
+def test_scn_f1_the_safety_contract_names_the_four_labels_only():
     text = CONTRACT.read_text(encoding="utf-8")
     i = text.find("Human approvals are needed")
     assert i != -1, "guarantee 5 not found in docs/safety-contract.md"
-    para = text[i:i + 900]
-    assert "critical" in para, (
-        "the contract states G5's trigger as four domains only; it must also "
-        "name critical blast radius now that the trigger does")
+    para = text[i:text.index("The evidence records", i)]
+    for label in ("auth", "payments", "personal data", "migrations"):
+        assert label in para, (label, para)
+    assert "critical" not in para, (
+        "the contract names critical risk as a trigger of guardrail 5, which "
+        "the 2026-10-12 decision removed")
 
 
 def test_scn_f2_guardrails_version_was_bumped():
     doc = yaml.safe_load(GUARDRAILS.read_text(encoding="utf-8"))
     version = str(doc.get("version", ""))
-    assert version and version != "1.4.0", (
+    assert version and version not in ("1.4.0", "1.32.0"), (
         f"guardrails.yml still reports version {version!r}; a rule change must "
         "bump it, or `compass policy lint` cannot tell projects their copy is "
         "stale")

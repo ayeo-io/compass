@@ -110,7 +110,8 @@ cannot see:
 2. Acceptance is defined before implementation.
 3. Code, criteria, intent and public claims remain traceable.
 4. Gates clear with evidence rather than assertion.
-5. A human approves irreversible or critical-risk work.
+5. A human approves irreversible work: an issue labelled `auth`, `payments`,
+   `personal-data` or `migrations`.
 
 An approach can reduce process weight but never removes a guardrail.
 

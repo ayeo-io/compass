@@ -631,9 +631,8 @@ def test_dp_5_old_dimension_and_stage_names_convert_to_the_same_preset():
 def test_dp_5_old_when_keys_in_the_guardrails_file_convert_too():
     policy, guardrails = _today()
     new = copy.deepcopy(guardrails)
-    new["defaults"][4]["applies_when"] = {"any_of": [
-        {"labels_any": ["auth", "payments", "personal-data", "migrations"]},
-        {"risk": "critical"}]}
+    new["defaults"][4]["applies_when"] = {
+        "labels_any": ["auth", "payments", "personal-data", "migrations"]}
     new["checks"]["scenarios-are-executable"]["blocking_when"] = {
         "risk": ["cross-cutting", "critical"]}
     new["defaults"][0]["checked_at"] = ["verify", "ship"]
@@ -839,9 +838,8 @@ def test_dp_6_the_guardrails_keep_their_names_and_the_spike_ones_apply_off_ships
         assert gates[g["id"]]["applies_to"] == {"ships": True}
     for g in guardrails["spike_guardrails"]:
         assert gates[g["id"]]["applies_to"] == {"ships": False}
-    assert gates["G5"]["when"] == {"any_of": [
-        {"labels_any": ["auth", "payments", "personal-data", "migrations"]},
-        {"risk": "critical"}]}
+    assert gates["G5"]["when"] == {
+        "labels_any": ["auth", "payments", "personal-data", "migrations"]}
 
 
 # --- on_skipped and the ranking ruling ----------------------------------------

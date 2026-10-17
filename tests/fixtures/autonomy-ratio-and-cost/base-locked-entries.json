@@ -1,8 +1,8 @@
 {
-  "captured_from": "the base commit of autonomy-ratio-and-cost, 401953ec",
+  "captured_from": "the base commit of autonomy-ratio-and-cost, 401953ec; the G5 entry from g5-irreversible-labels, which narrowed its trigger to the four labels",
   "entries": {
     "governance/presets/default/checks.yml#human-approval-present": "  human-approval-present: {statement: An approval record exists for an irreversible change., kind: deterministic,\n    impl: human-approval-present, severity: blocking, on_skipped: fail, locked: hard}\n",
-    "governance/presets/default/gates.yml#G5": "  G5:\n    kind: guardrail\n    name: A human signs off on the irreversible\n    statement: 'A change that can lose data, move money, or breach auth or privacy gets an explicit human\n      checkpoint before it lands.\n\n      '\n    stage: ship\n    applies_to: {ships: true}\n    when:\n      any_of:\n      - labels_any: [auth, payments, personal-data, migrations]\n      - {risk: critical}\n    checks: [human-approval-present]\n    locked: hard\n",
+    "governance/presets/default/gates.yml#G5": "  G5:\n    kind: guardrail\n    name: A human signs off on the irreversible\n    statement: 'A change labelled auth, payments, personal-data or migrations gets an explicit human checkpoint\n      before it lands: it can breach auth, move money, expose personal data or lose data that cannot be\n      restored.\n\n      '\n    stage: ship\n    applies_to: {ships: true}\n    when:\n      labels_any: [auth, payments, personal-data, migrations]\n    checks: [human-approval-present]\n    locked: hard\n",
     "governance/presets/default/preset.yml#locks.hard": "  hard: [checks.human-approval-present, gates.G5]\n"
   }
 }

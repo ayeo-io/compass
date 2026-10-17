@@ -594,7 +594,9 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # Re-pinned for issue `remove-role-from-assessment`: a point carries the documents on
 # disk beside the labels, and the evaluator reads artifact rules and drops a role the
 # policy does not declare (ADR-070); the version is now 9, version 7 never released.
-VERDICT_SOURCE_PIN = "58a682187436e0f6"
+# Re-pinned for issue `g5-irreversible-labels`, for the `reading_matches` docstring
+# only; no verdict moves, so the version stays 9.
+VERDICT_SOURCE_PIN = "3d50f8d0c3bdf966"
 
 
 def _verdict_source_digest():

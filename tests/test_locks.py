@@ -1208,11 +1208,23 @@ VOCABULARY_ROUTES = {
 }
 
 
-@pytest.mark.parametrize("name", sorted(VOCABULARY_ROUTES))
+# From 7.0.0 the trigger of `G5` reads the labels and not the risk (governance
+# decision 2026-10-12-guardrail-5-triggers-on-the-irreversible-labels), so only a
+# change to the label vocabulary can end it. A change to the risk values is still
+# refused, by the other locked gates that read the risk.
+@pytest.mark.parametrize("name", ["close-the-label-list"])
 def test_lk_5_a_vocabulary_change_that_ends_a_locked_gate_is_refused(name):
     result = _enforce_preset(VOCABULARY_ROUTES[name])
     assert not result.ok
     assert any(r.entry == "gates.G5" and r.level == "hard" for r in result.refusals), \
+        [(r.entry, r.field) for r in result.refusals]
+
+
+@pytest.mark.parametrize("name", ["drop-a-risk-value", "rename-a-risk-value"])
+def test_lk_5_a_risk_vocabulary_change_is_refused_without_reaching_g5(name):
+    result = _enforce_preset(VOCABULARY_ROUTES[name])
+    assert not result.ok
+    assert result.refusals and not _g5_gone(result), \
         [(r.entry, r.field) for r in result.refusals]
 
 

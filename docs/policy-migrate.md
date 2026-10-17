@@ -356,6 +356,11 @@ reassess), and the `compass.yml` it would write.
       "operation": "set"
     },
     {
+      "catalogue": "gates",
+      "id": "G5",
+      "operation": "set"
+    },
+    {
       "catalogue": "artifacts",
       "id": "spike-conclusion",
       "operation": "add"

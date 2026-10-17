@@ -492,7 +492,8 @@ def _check_lines(root, *names):
 
 
 def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
-    root = project(tmp_path, compass_yml=HUMAN_DESIGN, assessment={"risk": "critical"})
+    root = project(tmp_path, compass_yml=HUMAN_DESIGN,
+                   assessment={"risk": "critical", "labels": ["migrations"]})
     _define_done(root)
     assert "define" in manifest(root)["checkpoints"]
     without = _check_lines(root, "human-approval-present", "design-review")
@@ -510,7 +511,7 @@ def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
     record = approvals[0]
 
     # The locked check, the gate of guardrail `G5` and the hard locks are as the base
-    # commit has them.
+    # commit has them; the `G5` entry is as g5-irreversible-labels left it.
     base = json.loads((FIXTURES / "base-locked-entries.json").read_text())["entries"]
     assert _entry_text("governance/presets/default/checks.yml", "human-approval-present", 2) \
         == base["governance/presets/default/checks.yml#human-approval-present"]

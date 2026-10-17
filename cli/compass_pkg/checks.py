@@ -792,20 +792,21 @@ def _check_human_approval(task, task_dir):
 def _judge_g5_approval(task, approved):
     """`(ok, detail)` under the rule of ADR-066, before the landed floor."""
     if not approved:
-        # `G5` also fires on critical risk. A landed issue cleared the gates in
-        # force when it landed, so report this and do not fail it. There is
-        # no gap: an issue becomes `landed` only after the gates pass while
-        # it is in flight.
+        # The trigger of `G5` has changed between releases, and an issue is
+        # judged by the one in its stored configuration. A landed issue cleared
+        # the gates in force when it landed, so report this and do not fail it.
+        # There is no gap: an issue becomes `landed` only after the gates pass
+        # while it is in flight.
         if not status_words.is_in_flight(task):
             return True, ("no human-approval evidence on record, and the issue "
                           "has landed - reported only, because its gates were "
                           "cleared under the trigger in force at the time")
+        # The message names no trigger value: a generation stored before
+        # 7.0.0 also fires on critical risk, and a project can add that back.
         return False, ("no human-approval evidence with decision=approved - "
-                       "the human-sign-off guardrail applies because this issue "
-                       "touches irreversible surface, or its risk is critical "
-                       "(which the "
-                       "router defines as: can lose data, lose money, breach "
-                       "auth/privacy, or resist a clean rollback). A person "
+                       "the human-sign-off guardrail applies to this issue under "
+                       "the trigger in its configuration (by default, a label of "
+                       "auth, payments, personal-data or migrations). A person "
                        f"records the sign-off: {approval_records.G5_HOW}.")
     counting = [a for a in approved if approval_records.gives_g5(a)]
     if not counting:

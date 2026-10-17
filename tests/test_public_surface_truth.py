@@ -543,6 +543,12 @@ def test_d2_repairs_change_only_retired_names():
     `docs/safety-contract.md` (list_items 53 -> 59) gained the list of
     Bash write shapes the pre-tool hook does not detect.
 
+    Two more were re-baselined by `g5-irreversible-labels`:
+    `docs/safety-contract.md` (list_items 59 -> 58) lists the four labels that
+    bring the guardrail 5 sign-off and drops the critical-risk bullet, and
+    `skills/adaptive-routing/SKILL.md` (list_items 20 -> 21) gained the bullet
+    saying critical risk alone does not bring the sign-off.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

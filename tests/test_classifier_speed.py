@@ -602,7 +602,11 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # each in `obligations`, `routing.canonical_routes` and `routing.evaluate_route`
 # ("forced to thorough"). They say "approach" for "route" and "thorough" for
 # "full-weight" (ADR-044); no verdict moves, so the version stays 9.
-VERDICT_SOURCE_PIN = "1333e6f12c620fdf"
+# Re-pinned for issue `model-tier-from-assessment`: the evaluator returns each seat's
+# model tier and effort, the policy adapter reads the model-tier rule sets, and the grid
+# leaves out their conditions, because the classifier compares no tier. No verdict moves
+# (MT-28), so the version stays 9.
+VERDICT_SOURCE_PIN = "615ed12a689e9ba2"
 
 
 def _verdict_source_digest():

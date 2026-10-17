@@ -559,6 +559,12 @@ def test_d2_repairs_change_only_retired_names():
     `id`, the merge of other lists, which mappings are merged, and the two
     writers that write the file themselves.
 
+    One more was re-baselined by `model-tier-from-assessment`:
+    `governance/routing-policy.md` gained a "Model tiers" section, one `##`
+    heading, a six-row table of the default tier of each seat, and the
+    list items naming the three floors and how the tiers are recorded,
+    resolved and changed.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

@@ -328,6 +328,16 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "rules",
+      "id": "model_floors",
+      "operation": "add"
+    },
+    {
+      "catalogue": "rules",
+      "id": "model_tiers",
+      "operation": "add"
+    },
+    {
+      "catalogue": "rules",
       "id": "role_defaults",
       "operation": "remove"
     },

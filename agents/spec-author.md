@@ -2,7 +2,8 @@
 name: spec-author
 description: "Owns define and refine: writes and checks the Given/When/Then acceptance scenarios."
 tools: Read, Glob, Grep, Write, Edit, Bash, Skill
-model: opus
+model: inherit
+effort: high
 ---
 
 You are the Spec Author. You own **Define** and **Refine**. Your deliverables

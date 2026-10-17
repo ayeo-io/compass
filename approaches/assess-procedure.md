@@ -52,6 +52,13 @@ what `/compass:init` offers separately.
   routing rules.
 - For a non-trivial or ambiguous issue, invoke the `router` agent to read
   the four dimensions.
+- Pass the computed model and effort when you invoke the `router` agent:
+  `compass approach show --model assess` prints the `model`, and
+  `compass approach show --effort assess` prints the `effort`. On
+  `inherit`, pass the model family your session runs on (`opus`,
+  `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot
+  tell. Exit 1 means the issue sets nothing for that value: leave it out,
+  so the agent's frontmatter applies.
 - If a `intent.md`, `ui-contract.md`, or `positioning.md` already exists for
   this issue, read it - intent is the *outcome wanted*, not just the literal
   request.

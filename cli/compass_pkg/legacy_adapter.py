@@ -67,14 +67,17 @@ REQUIRED_DIMENSIONS = ("risk", "familiarity", "size")
 
 # How two rules that set the same effect combine. A selector is not an
 # effect and has no entry: `ceiling` picks which loop ceiling `limit` sets,
-# and `until` says when a blocked stage opens again.
+# `until` says when a blocked stage opens again, and `seat` picks which seat
+# `tier` and `effort` set.
 EFFECT_HITS = {
     "force_minimum_approach": "max",
     "lean_toward": "first",
     "max_worktrees": "min",
     "limit": "min",
+    "tier": "max",
+    "effort": "max",
 }
-SELECTORS = ("ceiling", "until")
+SELECTORS = ("ceiling", "until", "seat")
 
 # Effects the catalogue form names differently (ADR-041).
 RENAMED_EFFECTS = {"force_minimum_route": "force_minimum_approach",
@@ -330,6 +333,12 @@ def _rules(policy, notes):
     out["advisory"] = _rule_set("advisory", converted(strategies.get("advisory_strategies")))
     if "role_defaults" in strategies:
         out["role_defaults"] = _rule_set("advisory", converted(strategies.get("role_defaults")))
+    # The model tiers (`compass_pkg.model_tiers`). A policy without the block
+    # makes no rule set, and its issues compute no tier.
+    models = policy.get("model_rules")
+    if isinstance(models, dict):
+        out["model_tiers"] = _rule_set("model-tiers", converted(models.get("default_tiers")))
+        out["model_floors"] = _rule_set("model-floors", converted(models.get("floors")))
     out["biases"] = _rule_set("biases", [
         (f"RP-BIAS-{i:03d}", None, {}, {"rationale": str(text)})
         for i, text in enumerate(strategies.get("biases") or [], start=1)])

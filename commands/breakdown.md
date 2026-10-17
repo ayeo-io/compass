@@ -33,6 +33,13 @@ policy `caps`):
 - Read `distribution-map.md` - it is the source of truth for subtask count
   and which scenarios each subtask owns.
 - Load the `worktree-multiagent` skill.
+- Pass the computed model and effort when you invoke the `orchestrator` agent:
+  `compass approach show --model breakdown` prints the `model`, and
+  `compass approach show --effort breakdown` prints the `effort`. On
+  `inherit`, pass the model family your session runs on (`opus`,
+  `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot
+  tell. Exit 1 means the issue sets nothing for that value: leave it out,
+  so the agent's frontmatter applies.
 - Invoke the `orchestrator` agent. **Only the orchestrator** creates
   worktrees and integrates them.
 
@@ -52,8 +59,14 @@ policy `caps`):
    `docs/compass/<created>-<slug>/subtasks/<id>/briefing.md`. A builder works
    *only* inside its assigned worktree and never touches a sibling's.
 4. **Record, then launch.** Record each dispatch with `compass issue subtask
-   add <id> --brief <path> --model <model> --budget <tokens>`, then launch one
-   `builder` agent per worktree, naming only its brief file.
+   add <id> --brief <path> --budget <tokens>`. Without `--model` it takes the
+   tier the manifest records for the implement seat, and records both;
+   `compass approach show --model implement` prints the same model. Then
+   launch one `builder` agent per worktree, naming only its brief file and
+   passing the recorded model as `model` (on `inherit`, your session's model
+   family) and the recorded effort as `effort`;
+   `compass approach show --effort implement` prints the effort. A second try, recorded with `compass issue subtask set`, is
+   dispatched one tier up, and the command prints the new model.
 
 ## Gate
 

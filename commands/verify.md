@@ -30,6 +30,21 @@ The rest of this command is for delivery work.
 - Load the `evidence-gates` skill.
 - Invoke the `verifier` agent (runs the suites) and the `reviewer` agent
   (applies the review dimensions).
+- Pass the computed model and effort to each agent, as `model` and
+  `effort`. These print them, the first two for the `verifier` and the last
+  two for the `reviewer`:
+
+  ```
+  compass approach show --model verify
+  compass approach show --effort verify
+  compass approach show --model review
+  compass approach show --effort review
+  ```
+
+  On `inherit`, pass the model family your session runs on (`opus`,
+  `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot tell.
+  Exit 1 means the issue sets nothing for that value: leave it out, so the
+  agent's frontmatter applies.
 - If `positioning.md` is present, the `claims` dimension applies -
   `product-marketer` reviews here too.
 - If this issue is itself a sweep, rename, or cleanup touching many files,

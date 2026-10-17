@@ -792,10 +792,11 @@
       2,
       2,
       2,
+      2,
       2
     ],
-    "list_items": 59,
-    "table_rows": 12
+    "list_items": 70,
+    "table_rows": 20
   },
   "governance/strategies.md": {
     "fences": 0,

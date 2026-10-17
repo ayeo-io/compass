@@ -58,7 +58,7 @@ DIRECTORY = "generations"
 # The manifest fields a reassess computes. A commit whose configuration and
 # overlay are unchanged is still a new generation when one of these moved.
 OUTCOME_KEYS = ("delivery_approach", "stages", "gates", "checkpoints",
-                "policy_rules_fired", "subtask_ceiling", "artifacts")
+                "policy_rules_fired", "subtask_ceiling", "artifacts", "models")
 
 STATES = ("current", "superseded", "proposal", "incomplete",
           "complete-unreferenced", "broken")

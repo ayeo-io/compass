@@ -89,7 +89,7 @@ A brief never tells a builder or a reviewer what not to flag.
 Then, before launching anything:
 
 ```
-compass issue subtask add <id> --brief <brief path> --model <model> --budget <tokens>
+compass issue subtask add <id> --brief <brief path> --budget <tokens>
 ```
 
 This records the base commit (HEAD), the model, the budget and status
@@ -97,6 +97,32 @@ This records the base commit (HEAD), the model, the budget and status
 so it approves the documents of earlier stages that are still `draft` and have
 a path: `approved`, with `approved_by: compass issue subtask add`, or
 `awaiting-approval` for a document with a human check (ADR-050).
+
+The model of a dispatch:
+
+- Without `--model` or `--tier`, the dispatch takes the tier the manifest's
+  `models:` key records for the implement seat, and the model that tier maps
+  to in the `models` setting. `compass approach show --model implement`
+  prints the same model.
+- The record keeps one tier for each try in `tiers`, and the effort of the
+  latest try in `effort`: the higher of the tier's effort and the implement
+  seat's floor effort. `compass approach show --effort implement` prints it.
+- Pass the model as `model` and the effort as `effort` when you launch the
+  builder; on `inherit`, pass your own session's model family.
+- The record names the model the call passed. On `inherit`, give the model
+  family you passed to `compass issue subtask add` with `--model` and
+  `--tier`, or to `compass issue subtask set --model` for another try. A
+  model given without `--tier` records no tier. The record says `inherit`
+  only when the call passed no model, and a try the ceiling refuses records
+  no model.
+- An issue whose manifest has no `models:` key needs `--model`.
+- The second try, counted with `compass issue subtask set`, is dispatched
+  one tier up, and stops at `strong`. The command prints the new tier and
+  model. The first try is cheap, and a failed try moves up a tier: that is
+  what lets the builder's default tier be `standard`.
+- `compass retro --models` reports the mean number of review rounds by the
+  first try's tier and the issue's risk, which is the evidence for moving a
+  model floor.
 
 ## Step 3 - launch the builders
 
@@ -278,7 +304,7 @@ issue landed: that is `ship-commit`'s alone.
 
 | Step | Command | Recorded |
 |---|---|---|
-| 2 | `subtask add` | brief, model, budget, base commit, status `dispatched`, `attempts: 1` |
+| 2 | `subtask add` | brief, model, tier (`tiers`), budget, base commit, status `dispatched`, `attempts: 1` |
 | 4 | `subtask set --report --cost` | result file, status `reported`, tokens used |
 | 5 | `subtask package` | the review package's path |
 | 5 | `subtask set --reviewed --round` | the commit reviewed, the round's verdict |

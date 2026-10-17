@@ -471,6 +471,116 @@
           }
         }
       }
+    },
+    "model_rules": {
+      "type": "object",
+      "description": "Which model tier and effort each seat runs on: default_tiers gives each seat its tier, and a matching floors rule raises its tier, its effort or both.",
+      "properties": {
+        "default_tiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "seat",
+              "tier"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "when": {
+                "type": "object"
+              },
+              "seat": {
+                "enum": [
+                  "assess",
+                  "define",
+                  "refine",
+                  "plan",
+                  "breakdown",
+                  "implement",
+                  "verify",
+                  "review",
+                  "ship"
+                ]
+              },
+              "tier": {
+                "enum": [
+                  "fast",
+                  "standard",
+                  "strong"
+                ]
+              },
+              "rationale": {
+                "type": "string"
+              },
+              "effort": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "floors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "seat"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "when": {
+                "type": "object"
+              },
+              "seat": {
+                "enum": [
+                  "assess",
+                  "define",
+                  "refine",
+                  "plan",
+                  "breakdown",
+                  "implement",
+                  "verify",
+                  "review",
+                  "ship"
+                ]
+              },
+              "tier": {
+                "enum": [
+                  "fast",
+                  "standard",
+                  "strong"
+                ]
+              },
+              "rationale": {
+                "type": "string"
+              },
+              "effort": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

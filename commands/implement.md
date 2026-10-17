@@ -24,6 +24,15 @@ work.
 - Invoke the `builder` agent - **one per worktree** on a pair or multiagent
   orchestration, each owning its scenario set from the distribution map. On solo
   work, one builder on the current branch.
+- Pass the computed model and effort when you invoke the `builder` agent:
+  `compass approach show --model implement` prints the `model`, and
+  `compass approach show --effort implement` prints the `effort`. On
+  `inherit`, pass the model family your session runs on (`opus`,
+  `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot
+  tell. Exit 1 means the issue sets nothing for that value: leave it out,
+  so the agent's frontmatter applies.
+  On a multiagent, the orchestrator records each dispatch's tier with
+  `compass issue subtask add`, and a second try is dispatched one tier up.
 - On a multiagent, the `orchestrator` is already watching: it detects when two
   subtasks are converging on shared surface and intervenes *before* they
   collide. Cross-subtask changes go through the orchestrator, never builder

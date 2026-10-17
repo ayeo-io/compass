@@ -163,6 +163,8 @@ def _rebuild(preset, sidecar, types):
             "immovable_gates": rules_of("immovable_gates"),
             "artifact_rules": rules_of("artifact_rules"),
         },
+        "model_rules": {"default_tiers": rules_of("model_tiers"),
+                        "floors": rules_of("model_floors")},
         "assessment_vocabulary": vocabulary,
         "autonomy_checkpoints": {
             level: {a: approaches[a]["checkpoints"][level] for a in row

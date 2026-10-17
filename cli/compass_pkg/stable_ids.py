@@ -39,6 +39,19 @@ STAGE_SHIP = "ship"
 STAGE_IDS = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN, STAGE_BREAKDOWN,
              STAGE_IMPLEMENT, STAGE_VERIFY, STAGE_SHIP)
 
+# The model tiers, weakest first (`compass_pkg.model_tiers`). `standard` is also a
+# retired approach name; as a tier it names the model of the builder's seat.
+TIER_FAST = "fast"
+TIER_STANDARD = "standard"
+TIER_STRONG = "strong"
+MODEL_TIERS = (TIER_FAST, TIER_STANDARD, TIER_STRONG)
+# The effort levels a Claude Code subagent takes, lowest first. `medium` is also a
+# size value; as an effort it names how hard the model works.
+EFFORT_LOW = "low"
+EFFORT_MEDIUM = "medium"
+EFFORT_HIGH = "high"
+EFFORT_LEVELS = (EFFORT_LOW, EFFORT_MEDIUM, EFFORT_HIGH, "xhigh", "max")
+
 GATE_G1 = "G1"
 GATE_G2 = "G2"
 GATE_G3 = "G3"

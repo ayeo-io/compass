@@ -22,7 +22,7 @@
 # routing-policy.md.
 # =============================================================================
 
-version: 3.0.0
+version: 3.1.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -260,6 +260,70 @@ routing_guardrails:
       block_phase: plan
       until: "the spec has been checked against intent.md for intent fidelity"
       rationale: "Built-the-thing-right and built-the-right-thing are different checks."
+
+# -----------------------------------------------------------------------------
+# MODEL RULES - which model tier each seat runs on. A seat is a stage, or the
+# reviewer in the verify stage (`review`). The tiers are fast < standard <
+# strong; `models:` in compass.yml maps each to a model name. `default_tiers`
+# gives each seat its tier; a `floors` rule whose `when` matches raises it, and
+# never lowers it. The evaluator writes the result to the manifest's `models:`
+# key, and `compass approach show --model <seat>` prints the name to pass.
+# -----------------------------------------------------------------------------
+model_rules:
+  default_tiers:
+    - id: RP-TIER-001
+      seat: assess
+      tier: strong
+      rationale: "Assessment is judgement, and a wrong reading is the most expensive mistake to find later."
+    - id: RP-TIER-002
+      seat: define
+      tier: strong
+      rationale: "The scenarios are judgement; an ambiguous one is found only at verify."
+    - id: RP-TIER-003
+      seat: refine
+      tier: strong
+      rationale: "Resolving ambiguity is judgement, and the last review before design."
+    - id: RP-TIER-004
+      seat: plan
+      tier: strong
+      rationale: "Design decisions are judgement, and the cheapest point to change one."
+    - id: RP-TIER-005
+      seat: breakdown
+      tier: strong
+      rationale: "The orchestrator resolves collisions and conflicts: small in tokens, large in consequence."
+    - id: RP-TIER-006
+      seat: implement
+      tier: standard
+      rationale: "The spec and design are written, and the builder works against a red test."
+    - id: RP-TIER-007
+      seat: verify
+      tier: fast
+      rationale: "The verifier runs commands and records their output; it takes no judgement."
+    - id: RP-TIER-008
+      seat: review
+      tier: strong
+      rationale: "The shipped default keeps the reviewer strong, so a cheaper builder's work is checked by the strong model."
+    - id: RP-TIER-009
+      seat: ship
+      tier: fast
+      rationale: "The ship commit, the receipt and the release line are mechanical."
+  floors:
+    - id: RP-MODEL-001
+      when: { risk: critical }
+      seat: implement
+      tier: strong
+      effort: high
+      rationale: "A critical change is built by the strong model at high effort; a mistake there costs the most."
+    - id: RP-MODEL-002
+      when: { familiarity: [greenfield, brownfield-unmapped], size: [medium, large, product] }
+      seat: implement
+      tier: strong
+      rationale: "Unmapped or new ground above small has no written behaviour for a cheaper builder to lean on."
+    - id: RP-MODEL-003
+      when: { urgency: live-defect }
+      seat: implement
+      tier: strong
+      rationale: "A live defect is fixed once, under pressure, by the strong model."
 
 # -----------------------------------------------------------------------------
 # Assessment vocabulary - the legal values the assessment may take. The evaluator

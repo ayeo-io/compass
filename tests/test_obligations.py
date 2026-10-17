@@ -1113,7 +1113,7 @@ EVALUATOR_KEYS = {
     "renamed_routes", "candidate_route", "candidate_via", "delivery_approach",
     "policy_rules_fired", "stages", "gates", "artifacts", "subtask_ceiling",
     "required_artifacts", "required_skills", "blocked_phases", "max_worktrees",
-    "applicable_strategies", "checkpoints"}
+    "applicable_strategies", "checkpoints", "models"}
 
 
 def test_ob_8_the_evaluator_called_as_before_returns_the_same_keys():
@@ -1215,8 +1215,9 @@ def test_ob_8_the_module_declares_its_dependencies_and_stays_small():
     assert "# DEPENDENCY:" in text
     # The design's target was 600; the readiness fact (one function and its
     # table rows) takes the cap to 620, and the word-limit fact (one field and
-    # its row) to 625.
-    assert len(text.splitlines()) < 625
+    # its row) to 625, and the model-tier block (one import, one call and the
+    # dependency line) to 630.
+    assert len(text.splitlines()) < 630
     core = (ROOT / "cli" / "compass_pkg" / "core.py").read_text(encoding="utf-8")
     assert len(core.splitlines()) <= 1200
 

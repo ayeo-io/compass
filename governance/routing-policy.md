@@ -208,6 +208,72 @@ the answer into the manifest as `checkpoints:`.
   retired name (`express`, `standard`, `expedition`, or `feature` and
   `initiative` before 5 October 2026) is read as its current one; an unknown approach, or one approach named twice, is refused.
 
+## Model tiers (they set which model each seat runs on)
+
+Each seat of an issue runs on a model tier: `fast`, `standard` or `strong`,
+weakest first. A tier names a model and, optionally, an effort (`low`,
+`medium`, `high`, `xhigh` or `max`). A seat is a stage, or `review`, the reviewer in the verify stage. The `models:` setting in `compass.yml` maps each tier to a model name
+(`docs/configuration.md`), so the rules do not change when model names do.
+
+| Seat | Tier | Rule | Why |
+|---|---|---|---|
+| assess, define, refine, plan | strong | RP-TIER-001 to 004 | Judgement, and where a wrong call is most expensive to find later. |
+| breakdown (the orchestrator) | strong | RP-TIER-005 | It resolves collisions and conflicts: few tokens, large consequences. |
+| implement (the builder) | standard | RP-TIER-006 | The spec and design are written; the builder works against a red test. |
+| `verify` (the verifier) | fast | RP-TIER-007 | It runs commands and records their output. |
+| review (the reviewer) | strong | RP-TIER-008 | A cheaper builder is safe because the review is strong. |
+| ship | fast | RP-TIER-009 | The ship commit, the receipt and the release line are mechanical. |
+
+Floors raise a seat and never lower it, as the routing floors raise an
+approach:
+
+- `risk: critical` raises implement to strong, at effort high
+  (RP-MODEL-001).
+- `familiarity` greenfield or brownfield-unmapped, with size medium or
+  larger, raises implement to strong (RP-MODEL-002).
+- `urgency: live-defect` raises implement to strong (RP-MODEL-003).
+
+The second try of a subtask is dispatched one tier up, and stops at
+strong. This is behaviour of `compass issue subtask`, not a rule.
+
+- `compass approach evaluate --write` writes the result to the manifest's
+  `models:` key: for each seat whose stage runs, its `tier`, the rule that set
+  it (`by`) and the floors for that seat that did not fire (`not_fired`). The
+  delivery-approach record shows it in its `model-tiers` block.
+- `compass approach show --model <seat>` prints the model name a stage
+  command passes as `model` when it invokes the seat's agent, and
+  `--effort <seat>` prints the `effort`: the higher of the tier's effort and
+  a floor's effort. The manifest records a floor's effort as `effort` and
+  `effort_by`. `inherit` means the model the
+  session runs on. Exit 1 means the issue records no tier, and the agent's
+  frontmatter model applies.
+- The mechanism rests on two Claude Code facts: agent frontmatter accepts
+  `model: inherit`, and an Agent call's `model` argument overrides the
+  frontmatter, as its `effort` argument overrides the frontmatter `effort`.
+  The frontmatter keeps the shipped default as a fallback for a runtime that
+  cannot set either per call: `inherit` at `high` for the strong seats,
+  `sonnet` at `medium` for the builder and `haiku` at `low` for the verifier.
+- Claude Code applies an effort in this order: the
+  `CLAUDE_CODE_EFFORT_LEVEL` environment variable, then the effort an Agent
+  call passes, then the agent's frontmatter `effort`, then the session's
+  effort. So `CLAUDE_CODE_EFFORT_LEVEL` overrides what Compass computes.
+  Passing `effort` per call needs Claude Code v2.1.292 or later; an older
+  version uses the frontmatter effort.
+- `strong` follows the session's model. In a session that runs on the same
+  model as `standard`, the two tiers name one model, so the second-try raise
+  and the strong reviewer change the effort only. Set `strong` to a model name
+  in `compass.yml` to keep the two apart.
+- A tier is a cost choice, not an obligation. The classifier does not compare
+  tiers, so a layer that lowers one needs no waiver.
+- A project changes a tier by overriding the `model_tiers` or `model_floors`
+  rule set in `compass.yml`. One issue changes it through its `config:` layer
+  (`compass issue configure --from-file` with a `rules:` overlay, then
+  `compass approach evaluate --write --reason`), and the person records who
+  and why under Human overrides in `delivery-approach.md`.
+- `compass retro --models` reports the mean number of review rounds by the
+  first try's tier and the issue's risk. That number is the evidence for
+  moving a floor.
+
 ## Schema reference
 
 The authoritative structure is `routing-policy.yml`, validated by `compass

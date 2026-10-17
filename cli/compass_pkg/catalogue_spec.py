@@ -242,6 +242,8 @@ EFFECT_POLICIES = {
     "block_phase": ("collect",),
     "strategy": ("collect",),
     "suggest_artifact": ("collect",),
+    "tier": ("max",),
+    "effort": ("max",),
 }
 
 # The catalogue each effect's value names: a value is an id of that catalogue
@@ -263,7 +265,7 @@ EFFECT_TARGETS = {
 # The other keys a rule's `then:` may hold. They qualify an effect and take no
 # hit policy. Any key in neither this tuple nor `EFFECT_POLICIES` is refused,
 # so a misspelt effect fails lint and is not silently ignored.
-EFFECT_QUALIFIERS = ("ceiling", "until")
+EFFECT_QUALIFIERS = ("ceiling", "until", "seat")
 
 # Which way is stricter for each ceiling the classifier compares and a lock
 # protects (ADR-037, ADR-039). A key is a ceiling field of the table above,
@@ -310,7 +312,7 @@ CAPABILITIES = ("entry-exit-evaluation", "artifact-freshness")
 # Top-level keys of a layer file (ADR-043).
 LAYER_KEYS = ("schema", "extends", "owner", "approvers", "capabilities") + CATALOGUES
 SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement",
-                 "record", "project", "prices", "multiagent", "governance_drift",
+                 "record", "project", "prices", "models", "multiagent", "governance_drift",
                  "preset_index", "github_labels")
 #: The three switches inside `github_labels`, all off by default.
 GITHUB_LABEL_SWITCHES = ("domain", "status", "page")
@@ -432,8 +434,10 @@ FIELD_DESCRIPTIONS = {
     },
     "rules": {
         "kind": "What the rule set does: the shipped kinds are `shapes`, `floors`, `caps`, "
-                "`ceilings`, `immovable-gates`, `artifact-rules`, `advisory` and `biases`. "
-                "A stored 6.x generation can also hold `role-rules`.",
+                "`ceilings`, `immovable-gates`, `artifact-rules`, `advisory`, `biases`, "
+                "`model-tiers` (the default model tier of each seat) and `model-floors` "
+                "(rules that raise a seat's tier). A stored 6.x generation can also hold "
+                "`role-rules`.",
         "hit": "How matching rules combine, per effect: `first` stops at the first match, `max` "
                "and `min` take the highest or lowest value, and `collect` gathers every match. "
                "Each effect allows only some of these.",
@@ -580,6 +584,17 @@ TOP_DESCRIPTIONS = {
                "`compass readiness` runs every command in a clean checkout of HEAD.",
     "prices": "Dollars per million tokens for each model name, used to price the usage of a "
               "quick fix. Without it no cost is recorded.",
+    "models": "The model and effort of each tier `strong`, `standard` and `fast`, which "
+              "`compass approach show --model <seat>` and `--effort <seat>` print for a stage "
+              "command to pass to its agent. A tier is a model name, or `{model, effort}`; the "
+              "shipped mapping is `strong` inherit (the session's model) at high, `standard` "
+              "sonnet at medium and `fast` haiku at low.",
+    "models.strong": "The strong tier, for judgement seats: a model name, or `{model, effort}`. "
+                     "The default is `inherit`, the session's model, at effort `high`.",
+    "models.standard": "The standard tier, for the builder: a model name, or `{model, effort}`. "
+                       "The default is `sonnet` at effort `medium`.",
+    "models.fast": "The fast tier, for mechanical seats: a model name, or `{model, effort}`. The "
+                   "default is `haiku` at effort `low`.",
     "multiagent": "Where multiagent worktrees go and how many are allowed. Holds `worktree_root`"
                   " (default `../.compass-worktrees`) and `max_worktrees` (default 6).",
     "preset_index": "Reserved for published presets. It has no behaviour yet.",

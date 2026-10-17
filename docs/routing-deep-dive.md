@@ -73,6 +73,11 @@ the full approach.* Not because the change is large - it is
 atomic - but because the risk of the auth module is not a function of
 line count. A floor is domain knowledge overriding the raw dimension assessment.
 
+**Model tiers.** No model floor fires: risk is trivial, the ground is mapped
+and there is no live defect. The builder runs on `standard` (RP-TIER-006),
+and the reviewer stays `strong`. The full approach raises the process, not
+the builder's model: the strong review is what checks the work.
+
 ### Final `delivery-approach.md`
 
 The delivery approach is the full approach. The policy-rules section of
@@ -135,6 +140,11 @@ than added separately - it is approach-scoped, and a quick fix does not run it, 
 is the point of a quick fix. `verify.claims` is added only when `positioning.md` is present, so it does not
 appear here. No artifact rule fires, because neither `intent.md` nor
 `positioning.md` exists.
+
+**Model tiers.** The shipped defaults apply: implement `standard`
+(RP-TIER-006), `verify` `fast`, and every judgement seat, the reviewer among
+them, `strong`. No model floor fires (RP-MODEL-001, RP-MODEL-002 and
+RP-MODEL-003).
 
 ### Final `delivery-approach.md`
 
@@ -217,6 +227,10 @@ the plan stage - the delivery approach does not waive it. (If the team has
 hardened that into a project guardrail, it is checked as a guardrail and
 blocks.)
 
+**Model tiers.** Critical risk raises implement to `strong`, at effort high
+(RP-MODEL-001). A critical change is built by the strong model as well as
+reviewed by it.
+
 ### Final `delivery-approach.md`
 
 The delivery approach is the full approach, single worktree. The policy-rules
@@ -279,6 +293,9 @@ This is the key contrast with Case 3: Case 3 was *heavy and
 solo* (critical risk, capped); Case 4 is *heavy and parallel*
 (cross-cutting risk, uncapped). Same full-approach reference shape,
 genuinely different orchestration - because the dimensions read differently.
+
+**Model tiers.** Greenfield ground above small has no mapped behaviour for a
+cheaper builder to lean on, so implement runs on `strong` (RP-MODEL-002).
 
 ### Final `delivery-approach.md`
 
@@ -351,6 +368,10 @@ full approach, put someone in incident command, use the multiagent
 orchestration if it helps. Assess scores size precisely so that distinction
 holds.
 
+**Model tiers.** The live defect raises implement to `strong`
+(RP-MODEL-003). Refine, plan and breakdown are collapsed or skipped, so they
+have no seat.
+
 ### Final `delivery-approach.md`
 
 The delivery approach is hotfix. The §6 "Owed follow-ups" section of `delivery-approach.md` carries an unchecked
@@ -406,6 +427,10 @@ could only be answered by touching `auth`, `payments`, `personal-data`, or
 `migrations`, the floor would fire and this would *not* be a spike; it would be
 the full approach with discovery-heavy acceptance criteria. Here the investigation stays
 clear of irreversible surface, so spike stands. Nothing is floored.
+
+**Model tiers.** A spike records tiers only for the seats whose stage runs:
+`assess`, `implement` (`standard`), `verify`, `review` and `ship`. No floor
+fires.
 
 ### Final `delivery-approach.md` - and the exit
 

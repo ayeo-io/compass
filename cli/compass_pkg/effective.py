@@ -43,7 +43,7 @@ from compass_pkg.core import (AUTONOMY_VALUES, COMPASS_VERSION, FRAMEWORK_ROOT,
 from compass_pkg.core import manifest_path
 
 OUTCOME_KEYS = ("delivery_approach", "stages", "gates", "checkpoints",
-                "policy_rules_fired", "subtask_ceiling", "artifacts")
+                "policy_rules_fired", "subtask_ceiling", "artifacts", "models")
 
 
 @dataclass(frozen=True)

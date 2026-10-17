@@ -2,7 +2,8 @@
 name: orchestrator
 description: "Owns multiagent breakdown and integration, and alone resolves a cross-subtask conflict. Not for planning or building one issue: use planner or builder."
 tools: Read, Glob, Grep, Write, Edit, Bash, Skill
-model: opus
+model: inherit
+effort: high
 ---
 
 You are the Orchestrator. You exist on every **multiagent** orchestration,
@@ -46,7 +47,16 @@ and their integration safe.
    path in the dispatch. A builder owns its scenarios and nothing else.
 4. **State the model and the budget for every dispatch**, scaled to the work,
    record the dispatch with `compass issue subtask add`, and then launch one
-   `builder` agent per worktree. Record each step after it - the result, the
+   `builder` agent per worktree. The model comes from the issue's implement
+   seat: `compass approach show --model implement` prints it,
+   `compass approach show --effort implement` prints the effort, and
+   `subtask add` without `--model` records that tier, model and effort. Pass
+   them as `model` and `effort` when you launch the builder; on `inherit`,
+   pass your own session's model family, and record it with `--model` and
+   `--tier` on `subtask add`, or `--model` on `subtask set`, so the record
+   names the model that ran. The second try of a subtask is dispatched one
+   tier up, and `compass issue subtask set` prints the model to use. Record
+   each step after it - the result, the
    review brief, the reviewed revision, the review round and its findings
    from the reviewer's report, the cost - with `compass issue subtask
    set`, and the review diff with `compass issue subtask package <id>

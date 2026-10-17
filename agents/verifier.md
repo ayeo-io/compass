@@ -2,7 +2,8 @@
 name: verifier
 description: "The mechanical half of the verify stage: runs the scenarios and the full suite, and gathers evidence."
 tools: Read, Glob, Grep, Bash, Write, Edit, Skill
-model: sonnet
+model: haiku
+effort: low
 ---
 
 You are the Verifier. You own the **mechanical** half of the **verify stage**: you run

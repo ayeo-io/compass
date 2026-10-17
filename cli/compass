@@ -167,7 +167,20 @@ def build_parser():
         help="print the three-line decision view: approach, gates, files")
     prsum.add_argument("--issue", dest="task", metavar="SLUG",
                        help="issue slug (default: COMPASS_ISSUE, then the current-task pointer)")
-    prsum.set_defaults(func=cmd_approach_summary, output_kind="report")
+    from compass_pkg.model_tiers import SEATS as _SEATS
+    prsum.add_argument("--effort", metavar="SEAT",
+                       help="print only the effort a stage command passes to the agent "
+                            "of SEAT: the higher of its tier's effort in the `models` "
+                            "setting and a floor's effort. Exit 1 when neither sets one: "
+                            "leave `effort` out, so the agent's frontmatter applies")
+    prsum.add_argument("--model", metavar="SEAT",
+                       help="print only the model name a stage command passes to the "
+                            "agent of SEAT (" + ", ".join(_SEATS) + "): the tier the "
+                            "manifest records, through the `models` setting. `inherit` "
+                            "is the session's model. Exit 1 when no tier is recorded: "
+                            "leave `model` out, so the agent's frontmatter applies")
+    from compass_pkg.model_tiers import cmd_approach_show
+    prsum.set_defaults(func=cmd_approach_show, output_kind="report")
     prdia = prs.add_parser(
         "render",
         help="render every delivery approach as one HTML table",
@@ -246,6 +259,10 @@ def build_parser():
         "--lineage", action="store_true",
         help="count issues raised from another issue by where they were "
              "found, before or after the parent landed (advisory; exit 0)")
+    pcal.add_argument(
+        "--models", action="store_true",
+        help="count subtasks by the model tier of their first attempt and the "
+             "issue's risk, with the mean number of review rounds (advisory; exit 0)")
     pcal.add_argument(
         "--decisions", action="store_true",
         help="count how decisions agents took for the person were settled: confirmed, "

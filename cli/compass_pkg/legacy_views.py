@@ -115,6 +115,8 @@ def rebuild(root):
             "immovable_gates": rules_of("immovable_gates"),
             "artifact_rules": rules_of("artifact_rules"),
         },
+        "model_rules": {"default_tiers": rules_of("model_tiers"),
+                        "floors": rules_of("model_floors")},
         "assessment_vocabulary": vocabulary,
         "autonomy_checkpoints": {
             level: {a: approaches[a]["checkpoints"][level] for a in row
@@ -381,6 +383,8 @@ def render_policy(root):
         "biases": biases,
         "advisory_strategies": _entries("advisory", strategies["advisory_strategies"], 4),
         **{name: _entries(name, rules[name], 4) for name in rules},
+        "model_default_tiers": _entries("model_tiers", policy["model_rules"]["default_tiers"], 4),
+        "model_floors": _entries("model_floors", policy["model_rules"]["floors"], 4),
         "assessment_vocabulary": _flow_map("assessment_vocabulary",
                                            policy["assessment_vocabulary"]),
         "autonomy_checkpoints": autonomy,

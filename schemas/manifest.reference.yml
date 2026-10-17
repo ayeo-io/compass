@@ -33,6 +33,7 @@ subtask_ceiling: # (optional) integer or null - how many parallel subtasks the d
 policy_rules_fired: # (optional) list of maps {id, kind, rationale, changed[]}
 stages:          # (optional until approach evaluate) map of stage -> weight string
 checkpoints:     # (optional until approach evaluate) list of the stage hand-offs that wait for a person: assess, define, refine, plan
+models:          # (optional until approach evaluate) map of seat -> {tier, by, not_fired[]} - the model tier of each seat whose stage runs; tier is fast | standard | strong
 checkpoint_outcomes: # (optional) list of maps - one outcome per checkpoint stage hand-off; the first assessment writes []; an issue without the key is not judged:
   - stage:       #   (required in entry) [assess, define, refine, plan] - here define
     outcome:     #   (required in entry) [waited, skipped] - waited: a person answered it with compass evidence approve --checkpoint

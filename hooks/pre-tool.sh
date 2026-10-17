@@ -241,11 +241,32 @@ if command -v jq >/dev/null 2>&1; then
   TOOL="$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)"
   SESSION_ID="$(printf '%s' "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)"
   COMMAND="$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)"
+  TRANSCRIPT="$(printf '%s' "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null || true)"
 else
-  TARGET="$(printf '%s' "$INPUT" | grep -oE '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)"
-  SESSION_ID="$(printf '%s' "$INPUT" | grep -oE '"session_id"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)"
-  TOOL="$(printf '%s' "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)"
-  COMMAND="$(printf '%s' "$INPUT" | grep -oE '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)"
+  # A JSON string runs to the first quote that no backslash escapes, so a
+  # command such as `bash -c "..."` is read in full, as jq reads it. The
+  # bracket expression `[^"\\]` means the same to BSD and GNU grep.
+  _json_string() {
+    local found
+    found="$(printf '%s' "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*\"([^\"\\\\]|\\\\.)*\"" | head -n1 | sed -E 's/^"[^"]*"[[:space:]]*:[[:space:]]*"(.*)"$/\1/' || true)"
+    # Undo the JSON escapes jq would undo. A doubled backslash is held as a
+    # control character first, so `\\"` reads as a backslash and a quote.
+    found="${found//\\\\/$'\001'}"
+    found="${found//\\\"/\"}"
+    found="${found//\\\//\/}"
+    found="${found//\\t/$'\t'}"
+    found="${found//\\n/$'\n'}"
+    found="${found//$'\001'/\\}"
+    printf '%s' "$found"
+  }
+  TARGET="$(_json_string file_path)"
+  # A Grep names its folder as `path`, as jq's `// .tool_input.path` reads it.
+  # The opening quote keeps `"transcript_path"` from matching.
+  [ -n "$TARGET" ] || TARGET="$(_json_string path)"
+  TRANSCRIPT="$(_json_string transcript_path)"
+  SESSION_ID="$(_json_string session_id)"
+  TOOL="$(_json_string tool_name)"
+  COMMAND="$(_json_string command)"
 fi
 
 # --- resolve the project this hook is enforcing -----------------------------
@@ -421,16 +442,56 @@ set -e
 # decision 10, ADR-069 decisions 3, 4 and 8). This runs before the path
 # classification, which exempts every `.compass/` path from the red check.
 # python3 starts only when the call names one of these, so an ordinary call
-# costs one `case`. A guard that cannot run refuses. Every input names the
-# transcript, so the match is on the command and the target, not the input.
+# costs a few `case` tests. A guard that cannot run refuses. Every input names
+# the transcript, so the match is on the command and the target, not the input.
+#
+# Every Grep runs the guard: one with no path, or a relative one, can search a
+# folder above the transcript, and only the guard resolves it against the
+# call's `cwd`. A Bash command runs it when it names `~`, HOME, a `.claude`
+# folder, `/.` or `//` (a spelling the guard normalises), the transcript's
+# folder anywhere, or a folder above the transcript as a whole word or
+# followed by a glob, a brace or a quote. The loop walks those
+# folders with parameter expansion, so it starts no process, and only for an
+# absolute transcript path, so it always ends. The match ignores letter case,
+# as macOS does, and the shell option is put back afterwards.
 GUARD_RUN=0
+_nocase=0
+shopt -q nocasematch && _nocase=1
+shopt -s nocasematch
 case "${TOOL:-}" in
-  Read|Grep) case "${TARGET:-}" in *projects*) GUARD_RUN=1 ;; esac ;;
-  *) case "${COMMAND:-}${TARGET:-}" in
+  Grep) GUARD_RUN=1 ;;
+  Read) case "${TARGET:-}" in
+          *projects*|*.claude*|*CLAUDE_CONFIG_DIR*|*delegations*|*approval-requests*|\
+          *'~'*|*HOME*) GUARD_RUN=1 ;;
+        esac ;;
+  *) # The patterns are also tried with every quote and backslash removed,
+     # since the shell drops them: `--d''elegated`, `-\-delegated` and
+     # `$'--delegated'` all run as `--delegated`.
+     _text="${COMMAND:-}${TARGET:-}"
+     _bare="${_text//[\'\"\\]/}"
+     case "$_text $_bare" in
        *approval-requests*|*prompt-approval.sh*|*.compass/delegations*|*--del*|\
-       *.claude*projects*|*CLAUDE_CONFIG_DIR*) GUARD_RUN=1 ;;
-     esac ;;
+       *.claude*|*CLAUDE_CONFIG_DIR*) GUARD_RUN=1 ;;
+     esac
+     if [ "$GUARD_RUN" = 0 ] && [ "${TOOL:-}" = "Bash" ]; then
+       case "${COMMAND:-}" in *'~'*|*HOME*|*/.*|*//*) GUARD_RUN=1 ;; esac
+       _above=""
+       case "${TRANSCRIPT:-}" in /*) _above="${TRANSCRIPT%/*}" ;; esac
+       case "${COMMAND:-}" in *"${_above:-//no transcript//}"*) GUARD_RUN=1 ;; esac
+       while [ "$GUARD_RUN" = 0 ] && [ -n "$_above" ]; do
+         case " ${COMMAND:-} " in
+           *[[:space:]\"\']"$_above"[[:space:]\"\']*|\
+           *[[:space:]\"\']"$_above"/[[:space:]\"\'*]*|\
+           *[[:space:]\"\']"$_above"/*[*?[{\"\'\\]*)
+             GUARD_RUN=1 ;;
+         esac
+         _next="${_above%/*}"
+         [ "$_next" = "$_above" ] && break
+         _above="$_next"
+       done
+     fi ;;
 esac
+[ "$_nocase" = 1 ] || shopt -u nocasematch
 case "$GUARD_RUN" in
   1)
     GUARD_ERR="$(mktemp 2>/dev/null)" || compass_reader_failed "approval guard" tmp
@@ -477,8 +538,8 @@ GUARDPARAMS
     fi
     ;;
 esac
-# Read and Grep are matched only for the transcript check above; reading a
-# file never needs a red.
+# Read and Grep are matched only for the transcript and delegation checks
+# above; reading a file never needs a red.
 case "${TOOL:-}" in Read|Grep) exit 0 ;; esac
 
 

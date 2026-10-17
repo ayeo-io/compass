@@ -156,9 +156,10 @@ REFUSALS: dict[str, dict[str, str]] = {
     "delegation-protected": {
         "what": "{target} (tool: {tool})",
         "why": "a delegation is a person's decision, written only from a typed "
-               "/compass:delegate.",
+               "/compass:delegate, and its folder holds the check for the code "
+               "that confirms one.",
         "fix": "ask the person to type /compass:delegate or /compass:revoke; "
-               "never write a delegation yourself.",
+               "never read or write a delegation file yourself.",
     },
     "delegation-caller-mismatch": {
         "what": "delegated approval (--as {named})",

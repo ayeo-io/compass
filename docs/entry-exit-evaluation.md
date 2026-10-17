@@ -340,7 +340,12 @@ A person can let one named agent approve for them with `/compass:delegate
 <agent> until <time> [on <issues>] [for <forms>] [labels <labels>] [max <n>]`
 (`cli/compass_pkg/delegations.py`, ADR-069). The end time is at most 24 hours
 ahead, at most five delegations are in force, and `g5` is covered only when
-typed, after the person types back a code the hook shows them.
+typed, after the person types back a code the hook shows them. The code is
+16 hex characters in four groups, such as `1a2b-3c4d-5e6f-7a8b`, typed with
+or without the hyphens. A `/compass:approve`, `/compass:reject` or
+`/compass:delegate` whose input has no prompt id is refused, and so is a
+`/compass:delegate` whose prompt id a delegation already holds; a confirmed
+g5 delegation keeps the first command's prompt id as `requested_prompt_id`.
 `/compass:revoke [DL-n]` ends delegations early. The agent records with:
 
 ```

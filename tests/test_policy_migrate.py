@@ -927,3 +927,105 @@ def test_PM_18_a_real_difference_between_the_copy_and_the_overlay_is_not_equival
     assert made.result == "blocked"
     assert made.equivalence["result"] != "equivalent"
     assert "MIG-NOT-EQUIVALENT" in {b["code"] for b in made.blocked}
+
+
+# --- PM-20 to PM-23: a copied `waived:` entry ------------------------------------------
+
+def _drop_floors(count, waived):
+    """An edit that removes the first `count` floor rules and records
+    `waived` - `(index, reason)` pairs - under `routing_guardrails.waived`."""
+    def edit(policy, guardrails):
+        floors = policy["routing_guardrails"]["floors"]
+        dropped = [floors.pop(0)["id"] for _ in range(count)]
+        policy["routing_guardrails"]["waived"] = [
+            {"id": dropped[index], "reason": reason} for index, reason in waived]
+        edit.dropped = dropped
+    return edit
+
+
+def test_PM_20_a_copied_waived_entry_becomes_a_legacy_waiver_with_its_reason(tmp_path):
+    root = _project(tmp_path)
+    edit = _drop_floors(1, [(0, "We run every issue through assess by hand.")])
+    _copy_governance(root, edit)
+    made = _plan(root)
+    assert made.blocked == [] and made.result == "ready", made.blocked
+    assert [o["waiver"] for o in made.ops] == ["LEGACY"]
+    waiver = yaml.safe_load(made.compass_yml)["rules"]["floors"]["waiver"]
+    assert waiver == {"reason": f"{edit.dropped[0]}: We run every issue through assess by hand.",
+                      "approved_by": "LEGACY"}
+    text = "\n".join(_api().report_text(made, "dry-run"))
+    assert "rules.floors (LEGACY waiver, no approval recorded)" in text
+
+
+def test_PM_21_a_waived_removal_next_to_an_unrecorded_one_keeps_the_stub(tmp_path):
+    root = _project(tmp_path)
+    _copy_governance(root, _drop_floors(2, [(0, "Recorded for the first floor only.")]))
+    made = _plan(root)
+    assert made.result == "blocked"
+    assert [o["waiver"] for o in made.ops] == ["UNAPPROVED"]
+    waiver = yaml.safe_load(made.compass_yml)["rules"]["floors"]["waiver"]
+    assert waiver["approved_by"] == "UNAPPROVED"
+    assert "W-UNAPPROVED" in {b["code"] for b in made.blocked}
+
+
+def test_PM_22_several_waived_removals_in_one_entry_keep_every_reason(tmp_path):
+    root = _project(tmp_path)
+    edit = _drop_floors(2, [(0, "First reason."), (1, "Second reason.")])
+    _copy_governance(root, edit)
+    made = _plan(root)
+    assert made.blocked == [] and made.result == "ready", made.blocked
+    waiver = yaml.safe_load(made.compass_yml)["rules"]["floors"]["waiver"]
+    first, second = edit.dropped
+    assert waiver == {"reason": f"{first}: First reason.; {second}: Second reason.",
+                      "approved_by": "LEGACY"}
+
+
+def test_PM_23_a_waived_entry_with_no_reason_keeps_the_stub(tmp_path):
+    root = _project(tmp_path)
+    _copy_governance(root, _drop_floors(1, [(0, "  ")]))
+    made = _plan(root)
+    assert made.result == "blocked"
+    assert [o["waiver"] for o in made.ops] == ["UNAPPROVED"]
+
+
+def _drop_gates(guardrails, *ids):
+    guardrails["defaults"] = [g for g in guardrails["defaults"] if g["id"] not in ids]
+
+
+def _waived_entries(made):
+    doc = yaml.safe_load(made.compass_yml) or {}
+    return {f"{catalogue}.{entry_id}": body["waiver"]
+            for catalogue, entries in doc.items() if isinstance(entries, dict)
+            for entry_id, body in entries.items()
+            if isinstance(body, dict) and "waiver" in body}
+
+
+def test_PM_24_a_waived_gate_does_not_excuse_an_unrecorded_change_to_its_check(tmp_path):
+    def edit(policy, guardrails):
+        _drop_gates(guardrails, "G1")
+        guardrails["checks"]["scenarios-are-executable"]["blocking_when"] = {
+            "blast_radius": ["critical"]}
+        policy["routing_guardrails"]["waived"] = [{"id": "G1", "reason": "No BDD runner."}]
+
+    root = _project(tmp_path)
+    _copy_governance(root, edit)
+    waivers = _waived_entries(_plan(root))
+    assert waivers["checks.scenarios-are-executable"]["approved_by"] == "UNAPPROVED"
+    assert waivers["gates.G1"] == {"reason": "G1: No BDD runner.", "approved_by": "LEGACY"}
+
+
+def test_PM_25_a_check_two_waived_gates_held_gets_no_empty_legacy_reason(tmp_path):
+    def edit(policy, guardrails):
+        _drop_gates(guardrails, "G1", "G3")
+        guardrails["checks"]["changed-code-traces-to-scenario"]["blocking_when"] = {
+            "blast_radius": ["critical"]}
+        policy["routing_guardrails"]["waived"] = [{"id": "G1", "reason": "r1"},
+                                                   {"id": "G3", "reason": "r3"}]
+
+    root = _project(tmp_path)
+    _copy_governance(root, edit)
+    waivers = _waived_entries(_plan(root))
+    assert waivers["checks.changed-code-traces-to-scenario"]["approved_by"] == "UNAPPROVED"
+    assert waivers["gates.G1"] == {"reason": "G1: r1", "approved_by": "LEGACY"}
+    assert waivers["gates.G3"] == {"reason": "G3: r3", "approved_by": "LEGACY"}
+    assert all(w["reason"] for w in waivers.values()), waivers

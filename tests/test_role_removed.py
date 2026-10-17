@@ -543,6 +543,66 @@ def test_trc_c2_copied_6x_governance_keeps_its_role_rules_through_the_cli(tmp_pa
     assert [b["phase"] for b in result["blocked_phases"]] == ["plan"]
 
 
+# An issue that Compass 6.0.1 assessed with `role: product-owner` and committed
+# as generation 1, under a `compass.yml` that extends compass:default@6. Its
+# `versions.yml` names cli 6.0.1. Packed, so the prose scans do not read the
+# 6.0.1 wording as this tree's.
+GENERATION_6_0_1 = ROOT / "tests" / "fixtures" / "v6.0.1-generation.tgz"
+
+
+def _six_generation_project(tmp_path):
+    import tarfile
+    root = tmp_path / "proj"
+    root.mkdir()
+    with tarfile.open(GENERATION_6_0_1) as tar:
+        tar.extractall(root)
+    return root
+
+
+def test_trc_c2_a_stored_6x_generation_keeps_its_role_rules_through_the_cli(tmp_path):
+    """Through `compass approach evaluate`: an issue whose stored generation was
+    committed by 6.0.1 keeps its role rules until it is re-assessed, and the
+    re-assessment commits a generation on the 7.0.0 default without them."""
+    root = _six_generation_project(tmp_path)
+    task_dir = root / ".compass" / "work" / "t"
+    versions = _load(task_dir / "generations" / "1" / "versions.yml")
+    assert versions["cli"] == "6.0.1"
+    assert _load(task_dir / "manifest.yml")["generation"] == 1
+
+    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--json")
+    assert code == 0, out + err
+    result = json.loads(out)
+    assert _fired(result) == ["RP-ROLE-002"]
+    assert [b["phase"] for b in result["blocked_phases"]] == ["plan"]
+    # The generation in force declares `role`, so the recorded role is read.
+    assert NOT_READ not in err, err
+
+    # The stored generation holds the other role rule too.
+    data = _load(task_dir / "manifest.yml")
+    data["assessment"]["role"] = "product-marketer"
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(data, sort_keys=False),
+                                           encoding="utf-8")
+    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--json")
+    assert code == 0, out + err
+    result = json.loads(out)
+    assert _fired(result) == ["RP-ROLE-001"]
+    assert "verify.claims" in result["gates"]
+    assert _load(task_dir / "manifest.yml")["generation"] == 1
+
+    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write",
+                          "--reason", "upgraded to 7.0.0")
+    assert code == 0, out + err
+    assert NOT_READ in err and "assessment.role" in err, err
+    data = _load(task_dir / "manifest.yml")
+    assert data["generation"] == 2
+    assert not [f for f in data.get("policy_rules_fired") or []
+                if f["id"].startswith("RP-ROLE")]
+    assert "verify.claims" not in [g["id"] for g in data["gates"]]
+    stored = {n: _load(task_dir / "generations" / str(n) / "resolved.yml") for n in (1, 2)}
+    assert "role_rules" in stored[1]["rules"] and "role" in stored[1]["dimensions"]
+    assert "role_rules" not in stored[2]["rules"] and "role" not in stored[2]["dimensions"]
+
+
 INTENT_TEXT = ("# Intent\n\n## Problem\n\nx\n\n## Desired outcome\n\n- INT-1: x\n\n"
                "## Success signals\n\n- x\n\n## Non-goals\n\n- x\n")
 

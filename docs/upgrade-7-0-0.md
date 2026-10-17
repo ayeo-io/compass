@@ -586,3 +586,16 @@ Guardrail 5 (`G5`, "a human signs off on the irreversible") asks for a person's 
 ### What to do
 
 Nothing. To clear the warning, the project's `owner` replaces `LEGACY` with an approver's name and adds `approved_on`.
+
+## A waived stage mode holds on a floor-raised approach
+
+A floor that raises an issue's approach keeps the issue's lower mode for a stage the floor does not name, when that stage's entry in the issue's `config:` carries an approved issue waiver. `docs/issue-configure.md` states the rule, and `governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md` records the decision.
+
+### What changes
+
+- **A generation stored by 6.0.1 for an issue with an approved breakdown waiver reads as skipped until the issue is reassessed.** The stored generation keeps the waiver in its provenance, so a read of it gives `breakdown: skipped`. The manifest's `stages:` keeps `multiagent` until the next `compass approach evaluate --write`.
+- **The classifier is version 10.** A waived breakdown from `multiagent` to `skipped` on a floor-raised approach is incomparable, so the lint refuses it unless the waiver's approval is valid.
+
+### What to do
+
+Nothing for an issue with no stage waiver. For an issue with one, reassess it so that its manifest records the waived mode.

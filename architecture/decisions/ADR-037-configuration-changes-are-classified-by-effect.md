@@ -111,3 +111,7 @@ Decided while the maintainer was away, and marked for the maintainer's confirmat
 - No route is special-cased. `full` has no subtask ceiling, and no ceiling is the loosest (the amendment of 2026-10-07 above), so `full` over `regular` is incomparable on `approaches.subtask_ceiling` at the issue's own assessment. A spike issue that picks `full` loses `spike.conclude` and is refused by a lock.
 - The lint of the issue layer runs whenever the issue's stored assessment differs from the one the last write evaluated, including when the configuration equals the generation in force, so a route accepted at one assessment cannot carry onto a spike assessment by a reassess that changes nothing else.
 - A route pick has no catalogue entry to hang a waiver on, so a route pick that is looser or incomparable at the issue's own assessment cannot be waived in 6.0.0.
+
+## Amendment (2026-10-17): a waived stage mode has an effect on a floor-raised approach
+
+`obligations.issue_input` passes the evaluator `waived_stages`, the stages whose entry in the issue's layer holds an issue waiver. On an approach a floor raised, the evaluator keeps those stages' modes, so the classifier now sees the change at the issue's own assessment. Breakdown from `multiagent` to `skipped` is incomparable, and the lint accepts it only with the waiver's valid approval. Before this amendment the same entry had no effect and needed no waiver. The decision is `governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md`.

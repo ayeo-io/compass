@@ -565,6 +565,11 @@ def test_d2_repairs_change_only_retired_names():
     list items naming the three floors and how the tiers are recorded,
     resolved and changed.
 
+    One more was re-baselined by `owner-reassess-overrides-label-floor`:
+    `governance/routing-policy.md` (list_items 70 -> 71) gained the bullet on
+    `waived_stages`, the issue's waived stage modes that hold on a
+    floor-raised approach.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

@@ -56,6 +56,7 @@ NEW_LEDGER = [
     "2026-10-06-the-cli-writes-full-shas",
     "2026-10-06-parent-waivers-count-as-applied",
     "2026-10-06-the-preset-flag-is-not-on-compass-init",
+    "2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach",
 ]
 
 PRIVATE_PATHS = re.compile(r"docs/(?:analysis|specs|proposals)/")

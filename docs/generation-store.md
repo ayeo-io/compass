@@ -243,7 +243,7 @@ an issue with no `generation:` key (or no issue) in a project with no
 | Call on the view | Returns | Used by |
 |---|---|---|
 | `evaluator_policy()`, `autonomy` | the routing policy and the autonomy value | `routing`, `quick_fix_cmd`, `flow`, `calibration`, `approach_diagram` |
-| `evaluator_issue()` | the issue's own layer as the evaluator takes it: the approach it names, the stage modes it sets and its subtask ceiling, or None | `routing` |
+| `evaluator_issue()` | the issue's own layer as the evaluator takes it: the approach it names, the stage modes it sets, the stages among them that an issue waiver in the provenance covers (`waived_stages`) and its subtask ceiling, or None | `routing` |
 | `guardrail_gates()` | the guardrails in the legacy shape: `defaults`, `spike_guardrails`, `checks` (each check's `severity`, `on_skipped` and `blocking_when`) and `impl` (the implementation each check runs) | `check_cmd` |
 | `gate_requirements()` | the evidence types each gate accepts, and the known types | `checks`, `manifest`, `receipt` |
 | `command_checks()` | the checks that run a command the project wrote | `checks` |

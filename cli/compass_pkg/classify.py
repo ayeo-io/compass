@@ -72,7 +72,12 @@ JSON_SCHEMA_VERSION = 1
 # configuration that drops an artifact rule is a loosening (ADR-070), which
 # version 8 could not see. Version 7 was never released: this change held it
 # before version 8 merged first.
-CLASSIFIER_VERSION = 9
+#
+# Version 10: on an approach a floor raised, a stage whose entry in the issue's
+# layer holds a waiver keeps the issue's mode, so a waived breakdown from
+# `multiagent` to `skipped` is `incomparable` and refused unless the waiver's
+# approval is valid. Version 9 saw no effect there and read it as `equivalent`.
+CLASSIFIER_VERSION = 10
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")

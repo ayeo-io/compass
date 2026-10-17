@@ -460,6 +460,16 @@ as before:
   so a floor lifts a mode the issue lowered, and a floor that replaces the
   candidate drops the issue's modes (the result lists them as ignored). A cap
   lowers an issue's ceiling and an issue never raises one.
+- `waived_stages` in `issue`: the stages whose entry in the issue's layer
+  holds an issue waiver. Such a stage keeps the issue's mode on an approach a
+  floor raised, so an owner-approved solo build of a `migrations` issue is
+  recorded as `breakdown: skipped`. A floor's `never_skip` and
+  `require_phase` still lift the stages they name, and the gates, guardrails,
+  artifacts and forced approach do not change. When the issue's layer or
+  assessment changes, the reassess lints the layer at the issue's own
+  assessment, and refuses the waiver unless its approval record is valid
+  (ADR-039)
+  (`governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md`).
 - `RoutingConflict`, the error class of the two refusals: exploration that a
   floor would turn into delivery, and an approach a cap forbids. A caller that
   compares policies treats these as results (`Refused`). Every other error is

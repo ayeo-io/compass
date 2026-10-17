@@ -43,6 +43,13 @@ _SHAPES = (
                r"[\"']?[ \t]*[:=][ \t]*[\"']?)[^\s\"',;]{4,}"),
 )
 
+#: A YAML key that names a secret and whose value is empty or a block
+#: scalar indicator (`|`, `|-`, `>`, `>-`, `|2-` and the like). Its value is
+#: on the more-indented lines that follow, where no shape above would see it.
+_BLOCK_KEY = re.compile(r"(?i)^([ \t]*)(?:-[ \t]+)?[\"']?(?:[\w-]*[_-])?(?:"
+                        + _SECRET_KEY + r")[\"']?[ \t]*:"
+                        r"[ \t]*(?:[|>][0-9+-]{0,2})?[ \t]*$")
+
 #: An environment variable whose name contains one of these words holds a
 #: value worth hiding.
 _SECRET_NAME = re.compile(r"KEY|TOKEN|SECRET|PASSWORD", re.IGNORECASE)
@@ -64,9 +71,33 @@ def redact(text, env=None):
                     key=len, reverse=True)
     for value in values:
         text = text.replace(value, MARK)
+    text = _redact_blocks(text)
     for shape in _SHAPES:
         if shape.groups:
             text = shape.sub(lambda m: m.group(1) + MARK, text)
         else:
             text = shape.sub(MARK, text)
     return text
+
+
+def _redact_blocks(text):
+    """`text` with each line of a block value under a secret-named key
+    replaced by `[REDACTED]` at its own indentation. The block ends at the
+    first non-blank line indented no more than the key, so a sibling key on
+    the next line is left as it is."""
+    lines = text.split("\n")
+    key_indent = None
+    for i, line in enumerate(lines):
+        stripped = line.lstrip(" \t")
+        indent = len(line) - len(stripped)
+        if key_indent is not None:
+            if not stripped:
+                continue
+            if indent > key_indent:
+                lines[i] = line[:indent] + MARK
+                continue
+            key_indent = None
+        match = _BLOCK_KEY.match(line)
+        if match:
+            key_indent = len(match.group(1))
+    return "\n".join(lines)

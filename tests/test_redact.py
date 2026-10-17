@@ -76,3 +76,32 @@ def test_trc_001_a_bearer_token_and_an_environment_value_are_still_redacted():
     out = redact("Authorization: Bearer abcdefgh12345678 and hunter2-env-value",
                  env={"SERVICE_TOKEN": "hunter2-env-value"})
     assert "abcdefgh12345678" not in out and "hunter2-env-value" not in out
+
+
+# --- a secret value on the lines after its key --------------------------------
+
+@pytest.mark.parametrize("text, secret", [
+    ("db:\n  password: |\n    plain passphrase one\n    second line\nnext: kept\n",
+     "plain passphrase"),
+    ("token:\n  plain passphrase two\nnext: kept\n", "plain passphrase"),
+    ("secret_key: >-\n  plain passphrase\n  folded on\nnext: kept\n",
+     "plain passphrase"),
+    ("password: |2-\n\n    plain passphrase after a blank\nnext: kept\n",
+     "plain passphrase"),
+])
+def test_trc_001_a_block_value_after_a_secret_key_is_redacted(text, secret):
+    out = redact(text, env={})
+    assert secret not in out and "second line" not in out and "folded on" not in out
+    assert MARK in out
+    # The key and the next key at the same or a lower indentation stay.
+    assert out.endswith("next: kept\n"), out
+    assert out.count("\n") == text.count("\n"), out
+
+
+@pytest.mark.parametrize("text", [
+    "token:\nsibling: kept\n",
+    "signals:\n  password:\n  statement: kept\n",
+    "password: |\nsibling: kept\n",
+])
+def test_trc_001_a_secret_key_followed_by_a_sibling_key_is_unchanged(text):
+    assert redact(text, env={}) == text

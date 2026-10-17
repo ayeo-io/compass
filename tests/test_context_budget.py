@@ -44,11 +44,13 @@ RULES = {
 }
 
 # The four rules for sign-off, staging, lint fixes and edge cases (issue
-# `contract-handoff-and-staging-rules`). Compared with whitespace collapsed,
-# because the contract wraps its lines inside a phrase.
+# `contract-handoff-and-staging-rules`). The sign-off rule is the
+# "Approvals." paragraph, so its pin is that paragraph's request to the
+# person. Compared with whitespace collapsed, because the contract wraps its
+# lines inside a phrase.
 NEW_RULES = {
-    "signoff heading": "**A person's approval is theirs to give.**",
-    "signoff no bang": "no `!` prefix",
+    "signoff request": ("ask the person to type `/compass:approve` or "
+                        "`/compass:reject`, and stop."),
     "staging heading": "**Commit only what you mean to.**",
     "staging by path": "Stage each file by its path",
     "staging no compass": "never `.compass/`",
@@ -59,22 +61,19 @@ NEW_RULES = {
 # Raised from 2,250 by the one line that asks the agent to record friction it
 # observes (issue `agent-recorded-friction`, which allows 40 resident words):
 # the agent meets that friction mid-run, so the line must be resident.
-<<<<<<< HEAD
 # Raised again, to 2,700, by the approval rule (issue `approve-inside-claude-code`,
 # ADR-068 and ADR-069): the agent must know, before it acts, that it records an
 # approval only under a delegation and otherwise asks, so the rule must be
 # resident. Decided by compass:architect under jed72's overnight delegation.
-CONTRACT_BUDGET = 2700
-=======
 #
-# Raised from 2,400 to 2,600 by the sign-off, staging, lint-fix and
-# edge-case rules (issue `contract-handoff-and-staging-rules`), net of the
-# passages tightened to make room: 2,599 characters measured, rounded up to
-# the next 50. These rules apply at moments a session cannot predict, in any
-# stage including a quick fix, which reads only its own command and skill, so
-# the rules must be resident in the contract.
-CONTRACT_BUDGET = 2600
->>>>>>> 3e97cc7f (Add sign-off, staging, lint and edge-case rules to the contract)
+# Raised to 2,750 by the staging, lint-fix and edge-case rules (issue
+# `contract-handoff-and-staging-rules`), net of the passages tightened to
+# make room: 2,718 characters measured, rounded up to the next 50. The
+# sign-off rule is the approval rule above, so it adds nothing. These rules
+# apply at moments a session cannot predict, in any stage including a quick
+# fix, which reads only its own command and skill, so the rules must be
+# resident in the contract.
+CONTRACT_BUDGET = 2750
 
 # Set from the rewrite of 2026-10-04 (2,581, 1,476, 1,436 and 1,216
 # characters at 80 columns), with a little room; before it, 2,805, 1,643,
@@ -181,11 +180,15 @@ def _contract_flat():
 
 def test_contract_states_signoff_handoff():
     text = _contract_flat()
-    assert "**A person's approval is theirs to give.**" in text
-    assert "Never record it for them" in text
-    assert "no `!` prefix" in text
-    assert "Print the exact command for their own terminal" in text
-    assert "no `!` prefix, and stop." in text
+    assert "**Approvals.**" in text
+    assert "Approve only under a delegation naming you" in text
+    assert "run `compass evidence request`" in text
+    assert ("ask the person to type `/compass:approve` or "
+            "`/compass:reject`, and stop.") in text
+    # The superseded handoff, a command printed for the person's terminal,
+    # must not come back beside the typed approval.
+    assert "for their own terminal" not in text
+    assert "no `!` prefix" not in text
 
 
 def test_contract_states_staging_rule():
@@ -193,7 +196,7 @@ def test_contract_states_staging_rule():
     assert "**Commit only what you mean to.**" in text
     assert "Stage each file by its path" in text
     assert "never `.compass/`" in text
-    assert "check the staged list and the commit's authors" in text
+    assert "check the staged list and commit authors" in text
     assert ("If something is staged by mistake, say so and stop; "
             "do not retry a refused unstage.") in text
 
@@ -201,7 +204,7 @@ def test_contract_states_staging_rule():
 def test_contract_states_lint_fix_rule():
     text = _contract_flat()
     assert "A lint fix never weakens an assertion" in text
-    assert "re-run the affected tests" in text
+    assert "re-run affected tests" in text
 
 
 def test_contract_states_id_and_header_rule():

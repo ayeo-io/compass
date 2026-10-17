@@ -15,5 +15,8 @@ from compass_pkg import run_cmd  # noqa: E402
 
 def test_prompt_has_approval_sentence():
     prompt = run_cmd._prompt("implement", "some-issue")
-    assert ("If a step needs a person's approval, record nothing, end with "
-            "the exact command they must run, and stop.") in prompt
+    assert ("If a step needs a person's approval, record nothing: run "
+            "compass evidence request, ask the person to type "
+            "/compass:approve or /compass:reject, and stop.") in prompt
+    # The superseded handoff, a command printed for the person to run.
+    assert "exact command they must run" not in prompt

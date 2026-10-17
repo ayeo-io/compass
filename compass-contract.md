@@ -61,13 +61,10 @@ will recur, run `compass issue friction` with evidence and a one-line fix.
 **Write for someone with no context.** Why before what, no reference a reader
 cannot follow, and stop once you have said it.
 
-**A person's approval is theirs to give.** Never record it for them. Print
-the exact command for their own terminal, with no `!` prefix, and stop.
-
 **Commit only what you mean to.** Stage each file by its path, never
-`.compass/`, and check the staged list and the commit's authors. If
+`.compass/`, and check the staged list and commit authors. If
 something is staged by mistake, say so and stop; do not retry a refused
-unstage. A lint fix never weakens an assertion; re-run the affected tests.
+unstage. A lint fix never weakens an assertion; re-run affected tests.
 
 **Settle edge cases before scenarios.** Read
 `skills/bdd-specification/SKILL.md`.

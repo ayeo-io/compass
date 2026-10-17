@@ -18,11 +18,14 @@ def _section():
 
 def test_headless_runner_documents_approval_stop():
     text = _section()
-    assert ("If a step needs a person's approval, record nothing, end with "
-            "the exact command they must run, and stop.") in text
+    assert ("If a step needs a person's approval, record nothing: run "
+            "compass evidence request, ask the person to type "
+            "/compass:approve or /compass:reject, and stop.") in text
     assert "records nothing as approved" in text
-    assert "the exact command as its last line" in text
+    assert "writes a pending request with `compass evidence request`" in text
+    assert "the request to the person as its last line" in text
     assert "`run-<n>.md` keeps that last line" in text
+    assert "exact command they must run" not in text
     assert "three unchanged cycles" in text
     assert "`stopped_reason`" in text and "exit code 4" in text
     assert "reads exit code 4 and goes on to its next issue" in text

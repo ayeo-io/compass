@@ -84,8 +84,9 @@ def _prompt(stage, slug):
             f"Compass issue {slug}, and stop when the stage is done or you "
             f"cannot go on. Do not land, ship, push or merge: an unattended "
             f"run ends at a result, and a person lands it. If a step needs "
-            f"a person's approval, record nothing, end with the exact "
-            f"command they must run, and stop.")
+            f"a person's approval, record nothing: run compass evidence "
+            f"request, ask the person to type /compass:approve or "
+            f"/compass:reject, and stop.")
 
 
 def _session_args():

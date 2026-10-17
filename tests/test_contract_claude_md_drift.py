@@ -19,7 +19,8 @@ CLAUDE_MD = ROOT / "CLAUDE.md"
 
 # One phrase per shared rule, present in both files.
 SHARED = {
-    "sign-off handoff": "Never record it for them",
+    "sign-off handoff": ("ask the person to type `/compass:approve` or "
+                         "`/compass:reject`, and stop."),
     "staging": "Stage each file by its path",
     "lint fix": "A lint fix never weakens an assertion",
 }

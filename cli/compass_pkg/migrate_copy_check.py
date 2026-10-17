@@ -146,7 +146,7 @@ def unrestorable_folders(root, label=None, extra=None, project=None):
     for name, paths in (extra or {}).items():
         held_paths = folders.setdefault(name, [])
         held_paths += [p for p in paths if p not in held_paths]
-    return _judge(root, folders, label)
+    return _judge(root, folders, label, project)
 
 
 def unrestorable_files(root, paths, label=None):
@@ -154,13 +154,15 @@ def unrestorable_files(root, paths, label=None):
 
     The same judgement as `unrestorable_folders`, one file at a time:
     `unrestorable` holds the paths as given. `compass policy migrate --words`
-    runs it before it rewrites a project's configuration files."""
-    return _judge(root, {path: [path] for path in paths}, label or root)
+    runs it before it rewrites a project's configuration files, with the
+    project as `root`, so `root` is also the project the outside check reads."""
+    return _judge(root, {path: [path] for path in paths}, label or root, root)
 
 
-def _judge(root, folders, label):
+def _judge(root, folders, label, project):
     """The judgement of `folders` ({name: [path]}) below `root`: a name is
-    unrestorable when git cannot restore one of its paths."""
+    unrestorable when git cannot restore one of its paths, and every name is
+    when `project` is in a repository and `root` is outside it."""
     if not folders:
         return Judgement(label, "judged")
     if _outside_the_project_repository(root, project):

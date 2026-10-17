@@ -782,13 +782,72 @@ def test_ob_5_a_floor_that_names_another_stage_leaves_the_override_standing(
 
 def test_ob_5_an_override_on_an_approach_a_floor_replaced_is_ignored(preset_config):
     """Critical risk raises the approach to `full`, which has its own base
-    modes. The override was on the candidate's, so it is reported and dropped."""
+    modes. The override was on the candidate's and carries no waiver, so it is
+    reported and dropped (WSM-2)."""
     config, layer = _issue(preset_config, modes={"breakdown": "skipped"})
     got = _owed(config, _assessment(risk="critical"), layer)
     assert got.approach == "full"
     assert got.stage_mode["breakdown"] == "multiagent"
     assert got.ignored_overrides == {"breakdown": "skipped"}
     assert _owed(config, _assessment(), layer).ignored_overrides == {}
+
+
+WAIVER = {"reason": "Three small fixes in one module.", "approved_by": "EV-1"}
+
+
+def _waived(config, **modes):
+    """`(config, layer)` for an issue layer that sets each stage's mode and
+    carries an issue waiver on each entry. Whether the waiver is approved is
+    the lint's question; the evaluator reads only that the entry holds one."""
+    config, layer = _issue(config, modes=modes)
+    for stage in modes:
+        layer["stages"][stage]["waiver"] = dict(WAIVER)
+    return config, layer
+
+
+def test_ob_5_a_waived_mode_holds_on_an_approach_a_floor_replaced(preset_config):
+    """WSM-1: the migrations floor raises the approach to `full`. A waived
+    breakdown mode holds there, and nothing else the floor brings changes
+    (governance decision 2026-10-17, a waived stage mode holds on a
+    floor-raised approach)."""
+    migrations = _assessment(labels=["migrations"])
+    config, plain = _issue(preset_config, modes={"breakdown": "skipped"})
+    _, layer = _waived(preset_config, breakdown="skipped")
+    floor = _owed(config, migrations, plain)
+    got = _owed(config, migrations, layer)
+    assert got.approach == floor.approach == "full"
+    assert got.stage_mode["breakdown"] == "skipped"
+    assert got.ignored_overrides == {}
+    assert {s: m for s, m in got.stage_mode.items() if s != "breakdown"} == {
+        s: m for s, m in floor.stage_mode.items() if s != "breakdown"}
+    assert got.gate_set == floor.gate_set
+    assert "G5" in got.gate_set
+    assert got.artifacts_owed == floor.artifacts_owed
+
+
+def test_ob_5_a_waiver_does_not_lower_a_stage_the_floor_names(preset_config):
+    """WSM-3: RP-FLOOR-001 names three stages for critical risk, `verify` among them.
+    A waived lower mode there is lifted back to `thorough`."""
+    config, layer = _waived(preset_config, verify="lightweight", breakdown="skipped")
+    got = _owed(config, _assessment(risk="critical"), layer)
+    assert got.approach == "full"
+    assert got.stage_mode["verify"] == "thorough"
+    assert got.stage_mode["breakdown"] == "skipped"
+
+
+def test_ob_5_the_evaluator_applies_a_waived_stage_on_a_replaced_approach():
+    policy = _policy({"refine": "light", "implement": "full"})
+    policy["route_shapes"]["full"] = dict(policy["route_shapes"]["regular"], weight=9)
+    policy["routing_guardrails"]["floors"].append(
+        {"id": "F-UP", "when": {"risk": "contained"}, "force_minimum_route": "full"})
+    out = evaluate_route(READINGS, policy, issue={
+        "stage_modes": {"implement": "expedited", "refine": "lighter"},
+        "waived_stages": ["implement"]})
+    assert out["delivery_approach"] == "full"
+    # `light` is the older spelling, read as `lightweight`.
+    assert out["stages"] == {"refine": "lightweight", "implement": "expedited"}
+    assert out["issue_overrides"] == {"applied": {"implement": "expedited"},
+                                      "ignored": {"refine": "lighter"}}
 
 
 def test_ob_5_an_issue_can_set_a_stage_of_the_approach_it_names(preset_config):
@@ -1215,9 +1274,9 @@ def test_ob_8_the_module_declares_its_dependencies_and_stays_small():
     assert "# DEPENDENCY:" in text
     # The design's target was 600; the readiness fact (one function and its
     # table rows) takes the cap to 620, and the word-limit fact (one field and
-    # its row) to 625, and the model-tier block (one import, one call and the
-    # dependency line) to 630.
-    assert len(text.splitlines()) < 630
+    # its row) to 625, the model-tier block (one import, one call and the
+    # dependency line) to 630, and the waived stages of the issue layer to 634.
+    assert len(text.splitlines()) < 634
     core = (ROOT / "cli" / "compass_pkg" / "core.py").read_text(encoding="utf-8")
     assert len(core.splitlines()) <= 1200
 

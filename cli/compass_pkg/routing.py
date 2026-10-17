@@ -252,8 +252,8 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     ceiling (`subtask_ceiling`), and then the floors, caps and document rules
     apply, so they win over it. A floor that replaces the candidate brings
     the new approach's own modes, so the issue's modes are reported as
-    ignored. With no `issue` the result is what it was before the argument
-    existed."""
+    ignored, except a stage in `waived_stages` (its entry holds an issue
+    waiver), whose mode holds. With no `issue` the result is as before."""
     prepared = (policy if isinstance(policy, PreparedPolicy)
                 else prepare_policy(policy))
     policy, renamed, vocab = prepared.view, prepared.renamed, prepared.vocab
@@ -451,11 +451,11 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
         raise CompassError(f"delivery approach '{final}' has no entry in route_shapes")
     phases = shape_stages(shape)
     applied, ignored = {}, {}
+    waived = {_stage_key_renames().get(s, s) for s in issue.get("waived_stages") or ()}
     for stage, mode in (issue.get("stage_modes") or {}).items():
         stage = _stage_key_renames().get(stage, stage)
-        # Only the candidate's own stages take an override: the approach a
-        # floor chose instead has modes of its own.
-        if final == candidate and stage in phases:
+        # Only the candidate's stages and a waived stage take an override.
+        if stage in phases and (final == candidate or stage in waived):
             phases[stage] = applied[stage] = mode
         else:
             ignored[stage] = mode
@@ -812,7 +812,7 @@ def cmd_route_evaluate(args):
         # The reassess plan holds the configuration this write will commit:
         # the proposal applied, or `config:` dropped, and a stale waiver left out.
         view = effective.EffectiveView("live", view.issue, None, plan.resolution.resolved,
-                                       plan.resolution.versions)
+                                       plan.resolution.versions, plan.resolution.provenance)
     if view is None:
         gov = find_governance()
         policy = load_yaml(os.path.join(gov, "routing-policy.yml"))

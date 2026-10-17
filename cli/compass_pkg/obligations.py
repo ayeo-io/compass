@@ -460,9 +460,10 @@ def _mapping(value, what):
     return value
 
 
-def issue_input(config, issue):
+def issue_input(config, issue, waived=None):
     """What an issue's own layer hands the evaluator: the approach it names,
-    the stage modes it sets and the subtask ceiling it sets. The stage modes
+    the stage modes it sets, `waived_stages` (from `waived`, else the entries
+    that hold a waiver; kept on a floor-raised approach) and its ceiling. The modes
     are read from the resolved `config` (the merge writes an issue's `mode`
     into its stage); the approach and the ceilings are not catalogue entries,
     so they come from `issue`, the layer's own document. A key the issue layer
@@ -503,6 +504,12 @@ def issue_input(config, issue):
             modes[stage] = body["mode"]
     if modes:
         out["stage_modes"] = modes
+    # Whether a waiver is approved is the lint's question (decision 2026-10-17).
+    if waived is None:
+        waived = [s for s, b in (issue.get("stages") or {}).items()
+                  if isinstance(b, dict) and "waiver" in b]
+    if any(s in modes for s in waived):
+        out["waived_stages"] = sorted(s for s in waived if s in modes)
     ceilings = _mapping(issue.get("ceilings") or {}, "the issue's ceilings")
     for name, limit in ceilings.items():
         if name not in (*CEILINGS, "subtask_ceiling"):

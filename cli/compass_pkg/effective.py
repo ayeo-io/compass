@@ -92,10 +92,22 @@ class EffectiveView:
         it sets (`obligations.issue_input`), or None when it sets none of them.
         The layer is rebuilt from `resolved`, so a stored generation gives what
         the commit stored and a live view what the manifest's `config:` gives
-        now."""
+        now.
+
+        The stages the issue waives come from the waivers the provenance
+        records, so their modes hold on an approach a floor raised. A stale
+        waiver's entry is left out of the resolution, so its stage holds no
+        issue mode and is not passed as waived."""
         layer = {key: self.resolved[key] for key in ("approach", "ceilings")
                  if self.resolved.get(key)}
-        return obligations.issue_input(self.config, layer) or None
+        waived = []
+        for record in ((self.provenance or {}).get("waivers") or {}).values():
+            if not isinstance(record, dict) or record.get("scope") != "issue":
+                continue
+            entry = record.get("entry")
+            if isinstance(entry, str) and entry.startswith("stages."):
+                waived.append(entry[len("stages."):])
+        return obligations.issue_input(self.config, layer, waived) or None
 
     # --- the accessors the reader modules call --------------------------------------
     # Each returns the data in the shape the reader already consumed from the

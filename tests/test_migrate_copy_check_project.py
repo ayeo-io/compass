@@ -1,4 +1,5 @@
-"""Scenario TRC-001 of the issue `fix-copy-check-project`.
+"""Both copy check entry points pass the project root to their shared
+judgement, for the issue `fix-copy-check-project`.
 
 The copy check's two public entry points, `unrestorable_folders` (used by
 `compass issue migrate --apply`) and `unrestorable_files` (used by

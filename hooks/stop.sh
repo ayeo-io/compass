@@ -154,8 +154,9 @@ from compass_pkg.core import artifact_path
 
 work_dir, signals = sys.argv[1], sys.argv[2]
 
-# Reads only, saves no manifest, and never calls finish(): pruning the cache
-# is the board's job, and the hook must not delete entries the board uses.
+# Saves no manifest. It stores new parse entries in the cache but never
+# calls finish(): pruning the cache is the board's job, and the hook must not
+# delete entries the board uses.
 cache = parse_cache.for_work_root(work_dir)
 
 
@@ -220,7 +221,11 @@ def gate_state(task_dir, slug, task):
     # with nothing in it may be an empty scaffold; anything else in it means
     # work started without the assess stage.
     if not os.path.isfile(approach_doc):
-        if os.listdir(task_dir):
+        try:
+            has_artifacts = bool(os.listdir(task_dir))
+        except OSError:
+            has_artifacts = False
+        if has_artifacts:
             emit("W", slug, "the delivery-approach record is MISSING but the issue "
                  "has artifacts - work started without an assessment. Run /compass:assess.")
         return
@@ -312,8 +317,14 @@ for slug in sorted(os.listdir(work_dir)):
         task = {}
     if status_words.is_closed(task):
         continue
-    gate_state(task_dir, slug, task)
-    scope_bloat(task_dir, slug, task)
+    # Every issue shares this one process, so an error on one issue skips
+    # that issue only. Uncaught, it would end the scan and hide the warnings
+    # for every issue after it.
+    try:
+        gate_state(task_dir, slug, task)
+        scope_bloat(task_dir, slug, task)
+    except Exception:                                       # noqa: BLE001
+        continue
 PYEOF
 )" || true
 

@@ -23,6 +23,14 @@
 #           follow-ups section still has an unchecked item, or
 #           acceptance-criteria.md still lacks the promoted reproduction
 #           scenario.
+#   4. a scope-bloat phrase in the devlog with no re-assessment after it.
+#
+# A closed issue is not checked: its warnings are about work that is over,
+# and on a project with hundreds of them they hid the open issues' warnings.
+# All issues are read in ONE Python process, through the parse cache that
+# the board uses (ADR-049). The hook runs at the end of every turn, and
+# starting Python for each issue made a 515-issue project wait 513 seconds
+# (ayeo-io/compass-delivery-record#218).
 #
 # This mirrors what /compass:status reports, but fires automatically at
 # session end, so an unfinished issue is reported at every session end.
@@ -118,112 +126,203 @@ elif [ -f "$POINTER" ]; then
   fi
 fi
 
-for TASK_DIR in "$WORK_DIR"/*/; do
-  [ -d "$TASK_DIR" ] || continue
-  TASK_DIR="${TASK_DIR%/}"
-  SLUG="$(basename "$TASK_DIR")"
+# --- 1-4. every open issue, in one Python process ---------------------------
+# The scope-bloat phrases come from governance/signals.yml at runtime and are
+# never hardcoded: the project's copy first, then the framework's.
+SIGNALS=""
+if [ -f "$PROJECT_DIR/governance/signals.yml" ]; then
+  SIGNALS="$PROJECT_DIR/governance/signals.yml"
+else
+  _fw_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  [ -f "$_fw_root/governance/signals.yml" ] && SIGNALS="$_fw_root/governance/signals.yml"
+fi
 
-  # ASKED, NOT GUESSED. Each of these three may sit beside the manifest or
-  # under `docs/compass/<created>-<slug>/`, and only the issue's artifact
-  # registry knows which. The resolver answers - the same one `compass check`
-  # uses - and it already falls back to the retired filename for an archive
-  # that predates the artifact rename and to the flat filename for an issue
-  # that has not migrated, so both older generations still resolve without a
-  # second list of names here.
-  #
-  # A path is printed for every kind whatever the outcome; a kind with no
-  # document resolves to where it WOULD be, so the `[ -f ... ]` tests below
-  # keep working unchanged and an unreadable install leaves them all empty,
-  # which reads as "nothing written" - the same as this hook's behaviour
-  # before it could ask.
-  eval "$(compass_python - "$TASK_DIR" 2>/dev/null <<'PYEOF'
-import shlex
+# Each line of output is a kind, a tab and a message: W for a gate-state
+# warning, N for a scope-bloat reminder. A scan that cannot start prints
+# nothing, which reads as "nothing to report", as an unreadable install did
+# before.
+NUDGES=()
+SCAN="$(compass_python - "$WORK_DIR" "$SIGNALS" 2>/dev/null <<'PYEOF'
+import os
+import re
 import sys
+
 import compass_pkg                      # noqa: F401 - puts vendor on sys.path
+import yaml
+from compass_pkg import parse_cache, status_words
 from compass_pkg.core import artifact_path
-for var, name in (("APPROACH_DOC", "delivery-approach.md"),
-                  ("SPEC", "acceptance-criteria.md"),
-                  ("VREPORT", "verification-report.md")):
-    print("%s=%s" % (var, shlex.quote(artifact_path(sys.argv[1], name))))
+
+work_dir, signals = sys.argv[1], sys.argv[2]
+
+# Reads only, saves no manifest, and never calls finish(): pruning the cache
+# is the board's job, and the hook must not delete entries the board uses.
+cache = parse_cache.for_work_root(work_dir)
+
+
+def emit(kind, slug, text):
+    print("%s\t[%s] %s" % (kind, slug, text))
+
+
+def read_text(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            return fh.read()
+    except OSError:
+        return None
+
+
+def any_line(pattern, path):
+    """grep -qiE: does any one line of the file match?"""
+    text = read_text(path)
+    return text is not None and any(
+        pattern.search(line) for line in text.splitlines())
+
+
+def load_phrases():
+    try:
+        with open(signals, encoding="utf-8") as fh:
+            return [str(p) for p in
+                    (yaml.safe_load(fh) or {}).get("scope_bloat_phrases") or []
+                    if p]
+    except Exception:                                       # noqa: BLE001
+        return []
+
+
+# The separator between "FAIL" and the phrase after it is matched as "one or
+# more non-alphanumeric characters" rather than a literal dash. Reports
+# written before this repo swapped em dashes for hyphens are still on disk in
+# projects using Compass, and both spellings must be recognised.
+# vocabulary-scan: allow - matches the retired wording in older reports too
+FAILING = re.compile(
+    r"Overall:.*\bRED\b|Overall:.*FAIL|FAIL[^0-9A-Za-z]+(issue|task) does not advance",
+    re.IGNORECASE)
+PASSING = re.compile(r"Overall:.*PASS", re.IGNORECASE)
+REPRODUCTION = re.compile(r"reproduc|regression|defect|incident", re.IGNORECASE)
+LINE_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}")
+PHRASES = load_phrases() if signals else []
+
+
+def gate_state(task_dir, slug, task):
+    # ASKED, NOT GUESSED. Each of these three may sit beside the manifest or
+    # under `docs/compass/<created>-<slug>/`, and only the issue's artifact
+    # registry knows which. The resolver - the same one `compass check` uses -
+    # falls back to the retired filename and to the flat filename, so older
+    # archives still resolve. A kind with no document resolves to where it
+    # WOULD be, so the isfile tests below read it as "nothing written".
+    try:
+        approach_doc = artifact_path(task_dir, "delivery-approach.md")
+        spec = artifact_path(task_dir, "acceptance-criteria.md")
+        vreport = artifact_path(task_dir, "verification-report.md")
+    except Exception:                                       # noqa: BLE001
+        approach_doc = spec = vreport = ""
+
+    # 1. the delivery-approach record missing on in-progress work. A folder
+    # with nothing in it may be an empty scaffold; anything else in it means
+    # work started without the assess stage.
+    if not os.path.isfile(approach_doc):
+        if os.listdir(task_dir):
+            emit("W", slug, "the delivery-approach record is MISSING but the issue "
+                 "has artifacts - work started without an assessment. Run /compass:assess.")
+        return
+
+    # 2. a stage whose gate is not cleared. An unresolved red: implementation
+    # never closed.
+    if os.path.isfile(os.path.join(task_dir, ".red")):
+        emit("W", slug, ".red marker still present - a failing test is on record "
+             "and was never paid off green. implementation is mid-gate.")
+
+    # The verify stage entered but not cleared.
+    if os.path.isfile(vreport):
+        if any_line(FAILING, vreport):
+            emit("W", slug, "verification-report.md records a FAILING gate decision "
+                 "- test-and-review did not pass. The issue is mid-gate.")
+        elif not any_line(PASSING, vreport):
+            emit("W", slug, "verification-report.md exists but its gate decision is "
+                 "blank - test-and-review was entered and not completed.")
+
+    # 3. a hotfix with an outstanding follow-up. Both facts come from
+    # manifest.yml: the template can rename a heading in the prose record
+    # without any check failing, and a grep for the old heading then stops
+    # matching with no error.
+    if str(task.get("delivery_approach") or "") != "hotfix":
+        return
+    outstanding = [
+        f for f in (task.get("follow_ups") or [])
+        if isinstance(f, dict) and str(f.get("status", "")) in ("outstanding", "owed")
+    ]
+    if outstanding:
+        emit("W", slug, "HOTFIX with %d OUTSTANDING FOLLOW-UP(S) recorded in "
+             "manifest.yml. The issue is not closeable until they are resolved."
+             % len(outstanding))
+    # The reproduction test must have been promoted into a real scenario.
+    if os.path.isfile(spec):
+        if not any_line(REPRODUCTION, spec):
+            emit("W", slug, "HOTFIX follow-up incomplete - acceptance-criteria.md "
+                 "has no promoted reproduction scenario yet.")
+    else:
+        emit("W", slug, "HOTFIX follow-up incomplete - acceptance-criteria.md does "
+             "not exist; the reproduction test was never promoted to a scenario.")
+
+
+def scope_bloat(task_dir, slug, task):
+    # 4. Each phrase is anchored at the start of the line, after an optional
+    # YYYY-MM-DD[: ] date, the way cli/compass_pkg/calibration.py anchors it.
+    # A line that starts with whitespace is quoted or indented context and
+    # does not fire (TRC-X3).
+    devlog = os.path.join(task_dir, "devlog.md")
+    if not PHRASES or not os.path.isfile(devlog) \
+            or not os.path.isfile(os.path.join(task_dir, "manifest.yml")):
+        return
+    text = read_text(devlog)
+    if text is None:
+        return
+    lines = [line for line in text.splitlines() if line and not line[0].isspace()]
+
+    # A reassessment dated on or after the matching line suppresses the
+    # reminder: it was already filed (TRC-C3).
+    try:
+        entries = task.get("reassessments") or task.get("reframes") or []
+        dates = [r.get("date", "") for r in entries if r.get("date")]
+        latest = str(max(dates)) if dates else ""
+    except Exception:                                       # noqa: BLE001
+        latest = ""
+
+    for phrase in PHRASES:
+        pattern = re.compile(r"^(?:\d{4}-\d{2}-\d{2}[: ]+)?" + re.escape(phrase))
+        matched = next((line for line in lines if pattern.match(line)), None)
+        if matched is None:
+            continue
+        found = LINE_DATE.match(matched)
+        line_date = found.group(0) if found else ""
+        # A reassessment exists and the line has no date to compare: suppress.
+        if latest and (not line_date or latest >= line_date):
+            continue
+        emit("N", slug, 'Scope-bloat signal detected in devlog: "%s"' % matched)
+
+
+for slug in sorted(os.listdir(work_dir)):
+    task_dir = os.path.join(work_dir, slug)
+    if slug.startswith(".") or not os.path.isdir(task_dir):
+        continue
+    try:
+        task = cache.load_yaml(os.path.join(task_dir, "manifest.yml"))
+    except Exception:                                       # noqa: BLE001
+        task = {}
+    if not isinstance(task, dict):
+        task = {}
+    if status_words.is_closed(task):
+        continue
+    gate_state(task_dir, slug, task)
+    scope_bloat(task_dir, slug, task)
 PYEOF
 )" || true
-  : "${APPROACH_DOC:=}" "${SPEC:=}" "${VREPORT:=}"
-  RED_MARKER="$TASK_DIR/.red"
 
-  # --- 1. the delivery-approach record missing on in-progress work ----------
-  if [ ! -f "$APPROACH_DOC" ]; then
-    # A work dir with no delivery-approach record and no other artifacts may
-    # just be an empty scaffold; but if anything else is in it, work started
-    # without the assess stage.
-    if [ -n "$(ls -A "$TASK_DIR" 2>/dev/null)" ]; then
-      WARNINGS+=("[$SLUG] the delivery-approach record is MISSING but the issue has artifacts - work started without an assessment. Run /compass:assess.")
-    fi
-    continue
-  fi
-
-  # --- 2. a stage whose gate is not cleared --------------------------------
-  # An unresolved red: implementation never closed.
-  if [ -f "$RED_MARKER" ]; then
-    WARNINGS+=("[$SLUG] .red marker still present - a failing test is on record and was never paid off green. implementation is mid-gate.")
-  fi
-
-  # The verify stage entered but not cleared.
-  #
-  # The separator between "FAIL" and the phrase after it is matched as
-  # "one or more non-alphanumeric characters" rather than a literal dash.
-  # Reports written before this repo swapped em dashes for hyphens are still
-  # on disk in projects using Compass, and both spellings must be recognised.
-  # POSIX character classes rather than \s, so this also runs under BSD grep.
-  if [ -f "$VREPORT" ]; then
-    # vocabulary-scan: allow - matches the retired wording in older reports too
-    if grep -qiE 'Overall:.*\bRED\b|Overall:.*FAIL|FAIL[^[:alnum:]]+(issue|task) does not advance' "$VREPORT" 2>/dev/null; then
-      WARNINGS+=("[$SLUG] verification-report.md records a FAILING gate decision - test-and-review did not pass. The issue is mid-gate.")
-    elif ! grep -qiE 'Overall:.*PASS' "$VREPORT" 2>/dev/null; then
-      WARNINGS+=("[$SLUG] verification-report.md exists but its gate decision is blank - test-and-review was entered and not completed.")
-    fi
-  fi
-
-  # --- 3. a hotfix with an outstanding follow-up ---------------------------
-  #
-  # Read both facts from manifest.yml. The template can rename a heading in
-  # the prose record without any check failing, and a grep for the old
-  # heading then stops matching with no error. scripts/multiagent.sh makes
-  # the same choice for the worktree cap, for the same reason.
-  HOTFIX_STATE="$(compass_python - "$TASK_DIR/manifest.yml" 2>/dev/null <<'PYSTOP'
-import sys
-import compass_pkg          # side effect: the bundled PyYAML resolves first
-import yaml
-try:
-    with open(sys.argv[1], encoding="utf-8") as fh:
-        task = yaml.safe_load(fh) or {}
-except OSError:
-    raise SystemExit(0)
-if not isinstance(task, dict):
-    raise SystemExit(0)
-approach = str(task.get("delivery_approach") or "")
-outstanding = [
-    f for f in (task.get("follow_ups") or [])
-    if isinstance(f, dict) and str(f.get("status", "")) in ("outstanding", "owed")
-]
-print(approach + "|" + str(len(outstanding)))
-PYSTOP
-)"
-  if [ "${HOTFIX_STATE%%|*}" = "hotfix" ]; then
-
-    if [ "${HOTFIX_STATE#*|}" != "0" ]; then
-      WARNINGS+=("[$SLUG] HOTFIX with ${HOTFIX_STATE#*|} OUTSTANDING FOLLOW-UP(S) recorded in manifest.yml. The issue is not closeable until they are resolved.")
-    fi
-
-    # The reproduction test must have been promoted into a real scenario.
-    if [ -f "$SPEC" ]; then
-      if ! grep -qiE 'reproduc|regression|defect|incident' "$SPEC" 2>/dev/null; then
-        WARNINGS+=("[$SLUG] HOTFIX follow-up incomplete - acceptance-criteria.md has no promoted reproduction scenario yet.")
-      fi
-    else
-      WARNINGS+=("[$SLUG] HOTFIX follow-up incomplete - acceptance-criteria.md does not exist; the reproduction test was never promoted to a scenario.")
-    fi
-  fi
-done
+while IFS= read -r _line; do
+  case "$_line" in
+    W$'\t'*) WARNINGS+=("${_line#*$'\t'}") ;;
+    N$'\t'*) NUDGES+=("${_line#*$'\t'}") ;;
+  esac
+done <<< "$SCAN"
 
 # --- emit gate-state warnings ------------------------------------------------
 if [ "${#WARNINGS[@]}" -gt 0 ]; then
@@ -243,147 +342,30 @@ if [ "${#WARNINGS[@]}" -gt 0 ]; then
   } >&2
 fi
 
-# --- 4. scope-bloat reassessment prompt -------------------------------------
-# Reads governance/signals.yml at runtime; the patterns are never hardcoded.
-# For each scope_bloat_phrase, greps the current issue's devlog.md.
-# The regex anchors the phrase at the start of the line (no leading whitespace
-# beyond the line start), so a phrase inside a block-quote (`> "..."`) or
-# backtick code context does not fire: a quoted or indented line begins with
-# whitespace or another special character (TRC-X3).
-#
-# Suppression rule: if manifest.yml contains a `reassessments:` entry whose
-# `date` field sorts lexicographically after the date prefix of the matching
-# devlog line, the prompt is suppressed - the reassessment was already filed
-# (TRC-C3).
-#
-# This block is NON-BLOCKING: it always exits 0.
-_nudge_scope_bloat() {
-  local task_dir="$1"
-  local slug
-  slug="$(basename "$task_dir")"
-  local devlog="$task_dir/devlog.md"
-  local task_yml="$task_dir/manifest.yml"
-
-  [ -f "$devlog" ] || return 0
-  [ -f "$task_yml" ] || return 0
-
-  # Locate governance/signals.yml - project-local first, then framework default.
-  local signals=""
-  if [ -f "$PROJECT_DIR/governance/signals.yml" ]; then
-    signals="$PROJECT_DIR/governance/signals.yml"
-  else
-    # Walk up from the hook's own directory to find the framework's shipped copy.
-    local hook_dir
-    hook_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local fw_root
-    fw_root="$(dirname "$hook_dir")"
-    if [ -f "$fw_root/governance/signals.yml" ]; then
-      signals="$fw_root/governance/signals.yml"
-    fi
-  fi
-  [ -n "$signals" ] || return 0
-
-  # Extract scope_bloat_phrases using Python (lightest dependency - already
-  # needed by the CLI for PyYAML).
-  local phrases
-  phrases="$(compass_python - "$signals" <<'PYEOF'
-import sys
-import compass_pkg
-import yaml
-sig = yaml.safe_load(open(sys.argv[1]))
-phrases = sig.get("scope_bloat_phrases") or []
-for p in phrases:
-    print(p)
-PYEOF
-)" || return 0
-
-  # Extract the latest reassessment date from manifest.yml (if any).
-  local latest_reframe_date
-  latest_reframe_date="$(compass_python - "$task_yml" <<'PYEOF'
-import sys
-import compass_pkg
-import yaml
-task = yaml.safe_load(open(sys.argv[1])) or {}
-entries = (task.get("reassessments") or task.get("reframes") or [])
-dates = [r.get("date","") for r in entries if r.get("date")]
-print(max(dates) if dates else "")
-PYEOF
-)" || latest_reframe_date=""
-
-  local nudges=()
-  while IFS= read -r phrase; do
-    [ -n "$phrase" ] || continue
-
-    # Anchor: phrase must appear as a top-level statement - either at column 0
-    # or immediately after an optional YYYY-MM-DD[: ] date prefix at column 0.
-    # A line starting with whitespace is excluded: that is indented or quoted
-    # context, and must not fire (TRC-X3).
-    #
-    # We use Python for the regex so that the pattern is applied uniformly
-    # with cli/compass_pkg/calibration.py, which anchors the same way.
-    local matched_line
-    matched_line="$(python3 - "$devlog" "$phrase" <<'PYEOF'
-import sys, re
-devlog, phrase = sys.argv[1], sys.argv[2]
-pat = re.compile(r'^(?:\d{4}-\d{2}-\d{2}[: ]+)?' + re.escape(phrase))
-with open(devlog) as fh:
-    for line in fh:
-        stripped = line.rstrip('\n')
-        if stripped and stripped[0].isspace():
-            continue  # leading whitespace = quoted/indented context
-        if pat.match(stripped):
-            print(stripped)
-            break
-PYEOF
-)" || true
-    [ -n "$matched_line" ] || continue
-
-    # Extract a date from the matched line (YYYY-MM-DD at line start, if present).
-    local line_date
-    line_date="$(echo "$matched_line" | grep -oE '^[0-9]{4}-[0-9]{2}-[0-9]{2}' || true)"
-
-    # Suppression: if there is a reassessment dated >= the line date, skip.
-    if [ -n "$latest_reframe_date" ] && [ -n "$line_date" ]; then
-      if [[ "$latest_reframe_date" > "$line_date" ]] || [[ "$latest_reframe_date" == "$line_date" ]]; then
-        continue
-      fi
-    elif [ -n "$latest_reframe_date" ] && [ -z "$line_date" ]; then
-      # Cannot compare - a reassessment exists and the line has no date; suppress.
-      continue
-    fi
-
-    nudges+=("[$slug] Scope-bloat signal detected in devlog: \"$matched_line\"")
-  done <<< "$phrases"
-
-  if [ "${#nudges[@]}" -gt 0 ]; then
-    {
-      echo ""
-      echo "================================================================"
-      echo " COMPASS - RE-ASSESSMENT REMINDER"
-      echo "================================================================"
-      echo "  The following scope-bloat signals were found in devlog.md"
-      echo "  but no re-assessment has been recorded after them:"
-      echo ""
-      for n in "${nudges[@]}"; do
-        echo "  ! $n"
-      done
-      echo ""
-      echo "  If the scope grew during Build, re-assess now:"
-      echo "    /compass:assess --reassess --reason \"<what changed and why>\""
-      echo ""
-      echo "  This preserves the calibration signal (compass retro)."
-      echo "  This reminder does not block - the session ends regardless."
-      echo "================================================================"
-      echo ""
-    } >&2
-  fi
-}
-
-for TASK_DIR in "$WORK_DIR"/*/; do
-  [ -d "$TASK_DIR" ] || continue
-  TASK_DIR="${TASK_DIR%/}"
-  _nudge_scope_bloat "$TASK_DIR"
-done
+# --- emit scope-bloat reminders ---------------------------------------------
+# NON-BLOCKING, like everything here.
+if [ "${#NUDGES[@]}" -gt 0 ]; then
+  {
+    echo ""
+    echo "================================================================"
+    echo " COMPASS - RE-ASSESSMENT REMINDER"
+    echo "================================================================"
+    echo "  The following scope-bloat signals were found in devlog.md"
+    echo "  but no re-assessment has been recorded after them:"
+    echo ""
+    for n in "${NUDGES[@]}"; do
+      echo "  ! $n"
+    done
+    echo ""
+    echo "  If the scope grew during Build, re-assess now:"
+    echo "    /compass:assess --reassess --reason \"<what changed and why>\""
+    echo ""
+    echo "  This preserves the calibration signal (compass retro)."
+    echo "  This reminder does not block - the session ends regardless."
+    echo "================================================================"
+    echo ""
+  } >&2
+fi
 
 # --- approval requests the person has not seen ------------------------------
 # The only output on stdout: Claude Code reads it as the hook's JSON.

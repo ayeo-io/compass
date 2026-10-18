@@ -4556,3 +4556,9 @@ The Stop hook skips closed issues and checks the rest in one Python process, so 
 The Stop hook still warns about every other issue when it cannot read one issue's folder.
 
 - `TRC-001` Given an unreadable issue folder beside an open issue with a failing-test marker When the Stop hook runs Then it still warns about the open issue
+
+### release-6-1-0 (completed 2026-10-18)
+
+Compass 6.1.0 is released.
+
+- `TRC-001` Given the release files When the version consistency test runs Then every file states 6.1.0

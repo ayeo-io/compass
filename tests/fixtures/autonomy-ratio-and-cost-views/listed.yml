@@ -60,7 +60,7 @@ lint-old-nokey.txt: |
 ci.txt: |
   exit 1
   --- stdout
-  compass ci - the full mechanical gate suite (compass 6.0.1, schema 3.0)
+  compass ci - the full mechanical gate suite (compass <version>, schema 3.0)
   [mode: enforced]
 
   [1] governance policy

@@ -90,7 +90,7 @@ from compass_pkg.render_after_entry import after_command as render_after_command
 # what `compass --version` and the release-consistency test read, and a
 # grep for the constant should find it at the CLI's entry point. The
 # assert fails if the two values differ.
-COMPASS_VERSION = "6.0.1"
+COMPASS_VERSION = "6.1.0"
 assert COMPASS_VERSION == _core.COMPASS_VERSION, (
     "cli/compass and compass_pkg/core.py disagree about the version")
 

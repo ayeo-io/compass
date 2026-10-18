@@ -46,9 +46,12 @@ FIXED_AT = dbi.FIXED_AT
 # --- the projects the base commit is compared on ---------------------------------
 
 def _masked(text, root):
-    """The output with the project's own folder and every commit hash replaced,
-    and the board page's Generated line, so two runs compare."""
+    """The output with the project's own folder, every commit hash and the CLI
+    version replaced, and the board page's Generated line, so two runs
+    compare. The version changes at every release, and
+    tests/test_version_consistency.py checks it."""
     text = dbi._masked(text, root)
+    text = re.sub(r"\bcompass \d+\.\d+\.\d+, schema", "compass <version>, schema", text)
     return re.sub(r"\b[0-9a-f]{8,40}\b", "<sha>", text)
 
 

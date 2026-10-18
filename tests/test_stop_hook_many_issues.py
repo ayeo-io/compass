@@ -15,10 +15,13 @@ time limit is a second check, set well above the hook's real run time.
 """
 from __future__ import annotations
 
+import os
 import pathlib
 import shutil
 import subprocess
 import time
+
+import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 HOOK = ROOT / "hooks" / "stop.sh"
@@ -130,3 +133,22 @@ def test_closed_issues_give_no_warning(tmp_path):
         assert "[%s] .red marker" % slug in out, (
             "the Stop hook did not warn about the open issue %s:\n%s"
             % (slug, out))
+
+
+@pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0,
+                    reason="root reads a folder whatever its mode")
+def test_an_unreadable_issue_does_not_hide_the_others(tmp_path):
+    # All issues share one process, so an error on one issue must not end
+    # the scan: the old hook, one process per issue, reported the rest.
+    project = _project(tmp_path, closed=0, open_=1)
+    unreadable = project / ".compass" / "work" / "a-unreadable"
+    unreadable.mkdir()
+    (unreadable / "notes.md").write_text("x\n", encoding="utf-8")
+    unreadable.chmod(0)
+    try:
+        result, _ = _run(project)
+    finally:
+        unreadable.chmod(0o755)
+    assert "[open-000] .red marker" in result.stderr, (
+        "an unreadable issue folder hid the open issue's warning:\n%s"
+        % result.stderr)

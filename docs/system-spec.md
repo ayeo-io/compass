@@ -4545,6 +4545,12 @@ Regression tests protect reports from approval when no verify-stage gate exists.
 
 - `TRC-001` Given every landed issue folder is in .compass/work When the living spec is derived again Then docs/system-spec.md matches the derivation And it names the scenarios of ste100-writing-rule
 
+### stop-hook-skips-closed-issues (completed 2026-10-18)
+
+The Stop hook skips closed issues and checks the rest in one Python process, so it no longer starts Python for each issue.
+
+- `TRC-001` Given a project with hundreds of closed issues and one open issue with a failing-test marker When the Stop hook runs Then it starts Python a fixed number of times, finishes within the time limit, and warns only about the open issue
+
 ### stop-hook-survives-unreadable-issue (completed 2026-10-18)
 
 The Stop hook still warns about every other issue when it cannot read one issue's folder.

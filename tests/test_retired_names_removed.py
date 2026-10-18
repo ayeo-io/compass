@@ -17,6 +17,7 @@ what-compass-owes-an-unobserved-adopter/acceptance-criteria.md
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
@@ -101,14 +102,28 @@ def test_the_hidden_cli_alias_no_longer_resolves():
     # running it is the defect this whole scenario exists to close.
     _assert_hidden_guard_rejects_a_verb_that_does_not_parse()
 
-    # The advertised set and the parsed set agree, apart from the internal
-    # underscore-prefixed verbs which are deliberately not public. This is
-    # the property the removed alias used to violate.
+    # The public verbs come from argparse's parser, not a terminal-formatted
+    # help message whose line wrapping changes with the caller's width.
+    import importlib.util
+    from importlib.machinery import SourceFileLoader
+
+    spec = importlib.util.spec_from_loader(
+        "compass_entry", SourceFileLoader("compass_entry", str(CLI)))
+    module = importlib.util.module_from_spec(spec)
+    old_argv = sys.argv
+    try:
+        sys.argv = [str(CLI)]
+        spec.loader.exec_module(module)
+    finally:
+        sys.argv = old_argv
+    parser = module.build_parser()
+    actions = [a for a in parser._actions
+               if isinstance(a, argparse._SubParsersAction)]
+    assert len(actions) == 1, "the top-level CLI parser must have one verb list"
+    verbs = actions[0].choices
     code, out = _run("--help")
     assert code == 0, out
-    advertised = re.search(r"\{([a-z0-9,_-]+)\}", out)
-    assert advertised, f"could not read the verb list from --help:\n{out[:400]}"
-    assert "design" not in advertised.group(1).split(","), (
+    assert "design" not in verbs, (
         "`design` is still advertised as a verb")
 
 

@@ -64,6 +64,7 @@ Compass now writes the status, ticks and counts in an issue's documents from the
 - **Cross-issue blocks are advisory.** The `related` block, the governance lines of `decisions` and the index row never fail `rendered-blocks-current`, because a checkout may not hold the other issues.
 - **A stale block drawn from the issue's own records fails at `verify`, `ship` and done.** Before that it is advisory. The fix is `compass issue render`.
 - **`ship-commit` renders the done state before it commits.** `compass quick-fix finish` writes the verification note.
+- **Three Definition of Done statements name the report sections.** `dod-every-scenario-passes`, `dod-suite-green` and `dod-coverage-floor` cited `§1` and `§2` of the verification report. They now name the "Scenario acceptance results" and "Test suite evidence" sections, so a new issue's `dod` block reads the section names. An issue with a stored generation keeps the wording it was checked against. `compass issue migrate` still reads a box written in the numbered wording.
 
 ### What `compass issue migrate` does
 

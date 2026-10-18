@@ -286,3 +286,21 @@ def test_rd_8_the_preset_headers_do_not_claim_the_adapter_wrote_the_files_once()
         header = path.read_text(encoding="utf-8").split("schema:")[0]
         assert "wrote these files once" not in header, path.name
         assert "source of the shipped defaults" in header, path.name
+
+
+# --- The Definition of Done names report sections (TRC-001, issue dod-statements-name-sections)
+
+def test_dsn_1_done_statements_name_report_sections():
+    """A Definition of Done statement names the verification report section it points at,
+    because the report's headings carry no number (ADR-064) and `§1` finds nothing. Scenario
+    `TRC-001`."""
+    headings = {line.lstrip("#").strip()
+                for line in DONE_TEMPLATE.read_text(encoding="utf-8").splitlines()
+                if line.startswith("## ")}
+    named = []
+    for check_id, statement in zip(DONE_IDS, statements(DONE_IDS)):
+        assert not re.search(r"§\s*\d", statement), (check_id, statement)
+        for section in re.findall(r'the "([^"]+)" section', statement):
+            assert section in headings, (check_id, section, sorted(headings))
+            named.append(section)
+    assert sorted(set(named)) == ["Scenario acceptance results", "Test suite evidence"], named

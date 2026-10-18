@@ -39,6 +39,19 @@ REPORT = "verification-report"
 NOTE = "verification-note"
 HEADING = doc_sections.list_heading("verify", "exit")
 PAIR = ("dod",)
+#: Earlier statements of a Definition of Done item, as a report written before 7.0.0 holds
+#: them. Those reports cite the report's sections by number; the shipped statements now name
+#: them (ADR-064). A box is matched by its words before its place, so without these a report
+#: with fewer boxes than the list would leave its items open.
+FORMER_STATEMENTS = {
+    "dod-every-scenario-passes": (
+        "Every scenario passes - §1 is all PASS; the spec, read as the acceptance suite, "
+        "is green.",),
+    "dod-suite-green": ("TDD suite green - §2 links the record of the full suite passing.",),
+    "dod-coverage-floor": (
+        "Coverage meets the \"Tested before it lands\" guardrail's floor (`G1`) - evidence "
+        "in §2.",),
+}
 
 _ITEM = re.compile(r"^\s*-\s+\[([ xX])\]\s*(.*)")
 _EVIDENCE_TAG = re.compile(r"\(evidence:\s*(EV-[^)]+)\)")
@@ -111,7 +124,9 @@ def _boxes(lines, start, end):
 def _map_boxes(boxes, listed):
     """`[check id or None]` for each box: the item whose statement the box reads, else the
     item at the box's place when the report has as many boxes as the list has items."""
-    by_statement = {doc_sections.normal(statement): check for check, statement in listed}
+    by_statement = {doc_sections.normal(old): check for check, _ in listed
+                    for old in FORMER_STATEMENTS.get(check, ())}
+    by_statement.update((doc_sections.normal(statement), check) for check, statement in listed)
     found, taken = [], set()
     for ticked, text in boxes:
         check = by_statement.get(doc_sections.normal(text))

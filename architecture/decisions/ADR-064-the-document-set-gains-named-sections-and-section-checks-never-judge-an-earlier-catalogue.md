@@ -78,3 +78,11 @@ Most of the archive predates generations. In the maintainer's checkout on 2026-1
 - ADR-055: the delivery-approach record, decision 9.
 - ADR-062: dependencies between issues, decision 7.
 - `docs/artifact-catalogue.md` and `docs/rendered-blocks.md` own the facts.
+
+## Amendment (2026-10-17): the Definition of Done statements name the report sections
+
+The Negative consequences above leave three Definition of Done statements citing `§1` and `§2` of the verification report (ayeo-io/compass-delivery-record#13). jed72 approved the following on 2026-10-17: "Approved".
+
+- **The statements name the sections.** `dod-every-scenario-passes`, `dod-suite-green` and `dod-coverage-floor` now name the "Scenario acceptance results" and "Test suite evidence" sections. The change edits three 6.0.0 values, so under `governance/decisions/2026-10-06-default-6-x-never-changes-a-6-0-value.md` it ships in 7.0.0, not in a 6.x release.
+- **A rendered `dod` block keeps its wording through its stored generation.** No new mechanism is added. Each of the 12 rendered `dod` blocks in the maintainer's checkout on 2026-10-17 belongs to an issue with a stored generation whose `resolved.yml` holds the numbered wording, and a render dry run with the new preset rewrites none of them. Rendered blocks are first released in 7.0.0, so no other project holds one. An issue with no generation gets its first `dod` block at `compass issue migrate`, after this change, so it renders the new wording from the start.
+- **Migration reads the numbered wording.** `compass issue migrate` matches a box to an item by its words, and by its place only when the report has as many boxes as the list. 48 of the 143 archived reports with a Definition of Done heading have a different number of boxes. `FORMER_STATEMENTS` in `cli/compass_pkg/migrate_blocks.py` holds the numbered wording of the three items, so such a report still maps each box. The table lives in the only module that reads page text. A `formerly:` key on each check in `checks.yml` was rejected: it would change the catalogue schema and every stored generation for a fact only migration reads.

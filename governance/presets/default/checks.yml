@@ -184,11 +184,11 @@ checks:
   dor-approach-still-fits: {statement: 'Delivery approach still fits - nothing found in refine makes `delivery-approach.md` wrong;
         if it does, re-assess (`/compass:assess --reassess`) before plan.', kind: human, severity: blocking,
       on_skipped: not-applicable, requires: [entry-exit-evaluation]}
-  dod-every-scenario-passes: {statement: 'Every scenario passes - §1 is all PASS; the spec, read as the acceptance suite, is green.',
+  dod-every-scenario-passes: {statement: 'Every scenario passes - every row of the "Scenario acceptance results" section is PASS; the spec, read as the acceptance suite, is green.',
       kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
-  dod-suite-green: {statement: TDD suite green - §2 links the record of the full suite passing., kind: human, severity: blocking,
+  dod-suite-green: {statement: 'TDD suite green - the "Test suite evidence" section links the record of the full suite passing.', kind: human, severity: blocking,
       on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
-  dod-coverage-floor: {statement: Coverage meets the "Tested before it lands" guardrail's floor (`G1`) - evidence in §2., kind: human,
+  dod-coverage-floor: {statement: 'Coverage meets the "Tested before it lands" guardrail''s floor (`G1`) - evidence in the "Test suite evidence" section.', kind: human,
       severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
   dod-no-lint-errors: {statement: 'No lint / format / type errors - clean, with the record linked.', kind: human, severity: blocking,
       on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}

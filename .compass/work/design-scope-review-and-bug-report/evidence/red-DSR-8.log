@@ -1,0 +1,31 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________________ test_dsr_8_missing_cited_record_does_not_count ________________
+
+tmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13046/test_dsr_8_missing_cited_recor0')
+
+    def test_dsr_8_missing_cited_record_does_not_count(tmp_path):
+        root = ready(tmp_path, design(cite=" Recorded in ADR-009."),
+                     {"ADR-001-other.md": "# ADR-001\n\nAnother issue.\n"})
+        done = ship(root)
+>       assert_refused(root, done, "architecture/decisions/ADR-002-keep-the-cache-in-one-module.md")
+
+tests/test_design_scope_review_and_bug_report.py:170: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13046/test_dsr_8_missing_cited_recor0/repo')
+done = CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...mit: committed. HEAD 30aa8075 -> 9b691858\n  issue marked done.\n  living spec re-derived and committed.\n', stderr='')
+path = 'architecture/decisions/ADR-002-keep-the-cache-in-one-module.md'
+
+    def assert_refused(root, done, path):
+>       assert done.returncode == 2, done
+E       AssertionError: CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...mit: committed. HEAD 30aa8075 -> 9b691858
+E           issue marked done.
+E           living spec re-derived and committed.
+E         ', stderr='')
+E       assert 0 == 2
+E        +  where 0 = CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...mit: committed. HEAD 30aa8075 -> 9b691858\n  issue marked done.\n  living spec re-derived and committed.\n', stderr='').returncode
+
+tests/test_design_scope_review_and_bug_report.py:59: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_8_missing_cited_record_does_not_count

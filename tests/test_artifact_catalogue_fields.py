@@ -1151,9 +1151,9 @@ def test_acf_26(tmp_path):
         assert "missing" not in text.lower() or "distribution-map" not in text.lower().split(
             "missing")[0][-60:], text
     assert "omitted" not in [ln for ln in page.splitlines() if "distribution-map" in ln][0]
-    # The five drafts that remain are counted (the record, intent, criteria, design and
-    # report); the map is not one of them.
-    assert "5 more still draft" in receipt, receipt
+    # The six drafts that remain are counted (the record, intent, criteria, requirements
+    # review, design and report); the map is not one of them.
+    assert "6 more still draft" in receipt, receipt
     # `compass next` does not name the map as outstanding work.
     code, out, err = _cli(root, "next", "--issue", SLUG)
     assert "distribution-map" not in out + err, out + err

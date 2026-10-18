@@ -1,0 +1,217 @@
+schema: 1
+generation: 2
+runs:
+  artifacts-approved:
+    verdict: nothing-to-check
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: artifacts-approved
+      version: 1.0.0
+    definition_digest: sha256:2bf3cd5c04e47b3e92b2a474318f848a3fbf5409d75e889270daf8124c350e74
+    inputs: {}
+    status: valid
+  assessment-keys:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl: null
+    definition_digest: null
+    inputs: {}
+    status: valid
+  backfills-paid:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: backfills-paid
+      version: 1.0.0
+    definition_digest: sha256:e4b6ddb7f7c4d0506712e2f6ad563da5355be0f90f76382d462567164289e3f5
+    inputs: {}
+    status: valid
+  borrowed-documents-answered:
+    verdict: nothing-to-check
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: borrowed-documents-answered
+      version: 1.0.0
+    definition_digest: sha256:316a9c050c38b06bb4ec7ccdc1180e222f18c6bef4491a4f23747945335637e1
+    inputs: {}
+    status: valid
+  changed-code-traces-to-scenario:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: changed-code-traces-to-scenario
+      version: 1.0.0
+    definition_digest: sha256:14c84d8301617e9b3e2a168c57732ec0d200c6272bf3f17e04b620342983d725
+    inputs: {}
+    status: valid
+  claim-traces-to-scenario:
+    verdict: nothing-to-check
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: claim-traces-to-scenario
+      version: 1.0.0
+    definition_digest: sha256:bca18bce8bcf80914113c04a1c71abafba0286395450a20251fd8eb1147abe6e
+    inputs: {}
+    status: valid
+  command-passes:
+    verdict: nothing-to-check
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: command-passes
+      version: 1.0.0
+    definition_digest: sha256:cdbbaa2f8ce52d68ba34beca8d64e28dd624af88e168c908904375007b323720
+    inputs: {}
+    status: valid
+  consistency-check-passes:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: consistency-check-passes
+      version: 1.0.0
+    definition_digest: sha256:be9f1fdf5fa54cfe92fc38ece0fb3f573a362e532af8996849ef0e0eb9eff011
+    inputs: {}
+    status: valid
+  contracts-declared:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: contracts-declared
+      version: 1.0.0
+    definition_digest: sha256:9c57fc895aa33147afa8725a5bffd1e12ac97a1b6a4cc7ff4d1574c255d7497f
+    inputs: {}
+    status: valid
+  declared-tests-resolve:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: declared-tests-resolve
+      version: 1.0.0
+    definition_digest: sha256:904c208b4f0f9c93da98a9cab462cf05bb2be6a82ebfb0d739f2ef4b7206e0f4
+    inputs: {}
+    status: valid
+  design-within-word-ceiling:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: design-within-word-ceiling
+      version: 1.0.0
+    definition_digest: sha256:0088aba75d287894fec16d1ef54fb6ae9543ebacec14d21a6394dfd18f8c0656
+    inputs: {}
+    status: valid
+  dod-evidence-typed:
+    verdict: nothing-to-check
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: dod-evidence-typed
+      version: 2.0.0
+    definition_digest: sha256:a305cf1eca41e59e33fab0faa9a68b7afe8b5976766d0e0eb92034076480e026
+    inputs: {}
+    status: valid
+  evidence-identity-matches:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: evidence-identity-matches
+      version: 1.0.0
+    definition_digest: sha256:aa8f7e3aec46195fe5f60636d4f47d3989f68a444fcca2c16c7042218fc1bf24
+    inputs: {}
+    status: valid
+  evidence-matches-tree:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: evidence-matches-tree
+      version: 1.0.0
+    definition_digest: sha256:6a237366b8e053bbfe1c0b3fa847ebfab03e1c4be432e60f3cb8e2becdaef42c
+    inputs: {}
+    status: valid
+  gate-evidence-present:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: gate-evidence-present
+      version: 1.0.0
+    definition_digest: sha256:9db6e4e2af3027791be16953cf6e64649a0e0990088c8241d6868993a0e106dd
+    inputs: {}
+    status: valid
+  landed-by-resolves:
+    verdict: nothing-to-check
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: landed-by-resolves
+      version: 1.0.0
+    definition_digest: sha256:42f1711797d2abca0bf350ccd8c43cfe7497fc578a908a71d4c2acdff3310c61
+    inputs: {}
+    status: valid
+  multiagent-run-recorded:
+    verdict: nothing-to-check
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: multiagent-run-recorded
+      version: 1.0.0
+    definition_digest: sha256:7669633db62c12310e2f4d3bd55469a38f03da288fb52ab93d76abc0bf1a14e7
+    inputs: {}
+    status: valid
+  nfr-rows-resolved:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: nfr-rows-resolved
+      version: 1.0.0
+    definition_digest: sha256:f26c148e5a3ee7459b30471f9fcdb72c1e3fb5d205be80b4f4c54636d27acaab
+    inputs: {}
+    status: valid
+  no-trusted-rerun:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: no-trusted-rerun
+      version: 1.0.0
+    definition_digest: sha256:4318b805af3ae1ef78c299ddfd6a496bc359e9a431fc57284fb0192b05022f51
+    inputs: {}
+    status: valid
+  rendered-blocks-current:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: rendered-blocks-current
+      version: 1.0.0
+    definition_digest: sha256:c080d9e352c8e12fa07fcfaac3de894eac3082a9382e0f058a6eae10a7a50556
+    inputs: {}
+    status: valid
+  scenario-has-id-and-intent:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: scenario-has-id-and-intent
+      version: 1.0.0
+    definition_digest: sha256:5b32c0c1c2755ee9d4879794a69ce9e21f053c156be2263f09282945919ae7f8
+    inputs: {}
+    status: valid
+  scenarios-are-executable:
+    verdict: nothing-to-check
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: scenarios-are-executable
+      version: 1.0.0
+    definition_digest: sha256:6a94eb6289a058f09aaa6c7e5c1d860b115f9af85ffe49b61387dc81f548ea3b
+    inputs: {}
+    status: valid
+  scenarios-have-tests:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: scenarios-have-tests
+      version: 1.0.0
+    definition_digest: sha256:b8f4d06d310a641c8127b3839cbe67f380606da2c839bce0bbf3fbb0171f5345
+    inputs: {}
+    status: valid
+  suite-passed:
+    verdict: pass
+    at: '2026-10-18T06:56:56Z'
+    impl:
+      id: suite-passed
+      version: 1.0.0
+    definition_digest: sha256:4d69520207c04a78df4c94659167472b91b3ba5ef7116e941f8f26882e50eb02
+    inputs: {}
+    status: valid

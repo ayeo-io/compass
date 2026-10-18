@@ -1,0 +1,9 @@
+{
+  "id": "EV-ANALYZE-ADVISORY-design-scope-review-and-bug-report-20261018T032002Z",
+  "type": "command-output",
+  "task": "design-scope-review-and-bug-report",
+  "timestamp": "2026-10-18T03:20:02+00:00",
+  "mode": "advisory",
+  "finding_count": 0,
+  "findings": []
+}

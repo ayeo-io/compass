@@ -1,0 +1,31 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+______________ test_dsr_9_no_decisions_folder_names_first_record _______________
+
+tmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13047/test_dsr_9_no_decisions_folder0')
+
+    def test_dsr_9_no_decisions_folder_names_first_record(tmp_path):
+        root = ready(tmp_path, design())
+        assert not (root / "architecture").exists()
+        done = ship(root)
+>       assert_refused(root, done, "architecture/decisions/ADR-001-keep-the-cache-in-one-module.md")
+
+tests/test_design_scope_review_and_bug_report.py:179: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13047/test_dsr_9_no_decisions_folder0/repo')
+done = CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...mit: committed. HEAD c3bf5a2a -> 236c0252\n  issue marked done.\n  living spec re-derived and committed.\n', stderr='')
+path = 'architecture/decisions/ADR-001-keep-the-cache-in-one-module.md'
+
+    def assert_refused(root, done, path):
+>       assert done.returncode == 2, done
+E       AssertionError: CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...mit: committed. HEAD c3bf5a2a -> 236c0252
+E           issue marked done.
+E           living spec re-derived and committed.
+E         ', stderr='')
+E       assert 0 == 2
+E        +  where 0 = CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...mit: committed. HEAD c3bf5a2a -> 236c0252\n  issue marked done.\n  living spec re-derived and committed.\n', stderr='').returncode
+
+tests/test_design_scope_review_and_bug_report.py:59: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_9_no_decisions_folder_names_first_record

@@ -1,0 +1,25 @@
+{
+  "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_7_hotfix_owes_thorough_bug_report --cov-fail-under=0",
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "tests/test_design_scope_review_and_bug_report.py::test_dsr_7_hotfix_owes_thorough_bug_report",
+    "--cov-fail-under=0"
+  ],
+  "scenario": "DSR-7",
+  "exit_code": 1,
+  "passed": false,
+  "timestamp": "2026-10-18T01:05:22+00:00",
+  "log_excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n__________________ test_dsr_7_hotfix_owes_thorough_bug_report __________________\n\ntmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13045/test_dsr_7_hotfix_owes_thoroug0')\n\n    def test_dsr_7_hotfix_owes_thorough_bug_report(tmp_path):\n        root = irl.repo(tmp_path)\n        irl.assess(root, \"hotfix\")\n>       assert [e.get(\"depth\") for e in irl._entries(root, \"bug-report\")] == [\"thorough\"]\nE       AssertionError: assert [] == ['thorough']\nE         \nE         Right contains one more item: 'thorough'\nE         Use -v to get more diff\n\ntests/test_design_scope_review_and_bug_report.py:158: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_7_hotfix_owes_thorough_bug_report",
+  "_full_log": "F                                                                        [100%]\n=================================== FAILURES ===================================\n__________________ test_dsr_7_hotfix_owes_thorough_bug_report __________________\n\ntmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13045/test_dsr_7_hotfix_owes_thoroug0')\n\n    def test_dsr_7_hotfix_owes_thorough_bug_report(tmp_path):\n        root = irl.repo(tmp_path)\n        irl.assess(root, \"hotfix\")\n>       assert [e.get(\"depth\") for e in irl._entries(root, \"bug-report\")] == [\"thorough\"]\nE       AssertionError: assert [] == ['thorough']\nE         \nE         Right contains one more item: 'thorough'\nE         Use -v to get more diff\n\ntests/test_design_scope_review_and_bug_report.py:158: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_7_hotfix_owes_thorough_bug_report\n",
+  "red_kind": "failure",
+  "tree_id": "342dead848e7c045e15998cd0b05d2859d2ceba2",
+  "changes_id": "c491b901efdeb8495737f328e11eaab4270f12d0",
+  "changes_scope": "changed-files-and-declared-tests",
+  "record_id": "1a34681c3af8489a",
+  "content_digest": "sha256:220fe1de9395671b888cc739073c48eb638e120a6847ff9ca6e55df8a3d253b3"
+}

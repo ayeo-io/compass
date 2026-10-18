@@ -1,0 +1,25 @@
+{
+  "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_8_missing_cited_record_does_not_count --cov-fail-under=0",
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "tests/test_design_scope_review_and_bug_report.py::test_dsr_8_missing_cited_record_does_not_count",
+    "--cov-fail-under=0"
+  ],
+  "scenario": "DSR-8",
+  "exit_code": 0,
+  "passed": true,
+  "attempts": 1,
+  "timestamp": "2026-10-18T02:49:15+00:00",
+  "log_excerpt": ".                                                                        [100%]",
+  "_full_log": ".                                                                        [100%]\n",
+  "tree_id": "60210cc78d052ff2fd4f5ac6541c92b53b50fcc3",
+  "changes_id": "c491b901efdeb8495737f328e11eaab4270f12d0",
+  "changes_scope": "changed-files-and-declared-tests",
+  "record_id": "672249f3d5e348f8",
+  "content_digest": "sha256:6a34de9c591ec8f90c82959fb023d80cf0880b2a4054ad3ec68601aee34a8e86"
+}

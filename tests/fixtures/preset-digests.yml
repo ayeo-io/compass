@@ -4,8 +4,8 @@
 # file changes without its digest moving. Pin again with: python3 scripts/generate-legacy-views.py --pin
 default@6.0.0:
   files:
-    approaches.yml: sha256:9c76a01450517f511cd1f6ee624ef3d34fc5114734f6509c1cca375a3c9d1cff
-    artifacts.yml: sha256:a434417c8f0551b4c837ab4af2c42d64ea646eed715b98181b5633f00a800b69
+    approaches.yml: sha256:603f45e38f0b0a594e7e16fd68a4874ec851ce27faec97f057f626952798379d
+    artifacts.yml: sha256:800ccef67074c9bfb5506884f1bd90be414fa8e22762e61aa9547314c24f0187
     checks.yml: sha256:019d1ba820f470d600cde21df6165f32a2c1a892bfad646d9cfdd52293cc60b2
     dimensions.yml: sha256:401eb199005f3f59a0de898a6e804301df7056727336581bfa0e5a396ef1467c
     evidence-types.yml: sha256:d56f9caa383f0481f3c62ee693c8f0d73cd0a162d3da73201574f9a4b2419207
@@ -15,4 +15,4 @@ default@6.0.0:
     rules.yml: sha256:b2e9f953d13fc05c6b0189e0af62cfecb77ed4d2f7235e3dd97561f516c49d76
     stages.yml: sha256:ae48f1af2f41356057eef5661512b664feac27c284dc065d069571446f4345e0
     vocabulary.yml: sha256:2aaa873481f45ca0f64091c0a623cd7b37942501b179730f0775eb593c7ccc24
-  preset: sha256:566524f78a41cacc3ecf878d736d755bd52377bc6ac130439f1e3b13a8ac8fa8
+  preset: sha256:93554a6ea924ad411a13439e7d378c2e70946141c499b5d876e3b0fc7c55cce9

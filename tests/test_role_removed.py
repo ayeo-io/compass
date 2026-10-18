@@ -165,6 +165,10 @@ REFERENCE = {
 }
 
 
+#: The documents each approach gained after the fixture below was recorded.
+ADDED_AFTER_ROLE_REMOVAL = {"regular": ("requirements-review",), "hotfix": ("bug-report",)}
+
+
 def _six_policy():
     """The routing policy view as it stood before role was removed: the last
     6.x shape, with the role dimension and the role rules."""
@@ -178,7 +182,11 @@ def test_trc_a4_an_assessment_without_a_role_routes_as_an_engineers_did():
         new = evaluate_route(dict(case), now)
         assert new["delivery_approach"] == old["delivery_approach"] == approach
         assert new["stages"] == old["stages"], approach
-        assert new["artifacts"] == old["artifacts"], approach
+        # Documents a later 7.0.0 change added to the approach (ADR-071) are not part of
+        # the role removal, so they are left out of the comparison.
+        added = ADDED_AFTER_ROLE_REMOVAL.get(approach, ())
+        assert [a for a in new["artifacts"] if a["kind"] not in added] == old["artifacts"], \
+            approach
         expected = [g for g in old["gates"]
                     if not (approach == "full" and g == "verify.claims")]
         assert new["gates"] == expected, approach

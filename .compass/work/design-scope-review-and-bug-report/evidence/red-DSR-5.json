@@ -1,0 +1,25 @@
+{
+  "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_5_regular_owes_lightweight_requirements_review --cov-fail-under=0",
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "tests/test_design_scope_review_and_bug_report.py::test_dsr_5_regular_owes_lightweight_requirements_review",
+    "--cov-fail-under=0"
+  ],
+  "scenario": "DSR-5",
+  "exit_code": 1,
+  "passed": false,
+  "timestamp": "2026-10-18T01:05:17+00:00",
+  "log_excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n___________ test_dsr_5_regular_owes_lightweight_requirements_review ____________\n\ntmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13043/test_dsr_5_regular_owes_lightw0')\n\n    def test_dsr_5_regular_owes_lightweight_requirements_review(tmp_path):\n        root = irl.project(tmp_path / \"regular\")\n        entries = irl._entries(root, \"requirements-review\")\n>       assert [e.get(\"depth\") for e in entries] == [\"lightweight\"], entries\nE       AssertionError: []\nE       assert [] == ['lightweight']\nE         \nE         Right contains one more item: 'lightweight'\nE         Use -v to get more diff\n\ntests/test_design_scope_review_and_bug_report.py:133: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_5_regular_owes_lightweight_requirements_review",
+  "_full_log": "F                                                                        [100%]\n=================================== FAILURES ===================================\n___________ test_dsr_5_regular_owes_lightweight_requirements_review ____________\n\ntmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13043/test_dsr_5_regular_owes_lightw0')\n\n    def test_dsr_5_regular_owes_lightweight_requirements_review(tmp_path):\n        root = irl.project(tmp_path / \"regular\")\n        entries = irl._entries(root, \"requirements-review\")\n>       assert [e.get(\"depth\") for e in entries] == [\"lightweight\"], entries\nE       AssertionError: []\nE       assert [] == ['lightweight']\nE         \nE         Right contains one more item: 'lightweight'\nE         Use -v to get more diff\n\ntests/test_design_scope_review_and_bug_report.py:133: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_5_regular_owes_lightweight_requirements_review\n",
+  "red_kind": "failure",
+  "tree_id": "342dead848e7c045e15998cd0b05d2859d2ceba2",
+  "changes_id": "c491b901efdeb8495737f328e11eaab4270f12d0",
+  "changes_scope": "changed-files-and-declared-tests",
+  "record_id": "6885c6a33ac14cc7",
+  "content_digest": "sha256:7f1b850f73303d96df7efd6371fcf0d5f76c80d8c970ceb04a19995058271734"
+}

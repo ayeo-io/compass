@@ -398,6 +398,11 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "artifacts",
+      "id": "bug-report",
+      "operation": "add"
+    },
+    {
+      "catalogue": "artifacts",
       "id": "spike-conclusion",
       "operation": "add"
     },

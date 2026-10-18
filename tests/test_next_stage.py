@@ -145,11 +145,13 @@ CASES = {
     "feature, criteria superseded": (dict(route="feature", scenarios=False,
                                           criteria="superseded"), "Define"),
     # NS-B
-    # A feature earns no requirements review; refine's record there is the
-    # review file, written and left unregistered.
+    # From 7.0.0 a feature earns a lightweight requirements review (ADR-071), so, as
+    # on an initiative, only a registered one clears refine.
     "feature, criteria draft": (dict(route="feature", criteria="draft"), "Refine"),
-    "feature, review written": (dict(route="feature", criteria="draft",
-                                     review_file=True), "Plan"),
+    "feature, review file unregistered": (dict(route="feature", criteria="draft",
+                                               review_file=True), "Refine"),
+    "feature, requirements review draft": (dict(route="feature", criteria="draft",
+                                                review=True), "Plan"),
     "initiative, criteria draft": (dict(route="initiative", criteria="draft"), "Refine"),
     "initiative, criteria without scenarios": (dict(route="initiative", scenarios=False,
                                                     criteria="draft"), "Refine"),

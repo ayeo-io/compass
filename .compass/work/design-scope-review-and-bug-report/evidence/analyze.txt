@@ -1,0 +1,3 @@
+compass analyze - issue 'design-scope-review-and-bug-report' (advisory): PASS - no coherence findin…
+The verify.analyze gate is NOT in this approach's gate set, so these findings do not block shipping.
+Evidence: evidence/EV-ANALYZE-ADVISORY-design-scope-review-and-bug-report-20261018T032002Z.json

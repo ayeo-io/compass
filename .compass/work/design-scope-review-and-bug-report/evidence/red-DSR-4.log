@@ -1,0 +1,30 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____________________ test_dsr_4_templates_ask_for_the_scope ____________________
+
+tmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13042/test_dsr_4_templates_ask_for_t0')
+
+    def test_dsr_4_templates_ask_for_the_scope(tmp_path):
+        from compass_pkg.issue_page import design_decisions
+        text = _shown(tmp_path, "technical-design")
+        section = irl._section(text, "Design decisions (ADR-style)")
+        blocks = section.split("### ")[1:]
+        assert len(blocks) == 2, section
+        for block in blocks:
+            scope = [line for line in block.splitlines() if line.startswith("- **Scope:**")]
+>           assert len(scope) == 1 and "issue" in scope[0] and "project" in scope[0], block
+E           AssertionError: `DD-1` - {{DECISION TITLE}}
+E             
+E             - **Context:** {{what forced a choice}}
+E             - **Decision:** {{what was chosen}}
+E             - **Alternatives considered:** {{what else, and why not}}
+E             - **Consequences:** {{what this commits us to; what it rules out}}
+E             - **Governance tie:** {{which guardrail or engineering strategy this honours - or "n/a"}}
+E             
+E             
+E           assert (0 == 1)
+E            +  where 0 = len([])
+
+tests/test_design_scope_review_and_bug_report.py:120: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_4_templates_ask_for_the_scope

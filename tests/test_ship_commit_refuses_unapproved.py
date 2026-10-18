@@ -23,8 +23,8 @@ from artifact_status_support import (DOCS, HUMAN_DESIGN, SLUG, add_entry,  # noq
 import test_quick_fix_verbs as qf  # noqa: E402
 
 BY_SET = "compass issue artifact set"
-REGULAR = ("intent", "acceptance-criteria", "technical-design", "distribution-map",
-           "verification-report")
+REGULAR = ("intent", "acceptance-criteria", "requirements-review", "technical-design",
+           "distribution-map", "verification-report")
 
 #: The release line a regular issue on the shipped default owes before it lands (ADR-065).
 RELEASE_NOTE = "Documents are approved before the issue lands."
@@ -150,7 +150,8 @@ def test_asw_17_ship_commit_refuses_awaiting_approval(tmp_path):
 
 def test_asw_18_omitted_with_reason_passes_ship_commit(tmp_path):
     root = project(tmp_path)
-    for kind in ("intent", "acceptance-criteria", "technical-design", "verification-report"):
+    for kind in ("intent", "acceptance-criteria", "requirements-review", "technical-design",
+                 "verification-report"):
         assert register(root, kind, "approved")[0] == 0
     code, out, err = run(root, "issue", "artifact", "set", "distribution-map", "--status",
                          "omitted", "--reason", "single subtask, no parallel work",
@@ -244,6 +245,7 @@ def _stage_run(root, swap, report_after_gates=False):
     git(root, "commit", "-q", "-m", "brief")
     assert register(root, "intent")[0] == 0                        # assess
     assert register(root, "acceptance-criteria")[0] == 0           # define
+    assert register(root, "requirements-review")[0] == 0           # refine
     assert register(root, "technical-design")[0] == 0              # plan
     assert register(root, "distribution-map")[0] == 0              # breakdown
 

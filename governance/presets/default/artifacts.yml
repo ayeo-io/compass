@@ -181,6 +181,10 @@ artifacts:
       design starts.
     stands_for: requirements-review
     sections:
+      lightweight:
+      - Self-QA of the spec
+      - Ambiguity ledger
+      - Gate
       thorough:
       - Self-QA of the spec
       - Governance QA of the spec

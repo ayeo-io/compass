@@ -1,0 +1,25 @@
+{
+  "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_9_no_decisions_folder_names_first_record --cov-fail-under=0",
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "tests/test_design_scope_review_and_bug_report.py::test_dsr_9_no_decisions_folder_names_first_record",
+    "--cov-fail-under=0"
+  ],
+  "scenario": "DSR-9",
+  "exit_code": 1,
+  "passed": false,
+  "timestamp": "2026-10-18T01:05:37+00:00",
+  "log_excerpt": "    def test_dsr_9_no_decisions_folder_names_first_record(tmp_path):\n        root = ready(tmp_path, design())\n        assert not (root / \"architecture\").exists()\n        done = ship(root)\n>       assert_refused(root, done, \"architecture/decisions/ADR-001-keep-the-cache-in-one-module.md\")\n\ntests/test_design_scope_review_and_bug_report.py:179: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nroot = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13047/test_dsr_9_no_decisions_folder0/repo')\ndone = CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...mit: committed. HEAD c3bf5a2a -> 236c0252\\n  issue marked done.\\n  living spec re-derived and committed.\\n', stderr='')\npath = 'architecture/decisions/ADR-001-keep-the-cache-in-one-module.md'\n\n    def assert_refused(root, done, path):\n>       assert done.returncode == 2, done\nE       AssertionError: CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...mit: committed. HEAD c3bf5a2a -> 236c0252\nE           issue marked done.\nE           living spec re-derived and committed.\nE         ', stderr='')\nE       assert 0 == 2\nE        +  where 0 = CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...mit: committed. HEAD c3bf5a2a -> 236c0252\\n  issue marked done.\\n  living spec re-derived and committed.\\n', stderr='').returncode\n\ntests/test_design_scope_review_and_bug_report.py:59: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_9_no_decisions_folder_names_first_record",
+  "_full_log": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________ test_dsr_9_no_decisions_folder_names_first_record _______________\n\ntmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13047/test_dsr_9_no_decisions_folder0')\n\n    def test_dsr_9_no_decisions_folder_names_first_record(tmp_path):\n        root = ready(tmp_path, design())\n        assert not (root / \"architecture\").exists()\n        done = ship(root)\n>       assert_refused(root, done, \"architecture/decisions/ADR-001-keep-the-cache-in-one-module.md\")\n\ntests/test_design_scope_review_and_bug_report.py:179: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nroot = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13047/test_dsr_9_no_decisions_folder0/repo')\ndone = CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...mit: committed. HEAD c3bf5a2a -> 236c0252\\n  issue marked done.\\n  living spec re-derived and committed.\\n', stderr='')\npath = 'architecture/decisions/ADR-001-keep-the-cache-in-one-module.md'\n\n    def assert_refused(root, done, path):\n>       assert done.returncode == 2, done\nE       AssertionError: CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...mit: committed. HEAD c3bf5a2a -> 236c0252\nE           issue marked done.\nE           living spec re-derived and committed.\nE         ', stderr='')\nE       assert 0 == 2\nE        +  where 0 = CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...mit: committed. HEAD c3bf5a2a -> 236c0252\\n  issue marked done.\\n  living spec re-derived and committed.\\n', stderr='').returncode\n\ntests/test_design_scope_review_and_bug_report.py:59: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_9_no_decisions_folder_names_first_record\n",
+  "red_kind": "failure",
+  "tree_id": "342dead848e7c045e15998cd0b05d2859d2ceba2",
+  "changes_id": "c491b901efdeb8495737f328e11eaab4270f12d0",
+  "changes_scope": "changed-files-and-declared-tests",
+  "record_id": "bfd8a8f0c50e4cf3",
+  "content_digest": "sha256:12186e17c85802a4bf142c443a912987c8e3c20e9873031a2ba0db70ef975a9f"
+}

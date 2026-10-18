@@ -1,0 +1,25 @@
+{
+  "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_6_lightweight_review_sections --cov-fail-under=0",
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "tests/test_design_scope_review_and_bug_report.py::test_dsr_6_lightweight_review_sections",
+    "--cov-fail-under=0"
+  ],
+  "scenario": "DSR-6",
+  "exit_code": 1,
+  "passed": false,
+  "timestamp": "2026-10-18T01:05:19+00:00",
+  "log_excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n____________________ test_dsr_6_lightweight_review_sections ____________________\n\ntmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13044/test_dsr_6_lightweight_review_0')\n\n    def test_dsr_6_lightweight_review_sections(tmp_path):\n        done = irl.run(tmp_path, \"issue\", \"template\", \"show\", \"requirements-review\",\n                       \"--depth\", \"lightweight\", cwd=tmp_path)\n>       assert done.returncode == 0, done\nE       AssertionError: CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...', stderr=\"compass: compass issue template show: no depth 'lightweight' for this kind. Its sections hold: thorough.\nE         \")\nE       assert 2 == 0\nE        +  where 2 = CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...', stderr=\"compass: compass issue template show: no depth 'lightweight' for this kind. Its sections hold: thorough.\\n\").returncode\n\ntests/test_design_scope_review_and_bug_report.py:147: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_6_lightweight_review_sections",
+  "_full_log": "F                                                                        [100%]\n=================================== FAILURES ===================================\n____________________ test_dsr_6_lightweight_review_sections ____________________\n\ntmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13044/test_dsr_6_lightweight_review_0')\n\n    def test_dsr_6_lightweight_review_sections(tmp_path):\n        done = irl.run(tmp_path, \"issue\", \"template\", \"show\", \"requirements-review\",\n                       \"--depth\", \"lightweight\", cwd=tmp_path)\n>       assert done.returncode == 0, done\nE       AssertionError: CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...', stderr=\"compass: compass issue template show: no depth 'lightweight' for this kind. Its sections hold: thorough.\nE         \")\nE       assert 2 == 0\nE        +  where 2 = CompletedProcess(args=['/Users/jed/.pyenv/versions/3.11.9/bin/python3', '/Users/jed/dev/compass-design-scope/cli/compa...', stderr=\"compass: compass issue template show: no depth 'lightweight' for this kind. Its sections hold: thorough.\\n\").returncode\n\ntests/test_design_scope_review_and_bug_report.py:147: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_6_lightweight_review_sections\n",
+  "red_kind": "failure",
+  "tree_id": "342dead848e7c045e15998cd0b05d2859d2ceba2",
+  "changes_id": "c491b901efdeb8495737f328e11eaab4270f12d0",
+  "changes_scope": "changed-files-and-declared-tests",
+  "record_id": "5fd900d5931f4dbc",
+  "content_digest": "sha256:6f0128a5fdfd1e9c0a84cce19ebfd29af81fed9a984fff2a251d40a092e8ca27"
+}

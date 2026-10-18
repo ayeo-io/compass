@@ -1,0 +1,18 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__________________ test_dsr_7_hotfix_owes_thorough_bug_report __________________
+
+tmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13045/test_dsr_7_hotfix_owes_thoroug0')
+
+    def test_dsr_7_hotfix_owes_thorough_bug_report(tmp_path):
+        root = irl.repo(tmp_path)
+        irl.assess(root, "hotfix")
+>       assert [e.get("depth") for e in irl._entries(root, "bug-report")] == ["thorough"]
+E       AssertionError: assert [] == ['thorough']
+E         
+E         Right contains one more item: 'thorough'
+E         Use -v to get more diff
+
+tests/test_design_scope_review_and_bug_report.py:158: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_7_hotfix_owes_thorough_bug_report

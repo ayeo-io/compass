@@ -1,0 +1,47 @@
+{
+  "DSR-1": {
+    "tree_hash": "60210cc78d052ff2fd4f5ac6541c92b53b50fcc3+0f405d5d84efa8cceed1cd9fd501ce3711ce783e76770728b4cbff43e962c735+c491b901efdeb8495737f328e11eaab4270f12d0",
+    "attempts": 1,
+    "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_1_project_decision_without_record_refused --cov-fail-under=0"
+  },
+  "DSR-3": {
+    "tree_hash": "60210cc78d052ff2fd4f5ac6541c92b53b50fcc3+0f405d5d84efa8cceed1cd9fd501ce3711ce783e76770728b4cbff43e962c735+c491b901efdeb8495737f328e11eaab4270f12d0",
+    "attempts": 1,
+    "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_3_issue_and_unscoped_decisions_not_refused --cov-fail-under=0"
+  },
+  "DSR-4": {
+    "tree_hash": "60210cc78d052ff2fd4f5ac6541c92b53b50fcc3+0f405d5d84efa8cceed1cd9fd501ce3711ce783e76770728b4cbff43e962c735+c491b901efdeb8495737f328e11eaab4270f12d0",
+    "attempts": 1,
+    "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_4_templates_ask_for_the_scope --cov-fail-under=0"
+  },
+  "DSR-5": {
+    "tree_hash": "60210cc78d052ff2fd4f5ac6541c92b53b50fcc3+0f405d5d84efa8cceed1cd9fd501ce3711ce783e76770728b4cbff43e962c735+c491b901efdeb8495737f328e11eaab4270f12d0",
+    "attempts": 1,
+    "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_5_regular_owes_lightweight_requirements_review --cov-fail-under=0"
+  },
+  "DSR-6": {
+    "tree_hash": "60210cc78d052ff2fd4f5ac6541c92b53b50fcc3+0f405d5d84efa8cceed1cd9fd501ce3711ce783e76770728b4cbff43e962c735+c491b901efdeb8495737f328e11eaab4270f12d0",
+    "attempts": 1,
+    "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_6_lightweight_review_sections --cov-fail-under=0"
+  },
+  "DSR-7": {
+    "tree_hash": "60210cc78d052ff2fd4f5ac6541c92b53b50fcc3+0f405d5d84efa8cceed1cd9fd501ce3711ce783e76770728b4cbff43e962c735+c491b901efdeb8495737f328e11eaab4270f12d0",
+    "attempts": 1,
+    "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_7_hotfix_owes_thorough_bug_report --cov-fail-under=0"
+  },
+  "DSR-8": {
+    "tree_hash": "60210cc78d052ff2fd4f5ac6541c92b53b50fcc3+0f405d5d84efa8cceed1cd9fd501ce3711ce783e76770728b4cbff43e962c735+c491b901efdeb8495737f328e11eaab4270f12d0",
+    "attempts": 1,
+    "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_8_missing_cited_record_does_not_count --cov-fail-under=0"
+  },
+  "DSR-9": {
+    "tree_hash": "60210cc78d052ff2fd4f5ac6541c92b53b50fcc3+0f405d5d84efa8cceed1cd9fd501ce3711ce783e76770728b4cbff43e962c735+c491b901efdeb8495737f328e11eaab4270f12d0",
+    "attempts": 1,
+    "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_9_no_decisions_folder_names_first_record --cov-fail-under=0"
+  },
+  "": {
+    "tree_hash": "60210cc78d052ff2fd4f5ac6541c92b53b50fcc3+0f405d5d84efa8cceed1cd9fd501ce3711ce783e76770728b4cbff43e962c735+a13f8563eaa6aeb383549763286ba3dafc060f38",
+    "attempts": 1,
+    "command": "env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q -p no:cacheprovider -p xdist -n 6 --junitxml=/private/tmp/claude-501/-Users-jed-dev-compass/a6edaffc-8816-4c93-b182-426fc54de423/scratchpad/dsr-full.xml -k not test_vr_h7 and not test_child_environment_drops_claude_variables_and_plugin_bin_paths and not test_si_d and not TestNextLatency --deselect=tests/test_hook_guards_only_its_project.py::test_ff_7_a_variable_set_again_or_only_sometimes_is_not_expanded[read-before-a-long-heredoc]"
+  }
+}

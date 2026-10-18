@@ -1,0 +1,25 @@
+{
+  "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_4_templates_ask_for_the_scope --cov-fail-under=0",
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "tests/test_design_scope_review_and_bug_report.py::test_dsr_4_templates_ask_for_the_scope",
+    "--cov-fail-under=0"
+  ],
+  "scenario": "DSR-4",
+  "exit_code": 1,
+  "passed": false,
+  "timestamp": "2026-10-18T01:05:15+00:00",
+  "log_excerpt": "\n    def test_dsr_4_templates_ask_for_the_scope(tmp_path):\n        from compass_pkg.issue_page import design_decisions\n        text = _shown(tmp_path, \"technical-design\")\n        section = irl._section(text, \"Design decisions (ADR-style)\")\n        blocks = section.split(\"### \")[1:]\n        assert len(blocks) == 2, section\n        for block in blocks:\n            scope = [line for line in block.splitlines() if line.startswith(\"- **Scope:**\")]\n>           assert len(scope) == 1 and \"issue\" in scope[0] and \"project\" in scope[0], block\nE           AssertionError: `DD-1` - {{DECISION TITLE}}\nE             \nE             - **Context:** {{what forced a choice}}\nE             - **Decision:** {{what was chosen}}\nE             - **Alternatives considered:** {{what else, and why not}}\nE             - **Consequences:** {{what this commits us to; what it rules out}}\nE             - **Governance tie:** {{which guardrail or engineering strategy this honours - or \"n/a\"}}\nE             \nE             \nE           assert (0 == 1)\nE            +  where 0 = len([])\n\ntests/test_design_scope_review_and_bug_report.py:120: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_4_templates_ask_for_the_scope",
+  "_full_log": "F                                                                        [100%]\n=================================== FAILURES ===================================\n____________________ test_dsr_4_templates_ask_for_the_scope ____________________\n\ntmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13042/test_dsr_4_templates_ask_for_t0')\n\n    def test_dsr_4_templates_ask_for_the_scope(tmp_path):\n        from compass_pkg.issue_page import design_decisions\n        text = _shown(tmp_path, \"technical-design\")\n        section = irl._section(text, \"Design decisions (ADR-style)\")\n        blocks = section.split(\"### \")[1:]\n        assert len(blocks) == 2, section\n        for block in blocks:\n            scope = [line for line in block.splitlines() if line.startswith(\"- **Scope:**\")]\n>           assert len(scope) == 1 and \"issue\" in scope[0] and \"project\" in scope[0], block\nE           AssertionError: `DD-1` - {{DECISION TITLE}}\nE             \nE             - **Context:** {{what forced a choice}}\nE             - **Decision:** {{what was chosen}}\nE             - **Alternatives considered:** {{what else, and why not}}\nE             - **Consequences:** {{what this commits us to; what it rules out}}\nE             - **Governance tie:** {{which guardrail or engineering strategy this honours - or \"n/a\"}}\nE             \nE             \nE           assert (0 == 1)\nE            +  where 0 = len([])\n\ntests/test_design_scope_review_and_bug_report.py:120: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_4_templates_ask_for_the_scope\n",
+  "red_kind": "failure",
+  "tree_id": "342dead848e7c045e15998cd0b05d2859d2ceba2",
+  "changes_id": "c491b901efdeb8495737f328e11eaab4270f12d0",
+  "changes_scope": "changed-files-and-declared-tests",
+  "record_id": "f5d956c8e15c404b",
+  "content_digest": "sha256:b7cf1401736072463f776d46c1fb80260d06b23df47d23a5f39b1dc695890310"
+}

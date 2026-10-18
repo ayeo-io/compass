@@ -1,0 +1,19 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+___________ test_dsr_5_regular_owes_lightweight_requirements_review ____________
+
+tmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13043/test_dsr_5_regular_owes_lightw0')
+
+    def test_dsr_5_regular_owes_lightweight_requirements_review(tmp_path):
+        root = irl.project(tmp_path / "regular")
+        entries = irl._entries(root, "requirements-review")
+>       assert [e.get("depth") for e in entries] == ["lightweight"], entries
+E       AssertionError: []
+E       assert [] == ['lightweight']
+E         
+E         Right contains one more item: 'lightweight'
+E         Use -v to get more diff
+
+tests/test_design_scope_review_and_bug_report.py:133: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_5_regular_owes_lightweight_requirements_review

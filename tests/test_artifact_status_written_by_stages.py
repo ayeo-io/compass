@@ -356,24 +356,41 @@ def test_asw_15_reassess_marks_unregistered_document_superseded(tmp_path):
     assert manifest(root)["delivery_approach"] == "full"
     add_entry(root, "requirements-review", status="approved", approved_by="jed72",
               approved_at="2026-10-10T12:00:00Z")
-    add_entry(root, "technical-design", status="approved", approved_by=BY_SET,
+    add_entry(root, "verification-report", status="approved", approved_by=BY_SET,
+              approved_at="2026-10-10T12:00:00Z")
+    # The regular approach owes every document the full approach owes, the requirements
+    # review included from 7.0.0 (ADR-071), so the re-assessment goes to the hotfix,
+    # which owes no requirements review.
+    edit(root, assessment={"risk": "trivial", "familiarity": "brownfield-mapped",
+                           "size": "atomic", "goal": "delivery", "urgency": "live-defect",
+                           "labels": []})
+    code, out, err = run(root, "approach", "evaluate", "--issue", SLUG, "--write",
+                         "--reason", "a live defect after all")
+    assert code == 0, out + err
+    assert manifest(root)["delivery_approach"] == "hotfix"
+    found = entries(root)
+    review = found["requirements-review"]
+    assert review["status"] == "superseded"
+    assert review["path"] == f"{DOCS}/requirements-review.md"
+    assert "re-assessment" in review["reason"] and "full to hotfix" in review["reason"]
+    assert "approved_by" not in review and "approved_at" not in review
+    assert found["verification-report"]["status"] == "approved"
+    assert found["verification-report"]["approved_by"] == BY_SET
+
+    # Re-assessed from full to regular, the review and the intent are regular's own: the
+    # regular approach owes both at lightweight (ADR-065, ADR-071), so neither is
+    # superseded, and the intent entry with no path stays a draft.
+    root = project(tmp_path / "regular", assessment={
+        "risk": "cross-cutting", "familiarity": "greenfield", "size": "large"})
+    add_entry(root, "requirements-review", status="approved", approved_by="jed72",
               approved_at="2026-10-10T12:00:00Z")
     add_entry(root, "intent", path=False)
     edit(root, assessment={"risk": "contained", "familiarity": "brownfield-mapped",
-                           "size": "medium", "goal": "delivery", "role": "engineer",
-                           "labels": []})
+                           "size": "medium", "goal": "delivery", "labels": []})
     code, out, err = run(root, "approach", "evaluate", "--issue", SLUG, "--write",
                          "--reason", "smaller than thought")
     assert code == 0, out + err
     assert manifest(root)["delivery_approach"] == "regular"
     found = entries(root)
-    review = found["requirements-review"]
-    assert review["status"] == "superseded"
-    assert review["path"] == f"{DOCS}/requirements-review.md"
-    assert "re-assessment" in review["reason"] and "full to regular" in review["reason"]
-    assert "approved_by" not in review and "approved_at" not in review
-    assert found["technical-design"]["status"] == "approved"
-    assert found["technical-design"]["approved_by"] == BY_SET
-    # The regular approach owes the intent too, at lightweight (ADR-065), so the entry
-    # with no path stays as regular's own and is not superseded.
-    assert found["intent"]["status"] == "draft" and not found["intent"].get("path"), found["intent"]
+    assert found["requirements-review"]["status"] != "superseded", found
+    assert found["intent"]["status"] == "draft" and not found["intent"].get("path"), found

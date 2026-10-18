@@ -1,0 +1,13 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_____________ test_dsr_3_issue_and_unscoped_decisions_not_refused ______________
+
+tmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13041/test_dsr_3_issue_and_unscoped_0')
+
+    def test_dsr_3_issue_and_unscoped_decisions_not_refused(tmp_path):
+>       from compass_pkg import decision_scope
+E       ImportError: cannot import name 'decision_scope' from 'compass_pkg' (/Users/jed/dev/compass-design-scope/cli/compass_pkg/__init__.py)
+
+tests/test_design_scope_review_and_bug_report.py:95: ImportError
+=========================== short test summary info ============================
+FAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_3_issue_and_unscoped_decisions_not_refused

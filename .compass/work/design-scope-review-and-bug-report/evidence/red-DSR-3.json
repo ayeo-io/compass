@@ -1,0 +1,25 @@
+{
+  "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_3_issue_and_unscoped_decisions_not_refused --cov-fail-under=0",
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "tests/test_design_scope_review_and_bug_report.py::test_dsr_3_issue_and_unscoped_decisions_not_refused",
+    "--cov-fail-under=0"
+  ],
+  "scenario": "DSR-3",
+  "exit_code": 1,
+  "passed": false,
+  "timestamp": "2026-10-18T01:05:13+00:00",
+  "log_excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_____________ test_dsr_3_issue_and_unscoped_decisions_not_refused ______________\n\ntmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13041/test_dsr_3_issue_and_unscoped_0')\n\n    def test_dsr_3_issue_and_unscoped_decisions_not_refused(tmp_path):\n>       from compass_pkg import decision_scope\nE       ImportError: cannot import name 'decision_scope' from 'compass_pkg' (/Users/jed/dev/compass-design-scope/cli/compass_pkg/__init__.py)\n\ntests/test_design_scope_review_and_bug_report.py:95: ImportError\n=========================== short test summary info ============================\nFAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_3_issue_and_unscoped_decisions_not_refused",
+  "_full_log": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_____________ test_dsr_3_issue_and_unscoped_decisions_not_refused ______________\n\ntmp_path = PosixPath('/private/var/folders/b1/5v5dtk5d13bbr6jmg6lhgctw0000gn/T/pytest-of-jed/pytest-13041/test_dsr_3_issue_and_unscoped_0')\n\n    def test_dsr_3_issue_and_unscoped_decisions_not_refused(tmp_path):\n>       from compass_pkg import decision_scope\nE       ImportError: cannot import name 'decision_scope' from 'compass_pkg' (/Users/jed/dev/compass-design-scope/cli/compass_pkg/__init__.py)\n\ntests/test_design_scope_review_and_bug_report.py:95: ImportError\n=========================== short test summary info ============================\nFAILED tests/test_design_scope_review_and_bug_report.py::test_dsr_3_issue_and_unscoped_decisions_not_refused\n",
+  "red_kind": "failure",
+  "tree_id": "342dead848e7c045e15998cd0b05d2859d2ceba2",
+  "changes_id": "c491b901efdeb8495737f328e11eaab4270f12d0",
+  "changes_scope": "changed-files-and-declared-tests",
+  "record_id": "1295cb37e11a46e3",
+  "content_digest": "sha256:21186b85be7d84176b7026a9dc10450e91c5dff70a2622f61329b00fb64a96c9"
+}

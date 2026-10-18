@@ -1,0 +1,3741 @@
+schema: 1
+fields:
+  dimensions.risk:
+    steps:
+    - layer: default
+      op: add
+  dimensions.risk.type:
+    steps:
+    - layer: default
+      op: add
+  dimensions.risk.values:
+    steps:
+    - layer: default
+      op: add
+  dimensions.risk.tighter:
+    steps:
+    - layer: default
+      op: add
+  dimensions.risk.required:
+    steps:
+    - layer: default
+      op: add
+  dimensions.familiarity:
+    steps:
+    - layer: default
+      op: add
+  dimensions.familiarity.type:
+    steps:
+    - layer: default
+      op: add
+  dimensions.familiarity.values:
+    steps:
+    - layer: default
+      op: add
+  dimensions.familiarity.required:
+    steps:
+    - layer: default
+      op: add
+  dimensions.size:
+    steps:
+    - layer: default
+      op: add
+  dimensions.size.type:
+    steps:
+    - layer: default
+      op: add
+  dimensions.size.values:
+    steps:
+    - layer: default
+      op: add
+  dimensions.size.tighter:
+    steps:
+    - layer: default
+      op: add
+  dimensions.size.required:
+    steps:
+    - layer: default
+      op: add
+  dimensions.goal:
+    steps:
+    - layer: default
+      op: add
+  dimensions.goal.type:
+    steps:
+    - layer: default
+      op: add
+  dimensions.goal.values:
+    steps:
+    - layer: default
+      op: add
+  dimensions.urgency:
+    steps:
+    - layer: default
+      op: add
+  dimensions.urgency.type:
+    steps:
+    - layer: default
+      op: add
+  dimensions.urgency.values:
+    steps:
+    - layer: default
+      op: add
+  dimensions.labels:
+    steps:
+    - layer: default
+      op: add
+  dimensions.labels.type:
+    steps:
+    - layer: default
+      op: add
+  dimensions.labels.open:
+    steps:
+    - layer: default
+      op: add
+  dimensions.labels.common:
+    steps:
+    - layer: default
+      op: add
+  stages.assess:
+    steps:
+    - layer: default
+      op: add
+  stages.assess.order:
+    steps:
+    - layer: default
+      op: add
+  stages.assess.modes:
+    steps:
+    - layer: default
+      op: add
+  stages.define:
+    steps:
+    - layer: default
+      op: add
+  stages.define.order:
+    steps:
+    - layer: default
+      op: add
+  stages.define.modes:
+    steps:
+    - layer: default
+      op: add
+  stages.refine:
+    steps:
+    - layer: default
+      op: add
+  stages.refine.order:
+    steps:
+    - layer: default
+      op: add
+  stages.refine.modes:
+    steps:
+    - layer: default
+      op: add
+  stages.plan:
+    steps:
+    - layer: default
+      op: add
+  stages.plan.order:
+    steps:
+    - layer: default
+      op: add
+  stages.plan.modes:
+    steps:
+    - layer: default
+      op: add
+  stages.plan.entry:
+    steps:
+    - layer: default
+      op: add
+  stages.breakdown:
+    steps:
+    - layer: default
+      op: add
+  stages.breakdown.order:
+    steps:
+    - layer: default
+      op: add
+  stages.breakdown.modes:
+    steps:
+    - layer: default
+      op: add
+  stages.implement:
+    steps:
+    - layer: default
+      op: add
+  stages.implement.order:
+    steps:
+    - layer: default
+      op: add
+  stages.implement.modes:
+    steps:
+    - layer: default
+      op: add
+  stages.verify:
+    steps:
+    - layer: default
+      op: add
+  stages.verify.order:
+    steps:
+    - layer: default
+      op: add
+  stages.verify.modes:
+    steps:
+    - layer: default
+      op: add
+  stages.verify.exit:
+    steps:
+    - layer: default
+      op: add
+  stages.ship:
+    steps:
+    - layer: default
+      op: add
+  stages.ship.order:
+    steps:
+    - layer: default
+      op: add
+  stages.ship.modes:
+    steps:
+    - layer: default
+      op: add
+  approaches.spike:
+    steps:
+    - layer: default
+      op: add
+  approaches.spike.weight:
+    steps:
+    - layer: default
+      op: add
+  approaches.spike.ships:
+    steps:
+    - layer: default
+      op: add
+  approaches.spike.stages:
+    steps:
+    - layer: default
+      op: add
+  approaches.spike.gates:
+    steps:
+    - layer: default
+      op: add
+  approaches.spike.artifacts:
+    steps:
+    - layer: default
+      op: add
+  approaches.spike.subtask_ceiling:
+    steps:
+    - layer: default
+      op: add
+  approaches.spike.checkpoints:
+    steps:
+    - layer: default
+      op: add
+  approaches.quick-fix:
+    steps:
+    - layer: default
+      op: add
+  approaches.quick-fix.weight:
+    steps:
+    - layer: default
+      op: add
+  approaches.quick-fix.ships:
+    steps:
+    - layer: default
+      op: add
+  approaches.quick-fix.release_line:
+    steps:
+    - layer: default
+      op: add
+  approaches.quick-fix.stages:
+    steps:
+    - layer: default
+      op: add
+  approaches.quick-fix.gates:
+    steps:
+    - layer: default
+      op: add
+  approaches.quick-fix.artifacts:
+    steps:
+    - layer: default
+      op: add
+  approaches.quick-fix.subtask_ceiling:
+    steps:
+    - layer: default
+      op: add
+  approaches.quick-fix.checkpoints:
+    steps:
+    - layer: default
+      op: add
+  approaches.regular:
+    steps:
+    - layer: default
+      op: add
+  approaches.regular.weight:
+    steps:
+    - layer: default
+      op: add
+  approaches.regular.ships:
+    steps:
+    - layer: default
+      op: add
+  approaches.regular.release_line:
+    steps:
+    - layer: default
+      op: add
+  approaches.regular.stages:
+    steps:
+    - layer: default
+      op: add
+  approaches.regular.gates:
+    steps:
+    - layer: default
+      op: add
+  approaches.regular.artifacts:
+    steps:
+    - layer: default
+      op: add
+  approaches.regular.subtask_ceiling:
+    steps:
+    - layer: default
+      op: add
+  approaches.regular.checkpoints:
+    steps:
+    - layer: default
+      op: add
+  approaches.hotfix:
+    steps:
+    - layer: default
+      op: add
+  approaches.hotfix.weight:
+    steps:
+    - layer: default
+      op: add
+  approaches.hotfix.ships:
+    steps:
+    - layer: default
+      op: add
+  approaches.hotfix.release_line:
+    steps:
+    - layer: default
+      op: add
+  approaches.hotfix.stages:
+    steps:
+    - layer: default
+      op: add
+  approaches.hotfix.gates:
+    steps:
+    - layer: default
+      op: add
+  approaches.hotfix.artifacts:
+    steps:
+    - layer: default
+      op: add
+  approaches.hotfix.subtask_ceiling:
+    steps:
+    - layer: default
+      op: add
+  approaches.hotfix.checkpoints:
+    steps:
+    - layer: default
+      op: add
+  approaches.full:
+    steps:
+    - layer: default
+      op: add
+  approaches.full.weight:
+    steps:
+    - layer: default
+      op: add
+  approaches.full.ships:
+    steps:
+    - layer: default
+      op: add
+  approaches.full.release_line:
+    steps:
+    - layer: default
+      op: add
+  approaches.full.stages:
+    steps:
+    - layer: default
+      op: add
+  approaches.full.gates:
+    steps:
+    - layer: default
+      op: add
+  approaches.full.artifacts:
+    steps:
+    - layer: default
+      op: add
+  approaches.full.subtask_ceiling:
+    steps:
+    - layer: default
+      op: add
+  approaches.full.checkpoints:
+    steps:
+    - layer: default
+      op: add
+  rules.default_shapes:
+    steps:
+    - layer: default
+      op: add
+  rules.default_shapes.kind:
+    steps:
+    - layer: default
+      op: add
+  rules.default_shapes.hit:
+    steps:
+    - layer: default
+      op: add
+  rules.default_shapes.rules:
+    steps:
+    - layer: default
+      op: add
+  rules.floors:
+    steps:
+    - layer: default
+      op: add
+  rules.floors.kind:
+    steps:
+    - layer: default
+      op: add
+  rules.floors.hit:
+    steps:
+    - layer: default
+      op: add
+  rules.floors.rules:
+    steps:
+    - layer: default
+      op: add
+  rules.caps:
+    steps:
+    - layer: default
+      op: add
+  rules.caps.kind:
+    steps:
+    - layer: default
+      op: add
+  rules.caps.hit:
+    steps:
+    - layer: default
+      op: add
+  rules.caps.rules:
+    steps:
+    - layer: default
+      op: add
+  rules.loop_ceilings:
+    steps:
+    - layer: default
+      op: add
+  rules.loop_ceilings.kind:
+    steps:
+    - layer: default
+      op: add
+  rules.loop_ceilings.hit:
+    steps:
+    - layer: default
+      op: add
+  rules.loop_ceilings.rules:
+    steps:
+    - layer: default
+      op: add
+  rules.immovable_gates:
+    steps:
+    - layer: default
+      op: add
+  rules.immovable_gates.kind:
+    steps:
+    - layer: default
+      op: add
+  rules.immovable_gates.hit:
+    steps:
+    - layer: default
+      op: add
+  rules.immovable_gates.rules:
+    steps:
+    - layer: default
+      op: add
+  rules.artifact_rules:
+    steps:
+    - layer: default
+      op: add
+  rules.artifact_rules.kind:
+    steps:
+    - layer: default
+      op: add
+  rules.artifact_rules.hit:
+    steps:
+    - layer: default
+      op: add
+  rules.artifact_rules.rules:
+    steps:
+    - layer: default
+      op: add
+  rules.advisory:
+    steps:
+    - layer: default
+      op: add
+  rules.advisory.kind:
+    steps:
+    - layer: default
+      op: add
+  rules.advisory.hit:
+    steps:
+    - layer: default
+      op: add
+  rules.advisory.rules:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers.kind:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers.hit:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers.rules:
+    steps:
+    - layer: default
+      op: add
+  rules.model_floors:
+    steps:
+    - layer: default
+      op: add
+  rules.model_floors.kind:
+    steps:
+    - layer: default
+      op: add
+  rules.model_floors.hit:
+    steps:
+    - layer: default
+      op: add
+  rules.model_floors.rules:
+    steps:
+    - layer: default
+      op: add
+  rules.biases:
+    steps:
+    - layer: default
+      op: add
+  rules.biases.kind:
+    steps:
+    - layer: default
+      op: add
+  rules.biases.hit:
+    steps:
+    - layer: default
+      op: add
+  rules.biases.rules:
+    steps:
+    - layer: default
+      op: add
+  checks.borrowed-documents-answered:
+    steps:
+    - layer: default
+      op: add
+  checks.borrowed-documents-answered.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.borrowed-documents-answered.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.borrowed-documents-answered.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.borrowed-documents-answered.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.borrowed-documents-answered.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.borrowed-documents-answered.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.rendered-blocks-current:
+    steps:
+    - layer: default
+      op: add
+  checks.rendered-blocks-current.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.rendered-blocks-current.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.rendered-blocks-current.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.rendered-blocks-current.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.rendered-blocks-current.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.rendered-blocks-current.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.landed-by-resolves:
+    steps:
+    - layer: default
+      op: add
+  checks.landed-by-resolves.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.landed-by-resolves.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.landed-by-resolves.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.landed-by-resolves.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.landed-by-resolves.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.landed-by-resolves.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-have-tests:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-have-tests.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-have-tests.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-have-tests.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-have-tests.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-have-tests.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-have-tests.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-are-executable:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-are-executable.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-are-executable.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-are-executable.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-are-executable.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-are-executable.blocking_when:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-are-executable.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.scenarios-are-executable.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.declared-tests-resolve:
+    steps:
+    - layer: default
+      op: add
+  checks.declared-tests-resolve.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.declared-tests-resolve.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.declared-tests-resolve.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.declared-tests-resolve.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.declared-tests-resolve.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.declared-tests-resolve.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.suite-passed:
+    steps:
+    - layer: default
+      op: add
+  checks.suite-passed.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.suite-passed.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.suite-passed.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.suite-passed.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.suite-passed.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.suite-passed.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.changed-code-traces-to-scenario:
+    steps:
+    - layer: default
+      op: add
+  checks.changed-code-traces-to-scenario.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.changed-code-traces-to-scenario.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.changed-code-traces-to-scenario.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.changed-code-traces-to-scenario.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.changed-code-traces-to-scenario.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.changed-code-traces-to-scenario.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.scenario-has-id-and-intent:
+    steps:
+    - layer: default
+      op: add
+  checks.scenario-has-id-and-intent.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.scenario-has-id-and-intent.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.scenario-has-id-and-intent.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.scenario-has-id-and-intent.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.scenario-has-id-and-intent.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.scenario-has-id-and-intent.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.claim-traces-to-scenario:
+    steps:
+    - layer: default
+      op: add
+  checks.claim-traces-to-scenario.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.claim-traces-to-scenario.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.claim-traces-to-scenario.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.claim-traces-to-scenario.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.claim-traces-to-scenario.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.claim-traces-to-scenario.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.gate-evidence-present:
+    steps:
+    - layer: default
+      op: add
+  checks.gate-evidence-present.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.gate-evidence-present.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.gate-evidence-present.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.gate-evidence-present.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.gate-evidence-present.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.gate-evidence-present.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.human-approval-present:
+    steps:
+    - layer: default
+      op: add
+  checks.human-approval-present.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.human-approval-present.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.human-approval-present.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.human-approval-present.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.human-approval-present.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.human-approval-present.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.backfills-paid:
+    steps:
+    - layer: default
+      op: add
+  checks.backfills-paid.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.backfills-paid.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.backfills-paid.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.backfills-paid.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.backfills-paid.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.artifacts-approved:
+    steps:
+    - layer: default
+      op: add
+  checks.artifacts-approved.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.artifacts-approved.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.artifacts-approved.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.artifacts-approved.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.artifacts-approved.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.nfr-rows-resolved:
+    steps:
+    - layer: default
+      op: add
+  checks.nfr-rows-resolved.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.nfr-rows-resolved.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.nfr-rows-resolved.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.nfr-rows-resolved.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.nfr-rows-resolved.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.contracts-declared:
+    steps:
+    - layer: default
+      op: add
+  checks.contracts-declared.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.contracts-declared.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.contracts-declared.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.contracts-declared.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.contracts-declared.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.contracts-declared.params:
+    steps:
+    - layer: default
+      op: add
+  checks.design-within-word-ceiling:
+    steps:
+    - layer: default
+      op: add
+  checks.design-within-word-ceiling.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.design-within-word-ceiling.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.design-within-word-ceiling.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.design-within-word-ceiling.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.design-within-word-ceiling.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.design-within-word-ceiling.params:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-conclusion-present:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-conclusion-present.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-conclusion-present.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-conclusion-present.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-conclusion-present.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-conclusion-present.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-conclusion-present.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-no-production-changes:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-no-production-changes.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-no-production-changes.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-no-production-changes.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-no-production-changes.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-no-production-changes.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.spike-no-production-changes.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-evidence-typed:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-evidence-typed.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-evidence-typed.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-evidence-typed.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-evidence-typed.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-evidence-typed.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-evidence-typed.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.consistency-check-passes:
+    steps:
+    - layer: default
+      op: add
+  checks.consistency-check-passes.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.consistency-check-passes.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.consistency-check-passes.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.consistency-check-passes.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.consistency-check-passes.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.consistency-check-passes.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.no-trusted-rerun:
+    steps:
+    - layer: default
+      op: add
+  checks.no-trusted-rerun.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.no-trusted-rerun.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.no-trusted-rerun.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.no-trusted-rerun.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.no-trusted-rerun.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.no-trusted-rerun.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-identity-matches:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-identity-matches.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-identity-matches.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-identity-matches.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-identity-matches.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-identity-matches.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-identity-matches.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-matches-tree:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-matches-tree.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-matches-tree.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-matches-tree.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-matches-tree.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-matches-tree.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.evidence-matches-tree.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.command-passes:
+    steps:
+    - layer: default
+      op: add
+  checks.command-passes.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.command-passes.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.command-passes.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.command-passes.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.command-passes.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.command-passes.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.multiagent-run-recorded:
+    steps:
+    - layer: default
+      op: add
+  checks.multiagent-run-recorded.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.multiagent-run-recorded.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.multiagent-run-recorded.impl:
+    steps:
+    - layer: default
+      op: add
+  checks.multiagent-run-recorded.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.multiagent-run-recorded.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.multiagent-run-recorded.locked:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-summary-filled:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-summary-filled.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-summary-filled.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-summary-filled.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-summary-filled.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-summary-filled.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-problem-traces-up:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-problem-traces-up.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-problem-traces-up.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-problem-traces-up.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-problem-traces-up.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-problem-traces-up.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-behaviour-is-gwt:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-behaviour-is-gwt.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-behaviour-is-gwt.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-behaviour-is-gwt.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-behaviour-is-gwt.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-behaviour-is-gwt.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-traceability-ids:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-traceability-ids.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-traceability-ids.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-traceability-ids.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-traceability-ids.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-traceability-ids.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-affected-surface-named:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-affected-surface-named.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-affected-surface-named.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-affected-surface-named.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-affected-surface-named.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-affected-surface-named.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-no-open-questions:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-no-open-questions.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-no-open-questions.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-no-open-questions.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-no-open-questions.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-no-open-questions.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-approach-still-fits:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-approach-still-fits.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-approach-still-fits.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-approach-still-fits.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-approach-still-fits.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dor-approach-still-fits.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-every-scenario-passes:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-every-scenario-passes.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-every-scenario-passes.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-every-scenario-passes.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-every-scenario-passes.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-every-scenario-passes.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-every-scenario-passes.when:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-suite-green:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-suite-green.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-suite-green.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-suite-green.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-suite-green.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-suite-green.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-suite-green.when:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-coverage-floor:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-coverage-floor.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-coverage-floor.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-coverage-floor.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-coverage-floor.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-coverage-floor.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-coverage-floor.when:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-no-lint-errors:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-no-lint-errors.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-no-lint-errors.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-no-lint-errors.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-no-lint-errors.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-no-lint-errors.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-no-lint-errors.when:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-traceability-intact:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-traceability-intact.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-traceability-intact.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-traceability-intact.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-traceability-intact.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-traceability-intact.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-traceability-intact.when:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-living-docs-updated:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-living-docs-updated.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-living-docs-updated.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-living-docs-updated.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-living-docs-updated.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-living-docs-updated.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-living-docs-updated.when:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-follow-ups-settled:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-follow-ups-settled.statement:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-follow-ups-settled.kind:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-follow-ups-settled.severity:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-follow-ups-settled.on_skipped:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-follow-ups-settled.requires:
+    steps:
+    - layer: default
+      op: add
+  checks.dod-follow-ups-settled.when:
+    steps:
+    - layer: default
+      op: add
+  gates.G1:
+    steps:
+    - layer: default
+      op: add
+  gates.G1.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.G1.name:
+    steps:
+    - layer: default
+      op: add
+  gates.G1.statement:
+    steps:
+    - layer: default
+      op: add
+  gates.G1.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.G1.applies_to:
+    steps:
+    - layer: default
+      op: add
+  gates.G1.checks:
+    steps:
+    - layer: default
+      op: add
+  gates.G1.locked:
+    steps:
+    - layer: default
+      op: add
+  gates.G2:
+    steps:
+    - layer: default
+      op: add
+  gates.G2.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.G2.name:
+    steps:
+    - layer: default
+      op: add
+  gates.G2.statement:
+    steps:
+    - layer: default
+      op: add
+  gates.G2.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.G2.applies_to:
+    steps:
+    - layer: default
+      op: add
+  gates.G2.checks:
+    steps:
+    - layer: default
+      op: add
+  gates.G2.locked:
+    steps:
+    - layer: default
+      op: add
+  gates.G3:
+    steps:
+    - layer: default
+      op: add
+  gates.G3.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.G3.name:
+    steps:
+    - layer: default
+      op: add
+  gates.G3.statement:
+    steps:
+    - layer: default
+      op: add
+  gates.G3.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.G3.applies_to:
+    steps:
+    - layer: default
+      op: add
+  gates.G3.checks:
+    steps:
+    - layer: default
+      op: add
+  gates.G3.locked:
+    steps:
+    - layer: default
+      op: add
+  gates.G4:
+    steps:
+    - layer: default
+      op: add
+  gates.G4.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.G4.name:
+    steps:
+    - layer: default
+      op: add
+  gates.G4.statement:
+    steps:
+    - layer: default
+      op: add
+  gates.G4.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.G4.applies_to:
+    steps:
+    - layer: default
+      op: add
+  gates.G4.checks:
+    steps:
+    - layer: default
+      op: add
+  gates.G4.locked:
+    steps:
+    - layer: default
+      op: add
+  gates.G5:
+    steps:
+    - layer: default
+      op: add
+  gates.G5.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.G5.name:
+    steps:
+    - layer: default
+      op: add
+  gates.G5.statement:
+    steps:
+    - layer: default
+      op: add
+  gates.G5.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.G5.applies_to:
+    steps:
+    - layer: default
+      op: add
+  gates.G5.when:
+    steps:
+    - layer: default
+      op: add
+  gates.G5.checks:
+    steps:
+    - layer: default
+      op: add
+  gates.G5.locked:
+    steps:
+    - layer: default
+      op: add
+  gates.S1:
+    steps:
+    - layer: default
+      op: add
+  gates.S1.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.S1.name:
+    steps:
+    - layer: default
+      op: add
+  gates.S1.statement:
+    steps:
+    - layer: default
+      op: add
+  gates.S1.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.S1.applies_to:
+    steps:
+    - layer: default
+      op: add
+  gates.S1.checks:
+    steps:
+    - layer: default
+      op: add
+  gates.S1.locked:
+    steps:
+    - layer: default
+      op: add
+  gates.S2:
+    steps:
+    - layer: default
+      op: add
+  gates.S2.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.S2.name:
+    steps:
+    - layer: default
+      op: add
+  gates.S2.statement:
+    steps:
+    - layer: default
+      op: add
+  gates.S2.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.S2.applies_to:
+    steps:
+    - layer: default
+      op: add
+  gates.S2.checks:
+    steps:
+    - layer: default
+      op: add
+  gates.S2.locked:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.correctness:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.correctness.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.correctness.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.correctness.accepts:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.correctness.locked:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.regression:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.regression.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.regression.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.regression.accepts:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.security:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.security.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.security.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.security.accepts:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.governance:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.governance.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.governance.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.governance.accepts:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.governance.locked:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.traceability:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.traceability.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.traceability.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.traceability.accepts:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.traceability.locked:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.claims:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.claims.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.claims.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.claims.accepts:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.clarity:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.clarity.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.clarity.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.clarity.accepts:
+    steps:
+    - layer: default
+      op: add
+  gates.spike.conclude:
+    steps:
+    - layer: default
+      op: add
+  gates.spike.conclude.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.spike.conclude.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.spike.conclude.accepts:
+    steps:
+    - layer: default
+      op: add
+  gates.spike.conclude.locked:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.analyze:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.analyze.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.analyze.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.analyze.accepts:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.architecture:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.architecture.kind:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.architecture.stage:
+    steps:
+    - layer: default
+      op: add
+  gates.verify.architecture.accepts:
+    steps:
+    - layer: default
+      op: add
+  artifacts.delivery-approach:
+    steps:
+    - layer: default
+      op: add
+  artifacts.delivery-approach.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.delivery-approach.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.delivery-approach.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.delivery-approach.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.delivery-approach.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.delivery-approach.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.delivery-approach.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.delivery-approach.every_approach:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-note:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-note.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-note.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-note.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-note.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-note.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-note.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-note.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.acceptance-criteria:
+    steps:
+    - layer: default
+      op: add
+  artifacts.acceptance-criteria.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.acceptance-criteria.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.acceptance-criteria.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.acceptance-criteria.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.acceptance-criteria.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.acceptance-criteria.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.acceptance-criteria.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.acceptance-criteria.word_ceiling:
+    steps:
+    - layer: default
+      op: add
+  artifacts.technical-design:
+    steps:
+    - layer: default
+      op: add
+  artifacts.technical-design.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.technical-design.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.technical-design.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.technical-design.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.technical-design.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.technical-design.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.technical-design.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.technical-design.word_ceiling:
+    steps:
+    - layer: default
+      op: add
+  artifacts.low-level-design:
+    steps:
+    - layer: default
+      op: add
+  artifacts.low-level-design.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.low-level-design.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.low-level-design.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.low-level-design.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.low-level-design.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.low-level-design.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.low-level-design.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.distribution-map:
+    steps:
+    - layer: default
+      op: add
+  artifacts.distribution-map.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.distribution-map.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.distribution-map.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.distribution-map.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.distribution-map.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.distribution-map.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.distribution-map.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.distribution-map.required_when:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-report:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-report.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-report.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-report.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-report.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-report.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-report.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.verification-report.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.intent:
+    steps:
+    - layer: default
+      op: add
+  artifacts.intent.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.intent.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.intent.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.intent.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.intent.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.intent.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.intent.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.requirements-review:
+    steps:
+    - layer: default
+      op: add
+  artifacts.requirements-review.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.requirements-review.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.requirements-review.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.requirements-review.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.requirements-review.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.requirements-review.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.requirements-review.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.threat-model:
+    steps:
+    - layer: default
+      op: add
+  artifacts.threat-model.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.threat-model.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.threat-model.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.threat-model.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.threat-model.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.threat-model.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.threat-model.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.rollback-plan:
+    steps:
+    - layer: default
+      op: add
+  artifacts.rollback-plan.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.rollback-plan.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.rollback-plan.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.rollback-plan.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.rollback-plan.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.rollback-plan.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.rollback-plan.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.launch-readiness:
+    steps:
+    - layer: default
+      op: add
+  artifacts.launch-readiness.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.launch-readiness.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.launch-readiness.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.launch-readiness.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.launch-readiness.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.launch-readiness.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.launch-readiness.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.ui-contract:
+    steps:
+    - layer: default
+      op: add
+  artifacts.ui-contract.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.ui-contract.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.ui-contract.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.ui-contract.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.ui-contract.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.ui-contract.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.ui-contract.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.bug-report:
+    steps:
+    - layer: default
+      op: add
+  artifacts.bug-report.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.bug-report.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.bug-report.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.bug-report.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.bug-report.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.bug-report.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.bug-report.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.architecture-notes:
+    steps:
+    - layer: default
+      op: add
+  artifacts.architecture-notes.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.architecture-notes.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.architecture-notes.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.architecture-notes.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.architecture-notes.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.architecture-notes.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.architecture-notes.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.positioning:
+    steps:
+    - layer: default
+      op: add
+  artifacts.positioning.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.positioning.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.positioning.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.positioning.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.positioning.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.positioning.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.positioning.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.product-owner-review:
+    steps:
+    - layer: default
+      op: add
+  artifacts.product-owner-review.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.product-owner-review.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.product-owner-review.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.product-owner-review.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.product-owner-review.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.product-owner-review.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.product-owner-review.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.review:
+    steps:
+    - layer: default
+      op: add
+  artifacts.review.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.review.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.review.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.review.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.review.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.review.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.review.depends_on:
+    steps:
+    - layer: default
+      op: add
+  artifacts.spike-conclusion:
+    steps:
+    - layer: default
+      op: add
+  artifacts.spike-conclusion.file:
+    steps:
+    - layer: default
+      op: add
+  artifacts.spike-conclusion.stage:
+    steps:
+    - layer: default
+      op: add
+  artifacts.spike-conclusion.owner:
+    steps:
+    - layer: default
+      op: add
+  artifacts.spike-conclusion.audience:
+    steps:
+    - layer: default
+      op: add
+  artifacts.spike-conclusion.stands_for:
+    steps:
+    - layer: default
+      op: add
+  artifacts.spike-conclusion.sections:
+    steps:
+    - layer: default
+      op: add
+  artifacts.spike-conclusion.depends_on:
+    steps:
+    - layer: default
+      op: add
+  readiness.agent-instructions-present:
+    steps:
+    - layer: default
+      op: add
+  readiness.agent-instructions-present.statement:
+    steps:
+    - layer: default
+      op: add
+  readiness.agent-instructions-present.impl:
+    steps:
+    - layer: default
+      op: add
+  readiness.agent-instructions-present.weight:
+    steps:
+    - layer: default
+      op: add
+  readiness.agent-instructions-present.required_for_autonomous:
+    steps:
+    - layer: default
+      op: add
+  readiness.lint-declared-and-clean:
+    steps:
+    - layer: default
+      op: add
+  readiness.lint-declared-and-clean.statement:
+    steps:
+    - layer: default
+      op: add
+  readiness.lint-declared-and-clean.impl:
+    steps:
+    - layer: default
+      op: add
+  readiness.lint-declared-and-clean.params:
+    steps:
+    - layer: default
+      op: add
+  readiness.lint-declared-and-clean.weight:
+    steps:
+    - layer: default
+      op: add
+  readiness.lint-declared-and-clean.required_for_autonomous:
+    steps:
+    - layer: default
+      op: add
+  readiness.typecheck-declared-and-clean:
+    steps:
+    - layer: default
+      op: add
+  readiness.typecheck-declared-and-clean.statement:
+    steps:
+    - layer: default
+      op: add
+  readiness.typecheck-declared-and-clean.impl:
+    steps:
+    - layer: default
+      op: add
+  readiness.typecheck-declared-and-clean.params:
+    steps:
+    - layer: default
+      op: add
+  readiness.typecheck-declared-and-clean.weight:
+    steps:
+    - layer: default
+      op: add
+  readiness.format-declared-and-clean:
+    steps:
+    - layer: default
+      op: add
+  readiness.format-declared-and-clean.statement:
+    steps:
+    - layer: default
+      op: add
+  readiness.format-declared-and-clean.impl:
+    steps:
+    - layer: default
+      op: add
+  readiness.format-declared-and-clean.params:
+    steps:
+    - layer: default
+      op: add
+  readiness.format-declared-and-clean.weight:
+    steps:
+    - layer: default
+      op: add
+  readiness.build-declared-and-succeeds:
+    steps:
+    - layer: default
+      op: add
+  readiness.build-declared-and-succeeds.statement:
+    steps:
+    - layer: default
+      op: add
+  readiness.build-declared-and-succeeds.impl:
+    steps:
+    - layer: default
+      op: add
+  readiness.build-declared-and-succeeds.params:
+    steps:
+    - layer: default
+      op: add
+  readiness.build-declared-and-succeeds.weight:
+    steps:
+    - layer: default
+      op: add
+  readiness.build-declared-and-succeeds.required_for_autonomous:
+    steps:
+    - layer: default
+      op: add
+  readiness.tests-declared-and-under-two-minutes:
+    steps:
+    - layer: default
+      op: add
+  readiness.tests-declared-and-under-two-minutes.statement:
+    steps:
+    - layer: default
+      op: add
+  readiness.tests-declared-and-under-two-minutes.impl:
+    steps:
+    - layer: default
+      op: add
+  readiness.tests-declared-and-under-two-minutes.params:
+    steps:
+    - layer: default
+      op: add
+    - layer: project
+      op: set
+  readiness.tests-declared-and-under-two-minutes.weight:
+    steps:
+    - layer: default
+      op: add
+  readiness.tests-declared-and-under-two-minutes.required_for_autonomous:
+    steps:
+    - layer: default
+      op: add
+  readiness.no-flaky-tests-on-record:
+    steps:
+    - layer: default
+      op: add
+  readiness.no-flaky-tests-on-record.statement:
+    steps:
+    - layer: default
+      op: add
+  readiness.no-flaky-tests-on-record.impl:
+    steps:
+    - layer: default
+      op: add
+  readiness.no-flaky-tests-on-record.weight:
+    steps:
+    - layer: default
+      op: add
+  readiness.structured-logging-declared:
+    steps:
+    - layer: default
+      op: add
+  readiness.structured-logging-declared.statement:
+    steps:
+    - layer: default
+      op: add
+  readiness.structured-logging-declared.impl:
+    steps:
+    - layer: default
+      op: add
+  readiness.structured-logging-declared.params:
+    steps:
+    - layer: default
+      op: add
+  readiness.structured-logging-declared.weight:
+    steps:
+    - layer: default
+      op: add
+  readiness.codeowners-present:
+    steps:
+    - layer: default
+      op: add
+  readiness.codeowners-present.statement:
+    steps:
+    - layer: default
+      op: add
+  readiness.codeowners-present.impl:
+    steps:
+    - layer: default
+      op: add
+  readiness.codeowners-present.weight:
+    steps:
+    - layer: default
+      op: add
+  readiness.pre-commit-hooks-present:
+    steps:
+    - layer: default
+      op: add
+  readiness.pre-commit-hooks-present.statement:
+    steps:
+    - layer: default
+      op: add
+  readiness.pre-commit-hooks-present.impl:
+    steps:
+    - layer: default
+      op: add
+  readiness.pre-commit-hooks-present.weight:
+    steps:
+    - layer: default
+      op: add
+  readiness.secret-scan-declared:
+    steps:
+    - layer: default
+      op: add
+  readiness.secret-scan-declared.statement:
+    steps:
+    - layer: default
+      op: add
+  readiness.secret-scan-declared.impl:
+    steps:
+    - layer: default
+      op: add
+  readiness.secret-scan-declared.params:
+    steps:
+    - layer: default
+      op: add
+  readiness.secret-scan-declared.weight:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.spike:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.spike.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.spike.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.quick-fix:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.quick-fix.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.quick-fix.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.regular:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.regular.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.regular.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.hotfix:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.hotfix.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.hotfix.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.full:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.full.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.approaches.full.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.assess:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.assess.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.assess.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.define:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.define.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.define.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.refine:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.refine.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.refine.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.plan:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.plan.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.plan.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.breakdown:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.breakdown.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.breakdown.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.implement:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.implement.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.implement.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.verify:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.verify.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.verify.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.ship:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.ship.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.stages.ship.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G1:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G1.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G1.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G2:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G2.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G2.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G3:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G3.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G3.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G4:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G4.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G4.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G5:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G5.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.G5.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.S1:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.S1.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.S1.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.S2:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.S2.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.gates.S2.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.borrowed-documents-answered:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.borrowed-documents-answered.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.borrowed-documents-answered.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.rendered-blocks-current:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.rendered-blocks-current.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.rendered-blocks-current.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.landed-by-resolves:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.landed-by-resolves.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.landed-by-resolves.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.scenarios-have-tests:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.scenarios-have-tests.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.scenarios-have-tests.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.scenarios-are-executable:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.scenarios-are-executable.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.scenarios-are-executable.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.declared-tests-resolve:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.declared-tests-resolve.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.declared-tests-resolve.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.suite-passed:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.suite-passed.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.suite-passed.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.changed-code-traces-to-scenario:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.changed-code-traces-to-scenario.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.changed-code-traces-to-scenario.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.scenario-has-id-and-intent:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.scenario-has-id-and-intent.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.scenario-has-id-and-intent.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.claim-traces-to-scenario:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.claim-traces-to-scenario.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.claim-traces-to-scenario.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.gate-evidence-present:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.gate-evidence-present.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.gate-evidence-present.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.human-approval-present:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.human-approval-present.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.human-approval-present.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.backfills-paid:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.backfills-paid.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.backfills-paid.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.artifacts-approved:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.artifacts-approved.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.artifacts-approved.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.nfr-rows-resolved:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.nfr-rows-resolved.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.nfr-rows-resolved.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.contracts-declared:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.contracts-declared.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.contracts-declared.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.design-within-word-ceiling:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.design-within-word-ceiling.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.design-within-word-ceiling.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.spike-conclusion-present:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.spike-conclusion-present.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.spike-conclusion-present.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.spike-no-production-changes:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.spike-no-production-changes.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.spike-no-production-changes.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.dod-evidence-typed:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.dod-evidence-typed.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.dod-evidence-typed.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.consistency-check-passes:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.consistency-check-passes.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.consistency-check-passes.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.no-trusted-rerun:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.no-trusted-rerun.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.no-trusted-rerun.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.evidence-identity-matches:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.evidence-identity-matches.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.evidence-identity-matches.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.evidence-matches-tree:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.evidence-matches-tree.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.evidence-matches-tree.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.command-passes:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.command-passes.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.command-passes.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.multiagent-run-recorded:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.multiagent-run-recorded.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.checks.multiagent-run-recorded.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.agent-instructions-present:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.agent-instructions-present.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.agent-instructions-present.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.lint-declared-and-clean:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.lint-declared-and-clean.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.lint-declared-and-clean.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.typecheck-declared-and-clean:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.typecheck-declared-and-clean.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.typecheck-declared-and-clean.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.format-declared-and-clean:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.format-declared-and-clean.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.format-declared-and-clean.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.build-declared-and-succeeds:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.build-declared-and-succeeds.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.build-declared-and-succeeds.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.tests-declared-and-under-two-minutes:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.tests-declared-and-under-two-minutes.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.tests-declared-and-under-two-minutes.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.no-flaky-tests-on-record:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.no-flaky-tests-on-record.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.no-flaky-tests-on-record.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.structured-logging-declared:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.structured-logging-declared.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.structured-logging-declared.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.codeowners-present:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.codeowners-present.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.codeowners-present.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.pre-commit-hooks-present:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.pre-commit-hooks-present.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.pre-commit-hooks-present.aliases:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.secret-scan-declared:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.secret-scan-declared.name:
+    steps:
+    - layer: default
+      op: add
+  vocabulary.readiness.secret-scan-declared.aliases:
+    steps:
+    - layer: default
+      op: add
+  rules.default_shapes.rules.RP-SHAPE-001:
+    steps:
+    - layer: default
+      op: add
+  rules.default_shapes.rules.RP-SHAPE-002:
+    steps:
+    - layer: default
+      op: add
+  rules.default_shapes.rules.RP-SHAPE-003:
+    steps:
+    - layer: default
+      op: add
+  rules.default_shapes.rules.RP-SHAPE-004:
+    steps:
+    - layer: default
+      op: add
+  rules.default_shapes.rules.RP-SHAPE-005:
+    steps:
+    - layer: default
+      op: add
+  rules.default_shapes.rules.RP-SHAPE-FALLBACK:
+    steps:
+    - layer: default
+      op: add
+  rules.floors.rules.RP-FLOOR-001:
+    steps:
+    - layer: default
+      op: add
+  rules.floors.rules.RP-FLOOR-002:
+    steps:
+    - layer: default
+      op: add
+  rules.floors.rules.RP-FLOOR-003:
+    steps:
+    - layer: default
+      op: add
+  rules.floors.rules.RP-REQUIRE-001:
+    steps:
+    - layer: default
+      op: add
+  rules.floors.rules.RP-REQUIRE-002:
+    steps:
+    - layer: default
+      op: add
+  rules.floors.rules.RP-REQUIRE-003:
+    steps:
+    - layer: default
+      op: add
+  rules.floors.rules.RP-REQUIRE-004:
+    steps:
+    - layer: default
+      op: add
+  rules.floors.rules.RP-REQUIRE-005:
+    steps:
+    - layer: default
+      op: add
+  rules.floors.rules.RP-REQUIRE-006:
+    steps:
+    - layer: default
+      op: add
+  rules.caps.rules.RP-CAP-001:
+    steps:
+    - layer: default
+      op: add
+  rules.loop_ceilings.rules.RP-LOOP-001:
+    steps:
+    - layer: default
+      op: add
+  rules.loop_ceilings.rules.RP-LOOP-002:
+    steps:
+    - layer: default
+      op: add
+  rules.loop_ceilings.rules.RP-LOOP-003:
+    steps:
+    - layer: default
+      op: add
+  rules.loop_ceilings.rules.RP-LOOP-004:
+    steps:
+    - layer: default
+      op: add
+  rules.loop_ceilings.rules.RP-LOOP-005:
+    steps:
+    - layer: default
+      op: add
+  rules.loop_ceilings.rules.RP-LOOP-006:
+    steps:
+    - layer: default
+      op: add
+  rules.loop_ceilings.rules.RP-LOOP-007:
+    steps:
+    - layer: default
+      op: add
+  rules.loop_ceilings.rules.RP-LOOP-008:
+    steps:
+    - layer: default
+      op: add
+  rules.immovable_gates.rules.RP-GATE-001:
+    steps:
+    - layer: default
+      op: add
+  rules.immovable_gates.rules.RP-GATE-002:
+    steps:
+    - layer: default
+      op: add
+  rules.immovable_gates.rules.RP-GATE-003:
+    steps:
+    - layer: default
+      op: add
+  rules.artifact_rules.rules.RP-ART-001:
+    steps:
+    - layer: default
+      op: add
+  rules.artifact_rules.rules.RP-ART-002:
+    steps:
+    - layer: default
+      op: add
+  rules.advisory.rules.RP-ADV-001:
+    steps:
+    - layer: default
+      op: add
+  rules.advisory.rules.RP-ADV-002:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers.rules.RP-TIER-001:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers.rules.RP-TIER-002:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers.rules.RP-TIER-003:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers.rules.RP-TIER-004:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers.rules.RP-TIER-005:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers.rules.RP-TIER-006:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers.rules.RP-TIER-007:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers.rules.RP-TIER-008:
+    steps:
+    - layer: default
+      op: add
+  rules.model_tiers.rules.RP-TIER-009:
+    steps:
+    - layer: default
+      op: add
+  rules.model_floors.rules.RP-MODEL-001:
+    steps:
+    - layer: default
+      op: add
+  rules.model_floors.rules.RP-MODEL-002:
+    steps:
+    - layer: default
+      op: add
+  rules.model_floors.rules.RP-MODEL-003:
+    steps:
+    - layer: default
+      op: add
+  rules.biases.rules.RP-BIAS-001:
+    steps:
+    - layer: default
+      op: add
+  rules.biases.rules.RP-BIAS-002:
+    steps:
+    - layer: default
+      op: add
+waivers: {}
+classification:
+  project:
+    result: accepted
+    waivers: []

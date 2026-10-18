@@ -1,0 +1,25 @@
+{
+  "command": "python3 -m pytest -q -p no:cacheprovider tests/test_design_scope_review_and_bug_report.py::test_dsr_3_issue_and_unscoped_decisions_not_refused --cov-fail-under=0",
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "tests/test_design_scope_review_and_bug_report.py::test_dsr_3_issue_and_unscoped_decisions_not_refused",
+    "--cov-fail-under=0"
+  ],
+  "scenario": "DSR-3",
+  "exit_code": 0,
+  "passed": true,
+  "attempts": 1,
+  "timestamp": "2026-10-18T02:48:58+00:00",
+  "log_excerpt": ".                                                                        [100%]",
+  "_full_log": ".                                                                        [100%]\n",
+  "tree_id": "60210cc78d052ff2fd4f5ac6541c92b53b50fcc3",
+  "changes_id": "c491b901efdeb8495737f328e11eaab4270f12d0",
+  "changes_scope": "changed-files-and-declared-tests",
+  "record_id": "b52072bed84e4b76",
+  "content_digest": "sha256:275b0eea5e58189a8b47e5600f3db77267915d5487ae5960c60cec0ae10d2319"
+}

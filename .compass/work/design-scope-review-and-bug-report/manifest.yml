@@ -1,0 +1,405 @@
+schema_version: '3.0'
+issue: design-scope-review-and-bug-report
+created: '2026-10-18'
+assessment:
+  risk: cross-cutting
+  familiarity: brownfield-mapped
+  size: medium
+  goal: delivery
+  labels: &id001 []
+generation: 2
+delivery_approach: regular
+policy_rules_fired:
+- id: RP-REQUIRE-003
+  kind: requirement
+  rationale: Architecture checked before cross-cutting or critical changes land.
+  changed:
+  - gate 'verify.architecture' added to the approach's gate set
+- id: RP-ART-002
+  kind: artifact_rule
+  rationale: Built-the-thing-right and built-the-right-thing are different checks.
+  changed:
+  - 'stage ''plan'' blocked until: the spec has been checked against intent.md for
+    intent fidelity'
+stages:
+  assess: thorough
+  define: thorough
+  refine: lightweight
+  plan: thorough
+  breakdown: multiagent
+  implement: thorough
+  verify: thorough
+  ship: thorough
+evidence:
+- id: EV-T-DSR-1
+  type: test-run
+  path: evidence/green-DSR-1.json
+  scenario: DSR-1
+  record_id: 9565e0bda1b0465c
+  content_digest: sha256:d61f6f40fd596b9d30ae05ccd44be01bc24c3c3fee5a919e1e50eb0dbcc4553d
+- id: EV-T-DSR-3
+  type: test-run
+  path: evidence/green-DSR-3.json
+  scenario: DSR-3
+  record_id: b52072bed84e4b76
+  content_digest: sha256:275b0eea5e58189a8b47e5600f3db77267915d5487ae5960c60cec0ae10d2319
+- id: EV-T-DSR-4
+  type: test-run
+  path: evidence/green-DSR-4.json
+  scenario: DSR-4
+  record_id: c91e8696456b40e1
+  content_digest: sha256:70d45e70aeedd900428f0eeb3e515b6bfcb0fcacfddebb3b4e8f89d3d38d55c0
+- id: EV-T-DSR-5
+  type: test-run
+  path: evidence/green-DSR-5.json
+  scenario: DSR-5
+  record_id: 8eabb813f9f24af1
+  content_digest: sha256:b833b24bdbcf1cf2d1c4f27510fdae0b5dbbc600b96d69adee9278b41c81fbe3
+- id: EV-T-DSR-6
+  type: test-run
+  path: evidence/green-DSR-6.json
+  scenario: DSR-6
+  record_id: 42160ec166e74a28
+  content_digest: sha256:d65938f15c694501438acef214f80d0ee2228f8292767f394fe1ccce9f768f7b
+- id: EV-T-DSR-7
+  type: test-run
+  path: evidence/green-DSR-7.json
+  scenario: DSR-7
+  record_id: f429318bc27940c4
+  content_digest: sha256:23c07b373ec2aa649024016c0da57ff3712da3e0afae16f8849f1f7529485fd0
+- id: EV-T-DSR-8
+  type: test-run
+  path: evidence/green-DSR-8.json
+  scenario: DSR-8
+  record_id: 672249f3d5e348f8
+  content_digest: sha256:6a34de9c591ec8f90c82959fb023d80cf0880b2a4054ad3ec68601aee34a8e86
+- id: EV-T-DSR-9
+  type: test-run
+  path: evidence/green-DSR-9.json
+  scenario: DSR-9
+  record_id: 3c4acafac4664fd8
+  content_digest: sha256:a8ccfe9ca356516b775a232aa22d379a6b273b2a98da4b869fccf31e324f9a09
+- id: EV-T
+  type: test-run
+  path: evidence/green.json
+  record_id: 64a74332aaff46a5
+  content_digest: sha256:fc4a059c2475f5cf5827b09a6b437376469e013a4000fea392d8a04a0e5f8a11
+- id: EV-CHECK
+  type: command-output
+  path: evidence/check.txt
+- id: EV-ANALYZE
+  type: command-output
+  path: evidence/analyze.txt
+gates:
+- id: verify.correctness
+  status: pass
+  evidence:
+  - EV-T
+- id: verify.governance
+  status: pending
+  evidence: []
+- id: verify.traceability
+  status: pass
+  evidence:
+  - EV-CHECK
+  - EV-ANALYZE
+- id: verify.regression
+  status: pass
+  evidence:
+  - EV-T
+- id: verify.clarity
+  status: pending
+  evidence: []
+- id: verify.security
+  status: pending
+  evidence: []
+- id: verify.architecture
+  status: pending
+  evidence: []
+scenarios:
+- id: DSR-1
+  title: A project-scoped decision with no record is refused at landing
+  intent: INT-1
+  tests:
+  - tests/test_design_scope_review_and_bug_report.py::test_dsr_1_project_decision_without_record_refused
+- id: DSR-2
+  title: A decision record that names the decision lets the issue land
+  intent: INT-1
+  tests:
+  - tests/test_design_scope_review_and_bug_report.py::test_dsr_2_record_naming_the_decision_lands
+- id: DSR-3
+  title: Issue-scoped and unscoped decisions are not refused
+  intent: INT-1
+  tests:
+  - tests/test_design_scope_review_and_bug_report.py::test_dsr_3_issue_and_unscoped_decisions_not_refused
+- id: DSR-4
+  title: The templates ask for the scope
+  intent: INT-1
+  tests:
+  - tests/test_design_scope_review_and_bug_report.py::test_dsr_4_templates_ask_for_the_scope
+- id: DSR-5
+  title: A new regular issue owes a lightweight requirements review
+  intent: INT-2
+  tests:
+  - tests/test_design_scope_review_and_bug_report.py::test_dsr_5_regular_owes_lightweight_requirements_review
+- id: DSR-6
+  title: The lightweight review has three sections
+  intent: INT-2
+  tests:
+  - tests/test_design_scope_review_and_bug_report.py::test_dsr_6_lightweight_review_sections
+- id: DSR-7
+  title: A new hotfix owes a thorough bug report
+  intent: INT-3
+  tests:
+  - tests/test_design_scope_review_and_bug_report.py::test_dsr_7_hotfix_owes_thorough_bug_report
+- id: DSR-8
+  title: A cited record that does not exist does not count
+  intent: INT-1
+  tests:
+  - tests/test_design_scope_review_and_bug_report.py::test_dsr_8_missing_cited_record_does_not_count
+- id: DSR-9
+  title: A project with no decisions folder is told the first record to write
+  intent: INT-1
+  tests:
+  - tests/test_design_scope_review_and_bug_report.py::test_dsr_9_no_decisions_folder_names_first_record
+- id: DSR-10
+  title: An issue assessed before the change owes neither document
+  intent: INT-2
+  tests:
+  - tests/test_design_scope_review_and_bug_report.py::test_dsr_10_earlier_generation_owes_neither
+changed_files:
+- path: cli/compass_pkg/decision_scope.py
+  scenarios:
+  - DSR-1
+  - DSR-3
+  - DSR-8
+  - DSR-9
+- path: cli/compass_pkg/manifest.py
+  scenarios:
+  - DSR-1
+  - DSR-3
+  - DSR-8
+  - DSR-9
+- path: cli/compass_pkg/refusals.py
+  scenarios:
+  - DSR-1
+  - DSR-3
+  - DSR-8
+  - DSR-9
+- path: templates/technical-design.md
+  scenarios:
+  - DSR-4
+- path: templates/architecture-notes.md
+  scenarios:
+  - DSR-4
+- path: governance/presets/default/approaches.yml
+  scenarios:
+  - DSR-5
+  - DSR-6
+  - DSR-7
+- path: governance/presets/default/artifacts.yml
+  scenarios:
+  - DSR-5
+  - DSR-6
+  - DSR-7
+- path: governance/routing-policy.yml
+  scenarios:
+  - DSR-5
+  - DSR-6
+  - DSR-7
+- path: governance/legacy-views.yml
+  scenarios:
+  - DSR-5
+  - DSR-6
+  - DSR-7
+claims: []
+follow_ups: []
+reassessments:
+- from_route: regular
+  to_route: regular
+  kind: policy-correction
+  changed:
+    policy_rules_fired:
+      from:
+      - RP-REQUIRE-003
+      to:
+      - RP-ART-002
+      - RP-REQUIRE-003
+  reason: The intent was registered after the first write, so RP-ART-002 now applies;
+    the assessment is unchanged.
+  date: '2026-10-18'
+  generation:
+    from: 1
+    to: 2
+failure_modes_descoped: []
+friction: []
+evaluated_assessment:
+  risk: cross-cutting
+  familiarity: brownfield-mapped
+  size: medium
+  goal: delivery
+  labels: *id001
+justifications:
+  risk: Adds a ship-commit refusal every shipping issue meets and changes two shipped
+    approach defaults
+  familiarity: ship-commit, the catalogue and approaches.yml were changed by the earlier
+    PRD 35 work and have tests
+  size: Three requirements across the preset, ship-commit, templates and docs, about
+    ten files
+  goal: The requirements state what is delivered
+checkpoints: []
+models:
+  assess:
+    tier: strong
+    by: RP-TIER-001
+  define:
+    tier: strong
+    by: RP-TIER-002
+  refine:
+    tier: strong
+    by: RP-TIER-003
+  plan:
+    tier: strong
+    by: RP-TIER-004
+  breakdown:
+    tier: strong
+    by: RP-TIER-005
+  implement:
+    tier: standard
+    by: RP-TIER-006
+    not_fired:
+    - RP-MODEL-001
+    - RP-MODEL-002
+    - RP-MODEL-003
+  verify:
+    tier: fast
+    by: RP-TIER-007
+  review:
+    tier: strong
+    by: RP-TIER-008
+  ship:
+    tier: fast
+    by: RP-TIER-009
+checkpoint_outcomes:
+- stage: assess
+  outcome: skipped
+  by: router
+  at: '2026-10-18T00:57:54Z'
+- stage: define
+  outcome: skipped
+  by: spec-author
+  at: '2026-10-18T01:00:00Z'
+- stage: refine
+  outcome: skipped
+  by: spec-author
+  at: '2026-10-18T01:00:34Z'
+- stage: plan
+  outcome: skipped
+  by: planner
+  at: '2026-10-18T01:02:23Z'
+artifacts:
+- id: ART-INTENT
+  kind: intent
+  status: approved
+  depth: lightweight
+  reason: every regular approach carries a lightweight one
+  path: docs/compass/2026-10-18-design-scope-review-and-bug-report/intent.md
+  registered_session: a6edaffc-8816-4c93-b182-426fc54de423
+  digest: sha256:281401b4f4e6ed5bd35ad199292d50ab4a91fefb3023624913c4d58e0f3d8d85
+  approved_by: compass issue artifact set
+  approved_at: '2026-10-18T00:59:33Z'
+- id: ART-ACCEPTANCE_CRITERIA
+  kind: acceptance-criteria
+  status: approved
+  depth: thorough
+  reason: changed after it was approved by compass issue artifact set (digest 80f768efe96b
+    then d9ba7876864a)
+  path: docs/compass/2026-10-18-design-scope-review-and-bug-report/acceptance-criteria.md
+  registered_session: a6edaffc-8816-4c93-b182-426fc54de423
+  digest: sha256:d9ba7876864a9c95ced6eaa18e1bd81667a63855f9fc70f90b6ba8faa9a24cb1
+  approved_by: compass tdd-red
+  approved_at: '2026-10-18T01:05:11Z'
+- id: ART-TECHNICAL_DESIGN
+  kind: technical-design
+  status: approved
+  depth: thorough
+  reason: every regular approach carries one
+  path: docs/compass/2026-10-18-design-scope-review-and-bug-report/technical-design.md
+  registered_session: a6edaffc-8816-4c93-b182-426fc54de423
+  digest: sha256:d880071905d04a43c8363fc31934634b6a025cb080f1b63b53f4d0c22be54acb
+  approved_by: compass tdd-red
+  approved_at: '2026-10-18T01:05:11Z'
+- id: ART-DISTRIBUTION_MAP
+  kind: distribution-map
+  status: draft
+  depth: lightweight
+  reason: every regular approach carries a lightweight one
+- id: ART-VERIFICATION_REPORT
+  kind: verification-report
+  status: draft
+  depth: thorough
+  reason: every regular approach carries one
+- id: ART-DELIVERY_APPROACH
+  kind: delivery-approach
+  status: approved
+  reason: registered by hand; no rule of the assessment asked for it
+  path: docs/compass/2026-10-18-design-scope-review-and-bug-report/delivery-approach.md
+  registered_session: a6edaffc-8816-4c93-b182-426fc54de423
+  digest: sha256:988cc59e88bf80065a54d9aa389ba4b959dc44874b96b9e600d2979a27bd4f51
+  approved_by: compass issue artifact set
+  approved_at: '2026-10-18T00:59:33Z'
+subtask_ceiling: 2
+readiness:
+  status: measured
+  score: 6
+  signals: 11
+  floor_met: true
+  absent:
+  - typecheck-declared-and-clean
+  - format-declared-and-clean
+  - structured-logging-declared
+  - pre-commit-hooks-present
+  - secret-scan-declared
+  measured_at: '2026-10-18T00:54:09Z'
+usage:
+  sessions:
+  - a6edaffc-8816-4c93-b182-426fc54de423
+decisions_taken:
+- id: Q1
+  question: The requirement asks for an `architecture/decisions/ADR-*` file "naming"
+    the decision. Decisions are numbered per issue, so `DD-2` alone is not unique
+    across the project.
+  resolution: A project-scoped decision is recorded when its block in the design cites
+    an ADR id whose file exists in `architecture/decisions/`, or when a file there
+    names both the issue's slug and the decision id. A citation of a missing file
+    does not count (DSR-8).
+  by: spec-author
+  stage: refine
+  status: open
+- id: Q2
+  question: The requirement says every decision carries a scope. Should a decision
+    with no scope line be refused?
+  resolution: No. Only a declared `project` scope is refused. Every design written
+    before 7.0.0 has no scope line, and refusing those would block their landings.
+    The template asks for the line, so new designs carry it.
+  by: spec-author
+  stage: refine
+  status: open
+- id: Q3
+  question: 'The release-line refusal fires only when the issue''s stored generation
+    sets `release_line: true`. Does this refusal need a field like that?'
+  resolution: 'No. It fires only on a decision that declares `Scope: project`, and
+    no design in the archive declares one (checked with a search of `docs/compass/*/technical-design.md`
+    on 18 October 2026). An author who writes the line asks for the check.'
+  by: spec-author
+  stage: refine
+  status: open
+- id: Q4
+  question: The requirement says the reproduction is the define stage's record. The
+    catalogue lists `bug-report` at stage `assess`.
+  resolution: The catalogue keeps `assess`. The report states the defect at intake,
+    and the hotfix's reproduce-first define stage writes the failing test against
+    it. Moving the stage would change when every project's bug report is due.
+  by: spec-author
+  stage: refine
+  status: open

@@ -85,7 +85,15 @@ A kind is written once per work unit when its `file` holds `<unit>`, as `low-lev
 
 The technical design keeps the approach, the decisions, the interfaces, the verification plan, the risks and the Work units table. The signatures, contracts, file plan and tests of each unit go in its low-level design. The template's Work units table has a Low-level design column, which links each unit's file on the full approach and holds a dash elsewhere. Unit stays the first column, so the distribution map reads the table as before.
 
-A kind that no approach, rule or `every_approach` flag names is voluntary: nothing owes it, and a person registers it when it is written. Today `review`, `bug-report`, `architecture-notes`, `product-owner-review`, `positioning` and `low-level-design` are voluntary. `compass issue artifact set` accepts any kind the issue's catalogue declares, and `compass approach evaluate --write` never marks a voluntary entry `superseded`.
+## Design-decision scope
+
+Each design decision of `technical-design.md` has a `Scope:` line, `issue` or `project`. A project-scoped decision binds later issues too, so `compass ship-commit` and `compass quick-fix finish` refuse an open issue whose registered design holds one that no record in `architecture/decisions/` names (`project-decision-unrecorded`, ADR-071). A record names the decision when the decision's block cites its ADR id and the file exists, or when the file holds both the issue's slug and the decision id. The refusal names the path the next `compass adr new` writes. A decision with no `Scope:` line is not judged. The architect proposes the project-scoped decisions under Candidate decision records in `architecture-notes.md`.
+
+## Owed and voluntary kinds
+
+From 7.0.0 the regular approach owes `requirements-review` at `lightweight`: Self-QA of the spec, Ambiguity ledger and Gate, which holds the Definition of Ready. The hotfix approach owes `bug-report` at `thorough`. An issue assessed earlier keeps its stored generation and owes neither.
+
+A kind that no approach, rule or `every_approach` flag names is voluntary: nothing owes it, and a person registers it when it is written. Today `review`, `architecture-notes`, `product-owner-review`, `positioning` and `low-level-design` are voluntary. `compass issue artifact set` accepts any kind the issue's catalogue declares, and `compass approach evaluate --write` never marks a voluntary entry `superseded`.
 
 ## One home for every kind
 
@@ -177,6 +185,7 @@ Headings of each kind, in order:
 - `intent`, thorough: Problem; Desired outcome; Success signals; Constraints; Non-goals; Internal FAQ; Affected roles; Intent-fidelity check (filled at the pre-plan gate)
 - `intent`, lightweight: Problem; Desired outcome; Success signals; Non-goals
 - `requirements-review`, thorough: Self-QA of the spec; Governance QA of the spec; Ambiguity ledger; Gate
+- `requirements-review`, lightweight: Self-QA of the spec; Ambiguity ledger; Gate
 - `threat-model`, thorough: What are we working on?; What can go wrong?; What are we going to do about it?; Did we do a good enough job?
 - `rollback-plan`, thorough: What breaks; How we go back; When this was last rehearsed
 - `launch-readiness`, thorough: Claims-to-scenarios traceability checklist; What is checked vs. not; Voice & positioning check; Go / No-Go

@@ -50,7 +50,10 @@ ADDED_TO_EVERY_APPROACH = ("delivery-approach",)
 # 7.0.0 also makes a regular issue owe a lightweight intent (issue `intent-and-release-line`,
 # ADR-065). A regular result is compared without an intent at the light depth; a product
 # owner's regular issue still owes the thorough intent its role rule asks for, as 5.6.0 did.
-ADDED_TO_REGULAR = ("intent",)
+# 7.0.0 also makes a regular issue owe a lightweight requirements review, and a hotfix a
+# thorough bug report (issue `design-scope-review-and-bug-report`, ADR-071).
+ADDED_TO_REGULAR = ("intent", "requirements-review")
+ADDED_TO_HOTFIX = ("bug-report",)
 
 
 # 7.0.0 removes role from the assessment (issue `remove-role-from-assessment`,
@@ -133,6 +136,8 @@ def compact(readings, policy):
                                             and a["kind"] in ADDED_TO_QUICK_FIX)
                                     and not (r["delivery_approach"] == "spike"
                                              and a["kind"] in ADDED_TO_SPIKE)
+                                    and not (r["delivery_approach"] == "hotfix"
+                                             and a["kind"] in ADDED_TO_HOTFIX)
                                     and not (r["delivery_approach"] == "regular"
                                              and a["kind"] in ADDED_TO_REGULAR
                                              and DEPTH_WAS.get(a["depth"]) == "light")),

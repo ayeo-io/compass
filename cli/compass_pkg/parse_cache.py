@@ -9,10 +9,12 @@
 #
 # `ParseCache.load_yaml` has the contract of `core.load_yaml` and is faster on
 # a second run, because a parse of the same bytes is the same value
-# `yaml.safe_load` would give again (ADR-049). Only `flow.board()` reads
-# through it. `core.load_yaml` and every path that reads a manifest to change
-# and save it do not, so a fault here can at worst misplace a row on an
-# advisory board.
+# `yaml.safe_load` would give again (ADR-049). Two advisory readers use it:
+# `flow.board()`, and `hooks/stop.sh`, which warns at the end of a turn and
+# never blocks. `core.load_yaml` and every path that reads a manifest to
+# change and save it do not, so a fault here can at worst misplace a row on
+# the board or a warning at the end of a turn. Only the board calls
+# `finish()`, so only the board prunes entries.
 # =============================================================================
 
 import datetime

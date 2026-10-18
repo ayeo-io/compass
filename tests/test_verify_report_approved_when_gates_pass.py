@@ -1,11 +1,11 @@
 """A `verify` document is approved only once every `verify` gate has passed
-(issue `verify-report-approved-when-gates-pass`, VRA-1 to VRA-11).
+(issue `verify-report-approved-when-gates-pass`, VRA-1 to VRA-12).
 
 Each test builds a scratch git repository with `compass init` and
 `compass approach evaluate --write`, then drives `cli/compass` the way a person
 or an agent session does.
 
-Scenario ids: `VRA-1` to `VRA-11`. Each test name starts with its scenario id.
+Scenario ids: `VRA-1` to `VRA-12`. Each test name starts with its scenario id.
 """
 from __future__ import annotations
 
@@ -257,3 +257,18 @@ def test_vra_11_the_changed_rule_is_recorded_and_documented():
     assert "registering the report also approves it" not in verify
     decision = DECISION.read_text(encoding="utf-8")
     assert "ADR-050" in decision and "every `verify` gate" in decision
+
+
+# --- VRA-12 --------------------------------------------------------------------
+
+@pytest.mark.parametrize("gates", [
+    [],
+    [{"id": "G2", "status": "pass"}],
+    [{"id": "unknown-gate", "status": "pass"}],
+], ids=["empty", "other-stage", "unknown"])
+def test_vra_12_no_verify_gate_leaves_report_draft(tmp_path, gates):
+    """A passed gate counts only when the catalogue places it in verify."""
+    root = _fresh(tmp_path, report=False)
+    edit(root, gates=gates)
+    assert register(root, "verification-report")[0] == 0
+    assert _report(root)["status"] == "draft" and _plain(_report(root))

@@ -58,8 +58,10 @@ will recur, run `compass issue friction` with evidence and a one-line fix.
 **Where to look.** `compass <verb> --help` explains a verb; the
 `compass-runtime` skill maps the stages.
 
-**Write for someone with no context.** Why before what, no reference a reader
-cannot follow, and stop once you have said it.
+**Write for a person in the spirit of ASD-STE100.** Why before what, no
+reference a reader cannot follow, and stop once you have said it. Call each
+thing by its `compass terminology` term and say what it does the first time.
+If they are lost, re-pitch: the premise they missed, then the point.
 
 **Commit only what you mean to.** Stage each file by its path, never
 `.compass/`, and check the staged list and commit authors. If

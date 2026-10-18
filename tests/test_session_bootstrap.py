@@ -43,7 +43,9 @@ AGENTS_MD = ROOT / "AGENTS.md"
 # compass:architect under jed72's overnight delegation. Since issue
 # `size-caps-as-targets` the number is a target: a contract over it passes
 # and pytest warns.
-CONTRACT_WORD_TARGET = 420
+# Moved to 450 by the ASD-STE100 writing rule (issue `ste100-writing-rule`):
+# 442 words measured.
+CONTRACT_WORD_TARGET = 450
 
 
 # ---------------------------------------------------------------------------

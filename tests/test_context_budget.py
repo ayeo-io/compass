@@ -41,7 +41,7 @@ RULES = {
     "stages": "**Stages, in order**",
     "verify stage": "7. verify",
     "where to look": "`compass <verb> --help`",
-    "write for no context": "**Write for someone with no context.**",
+    "write for a person": "**Write for a person in the spirit of ASD-STE100.**",
     "approvals": "**Approvals.**",
 }
 
@@ -79,7 +79,11 @@ NEW_RULES = {
 # Since issue `size-caps-as-targets` the number is a target, not a limit:
 # a contract over it passes and pytest warns, so the growth shows in every
 # run without blocking a rule the owner agreed to.
-CONTRACT_TARGET = 2750
+#
+# Moved to 2,900 by the ASD-STE100 writing rule (issue `ste100-writing-rule`):
+# 2,873 characters measured, rounded up to the next 50. Every message a
+# session writes to a person depends on it, so it must be resident.
+CONTRACT_TARGET = 2900
 
 # Set from the rewrite of 2026-10-04 (2,581, 1,476, 1,436 and 1,216
 # characters at 80 columns), with a little room; before it, 2,805, 1,643,

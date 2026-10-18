@@ -222,12 +222,13 @@ def test_trc_004_guardrail_notes_never_count(project):
 # --- resident words (`TRC-005`) ---
 
 def test_trc_005_the_instruction_is_at_most_40_resident_words():
-    import test_instruction_volume as volume
     contract = (ROOT / "compass-contract.md").read_text(encoding="utf-8")
     paragraphs = [p for p in contract.split("\n\n") if "compass issue friction" in p]
     assert len(paragraphs) == 1, "the contract must carry one friction instruction"
     assert len(paragraphs[0].split()) <= 40, paragraphs[0]
-    assert sum(volume._resident_breakdown().values()) <= volume.RESIDENT_CEILING
+    # The resident total is a target that warns (issue `ste100-writing-rule`);
+    # `test_iv_a1_resident_cost_is_bounded` reports it, so it is not checked
+    # twice here.
 
 
 def test_trc_001_friction_capture_at_finish_keeps_agent_notes(project):

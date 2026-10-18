@@ -541,10 +541,13 @@ def test_trc_d1_the_clarity_dimension_names_the_tells_as_judgement():
 
 REFERENCE_PATH = "skills/compass-runtime/writing-voice.md"
 
-# The larger of the two Writing voice sections (AGENTS.md, 546 words) plus a
-# small margin. A target, not a limit, since issue `size-caps-as-targets`: a
-# section over it passes and pytest warns.
-VOICE_WORD_TARGET = 560
+# The larger of the two Writing voice sections plus a small margin. A target,
+# not a limit, since issue `size-caps-as-targets`: a section over it passes
+# and pytest warns. Moved from 560 to 600 by the ASD-STE100 writing rule
+# (issue `ste100-writing-rule`), which adds the rule and the re-pitch to the
+# Plain English section and removes four rules the standard states directly:
+# AGENTS.md is 593 words.
+VOICE_WORD_TARGET = 600
 
 def _evidence_gates_text():
     """Reads SKILL.md and its sibling files.

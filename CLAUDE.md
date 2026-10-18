@@ -143,14 +143,19 @@ This covers everything you write: a reply, a commit message, a code comment,
 a PR description, a document. The reader has no context and must get the point
 on the first read.
 
+Write in the spirit of ASD-STE100 Simplified Technical English. The
+ubiquitous language is `governance/terminology.yml`: call each thing by its
+term there and by no other word. A reader outside Compass does not know
+those terms, so the first time one appears in a message, say in the same
+sentence what it does (`compass terminology <term>` gives the meaning).
+Take every other word from everyday English.
+
+When the person says they are lost, re-pitch: go back to where they stopped
+following, give the premise they did not see, then make the point again in
+fewer words with the same terms.
+
 - Lead with the point. Give the finding first, then the evidence. Do not build
   up to it.
-- Use the active voice. Name the actor, then the action.
-- Use a simple tense: present, past or future.
-- Put one point in each sentence, ideally under about 25 words. A longer
-  sentence is usually two points.
-- Use the same word for the same thing every time. Do not change the word for
-  variety.
 - Do not use an idiom or a metaphor. Say what happens instead. "Low-hanging
   fruit", "the direction of travel" and "a cliff" each hide a claim that a
   plain sentence would state.

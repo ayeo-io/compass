@@ -12,6 +12,9 @@ word such as "idiom" appearing somewhere else in the file must not satisfy it.
 Scenario ids:
 - PE-1, in claude-md-plain-english/delivery-approach.md
 - PFR-1, in plain-english-full-rules/delivery-approach.md
+- `STE-4`, in ste100-writing-rule/acceptance-criteria.md: the section names
+  ASD-STE100 and drops the rules the standard states directly, such as the
+  active voice
 """
 from __future__ import annotations
 
@@ -30,7 +33,7 @@ HEADING = "### Plain English"
 # a heading with no table under it fails.
 FULL_RULES = {
     "lead with the point": "lead with the point",
-    "the active voice": "active voice",
+    "the ASD-STE100 standard": "ASD-STE100",
     "the ban on idiom": "idiom",
     "the ban on metaphor": "metaphor",
     "saying what happens instead": "say what happens",
@@ -70,7 +73,7 @@ def test_pe_1_the_section_bans_idiom_and_metaphor():
 
 def test_pe_1_the_section_says_lead_with_the_point():
     section = _section().lower()
-    missing = [w for w in ("lead with the point", "active voice") if w not in section]
+    missing = [w for w in ("lead with the point", "asd-ste100") if w not in section]
     assert not missing, f"the '{HEADING}' section does not say: {', '.join(missing)}"
 
 

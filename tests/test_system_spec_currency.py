@@ -68,9 +68,15 @@ def _sandbox(landed_only=True):
                 shutil.copytree(t, tmp / ".compass" / "work" / t.name)
     # The project's config and its names key, so the derivation replaces
     # rival names with codes here as it does for the committed files.
-    config = WORK.parent / "config.yml"
-    if config.is_file():
-        shutil.copy(config, tmp / ".compass" / "config.yml")
+    # A project configures through compass.yml, or through the older
+    # .compass/config.yml; either can name the key (issue #93).
+    copied = False
+    for config, dest in ((ROOT / "compass.yml", tmp / "compass.yml"),
+                         (WORK.parent / "config.yml", tmp / ".compass" / "config.yml")):
+        if config.is_file():
+            shutil.copy(config, dest)
+            copied = True
+    if copied:
         sys.path.insert(0, str(ROOT / "cli"))
         from compass_pkg import record
         key = record.names_key(str(ROOT))

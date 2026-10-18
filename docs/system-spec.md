@@ -4126,6 +4126,31 @@ Regular issues now owe a short intent with four sections: Problem, Desired outco
 - `IRL-30` The documented quick-fix commands land a fresh quick fix
 - `IRL-31` The merge with the named document sections keeps both features
 
+### provisioner-honours-issue-ceiling (completed 2026-10-15)
+
+- `CAP-1` Honour the stored issue ceiling
+
+### ci-run-id-eleven-digits (completed 2026-10-16)
+
+- `TRC-001` Given an earlier green self-check and this run's id of 11 or 19 digits When the earlier-result form runs Then it passes, and a 20-digit id or a leading zero is still refused
+
+### adapter-behaviour-conformance-suite (completed 2026-10-16)
+
+- `ACF-1` Compare actual adapter kit entry points
+- `ACF-2` Run a real quick-fix journey and local handoff
+- `ACF-3` Check regular feature records
+- `ACF-4` Reject changed policy and evidence meaning
+- `ACF-5` Compare current hook payloads
+- `ACF-6` Check approval scope and cap outcomes
+- `ACF-7` Publish honest local and native scope
+- `ACF-8` Keep inherited Git settings outside fixture commands
+
+### issue-numbers-not-row-ids (completed 2026-10-16)
+
+Agent instructions now say to name an issue by its GitHub number and title, never by an internal row id.
+
+- `TRC-001` Given AGENTS.md and CLAUDE.md When an agent reads them Then each states that issues are named by GitHub issue number, as #N [title] or owner/repo#N [title], and never by an internal row id
+
 ### migrate-archive-safety (completed 2026-10-16)
 
 - `MAS-1` A document in both places is a change once and an item for a person after that
@@ -4174,6 +4199,93 @@ A document kind can now carry a word limit per depth, compass check refuses a te
 - `WCL-22` The regular median stays within 1.5 times 2,577 bytes on the re-rendered archive
 - `WCL-23` The check, the field and the kind are declared and documented
 
+### broken-pipe-only-stdout (completed 2026-10-16)
+
+- `TRC-001` Given a verb whose output goes to an open pipe When the verb raises BrokenPipeError by writing to a different, closed pipe Then the CLI shows the BrokenPipeError traceback and does not exit 141
+
+### agent-file-handling (completed 2026-10-16)
+
+Compass agents that are told to load a skill now have the Skill tool, the builder can wait on a long test run with Monitor, and the builder is told to open a file with Read before it edits it.
+
+- `TRC-001` Given an agent whose text tells it to load a skill, When its tools line is read, Then it lists Skill, the builder also lists Monitor, the builder has an Editing files section, and the orchestrator description says it is not for planning or building one issue
+
+### hook-expands-variables (completed 2026-10-16)
+
+The pre-tool hook no longer refuses a Bash write to a scratch file named through a variable the same command sets, or a file a command only pipes into tee or reads after a copy; it now refuses more copy and move writes to production code.
+
+- `TRC-A1` A scratch path named through a variable is allowed
+- `TRC-A2` A variable that points inside the project is still refused
+- `TRC-A3` A guarded write beside a scratch variable is still refused
+- `TRC-F1` A variable whose value the command does not state is not expanded
+- `TRC-F2` A variable the command sets again or only sometimes is not expanded
+- `TRC-F3` A parent-directory step does not move a write out of the project
+- `TRC-B1` The input of tee is not a write target
+- `TRC-B2` A file read after cp or mv is not a write target
+- `TRC-B3` Every tee, cp and mv write to a guarded file is refused
+
+### self-check-edit-race (completed 2026-10-16)
+
+- `SER-1` A text edit waits for the head's suite run and reports its result
+- `SER-2` The wait has a limit
+- `SER-3` Only a completed suite run of this pull request counts
+- `SER-4` The base and the input rules are unchanged
+- `SER-5` The self-check job can read the runs and wait for them
+
+### remove-role-from-assessment (completed 2026-10-16)
+
+Role is no longer part of the assessment: the claims gate and the plan's intent check now follow the positioning.md and intent.md an issue has on disk.
+
+- `TRC-A1` The shipped default declares no role dimension
+- `TRC-A2` The shipped rules hold no role rule, role default or role bias
+- `TRC-A3` The full approach no longer builds in the claims gate
+- `TRC-A4` An assessment without a role routes as an engineer's assessment did
+- `TRC-A5` The receipt, the board and the flow view show no role
+- `TRC-B1` A positioning document brings the claims gate and the ship block
+- `TRC-B2` An intent document brings the plan block
+- `TRC-B3` Neither rule fires without its document
+- `TRC-B4` A spike with a positioning document carries only its own gate
+- `TRC-B5` Presence is read from the issue's documents at evaluation
+- `TRC-B6` The classifier sees the artifact rules
+- `TRC-C1` A manifest that records a role evaluates on the new default
+- `TRC-C2` A stored 6.x configuration keeps its role rules until the issue is re-assessed
+- `TRC-C3` A role justification is accepted and not recorded
+- `TRC-C4` A quick fix given a role is accepted and records none
+- `TRC-C5` The 7.0.0 issue migrate reports a recorded role as no longer read
+- `TRC-C6` Policy migrate drops unedited role rules without a waiver
+- `TRC-C7` Policy migrate names the replacement of an edited role rule
+- `TRC-C8` A project rule that reads role is refused
+- `TRC-C9` A preset fixture that records a role is read without it
+- `TRC-D1` A document can still name a perspective as its owner
+- `TRC-D2` The documents and templates describe role as a perspective
+- `TRC-B7` Ship refuses a document whose artifact rule the approach does not hold
+
+### hook-catch-wrapped-writes (completed 2026-10-16)
+
+The pre-tool hook refuses a Bash write to production code that a substitution, a line continuation, quotes or a path spelled with .. or // used to hide.
+
+- `TRC-W1` A substitution or line continuation in a tee, cp or mv command does not hide its write
+- `TRC-Q1` A quoted write target is judged like an unquoted one
+- `TRC-N1` A path that resolves into the project is guarded however it is spelled
+- `TRC-N2` A path that resolves elsewhere is judged where it points
+
+### hook-span-and-exemptions (completed 2026-10-16)
+
+The pre-tool hook now refuses a cp, mv or tee destination after a substitution that holds a quoted bracket, and a path whose .. step follows an unknown part no longer borrows the test or .compass/ exemption. The safety contract lists the Bash writes the hook does not detect.
+
+- `TRC-S1` A destination after a span with a quoted bracket is refused
+- `TRC-S2` A scratch destination after such a span is still allowed
+- `TRC-E1` A .. after an unknown part does not borrow an exemption
+- `TRC-E2` A test file name or a document after such a path is still allowed
+- `TRC-D1` The safety contract lists the writes the hook does not detect
+
+### generation-commit-keeps-unjudged (completed 2026-10-16)
+
+A generation commit no longer deletes files it did not write: a reassess or `compass issue migrate` that finds one in the next generation folder names it and leaves it in place.
+
+- `GCK-1` Given a next generation folder holding a file a commit does not write, When a generation commit runs, Then it refuses, names the file and changes nothing
+- `GCK-2` Given an untracked file in the next generation folder of an issue the migrate pins, When the migrate runs and applies, Then both name the file as the reason the pin is refused and the file survives
+- `GCK-3` Given a next generation folder holding only files a commit writes and proposed.yml, When a generation commit runs, Then it commits, removes the temporary file and keeps proposed.yml
+
 ### migrate-dry-run-status-line (completed 2026-10-16)
 
 The dry run of `compass issue migrate` now prints the same count of artifact entries approved and superseded as `--apply`. It counts the documents and verification notes the apply registers first, and leaves out a stub distribution map the apply supersedes, so you can check the counts before migrating your archive.
@@ -4182,6 +4294,18 @@ The dry run of `compass issue migrate` now prints the same count of artifact ent
 - `DRS-2` Given a completed quick fix with no verification note, When the dry run and then the apply run, Then the dry run's artifact status line equals the apply's
 - `DRS-3` Given a not-planned issue with a stub distribution map, When the dry run and then the apply run, Then the dry run's artifact status line equals the apply's
 - `DRS-4` Given a completed issue whose stub distribution map already has a kept copy, When the dry run and then the apply run, Then the dry run's artifact status line equals the apply's
+
+### generation-refusals-name-issue (completed 2026-10-16)
+
+A refusal that prints a compass issue configure or compass approach evaluate --write command now names the issue with --issue, so the command acts on the refused issue even when the pointer names another one.
+
+- `TRC-001` Given issue feature has a complete leftover generation folder that the manifest does not name, and the pointer names another issue, When a commit refuses and the person runs the printed compass issue configure command, Then it acts on feature and leaves the other issue's folder untouched
+
+### upgrade-guide-git-clean (completed 2026-10-16)
+
+The 7.0.0 upgrade guide now names git clean as well as git reset --hard to undo a migrate apply, with a dry run first.
+
+- `TRC-001` Given the upgrade guide for 7.0.0 When a reader reads the Copy first paragraph Then it names git reset --hard and git clean to undo an apply, warns that git clean removes every untracked file, and suggests a dry run with git clean -n limited to the two folders
 
 ### migrate-copy-check-gaps (completed 2026-10-16)
 
@@ -4193,3 +4317,226 @@ The dry run of `compass issue migrate` now prints the same count of artifact ent
 - `MCG-4` Given a committed repository whose docs/compass is a symbolic link to a committed folder inside it, When --apply runs without --i-have-a-copy, Then it runs
 - `MCG-5` Given a lightweight distribution map registered at a path above the project root, When the dry run and then the apply run, Then the file outside the project is not renamed, both runs report it on the same line and neither counts a rename
 - `MCG-6` Given a committed repository whose docs/compass is a symbolic link to a folder inside the project, holding a lightweight distribution map, When the dry run and then the apply run, Then both rename the map to its backup and count it
+
+### next-latency-stable (completed 2026-10-16)
+
+The compass next latency test no longer fails CI on runner noise: it measures in interleaved rounds and measures once more on a borderline ratio, and still fails a real slowdown.
+
+- `TRC-001` Given a load burst that slows every command for part of the measurement, When the latency test measures in interleaved rounds, Then the ratio stays within 2 percent of the unloaded ratio, and a borderline failure is measured once more while a clear failure fails at once
+
+### fix-copy-check-project (completed 2026-10-17)
+
+compass migrate no longer stops with a NameError when it checks which files it can restore.
+
+- `TRC-001` Given a project in a git repository, When unrestorable_files or unrestorable_folders judges a root inside it or linked outside it, Then each returns a judgement (judged, or outside for the linked root) instead of raising NameError
+
+### g5-irreversible-labels (completed 2026-10-17)
+
+Guardrail 5 now asks for a human sign-off only on work labelled auth, payments, personal-data or migrations, not on every risk: critical issue.
+
+- `GIL-1` A critical-risk issue with none of the four labels needs no sign-off
+- `GIL-2` A critical-risk issue labelled migrations still needs the sign-off
+- `GIL-3` Each of the four labels needs the sign-off at any risk
+- `GIL-4` The generated guardrails view states the same trigger
+- `GIL-5` A generation stored before the change keeps the critical-risk arm
+- `GIL-6` A landed issue is reported, not failed
+- `GIL-7` A project puts critical risk back into the trigger
+- `GIL-8` A project cannot drop a label from the trigger
+- `GIL-9` Assess names the labels when risk is critical and none is set
+- `GIL-10` The documents name the same four cases
+- `GIL-11` The decision record and the upgrade note exist
+- `GIL-12` The check's register tests still go red when it is broken
+
+### migrated-waiver-legacy (completed 2026-10-17)
+
+compass policy migrate keeps the reasons a project recorded for waived rules, so the upgraded project is not blocked by them.
+
+- `PM-20` Given a copy that removes a floor and records it under waived with a reason, When policy migrate plans, Then the entry carries a LEGACY waiver with the reason and no approved_on, and the plan is ready
+- `PM-21` Given a copy that removes two floors and records only one under waived, When policy migrate plans, Then the entry keeps the UNAPPROVED stub and the plan is blocked
+- `PM-22` Given a copy that removes two floors and records both under waived, When policy migrate plans, Then one LEGACY waiver names both ids with their reasons and the plan is ready
+- `PM-23` Given a copy that removes a floor and lists it under waived with an empty reason, When policy migrate plans, Then the entry keeps the UNAPPROVED stub and the plan is blocked
+- `PM-24` Given a copy that removes a waived gate and also loosens a check that gate held, When policy migrate plans, Then the check keeps the UNAPPROVED stub and the gate gets a LEGACY waiver
+- `PM-25` Given a copy that removes two waived gates and loosens a check both held, When policy migrate plans, Then the check keeps the UNAPPROVED stub and no LEGACY waiver has an empty reason
+
+### legacy-waivers-until-8-0-0 (completed 2026-10-17)
+
+Lint keeps accepting LEGACY waivers, with a warning, until 8.0.0, so a project upgraded to 7.0.0 is not blocked by the waivers the upgrade writes.
+
+- `TRC-001` Given a project waiver with approved_by LEGACY and no date, When lint runs on Compass 7.x, Then it reports W-LEGACY as a warning naming 8.0.0 and the lint passes; and on 8.0.0 W-LEGACY is an error
+
+### approval-guard-hardening (completed 2026-10-17)
+
+The approval guard now refuses more ways an agent could forge or replay a guardrail 5 approval, including wrapped and quoted commands and reads of the delegation files.
+
+- `TRC-A1` the agent's Read and Grep under the delegation folder are refused
+- `TRC-A2` the g5 confirmation code holds 64 bits and stays typeable
+- `TRC-A3` a short or wrong code is refused
+- `TRC-B1` a wrapped delegated approval is checked against the caller
+- `TRC-B2` every --as must name the caller
+- `TRC-C1` an approval or delegation event with no prompt id is refused
+- `TRC-C2` a revoke with no prompt id still revokes
+- `TRC-C3` a replayed delegation is refused
+- `TRC-D1` Read and Grep on the configuration folder or above the transcript are refused
+- `TRC-D2` a Bash command naming the configuration folder or the home folder is refused
+- `TRC-D3` without jq, a Grep path is read
+- `TRC-F1` every refusal from #577 still refuses
+- `TRC-F2` the hook answers on any transcript path
+
+### review-locks-one-order (completed 2026-10-17)
+
+Two sessions approving at once can no longer hang on each other's review locks.
+
+- `TRC-001` Given two issues that each hold an unreviewed delegated approval, When a session on each issue types /compass:approve with nothing pending at the same moment, Then both commands finish within a bounded time and every delegated approval on both issues is marked reviewed
+
+### contract-handoff-and-staging-rules (completed 2026-10-17)
+
+Every Compass session now stages files by path, keeps lint fixes from weakening tests and settles edge cases before writing scenarios.
+
+- `CHS-1` The contract states the sign-off handoff
+- `CHS-2` The contract states the staging rule
+- `CHS-3` The contract states the lint-fix rule
+- `CHS-4` The contract states the id and header rule
+- `CHS-5` Deleting a rule's phrase fails the build
+- `CHS-6` Tightened passages keep their existing pins
+- `CHS-7` The budget is raised to the measured length with a reason
+- `CHS-8` The budget test still fails on an overlong contract
+- `CHS-9` The word ceilings hold
+- `CHS-10` A failed ceiling turns rule four into a pointer
+- `CHS-11` CLAUDE.md holds the first three rules
+- `CHS-12` CLAUDE.md does not hold rule four
+- `CHS-13` Drift between the contract and CLAUDE.md fails a test
+- `CHS-14` The run prompt tells the session to record nothing and end with the command
+- `CHS-15` The headless runner document states the stop
+- `CHS-16` An unattended session cannot record the approval
+- `CHS-17` Staging a refused unstage is not retried
+
+### narrow-redaction-to-secrets (completed 2026-10-17)
+
+Records copied to the delivery record now match their source: redaction removes secret values only and no longer blanks key names or token counts.
+
+- `TRC-001` Given text holding a key whose name only contains a secret word, such as secret-scan-declared followed by a nested key, or input_tokens with a count, When redact runs, Then the text is unchanged, while a value after a key such as password, api_key or GITHUB_TOKEN on the same line is still replaced
+
+### next-latency-limit-1-9 (completed 2026-10-17)
+
+The compass next latency check no longer fails on slower CI runners, and still catches a real slowdown.
+
+- `TRC-001` Given the latency test on a GitHub runner, when compass next costs 1.83 times the reference, then the test passes; and when a 50ms delay is added, the ratio passes the borderline band and the test fails without a second measurement
+
+### manifest-writes-atomic-and-locked (completed 2026-10-17)
+
+Two Compass commands that save the same issue at once no longer lose either change, and a reader never sees a half-written manifest.
+
+- `TRC-A1` Two writers change different keys
+- `TRC-A2` The hook records a session while a command runs
+- `TRC-A3` Two writers add to the same list
+- `TRC-A4` Two writers change the same value
+- `TRC-A5` A save with no concurrent change writes what it was given
+- `TRC-B1` A reader during a save sees a whole manifest
+- `TRC-B2` Reading a manifest takes no lock
+- `TRC-A6` Records with an id merge by id, and a position both changed without one is refused
+- `TRC-A7` Saves after a merged save keep this writer's changes
+- `TRC-A8` A copy of a loaded manifest, and analyze's evidence write, merge
+- `TRC-A9` Every save gets a manifest a load returned
+- `TRC-A10` A value of another type is a change
+- `TRC-B3` A manifest no one holds is released
+- `TRC-A11` A record or mapping held across a merged save stays in the manifest
+- `TRC-A12` A record merge keeps this writer's order
+- `TRC-A13` Both writers append a record without an id
+
+### review-workflow-uses-review-rule-list (completed 2026-10-17)
+
+The review workflow calls compass review-rule list instead of the retired policy review-rules spelling.
+
+- `TRC-001` Given .github/workflows/claude-review.yml, When the rules step runs the base branch's CLI, Then it calls review-rule list, and the retired-spelling scan passes with no exemption for policy review-rules
+
+### retired-words-in-prose-and-output (completed 2026-10-17)
+
+The CLI and the docs now use only the current vocabulary, and the guards fail on a retired word.
+
+- `RWP-1` The swept folders carry no noun use of route
+- `RWP-2` A planted noun fails in each widened folder, and machine names pass
+- `RWP-3` History and derived files are not read
+- `RWP-4` The printed-output guard reads every prose string in the CLI
+- `RWP-5` Shipping says the issue is marked done
+- `RWP-6` The digest names backlog issues
+- `RWP-7` A floor that forces a stage names the current mode
+- `RWP-8` The quick-fix help names the implement stage
+
+### rubric-three-scored-dimensions (completed 2026-10-17)
+
+The assessment rubric now describes the three scored dimensions, the two switches and the domain labels instead of four dimensions.
+
+- `TRC-001` Given role is no longer an assessment dimension, When a session reads approaches/rubric.md or skills/adaptive-routing/SKILL.md, Then they describe three scored dimensions (risk, familiarity, size), two switches (goal, urgency) and domain labels, not four dimensions
+
+### owner-reassess-overrides-label-floor (completed 2026-10-17)
+
+An owner-approved waiver can now lower a stage that a label floor raised, such as running a migrations issue solo, without touching its gates or guardrails.
+
+- `WSM-1` Given an issue a floor raised to full whose config sets breakdown to skipped with an issue waiver, When the approach is computed, Then breakdown is skipped, the approach stays full and the gate set is unchanged, guardrail 5 included
+- `WSM-2` Given the same issue with no waiver on the stage, When the approach is computed, Then breakdown stays multiagent and the issue's mode is reported as ignored
+- `WSM-3` Given a critical issue whose config lowers verify, a stage the floor names, with an issue waiver, When the approach is computed, Then verify stays thorough
+- `WSM-4` Given a migrations issue whose config waives breakdown to skipped with the owner's approval record, When it is reassessed, Then the manifest records breakdown skipped and the gates of the full approach
+- `WSM-5` Given the same waiver with no approval record, or with a record by a person who may not approve it, When it is reassessed, Then the reassess is refused and nothing is written
+
+### model-tier-from-assessment (completed 2026-10-17)
+
+Compass now picks each stage's model and effort from the issue's assessment, so cheap models run mechanical stages and the strong model runs judgement.
+
+- `MT-1` the shipped default tiers are recorded
+- `MT-2` critical risk raises the builder to strong
+- `MT-3` unmapped ground above small raises the builder
+- `MT-4` a live defect raises the builder
+- `MT-5` a floor never lowers a tier
+- `MT-6` a stage the approach does not run has no seat
+- `MT-7` the generated routing policy carries the tier rules
+- `MT-8` the shipped mapping resolves each tier
+- `MT-9` a project's mapping replaces a tier's model name
+- `MT-10` an unknown tier in the setting is refused
+- `MT-11` the compass.yml schema describes the setting
+- `MT-12` the delivery-approach record shows a line per seat
+- `MT-13` the stage commands pass the computed model
+- `MT-14` agent frontmatter keeps a fallback model
+- `MT-15` an issue with no tier rules falls back to the frontmatter
+- `MT-16` a dispatch takes its tier from the manifest
+- `MT-17` the second attempt is dispatched one tier up
+- `MT-18` retro reports review rounds by builder tier
+- `MT-19` retro with no tiered subtasks says so
+- `MT-20` a tier rule that names an unknown tier is refused
+- `MT-21` critical risk raises the builder's effort
+- `MT-22` the shipped mapping gives each tier an effort
+- `MT-23` a bare model name sets no effort
+- `MT-24` an effort outside the five levels is refused
+- `MT-25` agent frontmatter keeps a fallback effort
+- `MT-26` a dispatch records its effort and raises it with the tier
+- `MT-27` the commands pass the effort and the docs name its limits
+- `MT-28` lowering a tier needs no waiver
+- `MT-29` a subtask records the model the call passed
+- `MT-30` a process tier planted in the model rules is refused
+- `MT-31` an effort outside the five levels in the manifest is an error
+- `MT-32` the model and effort flags are not given together
+
+### size-caps-as-targets (completed 2026-10-17)
+
+- `TRC-001` Given the contract or a Writing voice section is over its size target When the test suite runs Then the size test passes And pytest prints a warning that names the file, its size and the target
+
+### dod-statements-name-sections (completed 2026-10-18)
+
+The Definition of Done now names the verification report's sections instead of citing them by number.
+
+- `TRC-001` The Definition of Done statements name the report sections
+- `TRC-002` Migration reads a box written with the numbered wording
+
+### ste100-writing-rule (completed 2026-10-18)
+
+- `STE-1` The contract carries the writing rule
+- `STE-2` The contract's size targets fit the rule
+- `STE-3` CLAUDE.md and AGENTS.md carry the writing rule
+- `STE-4` The Plain English section keeps the rules STE-100 does not carry
+- `STE-5` A contract over its target warns and does not fail
+- `STE-6` Resident words over their target warn and do not fail
+
+### verify-empty-gates-21 (completed 2026-10-18)
+
+Regression tests protect reports from approval when no verify-stage gate exists.
+
+- `TRC-001` Given a registered verification report and no verify-stage gate When the verify stage records its exit Then the report remains draft without an approver

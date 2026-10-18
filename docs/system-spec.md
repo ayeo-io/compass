@@ -4544,3 +4544,9 @@ Regression tests protect reports from approval when no verify-stage gate exists.
 ### living-spec-rederive (completed 2026-10-18)
 
 - `TRC-001` Given every landed issue folder is in .compass/work When the living spec is derived again Then docs/system-spec.md matches the derivation And it names the scenarios of ste100-writing-rule
+
+### stop-hook-survives-unreadable-issue (completed 2026-10-18)
+
+The Stop hook still warns about every other issue when it cannot read one issue's folder.
+
+- `TRC-001` Given an unreadable issue folder beside an open issue with a failing-test marker When the Stop hook runs Then it still warns about the open issue

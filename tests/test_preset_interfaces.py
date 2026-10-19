@@ -224,7 +224,7 @@ def test_pi_3_a_loosening_parent_is_stored_as_loosening_though_its_waiver_excuse
     stored = _commit_stored(tmp_path, monkeypatch, [_parent(LOOSENS)])
     found = stored["parents"][1]["classification"]
     assert found["result"] == "loosening"
-    assert found["against"] == "compass:default@6"
+    assert found["against"] == "compass:default@7"
     assert found["points"] > 0 and found["raw_points"] >= found["points"]
     assert found["complete"] is True
     assert found["first_looser"]["assessment"]
@@ -310,9 +310,9 @@ def test_pi_4_a_git_parent_is_compared_with_the_shipped_default(tmp_path):
     base, sha = _remote(tmp_path, _parent(TIGHTENS))
     root = _diff_project(tmp_path)
     ref = _ref(sha)
-    code, doc, out, err = _diff(root, "default@6", ref, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
+    code, doc, out, err = _diff(root, "default@7", ref, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
     assert code == 0, (out, err)
-    assert doc["a"]["ref"] == "default@6"
+    assert doc["a"]["ref"] == "default@7"
     assert doc["b"]["ref"] == ref
     assert doc["b"]["kind"] == "parent"
     assert doc["classification"]["result"] == "tightening"
@@ -323,7 +323,7 @@ def test_pi_4_a_git_parent_is_compared_with_the_shipped_default(tmp_path):
 
 def test_pi_4_a_loosening_parent_is_shown_not_refused(tmp_path):
     base, sha = _remote(tmp_path, _parent(LOOSENS))
-    code, doc, out, err = _diff(_diff_project(tmp_path), "default@6", _ref(sha),
+    code, doc, out, err = _diff(_diff_project(tmp_path), "default@7", _ref(sha),
                                 env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
     assert code == 0, (out, err)
     assert doc["classification"]["result"] == "loosening"
@@ -339,7 +339,7 @@ def test_pi_4_one_argument_compares_the_project_with_the_parent(tmp_path):
 
 def test_pi_4_the_parent_may_be_the_first_argument(tmp_path):
     base, sha = _remote(tmp_path, _parent(TIGHTENS))
-    code, doc, out, err = _diff(_diff_project(tmp_path), _ref(sha), "default@6",
+    code, doc, out, err = _diff(_diff_project(tmp_path), _ref(sha), "default@7",
                                 env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
     assert code == 0, (out, err)
     assert doc["classification"]["result"] == "loosening"
@@ -350,7 +350,7 @@ def test_pi_4_a_parent_that_extends_another_is_read_with_its_chain(tmp_path):
     far = make_remote(base, repo="far", files={"compass.yml": yaml.safe_dump(_parent(TIGHTENS))})
     near_doc = _parent({}, extends=_ref(far, repo="far"))
     near = make_remote(base, repo="near", files={"compass.yml": yaml.safe_dump(near_doc)})
-    code, doc, out, err = _diff(_diff_project(tmp_path), "default@6", _ref(near, repo="near"),
+    code, doc, out, err = _diff(_diff_project(tmp_path), "default@7", _ref(near, repo="near"),
                                 env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
     assert code == 0, (out, err)
     assert doc["classification"]["result"] == "tightening"
@@ -359,7 +359,7 @@ def test_pi_4_a_parent_that_extends_another_is_read_with_its_chain(tmp_path):
 def test_pi_4_offline_with_the_parent_uncached_is_refused_and_runs_no_git(tmp_path):
     bin_dir, log = fake_git(tmp_path)
     root = _diff_project(tmp_path)
-    code, _, out, err = _diff(root, "default@6", _ref("9" * 40), "--offline",
+    code, _, out, err = _diff(root, "default@7", _ref("9" * 40), "--offline",
                               env={"PATH": f"{bin_dir}:{REAL_GIT}"})
     assert code == 2
     assert "L-PARENT-NOT-CACHED" in out + err
@@ -370,11 +370,11 @@ def test_pi_4_an_uncached_parent_is_fetched_and_one_stderr_line_says_so(tmp_path
     base, sha = _remote(tmp_path, _parent(TIGHTENS))
     root = _diff_project(tmp_path)
     env = {"COMPASS_PARENT_REMOTE_BASE": str(base)}
-    code, _, out, err = _diff(root, "default@6", _ref(sha), env=env)
+    code, _, out, err = _diff(root, "default@7", _ref(sha), env=env)
     assert code == 0, (out, err)
     lines = [line for line in err.splitlines() if line.strip()]
     assert lines == [f"compass policy diff: fetching {_ref(sha)} into .compass/cache/parents/"]
-    code, _, out, err = _diff(root, "default@6", _ref(sha), env=env)
+    code, _, out, err = _diff(root, "default@7", _ref(sha), env=env)
     assert code == 0 and err.strip() == "", err
 
 
@@ -382,16 +382,16 @@ def test_pi_4_offline_never_fetches_and_writes_no_cache(tmp_path):
     base, sha = _remote(tmp_path, _parent(TIGHTENS))
     root = _diff_project(tmp_path)
     env = {"COMPASS_PARENT_REMOTE_BASE": str(base)}
-    code, _, out, err = _diff(root, "default@6", _ref(sha), "--offline", env=env)
+    code, _, out, err = _diff(root, "default@7", _ref(sha), "--offline", env=env)
     assert code == 2 and "fetching" not in err
     assert not (root / ".compass" / "cache" / "parents").exists()
-    code, _, out, err = _diff(root, "default@6", _ref(sha), env={**env, "COMPASS_OFFLINE": "1"})
+    code, _, out, err = _diff(root, "default@7", _ref(sha), env={**env, "COMPASS_OFFLINE": "1"})
     assert code == 2 and "fetching" not in err
     assert not (root / ".compass" / "cache" / "parents").exists()
 
 
 def test_pi_4_a_command_line_reference_error_does_not_repeat_the_extends_prefix(tmp_path):
-    code, _, out, err = _diff(_diff_project(tmp_path), "default@6", "github:acme/bank@1.2.0")
+    code, _, out, err = _diff(_diff_project(tmp_path), "default@7", "github:acme/bank@1.2.0")
     assert code == 2
     assert "extends:" not in out + err
     assert "L-PARENT-NO-SHA" in out + err
@@ -399,7 +399,7 @@ def test_pi_4_a_command_line_reference_error_does_not_repeat_the_extends_prefix(
 
 def test_pi_4_a_parent_that_turns_a_capability_on_is_compared_with_it_on(tmp_path):
     base, sha = _remote(tmp_path, _parent(CAPABILITY_ON))
-    code, doc, out, err = _diff(_diff_project(tmp_path), "default@6", _ref(sha),
+    code, doc, out, err = _diff(_diff_project(tmp_path), "default@7", _ref(sha),
                                 env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
     assert code == 0, (out, err)
     assert doc["b"]["capabilities"] == ["entry-exit-evaluation"]
@@ -411,8 +411,8 @@ def test_pi_4_a_cached_parent_is_read_offline(tmp_path):
     base, sha = _remote(tmp_path, _parent(TIGHTENS))
     root = _diff_project(tmp_path)
     env = {"COMPASS_PARENT_REMOTE_BASE": str(base)}
-    assert _diff(root, "default@6", _ref(sha), env=env)[0] == 0
-    code, doc, out, err = _diff(root, "default@6", _ref(sha), "--offline", env=env)
+    assert _diff(root, "default@7", _ref(sha), env=env)[0] == 0
+    code, doc, out, err = _diff(root, "default@7", _ref(sha), "--offline", env=env)
     assert code == 0, (out, err)
     assert doc["b"]["kind"] == "parent"
 
@@ -423,7 +423,7 @@ def test_pi_4_a_cached_parent_is_read_offline(tmp_path):
 ])
 def test_pi_4_a_bad_spelling_is_refused_with_its_lint_code(tmp_path, bad, code_wanted):
     bin_dir, log = fake_git(tmp_path)
-    code, _, out, err = _diff(_diff_project(tmp_path), "default@6", bad,
+    code, _, out, err = _diff(_diff_project(tmp_path), "default@7", bad,
                               env={"PATH": f"{bin_dir}:{REAL_GIT}"})
     assert code == 2
     assert code_wanted in out + err
@@ -432,7 +432,7 @@ def test_pi_4_a_bad_spelling_is_refused_with_its_lint_code(tmp_path, bad, code_w
 
 def test_pi_4_a_parent_with_a_settings_key_is_refused_before_it_is_compared(tmp_path):
     base, sha = _remote(tmp_path, _parent({"autonomy": "balanced"}))
-    code, _, out, err = _diff(_diff_project(tmp_path), "default@6", _ref(sha),
+    code, _, out, err = _diff(_diff_project(tmp_path), "default@7", _ref(sha),
                               env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
     assert code == 2
     assert "autonomy" in out + err and "Traceback" not in err
@@ -441,7 +441,7 @@ def test_pi_4_a_parent_with_a_settings_key_is_refused_before_it_is_compared(tmp_
 def test_pi_4_the_report_names_the_parent_without_a_machine_path(tmp_path):
     base, sha = _remote(tmp_path, _parent(TIGHTENS))
     root = _diff_project(tmp_path)
-    _, _, out, _ = _diff(root, "default@6", _ref(sha),
+    _, _, out, _ = _diff(root, "default@7", _ref(sha),
                          env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
     assert str(tmp_path) not in out
 

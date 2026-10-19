@@ -169,7 +169,9 @@ same file. The copy is frozen, so do not edit it. A project on v6.0.1, which shi
 `default@6.0.0` values, has its waivers re-checked against the v6.1.0 values,
 because no record stores what an approval saw. The live default wins for
 its own major. `compass policy update` reads both folders to tell which waived
-fields moved, and exits 2 for a project on a major that is not kept. Pin the
+fields moved, and exits 2 for a project on a major that is not kept. The live preset takes the new major's version at the first change to it after
+the previous major ships, not at the release: from then on the live preset and the
+kept copy no longer share a pin. Pin the
 new preset with `python3 scripts/generate-legacy-views.py --pin`; the old
 pins stay. `tests/test_policy_update.py` fails when a kept folder does not
 match its pinned digest or when an earlier pinned major is not kept.

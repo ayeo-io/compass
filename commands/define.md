@@ -106,7 +106,8 @@ contract, QA for coverage. Write it so all five roles can.
 
 On a hotfix, this stage is **reproduce-first**: the spec is a failing
 regression test that reproduces the defect - simultaneously the BDD scenario
-and the TDD red. Write that test now; the proper scenario is promoted into
+and the TDD red. Write that test now, against the reproduction steps of
+`bug-report.md`, which the hotfix owes; the proper scenario is promoted into
 `acceptance-criteria.md` as the follow-up owed at ship time.
 
 ## Spike note

@@ -22,7 +22,7 @@
 # routing-policy.md.
 # =============================================================================
 
-version: 3.1.0
+version: 3.2.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -409,7 +409,7 @@ route_shapes:
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.clarity, verify.security]
     subtask_ceiling: 2
     # A multiagent breakdown reads a distribution map, so this approach earns one.
-    artifacts: { intent: lightweight, acceptance-criteria: thorough, technical-design: thorough, distribution-map: lightweight, verification-report: thorough }
+    artifacts: { intent: lightweight, acceptance-criteria: thorough, requirements-review: lightweight, technical-design: thorough, distribution-map: lightweight, verification-report: thorough }
   hotfix:
     weight: 3
     # The `ship:` value on the `stages` line below is a stage-weight enum the evaluator
@@ -419,7 +419,7 @@ route_shapes:
     stages: { assess: lightweight, define: reproduce-first, refine: collapsed, plan: collapsed, breakdown: skipped, implement: expedited, verify: thorough, ship: thorough-with-follow-up }
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security]
     subtask_ceiling: 1
-    artifacts: { acceptance-criteria: lightweight, verification-report: thorough }
+    artifacts: { bug-report: thorough, acceptance-criteria: lightweight, verification-report: thorough }
   full:
     weight: 4
     stages: { assess: thorough, define: thorough, refine: thorough, plan: thorough, breakdown: multiagent, implement: thorough, verify: thorough, ship: thorough }

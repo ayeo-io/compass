@@ -394,10 +394,10 @@ def test_dp_1_the_rendered_files_are_what_is_committed():
 
 # --- the preset names itself and checks as a parent (`DP-2`) -------------------
 
-def test_dp_2_preset_yml_names_default_at_6_0_0_with_capabilities_off():
+def test_dp_2_preset_yml_names_default_at_7_0_0_with_capabilities_off():
     preset = _load(PRESET / "preset.yml")
     assert preset["id"] == "default"
-    assert preset["version"] == "6.0.0"
+    assert preset["version"] == "7.0.0"
     assert preset["schema"] == 1
     assert preset["capabilities"] == {name: False for name in catalogue_spec.CAPABILITIES}
 

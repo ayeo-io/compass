@@ -424,9 +424,11 @@ approach the issue was given does not list that document kind among its
 artifacts, the approach owes no such document, and the row is nothing to check,
 for example "quick-fix owes no verification-report". The artifact set is read
 from the configuration, so a project that adds `verification-report` to an
-approach makes the Definition of Done owed there. Note that the shipped regular
-approach does not list `requirements-review`, so a regular issue with no
-requirements review has nothing to check for the Definition of Ready.
+approach makes the Definition of Done owed there. The shipped regular approach
+lists `requirements-review` from 7.0.0, so with this capability on, a regular
+issue assessed from 7.0.0 owes the seven Definition of Ready records at plan
+entry. An issue assessed earlier keeps its stored generation, which does not
+list the kind, so it has nothing to check for the Definition of Ready.
 
 ## A check that an approach does not owe
 

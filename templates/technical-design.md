@@ -208,10 +208,15 @@ Name only the ones it touches.}}
 
 <!-- One block per real design decision. A decision with no alternative
      considered is usually not a decision yet. A quick fix has none of these by
-     definition; if you have one, the approach was mis-sized - re-assess. -->
+     definition; if you have one, the approach was mis-sized - re-assess.
+     Scope is `issue` when the decision holds for this issue only, and `project`
+     when later issues must follow it too. `compass ship-commit` refuses a
+     `project` decision until a record in architecture/decisions/ names it: cite
+     the record's ADR id in the block, after `compass adr new` writes it. -->
 
 ### `DD-1` - {{DECISION TITLE}}
 
+- **Scope:** {{issue \| project}}
 - **Context:** {{what forced a choice}}
 - **Decision:** {{what was chosen}}
 - **Alternatives considered:** {{what else, and why not}}
@@ -220,6 +225,7 @@ Name only the ones it touches.}}
 
 ### `DD-2` - {{DECISION TITLE}}
 
+- **Scope:** {{issue \| project}}
 - **Context:** {{…}}
 - **Decision:** {{…}}
 - **Alternatives considered:** {{…}}

@@ -204,7 +204,7 @@ reads it. It is dropped in a later migration step when the legacy lint retires.
 Comments in the old file are not copied; the copy in the `legacy` folder keeps
 them.
 
-The new file starts `schema: 1` and `extends: compass:default@6`, then the
+The new file starts `schema: 1` and `extends: compass:default@7`, then the
 settings, then the overlay. The `extends` string is built by
 `layers.default_extends` from the preset's major version, and
 `layers.parse_extends` reads it back, so the writer and the reader share one
@@ -398,6 +398,11 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "artifacts",
+      "id": "bug-report",
+      "operation": "add"
+    },
+    {
+      "catalogue": "artifacts",
       "id": "spike-conclusion",
       "operation": "add"
     },
@@ -526,7 +531,7 @@ reassess), and the `compass.yml` it would write.
       "to": null
     }
   ],
-  "compass_yml": "# Written by compass policy migrate. This file holds only what differs from\n# the shipped default preset named in extends, and the project's settings.\nschema: 1\nextends: compass:default@6\nadoption: advisory\nrules:\n  floors:\n    set:\n      rules:\n        set:\n          RP-FLOOR-001:\n            order: 1\n            when:\n              risk: critical\n            then:\n              force_minimum_approach: full\n              never_skip:\n              - define\n              - refine\n              - verify\n              - ship\n            rationale: Critical changes coordinate, or they break things quietly.\n"
+  "compass_yml": "# Written by compass policy migrate. This file holds only what differs from\n# the shipped default preset named in extends, and the project's settings.\nschema: 1\nextends: compass:default@7\nadoption: advisory\nrules:\n  floors:\n    set:\n      rules:\n        set:\n          RP-FLOOR-001:\n            order: 1\n            when:\n              risk: critical\n            then:\n              force_minimum_approach: full\n              never_skip:\n              - define\n              - refine\n              - verify\n              - ship\n            rationale: Critical changes coordinate, or they break things quietly.\n"
 }
 ```
 

@@ -658,9 +658,10 @@ def cmd_task_lint(args):
         task_dir = os.path.dirname(os.path.abspath(path))
         notes = github_labels.lint_notes(task, task_dir) + github_page.lint_notes(task, task_dir)
         notes += _unmatched_document_notes(task_dir)
-        from compass_pkg import design_size, verification_plan
+        from compass_pkg import decision_scope, design_size, verification_plan
         notes += verification_plan.lint_notes(task, task_dir)
         notes += design_size.lint_notes(task, task_dir)
+        notes += decision_scope.lint_notes(task, task_dir)
     if errs:
         print(f"compass issue lint: FAIL - {relative_to_project(path)}")
         for e in errs:

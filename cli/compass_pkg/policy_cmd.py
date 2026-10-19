@@ -284,7 +284,7 @@ def register(pls):
     pld = pls.add_parser("diff", help="compare two configurations by classification "
                          "and by replaying assessments under both")
     pld.add_argument("refs", nargs="*", metavar="REF",
-                     help="default@6, project, legacy, git:<revision>, a git parent written "
+                     help="default@7, project, legacy, git:<revision>, a git parent written "
                      "as in extends: (github:<owner>/<repo>@<ref>#<sha>) or a path to a "
                      "compass.yml. Two compare A with B, one compares the project with "
                      "it, none compares the project file at git HEAD with the working file")

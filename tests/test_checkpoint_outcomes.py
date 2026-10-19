@@ -549,8 +549,8 @@ def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
 
 # --- ARC-5 ------------------------------------------------------------------------
 
-REGULAR_DOCUMENTS = ("delivery-approach", "intent", "technical-design", "distribution-map",
-                     "verification-report")
+REGULAR_DOCUMENTS = ("delivery-approach", "intent", "requirements-review", "technical-design",
+                     "distribution-map", "verification-report")
 
 #: The release line a regular issue on the shipped default owes before it lands (ADR-065).
 RELEASE_NOTE = "Each stage hand-off is on record."

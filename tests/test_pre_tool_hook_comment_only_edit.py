@@ -870,23 +870,49 @@ def _charged(r) -> int:
     return int(found[-1])
 
 
+# The files of the next two tests. The densest shapes are the ones that the cost
+# table charges at the rate of its slowest measurement. KiB is the size of the
+# file; the limit is the size at which the charge reaches the work budget (about
+# 780 KiB of Python and 230 KiB of YAML).
+def _dense_python(kib):
+    return "# comment\n" + "a\n" * (kib * 512)
+
+
+def _calls(kib):
+    return "# comment\n" + "f(a, b)\n" * (kib * 128)
+
+
+def _flow_numbers(kib):
+    return "# comment\nx: [" + "1," * (kib * 512) + "1]\n"
+
+
+def _list_of_maps(kib):
+    return "# comment\n" + "- a: 1\n  b: 2\n" * (kib * 73)
+
+
 @pytest.mark.serial
 @pytest.mark.parametrize("rel, text", [
-    pytest.param("cli/compass_pkg/dense.py",
-                 "# comment\n" + "a\n" * (700 * 512), id="python-statements-of-two-bytes"),
-    pytest.param("cli/compass_pkg/calls.py",
-                 "# comment\n" + "f(a, b)\n" * (700 * 128), id="python-calls"),
-    pytest.param(".github/workflows/dense.yml",
-                 "# comment\nx: [" + "1," * (200 * 512) + "1]\n", id="yaml-flow-numbers"),
-    pytest.param(".github/workflows/maps.yml",
-                 "# comment\n" + "- a: 1\n  b: 2\n" * (200 * 73), id="yaml-list-of-maps"),
+    pytest.param("cli/compass_pkg/dense.py", _dense_python(300),
+                 id="python-statements-of-two-bytes"),
+    pytest.param("cli/compass_pkg/calls.py", _calls(300), id="python-calls"),
+    pytest.param(".github/workflows/dense.yml", _flow_numbers(90),
+                 id="yaml-flow-numbers"),
+    pytest.param(".github/workflows/maps.yml", _list_of_maps(90),
+                 id="yaml-list-of-maps"),
 ])
 def test_the_charged_work_of_an_edit_matches_the_measured_time(tmp_path, rel, text):
     """Supports `TRC-050` in hooks-comment-only-edits-and-prose/acceptance-criteria.md:
     the cost table is in microseconds, so the seconds the hook takes are at most
     three times the work it charged, and at least a fifth of it. The first bound
     is the one that protects: a hook that costs more than it was charged can pass
-    its limit. A faster machine takes less than it was charged, which is safe."""
+    its limit. A faster machine takes less than it was charged, which is safe.
+
+    Each file is about 40% of the size at which the charge reaches the budget.
+    The check ends at a 3 second alarm and is then charged the whole alarm, so a
+    file charged 2.1 s (700 KiB of Python) is refused by a machine that is 1.6
+    times slower than the one that measured the table, and a Linux runner that
+    GitHub hosts is that slow. At 40% the machine must be 3.5 times slower, and the
+    test checks the model and not the speed of the machine."""
     root = _project(tmp_path)
     _write(root, rel, text)
     started = time.monotonic()
@@ -902,6 +928,42 @@ def test_the_charged_work_of_an_edit_matches_the_measured_time(tmp_path, rel, te
     ratio = seconds / (_charged(r) / 1e6)
     print(f"{rel}: {seconds:.2f} s for {_charged(r)} charged: {ratio:.2f}")
     assert 0.2 <= ratio <= 3.0, f"{seconds:.2f} s for {_charged(r)} charged: {ratio:.2f}"
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("rel, text, code_old, code_new", [
+    pytest.param("cli/compass_pkg/dense.py", _dense_python(780),
+                 "# comment\na\n", "# comment\nb\n", id="python-statements-of-two-bytes"),
+    pytest.param("cli/compass_pkg/calls.py", _calls(780),
+                 "# comment\nf(a, b)\n", "# comment\nf(a, c)\n", id="python-calls"),
+    pytest.param(".github/workflows/dense.yml", _flow_numbers(230),
+                 "x: [1,", "x: [2,", id="yaml-flow-numbers"),
+    pytest.param(".github/workflows/maps.yml", _list_of_maps(230),
+                 "# comment\n- a: 1\n", "# comment\n- a: 4\n", id="yaml-list-of-maps"),
+])
+@pytest.mark.parametrize("kind", ["comment", "code"])
+def test_a_file_at_the_budget_limit_is_judged_safely_on_any_machine(
+        tmp_path, rel, text, code_old, code_new, kind):
+    """Supports `TRC-050` in hooks-comment-only-edits-and-prose/acceptance-criteria.md:
+    a file of the size at which the charge reaches the budget takes about 2
+    seconds here and can pass the 3 second alarm on a slower machine. Both
+    outcomes are right for a comment edit: allowed, or refused as before. An edit
+    of code is refused on every machine, and the hook ends within the time bound
+    with no other refusal code."""
+    root = _project(tmp_path)
+    _write(root, rel, text)
+    old, new = (("# comment", "# another") if kind == "comment"
+                else (code_old, code_new))
+    # An old text that occurs twice would be refused for that reason alone.
+    assert text.count(old) == 1, old
+    seconds, r = _call(root, {"tool_name": "Edit", "tool_input": {
+        "file_path": str(root / rel), "old_string": old, "new_string": new}})
+
+    if r.returncode == 2 or kind == "code":
+        _refused(r)
+    else:
+        _allowed(r)
+    assert seconds < 6, f"the hook took {seconds:.1f} s"
 
 
 @pytest.mark.serial

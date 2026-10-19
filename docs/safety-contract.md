@@ -782,6 +782,21 @@ numbers), against 6.6 ms for a list of mappings and 0.7 ms for comment lines.
 the hook is between 0.2 and 3 times the work it charged, and every hostile
 shape ends within 6 seconds.
 
+A slower machine refuses a file that is close to the limit. The check ends at
+the 3 second alarm and is charged the whole alarm, and the Edit keeps the old
+verdict. A file of statements of two bytes and 700 KiB is charged 2.15 seconds
+and takes 1.9 here, so a machine that is 1.6 times slower ends it at the alarm.
+A GitHub-hosted Linux runner did so on 19 October 2026 (the check ran past
+3 seconds). The refusal is safe, and the limit is for hostile files; a file that
+people write is far from it (81 KiB of definitions and comments takes 0.1
+seconds, in the table above). The model
+test therefore uses files of about 40% of the limit (300 KiB of Python, 90 KiB
+of YAML), which take 0.65 to 0.9 seconds here and leave a margin of 3.3 times
+before the alarm. A second test uses files at the limit (780 KiB of Python,
+230 KiB of YAML) and asserts only that the result is safe: a comment edit is
+allowed or refused as before, an edit of code is always refused, and the hook
+ends within 6 seconds.
+
 Three more rules sit beside this one:
 
 - Path classes. `evals/*/seed/` holds input that the eval harness copies into a

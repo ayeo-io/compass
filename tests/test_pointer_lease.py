@@ -292,3 +292,11 @@ def test_the_root_is_the_real_path_of_the_compass_folder(project, tmp_path):
     session_lease.record(str(link), "S1", "alpha")
     assert _table(folder)["S1"]["root"] == os.path.realpath(folder)
     assert session_lease.check(str(folder), "S1", "beta") == "moved:alpha"
+
+
+def test_the_recorder_names_all_three_ways_the_issue_is_resolved():
+    """`via=tree` is what the hook passes for an edit in another tree; the
+    recorder's documentation names it beside `env` and `pointer`."""
+    from compass_pkg import session_record
+    doc = session_record.record.__doc__
+    assert all(f"`{via}`" in doc for via in ("env", "pointer", "tree"))

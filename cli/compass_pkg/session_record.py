@@ -60,8 +60,10 @@ class _Changed(Exception):
 
 def record(task_dir, session, via="pointer") -> None:
     """Add `session` to the `usage.sessions` of the issue in `task_dir`, or do
-    nothing. `via` says how the hook resolved the issue: `env` (COMPASS_ISSUE)
-    or `pointer` (`.compass/current-task`). Never raises."""
+    nothing. `via` says how the hook resolved the issue: `env` (COMPASS_ISSUE),
+    `pointer` (`.compass/current-task`) or `tree` (the issue of another
+    tree the edit names, ADR-074). Only `pointer` reads the session table.
+    Never raises."""
     try:
         _record(os.path.abspath(str(task_dir)), session, via)
     except Exception:                                   # noqa: BLE001 - never stop a tool call

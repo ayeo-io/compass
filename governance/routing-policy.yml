@@ -10,8 +10,8 @@
 # is what the deterministic evaluator (`compass approach evaluate`) actually runs.
 #
 # The split that matters: the four-dimension *assessment* (risk, familiarity,
-# size, goal, plus urgency and labels) is JUDGEMENT - the assess stage, an LLM or a
-# human, produces it, and it is not mechanisable, because that judgement
+# size, goal, plus urgency and labels) is JUDGMENT - the assess stage, an LLM or a
+# human, produces it, and it is not mechanisable, because that judgment
 # IS the adaptivity. This file governs only what happens *after* the assessment
 # is recorded: composing and constraining the delivery approach. That part is deterministic and
 # reproducible - same assessment + same policy => same delivery approach, every time.

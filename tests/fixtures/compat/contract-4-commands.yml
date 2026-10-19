@@ -655,7 +655,7 @@ entries:
   project: empty
   argv: ["init"]
   exit: 0
-  stdout_contains: "initialised Compass"
+  stdout_contains: "initialized Compass"
 - id: init-twice
   project: initialised
   argv: ["init"]

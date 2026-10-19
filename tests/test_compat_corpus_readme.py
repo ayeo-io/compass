@@ -1,7 +1,8 @@
 """The recorded command corpus keeps its pins; one dated entry says why one moved.
 
-Scenario id: TRC-057 of the issue `language-key-and-us-english`. The file name
-is the one in the manifest; the corpus holds no README.
+The scenario that keeps the recorded pins (`TRC-057`) of the issue
+`language-key-and-us-english`. The file name is the one in the manifest; the
+corpus holds no README.
 """
 from __future__ import annotations
 
@@ -16,10 +17,10 @@ CORPUS = "tests/fixtures/compat"
 PIN_FILE = CORPUS + "/contract-4-commands.yml"
 
 
-def _recorded():
+def _recorded(path=PIN_FILE):
     """The same file as it stands on the base branch, or None without one."""
     for ref in ("origin/main", "main"):
-        done = subprocess.run(["git", "show", f"{ref}:{PIN_FILE}"], cwd=ROOT,
+        done = subprocess.run(["git", "show", f"{ref}:{path}"], cwd=ROOT,
                               capture_output=True, text=True)
         if done.returncode == 0:
             return done.stdout
@@ -27,7 +28,7 @@ def _recorded():
 
 
 def _entries(text):
-    return {e["id"]: e for e in yaml.safe_load(text)}
+    return {e["id"]: e for e in yaml.safe_load(text)["entries"]}
 
 
 def test_trc_057():
@@ -55,6 +56,10 @@ def test_trc_057():
             assert now[name] == entry, name
     assert now_text.count("stdout_contains: \"initialized Compass\"") == 1
     assert list((ROOT / CORPUS).rglob("README*")) == []
-    # The ten refusal-code pins of the hook corpus are as recorded 5.6.0 output.
-    hook = (ROOT / CORPUS / "contract-5-hook.yml").read_text(encoding="utf-8")
-    assert hook.count("code: not-initialised") == 10
+    # The refusal-code pins of the hook corpus are as recorded 5.6.0 output.
+    hook_path = CORPUS + "/contract-5-hook.yml"
+    hook = (ROOT / hook_path).read_text(encoding="utf-8")
+    assert "code: not-initialised" in hook and "code: not-initialized" not in hook
+    base_hook = _recorded(hook_path)
+    if base_hook is not None:
+        assert hook == base_hook

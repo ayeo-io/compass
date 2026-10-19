@@ -181,8 +181,8 @@ def test_trc_039_only_the_one_pin_line_of_the_command_corpus_may_move(tmp_path):
     pinned = {p: d for p, d in _pinned().items() if p.startswith(CORPORA)}
     path = root / CASE_PIN_FILE
     text = path.read_text(encoding="utf-8")
-    assert 'stdout_contains: "initialised Compass"' in text
-    path.write_text(text.replace('"initialised Compass"', '"initialized Compass"'),
+    assert 'stdout_contains: "initialized Compass"' in text
+    path.write_text(text.replace('"initialized Compass"', '"initialised Compass"'),
                     encoding="utf-8")
     assert digest_problems(root, pinned) == [], "the pin line may change"
     path.write_text(text.replace("already a Compass project", "already a Compass projekt"),

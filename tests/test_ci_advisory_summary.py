@@ -4,7 +4,8 @@ after a check has failed.
 A person reading a CI log sees the last line first. Advisory mode changes
 the exit code, not what the summary line says about the checks.
 
-Scenario ids: TRC-001.
+Scenario id: `TRC-001` in
+advisory-ci-no-pass-after-fail/acceptance-criteria.md.
 """
 from __future__ import annotations
 

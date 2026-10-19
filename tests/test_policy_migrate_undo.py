@@ -5,8 +5,9 @@ apply the undo through `compass_pkg.policy_migrate_undo`. Stop tests replace
 one undo writer by name with a function that raises `OSError`, as the tests
 for the migration do, and run the undo again.
 
-Scenario id: `TRC-007` in policy-migrate-undo/acceptance-criteria.md. The ids
-run from TRC-007 to TRC-018. Each test name starts with its scenario id.
+Scenario id: `TRC-007` in policy-migrate-undo/acceptance-criteria.md. The
+scenarios of the first group follow it in order. Each test name starts with
+its scenario id.
 """
 from __future__ import annotations
 
@@ -115,7 +116,7 @@ def stop_before(monkeypatch, name):
     monkeypatch.setattr(undo_api(), name, stop)
 
 
-# --- TRC-007 to TRC-013 -----------------------------------------------------------
+# --- the restore, the removals and the order of the steps ---------------------------
 
 def test_TRC_007_apply_restores_the_three_sources_byte_for_byte(tmp_path):
     root, originals, _ = migrated(tmp_path, crlf=True)
@@ -186,7 +187,7 @@ def test_TRC_013_a_governance_file_deleted_since_the_migration_is_restored(tmp_p
     assert restores == [".compass/config.yml", "governance/guardrails.yml"]
 
 
-# --- TRC-014 to TRC-018 -----------------------------------------------------------
+# --- the round trip and the stops ----------------------------------------------------
 
 def _project_state(root):
     """The files a migration leaves, with the marker minus its time."""

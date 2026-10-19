@@ -6,8 +6,9 @@ has fewer than 60 words, and happens in `plan`, before any write. These tests
 break a migrated scratch project in one way each, plan the undo and read the
 message. They use the helpers of `test_policy_migrate_undo`.
 
-Scenario id: `TRC-019` in policy-migrate-undo/acceptance-criteria.md. The ids
-run from TRC-019 to TRC-031. Each test name starts with its scenario id.
+Scenario id: `TRC-019` in policy-migrate-undo/acceptance-criteria.md. The
+refusal scenarios follow it in order. Each test name starts with its
+scenario id.
 """
 from __future__ import annotations
 
@@ -91,7 +92,7 @@ CASES = {
 }
 
 
-# --- TRC-019 to TRC-025 -----------------------------------------------------------
+# --- edited files, legacy copies and the marker --------------------------------------
 
 def test_TRC_019_an_edited_compass_yml_is_refused(tmp_path):
     root, _, _ = migrated(tmp_path)
@@ -184,7 +185,7 @@ def test_TRC_025_a_marker_that_is_not_a_mapping_counts_as_no_marker(tmp_path, te
     assert "nothing to undo" in refusal(root)
 
 
-# --- TRC-026 to TRC-028: signed records --------------------------------------------
+# --- signed records ---------------------------------------------------------------
 
 def test_TRC_026_signed_records_since_the_migration_are_refused_and_counted(tmp_path):
     root, _, _ = migrated(tmp_path)
@@ -244,11 +245,14 @@ def test_TRC_028_only_regular_signed_json_records_in_evidence_folders_count(tmp_
     (work / "stray.json").write_text(json.dumps({"timestamp": late, "content_digest": "x"}),
                                      encoding="utf-8")
     outside = root / "outside"
-    outside.mkdir()
-    (outside / "linked.json").write_text(json.dumps({"timestamp": late, "content_digest": "x"}),
-                                         encoding="utf-8")
-    (work / "issue-a" / "evidence" / "link.json").symlink_to(outside / "linked.json")
+    (outside / "evidence").mkdir(parents=True)
+    linked = outside / "evidence" / "linked.json"
+    linked.write_text(json.dumps({"timestamp": late, "content_digest": "x"}), encoding="utf-8")
+    # a link to a record, a link to an issue folder, and a link to an evidence folder
+    (work / "issue-a" / "evidence" / "link.json").symlink_to(linked)
     (work / "linked-issue").symlink_to(outside, target_is_directory=True)
+    (work / "issue-c").mkdir()
+    (work / "issue-c" / "evidence").symlink_to(outside / "evidence", target_is_directory=True)
     assert undo_api().plan(str(root)).result == "ready"
 
 
@@ -267,7 +271,7 @@ def test_TRC_028_without_a_readable_migrated_at_the_markers_own_time_stands_in(t
     assert "1 signed record exists" in refusal(root)
 
 
-# --- TRC-029 to TRC-031 -----------------------------------------------------------
+# --- a refusal writes nothing, the fixed path list and the word limit ---------------
 
 def broken(tmp_path, case):
     root, _, _ = migrated(tmp_path)

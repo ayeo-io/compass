@@ -77,7 +77,12 @@ JSON_SCHEMA_VERSION = 1
 # layer holds a waiver keeps the issue's mode, so a waived breakdown from
 # `multiagent` to `skipped` is `incomparable` and refused unless the waiver's
 # approval is valid. Version 9 saw no effect there and read it as `equivalent`.
-CLASSIFIER_VERSION = 10
+#
+# Version 11: a list parameter whose registry direction is `superset` (the
+# trigger lists of `contracts-declared`) is compared as a set of exact entries,
+# so adding an entry is `tighter`, which version 10 read as `incomparable`
+# (ADR-073).
+CLASSIFIER_VERSION = 11
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")
@@ -323,7 +328,7 @@ def grid_at(assessment):
 
 # --- comparing one fact -----------------------------------------------------------
 
-TIGHTER_DIRECTIONS = (*DIRECTIONS, "none", "equivalent")
+TIGHTER_DIRECTIONS = (*DIRECTIONS, "none", "equivalent", "superset")
 
 EQUAL, TIGHTER, LOOSER, INCOMPARABLE = "equal", "tighter", "looser", "incomparable"
 
@@ -467,11 +472,48 @@ def _in_declared_choices(field, meta, p, c, ctx):
     return p in allowed and c in allowed
 
 
+def _entry(item):
+    """One entry of a trigger list as a hashable value, or None when its shape
+    is not one the check reads: a non-empty string, or a pair with exactly the
+    keys `path` and `contains`, both non-empty strings."""
+    if isinstance(item, str):
+        return item or None
+    if isinstance(item, dict) and set(item) == {"path", "contains"}:
+        pair = (item["path"], item["contains"])
+        if all(isinstance(part, str) and part for part in pair):
+            return pair
+    return None
+
+
+def _entries(value):
+    """A list as the set of its exact entries, so order and repeats do not
+    matter. None when the value is not a list or holds an entry of the wrong
+    shape: the check skips such an entry silently, and the classifier does not
+    call it safe."""
+    if not isinstance(value, (list, tuple)):
+        return None
+    found = {_entry(item) for item in value}
+    return None if None in found else found
+
+
+def _list_rule(p, c):
+    """A list parameter whose direction is `superset`: a list that holds every
+    entry of the other and more is stricter, because each entry makes the
+    check run on more changes. A side that is absent or malformed is
+    incomparable (nothing is raised: a typo in a layer must not stop the
+    classification)."""
+    p, c = _entries(p), _entries(c)
+    if p is None or c is None:
+        return INCOMPARABLE
+    return _set_rule(None, None, p, c, None)
+
+
 def _ceiling_rule(field, key, p, c, ctx, meta=None):
     """As the registry declares: `higher` or `lower` is the stricter way, and
     `none` (the default) makes any change incomparable. `equivalent` makes a
     swap between two declared choices equal, and any other change
-    incomparable: it is never tighter or looser."""
+    incomparable: it is never tighter or looser. `superset` compares a list as
+    a set of entries (`_list_rule`)."""
     if p == c:
         return EQUAL
     # A readiness parameter one side leaves out runs with the implementation's
@@ -482,6 +524,8 @@ def _ceiling_rule(field, key, p, c, ctx, meta=None):
     direction = _direction(field, key, meta, ctx)
     if direction == "equivalent":
         return EQUAL if _in_declared_choices(field, meta, p, c, ctx) else INCOMPARABLE
+    if direction == "superset":
+        return _list_rule(p, c)
     np_, nc = _number(p), _number(c)
     if direction == "none" or np_ is None or nc is None:
         return INCOMPARABLE

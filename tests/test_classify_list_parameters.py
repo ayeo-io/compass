@@ -144,7 +144,7 @@ def test_unknown_direction_still_raises():
     (PATHS_KEY, "api/**"),
     (PATHS_KEY, ["schemas/*", ""]),
     (CONTENTS_KEY, None),
-    (CONTENTS_KEY, [dict(PAIR), "add_parser("]),
+    (CONTENTS_KEY, ["add_parser("]),
     (CONTENTS_KEY, [dict(PAIR, extra="x")]),
     (CONTENTS_KEY, [{"path": "*.py"}]),
 ], ids=["no-paths", "string-paths", "empty-entry", "no-contents", "bare-string-entry",

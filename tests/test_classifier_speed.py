@@ -611,7 +611,11 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # waived breakdown is now refused as incomparable unless its approval is valid,
 # where version 9 saw no effect. The version is now 10. Pinned on top of the
 # `model-tier-from-assessment` source above.
-VERDICT_SOURCE_PIN = "e0233412f088703b"
+# Re-pinned for issue `list-parameter-superset-tightens`: a list parameter whose
+# registry direction is `superset` compares as a set of exact entries, so adding a
+# trigger path is now `tighter`, where version 10 read it as `incomparable`. The
+# version is now 11 (ADR-073).
+VERDICT_SOURCE_PIN = "0f031f17ab7f22c7"
 
 
 def _verdict_source_digest():

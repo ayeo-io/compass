@@ -18,6 +18,8 @@ the table does not exist, and when a doc in this folder is not listed.
 - [routing-deep-dive.md](routing-deep-dive.md) - how the assessment becomes a delivery approach.
 - [safety-contract.md](safety-contract.md) - what Compass enforces, and what it does not claim.
 - [refusal-codes.md](refusal-codes.md) - every reason the pre-tool hook can refuse with, generated.
+- [artifact-catalog.md](artifact-catalog.md) - the artifact catalog: the fields of a kind, the skeleton, the word limits, the documents that repeat, the documents per work unit and the table of shipped kinds.
+- [artifact-catalogue.md](artifact-catalogue.md) - the old name of the artifact catalog page, kept until 8.0.0 so a link to it opens the new page.
 - [multiagent-protocol.md](multiagent-protocol.md) - how a multiagent issue is run, step by step.
 - [headless-runner.md](headless-runner.md) - `compass run`: one stage of one issue with nobody in the session.
 - [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.

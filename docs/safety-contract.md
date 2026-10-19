@@ -674,7 +674,9 @@ inside a comment into a line break, and the hook reads UTF-8, so the Edit is
 code when the cookie before or after the Edit is not `utf-8`, `utf8` or
 `ascii`, and when the Edit adds, removes, changes or moves the cookie (two
 comment lines put above a cookie on line 2 move it out of the first two
-lines). A file whose first line starts with `#` and `template:` (cloud-init's
+lines). When the cookie is `ascii`, an Edit that leaves a non-ASCII character in
+the file is code too, because Python cannot load such a file. A file whose first
+line starts with `#` and `template:` (cloud-init's
 `## template: jinja`) is rendered as a template before a YAML parser reads it,
 so an Edit of it is code too.
 
@@ -711,7 +713,9 @@ version, and each lets an Edit through that a stricter check would refuse:
   grammar or help is not detected.
 - The directive rule is a deny list of words. A scanner or formatter directive
   that is not on the list passes as a comment. The list now holds the common
-  ones; a tool that is not on it is not seen.
+  ones; a tool that is not on it is not seen. The same holds for a first line
+  that a tool reads as a file type: an Edit that removes `#cloud-config` or
+  `#include` from the first line of a YAML file passes as a comment edit.
 - A template engine that reads comment text is relevant only where
   `enforcement.code_globs` guards a template. A YAML comment such as
   `# {{ "\nevil: true" }}` in a Helm template passes the YAML check, because

@@ -43,6 +43,10 @@ UTF7 = "# coding: utf-7\nx = 1  # note\n"
                  "# note", "# other", id="cookie-on-line-two-after-a-shebang"),
     pytest.param("﻿# coding: utf-7\nx = 1  # note\n", "# note", "# other",
                  id="cookie-after-a-byte-order-mark"),
+    # Python cannot load an ASCII-cookie file that holds a non-ASCII character,
+    # so the Edit would turn a working file into a SyntaxError.
+    pytest.param("# coding: ascii\nx = 1  # note\n", "# note", "# note é",
+                 id="ascii-cookie-and-an-added-non-ascii-character"),
 ])
 def test_comment_edit_of_a_file_whose_encoding_cookie_is_not_utf_8_or_ascii_is_refused(
         tmp_path, text, old, new):
@@ -141,6 +145,8 @@ def test_the_word_template_in_a_later_comment_is_not_a_template_header(tmp_path)
 
 _UNSAFE_CHECK = ("    if cookie_before is not None and cookie_before not in SAFE_ENCODINGS:\n"
                  "        return True\n")
+_ASCII_CHECK = ('    if cookie_after == "ascii" and not after.isascii():\n'
+                "        return True\n")
 _MOVED_CHECK = ("    if cookie_before != cookie_after:\n"
                 "        return True\n")
 _TEMPLATE_CHECK = ('    if starts_as_template(before) or starts_as_template(after):\n'
@@ -149,6 +155,9 @@ _TEMPLATE_CHECK = ('    if starts_as_template(before) or starts_as_template(afte
 FAULTS = [
     pytest.param({_UNSAFE_CHECK: ""}, PY, UTF7, "# note", '# note +AAo-print("x")',
                  id="TRC-062-an-unsafe-cookie-is-allowed"),
+    pytest.param({_ASCII_CHECK: ""}, PY, "# coding: ascii\nx = 1  # note\n",
+                 "# note", "# note é",
+                 id="TRC-062-a-non-ascii-character-is-added-to-an-ascii-file"),
     pytest.param({_MOVED_CHECK: ""}, PY, "# a\n# coding: utf-8\nx = 1\n",
                  "# a\n", "# z\n# z\n# a\n",
                  id="TRC-062-a-moved-cookie-is-allowed"),

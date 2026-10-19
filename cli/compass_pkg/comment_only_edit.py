@@ -25,7 +25,8 @@
 # judges the Edit as it did before this module existed. A comment that carries
 # a pragma is code (DD-3 of the decision record). So is an Edit of a Python file
 # whose encoding cookie is not utf-8 or ascii or that the Edit adds, removes or
-# moves, and an Edit of a file whose first line makes a template engine read
+# moves, an Edit that adds a non-ASCII character to a file with an ascii
+# cookie, and an Edit of a file whose first line makes a template engine read
 # it. The pragma list and the docstring readers are lists of words: a tool that
 # is not on them is not seen.
 #
@@ -192,6 +193,10 @@ def encoding_changes_code(before: str, after: str) -> bool:
     if cookie_before != cookie_after:
         return True
     if cookie_before is not None and cookie_before not in SAFE_ENCODINGS:
+        return True
+    # Python cannot load an ASCII-cookie file that holds a non-ASCII character,
+    # so an Edit that adds one turns a working file into a SyntaxError.
+    if cookie_after == "ascii" and not after.isascii():
         return True
     return False
 

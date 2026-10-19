@@ -52,6 +52,8 @@ def test_contract_states_the_limits_of_the_comment_only_check():
     for word in ("nosemgrep", "gitleaks", "checkov", "lgtm", "NOSONAR", "codeql",
                  "yapf", "tfsec", "## template:"):
         assert word in section, word
+    # A first line that a tool reads as a file type, which is not on the list.
+    assert "`#cloud-config`" in section and "`#include`" in section
     # The encoding cookie.
     assert "encoding cookie" in section and "utf-7" in section
     # Template text, a symbolic link in a fixture folder, python3 and awk.

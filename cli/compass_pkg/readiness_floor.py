@@ -4,6 +4,8 @@
 # `autonomy: autonomous` issue, split out of routing.py to keep it under the
 # module line cap. routing.py imports from here; this module imports nothing
 # from routing.
+#
+# DEPENDENCY: standard library (os) only; no third-party package.
 # =============================================================================
 
 import os

@@ -32,6 +32,7 @@ components. Relations are ordered by the calling component.
 | `cli/compass` | `.compass/current-task` | file read | resolves the active issue slug for hooks and subcommands that don't receive `--issue` explicitly | high |
 | `hooks/pre-tool.sh` | `.compass/work/<issue>/.red` | file read | the hook checks for the `.red` marker before allowing code-editing tool calls; absent marker → edit blocked | high |
 | `hooks/pre-tool.sh` | `.compass/current-task` | file read | resolves which issue's `.red` marker to check | high |
+| `hooks/pre-tool.sh` | `cli/compass_pkg/comment_only_edit.py` and the edited `.py`, `.yml` or `.yaml` file | python3 call with the tool call on stdin; file read | an Edit that the module proves changes only comments, docstrings or layout is allowed with no failing test and no issue lookup; any doubt, failure or overrun gives the verdict the hook gave before, and a missing `python3` refuses (`docs/safety-contract.md`) | high |
 | `hooks/stop.sh` | `governance/signals.yml` | file read | reads scope-bloat and rework signal patterns at session end | medium |
 | `hooks/stop.sh` | `.compass/work/<issue>/devlog.md` | file read | scans the session's devlog for rework signals before the session closes | medium |
 | `hooks/stop.sh` | `.compass/current-task` | file read | resolves the active issue for devlog location | medium |

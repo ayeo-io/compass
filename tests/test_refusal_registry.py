@@ -53,6 +53,10 @@ FIXTURES = {
     "not-initialised": dict(detail="no .compass/work/ exists in this project"),
     "bad-current-task": dict(slug="../side"),
     "bad-session-issue": dict(slug="missing", project="/work/proj"),
+    # The longest form of the own-project code: a 40-character slug and a
+    # long project path.
+    "bad-session-issue-restart": dict(slug="a" * 40,
+                                      project="/work/" + "p" * 40),
     "tree-not-tied": dict(project="/work/proj"),
     "working-directory-gone": dict(target="src/app.py", tool="Edit"),
     "pointer-moved": dict(slug="why", previous="ex"),
@@ -60,8 +64,11 @@ FIXTURES = {
     "no-acceptance-criteria": dict(target="src/app.py", tool="Edit"),
     "red-unsigned": dict(slug="demo", since_date="2026-09-01"),
     "red-marker-no-record": dict(slug="demo"),
-    "no-red-on-record": dict(slug="demo", target="src/app.py", tool="Edit",
-                             guard="the built-in production-code set"),
+    # The longest form: a 40-character slug and a guard of 20 words, the most
+    # the registry keeps of a long parameter, so the 60-word cap is checked
+    # where it is tightest.
+    "no-red-on-record": dict(slug="a" * 40, target="src/app.py", tool="Edit",
+                             guard=" ".join(f"word{i}" for i in range(20))),
     # The longest form: 40-character slugs, more unmet dependencies and a
     # closed state, so the 60-word cap is checked where it is tightest.
     "waits-for-issue": dict(slug="a" * 40, target="src/app.py", tool="Edit",

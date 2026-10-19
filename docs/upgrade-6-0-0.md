@@ -43,7 +43,7 @@ The keys `held`, `next_up`, `landed_this_week` and `abandoned` are removed. The 
 | `issue subtask update` | `issue subtask set` |
 | `run --stage build` | `run --stage implement` |
 
-A spelling that no release held has no alias. Its unknown-command message is the parser's usual error and names no new spelling, except for `issue dashboard` and `issue labels sync`, which add one line.
+A spelling that no release held has no alias. Its unknown-command message is the parser's usual error and names no new spelling, except for the two verbs whose error adds one line. The 7.0.0 upgrade guide (`docs/upgrade-7-0-0.md`, "What is removed") names both.
 
 `issue status remove` also reopens a closed issue. A v5.6.0 script that ran `issue set-status active` on a landed issue now exits 2 and must run `issue status remove` instead. The reopening removes `status`, `close_reason` and `duplicate_of`, keeps the land time as history and records a reason.
 

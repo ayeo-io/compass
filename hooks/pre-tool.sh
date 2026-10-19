@@ -534,6 +534,40 @@ set +e
 compass_record_session
 set -e
 
+# --- a Bash command too long to scan in time ---------------------------------
+# Claude Code stops a hook that runs too long, and before 2.1.295 a stopped
+# hook lets the call run. The scans below take longer the longer the command
+# is, so a command over COMMAND_LIMIT bytes is not scanned.
+#   - In a project that opted in (it has `.compass/`, the test the opt-in
+#     exits near the end make), the command is refused whole. A cut command
+#     would pass any write placed after the cut.
+#   - Elsewhere it is not refused, because the hook runs in every repository.
+#     Only the write scan is skipped (SKIP_WRITE_SCAN, read where the Bash
+#     decision starts). The approval guard below still reads the whole command:
+#     it protects the transcript and the delegation files wherever the hook
+#     runs.
+# Write and Edit have no command, so they are never counted. The count is in
+# bytes: `${#COMMAND}` counts characters in a UTF-8 locale, and a character is
+# at most four bytes, so a command of COMMAND_LIMIT / 4 characters or fewer is
+# under the limit and starts no process. If `wc` fails, the count is the upper
+# bound, so a fault refuses and never allows.
+COMMAND_LIMIT=98304
+SKIP_WRITE_SCAN=0
+if [ "${TOOL:-}" = "Bash" ]; then
+  _chars=${#COMMAND}
+  if [ "$_chars" -gt $((COMMAND_LIMIT / 4)) ]; then
+    _bytes="$(printf '%s' "$COMMAND" | wc -c 2>/dev/null)" || _bytes=""
+    _bytes="${_bytes//[[:space:]]/}"
+    case "$_bytes" in ""|*[!0-9]*) _bytes=$((_chars * 4)) ;; esac
+    if [ "$_bytes" -gt "$COMMAND_LIMIT" ]; then
+      if [ "${PROJECT_RESOLVED:-0}" -eq 1 ] && [ -d "$PROJECT_DIR/.compass" ]; then
+        compass_block bash-command-too-long "size=$_bytes" "limit=$COMMAND_LIMIT"
+      fi
+      SKIP_WRITE_SCAN=1
+    fi
+  fi
+fi
+
 # --- approval state the agent must not touch ---------------------------------
 # Request files, delegation files, the prompt hook's entry point, the session
 # transcript (which holds the code that confirms a g5 delegation) and a
@@ -567,7 +601,22 @@ case "${TOOL:-}" in
      # since the shell drops them: `--d''elegated`, `-\-delegated` and
      # `$'--delegated'` all run as `--delegated`.
      _text="${COMMAND:-}${TARGET:-}"
-     _bare="${_text//[\'\"\\]/}"
+     # prefilter-bare-begin (tests/test_pre_tool_hook_time_bounded.py runs it)
+     # A text with no quote or backslash is its own bare form. For the rest,
+     # bash substitution costs a few milliseconds up to 256 characters and
+     # grows faster than the text after that (about 3 s at 4096 characters in
+     # a UTF-8 locale), so a longer text goes through one `tr`. `tr -d` removes
+     # the same three ASCII characters, byte by byte under LC_ALL=C.
+     case "$_text" in
+       *[\'\"\\]*)
+         if [ "${#_text}" -lt 256 ]; then
+           _bare="${_text//[\'\"\\]/}"
+         else
+           _bare="$(printf '%s' "$_text" | LC_ALL=C tr -d "'\"\\\\")"
+         fi ;;
+       *) _bare="$_text" ;;
+     esac
+     # prefilter-bare-end
      case "$_text $_bare" in
        *approval-requests*|*prompt-approval.sh*|*.compass/delegations*|*--del*|\
        *.claude*|*CLAUDE_CONFIG_DIR*) GUARD_RUN=1 ;;
@@ -1147,8 +1196,9 @@ bash_write_targets() {
 # text, is deliberate evasion, which shell-write detection does not claim to
 # stop (docs/safety-contract.md).
 expand_command_variable() {
-  local target="$1" cmd="$2" name rest rem value="" count=0 full
+  local target="$1" cmd="$2" name rest value="" count=0 full
   local sep="start" before="" after_sep="" after_name="" stmt w len deny
+  local total off size win after_off=0
   local ref1 ref2 head head2
   local sq="'" dq='"' bt='`' nl=$'\n'
   local path_re='^(/[A-Za-z0-9._+@%:,=-]*)*$'
@@ -1161,7 +1211,6 @@ expand_command_variable() {
   local binder_re='(^|[^A-Za-z0-9_./-])(eval|source|trap|declare|typeset|local|readonly|export|read|mapfile|readarray|unset|getopts|let)([^A-Za-z0-9_./-]|$)|(^|[;&|({'"${nl}"']|then|do|else)[[:space:]]*\.[[:space:]]|printf[[:space:]]+-v|(^|[^A-Za-z0-9_)])\(\('
   local stripped mention_re
   local plain_re="^[[:space:]]*([A-Za-z0-9._+@%:,=/~-]+([[:blank:]]+[A-Za-z0-9._+@%:,=/~-]+)*)[[:blank:]]*(;|&&|${nl})"
-  local deny_re='^(eval|source|\.|declare|typeset|local|readonly|trap|alias|enable|builtin|command|shopt|function|if|then|else|elif|fi|case|esac|for|select|while|until|do|done|coproc)$'
 
   if [[ $target =~ $brace_re ]] || [[ $target =~ $bare_re ]]; then
     name="${BASH_REMATCH[1]}"
@@ -1174,36 +1223,65 @@ expand_command_variable() {
   fi
 
   # Walk the leading statements. `sep` is the separator that ended the
-  # previous one; `after_name` is the command after NAME's assignment.
-  rem="$cmd"
+  # previous one; `after_off` is where the command after NAME's assignment
+  # starts.
+  #
+  # Each statement is matched against `win`, the next few hundred characters,
+  # and not against the whole rest of the command: a match on 80 KB of text
+  # for each of 14000 statements took 20 s. This gives the same answer as
+  # matching the rest because both patterns are anchored at the start and
+  # end at the first separator, so a match that ends inside the window is the
+  # match the rest gives. A window that finds no match may have cut a long
+  # statement, so it is doubled until it holds all that is left, and only
+  # then does the walk stop. The golden corpus in
+  # tests/test_pre_tool_hook_time_bounded.py pins the results.
+  total=${#cmd}
+  off=0
+  size=512
+  win="${cmd:0:$size}"
   while :; do
-    if [[ $rem =~ $assign_re ]]; then
+    if [[ $win =~ $assign_re ]]; then
       len=${#BASH_REMATCH[0]}
       if [ "${BASH_REMATCH[2]}" = "$name" ]; then
         count=$((count + 1))
         value="${BASH_REMATCH[3]}"
         before="$sep"
         after_sep="${BASH_REMATCH[4]}"
-        after_name="${rem:$len}"
+        after_off=$((off + len))
       fi
       sep="${BASH_REMATCH[4]}"
-    elif [[ $rem =~ $plain_re ]]; then
+    elif [[ $win =~ $plain_re ]]; then
       len=${#BASH_REMATCH[0]}
       stmt="${BASH_REMATCH[1]}"
       sep="${BASH_REMATCH[3]}"
       deny=0
       for w in $stmt; do
-        if [[ $w =~ $deny_re ]]; then deny=1; fi
+        case "$w" in
+          eval|source|.|declare|typeset|local|readonly|trap|alias|enable|builtin|\
+          command|shopt|function|if|then|else|elif|fi|case|esac|for|select|\
+          while|until|do|done|coproc) deny=1 ;;
+        esac
       done
       [ "$deny" -eq 1 ] && break
+    elif [ $((off + ${#win})) -lt "$total" ]; then
+      size=$((size * 2))
+      win="${cmd:$off:$size}"
+      continue
     else
       break
     fi
-    rem="${rem:$len}"
+    off=$((off + len))
+    win="${win:$len}"
+    if [ "${#win}" -gt 1024 ] || {
+         [ "${#win}" -lt 256 ] && [ $((off + ${#win})) -lt "$total" ]; }; then
+      size=512
+      win="${cmd:$off:$size}"
+    fi
   done
   if [ "$count" -ne 1 ]; then
     printf '%s\n' "$target"; return 0
   fi
+  after_name="${cmd:$after_off}"
 
   # After `&&`, the assignment may not run. Then the text up to the last use
   # of NAME must be one `&&` chain: no `;`, line end, `||` or lone `&`.
@@ -1255,6 +1333,7 @@ expand_command_variable() {
 # --- decide whether this tool call needs a red on record ---------------------
 if [ "${TOOL:-}" = "Bash" ]; then
   [ -z "${COMMAND:-}" ] && exit 0
+  [ "${SKIP_WRITE_SCAN:-0}" = 1 ] && exit 0
 
   # Cheap pre-filter, before any filesystem work: this hook now runs on every
   # Bash call in the session, and most of them write nothing.

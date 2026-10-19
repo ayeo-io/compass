@@ -220,6 +220,17 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "write the release line as plain text that does not start with #, "
                "then run the command again.",
     },
+    # A Bash command too long for the pre-tool hook to scan before Claude Code
+    # stops it (hooks/pre-tool.sh holds the limit). The refusal never quotes the
+    # command: it can hold a secret.
+    "bash-command-too-long": {
+        "what": "Bash command of {size} bytes",
+        "why": "the write guard refuses a command over {limit} bytes because it "
+               "cannot scan one in time.",
+        "fix": "write the file with the Write tool, or split the command into "
+               "smaller steps. For a long commit message, use git commit -F with "
+               "a file you wrote.",
+    },
 }
 
 

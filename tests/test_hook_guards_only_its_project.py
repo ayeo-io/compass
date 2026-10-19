@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import pathlib
 import subprocess
+import time
 
 import pytest
 
@@ -299,11 +300,24 @@ def test_ff_7_a_variable_set_again_or_only_sometimes_is_not_expanded(
         tmp_path, template):
     """The value at the write is certain only when the command assigns the
     variable once, in a leading statement that always runs before the
-    write, and nothing after can change it (scenario `TRC-F2`)."""
+    write, and nothing after can change it (scenario `TRC-F2`).
+
+    The 20,000-line case is over the 98304-byte limit, so the hook refuses it
+    for its length within 5 seconds and never reaches the write (Scenario id:
+    `TRC-003` in pre-tool-hook-time-bounded/acceptance-criteria.md). A body
+    between 64 KiB and the limit keeps the pipe-buffer case under test, in
+    tests/test_pre_tool_hook_time_bounded.py (`TRC-010`)."""
+    started = time.monotonic()
     command, r = _judge(tmp_path, template)
+    seconds = time.monotonic() - started
     assert r.returncode == 2, (
         f"the hook expanded a variable whose value at the write is not "
         f"certain:\n{command}\n{r.stdout}{r.stderr}")
+    if len(command.encode()) > 98304:
+        assert "[bash-command-too-long]" in r.stderr, (
+            f"a command over the limit was refused, but not for its "
+            f"length:\n{r.stderr}")
+        assert seconds < 5, f"the length refusal took {seconds:.1f} s"
 
 
 @pytest.mark.parametrize("template", [

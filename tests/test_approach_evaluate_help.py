@@ -4,8 +4,8 @@ The help said the command applies governance/routing-policy.yml. The code
 applies the issue's stored generation, or with --write the project's
 resolved configuration (compass.yml over the shipped default).
 
-Scenario id: TRC-001, in the delivery approach of issue
-`approach-evaluate-help-names-config`.
+Scenario id: `TRC-001` in
+approach-evaluate-help-names-config/acceptance-criteria.md.
 """
 from __future__ import annotations
 

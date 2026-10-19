@@ -89,17 +89,11 @@ def test_the_document_says_most_projects_with_a_waiver_are_refused():
 
 
 def test_the_flags_the_document_names_exist():
-    """`--undo` and `--apply` are in the help of `compass policy migrate`.
-
-    The flag does not exist until the command-line unit (U3 of the issue)
-    lands, so this test skips while it is absent.
-    """
+    """`--undo`, `--apply` and the other flags the document names are in the help."""
     help_text = subprocess.run(
         [sys.executable, str(CLI), "policy", "migrate", "--help"],
         capture_output=True, text=True, cwd=ROOT, check=False,
     )
     combined = help_text.stdout + help_text.stderr
-    if "--undo" not in combined:
-        pytest.skip("--undo is added by U3 (policy_cmd.py) of policy-migrate-undo")
     for flag in ("--undo", "--apply", "--words", "--i-have-a-copy"):
         assert flag in combined, f"{flag} is not in the help of policy migrate"

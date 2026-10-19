@@ -26,7 +26,8 @@ import `core`: `core` imports it, and the import graph is checked to have no
 cycle (`tests/test_cli_module_split.py`).
 """
 # DEPENDENCY: standard library (copy, os, sys);
-# compass_pkg.catalogue_spec, and compass_pkg.project_settings for the error it
+# compass_pkg.catalogue_spec, compass_pkg.old_names (a leaf), and
+# compass_pkg.project_settings for the error it
 # raises on a link. It reads cli/migrate-map.yml only through the reader `core`
 # binds, and imports nothing else from the package.
 from __future__ import annotations
@@ -36,13 +37,16 @@ import os
 import sys
 
 from compass_pkg import catalogue_spec as spec
+from compass_pkg import old_names
 
 # The tables that sit under `values:` in cli/migrate-map.yml, and the one
 # top-level table. A manifest field and a layer field read the table named
 # in the domain column of `catalogue_spec.VALUE_DOMAINS`.
 VALUE_SECTIONS = ("stage_mode", "artifact_depth", "size", "issue_status",
-                  "close_reason", "run_stage")
+                  "close_reason", "run_stage", "reassessment_kind", "check_id")
 KEY_SECTIONS = ("friction_keys",)
+# The sections that come from the `old_names:` table, not from `values:`.
+OLD_NAME_SECTIONS = ("reassessment_kind", "check_id")
 
 # The in-module copy of the tables, for a checkout with no framework install.
 # A table with a row is what turns a retired word into a new one on read and
@@ -70,15 +74,20 @@ FALLBACK["issue_status"] = {
 FALLBACK["close_reason"] = {"landed": "completed", "abandoned": "not-planned"}
 FALLBACK["run_stage"] = {"build": "implement"}
 FALLBACK["friction_keys"] = {"phase": "stage"}
+# The two stored values of the `old_names:` table (`old_names` keeps the rest).
+FALLBACK["reassessment_kind"] = {"judgement": "judgment"}  # us-english-scan: allow - old name read until 8.0.0
+FALLBACK["check_id"] = {"dor-behaviour-is-gwt": "dor-behavior-is-gwt"}  # us-english-scan: allow - old name read until 8.0.0
 
 _READ = None
 
 
 def bind(reader):
     """Give this module the reader of `cli/migrate-map.yml`
-    (`core.migrate_map_section`: `reader(name, fallback)`)."""
+    (`core.migrate_map_section`: `reader(name, fallback)`). It also binds
+    `old_names`, so `core` needs no line of its own for that table."""
     global _READ
     _READ = reader
+    old_names.bind(reader)
 
 
 def tables():
@@ -90,8 +99,13 @@ def tables():
         return rows
     values = _READ("values", {})
     for name in VALUE_SECTIONS:
-        if isinstance(values.get(name), dict) and values[name]:
+        if name not in OLD_NAME_SECTIONS and isinstance(values.get(name), dict) \
+                and values[name]:
             rows[name] = dict(values[name])
+    for name in OLD_NAME_SECTIONS:
+        found = {r["old"]: r["new"] for r in old_names.rows(name)}
+        if found:
+            rows[name] = found
     for name in KEY_SECTIONS:
         found = _READ(name, {})
         if isinstance(found, dict) and found:
@@ -350,6 +364,11 @@ def _map_manifest(manifest, rows, changes):
         if isinstance(run, dict) and "stage" in run:
             run["stage"] = _map_word(run["stage"], rows.get("run_stage") or {},
                                      f"runs[{index}].stage", changes)
+    for index, entry in enumerate(manifest.get("reassessments") if isinstance(
+            manifest.get("reassessments"), list) else []):
+        if isinstance(entry, dict) and "kind" in entry:
+            entry["kind"] = _map_word(entry["kind"], rows.get("reassessment_kind") or {},
+                                      f"reassessments[{index}].kind", changes)
     _map_friction(manifest, rows, changes)
     _map_status(manifest, rows, changes)
 
@@ -432,6 +451,10 @@ def _map_manifest_back(manifest, rows, back):
     for run in manifest.get("runs") if isinstance(manifest.get("runs"), list) else []:
         if isinstance(run, dict) and "stage" in run:
             run["stage"] = back["run_stage"].get(run["stage"], run["stage"])
+    for entry in manifest.get("reassessments") if isinstance(
+            manifest.get("reassessments"), list) else []:
+        if isinstance(entry, dict) and "kind" in entry:
+            entry["kind"] = back["reassessment_kind"].get(entry["kind"], entry["kind"])
     for new, old in back["friction_keys"].items():
         for entry in manifest.get("friction") if isinstance(
                 manifest.get("friction"), list) else []:

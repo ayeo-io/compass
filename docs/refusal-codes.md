@@ -37,7 +37,7 @@ reason code and are not in the generated list.
 
 **Blocked:** {target} (tool: {tool})
 **Why:** an approval binds to the request a person was shown.
-**Fix:** do not read, change or run these files; you can list a request folder with ls alone. The person answers with /compass:approve.
+**Fix:** do not read, change or run these files. Ask with compass evidence request; the person answers with /compass:approve.
 
 ### `artifact-rule-not-applied`
 

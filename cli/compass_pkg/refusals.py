@@ -163,8 +163,8 @@ REFUSALS: dict[str, dict[str, str]] = {
     "approval-request-protected": {
         "what": "{target} (tool: {tool})",
         "why": "an approval binds to the request a person was shown.",
-        "fix": "do not read, change or run these files; you can list a request "
-               "folder with ls alone. The person answers with /compass:approve.",
+        "fix": "do not read, change or run these files. Ask with compass "
+               "evidence request; the person answers with /compass:approve.",
     },
     "delegation-protected": {
         "what": "{target} (tool: {tool})",

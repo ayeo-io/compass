@@ -149,8 +149,15 @@ because macOS opens a path in any case.
   `**/*l*.yml`. A Grep glob counts only when the search path is the
   delegation folder or a folder above it, so `src` and `.compass/work` pass.
   A Bash word is read after the shell's quotes are removed, in any letter
-  case, and also inside `bash -c`, `sh -c` and `eval`; a quoted regular
-  expression such as `'.*delegat.*'` is read as a glob and refused;
+  case, and also inside `bash -c`, `sh -c` and `eval`. A backslash and
+  newline inside a word are removed first, as the shell removes them. The
+  glob is read as the shell reads it: `[^y]` counts as `[!y]`, and a POSIX
+  class such as `[[:lower:]]` counts as one character. A quoted regular
+  expression is read as a glob too, so `'.*delegat*'` is refused, while
+  `'.*delegat.*'` is accepted because it picks an ordinary path as well. A
+  Grep glob is also split on commas, so `*.yml,deleg*/*` is refused. Known
+  cost: the rule also refuses `**/*-*.yml`, `**/D*`, `d*` and `**/*s.yml` as
+  Grep globs;
 - these globs are accepted, because they match an ordinary path as well: `*`,
   `**/*`, `**/*.md`, `*.yml`, `**/*.yml`, `src/**/*.py` and `.compass/*` in a
   Grep, and `ls .compass/*`, `ls .compass/work/*`, `cat
@@ -169,9 +176,17 @@ because macOS opens a path in any case.
   turn it into a second `--as` that the hook cannot read. Quotes are removed
   first, so `"--as"` and `--a''s` count as `--as`. A word with white space is
   read again as its parts, so a quoted value is read word by word and a word
-  that holds `--as` inside it, such as `--reason 'fix--assets'`, is refused
-  too. That is the cost of refusing any word that holds `--as`; the refusal
-  names the word, so a person can rephrase it. A command that is not a
+  that holds `--as` inside it, such as `--reason 'fix--assets'` or
+  `--reason 'fix --assets'`, is refused too. That is the cost of refusing
+  any word that holds `--as`; the refusal names the word, so a person can
+  rephrase it. A backslash and newline inside a word are removed first, so
+  `--a\<newline>s` counts as `--as`. The hook also refuses a word without
+  white space that holds a brace expansion (a `{` with a `,` or `..` before
+  the closing `}`), such as `--a{s=main,s=compass:architect}`, because the
+  shell expands it into two `--as=` words. A quoted value with a space, such
+  as `--reason '{"a": 1}'`, or with no comma or `..`, passes; a compact JSON
+  value with a comma and no space, such as `'{"a":1,"b":2}'`, is refused
+  as a known cost. A command that is not a
   delegated approval, such as `git update-index --assume-unchanged`, is not
   checked. The call is the main agent only when the hook input has neither
   `agent_type` nor `agent_id`, and the CLI takes no abbreviated flag, so
@@ -206,16 +221,21 @@ approval as another agent, as they did before this check:
   cannot follow: a flag built from a variable, command substitution, a value
   read from a file or the environment, and arguments built by `xargs` or
   `printf`;
-- brace expansion, such as `{d,x}eleg*/*`;
-- a tool option that takes its own glob;
-- a Bash glob rooted in a folder other than the call's working folder, a
-  relative path after `cd`, and a project root above the working folder;
-- a Bash glob that spells neither .compass nor deleg, such as `.c*/d*/*`.
+- brace expansion in a glob, such as `{d,x}eleg*/*`;
+- a tool option that takes its own glob, such as `rg -g`, `find -name` and
+  `--include`, and extended globs after `shopt -s extglob`, such as
+  `.compass/@(deleg)ations/*`;
+- a Bash glob rooted in a folder other than the call's working folder, such
+  as `$PWD/.compass/deleg*/*`, a relative path after `cd`, such as `cd
+  .compass && cat d*/*`, and a project root above the working folder;
+- a Bash glob that spells neither .compass nor deleg, such as `cat .c*/d*/*`.
   The hook starts the guard only when a glob character follows `.compass/` or
-  `deleg`, so `cat .c*/delegations` has no glob character after either and
-  does not start it. A glob character in a later word of the same command
-  also starts the guard, which costs one python3 start and refuses nothing
-  more.
+  `deleg`, so this glob does not start it. A glob before `deleg` does start
+  it when the command has a glob character after `deleg` in its second copy:
+  the hook tests the command twice, so `cat .c*/delegations` starts the guard
+  and is refused (`delegation-protected`). A glob character in a later word
+  of the same command also starts the guard, which costs one python3 start
+  and refuses nothing more.
 
 A process running as the same operating system user can still write these
 files, or `manifest.yml`.

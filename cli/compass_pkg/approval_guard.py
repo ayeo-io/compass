@@ -46,7 +46,7 @@
 - **A glob that reaches the delegation files.** A Grep glob, or a Bash word
   with `*`, `?` or `[`, is tested with `fnmatch` against sample paths in
   `.compass/delegations` and against an ordinary path of the same shape
-  (`.compass/zz`, `.compass/zz/file.yml`). It gives `delegation-protected`
+  (`.compass/zz`, or a file `file.yml` inside it). It gives `delegation-protected`
   when it matches a sample and not the ordinary path. Refused: `d*/*`,
   `deleg*/*`, `**/confirm-*`, `deleg?tions`, `**/DL-*.yml`. Accepted, as
   they pick everything: `*`, `**/*`, `*.yml`, `**/*.yml`, `.compass/*`,
@@ -332,7 +332,7 @@ def _relative_pairs(root, searched):
 
 def _grep_glob_reaches(pattern, searched, cwd):
     pairs = _relative_pairs(_resolved(".", cwd), _resolved(searched, cwd))
-    # Claude Code may split the glob on white space; test both readings.
+    # Claude Code may split the glob on white space; test both forms.
     return any(_glob_selects(g, pairs, True) for g in [pattern] + pattern.split())
 
 

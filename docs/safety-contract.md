@@ -165,7 +165,7 @@ because macOS opens a path in any case.
   too. Every `--as` must name the caller, since the CLI keeps the last one.
   The hook also refuses any word that holds `--as` and is neither exactly
   `--as` nor `--as=...`, such as `--as${IFS}compass:architect`, `--as$IFS`,
-  `--as$X`, `x--as`, `--asmain` and `--assume-yes`, because the shell can
+  `--as$X`, `x--as`, `--asmain`, `--as-main` and `--assume-yes`, because the shell can
   turn it into a second `--as` that the hook cannot read. Quotes are removed
   first, so `"--as"` and `--a''s` count as `--as`. A word with white space is
   read again as its parts, so a quoted value is read word by word and a word
@@ -210,7 +210,7 @@ approval as another agent, as they did before this check:
 - a tool option that takes its own glob;
 - a Bash glob rooted in a folder other than the call's working folder, a
   relative path after `cd`, and a project root above the working folder;
-- a Bash glob that spells neither `.compass` nor `deleg`, such as `.c*/d*/*`.
+- a Bash glob that spells neither .compass nor deleg, such as `.c*/d*/*`.
   The hook starts the guard only when a glob character follows `.compass/` or
   `deleg`, so `cat .c*/delegations` has no glob character after either and
   does not start it. A glob character in a later word of the same command

@@ -12,8 +12,9 @@
 - Group D: the transcript cannot be read through the Claude Code
   configuration folder or any folder above it, with or without `jq`
   (compass-delivery-record#146).
-- Group E (TRC-001 to TRC-014): an `--as` word built from a shell variable,
-  and a Grep or Bash glob that can match the delegation files.
+- Group E (issue `approval-guard-ifs-as-and-delegation-globs`): an `--as`
+  word built from a shell variable, and a Grep or Bash glob that can match
+  the delegation files.
 
 Every test pairs the calls it refuses with ordinary calls that must still
 pass, so a refusal that is too wide fails here too. Each test name starts

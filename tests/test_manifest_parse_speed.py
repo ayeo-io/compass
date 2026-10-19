@@ -229,10 +229,31 @@ def test_trc_a12_python_tag_refused(reader, tmp_path):
     assert not marker.exists()
 
 
+def _assert_names_file_not_utf8(caught, path):
+    message = str(caught.value)
+    assert str(path) in message
+    assert "not valid UTF-8" in message
+    assert "re-save" in message
+
+
 def test_trc_a13_not_utf8_raises(reader):
     path = reader.write("probe", b"status: caf\xe9\n")
-    with pytest.raises(UnicodeDecodeError):
+    with pytest.raises(CompassError) as caught:
         reader.read(path)
+    _assert_names_file_not_utf8(caught, path)
+
+
+def test_trc_a13_not_utf8_named_by_manifest_readers(tmp_path):
+    from compass_pkg import manifest_store
+    folder = tmp_path / ".compass" / "work" / "probe"
+    folder.mkdir(parents=True)
+    path = folder / "manifest.yml"
+    path.write_bytes(b"status: caf\xe9\n")
+    for read in (manifest_store.load_manifest_mapping, manifest_store.read,
+                 lambda p: core.load_manifest(str(folder))):
+        with pytest.raises(CompassError) as caught:
+            read(str(path))
+        _assert_names_file_not_utf8(caught, path)
 
 
 @pytest.mark.parametrize("entry_point", ["write_proposal", "commit"])

@@ -34,8 +34,8 @@ code from a refusal you hit.
 ### `bad-session-issue`
 
 **Blocked:** this edit
-**Why:** COMPASS_ISSUE names '{slug}', which is not an issue directly under .compass/work/. It names this session's issue ahead of .compass/current-task, so the edit is not judged by another issue instead.
-**Fix:** set COMPASS_ISSUE to a real issue slug, or unset it to use .compass/current-task, then retry.
+**Why:** no issue can be named for {project}: '{slug}' is not an issue under its .compass/work/, or it is not a worktree of the session's repository, or git cannot read it.
+**Fix:** in the session's own project, set COMPASS_ISSUE to a real slug or unset it. In a worktree, run compass issue use <slug> there.
 
 ### `checkpoint-no-outcome`
 
@@ -88,7 +88,7 @@ code from a refusal you hit.
 ### `pointer-moved`
 
 **Blocked:** this edit
-**Why:** another session moved .compass/current-task from this session's issue '{previous}' to '{slug}', so this edit would count against the wrong issue.
+**Why:** another session moved .compass/current-task in this session's own project from this session's issue '{previous}' to '{slug}', so this edit would count against the wrong issue.
 **Fix:** in this session, run `compass issue use {previous}` to carry on, or `compass issue use {slug}` to switch, then retry.
 
 ### `python-missing`

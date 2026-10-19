@@ -576,7 +576,15 @@ set -e
 #     openers that never close make its work grow with their number times the
 #     length of the text, which a count alone does not bound: 700 openers
 #     before 85 KB of text took 224 s. A scan that passes the limit tells the
-#     caller with SCAN_MARK, and the command is refused as too complex.
+#     caller in a file (SCAN_WORK_FILE), and the command is refused as too
+#     complex.
+#   - TARGET_BYTES_LIMIT: bytes in one write target. The fuse and the budget
+#     are checked between targets, never inside one, and the quote strip and
+#     the path normaliser take time that grows with the square of its length
+#     in a UTF-8 locale: one target of 10 KB ran for 20 s and 90 KB for 25 s.
+#     A target over the limit is refused as too complex (and the write scan is
+#     skipped where Compass is not in use). The length is counted in bytes by
+#     awk in the C locale, so a multibyte character counts as its bytes.
 #
 # The limits above each bound one shape, and the time of a command that holds
 # several is their sum. One shared counter, WORK_USED, bounds the sum: each
@@ -621,9 +629,9 @@ COST_STATEMENT=110
 COST_STATEMENT_CHAR=5
 COST_NAME_PER_KB=200
 COST_CANDIDATE=3000
-COST_CANDIDATE_CHAR=4
+COST_CANDIDATE_CHAR=10
 COST_GLOB=20
-SCAN_MARK="compass-scan-budget-exceeded"
+TARGET_BYTES_LIMIT=2048
 SKIP_WRITE_SCAN=0
 COMPASS_IN_USE=0
 if [ "${PROJECT_RESOLVED:-0}" -eq 1 ] && [ -d "$PROJECT_DIR/.compass" ]; then
@@ -1241,7 +1249,7 @@ bash_write_targets() {
     case "$cmd" in
       *tee*|*cp*|*mv*)
         printf '%s\n' "$cmd" \
-          | awk -v budget="$SCAN_WORK_LIMIT" -v mark="$SCAN_MARK" '
+          | awk -v budget="$SCAN_WORK_LIMIT" -v workfile="${SCAN_WORK_FILE:-}" '
               function emit(line) {
                 if (!(line in seen)) { seen[line] = 1; print line }
               }
@@ -1311,12 +1319,11 @@ bash_write_targets() {
                 gsub(/\\\n/, " ", s)
                 flatten(s, 0)
                 if (!blown) flatten(s, 1)
-                # Out of budget: say so as a word the last stage prints, so the
-                # caller refuses the command. Whatever was found stays.
-                if (blown) print "cp " mark
-                # The steps taken, for the shared work budget (read by the
-                # caller; the largest of the lines wins).
-                print "cp compass-scan-work=" (work + 0)
+                # The steps taken, for the shared work budget, and whether the
+                # scan ran out of its own budget (whatever it found stays),
+                # in a file the caller made. The text of the command cannot
+                # write that file: it is not on the path the targets take.
+                if (workfile != "") { print (work + 0), (blown + 0) > workfile; close(workfile) }
               }' \
           | tr ';&|(' '\n\n\n\n' \
           | sed -E 's/(^|[[:space:]])#.*//; s/[0-9]*>>?[[:space:]]*[^[:space:]]*//g; s/<[[:space:]]*[^[:space:]]*//g; s/\)//g' \
@@ -1702,31 +1709,65 @@ if [ "${TOOL:-}" = "Bash" ]; then
   if [ -z "$DETECTED" ]; then
     # A target written again judges the same, so each is judged once, in the
     # order it first appears: 200 identical `cp` lines cost one.
-    # The last line is the steps the flattening took (compass-scan-work=N, the
-    # largest such line); it is taken off the list and charged to the shared
-    # work budget.
-    TARGET_LIST="$(bash_write_targets "$COMMAND" | awk '
-      /^compass-scan-work=[0-9]+$/ { w = substr($0, 19) + 0; if (w > most) most = w; next }
-      !seen[$0]++ { print }
-      END { print "compass-scan-work=" (most + 0) }')" || true
-    _scan_nl=$'\n'
-    _scan_work="${TARGET_LIST##*"$_scan_nl"}"
-    case "$TARGET_LIST" in
-      *"$_scan_nl"*) TARGET_LIST="${TARGET_LIST%"$_scan_nl"*}" ;;
-      *) TARGET_LIST="" ;;
+    #
+    # awk (in the C locale, so in bytes and in time that grows with the length)
+    # also prepares each target for the loops below, so no bash string
+    # operation runs on a long target: the quotes are taken out (both kinds
+    # from a target that holds a single quote, which the shell does not
+    # expand; the double quotes only from the others), and a letter in front
+    # says which it was: L for a literal target, E for one that can be
+    # expanded. A target over TARGET_BYTES_LIMIT bytes becomes X and its
+    # length. Every line starts with one of the three letters, put there by
+    # awk, so the text of a command cannot make a line of another kind.
+    SCAN_WORK_FILE=""
+    case "$COMMAND" in
+      *tee*|*cp*|*mv*)
+        SCAN_WORK_FILE="$(mktemp 2>/dev/null)" \
+          || compass_reader_failed "write scan" tmp ;;
     esac
-    _scan_work="${_scan_work#compass-scan-work=}"
-    case "$_scan_work" in ""|*[!0-9]*) _scan_work=0 ;; esac
+    TARGET_LIST="$(bash_write_targets "$COMMAND" | LC_ALL=C awk -v limit="$TARGET_BYTES_LIMIT" '
+      $0 == "" { next }
+      !seen[$0]++ {
+        if (length($0) > limit) { print "X" length($0); next }
+        if (index($0, "\047")) { gsub("\047", ""); gsub(/"/, ""); print "L" $0 }
+        else { gsub(/"/, ""); print "E" $0 }
+      }')" || true
+    _scan_nl=$'\n'
+
+    # The steps the flattening took, and whether it ran out of its own budget,
+    # are in the file it wrote, which the text of the command cannot write.
+    # Anything that is not two small numbers is a fault, and a fault refuses.
+    _scan_work=0 _scan_blown=0
+    if [ -n "$SCAN_WORK_FILE" ]; then
+      _scan_line="$(cat "$SCAN_WORK_FILE" 2>/dev/null)" || _scan_line=""
+      rm -f "$SCAN_WORK_FILE"
+      _scan_extra=""
+      read -r _scan_work _scan_blown _scan_extra <<EOF
+$_scan_line
+EOF
+      case "$_scan_work" in
+        ""|*[!0-9]*|??????????*) _scan_work="$SCAN_WORK_LIMIT"; _scan_blown=1 ;;
+      esac
+      case "$_scan_blown$_scan_extra" in 0|1) ;; *) _scan_blown=1 ;; esac
+    fi
     WORK_USED=$((WORK_USED + _scan_work * COST_AWK_STEP))
 
     # Too much to scan in time (see the limits above). The scan marks a
     # command it gave up on; the count of targets needs a process only when
-    # the list is long enough to hold TARGET_LIMIT + 1 of them (a target and
-    # its line end take two characters at least).
+    # the list is long enough to hold TARGET_LIMIT + 1 of them (a target, its
+    # letter and its line end take three characters at least).
     _too_complex=""
-    case "$_scan_nl$TARGET_LIST$_scan_nl" in
-      *"$_scan_nl$SCAN_MARK$_scan_nl"*)
-        _too_complex="has=substitutions that stay open|over=that many unclosed command substitutions" ;;
+    if [ "$_scan_blown" -eq 1 ]; then
+      _too_complex="has=substitutions that stay open|over=that many unclosed command substitutions"
+    fi
+    case "$_scan_nl$TARGET_LIST" in
+      *"$_scan_nl"X*)
+        if [ -z "$_too_complex" ]; then
+          _long="$_scan_nl$TARGET_LIST"
+          _long="${_long#*"$_scan_nl"X}"
+          _long="${_long%%"$_scan_nl"*}"
+          _too_complex="has=a write target of $_long bytes|over=more than $TARGET_BYTES_LIMIT bytes in one write target"
+        fi ;;
     esac
     if [ -z "$_too_complex" ] && [ "${#TARGET_LIST}" -ge $((2 * (TARGET_LIMIT + 1))) ]; then
       _targets="$(printf '%s\n' "$TARGET_LIST" | grep -c . 2>/dev/null)" || _targets=0
@@ -1753,8 +1794,8 @@ if [ "${TOOL:-}" = "Bash" ]; then
     _preload_brace='^\$\{([A-Za-z_][A-Za-z0-9_]*)\}'
     _preload_bare='^\$([A-Za-z_][A-Za-z0-9_]*)'
     while IFS= read -r candidate; do
-      case "$candidate" in *\'*) continue ;; esac
-      candidate="${candidate//\"/}"
+      [ "${candidate:0:1}" = E ] || continue
+      candidate="${candidate:1}"
       case "$candidate" in '$'*) ;; *) continue ;; esac
       if [[ $candidate =~ $_preload_brace ]] || [[ $candidate =~ $_preload_bare ]]; then
         case " $WALK_PRELOAD " in
@@ -1771,42 +1812,40 @@ CANDIDATES
     GLOB_DEFER=1
     GLOB_PENDING="" GLOB_PENDING_CANDIDATES=""
     while IFS= read -r candidate; do
+      _kind="${candidate:0:1}"
+      candidate="${candidate:1}"
       [ -z "$candidate" ] && continue
       # Judging a path costs more for a long path and for each glob it is
       # tried against (charged in is_enforced_path).
       WORK_USED=$((WORK_USED + COST_CANDIDATE + COST_CANDIDATE_CHAR * ${#candidate}))
       if [ "$WORK_USED" -gt "$WORK_BUDGET" ] \
           || [ $((SECONDS - HOOK_START)) -ge "$FUSE_SECONDS" ]; then work_over; fi
-      # A quoted target names the same file as an unquoted one, so the quotes
-      # go before it is judged (`> "src/app.ts"`). Inside single quotes the
-      # shell expands nothing, so `'$S/x'` is a literal path and is not
-      # expanded.
-      case "$candidate" in
-        *\'*) candidate="${candidate//\'/}"
-              candidate="${candidate//\"/}" ;;
-        *) candidate="${candidate//\"/}"
-           # Only a target that starts with `$` can be expanded, and passing the
-           # whole command to the function costs about 3 ms in a UTF-8 locale
-           # at 90 KB, so the others do not call it.
-           case "$candidate" in
-             '$'*)
-               if [ -n "$EXPAND_MEMO_CMD" ]; then
-                 expand_command_variable_into "$candidate" "" same
-               else
-                 expand_command_variable_into "$candidate" "$COMMAND"
-               fi
-               candidate="$EXPANDED"
-               if [ "$WORK_OVER" -eq 1 ]; then work_over; fi
-               # Past NAME_LIMIT the command is too slow to read for every name.
-               if [ "$EXPAND_NAMES" -gt "$NAME_LIMIT" ]; then
-                 [ "$COMPASS_IN_USE" -eq 1 ] \
-                   && compass_block bash-command-too-complex \
-                        "has=$EXPAND_NAMES different variable names" \
-                        "over=more than $NAME_LIMIT variable names"
-                 exit 0
-               fi ;;
-           esac ;;
-      esac
+      # A quoted target names the same file as an unquoted one, so awk took the
+      # quotes out above (`> "src/app.ts"`). Inside single quotes the shell
+      # expands nothing, so `'$S/x'` is a literal path (kind L) and is not
+      # expanded. Only a target that starts with `$` can be expanded, and
+      # passing the whole command to the function costs about 3 ms in a UTF-8
+      # locale at 90 KB, so the others do not call it.
+      if [ "$_kind" = E ]; then
+        case "$candidate" in
+          '$'*)
+            if [ -n "$EXPAND_MEMO_CMD" ]; then
+              expand_command_variable_into "$candidate" "" same
+            else
+              expand_command_variable_into "$candidate" "$COMMAND"
+            fi
+            candidate="$EXPANDED"
+            if [ "$WORK_OVER" -eq 1 ]; then work_over; fi
+            # Past NAME_LIMIT the command is too slow to read for every name.
+            if [ "$EXPAND_NAMES" -gt "$NAME_LIMIT" ]; then
+              [ "$COMPASS_IN_USE" -eq 1 ] \
+                && compass_block bash-command-too-complex \
+                     "has=$EXPAND_NAMES different variable names" \
+                     "over=more than $NAME_LIMIT variable names"
+              exit 0
+            fi ;;
+        esac
+      fi
       [ -z "$candidate" ] && continue
       # 0: enforced, 1: not, 2: only a glob bash cannot decide could enforce it.
       # The paths of the third kind are kept for one Python start below.

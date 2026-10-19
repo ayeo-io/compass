@@ -916,9 +916,9 @@ def test_the_charged_work_matches_the_measured_time(tmp_path, command):
     that a loaded machine does not fail the test; a table that is far from the
     clock fails it, which the boundary test above cannot see."""
     hook = _hook_copy(tmp_path, {
-        'SCAN_MARK="compass-scan-budget-exceeded"':
-        'trap \'echo "WORK_USED=$WORK_USED" >&2\' EXIT\n'
-        'SCAN_MARK="compass-scan-budget-exceeded"'})
+        "\nTARGET_BYTES_LIMIT=2048\n":
+        '\ntrap \'echo "WORK_USED=$WORK_USED" >&2\' EXIT\n'
+        "TARGET_BYTES_LIMIT=2048\n"})
     root = _project(tmp_path)
     seconds, r = _bash(root, command, tmp_path, hook=hook, timeout=60)
 
@@ -1035,6 +1035,138 @@ def test_the_fuse_has_no_override_in_the_environment():
     text = HOOK.read_text(encoding="utf-8")
     assert re.search(r"^FUSE_SECONDS=\d+$", text, re.M)
     assert not re.search(r"\$\{FUSE_SECONDS:-", text.split("expand_command_variable()")[0])
+
+
+# ---------------------------------------------------------------------------
+# Group I - one write target. The fuse and the budget are checked between
+# write targets, and the quote strip and the path normaliser take time that
+# grows with the square of the length of one target in a UTF-8 locale, so a
+# single target of 10 KB ran for 20 s. A target over TARGET_BYTES_LIMIT bytes
+# is refused where Compass is in use, and the write scan is skipped elsewhere.
+# ---------------------------------------------------------------------------
+
+TARGET_BYTES = 2048
+
+
+def _target(shape: str, size: int) -> str:
+    """A write target of exactly `size` characters (ASCII, so also bytes)."""
+    unit = {"quotes": 'a"', "segments": "a/", "dots": "x/./"}.get(shape, "a/")
+    text = unit * (size // len(unit)) + "a" * (size % len(unit))
+    if shape == "braces":
+        text = "${V}/" + text[: size - 5]
+    assert len(text) == size
+    return text
+
+
+def _long_target_command(shape: str, size: int) -> str:
+    return "V=docs\n" + f"echo x > {_target(shape, size)}\n"
+
+
+@pytest.mark.serial
+def test_a_single_write_target_over_2048_bytes_is_refused(tmp_path):
+    """Scenario id: `TRC-027` in pre-tool-hook-time-bounded/acceptance-criteria.md"""
+    root = _project(tmp_path)
+    md = "docs/" + "a" * (TARGET_BYTES - len("docs/") - len(".md")) + ".md"
+    py = "src/" + "a" * (TARGET_BYTES - len("src/") - len(".py")) + ".py"
+    assert len(md) == len(py) == TARGET_BYTES
+
+    seconds, r = _bash(root, f"echo x > {md}\n", tmp_path)
+    assert r.returncode == 0, (r.returncode, r.stderr)
+
+    # A target at the limit is judged as any other: this one is code.
+    seconds, r = _bash(root, f"echo x > {py}\n", tmp_path)
+    assert r.returncode == 2 and "[no-red-on-record]" in r.stderr, r.stderr
+
+    seconds, r = _bash(root, f"echo x > {md}a\n", tmp_path)
+    _complex(r)
+    assert f"{TARGET_BYTES + 1} bytes" in r.stderr, r.stderr
+    assert f"more than {TARGET_BYTES} bytes" in r.stderr, r.stderr
+    assert seconds < IDLE, f"the refusal took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("shape", ["quotes", "segments", "braces", "dots"])
+def test_the_worst_single_write_target_at_the_limit_ends_in_time(tmp_path, shape):
+    """Supports `TRC-027` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    a target of 4 KB of quote pairs took 2.7 s, and one of 90 KB of
+    segments took 24.6 s. The bar is 1.5 s for one target at the limit."""
+    root = _project(tmp_path)
+    seconds, r = _bash(root, _long_target_command(shape, TARGET_BYTES), tmp_path)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert seconds < 1.5, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("where", ["alone", "before", "after"])
+@pytest.mark.parametrize("shape", ["quotes", "segments", "braces"])
+def test_a_10_kb_write_target_is_refused_in_time(tmp_path, shape, where):
+    """Supports `TRC-027` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    one target of 10 KB ran for 19 s and was refused only at the end, with a
+    code write before it or after it."""
+    root = _project(tmp_path)
+    command = _long_target_command(shape, 10000)
+    if where == "before":
+        command = "echo x > src/evil.py\n" + command
+    elif where == "after":
+        command += "echo x > src/evil.py\n"
+    seconds, r = _bash(root, command, tmp_path, timeout=60)
+
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert seconds < 3.0, f"the hook took {seconds:.1f} s"
+    if where == "alone":
+        _complex(r)
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("shape", ["quotes", "segments", "braces"])
+def test_the_target_limit_does_not_apply_where_compass_is_not_in_use(tmp_path, shape):
+    """Supports `TRC-027` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    a repository without `.compass/` gets exit 0 and no message, quickly."""
+    root = _guest(tmp_path)
+    seconds, r = _bash(root, _long_target_command(shape, 10000), tmp_path,
+                       timeout=60)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert r.stderr == "", r.stderr
+    assert seconds < 3.0, f"the hook took {seconds:.1f} s"
+
+
+# ---------------------------------------------------------------------------
+# Group J - the work count. The steps of the flattening reached the caller as
+# a write target named compass-scan-work=N, and a command could write one: a
+# value over 2**63 divided by the cost wrapped the counter to a large negative
+# number and the budget never tripped. The count now travels in a file the
+# command text cannot write, and text of that form is an ordinary target.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.serial
+@pytest.mark.parametrize("forged", [
+    "5000000000000000000", "99999999999999999999", "4611686018427387905", "5000"])
+def test_a_write_target_named_like_the_work_count_changes_nothing(tmp_path, forged):
+    """Scenario id: `TRC-028` in pre-tool-hook-time-bounded/acceptance-criteria.md
+
+    40000 leading statements with 5 names are refused in about 2 s. With a
+    target named compass-scan-work=<number> they ran for 3.9 s."""
+    root = _project(tmp_path)
+    command = _leading_statements(40000, 5) + f"cp a compass-scan-work={forged}\n"
+    seconds, r = _bash(root, command, tmp_path, timeout=60)
+
+    _complex(r)
+    assert seconds < IDLE, f"the refusal took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("word", [
+    "compass-scan-budget-exceeded", "compass-scan-work=7", "Xcompass-scan-work=7"])
+def test_marker_text_in_a_command_is_an_ordinary_write_target(tmp_path, word):
+    """Supports `TRC-028` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    the text of the old markers is judged as a path and allowed, not refused."""
+    root = _project(tmp_path)
+    seconds, r = _bash(root, f"cp a {word}\n", tmp_path)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert r.stderr == "", r.stderr
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-"""The session-start hook adds one line when `language` is set (DD-3).
+"""The session-start hook adds one line when `language` is set.
 
 Each test runs the real hook in a subprocess against a temporary project.
 Each test name ends with the number of its scenario in the acceptance

@@ -1,10 +1,10 @@
-"""The old typed names that 7.0.0 still reads (issue language-key-and-us-english, group G).
+"""The old typed names that 7.0.0 still reads (issue language-key-and-us-english).
 
 One reader-side table in `cli/migrate-map.yml` (`old_names:`), each row ending at
-8.0.0, read through `cli/compass_pkg/old_names.py`. U4 owns the tests for the
-table and the `--kind` argument. U5, U6 and U7 each replace only their own
-function bodies, and add a helper only directly above its own functions, so the
-units merge without conflicts.
+8.0.0, read through `cli/compass_pkg/old_names.py`. The sections below test, in
+order: the table and the `--kind` argument; the skill and the check id; the
+state key, the refusal code and the readiness key; the JSON keys, the headings
+and the term; the end of the table at 8.0.0; and the upgrade guide table.
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ OLD_KIND = "judge" + "ment"
 NEW_KIND = "judg" + "ment"
 
 
-# --- U4: the table, the --kind argument and the manifest kind ----------------
+# --- The table, the --kind argument and the manifest kind --------------------
 
 BASE_MANIFEST = """schema_version: "2.0"
 issue: sample
@@ -167,7 +167,7 @@ def test_trc_044():
         assert err.count(f"'{OLD_KIND}' is now '{NEW_KIND}'") == 1, err
 
 
-# --- U5: the skill and the check id ------------------------------------------
+# --- The skill and the check id ----------------------------------------------
 
 OLD_SKILL = "behav" + "iour-mapping"
 NEW_SKILL = "behavior-mapping"
@@ -366,7 +366,7 @@ def test_trc_049():
     assert legacy_views.digest_problems(ROOT) == [], legacy_views.digest_problems(ROOT)
 
 
-# --- U6: the state key, the refusal code and the readiness key ---------------
+# --- The state key, the refusal code and the readiness key -------------------
 
 # The old words of this unit, spelt from pieces so that no scan of the tests
 # finds an old name in a literal of its own.
@@ -565,7 +565,7 @@ def test_trc_053(tmp_path):
         assert _old_keys_emitted(data) == [], "an old JSON key is still emitted"
 
 
-# --- U7: the JSON keys, the headings and the term ----------------------------
+# --- The JSON keys, the headings and the term --------------------------------
 
 def test_trc_054(tmp_path):
     from compass_pkg import flow, old_names
@@ -669,7 +669,7 @@ def test_trc_055(tmp_path):
     assert built.returncode == 0, built.stdout + built.stderr
 
 
-# --- U4: the table ends at 8.0.0 ----------------------------------------------
+# --- The table ends at 8.0.0 --------------------------------------------------
 
 def test_trc_056():
     from compass_pkg import aliases, core, old_names
@@ -706,7 +706,7 @@ def test_trc_056_the_table_check_fails_for_a_row_that_is_missing(monkeypatch):
     assert old_names.removal_problems("8.0.0") and len(old_names.removal_problems("8.0.0")) == 10
 
 
-# --- U4: the upgrade guide table is the reader table --------------------------
+# --- The upgrade guide table is the reader table ------------------------------
 
 def _guide_rows(text: str) -> set:
     """`(kind, old, new, removed_in)` for each row of the guide's table."""

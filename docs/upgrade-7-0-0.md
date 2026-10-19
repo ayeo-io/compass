@@ -694,6 +694,12 @@ Compass spells its own names in US English from 7.0.0. Each old name below is st
 | heading | `Archived Behaviour` | `Archived Behavior` | 8.0.0 |
 | term | `catalogue` | `catalog` | 8.0.0 |
 
+If a script or a rule matches the refusal code that the session-start hook prints, change it to match `not-initialized`. The hook prints only the new code. `compass _refusal not-initialised` still renders the refusal, and the saved output of an earlier run that holds the old code still reads.
+
+### The `language` setting
+
+7.0.0 adds the optional setting `language` to `compass.yml`: a BCP 47 tag such as `en-US` or `de`. When it is set, the session-start hook adds one line that tells the agent to write prose in that language. When it is not set, nothing changes. A malformed value stops no session; `compass policy lint` refuses it and says what to write. `docs/configuration.md` has the tag table.
+
 ## `compass policy migrate --undo` goes back to the old files
 
 `compass policy migrate --undo` puts a migrated project back as it was before `compass policy migrate --apply`. `docs/policy-migrate.md` owns the facts, under "Going back with `--undo`". The decision is `governance/decisions/2026-10-19-the-migration-marker-records-what-an-undo-needs.md`.

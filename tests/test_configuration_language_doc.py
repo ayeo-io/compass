@@ -50,7 +50,8 @@ def _problems(text):
     for note, pattern in {
         "bare language": r"bare language \(`de`\) is fine",
         "chinese": r"`zh-Hans` and `zh-Hant` for Chinese",
-        "norwegian": r"Norwegian is `nb` or `nn`, not `no`",
+        "norwegian": r"Norwegian is `nb` or `nn` .*?unquoted `no`: YAML reads it as false",
+        "settings file": r"settings file: `compass.yml`, or `.compass/config.yml` when",
         "hebrew": r"Hebrew is `he`, not `iw`",
         "unset": r"unset means no instruction|Unset means no instruction",
         "preset": r"preset cannot carry",

@@ -269,7 +269,9 @@ Unset means no instruction: Compass says nothing about language, and the
 agent follows the repository's existing prose. When it is set, the session-start
 hook adds one line that names the language. Code identifiers are out of scope.
 A preset cannot carry the key. The setting is read from the project's own
-`compass.yml` only. A malformed value is refused at `compass policy lint`.
+settings file: `compass.yml`, or `.compass/config.yml` when `compass.yml` is
+absent or has no `schema:`. A malformed value is refused at `compass policy lint`
+and adds no line to a session.
 A project's own `CLAUDE.md` or `AGENTS.md` that names a language should drop
 that sentence when `language` is set, and Compass never edits those files.
 
@@ -322,5 +324,6 @@ For a language not listed, see the
   a region (`de-CH`) when it does.
 - Use `zh-Hans` and `zh-Hant` for Chinese. The script, not the region, decides
   the characters.
-- Norwegian is `nb` or `nn`, not `no` (`nb` is Bokmål and `nn` is Nynorsk).
-  Hebrew is `he`, not `iw`.
+- Norwegian is `nb` or `nn` (`nb` is Bokmål and `nn` is Nynorsk). Do not write
+  an unquoted `no`: YAML reads it as false, and Compass refuses it. Hebrew is
+  `he`, not `iw`.

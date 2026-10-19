@@ -140,8 +140,8 @@ because macOS opens a path in any case.
   delegation folder or a file in it, such as `d*/*`, `deleg*/*`,
   `deleg?tions`, `**/confirm-*` or `cat .compass/deleg*/*`
   (`delegation-protected`). The hook tests the glob with `fnmatch` against
-  the folder `.compass/delegations` and the sample files `DL-1.yml` and
-  `confirm-s.yml` in it, and against an ordinary path of the same shape: a
+  the folder `.compass/delegations` and two sample files in it, one named
+  like a delegation record and `confirm-s.yml`, and against an ordinary path of the same shape: a
   folder `zz` and a file `file.yml` in it, both under `.compass`. It refuses
   the glob when it matches a delegation path and not the ordinary one. This is a
   heuristic: it can refuse a rare glob such as `**/*-*.yml`, and it passes a

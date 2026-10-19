@@ -856,7 +856,7 @@ def derive_system_spec(project_root: str) -> None:
 
     if current:
         lines += [
-            "## Current Behaviour",
+            "## Current Behavior",
             "",
         ]
         # One heading per issue, in landing order, then one line per
@@ -882,7 +882,7 @@ def derive_system_spec(project_root: str) -> None:
             lines.append("")
     else:
         lines += [
-            "## Current Behaviour",
+            "## Current Behavior",
             "",
             "> No landed scenarios yet.",
             "",
@@ -907,7 +907,7 @@ def derive_system_spec(project_root: str) -> None:
             "",
         ]
         archive_lines += [
-            "## Archived Behaviour",
+            "## Archived Behavior",
             "",
             "> These scenarios name a replacement in `superseded_by`.",
             "",

@@ -40,9 +40,9 @@ def test_current_and_archived_behaviour_go_to_separate_files(tmp_path):
     spec = (tmp_path / "docs" / "system-spec.md").read_text()
     archive = (tmp_path / "docs" / "system-spec-archive.md").read_text()
     assert "SCN-NEW" in spec and "SCN-OLD" not in spec
-    assert "## Archived Behaviour" not in spec
+    assert "## Archived Behavior" not in spec
     assert "system-spec-archive.md" in spec
-    assert "## Archived Behaviour" in archive
+    assert "## Archived Behavior" in archive
     assert "### old way _(archived)_" in archive and "`SCN-OLD`" in archive
     assert "SCN-NEW" not in archive
 

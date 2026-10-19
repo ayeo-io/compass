@@ -1257,8 +1257,10 @@ def test_dss_14_contracts_fails_undeclared(tmp_path):
     for pattern in ("schemas/", "governance/presets", ".schema.json", "add_parser("):
         assert pattern not in source, pattern
     # A project layer that adds the trigger pattern "api/**" makes a change to a YAML file
-    # under the api folder fail the same way, once the issue is assessed onto it. The merge grammar changes a
-    # map key by key, so the layer sets `trigger_paths` to the shipped list and the pattern.
+    # under the api folder fail the same way, once the issue is assessed onto it. Adding an
+    # entry tightens the check, so the layer needs no waiver (ADR-073). The merge grammar
+    # changes a map key by key, so the layer sets `trigger_paths` to the shipped list and
+    # the pattern.
     _u3_write_design(root, empty, changed=("api/v1.yaml",))
     code, rows = _u3_check(root)
     assert rows[CONTRACTS][0] == "nothing-to-check", rows[CONTRACTS]
@@ -1266,9 +1268,8 @@ def test_dss_14_contracts_fails_undeclared(tmp_path):
         "schema": 1, "owner": "jed72",
         "checks": {CONTRACTS: {
             "set": {"params": {"set": {
-                "trigger_paths": params["trigger_paths"] + ["api/**"]}}},
-            "waiver": {"reason": "Our API files are contracts too.", "approved_by": "jed72",
-                       "approved_on": "2026-10-14"}}}}, sort_keys=False), encoding="utf-8")
+                "trigger_paths": params["trigger_paths"] + ["api/**"]}}}}}},
+        sort_keys=False), encoding="utf-8")
     code, out, err = sup.run(root, "approach", "evaluate", "--issue", sup.SLUG, "--write",
                              "--reason", "add the api trigger pattern")
     assert code == 0, out + err

@@ -311,7 +311,7 @@ def test_roa_16_the_owning_docs_describe_the_rule_and_the_chain():
     assert "set: {params: {set: {command: test_micro_command}}}" in readiness_doc
     routing = _flat("governance/routing-policy.md")
     assert "the direction `equivalent`" in routing
-    assert "`CLASSIFIER_VERSION` is 5" in routing
+    assert "this rule raised `CLASSIFIER_VERSION` to 5" in routing
     diff_doc = _flat("docs/policy-diff.md")
     assert "changes readiness <signal> <param>: <parent value> -> <child value>" in diff_doc
     guardrails = _flat("governance/guardrails.md")

@@ -10,10 +10,13 @@ edits with the classifier, or says exactly what it could not express. From
 a change to a key, its order or a code is a breaking change.
 
 The code is `cli/compass_pkg/policy_migrate.py` (the plan, the writes and the
-report), `cli/compass_pkg/shipped_releases.py` (the table of releases) and
+report), `cli/compass_pkg/policy_migrate_undo.py` (the undo),
+`cli/compass_pkg/shipped_releases.py` (the table of releases) and
 `cli/compass_pkg/policy_cmd.py` (the command). The decisions behind it are
 ADR-037 (classification), ADR-039 (waivers), ADR-042 (the shipped preset and
-the legacy views) and ADR-043 (one project file).
+the legacy views), ADR-043 (one project file) and the record
+`governance/decisions/2026-10-19-the-migration-marker-records-what-an-undo-needs.md`
+(what the marker holds so that an undo can check the project).
 
 ## When the overlay takes effect
 
@@ -65,8 +68,9 @@ What happens to each old file:
 The kept copies and the overlay are two sources that can differ. The digest of
 each kept copy is in `migration.yml`. Removing the copies is a follow-up for
 when the readers move; the `legacy` folder already holds them, so nothing is
-lost. A person restores an old file by copying it back from the `legacy`
-folder. There is no `--undo` yet.
+lost. `compass policy migrate --undo` puts the old files back (see "Going back
+with `--undo`" below). A person can also copy an old file back from the
+`legacy` folder by hand.
 
 If a run stops after step 4 and before step 5, `compass.yml` and the old file
 exist together. The next `--apply` sees `migration.yml` and a digest of the old
@@ -81,7 +85,7 @@ writes nothing.
 | Cause | Reason |
 |---|---|
 | The project is the Compass framework repository | Its governance files are generated from the shipped preset |
-| `compass.yml` exists and `migration.yml` records that this command wrote it | The settings now live in `compass.yml`. The message says how to go back: copy the old files from the `legacy` folder, then remove `compass.yml` and `migration.yml`. It never advises moving `compass.yml` away, which would put the settings back to their defaults |
+| `compass.yml` exists and `migration.yml` records that this command wrote it | The settings now live in `compass.yml`. The message names `compass policy migrate --undo`, which restores the old files from the `legacy` folder. It gives no copy-back steps, and it warns against deleting `compass.yml` by hand, which would put the settings back to their defaults |
 | `compass.yml` exists, has `schema:`, and no marker | Compass reads it, so there is nothing to migrate into. When `.compass/config.yml` still sets keys, the message names them. This covers both settings files being present, which Compass does not merge |
 | `compass.yml` exists and has no `schema:` | Compass does not read it, so it is another tool's file. The message says to move it to another name or add `schema: 1` |
 | One of the two governance files is present without the other | A copy needs both |
@@ -227,7 +231,7 @@ longer matches its tag. Run the script after cutting a release tag.
 |---|---|
 | 0 | A dry run that is ready, an applied migration, or nothing to migrate |
 | 1 | Blocked: the base release plus the overlay is not shown equivalent to the copy, a value cannot be written, a merge or lint error stands, or a waiver stub is unapproved. Nothing is written |
-| 2 | A refusal, or a source that cannot be read |
+| 2 | A refusal, including a refusal by `--undo`, or a source that cannot be read |
 
 ## Output
 
@@ -569,6 +573,79 @@ A refusal prints no document: the reason is on stderr and the exit is 2.
 | An `M-*` code | The overlay does not merge, such as `M-MAP-REMOVE-ABSENT` or `M-REF-REMOVED` |
 | Any other lint code | A finding of `compass policy lint` on the file the command would write: `K-LOCK-REFUSED`, `C-LOOSENING`, `C-INCOMPARABLE`, `W-UNAPPROVED`, `W-NO-OWNER` and the rest of [the lint codes](policy-lint.md) |
 
+## Going back with `--undo`
+
+`compass policy migrate --undo` puts a project back in the state it had before
+`--apply`. The code is `cli/compass_pkg/policy_migrate_undo.py`.
+
+**Dry run and `--apply`.** The command is a dry run unless it is given
+`--apply`. A dry run lists the files it would restore and remove and writes
+nothing. It refuses in the same way as `--apply`, because the checks run before
+any write: a dry run that says "ready" and an apply that refuses would mislead.
+
+**What it checks.** `migration.yml`, the marker, holds a digest of each source
+and the time of the migration (`migrated_at`). It holds a digest of
+`compass.yml` and, when the migration made it, of `state.yml`. The undo checks
+every digest before it writes anything:
+
+- `compass.yml` and `state.yml`;
+- each governance file and the old `.compass/config.yml`;
+- each copy in `.compass/legacy/`. A copy that is changed or missing is a
+  refusal, because the undo could not restore the file byte for byte.
+
+A file that is absent is not a mismatch. A deleted source is restored from its
+copy.
+
+**What it refuses.** Each refusal exits 2, names its file, and writes nothing:
+
+- an edited `compass.yml`, `state.yml`, governance file or old settings file.
+  The undo does not discard an edit;
+- a changed or missing copy in `.compass/legacy/`;
+- no `migration.yml`: nothing records that a migration ran;
+- a marker with no digest of `compass.yml`, which an earlier version of the
+  command wrote. The message prints the manual steps below;
+- a marker whose `schema` is not 1. The message names the schema;
+- a signed record made since the migration. The undo counts the signed records
+  in `.compass/work/<slug>/evidence/*.json` dated at or after `migrated_at`, or
+  with no readable date, and refuses when the count is above 0. The message
+  says how many. It reads no other record, so a record kept in an archive is
+  not counted;
+- `--words`, `DIR` or `--i-have-a-copy`, which belong to the other mode.
+
+There is no override. The undo has no flag that skips a check.
+
+**A `compass.yml` edited after `--apply` is refused.** An unapproved waiver
+stub blocks `--apply` itself, so a project with a stub has no marker: the
+person puts `compass.yml` in place by hand and the undo reports nothing to undo.
+Only a `compass.yml` edited after `--apply` makes the undo refuse, because
+discarding that edit would discard the person's work. A project in that state
+goes back by the manual steps. An earlier marker gets the same steps in its
+refusal:
+
+1. Copy the old files back from `.compass/legacy/` to their places.
+2. Remove `compass.yml` and `migration.yml`.
+3. Remove `.compass/state.yml` only when the marker says the migration made it.
+
+**What it does.** The steps run in this order:
+
+1. Restore `.compass/config.yml`, and any governance file that was deleted,
+   from `.compass/legacy/`.
+2. Remove `compass.yml`.
+3. Remove `state.yml`, only if the migration made it.
+4. Remove `migration.yml` last.
+
+The marker is the proof that an undo is owed. If the undo stops, `migration.yml`
+is still there, so the undo finishes when it is run again: a source that
+already equals its copy counts as done. The undo keeps `.compass/legacy/`. The
+migration copies each source with its file mode, and the undo restores a file
+with the mode of its copy.
+
+**`--json`.** One document at schema 1, with the keys `schema`, `mode`,
+`result`, `sources` and `files`, in that order. `mode` is `undo` for a dry run
+and for an applied undo. `result` is `ready` for a dry run and `undone` after
+`--apply`. A refusal prints no document: the reason is on stderr and the exit is
+2.
+
 ## Rewriting the configuration in the 6.0.0 words (`--words`)
 
 `compass policy migrate --words [DIR]` rewrites a project's own configuration
@@ -669,7 +746,7 @@ for a list position.
 
 ## What it does not do
 
-- It has no `--undo` and no `--adopt-defaults`.
+- It has no `--adopt-defaults`.
 - It does not remove the governance copies.
 - It does not run the six compatibility contracts. The classifier is the proof it gives.
 - It does not call `compass policy diff`. The dry run classifies directly with `classify.classify`.

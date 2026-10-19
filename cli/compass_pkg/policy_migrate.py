@@ -27,6 +27,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import os
+import stat
 from dataclasses import dataclass, field
 
 import yaml
@@ -35,7 +36,8 @@ from compass_pkg import catalogue_spec as spec
 from compass_pkg import (classify, layers, legacy_adapter, merge, policy_lint,
                          project_settings, retired, shipped_releases, waivers)
 from compass_pkg.atomic_io import atomic_write_text
-from compass_pkg.core import FRAMEWORK_ROOT, CompassError, load_yaml, migrate_map_section
+from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, load_yaml, migrate_map_section,
+                              now_iso)
 
 GOVERNANCE_FILES = ("governance/routing-policy.yml", "governance/guardrails.yml")
 # The old settings file's path, as `project_settings` names it, in the form the
@@ -45,6 +47,9 @@ COMPASS_YML = "compass.yml"
 LEGACY_DIR = ".compass/legacy"
 MIGRATION_YML = ".compass/migration.yml"
 STATE_YML = ".compass/state.yml"
+# The marker's schema and the keys the migration writes and the undo reads.
+MARKER_SCHEMA = 1
+K_SOURCES, K_CREATED, K_WRITTEN, K_AT = "sources", "created_state", "written", "migrated_at"
 UNAPPROVED = waivers.UNAPPROVED
 STUB_REASON = ("Migrated from a copy of the governance files whose local edit loosens "
                "the shipped release it came from. Confirm the departure, then set "
@@ -96,17 +101,24 @@ def file_digest(path):
         return "sha256:" + hashlib.sha256(fh.read()).hexdigest()
 
 
-def _marker(root):
-    """The parsed `migration.yml`, or None."""
+def read_marker(root):
+    """The parsed `migration.yml`, or None when it is missing, unreadable, not
+    UTF-8, not YAML or not a mapping. The undo reads it through this function
+    too, so the two commands never disagree about what a marker is."""
     path = _absolute(root, MIGRATION_YML)
     if not os.path.isfile(path):
         return None
     try:
         with open(path, "r", encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
-    except (OSError, yaml.YAMLError):
+    except (OSError, UnicodeDecodeError, yaml.YAMLError):
         return None
     return data if isinstance(data, dict) else None
+
+
+def legacy_path(rel):
+    """Where the migration keeps its copy of the source `rel`."""
+    return f"{LEGACY_DIR}/{rel.rsplit('/', 1)[-1]}"
 
 
 def pending_removal(root):
@@ -114,10 +126,10 @@ def pending_removal(root):
     removed the old settings file: the marker is there and its digest of the
     old file is the digest of the file that is still there. Anything else, an
     edited old file included, is a conflict a person must settle."""
-    marker, old = _marker(root), _absolute(root, OLD_CONFIG)
+    marker, old = read_marker(root), _absolute(root, OLD_CONFIG)
     if not (_present(root, COMPASS_YML) and marker and os.path.isfile(old)):
         return False
-    recorded = (marker.get("sources") or {}).get(OLD_CONFIG)
+    recorded = (marker.get(K_SOURCES) or {}).get(OLD_CONFIG)
     return recorded == file_digest(old)
 
 
@@ -137,14 +149,13 @@ def _compass_yml_refusal(root):
     """The reason a `compass.yml` that is already there stops the command. It
     never advises a step that loses a setting: a recognised file holds the
     project's settings, so it is not moved away."""
-    if _marker(root) is not None:
+    if read_marker(root) is not None:
         return ("compass.yml was written by compass policy migrate, which "
-                "migration.yml in .compass records, and it now holds this project's "
-                "settings. Nothing was changed. Do not move it away: the settings "
-                f"would fall back to their defaults. To go back to the old files, "
-                f"copy {OLD_CONFIG} and the two governance files from the legacy "
-                "folder in .compass to where they were, then remove compass.yml and "
-                "migration.yml")
+                "migration.yml in .compass records. Nothing was changed. To go "
+                "back to the old files, run compass policy migrate --undo: it "
+                "restores them from the legacy folder in .compass. Do not delete "
+                "compass.yml by hand: the settings would fall back to their "
+                "defaults")
     if not _has_schema(root):
         return ("compass.yml exists and has no `schema:`, so Compass does not read "
                 "it: it looks like another tool's file. Nothing was changed. Move "
@@ -696,8 +707,8 @@ def _creates_state(root, made):
         return False
     if not _present(root, STATE_YML):
         return True
-    marker = _marker(root)
-    return bool(marker and marker.get("created_state") is True)
+    marker = read_marker(root)
+    return bool(marker and marker.get(K_CREATED) is True)
 
 
 def _files(root, made):
@@ -705,7 +716,7 @@ def _files(root, made):
     does them."""
     if made.resumed:
         return [{"action": "remove", "path": OLD_CONFIG, "to": None}]
-    files = [{"action": "copy", "path": rel, "to": f"{LEGACY_DIR}/{rel.rsplit('/', 1)[-1]}"}
+    files = [{"action": "copy", "path": rel, "to": legacy_path(rel)}
              for rel in made.sources]
     files.append({"action": "write", "path": MIGRATION_YML, "to": None})
     if made.state:
@@ -750,6 +761,19 @@ STATE_HEADER = ("# Compass - state the CLI wrote. Do not edit. Settings go in co
                 "# Moved here from the old settings file by compass policy migrate.\n")
 
 
+def text_digest(text):
+    """The digest of a text as the file will hold it, in the form
+    `file_digest` gives, so the marker can be compared with a file on disk."""
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _state_text(made):
+    """The text of the state file, built once so the digest and the write
+    use the same string."""
+    return STATE_HEADER + yaml.dump(
+        made.state, Dumper=_NoAlias, sort_keys=False, default_flow_style=False)
+
+
 def _tool_version():
     try:
         with open(os.path.join(FRAMEWORK_ROOT, "VERSION"), "r", encoding="utf-8") as fh:
@@ -781,17 +805,21 @@ def apply(root, made):
         return
     os.makedirs(_absolute(root, LEGACY_DIR), exist_ok=True)
     for rel in made.sources:
-        atomic_write_text(_absolute(root, f"{LEGACY_DIR}/{rel.rsplit('/', 1)[-1]}"),
-                          _read_exact(_absolute(root, rel)))
+        # The copy keeps the source's mode: the undo restores a deleted source with it.
+        atomic_write_text(_absolute(root, legacy_path(rel)), _read_exact(_absolute(root, rel)),
+                          mode=stat.S_IMODE(os.stat(_absolute(root, rel)).st_mode))
     creates_state = _creates_state(root, made)
+    written = {COMPASS_YML: text_digest(made.compass_yml)}
+    if creates_state:
+        state_text = _state_text(made)
+        written[STATE_YML] = text_digest(state_text)
     atomic_write_text(_absolute(root, MIGRATION_YML), yaml.dump(
-        {"schema": 1, "tool": _tool_version(), "sources": dict(made.digests),
-         "created_state": creates_state},
+        {"schema": MARKER_SCHEMA, "tool": _tool_version(), K_SOURCES: dict(made.digests),
+         K_CREATED: creates_state, K_WRITTEN: written, K_AT: now_iso()},
         Dumper=_NoAlias, sort_keys=False, default_flow_style=False))
     if creates_state:
-        atomic_write_text(_absolute(root, STATE_YML), STATE_HEADER + yaml.dump(
-            made.state, Dumper=_NoAlias, sort_keys=False, default_flow_style=False))
-    atomic_write_text(_absolute(root, COMPASS_YML), made.compass_yml)
+        atomic_write_text(_absolute(root, STATE_YML), state_text, newline="")
+    atomic_write_text(_absolute(root, COMPASS_YML), made.compass_yml, newline="")
     if OLD_CONFIG in made.sources:
         remove_old_config(root)
 

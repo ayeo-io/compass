@@ -1,6 +1,10 @@
 # compass_pkg.policy_cmd - `compass policy lint`, `show`, `diff`, `migrate` and `update`
 """The five verbs over `policy_lint`, `replay`, `policy_migrate` and `policy_update`.
 
+`policy migrate` has three modes: the migration, `--words` (rewrite compass.yml
+in the 6.0.0 words) and `--undo` (go back to the files from before the
+migration, through `policy_migrate_undo`).
+
 `policy lint` runs the legacy lint, unchanged, for a project with no
 `compass.yml` that Compass reads, and the layered lint for any other project.
 `--issue`, `--file` and `policy show` read the chain the write-time lint reads
@@ -10,7 +14,7 @@ either fails. `compass ci` calls the legacy function in `governance`
 directly, so its behaviour does not move.
 """
 # DEPENDENCY: standard library (os, sys); compass_pkg.classify, config_words, core, governance,
-# layers, parents, policy_lint, policy_migrate, policy_update, project_settings,
+# layers, parents, policy_lint, policy_migrate, policy_migrate_undo, policy_update, project_settings,
 # replay, terminal.
 from __future__ import annotations
 
@@ -18,7 +22,7 @@ import os
 import sys
 
 from compass_pkg import classify, config_words, governance, layers, parents, policy_lint, policy_migrate
-from compass_pkg import policy_update, preset_init, preset_test, project_settings, replay
+from compass_pkg import policy_migrate_undo, policy_update, preset_init, preset_test, project_settings, replay
 from compass_pkg.effective import GOVERNANCE_COPY_NOTICE, has_governance_copy
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
@@ -150,6 +154,8 @@ def run_policy_effective(args):
 
 def run_policy_migrate(args):
     root = layers.find_project_root(os.getcwd())
+    if getattr(args, "undo", False):
+        return _run_undo(args, root)
     if getattr(args, "words", False):
         return _run_words(args, root)
     if getattr(args, "dir", None) is not None or getattr(args, "have_copy", False):
@@ -162,6 +168,24 @@ def run_policy_migrate(args):
         made.result = "applied"
     _emit(args, policy_migrate.report_json(made, mode), policy_migrate.report_text(made, mode))
     return 1 if made.result == "blocked" else 0
+
+
+def _run_undo(args, root):
+    """`policy migrate --undo`: go back to the files from before the migration.
+
+    A dry run unless given `--apply`. The options of the other mode are refused
+    before anything is read, so a refusal changes nothing."""
+    other = (("words", "--words"), ("dir", "DIR"), ("have_copy", "--i-have-a-copy"))
+    for key, name in other:
+        if getattr(args, key, None) not in (None, False):
+            raise CompassError(f"--undo cannot be used with {name}: {name} belongs to the "
+                               "migration, and --undo goes back to the files from before "
+                               "it. Nothing was changed.")
+    made = policy_migrate_undo.plan(root)
+    if getattr(args, "apply", False):
+        policy_migrate_undo.apply(root, made)
+    _emit(args, policy_migrate_undo.report_json(made), policy_migrate_undo.report_text(made))
+    return 0
 
 
 def _run_words(args, root):
@@ -273,6 +297,9 @@ def register(pls):
     plm.add_argument("--i-have-a-copy", dest="have_copy", action="store_true",
                      help="with --words --apply: write files git cannot restore, because "
                      "you have a copy")
+    plm.add_argument("--undo", action="store_true",
+                     help="instead, go back to the files from before the migration; a dry "
+                     "run unless given --apply")
     plm.set_defaults(func=run_policy_migrate, output_kind="report")
     pll = pls.add_parser("lint", help="structurally validate the governance YAML")
     _issue_option(pll)

@@ -315,9 +315,11 @@ exits non-zero.
 With nothing staged, `compass ship-commit --issue <slug>` lands at HEAD
 only when the issue's own commits at the tip stay inside its declared
 scope. It walks the first parent from HEAD. A commit that changes only
-the living spec is passed over. A merge whose merged-in commits are all
-on the base branch, such as a merge of `origin/main`, counts only the
-paths it changed against every parent, which is its conflict resolution.
+the living spec is passed over. A commit judged in full keeps the living
+spec among its paths, so a hand edit of it is refused unless the issue
+owns it. A merge whose merged-in commits are all on the base branch, such
+as a merge of `origin/main`, counts only the paths it changed against
+every parent, which is its conflict resolution, without the living spec.
 Any other merge, such as a multiagent integration merge, is judged in
 full and ends the walk, whatever commit the merged branch started from.
 The walk stops at the issue's newest other commit, which is judged in

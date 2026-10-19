@@ -37,6 +37,12 @@ code from a refusal you hit.
 **Why:** no issue can be named for {project}: '{slug}' is not an issue under its .compass/work/.
 **Fix:** in the session's own project, set COMPASS_ISSUE to a real slug or unset it. In a worktree, run compass issue use <slug> there.
 
+### `bash-command-too-complex`
+
+**Blocked:** Bash command with {has}
+**Why:** the write guard cannot scan a command with {over} in time.
+**Fix:** split the command into smaller steps, or write the file with the Write tool.
+
 ### `bash-command-too-long`
 
 **Blocked:** Bash command of {size} bytes

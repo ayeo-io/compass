@@ -295,20 +295,31 @@ def test_a_reassigned_variable_before_a_heredoc_over_a_pipe_buffer_is_still_not_
 
 
 @pytest.mark.serial
-@pytest.mark.xfail(strict=True, reason=(
-    "TRC-012 waits for the architect's decision on the second limit (DD-7). "
-    "After the faster scans this command takes more than 100 s: each `cp` line "
-    "is a write candidate that costs about 50 ms, and the flattening of "
-    "unclosed substitutions grows faster than their number. "
-    "See result.md of subtask-1."))
 def test_many_unclosed_substitutions_under_the_limit_end_in_time(tmp_path):
-    """Scenario id: `TRC-012` in pre-tool-hook-time-bounded/acceptance-criteria.md"""
+    """Scenario id: `TRC-012` in pre-tool-hook-time-bounded/acceptance-criteria.md
+
+    4000 openers are over the substitution limit, so the hook refuses the
+    command by count and does not scan it."""
     root = _project(tmp_path)
     command = "cp x $(\n" * 4000          # 8 bytes a line: 32000 bytes
     assert len(command) == 32000
     seconds, r = _bash(root, command, tmp_path, timeout=10)
 
-    assert r.returncode in (0, 2), (r.returncode, r.stderr)
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert "[bash-command-too-complex]" in r.stderr, r.stderr
+    assert seconds < FAST, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_a_dense_command_of_closed_substitutions_is_refused_by_count(tmp_path):
+    """The density case of `TRC-012` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    4000 closed spans in 90 KB."""
+    root = _project(tmp_path)
+    command = _exact("".join(f"cp a $(d{i})\n" for i in range(4000)), 90000)
+    seconds, r = _bash(root, command, tmp_path, timeout=10)
+
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert "[bash-command-too-complex]" in r.stderr, r.stderr
     assert seconds < FAST, f"the hook took {seconds:.1f} s"
 
 
@@ -414,9 +425,146 @@ def test_a_broken_configuration_reader_still_refuses_with_the_cache(
 
 
 # ---------------------------------------------------------------------------
+# Group E - two counts. A command with very many different write targets or
+# very many `$(` openers is refused where Compass is in use, because the scans
+# cost time for each of them. The numbers come from measurements (result.md).
+# ---------------------------------------------------------------------------
+
+TARGET_LIMIT = 400
+OPENER_LIMIT = 700
+IDLE = 3.75      # seconds: a quarter of the 15 s hook timeout
+
+
+def _complex(r):
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert r.stderr.rstrip().endswith("[bash-command-too-complex]"), r.stderr
+    assert "filler line" not in r.stderr, "the refusal quotes the command"
+
+
+def _distinct_targets(count: int) -> str:
+    return "\n".join(f"cp a b{i}" for i in range(count))
+
+
+def _openers(count: int) -> str:
+    """`count` closed substitutions in write commands."""
+    return "\n".join(f"cp a $(d{i})" for i in range(count))
+
+
+@pytest.mark.serial
+def test_more_than_400_distinct_write_targets_are_refused(tmp_path):
+    """Scenario id: `TRC-018` in pre-tool-hook-time-bounded/acceptance-criteria.md"""
+    root = _project(tmp_path)
+    seconds, r = _bash(root, _distinct_targets(TARGET_LIMIT), tmp_path)
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s at the limit"
+
+    # Targets written again do not count.
+    again = _distinct_targets(TARGET_LIMIT) + "\ncp a b0\ncp a b1"
+    _, r = _bash(root, again, tmp_path)
+    assert r.returncode == 0, (r.returncode, r.stderr)
+
+    seconds, r = _bash(root, _distinct_targets(TARGET_LIMIT + 1), tmp_path)
+    _complex(r)
+    assert "401 " in r.stderr and f"{TARGET_LIMIT} " in r.stderr, r.stderr
+    assert seconds < IDLE, f"the refusal took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_the_worst_command_at_the_target_limit_ends_in_time(tmp_path):
+    """Supports `TRC-018` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    400 targets that start with a variable, after a heredoc of 85 KB. Each one
+    was read against the whole command and took about 50 ms."""
+    root = _project(tmp_path)
+    command = ("S=/tmp/zz\ncat <<E1\n" + "filler line\n" * 7000 + "E1\n"
+               + _distinct_targets(TARGET_LIMIT).replace("cp a b", "cp a $S/b"))
+    assert len(command) < LIMIT
+    seconds, r = _bash(root, command, tmp_path, timeout=60)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_more_than_700_substitution_openers_are_refused(tmp_path):
+    """Scenario id: `TRC-019` in pre-tool-hook-time-bounded/acceptance-criteria.md"""
+    root = _project(tmp_path)
+    seconds, r = _bash(root, _openers(OPENER_LIMIT), tmp_path)
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s at the limit"
+
+    seconds, r = _bash(root, _openers(OPENER_LIMIT + 1), tmp_path)
+    _complex(r)
+    assert "701 " in r.stderr and f"{OPENER_LIMIT} " in r.stderr, r.stderr
+    assert seconds < IDLE, f"the refusal took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_the_worst_unclosed_command_at_the_opener_limit_ends_in_time(tmp_path):
+    """Supports `TRC-019` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    openers that never close, followed by 85 KB. Each opener is scanned to the
+    end of the text, so the work grows with the openers times the length: 700
+    of them took 224 s. The scan stops when it has done a fixed amount of work,
+    and the command is refused as too complex."""
+    root = _project(tmp_path)
+    command = "cp x $(\n" * OPENER_LIMIT + "filler line\n" * 7000
+    assert len(command) < LIMIT
+    seconds, r = _bash(root, command, tmp_path, timeout=30)
+
+    _complex(r)
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_a_command_of_90_kb_with_many_line_continuations_ends_in_time(tmp_path):
+    """Supports `TRC-019` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    joining the lines that end in a backslash with a bash substitution took
+    1.2 s for each continuation in a UTF-8 locale, so 100 of them took 116 s."""
+    root = _project(tmp_path)
+    command = _exact("cp a b \\\n" * 300 + "cat <<'E'\n", 90000)
+    seconds, r = _bash(root, command, tmp_path, timeout=30)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_a_script_with_200_closed_substitutions_is_allowed_in_time(tmp_path):
+    """Scenario id: `TRC-020` in pre-tool-hook-time-bounded/acceptance-criteria.md"""
+    root = _project(tmp_path)
+    command = "\n".join(
+        f'v{i}=$(basename "$f{i}") && echo "$v{i}" > out{i}.log'
+        for i in range(200))
+    seconds, r = _bash(root, command, tmp_path)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert r.stderr == "", r.stderr
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("command", [
+    pytest.param(_distinct_targets(TARGET_LIMIT + 1), id="targets"),
+    pytest.param(_openers(OPENER_LIMIT + 1), id="openers"),
+    pytest.param("cp x $(\n" * 300 + "filler line\n" * 7000, id="unclosed"),
+])
+def test_the_counts_do_not_apply_where_compass_is_not_in_use(tmp_path, command):
+    """Scenario id: `TRC-021` in pre-tool-hook-time-bounded/acceptance-criteria.md
+
+    A repository without `.compass/` sees no new refusal. Only the write scan
+    is skipped."""
+    root = _guest(tmp_path)
+    seconds, r = _bash(root, command, tmp_path, timeout=30)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert r.stderr == "", r.stderr
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+# ---------------------------------------------------------------------------
 # The faster scans give the same answers. Two differential tests, one for the
 # transcript-guard prefilter and one golden corpus for expand_command_variable.
-# They serve TRC-011 and TRC-010 and need no scenario of their own.
+# They support the scenarios `TRC-011` (the prefilter) and `TRC-010` (the
+# expansion), and need no scenario of their own.
 # ---------------------------------------------------------------------------
 
 def _bash_run(script: str, *args: str, locale=UTF8):
@@ -897,9 +1045,74 @@ GOLDEN_ROWS = [
 
 def _expand_function() -> str:
     text = HOOK.read_text(encoding="utf-8")
-    found = re.search(r"^expand_command_variable\(\) \{\n.*?^\}\n", text, re.S | re.M)
-    assert found, "hooks/pre-tool.sh has no expand_command_variable function"
-    return found.group(0)
+    # The function and the helpers it calls, with the globals they keep.
+    found = re.findall(r"^expand_command_variable[a-z_]*\(\) \{\n.*?^\}\n", text,
+                       re.S | re.M)
+    assert len(found) == 3, "hooks/pre-tool.sh lacks an expand_command_variable function"
+    state = re.search(r"^EXPAND_MEMO_CMD=.*\n", text, re.M)
+    assert state, "hooks/pre-tool.sh does not set the memo of the expansion"
+    return state.group(0) + "".join(found)
+
+
+CONTINUATION_CORPUS = [
+    "", "x", "cp a b", "cp a \\\nb", "cp a \\\n\\\nb", "a\\", "a\\\n", "a\\\n\n",
+    "\\\n", "\\\n\\\n", "echo > \\\nsrc/app.ts", "x\\\\\ny", "x \\\\\\\ny",
+    "tab\\\n\tindent", "é \\\nü", "€\\\n€", "a\n\nb\\\n\nc", "line\r\\\nnext",
+    "# c \\\nmore", "end \\\n\\", "'q \\\n' x", "$(a \\\n b)",
+]
+
+
+def test_the_continuation_join_gives_the_same_text_as_the_bash_substitution(
+        tmp_path):
+    """The hook joins lines that end in a backslash with awk. The result is the
+    text the old bash substitution gave, including the line end after it
+    (supports `TRC-019` in pre-tool-hook-time-bounded/acceptance-criteria.md)."""
+    text = HOOK.read_text(encoding="utf-8")
+    found = re.search(r"awk ('\{ s = s \$0 \"\\n\" \}\n.*?\}')", text, re.S)
+    assert found, "hooks/pre-tool.sh does not join continuations with awk"
+    program = found.group(1)
+    old = ('continuation=$\'\\\\\\n\'\n'
+           'printf \'%s\\n\' "${1//"$continuation"/ }"')
+    new = f"printf '%s\\n' \"$1\" | awk {program}"
+    bad = []
+    for cmd in CONTINUATION_CORPUS:
+        a = _bash_run(old, cmd).stdout
+        b = _bash_run(new, cmd).stdout
+        if a != b:
+            bad.append((cmd, a, b))
+    assert not bad, bad[:3]
+
+
+def test_the_memo_of_the_expansion_never_carries_an_answer_to_another_command(
+        tmp_path):
+    """All the golden rows run in one shell, in order and again in reverse, so
+    that a name answered for one command is met again for the same command (the
+    memo is used) and for another one (it must not be). Each result must be the
+    stored one (supports `TRC-018` in pre-tool-hook-time-bounded/acceptance-criteria.md)."""
+    function = tmp_path / "expand.sh"
+    function.write_text(_expand_function(), encoding="utf-8")
+    rows = []
+    for number, (key, target, expected) in enumerate(GOLDEN_ROWS):
+        command = GOLDEN_COMMANDS[key] if key in GOLDEN_COMMANDS else GOLDEN_GENERATORS[key]()
+        path = tmp_path / f"cmd{number}"
+        path.write_text(command, encoding="utf-8")
+        rows.append((path, target, (target if expected is None else expected)))
+    order = rows + rows[::-1]
+    script = ('set -euo pipefail\nsource "$1"\nshift\n'
+              'while [ "$#" -gt 0 ]; do\n'
+              '  cmd="$(cat "$1"; printf x)"; cmd="${cmd%x}"\n'
+              '  expand_command_variable_into "$2" "$cmd"\n'
+              '  printf "%s\\0" "$EXPANDED"\n'
+              '  shift 2\n'
+              'done')
+    args = []
+    for path, target, _ in order:
+        args += [str(path), target]
+    r = _bash_run(script, str(function), *args)
+    got = r.stdout.split("\0")[:-1]
+
+    assert r.returncode == 0, r.stderr[:200]
+    assert got == [want for _, _, want in order]
 
 
 def test_expand_command_variable_gives_the_same_results_as_before(tmp_path):

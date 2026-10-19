@@ -551,8 +551,33 @@ set -e
 # at most four bytes, so a command of COMMAND_LIMIT / 4 characters or fewer is
 # under the limit and starts no process. If `wc` fails, the count is the upper
 # bound, so a fault refuses and never allows.
+#
+# Two more limits, for a command under COMMAND_LIMIT that is still slow, with
+# the same rule for where they apply (the refusal in a project that opted in,
+# a skipped write scan elsewhere). The numbers come from timings of the
+# worst commands the write scan accepts (result.md of the issue):
+#   - OPENER_LIMIT: `$(` openers. Each opener that never closes is scanned to
+#     the end of the text. The count starts a process only for a command of
+#     2 * (OPENER_LIMIT + 1) characters or more, the least that many `$(`
+#     take, so an ordinary command starts none.
+#   - TARGET_LIMIT: different write targets (the candidate loop). Each costs
+#     the judging of one path, and a target that starts with a variable reads
+#     the command. The count is made where the targets are found.
+#   - SCAN_WORK_LIMIT: steps the flattening of substitutions may take. The
+#     openers that never close make its work grow with their number times the
+#     length of the text, which a count alone does not bound: 700 openers
+#     before 85 KB of text took 224 s. A scan that passes the limit tells the
+#     caller with SCAN_MARK, and the command is refused as too complex.
 COMMAND_LIMIT=98304
+OPENER_LIMIT=700
+TARGET_LIMIT=400
+SCAN_WORK_LIMIT=1000000
+SCAN_MARK="compass-scan-budget-exceeded"
 SKIP_WRITE_SCAN=0
+COMPASS_IN_USE=0
+if [ "${PROJECT_RESOLVED:-0}" -eq 1 ] && [ -d "$PROJECT_DIR/.compass" ]; then
+  COMPASS_IN_USE=1
+fi
 if [ "${TOOL:-}" = "Bash" ]; then
   _chars=${#COMMAND}
   if [ "$_chars" -gt $((COMMAND_LIMIT / 4)) ]; then
@@ -560,8 +585,21 @@ if [ "${TOOL:-}" = "Bash" ]; then
     _bytes="${_bytes//[[:space:]]/}"
     case "$_bytes" in ""|*[!0-9]*) _bytes=$((_chars * 4)) ;; esac
     if [ "$_bytes" -gt "$COMMAND_LIMIT" ]; then
-      if [ "${PROJECT_RESOLVED:-0}" -eq 1 ] && [ -d "$PROJECT_DIR/.compass" ]; then
+      if [ "$COMPASS_IN_USE" -eq 1 ]; then
         compass_block bash-command-too-long "size=$_bytes" "limit=$COMMAND_LIMIT"
+      fi
+      SKIP_WRITE_SCAN=1
+    fi
+  fi
+  if [ "$SKIP_WRITE_SCAN" -eq 0 ] && [ "$_chars" -ge $((2 * (OPENER_LIMIT + 1))) ]; then
+    _openers="$(printf '%s\n' "$COMMAND" | grep -o '\$(' | wc -l 2>/dev/null)" || _openers=""
+    _openers="${_openers//[[:space:]]/}"
+    # A count that failed is no count: the scan below has its own work limit.
+    case "$_openers" in ""|*[!0-9]*) _openers=0 ;; esac
+    if [ "$_openers" -gt "$OPENER_LIMIT" ]; then
+      if [ "$COMPASS_IN_USE" -eq 1 ]; then
+        compass_block bash-command-too-complex "has=$_openers command substitutions" \
+          "over=more than $OPENER_LIMIT command substitutions"
       fi
       SKIP_WRITE_SCAN=1
     fi
@@ -1030,7 +1068,7 @@ PYEOF
 # which allows anything it does not recognise as production code. A token that
 # is not a path simply falls through.
 bash_write_targets() {
-  local cmd="$1" continuation=$'\\\n'
+  local cmd="$1"
   {
     # Redirects into a file: `> f`, `>> f`, `1> f`, and the `cat > f <<EOF`
     # heredoc form. `2>&1` and `>&2` duplicate a file descriptor rather than
@@ -1038,7 +1076,13 @@ bash_write_targets() {
     # taken whole, spaces included; the candidate loop removes the quotes.
     # `>|` writes as `>` does, and a line continuation after the operator
     # is joined first, so the target is not on a line of its own.
-    printf '%s\n' "${cmd//"$continuation"/ }" \
+    # The continuations are joined by awk and not by the bash substitution
+    # `${cmd//"$continuation"/ }`: in a UTF-8 locale that took 1.2 s for each
+    # continuation in 98 KB, so 100 of them took 116 s. The final line end is
+    # kept out of the join, as the substitution kept it.
+    printf '%s\n' "$cmd" \
+      | awk '{ s = s $0 "\n" }
+             END { s = substr(s, 1, length(s) - 1); gsub(/\\\n/, " ", s); print s }' \
       | grep -oE "[0-9]?>(>|\|)?[[:space:]]*(\"[^\"]*\"|'[^']*'|[^&<>|;()[:space:]]+)" \
       | sed -E 's/^[0-9]?>(>|\|)?[[:space:]]*//' || true
 
@@ -1083,7 +1127,7 @@ bash_write_targets() {
     case "$cmd" in
       *tee*|*cp*|*mv*)
         printf '%s\n' "$cmd" \
-          | awk '
+          | awk -v budget="$SCAN_WORK_LIMIT" -v mark="$SCAN_MARK" '
               function emit(line) {
                 if (!(line in seen)) { seen[line] = 1; print line }
               }
@@ -1124,6 +1168,7 @@ bash_write_targets() {
                         else if (ch == ")") st = substr(st, 1, length(st) - 1)
                         j++
                       }
+                      if ((work += j - RSTART - 2) > budget) { blown = 1; return }
                       closed = (st == "")
                       if (!closed) {
                         out = out substr(t, 1, RSTART + 1); t = substr(t, RSTART + 2)
@@ -1137,6 +1182,7 @@ bash_write_targets() {
                         else if (ch == ")") d--
                         j++
                       }
+                      if ((work += j - RSTART - 2) > budget) { blown = 1; return }
                       closed = (d == 0)
                     }
                     out = out substr(t, 1, RSTART - 1) "_SPAN_"
@@ -1150,7 +1196,10 @@ bash_write_targets() {
               END {
                 gsub(/\\\n/, " ", s)
                 flatten(s, 0)
-                flatten(s, 1)
+                if (!blown) flatten(s, 1)
+                # Out of budget: say so as a word the last stage prints, so the
+                # caller refuses the command. Whatever was found stays.
+                if (blown) print "cp " mark
               }' \
           | tr ';&|(' '\n\n\n\n' \
           | sed -E 's/(^|[[:space:]])#.*//; s/[0-9]*>>?[[:space:]]*[^[:space:]]*//g; s/<[[:space:]]*[^[:space:]]*//g; s/\)//g' \
@@ -1255,32 +1304,80 @@ bash_write_targets() {
 # (`ev""al`), or an arithmetic context that evaluates another variable's
 # text, is deliberate evasion, which shell-write detection does not claim to
 # stop (docs/safety-contract.md).
+#
+# The work is in two functions so that a command with many `$NAME/...` targets
+# reads the command once for each NAME and not once for each target. The
+# reading (`expand_command_variable_resolve`) depends on NAME and the command
+# and not on the rest of the target, and the caller keeps its answers in
+# EXPAND_MEMO. Each target after a heredoc of 85 KB cost about 50 ms, and 400
+# of them took 21 s. The caller runs `expand_command_variable_into` in the
+# hook's own shell, because a command substitution would lose the memo.
+# `expand_command_variable` prints the answer, for the tests and for a caller
+# that wants text.
+EXPAND_MEMO_CMD="" EXPAND_MEMO="" EXPANDED="" RESOLVED=""
 expand_command_variable() {
-  local target="$1" cmd="$2" name rest value="" count=0 full
-  local sep="start" before="" after_sep="" after_name="" stmt w len deny
-  local total off size win after_off=0
-  local ref1 ref2 head head2
-  local sq="'" dq='"' bt='`' nl=$'\n'
+  expand_command_variable_into "$@"
+  printf '%s\n' "$EXPANDED"
+}
+
+expand_command_variable_into() {
+  local target="$1" cmd="$2" name rest value full tail
+  local nl=$'\n'
   local path_re='^(/[A-Za-z0-9._+@%:,=-]*)*$'
   local dotdot_re='(^|/)\.\.(/|$)'
   local brace_re='^\$\{([A-Za-z_][A-Za-z0-9_]*)\}(.*)$'
   local bare_re='^\$([A-Za-z_][A-Za-z0-9_]*)(.*)$'
-  local value_re="(${sq}[^${sq}]*${sq}|${dq}[^${dq}]*${dq}|[^[:space:];&|<>()${sq}${dq}${bt}\\\$]*)"
-  local assign_re="^[[:space:]]*(export[[:blank:]]+)?([A-Za-z_][A-Za-z0-9_]*)=${value_re}[[:blank:]]*(;|&&|${nl})"
   local special_re='^(_|PWD|OLDPWD|UID|EUID|PPID|BASHPID|RANDOM|SRANDOM|SECONDS|EPOCHSECONDS|EPOCHREALTIME|LINENO|HISTCMD|REPLY|OPTARG|OPTIND|GROUPS|DIRSTACK|PIPESTATUS|FUNCNAME|SHELLOPTS|BASHOPTS|MAPFILE|COPROC|BASH_[A-Z_]*|BASH)$'
-  local binder_re='(^|[^A-Za-z0-9_./-])(eval|source|trap|declare|typeset|local|readonly|export|read|mapfile|readarray|unset|getopts|let)([^A-Za-z0-9_./-]|$)|(^|[;&|({'"${nl}"']|then|do|else)[[:space:]]*\.[[:space:]]|printf[[:space:]]+-v|(^|[^A-Za-z0-9_)])\(\('
-  local stripped mention_re
-  local plain_re="^[[:space:]]*([A-Za-z0-9._+@%:,=/~-]+([[:blank:]]+[A-Za-z0-9._+@%:,=/~-]+)*)[[:blank:]]*(;|&&|${nl})"
 
   if [[ $target =~ $brace_re ]] || [[ $target =~ $bare_re ]]; then
     name="${BASH_REMATCH[1]}"
     rest="${BASH_REMATCH[2]}"
   else
-    printf '%s\n' "$target"; return 0
+    EXPANDED="$target"; return 0
   fi
   if [[ $name =~ $special_re ]] || ! [[ $rest =~ $path_re ]]; then
-    printf '%s\n' "$target"; return 0
+    EXPANDED="$target"; return 0
   fi
+
+  # The answer for NAME in this command: "D" to decline, or "V" and the value.
+  case "$EXPAND_MEMO_CMD" in
+    "$cmd") ;;
+    *) EXPAND_MEMO_CMD="$cmd"; EXPAND_MEMO="" ;;
+  esac
+  case "$nl$EXPAND_MEMO" in
+    *"$nl$name="*)
+      tail="$nl$EXPAND_MEMO"
+      tail="${tail#*"$nl$name="}"
+      RESOLVED="${tail%%"$nl"*}" ;;
+    *)
+      expand_command_variable_resolve "$name" "$cmd"
+      EXPAND_MEMO="$EXPAND_MEMO$name=$RESOLVED$nl" ;;
+  esac
+  case "$RESOLVED" in
+    V*) value="${RESOLVED#V}" ;;
+    *) EXPANDED="$target"; return 0 ;;
+  esac
+  full="$value$rest"
+  if [[ $full =~ $dotdot_re ]]; then
+    EXPANDED="$target"; return 0
+  fi
+  EXPANDED="$full"
+}
+
+# Sets RESOLVED to "D" (the command does not state NAME for certain) or to "V"
+# and the value NAME has at the write.
+expand_command_variable_resolve() {
+  local name="$1" cmd="$2" value="" count=0
+  local sep="start" before="" after_sep="" after_name="" stmt w len deny
+  local total off size win after_off=0
+  local ref1 ref2 head head2
+  local sq="'" dq='"' bt='`' nl=$'\n'
+  local path_re='^(/[A-Za-z0-9._+@%:,=-]*)*$'
+  local value_re="(${sq}[^${sq}]*${sq}|${dq}[^${dq}]*${dq}|[^[:space:];&|<>()${sq}${dq}${bt}\\\$]*)"
+  local assign_re="^[[:space:]]*(export[[:blank:]]+)?([A-Za-z_][A-Za-z0-9_]*)=${value_re}[[:blank:]]*(;|&&|${nl})"
+  local binder_re='(^|[^A-Za-z0-9_./-])(eval|source|trap|declare|typeset|local|readonly|export|read|mapfile|readarray|unset|getopts|let)([^A-Za-z0-9_./-]|$)|(^|[;&|({'"${nl}"']|then|do|else)[[:space:]]*\.[[:space:]]|printf[[:space:]]+-v|(^|[^A-Za-z0-9_)])\(\('
+  local stripped mention_re
+  local plain_re="^[[:space:]]*([A-Za-z0-9._+@%:,=/~-]+([[:blank:]]+[A-Za-z0-9._+@%:,=/~-]+)*)[[:blank:]]*(;|&&|${nl})"
 
   # Walk the leading statements. `sep` is the separator that ended the
   # previous one; `after_off` is where the command after NAME's assignment
@@ -1339,7 +1436,7 @@ expand_command_variable() {
     fi
   done
   if [ "$count" -ne 1 ]; then
-    printf '%s\n' "$target"; return 0
+    RESOLVED=D; return 0
   fi
   after_name="${cmd:$after_off}"
 
@@ -1357,7 +1454,7 @@ expand_command_variable() {
     head2="${head//&&/}"
     if [ "$after_sep" != "&&" ] || [[ $head == *";"* ]] || [[ $head == *"$nl"* ]] \
         || [[ $head == *"||"* ]] || [[ $head2 == *"&"* ]]; then
-      printf '%s\n' "$target"; return 0
+      RESOLVED=D; return 0
     fi
   fi
 
@@ -1365,9 +1462,8 @@ expand_command_variable() {
     \'*\') value="${value#\'}"; value="${value%\'}" ;;
     \"*\") value="${value#\"}"; value="${value%\"}" ;;
   esac
-  full="$value$rest"
-  if [ -z "$value" ] || ! [[ $value =~ $path_re ]] || [[ $full =~ $dotdot_re ]]; then
-    printf '%s\n' "$target"; return 0
+  if [ -z "$value" ] || ! [[ $value =~ $path_re ]]; then
+    RESOLVED=D; return 0
   fi
 
   # Everything after the assignment: remove the plain references, then
@@ -1381,13 +1477,13 @@ expand_command_variable() {
     | sed -E "s/[\$][{]${name}[}]//g; s/[\$]${name}([^A-Za-z0-9_])/\\1/g; s/[\$]${name}\$//")"
   mention_re="(^|[^A-Za-z0-9_])${name}([^A-Za-z0-9_]|\$)"
   if [[ $stripped =~ $mention_re ]]; then
-    printf '%s\n' "$target"; return 0
+    RESOLVED=D; return 0
   fi
   if [[ $after_name =~ $binder_re ]]; then
-    printf '%s\n' "$target"; return 0
+    RESOLVED=D; return 0
   fi
 
-  printf '%s\n' "$full"
+  RESOLVED="V$value"
 }
 
 # --- decide whether this tool call needs a red on record ---------------------
@@ -1415,6 +1511,32 @@ if [ "${TOOL:-}" = "Bash" ]; then
   if [ -z "$DETECTED" ]; then
     # A target written again judges the same, so each is judged once, in the
     # order it first appears: 200 identical `cp` lines cost one.
+    TARGET_LIST="$(bash_write_targets "$COMMAND" | awk '!seen[$0]++')" || true
+
+    # Too much to scan in time (see the limits above). The scan marks a
+    # command it gave up on; the count of targets needs a process only when
+    # the list is long enough to hold TARGET_LIMIT + 1 of them (a target and
+    # its line end take two characters at least).
+    _scan_nl=$'\n'
+    _too_complex=""
+    case "$_scan_nl$TARGET_LIST$_scan_nl" in
+      *"$_scan_nl$SCAN_MARK$_scan_nl"*)
+        _too_complex="has=substitutions that stay open|over=that many unclosed command substitutions" ;;
+    esac
+    if [ -z "$_too_complex" ] && [ "${#TARGET_LIST}" -ge $((2 * (TARGET_LIMIT + 1))) ]; then
+      _targets="$(printf '%s\n' "$TARGET_LIST" | grep -c . 2>/dev/null)" || _targets=0
+      _targets="${_targets//[[:space:]]/}"
+      case "$_targets" in ""|*[!0-9]*) _targets=0 ;; esac
+      if [ "$_targets" -gt "$TARGET_LIMIT" ]; then
+        _too_complex="has=$_targets different write targets|over=more than $TARGET_LIMIT write targets"
+      fi
+    fi
+    if [ -n "$_too_complex" ]; then
+      [ "$COMPASS_IN_USE" -eq 1 ] \
+        && compass_block bash-command-too-complex "${_too_complex%%|*}" "${_too_complex#*|}"
+      exit 0
+    fi
+
     while IFS= read -r candidate; do
       [ -z "$candidate" ] && continue
       # A quoted target names the same file as an unquoted one, so the quotes
@@ -1425,7 +1547,8 @@ if [ "${TOOL:-}" = "Bash" ]; then
         *\'*) candidate="${candidate//\'/}"
               candidate="${candidate//\"/}" ;;
         *) candidate="${candidate//\"/}"
-           candidate="$(expand_command_variable "$candidate" "$COMMAND")" ;;
+           expand_command_variable_into "$candidate" "$COMMAND"
+           candidate="$EXPANDED" ;;
       esac
       [ -z "$candidate" ] && continue
       if is_enforced_path "$candidate"; then
@@ -1433,7 +1556,7 @@ if [ "${TOOL:-}" = "Bash" ]; then
         break
       fi
     done <<CANDIDATES
-$(bash_write_targets "$COMMAND" | awk '!seen[$0]++')
+$TARGET_LIST
 CANDIDATES
   fi
 

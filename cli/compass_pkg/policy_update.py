@@ -50,7 +50,10 @@ def _major_of(version):
 def available_defaults(framework_root=None):
     """`{major: preset folder}` for the shipped default and every major the
     framework keeps beside it. A kept folder whose `preset.yml` names another
-    major is a fault in the framework, so it raises."""
+    major is a fault in the framework, so it raises. The live default (the
+    folder `default`) wins for its own major: a kept folder of that major is
+    skipped after its version check. The result does not depend on the order
+    of the folders."""
     base = os.path.join(os.fspath(framework_root or FRAMEWORK_ROOT), PRESETS)
     found = {}
     for name in sorted(os.listdir(base)) if os.path.isdir(base) else ():
@@ -66,9 +69,12 @@ def available_defaults(framework_root=None):
         if kept and major != int(kept.group(1)):
             raise CompassError(f"{name}/preset.yml is version {meta.get('version')}, not "
                                f"major {kept.group(1)}")
-        if major in found:
-            raise CompassError(f"the framework holds default@{major} twice")
-        found[major] = directory
+        if kept:
+            # A kept folder never displaces the live default, so a release can
+            # keep `default@6` before the live default moves to major 7.
+            found.setdefault(major, directory)
+        else:
+            found[major] = directory
     return found
 
 

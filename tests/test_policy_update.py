@@ -141,6 +141,14 @@ def _waiver(plan, waiver_id):
 CEILING_ID = "project:approaches.regular"
 
 
+def test_trc_013_the_live_default_wins_for_its_own_major_beside_a_kept_folder(tmp_path):
+    """Scenario id: `TRC-013` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    base = fixtures.framework_root(tmp_path / "fw", change="none", version="6.0.0")
+    found = _has("policy_update", "available_defaults")(base)
+    assert list(found) == [6]
+    assert Path(found[6]) == base / "governance" / "presets" / "default"
+
+
 def test_up_1_a_project_on_the_target_major_has_nothing_to_do(tmp_path, frameworks):
     root = fixtures.project(tmp_path, fixtures.PROJECT.replace("@6", "@7"))
     plan = _plan(root, frameworks)

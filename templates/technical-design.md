@@ -313,7 +313,7 @@ Dependencies on other issues:
 |---|---|---|
 | Guardrails (the five defaults + project) | {{pass \| fail}} | {{e.g. "acceptance criteria stated before implementation; traceability chains designed in; coverage targets the guardrail floor"}} |
 | Method strategies (defaults + project) | {{followed \| deviation recorded}} | {{e.g. "BDD + TDD apply; simplest-thing honoured. Any deviation noted with its reason."}} |
-| Product strategies | {{followed \| deviation recorded \| n/a}} | {{e.g. "plan delivers intent.md's outcome; honours the product strategies in governance/strategies.md"}} |
+| Product strategies | {{followed \| deviation recorded \| n/a}} | {{e.g. "plan delivers intent.md's outcome; honours the product strategies in the shipped strategies or your project's strategies file, if it has one"}} |
 | Voice & positioning strategies | {{followed \| deviation recorded \| n/a}} | {{n/a unless positioning.md is present; if so, claims traceable}} |
 | Routing policy | {{pass \| fail}} | {{plan does not need to skip anything delivery-approach.md kept; floors honoured}} |
 

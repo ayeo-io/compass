@@ -426,6 +426,20 @@ Run these on top of steps 1 to 9, before step 10.
 
 ---
 
+## Artifact freshness at ship
+
+Compass records the digest of each document when it is written. With the
+`artifact-freshness` capability on, `ship` also refuses a document that is
+stale, because an artifact it depends on changed after it was written. The
+capability is off in the shipped default, so a stale document is refused only
+when the `artifact-freshness` capability is on. Run `compass policy show` to
+see the setting. Before a release, check whether your project turned it on,
+and rewrite each stale document it names. See
+[artifact-freshness.md](artifact-freshness.md) for how to switch it on and how
+to rewrite an approved document.
+
+---
+
 ## Before changing the words sessions act on
 
 Three texts decide most of what a session does under Compass. A change to

@@ -5,7 +5,7 @@ Define - UI behaviour here is authored as Given/When/Then scenarios so it
 flows directly into acceptance-criteria.md as scenarios, not as a separate track.
 That is how the designer is a full participant in the pipeline and not a
 downstream consumer. Accessibility commitments here are checked against the
-project's accessibility strategy, if governance/strategies.md has one.
+project's accessibility strategy, if the shipped strategies or your project's strategies file have one.
 
 Fill every {{PLACEHOLDER}}. Write behaviour as scenarios - the same Gherkin
 shape the spec uses - so the handoff into the define stage is mechanical.
@@ -66,7 +66,7 @@ Scenario: {{scenario title}}
 ## Accessibility commitments
 
 <!-- Stated as commitments that become scenarios or acceptance checks.
-     Must meet or exceed the project's accessibility strategy, if governance/strategies.md has one. -->
+     Must meet or exceed the project's accessibility strategy, if the shipped strategies or your project's strategies file have one. -->
 
 | Commitment | How it is checked |
 |---|---|
@@ -80,7 +80,7 @@ Scenario: {{scenario title}}
 ## Handoff to define
 
 - [ ] Every interaction scenario above has a traceability id and an intent link.
-- [ ] Accessibility commitments meet or exceed the project's accessibility strategy, if `governance/strategies.md` has one.
+- [ ] Accessibility commitments meet or exceed the project's accessibility strategy, if the shipped strategies or your project's strategies file have one.
 - [ ] These scenarios are copied into `acceptance-criteria.md` under a UI scenario group.
 
 Next: the scenarios flow into the acceptance criteria (`/compass:define`).

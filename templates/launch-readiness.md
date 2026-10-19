@@ -43,7 +43,7 @@ ship refuses to close on it.
 
 ## Voice & positioning check
 
-- [ ] Every shipping claim respects the project's voice and positioning strategies in `governance/strategies.md`, if it has any.
+- [ ] Every shipping claim respects the project's voice and positioning strategies in the shipped strategies or your project's strategies file, if it has one.
 - [ ] No claim overstates what the product can do.
 
 ---

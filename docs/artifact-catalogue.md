@@ -115,6 +115,10 @@ The manifest's `justifications` key holds one line for each assessed dimension o
 
 `compass issue artifact set spike-conclusion --status draft --path <file> --decision <discard|graduate-to-delivery|defer>` registers the conclusion and writes the one `spike-conclusion` evidence record that the check `spike-conclusion-present` reads, naming the document. `graduate-to-delivery` needs `--next-issue <slug>`, the slug of the delivery issue. A second run with another decision updates the record. `--decision` on any other kind is refused. The check itself is unchanged.
 
+## The distribution map's units line
+
+On a multiagent breakdown, `compass issue artifact set distribution-map` reads the map's `units:` line: `units: 1`, or a list such as `units: [U1, U2]`. It refuses, before saving anything, a map with no such line or with a count below one, and a map saying `units: 1` whose subtask table names two or more subtasks. A map saying `units: 1` records the breakdown as one subtask the session runs itself, marked `orchestration: single-unit`. Registering `verification-report` names that report on the record and marks it `done`. A map with two or more units removes such a record and records nothing else. A solo or skipped breakdown reads nothing. `docs/multiagent-protocol.md` says how `multiagent-run-recorded` judges the record (ADR-071).
+
 ## The rendered blocks of the record
 
 `templates/delivery-approach.md` holds four rendered blocks in place of its tables: `assessment` (under The assessment), `policy-rules` (under Policy rules that fired), `stage-weights` (under Per-stage weight) and `gate-set` (under Gate set). `compass issue render` writes them from the manifest, and `rendered-blocks-current` fails at the verification stage when a reassessment leaves one stale. The four templates with a `## Gate` section hold blocks, not tick boxes: `plan-exit` in `technical-design.md`, `breakdown-exit` in `distribution-map.md`, and the existing `dor` and `dod` blocks. `docs/rendered-blocks.md` describes each kind.

@@ -1,5 +1,5 @@
 # compass_pkg.language - the `language` setting: its tag rules and its session line
-"""The one owner of the rules for the `language` setting (DD-1).
+"""The one owner of the rules for the `language` setting.
 
 `language` in a project's own `compass.yml` is a BCP 47 language tag: a
 language, an optional script and an optional region, joined by hyphens, such

@@ -658,11 +658,25 @@ A comment that carries a pragma is code. The hook refuses an Edit that adds,
 changes or removes one: `# type: ignore`, `# noqa`, `# nosec`, `# fmt: off` and
 `# fmt: on`, `# pragma: no cover`, `# pylint:`, `# mypy:`, `# pyright:`,
 `# ruff:`, `# flake8`, `# isort:`, `# yamllint`, `# shellcheck`, a shebang
-line and an encoding line (`# -*- coding` or `# coding:`). The test is a
-superset of this list, so a prose comment that mentions one of these words
-needs a failing test. An Edit that adds a hidden character is refused too: a
-control character, a NUL byte, a bidirectional control or a zero-width
-character.
+line and an encoding line (`# -*- coding` or `# coding:`). It also refuses the
+directives of scanners and formatters that the list names: `# nosemgrep`,
+`# gitleaks`, `# checkov`, `# lgtm`, `# NOSONAR`, `# codeql`, `# yapf`,
+`# trivy` and `# tfsec`. The test is a superset of this list, so a prose
+comment that mentions one of these words needs a failing test. An Edit that
+adds a hidden character is refused too: a control character, a NUL byte, a
+bidirectional control or a zero-width character.
+
+The encoding cookie of the file is read for every Python Edit (PEP 263: a
+comment on line 1, or on line 2 when line 1 is blank or a comment, that holds
+`coding:` or `coding=` and a name). Python decodes the source with that name
+before it parses a line. A cookie such as `utf-7` or `unicode_escape` turns text
+inside a comment into a line break, and the hook reads UTF-8, so the Edit is
+code when the cookie before or after the Edit is not `utf-8`, `utf8` or
+`ascii`, and when the Edit adds, removes, changes or moves the cookie (two
+comment lines put above a cookie on line 2 move it out of the first two
+lines). A file whose first line starts with `#` and `template:` (cloud-init's
+`## template: jinja`) is rendered as a template before a YAML parser reads it,
+so an Edit of it is code too.
 
 The check fails closed. In each of these cases the Edit is judged as before the
 check existed, so it is refused unless a failing test is on record:
@@ -673,14 +687,45 @@ check existed, so it is refused unless a failing test is on record:
   `replace_all`
 - the file before or after the Edit does not parse
 - the Edit changes a pragma or adds a hidden character
+- the encoding cookie is not `utf-8`, `utf8` or `ascii`, or the Edit changes it
+- the file starts as a template
 - the check runs out of budget, runs past its alarm or fails for any reason
 
-A missing `python3` still refuses with `python-missing`, as for every reader of
-the hook. A Write is never judged this way: a Write that replaces a file is
-judged as a code change.
+The check runs in `python3`, with its standard library and the vendored YAML
+reader. A check that is over budget or fails returns "no", and the hook then
+judges the Edit as before. A missing `python3` still refuses with
+`python-missing`, as for every reader of the hook. A Write is never judged this
+way: a Write that replaces a file is judged as a code change.
 
 The hook reads the file once and cannot lock it, so a change to the file
 between the read and the Edit is not detected.
+
+These are stated limits of the comment-only check. They are not fixed in this
+version, and each lets an Edit through that a stricter check would refuse:
+
+- The docstring rule is a word list. A docstring may change its text unless the
+  file mentions `__doc__`, `getdoc`, `help`, `doctest`, `exec` or `eval`. A
+  docstring that a framework reads without the file naming it is editable: a
+  PLY grammar rule (`"""expr : expr PLUS term"""`), the help text of click or
+  typer, and a FastAPI description. A docstring that a framework reads as
+  grammar or help is not detected.
+- The directive rule is a deny list of words. A scanner or formatter directive
+  that is not on the list passes as a comment. The list now holds the common
+  ones; a tool that is not on it is not seen.
+- A template engine that reads comment text is relevant only where
+  `enforcement.code_globs` guards a template. A YAML comment such as
+  `# {{ "\nevil: true" }}` in a Helm template passes the YAML check, because
+  the parser sees a comment.
+- A symbolic link under `evals/*/seed/` that points at production code is
+  exempt, because a path is judged by its text and a symbolic link is not
+  followed. The same holds for `tests/` and `.compass/`.
+- The hook uses awk, for example to count the length of a write target in the C
+  locale. The hook was written and tested on the awk of macOS only. The
+  continuous-integration runners use Linux awk, and this contract does not claim
+  that the two give the same results.
+
+Reading a shell command by its grammar, so that prose in a message or a
+document is not taken for a write, is separate work (GitHub issue #247).
 
 The check is charged to the work budget (see the Shell-write section below) by
 the size of the larger of the two texts, before any parse. These constants are

@@ -378,7 +378,19 @@ def pin_stale_generation(task_dir, would, out):
     from compass_pkg.core import load_manifest
     try:
         data, _ = load_manifest(task_dir)
+        if status_words.is_closed(data):
+            # A closed issue keeps the generation it closed under, and `migrate --config`
+            # refuses it, so a note naming that fix would send the person in a circle.
+            return
         stale = sorted(impl_versions.refusals(task_dir, data).checks)
+    except effective.MajorRefusal:
+        # Pinning across a resolver or schema major is the repair's call, one issue at a
+        # time, so the migrate names it and goes on.
+        slug = os.path.basename(os.path.normpath(task_dir))
+        out.notes.append("%s: its generation was built by another resolver or schema major, "
+                         "so it was not pinned; run `%s --issue %s`"
+                         % (slug, effective.FIX_MAJOR, slug))
+        return
     except Exception:                                    # noqa: BLE001
         return
     if not stale:

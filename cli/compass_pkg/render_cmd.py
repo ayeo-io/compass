@@ -468,6 +468,7 @@ def _first_line(exc):
 def _render_all(args):
     """Render every readable issue, skip those whose inputs are unchanged, render the
     project index, and name each issue that could not be rendered."""
+    from compass_pkg import effective
     dry = bool(getattr(args, "dry_run", False))
     project = os.path.dirname(find_compass_dir())
     scan = project_scan.ProjectScan.build(project, store=not dry)
@@ -498,7 +499,9 @@ def _render_all(args):
                     apply(plan_issue(task_dir, scan=scan, manifest=manifest, index=False))
                 kept[slug] = render_skip.key(scan, slug, shared)
             rendered.append(slug)
-        except CompassError as exc:
+        except (CompassError, effective.MajorRefusal) as exc:
+            # A generation from another major refuses that issue only, as the
+            # other commands over every issue do (ADR-038).
             failed.append((slug, str(exc).replace("compass issue render: refused, nothing written.\n", "")
                            .strip()))
     index_note = _render_all_index(project, scan, dry, would)

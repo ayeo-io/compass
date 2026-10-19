@@ -42,8 +42,8 @@ approaches:
       implement: thorough, verify: thorough, ship: thorough}
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.clarity,
       verify.security]
-    artifacts: {intent: lightweight, acceptance-criteria: thorough, technical-design: thorough, distribution-map: lightweight,
-      verification-report: thorough}
+    artifacts: {intent: lightweight, acceptance-criteria: thorough, requirements-review: lightweight,
+      technical-design: thorough, distribution-map: lightweight, verification-report: thorough}
     subtask_ceiling: 2
     checkpoints:
       controlled: [assess, define, refine, plan]
@@ -56,7 +56,7 @@ approaches:
     stages: {assess: lightweight, define: reproduce-first, refine: collapsed, plan: collapsed, breakdown: skipped,
       implement: expedited, verify: thorough, ship: thorough-with-follow-up}
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security]
-    artifacts: {acceptance-criteria: lightweight, verification-report: thorough}
+    artifacts: {bug-report: thorough, acceptance-criteria: lightweight, verification-report: thorough}
     subtask_ceiling: 1
     checkpoints:
       controlled: [assess, define]

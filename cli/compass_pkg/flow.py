@@ -262,7 +262,7 @@ def board(work_root, today=None, sources=None, parsed=None):
     list of source dicts, one per issue folder, which may sit in other trees.
     `parsed` is `read_checkout`'s result, reused for this checkout's sources;
     every other source is parsed here, once."""
-    from compass_pkg import lifecycle
+    from compass_pkg import effective, lifecycle
     from compass_pkg.binding import evidence_state
 
     today = today or datetime.date.today()
@@ -316,6 +316,9 @@ def board(work_root, today=None, sources=None, parsed=None):
             continue
         try:
             _board_place(out, categories, src, m, today, now, guarded, evidence_state, reader)
+        except effective.MajorRefusal as exc:
+            # A generation built by another major refuses its own issue, not the board.
+            _unreadable(out, src, str(exc))
         except Exception as exc:                            # noqa: BLE001
             # One malformed manifest must not hide every other issue.
             _unreadable(out, src, "malformed manifest.yml (%s)" % type(exc).__name__)

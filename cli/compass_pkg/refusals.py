@@ -171,7 +171,8 @@ REFUSALS: dict[str, dict[str, str]] = {
     "delegation-caller-mismatch": {
         "what": "delegated approval (--as {named})",
         "why": "Claude Code reports this call as {caller}, and a delegated "
-               "approval must name exactly the agent that makes it.",
+               "approval must name exactly the agent that makes it. A word "
+               "the shell could build is refused too.",
         "fix": "run it from the agent the delegation names, with --as set to "
                "that agent's full name, or ask with compass evidence request.",
     },
@@ -212,6 +213,15 @@ REFUSALS: dict[str, dict[str, str]] = {
                "was evaluated before the document was there.",
         "fix": "run compass approach evaluate --issue {slug} --write, pass any gate it "
                "adds, then ship again.",
+    },
+    # A landing of an issue whose design holds a decision scoped `project` that no
+    # record in architecture/decisions/ names (decision_scope.py, ADR-072).
+    "project-decision-unrecorded": {
+        "what": "landing of issue '{slug}'",
+        "why": "technical-design.md scopes {decisions} to the whole project, and no "
+               "record in architecture/decisions/ names {it}.",
+        "fix": "write {path} with compass adr new, cite its id under the decision, then "
+               "ship again.",
     },
     "release-line-heading": {
         "what": "the release line of issue '{slug}'",

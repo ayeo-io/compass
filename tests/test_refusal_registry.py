@@ -86,6 +86,11 @@ FIXTURES = {
     # The longest form of the complexity refusal: a count and its limit.
     "bash-command-too-complex": dict(has="701 command substitutions",
                                      over="more than 700 command substitutions"),
+    # Three decisions and a long record path, so the 60-word cap is checked where it
+    # is tightest.
+    "project-decision-unrecorded": dict(
+        slug="a" * 40, decisions="DD-2, DD-5, DD-11", it="them",
+        path="architecture/decisions/ADR-072-keep-the-cache-in-one-module-for-every-reader.md"),
 }
 
 

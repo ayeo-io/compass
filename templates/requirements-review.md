@@ -33,7 +33,8 @@ resolution → who decided → what it changed.
 ## Governance QA of the spec
 
 <!-- Does any scenario cross a guardrail (governance/guardrails.md) or run
-     against a strategy (governance/strategies.md), or push a non-goal from
+     against a strategy (the shipped strategies, or your project's strategies
+     file, if it has one), or push a non-goal from
      intent.md? Cite the guardrail or strategy. -->
 
 - {{finding with governance reference - or "no governance conflict found"}}

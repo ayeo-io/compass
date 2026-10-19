@@ -383,7 +383,7 @@ entries:
   project: initialised
   argv: ["policy", "show"]
   exit: 0
-  stdout_contains: "default@6.0.0"
+  stdout_contains: "default@7.0.0"
 # Added on purpose by policy-lint: a root compass.yml that Compass reads is
 # now linted layer by layer. 5.6.0 did not read the file, so it ran the legacy
 # lint and passed.
@@ -404,14 +404,14 @@ entries:
 # that there is no difference and exit 0.
 - id: policy-diff-identical
   project: initialised
-  argv: ["policy", "diff", "default@6", "project"]
+  argv: ["policy", "diff", "default@7", "project"]
   exit: 0
   stdout_contains: "no difference"
 # Added on purpose by policy-diff: `--exit-code` exits 1 only when something
 # differs, so identical configurations still exit 0.
 - id: policy-diff-identical-exit-code
   project: initialised
-  argv: ["policy", "diff", "--exit-code", "default@6", "project"]
+  argv: ["policy", "diff", "--exit-code", "default@7", "project"]
   exit: 0
 # Added on purpose by policy-diff: a reference that is neither a keyword nor a
 # file exits 2. 5.6.0 also exited 2, for the unknown verb, so this guards that
@@ -426,7 +426,7 @@ entries:
 # flag, unlike `policy lint`, which judges and exits 1 on FAIL.
 - id: policy-diff-differs-exit-code
   project: with-looser-compass-yml
-  argv: ["policy", "diff", "--exit-code", "default@6", "project"]
+  argv: ["policy", "diff", "--exit-code", "default@7", "project"]
   exit: 1
   stdout_contains: "loosening"
 # Added on purpose by impl-refusal: `issue migrate-config` is a new verb. 5.6.0
@@ -544,7 +544,7 @@ entries:
   stdout_contains: "group meets/banking: 1 run, 1 passed, 0 failed"
 # Added on purpose by policy-update: `policy update` is a new verb. 5.6.0
 # refused it as an unknown choice (exit 2); from 6.0.0 a project already on
-# the only shipped major has nothing to move, writes nothing and exits 0.
+# the newest shipped major (now 7) has nothing to move, writes nothing and exits 0.
 - id: policy-update-nothing-to-do
   project: with-default-extends
   argv: ["policy", "update"]
@@ -558,12 +558,12 @@ entries:
   argv: ["policy", "update", "--json"]
   exit: 0
   stdout_contains: "nothing-to-do"
-# Added on purpose by policy-update: a major this CLI does not keep exits 2.
+# Added on purpose by policy-update: a major this CLI does not keep (8; it keeps 6 and 7) exits 2.
 # 5.6.0 also exited 2, for the unknown verb, so this guards that the new verb
 # keeps refusing a move it cannot check.
 - id: policy-update-major-not-kept
   project: with-default-extends
-  argv: ["policy", "update", "--to", "7"]
+  argv: ["policy", "update", "--to", "8"]
   exit: 2
 # Added on purpose by policy-update: a compass.yml with no extends line has no
 # major to move, so the verb exits 2. 5.6.0 did not read the file and exited 2

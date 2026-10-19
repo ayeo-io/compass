@@ -169,7 +169,9 @@ same file. The copy is frozen, so do not edit it. A project on v6.0.1, which shi
 `default@6.0.0` values, has its waivers re-checked against the v6.1.0 values,
 because no record stores what an approval saw. The live default wins for
 its own major. `compass policy update` reads both folders to tell which waived
-fields moved, and exits 2 for a project on a major that is not kept. Pin the
+fields moved, and exits 2 for a project on a major that is not kept. The live preset takes the new major's version at the first change to it after
+the previous major ships, not at the release: from then on the live preset and the
+kept copy no longer share a pin. Pin the
 new preset with `python3 scripts/generate-legacy-views.py --pin`; the old
 pins stay. `tests/test_policy_update.py` fails when a kept folder does not
 match its pinned digest or when an earlier pinned major is not kept.
@@ -423,6 +425,20 @@ Run these on top of steps 1 to 9, before step 10.
    changed behaviour, what is fixed, and "Queued against this release" (step 9).
    Say plainly that nothing is removed, and name the behaviour changes listed
    above.
+
+---
+
+## Artifact freshness at ship
+
+Compass records the digest of each document when it is written. With the
+`artifact-freshness` capability on, `ship` also refuses a document that is
+stale, because an artifact it depends on changed after it was written. The
+capability is off in the shipped default, so a stale document is refused only
+when the `artifact-freshness` capability is on. Run `compass policy show` to
+see the setting. Before a release, check whether your project turned it on,
+and rewrite each stale document it names. See
+[artifact-freshness.md](artifact-freshness.md) for how to switch it on and how
+to rewrite an approved document.
 
 ---
 

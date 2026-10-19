@@ -36,6 +36,10 @@ The text output is the legacy lint's lines, then the layered lint's. With
 the `legacy` layer and then the layered chain, `findings` holds both sets,
 `counts` and `result` cover both, and `stopped_after` is the legacy lint's
 stop, or the layered lint's when the legacy lint did not stop.
+If `governance/routing-policy.yml` is not valid YAML, the legacy lint runs
+first and reports the YAML error as a structure error. The output starts with
+`compass policy lint: FAIL`, the layered lint does not run, and the exit
+code is 1, in text and in `--json`.
 `scripts/validate.sh` runs this lint, so CI fails on a `compass.yml` a write
 would refuse.
 
@@ -263,6 +267,11 @@ generation, so this view can differ from what they use
 resolved field of the project, one line each: the path, the value, the source layer, the operation and the
 waiver. A stage list that a capability switch has not turned on is marked
 `(inactive: entry-exit-evaluation off)`.
+
+In an unmigrated 5.x project (no `compass.yml`, a copied `governance/`), the
+rows are the shipped default, not the copy that `compass approach evaluate`
+reads. The text view then adds a notice under its header line that names the
+copy and points to `compass policy migrate`. `--json` is unchanged.
 
 ```
 stages.plan.entry   [dor-summary-filled, ...]   default@6.0.0 (add)  (inactive: entry-exit-evaluation off)

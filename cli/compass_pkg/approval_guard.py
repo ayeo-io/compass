@@ -1,5 +1,5 @@
 # compass_pkg.approval_guard - the pre-tool checks on approval state
-"""Decide whether the agent's tool call touches approval state it must not
+r"""Decide whether the agent's tool call touches approval state it must not
 (ADR-068 decision 10, ADR-069 decisions 4 and 8). `hooks/pre-tool.sh` calls
 `check` with the hook input and blocks with the code it returns.
 
@@ -37,20 +37,84 @@
   exact `agent_type`, plugin prefix included. An `agent_id` with no or an
   empty `agent_type` is refused, because Claude Code's own internal agents
   report that shape (the host measurement on Claude Code 2.1.300, ADR-069).
-  Anything else gives `delegation-caller-mismatch`.
+  Anything else gives `delegation-caller-mismatch`. So does any word without
+  white space that holds `--as` and is neither `--as` nor `--as=...`, such
+  as `--as${IFS}compass:architect`, `$IFS--as`, `--asmain`, `--assume-yes`
+  or `--as-main`: the shell can turn it into `--as`, and the CLI keeps the
+  last value. A word with white space is read again as its parts. Quotes
+  are removed first, so `"--as"` and `--a''s` count as `--as`.
+- **A glob that reaches the delegation files.** A Grep glob, or a Bash word
+  with `*`, `?` or `[`, is tested with `fnmatch` against sample paths in
+  `.compass/delegations` and against an ordinary path of the same shape
+  (`.compass/zz`, or a file `file.yml` inside it). It gives `delegation-protected`
+  when it matches a sample and not the ordinary path. Refused: `d*/*`,
+  `deleg*/*`, `**/confirm-*`, `deleg?tions`, `**/DL-*.yml`. Accepted, as
+  they pick everything: `*`, `**/*`, `*.yml`, `**/*.yml`, `.compass/*`,
+  `**/*.md`, `src/*.py`. The samples are written relative to the Grep path
+  (so a path that cannot reach the folder, such as `src`, is accepted) or to
+  the call's `cwd` for Bash, where `./` is removed and an absolute word is
+  read under `cwd`. The line is a heuristic: a glob that picks the
+  delegation files together with others, such as `**/*l*.yml`, passes, and
+  the 64-bit code keeps the stored hash useless. The glob is read as the
+  shell reads it: `[^` counts as `[!`, a POSIX class counts as `?`, and a
+  backslash and newline are removed. A Grep glob is also split on commas.
+  A delegated approval with a brace expansion in a space-free word is
+  refused, because the shell expands `--a{s=main,s=x}` to two `--as=` words.
+  A bracket expression that holds a class, a collating symbol or an
+  equivalence class (`[[:lower:]x]`, `[[.d.]]`) is read as one character.
+- **ANSI-C quoting and braces in an evidence command.** A command that names
+  `evidence` (a word `evidence`, a quoted word that holds `compass evidence`,
+  or a `--delegated` flag) is refused, with the word named, when a word holds
+  ANSI-C quoting with an escape (`$'--a\x73'`, `$'appro\x76e'`) or a brace
+  expansion (`--{delegated,x}`, `appr{ove,x}`), whether or not `--delegated`
+  shows. The guard does not decode either spelling. `$'--as'` with no escape
+  is read as the quoted text. A value with a space or no comma, such as
+  `--note '{"a": 1}'`, passes; a compact value with a comma is refused, in
+  any `compass evidence` command. A command with the word `compass` (or an
+  escape-spelled `compass` in command position) and a word of ANSI-C quoting
+  with an escape is refused even when `evidence` is spelled with escapes too:
+  `compass $'\x65vidence' $'appro\x76e'` runs `evidence approve`.
+- **Limit: a text-matching guard cannot follow what the shell, a spelling or
+  an interpreter builds at run time** (variables, command substitution, a
+  glob that expands against a file the agent wrote, such as `appro?e` or
+  `--a?`, encodings, `python3 -c`). The stored confirmation hash and the
+  64-bit code (ayeo-io/compass#599) are the control that holds then.
 
 Each check ignores letter case, because macOS opens a path in any case. The
 earlier guard's checks run first, in its order and case, so a call it refused
-keeps its refusal code.
+keeps its refusal code. The glob check is the last Bash check.
 
 The Bash checks match text, as the hook's other Bash checks do. They stop the
-agent's ordinary use, not a deliberate workaround such as a variable that
-assembles the path; the safety contract states that limit.
+agent's ordinary use, not a deliberate workaround. What they do not stop:
+  - a flag or path built from a variable, command substitution, or a value
+    read from a file or the environment;
+  - arguments built by `xargs` or `printf`;
+  - brace expansion in a glob, in Bash or in a Grep glob (`{d,x}eleg*/*`,
+    `**/{DL-*,x}.yml`); a brace expansion in a delegated approval is refused;
+  - patterns that only zsh reads (`.compass/(deleg\|x)ations/*`,
+    `.compass/deleg*/DL-<->.yml`);
+  - a case-sensitive glob (`.compass/*/[A-Z]*`, Grep `**/[A-Z]*.yml`): the
+    guard lower-cases the glob, so it counts as a glob that picks the
+    delegation files together with others, and passes;
+  - a Bash command that reads the folder without naming it (`grep -r x
+    .compass`, `find .compass -type f -exec cat {} +`);
+  - a tool option that takes its own glob (`rg -g`, `find -name`,
+    `--include`), and extended globs after `shopt -s extglob`;
+  - a Bash glob that spells neither .compass nor deleg, such as
+    `cat .c*/d*/*` (the hook does not start the guard for it). `cat
+    .c*/delegations` does start it: the hook tests the command twice, so a
+    glob before `deleg` comes after `deleg` in the other copy, and the guard
+    refuses it. A glob rooted at another folder than `cwd` (`$PWD/...`) is
+    also not stopped;
+  - a relative path after `cd`, because the guard sees only the `cwd` of the
+    call.
+The safety contract states these limits.
 """
 # DEPENDENCY: standard library (os, re, shlex). Runs inside hooks/pre-tool.sh,
 # so it keeps to syntax the hook's oldest supported python3 reads.
 from __future__ import annotations
 
+import fnmatch
 import os
 import re
 import shlex
@@ -67,6 +131,8 @@ TRANSCRIPTS = re.compile(r"\.claude[\w.-]*/projects(?:/|\b)|CLAUDE_CONFIG_DIR")
 #: A shell glob or brace character: a word holding one names every path it
 #: expands to.
 GLOB = re.compile(r"[*?\[{]")
+#: A brace expansion: `{` with a `,` or `..` before the closing `}`.
+BRACE = re.compile(r"\{[^{}]*(?:,|\.\.)[^{}]*\}")
 #: How deep a command nested in quoted words is read, such as
 #: `bash -c "bash -c '...'"`.
 NESTING = 8
@@ -93,6 +159,8 @@ def _words(command):
     # shlex does not read ANSI-C quoting, so `$'approve'` would keep its `$`.
     # Dropping the `$` reads the word as the quoted text the shell runs.
     command = re.sub(r"\$(?=['\"])", "", command)
+    # The shell drops a backslash and newline: `--a\<newline>s` runs as `--as`.
+    command = command.replace("\\\n", "")
     try:
         return shlex.split(command)
     except ValueError:
@@ -146,6 +214,55 @@ def _delegated_approve(words, earlier=False):
     return runs and any(_delegated_flag(w) for w in words)
 
 
+def _unreadable_as(words):
+    """Space-free words that hold `--as` and are neither `--as` nor
+    `--as=...`. A word with white space is read again as its parts."""
+    return [w for w in words
+            if "--as" in w and w != "--as" and not w.startswith("--as=")
+            and not re.search(r"\s", w)]
+
+
+#: A word that holds ANSI-C quoting with an escape: `$'--a\x73'` runs as
+#: `--as`. Without a backslash, `$'--as'` is the quoted text, which `_words`
+#: already reads.
+ANSI_C = re.compile(r"\S*\$'[^']*\\\S*")
+
+#: A word with an escape in command position (the start, or after an
+#: operator or a variable assignment): `$'\x63ompass'` runs as `compass`.
+ESCAPED_COMMAND = re.compile(
+    r"(?:^|[;&|(`\n]|\$\()\s*(?:\w+=\S*\s+)*\S*\$'[^']*\\")
+
+
+def _names_evidence(command):
+    """True when a word is `evidence`, or a quoted word holds `compass
+    evidence` (the argument of `bash -c`, `eval` or a pipe into `sh`), or a
+    word is the `--delegated` flag."""
+    words = _words(command)
+    return (any(w == "evidence" or "compass evidence" in w for w in words)
+            or any(_delegated_flag(w) for w in _nested_words(command)))
+
+
+def _built_word(command):
+    """A word of a command that names evidence and holds ANSI-C quoting or a
+    brace expansion, else None. The shell turns `$'appro\\x76e'` into
+    `approve` and `--{delegated,x}` into `--delegated`; the guard does not
+    decode them, so it refuses the command whether or not `--delegated` shows."""
+    text = command.replace("\\\n", "")
+    found = ANSI_C.search(text)
+    # A command that holds `compass` (or spells it with an escape in command
+    # position) may spell every word with an escape, so `evidence` need not
+    # show: `compass $'\x65vidence' $'appro\x76e'` runs `evidence approve`.
+    if found and (_names_evidence(command) or "compass" in text.lower()
+                  or ESCAPED_COMMAND.search(text)):
+        return found.group(0)
+    if not _names_evidence(command):
+        return None
+    for word in _nested_words(command):
+        if BRACE.search(word) and not re.search(r"\s", word):
+            return word
+    return None
+
+
 def _caller_mismatch(command, who):
     """`(named, caller)` when a delegated approval does not name its caller.
     The top-level words keep the earlier guard's rule, so nothing it refused
@@ -157,6 +274,16 @@ def _caller_mismatch(command, who):
         wrong = [v for v in values if v != who]
         if not values or who is None or wrong:
             return (wrong[0] if wrong else values[0] if values else None), who
+        # The shell can turn such a word into `--as` (`--as${IFS}x`), so the
+        # value the CLI records may differ from the one checked above.
+        unreadable = _unreadable_as(words)
+        if unreadable:
+            return unreadable[0], who
+        # Brace expansion turns `--a{s=main,s=x}` into two `--as=` words. A
+        # word that holds a space (a quoted value) is read again as its parts.
+        braced = [w for w in words if BRACE.search(w) and not re.search(r"\s", w)]
+        if braced:
+            return braced[0], who
     return None
 
 
@@ -241,6 +368,118 @@ def _word_above(word, folder):
                             or path.startswith(folder + "/"))
 
 
+#: A delegation path and the ordinary path of the same shape outside the
+#: folder. A glob that matches the first and not the second picks the
+#: delegation files; one that matches both only picks "everything".
+DELEGATION_SAMPLES = (
+    (".compass/delegations", ".compass/zz"),
+    (".compass/delegations/DL-1.yml", ".compass/zz/file.yml"),
+    (".compass/delegations/confirm-s.yml", ".compass/zz/file.yml"),
+)
+
+
+def _flatten_classes(glob):
+    """Replace each whole bracket expression that holds a POSIX class
+    (`[:x:]`), collating symbol (`[.x.]`) or equivalence class (`[=x=]`) with
+    `?`. `fnmatch` reads none of them, and a replacement inside the set would
+    leave `[?x]`, which matches only `?` or `x`."""
+    out, i = [], 0
+    while i < len(glob):
+        if glob[i] != "[":
+            out.append(glob[i])
+            i += 1
+            continue
+        j, special = i + 1, False
+        if j < len(glob) and glob[j] in "!^":
+            j += 1
+        if j < len(glob) and glob[j] == "]":
+            j += 1
+        while j < len(glob) and glob[j] != "]":
+            kind = glob[j + 1] if glob[j] == "[" and j + 1 < len(glob) else ""
+            end = glob.find(kind + "]", j + 2) if kind in (":", ".", "=") and kind else -1
+            if end >= 0:
+                special, j = True, end + 2
+            else:
+                j += 1
+        if j >= len(glob):
+            out.append(glob[i])
+            i += 1
+        else:
+            out.append("?" if special else glob[i:j + 1])
+            i = j + 1
+    return "".join(out)
+
+
+def _glob_selects(glob, pairs, grep):
+    """True when `glob` matches the delegation path of some pair and not its
+    ordinary counterpart. All text is lower case, because macOS opens a path
+    in any case and `fnmatch.fnmatch` would apply the operating system's
+    rule. With `grep`, each path is also tried as `/` plus the path, as
+    ripgrep reads `**/x`, and a glob without `/` as the bare name."""
+    glob = glob.lower()
+    # Bash and zsh read `[^x]` as `[!x]` and `[[:lower:]]` as one character;
+    # `fnmatch` reads neither. A class becomes `?`, which keeps a refusal
+    # that names the delegation folder and accepts a glob that picks every name.
+    glob = _flatten_classes(glob).replace("[^", "[!")
+
+    def matches(path):
+        path = path.lower()
+        tries = [path]
+        if grep:
+            tries.append("/" + path)
+            if "/" not in glob:
+                tries.append(path.rpartition("/")[2])
+        return any(fnmatch.fnmatchcase(t, glob) for t in tries)
+
+    return any(matches(sample) and not matches(plain) for sample, plain in pairs)
+
+
+def _relative_pairs(root, searched):
+    """The samples written relative to the search path, only for those the
+    path can reach: the delegation folder is at or under it."""
+    pairs = []
+    for sample, plain in DELEGATION_SAMPLES:
+        full = _norm(root + "/" + sample)
+        if not (searched == "/" or full == searched or full.startswith(searched + "/")):
+            continue
+        rel = full[len(searched):].strip("/")
+        other = _norm(root + "/" + plain)
+        other_rel = (other[len(searched):].strip("/")
+                     if other.startswith(searched.rstrip("/") + "/") else "\0")
+        if rel:
+            pairs.append((rel, other_rel))
+    return pairs
+
+
+def _grep_glob_reaches(pattern, searched, cwd):
+    pairs = _relative_pairs(_resolved(".", cwd), _resolved(searched, cwd))
+    # Claude Code may split the glob on white space or commas; test all forms.
+    return any(_glob_selects(g, pairs, True)
+               for g in [pattern] + re.split(r"[\s,]+", pattern))
+
+
+def _bash_glob_reaches(words, cwd):
+    root = _resolved(".", cwd)
+    relative = [(s, p) for s, p in DELEGATION_SAMPLES]
+    absolute = [(root + "/" + s, root + "/" + p) for s, p in DELEGATION_SAMPLES]
+    for word in words:
+        if re.search(r"\s", word):
+            continue
+        for part in re.split(r"[;&|()<>`]+|(?<!\[)=+(?!\])", word):
+            if not any(c in part for c in "*?["):
+                continue
+            part = _expand_home(_path(part))
+            if os.path.isabs(part):
+                if _glob_selects(_norm(part), absolute, False):
+                    return True
+                continue
+            while part.startswith("./"):
+                part = part[2:]
+            if _glob_selects(os.path.normpath(part), relative, False):
+                return True
+    return False
+
+
 def _in_delegations(tool_input, cwd):
     target = _path(tool_input.get("file_path") or tool_input.get("path"))
     if target:
@@ -250,6 +489,8 @@ def _in_delegations(tool_input, cwd):
             return target
     pattern = _path(tool_input.get("glob"))
     if "delegations" in pattern.lower():
+        return f"{target or cwd} with glob {pattern}"
+    if pattern and _grep_glob_reaches(pattern, target or cwd or ".", cwd):
         return f"{target or cwd} with glob {pattern}"
     return ""
 
@@ -304,6 +545,10 @@ def check(event):
     if TRANSCRIPTS.search(text) or (folder and folder in text):
         return "transcript-protected", {
             "target": "a command naming a session transcript", "tool": tool}
+    built = _built_word(command)
+    if built:
+        return "delegation-caller-mismatch", {
+            "named": built, "caller": caller(event) or "an agent with no agent type"}
     found = _caller_mismatch(command, caller(event))
     if found:
         named, who = found
@@ -325,5 +570,10 @@ def check(event):
     if any(_word_above(w, folder) for w in _nested_words(command)):
         return "transcript-protected", {
             "target": "a command naming a folder above the session transcript",
+            "tool": tool}
+    # Last, so a call an earlier check refuses keeps its code.
+    if _bash_glob_reaches(_nested_words(command), str(event.get("cwd") or "")):
+        return "delegation-protected", {
+            "target": "a command with a glob that can match .compass/delegations",
             "tool": tool}
     return None

@@ -693,13 +693,10 @@ def cmd_check(args):
         guardrails = view.guardrail_gates()
     impls = guardrails.get("impl") or {}
     matches = view.matches if view is not None else reading_matches
-    # A check built for another major is refused rather than run (ADR-038).
+    # A check built for another major is refused rather than run (ADR-038). A
+    # resolver or schema major was refused by `require_whole` above.
     from compass_pkg import impl_versions
-    from compass_pkg.core import CompassError
-    refusals = impl_versions.refusals(task_dir, task)
-    if refusals.run:
-        raise CompassError(refusals.run)
-    refused = refusals.checks
+    refused = impl_versions.refusals(task_dir, task).checks
     readings = task.get("assessment") or {}
     if view is not None:
         # A `when`, `applies_when` or `blocking_when` reads one derived key

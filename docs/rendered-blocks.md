@@ -312,7 +312,20 @@ modification time.
 - A render that fails never fails the command and never stops the other
   renders. One line on standard error gives the count and the first failure:
   `compass: 2 of 3 renders failed - first: <issue>: <file>:<line>: <fault>`.
-  The label sync prints its own line when it fails.
+  The label sync prints its own line when it fails. A linked issue whose
+  generation was built by another resolver or schema major is one of these
+  failures.
+- Before a command in `RENDER_TRIGGERS` runs, `render_after_entry.before_command`
+  refuses it, with exit 2 and nothing written, when the issue it changes has a
+  generation that records another resolver or schema major
+  ([generation-store.md](generation-store.md)). `record_triggers.ISSUE_FROM`
+  names the argument that names that issue, so a command about another issue is
+  not refused.
+- The project index and every other view built from `project_scan` read each
+  issue as an issue other than the one the command acts on
+  (`issue_detail.detail(..., other=True)`): an issue
+  refused for its generation's major is listed from its manifest, and the render
+  of the issue the command changed goes on.
 - The step prints no reminder. The old review page verb and the reminder that
   named it are gone.
 

@@ -674,6 +674,45 @@ def test_arc_30_per_scenario_median_below_floor_is_withheld():
     assert kept["median_per_scenario_usd"] == 0.5 and kept["per_scenario_withheld"] is None, kept
 
 
+def test_retro_impact_reads_each_manifest_once(tmp_path, monkeypatch, capsys):
+    """`compass retro --impact` reads each manifest.yml once, not twice, the
+    decisions row stays as it was, and `decisions_taken.report` still reads
+    the folder when it is given no issues (TRC-001)."""
+    import argparse
+    from collections import Counter
+    from compass_pkg import calibration, core, decisions_taken, manifest_store
+
+    write_project(tmp_path, decisions_fixture())
+    work = tmp_path / ".compass" / "work"
+    reads = Counter()
+
+    def counted(module, name):
+        original = getattr(module, name)
+
+        def wrapper(path, *a, **k):
+            reads[Path(path).parent.name] += 1
+            return original(path, *a, **k)
+        monkeypatch.setattr(module, name, wrapper)
+
+    counted(core, "load_yaml")
+    counted(manifest_store, "read")
+    monkeypatch.setattr(calibration, "find_compass_dir", lambda: str(tmp_path / ".compass"))
+
+    assert calibration._cmd_calibration_impact(argparse.Namespace(format="json")) == 0
+    printed_json = json.loads(capsys.readouterr().out)
+    assert dict(reads) == {slug: 1 for slug in decisions_fixture()}, reads
+    # The row the unchanged code printed for this fixture.
+    assert printed_json["decisions_confirmed"] == {
+        "issues": 20, "not_measurable": 0, "withheld": None,
+        "value": {"changed": 5, "confirmed": 18, "never_confirmed": 4, "open_in_flight": 3,
+                  "share": {"changed": 17, "confirmed": 60, "never_confirmed": 13},
+                  "total": 30}}, printed_json["decisions_confirmed"]
+    # Alone, with no issues passed, the report reads the folder itself.
+    alone = decisions_taken.report(str(work))
+    assert (alone["total"], alone["issues"], alone["confirmed"], alone["changed"],
+            alone["never_confirmed"], alone["open_in_flight"]) == (30, 20, 18, 5, 4, 3), alone
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 4 and sys.argv[1] == "--capture":
         _capture(Path(sys.argv[2]), sys.argv[3])

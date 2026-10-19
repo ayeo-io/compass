@@ -245,6 +245,18 @@ def _legacy_parent(root):
                    "source": "legacy", "guardrails": guardrails}
 
 
+GOVERNANCE_COPY_NOTICE = (
+    "  This unmigrated 5.x project has no compass.yml and runs on its own copy of "
+    "governance/. The rows below are the shipped default, not what compass approach "
+    "evaluate reads. Run compass policy migrate to convert the copy.")
+
+
+def has_governance_copy(root):
+    """True when the project keeps its own copy of the two governance files
+    and has no `compass.yml` Compass reads, so `resolve_live` runs on the copy."""
+    return not project_settings.compass_yml_counts(root) and _legacy_parent(root) is not None
+
+
 def _evidence_types(root, legacy):
     if legacy:
         return legacy_adapter.adapt_evidence_types(legacy[1]["guardrails"])["evidence_types"]
@@ -493,7 +505,7 @@ def effective_for(task_dir=None, manifest=None):
         raise CompassError(
             f"issue {slug} is at generation 0: it was assessed but has no stored "
             f"configuration yet; run `{generation.FIX_ZERO} --issue {slug}`")
-    stored = generation.load(task_dir, held)
+    stored = generation.load(task_dir, held, any_major=status_words.is_closed(manifest))
     return EffectiveView("generation", slug, held, stored["resolved"], stored["versions"],
                          stored["provenance"])
 
@@ -605,8 +617,8 @@ def leftover_overlay_digest(task_dir, number):
     """The `issue_overlay_digest` a whole leftover folder recorded, or the
     string `unreadable` when the folder is not whole."""
     try:
-        return generation.load(os.fspath(task_dir), number)["versions"].get(
-            "issue_overlay_digest")
+        return generation.load(os.fspath(task_dir), number, any_major=True)[
+            "versions"].get("issue_overlay_digest")
     except CompassError:
         return "unreadable"
 
@@ -694,13 +706,20 @@ generation_number = generation.number
 FIX_ZERO = generation.FIX_ZERO
 configure_command = generation.configure_command
 evaluate_command = generation.evaluate_command
+# A generation built by another resolver or schema major (ADR-038): only this module
+# imports `generation`, so the readers and the entry point take these from here.
+FIX_MAJOR = generation.FIX_MAJOR
+MajorRefusal = generation.MajorRefusal
+refuse_other_major = generation.refuse_other_major
+version_major = generation._major
 
 
 def stored_documents(task_dir, manifest):
     """The four documents of the generation the manifest names, or None when
     it names none yet. A generation that is not whole raises `CompassError`."""
     held = generation.number(manifest)
-    return generation.load(os.fspath(task_dir), held) if held else None
+    return generation.load(os.fspath(task_dir), held,
+                           any_major=status_words.is_closed(manifest)) if held else None
 
 
 def pending_proposal(task_dir, manifest):
@@ -733,7 +752,7 @@ def require_whole(task_dir):
     manifest, _ = load_manifest(task_dir)
     held = generation.number(manifest)
     if held:
-        generation.load(os.fspath(task_dir), held)
+        generation.load(os.fspath(task_dir), held, any_major=status_words.is_closed(manifest))
 
 
 def _verdict_rank(verdict):
@@ -808,11 +827,6 @@ def stored_versions(task_dir, manifest):
     if not held:
         return None, {}
     return held, generation.load(os.fspath(task_dir), held)["versions"]
-
-
-def installed_pins():
-    """The resolver version and file schema this CLI writes."""
-    return {"resolver": generation.RESOLVER_VERSION, "schema": generation.SCHEMA}
 
 
 def _installed_implementations(checks):
@@ -897,10 +911,11 @@ def migrate_generation(task_dir, *, closed_ok=False):
     held = generation.number(manifest)
     invalidated = {}
     if held:
-        stored = generation.load(task_dir, held)
+        stored = generation.load(task_dir, held, any_major=True)
         resolution = _pin(stored)
-        if all(stored["versions"].get(k) == resolution.versions[k]
-               for k in ("resolver", "cli", "implementations")):
+        if stored["versions"].get("schema") == generation.SCHEMA and all(
+                stored["versions"].get(k) == resolution.versions[k]
+                for k in ("resolver", "cli", "implementations")):
             return generation.Committed(held, False, (
                 f"no change: generation {held} is already pinned to the installed "
                 f"versions")), []

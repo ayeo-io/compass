@@ -248,9 +248,10 @@ def test_dcj_45_board_panel_and_issue_page_share_one_function(tmp_path, monkeypa
     # replaced, so a module that bound the function by name keeps the original and shows it.
     real = issue_detail.detail
 
-    # The board passes a reader for the issues an issue depends on (ADR-062).
-    def stage_plan(manifest_, task_dir, read=None):
-        made = real(manifest_, task_dir, read=read)
+    # The board passes a reader for the issues an issue depends on (ADR-062), and the
+    # project scan reads each issue as another one (ADR-038).
+    def stage_plan(manifest_, task_dir, read=None, other=False):
+        made = real(manifest_, task_dir, read=read, other=other)
         return issue_detail.IssueDetail(made.approach, made.state, "breakdown", made.gates_passed,
                                         made.gates_total, made.stage_problem)
 

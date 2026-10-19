@@ -208,10 +208,15 @@ Name only the ones it touches.}}
 
 <!-- One block per real design decision. A decision with no alternative
      considered is usually not a decision yet. A quick fix has none of these by
-     definition; if you have one, the approach was mis-sized - re-assess. -->
+     definition; if you have one, the approach was mis-sized - re-assess.
+     Scope is `issue` when the decision holds for this issue only, and `project`
+     when later issues must follow it too. `compass ship-commit` refuses a
+     `project` decision until a record in architecture/decisions/ names it: cite
+     the record's ADR id in the block, after `compass adr new` writes it. -->
 
 ### `DD-1` - {{DECISION TITLE}}
 
+- **Scope:** {{issue \| project}}
 - **Context:** {{what forced a choice}}
 - **Decision:** {{what was chosen}}
 - **Alternatives considered:** {{what else, and why not}}
@@ -220,6 +225,7 @@ Name only the ones it touches.}}
 
 ### `DD-2` - {{DECISION TITLE}}
 
+- **Scope:** {{issue \| project}}
 - **Context:** {{…}}
 - **Decision:** {{…}}
 - **Alternatives considered:** {{…}}
@@ -313,7 +319,7 @@ Dependencies on other issues:
 |---|---|---|
 | Guardrails (the five defaults + project) | {{pass \| fail}} | {{e.g. "acceptance criteria stated before implementation; traceability chains designed in; coverage targets the guardrail floor"}} |
 | Method strategies (defaults + project) | {{followed \| deviation recorded}} | {{e.g. "BDD + TDD apply; simplest-thing honoured. Any deviation noted with its reason."}} |
-| Product strategies | {{followed \| deviation recorded \| n/a}} | {{e.g. "plan delivers intent.md's outcome; honours the product strategies in governance/strategies.md"}} |
+| Product strategies | {{followed \| deviation recorded \| n/a}} | {{e.g. "plan delivers intent.md's outcome; honours the product strategies in the shipped strategies or your project's strategies file, if it has one"}} |
 | Voice & positioning strategies | {{followed \| deviation recorded \| n/a}} | {{n/a unless positioning.md is present; if so, claims traceable}} |
 | Routing policy | {{pass \| fail}} | {{plan does not need to skip anything delivery-approach.md kept; floors honoured}} |
 

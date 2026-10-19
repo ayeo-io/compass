@@ -81,6 +81,13 @@ RENDER_TRIGGERS = {**LABEL_TRIGGERS, **RENDER_FURTHER}
 #: that can change the README, since the page is the README.
 PAGE_TRIGGERS = RENDER_TRIGGERS
 
+#: The argument that names the issue each command in `RENDER_TRIGGERS` changes, so the
+#: refusal of a generation built by another major (`render_after_entry.before_command`)
+#: asks about that issue and no other. The default is the `--issue` argument, which falls
+#: back to the pointer to the current issue. `quick-fix start` names its issue as a positional `slug`, often a
+#: new one, so the current issue is not the one it changes.
+ISSUE_FROM = {**{name: "task" for name in RENDER_TRIGGERS}, "cmd_quick_fix_start": "slug"}
+
 #: Commands that save a manifest and render nothing, each with its reason.
 EXEMPT = {
     "cmd_analyze": ("in gate-clearing mode it adds one consistency-check evidence entry, and "

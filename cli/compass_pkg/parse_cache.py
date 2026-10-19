@@ -28,6 +28,7 @@ import time
 
 import yaml
 
+from compass_pkg import manifest_store
 from compass_pkg.core import CompassError
 
 #: Bumped when the layout of an entry changes; older entries then miss.
@@ -177,15 +178,18 @@ class ParseCache:
 
     def load_yaml(self, path):
         """The contract of `core.load_yaml`, unchanged: "not found" for a path
-        that is not a regular file, UnicodeDecodeError for bytes that are not
-        UTF-8, "invalid YAML in <path>: <error>" for malformed YAML, `{}` for
+        that is not a regular file, a CompassError naming the file for bytes
+        that are not UTF-8, "invalid YAML in <path>: <error>" for malformed YAML, `{}` for
         a falsy document, and new objects on every call. Never raises or
         prints because of the cache."""
         if not os.path.isfile(path):
             raise CompassError(f"not found: {path}")
         with open(path, "rb") as fh:
             raw = fh.read()
-        raw.decode("utf-8")
+        try:
+            raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise manifest_store.read_error(path, exc)
         digest = hashlib.sha256(raw).hexdigest()
         self._reads += 1
         if self._folder:

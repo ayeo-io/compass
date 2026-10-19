@@ -38,6 +38,7 @@ import sys
 import yaml
 
 from compass_pkg import project_scan, record_triggers, render_cmd
+from compass_pkg.effective import MajorRefusal
 from compass_pkg.core import load_manifest, manifest_path, resolve_issue_dir
 from compass_pkg.issue_layout import is_one_segment
 
@@ -153,7 +154,9 @@ def after_command(args, code):
         for directory in directories:
             try:
                 render_issue(directory)
-            except Exception as exc:                    # noqa: BLE001 - one failure hides no other
+            # A linked issue built by another major is reported, and never fails the
+            # command: `before_command` already checked the issue the command changed.
+            except (Exception, MajorRefusal) as exc:  # noqa: BLE001
                 failures.append((os.path.basename(os.path.abspath(directory)), exc))
     finally:
         _scan = None

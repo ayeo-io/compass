@@ -11,11 +11,12 @@ unless the caller passes a reader for the issues it depends on (ADR-062). The
 board can read an issue from another worktree (ADR-048) while the page reads
 this checkout, so the two share the function and not the checkout.
 
-This module is a leaf: it imports `lifecycle`, `next_cmd` and `status_words`, and none
-of `flow`, `check_cmd` or `render_cmd`.
+This module is a leaf: it imports `artifact_owed`, `lifecycle`, `readiness_record`,
+`status_words` and `effective` (inside a function), and none of `flow`, `check_cmd`
+or `render_cmd`.
 """
-# DEPENDENCY: standard library (dataclasses, os); compass_pkg.lifecycle, next_cmd,
-# readiness_record, status_words, stable_ids.
+# DEPENDENCY: standard library (dataclasses, os); compass_pkg.artifact_owed, lifecycle,
+# readiness_record, status_words, effective (imported inside a function).
 from __future__ import annotations
 
 import os
@@ -61,15 +62,21 @@ def _gate_counts(manifest):
     return sum(1 for g in entries if g.get("status") == "pass"), len(entries)
 
 
-def _view(task_dir, manifest=None):
+def _view(task_dir, manifest=None, other=False):
     from compass_pkg import effective
     try:
         return effective.view_or_legacy(task_dir, manifest=manifest)
     except Exception:                                       # noqa: BLE001 - nothing declares a condition
         return None
+    except effective.MajorRefusal:
+        # A row about another issue shows what its manifest says; only a command on
+        # the issue itself is refused for its generation's major.
+        if other:
+            return None
+        raise
 
 
-def _documents(manifest, task_dir=None):
+def _documents(manifest, task_dir=None, other=False):
     """The registered documents, each as the facts a reader shows. `text` is the
     "not needed: ..." line of a document whose condition is false and that has no
     file. It comes from `artifact_owed`, the function the issue page uses."""
@@ -81,7 +88,7 @@ def _documents(manifest, task_dir=None):
             text = None
             if task_dir and not entry.get("path") and entry.get("status") != "omitted":
                 if not read:
-                    view, read = _view(task_dir, manifest), True
+                    view, read = _view(task_dir, manifest, other), True
                 text = artifact_owed.not_needed(manifest, view, entry)
             fact = {"id": str(entry.get("id") or ""), "kind": str(entry["kind"]),
                     "round": rnd if isinstance(rnd, int) else None,
@@ -101,9 +108,10 @@ def _stage(manifest, task_dir, state):
     return lifecycle.stage_of(manifest, task_dir, state)
 
 
-def detail(manifest, task_dir, read=None):
+def detail(manifest, task_dir, read=None, other=False):
     """The `IssueDetail` of one issue. `read` is a `lifecycle` reader for the
-    issues it depends on; without one, no dependency is judged."""
+    issues it depends on; without one, no dependency is judged. `other` is for a
+    view of many issues: a generation built by another major is then not refused."""
     state = lifecycle.state_of(manifest, task_dir)
     stage, problem = _stage(manifest, task_dir, state)
     passed, total = _gate_counts(manifest)
@@ -116,7 +124,7 @@ def detail(manifest, task_dir, read=None):
                        passed, total, problem,
                        str(flag.get("reason") or "no reason recorded") if flag else None,
                        readiness_record.line(manifest.get("readiness")),
-                       _documents(manifest, task_dir), waits, deps)
+                       _documents(manifest, task_dir, other), waits, deps)
 
 
 def state_text(manifest, task_dir):

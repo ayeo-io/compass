@@ -151,24 +151,55 @@ a visible change that needs a test row:
   `compass`.
 
 A heredoc body is text for `git` only in a `commit`, `tag`, `merge` or
-`revert`. The value of an option that names a file, such as `--body-file`, `-F`
-and `-f`, is a word and is judged.
+`revert`, and for `gh` only in `gh issue`, `gh pr` and `gh release`: `gh alias
+import -` reads its aliases from standard input, and an alias that starts with
+`!` runs a shell. The value of an option that names a file, such as
+`--body-file`, `-F` and `-f`, is a word and is judged. The reader keeps a
+backslash and newline inside the body of a quoted heredoc and inside a comment,
+as the shell does, so `cat <<'EOF'` with a line that ends in a backslash before
+the delimiter ends the heredoc there, and the next line is read as a command.
 
 **When text is judged again.** The guard judges text as it would judge words
 in each case below, because the text can run:
 
 - inside `$(...)`, backticks and `<(...)`, which the reader reads again as
-  commands;
+  commands. What a substitution prints is judged as the word it stands for:
+  in `cat "$(echo <file>)"` and `x=$(echo 'cat <file>'); $x` the text of the
+  `echo` is judged, with no text position inside. The one exception is a
+  substitution that stands in a text position of its outer command, and of
+  every command above it: a commit message, an argument of `echo` or a text
+  heredoc. The commands inside it are judged either way, so `git commit -m
+  "$(cat <<'EOF' ... EOF)"` with a protected name in the message is allowed,
+  and `git commit -m "$(cat <file>)"` is refused;
 - when a later stage of the same pipeline is not a command that only reads
   text (`cat`, `tee`, `head`, `tail`, `wc`, `sort`, `uniq`, `cut`, `tr`,
   `less`, `more`, `grep`, `egrep`, `fgrep`, `rg`, `diff`, `pbcopy`), such as
-  `echo "..." | sh`;
+  `echo "..." | sh`. A stage given an option that starts `--fil`, such as
+  `sort --files0-from=-`, reads the files its input names, so it is no such
+  command: `printf '%s\0' <file> | sort --files0-from=-` is judged;
 - a heredoc or a here-string for a shell or any other command that is not in
-  the lists, such as `bash <<'EOF'` and `python3 <<EOF`;
+  the lists, such as `bash <<'EOF'`, `python3 <<EOF` and `gh alias import -`;
 - the argument of `bash -c`, `sh -c` and `eval`;
-- a script that one command writes with a redirect, `tee`, `echo` or `printf`
-  and then runs with a shell, `source`, `.` or as a command name. The refusal
-  names the script.
+- a script that one call writes and then runs (below). The refusal names the
+  script.
+
+**Scripts written and run in one call.** The guard follows a file that a call
+writes and runs. It follows the text of `echo`, `printf` and a `cat` heredoc or
+here-string, through the pipe stages that only read text (`| cat > f`, `| tr a
+a > f`, `| tee f`); a write by `>`, `>>`, `>|` or `tee`, also through a brace
+group or a subshell (`{ echo x; } > f` holds all the text the call wrote
+before it); `cp`, `mv` and `ln` of such a file; and `cd`, so `cd /tmp; sh s1`
+runs `/tmp/s1`. A file is run when a command that is not a data command
+(`ls`, `cat`, `grep`, `rm`, `cp` and the like) names it as a word or inside a
+word that holds white space, or when it is a `<` redirect. So `env bash f`,
+`bash -o pipefail f`, `bash -c 'source f'`, `command sh f`, `exec sh f`,
+`find f -exec sh {} \;`, `rg --pre sh . f` and `python3 -c 'os.system("sh
+f")'` run it. The refusal carries the code of the thing the script names. A
+script that names nothing protected is not refused. One call writes and
+another call runs: not detected. Within one call, these shapes are not
+followed: a file written by another command (`dd`, `sed -i`, `curl -o`, an
+interpreter), a script built at run time, and a folder reached by `cd` with a
+variable or `~` (matched by file name alone).
 
 **What the guard still judges by the whole text.** When the reader cannot read
 a command (an open quote, parenthesis, backtick or `$(`, a heredoc with no
@@ -187,11 +218,15 @@ substitution. The exemptions are:
   path argument. `ls .compass/delegations` is refused: the delegation folder
   has no exemption;
 - those commands, `cat`, `head`, `tail`, `grep`, `rg`, `diff`, `chmod` and
-  `git log`, `show`, `diff`, `blame`, `status`, `ls-files`, `add`, `mv` and
-  `rm` may name `hooks/prompt-approval.sh` as a bare argument. A `VAR=` word,
-  `--output`, `--pre`, `--exec` and the word after `-f`, `--file` or
-  `--files0-from` are never bare arguments, and a runner or `cp` has no
-  exemption;
+  `git log`, `show`, `diff`, `blame`, `status`, `ls-files` and `add` may name
+  `hooks/prompt-approval.sh` as a bare argument. `git mv` and `git rm` have no
+  exemption: one replaces the script and the other deletes it. A `chmod` has
+  the exemption only for a mode that adds permissions (`+x`, `u+x,g+x`) or keeps
+  the owner's execute bit (`755`); `chmod -x`, `000` and `644` stop the approval
+  hook and are refused. A `VAR=` word, `--output`, `--pre`, `--exec` and the
+  word after `-f`, `--file` or `--files0-from` are never bare arguments, and a
+  runner or `cp` has no exemption. `rg --files` takes no pattern, so every
+  other word of it is a path and is judged;
 - `ls` alone, with no `-R`, `-d` or glob, may name a folder strictly above
   the configuration folder, such as the home folder. `cd` into that folder
   and every other command on it stay refused.
@@ -202,8 +237,9 @@ configuration folder. The guard joins the path to the call's `cwd`, collapses
 `..`, folds letter case and resolves each symbolic link, and the result must
 still be inside that folder. Edit and Write need a file inside the folder; Read
 and Grep may name the folder itself. A path with a glob or brace character, a
-Grep glob with a `..` segment, a path that leaves the folder and a symbolic
-link that points out of it are refused. A Bash command that names the folder
+Grep glob with a `..` segment or a brace expansion that holds `..` (such as
+`{..,x}/*.jsonl`), a path that leaves the folder and a symbolic link that
+points out of it are refused. A Bash command that names the folder
 stays refused, because the guard cannot follow `cd` out of it.
 
 The guard refuses these calls:
@@ -315,10 +351,11 @@ folder link and `test -f`) state where the guard is exact or too strict:
 - a glob in the name of a protected folder, which the guard can only test
   against sample paths (the rules above), and a glob that expands against a
   file the agent wrote;
-- a script written by one command and run by another. The guard follows a
-  script only when one command both writes and runs it. A script that one
-  Bash call writes and a later call runs is not followed. What holds depends on
-  what the script reads:
+- a script written by one command and run by another. One call writes, another
+  call runs: not detected. Within one call the guard follows the shapes listed
+  above under "Scripts written and run in one call" and no others. This is an
+  accepted limit, because a Write tool call followed by `bash /tmp/s.sh` did the
+  same before this guard changed. What holds depends on what the script reads:
   - for the delegation files, the stored hash and the 64-bit code. The hash is
     stored and the code is not, so a script cannot read the code from the
     files;

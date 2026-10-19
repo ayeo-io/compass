@@ -2,16 +2,16 @@
   "schema": 1,
   "differs": true,
   "a": {
-    "ref": "default@6",
+    "ref": "default@7",
     "kind": "default",
-    "default_version": "6.0.0",
+    "default_version": "7.0.0",
     "digest": "sha256:af04b956e48c375abd15bea8801bff4313b03bf90e518c8f42085daa08b0eefc",
     "capabilities": []
   },
   "b": {
     "ref": "project",
     "kind": "project",
-    "default_version": "6.0.0",
+    "default_version": "7.0.0",
     "digest": "sha256:733195b8c00fab2be740d0a297a1ef715874b98e04fda7359be9db6effc5de76",
     "capabilities": [
       "artifact-freshness"
@@ -22,7 +22,7 @@
     "result": "loosening",
     "reason": "at risk contained, familiarity greenfield, size small, labels none: checks.severity (tests-pass) is \"blocking\" in the parent and \"advisory\" in the child",
     "scan": "full",
-    "parent": "default@6",
+    "parent": "default@7",
     "child": "project",
     "exhaustive": false,
     "complete": true,

@@ -119,8 +119,10 @@ def test_gv_4_pinning_again_keeps_the_pins_of_earlier_versions(tmp_path):
     root = _root_copy(tmp_path)
     path = root / DIGEST_FILE
     pins = yaml.safe_load(path.read_text(encoding="utf-8"))
-    (current,) = pins
-    earlier = {"preset": "sha256:" + "1" * 64, "files": {"rules.yml": "sha256:" + "2" * 64}}
+    # The live preset's own key; the pin file also holds the kept `default@6.0.0`.
+    current, _ = views.preset_digests(root)
+    assert current in pins and len(pins) > 1
+    earlier ={"preset": "sha256:" + "1" * 64, "files": {"rules.yml": "sha256:" + "2" * 64}}
     pins["default@5.9.0"] = earlier
     path.write_text(yaml.safe_dump(pins), encoding="utf-8")
     _plant_rationale(root / "governance/presets/default/rules.yml")

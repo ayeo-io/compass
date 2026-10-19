@@ -301,7 +301,7 @@ def _with_compass_yml(root: Path, env: dict) -> None:
 
 def _with_default_extends(root: Path, env: dict) -> None:
     _initialised(root, env)
-    (root / "compass.yml").write_text("schema: 1\nextends: compass:default@6\n",
+    (root / "compass.yml").write_text("schema: 1\nextends: compass:default@7\n",
                                       encoding="utf-8")
 
 

@@ -44,7 +44,9 @@ def framework_root(base, change="ceiling", version="7.0.0"):
     presets = Path(base) / "governance" / "presets"
     presets.mkdir(parents=True)
     shutil.copytree(KEPT_DEFAULT_6, presets / "default@6")
-    shutil.copytree(REAL_DEFAULT, presets / "default")
+    # The second default starts from the kept copy, so the named change is the only
+    # difference between the two, whatever the live default holds.
+    shutil.copytree(KEPT_DEFAULT_6, presets / "default")
     new = presets / "default"
     meta = yaml.safe_load((new / "preset.yml").read_text(encoding="utf-8"))
     meta["version"] = version

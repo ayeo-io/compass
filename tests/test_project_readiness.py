@@ -87,7 +87,7 @@ def test_prc_3(tmp_path):
     assert readiness_catalogue.floor(layered) == sorted(REQUIRED_SIGNALS)
 
 
-def _diff_result(project, parent="default@6", child="project"):
+def _diff_result(project, parent="default@7", child="project"):
     code, out, err = support.run_compass(project, "policy", "diff", parent, child, "--json")
     assert code == 0, out + err
     return json.loads(out)["classification"]["result"]

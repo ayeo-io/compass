@@ -36,7 +36,7 @@ SWAP_LINE = f"changes readiness {TIMED} command: test_command -> test_micro_comm
 
 def test_roa_8_policy_diff_names_the_command_swap(tmp_path):
     project = support.make_project(tmp_path / "p", HEAD + MAP_FORM)
-    code, out, err = support.run_compass(project, "policy", "diff", "default@6", "project")
+    code, out, err = support.run_compass(project, "policy", "diff", "default@7", "project")
     assert code == 0, out + err
     lines = out.splitlines()
     assert SWAP_LINE in lines, out
@@ -46,7 +46,7 @@ def test_roa_8_policy_diff_names_the_command_swap(tmp_path):
     assert "classification: equivalent" in out
     assert "waiver" not in out
 
-    code, out, err = support.run_compass(project, "policy", "diff", "default@6", "project",
+    code, out, err = support.run_compass(project, "policy", "diff", "default@7", "project",
                                          "--json")
     assert code == 0, out + err
     assert json.loads(out)["classification"]["result"] == "equivalent"

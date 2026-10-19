@@ -223,3 +223,72 @@ def test_st2_a_planted_record_cannot_point_outside_the_work_folder(project):
     assert result.returncode == 2, result.stderr
     log = (project / ".compass" / "interruptions.log").read_text().splitlines()
     assert log[-1].split("\t")[1] == "ex", log
+
+
+# --- TRC-012 to TRC-015: a record keeps the folder it was written in --------------
+
+def _table(compass_dir):
+    return json.loads((Path(compass_dir) / "sessions.json").read_text())
+
+
+def _write_table(compass_dir, entry):
+    (Path(compass_dir) / "sessions.json").write_text(json.dumps({"S1": entry}))
+
+
+def _now():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+
+
+def test_a_record_copied_from_another_folder_is_ignored(project):
+    """Scenario id: `TRC-012` in worktree-issue-from-edited-path/acceptance-criteria.md"""
+    from compass_pkg import session_lease
+    compass_dir = str(project / ".compass")
+    _write_table(compass_dir, {"issue": "alpha", "at": _now(),
+                               "root": str(project / "elsewhere" / ".compass")})
+    assert session_lease.check(compass_dir, "S1", "beta") == "ok"
+    assert _table(compass_dir)["S1"]["issue"] == "beta"
+    assert _table(compass_dir)["S1"]["root"] == os.path.realpath(compass_dir)
+
+
+def test_a_record_with_no_root_is_ignored(project):
+    """Scenario id: `TRC-013` in worktree-issue-from-edited-path/acceptance-criteria.md"""
+    from compass_pkg import session_lease
+    compass_dir = str(project / ".compass")
+    _write_table(compass_dir, {"issue": "alpha", "at": _now()})
+    assert session_lease.check(compass_dir, "S1", "beta") == "ok"
+    assert _table(compass_dir)["S1"]["issue"] == "beta"
+    assert _table(compass_dir)["S1"]["root"] == os.path.realpath(compass_dir)
+
+
+def test_a_record_from_the_same_folder_still_refuses(project):
+    """Scenario id: `TRC-014` in worktree-issue-from-edited-path/acceptance-criteria.md"""
+    from compass_pkg import session_lease
+    compass_dir = str(project / ".compass")
+    session_lease.record(compass_dir, "S1", "alpha")
+    assert session_lease.check(compass_dir, "S1", "beta") == "moved:alpha"
+    assert _table(compass_dir)["S1"]["issue"] == "alpha"
+
+
+def test_the_recorder_ignores_a_record_copied_from_another_folder(project):
+    """Decision Q10 of worktree-issue-from-edited-path: `session_record` reads
+    the table with the same root test as `session_lease.check`."""
+    from compass_pkg import session_record
+    compass_dir = project / ".compass"
+    task_dir = compass_dir / "work" / "why"
+    _write_table(compass_dir, {"issue": "ex", "at": _now(),
+                               "root": str(project / "elsewhere" / ".compass")})
+    assert session_record._moved(str(task_dir), "S1") is False
+    _write_table(compass_dir, {"issue": "ex", "at": _now(),
+                               "root": os.path.realpath(compass_dir)})
+    assert session_record._moved(str(task_dir), "S1") is True
+
+
+def test_the_root_is_the_real_path_of_the_compass_folder(project, tmp_path):
+    """Scenario id: `TRC-015` in worktree-issue-from-edited-path/acceptance-criteria.md"""
+    from compass_pkg import session_lease
+    folder = project / ".compass"
+    link = tmp_path / "link"
+    link.symlink_to(folder, target_is_directory=True)
+    session_lease.record(str(link), "S1", "alpha")
+    assert _table(folder)["S1"]["root"] == os.path.realpath(folder)
+    assert session_lease.check(str(folder), "S1", "beta") == "moved:alpha"

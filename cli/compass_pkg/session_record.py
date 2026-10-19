@@ -112,14 +112,14 @@ def _record(task_dir, session, via):
 
 
 def _moved(task_dir, session):
-    """True when the session's fresh entry in the session table that
+    """True when the session's live entry in the session table that
     `session_lease` keeps names another issue: another session moved the
-    pointer, and this session's work is elsewhere. Read without the table's
-    lock; a table that cannot be read moves nothing."""
+    pointer, and this session's work is elsewhere. A copied entry (another
+    root, or none) is not live. Read without the table's lock; a table that
+    cannot be read moves nothing."""
     from compass_pkg import session_lease
-    entry = session_lease._load(os.path.dirname(os.path.dirname(task_dir))).get(session)
-    return (isinstance(entry, dict) and bool(entry.get("issue")) and session_lease._fresh(entry)
-            and entry["issue"] != os.path.basename(task_dir))
+    entry = session_lease.live_entry(os.path.dirname(os.path.dirname(task_dir)), session)
+    return bool(entry) and bool(entry.get("issue")) and entry["issue"] != os.path.basename(task_dir)
 
 
 def _inserted(data, session):

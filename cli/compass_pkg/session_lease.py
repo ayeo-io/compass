@@ -10,6 +10,10 @@
 # issue (`pointer-moved`), and `compass issue use <slug>` is how a session
 # says which issue it means.
 #
+# The table belongs to one `.compass/` folder: each record carries `root`, the
+# folder's real path. A table copied into another folder (for example into a
+# new worktree) is ignored there, as is a record with no root.
+#
 # A record older than LEASE_HOURS is stale and ignored: a session that ended
 # hours ago is not working on anything. A session with COMPASS_ISSUE set, or
 # a runtime that gives no session id, is not tracked at all.
@@ -113,14 +117,34 @@ def _fresh(entry):
     return _now() - at < datetime.timedelta(hours=LEASE_HOURS)
 
 
+def _root(compass_dir):
+    return os.path.realpath(compass_dir)
+
+
+def live_entry(compass_dir, session):
+    """The session's record, only when it is fresh and was written in this
+    `.compass/` folder (its `root` is the folder's real path). A record with
+    no root, or another one, is a copy or is older than the root field:
+    None."""
+    entry = _load(compass_dir).get(session)
+    if isinstance(entry, dict) and _fresh(entry) \
+            and entry.get("root") == _root(compass_dir):
+        return entry
+    return None
+
+
+def _entry(compass_dir, slug):
+    return {"issue": slug, "at": _now().isoformat(timespec="seconds"),
+            "root": _root(compass_dir)}
+
+
 def record(compass_dir, session, slug):
     """Note that `session` works on `slug` now."""
     if not session:
         return
     with _locked(compass_dir):
         table = _load(compass_dir)
-        table[session] = {"issue": slug,
-                          "at": _now().isoformat(timespec="seconds")}
+        table[session] = _entry(compass_dir, slug)
         _save(compass_dir, table)
 
 
@@ -131,12 +155,10 @@ def check(compass_dir, session, slug):
     it means, with `compass issue use`."""
     with _locked(compass_dir):
         table = _load(compass_dir)
-        entry = table.get(session)
-        if isinstance(entry, dict) and _fresh(entry) and entry.get("issue") \
-                and entry.get("issue") != slug:
+        entry = live_entry(compass_dir, session)
+        if entry and entry.get("issue") and entry.get("issue") != slug:
             return f"moved:{entry['issue']}"
-        table[session] = {"issue": slug,
-                          "at": _now().isoformat(timespec="seconds")}
+        table[session] = _entry(compass_dir, slug)
         _save(compass_dir, table)
     return "ok"
 

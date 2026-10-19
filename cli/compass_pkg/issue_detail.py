@@ -11,11 +11,12 @@ unless the caller passes a reader for the issues it depends on (ADR-062). The
 board can read an issue from another worktree (ADR-048) while the page reads
 this checkout, so the two share the function and not the checkout.
 
-This module is a leaf: it imports `lifecycle`, `next_cmd` and `status_words`, and none
-of `flow`, `check_cmd` or `render_cmd`.
+This module is a leaf: it imports `artifact_owed`, `lifecycle`, `readiness_record`,
+`status_words` and `effective` (inside a function), and none of `flow`, `check_cmd`
+or `render_cmd`.
 """
-# DEPENDENCY: standard library (dataclasses, os); compass_pkg.lifecycle, next_cmd,
-# readiness_record, status_words, stable_ids.
+# DEPENDENCY: standard library (dataclasses, os); compass_pkg.artifact_owed, lifecycle,
+# readiness_record, status_words, effective (imported inside a function).
 from __future__ import annotations
 
 import os

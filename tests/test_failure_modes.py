@@ -138,3 +138,70 @@ def test_list_manifest_refused_with_a_clear_error(issue, body):
     assert "Traceback" not in r.stderr, r.stderr
     assert "manifest.yml" in r.stderr and "must be a mapping" in r.stderr, r.stderr
     assert len(r.stderr.strip().splitlines()) == 1, r.stderr
+
+
+# Verbs that read one issue's manifest without going through manifest_store.read.
+_LIST_MANIFEST_VERBS = [
+    ("analyze", "--issue", "demo"),
+    ("issue", "artifact-path", "acceptance-criteria", "--issue", "demo"),
+    ("issue", "artifact", "set", "acceptance-criteria", "--status", "draft",
+     "--issue", "demo"),
+    ("issue", "diagnose", "--issue", "demo"),
+    ("issue", "template", "show", "technical-design", "--issue", "demo"),
+    ("bdd", "verify", "--issue", "demo", "--", "true"),
+    ("issue", "configure", "--discard", "--issue", "demo"),
+    ("issue", "receipt", "--issue", "demo"),
+    ("check", "--issue", "demo"),
+]
+
+
+@pytest.mark.parametrize("verb", _LIST_MANIFEST_VERBS, ids=lambda v: " ".join(v[:3]))
+def test_list_manifest_refused_by_every_reader(issue, verb):
+    """Scenario id: `TRC-001` in refuse-list-manifest-clearly/acceptance-criteria.md.
+
+    Each verb that reads the manifest refuses a list in one line that names
+    the file, with no traceback.
+    """
+    path = issue / ".compass" / "work" / "demo" / "manifest.yml"
+    path.write_text("- a\n- b\n")
+    r = _compass(issue, *verb)
+    assert r.returncode != 0, r.stdout + r.stderr
+    assert "Traceback" not in r.stderr, r.stderr
+    assert "manifest.yml" in r.stderr and "must be a mapping" in r.stderr, r.stderr
+    assert len(r.stderr.strip().splitlines()) == 1, r.stderr
+
+
+def test_list_manifest_helper_gives_one_wording_for_each_failure(tmp_path):
+    """Scenario id: `TRC-001` in refuse-list-manifest-clearly/acceptance-criteria.md.
+
+    The shared reader returns a mapping and refuses a list, a missing file
+    and bad YAML with an error that names the file.
+    """
+    from compass_pkg import manifest_store
+    from compass_pkg.project_settings import CompassError
+
+    good = tmp_path / "good.yml"
+    good.write_text("issue: demo\n")
+    assert manifest_store.load_manifest_mapping(str(good)) == {"issue": "demo"}
+    for name, body, words in (("list.yml", "- a\n", "must be a mapping"),
+                              ("bad.yml", "a: [\n", "invalid YAML"),
+                              ("absent.yml", None, "not found")):
+        path = tmp_path / name
+        if body is not None:
+            path.write_text(body)
+        with pytest.raises(CompassError) as err:
+            manifest_store.load_manifest_mapping(str(path))
+        assert str(path) in str(err.value) and words in str(err.value)
+
+
+def test_a_scan_of_all_issues_skips_a_list_manifest(issue):
+    """Scenario id: `TRC-001` in refuse-list-manifest-clearly/acceptance-criteria.md.
+
+    `compass flow --digest` reads every issue, so one list manifest is
+    skipped rather than ending the run.
+    """
+    path = issue / ".compass" / "work" / "demo" / "manifest.yml"
+    path.write_text("- a\n- b\n")
+    r = _compass(issue, "flow", "--digest")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "Traceback" not in r.stderr, r.stderr

@@ -41,7 +41,8 @@ from compass_pkg import status_words
 from compass_pkg.stable_ids import (
     APPROACH_QUICK_FIX, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
     STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
-from compass_pkg.core import (CompassError, artifact_path, canonical_shape, load_yaml, manifest_path,
+from compass_pkg.manifest_store import load_manifest_mapping
+from compass_pkg.core import (CompassError, artifact_path, canonical_shape, manifest_path,
                               normalize_spine, resolve_issue_dir)
 
 # --- command: next -----------------------------------------------------------
@@ -355,7 +356,7 @@ def cmd_next(args):
             "assess has not run for this issue - manifest.yml is missing.\n"
             f"  Run /compass:assess to start the issue at: {task_dir}")
 
-    task = _typed(normalize_spine(load_yaml(task_path)))
+    task = _typed(normalize_spine(load_manifest_mapping(task_path)))
 
     # --- delivery-approach.md: must exist ---
     route_md_path = artifact_path(task_dir, "delivery-approach.md")

@@ -209,8 +209,9 @@ def cmd_issue_template(args):
     import sys
 
     from compass_pkg import artifact_kinds, effective, terminal
-    from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, docs_dir, load_yaml,
+    from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, docs_dir,
                                   manifest_path, resolve_issue_dir)
+    from compass_pkg.manifest_store import load_manifest_mapping
 
     directory = os.path.join(FRAMEWORK_ROOT, "templates")
     available = sorted(name[:-3] for name in os.listdir(directory) if name.endswith(".md"))
@@ -239,7 +240,7 @@ def cmd_issue_template(args):
         entry = catalogue[kind]
         registered, issue = None, None
         if task_dir:
-            held = load_yaml(manifest_path(task_dir)) or {}
+            held = load_manifest_mapping(manifest_path(task_dir))
             registered = next((a.get("depth") for a in (held.get("artifacts") or [])
                                if isinstance(a, dict) and a.get("kind") == kind
                                and a.get("depth")), None)

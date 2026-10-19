@@ -38,8 +38,9 @@ from compass_pkg import catalogue_spec as spec
 from compass_pkg.atomic_io import digest, load_yaml_strict
 from compass_pkg.check_registry import REGISTRY
 from compass_pkg.core import (AUTONOMY_VALUES, COMPASS_VERSION, FRAMEWORK_ROOT,
-                              GOVERNANCE_FILES, CompassError, load_manifest, load_yaml,
-                              reading_matches)
+                              GOVERNANCE_FILES, CompassError, load_manifest,
+                              load_yaml, reading_matches)
+from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import manifest_path
 
 OUTCOME_KEYS = ("delivery_approach", "stages", "gates", "checkpoints",
@@ -888,7 +889,7 @@ def migrate_generation(task_dir, *, closed_ok=False):
     task_dir = os.path.abspath(os.fspath(task_dir))
     slug = os.path.basename(task_dir)
     path = manifest_path(task_dir)
-    manifest = load_yaml(path)
+    manifest = load_manifest_mapping(path)
     if status_words.is_closed(manifest) and not closed_ok:
         raise CompassError(
             f"issue {slug} is closed and keeps the configuration it closed under, so "

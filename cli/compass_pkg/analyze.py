@@ -37,6 +37,7 @@ from compass_pkg.check_cmd import cmd_check
 from compass_pkg.stable_ids import (
     GATE_VERIFY_ANALYZE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
     MODE_THOROUGH, STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
+from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import COMPASS_SCHEMA_VERSION, COMPASS_VERSION, CompassError, artifact_path, exit_for_mode, find_compass_dir, load_mode, load_yaml, manifest_path, mode_banner, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.governance import cmd_policy_lint
 from compass_pkg.policy import cmd_task_lint
@@ -290,7 +291,7 @@ def _analyze_task(task_dir: str, project_root: str | None = None) -> dict:
             f"compass analyze cannot run before it."
         )
     try:
-        task = normalize_spine(load_yaml(task_path))
+        task = normalize_spine(load_manifest_mapping(task_path))
     except CompassError:
         raise  # re-raise: parse error propagates to cmd_analyze
 

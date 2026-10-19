@@ -481,6 +481,9 @@ case "${TOOL:-}" in
        case "${_text:-}" in
          *evidence*) case "${_text:-}" in *'$'\'*|*'{'*) GUARD_RUN=1 ;; esac ;;
        esac
+       # Every word of `compass $'\x65vidence' $'appro\x76e'` can hold an
+       # escape, so `evidence` need not show: `$'` then a backslash starts it.
+       case "${_text:-}" in *'$'\'*'\'*) GUARD_RUN=1 ;; esac
        _above=""
        case "${TRANSCRIPT:-}" in /*) _above="${TRANSCRIPT%/*}" ;; esac
        case "${COMMAND:-}" in *"${_above:-//no transcript//}"*) GUARD_RUN=1 ;; esac

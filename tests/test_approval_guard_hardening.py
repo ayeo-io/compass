@@ -866,3 +866,62 @@ def test_trc_011_whole_bracket_class_read_as_one_character(delegated):
     # A class that picks every name still picks "everything".
     assert _guard(delegated, "ls .compass/[[:lower:]x]*") is None
     _grep(delegated, ".compass", "[[:lower:]x]*", False)
+
+
+# --- third review: every word spelled with an escape ----------------------------------------
+
+
+def test_trc_001_refusal_says_the_word_may_be_built_by_the_shell(guarded):
+    """Scenario id: `TRC-001` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md
+
+    A compact JSON `--note` in `compass evidence add` is refused as a word
+    the shell could build; the text says so, within the 60-word cap.
+    """
+    r = _hook(guarded, "Bash", {"command": "compass evidence add --note '{\"a\":1,\"b\":2}'"})
+    assert _refused(r, "delegation-caller-mismatch"), (r.returncode, r.stderr)
+    assert "word the shell could build" in r.stderr, r.stderr
+    assert len(r.stderr.split("This hook")[0].split()) < 60, r.stderr
+
+
+def test_trc_014_docs_state_third_review_refusal_and_limit():
+    """Scenario id: `TRC-014` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    contract = (ROOT / "docs" / "safety-contract.md").read_text(encoding="utf-8").lower()
+    module = (ROOT / "cli" / "compass_pkg" / "approval_guard.py").read_text(
+        encoding="utf-8").split('"""')[1].lower()
+    facts = ["$'\\x65vidence'", "appro?e", "--a?", "a glob that expands against a file",
+             "python3 -c", "ayeo-io/compass#599", "any `compass evidence` command"]
+    for name, text in (("docs/safety-contract.md", " ".join(contract.split())),
+                       ("approval_guard.py docstring", " ".join(module.split()))):
+        missing = [f for f in facts if f not in text]
+        assert not missing, (name, missing)
+
+
+def test_trc_001_every_word_spelled_with_an_escape_refused(guarded):
+    """Scenario id: `TRC-001` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md
+
+    The shell runs `compass $'\\x65vidence' $'appro\\x76e' ... $'--a\\x73'` as
+    `evidence approve ... --as`, so no literal `evidence` word is needed: a
+    command with the word `compass` and ANSI-C quoting with an escape is
+    refused. So is an escape-spelled `compass` in command position.
+    """
+    tail = "--check x --scope x"
+    for command in (f"compass $'\\x65vidence' $'appro\\x76e' {tail} $'--delegat\\x65d' "
+                    "$'--a\\x73' compass:architect",
+                    f"compass $'\\x65vidence' approve {tail} $'--delegat\\x65d' "
+                    "--as compass:architect",
+                    f"$'\\x63ompass' $'\\x65vidence' $'appro\\x76e' {tail} $'--delegat\\x65d' "
+                    "$'--a\\x73' compass:architect",
+                    f"c$'\\x6fmpass' $'\\x65vidence' approve {tail} --delegated "
+                    "--as compass:architect",
+                    f"cd x && $'\\x63ompass' $'\\x65vidence' approve {tail} --delegated "
+                    "--as compass:architect",
+                    f"$'\\x63ompass' $'\\x65vidence' $'appro\\x76e' {tail} --as main",
+                    f"X=1 c$'\\x6fmpass' $'\\x65vidence' $'appro\\x76e' {tail} --as main",
+                    "COMPASS_X=1 compass $'\\x65vidence' list"):
+        _caller_refused(guarded, command, "$'")
+    # No `compass` word, or no escape, passes.
+    for command in ("printf $'a\\n'", "echo $'x'", "echo $'a\\tb' | cat",
+                    "git commit -m 'x'", "git commit -m $'x'",
+                    f"compass evidence approve {tail} $'--as' main",
+                    "compass $'status'"):
+        _passes(guarded, command)

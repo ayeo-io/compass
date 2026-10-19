@@ -69,7 +69,16 @@ r"""Decide whether the agent's tool call touches approval state it must not
   expansion (`--{delegated,x}`, `appr{ove,x}`), whether or not `--delegated`
   shows. The guard does not decode either spelling. `$'--as'` with no escape
   is read as the quoted text. A value with a space or no comma, such as
-  `--note '{"a": 1}'`, passes; a compact value with a comma is refused.
+  `--note '{"a": 1}'`, passes; a compact value with a comma is refused, in
+  any `compass evidence` command. A command with the word `compass` (or an
+  escape-spelled `compass` in command position) and a word of ANSI-C quoting
+  with an escape is refused even when `evidence` is spelled with escapes too:
+  `compass $'\x65vidence' $'appro\x76e'` runs `evidence approve`.
+- **Limit: a text-matching guard cannot follow what the shell, a spelling or
+  an interpreter builds at run time** (variables, command substitution, a
+  glob that expands against a file the agent wrote, such as `appro?e` or
+  `--a?`, encodings, `python3 -c`). The stored confirmation hash and the
+  64-bit code (ayeo-io/compass#599) are the control that holds then.
 
 Each check ignores letter case, because macOS opens a path in any case. The
 earlier guard's checks run first, in its order and case, so a call it refused
@@ -218,6 +227,11 @@ def _unreadable_as(words):
 #: already reads.
 ANSI_C = re.compile(r"\S*\$'[^']*\\\S*")
 
+#: A word with an escape in command position (the start, or after an
+#: operator or a variable assignment): `$'\x63ompass'` runs as `compass`.
+ESCAPED_COMMAND = re.compile(
+    r"(?:^|[;&|(`\n]|\$\()\s*(?:\w+=\S*\s+)*\S*\$'[^']*\\")
+
 
 def _names_evidence(command):
     """True when a word is `evidence`, or a quoted word holds `compass
@@ -233,11 +247,16 @@ def _built_word(command):
     brace expansion, else None. The shell turns `$'appro\\x76e'` into
     `approve` and `--{delegated,x}` into `--delegated`; the guard does not
     decode them, so it refuses the command whether or not `--delegated` shows."""
+    text = command.replace("\\\n", "")
+    found = ANSI_C.search(text)
+    # A command that holds `compass` (or spells it with an escape in command
+    # position) may spell every word with an escape, so `evidence` need not
+    # show: `compass $'\x65vidence' $'appro\x76e'` runs `evidence approve`.
+    if found and (_names_evidence(command) or "compass" in text.lower()
+                  or ESCAPED_COMMAND.search(text)):
+        return found.group(0)
     if not _names_evidence(command):
         return None
-    found = ANSI_C.search(command.replace("\\\n", ""))
-    if found:
-        return found.group(0)
     for word in _nested_words(command):
         if BRACE.search(word) and not re.search(r"\s", word):
             return word

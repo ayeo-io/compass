@@ -52,7 +52,7 @@ code from a refusal you hit.
 ### `delegation-caller-mismatch`
 
 **Blocked:** delegated approval (--as {named})
-**Why:** Claude Code reports this call as {caller}, and a delegated approval must name exactly the agent that makes it.
+**Why:** Claude Code reports this call as {caller}, and a delegated approval must name exactly the agent that makes it. A word the shell could build is refused too.
 **Fix:** run it from the agent the delegation names, with --as set to that agent's full name, or ask with compass evidence request.
 
 ### `delegation-protected`

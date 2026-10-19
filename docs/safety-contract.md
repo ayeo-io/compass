@@ -186,7 +186,12 @@ because macOS opens a path in any case.
   shell expands it into two `--as=` words. A quoted value with a space, such
   as `--reason '{"a": 1}'`, or with no comma or `..`, passes; a compact JSON
   value with a comma and no space, such as `'{"a":1,"b":2}'`, is refused
-  as a known cost. A command that names `evidence` (a word `evidence`, or a
+  as a known cost, in any `compass evidence` command (`--note`, `--reason`
+  and the rest), and the refusal says the word may be built by the shell. A
+  command with the word `compass` (or an escape-spelled `compass` in command
+  position) and a word of ANSI-C quoting with an escape, such as
+  `compass $'\x65vidence' $'appro\x76e'`, is refused even when `evidence`
+  is spelled with escapes too. A command that names `evidence` (a word `evidence`, or a
   quoted word that holds `compass evidence`, or a `--delegated` flag) and
   holds ANSI-C quoting with an escape, such as `$'--a\x73'` or
   `$'appro\x76e'`, or a brace expansion in any word, such as
@@ -227,6 +232,12 @@ approval as another agent, as they did before this check:
   cannot follow: a flag built from a variable, command substitution, a value
   read from a file or the environment, and arguments built by `xargs` or
   `printf`;
+- a word that a glob expands against a file the agent wrote, such as
+  `appro?e` or `--a?`. A text-matching guard cannot follow anything that the
+  shell, a spelling or an interpreter builds at run time: variables, command
+  substitution, a glob that expands against a file the agent wrote,
+  encodings and `python3 -c`. The stored confirmation hash and the 64-bit
+  code (ayeo-io/compass#599) are the control that holds then;
 - brace expansion in a glob, in Bash or in a Grep glob, such as
   `{d,x}eleg*/*`, `deleg{ations,x}/*` and `**/{DL-*,x}.yml`;
 - patterns that only zsh reads, such as `.compass/(deleg\|x)ations/*` and

@@ -73,6 +73,12 @@
 #   We also emit a short human-readable reason on stderr when blocking.
 # =============================================================================
 
+# The seconds bash has counted when the script starts, for the wall-clock fuse
+# (FUSE_SECONDS, set with the limits below). It is read here, before anything
+# else runs, so the fuse counts the whole run, the input read and the guards
+# included. A difference is used, so an inherited SECONDS changes nothing.
+HOOK_START=$SECONDS
+
 set -euo pipefail
 # The issue this hook works on is resolved below. Clear it first, so a
 # TASK_DIR exported by the caller's environment is never taken for it.
@@ -577,8 +583,8 @@ set -e
 # scan that grows with the command adds its steps, in microseconds of the time
 # they were measured to take (bash 3.2, UTF-8), and a command past WORK_BUDGET
 # is refused as too complex, or has only its write scan skipped where Compass
-# is not in use. The worst command accepted took 2.4 s on a loaded machine
-# (docs/safety-contract.md lists the shapes).
+# is not in use. The worst command accepted took 1.9 s on a machine with a
+# load average of 2 to 4 (docs/safety-contract.md lists the shapes).
 #   - WORK_BUDGET: the most the counter may reach.
 #   - COST_AWK_STEP: one step of the flattening in awk (the largest count of
 #     steps the awk scan reports, SCAN_WORK_LIMIT at the most).
@@ -591,11 +597,24 @@ set -e
 #   - COST_CANDIDATE_CHAR: the same, for each character of the target.
 #   - COST_GLOB: the same, for each glob of the settings that the target is
 #     tried against one by one.
+#
+# The budget is an estimate from a table, and the hook reads no clock to check
+# it, so a slower machine, or an interaction the table does not charge (bash
+# slows down as the number of shell variables grows), could still run past the
+# 15 s time limit. FUSE_SECONDS is the backstop: the scan checks `$SECONDS`,
+# bash's own count of whole seconds (no process starts), at each write target,
+# each variable name and each pass of the walk, and past FUSE_SECONDS it stops
+# as it does for the budget. The count has a granularity of one second, so the
+# fuse trips between FUSE_SECONDS - 1 and FUSE_SECONDS seconds after the start
+# of the script (HOOK_START). A scan waiting on a process (the settings
+# reader) is not interrupted, only stopped at the next check. The value is
+# assigned and not read from the environment: an override would be a bypass.
 COMMAND_LIMIT=98304
 OPENER_LIMIT=700
 TARGET_LIMIT=400
 NAME_LIMIT=20
 SCAN_WORK_LIMIT=1000000
+FUSE_SECONDS=8
 WORK_BUDGET=2400000
 COST_AWK_STEP=2
 COST_STATEMENT=110
@@ -1413,7 +1432,7 @@ bash_write_targets() {
 # `expand_command_variable` prints the answer, for the tests and for a caller
 # that wants text. EXPAND_NAMES counts the names read for this command, which
 # the caller compares with NAME_LIMIT.
-EXPAND_MEMO_CMD="" EXPAND_MEMO="" EXPANDED="" RESOLVED="" EXPAND_NAMES=0 WORK_USED=0 WORK_OVER=0 WALK_CMD="" WALK_DIRTY=0
+EXPAND_MEMO_CMD="" EXPAND_MEMO="" EXPANDED="" RESOLVED="" EXPAND_NAMES=0 WORK_USED=0 WORK_OVER=0 WALK_CMD="" WALK_DIRTY=0 WALK_WANT=""
 expand_command_variable() {
   expand_command_variable_into "$@"
   printf '%s\n' "$EXPANDED"
@@ -1445,7 +1464,8 @@ expand_command_variable_into() {
   if [ "${3:-}" != same ]; then
     case "$EXPAND_MEMO_CMD" in
       "$cmd") ;;
-      *) EXPAND_MEMO_CMD="$cmd"; EXPAND_MEMO=""; EXPAND_NAMES=0; WALK_CMD="" ;;
+      *) EXPAND_MEMO_CMD="$cmd"; EXPAND_MEMO=""; EXPAND_NAMES=0; WALK_CMD=""
+         WALK_WANT="${WALK_PRELOAD:-}" ;;
     esac
   fi
   case "$nl$EXPAND_MEMO" in
@@ -1461,7 +1481,9 @@ expand_command_variable_into() {
       WORK_USED=$((WORK_USED + ${COST_NAME_PER_KB:-0} * ${#cmd} / 1024))
       expand_command_variable_resolve "$name" "$cmd"
       EXPAND_MEMO="$EXPAND_MEMO$name=$RESOLVED$nl"
-      if [ "${WORK_BUDGET:-0}" -gt 0 ] && [ "$WORK_USED" -gt "$WORK_BUDGET" ]; then
+      if { [ "${WORK_BUDGET:-0}" -gt 0 ] && [ "$WORK_USED" -gt "$WORK_BUDGET" ]; } \
+          || { [ "${FUSE_SECONDS:-0}" -gt 0 ] \
+               && [ $((SECONDS - HOOK_START)) -ge "$FUSE_SECONDS" ]; }; then
         WORK_OVER=1
       fi ;;
   esac
@@ -1506,12 +1528,19 @@ expand_command_variable_resolve() {
   # tests/test_pre_tool_hook_time_bounded.py pins the results.
   #
   # The walk does not depend on NAME except in what it keeps, so it runs once
-  # for the command and keeps what it found for every name it meets: for each
-  # assigned name, in WK_C_<name> the count of its assignments and in
+  # for the command and keeps what it found for each name in WALK_WANT (the
+  # names the write targets start with, set by the caller, at most
+  # NAME_LIMIT + 1): in WK_C_<name> the count of its assignments and in
   # WK_V_/WK_B_/WK_S_/WK_O_<name> the value, the separator before the
   # statement, the separator after it and where the text after it starts, all
   # for the last assignment. A walk for each name took 62 s for 40000
-  # statements and 20 names. Each pass is charged to the shared work budget.
+  # statements and 20 names. A name that is not in WALK_WANT is added and the
+  # walk runs again, so the answer never depends on the caller's list. Each
+  # pass is charged to the shared work budget, and stops at the fuse.
+  case " $WALK_WANT " in
+    *" $name "*) ;;
+    *) WALK_WANT="$WALK_WANT $name"; WALK_CMD="" ;;
+  esac
   if [ "$WALK_CMD" != "$cmd" ]; then
     WALK_CMD="$cmd"
     if [ "$WALK_DIRTY" -eq 1 ]; then
@@ -1524,19 +1553,27 @@ expand_command_variable_resolve() {
     win="${cmd:0:$size}"
     while :; do
       WORK_USED=$((WORK_USED + ${COST_STATEMENT:-0}))
-      if [ "${WORK_BUDGET:-0}" -gt 0 ] && [ "$WORK_USED" -gt "$WORK_BUDGET" ]; then
+      if { [ "${WORK_BUDGET:-0}" -gt 0 ] && [ "$WORK_USED" -gt "$WORK_BUDGET" ]; } \
+          || { [ "${FUSE_SECONDS:-0}" -gt 0 ] \
+               && [ $((SECONDS - HOOK_START)) -ge "$FUSE_SECONDS" ]; }; then
         WORK_OVER=1; break
       fi
       if [[ $win =~ $assign_re ]]; then
         len=${#BASH_REMATCH[0]}
         WORK_USED=$((WORK_USED + ${COST_STATEMENT_CHAR:-0} * len))
-        ref="WK_C_${BASH_REMATCH[2]}"
-        printf -v "$ref" '%s' $(( ${!ref:-0} + 1 ))
-        printf -v "WK_V_${BASH_REMATCH[2]}" '%s' "${BASH_REMATCH[3]}"
-        printf -v "WK_B_${BASH_REMATCH[2]}" '%s' "$sep"
-        printf -v "WK_S_${BASH_REMATCH[2]}" '%s' "${BASH_REMATCH[4]}"
-        printf -v "WK_O_${BASH_REMATCH[2]}" '%s' $((off + len))
-        WALK_DIRTY=1
+        # Only a name that a write target uses is kept. Bash slows every
+        # variable operation as the number of variables grows (1 s more for
+        # each 10000), and a command can assign thousands of other names.
+        case " $WALK_WANT " in
+          *" ${BASH_REMATCH[2]} "*)
+            ref="WK_C_${BASH_REMATCH[2]}"
+            printf -v "$ref" '%s' $(( ${!ref:-0} + 1 ))
+            printf -v "WK_V_${BASH_REMATCH[2]}" '%s' "${BASH_REMATCH[3]}"
+            printf -v "WK_B_${BASH_REMATCH[2]}" '%s' "$sep"
+            printf -v "WK_S_${BASH_REMATCH[2]}" '%s' "${BASH_REMATCH[4]}"
+            printf -v "WK_O_${BASH_REMATCH[2]}" '%s' $((off + len))
+            WALK_DIRTY=1 ;;
+        esac
         sep="${BASH_REMATCH[4]}"
       elif [[ $win =~ $plain_re ]]; then
         len=${#BASH_REMATCH[0]}
@@ -1708,6 +1745,29 @@ if [ "${TOOL:-}" = "Bash" ]; then
       exit 0
     fi
 
+    # The variable names the targets start with (at most NAME_LIMIT + 1, the
+    # most that is read before the command is refused), so that the walk over
+    # the leading statements keeps only those names.
+    WALK_PRELOAD=""
+    _preload_count=0
+    _preload_brace='^\$\{([A-Za-z_][A-Za-z0-9_]*)\}'
+    _preload_bare='^\$([A-Za-z_][A-Za-z0-9_]*)'
+    while IFS= read -r candidate; do
+      case "$candidate" in *\'*) continue ;; esac
+      candidate="${candidate//\"/}"
+      case "$candidate" in '$'*) ;; *) continue ;; esac
+      if [[ $candidate =~ $_preload_brace ]] || [[ $candidate =~ $_preload_bare ]]; then
+        case " $WALK_PRELOAD " in
+          *" ${BASH_REMATCH[1]} "*) ;;
+          *) WALK_PRELOAD="$WALK_PRELOAD ${BASH_REMATCH[1]}"
+             _preload_count=$((_preload_count + 1)) ;;
+        esac
+        if [ "$_preload_count" -gt "$NAME_LIMIT" ]; then break; fi
+      fi
+    done <<CANDIDATES
+$TARGET_LIST
+CANDIDATES
+
     GLOB_DEFER=1
     GLOB_PENDING="" GLOB_PENDING_CANDIDATES=""
     while IFS= read -r candidate; do
@@ -1715,7 +1775,8 @@ if [ "${TOOL:-}" = "Bash" ]; then
       # Judging a path costs more for a long path and for each glob it is
       # tried against (charged in is_enforced_path).
       WORK_USED=$((WORK_USED + COST_CANDIDATE + COST_CANDIDATE_CHAR * ${#candidate}))
-      if [ "$WORK_USED" -gt "$WORK_BUDGET" ]; then work_over; fi
+      if [ "$WORK_USED" -gt "$WORK_BUDGET" ] \
+          || [ $((SECONDS - HOOK_START)) -ge "$FUSE_SECONDS" ]; then work_over; fi
       # A quoted target names the same file as an unquoted one, so the quotes
       # go before it is judged (`> "src/app.ts"`). Inside single quotes the
       # shell expands nothing, so `'$S/x'` is a literal path and is not

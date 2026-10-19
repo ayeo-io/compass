@@ -71,9 +71,10 @@ def _guest(tmp_path):
 
 
 def _call(root, tool, tool_input, tmp_path, transcript=None, locale=UTF8,
-          timeout=60, path_prefix=None):
+          timeout=60, path_prefix=None, hook=None):
     """Run the hook once, in a UTF-8 locale when the machine has one. Returns
-    (seconds, completed process). `path_prefix` puts a folder first on PATH."""
+    (seconds, completed process). `path_prefix` puts a folder first on PATH.
+    `hook` is another copy of the script to run (see `_hook_copy`)."""
     body = {"tool_name": tool, "session_id": "sess-time", "tool_input": tool_input}
     if transcript is not None:
         body["transcript_path"] = str(transcript)
@@ -88,7 +89,7 @@ def _call(root, tool, tool_input, tmp_path, transcript=None, locale=UTF8,
     # Its own process group, so that a hook still running at the time limit is
     # stopped with the `awk` and `python3` processes it started.
     proc = subprocess.Popen(
-        ["bash", str(HOOK)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        ["bash", str(hook or HOOK)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
         stderr=subprocess.PIPE, text=True, cwd=str(root), env=env,
         start_new_session=True)
     try:
@@ -336,12 +337,13 @@ def _project_with_globs(tmp_path, globs_yaml: str):
     return root
 
 
-def _counting_python(tmp_path, fail=False, pattern="code_globs"):
+def _counting_python(tmp_path, fail=False, pattern="code_globs", sleep=0):
     """A folder with a `python3` that counts the starts of the code_globs reader
     (one line in `counter` for each) and then runs the real one. With `fail`,
     that reader exits 9 and does not run. `pattern` is the regular expression
     that picks the scripts to count: the reader holds `code_globs` and the
-    matcher for a glob bash cannot decide holds `import fnmatch`."""
+    matcher for a glob bash cannot decide holds `import fnmatch`. With `sleep`,
+    a counted start waits that many seconds before it runs."""
     folder = tmp_path / "counting-bin"
     folder.mkdir(parents=True)
     counter = tmp_path / "counter"
@@ -354,6 +356,7 @@ def _counting_python(tmp_path, fail=False, pattern="code_globs"):
         'f="$(mktemp)"; cat > "$f"\n'
         f'if grep -qE "{pattern}" "$f"; then\n'
         f'  echo x >> {counter}\n'
+        + (f"  sleep {sleep}\n" if sleep else "")
         + ("  echo 'reader broke' >&2; exit 9\n" if fail else "") +
         "fi\n"
         'exec ' + real + ' "$@" < "$f"\n')
@@ -737,7 +740,6 @@ def _leading_statements(count: int, names: int, statement: str = ":") -> str:
 
 @pytest.mark.serial
 @pytest.mark.parametrize("count, names, statement", [
-    pytest.param(10000, 20, ":", id="10000-colons-20-names"),
     pytest.param(40000, 1, ":", id="40000-colons-1-name"),
     pytest.param(40000, 5, ":", id="40000-colons-5-names"),
     pytest.param(4000, 20, "cd /x", id="4000-cd-20-names"),
@@ -838,6 +840,19 @@ def test_the_hook_explains_each_number_of_the_work_budget():
     assert not missing, f"the comment before the limits does not explain {missing}"
 
 
+def test_the_hook_and_the_safety_contract_give_the_same_slowest_time():
+    """Supports `TRC-025` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    the hook's comment and docs/safety-contract.md each state the slowest
+    accepted command, and the two must agree."""
+    hook = re.search(r"worst command accepted took ([0-9.]+) s",
+                     HOOK.read_text(encoding="utf-8"))
+    assert hook, "the comment in hooks/pre-tool.sh does not give the worst time"
+    page = " ".join((ROOT / "docs" / "safety-contract.md").read_text().split())
+    contract = re.search(r"in seconds: ([0-9.]+) for 260 write targets", page)
+    assert contract, "docs/safety-contract.md does not give the slowest time first"
+    assert hook.group(1) == contract.group(1), (hook.group(1), contract.group(1))
+
+
 @pytest.mark.serial
 def test_the_work_budget_does_not_apply_where_compass_is_not_in_use(tmp_path):
     """Supports `TRC-025` in pre-tool-hook-time-bounded/acceptance-criteria.md:
@@ -848,6 +863,178 @@ def test_the_work_budget_does_not_apply_where_compass_is_not_in_use(tmp_path):
     assert r.returncode == 0, (r.returncode, r.stderr)
     assert r.stderr == "", r.stderr
     assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_10000_leading_lines_with_20_names_are_allowed_in_time(tmp_path):
+    """Supports `TRC-025` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    this shape is under the budget and must be allowed. It took 14.5 s when
+    the walk ran once for each name, so a refusal would also hide that walk
+    coming back."""
+    root = _project(tmp_path)
+    seconds, r = _bash(root, _leading_statements(10000, 20), tmp_path, timeout=60)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+def _hook_copy(tmp_path, replacements: dict[str, str]):
+    """A copy of the hook, with each `old` text replaced by its `new` once, in
+    a folder that links the folders the hook reads. Returns the script's path."""
+    tree = tmp_path / "hook-copy"
+    (tree / "hooks").mkdir(parents=True)
+    for name in ("cli", "scripts", "governance"):
+        (tree / name).symlink_to(ROOT / name)
+    text = HOOK.read_text(encoding="utf-8")
+    for old, new in replacements.items():
+        assert old in text, f"hooks/pre-tool.sh has no {old!r}"
+        text = text.replace(old, new, 1)
+    path = tree / "hooks" / "pre-tool.sh"
+    path.write_text(text, encoding="utf-8")
+    path.chmod(0o755)
+    return path
+
+
+def _charged(r) -> int:
+    """The work the hook had counted when it ended (see `_hook_copy`)."""
+    found = re.findall(r"WORK_USED=(\d+)", r.stderr)
+    assert found, r.stderr
+    return int(found[-1])
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("command", [
+    pytest.param(_leading_statements(10000, 20), id="10000-lines-20-names"),
+    pytest.param(
+        _exact("".join(f"echo x > data/f{i}.dat\n" for i in range(400))
+               + "cat <<'E'\n", 90000), id="400-targets-90KB"),
+])
+def test_the_charged_work_matches_the_measured_time(tmp_path, command):
+    """Supports `TRC-025` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    the cost table is in microseconds, so the seconds the hook takes are within
+    a factor of two or three of the work it charged. The bounds are loose so
+    that a loaded machine does not fail the test; a table that is far from the
+    clock fails it, which the boundary test above cannot see."""
+    hook = _hook_copy(tmp_path, {
+        'SCAN_MARK="compass-scan-budget-exceeded"':
+        'trap \'echo "WORK_USED=$WORK_USED" >&2\' EXIT\n'
+        'SCAN_MARK="compass-scan-budget-exceeded"'})
+    root = _project(tmp_path)
+    seconds, r = _bash(root, command, tmp_path, hook=hook, timeout=60)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    ratio = seconds / (_charged(r) / 1e6)
+    assert 0.5 <= ratio <= 3.0, f"{seconds:.2f} s took for {_charged(r)} charged: {ratio:.2f}"
+
+
+# ---------------------------------------------------------------------------
+# Group H - the shapes that made bash slow in a way the work budget did not
+# charge, and a wall-clock fuse for whatever else does. The walk kept five
+# shell variables for every name a statement assigned, and bash slows every
+# later variable operation as their number grows, so a command with thousands
+# of assignments ran the glob loop several times slower than its charge. The
+# fuse is the backstop: the hook reads its own seconds and stops at FUSE_SECONDS.
+# ---------------------------------------------------------------------------
+
+def _globs_yaml(count: int) -> str:
+    return "[" + ", ".join(f'"zone{i}/*.q{i}"' for i in range(count)) + "]"
+
+
+def _assignments_names_targets(assigns: int, names: int, targets: int) -> str:
+    """`assigns` assignments to other names, `names` assigned names with a write
+    under each, then `targets` plain write targets."""
+    return ("".join(f"A{i}=1\n" for i in range(assigns))
+            + _leading_statements(0, names)
+            + "".join(f"echo x > data/f{i}.dat\n" for i in range(targets)))
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("assigns, names, targets, globs", [
+    pytest.param(5000, 20, 380, 30, id="5000-assigns-380-targets-30-globs"),
+    pytest.param(3000, 20, 150, 300, id="3000-assigns-150-targets-300-globs"),
+    pytest.param(8000, 20, 20, 1000, id="8000-assigns-20-targets-1000-globs"),
+])
+def test_many_assignments_with_names_targets_and_globs_end_in_time(
+        tmp_path, assigns, names, targets, globs):
+    """Scenario id: `TRC-026` in pre-tool-hook-time-bounded/acceptance-criteria.md
+
+    These took 5.5 s, 7.3 s and 17.3 s although the work budget charged 2.1 s
+    to 2.4 s. A code write placed last is refused in time too."""
+    root = _project_with_globs(tmp_path, _globs_yaml(globs))
+    command = _assignments_names_targets(assigns, names, targets)
+    seconds, r = _bash(root, command, tmp_path, timeout=60)
+
+    if r.returncode == 2:
+        _complex(r)
+    else:
+        assert r.returncode == 0, (r.returncode, r.stderr)
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+    seconds, r = _bash(root, command + "echo x > src/evil.py\n", tmp_path,
+                       timeout=60)
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert seconds < IDLE, f"the refusal took {seconds:.1f} s"
+
+
+FUSE_COPY = {"FUSE_SECONDS=8": "FUSE_SECONDS=1",
+             "WORK_BUDGET=2400000": "WORK_BUDGET=2400000000"}
+
+
+@pytest.mark.serial
+def test_the_wall_clock_fuse_stops_the_scan_of_a_project(tmp_path):
+    """Scenario id: `TRC-026` in pre-tool-hook-time-bounded/acceptance-criteria.md
+
+    A copy of the hook has a fuse of 1 s and no work budget, so only the fuse
+    can stop a walk of 40000 statements that takes about 4 s."""
+    hook = _hook_copy(tmp_path, FUSE_COPY)
+    root = _project(tmp_path)
+    seconds, r = _bash(root, _leading_statements(40000, 5), tmp_path,
+                       hook=hook, timeout=60)
+
+    _complex(r)
+    assert seconds < 3.5, f"the fuse stopped the hook after {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_the_wall_clock_fuse_only_skips_the_scan_where_compass_is_not_in_use(
+        tmp_path):
+    """Supports `TRC-026` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    the same copy, in a repository without `.compass/`, ends with exit 0 and
+    no message."""
+    hook = _hook_copy(tmp_path, FUSE_COPY)
+    root = _guest(tmp_path)
+    seconds, r = _bash(root, _leading_statements(40000, 5), tmp_path,
+                       hook=hook, timeout=60)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert r.stderr == "", r.stderr
+    assert seconds < 3.5, f"the fuse stopped the hook after {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_the_wall_clock_fuse_stops_a_slow_reader_before_the_timeout(tmp_path):
+    """Supports `TRC-026` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    the real hook, with a settings reader that waits 9 s, refuses at the next
+    write target, well before the 15 s timeout."""
+    fuse = _hook_number("FUSE_SECONDS")
+    assert fuse <= 8, f"FUSE_SECONDS={fuse} leaves too little before the 15 s timeout"
+    folder, counter = _counting_python(tmp_path, sleep=fuse + 1)
+    root = _project_with_globs(tmp_path, '["*.zzz"]')
+    command = "\n".join(f"cp a b{i}" for i in range(5))
+    seconds, r = _bash(root, command, tmp_path, path_prefix=folder, timeout=40)
+
+    _complex(r)
+    assert _starts(counter) == 1, "the reader started again"
+    assert seconds < 12, f"the hook took {seconds:.1f} s"
+
+
+def test_the_fuse_has_no_override_in_the_environment():
+    """Supports `TRC-026` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    the fuse is set by an assignment, so no variable in the environment of the
+    hook can lengthen it."""
+    text = HOOK.read_text(encoding="utf-8")
+    assert re.search(r"^FUSE_SECONDS=\d+$", text, re.M)
+    assert not re.search(r"\$\{FUSE_SECONDS:-", text.split("expand_command_variable()")[0])
 
 
 # ---------------------------------------------------------------------------

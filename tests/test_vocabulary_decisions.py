@@ -505,7 +505,7 @@ STATUS_WORD_ALLOW = (
     ("status_words.py", "_IN_FLIGHT_WORDS = (",
      "the words accepted and ignored as in flight"),
     ("status_words.py", "RETIRED_STATUSES = (",
-     "the five words stored before 6.0.0, read until 7.0.0 and never written"),
+     "the five words stored before 6.0.0, read until 8.0.0 and never written"),
     ("word_map.py", '"queued": "backlog",',
      "the fallback copy of the issue status table in cli/migrate-map.yml"),
     ("word_map.py", '"parked": "backlog",',

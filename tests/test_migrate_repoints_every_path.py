@@ -86,7 +86,7 @@ def _issue(tmp_path, manifest_over=None):
 
 def _migrate(project, *args):
     return subprocess.run(
-        [sys.executable, str(COMPASS_CLI), "migrate", "--apply",
+        [sys.executable, str(COMPASS_CLI), "issue", "migrate", "--apply",
          "--i-have-a-copy", *args],
         capture_output=True, text=True, timeout=300, cwd=str(project))
 
@@ -244,7 +244,7 @@ def test_mrs_2_a_value_that_names_a_file_that_stays_is_left_alone(tmp_path):
 def test_mrs_2_the_dry_run_reports_a_repoint_it_will_make(tmp_path):
     _issue(tmp_path)
     r = subprocess.run(
-        [sys.executable, str(COMPASS_CLI), "migrate"],
+        [sys.executable, str(COMPASS_CLI), "issue", "migrate"],
         capture_output=True, text=True, timeout=300, cwd=str(tmp_path))
     # The exact line, because `would move review-1.md` already names the file
     # and a loose match passes on a dry run that promises the wrong repoint.
@@ -373,7 +373,7 @@ def test_mrs_4_the_dry_run_reports_the_repair_and_changes_nothing(tmp_path):
     work = _relocated_issue(tmp_path)
     before = (work / "manifest.yml").read_text()
     r = subprocess.run(
-        [sys.executable, str(COMPASS_CLI), "migrate"],
+        [sys.executable, str(COMPASS_CLI), "issue", "migrate"],
         capture_output=True, text=True, timeout=300, cwd=str(tmp_path))
     expected = f"would repoint the manifest fields that cite {MOVED}"
     assert any(expected in ln for ln in r.stdout.splitlines()), r.stdout

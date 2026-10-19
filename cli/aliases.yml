@@ -1,13 +1,15 @@
 # CLI spellings that changed, and what to do when one is typed.
 #
-# aliases: a spelling a release tag holds. It keeps working until 7.0.0: the
-#   argument list is rewritten to the new spelling before it is parsed, and one
-#   notice goes to standard error. `released_in` names the first release tag
-#   that holds the old spelling; tests/test_cli_renames.py checks it against
-#   that tag.
+# aliases: a spelling a release tag holds, rewritten to the new spelling before
+#   the command line is parsed, with one notice on standard error. The aliases
+#   were removed at 7.0.0, so the list is empty. The rewrite code stays in
+#   cli/compass_pkg/aliases.py, and tests/test_cli_renames.py proves it on a
+#   planted table. `released_in` names the first release tag that held a spelling.
 #
-# hints: a spelling no release holds. It does not run. When the command line
-#   fails to parse, the error adds one line naming the new spelling.
+# hints: when the command line fails to parse, the error adds one line naming the
+#   new spelling. A hint row does not run anything. The two rows that remain are
+#   released verbs that 7.0.0 removed, and each carries `released_in` and
+#   `removed_in` (ADR-051, item 15).
 #
 # A test fails when the package version is 7.0.0 or later and an alias row remains, or a hint
 # row lacks `released_in` and `removed_in`, which together say that a release held the
@@ -17,53 +19,12 @@
 # artifact -> issue artifact set), a command line that already holds the extra
 # tokens, or a help flag, is left as it is.
 
-aliases:
-  - old: [approach, summary]
-    new: [approach, show]
-    kind: verb
-    released_in: v5.6.0
-  - old: [issue, set-status]
-    new: [issue, status, set]
-    kind: verb
-    released_in: v5.6.0
-    # The old positional status word picks the new command, wherever it stands
-    # among the options. `value_flags` take a value, which is not the status.
-    # A word not listed here is passed on to `issue status set` as it is.
-    value_flags: [--issue, --reason]
-    values:
-      active: [issue, status, remove]
-      queued: [issue, status, set, backlog]
-      parked: [issue, status, set, backlog]
-      landed: [issue, status, set, done, --close-reason, completed]
-      abandoned: [issue, status, set, done, --close-reason, not-planned]
-  - old: [policy, review-rules]
-    new: [review-rule, list]
-    kind: verb
-    released_in: v5.6.0
-  - old: [issue, artifact]
-    new: [issue, artifact, set]
-    kind: verb
-    released_in: v5.6.0
-  - old: [migrate]
-    new: [issue, migrate]
-    kind: verb
-    released_in: v5.6.0
-  - old: [issue, subtask, update]
-    new: [issue, subtask, set]
-    kind: verb
-    released_in: v5.6.0
-  # A value of a flag, not a verb: `old` and `new` are the command, the flag
-  # and the value. The value is rewritten wherever the flag stands after the
-  # command, as `--stage build` or `--stage=build`.
-  - old: [run, --stage, build]
-    new: [run, --stage, implement]
-    kind: value
-    released_in: v5.6.0
+aliases: []
 
 hints:
   # A released verb that 7.0.0 removed. It runs nothing: the parse error adds this line.
   # `released_in` names the first release tag that held the spelling, and `removed_in` the
-  # release that removed it. This is the one hint row that ends at 7.0.0 with both fields
+  # release that removed it. These are the two hint rows that end at 7.0.0 with both fields
   # (ADR-051, amending ADR-044, which ended every row at 7.0.0).
   - old: [issue, dashboard]
     new: [issue, render]
@@ -73,23 +34,3 @@ hints:
     new: [issue, github, sync]
     released_in: v6.0.0
     removed_in: 7.0.0
-  - old: [policy, effective]
-    new: [policy, show]
-  - old: [policy, test]
-    new: [preset, test]
-  - old: [policy, init-preset]
-    new: [preset, init]
-  - old: [approach, diagram]
-    new: [approach, render]
-  - old: [issue, refresh-spec]
-    new: [spec, sync]
-  - old: [issue, migrate-config]
-    new: [issue, migrate, --config]
-  - old: [issue, template]
-    new: [issue, template, show]
-  - old: [scenario, tests]
-    new: [scenario, tests, set]
-  # A flag no release holds: `issue friction` first shipped with `--stage`
-  # (the entry key was `phase` in the unreleased build before it).
-  - old: [issue, friction, --phase]
-    new: [issue, friction, --stage]

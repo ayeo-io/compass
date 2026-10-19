@@ -117,8 +117,8 @@ def test_au_3_an_unknown_value_is_refused(project):
 def test_au_4_the_summary_stays_three_lines_and_names_the_checkpoints(project):
     assert _start(project, "greeting", "trivial", "atomic").returncode == 0
     _start(project, "bigger", "contained", "standard")
-    small = _run(project, "approach", "summary", "--issue", "greeting")
-    big = _run(project, "approach", "summary", "--issue", "bigger")
+    small = _run(project, "approach", "show", "--issue", "greeting")
+    big = _run(project, "approach", "show", "--issue", "bigger")
     for view in (small, big):
         assert view.returncode == 0, view.stderr
         assert len(view.stdout.strip().splitlines()) == 3, view.stdout

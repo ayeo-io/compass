@@ -3,7 +3,7 @@
 
 6.0.0 reads an old word in a project's `compass.yml`, a team preset's
 `compass.yml` or a policy-test fixture through `word_map`, with a lint
-advisory, and 7.0.0 refuses it. This module rewrites those files so an
+advisory, and 8.0.0 refuses it. This module rewrites those files so an
 upgrading project is not refused. `docs/policy-migrate.md` owns the contract.
 
 It names no word itself. Each file goes through the reader that reads it

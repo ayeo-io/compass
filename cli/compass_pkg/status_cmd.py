@@ -135,9 +135,9 @@ def cmd_task_status_remove(args):
             f"{verb}: '{task.get('issue')}' has no backlog hold or close to remove "
             f"(its state is {state}). Only a hold or a close a person set is "
             "removed; nothing was written.")
-    # v5.6.0 `issue set-status active` reopened a closed issue, and that
-    # spelling keeps working until 7.0.0, so removing a close reopens it too.
-    # The land time stays: it is history, not state.
+    # v5.6.0 `issue set-status active` reopened a closed issue, and this verb
+    # does the same, so removing a close reopens it too. The land time stays:
+    # it is history, not state.
     del task["status"]
     for key in ("close_reason", "duplicate_of"):
         task.pop(key, None)

@@ -19,9 +19,9 @@ from test_subtask_record import _add, _cli, _subtasks, repo  # noqa: F401
 
 def test_sct_1_two_tries_keep_both_costs_and_their_total(repo):
     _add(repo)
-    assert _cli(repo, "update", "S1", "--cost", "100").returncode == 0
-    assert _cli(repo, "update", "S1", "--attempt").returncode == 0
-    assert _cli(repo, "update", "S1", "--cost", "50").returncode == 0
+    assert _cli(repo, "set", "S1", "--cost", "100").returncode == 0
+    assert _cli(repo, "set", "S1", "--attempt").returncode == 0
+    assert _cli(repo, "set", "S1", "--cost", "50").returncode == 0
     s = _subtasks(repo)["S1"]
     assert s["cost"] == 150
     assert sorted(s["costs"].values()) == [50, 100]
@@ -29,8 +29,8 @@ def test_sct_1_two_tries_keep_both_costs_and_their_total(repo):
 
 def test_sct_2_a_second_cost_for_the_same_try_replaces_it(repo):
     _add(repo)
-    _cli(repo, "update", "S1", "--cost", "100")
-    _cli(repo, "update", "S1", "--cost", "120")
+    _cli(repo, "set", "S1", "--cost", "100")
+    _cli(repo, "set", "S1", "--cost", "120")
     s = _subtasks(repo)["S1"]
     assert s["cost"] == 120
     assert list(s["costs"].values()) == [120]
@@ -38,7 +38,7 @@ def test_sct_2_a_second_cost_for_the_same_try_replaces_it(repo):
 
 def test_egb_8_a_cost_alongside_attempt_belongs_to_the_try_before_it(repo):
     _add(repo)
-    assert _cli(repo, "update", "S1", "--attempt", "--cost", "50").returncode == 0
+    assert _cli(repo, "set", "S1", "--attempt", "--cost", "50").returncode == 0
     s = _subtasks(repo)["S1"]
     assert s["attempts"] == 2
     assert s["costs"] == {"1": 50}
@@ -47,9 +47,9 @@ def test_egb_8_a_cost_alongside_attempt_belongs_to_the_try_before_it(repo):
 
 def test_egb_8_try_names_the_cost_explicitly(repo):
     _add(repo)
-    assert _cli(repo, "update", "S1", "--cost", "100", "--try", "1").returncode == 0
-    assert _cli(repo, "update", "S1", "--attempt").returncode == 0
-    assert _cli(repo, "update", "S1", "--cost", "60", "--try", "2").returncode == 0
+    assert _cli(repo, "set", "S1", "--cost", "100", "--try", "1").returncode == 0
+    assert _cli(repo, "set", "S1", "--attempt").returncode == 0
+    assert _cli(repo, "set", "S1", "--cost", "60", "--try", "2").returncode == 0
     s = _subtasks(repo)["S1"]
     assert s["costs"] == {"1": 100, "2": 60}
     assert s["cost"] == 160
@@ -57,10 +57,10 @@ def test_egb_8_try_names_the_cost_explicitly(repo):
 
 def test_egb_8_a_named_try_replaces_only_that_trys_figure(repo):
     _add(repo)
-    _cli(repo, "update", "S1", "--cost", "100", "--try", "1")
-    _cli(repo, "update", "S1", "--attempt")
-    _cli(repo, "update", "S1", "--cost", "30", "--try", "2")
-    result = _cli(repo, "update", "S1", "--cost", "50", "--try", "1")
+    _cli(repo, "set", "S1", "--cost", "100", "--try", "1")
+    _cli(repo, "set", "S1", "--attempt")
+    _cli(repo, "set", "S1", "--cost", "30", "--try", "2")
+    result = _cli(repo, "set", "S1", "--cost", "50", "--try", "1")
     assert result.returncode == 0, result.stderr
     s = _subtasks(repo)["S1"]
     assert s["costs"] == {"1": 50, "2": 30}
@@ -69,14 +69,14 @@ def test_egb_8_a_named_try_replaces_only_that_trys_figure(repo):
 
 def test_egb_8_a_cost_for_a_try_beyond_attempts_is_refused(repo):
     _add(repo)
-    result = _cli(repo, "update", "S1", "--cost", "100", "--try", "5")
+    result = _cli(repo, "set", "S1", "--cost", "100", "--try", "5")
     assert result.returncode != 0
     assert not _subtasks(repo)["S1"].get("costs")
 
 
 def test_sct_1_a_manifest_with_costs_lints(repo):
     _add(repo)
-    _cli(repo, "update", "S1", "--cost", "100")
+    _cli(repo, "set", "S1", "--cost", "100")
     import subprocess
     import sys
     from test_subtask_record import CLI, SLUG

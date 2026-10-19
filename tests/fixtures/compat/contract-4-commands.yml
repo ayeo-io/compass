@@ -43,19 +43,25 @@ entries:
   project: with-broken-governance
   argv: ["approach", "evaluate", "--assessment", "risk=contained", "--assessment", "familiarity=brownfield-mapped", "--assessment", "size=standard"]
   exit: 2
+# The spelling `approach summary` was removed at 7.0.0. The argv is `approach show`
+# and the exit code is the one 5.6.0 gave.
 - id: approach-summary-quick-fix
   project: quick-fix-started
-  argv: ["approach", "summary"]
+  argv: ["approach", "show"]
   exit: 0
   stdout_contains: "does not stop to wait for you"
+# The spelling `approach summary` was removed at 7.0.0. The argv is `approach show`
+# and the exit code is the one 5.6.0 gave.
 - id: approach-summary-regular
   project: regular-issue
-  argv: ["approach", "summary"]
+  argv: ["approach", "show"]
   exit: 0
   stdout_contains: "waits for you at: define, plan"
+# The spelling `approach summary` was removed at 7.0.0. The argv is `approach show`
+# and the exit code is the one 5.6.0 gave.
 - id: approach-summary-unknown-issue
   project: quick-fix-started
-  argv: ["approach", "summary", "--issue", "nope"]
+  argv: ["approach", "show", "--issue", "nope"]
   exit: 2
 - id: approach-diagram
   project: initialised
@@ -278,9 +284,11 @@ entries:
   argv: ["issue", "receipt", "--issue", "feature"]
   exit: 0
   stdout_contains: "stale - acceptance-criteria changed"
+# The spelling `issue artifact <kind>` was removed at 7.0.0. The argv is
+# `issue artifact set` and the exit code is the one 5.6.0 gave.
 - id: artifact-records-digests
   project: with-stale-document
-  argv: ["issue", "artifact", "acceptance-criteria", "--status", "draft", "--issue", "feature"]
+  argv: ["issue", "artifact", "set", "acceptance-criteria", "--status", "draft", "--issue", "feature"]
   exit: 0
   stdout_contains: "freshness: digest recorded"
 # Added on purpose by human-check-approvers: `evidence approve` is a new leaf of

@@ -4,7 +4,7 @@ Real work gets parked - deprioritised, blocked on a decision, superseded by a
 change of direction. Without a `parked` status, `compass flow` reported parked
 work as in progress, indistinguishable from an issue genuinely under way.
 
-With no `compass issue set-status`, every status change - including each
+With no `compass issue status set`, every status change - including each
 new value here - was a hand-edited `str.replace` on the manifest.
 
 Scenarios: status-vocabulary/acceptance-criteria.md (SCN-A1..F2).
@@ -100,7 +100,7 @@ def test_scn_a3_parked_reason_and_at_validate(tmp_path):
 
 def test_scn_b1_set_status_writes_the_field(tmp_path):
     root = _project(tmp_path, {"t": _task()})
-    r = _run(root, "issue", "set-status", "parked", "--issue", "t",
+    r = _run(root, "issue", "status", "set", "backlog", "--issue", "t",
              "--reason", "blocked on a pricing decision")
     assert r.returncode == 0, f"{r.stdout}{r.stderr}"
     body = yaml.safe_load((root / ".compass" / "work" / "t" / "manifest.yml").read_text())
@@ -112,7 +112,7 @@ def test_scn_b1_set_status_writes_the_field(tmp_path):
 
 def test_scn_b2_set_status_refuses_unknown(tmp_path):
     root = _project(tmp_path, {"t": _task()})
-    r = _run(root, "issue", "set-status", "finished", "--issue", "t")
+    r = _run(root, "issue", "status", "set", "finished", "--issue", "t")
     assert r.returncode != 0, "an invented status was written"
     assert "backlog" in (r.stdout + r.stderr)
 
@@ -121,7 +121,8 @@ def test_scn_b3_set_status_landed_respects_gates(tmp_path):
     """`compass ship-commit` refuses to mark landed over unpassed gates. A
     second door into the same field must not be an easier one."""
     root = _project(tmp_path, {"t": _task(gates_pass=False)})
-    r = _run(root, "issue", "set-status", "landed", "--issue", "t")
+    r = _run(root, "issue", "status", "set", "done", "--close-reason", "completed",
+             "--issue", "t")
     body = yaml.safe_load((root / ".compass" / "work" / "t" / "manifest.yml").read_text())
     assert body.get("status") not in ("landed", "done"), (
         f"marked landed over a pending gate:\n{r.stdout}{r.stderr}")

@@ -38,7 +38,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [codex.md](codex.md) - Codex source installation, shared stages and the tested limits of the adapter.
 - [adapter-conformance.md](adapter-conformance.md) - local behaviour checks and the separate native and independent acceptance runs.
 - [releasing.md](releasing.md) - how to cut a release.
-- [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 7.0.0, and why there is no supported rollback.
+- [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 8.0.0, and why there is no supported rollback.
 - [upgrade-7-0-0.md](upgrade-7-0-0.md) - what 7.0.0 changes and what to do about it, one section per change.
 - [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it.
 - [waivers-and-locks.md](waivers-and-locks.md) - how an owner writes a waiver, a lock, an unlock, an approver list and a layer in `compass.yml`.
@@ -100,7 +100,7 @@ same commit.
 | `cli/compass_pkg/review_records.py`, `cli/compass_pkg/review_cmd.py`, `tests/fixtures/evidence-review-example.json` | `docs/judged-checks.md` |
 | `cli/compass_pkg/freshness.py` | `docs/artifact-freshness.md` |
 | `cli/compass_pkg/replay.py` | `docs/policy-diff.md` |
-| `cli/compass_pkg/policy_migrate.py`, `cli/compass_pkg/config_words.py`, `cli/compass_pkg/shipped_releases.py`, `scripts/generate-shipped-releases.py`, `governance/shipped-releases.yml`, `governance/shipped-releases.tar.xz` | `docs/policy-migrate.md` |
+| `cli/compass_pkg/policy_migrate.py`, `cli/compass_pkg/policy_migrate_undo.py`, `cli/compass_pkg/config_words.py`, `cli/compass_pkg/shipped_releases.py`, `scripts/generate-shipped-releases.py`, `governance/shipped-releases.yml`, `governance/shipped-releases.tar.xz` | `docs/policy-migrate.md` |
 | `cli/compass_pkg/parents.py`, `cli/compass_pkg/parent_states.py`, `cli/compass_pkg/chain_class.py` | `docs/git-parents.md` |
 | `cli/compass_pkg/preset_test.py`, `cli/compass_pkg/preset_init.py` | `docs/policy-test.md` |
 | `cli/compass_pkg/policy_update.py` | `docs/policy-update.md` |

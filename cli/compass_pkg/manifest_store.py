@@ -102,11 +102,20 @@ def load_manifest_mapping(path):
     return read(path)[0]
 
 
+def read_error(path, exc):
+    """The `CompassError` for a file that did not parse: `exc` is the
+    `yaml.YAMLError` or the `UnicodeDecodeError` the read raised. Every reader
+    uses it, so a file that is not UTF-8 gets the same message from each."""
+    if isinstance(exc, UnicodeDecodeError):
+        return CompassError(f"{path} is not valid UTF-8: re-save the file as UTF-8")
+    return CompassError(f"invalid YAML in {path}: {exc}")
+
+
 def _parse(data, path):
     try:
         parsed = yaml.safe_load(data.decode("utf-8")) or {}
-    except yaml.YAMLError as exc:
-        raise CompassError(f"invalid YAML in {path}: {exc}")
+    except (yaml.YAMLError, UnicodeDecodeError) as exc:
+        raise read_error(path, exc)
     if not isinstance(parsed, dict):
         raise CompassError(
             f"{path}: the manifest must be a mapping of keys to values, "

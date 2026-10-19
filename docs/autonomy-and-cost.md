@@ -68,6 +68,7 @@ A judged issue is an issue whose manifest holds the `checkpoint_outcomes` key, a
 The pre-tool hook appends the session id to `usage.sessions` the first time it judges a tool call for an issue. It records on Edit, Write and Bash calls, before it classifies the target.
 
 - It resolves the issue in shell from `COMPASS_ISSUE`, then the current-task pointer. With neither it records nothing, and it never falls back to the most recently changed issue.
+- In a worktree of the session's repository, the order reverses: the worktree's own pointer first, and `COMPASS_ISSUE` only when that pointer is empty. The id goes in the worktree's issue manifest, and the session table is not read.
 - A recorded id costs one `grep`. A new id starts one Python process.
 - An id that does not match `[A-Za-z0-9_-]+` is not recorded.
 - When the pointer names the issue and the session table shows the session working on another issue, nothing is recorded.

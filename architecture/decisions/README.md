@@ -110,6 +110,7 @@ Rules:
 | [ADR-068](ADR-068-a-person-approves-inside-claude-code-through-an-event-the-model-cannot-raise.md) | A person approves inside Claude Code through an event the model cannot raise, and the agent only requests | accepted | amends ADR-050 decision 2; with ADR-006 and ADR-066 |
 | [ADR-069](ADR-069-a-person-can-delegate-approvals-to-a-named-agent-for-a-stated-time-and-scope.md) | A person can delegate approvals to a named agent for a stated time and scope | accepted | amends ADR-068 decision 1; with ADR-038 and ADR-066 |
 | [ADR-070](ADR-070-role-is-not-an-assessment-dimension-and-documents-on-disk-bring-the-claims-gate-and-the-intent-block.md) | Role is not an assessment dimension, and the documents on disk bring the claims gate and the intent block | proposed | narrows ADR-004 and ADR-007; with ADR-001, ADR-006, ADR-036 and ADR-037 |
+| [ADR-074](ADR-074-the-tree-being-edited-names-the-issue-that-judges-an-edit.md) | The tree being edited names the issue that judges an edit | accepted | extends ADR-005 and ADR-063; with ADR-006 and ADR-048 |
 
 ## Principle → ADR mapping
 

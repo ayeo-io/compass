@@ -55,6 +55,12 @@ def _tree(root, slug="t", *, red=False):
     (root / "src").mkdir(parents=True, exist_ok=True)
     (root / "src" / "app.py").write_text("x = 1\n", encoding="utf-8")
     subprocess.run(["git", "init", "-q", str(root)], check=True)
+    _compass_files(root, slug, red)
+    return root
+
+
+def _compass_files(root, slug, red):
+    """The `.compass/` folder of a project holding one issue."""
     issue = root / ".compass" / "work" / slug
     (issue / "evidence").mkdir(parents=True, exist_ok=True)
     (root / ".compass" / "current-task").write_text(slug, encoding="utf-8")
@@ -71,13 +77,30 @@ def _tree(root, slug="t", *, red=False):
             [str(REPO_ROOT / "cli" / "compass"), "tdd-red", "--",
              "python3", "-c", "print('1 failed'); import sys; sys.exit(1)"],
             capture_output=True, text=True, cwd=str(root), timeout=120)
+
+
+def _linked_tree(main, root, slug="t", *, red=False):
+    """A linked git worktree of `main`, with its own `.compass/` folder. The
+    hook only judges a tree by its own issue when git ties it to the session's
+    repository, so a separate repository would not do."""
+    main = main.resolve()
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@example.com",
+           "-c", "commit.gpgsign=false"]
+    subprocess.run([*git, "add", "src"], cwd=str(main), check=True)
+    subprocess.run([*git, "commit", "-q", "-m", "first"], cwd=str(main),
+                   check=True, capture_output=True)
+    root = root.resolve() if root.exists() else root
+    subprocess.run([*git, "worktree", "add", "-q", "--detach", str(root)],
+                   cwd=str(main), check=True, capture_output=True)
+    root = root.resolve()
+    _compass_files(root, slug, red)
     return root
 
 
 def test_a_red_in_the_worktree_allows_an_edit_in_the_worktree(tmp_path):
     """The fail-closed half. The builder did the right thing and was blocked."""
     session = _tree(tmp_path / "main")
-    worktree = _tree(tmp_path / "wt", red=True)
+    worktree = _linked_tree(session, tmp_path / "wt", red=True)
     r = _run_hook(session, worktree / "src" / "app.py",
                   project_dir=session)
     assert r.returncode == 0, (
@@ -89,7 +112,7 @@ def test_a_red_in_the_worktree_allows_an_edit_in_the_worktree(tmp_path):
 def test_a_red_in_the_session_does_not_unlock_a_worktree(tmp_path):
     """The fail-open half, and the reason this is not merely an annoyance."""
     session = _tree(tmp_path / "main", red=True)
-    worktree = _tree(tmp_path / "wt")          # no red of its own
+    worktree = _linked_tree(session, tmp_path / "wt")   # no red of its own
     r = _run_hook(session, worktree / "src" / "app.py",
                   project_dir=session)
     assert r.returncode != 0, (
@@ -97,6 +120,7 @@ def test_a_red_in_the_session_does_not_unlock_a_worktree(tmp_path):
         "worktree that has no failing test on record - the guard passed an "
         "untested change:\n"
         f"{r.stdout}{r.stderr}")
+    assert "no-red-on-record" in r.stderr
 
 
 def test_a_call_naming_no_file_still_resolves_from_the_session(tmp_path):

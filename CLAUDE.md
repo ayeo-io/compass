@@ -16,7 +16,9 @@ and the things it does not claim.
   active issue. `compass check`, `compass tdd-red` and the pre-tool hook all
   resolve the current issue through it. Move it with `compass issue use
   <slug>`, not by writing the file: the hook records each session's issue,
-  and refuses an edit (`pointer-moved`) when another session moved it.
+  and refuses an edit (`pointer-moved`) in the session's own project when
+  another session moved it. An edit in a worktree is judged by that
+  worktree's own pointer.
 - `/compass:assess --reassess` re-runs the evaluator and records the change in
   the manifest's `reassessments:` log.
 - Pass `--reason "..."` with it. `compass retro` aggregates those across issues

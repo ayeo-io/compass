@@ -1108,6 +1108,19 @@ PROSE_SKIPPED = ("docs/compass/", "docs/system-spec", "docs/upgrade",
                  "governance/decisions/", "governance/terminology.yml",
                  "architecture/decisions/")
 PROSE_MARKER = "vocabulary-scan: allow"
+# The 7.0.0 section of the release guide lists each removed spelling beside its
+# replacement, one table row each. A row is exempt only when the whole line
+# matches, and only in that file. A marker on the row would break the exact
+# row text that tests/test_release_guide_7_0_0_section.py asserts.
+PROSE_KEPT_ROWS = {
+    "docs/releasing.md": (
+        "| `approach summary` | `approach show` |",
+        "| `issue set-status` | `issue status set`, or `issue status remove` for `active` |",
+        "| `policy review-rules` | `review-rule list` |",
+        "| `issue subtask update` | `issue subtask set` |",
+        "| `run --stage build` | `run --stage implement` |",
+    ),
+}
 
 RETIRED_PROSE = {
     "a status field holding a retired status":
@@ -1190,7 +1203,7 @@ def retired_prose(root):
         except (OSError, UnicodeDecodeError):
             continue
         for number, line in enumerate(text.splitlines(), 1):
-            if PROSE_MARKER in line:
+            if PROSE_MARKER in line or line.rstrip() in PROSE_KEPT_ROWS.get(name, ()):
                 continue
             for reason, pattern in RETIRED_PROSE.items():
                 if re.search(pattern, line):
@@ -1305,6 +1318,17 @@ def test_vr_g9_help_text_names_no_retired_state(argv, retired):
                        env={"PATH": __import__("os").environ["PATH"], "HOME": "/nonexistent"})
     assert r.returncode == 0, r.stderr
     assert retired not in " ".join(r.stdout.split()), r.stdout
+
+
+def test_vr_g9_a_kept_release_guide_row_is_exempt_in_that_file_only(tmp_path):
+    row = PROSE_KEPT_ROWS["docs/releasing.md"][0]
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "releasing.md").write_text(row + "\n", encoding="utf-8")
+    (tmp_path / "docs" / "page.md").write_text(row + "\n", encoding="utf-8")
+    found = retired_prose(tmp_path)
+    assert [f.split(":")[0] for f in found] == ["docs/page.md"], found
+    (tmp_path / "docs" / "releasing.md").write_text(row + " Run it.\n", encoding="utf-8")
+    assert any(f.startswith("docs/releasing.md:") for f in retired_prose(tmp_path))
 
 
 def test_vr_g9_the_retired_list_and_the_decision_records_are_not_scanned(tmp_path):

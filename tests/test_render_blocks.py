@@ -946,6 +946,11 @@ CHECKED_REMOVAL_TESTS = (
     "tests/test_cli_renames.py", "tests/compat_baseline.py", "tests/test_compat_contracts.py",
     "tests/test_stream_c_no_new_checks_or_gates.py",    # the removed check is in its list of removals
     "tests/test_writing_style.py",                      # a comment on the corpus label count
+    # The 7.0.0 release guide lists the removed spellings, and these tests check the list.
+    "docs/releasing.md",
+    "tests/test_release_guide_7_0_0_section.py",
+    "tests/test_release_notes_7_0_0_draft.py",
+    "tests/test_upgrade_guides_state_removals_and_kept_readers.py",
 )
 
 

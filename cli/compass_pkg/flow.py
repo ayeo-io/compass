@@ -678,7 +678,9 @@ def cmd_flow(args):
                     tasks.append((d, data))
                 except CompassError:
                     pass
-    total_reframes = sum(len(t.get("reassessments") or []) for _, t in tasks)
+    # An `unchanged` entry keeps a reason; the approach did not move.
+    total_reframes = sum(1 for _, t in tasks for r in (t.get("reassessments") or [])
+                         if r.get("kind") != "unchanged")
     if total_reframes == 0:
         print(f"No re-assessments recorded across {len(tasks)} issue(s). "
               f"Either the sizing is well-calibrated, or there is not enough history yet.\n")

@@ -426,8 +426,8 @@ from the preset and `legacy-views.yml` to show nothing is lost:
 - The floor effect `force_minimum_route` becomes `force_minimum_approach`
   (ADR-041).
 - Old dimension names and old stage names (`clarify`, `build`, `land`)
-  become the current names; `legacy-views.yml` keeps the
-  spelling each file uses.
+  become the current names. `legacy-views.yml` spells stages with the current
+  names; the migration reads a copy's retired names as the current ones.
 - A document named by file (`intent.md`) becomes its id (`intent`).
 - The fallback approach becomes the last rule of `default_shapes`, and the
   `biases` become a rule set with no effect.
@@ -572,14 +572,27 @@ The grid:
   refuses `equivalent` on a parameter with no `choices`, the check registry
   refuses it on every parameter, and a catalogue or preset cannot declare it.
   A readiness parameter one side leaves out is `incomparable` whatever its
-  direction: the classifier fills in no runtime default. `CLASSIFIER_VERSION`
-  is 5 from this rule (governance decision
-  2026-10-14-a-declared-equivalent-parameter-choice-classifies-as-equivalent)
-  until the next one.
+  direction: the classifier fills in no runtime default, and this rule raised
+  `CLASSIFIER_VERSION` to 5 (governance decision
+  2026-10-14-a-declared-equivalent-parameter-choice-classifies-as-equivalent).
   An approach's `release_line` is compared at each point for the approach the
   assessment chose, `false` below `true`, with no field read as `false`, so
-  setting it `false` is `looser`. `CLASSIFIER_VERSION` is 6 since this rule
+  setting it `false` is `looser`. That rule raised `CLASSIFIER_VERSION` to 6
   (ADR-065).
+  A check parameter that is a list can declare the direction `superset`, and
+  only `trigger_paths` and `trigger_contents` of `contracts-declared` do. The
+  classifier compares each side as a set of exact entries. A `trigger_contents`
+  entry is the pair of path glob and text, compared whole, and the classifier
+  does not judge how broad a glob is. Neither reordering a list nor repeating
+  an entry changes the set, so the change is `equal`. A project list that holds
+  every shipped entry and at least one more is `tighter`, because a trigger
+  path makes the check run, so more entries check more changes. A project list
+  that lacks a shipped entry and adds none is `looser`, because fewer entries
+  check fewer changes. A project list that lacks a shipped entry and adds
+  another is `incomparable`. A list that is missing, is not a list, or holds a
+  malformed entry is `incomparable` and raises no error. The registry refuses
+  `superset` on a parameter that is not a list. `CLASSIFIER_VERSION` is 11
+  since the list rule (ADR-073).
 - `stages.order` and `gates.stage` are the footprint of a lock, not facts the
   classifier reads. Reordering an unlocked stage or moving a gate to another
   stage reads `equivalent` here, and the locks increment compares both.

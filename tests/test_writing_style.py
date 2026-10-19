@@ -1511,6 +1511,24 @@ _register(Rule(
         Exemption("governance/presets/default/vocabulary.yml", "verify",
                    "the display name of the verify stage, not the verb; the "
                    "file holds display names only."),
+        # The kept default@6 folder is a byte-identical copy of the live
+        # default at the v6.1.0 tag, so it carries the same four lines and
+        # the same reasons. The copy must not change, so each line is
+        # exempted here, not edited.
+        Exemption("governance/presets/default@6/checks.yml", "compass bdd verify",
+                   "compass bdd verify is a CLI verb, not the plain verb; the "
+                   "folder is a frozen copy of the v6.1.0 default preset."),
+        Exemption("governance/presets/default@6/checks.yml", "attempts: <int>",
+                   "attempts: <int> names the evidence field, not the verb "
+                   "\"attempt\"; the folder is a frozen copy of the v6.1.0 "
+                   "default preset."),
+        Exemption("governance/presets/default@6/evidence-types.yml", "attempts: <int>",
+                   "attempts: <int> names the evidence field, not the verb "
+                   "\"attempt\"; the folder is a frozen copy of the v6.1.0 "
+                   "default preset."),
+        Exemption("governance/presets/default@6/vocabulary.yml", "verify",
+                   "the display name of the verify stage, not the verb; the "
+                   "folder is a frozen copy of the v6.1.0 default preset."),
         Exemption(
             "tests/fixtures/receipt-fixture-project/governance/guardrails.yml",
             "checked_at: [verify]",

@@ -345,11 +345,24 @@ resolve_project() {
     return 0
   fi
   PROJECT_RESOLVED=1
-  PROJECT_DIR=""
-  _search="$INVOKED_FROM"
-  while [ -n "$_search" ]; do
-    if [ -d "$_search/.compass" ]; then
-      PROJECT_DIR="$_search"
+  find_compass_root "$INVOKED_FROM"
+  PROJECT_DIR="$FOUND_ROOT"
+  if [ -z "$PROJECT_DIR" ]; then
+    PROJECT_RESOLVED=0
+    # Provisional, so path classification still has something to compare
+    # against. Nothing is permitted on the strength of it.
+    PROJECT_DIR="$INVOKED_FROM"
+  fi
+}
+
+# Sets FOUND_ROOT to the nearest ancestor of $1 (or $1 itself) that holds a
+# .compass/ folder, or "" when there is none before the repository root.
+find_compass_root() {
+  local search="$1" parent
+  FOUND_ROOT=""
+  while [ -n "$search" ]; do
+    if [ -d "$search/.compass" ]; then
+      FOUND_ROOT="$search"
       break
     fi
     # Stop at the repository root. A walk past it can reach another
@@ -358,15 +371,82 @@ resolve_project() {
     #
     # -e, not -d: in a git worktree .git is a file, and Compass creates
     # worktrees itself for multiagent orchestrations.
-    [ -e "$_search/.git" ] && break
-    [ "$_search" = "/" ] && break
-    _search="$(dirname "$_search")"
+    [ -e "$search/.git" ] && break
+    [ "$search" = "/" ] && break
+    # A relative path ends at "." and the parent of "." is ".", so stop
+    # when the parent is the path itself.
+    parent="$(dirname "$search")"
+    [ "$parent" = "$search" ] && break
+    search="$parent"
   done
-  if [ -z "$PROJECT_DIR" ]; then
-    PROJECT_RESOLVED=0
-    # Provisional, so path classification still has something to compare
-    # against. Nothing is permitted on the strength of it.
-    PROJECT_DIR="$INVOKED_FROM"
+}
+
+# Sets REAL_DIR to the real path of directory $1, or "" when it cannot be
+# entered. The comparison of two projects is on real paths, so a symbolic link
+# to the session's project is still the session's project.
+real_dir() {
+  REAL_DIR="$(CDPATH= cd -- "$1" 2>/dev/null && pwd -P)" || REAL_DIR=""
+}
+
+# Prints the real path of the git common directory of directory $1; fails when
+# git cannot read it. A main working tree prints a path relative to $1. The
+# GIT_* variables are removed so a session's own settings cannot point git at
+# another repository.
+git_common_dir() {
+  local out
+  out="$(unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR
+         git -C "$1" rev-parse --git-common-dir 2>/dev/null)" || return 1
+  [ -n "$out" ] || return 1
+  case "$out" in /*) ;; *) out="$1/$out" ;; esac
+  real_dir "$out"
+  [ -n "$REAL_DIR" ] || return 1
+  printf '%s\n' "$REAL_DIR"
+}
+
+# Whether the foreign project is a tree of the session's repository: both git
+# common directories are readable and equal. Any other result is "no", so the
+# caller refuses. Computed once, because the session record and the issue
+# block both need it. This is a consistency check, not a defence against a
+# forged .git file: an edit inside a forged folder is not an edit of the
+# project's code.
+TIED=""
+tied_to_session_repo() {
+  if [ -z "$TIED" ]; then
+    TIED=0
+    local mine theirs
+    if mine="$(git_common_dir "$PROJECT_DIR")" && [ -n "$mine" ]; then
+      # -ef compares the folders on disk, so a case-insensitive file system
+      # does not make two spellings of one folder differ.
+      if theirs="$(git_common_dir "$SESSION_ROOT")" && [ "$mine" -ef "$theirs" ]; then
+        TIED=1
+      fi
+    fi
+  fi
+  [ "$TIED" = 1 ]
+}
+
+# FOREIGN=1 when the project found from the edited path is not the session's
+# own. The session's project is the Compass root found by walking up from
+# CLAUDE_PROJECT_DIR, so a session started in a sub-folder is not foreign.
+# A session with no Compass project is never foreign: the hook is installed
+# at user scope, and such a session has no issue to borrow. When the text of
+# both paths is equal, as for every Bash call, nothing else runs.
+FOREIGN=0
+SESSION_ROOT=""
+classify_foreign() {
+  [ "${PROJECT_RESOLVED:-0}" -eq 1 ] || return 0
+  [ -n "${CLAUDE_PROJECT_DIR:-}" ] || return 0
+  [ "$PROJECT_DIR" != "$CLAUDE_PROJECT_DIR" ] || return 0
+  find_compass_root "$CLAUDE_PROJECT_DIR"
+  [ -n "$FOUND_ROOT" ] || return 0
+  SESSION_ROOT="$FOUND_ROOT"
+  [ "$PROJECT_DIR" != "$SESSION_ROOT" ] || return 0
+  # -ef compares the folders on disk, so a case-insensitive file system
+  # does not make two spellings of one folder differ. A folder that cannot
+  # be entered is foreign.
+  if ! { [ -d "$SESSION_ROOT" ] && [ -d "$PROJECT_DIR" ] \
+         && [ "$SESSION_ROOT" -ef "$PROJECT_DIR" ]; }; then
+    FOREIGN=1
   fi
 }
 
@@ -392,6 +472,13 @@ else
   resolve_project "${TARGET:-}"
 fi
 
+# An Edit or Write whose project is not the session's own (a foreign project,
+# such as a sibling git worktree) is judged by that project's issue, not the
+# session's: its pointer decides, COMPASS_ISSUE only stands in for an empty
+# pointer, the most-recently-changed guess and the pointer-moved check are not
+# used, and the tree must be tied to the session's repository.
+classify_foreign
+
 # --- record the session on the issue (usage.sessions) ------------------------
 # `compass ship-commit` reads the transcripts of every session that worked on
 # an issue, so the hook notes each session id in the issue's manifest the
@@ -400,8 +487,12 @@ fi
 #
 # The issue comes from COMPASS_ISSUE or the pointer only, read in shell: with
 # neither, nothing is recorded, and the most recently changed issue is never
-# guessed. An id already recorded costs one `grep` and no python3 process; a
-# new one starts one, which tries the manifest lock once without waiting
+# guessed. In a foreign project the selection is the one the guard below
+# uses: the tree must be tied to the session's repository, the pointer comes
+# first and COMPASS_ISSUE only stands in for an empty pointer, and the issue
+# is recorded with via=tree so the session table is not read. An id already
+# recorded costs one `grep` and no python3 process; a new one starts one,
+# which tries the manifest lock once without waiting
 # (cli/compass_pkg/session_record.py). This never refuses a call: every
 # fault, a bad id or a recorder that cannot run returns 0 with its output
 # discarded, and the checks below judge the call as before. A broken install
@@ -410,7 +501,15 @@ compass_record_session() {
   [ "${PROJECT_RESOLVED:-0}" -eq 1 ] || return 0
   case "${SESSION_ID:-}" in ""|*[!A-Za-z0-9_-]*) return 0 ;; esac
   local slug="" via="pointer" pointer="$PROJECT_DIR/.compass/current-task"
-  if [ -n "${COMPASS_ISSUE:-}" ]; then
+  if [ "${FOREIGN:-0}" -eq 1 ]; then
+    tied_to_session_repo || return 0
+    via="tree"
+    if [ -f "$pointer" ]; then
+      IFS= read -r slug < "$pointer" || true
+      slug="${slug//[[:space:]]/}"
+    fi
+    [ -n "$slug" ] || slug="${COMPASS_ISSUE:-}"
+  elif [ -n "${COMPASS_ISSUE:-}" ]; then
     slug="$COMPASS_ISSUE"; via="env"
   elif [ -f "$pointer" ]; then
     IFS= read -r slug < "$pointer" || true
@@ -475,6 +574,15 @@ case "${TOOL:-}" in
      esac
      if [ "$GUARD_RUN" = 0 ] && [ "${TOOL:-}" = "Bash" ]; then
        case "${COMMAND:-}" in *'~'*|*HOME*|*/.*|*//*) GUARD_RUN=1 ;; esac
+       case "${_text:-} ${_bare:-}" in *.compass/*[*?[]*|*deleg*[*?[]*) GUARD_RUN=1 ;; esac
+       # A flag or verb built with ANSI-C quoting or braces (`--{delegated,x}`)
+       # shows no `--del`, so evidence beside `$'` or `{` starts the guard.
+       case "${_text:-}" in
+         *evidence*) case "${_text:-}" in *'$'\'*|*'{'*) GUARD_RUN=1 ;; esac ;;
+       esac
+       # Every word of `compass $'\x65vidence' $'appro\x76e'` can hold an
+       # escape, so `evidence` need not show: `$'` then a backslash starts it.
+       case "${_text:-}" in *'$'\'*'\'*) GUARD_RUN=1 ;; esac
        _above=""
        case "${TRANSCRIPT:-}" in /*) _above="${TRANSCRIPT%/*}" ;; esac
        case "${COMMAND:-}" in *"${_above:-//no transcript//}"*) GUARD_RUN=1 ;; esac
@@ -1278,13 +1386,39 @@ POINTER="$COMPASS_DIR/current-task"
 # run` sets it for each unattended session, whose edits must be judged by
 # the run's issue, not by whatever issue the person's pointer names. A bad
 # value is refused, never passed over for the pointer.
-if [ -n "${COMPASS_ISSUE:-}" ]; then
+#
+# A foreign project (a sibling worktree) is the exception: it is judged by its
+# own pointer. A pointer that names anything is not empty, so a pointer to a
+# missing issue refuses. COMPASS_ISSUE applies only to an empty pointer. There
+# is no guess and no lease. A tree that cannot be tied to the session's
+# repository refuses.
+if [ "$FOREIGN" -eq 1 ]; then
+  tied_to_session_repo || compass_block tree-not-tied "project=$PROJECT_DIR"
+  SLUG=""
+  if [ -f "$POINTER" ]; then
+    SLUG="$(tr -d '[:space:]' < "$POINTER" 2>/dev/null || true)"
+    case "$SLUG" in
+      .|..|*/*|*\\*)
+        compass_block bad-current-task "slug=$SLUG" ;;
+    esac
+  fi
+  if [ -z "$SLUG" ]; then
+    SLUG="${COMPASS_ISSUE:-}"
+    case "$SLUG" in
+      "") compass_block bad-session-issue "slug=none" "project=$PROJECT_DIR" ;;
+      .|..|*/*|*\\*)
+        compass_block bad-session-issue "slug=$SLUG" "project=$PROJECT_DIR" ;;
+    esac
+  fi
+  [ -d "$WORK_DIR/$SLUG" ] || compass_block bad-session-issue "slug=$SLUG" "project=$PROJECT_DIR"
+  TASK_DIR="$WORK_DIR/$SLUG"
+elif [ -n "${COMPASS_ISSUE:-}" ]; then
   SLUG="$COMPASS_ISSUE"
   case "$SLUG" in
     .|..|*/*|*\\*)
-      compass_block bad-session-issue "slug=$SLUG" ;;
+      compass_block bad-session-issue "slug=$SLUG" "project=$PROJECT_DIR" ;;
   esac
-  [ -d "$WORK_DIR/$SLUG" ] || compass_block bad-session-issue "slug=$SLUG"
+  [ -d "$WORK_DIR/$SLUG" ] || compass_block bad-session-issue "slug=$SLUG" "project=$PROJECT_DIR"
   TASK_DIR="$WORK_DIR/$SLUG"
 elif [ -f "$POINTER" ]; then
   SLUG="$(tr -d '[:space:]' < "$POINTER" 2>/dev/null || true)"
@@ -1300,8 +1434,10 @@ elif [ -f "$POINTER" ]; then
 fi
 # Another session may have moved the pointer since this one last edited
 # (session_lease.py). Only when the pointer named the issue: COMPASS_ISSUE
-# names one session's issue, and the fallback names none.
-if [ -z "${COMPASS_ISSUE:-}" ] && [ -n "${SESSION_ID:-}" ] && [ -n "$TASK_DIR" ]; then
+# names one session's issue, and the fallback names none. Only in the
+# session's own project: a session that visits a foreign project neither
+# reads nor writes that project's table.
+if [ "$FOREIGN" -eq 0 ] && [ -z "${COMPASS_ISSUE:-}" ] && [ -n "${SESSION_ID:-}" ] && [ -n "$TASK_DIR" ]; then
   LEASE_ERR="$(mktemp 2>/dev/null)" || compass_reader_failed "session lease reader" tmp
   set +e
   LEASE="$(compass_python - "$COMPASS_DIR" "$SESSION_ID" "$SLUG" 2>"$LEASE_ERR" <<'PYEOF'

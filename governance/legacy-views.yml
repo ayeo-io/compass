@@ -22,15 +22,15 @@ routing_policy:
     RP-ROLE-002: {replaced_by: RP-ART-002, retired_in: 7.0.0}
     RP-SROLE-001: {replaced_by: null, retired_in: 7.0.0}
 guardrails:
-  version: 1.33.0
+  version: 1.33.1
   project: []
   when_keys: {risk: blast_radius, labels_any: touches_any}
   checked_at:
-    G1: [verify, land]
-    G2: [clarify, verify]
-    G3: [clarify, build, verify, land]
-    G4: [verify, land]
-    G5: [land]
-    S1: [land]
-    S2: [land]
+    G1: [verify, ship]
+    G2: [refine, verify]
+    G3: [refine, implement, verify, ship]
+    G4: [verify, ship]
+    G5: [ship]
+    S1: [ship]
+    S2: [ship]
   key_order: {}

@@ -611,7 +611,12 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # waived breakdown is now refused as incomparable unless its approval is valid,
 # where version 9 saw no effect. The version is now 10. Pinned on top of the
 # `model-tier-from-assessment` source above.
-VERDICT_SOURCE_PIN = "e0233412f088703b"
+# Re-pinned for issue `list-parameter-superset-tightens`: a list parameter whose
+# registry direction is `superset` compares as a set of exact entries, so adding a
+# trigger path is now `tighter`, where version 10 read it as `incomparable`. The
+# version is now 11 (ADR-073). The digest also reads `classify_lists`, which holds
+# the code that decides whether a list can be read, so an edit there is pinned too.
+VERDICT_SOURCE_PIN = "9bef8436e918b7c2"
 
 
 def _verdict_source_digest():
@@ -620,9 +625,10 @@ def _verdict_source_digest():
     Any edit to any of it, a comment included, changes the digest."""
     import hashlib
     import inspect
-    from compass_pkg import classify, core, obligations, routing
+    from compass_pkg import classify, classify_lists, core, obligations, routing
     from compass_pkg import policy
-    text = [inspect.getsource(classify), inspect.getsource(obligations)]
+    text = [inspect.getsource(classify), inspect.getsource(classify_lists),
+            inspect.getsource(obligations)]
     text += [inspect.getsource(getattr(routing, name)) for name in (
         "evaluate_route", "canonical_routes", "canonical_view", "prepare_policy",
         "route_checkpoints", "PreparedPolicy", "_below_thorough")]

@@ -87,7 +87,7 @@ same commit.
 | `cli/compass_pkg/atomic_io.py` | `architecture/decisions/ADR-036-an-issue-runs-against-a-stored-generation.md` |
 | `cli/compass_pkg/board_cmd.py`, `cli/compass_pkg/board_page.py`, `cli/compass_pkg/board_file.py`, `cli/compass_pkg/board_trees.py` | `docs/board.md` |
 | `cli/compass_pkg/obligations.py` | `architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md` |
-| `cli/compass_pkg/classify.py`, `scripts/bench-classifier.py` | `governance/routing-policy.md` |
+| `cli/compass_pkg/classify.py`, `cli/compass_pkg/classify_lists.py`, `scripts/bench-classifier.py` | `governance/routing-policy.md` |
 | `cli/compass_pkg/policy_lint.py`, `cli/compass_pkg/policy_cmd.py` | `docs/policy-lint.md` |
 | `cli/compass_pkg/generation.py`, `cli/compass_pkg/effective.py`, `cli/compass_pkg/impl_versions.py`, `scripts/bench-evaluate.py` | `docs/generation-store.md` |
 | `scripts/impl-coverage.py`, `tests/fixtures/impls/versions.lock.yml` | `docs/check-implementations.md` |
@@ -105,7 +105,7 @@ same commit.
 | `cli/compass_pkg/waivers.py` | `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md` |
 | `cli/compass_pkg/layers.py`, `cli/compass_pkg/merge.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/locks.py` | `governance/guardrails.md` |
-| `cli/compass_pkg/routing.py`, `cli/compass_pkg/model_tiers.py`, `cli/compass_pkg/g5_label_prompt.py`, `cli/compass_pkg/approach_diagram.py`, `governance/routing-policy.yml`, `approaches/`, `docs/approach-diagram.html` | `governance/routing-policy.md` |
+| `cli/compass_pkg/routing.py`, `cli/compass_pkg/readiness_floor.py`, `cli/compass_pkg/model_tiers.py`, `cli/compass_pkg/g5_label_prompt.py`, `cli/compass_pkg/approach_diagram.py`, `governance/routing-policy.yml`, `approaches/`, `docs/approach-diagram.html` | `governance/routing-policy.md` |
 | `cli/compass_pkg/checks.py`, `cli/compass_pkg/check_cmd.py`, `cli/compass_pkg/check_registry.py`, `governance/guardrails.yml` | `governance/guardrails.md` |
 | `governance/strategies.md` | `governance/strategies-rationale.md` |
 | `governance/terminology.yml` | `docs/glossary.md` |

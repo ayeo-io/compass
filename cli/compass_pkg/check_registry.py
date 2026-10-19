@@ -41,7 +41,7 @@ from compass_pkg.render_check_entry import _check_rendered_blocks_current
 from compass_pkg.section_checks import _check_contracts_declared, _check_nfr_rows_resolved
 
 CORPUS_ROOT = "tests/fixtures/impls"
-TIGHTER = ("higher", "lower", "none")
+TIGHTER = ("higher", "lower", "none", "superset")
 
 
 @dataclass(frozen=True)
@@ -51,8 +51,9 @@ class CheckImpl:
     version: str = "1.0.0"
     # Parameter name -> type name. Empty for a check that takes none.
     params_spec: dict = field(default_factory=dict)
-    # Parameter name -> `higher`, `lower` or `none` (ADR-037). A missing
-    # parameter means `none`, which makes any change to it incomparable.
+    # Parameter name -> `higher`, `lower`, `none` or `superset` (ADR-037, ADR-073).
+    # A missing parameter means `none`, which makes any change to it incomparable.
+    # `superset` is for a list parameter: adding entries tightens it.
     tighter: dict = field(default_factory=dict)
     # True only where the implementation runs a command the project wrote.
     executes_project_code: bool = False
@@ -66,6 +67,11 @@ class CheckImpl:
                     f"check implementation '{self.name}': parameter '{param}' declares "
                     f"the direction equivalent, which needs declared choices, and a "
                     f"check parameter has none")
+            # `superset` compares the entries of a list, so another type has none.
+            if direction == "superset" and self.params_spec.get(param) != "list":
+                raise ValueError(
+                    f"check implementation '{self.name}': parameter '{param}' declares "
+                    f"the direction superset, which applies to a list parameter only")
 
     @property
     def corpus(self) -> str:
@@ -120,11 +126,12 @@ _ENTRIES = (
     _entry("multiagent-run-recorded", _check_multiagent_run_recorded, version="1.1.0"),
     _entry("artifacts-approved", _check_artifacts_approved),
     _entry("nfr-rows-resolved", _check_nfr_rows_resolved),
-    # The trigger patterns are declared data a project layer can extend (ADR-033);
-    # a list has no order to compare, so any change to one needs a waiver.
+    # The trigger patterns are declared data a project layer can extend (ADR-033).
+    # Each entry makes the check run on more changes, so adding entries tightens
+    # the check and removing or replacing one needs a waiver (ADR-073).
     _entry("contracts-declared", _check_contracts_declared,
            params_spec={"trigger_paths": "list", "trigger_contents": "list"},
-           tighter={"trigger_paths": "none", "trigger_contents": "none"}),
+           tighter={"trigger_paths": "superset", "trigger_contents": "superset"}),
     # A lower factor refuses more designs, so lowering it tightens the check.
     _entry("design-within-word-ceiling", _check_design_within_word_ceiling,
            params_spec={"factor": "number"}, tighter={"factor": "lower"}),

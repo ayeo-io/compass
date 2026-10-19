@@ -136,6 +136,33 @@ because macOS opens a path in any case.
   names `delegations`, and a Bash command that names that folder
   (`delegation-protected`). A Grep over the whole project still reaches the
   folder; the 64-bit code is what keeps the stored hash useless;
+- a Grep glob, or a Bash word with `*`, `?` or `[`, that can match the
+  delegation folder or a file in it, such as `d*/*`, `deleg*/*`,
+  `deleg?tions`, `**/confirm-*` or `cat .compass/deleg*/*`
+  (`delegation-protected`). The hook tests the glob with `fnmatch` against
+  the folder `.compass/delegations` and two sample files in it, one named
+  like a delegation record and `confirm-s.yml`, and against an ordinary path of the same shape: a
+  folder `zz` and a file `file.yml` in it, both under `.compass`. It refuses
+  the glob when it matches a delegation path and not the ordinary one. This is a
+  heuristic: it can refuse a rare glob such as `**/*-*.yml`, and it passes a
+  glob that picks a delegation file together with other files, such as
+  `**/*l*.yml`. A Grep glob counts only when the search path is the
+  delegation folder or a folder above it, so `src` and `.compass/work` pass.
+  A Bash word is read after the shell's quotes are removed, in any letter
+  case, and also inside `bash -c`, `sh -c` and `eval`. A backslash and
+  newline inside a word are removed first, as the shell removes them. The
+  glob is read as the shell reads it: `[^y]` counts as `[!y]`, and a POSIX
+  class such as `[[:lower:]]` counts as one character. A quoted regular
+  expression is read as a glob too, so `'.*delegat*'` is refused, while
+  `'.*delegat.*'` is accepted because it picks an ordinary path as well. A
+  Grep glob is also split on commas, so `*.yml,deleg*/*` is refused. Known
+  cost: the rule also refuses `**/*-*.yml`, `**/D*`, `d*` and `**/*s.yml` as
+  Grep globs;
+- these globs are accepted, because they match an ordinary path as well: `*`,
+  `**/*`, `**/*.md`, `*.yml`, `**/*.yml`, `src/**/*.py` and `.compass/*` in a
+  Grep, and `ls .compass/*`, `ls .compass/work/*`, `cat
+  .compass/work/*/manifest.yml`, `ls .compass/**`, `ls src/*.py` and `cat
+  docs/*.md` in Bash;
 - a delegated approval whose `--as` is not exactly the agent Claude Code
   reports (`delegation-caller-mismatch`). A Bash command counts as one when
   a word is `approve` and a word is `--delegated`, a prefix of it of five
@@ -143,7 +170,36 @@ because macOS opens a path in any case.
   approve` beside any word that starts `--del`, also counts. The words of
   `bash -c`, `sh -c`, `eval` or a quoted command piped into a shell are read
   too. Every `--as` must name the caller, since the CLI keeps the last one.
-  The call is the main agent only when the hook input has neither
+  The hook also refuses any word that holds `--as` and is neither exactly
+  `--as` nor `--as=...`, such as `--as${IFS}compass:architect`, `--as$IFS`,
+  `--as$X`, `x--as`, `--asmain`, `--as-main` and `--assume-yes`, because the shell can
+  turn it into a second `--as` that the hook cannot read. Quotes are removed
+  first, so `"--as"` and `--a''s` count as `--as`. A word with white space is
+  read again as its parts, so a quoted value is read word by word and a word
+  that holds `--as` inside it, such as `--reason 'fix--assets'` or
+  `--reason 'fix --assets'`, is refused too. That is the cost of refusing
+  any word that holds `--as`; the refusal names the word, so a person can
+  rephrase it. A backslash and newline inside a word are removed first, so
+  `--a\<newline>s` counts as `--as`. The hook also refuses a word without
+  white space that holds a brace expansion (a `{` with a `,` or `..` before
+  the closing `}`), such as `--a{s=main,s=compass:architect}`, because the
+  shell expands it into two `--as=` words. A quoted value with a space, such
+  as `--reason '{"a": 1}'`, or with no comma or `..`, passes; a compact JSON
+  value with a comma and no space, such as `'{"a":1,"b":2}'`, is refused
+  as a known cost, in any `compass evidence` command (`--note`, `--reason`
+  and the rest), and the refusal says the word may be built by the shell. A
+  command with the word `compass` (or an escape-spelled `compass` in command
+  position) and a word of ANSI-C quoting with an escape, such as
+  `compass $'\x65vidence' $'appro\x76e'`, is refused even when `evidence`
+  is spelled with escapes too. A command that names `evidence` (a word `evidence`, or a
+  quoted word that holds `compass evidence`, or a `--delegated` flag) and
+  holds ANSI-C quoting with an escape, such as `$'--a\x73'` or
+  `$'appro\x76e'`, or a brace expansion in any word, such as
+  `--{delegated,x}` or `appr{ove,x}`, is refused with the word named,
+  whether or not `--delegated` shows, because the hook does not decode
+  either spelling. A command that is not a
+  delegated approval, such as `git update-index --assume-unchanged`, is not
+  checked. The call is the main agent only when the hook input has neither
   `agent_type` nor `agent_id`, and the CLI takes no abbreviated flag, so
   `--deleg` cannot pass unseen. A command that only quotes a delegated
   approval, such as a commit message, needs a matching `--as` too;
@@ -171,7 +227,40 @@ approval as another agent, as they did before this check:
 - a relative Bash path, such as `grep -r x ../..`, or a bare `cd` followed
   by a relative path: the check does not know the shell's working folder;
 - a command assembled at run time: a variable, a script written with Write
-  and then run, or a list passed to Python's `subprocess`.
+  and then run, or a list passed to Python's `subprocess`;
+- a delegated approval or a delegation glob that the hook reads as text and
+  cannot follow: a flag built from a variable, command substitution, a value
+  read from a file or the environment, and arguments built by `xargs` or
+  `printf`;
+- a word that a glob expands against a file the agent wrote, such as
+  `appro?e` or `--a?`. A text-matching guard cannot follow anything that the
+  shell, a spelling or an interpreter builds at run time: variables, command
+  substitution, a glob that expands against a file the agent wrote,
+  encodings and `python3 -c`. The stored confirmation hash and the 64-bit
+  code (ayeo-io/compass#599) are the control that holds then;
+- brace expansion in a glob, in Bash or in a Grep glob, such as
+  `{d,x}eleg*/*`, `deleg{ations,x}/*` and `**/{DL-*,x}.yml`;
+- patterns that only zsh reads, such as `.compass/(deleg\|x)ations/*` and
+  `.compass/deleg*/DL-<->.yml`;
+- a case-sensitive glob, such as `.compass/*/[A-Z]*` or the Grep glob
+  `**/[A-Z]*.yml`: the guard lower-cases the glob, so it counts as a glob
+  that picks the delegation files together with others, and passes;
+- a Bash command that reads the folder without naming it, such as `grep -r x
+  .compass` or `find .compass -type f -exec cat {} +`;
+- a tool option that takes its own glob, such as `rg -g`, `find -name` and
+  `--include`, and extended globs after `shopt -s extglob`, such as
+  `.compass/@(deleg)ations/*`;
+- a Bash glob rooted in a folder other than the call's working folder, such
+  as `$PWD/.compass/deleg*/*`, a relative path after `cd`, such as `cd
+  .compass && cat d*/*`, and a project root above the working folder;
+- a Bash glob that spells neither .compass nor deleg, such as `cat .c*/d*/*`.
+  The hook starts the guard only when a glob character follows `.compass/` or
+  `deleg`, so this glob does not start it. A glob before `deleg` does start
+  it when the command has a glob character after `deleg` in its second copy:
+  the hook tests the command twice, so `cat .c*/delegations` starts the guard
+  and is refused (`delegation-protected`). A glob character in a later word
+  of the same command also starts the guard, which costs one python3 start
+  and refuses nothing more.
 
 A process running as the same operating system user can still write these
 files, or `manifest.yml`.
@@ -205,11 +294,15 @@ The hooks and the CLI judge work against the current issue:
 sets it. `COMPASS_ISSUE` comes first, so two sessions in one project can work
 on two issues; `compass run` sets it for each unattended session. A value
 that names no issue is refused (`bad-session-issue`), never passed over for
-the pointer.
+the pointer. That order holds in the session's own project. In a worktree
+the order reverses for Edit and Write: the worktree's own pointer names the
+issue, and `COMPASS_ISSUE` applies only when that pointer is empty (see the
+worktree paragraph below).
 
 Two interactive sessions share the pointer, so the pre-tool hook records the
 issue each Claude Code session last worked on, by its session id, in a
-`sessions.json` file under `.compass/`. When another session has moved the pointer since,
+`sessions.json` file under `.compass/`. When another session has moved the
+pointer in the session's own project since,
 the session's next code edit is refused (`pointer-moved`) until it runs
 `compass issue use <slug>` to say which issue it means. A record older than
 12 hours is ignored and dropped the next time the table is written, and a
@@ -475,6 +568,10 @@ manifest.
   is never guessed. A session whose fresh entry in the session table behind
   the `pointer-moved` refusal names another issue is not recorded on the
   pointer's issue.
+- For an Edit or Write in a worktree of the session's repository, the
+  worktree's pointer comes first, `COMPASS_ISSUE` stands in only for an empty
+  pointer, and the session is recorded on that issue without reading the
+  session table.
 - A session id that is not letters, digits, `-` and `_` is not recorded.
 - An id already in the manifest costs one `grep` and no python3 process. A new
   id starts one python3 process, which opens only that issue's manifest.
@@ -559,10 +656,21 @@ production code, not as a test. A symbolic link is not followed.
 Shell scripts, makefiles and extensionless scripts are not classified
 as production-code file types for red-before-green enforcement.
 
-Inside a worktree, Edit and Write are checked against that worktree's own red
-state, because they name their file and the hook resolves the project from
-it. A shell write is not. Its targets are found against the session's
-project, with two results:
+Inside a worktree, Edit and Write follow the worktree's own issue and failing
+test, because they name their file and the hook resolves the project from it.
+The worktree's pointer names the issue. COMPASS_ISSUE applies in the
+session's own project, and in a worktree only when the worktree's pointer is
+empty. A pointer that names a missing issue, or no issue to name at all,
+refuses (`bad-session-issue`); the hook never guesses the most recently
+changed issue there. An edit in a worktree of a different repository is
+refused, and so is one in a tree git cannot read. A session with no Compass
+project is not affected. A session in a worktree does not read that
+worktree's session table, so `pointer-moved` applies in the session's own
+project only.
+
+A shell write is not followed that way: a shell write still resolves from the
+session's project, because its targets are found against that project. GitHub
+issue #104 tracks the gap. The results are:
 
 - a relative path is checked against the session's issue, not the worktree's
 - an absolute path into a worktree outside the project - the default place

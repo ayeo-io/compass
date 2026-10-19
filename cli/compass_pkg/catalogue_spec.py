@@ -313,7 +313,7 @@ CAPABILITIES = ("entry-exit-evaluation", "artifact-freshness")
 LAYER_KEYS = ("schema", "extends", "owner", "approvers", "capabilities") + CATALOGUES
 SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement",
                  "record", "project", "prices", "models", "multiagent", "governance_drift",
-                 "preset_index", "github_labels")
+                 "preset_index", "github_labels", "language")
 #: The three switches inside `github_labels`, all off by default.
 GITHUB_LABEL_SWITCHES = ("domain", "status", "page")
 RESERVED_KEYS = ("preset",)
@@ -564,6 +564,10 @@ TOP_DESCRIPTIONS = {
     "autonomy": "How often a session stops for a person at a stage hand-off: `controlled` at "
                 "every listed hand-off, `balanced` at fewer, `autonomous` never. "
                 "The shipped default is `balanced`.",
+    "language": "The language of the prose an agent writes, as a BCP 47 tag: a language, an "
+                "optional script and an optional region, joined by hyphens, such as `en-US`. "
+                "Unset: no instruction; only the project's own `compass.yml` can hold it, "
+                "never a parent, a preset or an issue.",
     "adoption": "Whether a failed check blocks: `enforced` makes `compass check` and "
                 "`compass ci` exit non-zero, and `advisory` reports the failure and exits 0. "
                 "The shipped default is `enforced`.",

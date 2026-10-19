@@ -19,7 +19,7 @@ What this does not check yet: whether an entry is complete enough to add
 (the merge), and whether a value loosens its parent (the classifier).
 """
 # DEPENDENCY: standard library (copy, datetime, re); compass_pkg.catalogue_spec;
-# compass_pkg.stable_ids; compass_pkg.vocabulary. It does not import compass_pkg.waivers: the list of
+# compass_pkg.language; compass_pkg.stable_ids; compass_pkg.vocabulary. It does not import compass_pkg.waivers: the list of
 # modules that may is pinned, so the one date reader it needs is written here.
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ import datetime
 import re
 
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import stable_ids, vocabulary
+from compass_pkg import language, stable_ids, vocabulary
 
 _ID = re.compile(spec.ID_PATTERN)
 
@@ -61,7 +61,8 @@ def check_layer(doc, layer):
             errors.append(f"{key}: a settings key belongs in the project's own "
                           f"compass.yml, never in a parent (ADR-043)")
         elif key not in allowed:
-            errors.append(f"{key}: not a key a {layer} layer can hold")
+            errors.append(f"{key}: not a key {'an' if layer == 'issue' else 'a'} "
+                          f"{layer} layer can hold")
     errors += _check_top_values(doc)
     ordered = _ordered_dimensions(doc)
     for catalogue in spec.CATALOGUES:
@@ -125,6 +126,11 @@ def _check_top_values(doc):
     for key, allowed in _SETTINGS_ENUMS.items():
         if key in doc and doc[key] not in allowed:
             errors.append(f"{key}: '{doc[key]}' is not one of {', '.join(allowed)}")
+    if "language" in doc:
+        text = language.problem(doc["language"])
+        if text:
+            # The `key: ` prefix is how the lint reads the path of a finding.
+            errors.append(f"language: {text}")
     caps = doc.get("capabilities")
     if caps is not None:
         if not isinstance(caps, dict):
@@ -491,6 +497,7 @@ def schema():
                                         for c in spec.CAPABILITIES},
                          "additionalProperties": False},
         "autonomy": {"description": top["autonomy"], "enum": list(spec.AUTONOMY)},
+        "language": {"description": top["language"], "type": "string"},
         "adoption": {"description": top["adoption"], "enum": list(spec.ADOPTION)},
         "governance_drift": {"description": top["governance_drift"],
                              "enum": list(spec.GOVERNANCE_DRIFT)},

@@ -138,6 +138,9 @@ def _olds(rows):
     out = set()
     for section in ("stage_mode", "artifact_depth", "size"):
         out.update(rows.get(section) or ())
+    out.update(rows.get("check_id") or ())
+    for row in old_names.rows("skill"):
+        out.update((row["old"], SKILL_PREFIX + row["old"]))
     return out
 
 
@@ -174,8 +177,135 @@ def map_layer(doc, rows=None):
                 if field in holder:
                     holder[field] = _map_field(holder[field], shape, rows.get(domain) or {},
                                                f"{path}.{field}", changes)
+    _map_names(mapped, rows, changes)
     _walk_predicates(mapped, "", rows, changes)
     return (mapped, changes) if changes else (doc, [])
+
+
+# Where a layer names a check by id, besides the keys of `checks`: the lists
+# of obligations that hold check ids. Found by reading `catalogue_spec.FIELDS`
+# for the fields of `kind: obligation-set` that hold checks.
+CHECK_LISTS = (("stages", "entry"), ("stages", "exit"),
+               ("gates", "checks"), ("artifacts", "checks"))
+# The effects of a rule that name a skill.
+SKILL_EFFECTS = ("require_skill", "strategy")
+SKILL_PREFIX = "compass:"
+
+
+def one_check_conflicts(doc):
+    """`(code, path, message)` for each check that a layer sets under both
+    its old id and its new id with different bodies. `_map_check_keys` leaves
+    the two keys as they are, so `merge.apply` raises these as a finding."""
+    checks = doc.get("checks") if isinstance(doc, dict) else None
+    ids = {r["old"]: r["new"] for r in old_names.rows("check_id")}
+    if not isinstance(checks, dict):
+        return []
+    return [("M-ONE-CHECK", f"checks.{old}",
+             f"{old} and {new} are one check ({new} is the current name), and "
+             f"this layer sets them to different values; keep one of them")
+            for old, new in ids.items() if old in checks and new in checks]
+
+
+def _map_ids(items, table, path, changes):
+    """A list of check ids with each old id replaced. An id that is already in
+    the list under its new name is not repeated."""
+    out = []
+    for item in items:
+        new = table.get(item) if isinstance(item, str) else None
+        if new is not None:
+            changes.append((path, item, new))
+            if new in items or new in out:
+                continue
+            out.append(new)
+        else:
+            out.append(item)
+    return out
+
+
+def _map_id_list(value, table, path, changes):
+    if isinstance(value, list):
+        return _map_ids(value, table, path, changes)
+    if isinstance(value, dict):
+        return {key: (_map_ids(part, table, f"{path}.{key}", changes)
+                      if isinstance(part, list) else part)
+                for key, part in value.items()}
+    return value
+
+
+def _map_names(mapped, rows, changes):
+    """Rewrite, in the mapped copy of a layer, every check id and skill name
+    that is an old word (the `check_id` and `skill` rows of `old_names:`):
+
+    - check ids: the keys of `checks`, and the items of the lists in
+      `CHECK_LISTS`, also inside `set:` and `replace:` of an entry;
+    - skills: the values of `require_skill` and `strategy` under `rules`,
+      with or without the `compass:` prefix. The new name is written without
+      the prefix, as the shipped default writes it, so the two compare equal.
+
+    An overlay that holds both ids of one check with different bodies keeps
+    both keys: the new word would otherwise win and hide the conflict, and
+    `merge.apply` refuses the layer (`one_check_conflicts`)."""
+    ids = rows.get("check_id") or {}
+    if ids:
+        checks = mapped.get("checks")
+        if isinstance(checks, dict):
+            mapped["checks"] = _map_check_keys(checks, ids, changes)
+        for catalogue, field in CHECK_LISTS:
+            entries = mapped.get(catalogue)
+            for name, entry in (entries.items() if isinstance(entries, dict) else ()):
+                if not isinstance(entry, dict):
+                    continue
+                for slot, holder in (("", entry), (".set", entry.get("set")),
+                                     (".replace", entry.get("replace"))):
+                    if isinstance(holder, dict) and field in holder:
+                        holder[field] = _map_id_list(
+                            holder[field], ids, f"{catalogue}.{name}{slot}.{field}", changes)
+    skills = {row["old"]: row["new"] for row in old_names.rows("skill")}
+    rules = mapped.get("rules")
+    if skills and isinstance(rules, dict):
+        _map_skills(rules, skills, "rules", changes)
+
+
+def _map_check_keys(checks, ids, changes):
+    out = {}
+    for key, entry in checks.items():
+        new = ids.get(key) if isinstance(key, str) else None
+        if new is None:
+            out[key] = entry
+            continue
+        if new in checks:
+            if checks[new] != entry:
+                out[key] = entry    # a conflict: `one_check_conflicts` reports it
+                continue
+            changes.append((f"checks.{key}", key, new))
+            continue                # the same body under both: the new id stays
+        changes.append((f"checks.{key}", key, new))
+        out[new] = entry
+    return out
+
+
+def _skill_word(value, skills, path, changes):
+    if isinstance(value, str):
+        bare = value[len(SKILL_PREFIX):] if value.startswith(SKILL_PREFIX) else value
+        if bare in skills:
+            changes.append((path, value, skills[bare]))
+            return skills[bare]
+    return value
+
+
+def _map_skills(node, skills, path, changes):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            here = f"{path}.{key}"
+            if key in SKILL_EFFECTS:
+                node[key] = ([_skill_word(item, skills, here, changes) for item in value]
+                             if isinstance(value, list)
+                             else _skill_word(value, skills, here, changes))
+            else:
+                _map_skills(value, skills, here, changes)
+    elif isinstance(node, list):
+        for index, item in enumerate(node):
+            _map_skills(item, skills, f"{path}[{index}]", changes)
 
 
 def _map_word(value, table, path, changes):

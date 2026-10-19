@@ -72,7 +72,7 @@ and a reader knows where their evidence went without guessing.
 - **Assess** - load the `adaptive-routing` skill; consider the `router`
   agent.
 - **Define and refine** - load `bdd-specification`; on brownfield work whose
-  behaviour is not yet written down, also load `behaviour-mapping`. The
+  behaviour is not yet written down, also load `behavior-mapping`. The
   `spec-author` agent owns both stages.
 - **Plan** - load `plan-authoring` (which optional design sections earn a
   place) and `governance-check` (how to check the design against the

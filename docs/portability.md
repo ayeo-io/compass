@@ -36,7 +36,7 @@ commands/        the stage interface (the /compass: namespace)
 agents/          router, spec-author, planner, orchestrator, builder,
                  verifier, reviewer, product-owner, product-marketer,
                  architect
-skills/          adaptive-routing, bdd-specification, behaviour-mapping,
+skills/          adaptive-routing, bdd-specification, behavior-mapping,
                  compass-runtime, evidence-gates, flow-management,
                  governance-check, intent-interview, plan-authoring,
                  quick-fix, receiving-code-review, systematic-debugging,

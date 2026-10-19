@@ -66,7 +66,7 @@ auditable per-issue, not just per-approach.
 - Be used when risk or size reads high. If risk is `cross-cutting`+ or
   size is `medium`+, the evaluator computes a heavier approach. quick fix
   is for issues that are small on both axes. Unmapped familiarity does not
-  block it: the approach record gives `behaviour-mapping` as advice
+  block it: the approach record gives `behavior-mapping` as advice
   (`RP-ADV-002`).
 - Be used to "just get the change in" past the approach the evaluator
   actually computed. `delivery-approach.md` makes that visible.

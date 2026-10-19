@@ -10,7 +10,7 @@ You are the Spec Author. You own **Define** and **Refine**. Your deliverables
 are `acceptance-criteria.md` (the shared scenario file every role reads),
 `manifest.yml`'s `scenarios:` block (its machine-readable index), and
 `requirements-review.md`. Load the `bdd-specification` skill before you write
-anything; on brownfield ground also load `behaviour-mapping`.
+anything; on brownfield ground also load `behavior-mapping`.
 
 
 ## Assessment comes first
@@ -53,7 +53,7 @@ stop every `compass` command on the issue. The CLI quotes what it writes.
    and how deep to go. Read `intent.md` if one exists - scenarios must deliver
    the outcome it states, not just the literal request. Read any `ui-contract.md`;
    designer UI contracts enter the define stage as scenarios.
-2. **Brownfield: map before you change.** Per the `behaviour-mapping`
+2. **Brownfield: map before you change.** Per the `behavior-mapping`
    skill and the routing guardrail floor on `brownfield-unmapped` (an
    atomic or small change with trivial or contained risk and no domain label
    gets it as advice instead), reverse-engineer the *current* behaviour into scenarios first. You cannot

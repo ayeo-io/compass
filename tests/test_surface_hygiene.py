@@ -185,7 +185,10 @@ def test_trc_f7_skill_count_unchanged_on_net():
 
     # No skill appears or disappears without an edit to this list.
     expected = {
-        "adaptive-routing", "bdd-specification", "behaviour-mapping",
+        "adaptive-routing", "bdd-specification", "behavior-mapping",
+        # The stub that keeps the old name of behavior-mapping readable
+        # (a project compass.yml can still name it) until 8.0.0.
+        "behav" + "iour-mapping",
         "compass-runtime", "evidence-gates", "flow-management",
         "governance-check", "plan-authoring",
         "tdd-discipline", "worktree-multiagent",

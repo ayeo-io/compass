@@ -172,7 +172,7 @@ checks:
   dor-problem-traces-up: {statement: 'Problem traces up - the spec serves the Problem and Desired outcome in `intent.md` (or the
         issue description, if there is no intent.md). No scenario is orphaned from intent.', kind: human,
       severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
-  dor-behaviour-is-gwt: {statement: Behaviour is Given/When/Then - every scenario has an observable `Then`. No scenario is a wish.,
+  dor-behavior-is-gwt: {statement: Behaviour is Given/When/Then - every scenario has an observable `Then`. No scenario is a wish.,
       kind: human, severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
   dor-traceability-ids: {statement: Traceability ids assigned - every scenario has a `TRC-id` so code and claims can point back
         to it., kind: human, severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}

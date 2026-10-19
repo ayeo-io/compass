@@ -745,90 +745,90 @@ def cmd_calibration(args):
               readiness=[{"issue": s, "readiness": r, "floor": f}
                          for s, r, f in _readiness_rows(tasks)])
     _buf = _io.StringIO()
-    _ctx = _cl.redirect_stdout(_buf)
-    _ctx.__enter__()
-    print("Delivery approaches:")
-    for r in sorted(dist, key=lambda x: (weights.get(x, 99), x)):
-        print(f"  {display_shape(r):<12}: {dist[r]}")
-    if no_route:
-        print(f"  (no approach): {len(no_route)}  <- assessment did not "
-              f"complete: {', '.join(no_route)}")
-    print()
-    pct = round(100 * reframed_tasks / len(tasks))
-    print("Re-assessments:")
-    print(f"  issues re-assessed   : {reframed_tasks} of {len(tasks)} ({pct}%)")
-    print(f"  total re-assessments : {total}")
-    if total:
-        print("  direction:")
-        print(f"    up   (assessment under-sized) : {ups}")
-        print(f"    down (assessment over-sized)  : {downs}")
-        if sideways:
-            print(f"    sideways                      : {sideways}")
-        if unweighed:
-            print(f"    unweighed (an approach with no weight in routing-policy.yml): "
-                  f"{sum(unweighed.values())}")
-            for k, v in sorted(unweighed.items()):
-                print(f"      {_display_transition(k)} : {v}")
-        print("  transitions:")
-        for k, v in sorted(transitions.items(), key=lambda x: -x[1]):
-            print(f"    {_display_transition(k)} : {v}")
-    print()
-    print("Repository readiness at assessment:")
-    for slug, text, floor in _readiness_rows(tasks):
-        print(f"  {slug:<28} {text:<14} {floor}")
-    print()
-    # Interruptions: each hook block and each failing `compass check`,
-    # appended to .compass/interruptions.log as the work happened.
-    from compass_pkg.interruptions import totals
-    logged = totals(os.path.dirname(os.path.normpath(work)))
-    blocks = sum(c.get("hook_blocks", 0) for c in logged.values())
-    failures = sum(c.get("check_failures", 0) for c in logged.values())
-    counted = len(logged)
-    print("Interruptions:")
-    print(f"  {blocks} hook block(s) and {failures} check failure(s), "
-          f"across {counted} issue(s)")
-    print()
-    print("Signal:")
-    if total == 0:
-        print("  No re-assessments recorded - either routing is well-calibrated, or")
-        print("  there is not enough history yet. Revisit after more issues.")
-    elif ups >= 2 and ups > downs * 2:
-        print(f"  {ups} up re-assessments vs {downs} down - a lean toward UNDER-sizing.")
-        print("  Assess is reading size or risk low. Tune routing-policy.yml")
-        print("  `default_shapes`, or sharpen the sizing rubric in the")
-        print("  delivery-approach reference docs.")
-    elif downs >= 2 and downs > ups * 2:
-        print(f"  {downs} down re-assessments vs {ups} up - a lean toward OVER-sizing.")
-        print("  Assessment is reading risk high; the approaches may be heavier")
-        print("  than the work warrants. Review routing-policy.yml.")
-    else:
-        print(f"  {ups} up / {downs} down - roughly balanced, re-assessment rate "
-              f"{pct}%.")
-        print("  Routing looks reasonably calibrated; keep watching the trend.")
+    # The with block puts stdout back even when a section below raises, so a
+    # caller that catches the error does not keep writing into the buffer.
+    with _cl.redirect_stdout(_buf):
+        print("Delivery approaches:")
+        for r in sorted(dist, key=lambda x: (weights.get(x, 99), x)):
+            print(f"  {display_shape(r):<12}: {dist[r]}")
+        if no_route:
+            print(f"  (no approach): {len(no_route)}  <- assessment did not "
+                  f"complete: {', '.join(no_route)}")
+        print()
+        pct = round(100 * reframed_tasks / len(tasks))
+        print("Re-assessments:")
+        print(f"  issues re-assessed   : {reframed_tasks} of {len(tasks)} ({pct}%)")
+        print(f"  total re-assessments : {total}")
+        if total:
+            print("  direction:")
+            print(f"    up   (assessment under-sized) : {ups}")
+            print(f"    down (assessment over-sized)  : {downs}")
+            if sideways:
+                print(f"    sideways                      : {sideways}")
+            if unweighed:
+                print(f"    unweighed (an approach with no weight in routing-policy.yml): "
+                      f"{sum(unweighed.values())}")
+                for k, v in sorted(unweighed.items()):
+                    print(f"      {_display_transition(k)} : {v}")
+            print("  transitions:")
+            for k, v in sorted(transitions.items(), key=lambda x: -x[1]):
+                print(f"    {_display_transition(k)} : {v}")
+        print()
+        print("Repository readiness at assessment:")
+        for slug, text, floor in _readiness_rows(tasks):
+            print(f"  {slug:<28} {text:<14} {floor}")
+        print()
+        # Interruptions: each hook block and each failing `compass check`,
+        # appended to .compass/interruptions.log as the work happened.
+        from compass_pkg.interruptions import totals
+        logged = totals(os.path.dirname(os.path.normpath(work)))
+        blocks = sum(c.get("hook_blocks", 0) for c in logged.values())
+        failures = sum(c.get("check_failures", 0) for c in logged.values())
+        counted = len(logged)
+        print("Interruptions:")
+        print(f"  {blocks} hook block(s) and {failures} check failure(s), "
+              f"across {counted} issue(s)")
+        print()
+        print("Signal:")
+        if total == 0:
+            print("  No re-assessments recorded - either routing is well-calibrated, or")
+            print("  there is not enough history yet. Revisit after more issues.")
+        elif ups >= 2 and ups > downs * 2:
+            print(f"  {ups} up re-assessments vs {downs} down - a lean toward UNDER-sizing.")
+            print("  Assess is reading size or risk low. Tune routing-policy.yml")
+            print("  `default_shapes`, or sharpen the sizing rubric in the")
+            print("  delivery-approach reference docs.")
+        elif downs >= 2 and downs > ups * 2:
+            print(f"  {downs} down re-assessments vs {ups} up - a lean toward OVER-sizing.")
+            print("  Assessment is reading risk high; the approaches may be heavier")
+            print("  than the work warrants. Review routing-policy.yml.")
+        else:
+            print(f"  {ups} up / {downs} down - roughly balanced, re-assessment rate "
+                  f"{pct}%.")
+            print("  Routing looks reasonably calibrated; keep watching the trend.")
 
-    # --- Unrecorded re-assessments -------------------------------------------
-    # Read devlogs for scope-bloat signals that were absorbed without a re-assessment.
-    # Strictly read-only - no manifest.yml is written here.
-    # Patterns loaded from signals.yml at runtime (never hardcoded).
-    # Advisory only - this section reports, never gates (Inv-4).
-    debts = _find_reframe_debt(tasks, work)
-    if debts:
-        print()
-        print("Unrecorded re-assessments - scope grew with no re-assessment:")
-        print("  Each entry below is an issue where a scope-bloat signal was")
-        print("  detected in devlog.md but no re-assessment was recorded afterwards.")
-        print("  These are missed calibration signals. Re-assess retroactively")
-        print("  with: /compass:assess --reassess --reason \"<why scope grew>\"")
-        print()
-        for d in debts:
-            print(f"  issue    : {d['task']}")
-            print(f"  signal  : {d['devlog_line']!r}")
+        # --- Unrecorded re-assessments -------------------------------------------
+        # Read devlogs for scope-bloat signals that were absorbed without a re-assessment.
+        # Strictly read-only - no manifest.yml is written here.
+        # Patterns loaded from signals.yml at runtime (never hardcoded).
+        # Advisory only - this section reports, never gates (Inv-4).
+        debts = _find_reframe_debt(tasks, work)
+        if debts:
             print()
-    # Close the capture opened above and hand the prose to the report, which
+            print("Unrecorded re-assessments - scope grew with no re-assessment:")
+            print("  Each entry below is an issue where a scope-bloat signal was")
+            print("  detected in devlog.md but no re-assessment was recorded afterwards.")
+            print("  These are missed calibration signals. Re-assess retroactively")
+            print("  with: /compass:assess --reassess --reason \"<why scope grew>\"")
+            print()
+            for d in debts:
+                print(f"  issue    : {d['task']}")
+                print(f"  signal  : {d['devlog_line']!r}")
+                print()
+    # Hand the captured prose to the report, which
     # decides what the caller's mode should see. The numbers went in via
     # `data()`, so --json carries the retrospective's findings rather than its
     # paragraphs.
-    _ctx.__exit__(None, None, None)
     return _rep.body(_buf.getvalue().rstrip("\n")).emit()
 
 

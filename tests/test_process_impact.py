@@ -208,3 +208,26 @@ def test_trc_f4_calibration_without_the_flag_should_be_unchanged(tmp_path):
     import re as _re
     subs = set(_re.search(r"\{([a-zA-Z0-9_,\-]+)\}", out).group(1).split(","))
     assert "impact" not in subs, "a new top-level verb was added"
+
+
+def test_retro_restores_stdout_when_report_rendering_raises(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    calibration = _impl()
+    proj = make_project(tmp_path, STD[:1])
+    monkeypatch.setattr(calibration, "find_compass_dir",
+                        lambda: str(proj / ".compass"))
+
+    def fail(*_args):
+        raise RuntimeError("report rendering failed")
+
+    monkeypatch.setattr(calibration, "_find_reframe_debt", fail)
+    original_stdout = sys.stdout
+    try:
+        calibration.cmd_calibration(SimpleNamespace())
+    except RuntimeError as exc:
+        assert str(exc) == "report rendering failed"
+    else:
+        raise AssertionError("the injected report failure did not propagate")
+
+    assert sys.stdout is original_stdout

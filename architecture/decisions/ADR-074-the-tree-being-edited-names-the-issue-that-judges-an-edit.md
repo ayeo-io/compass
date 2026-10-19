@@ -26,9 +26,9 @@ Four earlier decisions bound the answer:
 2. **In a foreign project the pointer decides.** A pointer that names anything is not empty. If its folder exists that is the issue; if not, the hook refuses with `bad-session-issue`. `COMPASS_ISSUE` applies only to an empty pointer, and only when its folder exists in that tree.
 3. **A foreign project never uses the most-recently-changed guess.** A foreign project with a `.compass/` folder and no issue to name refuses. A tree with no `.compass/` folder is left alone, as before.
 4. **The lease is skipped for a foreign project.** `pointer-moved` applies in the session's own project. A visiting session neither reads nor writes the foreign tree's session table.
-5. **A foreign tree must be tied to the session's repository.** `git rev-parse --git-common-dir` is run in the edited tree and in the session's project. The trees are tied when both succeed and the real paths are equal. Any other result refuses with `bad-session-issue`. The result is cached for the hook call. This is a consistency check, not a defence against a forged `.git` file.
+5. **A foreign tree must be tied to the session's repository.** `git rev-parse --git-common-dir` is run in the edited tree and in the session's project. The trees are tied when both succeed and the two folders are the same folder on disk. Any other result refuses with `tree-not-tied`. The result is cached for the hook call. This is a consistency check, not a defence against a forged `.git` file.
 6. **The session record follows the same selection.** For a foreign project the session is recorded on the issue that judges the edit, with `via=tree`.
-7. **A record in the session table carries the real path of the Compass folder it was written in.** A record with no root, or another root, is ignored. This part is built by the subtask that owns the session table.
+7. **A record in the session table carries the real path of the Compass folder it was written in.** A record with no root, or another root, is ignored.
 8. **Bash is documented, not fixed.** A shell write still resolves from the session's project. The safety contract states the gap, and GitHub issue #104 stays open for it.
 
 ## Alternatives considered

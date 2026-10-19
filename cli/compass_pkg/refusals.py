@@ -84,11 +84,17 @@ REFUSALS: dict[str, dict[str, str]] = {
     "bad-session-issue": {
         "what": "this edit",
         "why": "no issue can be named for {project}: '{slug}' is not an "
-               "issue under its .compass/work/, or it is not a worktree of "
-               "the session's repository, or git cannot read it.",
+               "issue under its .compass/work/.",
         "fix": "in the session's own project, set COMPASS_ISSUE to a real "
                "slug or unset it. In a worktree, run compass issue use "
                "<slug> there.",
+    },
+    "tree-not-tied": {
+        "what": "this edit",
+        "why": "{project} is not tied to the session's repository: it is "
+               "not a worktree of it, or git cannot read it.",
+        "fix": "edit a worktree of the session's repository, or start the "
+               "session in {project}.",
     },
     "pointer-moved": {
         "what": "this edit",

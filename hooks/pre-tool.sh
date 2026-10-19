@@ -358,7 +358,7 @@ resolve_project() {
 # Sets FOUND_ROOT to the nearest ancestor of $1 (or $1 itself) that holds a
 # .compass/ folder, or "" when there is none before the repository root.
 find_compass_root() {
-  local search="$1"
+  local search="$1" parent
   FOUND_ROOT=""
   while [ -n "$search" ]; do
     if [ -d "$search/.compass" ]; then
@@ -373,7 +373,11 @@ find_compass_root() {
     # worktrees itself for multiagent orchestrations.
     [ -e "$search/.git" ] && break
     [ "$search" = "/" ] && break
-    search="$(dirname "$search")"
+    # A relative path ends at "." and the parent of "." is ".", so stop
+    # when the parent is the path itself.
+    parent="$(dirname "$search")"
+    [ "$parent" = "$search" ] && break
+    search="$parent"
   done
 }
 
@@ -411,7 +415,9 @@ tied_to_session_repo() {
     TIED=0
     local mine theirs
     if mine="$(git_common_dir "$PROJECT_DIR")" && [ -n "$mine" ]; then
-      if theirs="$(git_common_dir "$SESSION_ROOT")" && [ "$mine" = "$theirs" ]; then
+      # -ef compares the folders on disk, so a case-insensitive file system
+      # does not make two spellings of one folder differ.
+      if theirs="$(git_common_dir "$SESSION_ROOT")" && [ "$mine" -ef "$theirs" ]; then
         TIED=1
       fi
     fi
@@ -435,10 +441,11 @@ classify_foreign() {
   [ -n "$FOUND_ROOT" ] || return 0
   SESSION_ROOT="$FOUND_ROOT"
   [ "$PROJECT_DIR" != "$SESSION_ROOT" ] || return 0
-  real_dir "$SESSION_ROOT"
-  local mine="$REAL_DIR"
-  real_dir "$PROJECT_DIR"
-  if [ -z "$mine" ] || [ -z "$REAL_DIR" ] || [ "$mine" != "$REAL_DIR" ]; then
+  # -ef compares the folders on disk, so a case-insensitive file system
+  # does not make two spellings of one folder differ. A folder that cannot
+  # be entered is foreign.
+  if ! { [ -d "$SESSION_ROOT" ] && [ -d "$PROJECT_DIR" ] \
+         && [ "$SESSION_ROOT" -ef "$PROJECT_DIR" ]; }; then
     FOREIGN=1
   fi
 }
@@ -483,8 +490,9 @@ classify_foreign
 # guessed. In a foreign project the selection is the one the guard below
 # uses: the tree must be tied to the session's repository, the pointer comes
 # first and COMPASS_ISSUE only stands in for an empty pointer, and the issue
-# is recorded with via=tree so the session table is not read. An id already recorded costs one `grep` and no python3 process; a
-# new one starts one, which tries the manifest lock once without waiting
+# is recorded with via=tree so the session table is not read. An id already
+# recorded costs one `grep` and no python3 process; a new one starts one,
+# which tries the manifest lock once without waiting
 # (cli/compass_pkg/session_record.py). This never refuses a call: every
 # fault, a bad id or a recorder that cannot run returns 0 with its output
 # discarded, and the checks below judge the call as before. A broken install
@@ -1376,7 +1384,7 @@ POINTER="$COMPASS_DIR/current-task"
 # is no guess and no lease. A tree that cannot be tied to the session's
 # repository refuses.
 if [ "$FOREIGN" -eq 1 ]; then
-  tied_to_session_repo || compass_block bad-session-issue "slug=none" "project=$PROJECT_DIR"
+  tied_to_session_repo || compass_block tree-not-tied "project=$PROJECT_DIR"
   SLUG=""
   if [ -f "$POINTER" ]; then
     SLUG="$(tr -d '[:space:]' < "$POINTER" 2>/dev/null || true)"

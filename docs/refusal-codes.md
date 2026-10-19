@@ -34,7 +34,7 @@ code from a refusal you hit.
 ### `bad-session-issue`
 
 **Blocked:** this edit
-**Why:** no issue can be named for {project}: '{slug}' is not an issue under its .compass/work/, or it is not a worktree of the session's repository, or git cannot read it.
+**Why:** no issue can be named for {project}: '{slug}' is not an issue under its .compass/work/.
 **Fix:** in the session's own project, set COMPASS_ISSUE to a real slug or unset it. In a worktree, run compass issue use <slug> there.
 
 ### `checkpoint-no-outcome`
@@ -138,6 +138,12 @@ code from a refusal you hit.
 **Blocked:** {target} (tool: {tool})
 **Why:** the session transcript holds what Compass showed only to the person, such as the code that confirms a delegation.
 **Fix:** work from the conversation and the files in the project; ask the person for anything you need from the transcript.
+
+### `tree-not-tied`
+
+**Blocked:** this edit
+**Why:** {project} is not tied to the session's repository: it is not a worktree of it, or git cannot read it.
+**Fix:** edit a worktree of the session's repository, or start the session in {project}.
 
 ### `waits-for-issue`
 

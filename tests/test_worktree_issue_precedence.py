@@ -216,7 +216,84 @@ def test_project_outside_the_session_repository_is_refused(tmp_path, kind):
         project = _unreadable_worktree(tmp_path)
     r = _hook(main, project / "src" / "app.py")
     assert r.returncode == 2, r.stderr
-    assert "bad-session-issue" in r.stderr, r.stderr
+    assert "tree-not-tied" in r.stderr, r.stderr
+
+
+@pytest.mark.parametrize("kind", ["other-repository", "no-repository"])
+def test_untied_tree_refusal_does_not_call_none_an_issue(tmp_path, kind):
+    """Scenario id: `TRC-007` in worktree-issue-from-edited-path/acceptance-criteria.md
+
+    A tree that is not tied to the session's repository has no issue to
+    name, so the refusal says the tree is not tied, not that 'none' is not
+    an issue.
+    """
+    main = _setup(tmp_path)
+    project = (_other_repo_project(tmp_path) if kind == "other-repository"
+               else _plain_project(tmp_path))
+    r = _hook(main, project / "src" / "app.py")
+    assert r.returncode == 2, r.stderr
+    text = _flat(r)
+    assert "'none'" not in text, text
+    assert "not tied to the session's repository" in text, text
+
+
+def test_relative_session_project_directory_ends_the_search(tmp_path):
+    """Scenario id: `TRC-007` in worktree-issue-from-edited-path/acceptance-criteria.md
+
+    A relative CLAUDE_PROJECT_DIR has no Compass folder to find. The upward
+    search must stop at the top of the relative path, and the edit is judged
+    as before: by the project the edited path names (no red on record here).
+    """
+    main = _setup(tmp_path, main_issues=(("beta", False),))
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    payload = {"tool_name": "Write", "tool_input": {
+        "file_path": str(main / "src" / "app.py"), "content": "x = 2\n"}}
+    try:
+        r = subprocess.run(
+            ["bash", str(PRE)], input=json.dumps(payload),
+            capture_output=True, text=True, env=_env("main"),
+            cwd=str(outside), timeout=10)
+    except subprocess.TimeoutExpired:
+        pytest.fail("the hook did not end: the search for the session's "
+                    "Compass folder looped on a relative path")
+    assert r.returncode == 2, r.stderr
+    assert "no-red-on-record" in r.stderr, r.stderr
+
+
+def test_case_variant_spelling_of_the_session_project_is_the_session_project(
+        tmp_path):
+    """Scenario id: `TRC-009` in worktree-issue-from-edited-path/acceptance-criteria.md
+
+    On a case-insensitive file system `MAIN` and `main` are one folder. The
+    comparison follows the file system, so the variant is not foreign and
+    COMPASS_ISSUE keeps its place.
+    """
+    main = _setup(tmp_path)
+    variant = tmp_path / "MAIN"
+    if not variant.exists():
+        pytest.skip("this file system is case-sensitive: `MAIN` is not the "
+                    "folder `main`, so there is no case variant to test")
+    r = _hook(main, variant / "src" / "app.py", issue="alpha")
+    assert r.returncode == 0, r.stderr
+
+
+def test_case_variant_session_directory_still_ties_a_worktree(tmp_path):
+    """Scenario id: `TRC-009` in worktree-issue-from-edited-path/acceptance-criteria.md
+
+    The session is started in `MAIN`, which is the folder `main` on a
+    case-insensitive file system. A worktree of that repository is still tied
+    to it, so the worktree's own issue judges the edit.
+    """
+    main = _setup(tmp_path)
+    wt = _linked(main)
+    _wt_issues(wt, [("beta", True)], "beta")
+    variant = tmp_path / "MAIN"
+    if not variant.exists():
+        pytest.skip("this file system is case-sensitive: `MAIN` is not the "
+                    "folder `main`, so there is no case variant to test")
+    r = _hook(variant, wt / "src" / "app.py", cwd=main)
+    assert r.returncode == 0, r.stderr
 
 
 def test_stale_session_variable_in_the_session_project_is_refused(tmp_path):

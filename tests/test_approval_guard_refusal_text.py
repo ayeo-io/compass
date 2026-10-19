@@ -30,9 +30,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
 
 from approval_guard_cases import (CALLER, DEL, EXEMPT_COMMANDS, MIN_PER_EXEMPT,  # noqa: E402
-                                  MIN_PER_THING, REFUSED, REQ, REQUEST, THINGS, TRN,
-                                  UNREFUSED_ON_BASE, bash_event, build_world, drop_world,
-                                  payload, run_hook, verdict)
+                                  MIN_PER_THING, REFUSED, REQ, REQUEST, SCRIPT_EXEMPT_COMMANDS,
+                                  SCRIPT_REFUSED, THINGS, TRN, UNREFUSED_ON_BASE, bash_event,
+                                  build_world, drop_world, payload, run_hook, verdict)
 
 CONTRACT = ROOT / "docs" / "safety-contract.md"
 CLI = ROOT / "cli" / "compass"
@@ -122,6 +122,17 @@ def test_trc_049_a_refused_word_cannot_add_text_to_the_refusal(world):
     assert sum(line.startswith("Fix:") for line in text.splitlines()) == 1, text
 
 
+def test_trc_064_the_request_refusal_tells_the_agents_step_and_the_persons_step(world):
+    result = run_hook(world, bash_event(world, "cat {request}"))
+    assert verdict(result) == REQ, result.stderr
+    text = _refusal_text(result)
+    fix = next(line for line in text.splitlines() if line.startswith("Fix:"))
+    assert "compass evidence request" in fix, fix        # the agent's step
+    assert "/compass:approve" in fix, fix                # the person's step
+    assert "do not read, change or run" in fix, fix
+    assert len(text.split()) < 60, text
+
+
 # --- what the guard cannot read, and how fast it answers ---------------------------------------
 
 def test_trc_031_a_command_the_guard_cannot_read_is_judged_by_its_whole_text(world):
@@ -144,12 +155,19 @@ def test_trc_032_a_long_command_is_judged_within_two_seconds(world):
 
 @pytest.mark.serial
 def test_trc_053_a_very_long_or_deeply_nested_command_is_judged_within_two_seconds(world):
-    command = 'git commit -m "' + "$(" * 200 + "x" + ")" * 200 + " " + "a" * 20000 + '"'
-    started = time.perf_counter()
-    result = run_hook(world, bash_event(world, command))
-    elapsed = time.perf_counter() - started
-    assert result.returncode == 0, result.stderr
-    assert elapsed < BOUND, f"the hook took {elapsed:.2f} seconds"
+    # The hook starts the guard only for a command that holds a protected name, so each
+    # command holds one inside its message. Without it the hook returns before the guard
+    # runs and the time says nothing about the guard. A command nested over 32 levels
+    # cannot be read, so the guard judges its whole text and refuses the name.
+    name = " prompt-approval.sh "
+    readable = 'git commit -m "' + "$(" * 20 + "x" + ")" * 20 + name + "a" * 20000 + '"'
+    unreadable = 'git commit -m "' + "$(" * 200 + "x" + ")" * 200 + name + "a" * 20000 + '"'
+    for command, status in ((readable, 0), (unreadable, 2)):
+        started = time.perf_counter()
+        result = run_hook(world, bash_event(world, command))
+        elapsed = time.perf_counter() - started
+        assert result.returncode == status, result.stderr
+        assert elapsed < BOUND, f"the hook took {elapsed:.2f} seconds"
 
 
 # --- the shared table ---------------------------------------------------------------------------
@@ -193,6 +211,22 @@ def test_trc_054_each_exempt_command_has_at_least_three_counter_examples(world, 
     assert set(refused) <= set(EXEMPT_COMMANDS), set(refused) - set(EXEMPT_COMMANDS)
 
 
+def test_trc_065_the_exempt_commands_in_the_code_are_the_commands_the_table_attacks(
+        world, in_process):
+    """A command added to an exemption table in the code, without three calls in the shared
+    table that stay refused, fails here. The lists are read from the code, not copied."""
+    assert in_process.exempt_commands() == set(EXEMPT_COMMANDS), (
+        "the code exempts commands the table does not attack, or the reverse: "
+        f"{in_process.exempt_commands() ^ set(EXEMPT_COMMANDS)}")
+    assert in_process.script_commands() == set(SCRIPT_EXEMPT_COMMANDS), (
+        f"{in_process.script_commands() ^ set(SCRIPT_EXEMPT_COMMANDS)}")
+    refused = Counter(case.exempt for case in SCRIPT_REFUSED
+                      if _outcome(in_process, world, case) == case.code)
+    short = {name: refused[name] for name in SCRIPT_EXEMPT_COMMANDS
+             if refused[name] < MIN_PER_EXEMPT}
+    assert not short, f"fewer than {MIN_PER_EXEMPT} refused calls for {short}"
+
+
 # --- the documents -------------------------------------------------------------------------------
 
 #: The phrases the approval-guard section of the safety contract must hold. Each
@@ -225,6 +259,20 @@ def test_trc_035_the_refusal_reference_is_current():
     assert marker in page
     assert page.split(marker, 1)[1].strip() == result.stdout.strip(), (
         "docs/refusal-codes.md is stale - regenerate it with `compass _refusal --list`")
+
+
+def test_trc_066_the_docs_state_the_exemptions_the_code_holds(in_process):
+    """The safety contract and the guard's own docstring name every command the code
+    exempts, and neither lists `git mv` or `git rm` as a reader of the script."""
+    texts = {"the safety contract": _normal(_approval_section()),
+             "the approval_guard docstring": _normal(in_process.__doc__)}
+    names = in_process.exempt_commands() | in_process.script_commands()
+    missing = {label: sorted(n for n in names if n.split()[-1] not in text.replace(",", " ").split())
+               for label, text in texts.items()}
+    assert not any(missing.values()), missing
+    stale = re.compile(r"\badd,? (?:mv|or mv)\b|\bmv (?:and|or) rm\b")
+    listed = [label for label, text in texts.items() if stale.search(text)]
+    assert not listed, f"{listed} still list git mv or git rm as a reader of the script"
 
 
 def test_trc_056_the_safety_contract_no_longer_states_the_replaced_rules():

@@ -35,7 +35,8 @@ from compass_pkg import catalogue_spec as spec
 from compass_pkg import (classify, layers, legacy_adapter, merge, policy_lint,
                          project_settings, retired, shipped_releases, waivers)
 from compass_pkg.atomic_io import atomic_write_text
-from compass_pkg.core import FRAMEWORK_ROOT, CompassError, load_yaml, migrate_map_section
+from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, load_yaml, migrate_map_section,
+                              now_iso)
 
 GOVERNANCE_FILES = ("governance/routing-policy.yml", "governance/guardrails.yml")
 # The old settings file's path, as `project_settings` names it, in the form the
@@ -139,12 +140,11 @@ def _compass_yml_refusal(root):
     project's settings, so it is not moved away."""
     if _marker(root) is not None:
         return ("compass.yml was written by compass policy migrate, which "
-                "migration.yml in .compass records, and it now holds this project's "
-                "settings. Nothing was changed. Do not move it away: the settings "
-                f"would fall back to their defaults. To go back to the old files, "
-                f"copy {OLD_CONFIG} and the two governance files from the legacy "
-                "folder in .compass to where they were, then remove compass.yml and "
-                "migration.yml")
+                "migration.yml in .compass records. Nothing was changed. To go "
+                "back to the old files, run compass policy migrate --undo: it "
+                "restores them from the legacy folder in .compass. Do not delete "
+                "compass.yml by hand: the settings would fall back to their "
+                "defaults")
     if not _has_schema(root):
         return ("compass.yml exists and has no `schema:`, so Compass does not read "
                 "it: it looks like another tool's file. Nothing was changed. Move "
@@ -750,6 +750,19 @@ STATE_HEADER = ("# Compass - state the CLI wrote. Do not edit. Settings go in co
                 "# Moved here from the old settings file by compass policy migrate.\n")
 
 
+def text_digest(text):
+    """The digest of a text as the file will hold it, in the form
+    `file_digest` gives, so the marker can be compared with a file on disk."""
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _state_text(made):
+    """The text of the state file, built once so the digest and the write
+    use the same string."""
+    return STATE_HEADER + yaml.dump(
+        made.state, Dumper=_NoAlias, sort_keys=False, default_flow_style=False)
+
+
 def _tool_version():
     try:
         with open(os.path.join(FRAMEWORK_ROOT, "VERSION"), "r", encoding="utf-8") as fh:
@@ -784,14 +797,17 @@ def apply(root, made):
         atomic_write_text(_absolute(root, f"{LEGACY_DIR}/{rel.rsplit('/', 1)[-1]}"),
                           _read_exact(_absolute(root, rel)))
     creates_state = _creates_state(root, made)
+    written = {COMPASS_YML: text_digest(made.compass_yml)}
+    if creates_state:
+        state_text = _state_text(made)
+        written[STATE_YML] = text_digest(state_text)
     atomic_write_text(_absolute(root, MIGRATION_YML), yaml.dump(
         {"schema": 1, "tool": _tool_version(), "sources": dict(made.digests),
-         "created_state": creates_state},
+         "created_state": creates_state, "written": written, "migrated_at": now_iso()},
         Dumper=_NoAlias, sort_keys=False, default_flow_style=False))
     if creates_state:
-        atomic_write_text(_absolute(root, STATE_YML), STATE_HEADER + yaml.dump(
-            made.state, Dumper=_NoAlias, sort_keys=False, default_flow_style=False))
-    atomic_write_text(_absolute(root, COMPASS_YML), made.compass_yml)
+        atomic_write_text(_absolute(root, STATE_YML), state_text, newline="")
+    atomic_write_text(_absolute(root, COMPASS_YML), made.compass_yml, newline="")
     if OLD_CONFIG in made.sources:
         remove_old_config(root)
 

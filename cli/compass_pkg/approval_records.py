@@ -40,8 +40,16 @@ from __future__ import annotations
 
 import dataclasses
 import os
+import unicodedata
 
 from compass_pkg.stable_ids import GATE_G5
+
+#: The longest part of a loader reason or a folder name that the approver message shows.
+SHOWN_MAX = 120
+#: The longest folder name the approver message shows (a path is longer than a reason).
+SHOWN_FOLDER_MAX = 240
+#: Control, format and line-separator characters: none reaches a person's screen.
+HIDDEN = ("Cc", "Cf", "Zl", "Zp")
 
 #: The fields every `human-approval` record holds (the same four
 #: `human-approval-present` and a waiver's approval need).
@@ -149,6 +157,14 @@ class OwnerLookup:
     found_in: str = ""       # the folder of the compass.yml found above root
 
 
+def shown_text(text, limit=SHOWN_MAX):
+    """`text` as a person reads it in a message: no control, format or line-separator
+    character, white space folded, and at most `limit` characters, so a hostile file name or
+    key cannot add a line, move the cursor or make the message long."""
+    kept = "".join(c for c in str(text) if unicodedata.category(c) not in HIDDEN)
+    return " ".join(kept.split())[:limit]
+
+
 def _kind(value):
     """The owner value's type in words; `bool` first because it is an `int`."""
     if isinstance(value, bool):
@@ -202,7 +218,7 @@ def owner_and_cause(task_dir):
         try:
             loaded = layers.load_project_layer(root)
         except Exception as exc:                       # noqa: BLE001
-            detail = str(exc).replace(path + ": ", "").replace(path, "").strip()
+            detail = shown_text(str(exc).replace(path + ": ", "").replace(path, ""))
             return OwnerLookup(None, CAUSE_UNREADABLE, detail, root)
     value = loaded[0].doc.get("owner") if loaded else None
     if _text(value):

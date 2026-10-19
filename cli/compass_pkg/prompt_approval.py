@@ -244,8 +244,10 @@ def _no_approver(lookup):
     """The refusal for the cause that no owner can be named. Only the cause
     `no-owner` says "no approver can be named"; the others name what is wrong
     and the real next step. Each stays under 60 words."""
-    cause, root = lookup.cause, lookup.root
     records = approval_records
+    # The folder names come from the disk, so they are cleaned and cut like the reason.
+    cause, root = lookup.cause, records.shown_text(lookup.root, records.SHOWN_FOLDER_MAX)
+    found_in = records.shown_text(lookup.found_in, records.SHOWN_FOLDER_MAX)
     if cause == records.CAUSE_UNREADABLE:
         text = (f"compass.yml in {root} cannot be read: {lookup.detail}. "
                 f"Fix that file, {_SET_APPROVER}")
@@ -256,7 +258,7 @@ def _no_approver(lookup):
         text = ("The approver is read from compass.yml only, and owner is set only in "
                 f".compass/config.yml. Add owner: <your id> to compass.yml, {_SET_APPROVER}")
     elif cause == records.CAUSE_FILE_ABOVE:
-        text = (f"compass.yml is in {lookup.found_in}, but .compass is in {root}. Compass "
+        text = (f"compass.yml is in {found_in}, but .compass is in {root}. Compass "
                 f"reads compass.yml only from the folder that holds .compass. Copy it "
                 f"there, {_SET_APPROVER}")
     elif cause == records.CAUSE_MISSING_IN_WORKTREE:

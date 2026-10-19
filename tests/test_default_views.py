@@ -126,7 +126,7 @@ def test_gv_2_the_header_names_the_command_and_every_input_changes_the_text(
 
     # A value in the sidecar.
     root = _root_copy(tmp_path / "sidecar")
-    _edit(root / "governance/legacy-views.yml", "G5: [land]", "G5: [verify, land]")
+    _edit(root / "governance/legacy-views.yml", "G5: [ship]", "G5: [verify, ship]")
     changed = views.generate(root)
     assert changed[VIEWS[1]] != base[VIEWS[1]]
     assert changed[VIEWS[0]] == base[VIEWS[0]]
@@ -235,13 +235,13 @@ def test_gv_5_the_script_writes_and_checks(tmp_path):
     assert SCRIPT.is_file(), "scripts/generate-legacy-views.py is missing"
     root = _root_copy(tmp_path)
     assert _run("--check", root=root).returncode == 0
-    _edit(root / VIEWS[1], "version: 1.33.0", "version: 1.33.1")
+    _edit(root / VIEWS[1], "version: 1.33.1", "version: 1.33.2")
     checked = _run("--check", root=root)
     assert checked.returncode == 1
     assert VIEWS[1] in checked.stdout + checked.stderr
     assert COMMAND in checked.stdout + checked.stderr
     # `--check` writes nothing.
-    assert "version: 1.33.1" in (root / VIEWS[1]).read_text(encoding="utf-8")
+    assert "version: 1.33.2" in (root / VIEWS[1]).read_text(encoding="utf-8")
     written = _run(root=root)
     assert written.returncode == 0, written.stderr
     first = {v: (root / v).read_bytes() for v in VIEWS}

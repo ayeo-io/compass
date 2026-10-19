@@ -32,7 +32,7 @@
 # schemas/guardrails.schema.json.
 # =============================================================================
 
-version: 1.33.0
+version: 1.33.1
 # -----------------------------------------------------------------------------
 # Named checks - the mechanical checks `compass check` knows how to run. Each
 # guardrail below references one or more of these by name. The check reads
@@ -256,7 +256,7 @@ defaults:
     # does not exist yet, and after landing the manifest is a historical record.
     checks: [scenarios-have-tests, declared-tests-resolve, suite-passed,
              changed-code-traces-to-scenario, scenarios-are-executable]
-    checked_at: [verify, land]
+    checked_at: [verify, ship]
 
   - id: G2
     name: "Acceptance defined before it is built"
@@ -264,7 +264,7 @@ defaults:
       No code is written that no stated, checkable acceptance criterion
       describes. BDD scenarios (strategy `S1`) are the default form.
     checks: [scenario-has-id-and-intent]
-    checked_at: [clarify, verify]
+    checked_at: [refine, verify]
 
   - id: G3
     name: "Traceability holds"
@@ -278,7 +278,7 @@ defaults:
     # could vouch for one another.
     checks: [changed-code-traces-to-scenario, scenario-has-id-and-intent, claim-traces-to-scenario,
              landed-by-resolves]
-    checked_at: [clarify, build, verify, land]
+    checked_at: [refine, implement, verify, ship]
 
   - id: G4
     name: "Evidence, not assertion"
@@ -291,7 +291,7 @@ defaults:
     checks: [gate-evidence-present, dod-evidence-typed, consistency-check-passes, no-trusted-rerun,
              command-passes, evidence-identity-matches, evidence-matches-tree,
              rendered-blocks-current, borrowed-documents-answered, multiagent-run-recorded]
-    checked_at: [verify, land]
+    checked_at: [verify, ship]
 
   - id: G5
     name: "A human signs off on the irreversible"
@@ -309,7 +309,7 @@ defaults:
     # irreversible-labels). A project that wants critical risk too sets
     # `G5.when` back in compass.yml; the lock allows a stricter trigger.
     applies_when: { touches_any: [auth, payments, personal-data, migrations] }
-    checked_at: [land]
+    checked_at: [ship]
 
 # -----------------------------------------------------------------------------
 # SPIKE GUARDRAILS - apply only on a spike. A spike is intentionally
@@ -326,7 +326,7 @@ spike_guardrails:
       the work, graduate to delivery, or defer. Without a recorded
       conclusion a Spike is just untracked work.
     checks: [spike-conclusion-present]
-    checked_at: [land]
+    checked_at: [ship]
 
   - id: S2
     name: "No production change from a Spike"
@@ -336,7 +336,7 @@ spike_guardrails:
       assessment owns the code under a real delivery approach's guardrails.
       This is the safety model: a Spike cannot silently become delivery.
     checks: [spike-no-production-changes]
-    checked_at: [land]
+    checked_at: [ship]
 
 # -----------------------------------------------------------------------------
 # PROJECT GUARDRAILS - the team adds here. Each MUST reference a named check

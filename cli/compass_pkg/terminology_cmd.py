@@ -116,7 +116,7 @@ def _fmt(value):
 
 def kind_rows(artifacts: dict) -> list:
     """One row per document kind of the artifacts catalogue. The glossary and
-    `docs/artifact-catalogue.md` both read it, so they cannot disagree."""
+    `docs/artifact-catalog.md` both read it, so they cannot disagree."""
     from compass_pkg import artifact_kinds
 
     return artifact_kinds.rows(artifacts)
@@ -179,7 +179,7 @@ def render_glossary(vocab: dict, artifacts: dict = None) -> str:
     return "\n".join(out).rstrip("\n") + "\n"
 
 
-#: The lines in `docs/artifact-catalogue.md` between which `_derive-glossary`
+#: The lines in `docs/artifact-catalog.md` between which `_derive-glossary`
 #: writes the table of kinds. The text around them is written by hand.
 REGION_START = "<!-- compass:catalogue-table -->"
 REGION_END = "<!-- /compass:catalogue-table -->"
@@ -208,7 +208,7 @@ def replace_catalogue_region(doc: str, artifacts: dict) -> str:
     end = doc.find(REGION_END)
     if start < 0 or end < start:
         raise CompassError(
-            f"docs/artifact-catalogue.md has no {REGION_START} ... {REGION_END} region to write.")
+            f"docs/artifact-catalog.md has no {REGION_START} ... {REGION_END} region to write.")
     return (doc[:start + len(REGION_START)] + "\n\n" + render_catalogue_region(artifacts)
             + "\n" + doc[end:])
 
@@ -236,7 +236,7 @@ def cmd_derive_glossary(args):
     # The owning doc is rewritten beside the glossary: at its place when no
     # output is named, and at --catalogue-out when one is. A caller that names
     # only --out gets the glossary and leaves the doc alone.
-    doc_in = os.path.join(root, "docs", "artifact-catalogue.md")
+    doc_in = os.path.join(root, "docs", "artifact-catalog.md")
     doc_out = getattr(args, "catalogue_out", None) or (
         None if getattr(args, "out", None) else doc_in)
     if doc_out and os.path.isfile(doc_in):

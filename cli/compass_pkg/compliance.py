@@ -33,7 +33,7 @@ import json
 import os
 import re
 
-from compass_pkg import session_usage, status_words
+from compass_pkg import old_names, session_usage, status_words
 from compass_pkg.core import FRAMEWORK_ROOT, find_compass_dir, load_yaml, manifest_path
 
 LESSON_AFTER = 3   # distinct issues a behaviour must fail in
@@ -198,8 +198,8 @@ def report(root, only=None, days=14):
             rows[name]["sessions"] += 1
             rows[name][status if status in ("pass", "fail") else "undecided"] += 1
             if status == "fail":
-                failures.append({"issue": slug, "behaviour": name,
-                                 "call": result.get("call")})
+                failures.append(old_names.twins("json_key", {
+                    "issue": slug, "behavior": name, "call": result.get("call")}))
     for name, row in rows.items():
         decided = row["pass"] + row["fail"]
         row["rate"] = round(row["pass"] / decided, 3) if decided else None
@@ -208,8 +208,12 @@ def report(root, only=None, days=14):
         if name in judge.REAL_SESSION_NOT_JUDGED:
             row["not_judged"] = judge.REAL_SESSION_NOT_JUDGED[name]
     unmatched = 0 if only else len(_project_transcripts(root, days) - named)
-    return {"days": days, "behaviours": rows, "failures": failures,
-            "unmatched": unmatched, "skipped": skipped}
+    # Both spellings of each key are written until 8.0.0, so a consumer that
+    # reads only the old ones gets the data it got before.
+    rows = {name: old_names.twins("json_key", {**row, "behavior": name})
+            for name, row in rows.items()}
+    return {"days": days, **old_names.twins("json_key", {"behaviors": rows}),
+            "failures": failures, "unmatched": unmatched, "skipped": skipped}
 
 
 def propose_lessons(result):
@@ -221,7 +225,7 @@ def propose_lessons(result):
     advice = getattr(judge, "REAL_SESSION_ADVICE", {}) if judge else {}
     by_behaviour = {}
     for f in result.get("failures") or []:
-        by_behaviour.setdefault(f["behaviour"], set()).add(f["issue"])
+        by_behaviour.setdefault(f["behavior"], set()).add(f["issue"])
     added = []
     for name, issues in sorted(by_behaviour.items()):
         if len(issues) < LESSON_AFTER:
@@ -249,7 +253,7 @@ def cmd_retro_compliance(args):
         print(json.dumps({**result, "lessons_proposed": [e["id"] for e in added]},
                          indent=2))
         return 0
-    rows = result["behaviours"]
+    rows = result["behaviors"]
     scored = max((r["sessions"] for r in rows.values()), default=0)
     print(f"compass retro --compliance: {scored} issue session(s) over "
           f"{result['days']} days; {result['unmatched']} unmatched transcript(s)")
@@ -264,7 +268,7 @@ def cmd_retro_compliance(args):
               f"undecided; {rate}{interval}")
     for f in result["failures"]:
         call = "" if f["call"] is None else f" at call {f['call']}"
-        print(f"  failed: {f['issue']}{call}: {f['behaviour']}")
+        print(f"  failed: {f['issue']}{call}: {f['behavior']}")
     for reason, n in sorted(result["skipped"].items()):
         print(f"  not scored: {n} issue(s), {reason}")
     for e in added:

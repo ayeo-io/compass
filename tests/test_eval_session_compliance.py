@@ -135,7 +135,9 @@ def test_cs_1_each_behaviour_is_counted_with_an_interval(tmp_path):
     row = data["behaviours"]["no_route_around"]
     assert (row["sessions"], row["fail"]) == (2, 1), row
     assert 0 <= row["interval"][0] <= row["interval"][1] <= 1, row
-    assert {"issue": "bad-fix", "behaviour": "no_route_around", "call": 2} in data["failures"]
+    # Both spellings of the key are written until 8.0.0.
+    assert {"issue": "bad-fix", "behaviour": "no_route_around",  # us-english-scan: allow - old name read until 8.0.0
+            "behavior": "no_route_around", "call": 2} in data["failures"]
     text = _report(root, home)
     assert text.returncode == 0
     assert "no_route_around" in text.stdout and "bad-fix" in text.stdout

@@ -3,40 +3,20 @@ r"""Decide whether the agent's tool call touches approval state it must not
 (ADR-068 decision 10, ADR-069 decisions 4 and 8). `hooks/pre-tool.sh` calls
 `check` with the hook input and blocks with the code it returns.
 
-- **How a Bash command is read.** `approval_words.read` splits it into
-  simple commands, and the guard judges each command name, redirect target
-  and argument, except text. A word is judged by its substring, as before.
-  A command the reader cannot read (an open quote, nesting over 32 levels)
-  is judged by its whole text, as before.
-  - Text is the value of a message option (`-m` and `--message` of `git
-    commit`, `tag`, `merge` and `revert`; `--body`, `-b`, `--title` and `-t`
-    of `gh`; `--title`, `--note`, `--reason`, `--scope` and `--description`
-    of `compass`), every argument of `echo` and `printf`, the pattern of
-    `grep`, `rg` and `git grep` and the value of `--grep`, `-S` and `-G` of
-    `git log`, and the heredoc body and here-string of `cat`, `tee`, `gh`
-    (`issue`, `pr` and `release` only), `git` (the message verbs) and
-    `compass`. Text is not judged, unless a later stage of its pipeline is
-    not one of `TEXT_SINKS` (`cat tee head tail wc sort uniq cut tr less
-    more grep egrep fgrep rg diff pbcopy`, and none given an option that
-    starts `--fil`), which sends it to be judged by its whole text. The
-    heredoc body or here-string of any other command is judged.
-  - A substitution (`$(...)`, backticks, `<(...)`) is read as commands whose
-    words are judged. What it prints is judged too, as the word it stands
-    for, unless it stands in a text position of its outer command and of
-    every command above it (`_text_substitutions`).
-  - A bare path argument of `ls`, `wc`, `stat`, `du`, `test` or `[` may name
-    a request folder, and one of those or of `cat`, `head`, `tail`, `grep`,
-    `rg`, `diff`, `chmod` (a mode that keeps the x bit) or `git log`,
-    `show`, `diff`, `blame`, `status`, `ls-files` or `add` may name the
-    prompt hook script. `git mv` and `git rm` may not. `ls`
-    alone may name a folder strictly above the configuration folder, with no
-    `-R`, `-d` or glob. No exemption holds in a pipe, `$(...)`, backticks
-    or `<(...)`, for a `VAR=` word, an option such as `--output=<path>`, or
-    the word after `-f`, `--file`, `--files0-from`, `--output`, `--pre` or
-    `--exec`.
-  - Text that one call writes to a file and then runs is judged, and the
-    refusal names the script (`approval_guard_scripts`). A script that one
-    call writes and another runs is not followed.
+- **How a Bash command is judged.** `approval_words.simple` reads a command
+  as words only when the whole command is simple (one command, or plain
+  commands joined by `&&`, `;` or a new line, each starting with a name on
+  `COMMANDS`; the gate fails closed). Any other command is judged by its
+  whole text: any text that names a protected thing is refused.
+  - In a simple command the guard judges each word and redirect target by its
+    substring, except the message text of `git commit`, `tag`, `merge` and
+    `revert` (`-m`, `-am`, `--message`) and of `gh issue`, `pr` and `release`
+    (`--title`, `--body`, `--notes`, `-t`, `-b`).
+  - A command that stands alone, with no redirect, may name what `EXEMPT`
+    says in a bare path argument: a request folder for `ls`, `wc` and `stat`,
+    and the prompt hook script for `cat`. The exemption does not hold for a
+    `VAR=` word, an option such as `--output=<path>`, or the word after `-f`,
+    `--file`, `--files0-from`, `--output`, `--pre` or `--exec`.
   - A Bash word that holds a glob or brace character in the name of a
     protected folder is judged as before.
 - **The auto-memory folder.** Read, Grep, Edit and Write skip the
@@ -129,15 +109,15 @@ Each check ignores letter case, because macOS opens a path in any case. The
 earlier guard's checks run first, in its order and case, so a call it refused
 keeps its refusal code. The glob check is the last Bash check.
 
-The Bash checks match words, as the hook's other Bash checks do. They stop the
-agent's ordinary use, not a deliberate workaround. A call is judged by its
-whole text when the reader cannot read it, when a runner (`sh`, `eval`,
-`source`, `xargs`) is beside a substitution, and when it holds `>(...)`. What
-they do not stop:
-  - a script that one call writes and another call runs;
-  - the output of a command substitution that a shell does not run in the
-    same call, and any word built at run time;
-  - an option of an exempt command that runs a file the table does not know;
+The guard is defence in depth against an accidental or injected read of the
+transcript or of an approval request. It is not a hard boundary: a script that
+one call writes with the Write tool and another call runs was open before this
+guard. What it does not stop:
+  - a script that one call writes and another call runs, with Bash or the
+    Write tool;
+  - a command, function or alias that an earlier Bash call defined, and a
+    git alias, git hook or git config that runs a command;
+  - any word built at run time;
   - a flag or path built from a variable, command substitution, or a value
     read from a file or the environment;
   - arguments built by `xargs` or `printf`;
@@ -163,10 +143,9 @@ they do not stop:
 The safety contract states these limits.
 """
 # DEPENDENCY: standard library (fnmatch, os, re, shlex, unicodedata),
-# compass_pkg.approval_words (the reader) and compass_pkg.approval_guard_text (the
-# text positions). Runs inside hooks/pre-tool.sh, so it keeps to
-# syntax the hook's oldest supported python3 reads (3.10) and imports no
-# third-party module.
+# and compass_pkg.approval_words (the simple-command gate). Runs inside
+# hooks/pre-tool.sh, so it keeps to syntax the hook's oldest supported python3
+# reads (3.10) and imports no third-party module.
 from __future__ import annotations
 
 import fnmatch
@@ -175,11 +154,7 @@ import re
 import shlex
 import unicodedata
 
-from compass_pkg.approval_guard_scripts import scripts
-from compass_pkg.approval_guard_text import (HEREDOC_TEXT, SEARCH_VALUES, TEXT_COMMANDS,
-                                              git_start, heredoc_is_text, is_compass, is_sink,
-                                              skipped, text_marks)
-from compass_pkg.approval_words import Unreadable, read
+from compass_pkg.approval_words import simple
 
 REQUEST_FOLDER = "approval-requests"
 HOOK_ENTRY = "prompt-approval.sh"
@@ -206,40 +181,20 @@ NONE = frozenset()
 
 # --- the policy tables: a widening is a one-line diff that needs a twin test row ---------------
 
-#: Commands that show names or counts, so a bare path argument may name a request
-#: folder or the prompt hook script.
-LISTERS = frozenset(("ls", "wc", "stat", "du", "test", "["))
-#: Commands that read a file, so a bare path argument may name the prompt hook script.
-SCRIPT_READERS = frozenset(("cat", "head", "tail", "grep", "rg", "diff", "chmod"))
-#: `git mv` and `git rm` are left out: one replaces the script and the other deletes it.
-GIT_READS = frozenset("log show diff blame status ls-files add".split())
-#: A `chmod` mode that keeps the script runnable by its owner: `+x`, or digits whose owner
-#: digit has the x bit. `-x`, `000` and `644` stop the approval hook.
-CHMOD_KEEPS = re.compile(r"(?:[ugoa]*\+[rwxXst]+(?:,[ugoa]*\+[rwxXst]+)*|[0-7]?[1357][0-7]{2})")
-CHMOD_OPTIONS = re.compile(r"-[RvfHLPh]+")
+#: What a bare path argument of a command that stands alone may name. `ls`, `wc` and `stat`
+#: show names and counts, so they may name a request folder. `cat` may name the prompt hook
+#: script, and nothing else does: a copy of the script that the agent can change would run.
+EXEMPT = {"ls": ("request",), "wc": ("request",), "stat": ("request",), "cat": ("script",)}
 #: Options whose value is a path, a command or a file to write, never a bare path argument.
 PATH_OPTIONS = frozenset(("-f", "--file", "--files0-from", "--output", "--pre", "--exec"))
-#: Commands that run text. A substitution next to one, or into one, is judged as text.
-RUNNERS = frozenset("sh bash zsh dash ksh eval source . xargs exec".split())
-ESCAPED_NAME = re.compile(r"\$'[^']*\\")
-SHADOWS = re.compile(r"(?:^|[;&|(){\n])\s*(?:function\s|alias\s|[A-Za-z_][\w.-]*\s*\(\s*\))")
 ASSIGNMENT = re.compile(r"[A-Za-z_]\w*=")
 
 
 def exempt_commands():
-    """The commands that hold an exemption from the request-folder rule or have a text
-    position, read from the tables above, named as `tests/approval_guard_cases.py`
-    counts them (`git` is `git commit`, `egrep` and `fgrep` are `grep`). A test ties this
-    set to the table of counter-examples, so a widening needs three calls that stay refused."""
-    names = set(LISTERS) | set(TEXT_COMMANDS) | set(HEREDOC_TEXT)
-    return {"grep" if n in ("egrep", "fgrep") else "git commit" if n == "git" else n
-            for n in names}
-
-
-def script_commands():
-    """The commands that may name the prompt hook script as a bare argument, besides
-    `LISTERS`, read from the tables above."""
-    return set(SCRIPT_READERS) | {"git " + verb for verb in GIT_READS}
+    """The commands that hold an exemption or a text position, named as
+    `tests/approval_guard_cases.py` counts them. A test ties this set to the table of
+    counter-examples, so a widening needs three calls that stay refused."""
+    return set(EXEMPT) | {"git commit", "gh"}
 
 
 def shown_word(word, found=""):
@@ -706,12 +661,12 @@ def check(event):
             tool == "Grep" and _glob_climbs(tool_input.get("glob") or ""))
         if not memory and target and (_names_transcript(target, folder)
                                       or _config_folder().search(_resolved(target, cwd))):
-            return "transcript-protected", {"target": target, "tool": tool}
+            return _deny("transcript-protected", target, tool, folder)
         named = _in_delegations(tool_input, cwd)
         if named:
-            return "delegation-protected", {"target": named, "tool": tool}
+            return _deny("delegation-protected", named, tool, DELEGATION_FOLDER)
         if not memory and searched and _above_or_in(_resolved(searched, cwd), folder):
-            return "transcript-protected", {"target": searched, "tool": tool}
+            return _deny("transcript-protected", searched, tool, folder)
         return None
     if tool in EDIT_TOOLS:
         target = _path(tool_input.get("file_path") or tool_input.get("path")
@@ -721,220 +676,84 @@ def check(event):
         # keeps its code; then the same checks in any letter case.
         for path in (target, target.lower()):
             if f"/{REQUEST_FOLDER}/" in path and ".compass/" in path:
-                return "approval-request-protected", {"target": target, "tool": tool}
+                return _deny("approval-request-protected", target, tool, REQUEST_FOLDER)
             if f"{DELEGATION_FOLDER}/" in path:
-                return "delegation-protected", {"target": target, "tool": tool}
+                return _deny("delegation-protected", target, tool, DELEGATION_FOLDER)
             if not memory and _names_transcript(path, folder):
-                return "transcript-protected", {"target": target, "tool": tool}
+                return _deny("transcript-protected", target, tool, folder)
         return None
     if tool != "Bash":
         return None
     command = str(tool_input.get("command") or "")
-    try:
-        pipelines = read(command)
-    except (Unreadable, RecursionError):
-        # What the reader cannot read is judged by its whole text.
+    commands = simple(command)
+    if commands is None:
         return _judge_text(command, event, folder)
-    # An output process substitution feeds the command's output to a command the
-    # reader does not tie to it, and a function or alias can rename a command that
-    # has an exemption, so such a command is judged by its whole text.
-    material = None if ">(" in command or SHADOWS.search(command) else _material(
-        pipelines, folder)
-    if material is None:
-        return _judge_text(command, event, folder)
-    return _judge(event, folder, *material)
+    return _judge_words(commands, event, folder)
 
 
-# --- Bash: the words and the text of a command ---------------------------------------------------
-
-def _lists_above(word, folder):
-    """True when `word` is a path strictly above the configuration folder and has no
-    glob."""
-    if not folder or GLOB.search(word):
-        return False
-    path = re.sub(r"(?:/\*?|/\.)+$", "", _expand_home(_path(word)))
-    if not path.startswith("/"):
-        return False
-    path, config = _norm(path), _norm(os.path.dirname(os.path.dirname(folder)))
-    return path != "/" and config.startswith(path + "/")
+def _deny(code, target, tool, found):
+    """A refusal for a tool path. The path is the agent's, so it is cleaned and cut around
+    `found` as a refused Bash word is. A path that names the transcript's configuration
+    folder and not its exact folder is cut around the configuration folder."""
+    if found.lower() not in target.lower():
+        match = TRANSCRIPTS.search(target.lower())
+        found = match.group(0) if match else ""
+    return code, {"target": shown_word(target, found), "tool": tool}
 
 
-def _chmod_keeps(words):
-    """True when a `chmod` only adds permissions or keeps the owner's x bit, so it
-    cannot stop the approval hook; an option it does not know makes it false."""
-    if any(w.startswith("-") and not CHMOD_OPTIONS.fullmatch(w) for w in words[1:]):
-        return False
-    modes = [w for w in words[1:] if not w.startswith("-")]
-    return bool(modes) and CHMOD_KEEPS.fullmatch(modes[0]) is not None
+# --- Bash: the words of a simple command, or the whole text ------------------------------------
+
+def _bare(words, i):
+    """True when `words[i]` is a bare path argument: not the command name, an option, a
+    `VAR=` word or the value of an option that takes a path."""
+    return not (i == 0 or words[i].startswith("-") or ASSIGNMENT.match(words[i])
+                or words[i - 1] in PATH_OPTIONS)
 
 
-def _allowance(words, assigns, alone):
-    """`(things, listing)` for a command: what a bare path argument of it may name,
-    `request` (a request folder) and `script` (the prompt hook script), and whether
-    it may name a folder above the configuration folder (an `ls` with no `-R` or
-    `-d`). An exemption holds only for a command that stands alone."""
-    if not alone or assigns or not words:
-        return NONE, False
-    name = words[0]
-    if name == "chmod" and not _chmod_keeps(words):
-        return NONE, False
-    if name in LISTERS:
-        things = frozenset(("request", "script"))
-    elif name in SCRIPT_READERS or (name == "git" and git_start(words) > 0
-                                    and words[git_start(words)] in GIT_READS):
-        things = frozenset(("script",))
-    else:
-        return NONE, False
-    if any(w.startswith(("--output", "--pre", "--exec")) for w in words):
-        return NONE, False
-    recursive = any(w.startswith("-") and (w in ("--recursive", "--directory") or (
-        not w.startswith("--") and re.search("[Rd]", w))) for w in words[1:])
-    return things, name == "ls" and not recursive
-
-
-def _exempt(words, i, folder, allowance):
-    """The things the word `words[i]` may name: the `allowance` of its command, and
-    `above` for a folder above the configuration folder. Only a bare path argument
-    counts: not an option, a `VAR=` word or the value of an option that takes a
-    path."""
-    things, listing = allowance
-    word = words[i]
-    if (not things or i == 0 or word.startswith("-") or ASSIGNMENT.match(word)
-            or words[i - 1] in PATH_OPTIONS or words[i - 1] in SEARCH_VALUES):
-        return NONE
-    return things | {"above"} if listing and _lists_above(word, folder) else things
-
-
-def _text_substitutions(pipelines):
-    """The ids of the substitutions whose output stays in text. A substitution in a text
-    position (a message, an `echo`, a text heredoc) stays in text when the command that
-    holds it does too, all the way up; the words inside it are judged either way. Any other
-    substitution is judged as the word it stands for (`cat "$(echo <file>)"` names the
-    file), so no text exemption holds inside it."""
-    sites = {}                      # id -> (id of the substitution that holds it, in text)
-    for pipe in pipelines:
-        for n, cmd in enumerate(pipe.commands):
-            skip = skipped(cmd.words)
-            words = cmd.words[skip:]
-            marks, heredoc = text_marks(words), heredoc_is_text(words)
-            # Text that a later stage can run or write is judged, so are its substitutions.
-            runs = any(not is_sink(c.words) for c in pipe.commands[n + 1:])
-            for slot, index, ident in cmd.subs:
-                text = (index - skip in marks) if slot == "w" else heredoc and slot in "hs"
-                sites[ident] = (pipe.sub, bool(text) and not runs)
-
-    def in_text(ident):
-        while ident in sites:           # a site the reader did not report is judged
-            holder, text = sites[ident]
-            if not text:
-                return False
-            if holder < 0:
-                return True
-            ident = holder
-        return False
-
-    return {ident for ident in sites if in_text(ident)}
-
-
-def _material(pipelines, folder):
-    """What `_judge` reads from a read command: `(items, top, exempt, raw,
-    escaped)`, or None when the command must be judged by its whole text.
-
-    - `items` are `(text, exempt, label)`: each judged word (label None) and each
-      text that runs (label `"text"`, or `("script", path)`);
-    - `top` are the words the caller rules read, judged words first, and `exempt`
-      the exemptions of the first ones;
-    - `raw` is those words as written, for ANSI-C quoting, and `escaped` is true
-      when a command name is spelled with an escape."""
-    words, exempt, raws, texts, braced = [], [], [], [], []
-    escaped = runner = substituted = False
-
-    def add(word, raw, allowed=NONE):
-        words.append(word)
-        exempt.append(allowed)
-        raws.append(raw)
-
-    in_text = _text_substitutions(pipelines)
-    for pipe in pipelines:
-        alone = len(pipe.commands) == 1 and not pipe.nested
-        substituted = substituted or pipe.nested
-        # A substitution that is not in text stands for a judged word, so what it prints
-        # is judged: its commands have no text position.
-        printed = pipe.nested and pipe.sub not in in_text
-        for n, cmd in enumerate(pipe.commands):
-            # A keyword such as `do` or `then` is followed by the command it starts.
-            skip = skipped(cmd.words)
-            cwords, craws = cmd.words[skip:], cmd.raws[skip:]
-            name = cwords[0] if cwords else ""
-            runner = runner or os.path.basename(name) in RUNNERS
-            escaped = escaped or bool(craws and ESCAPED_NAME.search(craws[0]))
-            marks, spoken = ({} if printed else text_marks(cwords)), []
-            allowance = _allowance(cwords, cmd.assigns, alone)
-            for assign, raw in zip(cmd.assigns, cmd.assign_raws):
-                add(assign, raw)
-            for i, word in enumerate(cwords):
-                if i not in marks:
-                    add(word, craws[i], _exempt(cwords, i, folder, allowance))
-                    continue
-                judged, value = marks[i]
-                spoken.append(value)
-                if judged:
-                    add(judged, judged)
-                # The shell may expand a brace in the value of a compass option, and the
-                # earlier guard refused one in any `compass evidence` command.
-                if is_compass(name) and BRACE.search(value) and not re.search(r"\s", value):
-                    braced.append(value)
-            for _, target in cmd.redirects:
-                add(target, target)
-            body = [s for s in (cmd.heredoc, cmd.herestring) if s]
-            if not printed and heredoc_is_text(cwords):
-                spoken += body
-            elif body:
-                texts.append(("text", "\n".join(body)))
-            # Text is skipped only when every later stage of its pipeline reads it as
-            # data; a stage that can run it or write it sends the text to be judged.
-            if spoken and any(not is_sink(c.words) for c in pipe.commands[n + 1:]):
-                texts.append(("text", " ".join(spoken)))
-    if runner and substituted:      # the output of a substitution may be the script
-        return None
-    texts += [(("script", path), text) for path, text in scripts(pipelines)]
-    items = [(w, e, None) for w, e in zip(words, exempt)]
-    top = list(words) + braced
-    for label, text in texts:
-        items.append((text, NONE, label))
-        top += _words(text)
-        raws.append(text)
-    return items, top, exempt, " ".join(raws), escaped
+def _judge_words(commands, event, folder):
+    """The Bash checks on the words of a simple command: every word and redirect target
+    except message text. An exemption holds only for a command that stands alone and has
+    no redirect."""
+    items, top = [], []
+    for command in commands:
+        words = command.words
+        allowed = EXEMPT.get(words[0], ()) if len(commands) == 1 and not command.targets else ()
+        for i, word in enumerate(words):
+            if i not in command.text:
+                items.append((word, allowed if _bare(words, i) else (), False))
+                top.append(word)
+        for target in command.targets:
+            items.append((target, (), False))
+            top.append(target)
+    return _judge(event, folder, items, top, " ".join(top), False, False)
 
 
 def _judge_text(command, event, folder):
-    """The Bash checks on the whole text of a command, as they ran before the
-    reader: for a command the reader cannot read."""
+    """The Bash checks on the whole text of a command that is not simple: any text that
+    names a protected thing is refused."""
     text = command.replace("\\\n", "")
-    return _judge(event, folder, [(command, NONE, "text")], _words(command), [], text,
-                  bool(ESCAPED_COMMAND.search(text)), whole=True)
+    return _judge(event, folder, [(command, (), True)], _words(command), text,
+                  bool(ESCAPED_COMMAND.search(text)), True)
 
 
-def _refusal(code, tool, text, found, label):
-    if label is None:
-        target = "the Bash word '%s'" % shown_word(text, found)
-    elif label == "text":
+def _refusal(code, tool, text, found, whole):
+    if whole:
         target = "text that holds '%s'" % shown_word(found)
     else:
-        target = "script %s that holds '%s'" % (shown_word(label[1]), shown_word(found))
+        target = "the Bash word '%s'" % shown_word(text, found)
     return code, {"target": target, "tool": tool}
 
 
 def _first(items, find):
-    """`(found, text, label)` for the first item that `find(text, exempt)` names."""
-    for text, exempt, label in items:
+    """`(found, text, whole)` for the first item that `find(text, exempt)` names."""
+    for text, exempt, whole in items:
         found = find(text, exempt)
         if found:
-            return found, text, label
+            return found, text, whole
     return None
 
 
-def _judge(event, folder, items, top, exempt, raw, escaped, whole=False):
+def _judge(event, folder, items, top, raw, escaped, whole):
     """`(code, params)` for a Bash call to refuse, else None. The checks keep the
     order of the earlier guard, so a call it refused keeps its code: the request,
     delegation and transcript names; the caller rules; then the same names in any
@@ -948,7 +767,7 @@ def _judge(event, folder, items, top, exempt, raw, escaped, whole=False):
         if hit:
             return _refusal(code, tool, hit[1], hit[0], hit[2])
     nested = _nested_words(top)
-    compass = ("compass" in raw.lower() if whole else any(is_compass(w) for w in nested))
+    compass = "compass" in raw.lower()
     built = _built_word(top, nested, raw, compass, escaped)
     if built:
         return "delegation-caller-mismatch", {
@@ -968,11 +787,11 @@ def _judge(event, folder, items, top, exempt, raw, escaped, whole=False):
         hit = _first(items, find)
         if hit:
             return _refusal(code, tool, hit[1], hit[0], hit[2])
-    for i, word in enumerate(nested):
-        if _word_above(word, folder) and not (i < len(exempt) and "above" in exempt[i]):
-            return _refusal("transcript-protected", tool, word, word, None)
+    for word in nested:
+        if _word_above(word, folder):
+            return _refusal("transcript-protected", tool, word, word, False)
     # Last, so a call an earlier check refuses keeps its code.
     word = _bash_glob_reaches(nested, str(event.get("cwd") or ""))
     if word:
-        return _refusal("delegation-protected", tool, word, word, None)
+        return _refusal("delegation-protected", tool, word, word, False)
     return None

@@ -1,442 +1,226 @@
-# compass_pkg.approval_words - read a Bash command as simple commands
-"""Turn the text of a Bash command into pipelines of simple commands, so the
-approval guard (`approval_guard`) can judge each word and not the raw text.
+# compass_pkg.approval_words - read a Bash command only when it is simple
+"""The simple-command gate of the approval guard (`approval_guard`).
 
-The reader holds syntax only: no protected name and no policy. What it does:
+`simple(command)` returns the words of a command, or None. None means the
+guard must judge the whole text of the command, as it did before the gate. The
+gate fails closed: every shape it does not name is None.
 
-- splits a command at `;`, `&&`, `||`, `&`, a newline and a parenthesis into
-  pipelines, and at `|` and `|&` into the stages of one pipeline;
-- removes quotes and backslashes the way the shell does, and keeps the text
-  as written (`raws`), so a caller can see ANSI-C quoting;
-- reads `$(...)`, backticks, `<(...)` and `>(...)` again as pipelines marked
-  `nested`, and leaves `SUBST` where the substitution stood in a word;
-- reads redirects (`>`, `>>`, `<`, `2>`, `&>`, `>|`, `<>`), heredocs
-  (`<<`, `<<-`, quoted or not) and here-strings (`<<<`);
-- drops a comment and reads leading `VAR=value` words as `assigns`;
-- joins a backslash and newline as the shell does between and inside words, but keeps
-  it inside the body of a quoted heredoc and ends a comment at its newline, so the
-  reader and the shell agree on where a heredoc ends;
-- gives each substitution an id: `Pipeline.sub` is the id of the substitution a nested
-  pipeline came from, and `Command.subs` says where in the command (a word, an assign,
-  a redirect target, a here-string or an unquoted heredoc body) each id stood.
+A command is simple when it is one command, or plain commands joined by `&&`,
+`;` or a new line, and each of them:
 
-It raises `Unreadable` for an open quote, parenthesis, backtick or `$(`, a
-heredoc with no closing delimiter, a `${...}` that holds a quote or a
-substitution, a `case` inside a substitution, a pipe with nothing before it
-and nesting deeper than `MAX_DEPTH`. The caller then judges the whole text.
-Any other construct (`for`, `{ }`, `$((...))`) reads as ordinary words.
+- starts with a name on `COMMANDS` (no path, no `VAR=` word, no function);
+- holds no pipe, `&`, `||`, parenthesis, backtick, heredoc, here-string,
+  process substitution, comment or backslash at the end of a line;
+- holds no `$` in a word that is not message text, and no `$(`, `${`, `$'`,
+  `$"` or backtick in message text.
 
-The reader keeps no state between calls, and its time is linear in the text:
-a substitution is read once, inside the same pass, and the depth is bounded.
+Message text is the only text the guard does not judge. It is the value of
+`-m`, `-am` or `--message` for `git commit`, `tag`, `merge` and `revert`, and
+of `--title`, `--body`, `--notes`, `-t` and `-b` for `gh issue`, `pr` and
+`release`. A `git` command with `-F`, `--file`, `-c` or `--exec` has none, and
+neither has a `git` or `gh` command whose second word is not the verb, as in
+`git -C dir commit` or `gh alias set`.
+
+Quotes and backslashes are removed as the shell removes them. A redirect gives
+a target, which the guard judges as a word. The time is linear in the text.
 """
-# DEPENDENCY: standard library (dataclasses, re). Runs inside hooks/pre-tool.sh,
-# so it keeps to syntax that Python 3.10 reads and imports no third-party module.
+# DEPENDENCY: standard library (re). Runs inside hooks/pre-tool.sh, so it keeps to
+# syntax that Python 3.10 reads and imports no third-party module.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from typing import NamedTuple
 
-#: The deepest nesting of `$(...)`, backticks, `<(...)` and `>(...)` that is read.
-MAX_DEPTH = 32
-#: Stands in a word where a substitution was; the substitution is a nested pipeline.
-SUBST = "\x00"
-
-_ASSIGN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?\+?=")
-_FD = re.compile(r"\d+(?=[<>])")
-_OPERATORS = ("<<<", "<<-", "<<", "<>", "<&", "<", ">>", ">&", ">|", ">", "&>>", "&>")
-_DUPLICATION = re.compile(r"\d+-?|-")
-_UNSAFE_PARAMETER = re.compile(r"""['"`\\\n]|\$[({]""")
+#: The only command names a simple command may start with. A command with a text
+#: position or an exemption is here; any other name is judged by its whole text.
+COMMANDS = ("git", "gh", "ls", "wc", "stat", "cat")
+GIT_MESSAGES = ("commit", "tag", "merge", "revert")
+GH_VERBS = ("issue", "pr", "release")
+GH_TEXT = ("--title", "--body", "--notes", "-t", "-b")
+#: A descriptor copied by a redirect (`2>&1`, `>&2`, `>&-`) names no path.
+_DUPLICATE = re.compile(r"(?:\d+-?|-)(?![^\s;&])")
 
 
-def _odd_backslashes(line):
-    """True when `line` ends in a backslash that is not itself escaped."""
-    return (len(line) - len(line.rstrip("\\"))) % 2 == 1
+class Command(NamedTuple):
+    words: tuple        # name first; quotes removed
+    text: frozenset     # the indexes of the words that are message text
+    targets: tuple      # the targets of its redirects
 
 
-class Unreadable(Exception):
-    """The reader cannot read the command; the caller judges the whole text."""
+class _Refuse(Exception):
+    """The command is not simple."""
 
 
-@dataclass(frozen=True)
-class Command:
-    words: tuple[str, ...]            # name first; quotes removed; `$` before a quote dropped
-    raws: tuple[str, ...]             # the same words as written (for ANSI-C quoting)
-    assigns: tuple[str, ...]          # leading VAR=value words, judged like words
-    redirects: tuple[tuple[str, str], ...]   # (operator, target); fd duplication has none
-    heredoc: str | None               # body of << or <<-
-    heredoc_literal: bool             # the delimiter was quoted: the body holds no substitution
-    herestring: str | None            # operand of <<<
-    assign_raws: tuple[str, ...] = ()  # the assigns as written
-    # Where a substitution stood in this command: `(slot, index, id)`. The slot is `w`
-    # (a word), `a` (an assign), `r` (a redirect target), `s` (a here-string) or `h` (the
-    # body of an unquoted heredoc); the id is the `sub` of the nested pipelines it holds.
-    subs: tuple[tuple[str, int, int], ...] = ()
+def _dollar(t, i):
+    """1 for `$` before a name, 2 for any other `$`: `$(`, `${`, `$'`, `$"`, `$$`."""
+    return 1 if t[i + 1:i + 2].isalnum() or t[i + 1:i + 2] == "_" else 2
 
 
-@dataclass(frozen=True)
-class Pipeline:
-    commands: tuple[Command, ...]     # the stages of one pipeline, in order
-    nested: bool                      # read from inside $(...), backticks, <(...) or >(...)
-    sub: int = -1                     # the id of the substitution it came from; -1 at the top
+def _split(t):
+    """`(words, targets)` of each command; each word is `(value, flag)`, and the flag is
+    the strongest `$` it held (0, 1 or 2, see `_dollar`)."""
+    n, i = len(t), 0
+    commands, words, targets = [], [], []
+    word, flag, redirect, joined = None, 0, False, False
 
+    def end_word():
+        nonlocal word, flag, redirect
+        if word is not None:
+            (targets if redirect else words).append((word, flag))
+            redirect = False
+        word, flag = None, 0
 
-class _Builder:
-    """A command while it is read; a heredoc body arrives at the next newline."""
+    def end_command(blank_ok):
+        nonlocal words, targets
+        end_word()
+        if redirect:
+            raise _Refuse
+        if words or targets:
+            commands.append((words, targets))
+        elif not blank_ok:
+            raise _Refuse
+        words, targets = [], []
 
-    def __init__(self):
-        self.words, self.raws, self.assigns, self.assign_raws = [], [], [], []
-        self.redirects, self.heredoc, self.literal, self.herestring = [], None, False, None
-        self.used = False
-        self.subs = []
-
-    def build(self):
-        return Command(tuple(self.words), tuple(self.raws), tuple(self.assigns),
-                       tuple(self.redirects), self.heredoc, self.literal, self.herestring,
-                       tuple(self.assign_raws), tuple(self.subs))
-
-
-def read(text):
-    """The pipelines of `text` in source order, then the nested ones. Raises
-    `Unreadable`."""
-    parser = _Parser(text, 0)
-    try:
-        top = parser.sequence(False)
-    except RecursionError:
-        raise Unreadable("nesting is too deep")
-    return tuple(top) + tuple(parser.nested)
-
-
-class _Parser:
-    def __init__(self, text, depth, counter=None):
-        self.t, self.n, self.i, self.depth = text, len(text), 0, depth
-        self.nested = []
-        self.counter = counter if counter is not None else [0]   # one id count for all levels
-        self.open_words = []        # the ids of the substitutions of each word being read
-        self.word_subs = ()         # the ids that the last word held
-
-    def new_id(self):
-        self.counter[0] += 1
-        return self.counter[0]
-
-    def skip_continuation(self):
-        """Skip a backslash and newline: the shell joins the two lines. Quoted
-        heredoc bodies and comments are read elsewhere and keep theirs."""
-        if self.t.startswith("\\\n", self.i):
-            self.i += 2
-            return True
-        return False
-
-    # --- one level: a command list, or the inside of `$( )` -----------------------------------
-
-    def sequence(self, closer):
-        t, pipes, stages, cmd, pending, paren = self.t, [], [], _Builder(), [], 0
-
-        def end_command():
-            nonlocal cmd
-            if cmd.used:
-                stages.append(cmd)
-            cmd = _Builder()
-
-        def end_pipeline():
-            nonlocal stages
-            end_command()
-            if stages:
-                pipes.append(stages)
-            stages = []
-
-        closed = False
-        while self.i < self.n:
-            c = t[self.i]
-            if c in " \t":
-                self.i += 1
-            elif c == "\\" and self.skip_continuation():
-                pass
-            elif c == "\n":
-                self.i += 1
-                if not (stages and not cmd.used):    # a line after a pipe continues it
-                    end_pipeline()
-                for item in pending:
-                    self.heredoc_body(*item)
-                pending = []
-            elif c == "#":
-                while self.i < self.n and t[self.i] != "\n":
-                    self.i += 1
-            elif c == ";":
-                self.i += 1
-                end_pipeline()
-            elif c == "&" and t[self.i + 1:self.i + 2] != ">":
-                self.i += 2 if t[self.i + 1:self.i + 2] == "&" else 1
-                end_pipeline()
-            elif c == "|":
-                double = t[self.i + 1:self.i + 2] == "|"
-                self.i += 2 if double or t[self.i + 1:self.i + 2] == "&" else 1
-                if double:
-                    end_pipeline()
-                    continue
-                if not (cmd.used or stages):
-                    raise Unreadable("a pipe with nothing before it")
-                end_command()
-            elif c == "(":
-                self.i += 1
-                if stages and not cmd.used:     # `a | (b)`: a later stage that is not a sink
-                    pseudo = _Builder()
-                    pseudo.words, pseudo.raws, pseudo.used = ["("], ["("], True
-                    stages.append(pseudo)
-                end_pipeline()
-                paren += 1
-            elif c == ")":
-                self.i += 1
-                end_pipeline()
-                if paren > 0:
-                    paren -= 1
-                elif closer:
-                    closed = True
-                    break
-            elif c in "<>&" or (c.isdigit() and _FD.match(t, self.i)):
-                if c in "<>" and t[self.i + 1:self.i + 2] == "(":
-                    self.add_word(cmd, closer)
-                else:
-                    self.redirect(cmd, pending)
+    while i < n:
+        c = t[i]
+        if c in " \t":
+            end_word()
+        elif c in "\n;":
+            if c == ";" and t[i + 1:i + 2] in (";", "&"):
+                raise _Refuse
+            end_command(c == "\n")
+        elif c == "&":
+            if t[i + 1:i + 2] != "&":
+                raise _Refuse
+            end_command(False)
+            joined, i = True, i + 1
+        elif c in "|()`":
+            raise _Refuse
+        elif c in "<>":
+            if word is not None and word.isdigit() and not flag:
+                word = None                     # the descriptor of `2>`
+            if redirect and word is None:
+                raise _Refuse
+            end_word()
+            after = t[i + 1:i + 2]
+            if after == "(" or (c == "<" and after in "<>") or (c == ">" and after == "|"):
+                raise _Refuse
+            if after == "&":
+                found = _DUPLICATE.match(t, i + 2)
+                if not found:
+                    raise _Refuse
+                i = found.end() - 1
             else:
-                self.add_word(cmd, closer)
-        if closer and not closed:
-            raise Unreadable("a $( without its )")
-        if pending:
-            raise Unreadable("a heredoc with no closing delimiter")
-        end_pipeline()
-        return [Pipeline(tuple(b.build() for b in stage), False) for stage in pipes]
-
-    # --- words ---------------------------------------------------------------------------------
-
-    def add_word(self, cmd, closer):
-        start = self.i
-        text = self.word()
-        raw = self.t[start:self.i]
-        cmd.used = True
-        if not cmd.words and _ASSIGN.match(raw):
-            cmd.subs.extend(("a", len(cmd.assigns), sub) for sub in self.word_subs)
-            cmd.assigns.append(text)
-            cmd.assign_raws.append(raw)
-            return
-        cmd.subs.extend(("w", len(cmd.words), sub) for sub in self.word_subs)
-        # `case x in a) ...` inside a substitution ends the substitution at its `)`
-        # for this reader and not for the shell, so text after it would read wrongly.
-        if closer and not cmd.words and raw == "case":
-            raise Unreadable("a case inside a substitution")
-        cmd.words.append(text)
-        cmd.raws.append(raw)
-
-    def word(self):
-        """The next word, quotes removed. `word_subs` holds the ids of the
-        substitutions it held, in order."""
-        mine = []
-        self.open_words.append(mine)
-        try:
-            return self.read_word()
-        finally:
-            self.open_words.pop()
-            self.word_subs = tuple(mine)
-
-    def read_word(self):
-        t, out = self.t, []
-        while self.i < self.n:
-            c = t[self.i]
-            if c in " \t\n;&|()<>":
-                if c in "<>" and t[self.i + 1:self.i + 2] == "(":
-                    self.i += 2
-                    out.append(self.substitution())
-                    continue
-                break
+                redirect = True
+                i += after == ">" and c == ">"
+        elif c in "#=" and word is None:     # a comment; zsh expands `=name` to a path
+            raise _Refuse
+        else:
+            joined = False
+            word = "" if word is None else word
             if c == "\\":
-                if self.skip_continuation():
-                    continue
-                out.append(t[self.i + 1] if self.i + 1 < self.n else "\\")
-                self.i += 2
+                if i + 1 >= n or t[i + 1] == "\n":
+                    raise _Refuse
+                word += t[i + 1]
+                i += 1
             elif c == "'":
-                end = t.find("'", self.i + 1)
+                end = t.find("'", i + 1)
                 if end < 0:
-                    raise Unreadable("an open quote")
-                out.append(t[self.i + 1:end])
-                self.i = end + 1
+                    raise _Refuse
+                word += t[i + 1:end]
+                i = end
             elif c == '"':
-                self.double_quoted(out)
-            elif c == "$":
-                self.dollar(out, False)
-            elif c == "`":
-                out.append(self.backtick())
+                i += 1
+                while i < n and t[i] != '"':
+                    if t[i] == "\\" and t[i + 1:i + 2] in ("$", "`", '"', "\\"):
+                        i += 1
+                    elif t[i] == "\\" and t[i + 1:i + 2] == "\n":
+                        raise _Refuse
+                    elif t[i] == "`":
+                        raise _Refuse
+                    elif t[i] == "$":
+                        flag = max(flag, _dollar(t, i))
+                    word += t[i]
+                    i += 1
+                if i >= n:
+                    raise _Refuse
             else:
-                out.append(c)
-                self.i += 1
-        return "".join(out)
+                if c == "$":
+                    flag = max(flag, _dollar(t, i))
+                word += c
+        i += 1
+    end_command(True)
+    if joined or not commands:
+        raise _Refuse
+    return commands
 
-    def double_quoted(self, out):
-        t = self.t
-        self.i += 1
-        while self.i < self.n:
-            c = t[self.i]
-            if c == '"':
-                self.i += 1
-                return
-            if c == "\\" and self.skip_continuation():
-                continue
-            if c == "\\" and self.i + 1 < self.n and t[self.i + 1] in '$`"\\':
-                out.append(t[self.i + 1])
-                self.i += 2
-            elif c == "$":
-                self.dollar(out, True)
-            elif c == "`":
-                out.append(self.backtick())
-            else:
-                out.append(c)
-                self.i += 1
-        raise Unreadable("an open quote")
 
-    def dollar(self, out, quoted):
-        t, i = self.t, self.i
-        after = t[i + 1:i + 2]
-        if after == "(":
-            self.i += 2
-            out.append(self.substitution())
-        elif after == "{":
-            end = t.find("}", i + 2)
-            # A quote or a substitution inside `${...}` is read differently by each shell.
-            if end < 0 or _UNSAFE_PARAMETER.search(t, i + 2, end):
-                raise Unreadable("a ${ that the reader cannot follow")
-            out.append(t[i:end + 1])
-            self.i = end + 1
-        elif after == "'" and not quoted:          # ANSI-C quoting: the text is kept as written
-            j = i + 2
-            while j < self.n and t[j] != "'":
-                j += 2 if t[j] == "\\" else 1
-            if j >= self.n:
-                raise Unreadable("an open quote")
-            out.append(t[i + 2:j])
-            self.i = j + 1
-        elif after == '"' and not quoted:          # `$"..."`: the `$` is dropped
-            self.i += 1
-        else:
-            out.append("$")
-            self.i += 1
+def _git_text(w):
+    """The indexes of the message of `git commit` and the like; none when the command can
+    read its message from a file (`-F`, `--file`, `-c`) or run a command (`--exec`)."""
+    marks, i = set(), 2
+    while i < len(w):
+        word = w[i]
+        if word.startswith(("--file", "--exec")):
+            return frozenset()
+        if word == "--message":
+            marks.add(i + 1)
+            i += 1
+        elif word.startswith("--message="):
+            marks.add(i)
+        elif word.startswith("-") and not word.startswith("--"):
+            for j, letter in enumerate(word[1:], 1):
+                if letter in "Fc":
+                    return frozenset()
+                if letter == "m":
+                    if word[j + 1:]:
+                        marks.add(i)
+                    else:
+                        marks.add(i + 1)
+                        i += 1
+                    break
+        i += 1
+    return frozenset(marks)
 
-    def substitution(self):
-        """The inside of `$(`, `<(` or `>(`, which the caller has consumed."""
-        self.depth += 1
-        if self.depth > MAX_DEPTH:
-            raise Unreadable("nesting is too deep")
-        ident = self.new_id()
-        pipes = self.sequence(True)
-        self.depth -= 1
-        self.nested.extend(Pipeline(p.commands, True, ident) for p in pipes)
-        self.open_words[-1].append(ident)
-        return SUBST
 
-    def backtick(self):
-        t, j, inner = self.t, self.i + 1, []
-        while j < self.n and t[j] != "`":
-            if t[j] == "\\" and j + 1 < self.n and t[j + 1] in "`\\$":
-                j += 1
-            inner.append(t[j])
-            j += 1
-        if j >= self.n:
-            raise Unreadable("an open backtick")
-        self.i = j + 1
-        ident = self.new_id()
-        self.child("".join(inner), ident=ident)
-        self.open_words[-1].append(ident)
-        return SUBST
+def _gh_text(w):
+    """The indexes of the title, body and notes of `gh issue`, `pr` and `release`."""
+    marks, i = set(), 2
+    while i < len(w):
+        option, equals, _ = w[i].partition("=")
+        if equals and option in GH_TEXT:
+            marks.add(i)
+        elif w[i] in GH_TEXT:
+            marks.add(i + 1)
+            i += 1
+        i += 1
+    return frozenset(marks)
 
-    def child(self, text, start=0, closer=False, ident=-1):
-        """Read `text` as a nested level; return where the reading stopped."""
-        if self.depth + 1 > MAX_DEPTH:
-            raise Unreadable("nesting is too deep")
-        sub = _Parser(text, self.depth + 1, self.counter)
-        sub.i = start
-        pipes = sub.sequence(closer)
-        self.nested.extend(sub.nested)
-        self.nested.extend(Pipeline(p.commands, True, ident) for p in pipes)
-        return sub.i
 
-    # --- redirects and heredocs ----------------------------------------------------------------
+def _text(w):
+    if len(w) > 2 and w[0] == "git" and w[1] in GIT_MESSAGES:
+        return _git_text(w)
+    if len(w) > 2 and w[0] == "gh" and w[1] in GH_VERBS:
+        return _gh_text(w)
+    return frozenset()
 
-    def redirect(self, cmd, pending):
-        t = self.t
-        fd = _FD.match(t, self.i)
-        self.i = fd.end() if fd else self.i
-        op = next((o for o in _OPERATORS if t.startswith(o, self.i)), None)
-        if op is None:                      # a lone `&` is handled by the caller; this is `&`+other
-            raise Unreadable("an operator the reader does not know")
-        self.i += len(op)
-        while self.i < self.n:
-            if t[self.i] in " \t":
-                self.i += 1
-            elif not self.skip_continuation():
-                break
-        start = self.i
-        if self.i >= self.n or (t[self.i] in "\n;|&()<>" and not t.startswith(("<(", ">("), self.i)):
-            raise Unreadable("a redirect with no target")
-        target = self.word()
-        cmd.used = True
-        slot = "s" if op == "<<<" else "r"
-        cmd.subs.extend((slot, len(cmd.redirects), sub) for sub in self.word_subs)
-        if op in ("<<", "<<-"):
-            literal = bool(re.search(r"""['"\\]""", t[start:self.i]))
-            if not target:
-                raise Unreadable("a heredoc with no delimiter")
-            # A second heredoc on one command adds its body to the first.
-            cmd.literal = literal and (cmd.literal if cmd.heredoc is not None else True)
-            cmd.heredoc = cmd.heredoc or ""
-            pending.append((cmd, target, op == "<<-", literal))
-        elif op == "<<<":
-            cmd.herestring = target
-        elif op in ("<&", ">&") and _DUPLICATION.fullmatch(target):
-            pass                            # `2>&1` copies a descriptor and names no path
-        else:
-            cmd.redirects.append((op, target))
 
-    def heredoc_body(self, cmd, delimiter, strip, literal):
-        t, lines = self.t, []
-        while True:
-            if self.i >= self.n:
-                raise Unreadable("a heredoc with no closing delimiter")
-            end = t.find("\n", self.i)
-            line = t[self.i:] if end < 0 else t[self.i:end]
-            self.i = self.n if end < 0 else end + 1
-            # An unquoted body joins a line that ends in a backslash with the next
-            # line, and the delimiter must then stand alone on the joined line. A
-            # quoted body keeps the backslash and newline, so its delimiter can follow.
-            while not literal and self.i < self.n and _odd_backslashes(line) and end >= 0:
-                end = t.find("\n", self.i)
-                more = t[self.i:] if end < 0 else t[self.i:end]
-                self.i = self.n if end < 0 else end + 1
-                line = line[:-1] + more
-            if strip:
-                line = line.lstrip("\t")
-            if line == delimiter:
-                break
-            lines.append(line)
-        body = "\n".join(lines) + "\n" if lines else ""
-        cmd.heredoc += body
-        if not literal:
-            cmd.subs.extend(("h", 0, sub) for sub in self.body_substitutions(body))
-
-    def body_substitutions(self, body):
-        """An unquoted heredoc body holds `$(...)` and backticks that run. The ids of
-        the substitutions it holds."""
-        j, found = 0, []
-        while j < len(body):
-            c = body[j]
-            if c == "\\":
-                j += 2
-            elif c == "$" and body.startswith("$(", j):
-                found.append(self.new_id())
-                j = self.child(body, j + 2, True, found[-1])
-            elif c == "`":
-                end = body.find("`", j + 1)
-                if end < 0:
-                    raise Unreadable("an open backtick")
-                found.append(self.new_id())
-                self.child(body[j + 1:end].replace("\\`", "`"), ident=found[-1])
-                j = end + 1
-            else:
-                j += 1
-        return found
+def simple(command):
+    """The `Command`s of a simple command, in order, or None."""
+    try:
+        parsed = _split(command)
+        found = []
+        for words, targets in parsed:
+            values = tuple(value for value, _ in words)
+            if not values or values[0] not in COMMANDS or words[0][1]:
+                return None
+            text = _text(values)
+            # A `$` is allowed in message text alone, and there only before a name.
+            if any(flag and (flag > 1 or i not in text) for i, (_, flag) in enumerate(words)):
+                return None
+            if any(flag for _, flag in targets):
+                return None
+            found.append(Command(values, text, tuple(value for value, _ in targets)))
+        return tuple(found)
+    except (_Refuse, IndexError):
+        return None

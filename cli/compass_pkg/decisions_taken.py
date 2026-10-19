@@ -434,12 +434,12 @@ def approve_set(task_dir, answer, save=True):
 
 # --- retro --------------------------------------------------------------------------
 
-def report(work_root):
-    """The counts behind `compass retro --decisions`. Reads each manifest
-    directly; the parse cache of ADR-049 serves `flow.py` only."""
+def _folder_issues(work_root):
+    """`[(manifest, closed)]` read from each manifest in `work_root`. A
+    manifest that does not parse is skipped."""
     from compass_pkg import status_words
     from compass_pkg.core import load_yaml, manifest_path, normalize_spine
-    total = confirmed = changed = never = in_flight = issues = 0
+    found = []
     if os.path.isdir(work_root):
         for name in sorted(os.listdir(work_root)):
             path = manifest_path(os.path.join(work_root, name))
@@ -449,27 +449,41 @@ def report(work_root):
                 data = load_yaml(path)
             except CompassError:
                 continue
-            if not isinstance(data, dict):
-                continue
-            entries = [e for e in data.get("decisions_taken") or [] if isinstance(e, dict)]
-            if not entries:
-                continue
-            issues += 1
-            closed = status_words.is_closed(normalize_spine(data))
-            for e in entries:
-                total += 1
-                if e.get("reason"):
-                    changed += 1
-                elif e.get("status") == CONFIRMED:
-                    confirmed += 1
-                elif closed:
-                    never += 1
-                else:
-                    in_flight += 1
+            if isinstance(data, dict):
+                found.append((data, status_words.is_closed(normalize_spine(data))))
+    return found
+
+
+def report(work_root, issues=None):
+    """The counts behind `compass retro --decisions`. `issues` is
+    `[(slug, manifest)]` the caller has already read and normalised, so the
+    retro reads each manifest once; without it the report reads each manifest
+    in `work_root` directly (the parse cache of ADR-049 serves `flow.py` only)."""
+    from compass_pkg import status_words
+    total = confirmed = changed = never = in_flight = held = 0
+    if issues is None:
+        loaded = _folder_issues(work_root)
+    else:
+        loaded = [(d, status_words.is_closed(d)) for _, d in issues if isinstance(d, dict)]
+    for data, closed in loaded:
+        entries = [e for e in data.get("decisions_taken") or [] if isinstance(e, dict)]
+        if not entries:
+            continue
+        held += 1
+        for e in entries:
+            total += 1
+            if e.get("reason"):
+                changed += 1
+            elif e.get("status") == CONFIRMED:
+                confirmed += 1
+            elif closed:
+                never += 1
+            else:
+                in_flight += 1
 
     def share(n):
         return round(100 * n / total) if total else 0
-    return {"total": total, "issues": issues, "confirmed": confirmed, "changed": changed,
+    return {"total": total, "issues": held, "confirmed": confirmed, "changed": changed,
             "never_confirmed": never, "open_in_flight": in_flight,
             "share": {"confirmed": share(confirmed), "changed": share(changed),
                       "never_confirmed": share(never)}}

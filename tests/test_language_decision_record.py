@@ -41,7 +41,7 @@ def test_trc_064_the_record_states_each_fact():
         "the \"artifact exception\" ends",
         "accepted until 8.0.0",
         "`catalogue` becomes `catalog`",
-        "TRC-069",
+        "`catalog` term row keeps `catalogue` as its other form",
         "merged decision records",
         "governance/presets/default@6",
         "shipped-releases",
@@ -53,6 +53,24 @@ def test_trc_064_the_record_states_each_fact():
         assert fact.lower() in decision.lower(), fact
     assert _section("Why")
     assert "issues/241#issuecomment-6273616740" in _section("Evidence")
+
+
+def test_trc_064_the_record_cites_no_id_a_reader_cannot_open():
+    """Issue-local ids (scenarios, questions, units) live in untracked issue
+    state, so a record on main must name the subject instead."""
+    text = _text()
+    assert not re.search(r"\b(?:TRC|FU|RR|DD)-\d+\b|\bQ\d+\b", text)
+
+
+def test_trc_064_the_record_says_what_the_cli_prints_for_old_names():
+    """The CLI does write some old spellings back for one release: the readiness
+    record and the compliance JSON hold both, and a refusal names the old code."""
+    decision = _section("Decision")
+    assert "does not print them back" not in decision
+    for fact in ("`catalogue_digest` beside `catalog_digest`",
+                 "`behaviour` and `behaviours` beside `behavior` and `behaviors`",
+                 "`not-initialised`"):
+        assert fact in decision, fact
 
 
 def test_trc_064_the_older_record_is_unchanged():

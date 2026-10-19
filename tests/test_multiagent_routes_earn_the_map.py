@@ -35,7 +35,7 @@ def test_frm_1_a_feature_assessment_earns_and_registers_the_map(make_task, run_c
     doc = project / home
     doc.parent.mkdir(parents=True, exist_ok=True)
     doc.write_text("# Distribution map\n\nunits: 2\n")
-    register = run_cli("issue", "artifact", "distribution-map", "--issue", SLUG,
+    register = run_cli("issue", "artifact", "set", "distribution-map", "--issue", SLUG,
                        "--status", "draft", "--path", home)
     assert register.returncode == 0, register.combined
 

@@ -700,7 +700,7 @@ def test_trc_c5_migrate_refuses_a_many_to_one_collision():
     (work / "prd.md").write_text("# v2 intake - the real content\n")
 
     run = subprocess.run([sys.executable, str(REPO_ROOT / "cli" / "compass"),
-                          "migrate", "--apply"],
+                          "issue", "migrate", "--apply"],
                          cwd=str(project), capture_output=True, text=True,
                          timeout=120)
     combined = run.stdout + run.stderr
@@ -773,7 +773,7 @@ def _migrate(project, *flags):
     import sys
 
     return subprocess.run(
-        [sys.executable, str(REPO_ROOT / "cli" / "compass"), "migrate", *flags],
+        [sys.executable, str(REPO_ROOT / "cli" / "compass"), "issue", "migrate", *flags],
         cwd=str(project), capture_output=True, text=True, timeout=180)
 
 
@@ -1063,7 +1063,7 @@ def test_trc_c6_migrate_repoints_the_spine_at_the_files_it_renamed():
     }, sort_keys=False))
 
     run = subprocess.run(
-        [sys.executable, str(REPO_ROOT / "cli" / "compass"), "migrate", "--apply"],
+        [sys.executable, str(REPO_ROOT / "cli" / "compass"), "issue", "migrate", "--apply"],
         cwd=str(project), capture_output=True, text=True, timeout=120)
     assert run.returncode == 0, run.stdout + run.stderr
 

@@ -1,4 +1,4 @@
-"""`compass issue set-status` names the issue it acted on.
+"""`compass issue status set` names the issue it acted on.
 
 The success line, the refusal and the `--json` result all name the issue.
 
@@ -32,10 +32,9 @@ def _project(tmp_path, manifest):
     return tmp_path
 
 
-def _set_status(root, status, *extra):
+def _set_status(root, *words):
     return subprocess.run(
-        [sys.executable, str(CLI), "issue", "set-status", "--issue", SLUG,
-         status, *extra],
+        [sys.executable, str(CLI), "issue", "status", "set", "--issue", SLUG, *words],
         cwd=str(root), capture_output=True, text=True, timeout=120)
 
 
@@ -51,7 +50,7 @@ _BASE = {
 
 def test_ssn_a1_the_success_line_names_the_issue(tmp_path):
     root = _project(tmp_path, dict(_BASE, gates=[]))
-    run = _set_status(root, "parked")
+    run = _set_status(root, "backlog")
     out = run.stdout + run.stderr
     assert run.returncode == 0, out
     assert SLUG in out, f"the outcome does not name the issue:\n{out}"
@@ -60,7 +59,7 @@ def test_ssn_a1_the_success_line_names_the_issue(tmp_path):
 
 def test_ssn_a1b_the_json_result_carries_the_issue(tmp_path):
     root = _project(tmp_path, dict(_BASE, gates=[]))
-    run = _set_status(root, "parked", "--json")
+    run = _set_status(root, "backlog", "--json")
     payload = json.loads(run.stdout)
     assert payload.get("issue") == SLUG, (
         "the --json result does not carry the issue. A consumer reading this "
@@ -72,7 +71,7 @@ def test_ssn_a1c_the_refusal_names_the_issue(tmp_path):
     root = _project(tmp_path, dict(
         _BASE, gates=[{"id": "verify.correctness", "status": "pending",
                        "evidence": []}]))
-    run = _set_status(root, "landed")
+    run = _set_status(root, "done", "--close-reason", "completed")
     out = run.stdout + run.stderr
     assert run.returncode != 0, "an unmet gate did not refuse the landing"
     assert SLUG in out, (

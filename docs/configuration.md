@@ -17,8 +17,8 @@ every reader of a setting follows the same file.
   project, and `compass policy migrate` writes one for an existing project.
 - **`.compass/config.yml`** holds the same settings for a project from 5.x that
   has not moved. The CLI reads it when `compass.yml` is absent, or present
-  without `schema:`, through 6.x. `compass policy migrate` moves its settings
-  into `compass.yml`, and 7.0.0 stops reading it. In this file
+  without `schema:`, until 8.0.0. `compass policy migrate` moves its settings
+  into `compass.yml`, and 8.0.0 stops reading it. In this file
   the adoption setting is called `mode`; in `compass.yml` it is called
   `adoption`. No 6.0.0 command writes this file.
 - **The state file in `.compass/`** holds what the CLI writes, not what a

@@ -1,11 +1,11 @@
 """`compass policy migrate --undo`: the command line, the report output and the help text.
 
 The tests run the real parser and `main` in the test process, in a scratch
-project. They replace the planner and the writer of `policy_migrate_undo`
-with fixed stand-ins, so they check only the command: the flag, the refusals,
-that a dry run writes nothing, and the shape of the output. The report
-functions are also replaced while the module still holds its skeleton. The
-undo itself is checked in the tests of the undo module.
+project that a real `compass policy migrate --apply` migrated. The planner
+and the writer of `policy_migrate_undo` are the real ones, wrapped to record
+that they ran, so the output is the real report and the checks of the
+command are the flag, the refusals, that a dry run writes nothing, and the
+shape of the output. The undo itself is checked in the tests of the undo module.
 
 Scenario id: `TRC-032` in policy-migrate-undo/acceptance-criteria.md. The
 other ids run in the same way, `TRC-033` to `TRC-039`.
@@ -15,7 +15,6 @@ from __future__ import annotations
 import importlib.machinery
 import importlib.util
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -23,14 +22,10 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
+sys.path.insert(0, str(ROOT / "tests"))
 
-# The steps a dry run lists, in the order apply takes them.
-STEPS = [
-    {"action": "restore", "path": ".compass/config.yml", "to": ".compass/config.yml"},
-    {"action": "remove", "path": "compass.yml", "to": None},
-    {"action": "remove", "path": ".compass/state.yml", "to": None},
-    {"action": "remove", "path": ".compass/migration.yml", "to": None},
-]
+from test_policy_migrate import _full_project, _run  # noqa: E402
+
 HINT = "Run with --apply to make these changes."
 
 
@@ -42,51 +37,29 @@ def _cli():
     return module
 
 
-def _text(made):
-    """A stand-in for the report text: the steps in order, then the hint or the kept note."""
-    lines = [f"{s['action']} {s['path']}" for s in made.files]
-    if made.result == "undone":
-        lines.append(".compass/legacy is kept.")
-    else:
-        lines.append(HINT)
-    return lines
-
-
-def _json(made):
-    return {"schema": 1, "mode": "undo", "result": made.result,
-            "sources": made.sources, "files": made.files}
-
-
 @pytest.fixture
 def undo(tmp_path, monkeypatch):
-    """A scratch project with the undo module's planner and writer replaced."""
+    """A scratch project after a real migration, with the real planner and writer recorded."""
     from compass_pkg import policy_migrate_undo as module
-    (tmp_path / ".compass").mkdir()
-    (tmp_path / "compass.yml").write_text("extends: compass:default@7\n")
-    (tmp_path / ".compass" / "migration.yml").write_text("schema: 1\n")
-    monkeypatch.chdir(tmp_path)
+    root = _full_project(tmp_path)
+    code, out, err = _run(root, "policy", "migrate", "--apply")
+    assert code == 0, out + err
+    monkeypatch.chdir(root)
     monkeypatch.setenv("NO_COLOR", "1")
     calls = []
+    real_plan, real_apply = module.plan, module.apply
 
-    def plan(root):
+    def plan(project):
         calls.append("plan")
-        return module.UndoPlan(result="ready", sources=[{"path": ".compass/config.yml",
-                                                         "digest": "sha256:0"}],
-                               files=[dict(s) for s in STEPS])
+        return real_plan(project)
 
-    def apply(root, made):
+    def apply(project, made):
         calls.append("apply")
-        made.result = "undone"
+        return real_apply(project, made)
 
     monkeypatch.setattr(module, "plan", plan)
     monkeypatch.setattr(module, "apply", apply)
-    # Once the real report functions exist they run; until then fixed ones do.
-    try:
-        module.report_text(module.UndoPlan())
-    except NotImplementedError:
-        monkeypatch.setattr(module, "report_text", _text)
-        monkeypatch.setattr(module, "report_json", _json)
-    return tmp_path, calls
+    return root, calls
 
 
 def _tree(root):
@@ -114,6 +87,9 @@ def test_TRC_033_the_dry_run_lists_the_steps_in_the_order_apply_takes_them(undo,
     positions = [out.index(p) for p in (".compass/config.yml", "compass.yml\n",
                                         ".compass/state.yml", ".compass/migration.yml")]
     assert positions == sorted(positions)
+    # Each file the undo changes is on its own line, with its action.
+    assert "restore .compass/config.yml" in " ".join(out.split())
+    assert "remove  compass.yml\n" in out
 
 
 def test_TRC_034_the_dry_run_says_how_to_apply(undo, capsys):
@@ -136,6 +112,9 @@ def test_TRC_036_the_json_of_a_dry_run_has_a_fixed_shape(undo, capsys):
     document = json.loads(capsys.readouterr().out)
     assert list(document) == ["schema", "mode", "result", "sources", "files"]
     assert (document["schema"], document["mode"], document["result"]) == (1, "undo", "ready")
+    assert [(f["action"], f["path"]) for f in document["files"]][:4] == [
+        ("restore", ".compass/config.yml"), ("remove", "compass.yml"),
+        ("remove", ".compass/state.yml"), ("remove", ".compass/migration.yml")]
 
 
 def test_TRC_037_the_json_of_an_applied_undo_reports_undone(undo, capsys):

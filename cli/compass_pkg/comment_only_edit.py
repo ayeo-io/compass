@@ -23,7 +23,11 @@
 # times with replace_all), a pragma, a hidden character, a parse error, a check
 # that runs out of budget and an error of any kind all give "no". The hook then
 # judges the Edit as it did before this module existed. A comment that carries
-# a pragma is code (DD-3 of the decision record).
+# a pragma is code (DD-3 of the decision record). So is an Edit of a Python file
+# whose encoding cookie is not utf-8 or ascii or that the Edit adds, removes or
+# moves, and an Edit of a file whose first line makes a template engine read
+# it. The pragma list and the docstring readers are lists of words: a tool that
+# is not on them is not seen.
 #
 # THE TIME BOUND. A parser can be made slow on purpose: PyYAML needs about 90
 # seconds for 100,000 "[" characters. The charge is computed before any parse,
@@ -64,8 +68,19 @@ LANGUAGES = {".py": "python", ".yml": "yaml", ".yaml": "yaml"}
 _PRAGMA_WORDS = re.compile(
     r"type:|noqa|nosec|fmt:|pragma:|pylint:|mypy:|pyright:|ruff:|flake8|isort:"
     r"|yamllint|shellcheck|nolint|coding[:=]|noinspection|pytype:|pyre-"
-    r"|prettier-ignore|@formatter|trunk-ignore|bandit|skipcq|codespell|cspell",
+    r"|prettier-ignore|@formatter|trunk-ignore|bandit|skipcq|codespell|cspell"
+    r"|nosemgrep|gitleaks|checkov|lgtm|nosonar|codeql|yapf|tfsec|trivy",
     re.IGNORECASE)
+# The two encodings in which a comment cannot hide a line break. Python reads
+# the name of an encoding cookie after lower-casing it and turning "_" to "-".
+SAFE_ENCODINGS = frozenset(("utf-8", "utf8", "ascii"))
+# PEP 263: a comment on line 1, or on line 2 when line 1 is blank or a comment.
+_COOKIE = re.compile(r"[ \t\f]*#.*?coding[:=][ \t]*([-\w.]+)")
+_BLANK_OR_COMMENT = re.compile(r"[ \t\f]*(?:[#\r\n]|$)")
+_LINE = re.compile(r"[^\r\n]*(?:\r\n|\r|\n)?")
+# A file that starts with this line is rendered as a template (cloud-init's
+# `## template: jinja`) before the YAML parser reads it.
+_TEMPLATE_HEADER = re.compile(r"[ \t]*#+[ \t]*template[ \t]*:", re.IGNORECASE)
 # A docstring may change its text only when nothing in the file reads it.
 _DOCSTRING_READERS = re.compile(
     r"(?<![A-Za-z0-9])(?:__doc__|getdoc|help|doctest|exec|eval)(?![A-Za-z0-9])")
@@ -146,6 +161,44 @@ def touches_pragma(lines: list[str]) -> bool:
         if mark != -1 and _PRAGMA_WORDS.search(line, mark):
             return True
     return False
+
+
+def _first_two_lines(text: str) -> tuple[str, str]:
+    """The first two lines with their line ends, after a byte order mark."""
+    pos = 1 if text[:1] == "﻿" else 0
+    first = _LINE.match(text, pos)
+    second = _LINE.match(text, first.end())
+    return first.group(), second.group()
+
+
+def encoding_cookie(text: str) -> str | None:
+    """The encoding name that Python would read from the first two lines of the
+    source (PEP 263), as Python normalises it, or None when there is none."""
+    first, second = _first_two_lines(text)
+    found = _COOKIE.match(first)
+    if found is None and _BLANK_OR_COMMENT.match(first):
+        found = _COOKIE.match(second)
+    return found.group(1).lower().replace("_", "-") if found else None
+
+
+def encoding_changes_code(before: str, after: str) -> bool:
+    """Whether the encoding of the file decides what the Edit means. Python
+    decodes the source with the cookie before it parses a line, so a cookie
+    such as `utf-7` or `unicode_escape` turns text inside a comment into a line
+    break, and a cookie that moves out of the first two lines changes how the
+    whole file is read. The parse of the text as UTF-8 proves nothing then."""
+    cookie_before = encoding_cookie(before)
+    cookie_after = encoding_cookie(after)
+    if cookie_before != cookie_after:
+        return True
+    if cookie_before is not None and cookie_before not in SAFE_ENCODINGS:
+        return True
+    return False
+
+
+def starts_as_template(text: str) -> bool:
+    """Whether the first line makes a template engine read the whole file."""
+    return _TEMPLATE_HEADER.match(_first_two_lines(text)[0]) is not None
 
 
 def adds_hidden_character(lines: list[str]) -> bool:
@@ -367,6 +420,10 @@ def judge(event: dict, costs: dict[str, int], remaining: int) -> Verdict:
     size = max(len(before.encode("utf-8")), len(after.encode("utf-8")))
     if size > MAX_FILE_BYTES:
         return no("too-large")
+    if language == "python" and encoding_changes_code(before, after):
+        return no("encoding")
+    if starts_as_template(before) or starts_as_template(after):
+        return no("template")
     old_lines, new_lines = changed_lines(before, after)
     if touches_pragma(old_lines) or touches_pragma(new_lines):
         return no("pragma")

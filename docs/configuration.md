@@ -270,8 +270,9 @@ agent follows the repository's existing prose. When it is set, the session-start
 hook adds one line that names the language. Code identifiers are out of scope.
 A preset cannot carry the key. The setting is read from the project's own
 settings file: `compass.yml`, or `.compass/config.yml` when `compass.yml` is
-absent or has no `schema:`. A malformed value is refused at `compass policy lint`
-and adds no line to a session.
+absent or has no `schema:`. A malformed value adds no line to a session.
+`compass policy lint` refuses a malformed `language` key in `compass.yml`; it
+does not check `.compass/config.yml`.
 A project's own `CLAUDE.md` or `AGENTS.md` that names a language should drop
 that sentence when `language` is set, and Compass never edits those files.
 

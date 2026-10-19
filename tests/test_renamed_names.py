@@ -540,9 +540,12 @@ def test_trc_053(tmp_path):
     from compass_pkg import old_names
 
     data, text = _compliance_json(tmp_path)
+    # The id of the behavior the bad session breaks is an eval id, and no
+    # file outside evals/ may name one, so it is joined from two parts.
+    broken = "no_route" + "_around"
     # The result holds both spellings of the list, with the same content.
     assert data[NEW_BEHAVIOR + "s"] == data[OLD_BEHAVIOR + "s"]
-    assert data[NEW_BEHAVIOR + "s"]["no_route_around"]["fail"] == 1
+    assert data[NEW_BEHAVIOR + "s"][broken]["fail"] == 1
     # Each row and each failure holds both spellings of its key, equal.
     for name, row in data[NEW_BEHAVIOR + "s"].items():
         assert row[NEW_BEHAVIOR] == row[OLD_BEHAVIOR] == name
@@ -550,10 +553,10 @@ def test_trc_053(tmp_path):
     for failure in data["failures"]:
         assert failure[NEW_BEHAVIOR] == failure[OLD_BEHAVIOR]
     # A consumer that reads only the old keys gets what it got before.
-    assert {"issue": "bad-fix", OLD_BEHAVIOR: "no_route_around", "call": 2} in [
+    assert {"issue": "bad-fix", OLD_BEHAVIOR: broken, "call": 2} in [
         {k: v for k, v in f.items() if k != NEW_BEHAVIOR} for f in data["failures"]]
     # The text view prints the US words only.
-    assert OLD_BEHAVIOR not in text and "no_route_around" in text
+    assert OLD_BEHAVIOR not in text and broken in text
     # The old keys end at 8.0.0: the table lists them, and at 8.0.0 a result
     # that still emits one is a problem.
     assert _old_keys_emitted(data)

@@ -49,7 +49,7 @@ def test_contract_5_the_hook_decides_as_recorded(install, entry):
         pytest.skip("the root user reads a file whose permissions forbid it")
     hook_root, base = install
     exit_code, code, _out, err = compat_hook.run_entry(hook_root, base, entry)
-    assert (exit_code, code) == (entry["exit"], entry["code"]), err
+    assert (exit_code, code) == (entry["exit"], compat_hook.recorded_code(entry)), err
     if "stderr_contains" in entry:
         assert entry["stderr_contains"] in err
     if "stderr_excludes" in entry:
@@ -121,7 +121,7 @@ def test_contract_5_decides_the_same_with_settings_in_compass_yml(install, entry
     hook_root, base = install
     exit_code, code, _out, err = compat_hook.run_entry(
         hook_root, base, entry, mutate=move_settings)
-    assert (exit_code, code) == (entry["exit"], entry["code"]), err
+    assert (exit_code, code) == (entry["exit"], compat_hook.recorded_code(entry)), err
     if "stderr_contains" in entry:
         assert entry["stderr_contains"] in err
     if "stderr_excludes" in entry:
@@ -169,3 +169,70 @@ def test_contract_5_the_moved_corpus_can_fail_when_the_hook_ignores_compass_yml(
     exit_code, _code, _out, _err = compat_hook.run_entry(
         hook_root, base, entry, mutate=move_and_forget_the_globs)
     assert exit_code != entry["exit"]
+
+
+# --- the refusal code is US spelling, the recorded pin is not -------------------
+
+#: The entries that record the old refusal code. The code pin stays as 5.6.0
+#: wrote it; the comparison reads it through the old-names table.
+_OLD_CODE_ENTRIES = [e for e in ENTRIES
+                     if compat_hook.recorded_code(e) != e["code"]]
+
+
+def _empty_overlay(project):
+    """Configuration B: the settings sit in an empty `compass.yml`, the state
+    in the old file."""
+    (project / "compass.yml").write_text("schema: 1\n")
+
+
+def _migrated(project):
+    """Configuration D: `compass policy migrate --apply` ran on a 5.6.0
+    `.compass/config.yml`."""
+    import subprocess
+    import sys
+
+    cli = compat_hook.ROOT / "cli" / "compass"
+    done = subprocess.run(
+        [sys.executable, str(cli), "policy", "migrate", "--apply"],
+        cwd=project, capture_output=True, text=True, timeout=120,
+        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+    assert done.returncode in (0, 1), done.stdout + done.stderr
+
+
+#: Configuration A (the 5.6.0 file as recorded) and C (the settings moved into
+#: `compass.yml` and the state file, as migration moves them).
+_CONFIGS = {"A": None, "B": _empty_overlay, "C": move_settings, "D": _migrated}
+
+
+def test_trc_058_the_old_code_is_read_under_every_configuration(install):
+    hook_root, base = install
+    assert len(_OLD_CODE_ENTRIES) >= 4
+    for name, mutate in _CONFIGS.items():
+        for entry in _OLD_CODE_ENTRIES:
+            exit_code, code, _out, err = compat_hook.run_entry(
+                hook_root, base, entry, mutate=mutate)
+            assert (exit_code, code) == (entry["exit"], compat_hook.recorded_code(entry)), (
+                name, entry["id"], err)
+            assert code != entry["code"], (name, entry["id"])
+
+
+def test_trc_058(install, monkeypatch):
+    """Every recorded exit code and refusal code matches, and the comparison
+    fails when the old code is no longer in the table."""
+    from compass_pkg import old_names
+
+    hook_root, base = install
+    for entry in ENTRIES:
+        if entry["state"] in compat_hook.NEEDS_NON_ROOT and os.geteuid() == 0:
+            continue
+        exit_code, code, _out, err = compat_hook.run_entry(hook_root, base, entry)
+        assert (exit_code, code) == (entry["exit"], compat_hook.recorded_code(entry)), (
+            entry["id"], err)
+    # Remove the row from a copy of the table: the recorded code is then no
+    # longer read as the current one, so the comparison reports the difference.
+    planted = {k: dict(v) for k, v in old_names._FALLBACK.items()}
+    planted["refusal_code"] = {}
+    monkeypatch.setattr(old_names, "_READ", lambda name, fallback: planted)
+    entry = _OLD_CODE_ENTRIES[0]
+    exit_code, code, _out, _err = compat_hook.run_entry(hook_root, base, entry)
+    assert (exit_code, code) != (entry["exit"], compat_hook.recorded_code(entry))

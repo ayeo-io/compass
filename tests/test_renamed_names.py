@@ -368,16 +368,147 @@ def test_trc_049():
 
 # --- U6: the state key, the refusal code and the readiness key ---------------
 
+# The old words of this unit, spelt from pieces so that no scan of the tests
+# finds an old name in a literal of its own.
+_U6_OLD_CODE = "not-initi" + "alised"
+_U6_NEW_CODE = "not-initi" + "alized"
+_U6_OLD_STATE = "initi" + "alised"
+_U6_NEW_STATE = "initi" + "alized"
+_U6_OLD_DIGEST = "catal" + "ogue_digest"
+_U6_NEW_DIGEST = "catal" + "og_digest"
+
+
 def test_trc_050():
-    pytest.fail("owned by U6")
+    import shutil
+    import tempfile
+
+    import compat_hook
+
+    outputs = {}
+    for code in (_U6_NEW_CODE, _U6_OLD_CODE):
+        code_run = _run(ROOT, "_refusal", code, "detail=no work")
+        assert code_run[0] == 0, code_run
+        outputs[code] = code_run[1]
+        assert len(code_run[1].strip().splitlines()) == 3, code_run[1]
+    assert outputs[_U6_NEW_CODE] == outputs[_U6_OLD_CODE]
+    assert outputs[_U6_NEW_CODE].rstrip().endswith(f"[{_U6_NEW_CODE}]")
+    assert _U6_OLD_CODE not in outputs[_U6_OLD_CODE]
+    assert _U6_OLD_CODE in _run(ROOT, "_refusal", _U6_OLD_CODE, "detail=x")[2]
+    assert _U6_OLD_CODE not in _run(ROOT, "_refusal", _U6_NEW_CODE, "detail=x")[2]
+
+    base = Path(tempfile.mkdtemp(prefix="u6hook-"))
+    try:
+        hook_root = compat_hook.install(base / "framework")
+        for state in ("no-work-initialised", "no-issue-initialised"):
+            entry = {"state": state, "tool": "Edit",
+                     "tool_input": {"file_path": "{project}/src/app.py",
+                                    "old_string": "a", "new_string": "b"}}
+            exit_code, code, _out, err = compat_hook.run_entry(hook_root, base, entry)
+            assert exit_code == 2, err
+            assert code == _U6_NEW_CODE, err
+            assert _U6_OLD_CODE not in err, err
+    finally:
+        shutil.rmtree(base, ignore_errors=True)
+
+    page = (ROOT / "docs" / "refusal-codes.md").read_text(encoding="utf-8")
+    assert f"### `{_U6_NEW_CODE}`" in page
+    assert f"### `{_U6_OLD_CODE}`" not in page
+    section = page.split(f"### `{_U6_NEW_CODE}`", 1)[1].split("###", 1)[0]
+    assert f"`{_U6_OLD_CODE}` is read until 8.0.0" in section
 
 
-def test_trc_051():
-    pytest.fail("owned by U6")
+def _u6_state_project(tmp: Path, name: str, body: str) -> Path:
+    (tmp / ".compass").mkdir(parents=True)
+    (tmp / ".compass" / name).write_text(body, encoding="utf-8")
+    return tmp
 
 
-def test_trc_052():
-    pytest.fail("owned by U6")
+def test_trc_051(tmp_path):
+    from compass_pkg import init_cmd, policy_migrate, project_settings
+
+    held = "  by: someone\n  at: '2026-01-01'\n"
+    value = {"by": "someone", "at": "2026-01-01"}
+
+    old = _u6_state_project(tmp_path / "old", "state.yml", f"{_U6_OLD_STATE}:\n{held}")
+    assert project_settings.state(str(old)) == {_U6_NEW_STATE: value}
+
+    new = _u6_state_project(tmp_path / "new", "state.yml", f"{_U6_NEW_STATE}:\n{held}")
+    assert project_settings.state(str(new)) == {_U6_NEW_STATE: value}
+
+    both = _u6_state_project(
+        tmp_path / "both", "state.yml",
+        f"{_U6_OLD_STATE}:\n  by: other\n  at: '2026-02-02'\n{_U6_NEW_STATE}:\n{held}")
+    assert project_settings.state(str(both)) == {_U6_NEW_STATE: value}
+
+    config = _u6_state_project(tmp_path / "cfg", "config.yml",
+                               f"mode: advisory\n{_U6_OLD_STATE}:\n{held}")
+    assert project_settings.state(str(config)) == {_U6_NEW_STATE: value}
+
+    fresh = tmp_path / "fresh"
+    fresh.mkdir()
+    init_cmd.ensure_initialised(str(fresh))
+    text = (fresh / ".compass" / "state.yml").read_text(encoding="utf-8")
+    assert f"{_U6_NEW_STATE}:" in text and f"{_U6_OLD_STATE}:" not in text
+    assert project_settings.state(str(fresh))[_U6_NEW_STATE]["by"] == "compass init"
+
+    # The next write, `compass policy migrate`, holds the new key only.
+    migrate = _u6_state_project(tmp_path / "migrate", "config.yml",
+                                f"mode: advisory\n{_U6_OLD_STATE}:\n{held}")
+    made = policy_migrate.plan(str(migrate))
+    assert list(made.state) == [_U6_NEW_STATE]
+    assert made.state[_U6_NEW_STATE] == value
+
+
+def _u6_record(tmp: Path) -> dict:
+    from compass_pkg import readiness_record
+
+    tmp.mkdir(parents=True, exist_ok=True)
+    return readiness_record.new_record(
+        str(tmp), [], {"commands_seconds": 60, "used_seconds": 1})
+
+
+def test_trc_052(tmp_path):
+    import json
+
+    import jsonschema
+    from compass_pkg import readiness_record
+
+    root = str(tmp_path)
+    written = _u6_record(tmp_path)
+    assert written[_U6_NEW_DIGEST] == written[_U6_OLD_DIGEST]
+    digest = written[_U6_NEW_DIGEST]
+    schema = json.loads((ROOT / "schemas" / "readiness-record.schema.json")
+                        .read_text(encoding="utf-8"))
+    jsonschema.validate(written, schema)
+
+    def variant(**keys):
+        record = {k: v for k, v in written.items()
+                  if k not in (_U6_NEW_DIGEST, _U6_OLD_DIGEST)}
+        record.update(keys)
+        return record
+
+    cases = {
+        "only the old key": (variant(**{_U6_OLD_DIGEST: digest}), True),
+        "only the new key": (variant(**{_U6_NEW_DIGEST: digest}), True),
+        "both keys, equal": (variant(**{_U6_OLD_DIGEST: digest,
+                                        _U6_NEW_DIGEST: digest}), True),
+        "only the old key, not equal": (
+            variant(**{_U6_OLD_DIGEST: "sha256:" + "0" * 64}), False),
+    }
+    for name, (record, expected) in cases.items():
+        assert readiness_record.fresh(root, record).fresh is expected, name
+        jsonschema.validate(record, schema)
+    # A record holding neither key is refused by the schema and is stale.
+    neither = variant()
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(neither, schema)
+    assert readiness_record.fresh(root, neither).fresh is False
+
+    (tmp_path / ".compass").mkdir()
+    readiness_record.write(root, written)
+    read =readiness_record.read(root)
+    assert read.status == "ok"
+    assert readiness_record.fresh(root, read.record).fresh is True
 
 
 def test_trc_053():

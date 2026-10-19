@@ -9,7 +9,7 @@ and neither imports `core`, so `core` can use them.
   otherwise `.compass/config.yml`, loaded as it always was. The adoption
   setting is `adoption` in `compass.yml` and `mode` in the old file; the
   returned mapping holds it under `adoption` either way.
-- `state(project_root)`: the values the CLI writes, `initialised` and
+- `state(project_root)`: the values the CLI writes, `initialized` and
   `records_signed_since`. The state file in `.compass/` when it exists, otherwise
   `.compass/config.yml`, where a project created before ADR-043 keeps them.
 
@@ -19,8 +19,8 @@ that means, so a broken file behaves in each place exactly as it did before
 there was one reader.
 """
 # DEPENDENCY: standard library (copy, os, sys), compass_pkg.atomic_io,
-# compass_pkg.catalogue_spec and the bundled PyYAML; imports nothing else from
-# Compass.
+# compass_pkg.catalogue_spec, compass_pkg.old_names (a leaf) and the bundled
+# PyYAML; imports nothing else from Compass.
 from __future__ import annotations
 
 import copy
@@ -29,6 +29,7 @@ import sys
 
 import yaml
 
+from compass_pkg import old_names
 from compass_pkg.atomic_io import load_yaml_strict
 from compass_pkg.catalogue_spec import SETTINGS_KEYS
 
@@ -389,11 +390,21 @@ def state_source(project_root):
 
 
 def state(project_root):
-    """`initialised` and `records_signed_since` as a dict, `{}` when neither
-    file exists. A state file that exists is the whole answer."""
+    """`initialized` and `records_signed_since` as a dict, `{}` when neither
+    file exists. A state file that exists is the whole answer. The key
+    `initialized` is read from either spelling until 8.0.0 and the new one
+    wins when both are there."""
     path = state_source(project_root)
     if path is None:
         return {}
     data = _load(path, strict=False)
-    return {k: data[k] for k in ("initialised", "records_signed_since")
-            if k in data}
+    out = {}
+    marker = old_names.pick(data, "state_key", "initialized", _MISSING)
+    if marker is not _MISSING:
+        out["initialized"] = marker
+    if "records_signed_since" in data:
+        out["records_signed_since"] = data["records_signed_since"]
+    return out
+
+
+_MISSING = object()

@@ -50,7 +50,7 @@ FIXTURES = {
     "settings-conflict": dict(target="packaging/app.cfg", tool="Edit",
                               keys="mode, autonomy, enforcement, record, "
                                    "project and 2 more"),
-    "not-initialised": dict(detail="no .compass/work/ exists in this project"),
+    "not-initialized": dict(detail="no .compass/work/ exists in this project"),
     "bad-current-task": dict(slug="../side"),
     "bad-session-issue": dict(slug="missing", project="/work/proj"),
     "tree-not-tied": dict(project="/work/proj"),

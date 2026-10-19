@@ -1929,7 +1929,7 @@ import sys
 import compass_pkg
 from compass_pkg import project_settings
 try:
-    rec = project_settings.state(sys.argv[1]).get("initialised")
+    rec = project_settings.state(sys.argv[1]).get("initialized")
 except Exception:
     sys.exit(0)
 if isinstance(rec, dict) and rec.get("by"):
@@ -1971,7 +1971,7 @@ fi
 
 if [ ! -d "$WORK_DIR" ]; then
   compass_say_how_this_project_opted_in
-  compass_block not-initialised "detail=no .compass/work/ exists in $PROJECT_DIR"
+  compass_block not-initialized "detail=no .compass/work/ exists in $PROJECT_DIR"
 fi
 
 # The current issue is named by the .compass/current-task pointer (written by
@@ -2076,7 +2076,7 @@ fi
 
 if [ -z "${TASK_DIR:-}" ]; then
   compass_say_how_this_project_opted_in
-  compass_block not-initialised "detail=no issue exists under $PROJECT_DIR/.compass/work/"
+  compass_block not-initialized "detail=no issue exists under $PROJECT_DIR/.compass/work/"
 fi
 
 TASK_SLUG="$(basename "$TASK_DIR")"

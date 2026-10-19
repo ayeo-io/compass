@@ -99,7 +99,8 @@ The state decides what Compass reads, and no state loses a setting silently:
 - `enforced`: `compass check` and `compass ci` exit non-zero on any failure.
   The gate is real.
 - `advisory`: `compass check` and `compass ci` report every failure clearly
-  but exit 0, so CI does not fail. The pre-tool hook still refuses a code edit
+  but exit 0, so CI does not fail. The `compass ci` summary line still says
+  FAIL when a check failed. The pre-tool hook still refuses a code edit
   with no failing test on record.
 
 Advisory mode suits piloting Compass without blocking delivery. A value other

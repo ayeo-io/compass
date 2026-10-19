@@ -693,3 +693,26 @@ Compass spells its own names in US English from 7.0.0. Each old name below is st
 | heading | `Current Behaviour` | `Current Behavior` | 8.0.0 |
 | heading | `Archived Behaviour` | `Archived Behavior` | 8.0.0 |
 | term | `catalogue` | `catalog` | 8.0.0 |
+
+## `compass policy migrate --undo` goes back to the old files
+
+`compass policy migrate --undo` puts a migrated project back as it was before `compass policy migrate --apply`. `docs/policy-migrate.md` owns the facts, under "Going back with `--undo`". The decision is `governance/decisions/2026-10-19-the-migration-marker-records-what-an-undo-needs.md`.
+
+### What changes
+
+- **`--undo` is a dry run until you add `--apply`.** `--apply` restores the old settings file, and any deleted governance file, from `.compass/legacy/`, byte for byte. It removes `compass.yml`, then `.compass/state.yml` when the migration made it, then the marker, `migration.yml` in `.compass`. `.compass/legacy/` stays.
+- **The undo refuses, and writes nothing, when it would lose work.** A file the migration wrote or kept has changed, a legacy copy is missing or differs, or a signed record exists from after the migration. The refusal names the file or the count. There is no override.
+- **The migration marker holds more.** `migration.yml` in `.compass` now holds a `written` digest for each file the migration wrote, and a `migrated_at` time. A marker from an earlier run has neither, so `--undo` refuses it and prints the steps to go back by hand.
+- **The refusal of `compass.yml` after a migration names `--undo`.** It no longer lists the copy-back steps.
+- **`--undo` refuses `--words`, `--i-have-a-copy` and a folder argument.**
+
+### What to do
+
+Nothing, unless you want to go back. Run `compass policy migrate --undo`, read the list, then run `compass policy migrate --undo --apply`.
+
+### New keys and verbs
+
+| Name | Where | Meaning |
+|---|---|---|
+| `--undo` | `compass policy migrate` | Put the project back as it was before the migration |
+| `written`, `migrated_at` | the marker, `migration.yml` in `.compass` | The digests of the files the migration wrote, and when it ran |

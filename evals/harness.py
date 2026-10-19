@@ -1376,13 +1376,22 @@ def _hand_to(root: Path, user: SessionUser) -> None:
 
 # --- the child's own environment ---------------------------------------------
 
-def _is_claude_plugin_path(entry: str) -> bool:
+def _is_claude_plugin_path(entry: str, config_dir: str | None = None) -> bool:
     """True for a `PATH` entry under a Claude Code plugins directory, for
     example `~/.claude/plugins/cache/compass/compass/4.0.1/bin` - the route
     by which a bare or compass session could otherwise reach whatever
-    `compass` happens to be installed on the machine that started it."""
-    parts = Path(entry).parts
-    return any(parts[i:i + 2] == (".claude", "plugins")
+    `compass` happens to be installed on the machine that started it.
+
+    A config folder can have any name that starts with `.claude` (one per
+    profile), and `config_dir` is the folder `CLAUDE_CONFIG_DIR` names, so
+    a plugins directory under either counts."""
+    path = Path(entry)
+    if config_dir:
+        plugins_root = Path(config_dir) / "plugins"
+        if path == plugins_root or plugins_root in path.parents:
+            return True
+    parts = path.parts
+    return any(parts[i].startswith(".claude") and parts[i + 1] == "plugins"
                for i in range(len(parts) - 1))
 
 
@@ -1405,8 +1414,9 @@ def _build_child_env(condition: str, plugin_copy_dir: Path | None, *,
         env["HOME"], env["USER"] = session_user.home, session_user.name
         env.pop("TMPDIR", None)
 
+    config_dir = os.environ.get("CLAUDE_CONFIG_DIR")
     kept_entries = [entry for entry in os.environ.get("PATH", "").split(os.pathsep)
-                    if entry and not _is_claude_plugin_path(entry)]
+                    if entry and not _is_claude_plugin_path(entry, config_dir)]
     if condition == "compass" and plugin_copy_dir is not None:
         kept_entries = [str(plugin_copy_dir / "bin"), *kept_entries]
     env["PATH"] = os.pathsep.join(kept_entries)

@@ -171,7 +171,8 @@ REFUSALS: dict[str, dict[str, str]] = {
     "delegation-caller-mismatch": {
         "what": "delegated approval (--as {named})",
         "why": "Claude Code reports this call as {caller}, and a delegated "
-               "approval must name exactly the agent that makes it.",
+               "approval must name exactly the agent that makes it. A word "
+               "the shell could build is refused too.",
         "fix": "run it from the agent the delegation names, with --as set to "
                "that agent's full name, or ask with compass evidence request.",
     },

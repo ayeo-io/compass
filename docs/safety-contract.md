@@ -136,6 +136,26 @@ because macOS opens a path in any case.
   names `delegations`, and a Bash command that names that folder
   (`delegation-protected`). A Grep over the whole project still reaches the
   folder; the 64-bit code is what keeps the stored hash useless;
+- a Grep glob, or a Bash word with `*`, `?` or `[`, that can match the
+  delegation folder or a file in it, such as `d*/*`, `deleg*/*`,
+  `deleg?tions`, `**/confirm-*` or `cat .compass/deleg*/*`
+  (`delegation-protected`). The hook tests the glob with `fnmatch` against
+  the folder `.compass/delegations` and the sample files `DL-1.yml` and
+  `confirm-s.yml` in it, and against an ordinary path of the same shape: a
+  folder `zz` and a file `file.yml` in it, both under `.compass`. It refuses
+  the glob when it matches a delegation path and not the ordinary one. This is a
+  heuristic: it can refuse a rare glob such as `**/*-*.yml`, and it passes a
+  glob that picks a delegation file together with other files, such as
+  `**/*l*.yml`. A Grep glob counts only when the search path is the
+  delegation folder or a folder above it, so `src` and `.compass/work` pass.
+  A Bash word is read after the shell's quotes are removed, in any letter
+  case, and also inside `bash -c`, `sh -c` and `eval`; a quoted regular
+  expression such as `'.*delegat.*'` is read as a glob and refused;
+- these globs are accepted, because they match an ordinary path as well: `*`,
+  `**/*`, `**/*.md`, `*.yml`, `**/*.yml`, `src/**/*.py` and `.compass/*` in a
+  Grep, and `ls .compass/*`, `ls .compass/work/*`, `cat
+  .compass/work/*/manifest.yml`, `ls .compass/**`, `ls src/*.py` and `cat
+  docs/*.md` in Bash;
 - a delegated approval whose `--as` is not exactly the agent Claude Code
   reports (`delegation-caller-mismatch`). A Bash command counts as one when
   a word is `approve` and a word is `--delegated`, a prefix of it of five
@@ -143,7 +163,13 @@ because macOS opens a path in any case.
   approve` beside any word that starts `--del`, also counts. The words of
   `bash -c`, `sh -c`, `eval` or a quoted command piped into a shell are read
   too. Every `--as` must name the caller, since the CLI keeps the last one.
-  The call is the main agent only when the hook input has neither
+  The hook also refuses any word that holds `--as` and is neither exactly
+  `--as` nor `--as=...`, such as `--as${IFS}compass:architect`, `--as$IFS`,
+  `--as$X`, `x--as`, `--asmain` and `--assume-yes`, because the shell can
+  turn it into a second `--as` that the hook cannot read. Quotes are removed
+  first, so `"--as"` and `--a''s` count as `--as`. A word with white space is
+  read again as its parts. A command that is not a delegated approval, such as
+  `git update-index --assume-unchanged`, is not checked. The call is the main agent only when the hook input has neither
   `agent_type` nor `agent_id`, and the CLI takes no abbreviated flag, so
   `--deleg` cannot pass unseen. A command that only quotes a delegated
   approval, such as a commit message, needs a matching `--as` too;
@@ -171,7 +197,21 @@ approval as another agent, as they did before this check:
 - a relative Bash path, such as `grep -r x ../..`, or a bare `cd` followed
   by a relative path: the check does not know the shell's working folder;
 - a command assembled at run time: a variable, a script written with Write
-  and then run, or a list passed to Python's `subprocess`.
+  and then run, or a list passed to Python's `subprocess`;
+- a delegated approval or a delegation glob that the hook reads as text and
+  cannot follow: a flag built from a variable, command substitution, a value
+  read from a file or the environment, and arguments built by `xargs` or
+  `printf`;
+- brace expansion, such as `{d,x}eleg*/*`;
+- a tool option that takes its own glob;
+- a Bash glob rooted in a folder other than the call's working folder, a
+  relative path after `cd`, and a project root above the working folder;
+- a Bash glob that spells neither `.compass` nor `deleg`, such as `.c*/d*/*`.
+  The hook starts the guard only when a glob character follows `.compass/` or
+  `deleg`, so `cat .c*/delegations` has no glob character after either and
+  does not start it. A glob character in a later word of the same command
+  also starts the guard, which costs one python3 start and refuses nothing
+  more.
 
 A process running as the same operating system user can still write these
 files, or `manifest.yml`.

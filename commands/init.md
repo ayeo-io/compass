@@ -21,7 +21,7 @@ them on day one. This command is not a gate you must clear before the first
 issue.
 
 `/compass:init` copies nothing. A new project's `compass.yml` extends the
-shipped default (`extends: compass:default@6`) and holds only what differs from
+shipped default (`extends: compass:default@7`) and holds only what differs from
 it, so "the shipped defaults and nothing project-specific yet" is a complete,
 valid configuration. Copying `governance/` into a project, which 5.x versions
 of this command did, is what `compass policy migrate` now converts.
@@ -78,16 +78,25 @@ it is exempt from assessment.
 
    ```yaml
    schema: 1
-   extends: compass:default@6
+   extends: compass:default@7
    owner: <the person who approves waivers>
    project:
      name: <the project's name>
      test_command: <the command that runs the tests, such as "pytest -q">
    ```
 
+   Then ask one optional question: "Which language should the agent write
+   prose in, such as `en-US` or `de`? Leave it blank to set none." Add
+   `language: <the tag>` to the file only when the person answers. A blank
+   answer adds no key, and nothing is written in its place. Do not guess the
+   language from anywhere else. The tag is a BCP 47 tag, and
+   `docs/configuration.md` lists the usual ones.
+
    The name is `project.name` and the command is `project.test_command`.
    `compass init` writes no settings file, so this is the first one. Run
-   `compass policy lint` and report that it passes. Do not add keys the team has
+   `compass policy lint` and report that it passes. If it reports a `language`
+   finding, show it, ask again and lint again. Write no tag that lint has not
+   passed. Do not add keys the team has
    not asked for: every other setting has a default (see
    `docs/configuration.md`), and a missing key is a complete state.
 

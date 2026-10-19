@@ -34,6 +34,7 @@ import fnmatch
 import re as _re
 from compass_pkg import status_words
 from compass_pkg.stable_ids import APPROACH_HOTFIX
+from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import CompassError, canonical_shape, display_shape, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, migrate_map_section, normalize_spine, resolve_issue_dir, save_manifest
 
 
@@ -844,7 +845,7 @@ def _cmd_calibration_impact(args):
             path = manifest_path(os.path.join(work, slug))
             if os.path.isfile(path):
                 try:
-                    tasks.append((slug, normalize_spine(load_yaml(path))))
+                    tasks.append((slug, normalize_spine(load_manifest_mapping(path))))
                 except CompassError:
                     continue
     from compass_pkg import autonomy_cost, terminal

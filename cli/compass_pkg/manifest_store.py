@@ -93,11 +93,26 @@ def read(path):
     return _parse(data, path), data
 
 
+def load_manifest_mapping(path):
+    """The manifest at `path` as a mapping, for a reader that only needs the
+    parse. It gives `core.load_yaml`'s "not found" and the refusals of `read`,
+    so a manifest that is a list never reaches a `.get`."""
+    if not os.path.isfile(path):
+        raise CompassError(f"not found: {path}")
+    return read(path)[0]
+
+
 def _parse(data, path):
     try:
-        return yaml.safe_load(data.decode("utf-8")) or {}
+        parsed = yaml.safe_load(data.decode("utf-8")) or {}
     except yaml.YAMLError as exc:
         raise CompassError(f"invalid YAML in {path}: {exc}")
+    if not isinstance(parsed, dict):
+        raise CompassError(
+            f"{path}: the manifest must be a mapping of keys to values, "
+            f"not a {type(parsed).__name__}"
+        )
+    return parsed
 
 
 def track(manifest, path, data, normalised=True):

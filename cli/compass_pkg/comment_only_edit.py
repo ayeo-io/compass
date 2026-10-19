@@ -23,7 +23,7 @@
 # times with replace_all), a pragma, a hidden character, a parse error, a check
 # that runs out of budget and an error of any kind all give "no". The hook then
 # judges the Edit as it did before this module existed. A comment that carries
-# a pragma is code (DD-3 of the decision record). So is an Edit of a Python file
+# a pragma is code, because a tool reads it as an instruction. So is an Edit of a Python file
 # whose encoding cookie is not utf-8 or ascii or that the Edit adds, removes or
 # moves, an Edit that adds a non-ASCII character to a file with an ascii
 # cookie, and an Edit of a file whose first line makes a template engine read
@@ -39,8 +39,9 @@
 # THE OUTPUT. `main` prints "yes" or "no", then the charge in microseconds, and
 # nothing else. It never prints text of the file or of the Edit.
 #
-# DEPENDENCY: Python 3 standard library, and the vendored yaml for YAML files.
-# It is imported only for a YAML file, so a Python edit does not pay for it.
+# DEPENDENCY: Python 3 standard library, and the YAML reader bundled under
+# cli/vendor for YAML files. It is imported only for a YAML file, so a Python
+# edit does not pay for it.
 # =============================================================================
 from __future__ import annotations
 

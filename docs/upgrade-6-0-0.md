@@ -43,9 +43,9 @@ The keys `held`, `next_up`, `landed_this_week` and `abandoned` are removed. The 
 | `issue subtask update` | `issue subtask set` |
 | `run --stage build` | `run --stage implement` |
 
-A spelling that no release held has no alias, and its unknown-command message names the new spelling.
+A spelling that no release held has no alias. Its unknown-command message is the parser's usual error and names no new spelling, except for `issue dashboard` and `issue labels sync`, which add one line.
 
-`issue status remove` also reopens a closed issue, so a v5.6.0 script that ran `issue set-status active` on a landed issue keeps working. The reopening removes `status`, `close_reason` and `duplicate_of`, keeps the land time as history and records a reason.
+`issue status remove` also reopens a closed issue. A v5.6.0 script that ran `issue set-status active` on a landed issue now exits 2 and must run `issue status remove` instead. The reopening removes `status`, `close_reason` and `duplicate_of`, keeps the land time as history and records a reason.
 
 ## Upgrade and rollback
 

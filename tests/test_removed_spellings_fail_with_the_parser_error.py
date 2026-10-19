@@ -1,7 +1,8 @@
 """A removed spelling is refused by the parser (release-7-0-0-prep, group A).
 
 Each of the 7 alias spellings that 7.0.0 removed exits 2 and prints no alias
-notice. Each of the 9 spellings no release held prints no `is now '` hint.
+notice. Each of the 9 spellings no release held (10 command lines, the last the equals
+form of `--phase`) prints no `is now '` hint.
 """
 from __future__ import annotations
 
@@ -54,6 +55,9 @@ UNRELEASED = [
     ["scenario", "tests", "SCN-1", "--test", "tests/x.py::t"],
     ["issue", "friction", "--category", "tooling", "--phase", "assess", "--observed",
      "evidence/red.log", "--fix", "Run the suite once"],
+    # The equals form of the same removed flag.
+    ["issue", "friction", "--category", "tooling", "--phase=assess", "--observed",
+     "evidence/red.log", "--fix", "Run the suite once"],
 ]
 
 
@@ -105,4 +109,5 @@ def test_an_unreleased_spelling_prints_no_is_now_line(tmp_path, argv):
     project = _project(tmp_path / "p")
     rc, out, err = _run(argv, project)
     assert rc == 2, (rc, out, err)
+    assert out == "", out
     assert "is now '" not in err, err

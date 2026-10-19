@@ -711,6 +711,7 @@ def test_vr_d19_preset_test_advises_and_keeps_its_exit_status(tmp_path):
 def test_vr_d19_compass_check_prints_no_such_advisory(tmp_path):
     root, _ = _project(tmp_path, compass_yml=OLD_PROJECT)
     code, out, err = _cli(root, "check", "--issue", "t")
+    assert "7.0.0" not in out + err, (out, err)
     assert "8.0.0" not in out + err, (out, err)
 
 

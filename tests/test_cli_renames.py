@@ -639,10 +639,51 @@ def test_vr_e13_a_planted_row_for_an_unreleased_spelling_fails(tmp_path):
                               "kind": "verb"}], cli, p) == ["approach summary: no released_in"]
 
 
+def table_shape_problems(table):
+    """What is wrong with the shape of a table: an alias row without a release or
+    a kind, or a hint row for a removed verb without both `released_in` and
+    `removed_in`."""
+    problems = []
+    for row in table["aliases"]:
+        if not row.get("released_in", "").startswith("v"):
+            problems.append(f"{' '.join(row['old'])}: alias row has no released_in")
+        if row.get("kind") not in ("verb", "value"):
+            problems.append(f"{' '.join(row['old'])}: alias row has no kind")
+    for row in table["hints"]:
+        if row.get("removed_in") and not row.get("released_in", "").startswith("v"):
+            problems.append(f"{' '.join(row['old'])}: hint row has removed_in, no released_in")
+        if row.get("released_in") and not row.get("removed_in"):
+            problems.append(f"{' '.join(row['old'])}: hint row has released_in, no removed_in")
+    return problems
+
+
 def test_vr_e13_the_table_file_has_a_release_on_every_row():
-    for row in _table()["aliases"]:
-        assert row.get("released_in", "").startswith("v"), row
-        assert row["kind"] in ("verb", "value"), row
+    table = _table()
+    assert table_shape_problems(table) == []
+    # The two hint rows that remain each name the release that held the verb.
+    assert {tuple(r["old"]): r["released_in"] for r in table["hints"]} == {
+        ("issue", "dashboard"): "v5.6.0", ("issue", "labels", "sync"): "v6.0.0"}
+
+
+def test_vr_e13_a_planted_table_with_a_row_missing_its_release_is_reported():
+    planted = {
+        "aliases": [{"old": ["a", "b"], "new": ["a", "c"], "kind": "verb"},
+                    {"old": ["x"], "new": ["y"], "released_in": "v5.6.0"}],
+        "hints": [{"old": ["h"], "new": ["i"], "removed_in": "7.0.0"},
+                  {"old": ["j"], "new": ["k"], "released_in": "v5.6.0"}],
+    }
+    assert table_shape_problems(planted) == [
+        "a b: alias row has no released_in",
+        "x: alias row has no kind",
+        "h: hint row has removed_in, no released_in",
+        "j: hint row has released_in, no removed_in"]
+
+
+def test_vr_e13_the_routing_module_has_no_stale_summary_comment():
+    text = (Path(__file__).resolve().parent.parent / "cli" / "compass_pkg" / "routing.py"
+            ).read_text(encoding="utf-8")
+    assert "# --- command: approach summary" not in text
+    assert "# --- command: approach show" in text
 
 
 # --- VR-E14: one rewrite step; the bare artifact spelling --------------------

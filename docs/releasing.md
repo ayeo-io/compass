@@ -78,11 +78,12 @@ absent) are read until 8.0.0, not 7.0.0. Only the command spellings end at 7.0.0
 **Upgrade and rollback.** Update every checkout and every installed plugin
 together. Take a copy of the two issue folders, `.compass/work` and
 `docs/compass`, outside the project. Then run `compass issue migrate`, read the
-list, and run `compass issue migrate --apply --i-have-a-copy`. Run
-`compass policy migrate --words` to rewrite the old words in `compass.yml`, and
-`compass policy update` to move the project to `default@7`. There is no
-supported rollback. The only way back is to restore the copy of the two issue
-folders, both together. Do not run a 6.x CLI on a 7.0.0 tree.
+list, and run `compass issue migrate --apply --i-have-a-copy`. If the project
+has a `compass.yml`, run `compass policy migrate --words` to rewrite the old
+words in it, and `compass policy update` to move the project to `default@7`.
+There is no supported rollback. The only way back is to restore the copy of the
+two issue folders, both together. Restoring the copy discards everything
+recorded after it was taken. Do not run a 6.x CLI on a 7.0.0 tree.
 
 ### What changed at 6.0.0
 
@@ -105,8 +106,9 @@ stage `build`, the friction `phase` key, the stored issue statuses and eight
 released command spellings. A manifest is written at schema `3.0`. The old words
 are read until 8.0.0. The eight command spellings were removed at 7.0.0. The full tables, the notice a
 first save prints and the `manifest.yml.v5.bak` backup are in
-`docs/upgrade-6-0-0.md`. `issue status remove` also reopens a closed issue, so
-a released script that reopened one keeps working.
+`docs/upgrade-6-0-0.md`. `issue status remove` also reopens a closed issue. A
+script that reopened one with the removed spelling now exits 2 and must run
+`issue status remove`.
 
 **Upgrade and rollback.** Update every checkout and every installed plugin
 together. Do not run a v5 `ship-commit` on a 6.0.0 tree: it does not read the

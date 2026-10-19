@@ -81,7 +81,7 @@ Compass now writes the status, ticks and counts in an issue's documents from the
 
 ### What is removed
 
-- **The verb `compass issue dashboard render` and its alias.** A command line that still types it exits 2 with the parse error and one line: `'issue dashboard' is now 'issue render'`. The line runs nothing. It is the one hint row that stays at 7.0.0, because 5.6.0 held the spelling.
+- **The verb `compass issue dashboard render` and its alias.** A command line that still types it exits 2 with the parse error and one line: `'issue dashboard' is now 'issue render'`. The line runs nothing. It is one of the two hint rows that stay at 7.0.0 (the other is `issue labels sync`), because 5.6.0 held the spelling.
 - **The check `dashboard-current`.** `rendered-blocks-current` replaces it. An issue stored before 7.0.0 can still list the removed check in its generation. `compass check` reports it as "nothing to check", names the release and the replacement, and runs `rendered-blocks-current` in its place.
 - **The reminder after a command.** The line that told you to run the old verb is gone. The documents are rendered for you after each command that changes a record.
 - **The generated `README.md` beside the manifest** in `.compass/work/<issue>/`. Migration keeps each one as `README.md.v6.bak` (see below). The issue page is `docs/compass/<created>-<issue>/README.md`.

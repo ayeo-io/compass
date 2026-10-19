@@ -24,7 +24,7 @@ aliases: []
 hints:
   # A released verb that 7.0.0 removed. It runs nothing: the parse error adds this line.
   # `released_in` names the first release tag that held the spelling, and `removed_in` the
-  # release that removed it. This is the one hint row that ends at 7.0.0 with both fields
+  # release that removed it. These are the two hint rows that end at 7.0.0 with both fields
   # (ADR-051, amending ADR-044, which ended every row at 7.0.0).
   - old: [issue, dashboard]
     new: [issue, render]

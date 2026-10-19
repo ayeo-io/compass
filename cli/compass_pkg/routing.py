@@ -599,7 +599,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     return result
 
 
-# --- command: approach summary ------------------------------------------------
+# --- command: approach show ---------------------------------------------------
 
 def cmd_approach_summary(args):
     """`compass approach show`: the three lines a person reads before

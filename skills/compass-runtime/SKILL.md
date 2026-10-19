@@ -54,8 +54,8 @@ creates the project: the entry points above run `compass init` for you.
 
 A command spelling that a release held and 6.0.0 renamed worked through an
 alias in 6.x. The aliases were removed at 7.0.0, so the old spelling now exits 2
-with the parser's usual error. A spelling that no release held never had an alias: its
-unknown-command message names the new spelling. `docs/upgrade-7-0-0.md` lists
+with the parser's usual error. That error names no new spelling, except for
+two removed verbs that add one line. `docs/upgrade-7-0-0.md` names them and lists
 each removed spelling beside its new one. `governance/terminology.yml` names each retired word beside the
 one that replaced it, and `docs/glossary.md` says the same in prose; the
 current verbs are whatever `compass --help` lists.

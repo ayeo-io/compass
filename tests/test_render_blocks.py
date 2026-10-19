@@ -947,11 +947,25 @@ CHECKED_REMOVAL_TESTS = (
     "tests/test_stream_c_no_new_checks_or_gates.py",    # the removed check is in its list of removals
     "tests/test_writing_style.py",                      # a comment on the corpus label count
     # The 7.0.0 release guide lists the removed spellings, and these tests check the list.
-    "docs/releasing.md",
     "tests/test_release_guide_7_0_0_section.py",
     "tests/test_release_notes_7_0_0_draft.py",
     "tests/test_upgrade_guides_state_removals_and_kept_readers.py",
 )
+# Lines that name a removed word and are exempt, by exact text and in that file only. A
+# line of the release guide that is not listed here is scanned like any other file.
+CHECKED_REMOVAL_ROWS = {
+    "docs/releasing.md": (
+        "| `issue dashboard` | `issue render` |",
+        "rows for `issue dashboard` and `issue labels sync` stay and each prints one line",
+    ),
+}
+
+
+def removal_hits(rel, text):
+    """The removed words a file names outside its exact exempt lines."""
+    exempt = CHECKED_REMOVAL_ROWS.get(rel, ())
+    kept = "\n".join(line for line in text.splitlines() if line.rstrip() not in exempt)
+    return [w for w in REMOVED_WORDS if w in kept]
 
 
 def test_dcj_13_no_tracked_file_names_removed_verb_or_check():
@@ -967,7 +981,7 @@ def test_dcj_13_no_tracked_file_names_removed_verb_or_check():
             text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
-        hits = [w for w in REMOVED_WORDS if w in text]
+        hits = removal_hits(rel, text)
         if not hits:
             continue
         if rel.startswith(ALLOWED_PREFIXES) or rel in CHECKED_REMOVAL_TESTS:
@@ -979,3 +993,15 @@ def test_dcj_13_no_tracked_file_names_removed_verb_or_check():
                 continue
         found.append((rel, hits))
     assert found == [], found
+
+
+def test_dcj_13_an_exempt_release_guide_line_is_exempt_in_that_file_only():
+    row = CHECKED_REMOVAL_ROWS["docs/releasing.md"][0]
+    real = (sup.ROOT / "docs" / "releasing.md").read_text(encoding="utf-8")
+    assert row in real.splitlines()
+    assert removal_hits("docs/releasing.md", real) == []
+    assert removal_hits("docs/other.md", row + "\n") == ["issue dashboard"]
+    planted = real + "\nthe check `dashboard-current` still runs\n"
+    assert removal_hits("docs/releasing.md", planted) == ["dashboard-current"]
+    assert removal_hits("docs/releasing.md", real + "\n" + row + " Run it.\n") == [
+        "issue dashboard"]

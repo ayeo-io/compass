@@ -36,7 +36,7 @@ The rule covers `trigger_paths` and `trigger_contents` of `contracts-declared` o
 
 | Alternative | Why considered | Why rejected |
 |---|---|---|
-| Narrowing a list is free | The issue text asked for it | A trigger path makes the check run, so fewer entries check fewer changes. It is a loosening |
+| Narrowing a list is free | The issue text asked for it | Narrowing is a loosening, because a trigger path makes a check run, so fewer entries check fewer changes |
 | Test the key name in the classifier | One branch, no registry change | It hides the rule from the registry that ADR-037 names as the owner of a check parameter's direction |
 | Judge whether one glob covers another | A wider glob is stricter | It is unsound in general and out of scope |
 | Treat a missing list as empty | Simple | The classifier fills in no default |

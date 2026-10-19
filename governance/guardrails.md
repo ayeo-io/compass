@@ -208,10 +208,10 @@ _(none yet - the shipped default guardrails apply as-is)_
     cannot extend the list with `add:`, because `params` is a map and the merge
     grammar applies `add:` only to a catalogue field. A project sets the whole
     list, the shipped patterns and its own, in its layer. Both keys declare the
-    direction `superset`. Adding entries to `trigger_paths` or
-    `trigger_contents` needs no waiver, because a trigger path makes the check
-    run, so more entries check more changes. Removing or replacing an entry
-    needs a waiver, because fewer entries check fewer changes. A reordered or
+    direction `superset`. For these keys, adding an entry needs no waiver,
+    because a trigger path makes the check run, so more entries check more
+    changes. Under the same rule, removing or replacing an entry needs a waiver,
+    because fewer entries check fewer changes. A reordered or
     repeated entry is equal. A list that is missing or malformed cannot be
     compared and also needs a waiver.
   - **Four conditions make either check decline**, reporting `nothing to

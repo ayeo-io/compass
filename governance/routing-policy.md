@@ -574,8 +574,8 @@ The grid:
   only `trigger_paths` and `trigger_contents` of `contracts-declared` do. The
   classifier compares each side as a set of exact entries. A `trigger_contents`
   entry is the pair of path glob and text, compared whole, and the classifier
-  does not judge how broad a glob is. Reordering a list and repeating an entry
-  leave the set unchanged, so the change is `equal`. A project list that holds
+  does not judge how broad a glob is. Neither reordering a list nor repeating
+  an entry changes the set, so the change is `equal`. A project list that holds
   every shipped entry and at least one more is `tighter`, because a trigger
   path makes the check run, so more entries check more changes. A project list
   that lacks a shipped entry and adds none is `looser`, because fewer entries

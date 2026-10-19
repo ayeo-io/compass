@@ -126,6 +126,13 @@ scheduled job, a subagent or another session. Until then the adapter sets
 exact `compass evidence approve` command for the person's own terminal. Codex
 has no such event today, so its users approve at their terminal.
 
+**A time limit on the pre-tool hook.** On Claude Code, `hooks/hooks.json` sets
+`"timeout": 15` and `"onFailure": "block"` on the pre-tool hook, so a hook that
+runs out of time can block the call from Claude Code 2.1.295. A source install
+(`scripts/install.sh`) and the Codex hook file do not set these keys and keep
+the default timeout of 600 seconds. An adapter on another runtime needs its own
+bound; the safety contract states the length limit that holds on every version.
+
 An adapter limitation can reduce convenience or parallelism. It must not
 silently weaken a guardrail.
 

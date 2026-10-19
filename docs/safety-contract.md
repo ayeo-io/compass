@@ -132,104 +132,64 @@ The pre-tool hook refuses the agent's tool calls on approval state
 (`cli/compass_pkg/approval_guard.py`). Each path check ignores letter case,
 because macOS opens a path in any case.
 
-**How the guard reads a Bash command.** The guard reads a command as words
-(`cli/compass_pkg/approval_words.py`): simple commands split at `;`, `&&`,
-`||`, `&`, a newline, a parenthesis and a pipe, with quotes removed as the
-shell removes them. It judges each command name, each redirect target and each
-argument. It does not judge text, so a commit message or a search pattern that
-mentions a protected folder is allowed. The text positions are a fixed list
-(`cli/compass_pkg/approval_guard_text.py`), one row for each, and a widening is
-a visible change that needs a test row:
+**What the guard is.** The guard is defense in depth against an accidental or
+injected read of the session transcript or of an approval request. It is not a
+hard boundary. A Write tool call that writes a script, followed by a Bash call
+that runs it, was open before this guard changed, because the earlier hook
+allowed both calls. The stored hash, the 64-bit code and the person's typed
+approval are unchanged, and they are what keep a delegation from being
+confirmed without a person.
 
-- every argument of `echo` and `printf`;
-- the value of `-m` and `--message` of `git commit`, `tag`, `merge` and
-  `revert`, and of `--grep`, `-S` and `-G` of `git log`;
-- the search pattern of `grep`, `egrep`, `fgrep`, `rg` and `git grep`;
-- the value of `--body`, `-b`, `--title` and `-t` of `gh`, and of `--title`,
-  `--note`, `--reason`, `--scope` and `--description` of `compass`;
-- the heredoc body and the here-string of `cat`, `tee`, `gh`, `git` and
-  `compass`.
+**How the guard reads a Bash command.** The guard reads a simple command as
+words (`cli/compass_pkg/approval_words.py`) and judges any other command by
+its whole text. A command is simple when all of these hold:
 
-A heredoc body is text for `git` only in a `commit`, `tag`, `merge` or
-`revert`, and for `gh` only in `gh issue`, `gh pr` and `gh release`: `gh alias
-import -` reads its aliases from standard input, and an alias that starts with
-`!` runs a shell. The value of an option that names a file, such as
-`--body-file`, `-F` and `-f`, is a word and is judged. The reader keeps a
-backslash and newline inside the body of a quoted heredoc and inside a comment,
-as the shell does, so `cat <<'EOF'` with a line that ends in a backslash before
-the delimiter ends the heredoc there, and the next line is read as a command.
+- it is one command, or plain commands joined by `&&`, `;` or a new line;
+- each command starts with `git`, `gh`, `ls`, `wc`, `stat` or `cat`, with no
+  path, no `VAR=` word before it and no function or alias definition;
+- it holds no pipe, `&`, `||`, parenthesis, backtick, comment, heredoc,
+  here-string, process substitution, `eval`, `$'...'` or `$"..."`;
+- it holds no `$` outside message text, and no `$(`, `${` or backtick inside
+  message text.
 
-**When text is judged again.** The guard judges text as it would judge words
-in each case below, because the text can run:
+The gate fails closed: a shape it does not name is not simple.
 
-- inside `$(...)`, backticks and `<(...)`, which the reader reads again as
-  commands. What a substitution prints is judged as the word it stands for:
-  in `cat "$(echo <file>)"` and `x=$(echo 'cat <file>'); $x` the text of the
-  `echo` is judged, with no text position inside. The one exception is a
-  substitution that stands in a text position of its outer command, and of
-  every command above it: a commit message, an argument of `echo` or a text
-  heredoc. The commands inside it are judged either way, so `git commit -m
-  "$(cat <<'EOF' ... EOF)"` with a protected name in the message is allowed,
-  and `git commit -m "$(cat <file>)"` is refused;
-- when a later stage of the same pipeline is not a command that only reads
-  text (`cat`, `tee`, `head`, `tail`, `wc`, `sort`, `uniq`, `cut`, `tr`,
-  `less`, `more`, `grep`, `egrep`, `fgrep`, `rg`, `diff`, `pbcopy`), such as
-  `echo "..." | sh`. A stage given an option that starts `--fil`, such as
-  `sort --files0-from=-`, reads the files its input names, so it is no such
-  command: `printf '%s\0' <file> | sort --files0-from=-` is judged;
-- a heredoc or a here-string for a shell or any other command that is not in
-  the lists, such as `bash <<'EOF'`, `python3 <<EOF` and `gh alias import -`;
-- the argument of `bash -c`, `sh -c` and `eval`;
-- a script that one call writes and then runs (below). The refusal names the
-  script.
+**What the guard judges in a simple command.** It judges each command name,
+each redirect target and each argument by its text, with quotes removed as the
+shell removes them. It does not judge message text, so a commit message that
+mentions a protected folder is allowed. Message text is a fixed list, one row
+for each, and a widening is a visible change that needs a test row:
 
-**Scripts written and run in one call.** The guard follows a file that a call
-writes and runs. It follows the text of `echo`, `printf` and a `cat` heredoc or
-here-string, through the pipe stages that only read text (`| cat > f`, `| tr a
-a > f`, `| tee f`); a write by `>`, `>>`, `>|` or `tee`, also through a brace
-group or a subshell (`{ echo x; } > f` holds all the text the call wrote
-before it); `cp`, `mv` and `ln` of such a file; and `cd`, so `cd /tmp; sh s1`
-runs `/tmp/s1`. A file is run when a command that is not a data command
-(`ls`, `cat`, `grep`, `rm`, `cp` and the like) names it as a word or inside a
-word that holds white space, or when it is a `<` redirect. So `env bash f`,
-`bash -o pipefail f`, `bash -c 'source f'`, `command sh f`, `exec sh f`,
-`find f -exec sh {} \;`, `rg --pre sh . f` and `python3 -c 'os.system("sh
-f")'` run it. The refusal carries the code of the thing the script names. A
-script that names nothing protected is not refused. One call writes and
-another call runs: not detected. Within one call, these shapes are not
-followed: a file written by another command (`dd`, `sed -i`, `curl -o`, an
-interpreter), a script built at run time, and a folder reached by `cd` with a
-variable or `~` (matched by file name alone).
+- the value of `-m`, `-am` and `--message` of `git commit`, `tag`, `merge` and
+  `revert`. A command with `-F`, `--file`, `-c` or `--exec`, or with a global
+  option before the verb (`git -C dir commit`), has no message text;
+- the value of `--title`, `--body`, `--notes`, `-t` and `-b` of `gh issue`,
+  `gh pr` and `gh release`. `--body-file`, `gh api`, `gh alias` and `gh
+  extension` have none.
 
-**What the guard still judges by the whole text.** When the reader cannot read
-a command (an open quote, parenthesis, backtick or `$(`, a heredoc with no
-closing delimiter, nesting over 32 levels), the guard judges the whole text,
-as it did before. It does the same when the command holds `>(`, a function or
-alias definition, a runner (`sh`, `eval`, `source`, `xargs`) beside a
-substitution, a `case` inside `$(...)`, or a quoted `${...}`. An unknown
-command stays refused as before: a command outside the lists is judged word
-by word, with no text skipped.
+**What the guard judges by the whole text.** Every command that is not simple
+is judged as it was before this change: any text that names a protected thing
+is refused, and text that names none is allowed. That covers a pipe, a
+heredoc, an `echo` or `printf` that names a request, a search pattern, a
+message built with `$(...)`, a script written and run in one call, and a
+command that the gate does not list. For example `git commit -m "$(cat
+<<'EOF' ... EOF)"` is refused when its text names a protected thing and
+allowed when it names none. A broader reading of text moved to a later
+release (ayeo-io/compass-delivery-record#247).
 
 **The exemptions.** An exemption removes one thing from one word, and holds
-only when the command stands alone. No exemption applies inside a pipe or a
-substitution. The exemptions are:
+only when the command stands alone and has no redirect. The exemptions are:
 
-- `ls`, `wc`, `stat`, `du`, `test` and `[` may name a request folder as a bare
-  path argument. `ls .compass/delegations` is refused: the delegation folder
-  has no exemption;
-- those commands, `cat`, `head`, `tail`, `grep`, `rg`, `diff`, `chmod` and
-  `git log`, `show`, `diff`, `blame`, `status`, `ls-files` and `add` may name
-  `hooks/prompt-approval.sh` as a bare argument. `git mv` and `git rm` have no
-  exemption: one replaces the script and the other deletes it. A `chmod` has
-  the exemption only for a mode that adds permissions (`+x`, `u+x,g+x`) or keeps
-  the owner's x bit (`755`); `chmod -x`, `000` and `644` stop the approval
-  hook and are refused. A `VAR=` word, `--output`, `--pre`, `--exec` and the
-  word after `-f`, `--file` or `--files0-from` are never bare arguments, and a
-  runner or `cp` has no exemption. `rg --files` takes no pattern, so every
-  other word of it is a path and is judged;
-- `ls` alone, with no `-R`, `-d` or glob, may name a folder strictly above
-  the configuration folder, such as the home folder. `cd` into that folder
-  and every other command on it stay refused.
+- `ls`, `wc` and `stat` may name a request folder as a bare path argument.
+  `ls .compass/delegations` is refused: the delegation folder has no
+  exemption;
+- `cat` may name `hooks/prompt-approval.sh` as a bare path argument. Every
+  other command that names the script is refused, including `chmod`, `git add`,
+  `cp`, a runner and a listing, and a `cat` in a pipe or beside another
+  command;
+- a `VAR=` word, an option such as `--output=<path>`, and the word after `-f`,
+  `--file`, `--files0-from`, `--output`, `--pre` or `--exec` are never bare
+  arguments.
 
 **The auto-memory folder.** Read, Grep, Edit and Write may name a file inside
 `<configuration folder>/projects/<one folder>/memory/`, in any `.claude*`
@@ -317,12 +277,11 @@ The guard refuses these calls:
   delegated approval, such as `git update-index --assume-unchanged`, is not
   checked. The call is the main agent only when the hook input has neither
   `agent_type` nor `agent_id`, and the CLI takes no abbreviated flag, so
-  `--deleg` cannot pass unseen. A commit message or other text that names
-  `--delegated` or `evidence approve` is text and is not judged. A real
-  `compass evidence approve --delegated` in the same command still needs
-  a matching `--as`. The brace test still reads the values of the `compass`
-  text options, and only those: a compact value with a comma and no space is
-  refused there;
+  `--deleg` cannot pass unseen. The message of a simple `git commit` or `gh pr`
+  that names `--delegated` or `evidence approve` is text and is not judged. A
+  real `compass evidence approve --delegated` is not a simple command, and any
+  command that names it, in a message or not, is judged by its whole text and
+  needs a matching `--as`;
 - Read or Grep on the session transcript's folder, inside it or on any
   folder above it, such as the configuration folder or the home folder
   (`transcript-protected`). A relative path is read from the call's `cwd`,
@@ -332,18 +291,17 @@ The guard refuses these calls:
   folder above the transcript, such as `~`, `~<name>` or `$HOME`, once the
   shell's quotes are removed. A word with a glob or a brace counts by the
   folder before it, so a `cat` of a glob under `~/.claude-ayeo` is refused.
-  A non-recursive `ls` of the home folder is allowed, as the exemption above
-  says. `cd ~`, `grep -r x ~` and every other command on a folder above the
-  transcript are refused. A
+  A command on a folder above the transcript, such as `ls ~`, `cd ~` and
+  `grep -r x ~`, is refused. A
   project's own `.claude` folder is not refused. Claude Code writes a hook's
   block message to the transcript (measured on 2.1.301), and the block
   message is where the person sees the code that confirms a g5 delegation.
   The hook reads a Grep's path with or without `jq`.
 
-The Bash checks judge words, so they stop the agent's ordinary use and not a
+The Bash checks match words, so they stop the agent's ordinary use and not a
 deliberate workaround. These limits remain. Most of them let a call reach the
-transcript or run a delegated approval as another agent, and two (the memory
-folder link and `test -f`) state where the guard is exact or too strict:
+transcript or run a delegated approval as another agent, and one (the memory
+folder link) states where the guard is exact:
 
 - words built at run time: a variable, the output of a command substitution
   that a shell does not run in the same call, and arguments built by `xargs`
@@ -351,11 +309,15 @@ folder link and `test -f`) state where the guard is exact or too strict:
 - a glob in the name of a protected folder, which the guard can only test
   against sample paths (the rules above), and a glob that expands against a
   file the agent wrote;
+- a command, function or alias that an earlier Bash call defined, which a
+  later simple `git commit` or `gh pr` then runs in place of the real command,
+  and a git alias, git hook or git config that runs a command;
 - a script written by one command and run by another. One call writes, another
-  call runs: not detected. Within one call the guard follows the shapes listed
-  above under "Scripts written and run in one call" and no others. This is an
-  accepted limit, because a Write tool call followed by a shell command that
-  runs the file did the same before this guard changed. What holds depends on what the script reads:
+  call runs: not detected, and a script written with the Write tool and run by
+  a later Bash call is the same. This is an accepted limit, because the
+  earlier hook allowed a Write tool call followed by a shell command that runs
+  the file. A command that is not simple and names a protected thing in the
+  same call is refused. What holds depends on what the script reads:
   - for the delegation files, the stored hash and the 64-bit code. The hash is
     stored and the code is not, so a script cannot read the code from the
     files;
@@ -372,15 +334,9 @@ folder link and `test -f`) state where the guard is exact or too strict:
   `cd .compass && cat d*/*` is not stopped, and neither is `cd` into the
   memory folder and then a read of a file one folder up. This is also why a
   Bash command on the memory folder stays refused;
-- an option of an exempt command that runs a file the guard does not read: the
-  exempt commands refuse the options the lists name (`--output`, `--pre`,
-  `--exec`, `-f`, `--file`, `--files0-from`), and an option they do not name is
-  judged as an ordinary word;
 - a symbolic link inside the memory folder that a Grep over the folder follows
   is not detected, because the guard resolves the Grep path and not what
   `rg` finds inside it;
-- `test -f <request folder file>` is refused, because `-f` is an option that
-  names a path;
 - the root folder alone, such as `grep -r x /`, or a glob in the first
   folder of a path, such as `/U*/...`, because `/` is also an argument of
   `tr`, `cut` and `expr`;

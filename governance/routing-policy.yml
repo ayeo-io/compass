@@ -22,7 +22,7 @@
 # routing-policy.md.
 # =============================================================================
 
-version: 3.2.0
+version: 3.3.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.

@@ -26,7 +26,7 @@ r"""Decide whether the agent's tool call touches approval state it must not
     every command above it (`_text_substitutions`).
   - A bare path argument of `ls`, `wc`, `stat`, `du`, `test` or `[` may name
     a request folder, and one of those or of `cat`, `head`, `tail`, `grep`,
-    `rg`, `diff`, `chmod` (a mode that keeps the execute bit) or `git log`,
+    `rg`, `diff`, `chmod` (a mode that keeps the x bit) or `git log`,
     `show`, `diff`, `blame`, `status`, `ls-files` or `add` may name the
     prompt hook script. `git mv` and `git rm` may not. `ls`
     alone may name a folder strictly above the configuration folder, with no
@@ -214,7 +214,7 @@ SCRIPT_READERS = frozenset(("cat", "head", "tail", "grep", "rg", "diff", "chmod"
 #: `git mv` and `git rm` are left out: one replaces the script and the other deletes it.
 GIT_READS = frozenset("log show diff blame status ls-files add".split())
 #: A `chmod` mode that keeps the script runnable by its owner: `+x`, or digits whose owner
-#: digit has the execute bit. `-x`, `000` and `644` stop the approval hook.
+#: digit has the x bit. `-x`, `000` and `644` stop the approval hook.
 CHMOD_KEEPS = re.compile(r"(?:[ugoa]*\+[rwxXst]+(?:,[ugoa]*\+[rwxXst]+)*|[0-7]?[1357][0-7]{2})")
 CHMOD_OPTIONS = re.compile(r"-[RvfHLPh]+")
 #: Options whose value is a path, a command or a file to write, never a bare path argument.
@@ -760,7 +760,7 @@ def _lists_above(word, folder):
 
 
 def _chmod_keeps(words):
-    """True when a `chmod` only adds permissions or keeps the owner's execute bit, so it
+    """True when a `chmod` only adds permissions or keeps the owner's x bit, so it
     cannot stop the approval hook; an option it does not know makes it false."""
     if any(w.startswith("-") and not CHMOD_OPTIONS.fullmatch(w) for w in words[1:]):
         return False

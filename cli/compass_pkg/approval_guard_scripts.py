@@ -7,7 +7,7 @@ it as the commands it runs.
 What it follows, in one call:
 
 - the text of `echo`, `printf` and a `cat` heredoc or here-string, through the
-  `TEXT_SINKS` of a pipeline (`| cat > f`, `| tr a a > f`, `| tee f`);
+  `TEXT_SINKS` of a pipeline (`| cat > f`, `| tr a b > f`, `| tee f`);
 - a write by a redirect (`>`, `>>`, `>|`) or by `tee`, also through a brace group or
   a subshell (`{ echo x; } > f`: the file holds all the text written so far in the call);
 - a copy, move or link (`cp`, `mv`, `ln`) of such a file;

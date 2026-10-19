@@ -222,7 +222,7 @@ substitution. The exemptions are:
   `hooks/prompt-approval.sh` as a bare argument. `git mv` and `git rm` have no
   exemption: one replaces the script and the other deletes it. A `chmod` has
   the exemption only for a mode that adds permissions (`+x`, `u+x,g+x`) or keeps
-  the owner's execute bit (`755`); `chmod -x`, `000` and `644` stop the approval
+  the owner's x bit (`755`); `chmod -x`, `000` and `644` stop the approval
   hook and are refused. A `VAR=` word, `--output`, `--pre`, `--exec` and the
   word after `-f`, `--file` or `--files0-from` are never bare arguments, and a
   runner or `cp` has no exemption. `rg --files` takes no pattern, so every
@@ -354,8 +354,8 @@ folder link and `test -f`) state where the guard is exact or too strict:
 - a script written by one command and run by another. One call writes, another
   call runs: not detected. Within one call the guard follows the shapes listed
   above under "Scripts written and run in one call" and no others. This is an
-  accepted limit, because a Write tool call followed by `bash /tmp/s.sh` did the
-  same before this guard changed. What holds depends on what the script reads:
+  accepted limit, because a Write tool call followed by a shell command that
+  runs the file did the same before this guard changed. What holds depends on what the script reads:
   - for the delegation files, the stored hash and the 64-bit code. The hash is
     stored and the code is not, so a script cannot read the code from the
     files;

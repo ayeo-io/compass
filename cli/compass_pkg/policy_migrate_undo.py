@@ -12,16 +12,15 @@ so a rerun after any stop finishes the job.
 The undo never discards an edit. A file that changed since the migration is
 refused by name, and there is no override.
 """
-# DEPENDENCY: standard library (dataclasses, datetime, json, os); the bundled PyYAML;
+# DEPENDENCY: standard library (dataclasses, datetime, json, os, stat);
 # compass_pkg.atomic_io, core and policy_migrate.
 from __future__ import annotations
 
 import datetime
 import json
 import os
+import stat
 from dataclasses import dataclass, field
-
-import yaml
 
 from compass_pkg import policy_migrate as pm
 from compass_pkg.atomic_io import atomic_write_text
@@ -53,24 +52,8 @@ def _present(root, rel):
     return os.path.isfile(_path(root, rel))
 
 
-def _legacy(rel):
-    return f"{pm.LEGACY_DIR}/{rel.rsplit('/', 1)[-1]}"
-
-
 def _step(action, rel):
     return {"action": action, "path": rel, "to": None}
-
-
-def _marker(root):
-    """The parsed marker; a missing, unreadable or non-mapping file is no marker."""
-    if not _present(root, pm.MIGRATION_YML):
-        return None
-    try:
-        with open(_path(root, pm.MIGRATION_YML), "r", encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
-    except (OSError, UnicodeDecodeError, yaml.YAMLError):
-        return None
-    return data if isinstance(data, dict) else None
 
 
 NO_MARKER = ("There is no .compass/migration.yml, so there is nothing to undo. "
@@ -84,7 +67,7 @@ BY_HAND = "Keep the file, or go back by hand with the steps in docs/policy-migra
 
 def _digests(marker, created):
     """The source digests and the written digests, or a refusal with the manual steps."""
-    sources, written = marker.get("sources"), marker.get("written")
+    sources, written = marker.get(pm.K_SOURCES), marker.get(pm.K_WRITTEN)
     if not isinstance(sources, dict) or not isinstance(written, dict):
         raise CompassError(MANUAL)
     needed = [pm.COMPASS_YML] + ([pm.STATE_YML] if created else [])
@@ -103,7 +86,7 @@ def _changed(root, rel, digest):
 def _check(root, marker, listed, digests, written, created):
     """Refuse at the first thing that would make the undo lose work, in a fixed order."""
     for rel in listed:
-        legacy = _legacy(rel)
+        legacy = pm.legacy_path(rel)
         if not _present(root, legacy) or pm.file_digest(_path(root, legacy)) != digests[rel]:
             raise CompassError(
                 f"{legacy} is missing or is not the copy the migration made, so the undo "
@@ -139,7 +122,7 @@ def _when(value):
 
 def _migrated_at(root, marker):
     """When the migration ran; the marker's own modification time when it says nothing readable."""
-    stamp = _when(marker["migrated_at"]) if "migrated_at" in marker else None
+    stamp = _when(marker[pm.K_AT]) if pm.K_AT in marker else None
     if stamp is None:
         mtime = os.stat(_path(root, pm.MIGRATION_YML)).st_mtime
         stamp = datetime.datetime.fromtimestamp(mtime, datetime.timezone.utc)
@@ -186,10 +169,16 @@ def plan(root) -> UndoPlan:
 
     Writes nothing. Raises `CompassError` for every refusal.
     """
-    marker = _marker(root)
+    marker = pm.read_marker(root)
     if marker is None:
         raise CompassError(NO_MARKER)
-    created = marker.get("created_state") is True
+    schema = marker.get("schema")
+    if type(schema) is not int or schema != pm.MARKER_SCHEMA:
+        raise CompassError(
+            f"migration.yml has {'no schema' if schema is None else f'schema {schema!r}'}, "
+            f"and this undo reads only schema {pm.MARKER_SCHEMA}. Nothing was changed. "
+            "Go back by hand with the steps in docs/policy-migrate.md.")
+    created = marker.get(pm.K_CREATED) is True
     digests, written = _digests(marker, created)
     listed = [rel for rel in SOURCES if rel in digests]
     _check(root, marker, listed, digests, written, created)
@@ -226,10 +215,13 @@ def apply(root, made) -> None:
 
 def restore_source(root, rel) -> None:
     """Copy the legacy copy of `rel` back to `rel`, byte for byte."""
-    with open(_path(root, _legacy(rel)), "rb") as fh:
+    legacy = _path(root, pm.legacy_path(rel))
+    with open(legacy, "rb") as fh:
         text = fh.read().decode("utf-8")
     # newline="" writes the line endings as they are, so a CRLF file comes back unchanged.
-    atomic_write_text(_path(root, rel), text, newline="")
+    # The migration copied the source with its mode, so the copy's mode is the original's.
+    atomic_write_text(_path(root, rel), text, newline="",
+                      mode=stat.S_IMODE(os.stat(legacy).st_mode))
 
 
 def remove_compass_yml(root) -> None:

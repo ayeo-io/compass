@@ -604,6 +604,7 @@ copy.
 - no `migration.yml`: nothing records that a migration ran;
 - a marker with no digest of `compass.yml`, which an earlier version of the
   command wrote. The message prints the manual steps below;
+- a marker whose `schema` is not 1. The message names the schema;
 - a signed record made since the migration. The undo counts the signed records
   in `.compass/work/<slug>/evidence/*.json` dated at or after `migrated_at`, or
   with no readable date, and refuses when the count is above 0. The message
@@ -635,7 +636,9 @@ refusal:
 
 The marker is the proof that an undo is owed. If the undo stops, `migration.yml`
 is still there, so the undo finishes when it is run again: a source that
-already equals its copy counts as done. The undo keeps `.compass/legacy/`.
+already equals its copy counts as done. The undo keeps `.compass/legacy/`. The
+migration copies each source with its file mode, and the undo restores a file
+with the mode of its copy.
 
 **`--json`.** One document at schema 1, with the keys `schema`, `mode`,
 `result`, `sources` and `files`, in that order. `mode` is `undo` for a dry run

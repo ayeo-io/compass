@@ -14,7 +14,7 @@ Nothing.
 
 ## Decision
 
-The marker, `migration.yml` in the project's `.compass` folder, gains two keys after `created_state`. `written` maps `compass.yml`, and `.compass/state.yml` when `created_state` is true, to the sha256 digest of the text the migration wrote. `migrated_at` is a UTC time with seconds. The marker stays at schema 1. A marker without `written` is one that `compass policy migrate --undo` refuses, and it answers with the manual steps.
+The marker, `migration.yml` in the project's `.compass` folder, gains two keys after `created_state`. `written` maps `compass.yml`, and `.compass/state.yml` when `created_state` is true, to the sha256 digest of the text the migration wrote. `migrated_at` is a UTC time with seconds. The marker stays at schema 1. A marker without `written` is one that `compass policy migrate --undo` refuses, and it answers with the manual steps. The undo reads only schema 1 and refuses any other schema in the same way. The migration copies each source to `.compass/legacy/` with the source's mode, and the undo restores a file with the mode of its copy.
 
 ## Why
 

@@ -811,8 +811,77 @@ def test_up_15_a_nested_key_with_the_name_of_an_entry_is_not_mistaken_for_it():
 # fail when a kept folder is not the last preset that major shipped, or when
 # the live major has moved on and a pinned earlier major is not kept.
 
-def _kept_problems(root):
+def _digest_problems(folder, key, pins):
+    """One line for each way the preset files in `folder` differ from the digests
+    pinned under `key`: the file set, each file, then the whole preset. A file
+    line names the file. Digests are over parsed content, so a comment-only edit
+    gives no line; `_byte_problems` finds that."""
+    import tempfile
     from compass_pkg import legacy_views
+    folder, pin = Path(folder), pins[key]
+    with tempfile.TemporaryDirectory() as scratch:
+        shutil.copytree(folder, Path(scratch) / "governance/presets/default")
+        got_key, got = legacy_views.preset_digests(scratch)
+    problems = []
+    if got_key != key:
+        problems.append(f"{folder.name}/preset.yml reads {got_key}, not {key}")
+    for name in sorted(set(got["files"]) | set(pin["files"])):
+        if name not in pin["files"]:
+            problems.append(f"{folder.name}/{name} is in the folder but not pinned for {key}")
+        elif name not in got["files"]:
+            problems.append(f"{folder.name}/{name} is pinned for {key} but missing from the folder")
+        elif got["files"][name] != pin["files"][name]:
+            problems.append(f"{folder.name}/{name} differs from the digest pinned for {key}")
+    if got_key != key or got["preset"] != pin["preset"]:
+        major = key.split("@", 1)[1].split(".")[0]
+        problems.append(f"{folder.name} is not the last preset shipped for major {major} ({key})")
+    return problems
+
+
+def _git(repo, *args):
+    return subprocess.run(["git", *args], cwd=repo, capture_output=True)
+
+
+def _require_tag(repo, tag):
+    """Return when `tag` is a release tag of `repo`. Skip when the checkout has no
+    `v*` tag (a shallow clone) or git cannot read it. Fail when release tags
+    exist and `tag` is not one of them, so a missing tag is never a silent pass."""
+    try:
+        done = _git(repo, "tag", "--list", "v*")
+    except OSError as exc:
+        pytest.skip(f"git cannot read {repo}: {exc}")
+    if done.returncode != 0:
+        pytest.skip(f"git cannot read {repo}: {done.stderr.decode(errors='replace').strip()}")
+    tags = done.stdout.decode().split()
+    if not tags:
+        pytest.skip("no v* release tags in this checkout (a shallow clone?); "
+                    f"fetch the tags to compare with {tag}")
+    if tag not in tags:
+        pytest.fail(f"release tags exist but {tag} is not one of them: {', '.join(tags)}")
+
+
+def _byte_problems(folder, tag, repo=ROOT):
+    """One line for each file of `folder` whose bytes, or whose name, differ from
+    `governance/presets/default` at `tag` in `repo`."""
+    folder = Path(folder)
+    listed = _git(repo, "ls-tree", "-r", "--name-only", tag, "--", "governance/presets/default")
+    if listed.returncode != 0:
+        return [f"git cannot list governance/presets/default at {tag}: "
+                f"{listed.stderr.decode(errors='replace').strip()}"]
+    paths = {Path(line).name: line for line in listed.stdout.decode().splitlines()}
+    here = {p.name for p in folder.iterdir() if p.is_file()}
+    problems = []
+    for name in sorted(set(paths) | here):
+        if name not in here:
+            problems.append(f"{folder.name}/{name} is missing but {tag} has it")
+        elif name not in paths:
+            problems.append(f"{folder.name}/{name} is not in {tag}")
+        elif _git(repo, "show", f"{tag}:{paths[name]}").stdout != (folder / name).read_bytes():
+            problems.append(f"{folder.name}/{name} differs byte for byte from {tag}")
+    return problems
+
+
+def _kept_problems(root):
     root = Path(root)
     pins = yaml.safe_load((ROOT / "tests" / "fixtures" / "preset-digests.yml")
                           .read_text(encoding="utf-8"))
@@ -834,13 +903,7 @@ def _kept_problems(root):
             problems.append(f"default@{major} was shipped and the live major is {live_major}, "
                             f"but {folder.name} is not kept")
             continue
-        import tempfile
-        with tempfile.TemporaryDirectory() as scratch:
-            shutil.copytree(folder, Path(scratch) / "governance/presets/default")
-            got_key, got = legacy_views.preset_digests(scratch)
-        if got_key != key or got["preset"] != pins[key]["preset"]:
-            problems.append(f"{folder.name} is not the last preset shipped for major {major} "
-                            f"({key})")
+        problems.extend(_digest_problems(folder, key, pins))
     for folder in sorted((root / "governance" / "presets").glob("default@*")):
         if int(folder.name.split("@")[1]) not in last:
             problems.append(f"{folder.name} is kept but no shipped version of it is pinned")
@@ -873,3 +936,174 @@ def test_up_16_the_docs_cover_kept_majors_stepping_open_issues_and_exit_codes():
     releasing = " ".join((ROOT / "docs" / "releasing.md").read_text(encoding="utf-8").split())
     assert "governance/presets/default@<major>" in releasing
     assert "policy update" in releasing
+
+
+# --- the kept default@6 folder (issue default-6-preset-for-7-0-0) ------------------------
+# `governance/presets/default@6` is a byte copy of the files tag v6.1.0 shipped
+# in `governance/presets/default`. It keeps `version: 6.0.0`, the version line
+# that tag shipped.
+
+KEPT_6 = ROOT / "governance" / "presets" / "default@6"
+KEPT_TAG = "v6.1.0"
+KEPT_KEY = "default@6.0.0"
+SPEC = "default-6-preset-for-7-0-0/acceptance-criteria.md"
+
+
+def _pins():
+    return yaml.safe_load((ROOT / "tests" / "fixtures" / "preset-digests.yml")
+                          .read_text(encoding="utf-8"))
+
+
+def _fixture_kept(tmp_path):
+    """A fixture framework (live default at 7.0.0) and its `default@6` folder."""
+    base = fixtures.framework_root(tmp_path / "fw", change="none")
+    return base, base / "governance" / "presets" / "default@6"
+
+
+def test_trc_001_the_kept_default_6_folder_is_byte_identical_to_the_v6_1_0_tag():
+    """Scenario id: `TRC-001` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    assert KEPT_6.is_dir(), "governance/presets/default@6 does not exist"
+    _require_tag(ROOT, KEPT_TAG)
+    assert _byte_problems(KEPT_6, KEPT_TAG, ROOT) == []
+    names = sorted(p.name for p in KEPT_6.iterdir())
+    assert len(names) == 11 and "preset.yml" in names
+    lines = (KEPT_6 / "preset.yml").read_text(encoding="utf-8").splitlines()
+    assert "version: 6.0.0" in lines
+
+
+def test_trc_002_the_kept_default_6_folder_matches_every_pinned_digest():
+    """Scenario id: `TRC-002` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    assert KEPT_6.is_dir(), "governance/presets/default@6 does not exist"
+    pins = _pins()
+    assert len(pins[KEPT_KEY]["files"]) == 11
+    # Holds whatever major the live default has: the real folder, the real pins.
+    assert _digest_problems(KEPT_6, KEPT_KEY, pins) == []
+
+
+def test_trc_003_a_changed_value_in_the_kept_folder_is_reported_by_file(tmp_path):
+    """Scenario id: `TRC-003` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    base, kept = _fixture_kept(tmp_path)
+    path = kept / "approaches.yml"
+    text = path.read_text(encoding="utf-8")
+    assert "subtask_ceiling: 2" in text
+    path.write_text(text.replace("subtask_ceiling: 2", "subtask_ceiling: 9", 1),
+                    encoding="utf-8")
+    joined = "\n".join(_kept_problems(base))
+    assert "approaches.yml" in joined and KEPT_KEY in joined
+    for other in sorted(p.name for p in KEPT_6.iterdir()):
+        if other != "approaches.yml":
+            assert other not in joined, other
+
+
+def test_trc_004_a_missing_file_in_the_kept_folder_is_reported(tmp_path):
+    """Scenario id: `TRC-004` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    base, kept = _fixture_kept(tmp_path)
+    (kept / "vocabulary.yml").unlink()
+    problems = _kept_problems(base)
+    assert any("vocabulary.yml" in p for p in problems)
+    assert any("not the last preset" in p and "vocabulary.yml" not in p for p in problems)
+
+
+def test_trc_005_an_extra_file_in_the_kept_folder_is_reported(tmp_path):
+    """Scenario id: `TRC-005` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    base, kept = _fixture_kept(tmp_path)
+    (kept / "extra.yml").write_text("schema: 1\n", encoding="utf-8")
+    assert any("extra.yml" in p for p in _kept_problems(base))
+
+
+def test_trc_006_a_comment_only_edit_passes_the_digest_check_and_fails_the_byte_check(
+        tmp_path):
+    """Scenario id: `TRC-006` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    assert KEPT_6.is_dir(), "governance/presets/default@6 does not exist"
+    _require_tag(ROOT, KEPT_TAG)
+    copy_ = tmp_path / "default@6"
+    shutil.copytree(KEPT_6, copy_)
+    rules = copy_ / "rules.yml"
+    rules.write_text("# a comment added later\n" + rules.read_text(encoding="utf-8"),
+                     encoding="utf-8")
+    assert _digest_problems(copy_, KEPT_KEY, _pins()) == []
+    problems = _byte_problems(copy_, KEPT_TAG, ROOT)
+    assert problems and all("rules.yml" in p for p in problems)
+
+
+def _git_repo(path, monkeypatch):
+    """An empty git repository at `path`, with no user or system git settings."""
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    path.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(path)], check=True)
+    return path
+
+
+def test_trc_007_the_byte_check_skips_when_no_release_tags_exist(tmp_path, monkeypatch):
+    """Scenario id: `TRC-007` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    bare = _git_repo(tmp_path / "no-tags", monkeypatch)
+    with pytest.raises(pytest.skip.Exception) as skipped:
+        _require_tag(bare, KEPT_TAG)
+    assert "v*" in str(skipped.value) and "tags" in str(skipped.value)
+    # Not a git repository: git cannot read it, so the check skips too.
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    with pytest.raises(pytest.skip.Exception):
+        _require_tag(plain, KEPT_TAG)
+    # Tags exist but the one the guard needs is missing: a failure, never a skip.
+    other = _git_repo(tmp_path / "other-tag", monkeypatch)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com", "commit",
+                    "-q", "--allow-empty", "-m", "x"], cwd=other, check=True)
+    subprocess.run(["git", "tag", "v1.0.0"], cwd=other, check=True)
+    with pytest.raises(pytest.fail.Exception) as failed:
+        _require_tag(other, KEPT_TAG)
+    assert KEPT_TAG in str(failed.value)
+    subprocess.run(["git", "tag", KEPT_TAG], cwd=other, check=True)
+    assert _require_tag(other, KEPT_TAG) is None
+
+
+def test_trc_008_update_in_the_real_framework_exits_0_with_nothing_to_do_while_both_folders_exist(
+        tmp_path):
+    """Scenario id: `TRC-008` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    for folder in (ROOT / "governance/presets/default", KEPT_6):
+        assert folder.is_dir(), f"{folder.relative_to(ROOT)} does not exist"
+        meta = yaml.safe_load((folder / "preset.yml").read_text(encoding="utf-8"))
+        assert str(meta["version"]).split(".")[0] == "6", folder
+    root = fixtures.project(tmp_path)
+    before = (root / "compass.yml").read_bytes()
+    for argv in (("policy", "update"), ("policy", "update", "--to", "6")):
+        code, out, err = _run(root, *argv)
+        assert code == 0 and "nothing to do" in out, (argv, out, err)
+        assert "not kept" not in err and "twice" not in err
+    assert (root / "compass.yml").read_bytes() == before
+
+
+def test_trc_009_a_major_the_framework_does_not_ship_still_exits_2(tmp_path):
+    """Scenario id: `TRC-009` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    for folder in (ROOT / "governance/presets/default", KEPT_6):
+        assert folder.is_dir(), f"{folder.relative_to(ROOT)} does not exist"
+    root = fixtures.project(tmp_path)
+    code, _, err = _run(root, "policy", "update", "--to", "7")
+    assert code == 2
+    assert "default@7 is not available: this CLI keeps default@6" in err
+    code, _, err = _run(root, "policy", "update", "--to", "5")
+    assert code == 2 and "default@5 is not available" in err
+
+
+def test_trc_010_with_the_live_default_at_major_7_a_faithful_kept_folder_raises_no_problem(
+        tmp_path):
+    """Scenario id: `TRC-010` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    base, kept = _fixture_kept(tmp_path)
+    assert _digest_problems(kept, KEPT_KEY, _pins()) == []
+    assert _kept_problems(base) == []
+    root = fixtures.project(tmp_path / "project")
+    made = _has("policy_update", "plan")(root, None, framework_root=base)
+    assert made.current == 6 and made.target == 7 and not made.nothing_to_do
+
+
+def test_trc_012_the_docs_state_that_the_kept_copy_keeps_the_last_shipped_version_line():
+    """Scenario id: `TRC-012` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    for path in (ROOT / "docs" / "releasing.md", DOC):
+        flat = " ".join(path.read_text(encoding="utf-8").split())
+        for words in ("keeps the version line", "can be older than the release",
+                      "do not edit", KEPT_TAG, "version: 6.0.0"):
+            assert words in flat, (path.name, words)
+    flat = " ".join(DOC.read_text(encoding="utf-8").split()).lower()
+    assert "only default@6 ships today" not in flat

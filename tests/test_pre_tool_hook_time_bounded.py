@@ -336,10 +336,12 @@ def _project_with_globs(tmp_path, globs_yaml: str):
     return root
 
 
-def _counting_python(tmp_path, fail=False):
+def _counting_python(tmp_path, fail=False, pattern="code_globs"):
     """A folder with a `python3` that counts the starts of the code_globs reader
     (one line in `counter` for each) and then runs the real one. With `fail`,
-    that reader exits 9 and does not run."""
+    that reader exits 9 and does not run. `pattern` is the regular expression
+    that picks the scripts to count: the reader holds `code_globs` and the
+    matcher for a glob bash cannot decide holds `import fnmatch`."""
     folder = tmp_path / "counting-bin"
     folder.mkdir(parents=True)
     counter = tmp_path / "counter"
@@ -350,7 +352,7 @@ def _counting_python(tmp_path, fail=False):
         "#!/bin/bash\n"
         'if [ "$1" != "-" ]; then exec ' + real + ' "$@"; fi\n'
         'f="$(mktemp)"; cat > "$f"\n'
-        'if grep -q code_globs "$f"; then\n'
+        f'if grep -qE "{pattern}" "$f"; then\n'
         f'  echo x >> {counter}\n'
         + ("  echo 'reader broke' >&2; exit 9\n" if fail else "") +
         "fi\n"
@@ -558,6 +560,153 @@ def test_the_counts_do_not_apply_where_compass_is_not_in_use(tmp_path, command):
     assert r.returncode == 0, (r.returncode, r.stderr)
     assert r.stderr == "", r.stderr
     assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+# ---------------------------------------------------------------------------
+# Group F - two more bounds on the time. The count of write targets does not
+# bound the time: each write target that starts with a different variable
+# reads the whole command again (about 65 ms at 90 KB), and a glob that bash
+# cannot decide started Python for every target. Both are bounded now.
+# ---------------------------------------------------------------------------
+
+NAME_LIMIT = 20
+
+
+def _distinct_names(count: int, size: int = 90000) -> str:
+    """`count` write targets that each start with a different variable, with a
+    heredoc between the assignments and the writes that pads to `size` bytes."""
+    assigns = "".join(f"V{i}=docs\n" for i in range(count))
+    uses = "".join(f"echo x > $V{i}/f.md\n" for i in range(count))
+    return (assigns + _exact("cat <<'E'\n", size - len(assigns) - len(uses))
+            + "\n" + uses)
+
+
+def _unassigned_names(count: int, size: int = 90000) -> str:
+    """`count` write targets under variables the command never assigns."""
+    head = "".join(f"echo x > $X{i}/../a.md\n" for i in range(count))
+    return _exact(head + "cat <<'E'\n", size)
+
+
+@pytest.mark.serial
+def test_more_than_20_distinct_variable_names_are_refused(tmp_path):
+    """Scenario id: `TRC-023` in pre-tool-hook-time-bounded/acceptance-criteria.md"""
+    root = _project(tmp_path)
+    seconds, r = _bash(root, _distinct_names(NAME_LIMIT), tmp_path)
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s at the cap"
+
+    # A name used again does not count.
+    again = _distinct_names(NAME_LIMIT) + "echo x > $V0/g.md\necho x > $V1/g.md\n"
+    _, r = _bash(root, again, tmp_path)
+    assert r.returncode == 0, (r.returncode, r.stderr)
+
+    seconds, r = _bash(root, _distinct_names(NAME_LIMIT + 1), tmp_path)
+    _complex(r)
+    assert f"{NAME_LIMIT + 1} " in r.stderr and f"{NAME_LIMIT} " in r.stderr, r.stderr
+    assert "variable names" in r.stderr, r.stderr
+    assert seconds < IDLE, f"the refusal took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("command", [
+    pytest.param(_distinct_names(400), id="400-names-90KB"),
+    pytest.param(_distinct_names(400, 11800), id="400-names-12KB"),
+    pytest.param(_unassigned_names(400), id="400-unassigned-names"),
+])
+def test_the_worst_commands_of_many_variable_names_end_in_time(tmp_path, command):
+    """Supports `TRC-023` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    400 different names took 25.9 s at 90 KB, 10.9 s at 12 KB, and 400 names the
+    command never assigns took 11.9 s. All three are under the byte limit and
+    the limit of 400 targets."""
+    root = _project(tmp_path)
+    seconds, r = _bash(root, command, tmp_path, timeout=60)
+
+    _complex(r)
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_the_variable_name_cap_does_not_apply_where_compass_is_not_in_use(tmp_path):
+    """Supports `TRC-023` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    a repository without `.compass/` sees no refusal."""
+    root = _guest(tmp_path)
+    seconds, r = _bash(root, _distinct_names(400), tmp_path, timeout=60)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert r.stderr == "", r.stderr
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+BRACKET_GLOBS = '["[x]*.qqq", "{a,b}/*", "a\\\\b*"]'
+
+
+@pytest.mark.serial
+def test_globs_bash_cannot_decide_are_matched_in_one_python_start(tmp_path):
+    """Scenario id: `TRC-024` in pre-tool-hook-time-bounded/acceptance-criteria.md
+
+    A bracket, brace or backslash glob is matched by Python. It started Python
+    once for every write target; it starts once for all of them."""
+    root = _project_with_globs(tmp_path, BRACKET_GLOBS)
+    folder, counter = _counting_python(
+        tmp_path, pattern="code_globs|import fnmatch")
+    command = "\n".join(f"cp a b{i}" for i in range(200))
+    seconds, r = _bash(root, command, tmp_path, path_prefix=folder)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert _starts(counter) == 2, (
+        f"Python started {_starts(counter)} times: the reader once and the "
+        "matcher once are expected")
+    assert seconds < 3.0, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_the_worst_command_under_unsafe_globs_ends_in_time(tmp_path):
+    """Supports `TRC-024` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    400 targets in a project whose globs bash cannot decide took 12.6 s."""
+    root = _project_with_globs(tmp_path, BRACKET_GLOBS)
+    head = "".join(f"echo x > data/f{i}.dat\n" for i in range(TARGET_LIMIT))
+    command = _exact(head + "cat <<'E'\n", 90000)
+    seconds, r = _bash(root, command, tmp_path, timeout=60)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("lines, named", [
+    pytest.param(["cp a xfile.qqq", "cp a src/app.py"], "xfile.qqq",
+                 id="glob-first"),
+    pytest.param(["cp a src/app.py", "cp a xfile.qqq"], "src/app.py",
+                 id="builtin-first"),
+    pytest.param(["cp a b1", "cp a ok/xfile.qqq", "cp a b2"], "ok/xfile.qqq",
+                 id="glob-in-the-middle"),
+])
+def test_the_first_enforced_target_is_named_when_globs_are_matched_together(
+        tmp_path, lines, named):
+    """Supports `TRC-024` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    the target the refusal names is the first one in the command that is
+    enforced, as when each was judged on its own."""
+    root = _project_with_globs(tmp_path, BRACKET_GLOBS)
+    filler = [f"cp a pad{i}" for i in range(20)]
+    _, r = _bash(root, "\n".join(filler + lines), tmp_path)
+
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert f"Blocked: edit to {named} (" in r.stderr, r.stderr
+
+
+@pytest.mark.serial
+def test_a_failed_matcher_refuses_the_command_with_unsafe_globs(tmp_path):
+    """Supports `TRC-024` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    a matcher that cannot run is not an answer of "no match"."""
+    folder, counter = _counting_python(
+        tmp_path, fail=True, pattern="import fnmatch")
+    root = _project_with_globs(tmp_path, BRACKET_GLOBS)
+    command = "\n".join(f"cp a b{i}" for i in range(30))
+    _, r = _bash(root, command, tmp_path, path_prefix=folder)
+
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert "[reader-failed]" in r.stderr, r.stderr
+    assert _starts(counter) == 1, "the failed matcher started again"
 
 
 # ---------------------------------------------------------------------------

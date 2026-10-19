@@ -552,7 +552,7 @@ set -e
 # under the limit and starts no process. If `wc` fails, the count is the upper
 # bound, so a fault refuses and never allows.
 #
-# Two more limits, for a command under COMMAND_LIMIT that is still slow, with
+# Three more limits, for a command under COMMAND_LIMIT that is still slow, with
 # the same rule for where they apply (the refusal in a project that opted in,
 # a skipped write scan elsewhere). The numbers come from timings of the
 # worst commands the write scan accepts (result.md of the issue):
@@ -561,8 +561,11 @@ set -e
 #     2 * (OPENER_LIMIT + 1) characters or more, the least that many `$(`
 #     take, so an ordinary command starts none.
 #   - TARGET_LIMIT: different write targets (the candidate loop). Each costs
-#     the judging of one path, and a target that starts with a variable reads
-#     the command. The count is made where the targets are found.
+#     the judging of one path. The count is made where the targets are found.
+#   - NAME_LIMIT: different variable names that targets start with. A target
+#     that starts with a variable reads the whole command to find the value,
+#     once for each name, and the count of targets does not bound that: 400
+#     names took 26 s at 90 KB. The count is made as the names are read.
 #   - SCAN_WORK_LIMIT: steps the flattening of substitutions may take. The
 #     openers that never close make its work grow with their number times the
 #     length of the text, which a count alone does not bound: 700 openers
@@ -571,6 +574,7 @@ set -e
 COMMAND_LIMIT=98304
 OPENER_LIMIT=700
 TARGET_LIMIT=400
+NAME_LIMIT=20
 SCAN_WORK_LIMIT=1000000
 SCAN_MARK="compass-scan-budget-exceeded"
 SKIP_WRITE_SCAN=0
@@ -748,6 +752,10 @@ MATCHED_RULE=""
 # it ran, how it ended, the file it read, whether bash can match the globs
 # itself ("safe"), the globs as a JSON list, and the safe globs one to a line.
 GLOBS_LOADED=0 GLOBS_STATUS=0 GLOBS_ERR="" GLOBS_FILE="" GLOBS_KIND="" GLOBS_JSON="" GLOBS_LIST=""
+# While GLOB_DEFER is 1, a path that only a glob bash cannot decide could
+# enforce is not judged: its project-relative text is added to GLOB_PENDING
+# (one per line) and is_enforced_path returns 2 for it.
+GLOB_DEFER=0 GLOB_PENDING=""
 is_enforced_path() {
   local target="$1" rel base is_code=0 abs
 
@@ -950,7 +958,8 @@ is_enforced_path() {
       # was the one read. A glob is safe when bash's `case` matches it as
       # Python's fnmatch does: letters, digits, `*`, `?` and a few punctuation
       # marks. Any other glob (a bracket set, a backslash, an empty glob) is
-      # matched by Python, one start for each path, as before.
+      # matched by Python: one start for a single path, and one start for all
+      # the write targets of a Bash command (settle_deferred_globs).
       glob_out="$(compass_python - "$PROJECT_DIR" 2>"$GLOBS_ERR" <<'PYEOF'
 import json, re, sys
 import compass_pkg
@@ -1026,6 +1035,11 @@ PYEOF
       done <<GLOBLIST
 $GLOBS_LIST
 GLOBLIST
+    elif [ "$GLOB_DEFER" -eq 1 ]; then
+      # The candidate loop of a Bash command settles every path that reaches
+      # this point in one Python start, after the loop (settle_deferred_globs).
+      GLOB_PENDING="$GLOB_PENDING$rel"$'\n'
+      return 2
     else
       set +e
       hit="$(compass_python - "$rel" "$GLOBS_JSON" 2>"$GLOBS_ERR.m" <<'PYEOF'
@@ -1054,6 +1068,50 @@ PYEOF
   # production-impacting files; it does not block the unknown. If a project has
   # a production-impacting file type that slips through, declare it above.
   return 1
+}
+
+# Judge the paths is_enforced_path set aside (GLOB_PENDING) against the globs
+# bash cannot match, in one Python start. The first path, in the order the
+# command wrote them, that a glob matches is the answer: the number of its line
+# in GLOB_PENDING is printed, then the glob. The paths go in a file, so their
+# number and length are not limited by the size of an argument list. The
+# matcher is the one a single path uses, so the two cannot differ. A matcher
+# that cannot run refuses, and so does it for every path, because none was
+# judged. Sets GLOB_HIT_INDEX to that number (0 for none) and GLOB_HIT to the
+# glob.
+GLOB_HIT_INDEX=0 GLOB_HIT=""
+settle_deferred_globs() {
+  local out status
+  GLOB_HIT_INDEX=0 GLOB_HIT=""
+  [ -n "$GLOB_PENDING" ] || return 0
+  printf '%s' "$GLOB_PENDING" > "$GLOBS_ERR.r" 2>/dev/null \
+    || compass_reader_failed "enforcement.code_globs reader" tmp
+  set +e
+  out="$(compass_python - "$GLOBS_JSON" "$GLOBS_ERR.r" 2>"$GLOBS_ERR.m" <<'PYEOF'
+import fnmatch, json, os, sys
+globs = json.loads(sys.argv[1])
+with open(sys.argv[2], "rb") as handle:
+    paths = [os.fsdecode(line) for line in handle.read().split(b"\n")[:-1]]
+for number, path in enumerate(paths, 1):
+    for g in globs:
+        if fnmatch.fnmatch(path, g) or fnmatch.fnmatch(path, g.rstrip("/") + "/*") \
+                or fnmatch.fnmatch("/" + path, "*/" + g.lstrip("/")):
+            print(number)
+            print(g)
+            sys.exit(0)
+PYEOF
+)"
+  status=$?
+  set -e
+  rm -f "$GLOBS_ERR.r"
+  [ "$status" -eq 0 ] \
+    || compass_reader_failed "enforcement.code_globs reader" "$status" "$GLOBS_ERR.m"
+  rm -f "$GLOBS_ERR.m"
+  if [ -n "$out" ]; then
+    GLOB_HIT_INDEX="${out%%$'\n'*}"
+    GLOB_HIT="${out#*$'\n'}"
+  fi
+  return 0
 }
 
 # --- what a shell command can be known to write ------------------------------
@@ -1313,8 +1371,9 @@ bash_write_targets() {
 # of them took 21 s. The caller runs `expand_command_variable_into` in the
 # hook's own shell, because a command substitution would lose the memo.
 # `expand_command_variable` prints the answer, for the tests and for a caller
-# that wants text.
-EXPAND_MEMO_CMD="" EXPAND_MEMO="" EXPANDED="" RESOLVED=""
+# that wants text. EXPAND_NAMES counts the names read for this command, which
+# the caller compares with NAME_LIMIT.
+EXPAND_MEMO_CMD="" EXPAND_MEMO="" EXPANDED="" RESOLVED="" EXPAND_NAMES=0
 expand_command_variable() {
   expand_command_variable_into "$@"
   printf '%s\n' "$EXPANDED"
@@ -1342,7 +1401,7 @@ expand_command_variable_into() {
   # The answer for NAME in this command: "D" to decline, or "V" and the value.
   case "$EXPAND_MEMO_CMD" in
     "$cmd") ;;
-    *) EXPAND_MEMO_CMD="$cmd"; EXPAND_MEMO="" ;;
+    *) EXPAND_MEMO_CMD="$cmd"; EXPAND_MEMO=""; EXPAND_NAMES=0 ;;
   esac
   case "$nl$EXPAND_MEMO" in
     *"$nl$name="*)
@@ -1350,6 +1409,7 @@ expand_command_variable_into() {
       tail="${tail#*"$nl$name="}"
       RESOLVED="${tail%%"$nl"*}" ;;
     *)
+      EXPAND_NAMES=$((EXPAND_NAMES + 1))
       expand_command_variable_resolve "$name" "$cmd"
       EXPAND_MEMO="$EXPAND_MEMO$name=$RESOLVED$nl" ;;
   esac
@@ -1537,6 +1597,8 @@ if [ "${TOOL:-}" = "Bash" ]; then
       exit 0
     fi
 
+    GLOB_DEFER=1
+    GLOB_PENDING="" GLOB_PENDING_CANDIDATES=""
     while IFS= read -r candidate; do
       [ -z "$candidate" ] && continue
       # A quoted target names the same file as an unquoted one, so the quotes
@@ -1548,16 +1610,45 @@ if [ "${TOOL:-}" = "Bash" ]; then
               candidate="${candidate//\"/}" ;;
         *) candidate="${candidate//\"/}"
            expand_command_variable_into "$candidate" "$COMMAND"
-           candidate="$EXPANDED" ;;
+           candidate="$EXPANDED"
+           # Past NAME_LIMIT the command is too slow to read for every name.
+           if [ "$EXPAND_NAMES" -gt "$NAME_LIMIT" ]; then
+             [ "$COMPASS_IN_USE" -eq 1 ] \
+               && compass_block bash-command-too-complex \
+                    "has=$EXPAND_NAMES different variable names" \
+                    "over=more than $NAME_LIMIT variable names"
+             exit 0
+           fi ;;
       esac
       [ -z "$candidate" ] && continue
-      if is_enforced_path "$candidate"; then
+      # 0: enforced, 1: not, 2: only a glob bash cannot decide could enforce it.
+      # The paths of the third kind are kept for one Python start below.
+      _verdict=0
+      is_enforced_path "$candidate" || _verdict=$?
+      if [ "$_verdict" -eq 0 ]; then
         DETECTED="$candidate"
         break
+      elif [ "$_verdict" -eq 2 ]; then
+        GLOB_PENDING_CANDIDATES="$GLOB_PENDING_CANDIDATES$candidate"$'\n'
       fi
     done <<CANDIDATES
 $TARGET_LIST
 CANDIDATES
+    GLOB_DEFER=0
+    # A path set aside comes before the one that ended the loop, so a glob that
+    # matches one of them names the first such path, as when each was judged in
+    # turn.
+    settle_deferred_globs
+    if [ "$GLOB_HIT_INDEX" -gt 0 ]; then
+      _rest="$GLOB_PENDING_CANDIDATES"
+      _n=1
+      while [ "$_n" -lt "$GLOB_HIT_INDEX" ]; do
+        _rest="${_rest#*$'\n'}"
+        _n=$((_n + 1))
+      done
+      DETECTED="${_rest%%$'\n'*}"
+      MATCHED_RULE="enforcement.code_globs pattern '$GLOB_HIT' in $GLOBS_FILE"
+    fi
   fi
 
   # Nothing recognisable is written → allow. See docs/safety-contract.md.

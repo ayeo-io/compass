@@ -231,9 +231,10 @@ REFUSALS: dict[str, dict[str, str]] = {
                "smaller steps. For a long commit message, use git commit -F with "
                "a file you wrote.",
     },
-    # A Bash command with too many different write targets or command
-    # substitutions, or with substitutions that stay open, for the hook to scan
-    # in time (hooks/pre-tool.sh holds the numbers). It never quotes the command.
+    # A Bash command with too many different write targets, variable names or
+    # command substitutions, or with substitutions that stay open, for the hook
+    # to scan in time (hooks/pre-tool.sh holds the numbers). It never quotes the
+    # command.
     "bash-command-too-complex": {
         "what": "Bash command with {has}",
         "why": "the write guard cannot scan a command with {over} in time.",

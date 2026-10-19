@@ -149,6 +149,9 @@ def project(tmp_path, compass_yml=None, assessment=None, evaluate=True):
                  "distribution-map", "verification-report", "requirements-review",
                  "runbook"):
         (docs / f"{kind}.md").write_text(f"# {kind}\n\nFirst version.\n")
+    # A multiagent breakdown refuses a map with no `units:` line (ADR-071). Two
+    # units record nothing, so these tests record their subtasks as before.
+    (docs / "distribution-map.md").write_text("# distribution-map\n\nunits: 2\n")
     if evaluate and "delivery-approach" in entries(root):
         # The assess stage writes the record and registers it (ACF-17); a stage's exit then
         # approves it, as it does for every document of an earlier stage.

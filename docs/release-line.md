@@ -49,8 +49,10 @@ refused when:
   duration attached to a user's experience, or an outside user's experience.
 
 Each writer also refuses a completed or closed issue, naming it as completed or closed,
-so a landed record is never rewritten. `ship-commit --release-note` with no issue named
-is refused and names `--issue <slug>`. Line breaks inside a line are kept in the
+so a landed record is never rewritten. `ship-commit --release-note` takes the issue from
+`--issue`, then from `COMPASS_ISSUE` or the session issue, then from the current-task
+pointer. It is refused, and names `--issue <slug>`, only when none of these gives an
+issue. Line breaks inside a line are kept in the
 manifest; every reader prints the line on one line.
 
 ## When a landing refuses
@@ -71,12 +73,15 @@ The refusal judges an issue only when all four of these hold, and declines other
 When it judges, it refuses an issue whose `release_note` is absent or blank. So:
 
 - a spike lands with no line, because the shipped spike has no `release_line` field;
-- a commit with no issue named is not judged;
+- a commit is not judged when none of `--issue`, `COMPASS_ISSUE` or the session issue,
+  and the current-task pointer gives an issue;
 - a completed issue landed again at HEAD after a review fix is not judged, and is not
   rewritten;
 - an issue assessed before the field existed owes no line until
   `compass approach evaluate --write` commits a generation that sets it;
-- a project on the 5.x governance files has no generation and owes no line.
+- a newly assessed issue on the 5.x governance files gets a generation, and the legacy
+  adapter sets `release_line` on every approach except the spike, so it owes a line;
+  only an issue assessed before the field existed owes none.
 
 The refusal is not a check of `compass check`, so no archived issue is judged by it.
 

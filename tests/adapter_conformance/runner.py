@@ -186,7 +186,7 @@ class Adapter:
         contents = {
             "acceptance-criteria": spec,
             "technical-design": "# Reference design\n\nUse a pure names function and two observable behaviours.\n",
-            "distribution-map": "# Reference distribution\n\nLocal fixture state only; no native agents are dispatched.\n",
+            "distribution-map": "# Reference distribution\n\nunits: 2\n\nLocal fixture state only; no native agents are dispatched.\n",
         }
         for kind, text in contents.items():
             path = docs / f"{kind}.md"
@@ -262,7 +262,7 @@ class Adapter:
         approach.write_text("# Local fixture approach\n\n" + yaml.safe_dump({
             key: manifest[key] for key in ("assessment", "delivery_approach", "stages", "subtask_ceiling")}))
         distribution = docs / "distribution-map.md"
-        text = ("# Local fixture distribution\n\n"
+        text = (f"# Local fixture distribution\n\nunits: {requested}\n\n"
                 "| Subtask id | Task | Acceptance criteria | Branch name |\n|---|---|---|---|\n")
         for index in range(1, requested + 1):
             text += f"| subtask-{index} | Local fixture | CONF-1 | compass/{self.slug}/subtask-{index} |\n"

@@ -712,6 +712,22 @@ def test_PM_14_a_value_only_the_legacy_views_hold_blocks_by_name(tmp_path):
     assert "land" in named[0]["message"]
 
 
+def test_PM_14_a_copy_with_retired_stage_names_in_checked_at_does_not_block(tmp_path):
+    """An untouched copy made before the stage rename spells `checked_at` with
+    the retired names. The shipped views use the current names, so the two
+    must compare equal after the names are normalised."""
+    retired = {"refine": "clarify", "implement": "build", "ship": "land"}
+
+    def respell(policy, guardrails):
+        for gate in guardrails["defaults"] + guardrails.get("spike_guardrails", []):
+            gate["checked_at"] = [retired.get(s, s) for s in gate["checked_at"]]
+
+    root = _project(tmp_path)
+    _copy_governance(root, respell)
+    made = _plan(root)
+    assert [b for b in made.blocked if b["code"] == "MIG-UNEXPRESSED"] == []
+
+
 @pytest.mark.parametrize("extra, path", [
     ("    owner: platform-team\n", "project.Q2.owner"),
     ("    params: { floor: 80 }\n", "project.Q2.params"),

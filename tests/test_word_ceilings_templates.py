@@ -2,8 +2,10 @@
 
 The technical design template's Work units table gains a Low-level design
 column that links each unit's low-level design, and `template show` prints
-the `low-level-design` kind. The distribution map, its catalogue entry and
-the code that reads it do not change.
+the `low-level-design` kind. The distribution map's subtask table, its
+catalogue entry and the scripts that read the table do not change. The map
+itself may gain other lines: issue `one-unit-breakdown` (ADR-071) added its
+`units:` line, and `multiagent_check.py` reads that line as well as the table.
 """
 from __future__ import annotations
 
@@ -25,9 +27,8 @@ LLD_HEADINGS = ["Signatures", "Contracts", "File-level plan", "Tests this unit w
 WORK_UNIT_COLUMNS = ["Unit", "Scenario group(s) it satisfies", "Code surface it touches",
                      "Independent of", "Low-level design"]
 
-#: The files that read the distribution map's subtask table.
-MAP_READERS = ("scripts/multiagent.sh", "scripts/integrate.sh",
-               "cli/compass_pkg/multiagent_check.py")
+#: The scripts that read the distribution map's subtask table.
+MAP_READERS = ("scripts/multiagent.sh", "scripts/integrate.sh")
 
 
 # The two scripts' variable names and messages say "approach" where they said
@@ -59,6 +60,10 @@ def _artifacts(text):
 
 def _headings(text):
     return [line[3:].strip() for line in text.splitlines() if line.startswith("## ")]
+
+
+def _subtask_table_header(text):
+    return next(line for line in text.splitlines() if line.startswith("| Subtask "))
 
 
 def _work_units_header(text):
@@ -97,7 +102,8 @@ def test_wcl_13_template_show(tmp_path):
 
 def test_wcl_15_distribution_map_unchanged():
     rel = "templates/distribution-map.md"
-    assert (ROOT / rel).read_bytes() == _origin_main(rel)
+    assert (_subtask_table_header((ROOT / rel).read_text(encoding="utf-8"))
+            == _subtask_table_header(_origin_main(rel).decode("utf-8")))
     now = _artifacts((PRESET / "artifacts.yml").read_text(encoding="utf-8"))
     before = _artifacts(_origin_main("governance/presets/default/artifacts.yml"))
     assert now["distribution-map"] == before["distribution-map"]

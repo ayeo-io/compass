@@ -417,8 +417,8 @@ from the preset and `legacy-views.yml` to show nothing is lost:
 - The floor effect `force_minimum_route` becomes `force_minimum_approach`
   (ADR-041).
 - Old dimension names and old stage names (`clarify`, `build`, `land`)
-  become the current names; `legacy-views.yml` keeps the
-  spelling each file uses.
+  become the current names. `legacy-views.yml` spells stages with the current
+  names; the migration reads a copy's retired names as the current ones.
 - A document named by file (`intent.md`) becomes its id (`intent`).
 - The fallback approach becomes the last rule of `default_shapes`, and the
   `biases` become a rule set with no effect.

@@ -31,7 +31,7 @@ Fill every {{PLACEHOLDER}}.
 
 ## Product strategies
 
-{{How the design meets each product strategy in governance/strategies.md that applies.}}
+{{How the design meets each product strategy in your project's strategies file, if it has one, that applies.}}
 
 ## Needs a decision
 

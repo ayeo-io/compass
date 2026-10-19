@@ -12,7 +12,8 @@ every reader of a setting follows the same file.
   and refuses a key that appears twice. It is Compass's file when it has a
   top-level `schema:` key, or when it is the only settings file. The same file
   can also hold the project's edits to the shipped governance (see
-  `docs/policy-lint.md`). `/compass:init` writes a minimal one for a new
+  `docs/policy-lint.md`; for waivers, locks and approvers see
+  [waivers-and-locks.md](waivers-and-locks.md)). `/compass:init` writes a minimal one for a new
   project, and `compass policy migrate` writes one for an existing project.
 - **`.compass/config.yml`** holds the same settings for a project from 5.x that
   has not moved. The CLI reads it when `compass.yml` is absent, or present

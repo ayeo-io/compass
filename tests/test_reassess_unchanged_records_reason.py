@@ -155,3 +155,25 @@ def test_trc_001_a_manifest_with_the_entry_passes_lint():
              "--reason", "the catalogue was fixed")
         code, out, err = _run(project, "issue", "lint", "--issue", "sample")
     assert code == 0, out + err
+
+
+def test_a_person_cannot_label_a_real_change_unchanged():
+    """The CLI assigns `unchanged` itself, so `--kind unchanged` is refused.
+
+    A real route change labelled `unchanged` would be skipped by `compass retro`
+    and friction capture, hiding a true re-assessment.
+
+    Scenario id: `TRC-001` in unchanged-reassess-records-reason/acceptance-criteria.md
+    """
+    with tempfile.TemporaryDirectory() as raw:
+        project = _project(Path(raw))
+        _evaluated(project)
+        path = project / ".compass" / "work" / "sample" / "manifest.yml"
+        path.write_text(path.read_text(encoding="utf-8").replace(
+            "size: small", "size: large"), encoding="utf-8")
+        code, out, err = _run(project, "approach", "evaluate", "--issue", "sample",
+                              "--write", "--reason", "grew", "--kind", "unchanged")
+        entries = _manifest(project)["reassessments"]
+    assert code != 0, out + err
+    assert "unchanged" in err, err
+    assert entries == [], entries

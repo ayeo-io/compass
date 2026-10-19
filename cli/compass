@@ -150,8 +150,7 @@ def build_parser():
                           "reassess that changes nothing records it too, as "
                           "an unchanged entry")
     pre.add_argument("--kind", choices=["judgement", "policy-correction",
-                                        "scope-change", "configuration",
-                                        "unchanged"],
+                                        "scope-change", "configuration"],
                      help="what kind of re-assessment this is (default: "
                           "judgement). Only judgement feeds the retrospective "
                           "re-sizing signal - a policy correction is not "
@@ -159,7 +158,7 @@ def build_parser():
                           "changes only the issue's config: layer is recorded "
                           "as configuration without this flag, and one that "
                           "changes nothing but is given a --reason is "
-                          "recorded as unchanged.")
+                          "recorded as unchanged by the CLI (not a choice).")
     pre.add_argument("--reset-config", dest="reset_config", action="store_true",
                      help="with --write: drop the issue's config: layer in the "
                           "generation this commits (refused while a change is "

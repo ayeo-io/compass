@@ -1047,6 +1047,9 @@ def cmd_route_evaluate(args):
             # assessment was right, the policy under it moved. Only
             # `judgement` feeds the re-sizing aggregate.
             kind = getattr(args, "kind", None) or "judgement"
+            if kind == "unchanged":
+                raise CompassError("kind `unchanged` is recorded by the CLI "
+                                   "only when nothing changed.")
             task.setdefault("reassessments", []).append({
                 "from_route": prior["delivery_approach"],
                 "to_route": result["delivery_approach"],

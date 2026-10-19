@@ -447,7 +447,7 @@ def test_fresh_4_staleness_passes_over_three_hops_whatever_the_order_of_register
              "technical-design": {"set": {"depends_on": ["acceptance-criteria"]}},
              "verification-report": {"set": {"depends_on": ["technical-design"]}}}
     root, task_dir = _scene(tmp_path, graph=graph, phase="implement", write=False)
-    for kind, text in (("distribution-map", "# Map\n"), ("acceptance-criteria", CRITERIA),
+    for kind, text in (("distribution-map", "# Map\n\nunits: 1\n"), ("acceptance-criteria", CRITERIA),
                        ("technical-design", DESIGN), ("verification-report", REPORT)):
         _write(task_dir, kind, text)
     for kind in ("verification-report", "technical-design", "acceptance-criteria"):
@@ -594,7 +594,7 @@ def test_fresh_4_staleness_passes_up_a_chain_that_runs_against_the_registry_orde
              "technical-design": {"set": {"depends_on": ["distribution-map"]}},
              "acceptance-criteria": {"set": {"depends_on": ["technical-design"]}}}
     root, task_dir = _scene(tmp_path, graph=graph, phase="implement", write=False)
-    for kind, text in (("verification-report", REPORT), ("distribution-map", "# Map\n"),
+    for kind, text in (("verification-report", REPORT), ("distribution-map", "# Map\n\nunits: 1\n"),
                        ("technical-design", DESIGN), ("acceptance-criteria", CRITERIA)):
         _write(task_dir, kind, text)
     for kind in ("distribution-map", "technical-design", "acceptance-criteria"):

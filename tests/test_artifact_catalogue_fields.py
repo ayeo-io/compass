@@ -1117,7 +1117,7 @@ def test_acf_25(tmp_path):
     row = _check_row(root)
     assert row["status"] == "fail" and "distribution-map reads draft" in row["detail"], row
     assert "not needed" not in row["detail"], row
-    path = _doc(root, "distribution-map.md")
+    path = _doc(root, "distribution-map.md", "# a map\n\nunits: 2\n")
     assert _set(root, "distribution-map", "--status", "approved", "--path", path)[0] == 0
     row = _check_row(root)
     assert row["status"] == "pass", row

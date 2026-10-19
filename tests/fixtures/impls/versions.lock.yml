@@ -53,7 +53,7 @@ implementations:
     version: 1.0.0
   multiagent-run-recorded:
     verdict_digest: 31e31868b5a0bb6885734f2817617272e4e7bf1356cd55fd6ea8da3c492c7201
-    version: 1.0.0
+    version: 1.1.0
   nfr-rows-resolved:
     verdict_digest: 17cdacf146eaedcfa44275a3cc748d75e4239f9952b7f5cbe83ee1f3069934c8
     version: 1.0.0

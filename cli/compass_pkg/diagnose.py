@@ -176,7 +176,11 @@ def _timeline(root, task_dir, m, records):
             events.append((when, f"{label} {scenario or '(unbound)'}", _rel(root, path)))
     for st in _dicts(m.get("subtasks")):
         if st.get("dispatched_at"):
-            events.append((str(st["dispatched_at"]), f"{st.get('id')} dispatched", mpath))
+            # A single-unit record dispatched nothing: the session ran the one
+            # unit itself (ADR-071), so the timeline must not say otherwise.
+            what = ("recorded as one unit, run by this session"
+                    if st.get("orchestration") == "single-unit" else "dispatched")
+            events.append((str(st["dispatched_at"]), f"{st.get('id')} {what}", mpath))
         for rnd in _dicts(st.get("review_rounds")):
             if rnd.get("at"):
                 events.append((str(rnd["at"]),

@@ -1,7 +1,7 @@
 <!--
 TEMPLATE: pull-request-body.md
 Produced by: whoever opens the pull request.
-The rule this implements: `S13` in governance/strategies.md - a title is a
+The rule this implements: `S13` in the shipped strategies - a title is a
 summary, a body is a description.
 
 Four sections, in this order. Delete any that genuinely does not apply and say

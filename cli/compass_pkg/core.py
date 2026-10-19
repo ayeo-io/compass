@@ -54,8 +54,8 @@ def load_yaml(path):
     with open(path, "r", encoding="utf-8") as fh:
         try:
             return yaml.safe_load(fh) or {}
-        except yaml.YAMLError as exc:
-            raise CompassError(f"invalid YAML in {path}: {exc}")
+        except (yaml.YAMLError, UnicodeDecodeError) as exc:
+            raise manifest_store.read_error(path, exc)
 
 
 def now_iso():

@@ -33,7 +33,8 @@ read the dimensions.
    skim `guardrails.md` and `strategies.md` in the same directory for
    context. A project needs no setup first: the shipped default preset is in
    force. An unmigrated 5.x project runs on its own copied `governance/` until
-   `compass policy migrate`, which `compass policy show` does not print. If a `intent.md` exists, read it - intent is the *actual outcome
+   `compass policy migrate`. In that case `compass policy show` prints the shipped
+   default and says so, not the copy. If a `intent.md` exists, read it - intent is the *actual outcome
    wanted*, not the literal request.
 2. **Create the manifest.** Make `.compass/work/<issue-slug>/` and write
    `manifest.yml` from `${CLAUDE_PLUGIN_ROOT}/templates/manifest.yml`.

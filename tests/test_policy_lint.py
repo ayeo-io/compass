@@ -930,6 +930,38 @@ def test_pl_10_a_project_with_no_compass_yml_shows_the_shipped_default(tmp_path)
     assert code == 0 and "default@6.0.0" in out
 
 
+def _copy_governance(root):
+    import shutil
+    (root / "governance").mkdir()
+    for name in ("routing-policy.yml", "guardrails.yml"):
+        shutil.copy(ROOT / "governance" / name, root / "governance" / name)
+
+
+COPY_NOTICE = "runs on its own copy of governance/"
+
+
+def test_pl_10_a_copied_governance_folder_with_no_compass_yml_is_named_by_policy_show(tmp_path):
+    root = _project(tmp_path)
+    _copy_governance(root)
+    code, out, _ = _run(root, "policy", "show")
+    text = " ".join(out.split())
+    assert code == 0, out
+    assert COPY_NOTICE in text and "compass policy migrate" in text, out
+    assert COPY_NOTICE not in out.splitlines()[0]
+
+
+def test_pl_10_a_compass_yml_means_policy_show_names_no_copy(tmp_path):
+    root = _project(tmp_path, {"schema": 1})
+    _copy_governance(root)
+    code, out, _ = _run(root, "policy", "show")
+    assert code == 0 and COPY_NOTICE not in " ".join(out.split()), out
+
+
+def test_pl_10_no_copy_means_policy_show_names_no_copy(tmp_path):
+    code, out, _ = _run(_project(tmp_path), "policy", "show")
+    assert code == 0 and COPY_NOTICE not in " ".join(out.split()), out
+
+
 def test_pl_10_the_notes_say_what_reads_the_stored_generation(tmp_path):
     """The generation store has landed, so the view must not say that check
     and the evaluator wait for it (`TRC-D2`)."""

@@ -41,6 +41,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 7.0.0, and why there is no supported rollback.
 - [upgrade-7-0-0.md](upgrade-7-0-0.md) - what 7.0.0 changes and what to do about it, one section per change.
 - [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it.
+- [waivers-and-locks.md](waivers-and-locks.md) - how an owner writes a waiver, a lock, an unlock, an approver list and a layer in `compass.yml`.
 - [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show` on a layered project: the order of the checks, the finding codes and both JSON shapes.
 - [check-implementations.md](check-implementations.md) - the version and fixture corpus of each check implementation, the build rule and what a major difference does.
 - [policy-diff.md](policy-diff.md) - `compass policy diff`: the references, the sets it replays, `--open`, the exit codes and the JSON shape.

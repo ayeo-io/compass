@@ -295,7 +295,7 @@ project: <<project>>
 ENTRY_COMMENTS = {
     ('RP-SHAPE-003', 'rationale'): [
         '# Any familiarity qualifies. Unmapped ground on a change this small',
-        '# gets behaviour-mapping as advice (RP-ADV-002), not a floor: two of',
+        '# gets behavior-mapping as advice (RP-ADV-002), not a floor: two of',
         '# the three stops in the comparison run of 30 Sep 2026',
         '# (docs/compass/2026-09-30-eval-comparison-discriminating.md) came',
         '# from sending it to define at thorough weight (issue #324).',

@@ -220,7 +220,7 @@ def test_scn_c1_superseded_by_validates(tmp_path):
     root = _project(tmp_path, _base(scenarios=scenarios))
     r = _run(root, "issue", "lint", "--issue", "t")
     assert r.returncode == 0, (
-        f"the schema still forbids what behaviour-mapping requires:\n"
+        f"the schema still forbids what behavior-mapping requires:\n"
         f"{r.stdout}{r.stderr}")
 
 

@@ -25,7 +25,7 @@ from rendered_blocks_support import (DOCS, ROOT, SLUG, WORK, block, manifest, ma
 ITEMS = ["dod-every-scenario-passes", "dod-suite-green", "dod-coverage-floor",
          "dod-no-lint-errors", "dod-traceability-intact", "dod-living-docs-updated",
          "dod-follow-ups-settled"]
-READY = ["dor-summary-filled", "dor-problem-traces-up", "dor-behaviour-is-gwt",
+READY = ["dor-summary-filled", "dor-problem-traces-up", "dor-behavior-is-gwt",
          "dor-traceability-ids", "dor-affected-surface-named", "dor-no-open-questions",
          "dor-approach-still-fits"]
 #: A project that declares jed72 as owner and as an approver.

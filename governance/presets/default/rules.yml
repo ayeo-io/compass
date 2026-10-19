@@ -67,7 +67,7 @@ rules:
           - size: [medium, large, product]
           - risk: [cross-cutting, critical]
           - labels_any: [auth, payments, personal-data, migrations]
-        then: {require_phase: define, require_skill: behaviour-mapping}
+        then: {require_phase: define, require_skill: behavior-mapping}
         rationale: You cannot safely change behaviour you have not first written down.
       RP-FLOOR-003:
         order: 3
@@ -214,7 +214,7 @@ rules:
           familiarity: brownfield-unmapped
           size: [atomic, small]
           risk: [trivial, contained]
-        then: {strategy: behaviour-mapping}
+        then: {strategy: behavior-mapping}
         rationale: 'Unmapped ground on a small change - before editing, write a test that pins what the
           code does now where the change touches it, so the change cannot break behaviour nobody wrote
           down. Advice, not a floor: a larger, riskier or domain-labelled unmapped change meets RP-FLOOR-002.'

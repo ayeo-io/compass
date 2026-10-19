@@ -141,7 +141,7 @@ def test_floor_g5_domains_force_expedition(run_cli, domain):
 
 def test_floor_brownfield_unmapped_requires_specify(run_cli):
     """RP-FLOOR-002: brownfield-unmapped beyond a small, contained change
-    forces the define stage to full and needs the behaviour-mapping skill."""
+    forces the define stage to full and needs the behavior-mapping skill."""
     r = run_cli("approach", "evaluate", "--json",
                 *_reading_args({"risk": "contained",
                                 "familiarity": "brownfield-unmapped",
@@ -152,7 +152,7 @@ def test_floor_brownfield_unmapped_requires_specify(run_cli):
     fired = [f["id"] for f in data["policy_rules_fired"]]
     assert "RP-FLOOR-002" in fired
     assert data["stages"].get("define") == "thorough"
-    assert "behaviour-mapping" in data["required_skills"]
+    assert "behavior-mapping" in data["required_skills"]
 
 
 # --- caps: critical risk caps worktrees to 1 -------------------------------

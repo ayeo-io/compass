@@ -90,7 +90,7 @@ The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
   never skip refine/verify/ship; `RP-FLOOR-002` brownfield-unmapped familiarity
   at medium size or more, with cross-cutting or critical risk, or with one
   of the four domain labels → define
-  runs thorough-weight with `behaviour-mapping` (below that, `RP-ADV-002` gives
+  runs thorough-weight with `behavior-mapping` (below that, `RP-ADV-002` gives
   the skill as advice); `RP-FLOOR-003`
   touching auth/payments/personal-data/migrations → at least the full approach.
 - **caps** - `RP-CAP-001` critical risk caps worktrees at 1.

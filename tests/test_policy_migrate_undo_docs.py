@@ -81,11 +81,27 @@ def test_TRC_041_the_document_states_the_rules_of_undo(rule):
     )
 
 
-def test_the_document_says_most_projects_with_a_waiver_are_refused():
-    """The section warns that an approved waiver stub makes the undo refuse."""
+def test_the_document_says_only_a_compass_yml_edited_after_apply_is_refused():
+    """An unapproved stub blocks `--apply`, so only an edit made after it blocks the undo."""
     section = _section().lower()
-    assert "most" in section and "waiver" in section
-    assert "refuses them" in section
+    assert "most migrated projects" not in section
+    assert "unapproved" in section and "blocks `--apply`" in section
+    assert "edited after `--apply`" in section
+
+
+def test_the_document_says_what_the_undo_reads_of_the_evidence():
+    """The code reads `.compass/work/<slug>/evidence/*.json`, so the section says so."""
+    assert ".compass/work/<slug>/evidence/*.json" in _section()
+
+
+def test_the_document_describes_the_refusal_the_command_gives():
+    """The refusal of a plain migrate names `--undo` and gives no copy-back steps."""
+    text = DOC.read_text()
+    row = next(line for line in text.splitlines()
+               if line.startswith("| `compass.yml` exists and `migration.yml` records"))
+    assert "compass policy migrate --undo" in row
+    assert "manual way back" not in row and "copy the old files" not in row
+    assert "warns against deleting `compass.yml` by hand" in row
 
 
 def test_the_flags_the_document_names_exist():

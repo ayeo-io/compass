@@ -85,7 +85,7 @@ writes nothing.
 | Cause | Reason |
 |---|---|
 | The project is the Compass framework repository | Its governance files are generated from the shipped preset |
-| `compass.yml` exists and `migration.yml` records that this command wrote it | The settings now live in `compass.yml`. The message names `compass policy migrate --undo`, and says the manual way back: copy the old files from the `legacy` folder, then remove `compass.yml` and `migration.yml`. It never advises moving `compass.yml` away, which would put the settings back to their defaults |
+| `compass.yml` exists and `migration.yml` records that this command wrote it | The settings now live in `compass.yml`. The message names `compass policy migrate --undo`, which restores the old files from the `legacy` folder. It gives no copy-back steps, and it warns against deleting `compass.yml` by hand, which would put the settings back to their defaults |
 | `compass.yml` exists, has `schema:`, and no marker | Compass reads it, so there is nothing to migrate into. When `.compass/config.yml` still sets keys, the message names them. This covers both settings files being present, which Compass does not merge |
 | `compass.yml` exists and has no `schema:` | Compass does not read it, so it is another tool's file. The message says to move it to another name or add `schema: 1` |
 | One of the two governance files is present without the other | A copy needs both |
@@ -605,19 +605,21 @@ copy.
 - a marker with no digest of `compass.yml`, which an earlier version of the
   command wrote. The message prints the manual steps below;
 - a signed record made since the migration. The undo counts the signed records
-  under `.compass/work/` dated at or after `migrated_at`, or with no readable
-  date, and refuses when the count is above 0. The message says how many. It
-  reads no record outside `.compass/work/`, so a record kept in an archive is
+  in `.compass/work/<slug>/evidence/*.json` dated at or after `migrated_at`, or
+  with no readable date, and refuses when the count is above 0. The message
+  says how many. It reads no other record, so a record kept in an archive is
   not counted;
 - `--words`, `DIR` or `--i-have-a-copy`, which belong to the other mode.
 
 There is no override. The undo has no flag that skips a check.
 
-**Most migrated projects will be refused.** Approving a waiver stub means
-editing `compass.yml`, so most projects that approved one now have an edited
-`compass.yml`, and the undo refuses them. Discarding that edit would discard the
-approval. A project in that state goes back by the manual steps. An earlier
-marker gets the same steps in its refusal:
+**A `compass.yml` edited after `--apply` is refused.** An unapproved waiver
+stub blocks `--apply` itself, so a project with a stub has no marker: the
+person puts `compass.yml` in place by hand and the undo reports nothing to undo.
+Only a `compass.yml` edited after `--apply` makes the undo refuse, because
+discarding that edit would discard the person's work. A project in that state
+goes back by the manual steps. An earlier marker gets the same steps in its
+refusal:
 
 1. Copy the old files back from `.compass/legacy/` to their places.
 2. Remove `compass.yml` and `migration.yml`.

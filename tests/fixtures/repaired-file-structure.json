@@ -186,7 +186,7 @@
       2
     ],
     "list_items": 4,
-    "table_rows": 30
+    "table_rows": 31
   },
   "architecture/system-context.md": {
     "fences": 0,
@@ -314,7 +314,7 @@
       2,
       2
     ],
-    "list_items": 74,
+    "list_items": 85,
     "table_rows": 17
   },
   "examples/README.md": {

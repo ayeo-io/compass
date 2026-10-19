@@ -44,8 +44,8 @@ what `/compass:init` offers separately.
   **policy floors, caps, immovable gates, and blocking artifact rules** (hard) and
   its **default shapes and tie-breaking biases** (soft). You do not apply
   these by hand; the CLI does. An unmigrated 5.x project runs on its own
-  copied `governance/`, which `compass policy show` does not print but
-  `compass approach evaluate` reads.
+  copied `governance/`. `compass policy show` prints the shipped default and
+  says the project runs on its copy; `compass approach evaluate` reads the copy.
 - Read `compass.yml` for project settings (test command, multiagent
   worktree root), or `.compass/config.yml` in a 5.x project that has no
   `compass.yml`. The same `compass.yml` holds the project's changes to the
@@ -132,7 +132,13 @@ force; if it is still a spike, leave the marker in place.
    under the headings `compass issue template show intent --depth <depth>`
    prints, with one `- INT-n: <outcome>` line for each outcome, and register
    it with `compass issue artifact set intent --status draft --path <that
-   path>`. The spec author corrects it at define. Then run
+   path>`. The spec author corrects it at define. When the approach is a
+   hotfix, also write `docs/compass/<created>-<slug>/bug-report.md` under the
+   headings `compass issue template show bug-report --depth thorough` prints,
+   from what the defect report says, and register it with `compass issue
+   artifact set bug-report --status draft --path <that path>`. The define
+   stage writes the failing test against it, and `compass ship-commit`
+   refuses the hotfix until it is approved. Then run
    `compass approach evaluate --issue <slug> --write --justify
    <dimension>="<why>"` with one `--justify` for each assessed dimension (a
    changed value on a re-run needs a new one; an unchanged value keeps its

@@ -19,6 +19,7 @@ import sys
 
 from compass_pkg import classify, config_words, governance, layers, parents, policy_lint, policy_migrate
 from compass_pkg import policy_update, preset_init, preset_test, project_settings, replay
+from compass_pkg.effective import GOVERNANCE_COPY_NOTICE, has_governance_copy
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
 from compass_pkg.terminal import mark_handled, resolve_mode
@@ -72,6 +73,21 @@ def _lint_framework(args, root):
     governance/, then the layered lint of compass.yml over the shipped default,
     which is the chain a write reads. It fails when either fails, so CI
     (`scripts/validate.sh`) reports a chain a write would refuse."""
+    # The legacy check runs first. A policy that is not valid YAML raises
+    # CompassError there; it is a structure error of the lint, not a crash,
+    # and the layered lint is skipped. Other structure errors still let the
+    # layered lint run, so both reports print.
+    try:
+        governance.legacy_structure(find_governance())
+    except CompassError as exc:
+        errors = [str(exc)]
+        if resolve_mode(args) == "json":
+            _emit(args, policy_lint.lint_json(policy_lint.legacy_report(errors)), [])
+        else:
+            print("compass policy lint: FAIL")
+            for error in errors:
+                print(f"  - {error}")
+        return 1
     layered = _layered_report(args, root)
     if resolve_mode(args) == "json":
         legacy = _legacy_report()
@@ -126,7 +142,9 @@ def run_policy_effective(args):
     effective = policy_lint.resolve_effective(
         loaded.parent, loaded.project, loaded.issue, meta=loaded.meta, slug=slug,
         git_parents=loaded.git_parents)
-    _emit(args, policy_lint.effective_json(effective), policy_lint.effective_text(effective))
+    notice = GOVERNANCE_COPY_NOTICE if has_governance_copy(root) else None
+    _emit(args, policy_lint.effective_json(effective),
+          policy_lint.effective_text(effective, notice=notice))
     return 0
 
 
@@ -266,7 +284,7 @@ def register(pls):
     pld = pls.add_parser("diff", help="compare two configurations by classification "
                          "and by replaying assessments under both")
     pld.add_argument("refs", nargs="*", metavar="REF",
-                     help="default@6, project, legacy, git:<revision>, a git parent written "
+                     help="default@7, project, legacy, git:<revision>, a git parent written "
                      "as in extends: (github:<owner>/<repo>@<ref>#<sha>) or a path to a "
                      "compass.yml. Two compare A with B, one compares the project with "
                      "it, none compares the project file at git HEAD with the working file")

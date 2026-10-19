@@ -4,7 +4,8 @@ Role in the pipeline: the marketer's artifact. The marketer works PARALLEL
 to the spec, not downstream of it. Every claim must point at the scenario id
 in acceptance-criteria.md that backs it - that is the claim→scenario
 half of the traceability guardrail. The voice & positioning
-strategies in governance/strategies.md govern how it is said. Unbacked
+strategies (the shipped strategies, or your project's strategies file, if it
+has one) govern how it is said. Unbacked
 claims are resolved at ship time via launch-readiness.md; the artifact rule
 RP-ART-001 blocks shipping until they are.
 
@@ -99,8 +100,8 @@ the implementation.}}
 ## Honesty policy check (voice & positioning strategies)
 
 <!-- How this positioning describes what the product cannot yet do. No claim
-     may overstate. Checked against the voice & positioning strategies in
-     governance/strategies.md. -->
+     may overstate. Checked against the voice & positioning strategies (the
+     shipped strategies, or your project's strategies file, if it has one). -->
 
 - {{e.g. "We say 'CSV export for finance', not 'full reporting suite' - a voice strategy; the suite is a non-goal in intent.md."}}
 

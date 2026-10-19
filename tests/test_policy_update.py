@@ -156,11 +156,12 @@ def test_up_1_a_project_on_the_target_major_has_nothing_to_do(tmp_path, framewor
     assert plan.waivers == []
 
 
-def test_up_1_the_real_framework_ships_one_major_so_update_has_nothing_to_do(tmp_path):
+def test_up_1_the_real_framework_ships_two_majors_so_update_plans_the_move_to_the_live_one(
+        tmp_path):
     make = _has("policy_update", "plan")
     root = fixtures.project(tmp_path)
     plan = make(root, None)
-    assert plan.current == 6 and plan.target == 6 and plan.nothing_to_do
+    assert plan.current == 6 and plan.target == 7 and not plan.nothing_to_do
 
 
 def test_up_3_an_unusable_request_is_an_error_that_names_the_cause(tmp_path, frameworks):
@@ -534,12 +535,17 @@ def _run(cwd, *argv):
     return done.returncode, done.stdout, done.stderr
 
 
-def test_up_1_the_real_cli_on_the_only_shipped_major_has_nothing_to_do(tmp_path):
-    root = fixtures.project(tmp_path)
+def test_up_1_the_real_cli_moves_to_the_live_major_only_when_confirmed_and_to_the_kept_one_is_nothing(
+        tmp_path):
+    root = fixtures.project(tmp_path, fixtures.NO_WAIVER)
     before = (root / "compass.yml").read_text(encoding="utf-8")
     code, out, _ = _run(root, "policy", "update")
+    assert code == 1 and "compass:default@6 -> compass:default@7" in out
+    assert "needs-confirmation" in out
+    assert (root / "compass.yml").read_text(encoding="utf-8") == before
+    code, out, _ = _run(root, "policy", "update", "--to", "6")
     assert code == 0 and "nothing to do" in out and "compass:default@6" in out
-    code, out, _ = _run(root, "policy", "update", "--json")
+    code, out, _ = _run(root, "policy", "update", "--to", "6", "--json")
     assert code == 0
     doc = json.loads(out)
     assert (doc["status"], doc["written"], doc["refusal"]) == ("nothing-to-do", False, None)
@@ -550,10 +556,10 @@ def test_up_1_the_real_cli_on_the_only_shipped_major_has_nothing_to_do(tmp_path)
 
 def test_up_3_the_real_cli_exits_2_for_a_major_it_does_not_keep(tmp_path):
     root = fixtures.project(tmp_path)
-    for argv in (["--to", "7"], ["--to", "five"], ["--to", "5"]):
+    for argv in (["--to", "8"], ["--to", "five"], ["--to", "5"]):
         code, out, err = _run(root, "policy", "update", *argv)
         assert code == 2 and err.startswith("compass: "), (argv, err)
-    assert "default@7 is not available" in _run(root, "policy", "update", "--to", "7")[2]
+    assert "default@8 is not available" in _run(root, "policy", "update", "--to", "8")[2]
     empty = tmp_path / "bare"
     (empty / ".compass").mkdir(parents=True)
     code, _, err = _run(empty, "policy", "update")
@@ -1072,19 +1078,20 @@ def test_trc_007_the_byte_check_skips_when_no_release_tags_exist(tmp_path, monke
     assert _require_tag(other, KEPT_TAG) is None
 
 
-def test_trc_008_update_in_the_real_framework_exits_0_with_nothing_to_do_while_both_folders_exist(
+def test_trc_008_update_in_the_real_framework_names_both_majors_while_both_folders_exist(
         tmp_path):
     """Scenario id: `TRC-008` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
-    for folder in (ROOT / "governance/presets/default", KEPT_6):
+    for folder, major in ((ROOT / "governance/presets/default", "7"), (KEPT_6, "6")):
         assert folder.is_dir(), f"{folder.relative_to(ROOT)} does not exist"
         meta = yaml.safe_load((folder / "preset.yml").read_text(encoding="utf-8"))
-        assert str(meta["version"]).split(".")[0] == "6", folder
+        assert str(meta["version"]).split(".")[0] == major, folder
     root = fixtures.project(tmp_path)
     before = (root / "compass.yml").read_bytes()
-    for argv in (("policy", "update"), ("policy", "update", "--to", "6")):
-        code, out, err = _run(root, *argv)
-        assert code == 0 and "nothing to do" in out, (argv, out, err)
-        assert "not kept" not in err and "twice" not in err
+    code, out, err = _run(root, "policy", "update", "--to", "6")
+    assert code == 0 and "nothing to do" in out, (out, err)
+    code, out, err = _run(root, "policy", "update")
+    assert code == 1 and "compass:default@6 -> compass:default@7" in out, (out, err)
+    assert "not kept" not in err and "twice" not in err
     assert (root / "compass.yml").read_bytes() == before
 
 
@@ -1093,9 +1100,9 @@ def test_trc_009_a_major_the_framework_does_not_ship_still_exits_2(tmp_path):
     for folder in (ROOT / "governance/presets/default", KEPT_6):
         assert folder.is_dir(), f"{folder.relative_to(ROOT)} does not exist"
     root = fixtures.project(tmp_path)
-    code, _, err = _run(root, "policy", "update", "--to", "7")
+    code, _, err = _run(root, "policy", "update", "--to", "8")
     assert code == 2
-    assert "default@7 is not available: this CLI keeps default@6" in err
+    assert "default@8 is not available: this CLI keeps default@6, default@7" in err
     code, _, err = _run(root, "policy", "update", "--to", "5")
     assert code == 2 and "default@5 is not available" in err
 

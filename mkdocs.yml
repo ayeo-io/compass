@@ -49,6 +49,10 @@ exclude_docs: |
   !/install-smoke-test.md
   !/configuration.md
   !/upgrade-6-0-0.md
+  !/upgrade-7-0-0.md
+  !/github-labels.md
+  !/github-labels-walkthrough.md
+  !/waivers-and-locks.md
 
 nav:
   - Home: index.md
@@ -57,7 +61,11 @@ nav:
       - Quickstart: quickstart.md
       - Install check: install-smoke-test.md
       - Configuration: configuration.md
+      - Waivers and locks: waivers-and-locks.md
+      - GitHub labels: github-labels.md
+      - GitHub labels walkthrough: github-labels-walkthrough.md
       - Upgrading to 6.0.0: upgrade-6-0-0.md
+      - Upgrading to 7.0.0: upgrade-7-0-0.md
   - Guarantees:
       - Safety contract: safety-contract.md
       - Refusal codes: refusal-codes.md

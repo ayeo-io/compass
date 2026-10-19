@@ -45,7 +45,7 @@ from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, G
                                     STAGE_IDS, STAGE_SHIP, STAGE_VERIFY)
 
 PRESET_ID = "default"
-PRESET_VERSION = "6.0.0"
+PRESET_VERSION = "7.0.0"
 PRESET_FILES = ("dimensions", "stages", "approaches", "rules", "checks", "gates",
                 "artifacts", "readiness", "vocabulary")
 

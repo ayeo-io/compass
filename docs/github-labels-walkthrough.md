@@ -27,7 +27,7 @@ dimensions:
         add: [billing]
 ```
 
-A rule can name a label too. The labels it names in `labels_any` count as declared. See [configuration.md](configuration.md) and [policy-lint.md](policy-lint.md).
+A rule can name a label too. The labels it names in `labels_any` count as declared. See [configuration.md](configuration.md) and `docs/policy-lint.md`.
 
 ## 3. Link an issue
 

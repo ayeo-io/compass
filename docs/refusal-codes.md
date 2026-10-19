@@ -2,10 +2,11 @@
 
 Every reason code the pre-tool hook can refuse with, and the landing refusals
 of `compass ship-commit` and `compass quick-fix finish` (`checkpoint-no-outcome`,
-and `release-line-missing` and `release-line-heading`, which `docs/release-line.md`
-describes), generated from `cli/compass_pkg/refusals.py` by `compass _refusal --list`. Do not
-hand-edit the list below - regenerate it after any change to the registry,
-and `tests/test_refusal_registry.py` fails the build if it goes stale.
+`release-line-missing` and `release-line-heading`, which `docs/release-line.md`
+describes, and `project-decision-unrecorded`, which ADR-072 describes), generated
+from `cli/compass_pkg/refusals.py` by `compass _refusal --list`. Do not hand-edit
+the list below - regenerate it after any change to the registry, and
+`tests/test_refusal_registry.py` fails the build if it goes stale.
 
 A refusal always has three lines - `Blocked:`, `Why:`, `Fix:` - and ends
 with its code in brackets, e.g. `[no-red-on-record]`. Search this page for a
@@ -52,7 +53,7 @@ code from a refusal you hit.
 ### `delegation-caller-mismatch`
 
 **Blocked:** delegated approval (--as {named})
-**Why:** Claude Code reports this call as {caller}, and a delegated approval must name exactly the agent that makes it.
+**Why:** Claude Code reports this call as {caller}, and a delegated approval must name exactly the agent that makes it. A word the shell could build is refused too.
 **Fix:** run it from the agent the delegation names, with --as set to that agent's full name, or ask with compass evidence request.
 
 ### `delegation-protected`
@@ -90,6 +91,12 @@ code from a refusal you hit.
 **Blocked:** this edit
 **Why:** another session moved .compass/current-task in this session's own project from this session's issue '{previous}' to '{slug}', so this edit would count against the wrong issue.
 **Fix:** in this session, run `compass issue use {previous}` to carry on, or `compass issue use {slug}` to switch, then retry.
+
+### `project-decision-unrecorded`
+
+**Blocked:** landing of issue '{slug}'
+**Why:** technical-design.md scopes {decisions} to the whole project, and no record in architecture/decisions/ names {it}.
+**Fix:** write {path} with compass adr new, cite its id under the decision, then ship again.
 
 ### `python-missing`
 

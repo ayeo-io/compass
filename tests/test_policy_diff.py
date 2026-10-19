@@ -85,27 +85,36 @@ SET_UNKNOWN = {"schema": 1, "checks": {"no-such-check": {"set": {"severity": "ad
 
 # --- PD-1: the references ---------------------------------------------------------------
 
-@pytest.mark.parametrize("ref", ["default", "default@6", "compass:default@6",
-                                 "default@6.0.0"])
+@pytest.mark.parametrize("ref", ["default", "default@7", "compass:default@7",
+                                 "default@7.0.0"])
 def test_pd_1_the_shipped_default_has_one_label_and_its_version(ref, tmp_path):
     config = _has("resolve_ref")(ref, _project(tmp_path))
-    assert (config.ref, config.kind, config.default_version) == ("default@6", "default",
-                                                                 "6.0.0")
+    assert (config.ref, config.kind, config.default_version) == ("default@7", "default",
+                                                                 "7.0.0")
     assert config.capabilities == ()
     assert "approaches" in config.config
+
+
+@pytest.mark.parametrize("ref", ["default@6", "compass:default@6", "default@6.0.0"])
+def test_pd_1_the_kept_major_is_read_from_its_own_folder(ref, tmp_path):
+    config = _has("resolve_ref")(ref, _project(tmp_path))
+    live = _has("resolve_ref")("default", _project(tmp_path))
+    assert (config.ref, config.kind) == ("default@6", "default")
+    assert config.default_version.startswith("6.")
+    assert config.digest != live.digest
 
 
 def test_pd_1_another_major_of_the_default_is_refused_by_name(tmp_path):
     from compass_pkg.core import CompassError
     with pytest.raises(CompassError) as caught:
-        _has("resolve_ref")("default@7", _project(tmp_path))
-    assert "default@7" in str(caught.value) and "default@6" in str(caught.value)
+        _has("resolve_ref")("default@8", _project(tmp_path))
+    assert "default@8" in str(caught.value) and "default@7" in str(caught.value)
 
 
 def test_pd_1_a_project_with_no_file_is_the_shipped_default(tmp_path):
     resolve = _has("resolve_ref")
     root = _project(tmp_path)
-    project, default = resolve("project", root), resolve("default@6", root)
+    project, default = resolve("project", root), resolve("default@7", root)
     assert (project.ref, project.kind) == ("project", "project")
     assert project.digest == default.digest
     assert project.config == default.config
@@ -117,7 +126,7 @@ def test_pd_1_a_project_file_is_layered_over_the_default(tmp_path):
     project = resolve("project", root)
     assert project.config["checks"]["suite-passed"]["severity"] == "advisory"
     assert project.digest != resolve("default", root).digest
-    assert project.default_version == "6.0.0"
+    assert project.default_version == "7.0.0"
 
 
 def test_pd_1_a_path_is_one_file_over_the_default_and_the_label_has_no_path(tmp_path):
@@ -243,7 +252,7 @@ def test_pd_1_the_arguments_default_as_the_design_says():
     refs = _has("default_refs")
     assert refs([]) == ("git:HEAD", "project")
     assert refs(["proposed.yml"]) == ("project", "proposed.yml")
-    assert refs(["default@6", "project"]) == ("default@6", "project")
+    assert refs(["default@7", "project"]) == ("default@7", "project")
     from compass_pkg.core import CompassError
     with pytest.raises(CompassError):
         refs(["a", "b", "c"])
@@ -252,7 +261,7 @@ def test_pd_1_the_arguments_default_as_the_design_says():
 # --- the small configurations for the replay tests ---------------------------------
 
 def _config(label, config, capabilities=(), kind="project"):
-    return _api().Config(label, kind, config, tuple(capabilities), {}, "6.0.0")
+    return _api().Config(label, kind, config, tuple(capabilities), {}, "7.0.0")
 
 
 def _pair(change=None, labels=None):
@@ -739,14 +748,14 @@ def looser_run(tmp_path_factory):
     loosened project, with `--exit-code` and `--open`: the slow part of the
     end-to-end tests is done once."""
     root = _live_project(tmp_path_factory.mktemp("looser"))
-    code, document, err = _diff_json(root, "--exit-code", "--open", "default@6", "project")
+    code, document, err = _diff_json(root, "--exit-code", "--open", "default@7", "project")
     return root, code, document, err
 
 
 @pytest.fixture(scope="module")
 def looser_text(looser_run):
     root = looser_run[0]
-    return _diff_cli(root, "default@6", "project")
+    return _diff_cli(root, "default@7", "project")
 
 
 # --- PD-7: the exit codes --------------------------------------------------------------------
@@ -766,7 +775,7 @@ def test_pd_7_without_it_a_difference_still_exits_0(looser_text):
 
 def test_pd_7_identical_configurations_exit_0_even_with_exit_code(tmp_path):
     root = _project(tmp_path)
-    for argv in (("default@6", "project"), ("--exit-code", "default@6", "project")):
+    for argv in (("default@7", "project"), ("--exit-code", "default@7", "project")):
         code, out, err = _diff_cli(root, *argv)
         assert code == 0, (argv, out, err)
         assert "no difference" in out
@@ -774,7 +783,7 @@ def test_pd_7_identical_configurations_exit_0_even_with_exit_code(tmp_path):
 
 def test_pd_7_an_unreadable_or_unresolvable_input_exits_2(tmp_path, tmp_path_factory):
     root = _project(tmp_path)
-    cases = [(("nonsense",), "nonsense"), (("default@6", "generation:demo:1"),
+    cases = [(("nonsense",), "nonsense"), (("default@7", "generation:demo:1"),
                                            "stored generation"),
              (("--exit-code", "missing.yml"), "missing.yml")]
     for argv, said in cases:
@@ -782,7 +791,7 @@ def test_pd_7_an_unreadable_or_unresolvable_input_exits_2(tmp_path, tmp_path_fac
         assert code == 2, (argv, out, err)
         assert said in err, (argv, err)
     broken = _project(tmp_path_factory.mktemp("broken"), BROKEN)
-    code, out, err = _diff_cli(broken, "--exit-code", "default@6", "project")
+    code, out, err = _diff_cli(broken, "--exit-code", "default@7", "project")
     assert code == 2 and "project" in err and "policy lint" in err
 
 
@@ -837,9 +846,9 @@ def _example_document():
     before_config = fixtures.base()
     after_config = fixtures.base()
     after(after_config)
-    a = _api().Config("default@6", "default", before_config, (), {}, "6.0.0")
+    a = _api().Config("default@7", "default", before_config, (), {}, "7.0.0")
     b = _api().Config("project", "project", after_config, ("artifact-freshness",), {},
-                      "6.0.0")
+                      "7.0.0")
     layer = {"checks": {"no-secrets": {"set": {"severity": "advisory"}}}}
     archive = [
         _has("Issue")("broken-issue", None, None, None, True),
@@ -994,7 +1003,7 @@ def test_pd_8_the_command_prints_the_documented_shape_and_no_path(looser_run):
 
 def test_pd_8_the_command_prints_the_document_in_one_byte_form(tmp_path):
     root = _project(tmp_path)
-    code, out, _ = _run(root, "policy", "diff", "--json", "default@6", "project")
+    code, out, _ = _run(root, "policy", "diff", "--json", "default@7", "project")
     assert code == 0
     from compass_pkg import policy_lint
     assert out == policy_lint.dumps(json.loads(out)) + "\n"
@@ -1058,7 +1067,7 @@ def test_pd_9_lines_stay_within_a_hundred_columns_and_use_no_em_dash():
 
 def test_pd_9_the_command_prints_the_same_lines(looser_text):
     code, out, _ = looser_text
-    assert out.splitlines()[0] == "compass policy diff: default@6 -> project"
+    assert out.splitlines()[0] == "compass policy diff: default@7 -> project"
     assert "classification: loosening" in out
     # 72 closed points; the labels set crosses four labels and the two
     # documents the artifact rules read (ADR-070).
@@ -1088,7 +1097,7 @@ def test_pd_10_the_verb_sits_beside_lint_and_effective_and_describes_itself(tmp_
     for verb in ("lint", "show", "diff"):
         assert verb in listing
     text = _help(root, "policy", "diff")
-    for word in ("--open", "--exit-code", "--json", "default@6", "git:", "legacy"):
+    for word in ("--open", "--exit-code", "--json", "default@7", "git:", "legacy"):
         assert word in text, word
 
 
@@ -1155,7 +1164,7 @@ def test_pd_10_the_doc_documents_the_references_the_options_and_every_json_key()
             + OPEN_SECTION_KEYS + OPEN_KEYS + UNRESOLVED_KEYS + WAIVER_KEYS)
     for key in keys:
         assert f"`{key}`" in text, key
-    for word in ("--open", "--exit-code", "--json", "default@6", "git:<revision>", "legacy",
+    for word in ("--open", "--exit-code", "--json", "default@7", "git:<revision>", "legacy",
                  "generation:", "grid", "labels", "archive", "five"):
         assert word in text, word
     for kind in _api().CONFIG_KINDS:
@@ -1202,13 +1211,13 @@ def test_pd_9_unreadable_manifests_are_named_in_the_text():
     assert "unreadable manifests (not replayed): bad" in text
 
 
-@pytest.mark.parametrize("ref", ["compass:defaultfoo", "compass:default@7", "compass:defaults"])
+@pytest.mark.parametrize("ref", ["compass:defaultfoo", "compass:default@8", "compass:defaults"])
 def test_pd_1_only_the_exact_prefixed_default_is_the_default(ref, tmp_path):
     from compass_pkg.core import CompassError
     with pytest.raises(CompassError) as caught:
         _has("resolve_ref")(ref, _project(tmp_path))
     assert ref in str(caught.value)
-    assert _has("resolve_ref")("compass:default", _project(tmp_path)).ref == "default@6"
+    assert _has("resolve_ref")("compass:default", _project(tmp_path)).ref == "default@7"
 
 
 def test_pd_1_an_error_names_the_reference_once(tmp_path):

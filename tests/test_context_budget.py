@@ -275,3 +275,13 @@ def test_rule_four_pointer_keeps_heading():
         encoding="utf-8")
     assert "Reproduce a reported bug on current code" in _flat(body)
     assert len(body.splitlines()) <= 200
+
+
+def test_trc_026():
+    """The `language` line is added by the session-start hook, so the shipped
+    contract does not grow (issue `language-key-and-us-english`)."""
+    text = CONTRACT.read_text(encoding="utf-8")
+    assert len(text) <= 2900
+    assert CONTRACT_TARGET == 2900
+    assert "Write all prose in" not in text
+    warn_if_over("compass-contract.md", len(text), CONTRACT_TARGET, "characters")

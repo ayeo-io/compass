@@ -73,6 +73,21 @@ def _lint_framework(args, root):
     governance/, then the layered lint of compass.yml over the shipped default,
     which is the chain a write reads. It fails when either fails, so CI
     (`scripts/validate.sh`) reports a chain a write would refuse."""
+    # The legacy check runs first. A policy that is not valid YAML raises
+    # CompassError there; it is a structure error of the lint, not a crash,
+    # and the layered lint is skipped. Other structure errors still let the
+    # layered lint run, so both reports print.
+    try:
+        governance.legacy_structure(find_governance())
+    except CompassError as exc:
+        errors = [str(exc)]
+        if resolve_mode(args) == "json":
+            _emit(args, policy_lint.lint_json(policy_lint.legacy_report(errors)), [])
+        else:
+            print("compass policy lint: FAIL")
+            for error in errors:
+                print(f"  - {error}")
+        return 1
     layered = _layered_report(args, root)
     if resolve_mode(args) == "json":
         legacy = _legacy_report()

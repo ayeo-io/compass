@@ -721,6 +721,13 @@ of 180 characters, and the same under a bracket glob), 1.4 for 20 names and
 leading `:` lines with 20 names are accepted in 1.1 seconds. The next larger
 command of each of these shapes is refused, in at most 2.1 seconds.
 
+These times were measured on macOS with bash 3.2. The Linux runner of the
+continuous integration takes up to about twice as long for the shapes made of
+many leading lines: the hook took 4.1 seconds for 40000 leading `:` lines. That
+is under the fuse at 8 seconds and the time limit of 15 seconds. The tests
+therefore allow 6 seconds for an accepted or refused command, and not the 3.75
+seconds that was the aim on the first machine.
+
 Commands of thousands of assignments, 20 names, targets and globs, in seconds
 after the change, with the time before it in brackets: 5000 assignments, 380
 targets and 30 globs 1.8 (5.5), 3000 assignments, 150 targets and 300 globs 1.5

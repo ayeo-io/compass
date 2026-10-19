@@ -437,7 +437,14 @@ def test_a_broken_configuration_reader_still_refuses_with_the_cache(
 
 TARGET_LIMIT = 400
 OPENER_LIMIT = 700
-IDLE = 3.75      # seconds: a quarter of the 15 s hook timeout
+# Seconds. The aim on the machine where the limits were measured (macOS, bash
+# 3.2) is 3.75, a quarter of the 15 s hook time-out. The Linux runner of the
+# continuous integration takes up to about twice as long for the shapes made of
+# many leading lines (4.1 s measured), so the tests allow 6: above that
+# measurement, and below the 7 s at which the 8 s fuse can trip, so a refusal
+# by the fuse cannot pass for a quick one. The old hook took 10 to over 60 s on
+# these shapes, which 6 s still catches.
+IDLE = 6.0
 
 
 def _complex(r):

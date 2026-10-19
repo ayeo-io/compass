@@ -103,7 +103,10 @@ What holds the boundary, and what does not:
   worded. The approval binds to the request Compass showed, and a g5
   delegation needs the typed-back code. The code is 64 bits, 16 hex
   characters in groups of four, so its salted hash cannot be searched within
-  the 10-minute window.
+  the 10-minute window. That protects the stored hash only. The transcript
+  shows the code in clear, so for the transcript the person's Enter is the
+  barrier (see the limit on a script written by one command and run by
+  another).
 - Each typed command is recorded once. The hook refuses `/compass:approve`,
   `/compass:reject` and `/compass:delegate` when the input has no
   `prompt_id`, and refuses a `prompt_id` that a record, a closed request or a
@@ -129,13 +132,90 @@ The pre-tool hook refuses the agent's tool calls on approval state
 (`cli/compass_pkg/approval_guard.py`). Each path check ignores letter case,
 because macOS opens a path in any case.
 
-- Edit or Write on an issue's `approval-requests/` files, and a Bash command
-  that names that folder or `hooks/prompt-approval.sh`
+**How the guard reads a Bash command.** The guard reads a command as words
+(`cli/compass_pkg/approval_words.py`): simple commands split at `;`, `&&`,
+`||`, `&`, a newline, a parenthesis and a pipe, with quotes removed as the
+shell removes them. It judges each command name, each redirect target and each
+argument. It does not judge text, so a commit message or a search pattern that
+mentions a protected folder is allowed. The text positions are a fixed list
+(`cli/compass_pkg/approval_guard_text.py`), one row for each, and a widening is
+a visible change that needs a test row:
+
+- every argument of `echo` and `printf`;
+- the value of `-m` and `--message` of `git commit`, `tag`, `merge` and
+  `revert`, and of `--grep`, `-S` and `-G` of `git log`;
+- the search pattern of `grep`, `egrep`, `fgrep`, `rg` and `git grep`;
+- the value of `--body`, `-b`, `--title` and `-t` of `gh`, and of `--title`,
+  `--note`, `--reason`, `--scope` and `--description` of `compass`;
+- the heredoc body and the here-string of `cat`, `tee`, `gh`, `git` and
+  `compass`.
+
+A heredoc body is text for `git` only in a `commit`, `tag`, `merge` or
+`revert`. The value of an option that names a file, such as `--body-file`, `-F`
+and `-f`, is a word and is judged.
+
+**When text is judged again.** The guard judges text as it would judge words
+in each case below, because the text can run:
+
+- inside `$(...)`, backticks and `<(...)`, which the reader reads again as
+  commands;
+- when a later stage of the same pipeline is not a command that only reads
+  text (`cat`, `tee`, `head`, `tail`, `wc`, `sort`, `uniq`, `cut`, `tr`,
+  `less`, `more`, `grep`, `egrep`, `fgrep`, `rg`, `diff`, `pbcopy`), such as
+  `echo "..." | sh`;
+- a heredoc or a here-string for a shell or any other command that is not in
+  the lists, such as `bash <<'EOF'` and `python3 <<EOF`;
+- the argument of `bash -c`, `sh -c` and `eval`;
+- a script that one command writes with a redirect, `tee`, `echo` or `printf`
+  and then runs with a shell, `source`, `.` or as a command name. The refusal
+  names the script.
+
+**What the guard still judges by the whole text.** When the reader cannot read
+a command (an open quote, parenthesis, backtick or `$(`, a heredoc with no
+closing delimiter, nesting over 32 levels), the guard judges the whole text,
+as it did before. It does the same when the command holds `>(`, a function or
+alias definition, a runner (`sh`, `eval`, `source`, `xargs`) beside a
+substitution, a `case` inside `$(...)`, or a quoted `${...}`. An unknown
+command stays refused as before: a command outside the lists is judged word
+by word, with no text skipped.
+
+**The exemptions.** An exemption removes one thing from one word, and holds
+only when the command stands alone. No exemption applies inside a pipe or a
+substitution. The exemptions are:
+
+- `ls`, `wc`, `stat`, `du`, `test` and `[` may name a request folder as a bare
+  path argument. `ls .compass/delegations` is refused: the delegation folder
+  has no exemption;
+- those commands, `cat`, `head`, `tail`, `grep`, `rg`, `diff`, `chmod` and
+  `git log`, `show`, `diff`, `blame`, `status`, `ls-files`, `add`, `mv` and
+  `rm` may name `hooks/prompt-approval.sh` as a bare argument. A `VAR=` word,
+  `--output`, `--pre`, `--exec` and the word after `-f`, `--file` or
+  `--files0-from` are never bare arguments, and a runner or `cp` has no
+  exemption;
+- `ls` alone, with no `-R`, `-d` or glob, may name a folder strictly above
+  the configuration folder, such as the home folder. `cd` into that folder
+  and every other command on it stay refused.
+
+**The auto-memory folder.** Read, Grep, Edit and Write may name a file inside
+`<configuration folder>/projects/<one folder>/memory/`, in any `.claude*`
+configuration folder. The guard joins the path to the call's `cwd`, collapses
+`..`, folds letter case and resolves each symbolic link, and the result must
+still be inside that folder. Edit and Write need a file inside the folder; Read
+and Grep may name the folder itself. A path with a glob or brace character, a
+Grep glob with a `..` segment, a path that leaves the folder and a symbolic
+link that points out of it are refused. A Bash command that names the folder
+stays refused, because the guard cannot follow `cd` out of it.
+
+The guard refuses these calls:
+
+- Edit or Write on an issue's `approval-requests/` files, and a Bash word that
+  names that folder or `hooks/prompt-approval.sh`
   (`approval-request-protected`);
 - Edit, Write, Read or Grep under `.compass/delegations/`, a Grep whose glob
-  names `delegations`, and a Bash command that names that folder
+  names `delegations`, and a Bash word that names that folder
   (`delegation-protected`). A Grep over the whole project still reaches the
-  folder; the 64-bit code is what keeps the stored hash useless;
+  folder; the stored hash and the 64-bit code are what keep the confirmation
+  code of a delegation out of reach;
 - a Grep glob, or a Bash word with `*`, `?` or `[`, that can match the
   delegation folder or a file in it, such as `d*/*`, `deleg*/*`,
   `deleg?tions`, `**/confirm-*` or `cat .compass/deleg*/*`
@@ -201,26 +281,69 @@ because macOS opens a path in any case.
   delegated approval, such as `git update-index --assume-unchanged`, is not
   checked. The call is the main agent only when the hook input has neither
   `agent_type` nor `agent_id`, and the CLI takes no abbreviated flag, so
-  `--deleg` cannot pass unseen. A command that only quotes a delegated
-  approval, such as a commit message, needs a matching `--as` too;
+  `--deleg` cannot pass unseen. A commit message or other text that names
+  `--delegated` or `evidence approve` is text and is not judged. A real
+  `compass evidence approve --delegated` in the same command still needs
+  a matching `--as`. The brace test still reads the values of the `compass`
+  text options, and only those: a compact value with a comma and no space is
+  refused there;
 - Read or Grep on the session transcript's folder, inside it or on any
   folder above it, such as the configuration folder or the home folder
   (`transcript-protected`). A relative path is read from the call's `cwd`,
-  and a Grep with no path searches its `cwd`. A Bash command is refused when
+  and a Grep with no path searches its `cwd`. A Bash word is refused when
   it names the transcript, a `.claude*/projects` folder, a configuration
   folder directly under the home folder (such as `~/.claude-ayeo`), or a
   folder above the transcript, such as `~`, `~<name>` or `$HOME`, once the
   shell's quotes are removed. A word with a glob or a brace counts by the
-  folder before it, so a `cat` of a glob under `~/.claude-ayeo` is refused. So are `ls ~` and `cd ~`. A
+  folder before it, so a `cat` of a glob under `~/.claude-ayeo` is refused.
+  A non-recursive `ls` of the home folder is allowed, as the exemption above
+  says. `cd ~`, `grep -r x ~` and every other command on a folder above the
+  transcript are refused. A
   project's own `.claude` folder is not refused. Claude Code writes a hook's
   block message to the transcript (measured on 2.1.301), and the block
   message is where the person sees the code that confirms a g5 delegation.
   The hook reads a Grep's path with or without `jq`.
 
-The Bash checks match text, so they stop the agent's ordinary use and not a
-deliberate workaround. These still reach the transcript or run a delegated
-approval as another agent, as they did before this check:
+The Bash checks judge words, so they stop the agent's ordinary use and not a
+deliberate workaround. These limits remain. Most of them let a call reach the
+transcript or run a delegated approval as another agent, and two (the memory
+folder link and `test -f`) state where the guard is exact or too strict:
 
+- words built at run time: a variable, the output of a command substitution
+  that a shell does not run in the same call, and arguments built by `xargs`
+  or `printf`. The guard sees the word as written, not as the shell builds it;
+- a glob in the name of a protected folder, which the guard can only test
+  against sample paths (the rules above), and a glob that expands against a
+  file the agent wrote;
+- a script written by one command and run by another. The guard follows a
+  script only when one command both writes and runs it. A script that one
+  Bash call writes and a later call runs is not followed. What holds depends on
+  what the script reads:
+  - for the delegation files, the stored hash and the 64-bit code. The hash is
+    stored and the code is not, so a script cannot read the code from the
+    files;
+  - for the transcript, which shows the confirmation code in clear, only a
+    person's typed command confirms a delegation. The prompt hook
+    (`hooks/prompt-approval.sh`) runs only on the host's `UserPromptExpansion`
+    event, it acts only on a command whose `command_source` is `plugin`, and a
+    delegation is confirmed only from that event. The agent cannot type the
+    command. An agent
+    that reads the code in the transcript can still word a prompt suggestion
+    that holds it, so the person's Enter is the only barrier, and the code adds
+    nothing once the transcript is read;
+- a relative path after `cd`: the guard sees only the `cwd` of the call, so
+  `cd .compass && cat d*/*` is not stopped, and neither is `cd` into the
+  memory folder and then a read of a file one folder up. This is also why a
+  Bash command on the memory folder stays refused;
+- an option of an exempt command that runs a file the guard does not read: the
+  exempt commands refuse the options the lists name (`--output`, `--pre`,
+  `--exec`, `-f`, `--file`, `--files0-from`), and an option they do not name is
+  judged as an ordinary word;
+- a symbolic link inside the memory folder that a Grep over the folder follows
+  is not detected, because the guard resolves the Grep path and not what
+  `rg` finds inside it;
+- `test -f <request folder file>` is refused, because `-f` is an option that
+  names a path;
 - the root folder alone, such as `grep -r x /`, or a glob in the first
   folder of a path, such as `/U*/...`, because `/` is also an argument of
   `tr`, `cut` and `expr`;

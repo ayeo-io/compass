@@ -49,7 +49,7 @@ STATE_TEMPLATE = """\
 # What created this project, and when. The pre-tool hook's first refusal uses
 # this to say where Compass came from - a user who never ran `init` themselves
 # should not meet an unexplained block.
-initialised:
+initialized:
   by: "{by}"
   at: "{at}"
 

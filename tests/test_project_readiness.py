@@ -462,8 +462,8 @@ def test_prc_8_record_missing_unreadable_summary_and_line(tmp_path):
 
 #: What the record module may import: it is read by the session-start hook,
 #: so it must not load the policy, the checks or a command module.
-RECORD_IMPORTS = {"compass_pkg.atomic_io", "compass_pkg.project_settings",
-                  "compass_pkg.readiness_registry"}
+RECORD_IMPORTS = {"compass_pkg.atomic_io", "compass_pkg.old_names",
+                  "compass_pkg.project_settings", "compass_pkg.readiness_registry"}
 
 
 def test_prc_8_record_module_imports_stay_small():

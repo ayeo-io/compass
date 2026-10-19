@@ -92,11 +92,13 @@ code from a refusal you hit.
 **Why:** no failing test is on record for issue '{slug}' - the red-before-green strategy applies here.
 **Fix:** run compass tdd-red --scenario <id> -- <your failing test command>, then retry this edit.
 
-### `not-initialised`
+### `not-initialized`
 
 **Blocked:** this edit
 **Why:** no issue has been assessed yet - {detail}.
 **Fix:** run /compass:assess before changing code, or /compass:quick-fix for a small, low-risk change.
+
+**Old code:** `not-initialised` is read until 8.0.0.
 
 ### `pointer-moved`
 

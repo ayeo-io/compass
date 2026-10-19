@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 import yaml
 
 from compass_pkg import catalogue_spec as spec
+from compass_pkg import old_names
 from compass_pkg import (classify, layers, legacy_adapter, merge, policy_lint,
                          project_settings, retired, shipped_releases, waivers)
 from compass_pkg.atomic_io import atomic_write_text
@@ -181,7 +182,7 @@ def refusals(root):
 
 # --- the settings --------------------------------------------------------------------
 
-STATE_KEYS = ("initialised", "records_signed_since")
+STATE_KEYS = ("initialized", "initialised", "records_signed_since")  # us-english-scan: allow - old name read until 8.0.0
 DROPPED = {"version": "schema: 1 replaces it"}
 
 
@@ -209,7 +210,11 @@ def _fold_settings(root, made):
     for key, value in old.items():
         target = "adoption" if key == "mode" else renames.get(key, key)
         if key in STATE_KEYS:
-            made.state[key] = copy.deepcopy(value)
+            # The state file is written with the current key; when both
+            # spellings are there the current one wins.
+            current = old_names.current("state_key", key)
+            if key == current or current not in made.state:
+                made.state[current] = copy.deepcopy(value)
         elif key in DROPPED:
             made.dropped.append({"key": key, "reason": DROPPED[key]})
         elif (key == "mode" or target in counted) and target not in settings:

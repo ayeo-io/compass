@@ -142,7 +142,7 @@ def test_sh2_the_state_file_wins_over_the_old_file(box):
                                   "initialised: just-text\n", "other: 1\n"])
 def test_sh2_a_missing_or_broken_record_adds_nothing(box, body):
     exit_code, code, err = _refusal(box, state=body)
-    assert (exit_code, code) == (2, "not-initialised"), err
+    assert (exit_code, code) == (2, "not-initialized"), err
     assert "initialised by" not in err, err
 
 

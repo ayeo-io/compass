@@ -273,7 +273,7 @@ def test_PM_5_settings_fold_into_compass_yml_and_state_goes_to_state_yml(tmp_pat
     assert list(doc) == ["schema", "extends", "adoption", "autonomy", "governance_drift",
                          "enforcement", "multiagent", "project"]
     assert made.result == "ready"
-    assert made.state == {"initialised": {"by": "compass init", "at": "2026-01-01"},
+    assert made.state == {"initialized": {"by": "compass init", "at": "2026-01-01"},
                           "records_signed_since": "2026-09-24"}
     assert made.moved == [
         {"key": "mode", "to": "adoption"}, {"key": "autonomy", "to": "autonomy"},

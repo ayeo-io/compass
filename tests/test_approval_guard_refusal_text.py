@@ -30,9 +30,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
 
 from approval_guard_cases import (CALLER, DEL, EXEMPT_COMMANDS, MIN_PER_EXEMPT,  # noqa: E402
-                                  MIN_PER_THING, REFUSED, REQ, REQUEST, SCRIPT_EXEMPT_COMMANDS,
-                                  SCRIPT_REFUSED, THINGS, TRN, UNREFUSED_ON_BASE, bash_event,
-                                  build_world, drop_world, payload, run_hook, verdict)
+                                  MIN_PER_THING, REFUSED, REQ, REQUEST, THINGS, TRN,
+                                  UNREFUSED_ON_BASE, bash_event, build_world, drop_world,
+                                  payload, run_hook, verdict)
 
 CONTRACT = ROOT / "docs" / "safety-contract.md"
 CLI = ROOT / "cli" / "compass"
@@ -157,12 +157,13 @@ def test_trc_032_a_long_command_is_judged_within_two_seconds(world):
 def test_trc_053_a_very_long_or_deeply_nested_command_is_judged_within_two_seconds(world):
     # The hook starts the guard only for a command that holds a protected name, so each
     # command holds one inside its message. Without it the hook returns before the guard
-    # runs and the time says nothing about the guard. A command nested over 32 levels
-    # cannot be read, so the guard judges its whole text and refuses the name.
+    # runs and the time says nothing about the guard. A message with a substitution is not
+    # simple, so the guard judges the whole text and refuses the name, however deep it nests.
     name = " prompt-approval.sh "
-    readable = 'git commit -m "' + "$(" * 20 + "x" + ")" * 20 + name + "a" * 20000 + '"'
-    unreadable = 'git commit -m "' + "$(" * 200 + "x" + ")" * 200 + name + "a" * 20000 + '"'
-    for command, status in ((readable, 0), (unreadable, 2)):
+    nested = 'git commit -m "' + "$(" * 20 + "x" + ")" * 20 + name + "a" * 20000 + '"'
+    deep = 'git commit -m "' + "$(" * 200 + "x" + ")" * 200 + name + "a" * 20000 + '"'
+    plain = 'git commit -m "' + "word " * 8000 + name + "a" * 20000 + '"'
+    for command, status in ((nested, 2), (deep, 2), (plain, 0)):
         started = time.perf_counter()
         result = run_hook(world, bash_event(world, command))
         elapsed = time.perf_counter() - started
@@ -203,7 +204,7 @@ def test_the_findings_rows_are_not_in_the_table():
 
 
 def test_trc_054_each_exempt_command_has_at_least_three_counter_examples(world, in_process):
-    assert len(EXEMPT_COMMANDS) == 15
+    assert len(EXEMPT_COMMANDS) == 6
     refused = Counter(case.exempt for case in REFUSED
                       if case.exempt and _outcome(in_process, world, case) == case.code)
     short = {name: refused[name] for name in EXEMPT_COMMANDS if refused[name] < MIN_PER_EXEMPT}
@@ -214,17 +215,13 @@ def test_trc_054_each_exempt_command_has_at_least_three_counter_examples(world, 
 def test_trc_065_the_exempt_commands_in_the_code_are_the_commands_the_table_attacks(
         world, in_process):
     """A command added to an exemption table in the code, without three calls in the shared
-    table that stay refused, fails here. The lists are read from the code, not copied."""
+    table that stay refused, fails here. The lists are read from the code, not copied. A
+    command with an exemption must also be one the simple-command gate lets through."""
+    from compass_pkg import approval_words
     assert in_process.exempt_commands() == set(EXEMPT_COMMANDS), (
         "the code exempts commands the table does not attack, or the reverse: "
         f"{in_process.exempt_commands() ^ set(EXEMPT_COMMANDS)}")
-    assert in_process.script_commands() == set(SCRIPT_EXEMPT_COMMANDS), (
-        f"{in_process.script_commands() ^ set(SCRIPT_EXEMPT_COMMANDS)}")
-    refused = Counter(case.exempt for case in SCRIPT_REFUSED
-                      if _outcome(in_process, world, case) == case.code)
-    short = {name: refused[name] for name in SCRIPT_EXEMPT_COMMANDS
-             if refused[name] < MIN_PER_EXEMPT}
-    assert not short, f"fewer than {MIN_PER_EXEMPT} refused calls for {short}"
+    assert set(in_process.EXEMPT) <= set(approval_words.COMMANDS)
 
 
 # --- the documents -------------------------------------------------------------------------------
@@ -233,14 +230,18 @@ def test_trc_065_the_exempt_commands_in_the_code_are_the_commands_the_table_atta
 #: is the wording of the spec; the comparison ignores letter case, backticks and
 #: line breaks.
 CONTRACT_PHRASES = (
-    "reads a command as words",
+    "reads a simple command as words",
+    "judges any other command by its whole text",
+    "defense in depth",
+    "not a hard boundary",
     "auto-memory folder",
     "symbolic link",
     "words built at run time",
     "a glob in the name of a protected folder",
     "written by one command and run by another",
     "a relative path after cd",
-    "an option of an exempt command that runs a file",
+    "an earlier bash call defined",
+    "a git alias, git hook or git config",
 )
 
 
@@ -263,16 +264,19 @@ def test_trc_035_the_refusal_reference_is_current():
 
 def test_trc_066_the_docs_state_the_exemptions_the_code_holds(in_process):
     """The safety contract and the guard's own docstring name every command the code
-    exempts, and neither lists `git mv` or `git rm` as a reader of the script."""
+    exempts and every command the gate lets start a simple command, and neither lists a
+    reader of the script that the code does not exempt."""
+    from compass_pkg import approval_words
     texts = {"the safety contract": _normal(_approval_section()),
              "the approval_guard docstring": _normal(in_process.__doc__)}
-    names = in_process.exempt_commands() | in_process.script_commands()
+    names = in_process.exempt_commands() | set(approval_words.COMMANDS)
     missing = {label: sorted(n for n in names if n.split()[-1] not in text.replace(",", " ").split())
                for label, text in texts.items()}
     assert not any(missing.values()), missing
-    stale = re.compile(r"\badd,? (?:mv|or mv)\b|\bmv (?:and|or) rm\b")
+    stale = re.compile(r"\badd,? (?:mv|or mv)\b|\bmv (?:and|or) rm\b|\bchmod\b[^.]*\bexemption\b"
+                       r"|\bhead, tail\b|\bgit log, show\b")
     listed = [label for label, text in texts.items() if stale.search(text)]
-    assert not listed, f"{listed} still list git mv or git rm as a reader of the script"
+    assert not listed, f"{listed} still list a reader of the script that the code does not exempt"
 
 
 def test_trc_056_the_safety_contract_no_longer_states_the_replaced_rules():
@@ -280,7 +284,10 @@ def test_trc_056_the_safety_contract_no_longer_states_the_replaced_rules():
     replaced = {
         "a commit message quoting a delegated approval needs a matching --as":
             r"commit message,? needs a matching --as",
-        "ls ~ is refused": r"so are ls ~ and cd ~",
+        "text is never judged": r"it does not judge text\b",
+        "the word reader splits at a pipe": r"simple commands split at",
+        "text is judged again": r"when text is judged again",
+        "only a pipe stage that reads text": r"only reads text \(",
     }
     present = [name for name, pattern in replaced.items() if re.search(pattern, section)]
     assert not present, f"the approval guard section still states: {present}"

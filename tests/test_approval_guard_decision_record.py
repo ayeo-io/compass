@@ -1,5 +1,6 @@
 """Scenario `TRC-055` of issue `hooks-stop-refusing-harmless-work`: one new
-decision record states the rule that the approval guard judges words, not text.
+decision record states the rule that the approval guard reads a simple command
+as words and judges every other command by its whole text.
 
 The record is made by `compass decision record the-approval-guard-judges-words-not-text`,
 which dates the file for the day it runs, so the test finds it by the slug and
@@ -18,10 +19,12 @@ PATTERN = "*-the-approval-guard-judges-words-not-text.md"
 
 #: Statement -> the phrases that show the record makes it.
 STATEMENTS = {
-    "what is text and what is judged again": ("what is text", "judged again"),
-    "the table of nine loosenings": ("nine loosenings",),
-    "why an unknown command stays refused": ("an unknown command stays refused",),
-    "the accepted write-then-run limit": ("written by one command and run by another",),
+    "what a simple command is, and what is text": ("what is a simple command", "what is text"),
+    "the table of loosenings": ("the loosenings",),
+    "the whole-text judgement, and why an unknown command stays refused": (
+        "whole-text judgement", "an unknown command stays refused"),
+    "the accepted write-then-run limit, as defense in depth": (
+        "written by one command and run by another", "not a hard boundary", "#247"),
     "no exemption applies inside a pipe or a substitution": (
         "no exemption applies inside a pipe or a substitution",),
     "the replaced rule, with the older decisions left standing": (

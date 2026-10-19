@@ -1,27 +1,16 @@
-"""The reader of issue `hooks-stop-refusing-harmless-work`:
-`compass_pkg.approval_words.read` turns a Bash command into pipelines of simple
-commands, and holds syntax only (no protected name, no policy).
+"""The simple-command gate of issue `hooks-stop-refusing-harmless-work`:
+`compass_pkg.approval_words.simple` reads a Bash command as words only when the
+whole command is simple, and returns None for everything else, so the approval
+guard (`approval_guard`) judges that command by its whole text.
 
-No scenario owns these cases; they fix the contract that the guard builds on
-(`Command`, `Pipeline`, `Unreadable`, `MAX_DEPTH`). The module does not exist
-before the change, so each test imports it inside the test and fails with an
-import error until it does. Each case states what the reader returns for one
-construct:
-
-- a `;` and a `&&` split a command, and a pipe gives two stages of one pipeline;
-- quotes are removed, and ANSI-C quoting is kept in `raws`;
-- `$(...)`, backticks, `<(...)` and `>(...)` give nested pipelines, also inside
-  a double-quoted string and an unquoted heredoc body;
-- a quoted heredoc is literal and has no nested pipeline; `<<-` strips tabs;
-  `<<<` fills `herestring`;
-- redirect forms give a target, and `2>&1` gives none;
-- a comment ends a line, and leading `VAR=x` words are `assigns`;
-- an open quote, an open `$(`, a heredoc with no end and 33 nested levels raise
-  `Unreadable`, and 20,000 characters are read in under a second.
+Scenario: `TRC-067`. The gate fails closed. A command is simple when it is one
+command, or plain commands joined by `&&`, `;` or a new line, and every
+command name is on `COMMANDS`. Each row of `NOT_SIMPLE` is a construct the
+adversarial review used to read a protected file through a text position. Each
+must return None. A row that returns a command is a bypass.
 """
 from __future__ import annotations
 
-import dataclasses
 import sys
 import time
 from pathlib import Path
@@ -31,169 +20,130 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "cli"))
 
 
-def _mod():
+def _simple(command):
     from compass_pkg import approval_words
-    return approval_words
+    return approval_words.simple(command)
 
 
-def _read(text):
-    return _mod().read(text)
+def _one(command):
+    found = _simple(command)
+    assert found is not None and len(found) == 1, (command, found)
+    return found[0]
 
 
-def _commands(text):
-    """Every command of the top-level pipelines, in source order."""
-    return [c for p in _read(text) if not p.nested for c in p.commands]
+# --- what is simple ---------------------------------------------------------------------------
+
+def test_a_chain_of_plain_commands_is_simple():
+    found = _simple("git status && ls docs; wc -l x\ncat y")
+    assert [c.words[0] for c in found] == ["git", "ls", "wc", "cat"]
 
 
-def _nested(text):
-    return [p for p in _read(text) if p.nested]
+def test_quotes_and_escapes_are_removed_as_the_shell_removes_them():
+    command = _one("""ls 'a b' "c d" e\\ f g"h"'i'""")
+    assert command.words == ("ls", "a b", "c d", "e f", "ghi")
 
 
-# --- splitting --------------------------------------------------------------------------------
-
-def test_a_semicolon_and_double_ampersand_split_a_command_into_pipelines():
-    found = _read("echo a; echo b && echo c || echo d")
-    assert [p.commands[0].words for p in found] == [
-        ("echo", "a"), ("echo", "b"), ("echo", "c"), ("echo", "d")]
-    assert all(len(p.commands) == 1 and not p.nested for p in found)
+def test_a_redirect_gives_a_target_and_a_copied_descriptor_gives_none():
+    command = _one("ls docs > out.txt 2>&1")
+    assert command.words == ("ls", "docs") and command.targets == ("out.txt",)
+    assert _one("ls < in.txt").targets == ("in.txt",)
+    assert _one("ls >> log").targets == ("log",)
 
 
-def test_a_newline_and_a_single_ampersand_split_a_command_into_pipelines():
-    found = _read("sleep 1 & echo a\necho b")
-    assert [p.commands[0].words for p in found] == [("sleep", "1"), ("echo", "a"), ("echo", "b")]
+def test_a_dollar_name_is_allowed_only_in_a_message():
+    assert _one('git commit -m "fix $HOME handling"').text == frozenset({3})
+    assert _one(r'git commit -m "costs \$(5) and \`x\`"').text == frozenset({3})
 
 
-def test_a_pipe_gives_two_stages_of_one_pipeline():
-    (pipeline,) = _read("cat x | grep y")
-    assert [c.words for c in pipeline.commands] == [("cat", "x"), ("grep", "y")]
-    (pipeline,) = _read("cat x |& grep y")
-    assert len(pipeline.commands) == 2
+# --- the text positions -----------------------------------------------------------------------
 
-
-def test_parentheses_split_a_subshell_into_commands():
-    assert [c.words for c in _commands("(cd x; ls)")] == [("cd", "x"), ("ls",)]
-
-
-# --- quotes -------------------------------------------------------------------------------------
-
-def test_quotes_are_removed_from_the_words():
-    (command,) = _commands("echo \"a b\" 'c d' e\\ f")
-    assert command.words == ("echo", "a b", "c d", "e f")
-
-
-def test_ansi_c_quoting_is_kept_in_raws():
-    (command,) = _commands(r"echo $'a\tb'")
-    assert command.words[1] == r"a\tb"
-    assert command.raws[1] == r"$'a\tb'"
-    assert len(command.raws) == len(command.words)
-
-
-# --- substitutions ------------------------------------------------------------------------------
-
-@pytest.mark.parametrize("text", [
-    "echo $(cat x)",
-    "echo `cat x`",
-    "diff <(cat x) y",
-    "tee >(cat x)",
-    'echo "a $(cat x) b"',
-    "cat <<EOF\n$(cat x)\nEOF",
+@pytest.mark.parametrize("command, text", [
+    ('git commit -m "a b"', {3}),
+    ("git commit -am msg", {3}),
+    ("git commit -mmsg", {2}),
+    ("git commit --message=msg", {2}),
+    ("git commit --message msg", {3}),
+    ("git tag -m msg v1", {3}),
+    ("git merge -m msg topic", {3}),
+    ("git revert -m msg abc", {3}),
+    ("gh pr create --title t --body b", {4, 6}),
+    ("gh issue comment 5 -b b", {5}),
+    ("gh pr create --title=t --body=b", {3, 4}),
+    ("gh release create v1 --notes n", {5}),
 ])
-def test_a_substitution_gives_a_nested_pipeline(text):
-    inner = _nested(text)
-    assert [c.words for p in inner for c in p.commands] == [("cat", "x")], text
-    assert any(not p.nested for p in _read(text)), "the outer command is not nested"
+def test_the_text_positions_are_the_values_of_a_message_option(command, text):
+    assert _one(command).text == frozenset(text)
 
 
-def test_a_quoted_heredoc_is_literal_and_has_no_nested_pipeline():
-    (command,) = _commands("cat <<'EOF'\n$(cat x)\nEOF")
-    assert command.heredoc_literal is True
-    assert "$(cat x)" in command.heredoc
-    assert not _nested("cat <<'EOF'\n$(cat x)\nEOF")
-
-
-def test_an_unquoted_heredoc_is_not_literal():
-    (command,) = _commands("cat <<EOF\nbody\nEOF")
-    assert command.heredoc_literal is False
-    assert command.heredoc.splitlines() == ["body"]
-
-
-def test_a_dash_heredoc_strips_tabs():
-    (command,) = _commands("cat <<-EOF\n\tbody\n\tEOF\n")
-    assert command.heredoc.splitlines() == ["body"]
-
-
-def test_a_here_string_fills_herestring():
-    (command,) = _commands('cat <<<"hello there"')
-    assert command.herestring == "hello there"
-    assert command.heredoc is None
-
-
-# --- redirects, comments, assignments -------------------------------------------------------------
-
-@pytest.mark.parametrize("text, target", [
-    ("echo x > out", "out"),
-    ("echo x >> out", "out"),
-    ("echo x 2> err", "err"),
-    ("echo x &> all", "all"),
-    ("cat < in", "in"),
+@pytest.mark.parametrize("command", [
+    "git commit -m a -F file",
+    "git commit -m a --file=file",
+    "git commit -m a --file file",
+    "git commit -m a -c abc",
+    "git commit -m a -aF file",
+    "git commit -m a --exec=x",
+    "git -C dir commit -m a",
+    "git -c alias.commit=x commit -m a",
+    "git log -m a",
+    "git stash -m a",
+    "gh pr create --body-file f",
+    "gh api repos/o/r -f body=a",
+    "gh alias set x y",
+    "gh extension exec x",
+    "gh -R o/r pr create --body b",
+    "ls -m a",
+    "cat --message a",
 ])
-def test_a_redirect_gives_its_target(text, target):
-    (command,) = _commands(text)
-    assert [t for _, t in command.redirects] == [target], text
-    assert command.words[0] in ("echo", "cat")
-    assert target not in command.words
+def test_a_command_outside_the_list_has_no_text_position(command):
+    assert _one(command).text == frozenset()
 
 
-def test_a_file_descriptor_copy_has_no_target():
-    (command,) = _commands("make 2>&1")
-    assert command.redirects == ()
-    assert command.words == ("make",)
+# --- what is not simple -----------------------------------------------------------------------
+
+NOT_SIMPLE = [
+    # a variable or a substitution outside a message, or a substitution in one
+    "echo P; cat $_", 'cat "$p"', "cat ${p}", "cat $(echo P)", "cat `echo P`",
+    'git commit -m "$(cat f)"', 'git commit -m "`cat f`"', 'git commit -m "${x:=y}"',
+    'git commit -m "$((1+1))"', 'git commit -m "$\'a\'"', 'git commit -m "$[1]"',
+    "git commit -m $(cat f)", 'gh pr create --body "$(cat f)"', "cat $x", "cat $", "cat \"$\"",
+    # a quoting that decodes
+    "cat $'a'", "cat $\"a\"", "cat <<$'E\\x4fF'\nx\nEOF\ncat\nE\\x4fF",
+    # a heredoc or a here-string
+    "cat <<EOF\nx\nEOF", "cat <<'EOF'\nx\nEOF", "cat <<-EOF\nx\nEOF", "cat <<< x",
+    # a body and a delimiter that are themselves plain commands
+    "cat <<ls\nls\nls", "cat <<-ls\ngit status\nls", "cat <<'cat'\nls\ncat", "git commit -F - <<git\nls\ngit",
+    # a process substitution, a pipe, a group
+    "cat <(ls)", "ls >(cat)", "ls | cat", "ls |& cat", "ls || ls", "(ls)", "{ ls; }", "ls; (ls)",
+    # a name or a state that can change what a command is
+    "eval 'git(){ cat \"$3\"; }'; git commit -m P", "f() { :; }", "git() { :; }; git status",
+    "function git { :; }", "alias git=cat", "PATH=$PWD/bin:$PATH git commit -m P",
+    "FOO=1 git status", "FOO=1", "./compass --note P", "compass --note P", "./git status",
+    "/usr/bin/git status", "sh f", "bash f", "source f", ". f", "env git status", "exec ls",
+    "command git status", "xargs ls", "echo hi", "printf x", "grep x f", "sort f", "sed p f",
+    "cd /tmp && ls", "mystery", "make", "python3 -c x",
+    # a shape the reader does not follow
+    "ls &", "ls & ls", "ls &> f", "ls >& f", "ls >(", "ls # c", "ls;; ls", "ls &&", "&& ls",
+    "ls >", "ls <", "ls > ; ls", "ls\\\nx", "git commit -m 'a", 'git commit -m "a', "ls \\",
+    # a backslash and a new line join two lines in the shell and must not be read as one word
+    "ls approval-req\\\nuests", "git commit -m a\\\nb", 'git commit -m "a\\\nb"',
+    # zsh expands a word that starts with = to the path of a command
+    "ls =cat", "cat =ls", "ls a =cat",
+    "", "   ", ";", "ls ; ;", "ls ;& ls", "ls <> f", "ls >| f",
+]
 
 
-def test_a_comment_ends_a_line():
-    found = _read("echo a # a comment\necho b")
-    assert [p.commands[0].words for p in found] == [("echo", "a"), ("echo", "b")]
-    assert not any("comment" in w for p in found for c in p.commands for w in c.words)
+@pytest.mark.parametrize("command", NOT_SIMPLE)
+def test_a_command_that_is_not_simple_is_not_read(command):
+    assert _simple(command) is None, command
 
 
-def test_leading_assignments_are_assigns_and_not_words():
-    (command,) = _commands("FOO=bar BAZ=1 cmd arg")
-    assert command.assigns == ("FOO=bar", "BAZ=1")
-    assert command.words == ("cmd", "arg")
+def test_the_command_names_are_the_fixed_list():
+    from compass_pkg import approval_words
+    assert set(approval_words.COMMANDS) == {"git", "gh", "ls", "wc", "stat", "cat"}
 
 
-def test_a_command_is_a_frozen_value():
-    (command,) = _commands("ls")
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        command.words = ("rm",)
-
-
-# --- what the reader gives up on --------------------------------------------------------------------
-
-@pytest.mark.parametrize("text", [
-    'echo "an open quote',
-    "echo 'an open quote",
-    "echo $(cat x",
-    "echo `cat x",
-    "cat <<EOF\nbody with no end",
-    "echo " + "$(" * 33 + "x" + ")" * 33,
-])
-def test_the_reader_raises_unreadable(text):
-    with pytest.raises(_mod().Unreadable):
-        _read(text)
-
-
-def test_the_depth_bound_is_32_and_a_shallow_nesting_reads():
-    assert _mod().MAX_DEPTH == 32
-    found = _read("echo " + "$(" * 5 + "x" + ")" * 5)
-    assert sum(p.nested for p in found) == 5
-
-
-@pytest.mark.serial
-def test_twenty_thousand_characters_are_read_in_under_a_second():
-    text = "echo " + "word " * 4000 + "; echo $(cat x) | wc -l"
-    assert len(text) >= 20000
+def test_a_long_command_is_read_in_linear_time():
+    command = "ls " + "a" * 100000 + ' && git commit -m "' + "b " * 50000 + '"'
     started = time.perf_counter()
-    found = _read(text)
+    assert _simple(command) is not None
     assert time.perf_counter() - started < 1.0
-    assert len(found) >= 2

@@ -1,9 +1,12 @@
 """Group A and the Bash scenarios of group F of issue
-`hooks-stop-refusing-harmless-work`: the guard reads a Bash command as words,
-so text that only names a protected thing passes, and every call that reads,
-writes, enters or runs the thing is still refused.
+`hooks-stop-refusing-harmless-work`: the guard reads a simple Bash command as
+words, so message text that only names a protected thing passes, and every call
+that reads, writes, enters or runs the thing is still refused. A command that is
+not simple is judged by its whole text.
 
 Scenarios: `TRC-001` to `TRC-012`, `TRC-044` to `TRC-046`, `TRC-050`, `TRC-051`.
+`TRC-005` and `TRC-007` are superseded: their tests now check that the call is
+refused, as it was before the change.
 
 Each loosening scenario (an "allowed" test) runs the real `hooks/pre-tool.sh`
 on the controls of `tests/approval_guard_cases.py` that belong to it, and is
@@ -12,11 +15,6 @@ twin scenario (a "refused" test) names a harmful call nearby and passes before
 and after the change: a twin that passed only after the change would not guard
 anything. `test_table_controls_are_allowed` runs every control of the table in
 process.
-
-Red before the change: `TRC-001`, `TRC-003`, `TRC-005`, `TRC-007`, `TRC-009`, `TRC-011`,
-the scenario `TRC-050` and the table test. Green before the change, kept as
-regression guards: `TRC-002`, `TRC-004`, `TRC-006`, `TRC-008`, `TRC-010`, `TRC-012`
-and also the scenarios `TRC-044`, `TRC-045`, `TRC-046` and `TRC-051`.
 """
 from __future__ import annotations
 
@@ -87,7 +85,10 @@ def test_trc_004_a_message_does_not_hide_a_transcript_path(world):
     ], TRN)
 
 
-def test_trc_005_a_listing_above_the_transcript_is_not_refused(world):
+def test_trc_005_a_listing_above_the_transcript_is_refused_again(world):
+    """Superseded: the guard reads a listing as words only for a request folder, so a listing
+    of a folder above the transcript is judged by its whole text, as before the change."""
+    _refused(world, ["ls ~", "ls $HOME", "ls {home}", "ls -la ~"], TRN)
     _allowed(world, "TRC-005")
 
 
@@ -105,8 +106,14 @@ def test_trc_006_a_listing_into_the_transcript_folder_or_a_read_above_it_is_refu
 
 # --- a delegated approval and the delegation folder ------------------------------------------
 
-def test_trc_007_compass_in_a_path_beside_ansi_c_quoting_is_not_a_delegated_approval(world):
-    _allowed(world, "TRC-007")
+def test_trc_007_compass_in_a_path_beside_ansi_c_quoting_is_refused_again(world):
+    """Superseded: a command with ANSI-C quoting is not simple, so the word compass in a path
+    beside it is judged by its whole text, as before the change."""
+    _refused(world, [
+        r"awk -F$'\t' '{print $1}' /Users/ada/dev/compass-700/x.tsv",
+        r"git log --format=$'%h\t%s' -- cli/compass_pkg",
+        r"IFS=$'\n' ; ls /Users/ada/dev/compass-700/docs",
+    ], CALLER)
 
 
 def test_trc_008_compass_run_with_an_ansi_c_escape_is_still_refused(world):

@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
 sys.path.insert(0, str(ROOT / "cli"))
 
-from approval_guard_cases import (CALLER, REQ, bash_event, build_world,  # noqa: E402
+from approval_guard_cases import (CALLER, REQ, TRN, bash_event, build_world,  # noqa: E402
                                   drop_world, run_hook, verdict)
 from approval_support import event, project  # noqa: E402
 
@@ -79,6 +79,21 @@ def test_trc_063_the_as_value_of_a_refused_approval_is_cleaned_and_cut(world):
     assert not _hidden(text, allow="\n"), repr(_hidden(text, allow="\n"))
     assert sum(line.startswith("Fix:") for line in text.splitlines()) == 1, text
     assert "B" * 81 not in text, text
+
+
+def test_trc_063_a_refused_tool_path_has_no_escape_or_direction_character(world):
+    hostile = "‮\x1b[31m.claude/projects/-p/" + "x" * 200 + "/s1.jsonl"
+    path = str(world.home) + "/" + hostile
+    for tool, tool_input in (("Read", {"file_path": path}), ("Write", {"file_path": path}),
+                             ("Edit", {"file_path": path}),
+                             ("Grep", {"pattern": "x", "path": path})):
+        body = {"tool_name": tool, "tool_input": tool_input, "cwd": str(world.project),
+                "session_id": "sess-guard", "transcript_path": str(world.transcript)}
+        result = run_hook(world, body)
+        assert verdict(result) == TRN, (tool, result.stderr)
+        text = _refusal(result)
+        assert not _hidden(text, allow="\n"), (tool, repr(_hidden(text, allow="\n")))
+        assert ".claude/projects" in text, (tool, text)
 
 
 def test_trc_063_a_long_refused_word_shows_the_protected_part_and_no_format_character(world):

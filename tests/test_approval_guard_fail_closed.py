@@ -1,18 +1,15 @@
-"""The approval guard judges a command by its whole text, or refuses a word, where
-the reader cannot tie a piece of text to the command that uses it (issue
-`hooks-stop-refusing-harmless-work`, unit 2).
+"""The approval guard judges a command that is not simple by its whole text (issue
+`hooks-stop-refusing-harmless-work`, scenario `TRC-067`).
 
-Each refused call below hides a request path in text that a later command runs,
-or in a shape the reader does not follow. The matching controls show the guard
-does not refuse harmless text in the same shapes. The tests call `check` in
-process with the shared world of `tests/approval_guard_cases.py`.
+The rows of `tests/approval_guard_cases.py` that pair with `TRC-067` are the routes the
+adversarial review found through a word reader: a variable that carries text into a path,
+a heredoc delimiter that the shell decodes, a command or alias that replaces the command
+a text position trusts, a sink that writes or runs its input, and a search option in a short
+form. Every one names a protected thing, so every one is refused. The controls are the plain
+commands that stay allowed.
 
-- a pipe into a subshell, a subshell piped into a shell, an output process
-  substitution, a runner that reads a substitution, a function or alias that
-  renames an exempt command, a `case` or `${...}` that ends a substitution early;
-- a heredoc for `git apply`, which is a patch and not text;
-- an option of `rg` or `grep` whose value is a command or a file;
-- the keyword before a command (`do echo`), which must not hide it.
+The tests below call `check` in process with the shared world for the shapes of an earlier
+version that the gate keeps refused, and the real hook for the rows of the table.
 """
 from __future__ import annotations
 
@@ -23,7 +20,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from approval_guard_cases import bash_event, build_world, drop_world  # noqa: E402
+from approval_guard_cases import (bash_event, build_world, controls_for, drop_world,  # noqa: E402
+                                  payload, refused_for, run_hook, verdict)
 
 REQUEST = "approval-" + "requests"
 FILE = ".compass/work/issue-a/" + REQUEST + "/pending/1.yml"
@@ -45,6 +43,34 @@ def guard(world, monkeypatch):
     return lambda command: approval_guard.check(bash_event(world, command))
 
 
+def _verdicts(world, rows, want):
+    found = []
+    for case in rows:
+        body = payload(case, home=world.home, project=world.project, transcript=world.transcript)
+        got = verdict(run_hook(world, body))
+        if got != want(case):
+            found.append(f"{case.id} {case.command!r}: wanted {want(case)}, got {got}")
+    return found
+
+
+def test_trc_067_a_command_that_is_not_simple_is_judged_by_its_whole_text(world):
+    refused, allowed = refused_for("TRC-067"), controls_for("TRC-067")
+    assert len(refused) >= 35, len(refused)
+    assert len(allowed) >= 6, len(allowed)
+    found = _verdicts(world, refused, lambda case: case.code)
+    found += _verdicts(world, allowed, lambda case: "allowed")
+    assert not found, "\n".join(found)
+
+
+def test_trc_052_a_compass_option_is_not_text(guard):
+    """Superseded: no `compass` option is a text position, so a request path in a `--note`
+    is refused, and a command that starts with a path ending in `compass` is not simple."""
+    for command in (f"compass quick-fix start --note {FILE}", f"./compass --note {FILE}",
+                    f"./cli/compass quick-fix start --title t --reason {FILE}"):
+        found = guard(command)
+        assert found and found[0] == "approval-request-protected", (command, found)
+
+
 REFUSED = [
     f'echo "cat {FILE}" | (sh)',
     f'( echo "cat {FILE}" ) | sh',
@@ -63,25 +89,28 @@ REFUSED = [
     f"grep -A 2 x {FILE}",
     f"for f in a; do cat {FILE}; done",
     f"ls {FILE} | cat",
-]
-
-ALLOWED = [
+    # text that an earlier version skipped and the guard judges now
     f'for f in a b; do echo "$f {REQUEST}"; done',
     f"git commit -F - <<'EOF'\nabout {REQUEST}\nEOF",
-    f'git commit -m "Add a function that lists {REQUEST} and an alias"',
     f'echo "{REQUEST}" | head -1',
     f"grep -A 2 -rn {REQUEST} docs",
     f"rg -g '*.md' {REQUEST}",
 ]
 
+ALLOWED = [
+    f'git commit -m "Add a function that lists {REQUEST} and an alias"',
+    f"git status && git commit -m 'Name {REQUEST}'",
+]
+
 
 @pytest.mark.parametrize("command", REFUSED)
-def test_a_shape_the_reader_cannot_tie_to_its_command_is_refused(guard, command):
+def test_a_shape_the_gate_does_not_read_is_refused_when_it_names_a_protected_thing(
+        guard, command):
     found = guard(command)
     assert found and found[0] in ("approval-request-protected", "transcript-protected"), (
         command, found)
 
 
 @pytest.mark.parametrize("command", ALLOWED)
-def test_harmless_text_in_the_same_shapes_is_allowed(guard, command):
+def test_message_text_in_a_simple_command_is_allowed(guard, command):
     assert guard(command) is None, command

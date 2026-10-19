@@ -1,0 +1,79 @@
+# The shipped default preset: the source of the shipped defaults.
+# The two files governance/routing-policy.yml and governance/guardrails.yml
+# are generated from these files and governance/legacy-views.yml.
+# Change a default here, then run python3 scripts/generate-legacy-views.py.
+# Also raise the version in legacy-views.yml, then run the script with --pin
+# and again with --pin-hashes, which update the digest and drift fixtures.
+# cli/compass_pkg/legacy_adapter.py wrote the first version of these files from
+# those two files. The preset is the source now; edit it here.
+schema: 1
+approaches:
+  spike:
+    weight: 0
+    ships: false
+    stages: {assess: lightweight, define: collapsed, refine: skipped, plan: collapsed, breakdown: skipped,
+      implement: explore, verify: conclude, ship: graduate-or-discard}
+    gates: [spike.conclude]
+    artifacts: {delivery-approach: lightweight, spike-conclusion: thorough}
+    subtask_ceiling: 1
+    checkpoints:
+      controlled: [assess]
+      balanced: []
+      autonomous: []
+    locked: true
+  quick-fix:
+    weight: 1
+    ships: true
+    release_line: true
+    stages: {assess: thorough, define: lightweight, refine: collapsed, plan: collapsed, breakdown: skipped,
+      implement: thorough, verify: lightweight, ship: lightweight}
+    gates: [verify.correctness, verify.governance, verify.traceability]
+    artifacts: {delivery-approach: lightweight, verification-note: lightweight}
+    subtask_ceiling: 1
+    checkpoints:
+      controlled: [assess]
+      balanced: []
+      autonomous: []
+  regular:
+    weight: 2
+    ships: true
+    release_line: true
+    stages: {assess: thorough, define: thorough, refine: lightweight, plan: thorough, breakdown: multiagent,
+      implement: thorough, verify: thorough, ship: thorough}
+    gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.clarity,
+      verify.security]
+    artifacts: {intent: lightweight, acceptance-criteria: thorough, technical-design: thorough, distribution-map: lightweight,
+      verification-report: thorough}
+    subtask_ceiling: 2
+    checkpoints:
+      controlled: [assess, define, refine, plan]
+      balanced: [define, plan]
+      autonomous: []
+  hotfix:
+    weight: 3
+    ships: true
+    release_line: true
+    stages: {assess: lightweight, define: reproduce-first, refine: collapsed, plan: collapsed, breakdown: skipped,
+      implement: expedited, verify: thorough, ship: thorough-with-follow-up}
+    gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security]
+    artifacts: {acceptance-criteria: lightweight, verification-report: thorough}
+    subtask_ceiling: 1
+    checkpoints:
+      controlled: [assess, define]
+      balanced: []
+      autonomous: []
+  full:
+    weight: 4
+    ships: true
+    release_line: true
+    stages: {assess: thorough, define: thorough, refine: thorough, plan: thorough, breakdown: multiagent,
+      implement: thorough, verify: thorough, ship: thorough}
+    gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security,
+      verify.clarity]
+    artifacts: {intent: thorough, acceptance-criteria: thorough, requirements-review: thorough, technical-design: thorough,
+      distribution-map: thorough, verification-report: thorough}
+    subtask_ceiling: null
+    checkpoints:
+      controlled: [assess, define, refine, plan]
+      balanced: [assess, define, refine, plan]
+      autonomous: []

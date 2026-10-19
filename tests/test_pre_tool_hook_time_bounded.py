@@ -710,6 +710,147 @@ def test_a_failed_matcher_refuses_the_command_with_unsafe_globs(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Group G - one shared work budget. The scans that grow with the command (the
+# flattening of substitutions, the walk over the leading statements that finds
+# a variable's value, the judging of each write target and the reading of the
+# command for each variable name) add their steps to one counter. A command
+# that passes the budget is refused, whatever mix of shapes it holds. The
+# limits above give clear messages for the common cases; the budget is what
+# makes the worst accepted command short whatever the mix.
+# ---------------------------------------------------------------------------
+
+def _hook_number(name: str) -> int:
+    """A number the hook sets at the start of a line, such as `WORK_BUDGET=...`."""
+    found = re.search(rf"^{name}=(\d+)$", HOOK.read_text(encoding="utf-8"), re.M)
+    assert found, f"hooks/pre-tool.sh does not set {name}"
+    return int(found.group(1))
+
+
+def _leading_statements(count: int, names: int, statement: str = ":") -> str:
+    """`count` simple statements, then `names` assignments, then one write
+    target under each name."""
+    head = (statement + "\n") * count
+    assigns = "".join(f"V{i}=data\n" for i in range(names))
+    uses = "".join(f"echo x > $V{i}/f.dat\n" for i in range(names))
+    return head + assigns + uses
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("count, names, statement", [
+    pytest.param(10000, 20, ":", id="10000-colons-20-names"),
+    pytest.param(40000, 1, ":", id="40000-colons-1-name"),
+    pytest.param(40000, 5, ":", id="40000-colons-5-names"),
+    pytest.param(4000, 20, "cd /x", id="4000-cd-20-names"),
+    pytest.param(8000, 20, "cd /x", id="8000-cd-20-names"),
+])
+def test_many_leading_statements_with_many_names_are_refused_or_end_in_time(
+        tmp_path, count, names, statement):
+    """Scenario id: `TRC-025` in pre-tool-hook-time-bounded/acceptance-criteria.md
+
+    The walk over the leading statements ran once for each name, so 40000
+    statements and 20 names took 62 s. The refusal is the code the other limits
+    use."""
+    root = _project(tmp_path)
+    seconds, r = _bash(root, _leading_statements(count, names, statement),
+                       tmp_path, timeout=60)
+
+    if r.returncode == 2:
+        _complex(r)
+    else:
+        assert r.returncode == 0, (r.returncode, r.stderr)
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_the_work_budget_has_a_boundary(tmp_path):
+    """Supports `TRC-025` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    a command a few steps under the budget is accepted and one a few steps over
+    it is refused. The steps of this shape are the target, the command read
+    once for the name and each pass of the walk."""
+    budget = _hook_number("WORK_BUDGET")
+    statement = _hook_number("COST_STATEMENT")
+    per_char = _hook_number("COST_STATEMENT_CHAR")
+    candidate = _hook_number("COST_CANDIDATE")
+    candidate_char = _hook_number("COST_CANDIDATE_CHAR")
+    name_per_kb = _hook_number("COST_NAME_PER_KB")
+    glob = _hook_number("COST_GLOB")
+    # The costs are microseconds, so a budget past 3 seconds of work cannot keep
+    # the worst command under the 3.75 seconds of IDLE with the time the hook
+    # spends outside the scans.
+    assert budget <= 3_000_000, f"WORK_BUDGET={budget} is more than 3 s of work"
+
+    def work(n: int) -> tuple[int, str]:
+        command = _leading_statements(n, 1)
+        walk = (n * (statement + per_char * len(":\n"))
+                + statement + per_char * len("V0=data\n") + statement)
+        return (candidate + candidate_char * len("$V0/f.dat") + glob
+                + name_per_kb * len(command) // 1024 + walk), command
+
+    n = budget // statement
+    while work(n)[0] > budget:
+        n -= 1
+    root = _project(tmp_path)
+    seconds, r = _bash(root, work(n - 10)[1], tmp_path, timeout=60)
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s just under the budget"
+
+    seconds, r = _bash(root, work(n + 10)[1], tmp_path, timeout=60)
+    _complex(r)
+    assert seconds < IDLE, f"the refusal took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_the_scans_share_one_work_budget(tmp_path):
+    """Supports `TRC-025` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    each of two shapes is accepted alone and takes more than half of the
+    budget, and a command that holds both is refused. Each shape alone has a
+    limit of its own that it stays under: 11000 leading statements, and five
+    unclosed substitutions at the end of 67 KB."""
+    statements = ":\n" * 11000 + "V=data\necho x > $V/f.dat\n"
+    openers = "cp x $(\n" * 5
+    filler = _exact("", 67000 - len(openers))
+    alone_statements = statements
+    alone_openers = openers + filler
+    both = statements + openers + filler
+
+    root = _project(tmp_path)
+    for name, command in (("statements", alone_statements),
+                          ("openers", alone_openers)):
+        seconds, r = _bash(root, command, tmp_path, timeout=60)
+        assert r.returncode == 0, (name, r.returncode, r.stderr)
+        assert seconds < IDLE, f"{name} took {seconds:.1f} s"
+
+    seconds, r = _bash(root, both, tmp_path, timeout=60)
+    _complex(r)
+    assert seconds < IDLE, f"the refusal took {seconds:.1f} s"
+
+
+def test_the_hook_explains_each_number_of_the_work_budget():
+    """Supports `TRC-025` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    each cost is a measured time, so the hook names, in a comment before the
+    numbers, what each one counts."""
+    text = HOOK.read_text(encoding="utf-8")
+    first = text.index("\nCOMMAND_LIMIT=")
+    comment = text[:first]
+    names = re.findall(r"^((?:WORK_BUDGET|COST_[A-Z_]+))=\d+$", text, re.M)
+    assert names, "hooks/pre-tool.sh sets no work budget"
+    missing = [n for n in names if f"{n}:" not in comment]
+    assert not missing, f"the comment before the limits does not explain {missing}"
+
+
+@pytest.mark.serial
+def test_the_work_budget_does_not_apply_where_compass_is_not_in_use(tmp_path):
+    """Supports `TRC-025` in pre-tool-hook-time-bounded/acceptance-criteria.md:
+    a repository without `.compass/` sees no refusal."""
+    root = _guest(tmp_path)
+    seconds, r = _bash(root, _leading_statements(40000, 5), tmp_path, timeout=60)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert r.stderr == "", r.stderr
+    assert seconds < IDLE, f"the hook took {seconds:.1f} s"
+
+
+# ---------------------------------------------------------------------------
 # The faster scans give the same answers. Two differential tests, one for the
 # transcript-guard prefilter and one golden corpus for expand_command_variable.
 # They support the scenarios `TRC-011` (the prefilter) and `TRC-010` (the

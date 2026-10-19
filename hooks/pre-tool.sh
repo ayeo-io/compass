@@ -571,11 +571,39 @@ set -e
 #     length of the text, which a count alone does not bound: 700 openers
 #     before 85 KB of text took 224 s. A scan that passes the limit tells the
 #     caller with SCAN_MARK, and the command is refused as too complex.
+#
+# The limits above each bound one shape, and the time of a command that holds
+# several is their sum. One shared counter, WORK_USED, bounds the sum: each
+# scan that grows with the command adds its steps, in microseconds of the time
+# they were measured to take (bash 3.2, UTF-8), and a command past WORK_BUDGET
+# is refused as too complex, or has only its write scan skipped where Compass
+# is not in use. The worst command accepted took 2.4 s on a loaded machine
+# (docs/safety-contract.md lists the shapes).
+#   - WORK_BUDGET: the most the counter may reach.
+#   - COST_AWK_STEP: one step of the flattening in awk (the largest count of
+#     steps the awk scan reports, SCAN_WORK_LIMIT at the most).
+#   - COST_STATEMENT: one pass of the walk over the leading statements, which
+#     runs once for all the variable names.
+#   - COST_STATEMENT_CHAR: the same pass, for each character it consumes.
+#   - COST_NAME_PER_KB: the reading of the command for one variable name, for
+#     each 1024 characters of the command.
+#   - COST_CANDIDATE: the judging of one write target.
+#   - COST_CANDIDATE_CHAR: the same, for each character of the target.
+#   - COST_GLOB: the same, for each glob of the settings that the target is
+#     tried against one by one.
 COMMAND_LIMIT=98304
 OPENER_LIMIT=700
 TARGET_LIMIT=400
 NAME_LIMIT=20
 SCAN_WORK_LIMIT=1000000
+WORK_BUDGET=2400000
+COST_AWK_STEP=2
+COST_STATEMENT=110
+COST_STATEMENT_CHAR=5
+COST_NAME_PER_KB=200
+COST_CANDIDATE=3000
+COST_CANDIDATE_CHAR=4
+COST_GLOB=20
 SCAN_MARK="compass-scan-budget-exceeded"
 SKIP_WRITE_SCAN=0
 COMPASS_IN_USE=0
@@ -755,7 +783,7 @@ GLOBS_LOADED=0 GLOBS_STATUS=0 GLOBS_ERR="" GLOBS_FILE="" GLOBS_KIND="" GLOBS_JSO
 # While GLOB_DEFER is 1, a path that only a glob bash cannot decide could
 # enforce is not judged: its project-relative text is added to GLOB_PENDING
 # (one per line) and is_enforced_path returns 2 for it.
-GLOB_DEFER=0 GLOB_PENDING=""
+GLOB_DEFER=0 GLOB_PENDING="" GLOBS_COUNT=0
 is_enforced_path() {
   local target="$1" rel base is_code=0 abs
 
@@ -1004,6 +1032,14 @@ PYEOF
         GLOBS_KIND="$(printf '%s\n' "$glob_out" | sed -n '2p')"
         GLOBS_JSON="$(printf '%s\n' "$glob_out" | sed -n '3p')"
         GLOBS_LIST="$(printf '%s\n' "$glob_out" | sed -n '4,$p')"
+        # (A substitution that deletes every character but the line ends took
+        # 2 s on 300 globs, so the lines are counted in a loop.)
+        GLOBS_COUNT=0
+        while IFS= read -r g; do
+          GLOBS_COUNT=$((GLOBS_COUNT + 1))
+        done <<GLOBCOUNT
+$GLOBS_LIST
+GLOBCOUNT
       fi
     fi
     # The same outcome for every path: a failed read refuses each time.
@@ -1022,6 +1058,7 @@ PYEOF
     if [ "$GLOBS_KIND" = safe ]; then
       # Python's three tests, in the order it ran them: the glob as written,
       # the glob as a folder, and the glob after any leading folders.
+      WORK_USED=$((WORK_USED + COST_GLOB * GLOBS_COUNT))
       while IFS= read -r g; do
         [ -n "$g" ] || continue
         g2="$g"; while [ "${g2%/}" != "$g2" ]; do g2="${g2%/}"; done
@@ -1258,6 +1295,9 @@ bash_write_targets() {
                 # Out of budget: say so as a word the last stage prints, so the
                 # caller refuses the command. Whatever was found stays.
                 if (blown) print "cp " mark
+                # The steps taken, for the shared work budget (read by the
+                # caller; the largest of the lines wins).
+                print "cp compass-scan-work=" (work + 0)
               }' \
           | tr ';&|(' '\n\n\n\n' \
           | sed -E 's/(^|[[:space:]])#.*//; s/[0-9]*>>?[[:space:]]*[^[:space:]]*//g; s/<[[:space:]]*[^[:space:]]*//g; s/\)//g' \
@@ -1373,7 +1413,7 @@ bash_write_targets() {
 # `expand_command_variable` prints the answer, for the tests and for a caller
 # that wants text. EXPAND_NAMES counts the names read for this command, which
 # the caller compares with NAME_LIMIT.
-EXPAND_MEMO_CMD="" EXPAND_MEMO="" EXPANDED="" RESOLVED="" EXPAND_NAMES=0
+EXPAND_MEMO_CMD="" EXPAND_MEMO="" EXPANDED="" RESOLVED="" EXPAND_NAMES=0 WORK_USED=0 WORK_OVER=0 WALK_CMD="" WALK_DIRTY=0
 expand_command_variable() {
   expand_command_variable_into "$@"
   printf '%s\n' "$EXPANDED"
@@ -1399,19 +1439,31 @@ expand_command_variable_into() {
   fi
 
   # The answer for NAME in this command: "D" to decline, or "V" and the value.
-  case "$EXPAND_MEMO_CMD" in
-    "$cmd") ;;
-    *) EXPAND_MEMO_CMD="$cmd"; EXPAND_MEMO=""; EXPAND_NAMES=0 ;;
-  esac
+  # A caller that has already passed the command gives "same" as the third
+  # argument and an empty command: handing a command of 90 KB to a function
+  # costs about 3 ms in a UTF-8 locale, once for each target.
+  if [ "${3:-}" != same ]; then
+    case "$EXPAND_MEMO_CMD" in
+      "$cmd") ;;
+      *) EXPAND_MEMO_CMD="$cmd"; EXPAND_MEMO=""; EXPAND_NAMES=0; WALK_CMD="" ;;
+    esac
+  fi
   case "$nl$EXPAND_MEMO" in
     *"$nl$name="*)
       tail="$nl$EXPAND_MEMO"
       tail="${tail#*"$nl$name="}"
       RESOLVED="${tail%%"$nl"*}" ;;
     *)
+      [ "${3:-}" = same ] && cmd="$EXPAND_MEMO_CMD"
       EXPAND_NAMES=$((EXPAND_NAMES + 1))
+      # The reading of the command for this name (its text is read about once
+      # for each name) is charged to the shared work budget by its length.
+      WORK_USED=$((WORK_USED + ${COST_NAME_PER_KB:-0} * ${#cmd} / 1024))
       expand_command_variable_resolve "$name" "$cmd"
-      EXPAND_MEMO="$EXPAND_MEMO$name=$RESOLVED$nl" ;;
+      EXPAND_MEMO="$EXPAND_MEMO$name=$RESOLVED$nl"
+      if [ "${WORK_BUDGET:-0}" -gt 0 ] && [ "$WORK_USED" -gt "$WORK_BUDGET" ]; then
+        WORK_OVER=1
+      fi ;;
   esac
   case "$RESOLVED" in
     V*) value="${RESOLVED#V}" ;;
@@ -1430,7 +1482,7 @@ expand_command_variable_resolve() {
   local name="$1" cmd="$2" value="" count=0
   local sep="start" before="" after_sep="" after_name="" stmt w len deny
   local total off size win after_off=0
-  local ref1 ref2 head head2
+  local ref ref1 ref2 head head2
   local sq="'" dq='"' bt='`' nl=$'\n'
   local path_re='^(/[A-Za-z0-9._+@%:,=-]*)*$'
   local value_re="(${sq}[^${sq}]*${sq}|${dq}[^${dq}]*${dq}|[^[:space:];&|<>()${sq}${dq}${bt}\\\$]*)"
@@ -1452,49 +1504,81 @@ expand_command_variable_resolve() {
   # statement, so it is doubled until it holds all that is left, and only
   # then does the walk stop. The golden corpus in
   # tests/test_pre_tool_hook_time_bounded.py pins the results.
-  total=${#cmd}
-  off=0
-  size=512
-  win="${cmd:0:$size}"
-  while :; do
-    if [[ $win =~ $assign_re ]]; then
-      len=${#BASH_REMATCH[0]}
-      if [ "${BASH_REMATCH[2]}" = "$name" ]; then
-        count=$((count + 1))
-        value="${BASH_REMATCH[3]}"
-        before="$sep"
-        after_sep="${BASH_REMATCH[4]}"
-        after_off=$((off + len))
+  #
+  # The walk does not depend on NAME except in what it keeps, so it runs once
+  # for the command and keeps what it found for every name it meets: for each
+  # assigned name, in WK_C_<name> the count of its assignments and in
+  # WK_V_/WK_B_/WK_S_/WK_O_<name> the value, the separator before the
+  # statement, the separator after it and where the text after it starts, all
+  # for the last assignment. A walk for each name took 62 s for 40000
+  # statements and 20 names. Each pass is charged to the shared work budget.
+  if [ "$WALK_CMD" != "$cmd" ]; then
+    WALK_CMD="$cmd"
+    if [ "$WALK_DIRTY" -eq 1 ]; then
+      for w in $(compgen -v WK_); do unset "$w"; done
+      WALK_DIRTY=0
+    fi
+    total=${#cmd}
+    off=0
+    size=512
+    win="${cmd:0:$size}"
+    while :; do
+      WORK_USED=$((WORK_USED + ${COST_STATEMENT:-0}))
+      if [ "${WORK_BUDGET:-0}" -gt 0 ] && [ "$WORK_USED" -gt "$WORK_BUDGET" ]; then
+        WORK_OVER=1; break
       fi
-      sep="${BASH_REMATCH[4]}"
-    elif [[ $win =~ $plain_re ]]; then
-      len=${#BASH_REMATCH[0]}
-      stmt="${BASH_REMATCH[1]}"
-      sep="${BASH_REMATCH[3]}"
-      deny=0
-      for w in $stmt; do
-        case "$w" in
-          eval|source|.|declare|typeset|local|readonly|trap|alias|enable|builtin|\
-          command|shopt|function|if|then|else|elif|fi|case|esac|for|select|\
-          while|until|do|done|coproc) deny=1 ;;
-        esac
-      done
-      [ "$deny" -eq 1 ] && break
-    elif [ $((off + ${#win})) -lt "$total" ]; then
-      size=$((size * 2))
-      win="${cmd:$off:$size}"
-      continue
-    else
-      break
-    fi
-    off=$((off + len))
-    win="${win:$len}"
-    if [ "${#win}" -gt 1024 ] || {
-         [ "${#win}" -lt 256 ] && [ $((off + ${#win})) -lt "$total" ]; }; then
-      size=512
-      win="${cmd:$off:$size}"
-    fi
-  done
+      if [[ $win =~ $assign_re ]]; then
+        len=${#BASH_REMATCH[0]}
+        WORK_USED=$((WORK_USED + ${COST_STATEMENT_CHAR:-0} * len))
+        ref="WK_C_${BASH_REMATCH[2]}"
+        printf -v "$ref" '%s' $(( ${!ref:-0} + 1 ))
+        printf -v "WK_V_${BASH_REMATCH[2]}" '%s' "${BASH_REMATCH[3]}"
+        printf -v "WK_B_${BASH_REMATCH[2]}" '%s' "$sep"
+        printf -v "WK_S_${BASH_REMATCH[2]}" '%s' "${BASH_REMATCH[4]}"
+        printf -v "WK_O_${BASH_REMATCH[2]}" '%s' $((off + len))
+        WALK_DIRTY=1
+        sep="${BASH_REMATCH[4]}"
+      elif [[ $win =~ $plain_re ]]; then
+        len=${#BASH_REMATCH[0]}
+        WORK_USED=$((WORK_USED + ${COST_STATEMENT_CHAR:-0} * len))
+        stmt="${BASH_REMATCH[1]}"
+        sep="${BASH_REMATCH[3]}"
+        deny=0
+        for w in $stmt; do
+          case "$w" in
+            eval|source|.|declare|typeset|local|readonly|trap|alias|enable|builtin|\
+            command|shopt|function|if|then|else|elif|fi|case|esac|for|select|\
+            while|until|do|done|coproc) deny=1 ;;
+          esac
+        done
+        [ "$deny" -eq 1 ] && break
+      elif [ $((off + ${#win})) -lt "$total" ]; then
+        size=$((size * 2))
+        win="${cmd:$off:$size}"
+        continue
+      else
+        break
+      fi
+      off=$((off + len))
+      win="${win:$len}"
+      if [ "${#win}" -gt 1024 ] || {
+           [ "${#win}" -lt 256 ] && [ $((off + ${#win})) -lt "$total" ]; }; then
+        size=512
+        win="${cmd:$off:$size}"
+      fi
+    done
+  fi
+  if [ "$WORK_OVER" -eq 1 ]; then
+    RESOLVED=D; return 0
+  fi
+  ref="WK_C_$name"
+  count="${!ref:-0}"
+  if [ "$count" -eq 1 ]; then
+    ref="WK_V_$name"; value="${!ref}"
+    ref="WK_B_$name"; before="${!ref}"
+    ref="WK_S_$name"; after_sep="${!ref}"
+    ref="WK_O_$name"; after_off="${!ref}"
+  fi
   if [ "$count" -ne 1 ]; then
     RESOLVED=D; return 0
   fi
@@ -1546,6 +1630,16 @@ expand_command_variable_resolve() {
   RESOLVED="V$value"
 }
 
+# The shared work budget (see WORK_BUDGET above) is spent: the same refusal as
+# the other limits where Compass is in use, and only the write scan is skipped
+# elsewhere.
+WORK_REFUSAL="has=too many statements, names and targets to scan together|over=that many statements, names and targets"
+work_over() {
+  [ "$COMPASS_IN_USE" -eq 1 ] \
+    && compass_block bash-command-too-complex "${WORK_REFUSAL%%|*}" "${WORK_REFUSAL#*|}"
+  exit 0
+}
+
 # --- decide whether this tool call needs a red on record ---------------------
 if [ "${TOOL:-}" = "Bash" ]; then
   [ -z "${COMMAND:-}" ] && exit 0
@@ -1571,13 +1665,27 @@ if [ "${TOOL:-}" = "Bash" ]; then
   if [ -z "$DETECTED" ]; then
     # A target written again judges the same, so each is judged once, in the
     # order it first appears: 200 identical `cp` lines cost one.
-    TARGET_LIST="$(bash_write_targets "$COMMAND" | awk '!seen[$0]++')" || true
+    # The last line is the steps the flattening took (compass-scan-work=N, the
+    # largest such line); it is taken off the list and charged to the shared
+    # work budget.
+    TARGET_LIST="$(bash_write_targets "$COMMAND" | awk '
+      /^compass-scan-work=[0-9]+$/ { w = substr($0, 19) + 0; if (w > most) most = w; next }
+      !seen[$0]++ { print }
+      END { print "compass-scan-work=" (most + 0) }')" || true
+    _scan_nl=$'\n'
+    _scan_work="${TARGET_LIST##*"$_scan_nl"}"
+    case "$TARGET_LIST" in
+      *"$_scan_nl"*) TARGET_LIST="${TARGET_LIST%"$_scan_nl"*}" ;;
+      *) TARGET_LIST="" ;;
+    esac
+    _scan_work="${_scan_work#compass-scan-work=}"
+    case "$_scan_work" in ""|*[!0-9]*) _scan_work=0 ;; esac
+    WORK_USED=$((WORK_USED + _scan_work * COST_AWK_STEP))
 
     # Too much to scan in time (see the limits above). The scan marks a
     # command it gave up on; the count of targets needs a process only when
     # the list is long enough to hold TARGET_LIMIT + 1 of them (a target and
     # its line end take two characters at least).
-    _scan_nl=$'\n'
     _too_complex=""
     case "$_scan_nl$TARGET_LIST$_scan_nl" in
       *"$_scan_nl$SCAN_MARK$_scan_nl"*)
@@ -1591,6 +1699,9 @@ if [ "${TOOL:-}" = "Bash" ]; then
         _too_complex="has=$_targets different write targets|over=more than $TARGET_LIMIT write targets"
       fi
     fi
+    if [ -z "$_too_complex" ] && [ "$WORK_USED" -gt "$WORK_BUDGET" ]; then
+      _too_complex="$WORK_REFUSAL"
+    fi
     if [ -n "$_too_complex" ]; then
       [ "$COMPASS_IN_USE" -eq 1 ] \
         && compass_block bash-command-too-complex "${_too_complex%%|*}" "${_too_complex#*|}"
@@ -1601,6 +1712,10 @@ if [ "${TOOL:-}" = "Bash" ]; then
     GLOB_PENDING="" GLOB_PENDING_CANDIDATES=""
     while IFS= read -r candidate; do
       [ -z "$candidate" ] && continue
+      # Judging a path costs more for a long path and for each glob it is
+      # tried against (charged in is_enforced_path).
+      WORK_USED=$((WORK_USED + COST_CANDIDATE + COST_CANDIDATE_CHAR * ${#candidate}))
+      if [ "$WORK_USED" -gt "$WORK_BUDGET" ]; then work_over; fi
       # A quoted target names the same file as an unquoted one, so the quotes
       # go before it is judged (`> "src/app.ts"`). Inside single quotes the
       # shell expands nothing, so `'$S/x'` is a literal path and is not
@@ -1609,16 +1724,27 @@ if [ "${TOOL:-}" = "Bash" ]; then
         *\'*) candidate="${candidate//\'/}"
               candidate="${candidate//\"/}" ;;
         *) candidate="${candidate//\"/}"
-           expand_command_variable_into "$candidate" "$COMMAND"
-           candidate="$EXPANDED"
-           # Past NAME_LIMIT the command is too slow to read for every name.
-           if [ "$EXPAND_NAMES" -gt "$NAME_LIMIT" ]; then
-             [ "$COMPASS_IN_USE" -eq 1 ] \
-               && compass_block bash-command-too-complex \
-                    "has=$EXPAND_NAMES different variable names" \
-                    "over=more than $NAME_LIMIT variable names"
-             exit 0
-           fi ;;
+           # Only a target that starts with `$` can be expanded, and passing the
+           # whole command to the function costs about 3 ms in a UTF-8 locale
+           # at 90 KB, so the others do not call it.
+           case "$candidate" in
+             '$'*)
+               if [ -n "$EXPAND_MEMO_CMD" ]; then
+                 expand_command_variable_into "$candidate" "" same
+               else
+                 expand_command_variable_into "$candidate" "$COMMAND"
+               fi
+               candidate="$EXPANDED"
+               if [ "$WORK_OVER" -eq 1 ]; then work_over; fi
+               # Past NAME_LIMIT the command is too slow to read for every name.
+               if [ "$EXPAND_NAMES" -gt "$NAME_LIMIT" ]; then
+                 [ "$COMPASS_IN_USE" -eq 1 ] \
+                   && compass_block bash-command-too-complex \
+                        "has=$EXPAND_NAMES different variable names" \
+                        "over=more than $NAME_LIMIT variable names"
+                 exit 0
+               fi ;;
+           esac ;;
       esac
       [ -z "$candidate" ] && continue
       # 0: enforced, 1: not, 2: only a glob bash cannot decide could enforce it.

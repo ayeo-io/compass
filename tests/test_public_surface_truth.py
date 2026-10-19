@@ -570,6 +570,10 @@ def test_d2_repairs_change_only_retired_names():
     `waived_stages`, the issue's waived stage modes that hold on a
     floor-raised approach.
 
+    One more was re-baselined by `worktree-issue-from-edited-path`:
+    `docs/safety-contract.md` (list_items 70 -> 71) gained the bullet on
+    which issue judges an Edit or Write in a worktree.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

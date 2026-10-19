@@ -225,7 +225,7 @@ def test_st2_a_planted_record_cannot_point_outside_the_work_folder(project):
     assert log[-1].split("\t")[1] == "ex", log
 
 
-# --- TRC-012 to TRC-015: a record keeps the folder it was written in --------------
+# --- A record keeps the folder it was written in (`TRC-012` to `TRC-015`) ---
 
 def _table(compass_dir):
     return json.loads((Path(compass_dir) / "sessions.json").read_text())

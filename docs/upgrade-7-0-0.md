@@ -649,9 +649,9 @@ A project-scoped design decision cannot land without a decision record, a regula
 
 ### What changes
 
-- **`--undo` is a dry run until you add `--apply`.** `--apply` restores the old settings file, and any deleted governance file, from `.compass/legacy/`, byte for byte. It removes `compass.yml`, then `.compass/state.yml` when the migration made it, then `.compass/migration.yml`. `.compass/legacy/` stays.
+- **`--undo` is a dry run until you add `--apply`.** `--apply` restores the old settings file, and any deleted governance file, from `.compass/legacy/`, byte for byte. It removes `compass.yml`, then `.compass/state.yml` when the migration made it, then the marker, `migration.yml` in `.compass`. `.compass/legacy/` stays.
 - **The undo refuses, and writes nothing, when it would lose work.** A file the migration wrote or kept has changed, a legacy copy is missing or differs, or a signed record exists from after the migration. The refusal names the file or the count. There is no override.
-- **The migration marker holds more.** `.compass/migration.yml` now holds a `written` digest for each file the migration wrote, and a `migrated_at` time. A marker from an earlier run has neither, so `--undo` refuses it and prints the steps to go back by hand.
+- **The migration marker holds more.** `migration.yml` in `.compass` now holds a `written` digest for each file the migration wrote, and a `migrated_at` time. A marker from an earlier run has neither, so `--undo` refuses it and prints the steps to go back by hand.
 - **The refusal of `compass.yml` after a migration names `--undo`.** It no longer lists the copy-back steps.
 - **`--undo` refuses `--words`, `--i-have-a-copy` and a folder argument.**
 
@@ -664,4 +664,4 @@ Nothing, unless you want to go back. Run `compass policy migrate --undo`, read t
 | Name | Where | Meaning |
 |---|---|---|
 | `--undo` | `compass policy migrate` | Put the project back as it was before the migration |
-| `written`, `migrated_at` | `.compass/migration.yml` | The digests of the files the migration wrote, and when it ran |
+| `written`, `migrated_at` | the marker, `migration.yml` in `.compass` | The digests of the files the migration wrote, and when it ran |

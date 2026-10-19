@@ -192,8 +192,8 @@ def test_gs_2_versions_record_the_resolver_the_parent_and_the_implementations(pr
     assert versions["resolver"] == "1.0.0"
     assert versions["cli"] == COMPASS_VERSION
     parent = versions["parents"][0]
-    assert (parent["ref"], parent["source"]) == ("compass:default@6", "shipped")
-    assert parent["version"].startswith("6.") and parent["digest"].startswith("sha256:")
+    assert (parent["ref"], parent["source"]) == ("compass:default@7", "shipped")
+    assert parent["version"].startswith("7.") and parent["digest"].startswith("sha256:")
     assert versions["project"] is None and versions["issue_overlay_digest"] is None
     used = versions["implementations"]
     assert used["suite-passed"] == check_registry.installed_version("suite-passed")

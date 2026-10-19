@@ -239,9 +239,11 @@ def cost_row(tasks, floor, group_floor) -> dict:
     return _row(value, measured, len(ships) - measured, withheld)
 
 
-def decisions_row(work_root, floor) -> dict:
+def decisions_row(work_root, floor, issues=None) -> dict:
+    """`issues` is `[(slug, manifest)]` already read; without it the report
+    reads `work_root` itself."""
     from compass_pkg import decisions_taken
-    found = decisions_taken.report(work_root)
+    found = decisions_taken.report(work_root, issues)
     withheld = _withheld(found["issues"], floor, "issue(s) hold decisions")
     value = {key: found[key] for key in ("confirmed", "changed", "never_confirmed", "total",
                                          "open_in_flight")}
@@ -258,7 +260,7 @@ def impact_rows(issues, work_root) -> dict:
     return {"autonomy_ratio": ratio_row(issues, floor),
             "band_split": band_row(issues, work_root, floor),
             "cost_per_change": cost_row(issues, floor, group),
-            "decisions_confirmed": decisions_row(work_root, floor)}
+            "decisions_confirmed": decisions_row(work_root, floor, issues)}
 
 
 # --- the text rows -------------------------------------------------------------------

@@ -271,34 +271,61 @@ _DD_HEADING = re.compile(r"^#{1,6}\s+(.*\bDD-(\d+)\b.*?)\s*$")
 _ADR_ID = re.compile(r"\bADR-\d+\b")
 #: The declared field: `Scope: project`, `- **Scope:** issue` or ``scope: `project` ``, the whole
 #: line, with one of the two values. Prose that merely starts with the word is not a field.
-_SCOPE = re.compile(r"^\s*(?:[-*+]\s+)?(?:\*\*)?[Ss]cope(?::\*\*|\*\*:|:)\s*`?(issue|project)`?\s*$")
+#: The value is read in any case and may be followed by punctuation or a dash and an
+#: explanation (`project.`, `project - why`). Trailing plain words stay prose: `Scope:
+#: project and more` is not a field (DCJ-86). `unread_scope_lines` reports such a line.
+_SCOPE = re.compile(r"^\s*(?:[-*+]\s+)?(?:\*\*)?scope(?::\*\*|\*\*:|:)\s*`?(issue|project)`?"
+                    r"(?:[\s.;,!]*|\s+[-–]\s+.*)$", re.IGNORECASE)
+_SCOPE_START = re.compile(r"^\s*(?:[-*+]\s+)?(?:\*\*)?scope(?::\*\*|\*\*:|:)\s*`?(issue|project)\b",
+                          re.IGNORECASE)
 GOVERNANCE_PREFIX = "- governance: "
 
 
-def design_decisions(text):
-    """`[(id, title, scope or None, [ADR ids])]` for each `DD-n` heading of a
-    technical design, in the order it holds them."""
+def _decision_blocks(text):
+    """`[(DD id, heading match, body lines)]` for each `DD-n` heading of a technical design."""
     lines = text.splitlines()
     fenced = _fenced(lines)
     heads = [(i, m) for i, line in enumerate(lines) for m in [_DD_HEADING.match(line)]
              if m and i not in fenced]
     out = []
-    for position, (index, match) in enumerate(heads):
+    for index, match in heads:
         end = len(lines)
         for later in range(index + 1, len(lines)):
             if re.match(r"^#{1,6}\s", lines[later]) and later not in fenced:
                 end = later
                 break
-        body = lines[index + 1:end]
+        out.append(("DD-" + match.group(2), match, lines[index + 1:end]))
+    return out
+
+
+def design_decisions(text):
+    """`[(id, title, scope or None, [ADR ids])]` for each `DD-n` heading of a
+    technical design, in the order it holds them."""
+    out = []
+    for dd_id, match, body in _decision_blocks(text):
         title = re.sub(r"^`?DD-\d+`?\s*[-:–]*\s*", "", match.group(1)).strip()
         scope = None
         for line in body:
             got = _SCOPE.match(line)
             if got:
-                scope = re.sub(r"[`*]", "", got.group(1)).strip()
+                scope = re.sub(r"[`*]", "", got.group(1)).strip().lower()
                 break
         adrs = list(dict.fromkeys(_ADR_ID.findall("\n".join(body))))
-        out.append(("DD-" + match.group(2), title, scope, adrs))
+        out.append((dd_id, title, scope, adrs))
+    return out
+
+
+def unread_scope_lines(text):
+    """`[(DD id, line)]` for each decision whose body has a `Scope:` line that starts with
+    `issue` or `project` but is not read as the field, and has no line that is read. Such a
+    decision counts as unscoped, so the line is reported rather than passing in silence."""
+    out = []
+    for dd_id, _match, body in _decision_blocks(text):
+        if any(_SCOPE.match(line) for line in body):
+            continue
+        near = next((line for line in body if _SCOPE_START.match(line)), None)
+        if near is not None:
+            out.append((dd_id, near.strip()))
     return out
 
 

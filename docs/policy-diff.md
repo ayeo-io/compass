@@ -34,7 +34,8 @@ change. A change to which approach an assessment gets can be
 
 | Reference | Meaning |
 |---|---|
-| `default`, `default@6`, `compass:default@6` | The shipped default. Only major 6 ships; `default@6.0.0` is accepted |
+| `default`, `default@7`, `compass:default@7` | The live default. The major comes from the live preset's version; `default@7.0.0` is accepted |
+| `default@6`, `compass:default@6`, `default@6.0.0` | The kept major 6, read from `governance/presets/default@6`. Any other major is refused by name |
 | `project` | The root `compass.yml` over the shipped default, or the shipped default alone when there is no file |
 | `legacy` | The project's copied `governance/routing-policy.yml` and `governance/guardrails.yml`, through the legacy adapter |
 | `git:<revision>` | The project's `compass.yml` at that git revision over the shipped default, or the shipped default alone when the file did not exist then |
@@ -160,9 +161,9 @@ classification, because neither changes what a configuration owes:
 {
   "schema": 1,
   "differs": true,
-  "a": {"ref": "default@6", "kind": "default", "default_version": "6.0.0",
+  "a": {"ref": "default@7", "kind": "default", "default_version": "7.0.0",
         "digest": "sha256:...", "capabilities": []},
-  "b": {"ref": "project", "kind": "project", "default_version": "6.0.0",
+  "b": {"ref": "project", "kind": "project", "default_version": "7.0.0",
         "digest": "sha256:...", "capabilities": []},
   "classification": {"schema": 1, "result": "loosening", "...": "the classifier's own JSON"},
   "replay": {
@@ -199,7 +200,7 @@ Each side has these keys, in this order:
 
 | Key | Type | Meaning |
 |---|---|---|
-| `ref` | string | The label: `default@6`, `project`, `legacy`, `git:<revision>`, `file:<name>` or a git parent as it was written. A file's name is relative to the project root, or its own name when it is outside the root, so the document holds no machine path |
+| `ref` | string | The label: `default@7`, `project`, `legacy`, `git:<revision>`, `file:<name>` or a git parent as it was written. A file's name is relative to the project root, or its own name when it is outside the root, so the document holds no machine path |
 | `kind` | string | `default`, `project`, `legacy`, `git`, `file` or `parent` (a git parent) |
 | `default_version` | string or null | The version of the shipped default beneath it, null for `legacy` |
 | `digest` | string | `sha256:` and a digest of the resolved configuration and its capabilities |

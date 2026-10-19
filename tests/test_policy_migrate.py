@@ -180,7 +180,7 @@ def test_PM_2_an_unchanged_copy_migrates_to_an_empty_overlay(tmp_path):
     assert made.ops == []
     assert made.blocked == []
     assert made.equivalence["result"] == "equivalent"
-    assert yaml.safe_load(made.compass_yml) == {"schema": 1, "extends": "compass:default@6"}
+    assert yaml.safe_load(made.compass_yml) == {"schema": 1, "extends": "compass:default@7"}
 
 
 def test_PM_3_a_changed_copy_migrates_to_exactly_its_differing_entries(tmp_path):
@@ -265,7 +265,7 @@ def test_PM_5_settings_fold_into_compass_yml_and_state_goes_to_state_yml(tmp_pat
     made = _plan(root)
     doc = yaml.safe_load(made.compass_yml)
     assert doc == {
-        "schema": 1, "extends": "compass:default@6",
+        "schema": 1, "extends": "compass:default@7",
         "adoption": "advisory", "autonomy": "autonomous", "governance_drift": "strict",
         "enforcement": {"code_globs": ["src/*.py"]},
         "multiagent": {"worktree_root": "../wt", "max_worktrees": 3},
@@ -301,7 +301,7 @@ def test_PM_1_a_dry_run_prints_the_file_and_writes_nothing(tmp_path):
     code, out, err = _run(root, "policy", "migrate")
     assert code == 0, out + err
     assert "dry run" in out
-    assert "schema: 1" in out and "extends: compass:default@6" in out
+    assert "schema: 1" in out and "extends: compass:default@7" in out
     assert "equivalent" in out
     assert "--apply" in out
     assert _tree(root) == before
@@ -553,7 +553,7 @@ def test_PM_13_an_unedited_older_release_migrates_with_no_stub_and_no_refusal(tm
     assert made.base_release == {"release": same[-1], "chosen_by": "version"}
     assert made.ops == [] and made.blocked == []
     assert made.equivalence["result"] == "equivalent"
-    assert yaml.safe_load(made.compass_yml) == {"schema": 1, "extends": "compass:default@6"}
+    assert yaml.safe_load(made.compass_yml) == {"schema": 1, "extends": "compass:default@7"}
     if tag != "v5.6.0":
         assert made.adopted, "an older release has defaults the current one adds"
 

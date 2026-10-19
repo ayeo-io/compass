@@ -2,7 +2,7 @@
 """Compare two configurations by classifying them and by replaying
 assessments under both (`compass policy diff`, ADR-036 and ADR-037).
 
-This module has four parts: the references (`default@6`, `project`, a path
+This module has four parts: the references (`default@7`, `project`, a path
 and the others) that name a configuration; the replay of the grid, the label
 combinations and the archive; the comparison of open issues; and the one
 document the result becomes. It reads files and runs `git show`, writes no
@@ -45,7 +45,11 @@ PROJECT_FILE = "compass.yml"
 
 # What a person types for each reference, and the label each one gets.
 DEFAULT_REF = "default"
-SHIPPED_MAJOR = "6"
+
+
+def _live_major():
+    """The major of the live default preset, such as "7"."""
+    return str(policy_lint.load_parent()[1].get("version", "")).split(".", 1)[0]
 
 
 # --- the references ------------------------------------------------------------------
@@ -99,8 +103,8 @@ def _on(documents):
     return tuple(sorted(k for k, v in state.items() if v is True))
 
 
-def _shipped():
-    parent, meta = policy_lint.load_parent()
+def _shipped(directory=None):
+    parent, meta = policy_lint.load_parent(directory=directory)
     config, provenance = merge.apply({}, parent.doc, "parent", "default", {})
     return parent, meta, config, provenance
 
@@ -140,23 +144,35 @@ def _load_file(path, label, kind):
     return _overlay(label, kind, doc)
 
 
-def _default(label, kind):
-    parent, meta, config, provenance = _shipped()
+def _default(label, kind, directory=None):
+    parent, meta, config, provenance = _shipped(directory)
     return Config(label, kind, config, _on([parent.doc]), provenance, meta.get("version"))
 
 
 def _default_ref(ref):
-    """The shipped default for `default`, `default@6` and `default@6.0.0`,
-    with or without the `compass:` prefix an `extends:` line uses."""
+    """The live default for `default`, `default@7` and `default@7.0.0` (the
+    major comes from the live preset's version), with or without the
+    `compass:` prefix an `extends:` line uses. A major the framework keeps
+    beside the live one, such as `default@6`, is read from its own folder."""
+    from compass_pkg import policy_update  # imports this module, so load it late
+
     body = ref[len("compass:"):] if ref.startswith("compass:") else ref
     _, _, wanted = body.partition("@")
     parent, meta, _, _ = _shipped()
     version = str(meta.get("version", ""))
-    if wanted in ("", SHIPPED_MAJOR, version):
+    live = version.split(".", 1)[0]
+    if wanted in ("", live, version):
         if "@" in body and not wanted:
-            raise CompassError(f"'{ref}' names no version; write default@{SHIPPED_MAJOR}")
-        return _default(f"default@{SHIPPED_MAJOR}", "default")
-    raise CompassError(f"'{ref}': only default@{SHIPPED_MAJOR} ships "
+            raise CompassError(f"'{ref}' names no version; write default@{live}")
+        return _default(f"default@{live}", "default")
+    major = wanted.split(".", 1)[0]
+    kept = policy_update.available_defaults()
+    if major.isdigit() and int(major) in kept and int(major) != int(live):
+        directory = kept[int(major)]
+        _, kept_meta, _, _ = _shipped(directory)
+        if wanted in (major, str(kept_meta.get("version", ""))):
+            return _default(f"default@{major}", "default", directory)
+    raise CompassError(f"'{ref}': only default@{live} ships live "
                        f"(version {version}), so {body} cannot be compared")
 
 
@@ -263,7 +279,7 @@ def resolve_ref(ref, root, cwd=None, fetch=False):
     if ref and os.path.isfile(path):
         return _load_file(path, f"file:{_shown(path, root)}", "file")
     raise CompassError(f"'{ref}' is not a configuration reference and no such file "
-                       f"exists; use default@{SHIPPED_MAJOR}, project, legacy, "
+                       f"exists; use default@{_live_major()}, project, legacy, "
                        f"git:<revision>, a github: git parent or a path to a compass.yml")
 
 

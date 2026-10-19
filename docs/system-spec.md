@@ -4563,6 +4563,21 @@ Compass 6.1.0 is released.
 
 - `TRC-001` Given the release files When the version consistency test runs Then every file states 6.1.0
 
+### design-scope-review-and-bug-report (completed 2026-10-19)
+
+A design decision that declares Scope: project now needs a decision record before the issue lands. A regular issue owes a short requirements review and a hotfix owes a bug report.
+
+- `DSR-1` A project-scoped decision with no record is refused at landing
+- `DSR-2` A decision record that names the decision lets the issue land
+- `DSR-3` Issue-scoped and unscoped decisions are not refused
+- `DSR-4` The templates ask for the scope
+- `DSR-5` A new regular issue owes a lightweight requirements review
+- `DSR-6` The lightweight review has three sections
+- `DSR-7` A new hotfix owes a thorough bug report
+- `DSR-8` A cited record that does not exist does not count
+- `DSR-9` A project with no decisions folder is told the first record to write
+- `DSR-10` An issue assessed before the change owes neither document
+
 ### refuse-on-major-version-mismatch (completed 2026-10-19)
 
 Commands refuse an issue whose stored configuration was built by another major version of Compass, and name the command that repairs it.

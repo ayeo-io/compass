@@ -495,9 +495,13 @@ _SUPERSEDED = tuple(Case(f"SUP-{n:02d}", thing, code, "Bash", command, {}, exemp
     ("prompt-hook-script", REQ, "git log --oneline -- hooks/prompt-approval.sh", None, "TRC-015"),
     ("prompt-hook-script", REQ, "git add hooks/prompt-approval.sh", None, "TRC-015"),
     ("prompt-hook-script", REQ, "stat hooks/prompt-approval.sh", "stat", "TRC-015"),
-    # a compass option (TRC-050)
+    # a compass option, and a message value joined to its option (TRC-050)
     ("transcript", TRN, 'compass quick-fix start --note="see ~/.claude/projects/x"', None,
      "TRC-050"),
+    ("request-folder", REQ, 'git commit --message="see approval-requests"', "git commit",
+     "TRC-050"),
+    ("delegation-folder", DEL, 'gh issue comment 5 --body="the .compass/delegations folder"',
+     "gh", "TRC-050"),
     # text inside a substitution (TRC-057)
     ("request-folder", REQ, "git commit -m \"$(cat <<'EOF'\nExplain approval-requests\n\nThe hook "
      "reads .compass/delegations.\nEOF\n)\"", "git commit", "TRC-057"),
@@ -597,7 +601,56 @@ _GATE = tuple(Case(f"GTE-{n:02d}", thing, code, "Bash", command, {}, exempt, "TR
     ("prompt-hook-script", REQ, "cat {script}; git status", "cat"),
 ], 1))
 
-REFUSED = REFUSED + _SUPERSEDED + _GATE
+# --- a text value must be a quoted word, and every option must be known (TRC-068) --------------
+# The shell expands an unquoted word before the command runs: a brace makes extra words, a glob
+# or a tilde makes paths. An option the gate does not know may take the next word as its value,
+# so a message position after it is not a message. Each call below was allowed by the first
+# version of the gate and is refused by the installed hook.
+
+_QUOTE = tuple(Case(f"QTE-{n:02d}", thing, code, "Bash", command, {}, exempt, "TRC-068")
+               for n, (thing, code, command, exempt) in enumerate([
+    # brace expansion in a message position
+    ("transcript", TRN, "git commit --allow-empty -m {x,-F,{transcript}}", "git commit"),
+    ("request-folder", REQ, "git commit --allow-empty -m {x,--file={request}}", "git commit"),
+    ("request-folder", REQ, "git commit --allow-empty -m x{,\\ -F\\ {request}}", "git commit"),
+    ("request-folder", REQ, "git tag -m {x,-F,{request}} v1", None),
+    ("request-folder", REQ, "git merge -m {x,-F,{request}} main", None),
+    ("request-folder", REQ, "gh issue create --title t --body {x,--body-file,{request}}", "gh"),
+    ("request-folder", REQ, "gh issue create --title t --body {x,-F,{request}}", "gh"),
+    ("request-folder", REQ, "git commit --allow-empty -m {x,--template={request}}", "git commit"),
+    ("request-folder", REQ, "git commit --allow-empty -m {x,--exec=cat\\ {request}}",
+     "git commit"),
+    ("request-folder", REQ, 'git commit --allow-empty -m "x"{,-F{request}}', "git commit"),
+    # a glob or a tilde in a message position, or in a listing
+    ("request-folder", REQ, "git commit --allow-empty -m .compass/work/issue-a/approval-requests/*",
+     "git commit"),
+    ("transcript", TRN, "git commit --allow-empty -m ~/.claude/projects/-p/s1.jsonl", None),
+    ("request-folder", REQ, "ls {requests_dir}/*", "ls"),
+    ("request-folder", REQ, "ls {requests_dir}/pending/?.yml", "ls"),
+    ("request-folder", REQ, "wc -l {requests_dir}/[a-z]*/1.yml", "wc"),
+    ("request-folder", REQ, "stat {requests_dir}/{pending,closed}", "stat"),
+    # a message value that is not one quoted word, or joined to its option
+    ("request-folder", REQ, "git commit -m={request}", "git commit"),
+    ("request-folder", REQ, "git commit --message {request}", "git commit"),
+    ("request-folder", REQ, "git commit -m{request}", "git commit"),
+    ("request-folder", REQ, "gh pr create --title t --body @{request}", "gh"),
+    ("request-folder", REQ, 'gh pr create --title t --body "@{request}"', "gh"),
+    # an option that takes the next word as its value
+    ("request-folder", REQ, "git commit --pathspec-from-file -m {request}", "git commit"),
+    ("request-folder", REQ, "git commit --author -m {request}", "git commit"),
+    ("request-folder", REQ, "git commit -t -m {request}", "git commit"),
+    ("request-folder", REQ, "git commit -m x --pathspec-from-file -m {request}", "git commit"),
+    ("request-folder", REQ, "git commit -C -m {request}", "git commit"),
+    ("request-folder", REQ, "gh pr checkout 1 -b {request}", "gh"),
+    ("request-folder", REQ, 'gh pr create --draft --title t --body "{request}"', "gh"),
+    ("request-folder", REQ, "gh release create v1 --repo -t {request}", "gh"),
+    # a global option before the verb
+    ("request-folder", REQ, 'git -C . commit -m "x" {request}', "git commit"),
+    ("request-folder", REQ, 'git -c core.editor=cat commit -m "x" {request}', "git commit"),
+    ("request-folder", REQ, 'gh -R o/r pr create --body "{request}"', "gh"),
+], 1))
+
+REFUSED = REFUSED + _SUPERSEDED + _GATE + _QUOTE
 # The label of a command that no longer has an exemption names no exemption.
 REFUSED = tuple(c if c.exempt in EXEMPT_COMMANDS else replace(c, exempt=None) for c in REFUSED)
 
@@ -643,9 +696,9 @@ _ok("TRC-013", [
 _ok("TRC-015", ["cat hooks/prompt-approval.sh"], thing="prompt-hook-script")
 _ok("TRC-045", ["cat > /tmp/s.sh <<'EOF'\nls docs\nEOF\nsh /tmp/s.sh"])
 _ok("TRC-050", [
-    'git commit --message="see approval-requests and ~/.claude/projects"',
-    'git commit --message "see approval-requests"',
-    'gh issue comment 5 --body="the .compass/delegations folder"',
+    'git commit --message "see approval-requests and ~/.claude/projects"',
+    "git commit -am 'see approval-requests'",
+    'gh issue comment 5 --body "the .compass/delegations folder"',
 ])
 # A substitution that names nothing protected is judged by its whole text and passes (TRC-057),
 # and so does a command that is not simple and names nothing protected (TRC-067).
@@ -668,6 +721,13 @@ _ok("TRC-067", [
     "cat hooks/prompt-approval.sh",
     "git status && git commit -m \"Read the .compass/delegations folder\"",
     "git commit -m \"$(cat <<'EOF'\nFix a typo\nEOF\n)\"",
+])
+_ok("TRC-068", [
+    'git commit -am "Explain approval-requests"',
+    "git commit -a -s -m 'x approval-requests' -- docs",
+    'git merge --no-ff -m "Name approval-requests" topic',
+    'gh pr create --title "Name approval-requests" --body "About prompt-approval.sh"',
+    'gh pr comment 5 -b "The .compass/delegations folder"',
 ])
 _ok_tools = _tools("OK", "memory-folder", None, [
     ("Write", {"file_path": "{memory}/x.md"}, "TRC-017"),

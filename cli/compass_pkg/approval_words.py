@@ -35,7 +35,16 @@ from typing import NamedTuple
 #: position or an exemption is here; any other name is judged by its whole text.
 COMMANDS = ("git", "gh", "ls", "wc", "stat", "cat")
 GIT_MESSAGES = ("commit", "tag", "merge", "revert")
-GH_VERBS = ("issue", "pr", "release")
+#: The options of those verbs that take no value, so no word after one is read as its value.
+#: Any other option makes the command not simple.
+GIT_FLAGS = frozenset("amend no-edit allow-empty allow-empty-message no-verify signoff all "
+                      "quiet verbose no-ff ff-only squash force no-commit dry-run".split())
+GIT_LETTERS = frozenset("asnqvf")
+#: The `gh` subcommands whose `--title`, `--body`, `--notes`, `-t` and `-b` are the text of an
+#: issue, a pull request or a release; `gh pr checkout -b` is a branch, so `checkout` is not here.
+GH_SUBS = {"issue": ("create", "edit", "comment"),
+           "pr": ("create", "edit", "comment", "review", "merge"),
+           "release": ("create", "edit")}
 GH_TEXT = ("--title", "--body", "--notes", "-t", "-b")
 #: A descriptor copied by a redirect (`2>&1`, `>&2`, `>&-`) names no path.
 _DUPLICATE = re.compile(r"(?:\d+-?|-)(?![^\s;&])")
@@ -57,18 +66,20 @@ def _dollar(t, i):
 
 
 def _split(t):
-    """`(words, targets)` of each command; each word is `(value, flag)`, and the flag is
-    the strongest `$` it held (0, 1 or 2, see `_dollar`)."""
+    """`(words, targets)` of each command; each word is `(value, flag, bare)`. The flag is
+    the strongest `$` it held (0, 1 or 2, see `_dollar`), and `bare` is true when the word
+    holds a character outside quotes. An unquoted brace, glob or tilde character makes the
+    command not simple: the shell expands the word before the command runs."""
     n, i = len(t), 0
     commands, words, targets = [], [], []
-    word, flag, redirect, joined = None, 0, False, False
+    word, flag, bare, redirect, joined = None, 0, False, False, False
 
     def end_word():
-        nonlocal word, flag, redirect
+        nonlocal word, flag, bare, redirect
         if word is not None:
-            (targets if redirect else words).append((word, flag))
+            (targets if redirect else words).append((word, flag, bare))
             redirect = False
-        word, flag = None, 0
+        word, flag, bare = None, 0, False
 
     def end_command(blank_ok):
         nonlocal words, targets
@@ -122,6 +133,7 @@ def _split(t):
                 if i + 1 >= n or t[i + 1] == "\n":
                     raise _Refuse
                 word += t[i + 1]
+                bare = True
                 i += 1
             elif c == "'":
                 end = t.find("'", i + 1)
@@ -145,9 +157,12 @@ def _split(t):
                 if i >= n:
                     raise _Refuse
             else:
+                if c in "{}*?[~":
+                    raise _Refuse
                 if c == "$":
                     flag = max(flag, _dollar(t, i))
                 word += c
+                bare = True
         i += 1
     end_command(True)
     if joined or not commands:
@@ -155,53 +170,60 @@ def _split(t):
     return commands
 
 
-def _git_text(w):
-    """The indexes of the message of `git commit` and the like; none when the command can
-    read its message from a file (`-F`, `--file`, `-c`) or run a command (`--exec`)."""
+def _quoted(w, bare, i):
+    """True when `w[i]` can be message text: a word made only of quoted characters, so the
+    shell does not expand it, that does not start with `@`."""
+    return i < len(w) and not bare[i] and not w[i].startswith("@")
+
+
+def _git_text(w, bare):
+    """The indexes of the message values of `git commit` and the like, or None when an option
+    is not on `GIT_FLAGS`: it may take the next word as its value (`--author -m`), or read a
+    file or a commit (`-F`, `-c`, `-C`, `-t`, `--file`, `--template`)."""
     marks, i = set(), 2
-    while i < len(w):
-        word = w[i]
-        if word.startswith(("--file", "--exec")):
-            return frozenset()
-        if word == "--message":
+    while i < len(w) and w[i] != "--":
+        word, letters = w[i], w[i][1:]
+        if word.startswith("--"):
+            message, known = word == "--message", word[2:] in GIT_FLAGS
+        elif word.startswith("-") and len(word) > 1:
+            message = letters[-1] == "m" and set(letters[:-1]) <= GIT_LETTERS
+            known = set(letters) <= GIT_LETTERS
+        else:                                   # a ref or a path: judged as a word
+            i += 1
+            continue
+        if message:
+            if not _quoted(w, bare, i + 1):
+                return None
             marks.add(i + 1)
             i += 1
-        elif word.startswith("--message="):
-            marks.add(i)
-        elif word.startswith("-") and not word.startswith("--"):
-            for j, letter in enumerate(word[1:], 1):
-                if letter in "Fc":
-                    return frozenset()
-                if letter == "m":
-                    if word[j + 1:]:
-                        marks.add(i)
-                    else:
-                        marks.add(i + 1)
-                        i += 1
-                    break
+        elif not known:
+            return None
         i += 1
     return frozenset(marks)
 
 
-def _gh_text(w):
-    """The indexes of the title, body and notes of `gh issue`, `pr` and `release`."""
-    marks, i = set(), 2
+def _gh_text(w, bare):
+    """The indexes of the title, body and notes values of `gh issue`, `pr` and `release`, or
+    None when the command holds any other option."""
+    marks, i = set(), 3
     while i < len(w):
-        option, equals, _ = w[i].partition("=")
-        if equals and option in GH_TEXT:
-            marks.add(i)
-        elif w[i] in GH_TEXT:
+        if w[i].startswith("-") and len(w[i]) > 1:
+            if w[i] not in GH_TEXT or not _quoted(w, bare, i + 1):
+                return None
             marks.add(i + 1)
             i += 1
         i += 1
     return frozenset(marks)
 
 
-def _text(w):
+def _text(w, bare):
+    """The indexes of the message text of one command, or None when it is not simple."""
+    if w[0] in ("git", "gh") and len(w) > 1 and w[1].startswith("-"):
+        return None                             # a global option: -C, -c, -R, --git-dir
     if len(w) > 2 and w[0] == "git" and w[1] in GIT_MESSAGES:
-        return _git_text(w)
-    if len(w) > 2 and w[0] == "gh" and w[1] in GH_VERBS:
-        return _gh_text(w)
+        return _git_text(w, bare)
+    if len(w) > 2 and w[0] == "gh" and w[2] in GH_SUBS.get(w[1], ()):
+        return _gh_text(w, bare)
     return frozenset()
 
 
@@ -211,16 +233,18 @@ def simple(command):
         parsed = _split(command)
         found = []
         for words, targets in parsed:
-            values = tuple(value for value, _ in words)
+            values = tuple(value for value, _, _ in words)
             if not values or values[0] not in COMMANDS or words[0][1]:
                 return None
-            text = _text(values)
+            text = _text(values, [bare for _, _, bare in words])
+            if text is None:
+                return None
             # A `$` is allowed in message text alone, and there only before a name.
-            if any(flag and (flag > 1 or i not in text) for i, (_, flag) in enumerate(words)):
+            if any(flag and (flag > 1 or i not in text) for i, (_, flag, _) in enumerate(words)):
                 return None
-            if any(flag for _, flag in targets):
+            if any(flag for _, flag, _ in targets):
                 return None
-            found.append(Command(values, text, tuple(value for value, _ in targets)))
+            found.append(Command(values, text, tuple(value for value, _, _ in targets)))
         return tuple(found)
     except (_Refuse, IndexError):
         return None

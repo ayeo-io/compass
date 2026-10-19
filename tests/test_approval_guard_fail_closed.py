@@ -62,6 +62,15 @@ def test_trc_067_a_command_that_is_not_simple_is_judged_by_its_whole_text(world)
     assert not found, "\n".join(found)
 
 
+def test_trc_068_an_unquoted_text_value_or_an_unknown_option_is_judged_by_the_whole_text(world):
+    refused, allowed = refused_for("TRC-068"), controls_for("TRC-068")
+    assert len(refused) >= 30, len(refused)
+    assert len(allowed) >= 5, len(allowed)
+    found = _verdicts(world, refused, lambda case: case.code)
+    found += _verdicts(world, allowed, lambda case: "allowed")
+    assert not found, "\n".join(found)
+
+
 def test_trc_052_a_compass_option_is_not_text(guard):
     """Superseded: no `compass` option is a text position, so a request path in a `--note`
     is refused, and a command that starts with a path ending in `compass` is not simple."""

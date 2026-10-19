@@ -59,43 +59,69 @@ def test_a_dollar_name_is_allowed_only_in_a_message():
 
 @pytest.mark.parametrize("command, text", [
     ('git commit -m "a b"', {3}),
-    ("git commit -am msg", {3}),
-    ("git commit -mmsg", {2}),
-    ("git commit --message=msg", {2}),
-    ("git commit --message msg", {3}),
-    ("git tag -m msg v1", {3}),
-    ("git merge -m msg topic", {3}),
-    ("git revert -m msg abc", {3}),
-    ("gh pr create --title t --body b", {4, 6}),
-    ("gh issue comment 5 -b b", {5}),
-    ("gh pr create --title=t --body=b", {3, 4}),
-    ("gh release create v1 --notes n", {5}),
+    ('git commit -am "msg"', {3}),
+    ("git commit -asm 'msg'", {3}),
+    ('git commit --message "msg"', {3}),
+    ('git commit -a --amend --no-edit -m "msg" -- file', {6}),
+    ('git commit -m "a" -- -m', {3}),
+    ("git tag -m 'msg' v1", {3}),
+    ('git merge --no-ff -m "msg" topic', {4}),
+    ('git revert -m "1" abc', {3}),
+    ('gh pr create --title "t" --body "b"', {4, 6}),
+    ("gh issue comment 5 -b 'b'", {5}),
+    ('gh release create v1 --notes "n"', {5}),
+    ('gh pr merge 5 -t "t" -b "b"', {5, 7}),
 ])
-def test_the_text_positions_are_the_values_of_a_message_option(command, text):
+def test_the_text_positions_are_the_quoted_values_of_a_message_option(command, text):
     assert _one(command).text == frozenset(text)
 
 
 @pytest.mark.parametrize("command", [
-    "git commit -m a -F file",
-    "git commit -m a --file=file",
-    "git commit -m a --file file",
-    "git commit -m a -c abc",
-    "git commit -m a -aF file",
-    "git commit -m a --exec=x",
-    "git -C dir commit -m a",
-    "git -c alias.commit=x commit -m a",
     "git log -m a",
     "git stash -m a",
-    "gh pr create --body-file f",
+    "git status -s",
+    "git commit-tree abc",
     "gh api repos/o/r -f body=a",
     "gh alias set x y",
     "gh extension exec x",
-    "gh -R o/r pr create --body b",
+    "gh pr checkout 1 -b branch",
+    "gh pr view 5 -t x",
     "ls -m a",
     "cat --message a",
 ])
 def test_a_command_outside_the_list_has_no_text_position(command):
-    assert _one(command).text == frozenset()
+    assert _one(command).text == frozenset(), command
+
+
+@pytest.mark.parametrize("command", [
+    # a text value that is not one quoted word
+    "git commit -m msg", "git commit -am msg", "git commit -mmsg", "git commit --message=msg",
+    'git commit --message="msg"', "git commit --message msg", "git tag -m msg v1",
+    "git commit -m x'y'", 'git commit -m "x"y', "git commit -m", 'git commit -m "x" -m',
+    'gh pr create --title t --body "b"', 'gh pr create --title=t --body "b"',
+    'gh pr create --title "t" --body=b', 'gh pr create --title "t" --body "@file"',
+    'git commit -m "@file"',
+    # brace, glob and tilde expansion happen before the command runs
+    'git commit -m {a,b}', 'git commit -m "x" {a,b}', 'git commit -m x{,\\ -F\\ f}',
+    'git commit -m "x"{,-F}', "git commit -m *", "git commit -m ?", "git commit -m [a]",
+    "git commit -m ~", 'git commit -m "x" ~/f', "ls a/*", "ls ~", "ls {a,b}", "cat f?", "ls [ab]",
+    "git commit -m 'x' --message ~",
+    # an option the gate does not know may take the next word as its value
+    "git commit -m x -F f", 'git commit -m "x" --file=f', 'git commit -m "x" --file f',
+    'git commit -m "x" -c abc', 'git commit -m "x" -aF f', 'git commit -m "x" --exec=x',
+    'git commit --pathspec-from-file -m "x"', 'git commit --author -m "x"', 'git commit -t -m "x"',
+    'git commit -C -m "x"', 'git commit -m "x" -C HEAD', 'git commit -m "x" --template=f',
+    'git commit -m "x" --reuse-message=HEAD', 'git commit -m "x" --reedit-message=HEAD',
+    'git tag -m "x" -F f v1', 'git merge -m "x" -X theirs main', 'git commit -m "x" -S',
+    'gh pr create --title "t" --body-file f', 'gh pr create --title "t" -F f',
+    'gh pr create --draft --title "t"', 'gh release create v1 --repo -t "x"',
+    'gh issue create --title "t" --template f',
+    # a global option before the verb changes the directory or the configuration
+    'git -C dir commit -m "x"', 'git -c alias.commit=x commit -m "x"', "git --git-dir=d status",
+    'gh -R o/r pr create --body "b"', "gh --version",
+])
+def test_a_text_value_must_be_a_quoted_word(command):
+    assert _simple(command) is None, command
 
 
 # --- what is not simple -----------------------------------------------------------------------

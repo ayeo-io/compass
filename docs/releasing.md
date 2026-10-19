@@ -165,7 +165,9 @@ A release that moves the shipped default to a new major (`default@7` after
 `governance/presets/default@<major>`, a copy of the last preset that major
 shipped. The copy keeps the version line of that preset, so it can be older
 than the release: v6.1.0 ships `version: 6.0.0`, and `default@6` holds that
-same file. The copy is frozen, so do not edit it. The live default wins for
+same file. The copy is frozen, so do not edit it. A project on v6.0.1, which shipped different
+`default@6.0.0` values, has its waivers re-checked against the v6.1.0 values,
+because no record stores what an approval saw. The live default wins for
 its own major. `compass policy update` reads both folders to tell which waived
 fields moved, and exits 2 for a project on a major that is not kept. Pin the
 new preset with `python3 scripts/generate-legacy-views.py --pin`; the old

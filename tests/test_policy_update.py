@@ -870,7 +870,8 @@ def _byte_problems(folder, tag, repo=ROOT):
                 f"{listed.stderr.decode(errors='replace').strip()}"]
     paths = {Path(line).name: line for line in listed.stdout.decode().splitlines()}
     here = {p.name for p in folder.iterdir() if p.is_file()}
-    problems = []
+    problems = [f"{folder.name}/{p.name} is a directory; {tag} has only files"
+                for p in sorted(folder.iterdir()) if p.is_dir()]
     for name in sorted(set(paths) | here):
         if name not in here:
             problems.append(f"{folder.name}/{name} is missing but {tag} has it")
@@ -1024,6 +1025,18 @@ def test_trc_006_a_comment_only_edit_passes_the_digest_check_and_fails_the_byte_
     assert _digest_problems(copy_, KEPT_KEY, _pins()) == []
     problems = _byte_problems(copy_, KEPT_TAG, ROOT)
     assert problems and all("rules.yml" in p for p in problems)
+
+
+def test_trc_001_a_subdirectory_in_the_kept_folder_is_reported_by_name(tmp_path):
+    """Scenario id: `TRC-001` in default-6-preset-for-7-0-0/acceptance-criteria.md"""
+    assert KEPT_6.is_dir(), "governance/presets/default@6 does not exist"
+    _require_tag(ROOT, KEPT_TAG)
+    copy_ = tmp_path / "default@6"
+    shutil.copytree(KEPT_6, copy_)
+    (copy_ / "sub").mkdir()
+    (copy_ / "sub" / "x.yml").write_text("schema: 1\n", encoding="utf-8")
+    problems = _byte_problems(copy_, KEPT_TAG, ROOT)
+    assert any("sub" in p for p in problems), problems
 
 
 def _git_repo(path, monkeypatch):

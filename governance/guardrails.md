@@ -207,8 +207,13 @@ _(none yet - the shipped default guardrails apply as-is)_
     names a path glob and a text, and the file must hold the text. A project
     cannot extend the list with `add:`, because `params` is a map and the merge
     grammar applies `add:` only to a catalogue field. A project sets the whole
-    `trigger_paths` list, the shipped patterns and its own, in its layer, with a
-    project waiver, because `tighter` is `none` for the key.
+    list, the shipped patterns and its own, in its layer. Both keys declare the
+    direction `superset`. Adding entries to `trigger_paths` or
+    `trigger_contents` needs no waiver, because a trigger path makes the check
+    run, so more entries check more changes. Removing or replacing an entry
+    needs a waiver, because fewer entries check fewer changes. A reordered or
+    repeated entry is equal. A list that is missing or malformed cannot be
+    compared and also needs a waiver.
   - **Four conditions make either check decline**, reporting `nothing to
     check`, before it reads a document. The first that holds decides the
     detail:
@@ -281,9 +286,10 @@ Why it is enforced rather than warned about:
 - `cli/compass_pkg/check_registry.py` holds one entry for each built-in check
   implementation. `CHECK_FNS` is derived from it. An entry holds a semantic
   version (all start at `1.0.0`), a parameter spec, a `tighter` value per
-  parameter (`higher`, `lower` or `none`, default `none`; a check parameter
-  cannot declare `equivalent`, because it has no declared choices, and the
-  registry refuses the entry), whether the check
+  parameter (`higher`, `lower`, `superset` or `none`, default `none`; a check
+  parameter cannot declare `equivalent`, because it has no declared choices,
+  and the registry refuses the entry; `superset` applies to a list parameter
+  only, and the registry refuses it on any other), whether the check
   runs project code (`command-passes` alone), and the path of its fixture
   corpus. It also answers "installed version" and "installed major" of an
   implementation.

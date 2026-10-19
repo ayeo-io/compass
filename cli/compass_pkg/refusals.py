@@ -83,18 +83,25 @@ REFUSALS: dict[str, dict[str, str]] = {
     },
     "bad-session-issue": {
         "what": "this edit",
-        "why": "COMPASS_ISSUE names '{slug}', which is not an issue directly "
-               "under .compass/work/. It names this session's issue ahead of "
-               ".compass/current-task, so the edit is not judged by another "
-               "issue instead.",
-        "fix": "set COMPASS_ISSUE to a real issue slug, or unset it to use "
-               ".compass/current-task, then retry.",
+        "why": "no issue can be named for {project}: '{slug}' is not an "
+               "issue under its .compass/work/.",
+        "fix": "in the session's own project, set COMPASS_ISSUE to a real "
+               "slug or unset it. In a worktree, run compass issue use "
+               "<slug> there.",
+    },
+    "tree-not-tied": {
+        "what": "this edit",
+        "why": "{project} is not tied to the session's repository: it is "
+               "not a worktree of it, or git cannot read it.",
+        "fix": "edit a worktree of the session's repository, or start the "
+               "session in {project}.",
     },
     "pointer-moved": {
         "what": "this edit",
-        "why": "another session moved .compass/current-task from this "
-               "session's issue '{previous}' to '{slug}', so this edit would "
-               "count against the wrong issue.",
+        "why": "another session moved .compass/current-task in this "
+               "session's own project from this session's issue "
+               "'{previous}' to '{slug}', so this edit would count against "
+               "the wrong issue.",
         "fix": "in this session, run `compass issue use {previous}` to carry "
                "on, or `compass issue use {slug}` to switch, then retry.",
     },

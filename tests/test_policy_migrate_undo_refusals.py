@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
 from test_policy_migrate import _api, _full_project, _run, _tree  # noqa: E402
-from test_policy_migrate_undo import (WRITERS, _digest, add_marker_keys,  # noqa: E402
+from test_policy_migrate_undo import (WRITERS, _digest, assert_marker_keys,  # noqa: E402
                                       migrated, set_marker, undo, undo_api)
 
 MIGRATED_AT = "2026-10-19T12:00:00+00:00"
@@ -58,7 +58,12 @@ def record(root, slug, name, timestamp, signed=True, folder="evidence"):
 
 
 def signed_records(root, after=3):
-    """`after` signed records at or after the migration, in two issues, and one before it."""
+    """`after` signed records at or after the migration, in two issues, and one before it.
+
+    The migration time is set to MIGRATED_AT first: the real marker holds the time the
+    test ran, which is after every date below.
+    """
+    set_marker(root, migrated_at=MIGRATED_AT)
     record(root, "issue-a", "one.json", "2026-10-19T12:00:00+00:00")
     record(root, "issue-a", "two.json", "2026-10-20T08:30:00+00:00")
     for index in range(after - 2):
@@ -122,7 +127,7 @@ def test_TRC_022_an_old_settings_file_edited_after_a_stop_is_refused(tmp_path, m
     with pytest.raises(OSError):
         api.apply(str(root), api.plan(str(root)))
     monkeypatch.undo()
-    add_marker_keys(root)
+    assert_marker_keys(root)
     append(root, ".compass/config.yml", "autonomy: controlled\n")
     assert ".compass/config.yml" in refusal(root)
 
@@ -165,7 +170,7 @@ def test_TRC_024_a_marker_without_state_made_needs_no_state_digest(tmp_path):
     (root / ".compass" / "state.yml").write_text("initialised: {by: x, at: '2026-02-02'}\n",
                                                  encoding="utf-8")
     assert _run(root, "policy", "migrate", "--apply")[0] == 0
-    add_marker_keys(root)
+    assert_marker_keys(root)
     set_marker(root, written={"compass.yml": _digest((root / "compass.yml").read_bytes())})
     assert undo_api().plan(str(root)).result == "ready"
 

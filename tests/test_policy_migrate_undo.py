@@ -41,27 +41,22 @@ def _digest(data):
     return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
-def add_marker_keys(root, compass_yml_text=None):
-    """Add `written` and `migrated_at` to the marker when the migration did not.
+def assert_marker_keys(root):
+    """Check that the migration wrote `written` and `migrated_at` in the marker itself.
 
-    It does nothing once the keys exist, so the tests hold before and after
-    the migration writes them itself. `compass_yml_text` is the text of a
-    `compass.yml` the migration stopped before it wrote.
+    The undo reads both keys, so a test that compares or undoes a real
+    migration must see the marker as the migration wrote it.
     """
     path = Path(root) / ".compass" / "migration.yml"
     marker = yaml.safe_load(path.read_text(encoding="utf-8"))
-    before = dict(marker)
-    if "written" not in marker:
-        compass_yml = Path(root) / "compass.yml"
-        data = compass_yml.read_bytes() if compass_yml.exists() else compass_yml_text.encode("utf-8")
-        marker["written"] = {"compass.yml": _digest(data)}
-        if marker.get("created_state") is True:
-            state = (Path(root) / ".compass" / "state.yml").read_bytes()
-            marker["written"][".compass/state.yml"] = _digest(state)
-    if "migrated_at" not in marker:
-        marker["migrated_at"] = "2026-10-19T12:00:00+00:00"
-    if marker != before:
-        path.write_text(yaml.safe_dump(marker, sort_keys=False), encoding="utf-8")
+    assert "migrated_at" in marker
+    written = marker["written"]
+    compass_yml = Path(root) / "compass.yml"
+    if compass_yml.exists():
+        assert written["compass.yml"] == _digest(compass_yml.read_bytes())
+    else:
+        assert "compass.yml" in written
+    assert (".compass/state.yml" in written) == (marker.get("created_state") is True)
 
 
 def set_marker(root, **keys):
@@ -94,7 +89,7 @@ def migrated(tmp_path, crlf=False):
     settings = _settings_view(root)
     code, out, err = _run(root, "policy", "migrate", "--apply")
     assert code == 0, out + err
-    add_marker_keys(root)
+    assert_marker_keys(root)
     return root, originals, settings
 
 
@@ -162,7 +157,7 @@ def test_TRC_011_a_state_file_the_migration_did_not_create_is_kept(tmp_path):
     state.write_text("initialised: {by: someone, at: '2026-02-02'}\n", encoding="utf-8")
     code, out, err = _run(root, "policy", "migrate", "--apply")
     assert code == 0, out + err
-    add_marker_keys(root)
+    assert_marker_keys(root)
     kept = state.read_bytes()
     made = undo(root)
     assert state.read_bytes() == kept
@@ -204,7 +199,7 @@ def test_TRC_014_migrate_undo_migrate_gives_the_same_project(tmp_path):
     undo(root)
     code, out, err = _run(root, "policy", "migrate", "--apply")
     assert code == 0, out + err
-    add_marker_keys(root)
+    assert_marker_keys(root)
     assert _project_state(root) == first
 
 
@@ -233,7 +228,7 @@ def test_TRC_016_an_undo_finishes_a_migration_stopped_before_removing_the_old_fi
     with pytest.raises(OSError):
         api.apply(str(root), api.plan(str(root)))
     monkeypatch.undo()
-    add_marker_keys(root)
+    assert_marker_keys(root)
     assert (root / "compass.yml").is_file() and (root / ".compass" / "config.yml").is_file()
     undo(root)
     assert without_legacy(_tree(root)) == before
@@ -256,7 +251,7 @@ def test_TRC_017_an_undo_finishes_a_migration_stopped_before_writing_compass_yml
     with pytest.raises(OSError):
         api.apply(str(root), made)
     monkeypatch.undo()
-    add_marker_keys(root, compass_yml_text=made.compass_yml)
+    assert_marker_keys(root)
     assert (root / ".compass" / "state.yml").is_file() and not (root / "compass.yml").exists()
     undo(root)
     assert without_legacy(_tree(root)) == before

@@ -85,9 +85,18 @@ it is exempt from assessment.
      test_command: <the command that runs the tests, such as "pytest -q">
    ```
 
+   Then ask one optional question: "Which language should the agent write
+   prose in, such as `en-US` or `de`? Leave it blank to set none." Add
+   `language: <the tag>` to the file only when the person answers. A blank
+   answer adds no key, and nothing is written in its place. Do not guess the
+   language from anywhere else. The tag is a BCP 47 tag, and
+   `docs/configuration.md` lists the usual ones.
+
    The name is `project.name` and the command is `project.test_command`.
    `compass init` writes no settings file, so this is the first one. Run
-   `compass policy lint` and report that it passes. Do not add keys the team has
+   `compass policy lint` and report that it passes. If it reports a `language`
+   finding, show it, ask again and lint again. Write no tag that lint has not
+   passed. Do not add keys the team has
    not asked for: every other setting has a default (see
    `docs/configuration.md`), and a missing key is a complete state.
 

@@ -298,7 +298,19 @@ fi
 # resolve_project() runs twice: once here, for a tool that names a file
 # directly, and again once a Bash command's target has been extracted
 # further down.
-SESSION_DIR="$(pwd)"
+#
+# `pwd` fails in a removed directory, and under `set -e` that ended the hook
+# with exit 1, which the runtime reads as non-blocking: the call ran unchecked.
+# On a failure the hook enters CLAUDE_PROJECT_DIR (else /) so the readers below
+# start in a folder that exists, and CWD_GONE lets the refusal further down
+# fire when no project variable names the project.
+CWD_GONE=0
+if ! { SESSION_DIR="$(pwd 2>/dev/null)" && [ -d "$SESSION_DIR" ]; }; then
+  CWD_GONE=1
+  SESSION_DIR="${CLAUDE_PROJECT_DIR:-/}"
+  [ -d "$SESSION_DIR" ] || SESSION_DIR=/
+  cd "$SESSION_DIR" 2>/dev/null || cd /
+fi
 
 # Resolve `.`, `..` and repeated slashes in an absolute path, as text, into
 # NORMALISED. A global, not a printed value, so the hook starts no subshell
@@ -795,6 +807,13 @@ esac
 # Read and Grep are matched only for the transcript and delegation checks
 # above; reading a file never needs a red.
 case "${TOOL:-}" in Read|Grep) exit 0 ;; esac
+# A removed working directory with no CLAUDE_PROJECT_DIR leaves the project to
+# be found from the edited path alone. When that path is inside a Compass
+# project, refuse rather than judge by a guess.
+if [ "$CWD_GONE" -eq 1 ] && [ -z "${CLAUDE_PROJECT_DIR:-}" ] \
+   && [ "${PROJECT_RESOLVED:-0}" -eq 1 ]; then
+  compass_block working-directory-gone "target=${TARGET:-}" "tool=${TOOL:-?}"
+fi
 
 
 # --- classify a target file -------------------------------------------------

@@ -54,6 +54,7 @@ FIXTURES = {
     "bad-current-task": dict(slug="../side"),
     "bad-session-issue": dict(slug="missing", project="/work/proj"),
     "tree-not-tied": dict(project="/work/proj"),
+    "working-directory-gone": dict(target="src/app.py", tool="Edit"),
     "pointer-moved": dict(slug="why", previous="ex"),
     "no-delivery-approach": dict(slug="demo"),
     "no-acceptance-criteria": dict(target="src/app.py", tool="Edit"),

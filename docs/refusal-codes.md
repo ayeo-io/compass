@@ -169,3 +169,9 @@ code from a refusal you hit.
 **Blocked:** edit to {target} (tool: {tool})
 **Why:** issue '{slug}' waits for {dependency} to reach {until}{more}, and this checkout reads {dependency} as {state}.
 **Fix:** if {dependency} is finished in another checkout, bring its .compass/work/{dependency}/ folder here; or run compass issue depends remove {dependency}.
+
+### `working-directory-gone`
+
+**Blocked:** edit to {target} (tool: {tool})
+**Why:** the session's working directory was removed and CLAUDE_PROJECT_DIR is not set, so Compass cannot tell which project's issue judges this edit.
+**Fix:** restart the session from a folder that exists, then retry.

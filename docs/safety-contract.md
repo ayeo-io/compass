@@ -566,13 +566,22 @@ production code, not as a test. A symbolic link is not followed.
 
 The hook has to finish before Claude Code stops it, so it refuses a Bash
 command it cannot scan in time where Compass is in use, and skips only the
-write scan elsewhere. Two limits do this, both set from timings on a UTF-8
-machine: a command over 98304 bytes (`bash-command-too-long`), and a command
-with more than 400 different write targets or more than 700 `$(` openers
-(`bash-command-too-complex`). The scan of substitutions also stops after a
-fixed amount of work, and the command is then refused in the same way. The slowest command the hook
-accepts takes at most 7.5 seconds on a loaded machine, which is 3.75 seconds
-on an idle one.
+write scan elsewhere. Four limits do this, all set from timings on a UTF-8
+machine with bash 3.2: a command over 98304 bytes (`bash-command-too-long`),
+and a command with more than 400 different write targets, more than 20
+different variable names at the start of a write target, or more than 700
+`$(` openers (`bash-command-too-complex`). The scan of substitutions also
+stops after a fixed amount of work, and the command is then refused in the
+same way. A glob in `enforcement.code_globs` that bash cannot match itself
+is matched by Python once for all the write targets of a command.
+
+The slowest command the hook accepted in these timings took about 3.3
+seconds: 20 different variable names and 380 other write targets in 90 KB,
+in a project whose `code_globs` hold a bracket glob. It was timed on a
+machine with 14 cores and a load average of about 7; no idle run was
+available. Without the limit on variable names, 400 names took 26 seconds.
+Without the single Python start, 400 write targets under a bracket glob took
+13 seconds. The limit of 400 write targets alone did not bound the time.
 
 The length limit is 98304 bytes (96 KiB), counted over the whole command.
 In a project that has a `.compass` folder, the hook refuses a longer command
@@ -585,22 +594,26 @@ length. It skips only the write scan there, and the approval and transcript
 guards still read the whole command.
 
 The time limit is 15 seconds. `hooks/hooks.json` sets `"timeout": 15` and
-`"onFailure": "block"` on the pre-tool hook. From Claude Code 2.1.295 a hook that fails or runs out of time can block the call.
+`"onFailure": "block"` on the pre-tool hook. From Claude Code 2.1.295 a hook
+that fails or runs out of time can block the call.
 
 The size limits are the main control and work on every version of Claude
-Code. On an older version the length limit still refuses long commands, and the
-other size limits still refuse their commands, but a
-command that runs past the time limit can let the call run. Not every
-timeout fails closed.
+Code. On an older version the length limit still refuses long commands, and
+the other limits still refuse their commands, but a command that runs past
+the time limit can let the call run. Not every timeout fails closed.
 
 Not measured: only one version of Claude Code was available, so the
-behaviour of older versions is from its documentation. A machine without
-`jq` has a weaker bound, because the hook then reads the input with `grep`
-before it knows the command's length, so a very long command can run past 100
-seconds there. On Claude Code 2.1.295 or later the
-15-second timeout is the control there. `scripts/install.sh` and the Codex
-hook file do not set these keys, so a source install and a Codex session keep
-the default timeout of 600 seconds.
+behaviour of older versions is from its documentation.
+
+A machine without `jq` has no time bound. The hook then reads the input with
+`grep` before it knows the command's length, and that read slows quickly as
+the command grows: 10 KB took 4.4 seconds, 20 KB took 33.9 seconds and 50 KB
+did not end in 150 seconds. A command of 20 KB is a fifth of the length
+limit and already runs past the 15-second time limit. The hook before this
+change behaved the same way. On Claude Code 2.1.295 or later the 15-second
+timeout is the only control there. `scripts/install.sh` and the Codex hook
+file do not set these keys, so a source install and a Codex session keep the
+default timeout of 600 seconds.
 
 Shell scripts, makefiles and extensionless scripts are not classified
 as production-code file types for red-before-green enforcement.

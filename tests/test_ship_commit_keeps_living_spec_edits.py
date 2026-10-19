@@ -28,7 +28,7 @@ def _commit_spec(root, text, message):
 
 def test_a_hand_edit_of_the_living_spec_in_the_issues_own_commit_is_refused(
         repo):
-    """The issue's own commit changes src/new.py and the living spec: the
+    """The issue's own commit changes a source file and the living spec: the
     spec is outside the issue's scope, so the landing is refused."""
     (repo / "src" / "new.py").write_text("y = 1\n")
     (repo / "docs").mkdir()
@@ -61,6 +61,24 @@ def test_a_hand_edit_below_a_merge_of_the_base_is_refused(repo):
     combined = result.stdout + result.stderr
     assert result.returncode != 0, combined
     assert SPEC in combined, combined
+
+
+def test_a_hand_edit_brought_in_by_a_merge_judged_in_full_is_refused(repo):
+    """The merged-in branch is not on the base branch, as in a multiagent
+    integration merge. The merge is judged in full and keeps the spec edit.
+
+    Scenario id: `TRC-001` in ship-commit-keeps-living-spec-edits/
+    acceptance-criteria.md"""
+    _issue_commit(repo)
+    _side_branch(repo, {SPEC: "# System spec\n\nhand edit\n"}, on_base=False)
+    _git(repo, "merge", "-q", "--no-ff", "-m", "Merge side", "side")
+
+    result = _ship(repo)
+
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0, combined
+    assert SPEC in combined, combined
+    assert not _manifest(repo).get("land_commit")
 
 
 def test_a_spec_only_commit_still_lands(repo):

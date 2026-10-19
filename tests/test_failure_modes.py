@@ -126,3 +126,15 @@ def test_a_repeat_is_found_across_case_folding(issue):
     _compass(issue, "scenario", "descope", "STRASSE", "--reason", "x", "--issue", "demo")
     r = _compass(issue, "scenario", "descope", "straße", "--reason", "y", "--issue", "demo")
     assert r.returncode != 0
+
+
+@pytest.mark.parametrize("body", ["- a\n- b\n", "just a string\n"])
+def test_list_manifest_refused_with_a_clear_error(issue, body):
+    """A manifest.yml that is not a mapping is refused in one line naming the file."""
+    path = issue / ".compass" / "work" / "demo" / "manifest.yml"
+    path.write_text(body)
+    r = _compass(issue, "issue", "lint", "--issue", "demo")
+    assert r.returncode != 0
+    assert "Traceback" not in r.stderr, r.stderr
+    assert "manifest.yml" in r.stderr and "must be a mapping" in r.stderr, r.stderr
+    assert len(r.stderr.strip().splitlines()) == 1, r.stderr

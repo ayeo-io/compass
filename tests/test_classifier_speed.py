@@ -615,7 +615,7 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # registry direction is `superset` compares as a set of exact entries, so adding a
 # trigger path is now `tighter`, where version 10 read it as `incomparable`. The
 # version is now 11 (ADR-073).
-VERDICT_SOURCE_PIN = "0f031f17ab7f22c7"
+VERDICT_SOURCE_PIN = "77f5383a3d3e8adb"
 
 
 def _verdict_source_digest():

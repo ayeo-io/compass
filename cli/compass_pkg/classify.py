@@ -15,7 +15,8 @@ build their text from the same dictionary.
 # compass_pkg.catalogue_spec, compass_pkg.core (CompassError,
 # reading_matches, the `when` key map), compass_pkg.obligations (the obligations function,
 # Refused, the dimension orders) and, for a check parameter's direction,
-# compass_pkg.check_registry. compass_pkg.locks imports it and reads `scan`,
+# compass_pkg.check_registry, and compass_pkg.classify_lists (a list
+# parameter as sets of entries). compass_pkg.locks imports it and reads `scan`,
 # `Scan`, `where`, `plain` and `Refused`; `compass_pkg.waivers` reads
 # `classify`.
 from __future__ import annotations
@@ -29,6 +30,7 @@ from compass_pkg import obligations
 from compass_pkg.catalogue_spec import (ARTIFACT_DEPTHS, CEILING_DIRECTIONS, DOCUMENT_CAP, LABEL_CAP,
                                         OBLIGATION_FIELDS, ON_SKIPPED, SEVERITIES)
 from compass_pkg.catalogue_spec import TIGHTER as DIRECTIONS
+from compass_pkg.classify_lists import entry_sets
 from compass_pkg.core import WHEN_KEY_MAP, CompassError, reading_matches
 from compass_pkg.obligations import (Refused, assessment_vocabulary,
                                      dimension_orders)
@@ -472,40 +474,11 @@ def _in_declared_choices(field, meta, p, c, ctx):
     return p in allowed and c in allowed
 
 
-def _entry(item):
-    """One entry of a trigger list as a hashable value, or None when its shape
-    is not one the check reads: a non-empty string, or a pair with exactly the
-    keys `path` and `contains`, both non-empty strings."""
-    if isinstance(item, str):
-        return item or None
-    if isinstance(item, dict) and set(item) == {"path", "contains"}:
-        pair = (item["path"], item["contains"])
-        if all(isinstance(part, str) and part for part in pair):
-            return pair
-    return None
-
-
-def _entries(value):
-    """A list as the set of its exact entries, so order and repeats do not
-    matter. None when the value is not a list or holds an entry of the wrong
-    shape: the check skips such an entry silently, and the classifier does not
-    call it safe."""
-    if not isinstance(value, (list, tuple)):
-        return None
-    found = {_entry(item) for item in value}
-    return None if None in found else found
-
-
 def _list_rule(p, c):
-    """A list parameter whose direction is `superset`: a list that holds every
-    entry of the other and more is stricter, because each entry makes the
-    check run on more changes. A side that is absent or malformed is
-    incomparable (nothing is raised: a typo in a layer must not stop the
-    classification)."""
-    p, c = _entries(p), _entries(c)
-    if p is None or c is None:
-        return INCOMPARABLE
-    return _set_rule(None, None, p, c, None)
+    """A `superset` list: one that holds every entry of the other and more is
+    stricter. An absent or malformed side is incomparable, never an error."""
+    sets = entry_sets(p, c)
+    return INCOMPARABLE if sets is None else _set_rule(None, None, *sets, None)
 
 
 def _ceiling_rule(field, key, p, c, ctx, meta=None):

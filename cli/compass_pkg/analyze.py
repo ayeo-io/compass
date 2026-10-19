@@ -816,7 +816,9 @@ def cmd_ci(args):
             # Advisory mode makes the exit code 0 whatever failed, so the
             # summary counts the failures cmd_check recorded instead.
             check_failed = check_exit or getattr(check_args, "failed_checks", 0)
-        except CompassError as exc:
+        # A closed issue passes the lint above across a major, but `check` still refuses
+        # it, so the refusal is reported here as that issue's failure.
+        except (CompassError, MajorRefusal) as exc:
             print(f"  gate checks refused - {exc}")
             check_failed = 1
         if check_failed:

@@ -197,6 +197,21 @@ def test_ir_13_a_command_over_every_issue_refuses_that_issue_only(committed):
     assert "refused - generation 1" in out and "compass ci: FAIL" in out, out
 
 
+def test_ir_14_ci_goes_on_past_a_closed_issue_across_a_major(tmp_path):
+    # A closed issue is read across a major by lint, but `check` still refuses it. That
+    # refusal is reported as a failure of that issue, and the sweep goes on to the next.
+    _two_issues(tmp_path)
+    path = tmp_path / ".compass" / "work" / "feature" / "manifest.yml"
+    manifest = yaml.safe_load(path.read_text())
+    manifest.update(status="done", close_reason="completed", checkpoints=[])
+    path.write_text(yaml.safe_dump(manifest, sort_keys=False))
+    code, out, err = _run(tmp_path, "ci")
+    assert code == 1, (code, out, err)
+    assert "compass ci: FAIL" in out, out + err
+    assert out.index("[issue] feature") < out.index("[issue] other"), out
+    assert "compass issue lint: PASS - .compass/work/other/manifest.yml" in out, out
+
+
 def test_ir_13_flow_and_ci_go_on_to_a_healthy_issue(tmp_path):
     _two_issues(tmp_path)
     code, out, err = _run(tmp_path, "flow")

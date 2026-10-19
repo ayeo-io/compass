@@ -566,13 +566,15 @@ production code, not as a test. A symbolic link is not followed.
 
 The hook has to finish before Claude Code stops it, so it refuses a Bash
 command it cannot scan in time where Compass is in use, and skips only the
-write scan elsewhere. Four limits do this, all set from timings on a UTF-8
+write scan elsewhere. Five limits do this, all set from timings on a UTF-8
 machine with bash 3.2: a command over 98304 bytes (`bash-command-too-long`),
-and a command with more than 400 different write targets, more than 20
-different variable names at the start of a write target, or more than 700
-`$(` openers (`bash-command-too-complex`). A glob in
-`enforcement.code_globs` that bash cannot match itself is matched by Python
-once for all the write targets of a command.
+and a command with more than 400 different write targets, a write target of
+more than 2048 bytes, more than 20 different variable names at the start of a
+write target, or more than 700 `$(` openers (`bash-command-too-complex`). The
+length of a write target is counted in bytes, by awk in the C locale, before
+any bash string operation runs on it. A glob in `enforcement.code_globs` that
+bash cannot match itself is matched by Python once for all the write targets
+of a command.
 
 Those limits each bound one shape, and a command can hold several. So the
 scans that grow with the command also share one work budget, counted in
@@ -588,21 +590,36 @@ that the write targets start with. Bash slows every later variable operation
 as the number of shell variables grows, and the walk used to keep five
 variables for every name a statement assigned: a command of 8000 assignments,
 20 names, 20 targets and 1000 globs took 17.3 seconds although its work was
-charged at 2.4 seconds.
+charged at 2.4 seconds. The steps of the flattening reach the hook in a file
+that the hook makes and the flattening alone writes, as two numbers that the
+hook checks (nine digits at most). The text of a command is never read as
+that count: a write target named `compass-scan-work=5000000000000000000` once
+made the counter negative, so that the budget never tripped, and now it is a
+target like any other.
 
 The budget is an estimate from a table and reads no clock. It cannot see an
 interaction that the table does not charge, or a machine slower than the one
-that was timed. A wall-clock fuse covers both. The hook reads bash's own count
-of seconds (`$SECONDS`, which starts no process) when the script starts, and
-checks it at each write target, at each variable name and at each pass of the
-walk. When 8 seconds have gone it stops as it does for the budget: it refuses
-with `bash-command-too-complex` where Compass is in use, and exits 0 with the
-write scan skipped elsewhere. The count has a granularity of one second, so the
-fuse trips between 7 and 8 seconds after the script starts. It does not
-interrupt a process that is running, such as the settings reader, and no
-setting in the environment changes it. On a slower machine the fuse refuses a
-command at 8 seconds; the budget alone would pass the same command, and it
-would take longer.
+that was timed. A wall-clock fuse is the backstop for those. The hook reads
+bash's own count of seconds (`$SECONDS`, which starts no process) when the
+script starts, and checks it at each write target, at each variable name and
+at each pass of the walk. When 8 seconds have gone it stops as it does for the
+budget: it refuses with `bash-command-too-complex` where Compass is in use,
+and exits 0 with the write scan skipped elsewhere. The count has a
+granularity of one second, so the fuse trips between 7 and 8 seconds after
+the script starts. No setting in the environment changes it. On a slower
+machine the fuse refuses a command at 8 seconds; the budget alone would pass
+the same command, and it would take longer.
+
+The fuse is checked between write targets and between steps of the walk, so
+it does not interrupt a process that is running, such as the settings reader,
+or one write target. The quote strip and the path normaliser on one target
+take time that grows with the square of its length (a target of 10 KB ran for
+about 20 seconds, and one of 90 KB for 25 seconds), which is why a target over
+2048 bytes is refused and not left to the fuse. The worst accepted single
+target, 2048 bytes of quote pairs, `a/` segments, `x/./` segments, `a/../`
+segments or a `${V}/` prefix, took 0.2 seconds in the whole hook, and 45 such
+targets of segments, the most that fit in the length limit, took 1.3 seconds.
+Quote pairs are taken out by awk, in linear time, before bash sees the target.
 
 These are the largest accepted commands in the latest timings, on a machine
 with 14 cores and a load average of 2 to 4, in seconds: 1.9 for 260 write

@@ -502,7 +502,7 @@ manifest.
   that loaded the manifest before the hook wrote keeps the id when it saves:
   the save merges the hook's change.
 
-### The pre-tool hook refuses on a removed working directory, and four exits still let a call through
+### The pre-tool hook refuses on a removed working directory, and three exits still let a call through
 
 Claude Code blocks a tool call only when the pre-tool hook exits with 2. Any
 other exit code is a non-blocking error, and the call runs. The hook therefore
@@ -518,15 +518,15 @@ no project can be found: a shell command, a relative path with no known base,
 or a repository that has not opted in. A Read or Grep is never refused for a
 removed directory. A shell write in a removed directory with
 `CLAUDE_PROJECT_DIR` unset is therefore not seen, because it names no file
-path.
+path. An Edit or Write of any file inside a Compass project, a document as well
+as code, is refused in that state: the earlier exit 1 let it through.
 
-Four exits still let a call through, because the hook cannot turn them into
+Three exits still let a call through, because the hook cannot turn them into
 exit 2:
 
 - The hook's own folder is gone. The shell cannot open the script and exits
   127.
-- A helper script the hook calls is unreadable or broken.
-- Standard error is closed, so the hook cannot print its refusal.
+- A helper script the hook calls is unreadable, or fails when it runs.
 - A time-out of the hook. The time-out is covered by the declared limit once
   the hook time-bound change has merged; this section does not claim that
   cover as in force until then.

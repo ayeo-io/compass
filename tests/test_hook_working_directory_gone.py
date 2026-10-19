@@ -198,7 +198,7 @@ def test_wdg_5_repository_that_never_opted_in_is_allowed(project, tmp_path):
 SAFETY_CONTRACT = ROOT / "docs" / "safety-contract.md"
 SECTION_HEADING = (
     "### The pre-tool hook refuses on a removed working directory, "
-    "and four exits still let a call through"
+    "and three exits still let a call through"
 )
 
 
@@ -215,8 +215,10 @@ def test_wdg_6_contract_states_the_remaining_exits():
     """Scenario id: `TRC-008` in hook-exits-refuse-with-two/acceptance-criteria.md"""
     section = _section()
     lowered = section.lower()
-    for phrase in ("own folder", "helper script", "standard error", "time-out"):
+    for phrase in ("own folder", "helper script", "time-out"):
         assert phrase in lowered, phrase
+    assert "unreadable, or fails when it runs" in section
+    assert "standard error is closed" not in lowered
     assert "exits 127" in section
     assert "declared limit" in section
 
@@ -235,6 +237,27 @@ def test_wdg_8_contract_gives_the_reason_for_no_catch_all():
     assert "3.2.57" in section
     assert "unbound" in section
     assert "status 0" in section
+
+
+def test_wdg_10_pwd_naming_a_missing_directory_counts_as_gone(project):
+    """`pwd` can succeed in a removed directory on some platforms.
+
+    The stub prints a path that does not exist, as a stale `pwd` would. Only
+    the `[ -d "$SESSION_DIR" ]` clause in the hook notices.
+    """
+    # Stale only in the session's directory, so the hook's other uses of
+    # `pwd` (finding its own folder) still work.
+    stub = (
+        'pwd() { if [ "$PWD" = "$STUB_CWD" ]; then echo /no/such/directory; '
+        'else builtin pwd; fi; }; export -f pwd; exec bash "$1"')
+    hook = str(project / "hooks" / "pre-tool.sh")
+    event = _event("Edit", file_path=str(project / "cli" / "compass_pkg" / "core.py"))
+    gone = subprocess.run(
+        ["bash", "-c", stub, "wrapper", hook], input=event, cwd=str(project),
+        capture_output=True, text=True, timeout=120,
+        env={**_env(None), "STUB_CWD": str(project)})
+    assert gone.returncode == BLOCK, (gone.returncode, gone.stderr)
+    assert "[working-directory-gone]" in gone.stderr, gone.stderr
 
 
 def test_wdg_9_existing_directory_is_judged_as_before(project):

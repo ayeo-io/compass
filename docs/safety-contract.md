@@ -570,14 +570,37 @@ write scan elsewhere. Two limits do this, both set from timings on a UTF-8
 machine: a command over 98304 bytes (`bash-command-too-long`), and a command
 with more than 400 different write targets or more than 700 `$(` openers
 (`bash-command-too-complex`). The scan of substitutions also stops after a
-fixed amount of work, and the command is then refused in the same way. On
-Claude Code 2.1.295 or later the hook's 15 second timeout, with a failed hook
-blocking the call, is the backstop. On an older version a stopped hook can let
-the call run, so the limits must hold alone: the slowest command the hook
+fixed amount of work, and the command is then refused in the same way. The slowest command the hook
 accepts takes at most 7.5 seconds on a loaded machine, which is 3.75 seconds
-on an idle one. Without `jq` the hook reads the call with `grep`, which has no
-such bound, so a very long command can run past 100 seconds and only the
-timeout can stop it.
+on an idle one.
+
+The length limit is 98304 bytes (96 KiB), counted over the whole command.
+In a project that has a `.compass` folder, the hook refuses a longer command
+with the code `bash-command-too-long`, and it never scans a part of a
+command. The refusal names the size and the limit and does not quote the
+command. It is not counted in `.compass/interruptions.log`, because that count
+needs an issue and the hook does not know the issue yet. In a repository that
+has not opted in to Compass, the hook does not refuse a command for its
+length. It skips only the write scan there, and the approval and transcript
+guards still read the whole command.
+
+The time limit is 15 seconds. `hooks/hooks.json` sets `"timeout": 15` and
+`"onFailure": "block"` on the pre-tool hook. From Claude Code 2.1.295 a hook that fails or runs out of time can block the call.
+
+The size limits are the main control and work on every version of Claude
+Code. On an older version the length limit still refuses long commands, and the
+other size limits still refuse their commands, but a
+command that runs past the time limit can let the call run. Not every
+timeout fails closed.
+
+Not measured: only one version of Claude Code was available, so the
+behaviour of older versions is from its documentation. A machine without
+`jq` has a weaker bound, because the hook then reads the input with `grep`
+before it knows the command's length, so a very long command can run past 100
+seconds there. On Claude Code 2.1.295 or later the
+15-second timeout is the control there. `scripts/install.sh` and the Codex
+hook file do not set these keys, so a source install and a Codex session keep
+the default timeout of 600 seconds.
 
 Shell scripts, makefiles and extensionless scripts are not classified
 as production-code file types for red-before-green enforcement.

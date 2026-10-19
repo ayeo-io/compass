@@ -71,8 +71,8 @@ that names the new spelling.
 
 **What is kept until 8.0.0.** Old words, old approach names, copied 5.x
 governance (with the generated views `governance/routing-policy.yml` and
-`governance/guardrails.yml`) and `.compass/config.yml` are read until 8.0.0, not
-7.0.0. Only the command spellings end at 7.0.0
+`governance/guardrails.yml`) and `.compass/config.yml` (when `compass.yml` is
+absent) are read until 8.0.0, not 7.0.0. Only the command spellings end at 7.0.0
 (`governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`).
 
 **Upgrade and rollback.** Update every checkout and every installed plugin

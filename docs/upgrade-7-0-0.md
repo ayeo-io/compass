@@ -4,7 +4,7 @@ This page lists what 7.0.0 changes and what to do about it. Each section is one 
 
 ## The released spellings end, and the old readers stay until 8.0.0
 
-7.0.0 removes the command spellings that 6.0.0 renamed and kept working through an alias. The readers for old words, old approach names, copied 5.x governance and `.compass/config.yml` do not end at 7.0.0: they stay until 8.0.0. The decision is `governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`.
+7.0.0 removes the command spellings that 6.0.0 renamed and kept working through an alias. The readers for old words, old approach names, copied 5.x governance and `.compass/config.yml` (when `compass.yml` is absent) do not end at 7.0.0: they stay until 8.0.0. The decision is `governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`.
 
 ### What is removed
 
@@ -32,7 +32,7 @@ Each spelling below exits 2 with the parser's usual error. The error for the 7 s
 
 ### What to do
 
-1. Replace each removed spelling in your scripts, notes and CI with the new one from the table.
+1. Replace each removed spelling in your scripts, notes and CI with the new one from the table. Before you run any migration below, copy `.compass/work` and `docs/compass` to a folder outside the project.
 2. Run `compass policy migrate --words` and `compass policy migrate` before 8.0.0, so that no project depends on a reader that 8.0.0 removes.
 
 ## Artifact status and decisions taken

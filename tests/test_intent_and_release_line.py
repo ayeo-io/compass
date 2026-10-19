@@ -481,7 +481,9 @@ def register(root, kind, status="approved", slug=SLUG, text=None):
     path = Path(root) / DOCS / f"{kind}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     if text is not None or not path.exists():
-        path.write_text(text if text is not None else f"# {kind}\n\nFirst version.\n")
+        # A multiagent breakdown refuses a map with no `units:` line (ADR-071).
+        units = "\nunits: 2\n" if kind == "distribution-map" else ""
+        path.write_text(text if text is not None else f"# {kind}\n\nFirst version.\n{units}")
     done = run(root, "issue", "artifact", "set", kind, "--status", status,
                "--path", f"{DOCS}/{kind}.md", "--issue", slug)
     assert done.returncode == 0, done

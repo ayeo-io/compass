@@ -2,8 +2,10 @@
 # =============================================================================
 # compass - does a multiagent run leave a complete subtask record
 # =============================================================================
-# `compass issue subtask` (subtasks.py) is the only writer of a multiagent
-# issue's `subtasks:` list: each entry's status and review rounds. The check
+# `compass issue subtask` (subtasks.py) writes a multiagent issue's
+# `subtasks:` list: each entry's status and review rounds. Registering a
+# distribution map that declares one work unit writes one more kind of entry
+# (see below). The check
 # exists so that an issue cannot land with a subtask record that shows an
 # unfinished run - one never marked done, or one whose last review round did
 # not pass. It reads the manifest and fails a multiagent issue whose run left
@@ -23,8 +25,21 @@
 # created earlier is not compared with ceilings that did not exist when it
 # ran.
 #
-# DEPENDENCY: standard library (datetime, os), compass_pkg.check_results and
-# compass_pkg.loop_ceilings.
+# A distribution map that declares one work unit (`units: 1`) needs no split.
+# Registering it records one subtask run by the main session, marked
+# `orchestration: single-unit` (subtasks.py). Without it, a one-unit change
+# on a route whose breakdown is multiagent could land only by a waiver or by
+# a hand-made record of a dispatch that never happened. The check accepts a
+# single-unit record once every gate has passed, the map still declares one
+# unit and the issue's verification report exists: the gates stand in for
+# the package review a separate builder gets, because with one unit the
+# package is the integrated result the verify stage reviews. Critical risk
+# also needs a passing review round, because its review cadence adds a
+# second reviewer, and its one-worktree cap (RP-CAP-001) makes one unit the
+# usual shape of critical work (ADR-071).
+#
+# DEPENDENCY: standard library (datetime, os, re), compass_pkg.check_results
+# and compass_pkg.loop_ceilings.
 # =============================================================================
 """`multiagent-run-recorded`: does a multiagent issue's manifest show its run
 completed - every subtask done, with a passing last review round?"""
@@ -32,6 +47,7 @@ from __future__ import annotations
 
 import datetime
 import os
+import re
 
 from compass_pkg import status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
@@ -45,6 +61,18 @@ from compass_pkg.loop_ceilings import (LOOP_CEILINGS_FROM, loop_ceilings,
 #: its date (the requirements review's Q2). As `RED_REQUIRED_FROM` does in
 #: red_first.py.
 RUN_RECORD_REQUIRED_FROM = datetime.date(2026, 9, 26)
+
+#: The `orchestration:` value of a subtask the main session ran itself,
+#: because the distribution map declares one work unit.
+SINGLE_UNIT = "single-unit"
+
+#: The map's machine-readable line: `units: 1`, or a list such as
+#: `units: [U1, U2]`, alone on a line or as a list item, so prose that
+#: mentions units does not count.
+_UNITS_LINE = re.compile(r"^units:\s*(\S.*?)\s*$")
+
+#: How a message names the line and its two forms.
+UNITS_FORMS = "`units: 1` for one unit of work, or a list such as `units: [U1, U2]`"
 
 
 def _applies_from(created, cutoff=RUN_RECORD_REQUIRED_FROM):
@@ -127,6 +155,76 @@ _NOT_A_WORKTREE = ("not a parallel worktree", "not a worktree",
                    "non-provisioning", "integration/verify")
 
 
+def declared_units(path):
+    """How many work units the distribution map at `path` declares on its
+    `units:` line, or None when it has none. The first line whose value is
+    a whole number or a bracketed list counts; a template placeholder such
+    as `{{N}}` is skipped."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+    except (OSError, UnicodeDecodeError):
+        return None
+    for line in lines:
+        found = _UNITS_LINE.match(line.strip().lstrip("-* ").strip("`"))
+        if not found:
+            continue
+        value = found.group(1).strip("`").strip()
+        if value.isdecimal():
+            return int(value)
+        if value.startswith("[") and value.endswith("]"):
+            return len([u for u in value[1:-1].split(",") if u.strip()])
+    return None
+
+
+def map_units(task_dir):
+    """The units the issue's registered distribution map declares, or None
+    when no map is found or it declares none."""
+    try:
+        state, path, _ = resolve_artifact(str(task_dir), "distribution-map")
+    except Exception:
+        return None
+    if state != FOUND or not path:
+        return None
+    return declared_units(path)
+
+
+def _single_unit_problem(entry, task, task_dir):
+    """What stops a single-unit record from counting as a complete run, or
+    None. See the header: every gate passed, the map still declares one
+    unit, a verification report exists, and on critical risk a passing last
+    review round."""
+    gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
+    unmet = [str(g.get("id", "?")) for g in gates if g.get("status") != "pass"]
+    if not gates or unmet:
+        return ("gate(s) not passed: %s - the gates stand in for a separate "
+                "builder's review" % (", ".join(unmet) or "none recorded"))
+    if map_units(task_dir) != 1:
+        return ("the distribution map no longer declares `units: 1` - record "
+                "each unit with `compass issue subtask add`, or put the line "
+                "back")
+    assessment = task.get("assessment")
+    risk = assessment.get("risk") if isinstance(assessment, dict) else None
+    if risk == "critical" and not _last_round_passed(entry):
+        return ("critical risk needs a second reviewer, and the record has no "
+                "passing last review round - record it with `compass issue "
+                "subtask set %s --round pass`" % entry.get("id", "<id>"))
+    root = os.path.realpath(find_upwards(task_dir, ".compass") or task_dir)
+    report = entry.get("report")
+    if isinstance(report, str) and report:
+        full = os.path.realpath(os.path.join(root, report))
+        if os.path.commonpath([root, full]) == root and os.path.isfile(full):
+            return None
+    try:
+        state, _, _ = resolve_artifact(str(task_dir), "verification-report")
+    except Exception:
+        state = None
+    if state == FOUND:
+        return None
+    return ("no verification report - register it with `compass issue "
+            "artifact set verification-report --status draft --path <path>`")
+
+
 def mapped_subtask_ids(task_dir):
     """The subtask ids the issue's distribution map names, in its order, or
     None when no map is found.
@@ -143,10 +241,16 @@ def mapped_subtask_ids(task_dir):
         return None
     if state != FOUND or not path:
         return None
+    return subtask_ids_in(path)
+
+
+def subtask_ids_in(path):
+    """The subtask ids the distribution map at `path` names, read as
+    `mapped_subtask_ids` reads them, or None when the file cannot be read."""
     try:
         with open(path, encoding="utf-8") as fh:
             lines = fh.read().splitlines()
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return None
     ids, in_table = [], False
     for line in lines:
@@ -181,7 +285,8 @@ def _check_multiagent_run_recorded(task, task_dir):
     with no `subtasks:`, a subtask that is not `done`, or a subtask whose
     last review round is missing or `fail` (a later verdict is the last
     word on it, so a fail after an earlier pass still fails - the
-    requirements review's Q1).
+    requirements review's Q1). A single-unit record is judged by
+    `_single_unit_problem` instead of on its status.
     """
     stages = task.get("stages")
     breakdown = stages.get(STAGE_BREAKDOWN) if isinstance(stages, dict) else None
@@ -224,9 +329,18 @@ def _check_multiagent_run_recorded(task, task_dir):
     not_done = []
     no_pass = []
     bad_stop = []
+    bad_single = []
     past = []
     for index, entry in enumerate(subtasks):
         label = _subtask_label(entry, index)
+        if isinstance(entry, dict) and entry.get("orchestration") == SINGLE_UNIT:
+            problem = _single_unit_problem(entry, task, task_dir)
+            if problem:
+                bad_single.append("%s (%s)" % (label, problem))
+            if _past_ceilings(entry, ceilings):
+                past.append("%s: %s" % (label,
+                                        "; ".join(_past_ceilings(entry, ceilings))))
+            continue
         if isinstance(entry, dict) and "stopped_reason" in entry:
             problem = _stop_problem(entry["stopped_reason"], task_dir)
             if problem:
@@ -239,6 +353,20 @@ def _check_multiagent_run_recorded(task, task_dir):
         if isinstance(entry, dict) and _past_ceilings(entry, ceilings):
             past.append("%s: %s" % (label,
                                     "; ".join(_past_ceilings(entry, ceilings))))
+
+    singles = [e for e in subtasks
+               if isinstance(e, dict) and e.get("orchestration") == SINGLE_UNIT]
+    if singles and len(subtasks) > len(singles):
+        # A record that says this session ran the one unit cannot sit beside a
+        # dispatched subtask: one of the two is untrue.
+        others = [_subtask_label(e, i) for i, e in enumerate(subtasks) if e not in singles]
+        return False, (
+            "the record says the map's one unit was run by this session, but it "
+            "also records %s. Record two or more units in the map's `units:` "
+            "line and register it again, or take the other subtask out."
+            % ", ".join(others))
+    if bad_single:
+        return False, ("one-unit run not complete: %s." % "; ".join(bad_single))
 
     if not_done or no_pass or bad_stop:
         problems = []
@@ -273,6 +401,11 @@ def _check_multiagent_run_recorded(task, task_dir):
 
     stopped = sum(1 for e in subtasks
                   if isinstance(e, dict) and "stopped_reason" in e)
+    if any(isinstance(e, dict) and e.get("orchestration") == SINGLE_UNIT
+           for e in subtasks):
+        return True, ("the distribution map declares one unit, which this "
+                      "session ran itself; every gate has passed and the "
+                      "verification report exists (%d subtask(s))" % len(subtasks))
     return True, ("every subtask is done with a passing review round, or "
                   "stopped with a recorded reason (%d subtask(s), %d stopped)"
                   % (len(subtasks), stopped))

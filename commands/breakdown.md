@@ -10,6 +10,14 @@ worktrees and assigns one builder agent to each worktree.
 
 ## First: is breakdown in play?
 
+If the distribution map says `units: 1`, registering it already recorded the
+breakdown as one subtask this session runs itself (`orchestration:
+single-unit`). Create no worktree and launch no builder: go on to
+`/compass:implement`. Registering `verification-report` in `/compass:verify`
+completes the record, and `multiagent-run-recorded` accepts it. No waiver is
+needed. On a critical-risk issue the check also needs a passing review round
+from a second reviewer: `compass issue subtask set <id> --round pass`.
+
 Read `delivery-approach.md`. Breakdown is **skipped on solo work** - quick
 fixes, hotfixes, spikes, and most regular-approach issues work on the current branch with no
 worktree. If `delivery-approach.md` says solo, stop: confirm the de-scope

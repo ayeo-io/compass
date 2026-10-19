@@ -56,8 +56,13 @@ engineering plan stage.)
    - On the regular approach: a short list of 2-3 units is enough.
    - On the full approach: write the full `distribution-map.md` from its
      template.
-   - On the full approach capped to one worktree with one subtask: the map is
-     not needed. `compass check` owes it only with two or more subtasks.
+   - On a breakdown of `multiagent` (the regular and full approaches), the
+     map carries a line of its own in "Work units": `units: N`, or a list
+     such as `units: [U1, U2]`. Registering a multiagent map without it is
+     refused. When the change is one unit of work, write the map with
+     `units: 1` and register it: that records the breakdown as one subtask
+     this session runs itself, so breakdown needs no worktree, no builder,
+     no hand-made subtask record and no waiver.
 
    Subtask count comes from the map; orchestration thresholds from
    the multiagent settings in `compass.yml` (or `.compass/config.yml` in a

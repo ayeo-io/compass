@@ -96,6 +96,13 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "edit a worktree of the session's repository, or start the "
                "session in {project}.",
     },
+    "working-directory-gone": {
+        "what": "edit to {target} (tool: {tool})",
+        "why": "the session's working directory was removed and "
+               "CLAUDE_PROJECT_DIR is not set, so Compass cannot tell which "
+               "project's issue judges this edit.",
+        "fix": "restart the session from a folder that exists, then retry.",
+    },
     "pointer-moved": {
         "what": "this edit",
         "why": "another session moved .compass/current-task in this "

@@ -502,6 +502,43 @@ manifest.
   that loaded the manifest before the hook wrote keeps the id when it saves:
   the save merges the hook's change.
 
+### The pre-tool hook refuses on a removed working directory, and four exits still let a call through
+
+Claude Code blocks a tool call only when the pre-tool hook exits with 2. Any
+other exit code is a non-blocking error, and the call runs. The hook therefore
+turns each fault it can reach into exit 2 with a stated reason.
+
+When the session's working directory has been removed, for example by a
+clean-up step such as `cd d && rm -rf ../d`, the hook follows three rules.
+First, it falls back to `CLAUDE_PROJECT_DIR` and gives the same verdict as it
+does from a directory that exists. Second, when `CLAUDE_PROJECT_DIR` is not set
+and an Edit or Write names a file inside a Compass project by its absolute
+path, it refuses with `working-directory-gone`. Third, it allows the call when
+no project can be found: a shell command, a relative path with no known base,
+or a repository that has not opted in. A Read or Grep is never refused for a
+removed directory. A shell write in a removed directory with
+`CLAUDE_PROJECT_DIR` unset is therefore not seen, because it names no file
+path.
+
+Four exits still let a call through, because the hook cannot turn them into
+exit 2:
+
+- The hook's own folder is gone. The shell cannot open the script and exits
+  127.
+- A helper script the hook calls is unreadable or broken.
+- Standard error is closed, so the hook cannot print its refusal.
+- A time-out of the hook. The time-out is covered by the declared limit once
+  the hook time-bound change has merged; this section does not claim that
+  cover as in force until then.
+
+The hook has no catch-all exit rule, such as a trap that maps every exit other
+than 0 and 2 to 2. Measured on bash 3.2.57 on 2026-10-19, an `EXIT` trap like
+that ends a direct unbound-variable exit with status 0, so the call runs: worse
+than the exit 1 it replaces. An `ERR` trap does not fire inside functions
+unless `set -E` is on, and that setting changes how every function in the hook
+behaves. The fix therefore covers the one path that was reproduced, and the
+other exits are stated here.
+
 ### Shell-write detection is best-effort
 
 The Claude Code pre-tool hook completely covers supported file-editing tools.

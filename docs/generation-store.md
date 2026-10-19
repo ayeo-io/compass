@@ -11,7 +11,8 @@ resolution).
 ## What is built
 
 The store, its commit, the readers, the refusal of a check whose implementation
-major differs and the commands that change what it holds are built:
+major differs, the refusal of a generation whose resolver or schema major
+differs and the commands that change what it holds are built:
 `compass issue migrate --config`, `compass issue configure` (propose, preview,
 `--discard`, `--commit`) and `--reset-config` on the reassess
 ([issue-configure.md](issue-configure.md)). The modules that read
@@ -163,9 +164,65 @@ the schema of its files in `versions.yml`.
 ```
 
 - A different **resolver** or **schema** major can change what every check means,
-  so `compass check` runs none and exits 2. Other commands do not compare
-  versions yet.
+  so every command that reads the issue's generation refuses and exits 2. The
+  message names the generation, the recorded and installed versions and
+  `compass issue migrate --config --issue SLUG`. See "The resolver and schema
+  refusal" below.
 - The same major, with a different minor or patch, is not refused.
+
+### The resolver and schema refusal
+
+`generation.load` compares the recorded `resolver` and `schema` majors with the
+installed ones after it reads the generation. It compares what it already parsed,
+so the refusal opens no file. It raises `MajorRefusal`, which `main` prints as
+`compass: <message>` with exit 2.
+
+- `MajorRefusal` derives from `BaseException`, as `SystemExit` does. Several
+  readers turn any fault in the configuration into a fallback with `except
+  Exception`, such as the issue page render and the entry checks of `compass
+  next`. A refusal they caught would let the command run on rules it must not use.
+- A command that changes the issue's records (`record_triggers.RENDER_TRIGGERS`,
+  such as `tdd-green` or `scenario add`) is refused before it runs, by
+  `render_after_entry.before_command`. It can write before it reads the
+  generation, so the refusal comes first and nothing is written. It reads the
+  manifest and `versions.yml` only. A command that only reads, such as `compass
+  next`, adds no cost for it.
+- The pre-check asks about the issue the command changes, and no other.
+  `record_triggers.ISSUE_FROM` names the argument that names it: `--issue` (or
+  the current-task pointer) for every command but `compass quick-fix start`,
+  which names its issue as a positional slug. So `compass quick-fix start
+  <new-slug>` runs while the current issue is refused, and `compass quick-fix
+  start` on the refused issue is refused.
+- A command over every issue refuses that issue only. `compass flow` lists it as
+  unreadable with the message, and `compass ci` reports it as refused, counts a
+  failure and goes on. The project index that a render of any issue rewrites
+  lists the refused issue from its manifest.
+- A recorded version that is not a version, such as `v2`, is refused with a
+  message that says so. A `versions.yml` that is not a mapping makes the
+  generation broken.
+- These still run:
+  - `compass issue migrate --config`, which loads the generation with
+    `any_major=True`;
+  - `compass issue migrate`, which reads each issue's generation to pin a
+    stale implementation major. It does not pin an issue refused for its
+    resolver or schema major, and prints a line that names the issue and
+    `compass issue migrate --config --issue <slug>`;
+  - `compass readiness`, `compass policy update`, `--help` and `--version`,
+    which read no issue's generation.
+
+Deliberate limits:
+
+- A command that reads only the manifest, such as `compass approach show`, does
+  not refuse. It applies no resolved configuration to the issue.
+- The pre-tool hook reads no generation, so it does not compare the majors.
+  Comparing there would add a file read to every edit. A guard test in
+  `tests/test_impl_refusal.py` fails at the first resolver or schema major
+  bump, so this is decided before then.
+- A command that saves the manifest and renders nothing is not refused by the
+  pre-check (`record_triggers.EXEMPT`: `issue friction`, `friction capture`,
+  `checkpoint add`, `subtask package`, `intent ingest`, and `analyze` in
+  gate-clearing mode). It writes to an issue whose generation is refused. A command
+  that loads the generation still refuses.
 
 `compass issue migrate --config [--issue SLUG]` fixes both. It stores a new
 generation with the same resolved configuration and provenance, and with
@@ -178,8 +235,8 @@ again. Exit 0, or 2 on error.
   through `compass approach evaluate --write`, which classifies it.
 - It refuses a closed issue (done, whatever its close reason) and writes
   nothing.
-- When the generation already holds the installed versions it says "no change"
-  and writes nothing.
+- When the generation already holds the installed versions and schema it says
+  "no change" and writes nothing.
 - An issue with no `generation:` key, or at generation 0, is adopted: its live
   configuration becomes generation 1, and `provenance.yml` carries `adopted: adopted from live governance`.
 - It keeps the manifest's text and changes only the `generation:` line.

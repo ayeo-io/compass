@@ -752,9 +752,17 @@ def cmd_ci(args):
         # manifest's own structure - schema version, required keys, vocabulary -
         # and a malformed manifest is malformed whether or not the work has
         # started. Skipping it would let a manifest the linter rejects pass
-        # while the sweep reports clean.
-        if cmd_task_lint(types.SimpleNamespace(task=slug, file=None)):
+        # while the sweep reports clean. A generation built by another resolver
+        # or schema major refuses that issue only, and the sweep goes on.
+        from compass_pkg.effective import MajorRefusal
+        try:
+            if cmd_task_lint(types.SimpleNamespace(task=slug, file=None)):
+                failures += 1
+        except MajorRefusal as exc:
+            print(f"  refused - {exc}")
             failures += 1
+            skipped += 1
+            continue
 
         # The generation the manifest names is the issue's configuration. A
         # broken one fails the sweep and its gate checks are not run, because

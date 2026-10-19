@@ -82,6 +82,11 @@ FIXTURES = {
     # A 40-character slug, named twice, and both artifact rules with their documents.
     "artifact-rule-not-applied": dict(slug="a" * 40, rules="RP-ART-001, RP-ART-002",
                                       documents="positioning.md, intent.md"),
+    # Six-digit size, as the longest form of the length refusal.
+    "bash-command-too-long": dict(size="240000", limit="98304"),
+    # The longest form of the complexity refusal: a count and its limit.
+    "bash-command-too-complex": dict(has="701 command substitutions",
+                                     over="more than 700 command substitutions"),
     # Three decisions and a long record path, so the 60-word cap is checked where it
     # is tightest.
     "project-decision-unrecorded": dict(

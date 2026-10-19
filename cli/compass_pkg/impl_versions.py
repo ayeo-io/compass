@@ -10,7 +10,8 @@ CLI refuses instead of running code the issue was not assessed against.
 
 - `refusals` is what `compass check` asks. A different implementation major
   refuses that check only. A different resolver or schema major changes what
-  every check means, so it refuses the run.
+  every check means, so `generation.load` refuses it for every command that
+  reads the issue, `compass check` among them.
 - `compass issue migrate --config` stores a new generation holding the same
   configuration, pinned to the installed versions, with every recorded check
   result invalidated. It is the second of the three ways a generation is
@@ -28,20 +29,14 @@ from compass_pkg import effective
 from compass_pkg.check_registry import REGISTRY, installed_major
 from compass_pkg.core import CompassError, resolve_issue_dir
 
-COMMAND = "compass issue migrate --config"
+COMMAND = effective.FIX_MAJOR
+_major = effective.version_major
 
 
 @dataclass
 class Refusals:
-    """`run` is a message when the whole run is refused, else None. `checks`
-    maps an implementation id to the message that refuses that check."""
-    run: object = None
+    """`checks` maps an implementation id to the message that refuses that check."""
     checks: dict = field(default_factory=dict)
-
-
-def _major(version):
-    head = str(version).split(".")[0]
-    return int(head) if head.isdigit() else None
 
 
 def _fix(slug):
@@ -51,19 +46,15 @@ def _fix(slug):
 
 
 def refusals(task_dir, manifest):
-    """The refusals for an issue's run. An issue with no stored generation has
-    recorded nothing to differ from, so it gets none."""
+    """The checks refused for an issue's run, one for each implementation whose
+    recorded major differs from the installed one. An issue with no stored
+    generation has recorded nothing to differ from, so it gets none. A resolver
+    or schema major that differs refuses the whole command instead:
+    `generation.load` raises `MajorRefusal` before this compares anything."""
     held, recorded = effective.stored_versions(task_dir, manifest)
     if not held:
         return Refusals()
     slug = os.path.basename(os.path.normpath(os.fspath(task_dir)))
-    for what, installed in effective.installed_pins().items():
-        was = recorded.get(what)
-        if was is not None and _major(was) != _major(installed):
-            return Refusals(run=(
-                f"nothing was run: generation {held} of {slug} was built by {what} "
-                f"{was} and this CLI has {what} {installed}, a different major, "
-                f"which can change what every check means. {_fix(slug)}"))
     found = {}
     for impl, was in sorted((recorded.get("implementations") or {}).items()):
         now = installed_major(impl)

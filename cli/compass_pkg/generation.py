@@ -46,6 +46,7 @@ from compass_pkg.core import (CompassError, manifest_path,
                               prepare_manifest_write)
 
 FIX_ZERO = "compass approach evaluate --write"
+FIX_MAJOR = "compass issue migrate --config"
 SCHEMA = 1
 RESOLVER_VERSION = "1.0.0"
 
@@ -175,6 +176,9 @@ def _read_whole(task_dir, n):
             documents[name[:-4]] = load_yaml_strict(path)
             if held.get(name) != digest(documents[name[:-4]]):
                 return None, f"{name} does not match the digest in its marker"
+        # Every reader asks `versions.yml` for keys, the major refusal first.
+        if not isinstance(documents["versions"], dict):
+            return None, "versions.yml is not a mapping"
     except (StrictYamlError, AttributeError, TypeError) as exc:
         return None, f"it cannot be read: {exc}"
     return documents, ""
@@ -187,17 +191,79 @@ def is_whole(task_dir, n):
     return documents is not None, reason
 
 
-def load(task_dir, n):
+def _major(version):
+    head = str(version).split(".")[0]
+    return int(head) if head.isdigit() else None
+
+
+class MajorRefusal(BaseException):
+    """A generation built by another resolver or schema major was read. Either
+    can change what every check means, so the command that read it refuses
+    (ADR-038). It derives from `BaseException`, as `SystemExit` does, because
+    several readers turn any fault in the configuration into a fallback with
+    `except Exception`; a refusal they caught would let the command run on the
+    rules it must not use. `main` prints it and exits 2."""
+
+
+def major_refusal(slug, n, versions):
+    """The message that refuses generation n when its `versions.yml` records a
+    resolver or schema major other than the installed one, else None."""
+    fix = (f"Run `{FIX_MAJOR} --issue {slug}` to store a new generation pinned to the "
+           f"installed versions; it invalidates the results recorded under the old ones, "
+           f"so each check runs again.")
+    for what, installed in (("resolver", RESOLVER_VERSION), ("schema", SCHEMA)):
+        was = (versions or {}).get(what)
+        if was is not None and _major(was) is None:
+            return (f"generation {n} of {slug} records {what} {str(was)!r}, which is not a "
+                    f"version this CLI can read, so nothing was run. {fix}")
+        if was is not None and _major(was) != _major(installed):
+            return (f"generation {n} of {slug} was built by {what} {was} and this CLI "
+                    f"has {what} {installed}, a different major, which can change what "
+                    f"every check means, so nothing was run. {fix}")
+    return None
+
+
+def refuse_other_major(task_dir):
+    """Raise `MajorRefusal` for an issue whose generation in force records
+    another resolver or schema major. A command that writes the issue's records
+    asks this before it runs, because it may write before it reads the
+    generation. It reads the manifest and `versions.yml` only, and leaves a file
+    it cannot read to the command, which reports it. A closed issue is not
+    refused: it keeps the generation it closed under, and `compass issue migrate
+    --config` cannot repair it, so a refusal would name a fix that refuses."""
+    try:
+        manifest = load_manifest_mapping(manifest_path(task_dir))
+        if status_words.is_closed(manifest):
+            return
+        n = number(manifest)
+        versions = load_yaml_strict(os.path.join(gen_dir(task_dir, n), "versions.yml")) \
+            if n else None
+    except (CompassError, StrictYamlError, OSError):    # the command reports an unreadable file
+        return
+    if isinstance(versions, dict):
+        refused = major_refusal(os.path.basename(os.path.normpath(task_dir)), n, versions)
+        if refused:
+            raise MajorRefusal(refused)
+
+
+def load(task_dir, n, *, any_major=False):
     """The four documents of generation n, by file stem. A generation that
-    does not pass `is_whole` is broken and raises `CompassError`."""
+    does not pass `is_whole` is broken and raises `CompassError`. One built by
+    another resolver or schema major raises `MajorRefusal`, unless `any_major`
+    is passed by a reader that repairs or only reports it. The comparison reads
+    what `_read_whole` already parsed, so it adds no file read to any command."""
     documents, reason = _read_whole(task_dir, n)
+    slug = os.path.basename(os.path.normpath(task_dir))
     if documents is None:
         raise CompassError(
-            f"generation {n} of {os.path.basename(os.path.normpath(task_dir))} is "
+            f"generation {n} of {slug} is "
             f"broken: {reason} ({gen_dir(task_dir, n)}). Restore the folder from "
             f"version control, or remove the folder and the `generation:` line of "
             f"manifest.yml and run `compass approach evaluate --write` to store a new "
             f"generation")
+    refused = None if any_major else major_refusal(slug, n, documents["versions"])
+    if refused:
+        raise MajorRefusal(refused)
     # Read through the retired-word tables, never rewritten: the file keeps the
     # words it was stored in (ADR-036) and its marker digest is of that text.
     documents["resolved"] = word_map.map_layer(documents["resolved"])[0]
@@ -618,7 +684,8 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
     manifest, or commit nothing when generation n already holds the same
     configuration, overlay and outcome. `force` commits even then: the
     versions a generation pins are not part of that comparison, and
-    `migrate-config` changes nothing else. `manifest` is the mapping to write,
+    `migrate-config` changes nothing else. As the repair, it may also replace a
+    generation built by another resolver or schema major. `manifest` is the mapping to write,
     with the outcome fields folded in; it must still name the generation the
     file on disk names. Raises `CompassError` when the file changed since it
     was read, the generation in force is broken, or the next folder is a
@@ -650,7 +717,7 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
                 f"{path} changed since it was read (it now names {_named(held)}; the "
                 f"update was built on {_named(number(manifest))}); run the command again")
         n = held or 0
-        previous = load(task_dir, n) if n else None
+        previous = load(task_dir, n, any_major=force) if n else None
         target = n + 1
         if proposal is not None and read_proposal(task_dir, target) != proposal:
             raise CompassError(

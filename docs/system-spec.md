@@ -4577,3 +4577,10 @@ A design decision that declares Scope: project now needs a decision record befor
 - `DSR-8` A cited record that does not exist does not count
 - `DSR-9` A project with no decisions folder is told the first record to write
 - `DSR-10` An issue assessed before the change owes neither document
+
+### refuse-on-major-version-mismatch (completed 2026-10-19)
+
+Commands refuse an issue whose stored configuration was built by another major version of Compass, and name the command that repairs it.
+
+- `IR-13` every command that reads the issue refuses
+- `IR-14` the commands that repair a mismatch still run

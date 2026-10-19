@@ -73,6 +73,12 @@
 #   We also emit a short human-readable reason on stderr when blocking.
 # =============================================================================
 
+# The seconds bash has counted when the script starts, for the wall-clock fuse
+# (FUSE_SECONDS, set with the limits below). It is read here, before anything
+# else runs, so the fuse counts the whole run, the input read and the guards
+# included. A difference is used, so an inherited SECONDS changes nothing.
+HOOK_START=$SECONDS
+
 set -euo pipefail
 # The issue this hook works on is resolved below. Clear it first, so a
 # TASK_DIR exported by the caller's environment is never taken for it.
@@ -546,6 +552,131 @@ set +e
 compass_record_session
 set -e
 
+# --- a Bash command too long to scan in time ---------------------------------
+# Claude Code stops a hook that runs too long, and before 2.1.295 a stopped
+# hook lets the call run. The scans below take longer the longer the command
+# is, so a command over COMMAND_LIMIT bytes is not scanned.
+#   - In a project that opted in (it has `.compass/`, the test the opt-in
+#     exits near the end make), the command is refused whole. A cut command
+#     would pass any write placed after the cut.
+#   - Elsewhere it is not refused, because the hook runs in every repository.
+#     Only the write scan is skipped (SKIP_WRITE_SCAN, read where the Bash
+#     decision starts). The approval guard below still reads the whole command:
+#     it protects the transcript and the delegation files wherever the hook
+#     runs.
+# Write and Edit have no command, so they are never counted. The count is in
+# bytes: `${#COMMAND}` counts characters in a UTF-8 locale, and a character is
+# at most four bytes, so a command of COMMAND_LIMIT / 4 characters or fewer is
+# under the limit and starts no process. If `wc` fails, the count is the upper
+# bound, so a fault refuses and never allows.
+#
+# Three more limits, for a command under COMMAND_LIMIT that is still slow, with
+# the same rule for where they apply (the refusal in a project that opted in,
+# a skipped write scan elsewhere). The numbers come from timings of the
+# worst commands the write scan accepts (result.md of the issue):
+#   - OPENER_LIMIT: `$(` openers. Each opener that never closes is scanned to
+#     the end of the text. The count starts a process only for a command of
+#     2 * (OPENER_LIMIT + 1) characters or more, the least that many `$(`
+#     take, so an ordinary command starts none.
+#   - TARGET_LIMIT: different write targets (the candidate loop). Each costs
+#     the judging of one path. The count is made where the targets are found.
+#   - NAME_LIMIT: different variable names that targets start with. A target
+#     that starts with a variable reads the whole command to find the value,
+#     once for each name, and the count of targets does not bound that: 400
+#     names took 26 s at 90 KB. The count is made as the names are read.
+#   - SCAN_WORK_LIMIT: steps the flattening of substitutions may take. The
+#     openers that never close make its work grow with their number times the
+#     length of the text, which a count alone does not bound: 700 openers
+#     before 85 KB of text took 224 s. A scan that passes the limit tells the
+#     caller in a file (SCAN_WORK_FILE), and the command is refused as too
+#     complex.
+#   - TARGET_BYTES_LIMIT: bytes in one write target. The fuse and the budget
+#     are checked between targets, never inside one, and the quote strip and
+#     the path normaliser take time that grows with the square of its length
+#     in a UTF-8 locale: one target of 10 KB ran for 20 s and 90 KB for 25 s.
+#     A target over the limit is refused as too complex (and the write scan is
+#     skipped where Compass is not in use). The length is counted in bytes by
+#     awk in the C locale, so a multibyte character counts as its bytes.
+#
+# The limits above each bound one shape, and the time of a command that holds
+# several is their sum. One shared counter, WORK_USED, bounds the sum: each
+# scan that grows with the command adds its steps, in microseconds of the time
+# they were measured to take (bash 3.2, UTF-8), and a command past WORK_BUDGET
+# is refused as too complex, or has only its write scan skipped where Compass
+# is not in use. The worst command accepted took 1.9 s on a machine with a
+# load average of 2 to 4 (docs/safety-contract.md lists the shapes).
+#   - WORK_BUDGET: the most the counter may reach.
+#   - COST_AWK_STEP: one step of the flattening in awk (the largest count of
+#     steps the awk scan reports, SCAN_WORK_LIMIT at the most).
+#   - COST_STATEMENT: one pass of the walk over the leading statements, which
+#     runs once for all the variable names.
+#   - COST_STATEMENT_CHAR: the same pass, for each character it consumes.
+#   - COST_NAME_PER_KB: the reading of the command for one variable name, for
+#     each 1024 characters of the command.
+#   - COST_CANDIDATE: the judging of one write target.
+#   - COST_CANDIDATE_CHAR: the same, for each character of the target.
+#   - COST_GLOB: the same, for each glob of the settings that the target is
+#     tried against one by one.
+#
+# The budget is an estimate from a table, and the hook reads no clock to check
+# it, so a slower machine, or an interaction the table does not charge (bash
+# slows down as the number of shell variables grows), could still run past the
+# 15 s time limit. FUSE_SECONDS is the backstop: the scan checks `$SECONDS`,
+# bash's own count of whole seconds (no process starts), at each write target,
+# each variable name and each pass of the walk, and past FUSE_SECONDS it stops
+# as it does for the budget. The count has a granularity of one second, so the
+# fuse trips between FUSE_SECONDS - 1 and FUSE_SECONDS seconds after the start
+# of the script (HOOK_START). A scan waiting on a process (the settings
+# reader) is not interrupted, only stopped at the next check. The value is
+# assigned and not read from the environment: an override would be a bypass.
+COMMAND_LIMIT=98304
+OPENER_LIMIT=700
+TARGET_LIMIT=400
+NAME_LIMIT=20
+SCAN_WORK_LIMIT=1000000
+FUSE_SECONDS=8
+WORK_BUDGET=2400000
+COST_AWK_STEP=2
+COST_STATEMENT=110
+COST_STATEMENT_CHAR=5
+COST_NAME_PER_KB=200
+COST_CANDIDATE=3000
+COST_CANDIDATE_CHAR=10
+COST_GLOB=20
+TARGET_BYTES_LIMIT=2048
+SKIP_WRITE_SCAN=0
+COMPASS_IN_USE=0
+if [ "${PROJECT_RESOLVED:-0}" -eq 1 ] && [ -d "$PROJECT_DIR/.compass" ]; then
+  COMPASS_IN_USE=1
+fi
+if [ "${TOOL:-}" = "Bash" ]; then
+  _chars=${#COMMAND}
+  if [ "$_chars" -gt $((COMMAND_LIMIT / 4)) ]; then
+    _bytes="$(printf '%s' "$COMMAND" | wc -c 2>/dev/null)" || _bytes=""
+    _bytes="${_bytes//[[:space:]]/}"
+    case "$_bytes" in ""|*[!0-9]*) _bytes=$((_chars * 4)) ;; esac
+    if [ "$_bytes" -gt "$COMMAND_LIMIT" ]; then
+      if [ "$COMPASS_IN_USE" -eq 1 ]; then
+        compass_block bash-command-too-long "size=$_bytes" "limit=$COMMAND_LIMIT"
+      fi
+      SKIP_WRITE_SCAN=1
+    fi
+  fi
+  if [ "$SKIP_WRITE_SCAN" -eq 0 ] && [ "$_chars" -ge $((2 * (OPENER_LIMIT + 1))) ]; then
+    _openers="$(printf '%s\n' "$COMMAND" | grep -o '\$(' | wc -l 2>/dev/null)" || _openers=""
+    _openers="${_openers//[[:space:]]/}"
+    # A count that failed is no count: the scan below has its own work limit.
+    case "$_openers" in ""|*[!0-9]*) _openers=0 ;; esac
+    if [ "$_openers" -gt "$OPENER_LIMIT" ]; then
+      if [ "$COMPASS_IN_USE" -eq 1 ]; then
+        compass_block bash-command-too-complex "has=$_openers command substitutions" \
+          "over=more than $OPENER_LIMIT command substitutions"
+      fi
+      SKIP_WRITE_SCAN=1
+    fi
+  fi
+fi
+
 # --- approval state the agent must not touch ---------------------------------
 # Request files, delegation files, the prompt hook's entry point, the session
 # transcript (which holds the code that confirms a g5 delegation) and a
@@ -579,7 +710,22 @@ case "${TOOL:-}" in
      # since the shell drops them: `--d''elegated`, `-\-delegated` and
      # `$'--delegated'` all run as `--delegated`.
      _text="${COMMAND:-}${TARGET:-}"
-     _bare="${_text//[\'\"\\]/}"
+     # prefilter-bare-begin (tests/test_pre_tool_hook_time_bounded.py runs it)
+     # A text with no quote or backslash is its own bare form. For the rest,
+     # bash substitution costs a few milliseconds up to 256 characters and
+     # grows faster than the text after that (about 3 s at 4096 characters in
+     # a UTF-8 locale), so a longer text goes through one `tr`. `tr -d` removes
+     # the same three ASCII characters, byte by byte under LC_ALL=C.
+     case "$_text" in
+       *[\'\"\\]*)
+         if [ "${#_text}" -lt 256 ]; then
+           _bare="${_text//[\'\"\\]/}"
+         else
+           _bare="$(printf '%s' "$_text" | LC_ALL=C tr -d "'\"\\\\")"
+         fi ;;
+       *) _bare="$_text" ;;
+     esac
+     # prefilter-bare-end
      case "$_text $_bare" in
        *approval-requests*|*prompt-approval.sh*|*.compass/delegations*|*--del*|\
        *.claude*|*CLAUDE_CONFIG_DIR*) GUARD_RUN=1 ;;
@@ -685,6 +831,14 @@ fi
 #
 # Returns 0 (true) if a change to $1 must be preceded by a failing test.
 MATCHED_RULE=""
+# The settings read once by is_enforced_path (see the code_globs block): whether
+# it ran, how it ended, the file it read, whether bash can match the globs
+# itself ("safe"), the globs as a JSON list, and the safe globs one to a line.
+GLOBS_LOADED=0 GLOBS_STATUS=0 GLOBS_ERR="" GLOBS_FILE="" GLOBS_KIND="" GLOBS_JSON="" GLOBS_LIST=""
+# While GLOB_DEFER is 1, a path that only a glob bash cannot decide could
+# enforce is not judged: its project-relative text is added to GLOB_PENDING
+# (one per line) and is_enforced_path returns 2 for it.
+GLOB_DEFER=0 GLOB_PENDING="" GLOBS_COUNT=0
 is_enforced_path() {
   local target="$1" rel base is_code=0 abs
 
@@ -863,21 +1017,34 @@ is_enforced_path() {
   # with none costs no Python start on an edit to a path the sets above
   # neither guard nor exempt.
   if [ -d "$PROJECT_DIR/.compass" ] && compass_has_settings_file "$PROJECT_DIR"; then
-    local hit glob_status glob_err glob_out settings_name
+    local hit="" glob_out glob_status g g2 g3
     # A reader that ran and matched nothing means the path is not
     # project-guarded. A reader that could not run - no python3, a broken
     # install, or a config it cannot parse - means we do not know whether it
     # is, and answering "not guarded" to a question we could not ask is how a
     # broken install quietly stops guarding the very scripts that broke it.
-    glob_err="$(mktemp 2>/dev/null)" \
-      || compass_reader_failed "enforcement.code_globs reader" tmp
-    set +e
-    # The reader prints the settings file it read on its first line, so a
-    # refusal can name that file, and a match follows on the second line. On a
-    # failure the file is the one the error names, which can be the old file
-    # when `compass.yml` was the one read.
-    glob_out="$(compass_python - "$PROJECT_DIR" "$rel" 2>"$glob_err" <<'PYEOF'
-import fnmatch, sys
+    #
+    # The settings are read once per hook run, not once per path: a command
+    # with hundreds of write targets would otherwise start Python for each one
+    # (about 50 ms each). The outcome is kept in the GLOBS_* variables,
+    # including a failure, and every path is judged against it below, so a
+    # reader that failed refuses for every path, never only the first.
+    if [ "$GLOBS_LOADED" -eq 0 ]; then
+      GLOBS_LOADED=1
+      GLOBS_ERR="$(mktemp 2>/dev/null)" \
+        || compass_reader_failed "enforcement.code_globs reader" tmp
+      set +e
+      # The reader prints the settings file it read on its first line, so a
+      # refusal can name that file. Then come "safe" or "unsafe", the globs as
+      # a JSON list, and, when safe, the globs one to a line. A failure prints
+      # the file the error names, which can be the old file when `compass.yml`
+      # was the one read. A glob is safe when bash's `case` matches it as
+      # Python's fnmatch does: letters, digits, `*`, `?` and a few punctuation
+      # marks. Any other glob (a bracket set, a backslash, an empty glob) is
+      # matched by Python: one start for a single path, and one start for all
+      # the write targets of a Bash command (settle_deferred_globs).
+      glob_out="$(compass_python - "$PROJECT_DIR" 2>"$GLOBS_ERR" <<'PYEOF'
+import json, re, sys
 import compass_pkg
 from compass_pkg import project_settings
 try:
@@ -897,36 +1064,94 @@ except Exception as exc:            # unreadable config -> cannot answer
     print(exc.shown if conflict else exc, file=sys.stderr)
     sys.exit(5 if conflict else 4)
 print(project_settings.settings_file(sys.argv[1]))
-path = sys.argv[2]
-for g in globs:
+# A safe glob is matched by the shell case statement exactly as
+# fnmatch.fnmatch(path, g) matches it (the three tests are in the matcher
+# below, for an unsafe glob). No apostrophe here: bash 3.2 miscounts quotes in
+# a heredoc inside a command substitution.
+safe = all(re.fullmatch(r"[A-Za-z0-9_./*?+=,:@%-]+", g) for g in globs)
+print("safe" if safe else "unsafe")
+print(json.dumps(globs))
+if safe:
+    for g in globs:
+        print(g)
+PYEOF
+)"
+      GLOBS_STATUS=$?
+      set -e
+      GLOBS_FILE="${glob_out%%$'\n'*}"
+      if [ "$GLOBS_STATUS" -eq 0 ]; then
+        # A warning the reader wrote (a `compass.yml` it ignored) is for the
+        # person, once; it does not change the decision.
+        [ -s "$GLOBS_ERR" ] && cat "$GLOBS_ERR" >&2 || true
+        rm -f "$GLOBS_ERR"
+        GLOBS_KIND="$(printf '%s\n' "$glob_out" | sed -n '2p')"
+        GLOBS_JSON="$(printf '%s\n' "$glob_out" | sed -n '3p')"
+        GLOBS_LIST="$(printf '%s\n' "$glob_out" | sed -n '4,$p')"
+        # (A substitution that deletes every character but the line ends took
+        # 2 s on 300 globs, so the lines are counted in a loop.)
+        GLOBS_COUNT=0
+        while IFS= read -r g; do
+          GLOBS_COUNT=$((GLOBS_COUNT + 1))
+        done <<GLOBCOUNT
+$GLOBS_LIST
+GLOBCOUNT
+      fi
+    fi
+    # The same outcome for every path: a failed read refuses each time.
+    if [ "$GLOBS_STATUS" -eq 5 ]; then
+      emit_refusal settings-conflict "target=${TARGET:-${candidate:-?}}" \
+        "tool=${TOOL:-?}" \
+        "keys=$(sed -n '1p' "$GLOBS_ERR")"
+      rm -f "$GLOBS_ERR"
+      exit 2
+    elif [ "$GLOBS_STATUS" -eq 4 ]; then
+      compass_reader_failed "enforcement.code_globs reader" "$GLOBS_STATUS" \
+        "$GLOBS_ERR" "$GLOBS_FILE"
+    elif [ "$GLOBS_STATUS" -ne 0 ]; then
+      compass_reader_failed "enforcement.code_globs reader" "$GLOBS_STATUS" "$GLOBS_ERR"
+    fi
+    if [ "$GLOBS_KIND" = safe ]; then
+      # Python's three tests, in the order it ran them: the glob as written,
+      # the glob as a folder, and the glob after any leading folders.
+      WORK_USED=$((WORK_USED + COST_GLOB * GLOBS_COUNT))
+      while IFS= read -r g; do
+        [ -n "$g" ] || continue
+        g2="$g"; while [ "${g2%/}" != "$g2" ]; do g2="${g2%/}"; done
+        g3="$g"; while [ "${g3#/}" != "$g3" ]; do g3="${g3#/}"; done
+        case "$rel" in
+          $g|$g2/*) hit="$g"; break ;;
+        esac
+        case "/$rel" in
+          */$g3) hit="$g"; break ;;
+        esac
+      done <<GLOBLIST
+$GLOBS_LIST
+GLOBLIST
+    elif [ "$GLOB_DEFER" -eq 1 ]; then
+      # The candidate loop of a Bash command settles every path that reaches
+      # this point in one Python start, after the loop (settle_deferred_globs).
+      GLOB_PENDING="$GLOB_PENDING$rel"$'\n'
+      return 2
+    else
+      set +e
+      hit="$(compass_python - "$rel" "$GLOBS_JSON" 2>"$GLOBS_ERR.m" <<'PYEOF'
+import fnmatch, json, sys
+path = sys.argv[1]
+for g in json.loads(sys.argv[2]):
     if fnmatch.fnmatch(path, g) or fnmatch.fnmatch(path, g.rstrip("/") + "/*") \
             or fnmatch.fnmatch("/" + path, "*/" + g.lstrip("/")):
         print(g)
         break
 PYEOF
 )"
-    glob_status=$?
-    set -e
-    settings_name="$(printf '%s\n' "$glob_out" | sed -n '1p')"
-    hit="$(printf '%s\n' "$glob_out" | sed -n '2p')"
-    if [ "$glob_status" -eq 5 ]; then
-      emit_refusal settings-conflict "target=${TARGET:-${candidate:-?}}" \
-        "tool=${TOOL:-?}" \
-        "keys=$(sed -n '1p' "$glob_err")"
-      rm -f "$glob_err"
-      exit 2
-    elif [ "$glob_status" -eq 4 ]; then
-      compass_reader_failed "enforcement.code_globs reader" "$glob_status" \
-        "$glob_err" "$settings_name"
-    elif [ "$glob_status" -ne 0 ]; then
-      compass_reader_failed "enforcement.code_globs reader" "$glob_status" "$glob_err"
+      glob_status=$?
+      set -e
+      [ "$glob_status" -eq 0 ] \
+        || compass_reader_failed "enforcement.code_globs reader" "$glob_status" "$GLOBS_ERR.m"
+      rm -f "$GLOBS_ERR.m"
     fi
-    # A warning the reader wrote (a `compass.yml` it ignored) is for the person;
-    # it does not change the decision.
-    [ -s "$glob_err" ] && cat "$glob_err" >&2 || true
-    rm -f "$glob_err"
     if [ -n "${hit:-}" ]; then
-      MATCHED_RULE="enforcement.code_globs pattern '$hit' in $settings_name"
+      MATCHED_RULE="enforcement.code_globs pattern '$hit' in $GLOBS_FILE"
       return 0
     fi
   fi
@@ -935,6 +1160,50 @@ PYEOF
   # production-impacting files; it does not block the unknown. If a project has
   # a production-impacting file type that slips through, declare it above.
   return 1
+}
+
+# Judge the paths is_enforced_path set aside (GLOB_PENDING) against the globs
+# bash cannot match, in one Python start. The first path, in the order the
+# command wrote them, that a glob matches is the answer: the number of its line
+# in GLOB_PENDING is printed, then the glob. The paths go in a file, so their
+# number and length are not limited by the size of an argument list. The
+# matcher is the one a single path uses, so the two cannot differ. A matcher
+# that cannot run refuses, and so does it for every path, because none was
+# judged. Sets GLOB_HIT_INDEX to that number (0 for none) and GLOB_HIT to the
+# glob.
+GLOB_HIT_INDEX=0 GLOB_HIT=""
+settle_deferred_globs() {
+  local out status
+  GLOB_HIT_INDEX=0 GLOB_HIT=""
+  [ -n "$GLOB_PENDING" ] || return 0
+  printf '%s' "$GLOB_PENDING" > "$GLOBS_ERR.r" 2>/dev/null \
+    || compass_reader_failed "enforcement.code_globs reader" tmp
+  set +e
+  out="$(compass_python - "$GLOBS_JSON" "$GLOBS_ERR.r" 2>"$GLOBS_ERR.m" <<'PYEOF'
+import fnmatch, json, os, sys
+globs = json.loads(sys.argv[1])
+with open(sys.argv[2], "rb") as handle:
+    paths = [os.fsdecode(line) for line in handle.read().split(b"\n")[:-1]]
+for number, path in enumerate(paths, 1):
+    for g in globs:
+        if fnmatch.fnmatch(path, g) or fnmatch.fnmatch(path, g.rstrip("/") + "/*") \
+                or fnmatch.fnmatch("/" + path, "*/" + g.lstrip("/")):
+            print(number)
+            print(g)
+            sys.exit(0)
+PYEOF
+)"
+  status=$?
+  set -e
+  rm -f "$GLOBS_ERR.r"
+  [ "$status" -eq 0 ] \
+    || compass_reader_failed "enforcement.code_globs reader" "$status" "$GLOBS_ERR.m"
+  rm -f "$GLOBS_ERR.m"
+  if [ -n "$out" ]; then
+    GLOB_HIT_INDEX="${out%%$'\n'*}"
+    GLOB_HIT="${out#*$'\n'}"
+  fi
+  return 0
 }
 
 # --- what a shell command can be known to write ------------------------------
@@ -949,7 +1218,7 @@ PYEOF
 # which allows anything it does not recognise as production code. A token that
 # is not a path simply falls through.
 bash_write_targets() {
-  local cmd="$1" continuation=$'\\\n'
+  local cmd="$1"
   {
     # Redirects into a file: `> f`, `>> f`, `1> f`, and the `cat > f <<EOF`
     # heredoc form. `2>&1` and `>&2` duplicate a file descriptor rather than
@@ -957,7 +1226,13 @@ bash_write_targets() {
     # taken whole, spaces included; the candidate loop removes the quotes.
     # `>|` writes as `>` does, and a line continuation after the operator
     # is joined first, so the target is not on a line of its own.
-    printf '%s\n' "${cmd//"$continuation"/ }" \
+    # The continuations are joined by awk and not by the bash substitution
+    # `${cmd//"$continuation"/ }`: in a UTF-8 locale that took 1.2 s for each
+    # continuation in 98 KB, so 100 of them took 116 s. The final line end is
+    # kept out of the join, as the substitution kept it.
+    printf '%s\n' "$cmd" \
+      | awk '{ s = s $0 "\n" }
+             END { s = substr(s, 1, length(s) - 1); gsub(/\\\n/, " ", s); print s }' \
       | grep -oE "[0-9]?>(>|\|)?[[:space:]]*(\"[^\"]*\"|'[^']*'|[^&<>|;()[:space:]]+)" \
       | sed -E 's/^[0-9]?>(>|\|)?[[:space:]]*//' || true
 
@@ -1002,7 +1277,7 @@ bash_write_targets() {
     case "$cmd" in
       *tee*|*cp*|*mv*)
         printf '%s\n' "$cmd" \
-          | awk '
+          | awk -v budget="$SCAN_WORK_LIMIT" -v workfile="${SCAN_WORK_FILE:-}" '
               function emit(line) {
                 if (!(line in seen)) { seen[line] = 1; print line }
               }
@@ -1043,6 +1318,7 @@ bash_write_targets() {
                         else if (ch == ")") st = substr(st, 1, length(st) - 1)
                         j++
                       }
+                      if ((work += j - RSTART - 2) > budget) { blown = 1; return }
                       closed = (st == "")
                       if (!closed) {
                         out = out substr(t, 1, RSTART + 1); t = substr(t, RSTART + 2)
@@ -1056,6 +1332,7 @@ bash_write_targets() {
                         else if (ch == ")") d--
                         j++
                       }
+                      if ((work += j - RSTART - 2) > budget) { blown = 1; return }
                       closed = (d == 0)
                     }
                     out = out substr(t, 1, RSTART - 1) "_SPAN_"
@@ -1069,7 +1346,12 @@ bash_write_targets() {
               END {
                 gsub(/\\\n/, " ", s)
                 flatten(s, 0)
-                flatten(s, 1)
+                if (!blown) flatten(s, 1)
+                # The steps taken, for the shared work budget, and whether the
+                # scan ran out of its own budget (whatever it found stays),
+                # in a file the caller made. The text of the command cannot
+                # write that file: it is not on the path the targets take.
+                if (workfile != "") { print (work + 0), (blown + 0) > workfile; close(workfile) }
               }' \
           | tr ';&|(' '\n\n\n\n' \
           | sed -E 's/(^|[[:space:]])#.*//; s/[0-9]*>>?[[:space:]]*[^[:space:]]*//g; s/<[[:space:]]*[^[:space:]]*//g; s/\)//g' \
@@ -1174,64 +1456,205 @@ bash_write_targets() {
 # (`ev""al`), or an arithmetic context that evaluates another variable's
 # text, is deliberate evasion, which shell-write detection does not claim to
 # stop (docs/safety-contract.md).
+#
+# The work is in two functions so that a command with many `$NAME/...` targets
+# reads the command once for each NAME and not once for each target. The
+# reading (`expand_command_variable_resolve`) depends on NAME and the command
+# and not on the rest of the target, and the caller keeps its answers in
+# EXPAND_MEMO. Each target after a heredoc of 85 KB cost about 50 ms, and 400
+# of them took 21 s. The caller runs `expand_command_variable_into` in the
+# hook's own shell, because a command substitution would lose the memo.
+# `expand_command_variable` prints the answer, for the tests and for a caller
+# that wants text. EXPAND_NAMES counts the names read for this command, which
+# the caller compares with NAME_LIMIT.
+EXPAND_MEMO_CMD="" EXPAND_MEMO="" EXPANDED="" RESOLVED="" EXPAND_NAMES=0 WORK_USED=0 WORK_OVER=0 WALK_CMD="" WALK_DIRTY=0 WALK_WANT=""
 expand_command_variable() {
-  local target="$1" cmd="$2" name rest rem value="" count=0 full
-  local sep="start" before="" after_sep="" after_name="" stmt w len deny
-  local ref1 ref2 head head2
-  local sq="'" dq='"' bt='`' nl=$'\n'
+  expand_command_variable_into "$@"
+  printf '%s\n' "$EXPANDED"
+}
+
+expand_command_variable_into() {
+  local target="$1" cmd="$2" name rest value full tail
+  local nl=$'\n'
   local path_re='^(/[A-Za-z0-9._+@%:,=-]*)*$'
   local dotdot_re='(^|/)\.\.(/|$)'
   local brace_re='^\$\{([A-Za-z_][A-Za-z0-9_]*)\}(.*)$'
   local bare_re='^\$([A-Za-z_][A-Za-z0-9_]*)(.*)$'
-  local value_re="(${sq}[^${sq}]*${sq}|${dq}[^${dq}]*${dq}|[^[:space:];&|<>()${sq}${dq}${bt}\\\$]*)"
-  local assign_re="^[[:space:]]*(export[[:blank:]]+)?([A-Za-z_][A-Za-z0-9_]*)=${value_re}[[:blank:]]*(;|&&|${nl})"
   local special_re='^(_|PWD|OLDPWD|UID|EUID|PPID|BASHPID|RANDOM|SRANDOM|SECONDS|EPOCHSECONDS|EPOCHREALTIME|LINENO|HISTCMD|REPLY|OPTARG|OPTIND|GROUPS|DIRSTACK|PIPESTATUS|FUNCNAME|SHELLOPTS|BASHOPTS|MAPFILE|COPROC|BASH_[A-Z_]*|BASH)$'
-  local binder_re='(^|[^A-Za-z0-9_./-])(eval|source|trap|declare|typeset|local|readonly|export|read|mapfile|readarray|unset|getopts|let)([^A-Za-z0-9_./-]|$)|(^|[;&|({'"${nl}"']|then|do|else)[[:space:]]*\.[[:space:]]|printf[[:space:]]+-v|(^|[^A-Za-z0-9_)])\(\('
-  local stripped mention_re
-  local plain_re="^[[:space:]]*([A-Za-z0-9._+@%:,=/~-]+([[:blank:]]+[A-Za-z0-9._+@%:,=/~-]+)*)[[:blank:]]*(;|&&|${nl})"
-  local deny_re='^(eval|source|\.|declare|typeset|local|readonly|trap|alias|enable|builtin|command|shopt|function|if|then|else|elif|fi|case|esac|for|select|while|until|do|done|coproc)$'
 
   if [[ $target =~ $brace_re ]] || [[ $target =~ $bare_re ]]; then
     name="${BASH_REMATCH[1]}"
     rest="${BASH_REMATCH[2]}"
   else
-    printf '%s\n' "$target"; return 0
+    EXPANDED="$target"; return 0
   fi
   if [[ $name =~ $special_re ]] || ! [[ $rest =~ $path_re ]]; then
-    printf '%s\n' "$target"; return 0
+    EXPANDED="$target"; return 0
   fi
 
-  # Walk the leading statements. `sep` is the separator that ended the
-  # previous one; `after_name` is the command after NAME's assignment.
-  rem="$cmd"
-  while :; do
-    if [[ $rem =~ $assign_re ]]; then
-      len=${#BASH_REMATCH[0]}
-      if [ "${BASH_REMATCH[2]}" = "$name" ]; then
-        count=$((count + 1))
-        value="${BASH_REMATCH[3]}"
-        before="$sep"
-        after_sep="${BASH_REMATCH[4]}"
-        after_name="${rem:$len}"
-      fi
-      sep="${BASH_REMATCH[4]}"
-    elif [[ $rem =~ $plain_re ]]; then
-      len=${#BASH_REMATCH[0]}
-      stmt="${BASH_REMATCH[1]}"
-      sep="${BASH_REMATCH[3]}"
-      deny=0
-      for w in $stmt; do
-        if [[ $w =~ $deny_re ]]; then deny=1; fi
-      done
-      [ "$deny" -eq 1 ] && break
-    else
-      break
-    fi
-    rem="${rem:$len}"
-  done
-  if [ "$count" -ne 1 ]; then
-    printf '%s\n' "$target"; return 0
+  # The answer for NAME in this command: "D" to decline, or "V" and the value.
+  # A caller that has already passed the command gives "same" as the third
+  # argument and an empty command: handing a command of 90 KB to a function
+  # costs about 3 ms in a UTF-8 locale, once for each target.
+  if [ "${3:-}" != same ]; then
+    case "$EXPAND_MEMO_CMD" in
+      "$cmd") ;;
+      *) EXPAND_MEMO_CMD="$cmd"; EXPAND_MEMO=""; EXPAND_NAMES=0; WALK_CMD=""
+         WALK_WANT="${WALK_PRELOAD:-}" ;;
+    esac
   fi
+  case "$nl$EXPAND_MEMO" in
+    *"$nl$name="*)
+      tail="$nl$EXPAND_MEMO"
+      tail="${tail#*"$nl$name="}"
+      RESOLVED="${tail%%"$nl"*}" ;;
+    *)
+      [ "${3:-}" = same ] && cmd="$EXPAND_MEMO_CMD"
+      EXPAND_NAMES=$((EXPAND_NAMES + 1))
+      # The reading of the command for this name (its text is read about once
+      # for each name) is charged to the shared work budget by its length.
+      WORK_USED=$((WORK_USED + ${COST_NAME_PER_KB:-0} * ${#cmd} / 1024))
+      expand_command_variable_resolve "$name" "$cmd"
+      EXPAND_MEMO="$EXPAND_MEMO$name=$RESOLVED$nl"
+      if { [ "${WORK_BUDGET:-0}" -gt 0 ] && [ "$WORK_USED" -gt "$WORK_BUDGET" ]; } \
+          || { [ "${FUSE_SECONDS:-0}" -gt 0 ] \
+               && [ $((SECONDS - HOOK_START)) -ge "$FUSE_SECONDS" ]; }; then
+        WORK_OVER=1
+      fi ;;
+  esac
+  case "$RESOLVED" in
+    V*) value="${RESOLVED#V}" ;;
+    *) EXPANDED="$target"; return 0 ;;
+  esac
+  full="$value$rest"
+  if [[ $full =~ $dotdot_re ]]; then
+    EXPANDED="$target"; return 0
+  fi
+  EXPANDED="$full"
+}
+
+# Sets RESOLVED to "D" (the command does not state NAME for certain) or to "V"
+# and the value NAME has at the write.
+expand_command_variable_resolve() {
+  local name="$1" cmd="$2" value="" count=0
+  local sep="start" before="" after_sep="" after_name="" stmt w len deny
+  local total off size win after_off=0
+  local ref ref1 ref2 head head2
+  local sq="'" dq='"' bt='`' nl=$'\n'
+  local path_re='^(/[A-Za-z0-9._+@%:,=-]*)*$'
+  local value_re="(${sq}[^${sq}]*${sq}|${dq}[^${dq}]*${dq}|[^[:space:];&|<>()${sq}${dq}${bt}\\\$]*)"
+  local assign_re="^[[:space:]]*(export[[:blank:]]+)?([A-Za-z_][A-Za-z0-9_]*)=${value_re}[[:blank:]]*(;|&&|${nl})"
+  local binder_re='(^|[^A-Za-z0-9_./-])(eval|source|trap|declare|typeset|local|readonly|export|read|mapfile|readarray|unset|getopts|let)([^A-Za-z0-9_./-]|$)|(^|[;&|({'"${nl}"']|then|do|else)[[:space:]]*\.[[:space:]]|printf[[:space:]]+-v|(^|[^A-Za-z0-9_)])\(\('
+  local stripped mention_re
+  local plain_re="^[[:space:]]*([A-Za-z0-9._+@%:,=/~-]+([[:blank:]]+[A-Za-z0-9._+@%:,=/~-]+)*)[[:blank:]]*(;|&&|${nl})"
+
+  # Walk the leading statements. `sep` is the separator that ended the
+  # previous one; `after_off` is where the command after NAME's assignment
+  # starts.
+  #
+  # Each statement is matched against `win`, the next few hundred characters,
+  # and not against the whole rest of the command: a match on 80 KB of text
+  # for each of 14000 statements took 20 s. This gives the same answer as
+  # matching the rest because both patterns are anchored at the start and
+  # end at the first separator, so a match that ends inside the window is the
+  # match the rest gives. A window that finds no match may have cut a long
+  # statement, so it is doubled until it holds all that is left, and only
+  # then does the walk stop. The golden corpus in
+  # tests/test_pre_tool_hook_time_bounded.py pins the results.
+  #
+  # The walk does not depend on NAME except in what it keeps, so it runs once
+  # for the command and keeps what it found for each name in WALK_WANT (the
+  # names the write targets start with, set by the caller, at most
+  # NAME_LIMIT + 1): in WK_C_<name> the count of its assignments and in
+  # WK_V_/WK_B_/WK_S_/WK_O_<name> the value, the separator before the
+  # statement, the separator after it and where the text after it starts, all
+  # for the last assignment. A walk for each name took 62 s for 40000
+  # statements and 20 names. A name that is not in WALK_WANT is added and the
+  # walk runs again, so the answer never depends on the caller's list. Each
+  # pass is charged to the shared work budget, and stops at the fuse.
+  case " $WALK_WANT " in
+    *" $name "*) ;;
+    *) WALK_WANT="$WALK_WANT $name"; WALK_CMD="" ;;
+  esac
+  if [ "$WALK_CMD" != "$cmd" ]; then
+    WALK_CMD="$cmd"
+    if [ "$WALK_DIRTY" -eq 1 ]; then
+      for w in $(compgen -v WK_); do unset "$w"; done
+      WALK_DIRTY=0
+    fi
+    total=${#cmd}
+    off=0
+    size=512
+    win="${cmd:0:$size}"
+    while :; do
+      WORK_USED=$((WORK_USED + ${COST_STATEMENT:-0}))
+      if { [ "${WORK_BUDGET:-0}" -gt 0 ] && [ "$WORK_USED" -gt "$WORK_BUDGET" ]; } \
+          || { [ "${FUSE_SECONDS:-0}" -gt 0 ] \
+               && [ $((SECONDS - HOOK_START)) -ge "$FUSE_SECONDS" ]; }; then
+        WORK_OVER=1; break
+      fi
+      if [[ $win =~ $assign_re ]]; then
+        len=${#BASH_REMATCH[0]}
+        WORK_USED=$((WORK_USED + ${COST_STATEMENT_CHAR:-0} * len))
+        # Only a name that a write target uses is kept. Bash slows every
+        # variable operation as the number of variables grows (1 s more for
+        # each 10000), and a command can assign thousands of other names.
+        case " $WALK_WANT " in
+          *" ${BASH_REMATCH[2]} "*)
+            ref="WK_C_${BASH_REMATCH[2]}"
+            printf -v "$ref" '%s' $(( ${!ref:-0} + 1 ))
+            printf -v "WK_V_${BASH_REMATCH[2]}" '%s' "${BASH_REMATCH[3]}"
+            printf -v "WK_B_${BASH_REMATCH[2]}" '%s' "$sep"
+            printf -v "WK_S_${BASH_REMATCH[2]}" '%s' "${BASH_REMATCH[4]}"
+            printf -v "WK_O_${BASH_REMATCH[2]}" '%s' $((off + len))
+            WALK_DIRTY=1 ;;
+        esac
+        sep="${BASH_REMATCH[4]}"
+      elif [[ $win =~ $plain_re ]]; then
+        len=${#BASH_REMATCH[0]}
+        WORK_USED=$((WORK_USED + ${COST_STATEMENT_CHAR:-0} * len))
+        stmt="${BASH_REMATCH[1]}"
+        sep="${BASH_REMATCH[3]}"
+        deny=0
+        for w in $stmt; do
+          case "$w" in
+            eval|source|.|declare|typeset|local|readonly|trap|alias|enable|builtin|\
+            command|shopt|function|if|then|else|elif|fi|case|esac|for|select|\
+            while|until|do|done|coproc) deny=1 ;;
+          esac
+        done
+        [ "$deny" -eq 1 ] && break
+      elif [ $((off + ${#win})) -lt "$total" ]; then
+        size=$((size * 2))
+        win="${cmd:$off:$size}"
+        continue
+      else
+        break
+      fi
+      off=$((off + len))
+      win="${win:$len}"
+      if [ "${#win}" -gt 1024 ] || {
+           [ "${#win}" -lt 256 ] && [ $((off + ${#win})) -lt "$total" ]; }; then
+        size=512
+        win="${cmd:$off:$size}"
+      fi
+    done
+  fi
+  if [ "$WORK_OVER" -eq 1 ]; then
+    RESOLVED=D; return 0
+  fi
+  ref="WK_C_$name"
+  count="${!ref:-0}"
+  if [ "$count" -eq 1 ]; then
+    ref="WK_V_$name"; value="${!ref}"
+    ref="WK_B_$name"; before="${!ref}"
+    ref="WK_S_$name"; after_sep="${!ref}"
+    ref="WK_O_$name"; after_off="${!ref}"
+  fi
+  if [ "$count" -ne 1 ]; then
+    RESOLVED=D; return 0
+  fi
+  after_name="${cmd:$after_off}"
 
   # After `&&`, the assignment may not run. Then the text up to the last use
   # of NAME must be one `&&` chain: no `;`, line end, `||` or lone `&`.
@@ -1247,7 +1670,7 @@ expand_command_variable() {
     head2="${head//&&/}"
     if [ "$after_sep" != "&&" ] || [[ $head == *";"* ]] || [[ $head == *"$nl"* ]] \
         || [[ $head == *"||"* ]] || [[ $head2 == *"&"* ]]; then
-      printf '%s\n' "$target"; return 0
+      RESOLVED=D; return 0
     fi
   fi
 
@@ -1255,9 +1678,8 @@ expand_command_variable() {
     \'*\') value="${value#\'}"; value="${value%\'}" ;;
     \"*\") value="${value#\"}"; value="${value%\"}" ;;
   esac
-  full="$value$rest"
-  if [ -z "$value" ] || ! [[ $value =~ $path_re ]] || [[ $full =~ $dotdot_re ]]; then
-    printf '%s\n' "$target"; return 0
+  if [ -z "$value" ] || ! [[ $value =~ $path_re ]]; then
+    RESOLVED=D; return 0
   fi
 
   # Everything after the assignment: remove the plain references, then
@@ -1271,18 +1693,29 @@ expand_command_variable() {
     | sed -E "s/[\$][{]${name}[}]//g; s/[\$]${name}([^A-Za-z0-9_])/\\1/g; s/[\$]${name}\$//")"
   mention_re="(^|[^A-Za-z0-9_])${name}([^A-Za-z0-9_]|\$)"
   if [[ $stripped =~ $mention_re ]]; then
-    printf '%s\n' "$target"; return 0
+    RESOLVED=D; return 0
   fi
   if [[ $after_name =~ $binder_re ]]; then
-    printf '%s\n' "$target"; return 0
+    RESOLVED=D; return 0
   fi
 
-  printf '%s\n' "$full"
+  RESOLVED="V$value"
+}
+
+# The shared work budget (see WORK_BUDGET above) is spent: the same refusal as
+# the other limits where Compass is in use, and only the write scan is skipped
+# elsewhere.
+WORK_REFUSAL="has=too many statements, names and targets to scan together|over=that many statements, names and targets"
+work_over() {
+  [ "$COMPASS_IN_USE" -eq 1 ] \
+    && compass_block bash-command-too-complex "${WORK_REFUSAL%%|*}" "${WORK_REFUSAL#*|}"
+  exit 0
 }
 
 # --- decide whether this tool call needs a red on record ---------------------
 if [ "${TOOL:-}" = "Bash" ]; then
   [ -z "${COMMAND:-}" ] && exit 0
+  [ "${SKIP_WRITE_SCAN:-0}" = 1 ] && exit 0
 
   # Cheap pre-filter, before any filesystem work: this hook now runs on every
   # Bash call in the session, and most of them write nothing.
@@ -1302,26 +1735,174 @@ if [ "${TOOL:-}" = "Bash" ]; then
   esac
 
   if [ -z "$DETECTED" ]; then
-    while IFS= read -r candidate; do
-      [ -z "$candidate" ] && continue
-      # A quoted target names the same file as an unquoted one, so the quotes
-      # go before it is judged (`> "src/app.ts"`). Inside single quotes the
-      # shell expands nothing, so `'$S/x'` is a literal path and is not
-      # expanded.
-      case "$candidate" in
-        *\'*) candidate="${candidate//\'/}"
-              candidate="${candidate//\"/}" ;;
-        *) candidate="${candidate//\"/}"
-           candidate="$(expand_command_variable "$candidate" "$COMMAND")" ;;
+    # A target written again judges the same, so each is judged once, in the
+    # order it first appears: 200 identical `cp` lines cost one.
+    #
+    # awk (in the C locale, so in bytes and in time that grows with the length)
+    # also prepares each target for the loops below, so no bash string
+    # operation runs on a long target: the quotes are taken out (both kinds
+    # from a target that holds a single quote, which the shell does not
+    # expand; the double quotes only from the others), and a letter in front
+    # says which it was: L for a literal target, E for one that can be
+    # expanded. A target over TARGET_BYTES_LIMIT bytes becomes X and its
+    # length. Every line starts with one of the three letters, put there by
+    # awk, so the text of a command cannot make a line of another kind.
+    SCAN_WORK_FILE=""
+    case "$COMMAND" in
+      *tee*|*cp*|*mv*)
+        SCAN_WORK_FILE="$(mktemp 2>/dev/null)" \
+          || compass_reader_failed "write scan" tmp ;;
+    esac
+    TARGET_LIST="$(bash_write_targets "$COMMAND" | LC_ALL=C awk -v limit="$TARGET_BYTES_LIMIT" '
+      $0 == "" { next }
+      !seen[$0]++ {
+        if (length($0) > limit) { print "X" length($0); next }
+        if (index($0, "\047")) { gsub("\047", ""); gsub(/"/, ""); print "L" $0 }
+        else { gsub(/"/, ""); print "E" $0 }
+      }')" || true
+    _scan_nl=$'\n'
+
+    # The steps the flattening took, and whether it ran out of its own budget,
+    # are in the file it wrote, which the text of the command cannot write.
+    # Anything that is not two small numbers is a fault, and a fault refuses.
+    _scan_work=0 _scan_blown=0
+    if [ -n "$SCAN_WORK_FILE" ]; then
+      _scan_line="$(cat "$SCAN_WORK_FILE" 2>/dev/null)" || _scan_line=""
+      rm -f "$SCAN_WORK_FILE"
+      _scan_extra=""
+      read -r _scan_work _scan_blown _scan_extra <<EOF
+$_scan_line
+EOF
+      case "$_scan_work" in
+        ""|*[!0-9]*|??????????*) _scan_work="$SCAN_WORK_LIMIT"; _scan_blown=1 ;;
       esac
-      [ -z "$candidate" ] && continue
-      if is_enforced_path "$candidate"; then
-        DETECTED="$candidate"
-        break
+      case "$_scan_blown$_scan_extra" in 0|1) ;; *) _scan_blown=1 ;; esac
+    fi
+    WORK_USED=$((WORK_USED + _scan_work * COST_AWK_STEP))
+
+    # Too much to scan in time (see the limits above). The scan marks a
+    # command it gave up on; the count of targets needs a process only when
+    # the list is long enough to hold TARGET_LIMIT + 1 of them (a target, its
+    # letter and its line end take three characters at least).
+    _too_complex=""
+    if [ "$_scan_blown" -eq 1 ]; then
+      _too_complex="has=substitutions that stay open|over=that many unclosed command substitutions"
+    fi
+    case "$_scan_nl$TARGET_LIST" in
+      *"$_scan_nl"X*)
+        if [ -z "$_too_complex" ]; then
+          _long="$_scan_nl$TARGET_LIST"
+          _long="${_long#*"$_scan_nl"X}"
+          _long="${_long%%"$_scan_nl"*}"
+          _too_complex="has=a write target of $_long bytes|over=more than $TARGET_BYTES_LIMIT bytes in one write target"
+        fi ;;
+    esac
+    if [ -z "$_too_complex" ] && [ "${#TARGET_LIST}" -ge $((2 * (TARGET_LIMIT + 1))) ]; then
+      _targets="$(printf '%s\n' "$TARGET_LIST" | grep -c . 2>/dev/null)" || _targets=0
+      _targets="${_targets//[[:space:]]/}"
+      case "$_targets" in ""|*[!0-9]*) _targets=0 ;; esac
+      if [ "$_targets" -gt "$TARGET_LIMIT" ]; then
+        _too_complex="has=$_targets different write targets|over=more than $TARGET_LIMIT write targets"
+      fi
+    fi
+    if [ -z "$_too_complex" ] && [ "$WORK_USED" -gt "$WORK_BUDGET" ]; then
+      _too_complex="$WORK_REFUSAL"
+    fi
+    if [ -n "$_too_complex" ]; then
+      [ "$COMPASS_IN_USE" -eq 1 ] \
+        && compass_block bash-command-too-complex "${_too_complex%%|*}" "${_too_complex#*|}"
+      exit 0
+    fi
+
+    # The variable names the targets start with (at most NAME_LIMIT + 1, the
+    # most that is read before the command is refused), so that the walk over
+    # the leading statements keeps only those names.
+    WALK_PRELOAD=""
+    _preload_count=0
+    _preload_brace='^\$\{([A-Za-z_][A-Za-z0-9_]*)\}'
+    _preload_bare='^\$([A-Za-z_][A-Za-z0-9_]*)'
+    while IFS= read -r candidate; do
+      [ "${candidate:0:1}" = E ] || continue
+      candidate="${candidate:1}"
+      case "$candidate" in '$'*) ;; *) continue ;; esac
+      if [[ $candidate =~ $_preload_brace ]] || [[ $candidate =~ $_preload_bare ]]; then
+        case " $WALK_PRELOAD " in
+          *" ${BASH_REMATCH[1]} "*) ;;
+          *) WALK_PRELOAD="$WALK_PRELOAD ${BASH_REMATCH[1]}"
+             _preload_count=$((_preload_count + 1)) ;;
+        esac
+        if [ "$_preload_count" -gt "$NAME_LIMIT" ]; then break; fi
       fi
     done <<CANDIDATES
-$(bash_write_targets "$COMMAND")
+$TARGET_LIST
 CANDIDATES
+
+    GLOB_DEFER=1
+    GLOB_PENDING="" GLOB_PENDING_CANDIDATES=""
+    while IFS= read -r candidate; do
+      _kind="${candidate:0:1}"
+      candidate="${candidate:1}"
+      [ -z "$candidate" ] && continue
+      # Judging a path costs more for a long path and for each glob it is
+      # tried against (charged in is_enforced_path).
+      WORK_USED=$((WORK_USED + COST_CANDIDATE + COST_CANDIDATE_CHAR * ${#candidate}))
+      if [ "$WORK_USED" -gt "$WORK_BUDGET" ] \
+          || [ $((SECONDS - HOOK_START)) -ge "$FUSE_SECONDS" ]; then work_over; fi
+      # A quoted target names the same file as an unquoted one, so awk took the
+      # quotes out above (`> "src/app.ts"`). Inside single quotes the shell
+      # expands nothing, so `'$S/x'` is a literal path (kind L) and is not
+      # expanded. Only a target that starts with `$` can be expanded, and
+      # passing the whole command to the function costs about 3 ms in a UTF-8
+      # locale at 90 KB, so the others do not call it.
+      if [ "$_kind" = E ]; then
+        case "$candidate" in
+          '$'*)
+            if [ -n "$EXPAND_MEMO_CMD" ]; then
+              expand_command_variable_into "$candidate" "" same
+            else
+              expand_command_variable_into "$candidate" "$COMMAND"
+            fi
+            candidate="$EXPANDED"
+            if [ "$WORK_OVER" -eq 1 ]; then work_over; fi
+            # Past NAME_LIMIT the command is too slow to read for every name.
+            if [ "$EXPAND_NAMES" -gt "$NAME_LIMIT" ]; then
+              [ "$COMPASS_IN_USE" -eq 1 ] \
+                && compass_block bash-command-too-complex \
+                     "has=$EXPAND_NAMES different variable names" \
+                     "over=more than $NAME_LIMIT variable names"
+              exit 0
+            fi ;;
+        esac
+      fi
+      [ -z "$candidate" ] && continue
+      # 0: enforced, 1: not, 2: only a glob bash cannot decide could enforce it.
+      # The paths of the third kind are kept for one Python start below.
+      _verdict=0
+      is_enforced_path "$candidate" || _verdict=$?
+      if [ "$_verdict" -eq 0 ]; then
+        DETECTED="$candidate"
+        break
+      elif [ "$_verdict" -eq 2 ]; then
+        GLOB_PENDING_CANDIDATES="$GLOB_PENDING_CANDIDATES$candidate"$'\n'
+      fi
+    done <<CANDIDATES
+$TARGET_LIST
+CANDIDATES
+    GLOB_DEFER=0
+    # A path set aside comes before the one that ended the loop, so a glob that
+    # matches one of them names the first such path, as when each was judged in
+    # turn.
+    settle_deferred_globs
+    if [ "$GLOB_HIT_INDEX" -gt 0 ]; then
+      _rest="$GLOB_PENDING_CANDIDATES"
+      _n=1
+      while [ "$_n" -lt "$GLOB_HIT_INDEX" ]; do
+        _rest="${_rest#*$'\n'}"
+        _n=$((_n + 1))
+      done
+      DETECTED="${_rest%%$'\n'*}"
+      MATCHED_RULE="enforcement.code_globs pattern '$GLOB_HIT' in $GLOBS_FILE"
+    fi
   fi
 
   # Nothing recognisable is written → allow. See docs/safety-contract.md.

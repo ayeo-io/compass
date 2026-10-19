@@ -2,7 +2,7 @@
 
 This page shows how to write a waiver, a lock, an unlock, an approver list and a layer in `compass.yml`. It is for the owner of a project that departs from the shipped default. The settings keys (adoption, autonomy and the rest) are in [configuration.md](configuration.md). This page covers the governance edits.
 
-A waiver is a recorded departure from the shipped default, with a reason and a named approver. The decision behind it is `ADR-039`. The finding codes that lint prints are in `docs/policy-lint.md`.
+A waiver is a recorded departure from the shipped default, with a reason and a named approver. The decision behind it is `ADR-039`, the architecture decision record that says who may approve a departure from the shipped default and what a lock protects. The finding codes that lint prints are in `docs/policy-lint.md`.
 
 ## A first waiver
 
@@ -12,8 +12,6 @@ This `compass.yml` waives one readiness signal. The signal is not locked, so the
 schema: 1
 extends: compass:default@6
 owner: ada
-approvers:
-  issue-waiver: [ada, grace]
 readiness:
   tests-declared-and-under-two-minutes:
     set: {required_for_autonomous: false}
@@ -44,7 +42,7 @@ The layer keys of `compass.yml` are:
 | `owner` | The person who owns the project. The owner approves waivers and unlocks. |
 | `approvers` | Lists of names, by kind of approval: `issue-waiver` in the project file and `project-waiver` in a parent. |
 
-When `approvers` has no list for a kind, the `owner` approves. A waiver with no `owner` anywhere fails lint.
+The `issue-waiver` list in the project file names who may approve an issue waiver. A parent's `project-waiver` list names who may approve a project waiver. The owner approves a project waiver on the shipped default, which has no such list, so `approved_by: ada` in the example above is the owner. A name that is only in `issue-waiver` cannot approve a project waiver: lint refuses it with `W-APPROVER-NOT-ALLOWED`. When a list is absent, the `owner` approves. A waiver with no `owner` anywhere fails lint.
 
 ## Operations
 
@@ -80,16 +78,16 @@ The shipped default locks:
 
 - the stages `assess`, `verify` and `ship`, and their order;
 - the gates `verify.correctness`, `verify.governance` and `verify.traceability`;
-- the guardrails `G1` to `G4` and the checks in their sets, such as `suite-passed`;
+- the guardrails `G1` to `G4` (the shipped rules that every change must meet) and the checks in their sets, such as `suite-passed`;
 - the spike gate and the spike guardrails.
 
-The guardrail `G5` and the check `human-approval-present` are locked hard. No unlock lifts a hard lock.
+The guardrail `G5` (a human signs off on the irreversible) and the check `human-approval-present` are locked hard. No unlock lifts a hard lock.
 
 For example, a waiver on `suite-passed` fails lint with `K-LOCK-REFUSED`, because the shipped default locks that check. To depart from a locked entry the owner must unlock it.
 
 ## Unlocks
 
-Only the project layer can write `unlock`. The project `owner` must approve it, and it needs a waiver. A parent, a preset or an issue that carries `unlock` fails lint. Compass reports a project that unlocks a shipped entry as not conforming, on every `compass check` run. This page gives no unlock example on purpose: an unlock leaves conformance, so decide it with the owner and read `ADR-039` first.
+Only the project layer can write `unlock`. The project `owner` must approve it, and it needs a waiver. Write `unlock: true`, one operation (`set`, `replace` or `remove`) and the `waiver` together in the same entry. If the operation and the waiver are not in the entry with the `unlock`, lint reports `W-NO-OPERATION`. A parent, a preset or an issue that carries `unlock` fails lint. Compass reports a project that unlocks a shipped entry as not conforming, on every `compass check` run. This page gives no unlock example on purpose: an unlock leaves conformance, so decide it with the owner and read `ADR-039` first.
 
 ## Commands
 

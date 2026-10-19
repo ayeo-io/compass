@@ -591,6 +591,45 @@ manifest.
   that loaded the manifest before the hook wrote keeps the id when it saves:
   the save merges the hook's change.
 
+### The pre-tool hook refuses on a removed working directory, and three exits still let a call through
+
+Claude Code blocks a tool call only when the pre-tool hook exits with 2. Any
+other exit code is a non-blocking error, and the call runs. The hook therefore
+turns each fault it can reach into exit 2 with a stated reason.
+
+When the session's working directory has been removed, for example by a
+clean-up step such as `cd d && rm -rf ../d`, the hook follows three rules.
+First, it falls back to `CLAUDE_PROJECT_DIR` and gives the same verdict as it
+does from a directory that exists. Second, when `CLAUDE_PROJECT_DIR` is not set
+and an Edit or Write names a file inside a Compass project by its absolute
+path, it refuses with `working-directory-gone`. Third, it allows the call when
+no project can be found: a shell command, a relative path with no known base,
+or a repository that has not opted in. A Read or Grep is never refused for a
+removed directory. A shell write in a removed directory with
+`CLAUDE_PROJECT_DIR` unset is therefore not seen, because it names no file
+path. An Edit or Write of any file inside a Compass project, a document as well
+as code, is refused in that state: the earlier exit 1 let it through.
+
+Three exits still let a call through, because the hook cannot turn them into
+exit 2:
+
+- The hook's own folder is gone. The shell cannot open the script and exits
+  127.
+- A helper script the hook calls is unreadable, or fails when it runs.
+- A time-out of the hook. On Claude Code 2.1.295 or later the time-out is
+  covered by the declared limit: `hooks/hooks.json` sets `"timeout": 15` and
+  `"onFailure": "block"`, so a time-out blocks the call. On older versions a
+  time-out lets the call run, and the limits of the hook, described above, keep
+  it under the time-out.
+
+The hook has no catch-all exit rule, such as a trap that maps every exit other
+than 0 and 2 to 2. Measured on bash 3.2.57 on 2026-10-19, an `EXIT` trap like
+that ends a direct unbound-variable exit with status 0, so the call runs: worse
+than the exit 1 it replaces. An `ERR` trap does not fire inside functions
+unless `set -E` is on, and that setting changes how every function in the hook
+behaves. The fix therefore covers the one path that was reproduced, and the
+other exits are stated here.
+
 ### Shell-write detection is best-effort
 
 The Claude Code pre-tool hook completely covers supported file-editing tools.
@@ -652,6 +691,125 @@ such as an unexpanded variable or `~`, leaves the real location unknown, so
 that path is judged inside the project, and the directories named before
 the `..` do not exempt it: `$X/../tests/../src/app.ts` is judged as
 production code, not as a test. A symbolic link is not followed.
+
+The hook has to finish before Claude Code stops it, so it refuses a Bash
+command it cannot scan in time where Compass is in use, and skips only the
+write scan elsewhere. Five limits do this, all set from timings on a UTF-8
+machine with bash 3.2: a command over 98304 bytes (`bash-command-too-long`),
+and a command with more than 400 different write targets, a write target of
+more than 2048 bytes, more than 20 different variable names at the start of a
+write target, or more than 700 `$(` openers (`bash-command-too-complex`). The
+length of a write target is counted in bytes, by awk in the C locale, before
+any bash string operation runs on it. A glob in `enforcement.code_globs` that
+bash cannot match itself is matched by Python once for all the write targets
+of a command.
+
+Those limits each bound one shape, and a command can hold several. So the
+scans that grow with the command also share one work budget, counted in
+microseconds of time measured on one machine. The flattening of
+substitutions (which also stops by itself after a million steps), the walk
+over the leading statements (which runs once for all the variable names), the
+reading of the command for each variable name and the judging of each write
+target all add their steps to it. A command that passes the budget is refused
+with the same code, `bash-command-too-complex`, where Compass is in use, and
+only has its write scan skipped elsewhere. The budget is 2400000, which is
+2.4 seconds of work. The walk keeps its findings only for the variable names
+that the write targets start with. Bash slows every later variable operation
+as the number of shell variables grows, and the walk used to keep five
+variables for every name a statement assigned: a command of 8000 assignments,
+20 names, 20 targets and 1000 globs took 17.3 seconds although its work was
+charged at 2.4 seconds. The steps of the flattening reach the hook in a file
+that the hook makes and the flattening alone writes, as two numbers that the
+hook checks (nine digits at most). The text of a command is never read as
+that count: a write target named `compass-scan-work=5000000000000000000` once
+made the counter negative, so that the budget never tripped, and now it is a
+target like any other.
+
+The budget is an estimate from a table and reads no clock. It cannot see an
+interaction that the table does not charge, or a machine slower than the one
+that was timed. A wall-clock fuse is the backstop for those. The hook reads
+bash's own count of seconds (`$SECONDS`, which starts no process) when the
+script starts, and checks it at each write target, at each variable name and
+at each pass of the walk. When 8 seconds have gone it stops as it does for the
+budget: it refuses with `bash-command-too-complex` where Compass is in use,
+and exits 0 with the write scan skipped elsewhere. The count has a
+granularity of one second, so the fuse trips between 7 and 8 seconds after
+the script starts. No setting in the environment changes it. On a slower
+machine the fuse refuses a command at 8 seconds; the budget alone would pass
+the same command, and it would take longer.
+
+The fuse is checked between write targets and between steps of the walk, so
+it does not interrupt a process that is running, such as the settings reader,
+or one write target. The quote strip and the path normaliser on one target
+take time that grows with the square of its length (a target of 10 KB ran for
+about 20 seconds, and one of 90 KB for 25 seconds), which is why a target over
+2048 bytes is refused and not left to the fuse. The worst accepted single
+target, 2048 bytes of quote pairs, `a/` segments, `x/./` segments, `a/../`
+segments or a `${V}/` prefix, took 0.2 seconds in the whole hook, and 45 such
+targets of segments, the most that fit in the length limit, took 1.3 seconds.
+Quote pairs are taken out by awk, in linear time, before bash sees the target.
+
+These are the largest accepted commands in the latest timings, on a machine
+with 14 cores and a load average of 2 to 4, in seconds: 1.9 for 260 write
+targets under a project whose settings hold 300 globs, 1.9 for 19900 leading
+`:` lines and 1 name, 1.8 for 18200 such lines and 20 names, 1.6 for 9000
+leading `cd` lines and 20 names, 1.0 for 8000 leading assignments, 1.6 for 5
+unclosed `$(` openers before 85 KB, 1.2 for 400 write targets (1.3 for targets
+of 180 characters, and the same under a bracket glob), 1.4 for 20 names and
+380 other targets under a bracket glob, and 0.2 for 700 closed openers. 10000
+leading `:` lines with 20 names are accepted in 1.1 seconds. The next larger
+command of each of these shapes is refused, in at most 2.1 seconds.
+
+These times were measured on macOS with bash 3.2. The Linux runner of the
+continuous integration takes up to about twice as long for the shapes made of
+many leading lines: the hook took 4.1 seconds for 40000 leading `:` lines. That
+is under the fuse at 8 seconds and the time limit of 15 seconds. The tests
+therefore allow 6 seconds for an accepted or refused command, and not the 3.75
+seconds that was the aim on the first machine.
+
+Commands of thousands of assignments, 20 names, targets and globs, in seconds
+after the change, with the time before it in brackets: 5000 assignments, 380
+targets and 30 globs 1.8 (5.5), 3000 assignments, 150 targets and 300 globs 1.5
+(7.3), 8000 assignments, 20 targets and 1000 globs 1.7 (17.3). With a write
+to a code file placed last, 8000 assignments with 200 targets and 300 globs,
+and with 100 targets and 1000 globs, are refused in 1.7 seconds; they were
+refused after 14.2 and 18.0 seconds before. 5000 assignments, 380 targets and
+100 globs are refused in 1.8 seconds. Before the budget, 40000 leading `:` lines
+with 20 names took 62 seconds because the walk ran once for each name, and 400
+names took 26 seconds. The times before the change to the walk's variables are
+from the review of the earlier version.
+
+The length limit is 98304 bytes (96 KiB), counted over the whole command.
+In a project that has a `.compass` folder, the hook refuses a longer command
+with the code `bash-command-too-long`, and it never scans a part of a
+command. The refusal names the size and the limit and does not quote the
+command. It is not counted in `.compass/interruptions.log`, because that count
+needs an issue and the hook does not know the issue yet. In a repository that
+has not opted in to Compass, the hook does not refuse a command for its
+length. It skips only the write scan there, and the approval and transcript
+guards still read the whole command.
+
+The time limit is 15 seconds. `hooks/hooks.json` sets `"timeout": 15` and
+`"onFailure": "block"` on the pre-tool hook. From Claude Code 2.1.295 a hook
+that fails or runs out of time can block the call.
+
+The size limits are the main control and work on every version of Claude
+Code. On an older version the length limit still refuses long commands, and
+the other limits still refuse their commands, but a command that runs past
+the time limit can let the call run. Not every timeout fails closed.
+
+Not measured: only one version of Claude Code was available, so the
+behaviour of older versions is from its documentation.
+
+A machine without `jq` has no time bound. The hook then reads the input with
+`grep` before it knows the command's length, and that read slows quickly as
+the command grows: 10 KB took 4.4 seconds, 20 KB took 33.9 seconds and 50 KB
+did not end in 150 seconds. A command of 20 KB is a fifth of the length
+limit and already runs past the 15-second time limit. The hook before this
+change behaved the same way. On Claude Code 2.1.295 or later the 15-second
+timeout is the only control there. `scripts/install.sh` and the Codex hook
+file do not set these keys, so a source install and a Codex session keep the
+default timeout of 600 seconds.
 
 Shell scripts, makefiles and extensionless scripts are not classified
 as production-code file types for red-before-green enforcement.

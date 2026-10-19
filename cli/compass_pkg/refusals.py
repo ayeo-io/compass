@@ -96,6 +96,13 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "edit a worktree of the session's repository, or start the "
                "session in {project}.",
     },
+    "working-directory-gone": {
+        "what": "edit to {target} (tool: {tool})",
+        "why": "the session's working directory was removed and "
+               "CLAUDE_PROJECT_DIR is not set, so Compass cannot tell which "
+               "project's issue judges this edit.",
+        "fix": "restart the session from a folder that exists, then retry.",
+    },
     "pointer-moved": {
         "what": "this edit",
         "why": "another session moved .compass/current-task in this "
@@ -229,6 +236,27 @@ REFUSALS: dict[str, dict[str, str]] = {
                "### <slug> (completed <date>) as one of its issue headings.",
         "fix": "write the release line as plain text that does not start with #, "
                "then run the command again.",
+    },
+    # A Bash command too long for the pre-tool hook to scan before Claude Code
+    # stops it (hooks/pre-tool.sh holds the limit). The refusal never quotes the
+    # command: it can hold a secret.
+    "bash-command-too-long": {
+        "what": "Bash command of {size} bytes",
+        "why": "the write guard refuses a command over {limit} bytes because it "
+               "cannot scan one in time.",
+        "fix": "write the file with the Write tool, or split the command into "
+               "smaller steps. For a long commit message, use git commit -F with "
+               "a file you wrote.",
+    },
+    # A Bash command with too many different write targets, variable names or
+    # command substitutions, or with substitutions that stay open, for the hook
+    # to scan in time (hooks/pre-tool.sh holds the numbers). It never quotes the
+    # command.
+    "bash-command-too-complex": {
+        "what": "Bash command with {has}",
+        "why": "the write guard cannot scan a command with {over} in time.",
+        "fix": "split the command into smaller steps, or write the file with "
+               "the Write tool.",
     },
 }
 

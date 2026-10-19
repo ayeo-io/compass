@@ -675,3 +675,21 @@ A project-scoped design decision cannot land without a decision record, a regula
 | `project-decision-unrecorded` | a refusal code | A landing of an issue with a project-scoped decision and no record |
 | `requirements-review: lightweight` | `approaches.regular.artifacts` | The regular approach owes a lightweight requirements review |
 | `bug-report: thorough` | `approaches.hotfix.artifacts` | The hotfix approach owes a bug report |
+
+## Renamed names
+
+Compass spells its own names in US English from 7.0.0. Each old name below is still read until 8.0.0, and the new name is the one written. `compass approach evaluate --kind judgement` records `judgment`, and a manifest that holds `judgement` reads as `judgment` and is rewritten, with a `.v5.bak` copy, on its next save. The table below is checked against the table the CLI reads (`old_names:` in `cli/migrate-map.yml`).
+
+| Kind | Old name | New name | Read until |
+|---|---|---|---|
+| kind | `judgement` | `judgment` | 8.0.0 |
+| check | `dor-behaviour-is-gwt` | `dor-behavior-is-gwt` | 8.0.0 |
+| skill | `behaviour-mapping` | `behavior-mapping` | 8.0.0 |
+| refusal code | `not-initialised` | `not-initialized` | 8.0.0 |
+| state key | `initialised` | `initialized` | 8.0.0 |
+| readiness key | `catalogue_digest` | `catalog_digest` | 8.0.0 |
+| JSON key | `behaviour` | `behavior` | 8.0.0 |
+| JSON key | `behaviours` | `behaviors` | 8.0.0 |
+| heading | `Current Behaviour` | `Current Behavior` | 8.0.0 |
+| heading | `Archived Behaviour` | `Archived Behavior` | 8.0.0 |
+| term | `catalogue` | `catalog` | 8.0.0 |

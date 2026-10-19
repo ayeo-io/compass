@@ -364,6 +364,11 @@ def _map_manifest(manifest, rows, changes):
         if isinstance(run, dict) and "stage" in run:
             run["stage"] = _map_word(run["stage"], rows.get("run_stage") or {},
                                      f"runs[{index}].stage", changes)
+    for index, entry in enumerate(manifest.get("reassessments") if isinstance(
+            manifest.get("reassessments"), list) else []):
+        if isinstance(entry, dict) and "kind" in entry:
+            entry["kind"] = _map_word(entry["kind"], rows.get("reassessment_kind") or {},
+                                      f"reassessments[{index}].kind", changes)
     _map_friction(manifest, rows, changes)
     _map_status(manifest, rows, changes)
 
@@ -446,6 +451,10 @@ def _map_manifest_back(manifest, rows, back):
     for run in manifest.get("runs") if isinstance(manifest.get("runs"), list) else []:
         if isinstance(run, dict) and "stage" in run:
             run["stage"] = back["run_stage"].get(run["stage"], run["stage"])
+    for entry in manifest.get("reassessments") if isinstance(
+            manifest.get("reassessments"), list) else []:
+        if isinstance(entry, dict) and "kind" in entry:
+            entry["kind"] = back["reassessment_kind"].get(entry["kind"], entry["kind"])
     for new, old in back["friction_keys"].items():
         for entry in manifest.get("friction") if isinstance(
                 manifest.get("friction"), list) else []:

@@ -111,6 +111,62 @@ def test_trc_043():
             assert OLD_KIND not in err.replace(args[1], ""), (args, err)
 
 
+def _two_kinds(project: Path, *, old: bool = True) -> None:
+    data = yaml.safe_load(_manifest_path(project).read_text(encoding="utf-8"))
+    data["reassessments"] = [
+        {"from_route": "quick-fix", "to_route": "regular", "reason": "a",
+         "kind": OLD_KIND if old else NEW_KIND, "date": "2026-10-01"},
+        {"from_route": "quick-fix", "to_route": "regular", "reason": "b",
+         "kind": NEW_KIND, "date": "2026-10-02"},
+    ]
+    _manifest_path(project).write_text(yaml.safe_dump(data, sort_keys=False),
+                                       encoding="utf-8")
+
+
+def test_trc_044():
+    import json
+    import tempfile
+    schema = json.loads((ROOT / "schemas" / "manifest.schema.json").read_text(encoding="utf-8"))
+    enum = schema["properties"]["reassessments"]["items"]["properties"]["kind"]["enum"]
+    assert OLD_KIND in enum and NEW_KIND in enum, enum
+
+    with tempfile.TemporaryDirectory() as raw_old, tempfile.TemporaryDirectory() as raw_new:
+        old, new = _project(Path(raw_old)), _project(Path(raw_new))
+        _two_kinds(old)
+        _two_kinds(new, old=False)
+        original = _manifest_path(old).read_bytes()
+
+        for args in (("issue", "lint", "--issue", "sample"), ("check", "--issue", "sample"),
+                     ("retro",)):
+            code_old, out_old, _ = _run(old, *args)
+            code_new, out_new, _ = _run(new, *args)
+            assert code_old == code_new, (args, out_old, out_new)
+        assert _run(old, "issue", "lint", "--issue", "sample")[0] == 0
+        assert "total re-assessments : 2" in _run(old, "retro")[1]
+
+        # The block that lists the entries shows the current word.
+        assert _run(old, "issue", "render", "--issue", "sample")[0] == 0
+        page = old / "docs" / "compass" / "2026-08-30-sample" / "README.md"
+        page.write_text(page.read_text(encoding="utf-8")
+                        + "\n<!-- compass:render decisions-taken -->\nstale\n"
+                          "<!-- /compass:render -->\n", encoding="utf-8")
+        assert _run(old, "issue", "render", "--issue", "sample")[0] == 0
+        shown = page.read_text(encoding="utf-8")
+        assert shown.count(f"({NEW_KIND})") == 2 and OLD_KIND not in shown, shown
+
+        # A read leaves the file as it was.
+        assert _manifest_path(old).read_bytes() == original
+
+        # The next save writes the current word, keeps a copy and says so once.
+        code, out, err = _run(old, "approach", "evaluate", "--issue", "sample", "--write")
+        assert code == 0, out + err
+        kinds = [e["kind"] for e in yaml.safe_load(
+            _manifest_path(old).read_text(encoding="utf-8"))["reassessments"]]
+        assert kinds == [NEW_KIND, NEW_KIND], kinds
+        assert (_manifest_path(old).parent / "manifest.yml.v5.bak").read_bytes() == original
+        assert err.count(f"'{OLD_KIND}' is now '{NEW_KIND}'") == 1, err
+
+
 # --- U5: the skill and the check id ------------------------------------------
 
 def test_trc_045():
@@ -200,5 +256,34 @@ def test_trc_056_the_table_check_fails_for_a_row_that_is_missing(monkeypatch):
 
 # --- U4: the upgrade guide table is the reader table --------------------------
 
+def _guide_rows(text: str) -> set:
+    """`(kind, old, new, removed_in)` for each row of the guide's table."""
+    section = text.split("## Renamed names", 1)[1].split("\n## ", 1)[0]
+    found = set()
+    for line in section.splitlines():
+        cells = [c.strip().strip("`") for c in line.strip().strip("|").split("|")]
+        if line.startswith("|") and len(cells) == 4 and cells[3][:1].isdigit():
+            found.add(tuple(cells))
+    return found
+
+
+def _reader_rows() -> set:
+    from compass_pkg import old_names
+    return {(old_names.LABELS[r["kind"]], r["old"], r["new"], r["removed_in"])
+            for r in old_names.rows()}
+
+
 def test_trc_070():
-    pytest.fail("owned by U4")
+    text = GUIDE.read_text(encoding="utf-8")
+    guide, reader = _guide_rows(text), _reader_rows()
+    assert guide == reader, (sorted(guide - reader), sorted(reader - guide))
+    assert len(guide) == 11
+
+    # The comparison fails for a planted extra row, a missing row and a changed new name.
+    extra = text.replace("## Renamed names\n", "## Renamed names\n\n| term | `frob` | `frab` | 8.0.0 |\n", 1)
+    assert _guide_rows(extra) != reader
+    gone = "\n".join(ln for ln in text.splitlines() if "| `catalogue` |" not in ln)
+    assert _guide_rows(gone) != reader
+    first = sorted(reader)[0]
+    changed = text.replace(f"`{first[1]}` | `{first[2]}`", f"`{first[1]}` | `{first[2]}x`", 1)
+    assert _guide_rows(changed) != reader

@@ -186,7 +186,13 @@ because macOS opens a path in any case.
   shell expands it into two `--as=` words. A quoted value with a space, such
   as `--reason '{"a": 1}'`, or with no comma or `..`, passes; a compact JSON
   value with a comma and no space, such as `'{"a":1,"b":2}'`, is refused
-  as a known cost. A command that is not a
+  as a known cost. A command that names `evidence` (a word `evidence`, or a
+  quoted word that holds `compass evidence`, or a `--delegated` flag) and
+  holds ANSI-C quoting with an escape, such as `$'--a\x73'` or
+  `$'appro\x76e'`, or a brace expansion in any word, such as
+  `--{delegated,x}` or `appr{ove,x}`, is refused with the word named,
+  whether or not `--delegated` shows, because the hook does not decode
+  either spelling. A command that is not a
   delegated approval, such as `git update-index --assume-unchanged`, is not
   checked. The call is the main agent only when the hook input has neither
   `agent_type` nor `agent_id`, and the CLI takes no abbreviated flag, so
@@ -221,7 +227,15 @@ approval as another agent, as they did before this check:
   cannot follow: a flag built from a variable, command substitution, a value
   read from a file or the environment, and arguments built by `xargs` or
   `printf`;
-- brace expansion in a glob, such as `{d,x}eleg*/*`;
+- brace expansion in a glob, in Bash or in a Grep glob, such as
+  `{d,x}eleg*/*`, `deleg{ations,x}/*` and `**/{DL-*,x}.yml`;
+- patterns that only zsh reads, such as `.compass/(deleg\|x)ations/*` and
+  `.compass/deleg*/DL-<->.yml`;
+- a case-sensitive glob, such as `.compass/*/[A-Z]*` or the Grep glob
+  `**/[A-Z]*.yml`: the guard lower-cases the glob, so it counts as a glob
+  that picks the delegation files together with others, and passes;
+- a Bash command that reads the folder without naming it, such as `grep -r x
+  .compass` or `find .compass -type f -exec cat {} +`;
 - a tool option that takes its own glob, such as `rg -g`, `find -name` and
   `--include`, and extended globs after `shopt -s extglob`, such as
   `.compass/@(deleg)ations/*`;

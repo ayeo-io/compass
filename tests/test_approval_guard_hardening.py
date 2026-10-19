@@ -791,3 +791,78 @@ def test_trc_014_docs_state_refusals_accepted_forms_and_limits():
                        ("approval_guard.py docstring", module)):
         missing = [f for f in facts if f not in text]
         assert not missing, (name, missing)
+
+
+def test_trc_014_docs_state_second_review_refusals_and_limits():
+    """Scenario id: `TRC-014` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    contract = (ROOT / "docs" / "safety-contract.md").read_text(encoding="utf-8").lower()
+    module = (ROOT / "cli" / "compass_pkg" / "approval_guard.py").read_text(
+        encoding="utf-8").split('"""')[1].lower()
+    facts = ["ansi-c quoting", "$'appro\\x76e'", "--{delegated,x}", "appr{ove,x}",
+             "grep glob", "**/{dl-*,x}.yml", "only zsh reads", "(deleg\\|x)ations",
+             "<->", "[a-z]", "grep -r x", "find .compass -type f -exec cat {} +"]
+    for name, text in (("docs/safety-contract.md", contract),
+                       ("approval_guard.py docstring", module)):
+        missing = [f for f in facts if f not in text]
+        assert not missing, (name, missing)
+
+
+# --- second review: ANSI-C quoting, brace-built words, bracket classes ----------------------
+
+
+def test_trc_001_ansi_c_quoting_in_evidence_command_refused(guarded):
+    """Scenario id: `TRC-001` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md
+
+    `$'--a\\x73'` runs as `--as` and `$'appro\\x76e'` runs as `approve`; the
+    guard does not decode them, so a command that names evidence and holds
+    ANSI-C quoting is refused.
+    """
+    for command in (f"{_BASE} --as main $'--a\\x73' compass:architect",
+                    f"{_BASE} --as main $'--a\\163' compass:architect",
+                    f"{_BASE} --as main $'\\x2d\\x2das' compass:architect",
+                    "compass evidence $'appro\\x76e' --check x --scope x --delegated "
+                    "--as compass:architect",
+                    "compass evidence approve --check x --scope x $'--delegat\\x65d' "
+                    "--as compass:architect",
+                    "compass evidence list $'--n\\x6fte'",
+                    f"bash -c \"{_BASE} --as main $'--a\\x73' compass:architect\""):
+        _caller_refused(guarded, command, "$'")
+    # No ANSI-C quoting, or a command that does not name evidence, passes.
+    _passes(guarded, "compass evidence list --scope x")
+    _passes(guarded, "echo $'a\\x62'")
+
+
+def test_trc_004_brace_built_flag_or_verb_in_evidence_command_refused(guarded):
+    """Scenario id: `TRC-004` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md
+
+    `--{delegated,x}` and `appr{ove,x}` expand to the flag and the verb, so a
+    command that names evidence and holds a brace expansion is refused.
+    """
+    for command in ("compass evidence approve --check x --scope x --{delegated,x} "
+                    "--as compass:architect",
+                    "compass evidence appr{ove,x} --check x --scope x --delegated "
+                    "--as compass:architect",
+                    "compass evidence appr{ove,x} --check x --{delegated,x}",
+                    "bash -c 'compass evidence appr{ove,x} --delegated'"):
+        _caller_refused(guarded, command, "{")
+    for command in ("compass evidence add --check x --note '{\"a\": 1}'",
+                    "compass evidence add --check x --note '{\"a\":1}'",
+                    "compass evidence list --scope x",
+                    "echo {a,b}"):
+        _passes(guarded, command)
+
+
+def test_trc_011_whole_bracket_class_read_as_one_character(delegated):
+    """Scenario id: `TRC-011` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md
+
+    A bracket expression with a POSIX class, a collating symbol or an
+    equivalence class beside other members is read as one character.
+    """
+    for set_ in ("[[:lower:]x]", "[x[:lower:]]", "[[:digit:][:alpha:]]", "[[.d.]]",
+                 "[[=d=]]", "[^[:digit:]]"):
+        found = _guard(delegated, f"cat .compass/{set_}eleg*/*")
+        assert found and found[0] == "delegation-protected", (set_, found)
+        _grep(delegated, ".compass", f"{set_}eleg*/*", True)
+    # A class that picks every name still picks "everything".
+    assert _guard(delegated, "ls .compass/[[:lower:]x]*") is None
+    _grep(delegated, ".compass", "[[:lower:]x]*", False)

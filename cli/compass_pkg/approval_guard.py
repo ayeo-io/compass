@@ -1,5 +1,5 @@
 # compass_pkg.approval_guard - the pre-tool checks on approval state
-"""Decide whether the agent's tool call touches approval state it must not
+r"""Decide whether the agent's tool call touches approval state it must not
 (ADR-068 decision 10, ADR-069 decisions 4 and 8). `hooks/pre-tool.sh` calls
 `check` with the hook input and blocks with the code it returns.
 
@@ -60,6 +60,16 @@
   backslash and newline are removed. A Grep glob is also split on commas.
   A delegated approval with a brace expansion in a space-free word is
   refused, because the shell expands `--a{s=main,s=x}` to two `--as=` words.
+  A bracket expression that holds a class, a collating symbol or an
+  equivalence class (`[[:lower:]x]`, `[[.d.]]`) is read as one character.
+- **ANSI-C quoting and braces in an evidence command.** A command that names
+  `evidence` (a word `evidence`, a quoted word that holds `compass evidence`,
+  or a `--delegated` flag) is refused, with the word named, when a word holds
+  ANSI-C quoting with an escape (`$'--a\x73'`, `$'appro\x76e'`) or a brace
+  expansion (`--{delegated,x}`, `appr{ove,x}`), whether or not `--delegated`
+  shows. The guard does not decode either spelling. `$'--as'` with no escape
+  is read as the quoted text. A value with a space or no comma, such as
+  `--note '{"a": 1}'`, passes; a compact value with a comma is refused.
 
 Each check ignores letter case, because macOS opens a path in any case. The
 earlier guard's checks run first, in its order and case, so a call it refused
@@ -70,8 +80,15 @@ agent's ordinary use, not a deliberate workaround. What they do not stop:
   - a flag or path built from a variable, command substitution, or a value
     read from a file or the environment;
   - arguments built by `xargs` or `printf`;
-  - brace expansion in a glob (`{d,x}eleg*/*`); a brace expansion in a
-    delegated approval is refused;
+  - brace expansion in a glob, in Bash or in a Grep glob (`{d,x}eleg*/*`,
+    `**/{DL-*,x}.yml`); a brace expansion in a delegated approval is refused;
+  - patterns that only zsh reads (`.compass/(deleg\|x)ations/*`,
+    `.compass/deleg*/DL-<->.yml`);
+  - a case-sensitive glob (`.compass/*/[A-Z]*`, Grep `**/[A-Z]*.yml`): the
+    guard lower-cases the glob, so it counts as a glob that picks the
+    delegation files together with others, and passes;
+  - a Bash command that reads the folder without naming it (`grep -r x
+    .compass`, `find .compass -type f -exec cat {} +`);
   - a tool option that takes its own glob (`rg -g`, `find -name`,
     `--include`), and extended globs after `shopt -s extglob`;
   - a Bash glob that spells neither .compass nor deleg, such as
@@ -196,6 +213,37 @@ def _unreadable_as(words):
             and not re.search(r"\s", w)]
 
 
+#: A word that holds ANSI-C quoting with an escape: `$'--a\x73'` runs as
+#: `--as`. Without a backslash, `$'--as'` is the quoted text, which `_words`
+#: already reads.
+ANSI_C = re.compile(r"\S*\$'[^']*\\\S*")
+
+
+def _names_evidence(command):
+    """True when a word is `evidence`, or a quoted word holds `compass
+    evidence` (the argument of `bash -c`, `eval` or a pipe into `sh`), or a
+    word is the `--delegated` flag."""
+    words = _words(command)
+    return (any(w == "evidence" or "compass evidence" in w for w in words)
+            or any(_delegated_flag(w) for w in _nested_words(command)))
+
+
+def _built_word(command):
+    """A word of a command that names evidence and holds ANSI-C quoting or a
+    brace expansion, else None. The shell turns `$'appro\\x76e'` into
+    `approve` and `--{delegated,x}` into `--delegated`; the guard does not
+    decode them, so it refuses the command whether or not `--delegated` shows."""
+    if not _names_evidence(command):
+        return None
+    found = ANSI_C.search(command.replace("\\\n", ""))
+    if found:
+        return found.group(0)
+    for word in _nested_words(command):
+        if BRACE.search(word) and not re.search(r"\s", word):
+            return word
+    return None
+
+
 def _caller_mismatch(command, who):
     """`(named, caller)` when a delegated approval does not name its caller.
     The top-level words keep the earlier guard's rule, so nothing it refused
@@ -311,6 +359,38 @@ DELEGATION_SAMPLES = (
 )
 
 
+def _flatten_classes(glob):
+    """Replace each whole bracket expression that holds a POSIX class
+    (`[:x:]`), collating symbol (`[.x.]`) or equivalence class (`[=x=]`) with
+    `?`. `fnmatch` reads none of them, and a replacement inside the set would
+    leave `[?x]`, which matches only `?` or `x`."""
+    out, i = [], 0
+    while i < len(glob):
+        if glob[i] != "[":
+            out.append(glob[i])
+            i += 1
+            continue
+        j, special = i + 1, False
+        if j < len(glob) and glob[j] in "!^":
+            j += 1
+        if j < len(glob) and glob[j] == "]":
+            j += 1
+        while j < len(glob) and glob[j] != "]":
+            kind = glob[j + 1] if glob[j] == "[" and j + 1 < len(glob) else ""
+            end = glob.find(kind + "]", j + 2) if kind in (":", ".", "=") and kind else -1
+            if end >= 0:
+                special, j = True, end + 2
+            else:
+                j += 1
+        if j >= len(glob):
+            out.append(glob[i])
+            i += 1
+        else:
+            out.append("?" if special else glob[i:j + 1])
+            i = j + 1
+    return "".join(out)
+
+
 def _glob_selects(glob, pairs, grep):
     """True when `glob` matches the delegation path of some pair and not its
     ordinary counterpart. All text is lower case, because macOS opens a path
@@ -321,9 +401,7 @@ def _glob_selects(glob, pairs, grep):
     # Bash and zsh read `[^x]` as `[!x]` and `[[:lower:]]` as one character;
     # `fnmatch` reads neither. A class becomes `?`, which keeps a refusal
     # that names the delegation folder and accepts a glob that picks every name.
-    glob = re.sub(r"\[\[:\w+:\]\]", "?", glob)
-    glob = re.sub(r"\[:\w+:\]", "?", glob)
-    glob = glob.replace("[^", "[!")
+    glob = _flatten_classes(glob).replace("[^", "[!")
 
     def matches(path):
         path = path.lower()
@@ -368,7 +446,7 @@ def _bash_glob_reaches(words, cwd):
     for word in words:
         if re.search(r"\s", word):
             continue
-        for part in re.split(r"[;&|()<>`=]+", word):
+        for part in re.split(r"[;&|()<>`]+|(?<!\[)=+(?!\])", word):
             if not any(c in part for c in "*?["):
                 continue
             part = _expand_home(_path(part))
@@ -448,6 +526,10 @@ def check(event):
     if TRANSCRIPTS.search(text) or (folder and folder in text):
         return "transcript-protected", {
             "target": "a command naming a session transcript", "tool": tool}
+    built = _built_word(command)
+    if built:
+        return "delegation-caller-mismatch", {
+            "named": built, "caller": caller(event) or "an agent with no agent type"}
     found = _caller_mismatch(command, caller(event))
     if found:
         named, who = found

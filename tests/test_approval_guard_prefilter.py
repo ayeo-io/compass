@@ -40,6 +40,10 @@ STARTS_GUARD = (
     # A glob before `deleg` starts the guard too: the hook tests the command
     # twice, so the glob in one copy comes after `deleg` in the other.
     "cat .c*/delegations",
+    # A flag or verb built with braces or ANSI-C quoting shows no `--del`.
+    "compass evidence approve --{delegated,x}",
+    "compass evidence appr{ove,x}",
+    "compass evidence $'appro\\x76e'",
 )
 
 # None of these can reach the delegation folder through a glob.
@@ -49,6 +53,8 @@ STARTS_NO_GUARD = (
     "git status",
     "grep -rn approve src",
     "ls",
+    "compass evidence list --scope x",
+    "echo {a,b} $'x'",
 )
 
 

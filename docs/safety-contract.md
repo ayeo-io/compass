@@ -574,31 +574,58 @@ different variable names at the start of a write target, or more than 700
 `enforcement.code_globs` that bash cannot match itself is matched by Python
 once for all the write targets of a command.
 
-Those limits each bound one shape, and the time of a command that holds
-several is their sum. So the scans that grow with the command also share one
-work budget, counted in microseconds of measured time. The flattening of
+Those limits each bound one shape, and a command can hold several. So the
+scans that grow with the command also share one work budget, counted in
+microseconds of time measured on one machine. The flattening of
 substitutions (which also stops by itself after a million steps), the walk
 over the leading statements (which runs once for all the variable names), the
 reading of the command for each variable name and the judging of each write
-target all add their steps to it. A command that
-passes the budget is refused with the same code, `bash-command-too-complex`,
-where Compass is in use, and only has its write scan skipped elsewhere. The
-budget is 2400000, which is 2.4 seconds of work.
+target all add their steps to it. A command that passes the budget is refused
+with the same code, `bash-command-too-complex`, where Compass is in use, and
+only has its write scan skipped elsewhere. The budget is 2400000, which is
+2.4 seconds of work. The walk keeps its findings only for the variable names
+that the write targets start with. Bash slows every later variable operation
+as the number of shell variables grows, and the walk used to keep five
+variables for every name a statement assigned: a command of 8000 assignments,
+20 names, 20 targets and 1000 globs took 17.3 seconds although its work was
+charged at 2.4 seconds.
 
-The slowest command the hook accepted in these timings took 2.4 seconds: 260
-write targets under a project whose settings hold 300 globs. The other
-largest accepted commands took 1.9 seconds for 19900 leading `:` lines and
-one variable name, 1.9 seconds for 18200 such lines and 20 names, 1.7
-seconds for 9000 leading `cd` lines and 20 names, 1.7 seconds for 8000
-leading assignments, 1.7 seconds for 5 unclosed `$(` openers before 85 KB,
-1.5 seconds for 400 write targets (1.6 seconds for targets of 180
-characters, and the same under a bracket glob), 1.8 seconds for 20 names and
-380 other targets under a bracket glob, and 0.2 seconds for 700 closed
-openers. One more of any of these shapes is refused, in at most 2.4 seconds.
-The timings are from a machine with 14 cores and a load average of 7 to 9; no
-idle run was available. Before the budget, 40000 leading `:` lines with 20
-names took 62 seconds and 10000 such lines with 20 names took 14 seconds,
-because the walk ran once for each name, and 400 names took 26 seconds.
+The budget is an estimate from a table and reads no clock. It cannot see an
+interaction that the table does not charge, or a machine slower than the one
+that was timed. A wall-clock fuse covers both. The hook reads bash's own count
+of seconds (`$SECONDS`, which starts no process) when the script starts, and
+checks it at each write target, at each variable name and at each pass of the
+walk. When 8 seconds have gone it stops as it does for the budget: it refuses
+with `bash-command-too-complex` where Compass is in use, and exits 0 with the
+write scan skipped elsewhere. The count has a granularity of one second, so the
+fuse trips between 7 and 8 seconds after the script starts. It does not
+interrupt a process that is running, such as the settings reader, and no
+setting in the environment changes it. On a slower machine the fuse refuses a
+command at 8 seconds; the budget alone would pass the same command, and it
+would take longer.
+
+These are the largest accepted commands in the latest timings, on a machine
+with 14 cores and a load average of 2 to 4, in seconds: 1.9 for 260 write
+targets under a project whose settings hold 300 globs, 1.9 for 19900 leading
+`:` lines and 1 name, 1.8 for 18200 such lines and 20 names, 1.6 for 9000
+leading `cd` lines and 20 names, 1.0 for 8000 leading assignments, 1.6 for 5
+unclosed `$(` openers before 85 KB, 1.2 for 400 write targets (1.3 for targets
+of 180 characters, and the same under a bracket glob), 1.4 for 20 names and
+380 other targets under a bracket glob, and 0.2 for 700 closed openers. 10000
+leading `:` lines with 20 names are accepted in 1.1 seconds. The next larger
+command of each of these shapes is refused, in at most 2.1 seconds.
+
+Commands of thousands of assignments, 20 names, targets and globs, in seconds
+after the change, with the time before it in brackets: 5000 assignments, 380
+targets and 30 globs 1.8 (5.5), 3000 assignments, 150 targets and 300 globs 1.5
+(7.3), 8000 assignments, 20 targets and 1000 globs 1.7 (17.3). With a write
+to a code file placed last, 8000 assignments with 200 targets and 300 globs,
+and with 100 targets and 1000 globs, are refused in 1.7 seconds; they were
+refused after 14.2 and 18.0 seconds before. 5000 assignments, 380 targets and
+100 globs are refused in 1.8 seconds. Before the budget, 40000 leading `:` lines
+with 20 names took 62 seconds because the walk ran once for each name, and 400
+names took 26 seconds. The times before the change to the walk's variables are
+from the review of the earlier version.
 
 The length limit is 98304 bytes (96 KiB), counted over the whole command.
 In a project that has a `.compass` folder, the hook refuses a longer command

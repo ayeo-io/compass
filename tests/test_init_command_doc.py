@@ -220,6 +220,17 @@ def test_trc_028_a_bad_answer_is_linted_and_asked_again():
     assert re.search(r"no\s+tag\s+that\s+lint\s+has\s+not\s+passed", step), step
 
 
+def test_init_names_the_shipped_default_preset():
+    """Issue 244: a new project extends the default that ships now, and the
+    major comes from the shipped preset folder, not from a pinned number."""
+    preset = yaml.safe_load(
+        (ROOT / "governance" / "presets" / "default" / "preset.yml")
+        .read_text(encoding="utf-8"))
+    major = str(preset["version"]).split(".")[0]
+    names = re.findall(r"extends: (compass:default@\d+)", _init_text())
+    assert names == [f"compass:default@{major}"] * 2, names
+
+
 def test_trc_029_the_question_leaves_the_extends_line_alone():
     text = _init_text()
     _, question = _question(text)

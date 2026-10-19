@@ -185,6 +185,27 @@ def _check_renames() -> dict:
     return dict((data.get("values") or {}).get("check_name") or {})
 
 
+def _current_stages(names):
+    """Stage names as the current spelling. A stage renamed since main is the
+    same stage, so a spelling change alone is not a change of when a guardrail
+    is checked."""
+    import yaml
+
+    path = REPO_ROOT / "cli" / "migrate-map.yml"
+    renames = (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("stage_keys") or {}
+    return [renames.get(n, n) for n in names]
+
+
+def _in_current_stages(value):
+    """`value` with every `checked_at` list spelled in the current stage names."""
+    if isinstance(value, dict):
+        return {k: _current_stages(v) if k == "checked_at" else _in_current_stages(v)
+                for k, v in value.items()}
+    if isinstance(value, list):
+        return [_in_current_stages(v) for v in value]
+    return value
+
+
 def _rename_checks(names):
     renames = _check_renames()
     return {renames.get(n, n) for n in names}
@@ -344,7 +365,8 @@ def test_guardrails_gains_no_mechanism_on_this_branch():
                 f"guardrails.yml changed the guardrail set: {sorted(b)} -> "
                 f"{sorted(a)}. The count is capped at five (ADR-002).")
             for gid in b:
-                assert b[gid]["checked_at"] == a[gid]["checked_at"], (
+                assert (_current_stages(b[gid]["checked_at"])
+                        == _current_stages(a[gid]["checked_at"])), (
                     f"{gid} changed when it is checked: "
                     f"{b[gid]['checked_at']} -> {a[gid]['checked_at']}")
                 gained = set(a[gid]["checks"]) - _rename_checks(set(b[gid]["checks"]))
@@ -355,7 +377,7 @@ def test_guardrails_gains_no_mechanism_on_this_branch():
                 assert lost <= REMOVED_CHECKS, (
                     f"{gid} lost check(s): {sorted(lost - REMOVED_CHECKS)}")
             continue
-        assert b == a, (
+        assert _in_current_stages(b) == _in_current_stages(a), (
             f"guardrails.yml changed mechanism in {field!r} relative to main.\n"
             f"  on main: {b!r}\n"
             f"  now:     {a!r}\n"

@@ -68,7 +68,7 @@ def _words(text):
     return re.sub(r"\s+", " ", text)
 
 
-# --- TRC-001 to TRC-007: comparing a list parameter -------------------------------
+# --- Comparing a list parameter (`TRC-001` to `TRC-007`) ---
 
 def test_added_trigger_path_is_tighter():
     """Scenario id: `TRC-001` in list-parameter-superset-tightens/acceptance-criteria.md"""
@@ -161,7 +161,7 @@ def test_missing_or_malformed_list_is_incomparable(key, value):
     assert _refused(parent, child)
 
 
-# --- TRC-009, TRC-010: what the change must not disturb ---------------------------
+# --- What the change must not disturb (`TRC-009`, `TRC-010`) ---
 
 TIMED = "tests-declared-and-under-two-minutes"
 
@@ -220,7 +220,7 @@ def test_classifier_version_is_raised_for_the_list_rule(monkeypatch):
     assert classify.classification_key(parent, child) != now
 
 
-# --- the registry guards (design decision DD-4) ------------------------------------
+# --- The registry guards (design decision `DD-4`) ---
 
 def test_only_the_two_trigger_lists_declare_superset():
     from compass_pkg.check_registry import REGISTRY
@@ -245,7 +245,7 @@ def test_a_check_parameter_that_is_not_a_list_cannot_declare_superset():
     assert dataclasses.is_dataclass(ok)
 
 
-# --- TRC-011, TRC-012: the documents state the rule -------------------------------
+# --- The documents state the rule (`TRC-011`, `TRC-012`) ---
 
 def test_governance_documents_state_the_superset_rule():
     """Scenario id: `TRC-011` in list-parameter-superset-tightens/acceptance-criteria.md"""

@@ -564,6 +564,21 @@ that path is judged inside the project, and the directories named before
 the `..` do not exempt it: `$X/../tests/../src/app.ts` is judged as
 production code, not as a test. A symbolic link is not followed.
 
+The hook has to finish before Claude Code stops it, so it refuses a Bash
+command it cannot scan in time where Compass is in use, and skips only the
+write scan elsewhere. Two limits do this, both set from timings on a UTF-8
+machine: a command over 98304 bytes (`bash-command-too-long`), and a command
+with more than 400 different write targets or more than 700 `$(` openers
+(`bash-command-too-complex`). The scan of substitutions also stops after a
+fixed amount of work, and the command is then refused in the same way. On
+Claude Code 2.1.295 or later the hook's 15 second timeout, with a failed hook
+blocking the call, is the backstop. On an older version a stopped hook can let
+the call run, so the limits must hold alone: the slowest command the hook
+accepts takes at most 7.5 seconds on a loaded machine, which is 3.75 seconds
+on an idle one. Without `jq` the hook reads the call with `grep`, which has no
+such bound, so a very long command can run past 100 seconds and only the
+timeout can stop it.
+
 Shell scripts, makefiles and extensionless scripts are not classified
 as production-code file types for red-before-green enforcement.
 

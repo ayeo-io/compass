@@ -340,9 +340,12 @@ class ProjectScan:
         return docs_dir_for(body.get("created"), slug).replace(os.sep, "/") + "/README.md"
 
     def detail(self, slug):
-        """The `IssueDetail` of an issue, read once, through the shared function."""
+        """The `IssueDetail` of an issue, read once, through the shared function. The
+        scan serves views of every issue, so it reads each as an issue other than the
+        one a command acts on."""
         if slug not in self._detail:
-            self._detail[slug] = issue_detail.detail(self.manifests[slug], self.task_dir(slug))
+            self._detail[slug] = issue_detail.detail(self.manifests[slug], self.task_dir(slug),
+                                                     other=True)
         return self._detail[slug]
 
     def state_text(self, slug):

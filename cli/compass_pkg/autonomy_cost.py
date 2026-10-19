@@ -142,7 +142,10 @@ def bands(task, task_dir) -> dict | None:
         try:
             view = effective.view_or_legacy(task_dir, manifest=task)
             human = human_checks_passed(view, task, task_dir)
-        except Exception:                              # noqa: BLE001 - an unreadable configuration
+        # `MajorRefusal` is not caught: a person asking about an issue must be told its
+        # generation is refused. A shipped issue is read across a major, so the retro
+        # does not meet it.
+        except Exception:                               # noqa: BLE001 - an unreadable configuration
             return None
     waited = sum(1 for entry in checkpoint_outcomes.outcomes(task).values()
                  if entry.get("outcome") == checkpoint_outcomes.WAITED)

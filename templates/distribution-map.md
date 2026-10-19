@@ -21,6 +21,16 @@ Fill every {{PLACEHOLDER}}.
 
 ## Work units
 
+<!-- The line below is the one the CLI reads when this map is registered
+     with `compass issue artifact set distribution-map`. Write the number of
+     independent work units, or their list, such as [U1, U2]. On a
+     multiagent breakdown a map without it is refused. With one unit,
+     registering the map records the breakdown as one subtask that this
+     session runs itself: no worktree, no builder and no waiver. Registering
+     verification-report in `/compass:verify` completes that record. -->
+
+units: {{N}}
+
 | Unit | From technical-design.md | Scenario group(s) | Code surface |
 |---|---|---|---|
 | U1 | {{plan Work units, U1}} | {{group A}} | {{files / modules}} |

@@ -188,6 +188,56 @@ def _refuse_unreadable(task, task_dir, kind):
             "readable and register the document again." % ", ".join(found))
 
 
+def _project_rel(task_dir, kind):
+    """The registered file of `kind`, relative to the project root, or None."""
+    from compass_pkg.core import find_upwards
+
+    state, found, _ = resolve_artifact(task_dir, kind)
+    if state != FOUND or not found:
+        return None
+    root = os.path.realpath(find_upwards(os.path.abspath(task_dir), ".compass") or task_dir)
+    rel = os.path.relpath(os.path.realpath(found), root).replace(os.sep, "/")
+    # A file reached through a link that leaves the project is not recorded.
+    return None if rel == ".." or rel.startswith("../") else rel
+
+
+def _refuse_map(task, task_dir, entry):
+    """Refuse, before anything is saved, a distribution map whose `units:`
+    line is missing or untrue on a multiagent breakdown (subtasks.map_refusal).
+    The map is found as the record writer finds it: the path being registered,
+    else the resolver's answer, which includes a flat file in the issue's
+    folder. A map with no file yet is left to the other refusals."""
+    from compass_pkg import subtasks
+
+    if entry.get("path"):
+        resolved, refused = _registered_path(task_dir, entry["path"])
+        if refused:
+            return
+    else:
+        state, resolved, _ = resolve_artifact(task_dir, "distribution-map")
+        if state != FOUND:
+            return
+    if not resolved or not os.path.isfile(resolved):
+        return
+    problem = subtasks.map_refusal(task, resolved)
+    if problem:
+        raise CompassError(problem)
+
+
+def _record_breakdown(task, task_dir, kind):
+    """The distribution map's `units:` line and the verification report feed
+    the record of a one-unit breakdown (subtasks.py). Reads the registry on
+    disk, so it runs after the entry is saved; the caller saves again."""
+    from compass_pkg import subtasks
+
+    if kind == "distribution-map":
+        rel = _project_rel(task_dir, kind)
+        return subtasks.record_single_unit(task, task_dir, rel) if rel else []
+    if kind == "verification-report":
+        return subtasks.report_single_unit(task, _project_rel(task_dir, kind))
+    return []
+
+
 #: The close-out decisions a spike records (`spike-conclusion-present` reads them).
 SPIKE_DECISIONS = ("discard", "graduate-to-delivery", "defer")
 SPIKE_EVIDENCE_ID = "EV-SPIKE-CONCLUSION"
@@ -427,6 +477,8 @@ def cmd_issue_artifact(args):
 
     if args.status != "omitted":
         _refuse_unreadable(task, task_dir, args.kind)
+    if args.kind == "distribution-map" and args.status not in ("omitted", "superseded"):
+        _refuse_map(task, task_dir, entry)
     from compass_pkg import artifact_status, freshness
 
     digest_now = _own_digest(task, task_dir, entry)
@@ -440,6 +492,8 @@ def cmd_issue_artifact(args):
     # the registry on disk.
     save_manifest(task, path)
     recorded = _record_freshness(view, task, task_dir, entry)
+    if args.status not in ("omitted", "superseded"):
+        recorded += _record_breakdown(task, task_dir, args.kind)
     moved = []
     if entry.get("path") and entry.get("status") in (
             artifact_status.DRAFT, artifact_status.AWAITING, artifact_status.APPROVED):

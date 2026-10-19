@@ -263,6 +263,12 @@
           "dispatched_at": {
             "type": "string"
           },
+          "orchestration": {
+            "enum": [
+              "single-unit"
+            ],
+            "description": "Set when the distribution map declares `units: 1`: the main session ran the one unit itself, with the map as its brief and the verification report as its report. Written by `compass issue artifact set distribution-map` (ADR-071)."
+          },
           "reviewed_revision": {
             "type": "string",
             "description": "The commit the latest review read.",

@@ -37,6 +37,32 @@ The printed plan plus the recorded run is the interface (ADR-025).
    compass issue artifact set <kind> --status draft --path <path>
    ```
 
+## One unit of work
+
+A map whose `units:` line says `1` needs no split. Registering it with
+`compass issue artifact set distribution-map` records one subtask:
+
+- its id is the map's one subtask id, or `subtask-1`;
+- its brief is the map, its base is HEAD and its model is `main-session`;
+- it carries `orchestration: single-unit`.
+
+The session that owns the issue builds the change itself, with no worktree
+and no builder. Registering `verification-report` in `/compass:verify` names
+that report on the record and marks it `done`. `multiagent-run-recorded`
+accepts the record when every gate has passed, the map still says `units: 1`
+and the verification report exists. On a critical-risk issue it also needs a
+passing last review round, recorded with `compass issue subtask set <id>
+--round pass`, because the critical cadence in step 5 adds a second reviewer.
+
+A single-unit record beside any other subtask fails the check, because one
+of the two would then be untrue.
+
+On a multiagent breakdown, a map with no `units:` line, or with a count below
+one, is refused when it is registered, and so is `units: 1` beside a subtask table that names two or
+more subtasks. A map registered later with two or more units removes the
+single-unit record; a subtask recorded by hand is never removed. Nothing
+else in this document changes for a map of two or more units (ADR-071).
+
 ## The order of a run
 
 Steps 1 to 6 run once per wave: wave 1 first, then each later wave in turn.

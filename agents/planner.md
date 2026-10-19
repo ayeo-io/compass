@@ -106,6 +106,7 @@ the feature code.
 - **regular** - a real `technical-design.md` with the one or two design decisions stated
   and the governance check run. If the work splits into 2–3 clean independent
   units, a short distribution list (not the full mapping process weight).
+  The map always carries a `units: N` line; one unit of work is `units: 1`.
 - **full** - full `technical-design.md` plus full `distribution-map.md`. Architecture,
   every design decision as an ADR-style note, scenario groups mapped to
   independent subtasks. Write the map when the work has two or more

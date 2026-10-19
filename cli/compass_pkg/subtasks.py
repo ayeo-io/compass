@@ -23,6 +23,14 @@
 # and `compass check` then refuses to land the subtask until a stop reason
 # with an evidence file says why. A ceiling reached is a stop, not a success.
 #
+# A distribution map that declares one work unit (`units: 1`) is recorded
+# here too, when `compass issue artifact set` registers it: one subtask the
+# main session runs, marked `orchestration: single-unit`, its brief the map
+# itself and its model `main-session`, so it claims no worktree and no
+# builder. Registering the verification report fills in its report. Two or
+# more units remove a single-unit record and record nothing else; a subtask
+# recorded by hand is never touched (ADR-071).
+#
 # Every value that reaches git or the file system is checked first: the base
 # is resolved to a full commit id, a subtask id is a plain name, and every
 # path stays inside the project.
@@ -494,6 +502,113 @@ def cmd_subtask_package(args):
     save_manifest(task, path)
     print(f"compass issue subtask: review package for {args.id} written to {rel}.")
     return 0
+
+
+def _single_units(task):
+    """The subtasks recorded as a one-unit run by the main session."""
+    from compass_pkg.multiagent_check import SINGLE_UNIT
+    subtasks = task.get("subtasks")
+    if not isinstance(subtasks, list):
+        return []
+    return [s for s in subtasks
+            if isinstance(s, dict) and s.get("orchestration") == SINGLE_UNIT]
+
+
+def map_refusal(task, map_path):
+    """Why a distribution map at `map_path` cannot be registered on this
+    issue, or None. On a multiagent breakdown the map must declare its units,
+    and `units: 1` must not sit beside a subtask table naming two or more
+    subtasks, because the record it writes would then be untrue."""
+    from compass_pkg.multiagent_check import (UNITS_FORMS, declared_units,
+                                              subtask_ids_in)
+    from compass_pkg.stable_ids import STAGE_BREAKDOWN
+
+    stages = task.get("stages")
+    if not isinstance(stages, dict) or stages.get(STAGE_BREAKDOWN) != "multiagent":
+        return None
+    units = declared_units(map_path)
+    if units is None or units < 1:
+        return ("the distribution map has no `units:` line with a count of one "
+                "or more. On a multiagent "
+                "breakdown it needs one, on a line of its own: %s. With one "
+                "unit, registering the map records the breakdown as one "
+                "subtask this session runs, with no worktree and no waiver."
+                % UNITS_FORMS)
+    named = subtask_ids_in(map_path) or []
+    if units == 1 and len(named) > 1:
+        return ("the distribution map says `units: 1` but its subtask table "
+                "names %d subtasks (%s). Make the line say how many units "
+                "there are, or fold the table into one subtask."
+                % (len(named), ", ".join(named)))
+    return None
+
+
+def record_single_unit(task, task_dir, map_rel):
+    """Called when the distribution map is registered, on the manifest in
+    memory; the caller saves it. With `units: 1` on a multiagent breakdown,
+    record the breakdown as one subtask run by the main session. With two or
+    more units, take back a single-unit record an earlier map made. Returns
+    the lines to show."""
+    from compass_pkg.multiagent_check import (SINGLE_UNIT, map_units,
+                                              mapped_subtask_ids)
+    from compass_pkg.stable_ids import STAGE_BREAKDOWN
+
+    stages = task.get("stages")
+    if not isinstance(stages, dict) or stages.get(STAGE_BREAKDOWN) != "multiagent":
+        return []
+    units = map_units(task_dir)
+    if units is None:
+        return []
+    singles = _single_units(task)
+    if units >= 2:
+        if not singles:
+            return []
+        task["subtasks"] = [s for s in task["subtasks"] if s not in singles]
+        return [f"breakdown: the map declares {units} units; the single-unit "
+                f"record is removed.",
+                "Record each subtask with `compass issue subtask add`."]
+    if units != 1:
+        return []
+    if singles:
+        singles[0]["brief"] = map_rel
+        return [f"breakdown: already recorded as one unit "
+                f"({singles[0].get('id')})."]
+    subtasks = task.get("subtasks")
+    if subtasks:
+        return [f"breakdown: the map declares one unit, but {len(subtasks)} "
+                f"subtask(s) are recorded by hand.",
+                "The record is left as it is."]
+    try:
+        base = _commit(_root(task_dir), "HEAD", "base")
+    except CompassError:
+        return ["breakdown: not recorded as one unit: HEAD is not a commit.",
+                "Commit, then register the map again."]
+    # The map's own subtask id when it names exactly one, so the check's
+    # comparison of the record with the map finds it.
+    mapped = mapped_subtask_ids(task_dir) or []
+    sid = mapped[0] if len(mapped) == 1 else "subtask-1"
+    task["subtasks"] = [{"id": sid, "brief": map_rel, "base_sha": base,
+                         "model": "main-session", "status": "dispatched",
+                         "attempts": 1, "orchestration": SINGLE_UNIT,
+                         "dispatched_at": now_iso()}]
+    return [f"breakdown: one unit ({sid}, orchestration: {SINGLE_UNIT}), "
+            f"run by this session.",
+            "No worktree and no builder: go on to implement.",
+            "Registering verification-report at verify completes the record."]
+
+
+def report_single_unit(task, report_rel):
+    """Called when the verification report is registered, on the manifest in
+    memory: it is the report of a single-unit run, so the record names it and
+    is done. Returns the lines to show."""
+    singles = _single_units(task)
+    if not singles or not report_rel:
+        return []
+    for s in singles:
+        s["report"] = report_rel
+        s["status"] = "done"
+    return ["breakdown: the one-unit record %s names this report; it is done."
+            % ", ".join(str(s.get("id")) for s in singles)]
 
 
 def register(issue_subparsers, issue_arg):

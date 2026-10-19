@@ -13,24 +13,30 @@ r"""Decide whether the agent's tool call touches approval state it must not
     of `gh`; `--title`, `--note`, `--reason`, `--scope` and `--description`
     of `compass`), every argument of `echo` and `printf`, the pattern of
     `grep`, `rg` and `git grep` and the value of `--grep`, `-S` and `-G` of
-    `git log`, and the heredoc body and here-string of `cat`, `tee`, `gh`,
-    `git` and `compass`. Text is not judged, unless a later stage of its
-    pipeline is not one of `TEXT_SINKS` (`cat tee head tail wc sort uniq cut
-    tr less more grep egrep fgrep rg diff pbcopy`), which sends it to be
-    judged by its whole text. The heredoc body or here-string of any other
-    command, and text inside `$(...)`, backticks and `<(...)`, are judged.
+    `git log`, and the heredoc body and here-string of `cat`, `tee`, `gh`
+    (`issue`, `pr` and `release` only), `git` (the message verbs) and
+    `compass`. Text is not judged, unless a later stage of its pipeline is
+    not one of `TEXT_SINKS` (`cat tee head tail wc sort uniq cut tr less
+    more grep egrep fgrep rg diff pbcopy`, and none given an option that
+    starts `--fil`), which sends it to be judged by its whole text. The
+    heredoc body or here-string of any other command is judged.
+  - A substitution (`$(...)`, backticks, `<(...)`) is read as commands whose
+    words are judged. What it prints is judged too, as the word it stands
+    for, unless it stands in a text position of its outer command and of
+    every command above it (`_text_substitutions`).
   - A bare path argument of `ls`, `wc`, `stat`, `du`, `test` or `[` may name
     a request folder, and one of those or of `cat`, `head`, `tail`, `grep`,
-    `rg`, `diff`, `chmod` or `git log`, `show`, `diff`, `blame`, `status`,
-    `ls-files`, `add`, `mv` or `rm` may name the prompt hook script. `ls`
+    `rg`, `diff`, `chmod` (a mode that keeps the execute bit) or `git log`,
+    `show`, `diff`, `blame`, `status`, `ls-files` or `add` may name the
+    prompt hook script. `git mv` and `git rm` may not. `ls`
     alone may name a folder strictly above the configuration folder, with no
     `-R`, `-d` or glob. No exemption holds in a pipe, `$(...)`, backticks
     or `<(...)`, for a `VAR=` word, an option such as `--output=<path>`, or
     the word after `-f`, `--file`, `--files0-from`, `--output`, `--pre` or
     `--exec`.
-  - Text that one call writes to a file and then runs (a shell, `source`,
-    `.` or the file as a command) is judged, and the refusal names the
-    script. A script that one call writes and another runs is not followed.
+  - Text that one call writes to a file and then runs is judged, and the
+    refusal names the script (`approval_guard_scripts`). A script that one
+    call writes and another runs is not followed.
   - A Bash word that holds a glob or brace character in the name of a
     protected folder is judged as before.
 - **The auto-memory folder.** Read, Grep, Edit and Write skip the
@@ -169,8 +175,10 @@ import re
 import shlex
 import unicodedata
 
-from compass_pkg.approval_guard_text import (GIT_MESSAGES, SEARCH_VALUES, command_name,
-                                              git_start, is_compass, text_marks)
+from compass_pkg.approval_guard_scripts import scripts
+from compass_pkg.approval_guard_text import (HEREDOC_TEXT, SEARCH_VALUES, TEXT_COMMANDS,
+                                              git_start, heredoc_is_text, is_compass, is_sink,
+                                              skipped, text_marks)
 from compass_pkg.approval_words import Unreadable, read
 
 REQUEST_FOLDER = "approval-requests"
@@ -192,41 +200,61 @@ BRACE = re.compile(r"\{[^{}]*(?:,|\.\.)[^{}]*\}")
 NESTING = 8
 #: The longest part of a refused word that a refusal shows.
 SHOWN_MAX = 80
+#: Control, format and line-separator characters: none reaches a person's screen.
+HIDDEN = ("Cc", "Cf", "Zl", "Zp")
 NONE = frozenset()
 
 # --- the policy tables: a widening is a one-line diff that needs a twin test row ---------------
 
-#: Commands that read piped text as data. Text piped into any other command is
-#: judged, because that command can turn it into a write or a run (`git commit -F -`,
-#: `gh api --input -`) or is unknown.
-TEXT_SINKS = frozenset("cat tee head tail wc sort uniq cut tr less more grep egrep fgrep rg "
-                       "diff pbcopy".split())
-#: Commands whose heredoc body and here-string are text. For `git` only the verbs of
-#: `GIT_MESSAGES` count, because the body of `git apply` is a patch that writes files.
-HEREDOC_TEXT = frozenset(("cat", "tee", "gh", "git", "compass"))
 #: Commands that show names or counts, so a bare path argument may name a request
 #: folder or the prompt hook script.
 LISTERS = frozenset(("ls", "wc", "stat", "du", "test", "["))
 #: Commands that read a file, so a bare path argument may name the prompt hook script.
 SCRIPT_READERS = frozenset(("cat", "head", "tail", "grep", "rg", "diff", "chmod"))
-GIT_READS = frozenset("log show diff blame status ls-files add mv rm".split())
+#: `git mv` and `git rm` are left out: one replaces the script and the other deletes it.
+GIT_READS = frozenset("log show diff blame status ls-files add".split())
+#: A `chmod` mode that keeps the script runnable by its owner: `+x`, or digits whose owner
+#: digit has the execute bit. `-x`, `000` and `644` stop the approval hook.
+CHMOD_KEEPS = re.compile(r"(?:[ugoa]*\+[rwxXst]+(?:,[ugoa]*\+[rwxXst]+)*|[0-7]?[1357][0-7]{2})")
+CHMOD_OPTIONS = re.compile(r"-[RvfHLPh]+")
 #: Options whose value is a path, a command or a file to write, never a bare path argument.
 PATH_OPTIONS = frozenset(("-f", "--file", "--files0-from", "--output", "--pre", "--exec"))
 #: Commands that run text. A substitution next to one, or into one, is judged as text.
 RUNNERS = frozenset("sh bash zsh dash ksh eval source . xargs exec".split())
-SHELLS = ("sh", "bash", "zsh", "dash", "ksh")
-#: Words that begin a command without being it: `do ls` runs `ls`.
-KEYWORDS = frozenset(("do", "then", "else", "elif", "if", "while", "until", "time", "!", "{"))
 ESCAPED_NAME = re.compile(r"\$'[^']*\\")
 SHADOWS = re.compile(r"(?:^|[;&|(){\n])\s*(?:function\s|alias\s|[A-Za-z_][\w.-]*\s*\(\s*\))")
 ASSIGNMENT = re.compile(r"[A-Za-z_]\w*=")
 
 
-def shown_word(word):
-    """A refused word as a refusal shows it: no control character, and at most
-    `SHOWN_MAX` characters, so a hostile word cannot add text to the message."""
-    kept = [c for c in str(word) if unicodedata.category(c) not in ("Cc", "Zl", "Zp")]
-    return "".join(kept)[:SHOWN_MAX]
+def exempt_commands():
+    """The commands that hold an exemption from the request-folder rule or have a text
+    position, read from the tables above, named as `tests/approval_guard_cases.py`
+    counts them (`git` is `git commit`, `egrep` and `fgrep` are `grep`). A test ties this
+    set to the table of counter-examples, so a widening needs three calls that stay refused."""
+    names = set(LISTERS) | set(TEXT_COMMANDS) | set(HEREDOC_TEXT)
+    return {"grep" if n in ("egrep", "fgrep") else "git commit" if n == "git" else n
+            for n in names}
+
+
+def script_commands():
+    """The commands that may name the prompt hook script as a bare argument, besides
+    `LISTERS`, read from the tables above."""
+    return set(SCRIPT_READERS) | {"git " + verb for verb in GIT_READS}
+
+
+def shown_word(word, found=""):
+    """A refused word as a refusal shows it: no control, format or line-separator
+    character, and at most `SHOWN_MAX` characters, so a hostile word cannot add text to
+    the message. A longer word is cut around `found`, the protected part, so it is shown."""
+    kept = "".join(c for c in str(word) if unicodedata.category(c) not in HIDDEN)
+    if len(kept) <= SHOWN_MAX:
+        return kept
+    at = kept.lower().find(str(found).lower()) if found else -1
+    if at < 0:
+        return kept[:SHOWN_MAX]
+    start = at if len(found) >= SHOWN_MAX else at - (SHOWN_MAX - len(found)) // 2
+    start = max(0, min(start, len(kept) - SHOWN_MAX))
+    return kept[start:start + SHOWN_MAX]
 
 
 def _path(text):
@@ -527,8 +555,10 @@ def in_memory_folder(path, cwd, folder, inside=False):
 
 
 def _glob_climbs(glob):
-    """True when a Grep glob holds a `..` segment, as `../*.jsonl` does."""
-    return ".." in re.split(r"[/\\,\s]+", _path(glob))
+    """True when a Grep glob holds a `..` segment, as `../*.jsonl` does, or a brace
+    expansion that holds `..`, as `{..,x}/*.jsonl` does: ripgrep expands braces."""
+    text = _path(glob)
+    return ".." in re.split(r"[/\\,\s]+", text) or ("{" in text and ".." in text)
 
 
 #: A delegation path and the ordinary path of the same shape outside the
@@ -729,6 +759,15 @@ def _lists_above(word, folder):
     return path != "/" and config.startswith(path + "/")
 
 
+def _chmod_keeps(words):
+    """True when a `chmod` only adds permissions or keeps the owner's execute bit, so it
+    cannot stop the approval hook; an option it does not know makes it false."""
+    if any(w.startswith("-") and not CHMOD_OPTIONS.fullmatch(w) for w in words[1:]):
+        return False
+    modes = [w for w in words[1:] if not w.startswith("-")]
+    return bool(modes) and CHMOD_KEEPS.fullmatch(modes[0]) is not None
+
+
 def _allowance(words, assigns, alone):
     """`(things, listing)` for a command: what a bare path argument of it may name,
     `request` (a request folder) and `script` (the prompt hook script), and whether
@@ -737,6 +776,8 @@ def _allowance(words, assigns, alone):
     if not alone or assigns or not words:
         return NONE, False
     name = words[0]
+    if name == "chmod" and not _chmod_keeps(words):
+        return NONE, False
     if name in LISTERS:
         things = frozenset(("request", "script"))
     elif name in SCRIPT_READERS or (name == "git" and git_start(words) > 0
@@ -764,52 +805,35 @@ def _exempt(words, i, folder, allowance):
     return things | {"above"} if listing and _lists_above(word, folder) else things
 
 
-def _stage_text(cmd):
-    """The text a command writes to its output, or None."""
-    name = command_name(cmd.words)
-    if name in ("echo", "printf"):
-        return " ".join(cmd.words[1:])
-    if name == "cat":
-        body = [s for s in (cmd.heredoc, cmd.herestring) if s]
-        return "\n".join(body) if body else None
-    return None
-
-
-def _scripts(pipelines):
-    """`[(path, text)]` for each file that a command writes with a redirect or
-    `tee` and a later command of the same call runs: by name, with a shell, or
-    with `source` or `.`. Only a script written and run in one call is followed."""
-    written, found = {}, {}
+def _text_substitutions(pipelines):
+    """The ids of the substitutions whose output stays in text. A substitution in a text
+    position (a message, an `echo`, a text heredoc) stays in text when the command that
+    holds it does too, all the way up; the words inside it are judged either way. Any other
+    substitution is judged as the word it stands for (`cat "$(echo <file>)"` names the
+    file), so no text exemption holds inside it."""
+    sites = {}                      # id -> (id of the substitution that holds it, in text)
     for pipe in pipelines:
-        if pipe.nested:
-            continue
         for n, cmd in enumerate(pipe.commands):
-            words = cmd.words
-            name = words[0] if words else ""
-            runs = [t for op, t in cmd.redirects if op == "<" and
-                    os.path.basename(name) in SHELLS]
-            if "/" in name:
-                runs.append(name)
-            if os.path.basename(name) in SHELLS:
-                runs += [w for w in words[1:] if not w.startswith("-")][:1]
-            elif name in ("source", ".") and words[1:]:
-                runs.append(words[1])
-            for run in runs:
-                run = os.path.normpath(run)
-                if run in written:
-                    found[run] = written[run]
-            text = _stage_text(cmd)
-            for op, target in cmd.redirects:
-                if text is not None and op in (">", ">>", ">|"):
-                    written[os.path.normpath(target)] = text
-            if name == "tee":
-                fed = _stage_text(pipe.commands[n - 1]) if n else None
-                own = [s for s in (cmd.heredoc, cmd.herestring) if s]
-                fed = fed if fed is not None else ("\n".join(own) if own else None)
-                for operand in words[1:]:
-                    if fed is not None and not operand.startswith("-"):
-                        written[os.path.normpath(operand)] = fed
-    return list(found.items())
+            skip = skipped(cmd.words)
+            words = cmd.words[skip:]
+            marks, heredoc = text_marks(words), heredoc_is_text(words)
+            # Text that a later stage can run or write is judged, so are its substitutions.
+            runs = any(not is_sink(c.words) for c in pipe.commands[n + 1:])
+            for slot, index, ident in cmd.subs:
+                text = (index - skip in marks) if slot == "w" else heredoc and slot in "hs"
+                sites[ident] = (pipe.sub, bool(text) and not runs)
+
+    def in_text(ident):
+        while ident in sites:           # a site the reader did not report is judged
+            holder, text = sites[ident]
+            if not text:
+                return False
+            if holder < 0:
+                return True
+            ident = holder
+        return False
+
+    return {ident for ident in sites if in_text(ident)}
 
 
 def _material(pipelines, folder):
@@ -830,19 +854,21 @@ def _material(pipelines, folder):
         exempt.append(allowed)
         raws.append(raw)
 
+    in_text = _text_substitutions(pipelines)
     for pipe in pipelines:
         alone = len(pipe.commands) == 1 and not pipe.nested
         substituted = substituted or pipe.nested
+        # A substitution that is not in text stands for a judged word, so what it prints
+        # is judged: its commands have no text position.
+        printed = pipe.nested and pipe.sub not in in_text
         for n, cmd in enumerate(pipe.commands):
             # A keyword such as `do` or `then` is followed by the command it starts.
-            skip = 0
-            while skip < len(cmd.words) - 1 and cmd.words[skip] in KEYWORDS:
-                skip += 1
+            skip = skipped(cmd.words)
             cwords, craws = cmd.words[skip:], cmd.raws[skip:]
             name = cwords[0] if cwords else ""
             runner = runner or os.path.basename(name) in RUNNERS
             escaped = escaped or bool(craws and ESCAPED_NAME.search(craws[0]))
-            marks, spoken = text_marks(cwords), []
+            marks, spoken = ({} if printed else text_marks(cwords)), []
             allowance = _allowance(cwords, cmd.assigns, alone)
             for assign, raw in zip(cmd.assigns, cmd.assign_raws):
                 add(assign, raw)
@@ -861,20 +887,17 @@ def _material(pipelines, folder):
             for _, target in cmd.redirects:
                 add(target, target)
             body = [s for s in (cmd.heredoc, cmd.herestring) if s]
-            at = git_start(cwords) if name == "git" else 0
-            if command_name(cwords) in HEREDOC_TEXT and (name != "git" or (
-                    at > 0 and cwords[at] in GIT_MESSAGES)):
+            if not printed and heredoc_is_text(cwords):
                 spoken += body
             elif body:
                 texts.append(("text", "\n".join(body)))
             # Text is skipped only when every later stage of its pipeline reads it as
             # data; a stage that can run it or write it sends the text to be judged.
-            if spoken and any(not (c.words and c.words[0] in TEXT_SINKS)
-                              for c in pipe.commands[n + 1:]):
+            if spoken and any(not is_sink(c.words) for c in pipe.commands[n + 1:]):
                 texts.append(("text", " ".join(spoken)))
     if runner and substituted:      # the output of a substitution may be the script
         return None
-    texts += [(("script", path), text) for path, text in _scripts(pipelines)]
+    texts += [(("script", path), text) for path, text in scripts(pipelines)]
     items = [(w, e, None) for w, e in zip(words, exempt)]
     top = list(words) + braced
     for label, text in texts:
@@ -894,7 +917,7 @@ def _judge_text(command, event, folder):
 
 def _refusal(code, tool, text, found, label):
     if label is None:
-        target = "the Bash word '%s'" % shown_word(text)
+        target = "the Bash word '%s'" % shown_word(text, found)
     elif label == "text":
         target = "text that holds '%s'" % shown_word(found)
     else:
@@ -929,12 +952,14 @@ def _judge(event, folder, items, top, exempt, raw, escaped, whole=False):
     built = _built_word(top, nested, raw, compass, escaped)
     if built:
         return "delegation-caller-mismatch", {
-            "named": built, "caller": caller(event) or "an agent with no agent type"}
+            "named": shown_word(built),
+            "caller": shown_word(caller(event) or "an agent with no agent type")}
     found = _caller_mismatch(top, nested, caller(event))
     if found:
         named, who = found
         return "delegation-caller-mismatch", {
-            "named": named or "no --as", "caller": who or "an agent with no agent type"}
+            "named": shown_word(named or "no --as"),
+            "caller": shown_word(who or "an agent with no agent type")}
     for code, find in (
             ("approval-request-protected", lambda t, e: _names_request(t, e, True)),
             ("delegation-protected", lambda t, e: _names_delegation(t, True)),

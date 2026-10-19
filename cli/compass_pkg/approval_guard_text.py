@@ -16,8 +16,10 @@ this module does not list has no text, and every word of it is judged.
   or the value of `-e`. With `-f` or `--file` the pattern is in a file, and every
   other word is a path. An option the tables do not know leaves no text, so a
   word is judged and never skipped by mistake.
-- `gh`: `--body`, `-b`, `--title`, `-t`. `compass`: `--title`, `--note`,
+- `gh`: `--body`, `-b`, `--title`, `-t`; its heredoc and here-string are text for
+  `gh issue`, `gh pr` and `gh release` only. `compass`: `--title`, `--note`,
   `--reason`, `--scope`, `--description`.
+- `rg --files` lists files and takes no pattern, so none of its words is text.
 
 Both forms of an option, `--opt value` and `--opt=value`, give the same text. A
 value of `--body-file`, `--file` or `-F` is a path and never text. `git` is read
@@ -28,6 +30,23 @@ only after `--no-pager` and `-C <dir>`; any other global option leaves no text.
 from __future__ import annotations
 
 GIT_MESSAGES = ("commit", "tag", "merge", "revert")
+#: Commands that read piped text as data. Text piped into any other command is
+#: judged, because that command can turn it into a write or a run (`git commit -F -`,
+#: `gh api --input -`) or is unknown.
+TEXT_SINKS = frozenset("cat tee head tail wc sort uniq cut tr less more grep egrep fgrep rg "
+                       "diff pbcopy".split())
+#: A sink that is given an option which starts like `--files0-from` reads the files its
+#: input names, so it is no sink: `printf '%s\0' <file> | sort --files0-from=-` prints the file.
+FILE_LIST_OPTION = "--fil"
+#: Commands whose heredoc body and here-string are text. For `git` only the verbs of
+#: `GIT_MESSAGES` count, because the body of `git apply` is a patch that writes files. For
+#: `gh` only the subcommands of `GH_TEXT_COMMANDS` count, because `gh alias import -` reads
+#: its aliases from standard input and an alias that starts with `!` runs a shell.
+HEREDOC_TEXT = frozenset(("cat", "tee", "gh", "git", "compass"))
+GH_TEXT_COMMANDS = frozenset(("issue", "pr", "release"))
+#: Commands that have a text position (`text_marks`). `git` counts for the verbs of
+#: `GIT_MESSAGES`, `log` and `grep`.
+TEXT_COMMANDS = frozenset(("echo", "printf", "gh", "compass", "grep", "egrep", "fgrep", "rg", "git"))
 GH_TEXT = frozenset(("--body", "-b", "--title", "-t"))
 COMPASS_TEXT = frozenset(("--title", "--note", "--reason", "--scope", "--description"))
 #: Per searcher: the letters of its options without a value, and with one.
@@ -80,6 +99,39 @@ def git_start(words):
     return -1 if i >= len(words) or words[i].startswith("-") else i
 
 
+#: Words that begin a command without being it: `do ls` runs `ls`.
+KEYWORDS = frozenset(("do", "then", "else", "elif", "if", "while", "until", "time", "!", "{"))
+
+
+def skipped(words):
+    """How many leading keywords (`do`, `then`) a command's words have."""
+    skip = 0
+    while skip < len(words) - 1 and words[skip] in KEYWORDS:
+        skip += 1
+    return skip
+
+
+def is_sink(words):
+    """True when a pipeline stage reads its input as data: a command of `TEXT_SINKS`
+    that is not given an option that reads a list of files."""
+    return bool(words) and words[0] in TEXT_SINKS and not any(
+        w.startswith(FILE_LIST_OPTION) for w in words[1:])
+
+
+def heredoc_is_text(words):
+    """True when the heredoc body and the here-string of a command (name first) are
+    text: the command is in `HEREDOC_TEXT`, and for `git` and `gh` the subcommand is too."""
+    name = command_name(words)
+    if name not in HEREDOC_TEXT:
+        return False
+    if name == "git":
+        at = git_start(words)
+        return at > 0 and words[at] in GIT_MESSAGES
+    if name == "gh":
+        return len(words) > 1 and words[1] in GH_TEXT_COMMANDS
+    return True
+
+
 def _options(words, start, names):
     """The value of each option in `names`, in both forms."""
     marks, i = {}, start
@@ -123,6 +175,8 @@ def _search_marks(words, start, family):
     """The pattern of a search command, and the value of `-e`."""
     flags, values = SEARCH_LETTERS[family]
     marks, positional, from_option, unknown, ended = {}, [], False, False, False
+    # `rg --files` lists files and takes no pattern: every other word is a path.
+    listing = family == "rg" and "--files" in words[start:]
     i = start
     while i < len(words):
         word = words[i]
@@ -166,7 +220,7 @@ def _search_marks(words, start, family):
                     unknown = True
                     break
         i += 1
-    if positional and not from_option and not unknown:
+    if positional and not from_option and not unknown and not listing:
         marks[positional[0]] = ("", words[positional[0]])
     return marks
 
@@ -174,6 +228,8 @@ def _search_marks(words, start, family):
 def text_marks(words):
     """`{index: (judged part, text)}` for the words of one command that are text."""
     name = command_name(words)
+    if name not in TEXT_COMMANDS:
+        return {}
     if name in ("echo", "printf"):
         return {i: ("", w) for i, w in enumerate(words) if i}
     if name == "gh":

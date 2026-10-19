@@ -325,6 +325,159 @@ _TEXT_TO_WRITER = _bash("PIP", "request-folder", REQ, [
 ])
 REFUSED = REFUSED + tuple(_TEXT_TO_WRITER)
 
+# --- the review fixes: calls the first version of the guard let through ------------------------
+# Each row below was allowed by the guard at the integrated tip 0a1ed042 and is refused by the
+# installed hook, so each pairs with a loosening scenario as its twin.
+
+# Text inside `$(...)`, backticks or `<(...)` is judged unless the substitution stands in a text
+# position of its outer command (TRC-057).
+_NESTED = (
+    _bash("NST", "request-folder", REQ, [
+        ('cat "$(echo {request})"', None, "TRC-057"), ("cat $(echo {request})", None, "TRC-057"),
+        ("cat `echo {request}`", None, "TRC-057"), ('echo x > "$(echo {request})"', "echo", "TRC-057"),
+        ('tee "$(echo {request})" < /dev/null', "tee", "TRC-057"),
+        ('rm "$(echo {request})"', None, "TRC-057"),
+        ('cp /tmp/e.json "$(echo {request})"', None, "TRC-057"),
+        ("cat <(echo {request})", None, "TRC-057"),
+        ('cat "$(printf %s {request})"', "printf", "TRC-057"),
+        ("x=$(echo 'cat {request}'); $x", "echo", "TRC-057"),
+        ('cat "$(echo "$(echo {request})")"', None, "TRC-057"),
+        ('cat "$(echo {request} | tr a a)"', None, "TRC-057"),
+        ('cat "$(tr a a <<< {request})"', None, "TRC-057"),
+        ('cat "$(cat <<EOF\n{request}\nEOF\n)"', "cat", "TRC-057"),
+        ('git commit -m "$(echo ok)" -- "$(echo {request})"', "git commit", "TRC-057"),
+    ])
+    + _bash("NST", "delegation-folder", DEL, [
+        ("cat $(echo {delegation})", None, "TRC-057"), ("cat `echo {delegation}`", None, "TRC-057"),
+        ('rm "$(printf %s {delegation})"', "printf", "TRC-057"),
+    ])
+    + _bash("NST", "transcript", TRN, [
+        ('cat "$(echo {transcript})"', None, "TRC-057"), ("cat $(printf %s {transcript})", None, "TRC-057"),
+        ("x=$(echo 'cat {transcript}'); $x", None, "TRC-057"),
+        ('cat "$(git log -1 --grep {transcript})"', None, "TRC-057"),
+        (r"sort --files0-from=<(printf '%s\0' {transcript})", None, "TRC-057"),
+    ])
+)
+# Start the ids after the rows above, so no id is used twice.
+_NESTED = tuple(Case(f"NST-{n:02d}", c.thing, c.code, c.tool, c.command, {}, c.exempt, c.twin_of)
+                for n, c in enumerate(_NESTED, 1))
+
+# A command that reads a list of files from its input is no sink for text (TRC-058).
+_SINK_NAMES = ("wc", "sort", "uniq", "cut", "tr", "head", "tail", "grep", "rg", "diff")
+_SINKS = tuple(_bash("SNK", "transcript", TRN, [
+    (r"printf '%s\0' {transcript} | sort --files0-from=/dev/stdin", None, "TRC-058"),
+    (r"printf '%s\0' {transcript} | sort --files0=-", None, "TRC-058"),
+]) + _bash("SNK", "request-folder", REQ, [
+    ("echo -n {request} | sort --files0-from /dev/stdin | head", None, "TRC-058"),
+] + [(f"echo {{request}} | {name} --files0-from=-", None, "TRC-058") for name in _SINK_NAMES])
+  + _bash("SNK", "delegation-folder", DEL, [
+    ("echo {delegation} | sort --files0-from=- | head", None, "TRC-058"),
+]))
+_SINKS = tuple(Case(f"SNK-{n:02d}", c.thing, c.code, c.tool, c.command, {}, c.exempt, c.twin_of)
+               for n, c in enumerate(_SINKS, 1))
+
+# The body of a quoted heredoc keeps a backslash and newline; a comment ends at its newline (TRC-059).
+_HEREDOC = tuple(Case(f"HDC-{n:02d}", thing, code, "Bash", command, {}, None, "TRC-059")
+                 for n, (thing, code, command) in enumerate([
+    ("request-folder", REQ, "cat <<'EOF'\nfoo\\\nEOF\ncat {request}\nEOF"),
+    ("transcript", TRN, "cat <<'EOF'\nfoo\\\nEOF\ncat {transcript}\nEOF"),
+    ("delegation-folder", DEL, "cat <<'EOF'\nfoo\\\nEOF\ncat {delegation}\nEOF"),
+    ("request-folder", REQ, 'cat <<"EOF"\nfoo\\\nEOF\ncat {request}\nEOF'),
+    ("request-folder", REQ, "cat <<\\EOF\nfoo\\\nEOF\ncat {request}\nEOF"),
+    ("request-folder", REQ, "cat <<-'EOF'\n\tfoo\\\nEOF\ncat {request}\nEOF"),
+    ("transcript", TRN, "echo ok # a comment \\\ncat {transcript}"),
+    ("request-folder", REQ, "echo ok # a comment \\\ncat {request}"),
+], 1))
+
+# `gh` reads a heredoc as text only for `issue`, `pr` and `release`; `gh alias import -` runs a
+# shell when the alias starts with `!` (TRC-060).
+_GH = tuple(Case(f"GHH-{n:02d}", thing, code, "Bash", command, {}, "gh", "TRC-060")
+            for n, (thing, code, command) in enumerate([
+    ("transcript", TRN, "gh alias import - <<'EOF'\npwn: '!cat {transcript}'\nEOF\ngh pwn"),
+    ("transcript", TRN, "gh alias import - <<< \"pwn: '!cat {transcript}'\"\ngh pwn"),
+    ("request-folder", REQ, "gh alias import - <<'EOF'\npwn: '!cat {request}'\nEOF"),
+    ("request-folder", REQ, "gh api repos/o/r --input - <<'EOF'\ncat {request}\nEOF"),
+    ("delegation-folder", DEL, "gh extension exec x <<'EOF'\ncat {delegation}\nEOF"),
+    ("request-folder", REQ, "gh --repo o/r alias import - <<< 'pwn: !cat {request}'"),
+], 1))
+
+# A script that one call writes and the same call runs is followed through these shapes
+# (TRC-061). A script that one call writes and another call runs is not followed.
+_WRITE_THEN_RUN = tuple(Case(f"WTR-{n:02d}", "transcript", TRN, "Bash", command, {}, None, "TRC-061")
+                        for n, command in enumerate([
+    "echo 'cat {transcript}' > /tmp/s1; env bash /tmp/s1",
+    "echo 'cat {transcript}' > /tmp/s1; bash -o pipefail /tmp/s1",
+    "echo 'cat {transcript}' > /tmp/s1; bash -c 'source /tmp/s1'",
+    "echo 'cat {transcript}' | cat > /tmp/s1; sh /tmp/s1",
+    "echo 'cat {transcript}' | tr a a > /tmp/s1; sh /tmp/s1",
+    "echo 'cat {transcript}' > /tmp/s1; cd /tmp; sh s1",
+    "cd /tmp; echo 'cat {transcript}' > s1; sh s1",
+    "{ echo 'cat {transcript}'; } > /tmp/s1; sh /tmp/s1",
+    "( echo 'cat {transcript}' ) > /tmp/s1; sh /tmp/s1",
+    "echo 'cat {transcript}' > /tmp/s1; cp /tmp/s1 /tmp/s2; sh /tmp/s2",
+    "echo 'cat {transcript}' > /tmp/s1; ln -s /tmp/s1 /tmp/s2; sh /tmp/s2",
+    "echo 'cat {transcript}' > /tmp/s1; find /tmp/s1 -exec sh {} \\;",
+    "echo 'cat {transcript}' > /tmp/s1; rg --pre sh . /tmp/s1",
+    "echo 'cat {transcript}' > /tmp/s1; command sh /tmp/s1",
+    "echo 'cat {transcript}' > /tmp/s1; exec sh /tmp/s1",
+    "echo 'cat {transcript}' > /tmp/s1; sh -- /tmp/s1",
+    "echo 'cat {transcript}' > /tmp/s1; sh /tmp/./s1",
+    "echo 'cat {transcript}' > /tmp/s1; sh \"/tmp/s1\"",
+    "echo 'cat {transcript}' > /tmp/s1; sh</tmp/s1",
+    "echo 'cat {transcript}' > /tmp/s1; python3 -c 'import os; os.system(\"sh /tmp/s1\")'",
+    "echo 'cat {transcript}' | tee /tmp/s1 > /dev/null; sh /tmp/s1",
+    "echo 'cat {transcript}' | tr a a | tee /tmp/s1; sh /tmp/s1",
+    "echo 'cat {transcript}' > /tmp/s1 && mv /tmp/s1 /tmp/s2 && bash /tmp/s2",
+], 1))
+
+# Smaller routes (TRC-062).
+_MINOR = (
+    _bash("MNR", "request-folder", REQ, [
+        ("rg --files {requests_dir}", "rg", "TRC-062"),
+        ("rg --files {request}", "rg", "TRC-062"),
+        ("chmod -x {script}", None, "TRC-062"), ("chmod 000 {script}", None, "TRC-062"),
+        ("chmod a-x {script}", None, "TRC-062"), ("chmod 644 {script}", None, "TRC-062"),
+        ("chmod --reference=/tmp/x {script}", None, "TRC-062"),
+        ("git mv -f /tmp/x {script}", None, "TRC-062"), ("git mv {script} /tmp/y", None, "TRC-062"),
+        ("git rm {script}", None, "TRC-062"), ("git rm -f {script}", None, "TRC-062"),
+    ])
+    + _tools("MNR", "memory-folder", TRN, [
+        ("Grep", {"pattern": "x", "path": "{memory}", "glob": "{..,x}/*.jsonl"}, "TRC-062"),
+        ("Grep", {"pattern": "x", "path": "{memory}", "glob": "a/{b,..}/*.jsonl"}, "TRC-062"),
+        ("Grep", {"pattern": "x", "path": "{memory}", "glob": "{x,y,..}/*"}, "TRC-062"),
+    ])
+)
+_MINOR = tuple(Case(f"MNR-{n:02d}", c.thing, c.code, c.tool, c.command, c.tool_input, c.exempt,
+                    c.twin_of) for n, c in enumerate(_MINOR, 1))
+
+REFUSED = REFUSED + _NESTED + _SINKS + _HEREDOC + _GH + _WRITE_THEN_RUN + _MINOR
+
+# --- the commands that may name the prompt hook script (TRC-065) --------------------------------
+# `EXEMPT_COMMANDS` above counts the commands that may name a request folder or hold text. These
+# are the readers that may name the prompt hook script as a bare argument. Each needs three
+# calls that stay refused: the reader in a pipe, in a substitution and after a `VAR=` word.
+
+SCRIPT_EXEMPT_COMMANDS = ("cat", "head", "tail", "grep", "rg", "diff", "chmod", "git log",
+                          "git show", "git diff", "git blame", "git status", "git ls-files",
+                          "git add")
+_READER_LINES = {"cat": "cat", "head": "head", "tail": "tail", "grep": "grep x", "rg": "rg x",
+                 "diff": "diff /dev/null", "chmod": "chmod +x"}
+
+
+def _script_rows():
+    rows = []
+    for name in SCRIPT_EXEMPT_COMMANDS:
+        line = _READER_LINES.get(name, name + " --")
+        for n, command in enumerate([f"{line} {{script}} | head",
+                                     f"echo $({line} {{script}})",
+                                     f"FOO=1 {line} {{script}}"], 1):
+            rows.append(Case(f"SRX-{name.replace(' ', '-')}-{n}", "prompt-hook-script", REQ,
+                             "Bash", command, {}, name, "TRC-065"))
+    return tuple(rows)
+
+
+SCRIPT_REFUSED = _script_rows()
+
 # --- the controls: calls that must pass -------------------------------------------------------
 
 _OK = []
@@ -389,6 +542,36 @@ _ok("TRC-050", [
     'gh issue comment 5 --body="the .compass/delegations folder"',
     'compass quick-fix start --note="see ~/.claude/projects/x"',
 ])
+# The review fixes keep these ordinary calls allowed.
+_ok("TRC-057", [
+    "git commit -m \"$(cat <<'EOF'\nExplain approval-requests\n\nThe hook reads .compass/delegations.\nEOF\n)\"",
+    'git commit -m "$(echo Explain approval-requests)"',
+    "gh pr create --title t --body \"$(cat <<'EOF'\nthe prompt-approval.sh script\nEOF\n)\"",
+    'echo "$(echo see approval-requests)"',
+    "git commit -am \"$(printf '%s' 'the .compass/delegations folder')\"",
+    'cat "$(echo hello)"',
+])
+_ok("TRC-058", ['echo "see approval-requests" | sort', 'printf "see prompt-approval.sh" | uniq -c'])
+_ok("TRC-059", [
+    "cat > docs/n.md <<EOF\nthe approval-requests folder \\\nand more\nEOF",
+    "cat > docs/n.md <<'EOF'\nthe approval-requests folder \\\nand more\nEOF",
+    "echo ok # about approval-requests \\\nand more",
+])
+_ok("TRC-060", [
+    "gh issue comment 5 --body-file - <<'EOF'\nsee approval-requests\nEOF",
+    "gh pr create --title t --body-file - <<'EOF'\nthe prompt-approval.sh script\nEOF",
+    'gh release create v1 --notes-file - <<< "the approval-requests folder"',
+])
+_ok("TRC-061", [
+    "echo 'ls docs' > /tmp/s1; env bash /tmp/s1",
+    "echo hi | tr a a > /tmp/s1; sh /tmp/s1",
+    "cd /tmp; echo ls > s1; sh s1",
+    "{ echo 'ls docs'; } > /tmp/s1; sh /tmp/s1",
+])
+_ok("TRC-062", [
+    "chmod +x {script}", "chmod 755 {script}", "chmod u+x,g+x {script}",
+    "rg --files docs", "git add {script}",
+], thing="prompt-hook-script")
 _ok_tools = _tools("OK", "memory-folder", None, [
     ("Write", {"file_path": "{memory}/x.md"}, "TRC-017"),
     ("Edit", {"file_path": "{memory}/MEMORY.md"}, "TRC-017"),

@@ -104,10 +104,10 @@ def test_scn_a2_no_material_change_is_not_logged(tmp_path):
              "--reason", "no change expected")
     after = _task(root)
     # A reason given with no change is kept as kind `unchanged`, which retro
-    # and friction capture ignore. Nothing may be logged as a real re-frame.
+    # and friction capture ignore. Nothing may be logged as a real change.
     kinds = [e["kind"] for e in after["reassessments"]]
     assert kinds == ["unchanged"], (
-        f"an unchanged re-evaluation was logged as a re-frame:\n{after['reassessments']}")
+        f"an unchanged re-evaluation was logged as a real change:\n{after['reassessments']}")
     assert "not recorded" not in (r.stdout + r.stderr).lower(), (
         f"a --reason that was kept must not be reported as dropped:\n{r.stdout}{r.stderr}")
 

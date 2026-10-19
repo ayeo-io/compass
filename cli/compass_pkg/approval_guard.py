@@ -55,7 +55,11 @@
   the call's `cwd` for Bash, where `./` is removed and an absolute word is
   read under `cwd`. The line is a heuristic: a glob that picks the
   delegation files together with others, such as `**/*l*.yml`, passes, and
-  the 64-bit code keeps the stored hash useless.
+  the 64-bit code keeps the stored hash useless. The glob is read as the
+  shell reads it: `[^` counts as `[!`, a POSIX class counts as `?`, and a
+  backslash and newline are removed. A Grep glob is also split on commas.
+  A delegated approval with a brace expansion in a space-free word is
+  refused, because the shell expands `--a{s=main,s=x}` to two `--as=` words.
 
 Each check ignores letter case, because macOS opens a path in any case. The
 earlier guard's checks run first, in its order and case, so a call it refused
@@ -66,11 +70,16 @@ agent's ordinary use, not a deliberate workaround. What they do not stop:
   - a flag or path built from a variable, command substitution, or a value
     read from a file or the environment;
   - arguments built by `xargs` or `printf`;
-  - brace expansion (`{d,x}eleg*/*`);
-  - a tool option that takes its own glob;
-  - a Bash glob that spells neither .compass nor deleg, such as `.c*/d*/*`
-    (the hook does not start the guard for it), and a glob rooted at another
-    folder than `cwd`;
+  - brace expansion in a glob (`{d,x}eleg*/*`); a brace expansion in a
+    delegated approval is refused;
+  - a tool option that takes its own glob (`rg -g`, `find -name`,
+    `--include`), and extended globs after `shopt -s extglob`;
+  - a Bash glob that spells neither .compass nor deleg, such as
+    `cat .c*/d*/*` (the hook does not start the guard for it). `cat
+    .c*/delegations` does start it: the hook tests the command twice, so a
+    glob before `deleg` comes after `deleg` in the other copy, and the guard
+    refuses it. A glob rooted at another folder than `cwd` (`$PWD/...`) is
+    also not stopped;
   - a relative path after `cd`, because the guard sees only the `cwd` of the
     call.
 The safety contract states these limits.
@@ -96,6 +105,8 @@ TRANSCRIPTS = re.compile(r"\.claude[\w.-]*/projects(?:/|\b)|CLAUDE_CONFIG_DIR")
 #: A shell glob or brace character: a word holding one names every path it
 #: expands to.
 GLOB = re.compile(r"[*?\[{]")
+#: A brace expansion: `{` with a `,` or `..` before the closing `}`.
+BRACE = re.compile(r"\{[^{}]*(?:,|\.\.)[^{}]*\}")
 #: How deep a command nested in quoted words is read, such as
 #: `bash -c "bash -c '...'"`.
 NESTING = 8
@@ -122,6 +133,8 @@ def _words(command):
     # shlex does not read ANSI-C quoting, so `$'approve'` would keep its `$`.
     # Dropping the `$` reads the word as the quoted text the shell runs.
     command = re.sub(r"\$(?=['\"])", "", command)
+    # The shell drops a backslash and newline: `--a\<newline>s` runs as `--as`.
+    command = command.replace("\\\n", "")
     try:
         return shlex.split(command)
     except ValueError:
@@ -199,6 +212,11 @@ def _caller_mismatch(command, who):
         unreadable = _unreadable_as(words)
         if unreadable:
             return unreadable[0], who
+        # Brace expansion turns `--a{s=main,s=x}` into two `--as=` words. A
+        # word that holds a space (a quoted value) is read again as its parts.
+        braced = [w for w in words if BRACE.search(w) and not re.search(r"\s", w)]
+        if braced:
+            return braced[0], who
     return None
 
 
@@ -300,6 +318,12 @@ def _glob_selects(glob, pairs, grep):
     rule. With `grep`, each path is also tried as `/` plus the path, as
     ripgrep reads `**/x`, and a glob without `/` as the bare name."""
     glob = glob.lower()
+    # Bash and zsh read `[^x]` as `[!x]` and `[[:lower:]]` as one character;
+    # `fnmatch` reads neither. A class becomes `?`, which keeps a refusal
+    # that names the delegation folder and accepts a glob that picks every name.
+    glob = re.sub(r"\[\[:\w+:\]\]", "?", glob)
+    glob = re.sub(r"\[:\w+:\]", "?", glob)
+    glob = glob.replace("[^", "[!")
 
     def matches(path):
         path = path.lower()
@@ -332,8 +356,9 @@ def _relative_pairs(root, searched):
 
 def _grep_glob_reaches(pattern, searched, cwd):
     pairs = _relative_pairs(_resolved(".", cwd), _resolved(searched, cwd))
-    # Claude Code may split the glob on white space; test both forms.
-    return any(_glob_selects(g, pairs, True) for g in [pattern] + pattern.split())
+    # Claude Code may split the glob on white space or commas; test all forms.
+    return any(_glob_selects(g, pairs, True)
+               for g in [pattern] + re.split(r"[\s,]+", pattern))
 
 
 def _bash_glob_reaches(words, cwd):

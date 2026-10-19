@@ -702,6 +702,81 @@ def test_trc_012_bash_glob_matching_everything_accepted(delegated):
                                      "tool_input": {"command": command}}) is None, command
 
 
+def _guard(project_dir, command):
+    from compass_pkg import approval_guard
+    return approval_guard.check({"tool_name": "Bash", "cwd": str(project_dir),
+                                 "tool_input": {"command": command}})
+
+
+def test_trc_001_backslash_newline_inside_as_word_refused(guarded):
+    """Scenario id: `TRC-001` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md
+
+    The shell drops a backslash and newline inside a word, so `--a\\<newline>s`
+    runs as `--as`.
+    """
+    for word in ("--a\\\ns", "--\\\nas", "-\\\n-as"):
+        command = f"{_BASE} --as main {word} compass:architect"
+        _caller_refused(guarded, command, "compass:architect")
+        _caller_refused(guarded, f"bash -c '{command}'", "compass:architect")
+    _passes(guarded, f"{_BASE} --a\\\ns main")
+
+
+def test_trc_004_brace_expansion_in_delegated_approval_refused(guarded):
+    """Scenario id: `TRC-004` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md
+
+    The shell expands `--a{s=main,s=compass:architect}` to two `--as=` words.
+    """
+    for word in ("--a{s=main,s=compass:architect}", "--as={main,compass:architect}",
+                 "--a{s,x}", "--as={1..2}"):
+        named = word.replace("--as=", "")
+        _caller_refused(guarded, f"{_BASE} --as main {word}", named)
+        _caller_refused(guarded, f"bash -c '{_BASE} --as main {word}'", named)
+    # A quoted JSON value holds a space or has no comma or range, and a command
+    # that is not a delegated approval is not read at all.
+    _passes(guarded, f"""{_BASE} --as main --reason '{{"a": 1}}'""")
+    _passes(guarded, f"""{_BASE} --as main --reason '{{"a":1}}'""")
+    _passes(guarded, "echo {a,b}")
+    assert _guard(guarded, "echo {a,b} --as x") is None
+
+
+def test_trc_011_backslash_newline_inside_glob_refused(delegated):
+    """Scenario id: `TRC-011` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    for command in ("cat .compass/deleg\\\n*/*", "cat .compass/d\\\neleg?tions/DL-1.yml"):
+        found = _guard(delegated, command)
+        assert found and found[0] == "delegation-protected", (command, found)
+
+
+def test_trc_011_negated_and_posix_class_globs_refused(delegated):
+    """Scenario id: `TRC-011` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md
+
+    Bash and zsh read `[^y]` as `[!y]` and `[[:lower:]]` as a letter, which
+    `fnmatch` does not.
+    """
+    for command in ("cat .compass/deleg[^y]*/*", "cat .compass/deleg[!y]*/*",
+                    "cat .compass/d[[:lower:]]leg*/*", "cat .compass/d[[:alpha:]]leg?tions/*"):
+        found = _guard(delegated, command)
+        assert found and found[0] == "delegation-protected", (command, found)
+    # A class that picks every name picks "everything", as `?*` does.
+    assert _guard(delegated, "ls .compass/[[:lower:]]*") is None
+
+
+def test_trc_008_grep_glob_split_on_commas_refused(delegated):
+    """Scenario id: `TRC-008` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    for path, glob in ((".compass", "*.yml,deleg*/*"), (".compass", "x,d*/*"),
+                       (".compass", "*.md, d*/*")):
+        _grep(delegated, path, glob, True)
+    _grep(delegated, ".compass", "*.yml,*.md", False)
+
+
+def test_trc_013_glob_before_deleg_still_starts_the_guard(delegated):
+    """Scenario id: `TRC-013` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md
+
+    `cat .c*/delegations` is refused: the hook tests the command twice, so the
+    glob character in one copy comes after `deleg` in the other.
+    """
+    _bash_glob(delegated, "cat .c*/delegations", True)
+
+
 def test_trc_014_docs_state_refusals_accepted_forms_and_limits():
     """Scenario id: `TRC-014` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
     contract = (ROOT / "docs" / "safety-contract.md").read_text(encoding="utf-8").lower()
@@ -710,7 +785,8 @@ def test_trc_014_docs_state_refusals_accepted_forms_and_limits():
     facts = ["--as${ifs}", "--asmain", "--assume-yes", "--as-main",
              "**/*", "*.yml", ".compass/*", "d*/*", "**/confirm-*", "deleg?tions",
              "variable", "command substitution", "environment", "xargs", "printf",
-             "brace expansion", "its own glob", "neither .compass nor deleg", "cd"]
+             "brace expansion", "its own glob", "neither .compass nor deleg", "cd",
+             "extglob", "rg -g", "find -name", "--include"]
     for name, text in (("docs/safety-contract.md", contract),
                        ("approval_guard.py docstring", module)):
         missing = [f for f in facts if f not in text]

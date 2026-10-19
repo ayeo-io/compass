@@ -37,6 +37,9 @@ STARTS_GUARD = (
     "ls .compass/d*",
     # Letter case is ignored, as macOS opens a path in any case.
     "cat .Compass/Deleg*/*",
+    # A glob before `deleg` starts the guard too: the hook tests the command
+    # twice, so the glob in one copy comes after `deleg` in the other.
+    "cat .c*/delegations",
 )
 
 # None of these can reach the delegation folder through a glob.

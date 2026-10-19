@@ -149,3 +149,7 @@ def removal_problems(version):
 
 # The parser type of `--kind`: an old word is read as the current one.
 kind_type = functools.partial(read, "reassessment_kind")
+
+# The parser type of a check id given to `compass evidence approve`, `request`
+# and `review`: a script written for 6.x still passes the old id until 8.0.0.
+check_type = functools.partial(read, "check_id")

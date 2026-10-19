@@ -126,6 +126,77 @@ def test_roa_9_policy_commands_load_compass_yml_in_this_repository(
     assert not probe.exists()
 
 
+def _framework_lint_with_bad_yaml(tmp_path, monkeypatch, capsys, as_json):
+    """Run the no-argument framework lint over a governance folder whose policy
+    is not valid YAML. Returns the exit code, the output and how often the
+    layered lint ran."""
+    import argparse
+    from compass_pkg import policy_cmd
+    gov = tmp_path / "governance"
+    gov.mkdir()
+    (gov / "routing-policy.yml").write_text("routes: [unclosed\n", encoding="utf-8")
+    (gov / "guardrails.yml").write_text("guardrails: []\n", encoding="utf-8")
+    calls = []
+    monkeypatch.setattr(policy_cmd, "find_governance", lambda: str(gov))
+    monkeypatch.setattr(policy_cmd, "_layered_report",
+                        lambda *a, **k: calls.append(1) or (_ for _ in ()).throw(
+                            AssertionError("layered lint ran")))
+    monkeypatch.chdir(ROOT)
+    capsys.readouterr()
+    code = policy_cmd.run_policy_lint(argparse.Namespace(
+        task=None, file=None, exhaustive=False, offline=True, json=as_json))
+    return code, capsys.readouterr().out, calls
+
+
+def test_roa_9_framework_lint_reports_invalid_policy_yaml_as_a_failure(
+        tmp_path, monkeypatch, capsys):
+    code, out, calls = _framework_lint_with_bad_yaml(tmp_path, monkeypatch, capsys, False)
+    assert code == 1, out
+    assert out.startswith("compass policy lint: FAIL"), out
+    assert "invalid YAML" in out, out
+    assert not calls
+
+
+def test_roa_9_framework_lint_json_reports_invalid_policy_yaml_as_a_failure(
+        tmp_path, monkeypatch, capsys):
+    code, out, calls = _framework_lint_with_bad_yaml(tmp_path, monkeypatch, capsys, True)
+    assert code == 1, out
+    document = json.loads(out)
+    assert document["result"] == "fail", out
+    assert [f["code"] for f in document["findings"]] == ["LEGACY-STRUCTURE"], out
+    assert "invalid YAML" in out
+    assert not calls
+
+
+def test_roa_9_framework_lint_still_runs_both_lints_for_a_wrong_but_valid_policy(
+        tmp_path, monkeypatch, capsys):
+    import argparse
+    from compass_pkg import policy_cmd
+    gov = tmp_path / "governance"
+    gov.mkdir()
+    (gov / "routing-policy.yml").write_text("unrelated: 1\n", encoding="utf-8")
+    (gov / "guardrails.yml").write_text("guardrails: []\n", encoding="utf-8")
+    real = policy_cmd._layered_report
+    calls = []
+    monkeypatch.setattr(policy_cmd, "find_governance", lambda: str(gov))
+    monkeypatch.setattr(governance_module(), "find_governance", lambda: str(gov))
+    monkeypatch.setattr(policy_cmd, "_layered_report",
+                        lambda *a, **k: calls.append(1) or real(*a, **k))
+    monkeypatch.chdir(ROOT)
+    capsys.readouterr()
+    code = policy_cmd.run_policy_lint(argparse.Namespace(
+        task=None, file=None, exhaustive=False, offline=True, json=False))
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert out.startswith("compass policy lint: FAIL"), out
+    assert calls == [1]
+
+
+def governance_module():
+    from compass_pkg import governance
+    return governance
+
+
 # --- ROA-10: the write-time lint and compass policy lint --issue agree -------------
 
 def _write_time_error(project, slug):

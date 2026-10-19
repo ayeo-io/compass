@@ -714,7 +714,8 @@ def _session_table(compass_dir, session, issue, hours_ago):
     from datetime import datetime, timedelta, timezone
     at = datetime.now(timezone.utc) - timedelta(hours=hours_ago)
     (Path(compass_dir) / "sessions.json").write_text(json.dumps(
-        {session: {"issue": issue, "at": at.isoformat(timespec="seconds")}}))
+        {session: {"issue": issue, "at": at.isoformat(timespec="seconds"),
+                   "root": os.path.realpath(compass_dir)}}))
 
 
 def test_arc_25_moved_pointer_records_nothing(tmp_path):

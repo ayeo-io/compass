@@ -570,8 +570,11 @@ def test_d2_repairs_change_only_retired_names():
     `waived_stages`, the issue's waived stage modes that hold on a
     floor-raised approach.
 
-    One more was re-baselined by `approval-guard-ifs-as-and-delegation-globs`:
-    `docs/safety-contract.md` (list_items 70 -> 77) gained the bullets on the
+    One more was re-baselined by two changes:
+    `docs/safety-contract.md` (list_items 70 -> 82). The change
+    `worktree-issue-from-edited-path` added the bullet on which issue judges
+    an Edit or Write in a worktree. The change
+    `approval-guard-ifs-as-and-delegation-globs` added the bullets on the
     refused and accepted globs and on the limits that remain: unreadable
     words, brace expansion, a tool option with its own glob, a glob rooted
     elsewhere and a glob the prefilter does not see.

@@ -294,11 +294,15 @@ The hooks and the CLI judge work against the current issue:
 sets it. `COMPASS_ISSUE` comes first, so two sessions in one project can work
 on two issues; `compass run` sets it for each unattended session. A value
 that names no issue is refused (`bad-session-issue`), never passed over for
-the pointer.
+the pointer. That order holds in the session's own project. In a worktree
+the order reverses for Edit and Write: the worktree's own pointer names the
+issue, and `COMPASS_ISSUE` applies only when that pointer is empty (see the
+worktree paragraph below).
 
 Two interactive sessions share the pointer, so the pre-tool hook records the
 issue each Claude Code session last worked on, by its session id, in a
-`sessions.json` file under `.compass/`. When another session has moved the pointer since,
+`sessions.json` file under `.compass/`. When another session has moved the
+pointer in the session's own project since,
 the session's next code edit is refused (`pointer-moved`) until it runs
 `compass issue use <slug>` to say which issue it means. A record older than
 12 hours is ignored and dropped the next time the table is written, and a
@@ -564,6 +568,10 @@ manifest.
   is never guessed. A session whose fresh entry in the session table behind
   the `pointer-moved` refusal names another issue is not recorded on the
   pointer's issue.
+- For an Edit or Write in a worktree of the session's repository, the
+  worktree's pointer comes first, `COMPASS_ISSUE` stands in only for an empty
+  pointer, and the session is recorded on that issue without reading the
+  session table.
 - A session id that is not letters, digits, `-` and `_` is not recorded.
 - An id already in the manifest costs one `grep` and no python3 process. A new
   id starts one python3 process, which opens only that issue's manifest.
@@ -648,10 +656,21 @@ production code, not as a test. A symbolic link is not followed.
 Shell scripts, makefiles and extensionless scripts are not classified
 as production-code file types for red-before-green enforcement.
 
-Inside a worktree, Edit and Write are checked against that worktree's own red
-state, because they name their file and the hook resolves the project from
-it. A shell write is not. Its targets are found against the session's
-project, with two results:
+Inside a worktree, Edit and Write follow the worktree's own issue and failing
+test, because they name their file and the hook resolves the project from it.
+The worktree's pointer names the issue. COMPASS_ISSUE applies in the
+session's own project, and in a worktree only when the worktree's pointer is
+empty. A pointer that names a missing issue, or no issue to name at all,
+refuses (`bad-session-issue`); the hook never guesses the most recently
+changed issue there. An edit in a worktree of a different repository is
+refused, and so is one in a tree git cannot read. A session with no Compass
+project is not affected. A session in a worktree does not read that
+worktree's session table, so `pointer-moved` applies in the session's own
+project only.
+
+A shell write is not followed that way: a shell write still resolves from the
+session's project, because its targets are found against that project. GitHub
+issue #104 tracks the gap. The results are:
 
 - a relative path is checked against the session's issue, not the worktree's
 - an absolute path into a worktree outside the project - the default place

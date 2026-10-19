@@ -1,9 +1,10 @@
 """A fixture second shipped default, and projects that extend the first.
 
-Only default@6 ships today. `policy update` reads any major the framework
-keeps, so these builders make a framework root of the same shape a real next
-major would leave: the previous major kept as `default@6` and the new one as
-`default`. The new one is a copy of the real default with named changes, so
+`policy update` reads any major the framework keeps, so these builders make a
+framework root of the shape a release with a next major leaves: the previous
+major kept as `default@6` (a copy of the repository's kept folder, so it stays
+major 6 whatever the live default is) and the new one as `default`. The new
+one is a copy of the live default with named changes, so
 the project layers here merge over a full default and the classifier and the
 replay run over it.
 
@@ -20,6 +21,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 REAL_DEFAULT = ROOT / "governance" / "presets" / "default"
+KEPT_DEFAULT_6 = ROOT / "governance" / "presets" / "default@6"
 
 # The changes a second default can carry. `ceiling` moves the waived field's
 # parent value (2 to 3) and loosens the hotfix ceiling (1 to 2); `unrelated`
@@ -37,11 +39,11 @@ def _edit(directory, name, change):
 
 def framework_root(base, change="ceiling", version="7.0.0"):
     """A directory shaped like the framework: `governance/presets/default@6`
-    (the real default, kept) and `governance/presets/default` at `version`
+    (the repository's kept folder) and `governance/presets/default` at `version`
     with the named change."""
     presets = Path(base) / "governance" / "presets"
     presets.mkdir(parents=True)
-    shutil.copytree(REAL_DEFAULT, presets / "default@6")
+    shutil.copytree(KEPT_DEFAULT_6, presets / "default@6")
     shutil.copytree(REAL_DEFAULT, presets / "default")
     new = presets / "default"
     meta = yaml.safe_load((new / "preset.yml").read_text(encoding="utf-8"))

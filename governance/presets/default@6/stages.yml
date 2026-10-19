@@ -1,0 +1,65 @@
+# The shipped default preset: the source of the shipped defaults.
+# The two files governance/routing-policy.yml and governance/guardrails.yml
+# are generated from these files and governance/legacy-views.yml.
+# Change a default here, then run python3 scripts/generate-legacy-views.py.
+# Also raise the version in legacy-views.yml, then run the script with --pin
+# and again with --pin-hashes, which update the digest and drift fixtures.
+# cli/compass_pkg/legacy_adapter.py wrote the first version of these files from
+# those two files. The preset is the source now; edit it here.
+schema: 1
+stages:
+  assess:
+    order: 1
+    modes:
+      lightweight: {rank: 2}
+      thorough: {rank: 3}
+    locked: true
+  define:
+    order: 2
+    modes:
+      collapsed: {rank: 1}
+      lightweight: {rank: 2}
+      thorough: {rank: 3}
+      reproduce-first: {}
+  refine:
+    order: 3
+    modes:
+      skipped: {rank: 0}
+      collapsed: {rank: 1}
+      lightweight: {rank: 2}
+      thorough: {rank: 3}
+  plan:
+    order: 4
+    modes:
+      collapsed: {rank: 1}
+      thorough: {rank: 3}
+    entry: [dor-summary-filled, dor-problem-traces-up, dor-behaviour-is-gwt, dor-traceability-ids,
+      dor-affected-surface-named, dor-no-open-questions, dor-approach-still-fits]
+  breakdown:
+    order: 5
+    modes:
+      skipped: {rank: 0}
+      multiagent: {}
+  implement:
+    order: 6
+    modes:
+      thorough: {rank: 3}
+      expedited: {}
+      explore: {}
+  verify:
+    order: 7
+    modes:
+      lightweight: {rank: 2}
+      thorough: {rank: 3}
+      conclude: {}
+    exit: [dod-every-scenario-passes, dod-suite-green, dod-coverage-floor, dod-no-lint-errors,
+      dod-traceability-intact, dod-living-docs-updated, dod-follow-ups-settled]
+    locked: true
+  ship:
+    order: 8
+    modes:
+      lightweight: {rank: 2}
+      thorough: {rank: 3}
+      thorough-with-follow-up: {rank: 4}
+      graduate-or-discard: {}
+    locked: true

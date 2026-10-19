@@ -911,10 +911,13 @@ def _charged(r) -> int:
 ])
 def test_the_charged_work_matches_the_measured_time(tmp_path, command):
     """Supports `TRC-025` in pre-tool-hook-time-bounded/acceptance-criteria.md:
-    the cost table is in microseconds, so the seconds the hook takes are within
-    a factor of two or three of the work it charged. The bounds are loose so
-    that a loaded machine does not fail the test; a table that is far from the
-    clock fails it, which the boundary test above cannot see."""
+    the cost table is in microseconds, so the seconds the hook takes are at
+    most three times the work it charged. That upper bound is the one that
+    protects: a hook that costs more than it was charged is a hook that can pass
+    its limit. The lower bound is loose (0.2) because a faster machine, such as
+    the Linux CI runner, takes less than it was charged, which is safe; a table
+    far above the clock still fails it. The boundary test above cannot see
+    either."""
     hook = _hook_copy(tmp_path, {
         "\nTARGET_BYTES_LIMIT=2048\n":
         '\ntrap \'echo "WORK_USED=$WORK_USED" >&2\' EXIT\n'
@@ -924,7 +927,7 @@ def test_the_charged_work_matches_the_measured_time(tmp_path, command):
 
     assert r.returncode == 0, (r.returncode, r.stderr)
     ratio = seconds / (_charged(r) / 1e6)
-    assert 0.5 <= ratio <= 3.0, f"{seconds:.2f} s took for {_charged(r)} charged: {ratio:.2f}"
+    assert 0.2 <= ratio <= 3.0, f"{seconds:.2f} s took for {_charged(r)} charged: {ratio:.2f}"
 
 
 # ---------------------------------------------------------------------------

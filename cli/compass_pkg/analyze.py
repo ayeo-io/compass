@@ -799,10 +799,14 @@ def cmd_ci(args):
         # An issue whose configuration cannot be read (generation 0, say) is a
         # failure of that issue, reported, and the sweep goes on to the next.
         try:
-            check_failed = cmd_check(types.SimpleNamespace(
+            check_args = types.SimpleNamespace(
                 task=slug, _mode=getattr(args, "_mode", None),
                 evidence_out=getattr(args, "evidence_out", None),
-                no_count=True))
+                no_count=True)
+            check_exit = cmd_check(check_args)
+            # Advisory mode makes the exit code 0 whatever failed, so the
+            # summary counts the failures cmd_check recorded instead.
+            check_failed = check_exit or getattr(check_args, "failed_checks", 0)
         except CompassError as exc:
             print(f"  gate checks refused - {exc}")
             check_failed = 1

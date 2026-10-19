@@ -723,6 +723,7 @@ def cmd_check(args):
                        "a Spike is uncontrolled")
             run.ran = run.failures = 1
             _emit_check(run, args)
+            args.failed_checks = 1
             return exit_for_mode(1, mode)
         failures = 0
         ran = 0
@@ -790,6 +791,7 @@ def cmd_check(args):
 
         run.ran, run.failures = ran, failures
         _emit_check(run, args)
+        args.failed_checks = failures
         return exit_for_mode(failures, mode)
 
     all_guardrails = list(guardrails.get("defaults", [])) + list(guardrails.get("project", []))
@@ -959,4 +961,7 @@ def cmd_check(args):
     run.ran, run.failures, run.nothing = ran, failures, nothing_to_check
     run.advisory = advisory
     _emit_check(run, args)
+    # The exit code is 0 in advisory mode whatever failed. A caller that
+    # reports a summary (compass ci) reads the real count from here.
+    args.failed_checks = failures
     return exit_for_mode(failures, mode)

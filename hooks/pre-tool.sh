@@ -475,6 +475,7 @@ case "${TOOL:-}" in
      esac
      if [ "$GUARD_RUN" = 0 ] && [ "${TOOL:-}" = "Bash" ]; then
        case "${COMMAND:-}" in *'~'*|*HOME*|*/.*|*//*) GUARD_RUN=1 ;; esac
+       case "${_text:-} ${_bare:-}" in *.compass/*[*?[]*|*deleg*[*?[]*) GUARD_RUN=1 ;; esac
        _above=""
        case "${TRANSCRIPT:-}" in /*) _above="${TRANSCRIPT%/*}" ;; esac
        case "${COMMAND:-}" in *"${_above:-//no transcript//}"*) GUARD_RUN=1 ;; esac

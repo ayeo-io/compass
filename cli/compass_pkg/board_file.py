@@ -96,3 +96,15 @@ def write_page(path, text, mode):
     existed = os.path.lexists(path)
     atomic_io.atomic_write_text(path, text, mode=mode, temp_prefix=TEMP_PREFIX)
     return "refreshed" if existed else "created"
+
+
+def write_page_or_refuse(command, path, text, mode):
+    """`write_page`, with a file-system refusal (read-only folder, full disk)
+    turned into a one-line CompassError that names `command`, the path and
+    the cause. The guards pass a path the file system can still refuse; both
+    callers must refuse in one line, not with a traceback."""
+    try:
+        return write_page(path, text, mode)
+    except OSError as err:
+        raise CompassError(f"{command}: cannot write {path}: "
+                           f"{err.strerror or err}") from err

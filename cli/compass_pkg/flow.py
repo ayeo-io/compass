@@ -599,7 +599,8 @@ def _write_board_html(work_root, target):
     path = _check_html_target(target)
     page = board_cmd.build_page(_html_project_root(), work_root, False,
                                 datetime.datetime.now())
-    board_file.write_page(path, page, board_file.OUT_MODE)
+    board_file.write_page_or_refuse("compass flow --html", path, page,
+                                    board_file.OUT_MODE)
     print(f"compass flow: wrote the delivery board to {target}")
     return 0
 

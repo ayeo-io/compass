@@ -29,6 +29,61 @@ ADR-006 is the other half of this: backward compatibility is non-negotiable
 it, and a breaking change happens once, at a major version, with the reason
 recorded.
 
+### What changed at 7.0.0
+
+7.0.0 removes the released command spellings that 6.0.0 renamed, and keeps the
+readers for old forms until 8.0.0. The facts are in `docs/upgrade-7-0-0.md`.
+
+**What the release contains**
+
+- The document set: the artifact catalogue describes each document (who writes
+  it, who reads it and its sections), the delivery-approach record lives in the
+  documents folder, and rendered blocks keep the status, ticks and counts of a
+  document in step with the manifest and the evidence.
+- `compass issue migrate` moves and renames an issue archive to match, and settles
+  the status of done issues.
+- The shipped default moves to `default@7`. `default@6` stays as a frozen copy
+  in `governance/presets/default@6/`, so `compass policy update` can tell which
+  waived fields moved.
+- Guardrail `G5` counts only its own sign-off and asks for one only on the
+  irreversible labels. A person approves inside Claude Code, and can delegate
+  approvals to one named agent.
+- An autonomous project must meet the readiness floor before an issue is assessed.
+
+**What is removed.** These 8 command spellings are removed. Each now exits 2
+with the parser's usual error, and prints no alias notice:
+
+| Removed | Use instead |
+|---|---|
+| `approach summary` | `approach show` |
+| `issue set-status` | `issue status set`, or `issue status remove` for `active` |
+| `policy review-rules` | `review-rule list` |
+| `issue dashboard` | `issue render` |
+| `issue artifact` | `issue artifact set` |
+| `migrate` | `issue migrate` |
+| `issue subtask update` | `issue subtask set` |
+| `run --stage build` | `run --stage implement` |
+
+`issue labels sync` is removed as well. It is a ninth spelling, outside the 8
+because it was removed with its own hint: use `issue github sync`. The hint
+rows for `issue dashboard` and `issue labels sync` stay and each prints one line
+that names the new spelling.
+
+**What is kept until 8.0.0.** Old words, old approach names, copied 5.x
+governance (with the generated views `governance/routing-policy.yml` and
+`governance/guardrails.yml`) and `.compass/config.yml` are read until 8.0.0, not
+7.0.0. Only the command spellings end at 7.0.0
+(`governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`).
+
+**Upgrade and rollback.** Update every checkout and every installed plugin
+together. Take a copy of the two issue folders, `.compass/work` and
+`docs/compass`, outside the project. Then run `compass issue migrate`, read the
+list, and run `compass issue migrate --apply --i-have-a-copy`. Run
+`compass policy migrate --words` to rewrite the old words in `compass.yml`, and
+`compass policy update` to move the project to `default@7`. There is no
+supported rollback. The only way back is to restore the copy of the two issue
+folders, both together. Do not run a 6.x CLI on a 7.0.0 tree.
+
 ### What changed at 6.0.0
 
 6.0.0 makes the project's configuration a file a person edits and a tool can
@@ -37,9 +92,9 @@ and ships together with the delivery approaches as data (the decision record
 "routing policy as configuration goes ahead", in `governance/decisions/`),
 not because it removes a command. **It removes no command.** Every file and
 name that 5.x read is still read, and every released command spelling that 6.0.0
-renames still runs, until 7.0.0 removes them
-(`governance/decisions/2026-10-06-legacy-governance-readable-until-7-0-0.md`
-and `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md`).
+renames still runs. 7.0.0 removed the command spellings, and the readers stay
+until 8.0.0
+(`governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`).
 It does remove one output shape: the `compass flow --json` keys held, next_up,
 landed_this_week and abandoned, replaced by backlog, ready, in_progress,
 in_review, done_this_week and closed.
@@ -48,7 +103,7 @@ in_review, done_this_week and closed.
 becomes `thorough`, and the other two follow), the size `standard`, the run
 stage `build`, the friction `phase` key, the stored issue statuses and eight
 released command spellings. A manifest is written at schema `3.0`. The old words
-and the eight command spellings work until 7.0.0. The full tables, the notice a
+are read until 8.0.0. The eight command spellings were removed at 7.0.0. The full tables, the notice a
 first save prints and the `manifest.yml.v5.bak` backup are in
 `docs/upgrade-6-0-0.md`. `issue status remove` also reopens a closed issue, so
 a released script that reopened one keeps working.
@@ -64,7 +119,7 @@ reverse map, used only to rehearse a rollback before the tag, loses
 `blocked` flag, and the fact that a parked issue had no reason (it returns as
 a plain queued hold). The configuration files of a project (`compass.yml`,
 copied governance and `.compass/config.yml`) are read in their old words until
-7.0.0. A tool to rewrite them is owed before 7.0.0.
+8.0.0. `compass policy migrate --words` rewrites them.
 
 **What the release contains**
 
@@ -74,7 +129,7 @@ copied governance and `.compass/config.yml`) are read in their old words until
   default. A 6.x release of the default never changes a value that 6.0.0 defines.
 - The shipped default is a preset directory, `governance/presets/default/`.
   `governance/routing-policy.yml` and `governance/guardrails.yml` are views
-  generated from it, and they stay through 6.x for the projects, the drift
+  generated from it, and they stay until 8.0.0 for the projects, the drift
   report and the tests that read them.
 - A layer can add, set, replace or remove an entry. The classifier compares a
   layer with its parent. A change that loosens the parent needs a waiver with an

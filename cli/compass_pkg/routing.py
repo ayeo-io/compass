@@ -647,7 +647,7 @@ def read_size(dimension, value):
     new = word_map.tables()["size"].get(value) if dimension == "size" else None
     if new is None:
         return value
-    print(f"compass: size {value} is now {new}; the old word is read until 7.0.0.",
+    print(f"compass: size {value} is now {new}; the old word is read until 8.0.0.",
           file=sys.stderr)
     return new
 

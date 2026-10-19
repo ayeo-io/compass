@@ -100,7 +100,7 @@ def _rewrite_value(argv, table):
         else:
             rest[at] = f"{flag}={replacement}"
         notice = (f"compass: '{' '.join(row['old'])}' is now "
-                  f"'{' '.join(row['new'])}'; the old spelling works until 7.0.0.")
+                  f"'{' '.join(row['new'])}'; the old spelling works until 7.0.0.")  # legacy-date-scan: allow - an alias notice, which no row prints at 7.0.0
         return command + rest, notice
     return None
 
@@ -131,10 +131,10 @@ def rewrite(argv, table=None):
         # The old value picks the new command, so the notice names that one.
         picked = list(values[rest[at]])
         notice = (f"compass: '{' '.join(old + [rest[at]])}' is now "
-                  f"'{' '.join(picked)}'; the old spelling works until 7.0.0.")
+                  f"'{' '.join(picked)}'; the old spelling works until 7.0.0.")  # legacy-date-scan: allow - an alias notice, which no row prints at 7.0.0
         return picked + rest[:at] + rest[at + 1:], notice
     notice = (f"compass: '{' '.join(old)}' is now '{' '.join(new)}'; "
-              f"the old spelling works until 7.0.0.")
+              f"the old spelling works until 7.0.0.")  # legacy-date-scan: allow - an alias notice, which no row prints at 7.0.0
     return list(new) + rest, notice
 
 

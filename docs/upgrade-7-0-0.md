@@ -2,6 +2,39 @@
 
 This page lists what 7.0.0 changes and what to do about it. Each section is one change. The decisions behind them are in `architecture/decisions/`.
 
+## The released spellings end, and the old readers stay until 8.0.0
+
+7.0.0 removes the command spellings that 6.0.0 renamed and kept working through an alias. The readers for old words, old approach names, copied 5.x governance and `.compass/config.yml` do not end at 7.0.0: they stay until 8.0.0. The decision is `governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`.
+
+### What is removed
+
+Each spelling below exits 2 with the parser's usual error. The error for the 7 spellings that were aliases names no new spelling, so use this table. For `issue dashboard`, the error adds one line that names `issue render`.
+
+| Old | New |
+|---|---|
+| `approach summary` | `approach show` |
+| `issue set-status` | `issue status set`, or `issue status remove` for `active` |
+| `policy review-rules` | `review-rule list` |
+| `issue dashboard` | `issue render` |
+| `issue artifact` | `issue artifact set` |
+| `migrate` | `issue migrate` |
+| `issue subtask update` | `issue subtask set` |
+| `run --stage build` | `run --stage implement` |
+
+`issue labels sync` is removed too, and it is not one of the 8. Use `issue github sync`. The error for it adds one line that names the new spelling (see "The issue page on GitHub" below).
+
+### What is kept until 8.0.0
+
+- **Old words** in a manifest, a policy or a flag, such as the stage mode `full` and the size `standard`, are read until 8.0.0. The notice says "the old word is read until 8.0.0". `compass policy migrate --words` rewrites a project's `compass.yml`.
+- **Old approach names** are read until 8.0.0.
+- **Copied 5.x governance** and the generated views `governance/routing-policy.yml` and `governance/guardrails.yml` are read until 8.0.0.
+- **`.compass/config.yml`** is read until 8.0.0 when `compass.yml` is absent. `compass policy migrate` moves its settings into `compass.yml`.
+
+### What to do
+
+1. Replace each removed spelling in your scripts, notes and CI with the new one from the table.
+2. Run `compass policy migrate --words` and `compass policy migrate` before 8.0.0, so that no project depends on a reader that 8.0.0 removes.
+
 ## Artifact status and decisions taken
 
 Stage commands now write the status of each registered document. A document that is not accepted does not ship. The decision is `architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md`.

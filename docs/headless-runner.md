@@ -12,7 +12,7 @@ compass run <slug> --stage verify --stop-file .compass/STOP
 
 | Flag | Meaning |
 |---|---|
-| `--stage` | `implement`, which runs `/compass:implement`, or `verify`, which runs `/compass:verify`. Nothing else can run unattended. The stage was named `build` before 6.0.0; that spelling works until 7.0.0 and prints a notice on standard error. |
+| `--stage` | `implement`, which runs `/compass:implement`, or `verify`, which runs `/compass:verify`. Nothing else can run unattended. The stage was named `build` before 6.0.0; that spelling was removed at 7.0.0 and the parser refuses it. |
 | `--stop-file` | Required. Create this file to stop the run before its next session. A relative path is read from the project root, not from where the command was started. |
 | `--max-cycles` | Sessions to start at most. At most the RP-LOOP-006 ceiling, 30. |
 | `--max-minutes` | Minutes to run at most; decimals are allowed. At most the RP-LOOP-007 ceiling, 240. |

@@ -573,7 +573,7 @@ A refusal prints no document: the reason is on stderr and the exit is 2.
 
 `compass policy migrate --words [DIR]` rewrites a project's own configuration
 files in the 6.0.0 words. 6.0.0 reads an old word in these files through the
-word mapping, with a lint advisory (`docs/policy-lint.md`), and 7.0.0 refuses
+word mapping, with a lint advisory (`docs/policy-lint.md`), and 8.0.0 refuses
 it. The code is `cli/compass_pkg/config_words.py`. The decision to make it a
 mode of this verb is `governance/decisions/2026-10-16-the-word-rewrite-is-policy-migrate-words.md`.
 

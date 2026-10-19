@@ -352,9 +352,10 @@ def test_trc_s9_plugin_instructions_use_real_types_verbs_and_fields():
     assert "`set` for the report" in _read("skills/worktree-multiagent/SKILL.md")
 
     runtime = _read("skills/compass-runtime/SKILL.md")
-    assert "keeps working through\nan alias until 7.0.0" in runtime
+    assert "The aliases were removed at 7.0.0" in " ".join(runtime.split())
+    assert "until 7.0.0" not in runtime
     assert "unknown command rather than a\npointer" not in runtime
-    assert "docs/upgrade-6-0-0.md" in runtime
+    assert "docs/upgrade-7-0-0.md" in runtime
 
 
 def architect_registration_runs(text, tmp_path):

@@ -675,7 +675,7 @@ _VIEWS_HEADER = (
     "# What governance/routing-policy.yml and governance/guardrails.yml hold that the\n"
     "# preset in governance/presets/default/ has no field for: the values the generator\n"
     "# of those two views needs to rebuild them. Only that generator reads this file.\n"
-    "# It goes with the views at 7.0.0.\n")
+    "# It goes with the views at 8.0.0.\n")
 
 
 def legacy_views_text(policy, guardrails):

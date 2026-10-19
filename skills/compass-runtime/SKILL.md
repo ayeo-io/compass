@@ -52,11 +52,11 @@ Cross-issue: `/compass:status` (one issue or a flat list), `/compass:flow`
 (multi-role decisions). `/compass:init` is optional, and it is not what
 creates the project: the entry points above run `compass init` for you.
 
-A command spelling that a release held and 6.0.0 renamed keeps working through
-an alias until 7.0.0. The alias prints the new spelling on standard error and
-gives the new command's output and exit code. A spelling that no release held has no alias: its
-unknown-command message names the new spelling. `docs/upgrade-6-0-0.md` lists
-the aliases. `governance/terminology.yml` names each retired word beside the
+A command spelling that a release held and 6.0.0 renamed worked through an
+alias in 6.x. The aliases were removed at 7.0.0, so the old spelling now exits 2
+with the parser's usual error. A spelling that no release held never had an alias: its
+unknown-command message names the new spelling. `docs/upgrade-7-0-0.md` lists
+each removed spelling beside its new one. `governance/terminology.yml` names each retired word beside the
 one that replaced it, and `docs/glossary.md` says the same in prose; the
 current verbs are whatever `compass --help` lists.
 

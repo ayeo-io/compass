@@ -2,7 +2,7 @@
 the 6.0.0 words (issue `config-rewrite-tool`, scenarios CRW-1 to CRW-17).
 
 6.0.0 reads an old word in `compass.yml` or a policy-test fixture through
-`word_map` with a lint advisory, and 7.0.0 refuses it. The command maps each
+`word_map` with a lint advisory, and 8.0.0 refuses it. The command maps each
 file through that same mapping and replaces only the changed words in the
 file's text. Every test runs the CLI over a temporary project, with no
 network; the ones that need git make a repository there.
@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
-ADVISORY = "the old word is read until 7.0.0"
+ADVISORY = "the old word is read until 8.0.0"
 
 OLD_LAYER = (
     "# Our Compass settings.\n"

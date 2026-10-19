@@ -260,6 +260,26 @@ def test_crt_22_the_committed_table_partitions_the_collected_files():
         "not collected by pytest": sorted(union - collected)}
 
 
+def test_crt_22_the_committed_table_covers_the_test_files():
+    """A file the table lacks weighs the median, so a table that lists only
+    a few files splits the rest by guesswork. The table must hold a
+    duration for at least 80 percent of the files the shards split. A table
+    built from a full run holds about 86 percent of the files; a table of
+    the slowest tests alone held about 8 percent."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("ci_shard", SHARD)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(ROOT / "scripts"))
+    files = module.test_files(ROOT)
+    recorded = module.recorded_seconds(ROOT)
+    covered = [f for f in files if f in recorded]
+    assert len(covered) >= 0.80 * len(files), (len(covered), len(files))
+
+
 GH_SHIM = '''#!{python}
 import json, os, sys
 base = os.environ["FAKE_GH_DIR"]

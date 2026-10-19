@@ -96,12 +96,12 @@ is for. The same split is written from the other side in
    issue's entry lists: the ambiguity ledger, each entry resolved or assigned.
 
    **Where it goes.** `docs/compass/<created>-<issue-slug>/requirements-review.md`, where the
-   date is the manifest's `created:` field - not today's. On an approach that
-   earns the document (the full approach), register it:
+   date is the manifest's `created:` field - not today's. When the issue owes the
+   document (regular at `lightweight`, full at `thorough`), register it:
    `compass issue artifact set requirements-review --status draft --path <that path>`. The CLI
    refuses a path that climbs out of the project, so the record is checked
-   rather than claimed. The regular approach does not earn it, and the CLI refuses to
-   register it there: write the file and leave it unregistered. `compass next`
+   rather than claimed. A regular issue assessed before 7.0.0 does not owe it:
+   write the file and leave it unregistered. `compass next`
    takes the file as refine's record. If you had to create `docs/compass/`, **say so in one
    line** - a directory appearing with nothing said is how it gets deleted by
    hand or committed by accident.

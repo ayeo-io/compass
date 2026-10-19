@@ -405,6 +405,15 @@ project that sets it `false` on an approach that has it loosens the approach
 and needs a waiver (ADR-039). The decision is
 `architecture/decisions/ADR-065-regular-issues-owe-an-intent-and-shipping-issues-record-a-release-line.md`.
 
+The regular approach also owes `requirements-review` at depth `lightweight`: the
+three headings Self-QA of the spec, Ambiguity ledger and Gate of
+`artifacts.yml`'s `requirements-review.sections.lightweight`. Full keeps the
+thorough review. The hotfix approach owes `bug-report` at `thorough` and keeps
+`acceptance-criteria` at `lightweight`. Each is an added obligation, so a stored
+generation keeps its own set until a reassessment commits a new one. The
+decision is
+`architecture/decisions/ADR-072-a-project-scoped-design-decision-needs-a-record-and-regular-and-hotfix-owe-a-review-and-a-bug-report.md`.
+
 `governance/legacy-views.yml` holds what the two files contain that the
 catalogues have no field for. Only the generator of the views reads it, and it
 goes with the views at 7.0.0.

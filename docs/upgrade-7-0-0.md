@@ -600,3 +600,35 @@ A floor that raises an issue's approach keeps the issue's lower mode for a stage
 ### What to do
 
 Nothing for an issue with no stage waiver. For an issue with one, reassess it so that its manifest records the waived mode.
+
+## Design-decision scope, the regular requirements review and the hotfix bug report
+
+A project-scoped design decision cannot land without a decision record, a regular issue owes a short requirements review, and a hotfix owes a bug report. The decision is `architecture/decisions/ADR-072-a-project-scoped-design-decision-needs-a-record-and-regular-and-hotfix-owe-a-review-and-a-bug-report.md`. `docs/artifact-catalogue.md` owns the facts.
+
+### What breaks
+
+- **A landing refuses an open issue whose registered technical design holds a `Scope: project` decision that no record in `architecture/decisions/` names**, with the code `project-decision-unrecorded`. The refusal names the path the next `compass adr new` writes. A decision with no `Scope:` line is not judged, so no design written before 7.0.0 is refused.
+- **A new regular issue cannot land until its `requirements-review.md` is approved, and a new hotfix until its `bug-report.md` is approved**, through the check `artifacts-approved`.
+- **A project with `entry-exit-evaluation` on owes the seven Definition of Ready records at plan entry on each new regular issue**, because the regular approach now lists `requirements-review`. `compass next` names each one that is missing as `entry not met:`.
+
+### What changes
+
+- **Each design decision of the technical design template has a `Scope:` line**, `issue` or `project`. The value is read in any case and may be followed by punctuation or a dash and a reason, so `Scope: Project - later issues follow it` declares the project scope. A line such as `Scope: project and more` is prose: the decision counts as unscoped, and `compass issue lint` prints a note naming the line. A design that already holds a `Scope: Project` line now counts as project-scoped, so the landing refusal can fire on it. Architecture notes propose the project-scoped decisions under Candidate decision records.
+- **The regular approach owes `requirements-review` at depth `lightweight`**, with three headings: Self-QA of the spec, Ambiguity ledger and Gate. The Gate holds the Definition of Ready.
+- **The hotfix approach owes `bug-report` at depth `thorough`.** It keeps `acceptance-criteria` at `lightweight`.
+- **The routing policy view is version 3.2.0.**
+
+### What to do
+
+1. Nothing for issues already assessed. An open issue owes the two documents only after `compass approach evaluate --write` commits a generation from the new default.
+2. Give each design decision a `Scope:` line. For a `project` decision, run `compass adr new <slug>`, write the record, and cite its ADR id in the decision's block.
+3. On a regular issue, register the requirements review at refine with `compass issue artifact set requirements-review --status draft --path <file>`. On a hotfix, write and register `bug-report.md` at assess.
+
+### New keys and codes
+
+| Name | Where | Meaning |
+|---|---|---|
+| `Scope:` | a design decision of `technical-design.md` | Whether the decision holds for the issue or the whole project |
+| `project-decision-unrecorded` | a refusal code | A landing of an issue with a project-scoped decision and no record |
+| `requirements-review: lightweight` | `approaches.regular.artifacts` | The regular approach owes a lightweight requirements review |
+| `bug-report: thorough` | `approaches.hotfix.artifacts` | The hotfix approach owes a bug report |

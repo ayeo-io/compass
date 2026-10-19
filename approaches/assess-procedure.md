@@ -131,7 +131,13 @@ force; if it is still a spike, leave the marker in place.
    under the headings `compass issue template show intent --depth <depth>`
    prints, with one `- INT-n: <outcome>` line for each outcome, and register
    it with `compass issue artifact set intent --status draft --path <that
-   path>`. The spec author corrects it at define. Then run
+   path>`. The spec author corrects it at define. When the approach is a
+   hotfix, also write `docs/compass/<created>-<slug>/bug-report.md` under the
+   headings `compass issue template show bug-report --depth thorough` prints,
+   from what the defect report says, and register it with `compass issue
+   artifact set bug-report --status draft --path <that path>`. The define
+   stage writes the failing test against it, and `compass ship-commit`
+   refuses the hotfix until it is approved. Then run
    `compass approach evaluate --issue <slug> --write --justify
    <dimension>="<why>"` with one `--justify` for each assessed dimension (a
    changed value on a re-run needs a new one; an unchanged value keeps its

@@ -30,7 +30,7 @@ Fill every {{PLACEHOLDER}}.
 
 ## Candidate decision records
 
-{{Each decision the plan should record as a decision record: its title and the question it settles.}}
+{{Each decision the plan should record as a decision record: its title and the question it settles. Name the design decisions you propose as project-scoped - those the planner marks `Scope: project`, which cannot land until a record in architecture/decisions/ names them.}}
 
 ## Recommendations
 

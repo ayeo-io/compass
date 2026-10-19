@@ -284,7 +284,8 @@ def scope_bloat(task_dir, slug, task):
     lines = [line for line in text.splitlines() if line and not line[0].isspace()]
 
     # A reassessment dated on or after the matching line suppresses the
-    # reminder: it was already filed (TRC-C3).
+    # reminder: it was already filed (TRC-C3). An `unchanged` entry counts: a
+    # reassess given a reason after the bloat line is an answer to it.
     try:
         entries = task.get("reassessments") or task.get("reframes") or []
         dates = [r.get("date", "") for r in entries if r.get("date")]

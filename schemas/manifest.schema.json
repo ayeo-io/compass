@@ -263,6 +263,12 @@
           "dispatched_at": {
             "type": "string"
           },
+          "orchestration": {
+            "enum": [
+              "single-unit"
+            ],
+            "description": "Set when the distribution map declares `units: 1`: the main session ran the one unit itself, with the map as its brief and the verification report as its report. Written by `compass issue artifact set distribution-map` (ADR-071)."
+          },
           "reviewed_revision": {
             "type": "string",
             "description": "The commit the latest review read.",
@@ -947,9 +953,10 @@
               "judgement",
               "policy-correction",
               "scope-change",
-              "configuration"
+              "configuration",
+              "unchanged"
             ],
-            "description": "What kind of re-assessment this was. Only 'judgement' feeds compass retro's re-sizing signal - a policy correction, a scope change or a change to the issue's own config: layer (configuration) is not the assessment having misread the work."
+            "description": "What kind of re-assessment this was. Only 'judgement' feeds compass retro's re-sizing signal - a policy correction, a scope change, a change to the issue's own config: layer (configuration) or a reassess that left the approach as it was (unchanged, which keeps only its reason) is not the assessment having misread the work."
           },
           "generation": {
             "type": "object",

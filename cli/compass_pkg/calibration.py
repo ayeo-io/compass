@@ -129,7 +129,9 @@ def _find_reframe_debt(tasks, work):
         except OSError:
             continue
 
-        # Latest re-assessment date for this issue
+        # Latest re-assessment date for this issue. An `unchanged` entry counts
+        # too: a reassess given a reason after the bloat line was filed is an
+        # answer to it, so it suppresses the reminder.
         reframes = task.get("reassessments") or []
         reframe_dates = sorted(
             r.get("date", "") for r in reframes if r.get("date")
@@ -338,6 +340,11 @@ def derive_friction(slug, task, work):
     entries = []
     for rf in (task.get("reassessments") or []):
         if not isinstance(rf, dict):
+            continue
+        # An `unchanged` entry records a reason, not a misjudgement; a
+        # `configuration` entry records a changed config: layer. Neither is a
+        # mis-route.
+        if rf.get("kind") in ("unchanged", "configuration"):
             continue
         fr = rf.get("from_route", "?")
         to = rf.get("to_route", "?")
@@ -691,7 +698,10 @@ def cmd_calibration(args):
     unweighed = {}
     transitions = {}
     for slug, t in tasks:
-        rfs = t.get("reassessments") or []
+        # An `unchanged` entry records a reason, not a re-sizing, so it is
+        # neither a re-assessed issue nor a re-assessment.
+        rfs = [rf for rf in (t.get("reassessments") or [])
+               if rf.get("kind") != "unchanged"]
         if rfs:
             reframed_tasks += 1
         for rf in rfs:

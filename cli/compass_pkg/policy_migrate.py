@@ -380,7 +380,10 @@ def _unexpressed(base_views, copy_views):
     found = []
     for gate, stages in (copy_views.get("guardrails", {}).get("checked_at") or {}).items():
         was = (base_views.get("guardrails", {}).get("checked_at") or {}).get(gate) or []
-        if list(stages[1:]) != list(was[1:]):
+        # A copy and a release may spell a stage with its retired name; the
+        # current views use the current names. Compare the current names.
+        if [legacy_adapter._stage(s) for s in stages[1:]] != [
+                legacy_adapter._stage(s) for s in was[1:]]:
             first = stages[0] if stages else "none"
             found.append({"code": UNEXPRESSED, "path": f"gates.{gate}.checked_at",
                           "message": f"{gate} is checked at {', '.join(stages)}; compass.yml "

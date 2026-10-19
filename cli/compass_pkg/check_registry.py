@@ -115,7 +115,9 @@ _ENTRIES = (
     _entry("evidence-matches-tree", _check_evidence_matches_tree),
     _entry("rendered-blocks-current", _check_rendered_blocks_current),
     _entry("borrowed-documents-answered", _check_borrowed_documents_answered),
-    _entry("multiagent-run-recorded", _check_multiagent_run_recorded),
+    # 1.1.0: accepts a single-unit record, which only a map registered with
+    # `units: 1` writes; no stored record has one, so the corpus verdicts hold (ADR-071).
+    _entry("multiagent-run-recorded", _check_multiagent_run_recorded, version="1.1.0"),
     _entry("artifacts-approved", _check_artifacts_approved),
     _entry("nfr-rows-resolved", _check_nfr_rows_resolved),
     # The trigger patterns are declared data a project layer can extend (ADR-033);

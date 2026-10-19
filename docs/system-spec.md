@@ -4562,3 +4562,10 @@ The Stop hook still warns about every other issue when it cannot read one issue'
 Compass 6.1.0 is released.
 
 - `TRC-001` Given the release files When the version consistency test runs Then every file states 6.1.0
+
+### refuse-on-major-version-mismatch (completed 2026-10-19)
+
+Commands refuse an issue whose stored configuration was built by another major version of Compass, and name the command that repairs it.
+
+- `IR-13` every command that reads the issue refuses
+- `IR-14` the commands that repair a mismatch still run

@@ -354,6 +354,16 @@ A regular issue now opens with a short intent, and every issue that ships record
 2. Give each new shipping issue its line before it lands: `compass ship-commit --issue <slug> --release-note "<text written for a user>"`, or the same flag on `quick-fix finish` or `acceptance record`.
 3. Update agent instructions and scripts that run a quick fix to `compass quick-fix finish -m "<message>" --release-note "<one sentence for a user>" --no-commit -- <test command>`. Without the flag, the `compass ship-commit` command that `--no-commit` prints asks for `--release-note`.
 
+A project whose `compass.yml` has replaced a shipping approach (an entry with `replace: true`) must add the new fields to that entry. This applies to quick fix, regular, hotfix and full. An entry written for 6.0 has neither field, so `compass policy lint` fails it with `C-LOOSENING`. It reports `approaches.<name>.release_line`, because `true` is stricter than `false`. On regular and full it also reports `approaches.<name>.artifacts` when `intent` is missing. The replaced regular entry needs `release_line: true` and `intent: lightweight` or deeper. The replaced full entry needs `release_line: true` and `intent: thorough`. The replaced quick fix and hotfix entries need only `release_line: true`. A project waiver on the entry is the alternative: it needs an `owner`, an `approved_by` and an `approved_on`, and `docs/policy-lint.md` lists the waiver codes. Run `compass policy lint` after the upgrade to see what is missing. A replaced regular entry adds these fields to its 6.0 shape:
+
+```yaml
+approaches:
+  regular:
+    replace: true
+    release_line: true
+    artifacts: {intent: lightweight, acceptance-criteria: thorough, technical-design: thorough, distribution-map: lightweight, verification-report: thorough}
+```
+
 ### New keys and verbs
 
 | Name | Where | Meaning |

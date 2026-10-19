@@ -75,6 +75,14 @@ def cmd_terminology(args):
     key = raw.lower().replace(" ", "-")
     entry = terms.get(key)
     if entry is None:
+        # An entry can list another form of its name in `also`, as `catalog`
+        # lists `catalogue`. A prose `also` never equals a bare name.
+        for name, candidate in terms.items():
+            other = str((candidate or {}).get("also", "")).strip().lower().replace(" ", "-")
+            if other and other == key:
+                key, entry = name, candidate
+                break
+    if entry is None:
         near = [n for n in sorted(terms) if key in n or n in key]
         hint = f" Did you mean: {', '.join(near)}?" if near else ""
         raise CompassError(

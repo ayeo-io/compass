@@ -177,8 +177,27 @@ def test_trc_007(tmp_path, written, expected):
     assert (root / "compass.yml").read_bytes() == before
 
 
+def _documented_tags():
+    """The tags in the language table of the configuration guide."""
+    import re
+
+    text = (ROOT / GUIDE).read_text(encoding="utf-8")
+    section = re.search(r"^### `language`\n(.*?)(?=^#{1,3} |\Z)", text,
+                        flags=re.M | re.S).group(1)
+    rows = re.findall(r"^\| ([^|]+?) \| `([^`]+)` \|$", section, flags=re.M)
+    return [tag for name, tag in rows if name != "Language"]
+
+
+def _rejected(tags):
+    return [tag for tag in tags if language.canonical(tag) is None]
+
+
 def test_trc_008():
-    pytest.fail("owned by U3")
+    tags = _documented_tags()
+    assert len(tags) == 39
+    assert _rejected(tags) == []
+    # A planted row with the wrong separator makes the check fail.
+    assert _rejected(tags + ["en_US"]) == ["en_US"]
 
 
 def test_trc_009(tmp_path, monkeypatch):

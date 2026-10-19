@@ -866,6 +866,20 @@ def test_trc_069_the_old_version_value_fails_the_version_check():
     assert _version_is_past("2.0.0-pre22", 22)
 
 
+def test_trc_069_the_old_term_resolves_to_the_catalog_entry():
+    """`compass terminology catalogue` finds the entry that lists `catalogue`
+    as its other form."""
+    import subprocess
+    import sys
+
+    cli = Path(__file__).resolve().parent.parent / "cli" / "compass"
+    done = subprocess.run([sys.executable, str(cli), "terminology", "catalogue"],
+                          capture_output=True, text=True, timeout=120)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert done.stdout.startswith("catalog  (vocabulary"), done.stdout
+    assert "also:    catalogue" in done.stdout
+
+
 def test_every_term_states_its_meaning():
     """A term without a meaning is a name, not vocabulary (`TRC-A2`)."""
     missing = [

@@ -17,9 +17,9 @@ The classifier gave every edit to a trigger list the verdict `incomparable`, bec
 
 Three earlier decisions bound the answer:
 
-- ADR-037: a configuration change is classified by its effect, and the check registry owns the direction of a check parameter. Its table row for a parameter gives `none` where no direction is declared.
-- ADR-064: the document set gains the section checks. It states that a project sets the whole trigger list with a waiver.
-- ADR-039: a loosening needs a signed waiver. The waiver process does not change.
+- A configuration change is classified by its effect, and the check registry owns the direction of a check parameter (ADR-037). Its table row for a parameter gives `none` where no direction is declared.
+- The document set gains the section checks, and a project sets the whole trigger list with a waiver (ADR-064).
+- A loosening needs a signed waiver, and the waiver process does not change (ADR-039).
 
 ## Decision
 
@@ -46,7 +46,7 @@ The rule covers `trigger_paths` and `trigger_contents` of `contracts-declared` o
 
 **Positive:**
 - A project that adds a trigger path needs no waiver.
-- A loosening still needs one.
+- A loosening still needs one, where the check is placed on a gate, a stage or an artifact. The shipped preset places `contracts-declared` on none, so it asks for no waiver until a project places the check.
 
 **Negative:**
 - A project that replaces a glob with a wider one files a waiver.

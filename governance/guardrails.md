@@ -213,7 +213,11 @@ _(none yet - the shipped default guardrails apply as-is)_
     changes. Under the same rule, removing or replacing an entry needs a waiver,
     because fewer entries check fewer changes. A reordered or
     repeated entry is equal. A list that is missing or malformed cannot be
-    compared and also needs a waiver.
+    compared and also needs a waiver. These waiver rules apply where the check
+    is placed on a gate, a stage or an artifact, because the classifier
+    compares only a check that one of them lists. The shipped preset places
+    `contracts-declared` on none, so it asks for no waiver until a project
+    places the check.
   - **Four conditions make either check decline**, reporting `nothing to
     check`, before it reads a document. The first that holds decides the
     detail:

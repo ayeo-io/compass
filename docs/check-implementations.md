@@ -55,7 +55,7 @@ decides which detail an archived issue shows, and the corpus has one case for ea
   is `fnmatch` on the project-relative path, where `*` also matches `/`.
 - A project cannot extend `trigger_paths` with `add:`, because `params` is a map and `add:` applies only to a
   catalogue field. It sets the whole list in its layer. Adding entries needs no waiver, because more trigger paths make
-  the check run on more changes. Removing or replacing an entry needs a project waiver.
+  the check run on more changes. Removing or replacing an entry needs a project waiver where the check is placed on a gate, a stage or an artifact. The shipped preset places `contracts-declared` on none, so it asks for no waiver until a project places the check.
 - `nfr-rows-resolved` reads a Then as numbered when a digit sits on the Then line or on a Then, And or But line
   after it. Its lookahead stops `TRC-1` matching `TRC-10`.
 

@@ -113,6 +113,7 @@ Rules:
 | [ADR-071](ADR-071-a-one-unit-breakdown-is-recorded-from-the-distribution-maps-units-line.md) | A one-unit breakdown is recorded from the distribution map's units line | proposed | amends ADR-025; with ADR-006, ADR-038 and ADR-050 |
 | [ADR-073](ADR-073-a-list-parameter-tightens-by-superset-and-narrowing-it-is-a-waiver.md) | A list parameter tightens by superset; narrowing it is a waiver | accepted | amends ADR-037 and ADR-064 for `trigger_paths` and `trigger_contents` of `contracts-declared` only; with ADR-039 |
 | [ADR-074](ADR-074-the-tree-being-edited-names-the-issue-that-judges-an-edit.md) | The tree being edited names the issue that judges an edit | accepted | extends ADR-005 and ADR-063; with ADR-006 and ADR-048 |
+| [ADR-075](ADR-075-a-readiness-commands-process-group-stops-with-sigterm-then-sigkill-after-two-seconds.md) | A readiness command's process group stops with SIGTERM, then SIGKILL after two seconds | accepted | amends ADR-061 decision 5; with ADR-009 and ADR-025 |
 
 ## Principle → ADR mapping
 

@@ -37,9 +37,12 @@ The CLI ships one default as `governance/presets/default`. When a new major
 ships, the previous major must stay in the repository as
 `governance/presets/default@<major>` (a copy of its preset files), because the
 command needs the old values to tell which waived fields moved. A project
-whose major has no kept folder gets exit 2. The tests use a fixture framework
-folder that holds `default@6` and a changed `default` at major 7, since only
-default@6 ships today.
+whose major has no kept folder gets exit 2. The kept copy keeps the version
+line of the preset it copies, so it can be older than the release: v6.1.0 ships
+`version: 6.0.0`, and `default@6` holds that same file, so do not edit it. The
+live default wins for its own major, so a kept folder never replaces it. The
+tests use a fixture framework folder that holds `default@6` and a changed
+`default` at major 7, so they hold before and after 7.0.0 ships.
 
 A project two majors behind (on default@5 when the CLI keeps default@6 and
 default@7) can move only if its own major is kept. When it is, `--to` can skip

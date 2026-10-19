@@ -163,7 +163,10 @@ copied governance and `.compass/config.yml`) are read in their old words until
 A release that moves the shipped default to a new major (`default@7` after
 `default@6`) must keep the previous major's preset files in
 `governance/presets/default@<major>`, a copy of the last preset that major
-shipped. `compass policy update` reads both folders to tell which waived
+shipped. The copy keeps the version line of that preset, so it can be older
+than the release: v6.1.0 ships `version: 6.0.0`, and `default@6` holds that
+same file. The copy is frozen, so do not edit it. The live default wins for
+its own major. `compass policy update` reads both folders to tell which waived
 fields moved, and exits 2 for a project on a major that is not kept. Pin the
 new preset with `python3 scripts/generate-legacy-views.py --pin`; the old
 pins stay. `tests/test_policy_update.py` fails when a kept folder does not

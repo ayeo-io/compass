@@ -41,6 +41,8 @@ Every target passes the path guard before any manifest is read. The refusal name
 - a directory;
 - a path in a folder that does not exist.
 
+If the file system then refuses the write (for example a read-only folder or a full disk), the command refuses in one line that names the path and the cause, and exits non-zero.
+
 The default path has one more check. It is refused, with a message that suggests `--out`, when it already exists as a link, as something other than a regular file, or (where the system has `os.getuid`) as a file another user owns. On a shared temp folder another user can plant a link at a predictable name.
 
 The page is written to a new file made exclusively in the same folder, with a fixed prefix that is not formed from the board file's name, and then moved into place. A link planted at a guessed temporary name is never followed, and no temporary file is left behind.

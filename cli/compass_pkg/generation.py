@@ -27,7 +27,7 @@ that was whole. This module never adopts a leftover folder on its own.
 """
 # DEPENDENCY: standard library (dataclasses, datetime, os, re, shutil);
 # PyYAML (bundled); compass_pkg.atomic_io, compass_pkg.core (CompassError,
-# load_yaml and manifest_path, only).
+# load_manifest_mapping and manifest_path, only).
 from __future__ import annotations
 
 import datetime
@@ -41,7 +41,8 @@ import yaml
 from compass_pkg.atomic_io import (StrictYamlError, atomic_write_text, digest,
                                    load_yaml_strict, locked)
 from compass_pkg import status_words, word_map
-from compass_pkg.core import (CompassError, load_yaml, manifest_path,
+from compass_pkg.manifest_store import load_manifest_mapping
+from compass_pkg.core import (CompassError, manifest_path,
                               prepare_manifest_write)
 
 FIX_ZERO = "compass approach evaluate --write"
@@ -229,7 +230,7 @@ def states(task_dir, manifest=None):
     for the number the manifest names when its folder is not there."""
     task_dir = os.fspath(task_dir)
     if manifest is None:
-        manifest = load_yaml(manifest_path(task_dir))
+        manifest = load_manifest_mapping(manifest_path(task_dir))
     current = number(manifest) or 0
     found = []
     held = _numbers(task_dir)
@@ -334,7 +335,7 @@ def write_proposal(task_dir, manifest, overlay):
             f"{os.path.basename(os.path.normpath(task_dir))}` first")
     target = held + 1
     with locked(os.path.join(task_dir, LOCK)):
-        disk = load_yaml(manifest_path(task_dir))
+        disk = load_manifest_mapping(manifest_path(task_dir))
         if number(disk) != held:
             raise CompassError(f"{manifest_path(task_dir)} changed since it was read (it "
                                f"now names {_named(number(disk))}); run the command again")
@@ -367,7 +368,7 @@ def discard(task_dir, n=None):
     task_dir = os.fspath(task_dir)
     slug = os.path.basename(os.path.normpath(task_dir))
     with locked(os.path.join(task_dir, LOCK)):
-        manifest = load_yaml(manifest_path(task_dir))
+        manifest = load_manifest_mapping(manifest_path(task_dir))
         current = number(manifest) or 0
         above = {g.number: g for g in states(task_dir, manifest) if g.number > current}
         if n is None:
@@ -586,7 +587,7 @@ def preflight(task_dir, resolution, manifest, invalidated=None, adopt=None):
     lock; this is the early look. The lint runs at most once: the resolution's
     lint hook is cleared after it passes."""
     task_dir = os.fspath(task_dir)
-    disk = load_yaml(manifest_path(task_dir))
+    disk = load_manifest_mapping(manifest_path(task_dir))
     n = number(disk) or 0
     previous = load(task_dir, n) if n else None
     documents = _documents(task_dir, n + 1, resolution,
@@ -642,7 +643,7 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
     stamp = stamp or (lambda mapping, old, new: None)
     path = manifest_path(task_dir)
     with locked(os.path.join(task_dir, LOCK)):
-        disk = load_yaml(path)
+        disk = load_manifest_mapping(path)
         held = number(disk)
         if held != number(manifest):
             raise CompassError(

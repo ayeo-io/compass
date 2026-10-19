@@ -140,7 +140,8 @@ decisions), risk `cross-cutting` (a misconfigured limiter degrades
 something every API consumer touches), familiarity `brownfield-mapped`. It tags `labels: [public-api]`.
 
 Then the mechanism takes over. `/compass:assess` shells out to
-`compass approach evaluate --write`, which applies `governance/routing-policy.yml`
+`compass approach evaluate --write`, which applies the project's resolved
+configuration (`compass.yml` over the shipped default)
 deterministically - composing the candidate delivery approach, applying the
 floors and caps, assembling the gate set - and folds `delivery_approach`,
 `stages`, and `gates` back into `manifest.yml`. For this issue it lands on

@@ -426,8 +426,8 @@ def cmd_land_commit(args):
 
         # What the issue's own commits at the tip added must be the issue's:
         # a commit a git hook widened, refused once, must not land when
-        # shipped again. `tip_scope.tip_own_paths` passes over a merge of
-        # the base branch and the living spec `ship-commit` writes itself.
+        # shipped again. `tip_scope.tip_own_paths` passes over a spec-only
+        # commit and a merge of the base branch.
         if _git(["rev-parse", "--verify", "-q", "HEAD^1"], cwd).returncode == 0:
             added, base_note = tip_own_paths(cwd)
             head_owned, head_artifacts = _land_scope(head_task, head_slug)

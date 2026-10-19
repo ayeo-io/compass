@@ -1086,6 +1086,40 @@ BASE_PYTHON3 = 3
 #: are the main check; they do not depend on timing.
 MAX_MARGINAL_OVER_REFERENCE = 2.5
 
+#: The 5-over-none ratio limit, and how far past each limit a measurement can
+#: be and still be measured once more. A second added process (about one
+#: reference more) lands past the marginal band on a slower runner and fails
+#: at once; on a fast machine it is borderline, then fails again.
+MAX_RATIO_OVER_NONE = 2.0
+BORDERLINE_RATIO = 0.4
+BORDERLINE_MARGINAL = 0.5
+
+
+def judge_hook_cost(measure):
+    """Pass, or fail, a hook cost measurement, measuring once more only when
+    it is borderline.
+
+    Borderline is at a limit or above, but below the limit plus its band, for
+    either the ratio or the marginal. Machine load moves both by a few tenths,
+    so a second measurement settles it. A real slowdown fails both. A
+    measurement past a band fails at once. Returns the verdict and every
+    measurement taken.
+    """
+    def within(m):
+        return m["ratio"] <= MAX_RATIO_OVER_NONE and m["marginal"] < MAX_MARGINAL_OVER_REFERENCE
+
+    def far_past(m):
+        return (m["ratio"] >= MAX_RATIO_OVER_NONE + BORDERLINE_RATIO
+                or m["marginal"] >= MAX_MARGINAL_OVER_REFERENCE + BORDERLINE_MARGINAL)
+
+    measured = [measure()]
+    if within(measured[0]):
+        return "pass", measured
+    if far_past(measured[0]):
+        return "fail", measured
+    measured.append(measure())
+    return ("pass" if within(measured[-1]) else "fail"), measured
+
 
 def _budget_project(root, deps):
     project = Project(root)
@@ -1118,8 +1152,58 @@ def _work_folders_listed(project, events, allowed):
     return bad
 
 
+class TestHookCostJudging:
+    """The judging of a hook cost measurement, with fake measurements.
+
+    Scenario id: `TRC-001` in hook-cost-test-stable-under-load/acceptance-criteria.md
+    """
+
+    @staticmethod
+    def measurement(ratio, marginal):
+        return {"ratio": ratio, "marginal": marginal}
+
+    def judge(self, measurements):
+        results = iter(measurements)
+        return judge_hook_cost(lambda: next(results))
+
+    def test_within_both_limits_is_measured_once(self):
+        verdict, measured = self.judge([self.measurement(1.4, 1.6)])
+        assert (verdict, len(measured)) == ("pass", 1)
+
+    def test_borderline_then_within_passes(self):
+        verdict, measured = self.judge([self.measurement(1.9, 2.6), self.measurement(1.5, 1.8)])
+        assert (verdict, len(measured)) == ("pass", 2)
+
+    def test_borderline_twice_fails(self):
+        verdict, measured = self.judge([self.measurement(1.9, 2.6), self.measurement(1.9, 2.7)])
+        assert (verdict, len(measured)) == ("fail", 2)
+
+    def test_the_ratio_limit_is_retried_too(self):
+        # 5 deps over none at 2.2 breaks the 2.0 limit while the marginal is fine.
+        verdict, measured = self.judge([self.measurement(2.2, 1.6), self.measurement(1.8, 1.6)])
+        assert (verdict, len(measured)) == ("pass", 2)
+
+    def test_past_the_borderline_band_fails_at_once(self):
+        verdict, measured = self.judge([self.measurement(1.5, 3.2)])
+        assert (verdict, len(measured)) == ("fail", 1)
+        verdict, measured = self.judge([self.measurement(2.6, 1.6)])
+        assert (verdict, len(measured)) == ("fail", 1)
+
+    @pytest.mark.parametrize("marginal_without, verdict, attempts", [
+        (2.0, "fail", 1),   # a slower runner: the extra process is past the band
+        (1.63, "fail", 2),  # the development machine: borderline, then fails again
+    ])
+    def test_a_planted_extra_process_fails(self, marginal_without, verdict, attempts):
+        # One more python3 process costs about one reference, so the marginal
+        # over reference rises by 1.0 on every measurement.
+        def measure():
+            return self.measurement(1.5, marginal_without + 1.0)
+        got, measured = judge_hook_cost(measure)
+        assert (got, len(measured)) == (verdict, attempts)
+
+
 @pytest.mark.serial
-def test_dbi_12_hook_cost_budget(tmp_path):
+def test_dbi_12_hook_cost_budget(tmp_path, request):
     import statistics
     import time
     counts = {}
@@ -1153,28 +1237,43 @@ def test_dbi_12_hook_cost_budget(tmp_path):
                  "import sys; sys.path.insert(0, sys.argv[1]); import compass_pkg; "
                  "from compass_pkg.core import load_manifest; load_manifest(sys.argv[2])",
                  str(CLI_DIR), str(projects[5].dir("met-0"))]
-    times = {0: [], 1: [], 5: [], "reference": []}
-    for round_ in range(12):
-        for deps, key in ((None, 0), (1, 1), (5, 5)):
-            start = time.perf_counter()
-            done = hook(projects[deps], code_file(projects[deps]))
-            elapsed = time.perf_counter() - start
-            assert done.returncode == 0, done
-            if round_:
-                times[key].append(elapsed)
-        start = time.perf_counter()
-        subprocess.run(reference, check=True, capture_output=True, timeout=60)
-        if round_:
-            times["reference"].append(time.perf_counter() - start)
-    median = {k: statistics.median(v) for k, v in times.items()}
-    ratio = median[5] / median[0]
-    marginal = (median[5] - median[0]) / median["reference"]
-    print("DBI-12 hook medians: 0 deps %.4fs, 1 dep %.4fs, 5 deps %.4fs; reference %.4fs; "
-          "5 over 0 %.2f (limit 2.0); marginal over reference %.2f (limit %.1f)"
-          % (median[0], median[1], median[5], median["reference"], ratio, marginal,
-             MAX_MARGINAL_OVER_REFERENCE))
-    assert ratio <= 2.0, median
-    assert marginal < MAX_MARGINAL_OVER_REFERENCE, median
+    keys = [(None, 0), (1, 1), (5, 5), (None, "reference")]
+    # pytest hides captured output unless a test fails. Suspending the capture
+    # while printing puts the figures in the CI log on a pass.
+    capture = request.config.pluginmanager.getplugin("capturemanager")
+
+    def measure():
+        times = {0: [], 1: [], 5: [], "reference": []}
+        # Interleaved rounds with a rotating start order: a load burst slows
+        # every command alike. The first round is a warm-up and is discarded.
+        for round_ in range(12):
+            shift = round_ % len(keys)
+            for deps, key in keys[shift:] + keys[:shift]:
+                start = time.perf_counter()
+                if key == "reference":
+                    subprocess.run(reference, check=True, capture_output=True, timeout=60)
+                else:
+                    done = hook(projects[deps], code_file(projects[deps]))
+                    assert done.returncode == 0, done
+                elapsed = time.perf_counter() - start
+                if round_:
+                    times[key].append(elapsed)
+        median = {k: statistics.median(v) for k, v in times.items()}
+        ratio = median[5] / median[0]
+        marginal = (median[5] - median[0]) / median["reference"]
+        line = ("DBI-12 hook medians: 0 deps %.4fs, 1 dep %.4fs, 5 deps %.4fs; reference %.4fs; "
+                "5 over 0 %.2f (limit %.1f, borderline below %.1f); marginal over reference "
+                "%.2f (limit %.1f, borderline below %.1f)"
+                % (median[0], median[1], median[5], median["reference"], ratio,
+                   MAX_RATIO_OVER_NONE, MAX_RATIO_OVER_NONE + BORDERLINE_RATIO, marginal,
+                   MAX_MARGINAL_OVER_REFERENCE,
+                   MAX_MARGINAL_OVER_REFERENCE + BORDERLINE_MARGINAL))
+        with capture.global_and_fixture_disabled():
+            print("\n" + line, flush=True)
+        return {"ratio": ratio, "marginal": marginal, "line": line}
+
+    verdict, measured = judge_hook_cost(measure)
+    assert verdict == "pass", "; then ".join(m["line"] for m in measured)
 
 
 # --- DBI-16: ship-commit ----------------------------------------------------------------

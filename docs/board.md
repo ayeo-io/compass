@@ -11,7 +11,7 @@ The page is advisory. Nothing the board does changes issue state.
 | `compass board render` | Writes the page, prints its path and asks the default browser to open it once. |
 | `compass board render --no-open` | Writes the page and prints its path. No browser is asked. |
 | `compass board refresh` | Rewrites the page in place and prints its path. It says whether it created or refreshed the file. It never opens a browser. |
-| `compass flow --html FILE` | Writes the same page to FILE. It is the page `compass board render --out FILE` writes. |
+| `compass flow --html FILE` | Writes the same page to FILE. It is the page `compass board render --out FILE` writes. If the file system refuses the write, it refuses in one line, as `board render` does. |
 
 Both board commands take two options. A `refresh` does not remember the options of an earlier `render`.
 
@@ -40,6 +40,8 @@ Every target passes the path guard before any manifest is read. The refusal name
 - a path inside `.compass/` or `docs/compass/`, which hold issue state, whether it is reached by a link or by a different letter case;
 - a directory;
 - a path in a folder that does not exist.
+
+If the file system then refuses the write (for example a read-only folder or a full disk), the command refuses in one line that names the path and the cause, and exits non-zero.
 
 The default path has one more check. It is refused, with a message that suggests `--out`, when it already exists as a link, as something other than a regular file, or (where the system has `os.getuid`) as a file another user owns. On a shared temp folder another user can plant a link at a predictable name.
 

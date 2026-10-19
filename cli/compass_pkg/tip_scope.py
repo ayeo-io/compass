@@ -40,10 +40,13 @@ def tip_own_paths(cwd):
     because the base branch could not be found.
 
     - A commit that changes only the living spec is passed over: `ship-commit`
-      and `compass spec sync` write it, so it is no issue's change.
+      and `compass spec sync` write it, so it is no issue's change. In a
+      commit judged in full, the living spec stays: a hand edit of it is the
+      issue's change and the scope check judges it.
     - A merge whose merged-in commits are all on the base branch, such as a
       merge of `origin/main`, counts only the paths it changed against every
-      parent, which is its conflict resolution.
+      parent, which is its conflict resolution. The living spec is left out
+      of that resolution.
     - Any other merge, such as a multiagent integration merge, is judged in
       full and ends the walk, whatever commit the merged branch started
       from. So is every merge when the base branch cannot be resolved.
@@ -81,7 +84,8 @@ def tip_own_paths(cwd):
             paths |= changed[0]
             break
         if len(parents) > 1:
-            paths |= set.intersection(*changed)
+            # A conflict resolution of the living spec is derived output.
+            paths |= set.intersection(*changed) - set(LIVING_SPEC_FILES)
             sides += parents[1:]
             commit = parents[0]
             continue
@@ -90,4 +94,4 @@ def tip_own_paths(cwd):
             continue
         paths |= changed[0]
         break
-    return sorted(paths - set(LIVING_SPEC_FILES)), note
+    return sorted(paths), note

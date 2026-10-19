@@ -35,6 +35,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg import artifact_owed, status_words
+from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import CompassError, artifact_path, display_shape, find_compass_dir, find_upwards, load_yaml, manifest_path, normalize_spine
 from compass_pkg.render import fired_rule_line
 
@@ -647,7 +648,7 @@ def cmd_task_receipt(args):
     # A missing issue is a refusal (exit 2), as in every other verb; exit 1
     # is kept for a check that ran and found something.
     task_dir, slug, project_root = _receipt_resolve_task_dir(args)
-    task = normalize_spine(load_yaml(manifest_path(task_dir)) or {})
+    task = normalize_spine(load_manifest_mapping(manifest_path(task_dir)))
     approach_path = artifact_path(task_dir, "delivery-approach.md")
     route_readings = _receipt_parse_route_md_readings(approach_path)
     gate_requirements = _receipt_gate_requirements(project_root, task_dir)

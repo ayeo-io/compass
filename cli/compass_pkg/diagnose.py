@@ -25,7 +25,8 @@ from compass_pkg import autonomy_cost, checkpoint_outcomes, lifecycle, status_wo
 from compass_pkg.stable_ids import (
     APPROACH_SPIKE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
     STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
-from compass_pkg.core import (artifact_path, load_yaml, manifest_path,
+from compass_pkg.manifest_store import load_manifest_mapping
+from compass_pkg.core import (artifact_path, manifest_path,
                               resolve_issue_dir, unregistered_document)
 from compass_pkg.interruptions import LOG_NAME
 
@@ -318,9 +319,7 @@ def _deviations(task_dir, m, stages, shown, records):
 def cmd_issue_diagnose(args):
     task_dir = resolve_issue_dir(args.task)
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.normpath(task_dir))))
-    m = load_yaml(manifest_path(task_dir))
-    if not isinstance(m, dict):
-        m = {}
+    m = load_manifest_mapping(manifest_path(task_dir))
     # Show the current words. Nothing here compares a mapped word, so reading
     # the file raw and mapping the copy changes only what is printed.
     m = word_map.map_manifest(m)

@@ -17,7 +17,8 @@ from __future__ import annotations
 
 import os
 
-from compass_pkg.core import (FOUND, CompassError, _registered_path, docs_dir, load_yaml,
+from compass_pkg.manifest_store import load_manifest_mapping
+from compass_pkg.core import (FOUND, CompassError, _registered_path, docs_dir,
                               manifest_path, resolve_artifact, resolve_issue_dir, save_manifest)
 
 # The statuses a document can be in. `draft` is what routing seeds; the rest
@@ -101,10 +102,10 @@ def _refuse_unit_on_kind(task_dir, kind):
 def _registered_units(task_dir, kind):
     """The units of the registry entries of `kind`, in registry order. An issue
     with no manifest has none, and the resolver answers for it as before."""
-    try:
-        task = load_yaml(manifest_path(task_dir)) or {}
-    except CompassError:
+    path = manifest_path(task_dir)
+    if not os.path.isfile(path):
         return []
+    task = load_manifest_mapping(path)
     return [str(a["unit"]) for a in task.get("artifacts") or []
             if isinstance(a, dict) and a.get("kind") == kind and a.get("unit")]
 
@@ -114,7 +115,7 @@ def _earned_home(task_dir, kind):
     it that names no path yet, else None. A kind that repeats, or that has one
     document per work unit, has no one home."""
     from compass_pkg import artifact_kinds
-    task = load_yaml(manifest_path(task_dir)) or {}
+    task = load_manifest_mapping(manifest_path(task_dir))
     held = [a for a in task.get("artifacts") or []
             if isinstance(a, dict) and a.get("kind") == kind and not a.get("path")
             and a.get("status") not in ("omitted", "superseded")]

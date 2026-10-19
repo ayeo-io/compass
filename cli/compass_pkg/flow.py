@@ -40,8 +40,9 @@ from compass_pkg import parse_cache, status_words
 from compass_pkg.shipped_issues import (LIVING_SPEC_FILES, ISSUE_HEADING as _ISSUE_HEADING,
                                         completed_issues, issues_named as _issues_named,
                                         one_line, ships as _ships)
-from compass_pkg.core import (CompassError, find_compass_dir, find_governance, load_yaml,
-                              manifest_path, normalize_spine)
+from compass_pkg.manifest_store import load_manifest_mapping
+from compass_pkg.core import (CompassError, find_compass_dir, find_governance,
+                              load_yaml, manifest_path, normalize_spine)
 from compass_pkg.rework import cmd_rework_scan
 from compass_pkg.stable_ids import APPROACH_SPIKE, STAGE_IDS, STAGE_SHIP
 
@@ -599,7 +600,8 @@ def _write_board_html(work_root, target):
     path = _check_html_target(target)
     page = board_cmd.build_page(_html_project_root(), work_root, False,
                                 datetime.datetime.now())
-    board_file.write_page(path, page, board_file.OUT_MODE)
+    board_file.write_page_or_refuse("compass flow --html", path, page,
+                                    board_file.OUT_MODE)
     print(f"compass flow: wrote the delivery board to {target}")
     return 0
 
@@ -672,7 +674,7 @@ def cmd_flow(args):
             tp = manifest_path(os.path.join(work_root, d))
             if os.path.isfile(tp):
                 try:
-                    data = load_yaml(tp)
+                    data = load_manifest_mapping(tp)
                     tasks.append((d, data))
                 except CompassError:
                     pass

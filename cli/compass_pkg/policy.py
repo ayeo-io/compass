@@ -40,6 +40,7 @@ from compass_pkg.stable_ids import (
 from compass_pkg.core import (AUTONOMY_VALUES, ROUTE_NAMES, assessment_key_errors, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT, artifact_path,
                               load_manifest, load_yaml, normalize_spine,
                               resolve_issue_dir)
+from compass_pkg.manifest_store import load_manifest_mapping
 
 
 
@@ -566,7 +567,7 @@ def cmd_task_lint(args):
     from compass_pkg.terminal import relative_to_project
     if args.file:
         path = args.file
-        task = normalize_spine(load_yaml(path))
+        task = normalize_spine(load_manifest_mapping(path))
     else:
         task_dir = resolve_issue_dir(args.task)
         task, path = load_manifest(task_dir)

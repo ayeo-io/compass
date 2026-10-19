@@ -216,10 +216,11 @@ def test_ci_jobs_that_run_python_set_up_python_first():
     # The setup step must also come before the first step that runs Python:
     # a step that runs earlier still gets the runner image's interpreter.
     missing = []
-    for workflow_name in ("compass.yml", "docs.yml"):
-        workflow = yaml.safe_load(
-            (ROOT / ".github" / "workflows" / workflow_name).read_text(encoding="utf-8")
-        )
+    workflow_paths = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+    assert workflow_paths, "no workflow files found"
+    for workflow_path in workflow_paths:
+        workflow_name = workflow_path.name
+        workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
         for name, job in workflow["jobs"].items():
             steps = job.get("steps", [])
             runs = [

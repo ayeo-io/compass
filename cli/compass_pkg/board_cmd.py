@@ -25,7 +25,7 @@ import webbrowser
 from pathlib import Path
 
 from compass_pkg import board_file, board_page, board_trees, flow, status_words
-from compass_pkg.core import find_compass_dir
+from compass_pkg.core import CompassError, find_compass_dir
 from compass_pkg.terminal import Report
 
 
@@ -74,7 +74,7 @@ def _open_in_browser(path):
 def _run(args, command, open_browser):
     root, work_root, path, mode = _target(args, command)
     text = build_page(root, work_root, args.worktrees, datetime.datetime.now())
-    action = board_file.write_page(path, text, mode)
+    action = board_file.write_page_or_refuse(command, path, text, mode)
     lines = ["%s: %s %s" % (command, action, path)]
     opened = None
     if open_browser:

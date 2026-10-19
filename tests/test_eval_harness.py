@@ -1037,6 +1037,27 @@ def test_child_environment_drops_claude_variables_and_plugin_bin_paths(
         str(Path(plugin_dir_arg) / "bin" / "compass")
 
 
+def test_child_environment_drops_plugin_bin_paths_under_other_config_dirs(
+    tmp_path, monkeypatch
+):
+    profile_bin = (tmp_path / "home" / ".claude-work" / "plugins" / "cache"
+                   / "compass" / "compass" / "6.1.0" / "bin")
+    named_dir = tmp_path / "custom-config"
+    named_bin = named_dir / "plugins" / "cache" / "compass" / "bin"
+    normal_bin = tmp_path / "usr-bin"
+    monkeypatch.setenv(
+        "PATH", os.pathsep.join([str(profile_bin), str(named_bin), str(normal_bin)])
+    )
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(named_dir))
+
+    env = harness._build_child_env("bare", None)
+
+    entries = env["PATH"].split(os.pathsep)
+    assert str(profile_bin) not in entries
+    assert str(named_bin) not in entries
+    assert str(normal_bin) in entries
+
+
 def test_claude_invocations_close_stdin(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):

@@ -35,7 +35,8 @@ import re as _re
 
 from compass_pkg.checks import _spec_sha256
 from compass_pkg.terminal import say
-from compass_pkg.core import CompassError, artifact_path, find_upwards, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir
+from compass_pkg.manifest_store import load_manifest_mapping
+from compass_pkg.core import CompassError, artifact_path, find_upwards, manifest_path, normalize_spine, now_iso, resolve_issue_dir
 from compass_pkg.tdd import _read_config, _run_test, settings_hint
 
 
@@ -345,7 +346,7 @@ def cmd_bdd_verify(args):
     spec it claims to check.
     """
     task_dir = resolve_issue_dir(getattr(args, "task", None))
-    task_yaml = normalize_spine(load_yaml(manifest_path(task_dir)) or {})
+    task_yaml = normalize_spine(load_manifest_mapping(manifest_path(task_dir)))
     proj = _read_config(task_dir).get("project") or {}
     command = list(getattr(args, "command", None) or [])
     if not command:

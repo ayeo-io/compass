@@ -274,8 +274,16 @@ def test_roa_15_the_decision_entry_records_the_rule(tmp_path):
     assert ("`2026-10-13-this-repository-declares-readiness-commands` still holds"
             in sections["Supersedes"])
 
-    code, out, err = _run_here(tmp_path, "decision", "check", "--base", "origin/main")
+    # The base is a commit this test makes in its own repository, so the result
+    # does not depend on where `origin/main` points when the test runs.
+    relative = f"governance/decisions/{path.name}"
+    project = support.make_project(tmp_path / "decisions", files={relative: text})
+    base = support.git(project, "rev-parse", "HEAD").strip()
+    code, out, err = support.run_compass(project, "decision", "check", "--base", base)
     assert code == 0, out + err
+    (project / relative).write_text(text + "\nedited\n", encoding="utf-8")
+    code, out, err = support.run_compass(project, "decision", "check", "--base", base)
+    assert code == 1 and "was changed" in out, out + err
 
 
 # --- ROA-16: the owning docs ---------------------------------------------------------

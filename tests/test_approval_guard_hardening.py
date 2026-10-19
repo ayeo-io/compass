@@ -12,6 +12,8 @@
 - Group D: the transcript cannot be read through the Claude Code
   configuration folder or any folder above it, with or without `jq`
   (compass-delivery-record#146).
+- Group E (TRC-001 to TRC-014): an `--as` word built from a shell variable,
+  and a Grep or Bash glob that can match the delegation files.
 
 Every test pairs the calls it refuses with ordinary calls that must still
 pass, so a refusal that is too wide fails here too. Each test name starts
@@ -505,3 +507,210 @@ def test_d2_transcript_named_in_full_refused(guarded, tmp_path):
     for command in (f"ls {home_dir}/dev", "cat notes.txt"):
         r = _hook(guarded, "Bash", {"command": command}, env, **common)
         assert r.returncode == 0, (command, r.stderr)
+
+
+# --- group E: IFS-built --as words and delegation globs ------------------------------------
+# Scenario ids are in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md.
+
+_BASE = "compass evidence approve --check x --scope x --delegated"
+
+
+def _passes(project_dir, command, **fields):
+    r = _hook(project_dir, "Bash", {"command": command}, **fields)
+    assert r.returncode == 0, (command, fields, r.stderr)
+
+
+def _caller_refused(project_dir, command, named=None, **fields):
+    r = _hook(project_dir, "Bash", {"command": command}, **fields)
+    assert _refused(r, "delegation-caller-mismatch"), (command, fields, r.returncode, r.stderr)
+    if named:
+        assert named in r.stderr, (command, named, r.stderr)
+
+
+def _wrap(inner):
+    return [f'bash -c "{inner}"', f"sh -c '{inner}'", f"eval '{inner}'",
+            f"bash -c \"bash -c '{inner}'\"", f'echo "{inner}" | sh']
+
+
+def test_trc_001_second_as_built_with_shell_variable_refused(guarded):
+    """Scenario id: `TRC-001` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    for word, named in (("--as${IFS}compass:architect", "--as${IFS}compass:architect"),
+                        ("--as$IFS", "--as$IFS"),
+                        ("--as$X", "--as$X"),
+                        ('--as"$X"', "--as$X"),
+                        ("--as'$X'", "--as$X"),
+                        ("--as${IFS}main", "--as${IFS}main")):
+        _caller_refused(guarded, f"{_BASE} --as main {word} compass:architect", named)
+
+
+def test_trc_002_wrapped_second_as_refused(guarded):
+    """Scenario id: `TRC-002` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    for command in _wrap(f"{_BASE} --as main --as${{IFS}}compass:architect"):
+        _caller_refused(guarded, command, "--as${IFS}compass:architect")
+    for command in _wrap(f"{_BASE} --as compass:architect --as${{IFS}}compass:architect"):
+        _caller_refused(guarded, command, "--as${IFS}compass:architect",
+                        agent_type=ARCHITECT, agent_id="a1")
+
+
+def test_trc_003_quoted_as_read_as_shell_reads_it(guarded):
+    """Scenario id: `TRC-003` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    for spelling in ('"--as" main', "--a''s main", "$'--as' main"):
+        _passes(guarded, f"{_BASE} {spelling}")
+    for spelling in ('"--as" compass:architect', "--a''s compass:architect",
+                     "$'--as' compass:architect"):
+        _caller_refused(guarded, f"{_BASE} {spelling}", "compass:architect")
+    for spelling in ('"--as"${IFS}compass:architect', "$'--as'${IFS}compass:architect",
+                     "--a''s${IFS}compass:architect"):
+        # No exact --as is given, so the earlier rule refuses it as "no --as".
+        _caller_refused(guarded, f"{_BASE} {spelling}")
+
+
+def test_trc_004_other_as_word_refused(guarded):
+    """Scenario id: `TRC-004` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    for word in ("--asmain", "--assume-yes", "--as-main", "${IFS}--as${IFS}compass:architect",
+                 "$IFS--as", "x--as"):
+        _caller_refused(guarded, f"{_BASE} --as main {word}", word)
+        _caller_refused(guarded, f"bash -c '{_BASE} --as main {word}'", word)
+
+
+def test_trc_005_accepted_as_spellings_pass(guarded):
+    """Scenario id: `TRC-005` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    for flags in ("--as main", "--as main --as main", "--as=main", "--as main --as=main"):
+        _passes(guarded, f"{_BASE} {flags}")
+    for flags in ("--as=compass:architect", "--as compass:architect --as=compass:architect"):
+        _passes(guarded, f"{_BASE} {flags}", agent_type=ARCHITECT, agent_id="a1")
+    _passes(guarded, f"bash -c '{_BASE} --as main'")
+
+
+def test_trc_006_as_word_outside_delegated_approval_passes(guarded):
+    """Scenario id: `TRC-006` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    from compass_pkg import approval_guard
+    for command in ("git update-index --assume-unchanged src/app.py",
+                    "gh issue edit 7 --add-assignee octocat --assignee octocat",
+                    "ls --ascii",
+                    "compass evidence approve --check x --scope x --approver ada --role po",
+                    "grep -rn approve . --assume-unchanged"):
+        _passes(guarded, command)
+        # The hook starts the guard only for some of these commands, so the
+        # guard is also asked directly.
+        assert approval_guard.check({"tool_name": "Bash", "tool_input": {"command": command}}
+                                    ) is None, command
+
+
+@pytest.fixture
+def delegated(guarded):
+    folder = guarded / ".compass" / "delegations"
+    folder.mkdir(parents=True)
+    (folder / "DL-1.yml").write_text("x: 1\n", encoding="utf-8")
+    (folder / "confirm-s.yml").write_text("salt: x\ncode_hash: y\n", encoding="utf-8")
+    return guarded
+
+
+def _grep(project_dir, path, glob, expect):
+    tool_input = {"pattern": "salt", "glob": glob}
+    if path is not None:
+        tool_input["path"] = path
+    r = _hook(project_dir, "Grep", tool_input, cwd=str(project_dir))
+    if expect:
+        assert _refused(r, "delegation-protected"), (path, glob, r.returncode, r.stderr)
+    else:
+        assert r.returncode == 0, (path, glob, r.stderr)
+
+
+def test_trc_007_grep_glob_naming_folder_refused(delegated):
+    """Scenario id: `TRC-007` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    here = str(delegated)
+    for path, glob in ((".compass", "deleg*/*"), (".compass", "d*/*"),
+                       (".compass", "deleg?tions"), (".compass", "[d]elegations/*"),
+                       (".Compass", "DELEG*/*"), (here, ".compass/deleg*/*"),
+                       (here, ".compass/d*"), (".compass", "x d*/*")):
+        _grep(delegated, path, glob, True)
+
+
+def test_trc_008_grep_glob_naming_files_refused(delegated):
+    """Scenario id: `TRC-008` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    for path, glob in ((".compass", "**/confirm-*"), (".compass", "**/delegations/**"),
+                       (".compass", "confirm-*"), (".compass", "**/DL-*.yml"),
+                       (".compass", "delegations/*"), (str(delegated), "**/confirm-*"),
+                       (str(delegated.parent), "**/confirm-*"), (None, "**/delegations/**")):
+        _grep(delegated, path, glob, True)
+
+
+def test_trc_009_grep_glob_matching_everything_accepted(delegated):
+    """Scenario id: `TRC-009` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    here = str(delegated)
+    for path, glob in ((".compass", "**/*"), (".compass", "**/*.md"), (".compass", "*"),
+                       (".compass", "*.yml"), (".compass", "**/*.yml"), (here, "**/*"),
+                       (here, "src/**/*.py"), (here, ".compass/*"), (here, "*.yml"),
+                       (here, "**/*.yml")):
+        _grep(delegated, path, glob, False)
+
+
+def test_trc_010_grep_glob_from_unreachable_path_accepted(delegated):
+    """Scenario id: `TRC-010` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    for path, glob in (("src", "d*/*"), ("src", "**/confirm-*"), (".compass/work", "d*/*"),
+                       (".compass/work", "**/DL-*.yml")):
+        _grep(delegated, path, glob, False)
+
+
+def _bash_glob(project_dir, command, expect):
+    r = _hook(project_dir, "Bash", {"command": command}, cwd=str(project_dir))
+    if expect:
+        assert _refused(r, "delegation-protected"), (command, r.returncode, r.stderr)
+    else:
+        assert r.returncode == 0, (command, r.stderr)
+
+
+def _refused_bash_globs(project_dir):
+    return ["cat .compass/deleg*/*", "cat ./.compass/deleg*/*",
+            "cat .compass/deleg?tions/DL-1.yml", "cat .compass/[d]eleg*/*", "ls .compass/d*",
+            "cat .compass/**/confirm-*", "cat .compass/'deleg'*/*", "cat .Compass/Deleg*/*",
+            f"cat {project_dir}/.compass/deleg*/*", "bash -c 'cat .compass/deleg*/*'",
+            'eval "cat .compass/deleg*/*"', "cat<.compass/deleg*/*", "A=.compass/deleg*/*"]
+
+
+def test_trc_011_bash_glob_reaching_folder_refused(delegated):
+    """Scenario id: `TRC-011` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md
+
+    Some rows start the guard only through the hook prefilter line of the
+    other subtask, so this test stays red until that line is merged.
+    """
+    for command in _refused_bash_globs(delegated):
+        _bash_glob(delegated, command, True)
+
+
+def test_trc_011_guard_refuses_every_bash_glob_row(delegated):
+    """Scenario id: `TRC-011` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md
+
+    The guard module alone, so the rows are proved without the prefilter.
+    """
+    from compass_pkg import approval_guard
+    for command in _refused_bash_globs(delegated):
+        found = approval_guard.check({"tool_name": "Bash", "cwd": str(delegated),
+                                      "tool_input": {"command": command}})
+        assert found and found[0] == "delegation-protected", (command, found)
+
+
+def test_trc_012_bash_glob_matching_everything_accepted(delegated):
+    """Scenario id: `TRC-012` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    from compass_pkg import approval_guard
+    for command in ("ls .compass/*", "ls .compass/work/*", "cat .compass/work/*/manifest.yml",
+                    "ls .compass/**", "ls src/*.py", "cat docs/*.md"):
+        _bash_glob(delegated, command, False)
+        assert approval_guard.check({"tool_name": "Bash", "cwd": str(delegated),
+                                     "tool_input": {"command": command}}) is None, command
+
+
+def test_trc_014_docs_state_refusals_accepted_forms_and_limits():
+    """Scenario id: `TRC-014` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
+    contract = (ROOT / "docs" / "safety-contract.md").read_text(encoding="utf-8").lower()
+    module = (ROOT / "cli" / "compass_pkg" / "approval_guard.py").read_text(
+        encoding="utf-8").split('"""')[1].lower()
+    facts = ["--as${ifs}", "--asmain", "--assume-yes", "--as-main",
+             "**/*", "*.yml", ".compass/*", "d*/*", "**/confirm-*", "deleg?tions",
+             "variable", "command substitution", "environment", "xargs", "printf",
+             "brace expansion", "its own glob", "neither .compass nor deleg", "cd"]
+    for name, text in (("docs/safety-contract.md", contract),
+                       ("approval_guard.py docstring", module)):
+        missing = [f for f in facts if f not in text]
+        assert not missing, (name, missing)

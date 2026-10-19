@@ -37,20 +37,49 @@
   exact `agent_type`, plugin prefix included. An `agent_id` with no or an
   empty `agent_type` is refused, because Claude Code's own internal agents
   report that shape (the host measurement on Claude Code 2.1.300, ADR-069).
-  Anything else gives `delegation-caller-mismatch`.
+  Anything else gives `delegation-caller-mismatch`. So does any word without
+  white space that holds `--as` and is neither `--as` nor `--as=...`, such
+  as `--as${IFS}compass:architect`, `$IFS--as`, `--asmain`, `--assume-yes`
+  or `--as-main`: the shell can turn it into `--as`, and the CLI keeps the
+  last value. A word with white space is read again as its parts. Quotes
+  are removed first, so `"--as"` and `--a''s` count as `--as`.
+- **A glob that reaches the delegation files.** A Grep glob, or a Bash word
+  with `*`, `?` or `[`, is tested with `fnmatch` against sample paths in
+  `.compass/delegations` and against an ordinary path of the same shape
+  (`.compass/zz`, `.compass/zz/file.yml`). It gives `delegation-protected`
+  when it matches a sample and not the ordinary path. Refused: `d*/*`,
+  `deleg*/*`, `**/confirm-*`, `deleg?tions`, `**/DL-*.yml`. Accepted, as
+  they pick everything: `*`, `**/*`, `*.yml`, `**/*.yml`, `.compass/*`,
+  `**/*.md`, `src/*.py`. The samples are written relative to the Grep path
+  (so a path that cannot reach the folder, such as `src`, is accepted) or to
+  the call's `cwd` for Bash, where `./` is removed and an absolute word is
+  read under `cwd`. The line is a heuristic: a glob that picks the
+  delegation files together with others, such as `**/*l*.yml`, passes, and
+  the 64-bit code keeps the stored hash useless.
 
 Each check ignores letter case, because macOS opens a path in any case. The
 earlier guard's checks run first, in its order and case, so a call it refused
-keeps its refusal code.
+keeps its refusal code. The glob check is the last Bash check.
 
 The Bash checks match text, as the hook's other Bash checks do. They stop the
-agent's ordinary use, not a deliberate workaround such as a variable that
-assembles the path; the safety contract states that limit.
+agent's ordinary use, not a deliberate workaround. What they do not stop:
+  - a flag or path built from a variable, command substitution, or a value
+    read from a file or the environment;
+  - arguments built by `xargs` or `printf`;
+  - brace expansion (`{d,x}eleg*/*`);
+  - a tool option that takes its own glob;
+  - a Bash glob that spells neither .compass nor deleg, such as `.c*/d*/*`
+    (the hook does not start the guard for it), and a glob rooted at another
+    folder than `cwd`;
+  - a relative path after `cd`, because the guard sees only the `cwd` of the
+    call.
+The safety contract states these limits.
 """
 # DEPENDENCY: standard library (os, re, shlex). Runs inside hooks/pre-tool.sh,
 # so it keeps to syntax the hook's oldest supported python3 reads.
 from __future__ import annotations
 
+import fnmatch
 import os
 import re
 import shlex
@@ -146,6 +175,14 @@ def _delegated_approve(words, earlier=False):
     return runs and any(_delegated_flag(w) for w in words)
 
 
+def _unreadable_as(words):
+    """Space-free words that hold `--as` and are neither `--as` nor
+    `--as=...`. A word with white space is read again as its parts."""
+    return [w for w in words
+            if "--as" in w and w != "--as" and not w.startswith("--as=")
+            and not re.search(r"\s", w)]
+
+
 def _caller_mismatch(command, who):
     """`(named, caller)` when a delegated approval does not name its caller.
     The top-level words keep the earlier guard's rule, so nothing it refused
@@ -157,6 +194,11 @@ def _caller_mismatch(command, who):
         wrong = [v for v in values if v != who]
         if not values or who is None or wrong:
             return (wrong[0] if wrong else values[0] if values else None), who
+        # The shell can turn such a word into `--as` (`--as${IFS}x`), so the
+        # value the CLI records may differ from the one checked above.
+        unreadable = _unreadable_as(words)
+        if unreadable:
+            return unreadable[0], who
     return None
 
 
@@ -241,6 +283,81 @@ def _word_above(word, folder):
                             or path.startswith(folder + "/"))
 
 
+#: A delegation path and the ordinary path of the same shape outside the
+#: folder. A glob that matches the first and not the second picks the
+#: delegation files; one that matches both only picks "everything".
+DELEGATION_SAMPLES = (
+    (".compass/delegations", ".compass/zz"),
+    (".compass/delegations/DL-1.yml", ".compass/zz/file.yml"),
+    (".compass/delegations/confirm-s.yml", ".compass/zz/file.yml"),
+)
+
+
+def _glob_selects(glob, pairs, grep):
+    """True when `glob` matches the delegation path of some pair and not its
+    ordinary counterpart. All text is lower case, because macOS opens a path
+    in any case and `fnmatch.fnmatch` would apply the operating system's
+    rule. With `grep`, each path is also tried as `/` plus the path, as
+    ripgrep reads `**/x`, and a glob without `/` as the bare name."""
+    glob = glob.lower()
+
+    def matches(path):
+        path = path.lower()
+        tries = [path]
+        if grep:
+            tries.append("/" + path)
+            if "/" not in glob:
+                tries.append(path.rpartition("/")[2])
+        return any(fnmatch.fnmatchcase(t, glob) for t in tries)
+
+    return any(matches(sample) and not matches(plain) for sample, plain in pairs)
+
+
+def _relative_pairs(root, searched):
+    """The samples written relative to the search path, only for those the
+    path can reach: the delegation folder is at or under it."""
+    pairs = []
+    for sample, plain in DELEGATION_SAMPLES:
+        full = _norm(root + "/" + sample)
+        if not (searched == "/" or full == searched or full.startswith(searched + "/")):
+            continue
+        rel = full[len(searched):].strip("/")
+        other = _norm(root + "/" + plain)
+        other_rel = (other[len(searched):].strip("/")
+                     if other.startswith(searched.rstrip("/") + "/") else "\0")
+        if rel:
+            pairs.append((rel, other_rel))
+    return pairs
+
+
+def _grep_glob_reaches(pattern, searched, cwd):
+    pairs = _relative_pairs(_resolved(".", cwd), _resolved(searched, cwd))
+    # Claude Code may split the glob on white space; test both readings.
+    return any(_glob_selects(g, pairs, True) for g in [pattern] + pattern.split())
+
+
+def _bash_glob_reaches(words, cwd):
+    root = _resolved(".", cwd)
+    relative = [(s, p) for s, p in DELEGATION_SAMPLES]
+    absolute = [(root + "/" + s, root + "/" + p) for s, p in DELEGATION_SAMPLES]
+    for word in words:
+        if re.search(r"\s", word):
+            continue
+        for part in re.split(r"[;&|()<>`=]+", word):
+            if not any(c in part for c in "*?["):
+                continue
+            part = _expand_home(_path(part))
+            if os.path.isabs(part):
+                if _glob_selects(_norm(part), absolute, False):
+                    return True
+                continue
+            while part.startswith("./"):
+                part = part[2:]
+            if _glob_selects(os.path.normpath(part), relative, False):
+                return True
+    return False
+
+
 def _in_delegations(tool_input, cwd):
     target = _path(tool_input.get("file_path") or tool_input.get("path"))
     if target:
@@ -250,6 +367,8 @@ def _in_delegations(tool_input, cwd):
             return target
     pattern = _path(tool_input.get("glob"))
     if "delegations" in pattern.lower():
+        return f"{target or cwd} with glob {pattern}"
+    if pattern and _grep_glob_reaches(pattern, target or cwd or ".", cwd):
         return f"{target or cwd} with glob {pattern}"
     return ""
 
@@ -325,5 +444,10 @@ def check(event):
     if any(_word_above(w, folder) for w in _nested_words(command)):
         return "transcript-protected", {
             "target": "a command naming a folder above the session transcript",
+            "tool": tool}
+    # Last, so a call an earlier check refuses keeps its code.
+    if _bash_glob_reaches(_nested_words(command), str(event.get("cwd") or "")):
+        return "delegation-protected", {
+            "target": "a command with a glob that can match .compass/delegations",
             "tool": tool}
     return None

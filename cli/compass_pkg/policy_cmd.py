@@ -19,6 +19,7 @@ import sys
 
 from compass_pkg import classify, config_words, governance, layers, parents, policy_lint, policy_migrate
 from compass_pkg import policy_update, preset_init, preset_test, project_settings, replay
+from compass_pkg.effective import GOVERNANCE_COPY_NOTICE, has_governance_copy
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
 from compass_pkg.terminal import mark_handled, resolve_mode
@@ -126,7 +127,9 @@ def run_policy_effective(args):
     effective = policy_lint.resolve_effective(
         loaded.parent, loaded.project, loaded.issue, meta=loaded.meta, slug=slug,
         git_parents=loaded.git_parents)
-    _emit(args, policy_lint.effective_json(effective), policy_lint.effective_text(effective))
+    notice = GOVERNANCE_COPY_NOTICE if has_governance_copy(root) else None
+    _emit(args, policy_lint.effective_json(effective),
+          policy_lint.effective_text(effective, notice=notice))
     return 0
 
 

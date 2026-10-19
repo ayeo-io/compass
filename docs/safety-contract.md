@@ -570,18 +570,35 @@ write scan elsewhere. Four limits do this, all set from timings on a UTF-8
 machine with bash 3.2: a command over 98304 bytes (`bash-command-too-long`),
 and a command with more than 400 different write targets, more than 20
 different variable names at the start of a write target, or more than 700
-`$(` openers (`bash-command-too-complex`). The scan of substitutions also
-stops after a fixed amount of work, and the command is then refused in the
-same way. A glob in `enforcement.code_globs` that bash cannot match itself
-is matched by Python once for all the write targets of a command.
+`$(` openers (`bash-command-too-complex`). A glob in
+`enforcement.code_globs` that bash cannot match itself is matched by Python
+once for all the write targets of a command.
 
-The slowest command the hook accepted in these timings took about 3.3
-seconds: 20 different variable names and 380 other write targets in 90 KB,
-in a project whose `code_globs` hold a bracket glob. It was timed on a
-machine with 14 cores and a load average of about 7; no idle run was
-available. Without the limit on variable names, 400 names took 26 seconds.
-Without the single Python start, 400 write targets under a bracket glob took
-13 seconds. The limit of 400 write targets alone did not bound the time.
+Those limits each bound one shape, and the time of a command that holds
+several is their sum. So the scans that grow with the command also share one
+work budget, counted in microseconds of measured time. The flattening of
+substitutions (which also stops by itself after a million steps), the walk
+over the leading statements (which runs once for all the variable names), the
+reading of the command for each variable name and the judging of each write
+target all add their steps to it. A command that
+passes the budget is refused with the same code, `bash-command-too-complex`,
+where Compass is in use, and only has its write scan skipped elsewhere. The
+budget is 2400000, which is 2.4 seconds of work.
+
+The slowest command the hook accepted in these timings took 2.4 seconds: 260
+write targets under a project whose settings hold 300 globs. The other
+largest accepted commands took 1.9 seconds for 19900 leading `:` lines and
+one variable name, 1.9 seconds for 18200 such lines and 20 names, 1.7
+seconds for 9000 leading `cd` lines and 20 names, 1.7 seconds for 8000
+leading assignments, 1.7 seconds for 5 unclosed `$(` openers before 85 KB,
+1.5 seconds for 400 write targets (1.6 seconds for targets of 180
+characters, and the same under a bracket glob), 1.8 seconds for 20 names and
+380 other targets under a bracket glob, and 0.2 seconds for 700 closed
+openers. One more of any of these shapes is refused, in at most 2.4 seconds.
+The timings are from a machine with 14 cores and a load average of 7 to 9; no
+idle run was available. Before the budget, 40000 leading `:` lines with 20
+names took 62 seconds and 10000 such lines with 20 names took 14 seconds,
+because the walk ran once for each name, and 400 names took 26 seconds.
 
 The length limit is 98304 bytes (96 KiB), counted over the whole command.
 In a project that has a `.compass` folder, the hook refuses a longer command

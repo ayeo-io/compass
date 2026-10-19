@@ -577,7 +577,7 @@ def check_vocabulary(config):
         parts = vocabulary.split_key(key)
         if parts is None:
             errors.append(("M-REF-UNKNOWN", f"vocabulary.{key}",
-                           f"'{key}' is not <catalogue>.<id> for a catalogue that "
+                           f"'{key}' is not <catalog>.<id> for a catalog that "
                            f"has display names"))
             continue
         catalogue, entry_id = parts

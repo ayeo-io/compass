@@ -75,7 +75,7 @@ def declines(task, task_dir, kind, entry=None):
         return "no %s is registered with a path" % kind
     depth = entry.get("depth")
     if word_ceiling.limit(_view(task_dir), kind, depth) is None:
-        return ("the catalogue of generation %s has no word_ceiling for %s at %s"
+        return ("the catalog of generation %s has no word_ceiling for %s at %s"
                 % (task.get("generation"), kind, "depth %s" % depth if depth else "no depth"))
     return None
 

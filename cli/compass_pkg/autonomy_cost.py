@@ -290,7 +290,7 @@ def render_rows(rows) -> list:
             band, " (%d shipped issue(s) not counted)" % band["not_measurable"]))
     else:
         v = band["value"]
-        out.append("  bands         human judgement %d (%s), guardrailed %d (%s), autonomous %d "
+        out.append("  bands         human judgment %d (%s), guardrailed %d (%s), autonomous %d "
                    "(%s); over %d issue(s)"
                    % (v["human_judgement"], UNITS["human_judgement"], v["guardrailed"],
                       UNITS["guardrailed"], v["autonomous"], UNITS["autonomous"],

@@ -33,7 +33,7 @@ def shipped():
     try:
         document = load_yaml_strict(path)
     except (OSError, ValueError) as exc:
-        raise CompassError(f"the shipped readiness catalogue cannot be read: {exc}") from exc
+        raise CompassError(f"the shipped readiness catalog cannot be read: {exc}") from exc
     return copy.deepcopy(document.get("readiness") or {})
 
 

@@ -131,7 +131,7 @@ def cmd_evidence_review(args):
 def register(evidence_subs):
     """Add `review` to the `evidence` group."""
     p = evidence_subs.add_parser(
-        "review", help="record a judgement against a judged check")
+        "review", help="record a judgment against a judged check")
     p.add_argument("check", type=old_names.check_type, help="id of the judged check")
     issue_arg(p)
     p.add_argument("--verdict", required=True, choices=VERDICTS,
@@ -139,5 +139,5 @@ def register(evidence_subs):
     p.add_argument("--reason", required=True, help="what was read and why the verdict holds")
     p.add_argument("--reviewer", required=True,
                    help="who judged: `agent`, `agent:<session id>` or a person's id")
-    p.add_argument("--scope", help="what the judgement covers (optional)")
+    p.add_argument("--scope", help="what the judgment covers (optional)")
     p.set_defaults(func=cmd_evidence_review, output_kind="hand-off")

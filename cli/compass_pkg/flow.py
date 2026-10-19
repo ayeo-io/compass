@@ -895,7 +895,7 @@ def derive_system_spec(project_root: str) -> None:
         "# System Specification - Archive (derived)",
         "",
         "> Scenarios whose manifest names a replacement in `superseded_by`. "
-        "The current behaviour is in `docs/system-spec.md`.",
+        "The current behavior is in `docs/system-spec.md`.",
         "",
     ]
     if archived:

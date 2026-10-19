@@ -472,7 +472,7 @@ def _archive_shapes(tmp_path):
     sup.edit(root, status="done")
     shapes["second"] = (root, "the issue is closed")
     root = _full_over(tmp_path / "third", words=7000, compass_yml=_no_limit_layer())
-    shapes["third"] = (root, "the catalogue of generation 1 has no word_ceiling for "
+    shapes["third"] = (root, "the catalog of generation 1 has no word_ceiling for "
                              "technical-design at depth thorough")
     root = _project(tmp_path / "fourth", assessment=FULL)
     _write(root, "technical-design", _document(7000, UNITS), path=False)

@@ -135,7 +135,7 @@ def _rule_unmapped(_name, _catalogue):
 #: The mapping table. The first row that matches a name decides its target.
 KIND_RULES = (
     Rule(1, "a name on the not-an-artifact list", _rule_skip),
-    Rule(2, "a name the catalogue declares", _rule_declared),
+    Rule(2, "a name the catalog declares", _rule_declared),
     Rule(3, "design and prd, the old names of two kinds", _rule_alias),
     Rule(4, "review.md, round 1 of review", _rule_plain_review),
     Rule(5, "review-claims, security-review, integrated-review-<n>, verify-<word>", _rule_family),

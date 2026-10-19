@@ -1673,7 +1673,7 @@ def _u3_archive_shape(tmp_path, shape):
 U3_SHAPES = {
     "first": ("no-generation", "the issue predates the section checks"),
     "second": ("closed", "the issue is closed"),
-    "third": ("no-section", 'the catalogue of generation 1 does not list'),
+    "third": ("no-section", 'the catalog of generation 1 does not list'),
     "fourth": ("not-registered", "is registered with a path"),
 }
 

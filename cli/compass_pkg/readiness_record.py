@@ -170,7 +170,7 @@ def fresh(root, record, now=None):
         name = current["path"] or recorded.get("path") or "the settings file"
         return Freshness(False, f"{name} changed since the record was written")
     if old_names.pick(record, "readiness_key", "catalog_digest") != catalogue_digest():
-        return Freshness(False, "the readiness catalogue this CLI ships changed since the "
+        return Freshness(False, "the readiness catalog this CLI ships changed since the "
                                 "record was written")
     for signal in record["signals"]:
         shipped = readiness_registry.installed_version(signal.get("impl"))

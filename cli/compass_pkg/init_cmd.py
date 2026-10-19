@@ -172,7 +172,7 @@ def cmd_init(args):
     if created:
         return say(
             args,
-            "compass init: initialised Compass in %s." % root,
+            "compass init: initialized Compass in %s." % root,
             detail=[
                 "state    : %s" % _state_path(root, compass_dir),
                 "work     : %s" % os.path.join(compass_dir, "work"),

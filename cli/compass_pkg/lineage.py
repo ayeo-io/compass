@@ -128,7 +128,7 @@ def report(compass_dir):
     lines = [f"compass retro --lineage: {len(parents)} issue(s) raised from another issue",
              f"  found before the parent landed: {before}",
              f"  found after the parent landed: {after}",
-             ] + ([f"  where found not recognised: {unknown} (see `compass issue lint`)"]
+             ] + ([f"  where found not recognized: {unknown} (see `compass issue lint`)"]
                   if unknown else []) + [
              "  by where found: " + ", ".join(
                  f"{p} {places[p]}" for p in FOUND_AT if places.get(p))]

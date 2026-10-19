@@ -45,7 +45,7 @@ _FALLBACK = {
     "skill": {"behaviour-mapping": _row("behavior-mapping")},  # us-english-scan: allow - old name read until 8.0.0
     "refusal_code": {"not-initialised": _row("not-initialized")},  # us-english-scan: allow - old name read until 8.0.0
     "state_key": {"initialised": _row("initialized")},  # us-english-scan: allow - old name read until 8.0.0
-    "readiness_key": {"catalogue_digest": _row("catalog_digest")},  # us-english-scan: allow - old name read until 8.0.0
+    "readiness_key": {"catalogue_digest": _row("catalog_digest")},
     "json_key": {"behaviour": _row("behavior"), "behaviours": _row("behaviors")},  # us-english-scan: allow - old name read until 8.0.0
     "spec_heading": {"Current Behaviour": _row("Current Behavior"),  # us-english-scan: allow - old name read until 8.0.0
                      "Archived Behaviour": _row("Archived Behavior")},  # us-english-scan: allow - old name read until 8.0.0

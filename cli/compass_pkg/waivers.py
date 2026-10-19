@@ -45,7 +45,7 @@ WRITTEN = {"project": ("reason", "approved_by", "approved_on"),
 WHOLE_ENTRY = "(entry)"
 REFUSED = ("loosening", "incomparable")   # the classes that need an excuse
 
-Waiver = namedtuple("Waiver", "id scope catalogue entry operation fields body")
+Waiver = namedtuple("Waiver", "id scope catalogue entry operation fields body")  # us-english-scan: allow - field name read from stored waivers
 Finding = namedtuple("Finding", "code level waiver_id message")
 Invalidation = namedtuple("Invalidation", "waiver_id entry field old new project reason")
 Attribution = namedtuple("Attribution", "result residual excused refusal unneeded")

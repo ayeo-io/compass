@@ -44,8 +44,8 @@ what `/compass:init` offers separately.
   **policy floors, caps, immovable gates, and blocking artifact rules** (hard) and
   its **default shapes and tie-breaking biases** (soft). You do not apply
   these by hand; the CLI does. An unmigrated 5.x project runs on its own
-  copied `governance/`, which `compass policy show` does not print but
-  `compass approach evaluate` reads.
+  copied `governance/`. `compass policy show` prints the shipped default and
+  says the project runs on its copy; `compass approach evaluate` reads the copy.
 - Read `compass.yml` for project settings (test command, multiagent
   worktree root), or `.compass/config.yml` in a 5.x project that has no
   `compass.yml`. The same `compass.yml` holds the project's changes to the

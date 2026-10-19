@@ -245,6 +245,18 @@ def _legacy_parent(root):
                    "source": "legacy", "guardrails": guardrails}
 
 
+GOVERNANCE_COPY_NOTICE = (
+    "  This unmigrated 5.x project has no compass.yml and runs on its own copy of "
+    "governance/. The rows below are the shipped default, not what compass approach "
+    "evaluate reads. Run compass policy migrate to convert the copy.")
+
+
+def has_governance_copy(root):
+    """True when the project keeps its own copy of the two governance files
+    and has no `compass.yml` Compass reads, so `resolve_live` runs on the copy."""
+    return not project_settings.compass_yml_counts(root) and _legacy_parent(root) is not None
+
+
 def _evidence_types(root, legacy):
     if legacy:
         return legacy_adapter.adapt_evidence_types(legacy[1]["guardrails"])["evidence_types"]

@@ -264,6 +264,11 @@ resolved field of the project, one line each: the path, the value, the source la
 waiver. A stage list that a capability switch has not turned on is marked
 `(inactive: entry-exit-evaluation off)`.
 
+In an unmigrated 5.x project (no `compass.yml`, a copied `governance/`), the
+rows are the shipped default, not the copy that `compass approach evaluate`
+reads. The text view then adds a notice under its header line that names the
+copy and points to `compass policy migrate`. `--json` is unchanged.
+
 ```
 stages.plan.entry   [dor-summary-filled, ...]   default@6.0.0 (add)  (inactive: entry-exit-evaluation off)
 checks.suite-passed.severity   advisory   project (set, waiver by jed72, 2026-10-05)

@@ -1162,13 +1162,29 @@ def cmd_route_evaluate(args):
                 "reason": args.reason or "(reason not given - fill this in)",
                 "date": datetime.date.today().isoformat(),
             })
+        # A reassess that changes nothing but is given a reason keeps the
+        # reason as evidence. `compass retro` and friction capture skip the
+        # `unchanged` kind: no one misread the work. Without a reason there is
+        # nothing to keep, so nothing is written.
+        unchanged = (evaluated_before and not reframed and not configuring
+                     and bool(getattr(args, "reason", None)))
+        if unchanged:
+            route = result["delivery_approach"]
+            task.setdefault("reassessments", []).append({
+                "from_route": prior["delivery_approach"] or route,
+                "to_route": route,
+                "kind": "unchanged",
+                "changed": {},
+                "reason": args.reason,
+                "date": datetime.date.today().isoformat(),
+            })
 
         def stamp(mapping, old, new):
             # The entry says which generation the reassess moved from and to;
             # both are the same number when nothing was committed. A change to
             # the config: layer always commits, so a configuration entry never
             # sees the same number twice.
-            if reframed or configuring:
+            if reframed or configuring or unchanged:
                 mapping["reassessments"][-1]["generation"] = {"from": old, "to": new}
         # The accepted-type comments are written in the same replace, under the lock.
         committed = effective.commit_generation(
@@ -1180,10 +1196,9 @@ def cmd_route_evaluate(args):
         for note in plan.notes:
             print(f"  {note}")
         configured = configuring and committed.committed
-        if not reframed and not configured and getattr(args, "reason", None):
-            print("  the delivery approach did not change - the --reason was NOT "
-                  "recorded. The approach, stages, gates, ceiling and policy "
-                  "rules fired are all identical to what was already on record.")
+        if unchanged:
+            print(f"  RE-ASSESSMENT recorded (unchanged): the delivery approach "
+                  f"stayed {task['reassessments'][-1]['to_route']}; the reason is on record")
         if configured:
             print(f"  RE-ASSESSMENT recorded (configuration): the issue's config: layer "
                   f"changed, generation {committed.number - 1} -> {committed.number}")

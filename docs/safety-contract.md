@@ -616,9 +616,11 @@ exit 2:
 - The hook's own folder is gone. The shell cannot open the script and exits
   127.
 - A helper script the hook calls is unreadable, or fails when it runs.
-- A time-out of the hook. The time-out is covered by the declared limit once
-  the hook time-bound change has merged; this section does not claim that
-  cover as in force until then.
+- A time-out of the hook. On Claude Code 2.1.295 or later the time-out is
+  covered by the declared limit: `hooks/hooks.json` sets `"timeout": 15` and
+  `"onFailure": "block"`, so a time-out blocks the call. On older versions a
+  time-out lets the call run, and the limits of the hook, described above, keep
+  it under the time-out.
 
 The hook has no catch-all exit rule, such as a trap that maps every exit other
 than 0 and 2 to 2. Measured on bash 3.2.57 on 2026-10-19, an `EXIT` trap like

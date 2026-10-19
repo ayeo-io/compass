@@ -137,7 +137,7 @@ After `--apply`, run `compass issue render --all --dry-run` to see the files and
 
 ## The artifact catalogue, the delivery-approach record and the archive
 
-The artifact catalogue now describes each document: who writes it, who reads it, its traditional name and its sections. The delivery-approach record lives in the documents folder on every approach, each assessed value carries a justification, and a review round is a file of its own. `compass issue migrate` moves and renames the archive's documents to match. The decisions are ADR-053 to ADR-056 in `architecture/decisions/`. The facts are in `docs/artifact-catalogue.md`.
+The artifact catalogue now describes each document: who writes it, who reads it, its traditional name and its sections. The delivery-approach record lives in the documents folder on every approach, each assessed value carries a justification, and a review round is a file of its own. `compass issue migrate` moves and renames the archive's documents to match. The decisions are ADR-053 to ADR-056 in `architecture/decisions/`. The facts are in `docs/artifact-catalog.md`.
 
 ### What breaks
 
@@ -153,7 +153,7 @@ The artifact catalogue now describes each document: who writes it, who reads it,
 
 ### What changes
 
-- **`compass issue template show <kind>` prints a skeleton** built from the catalogue, at `--depth lightweight` or `thorough`. A template that is not a kind is printed as the file. The skeleton opens with a `document-header` block of six lines in place of the Audience, Stage, Owner, Home, Traditional name and Depth lines. The home path and the traditional name are in `docs/artifact-catalogue.md` and the glossary.
+- **`compass issue template show <kind>` prints a skeleton** built from the catalogue, at `--depth lightweight` or `thorough`. A template that is not a kind is printed as the file. The skeleton opens with a `document-header` block of six lines in place of the Audience, Stage, Owner, Home, Traditional name and Depth lines. The home path and the traditional name are in `docs/artifact-catalog.md` and the glossary.
 - **Four sections are new.** Non-functional requirements (the spec), and Data and interfaces, Verification plan and Risks and dependencies (the design). The Non-functional requirements section holds a table with a row for each of seven concerns. The role block `How each role reads this file` is gone from every template and section list; `docs/roles-guide.md` holds it.
 - **Two new block kinds:** `document-header` opens every document written from a template, and `dependencies` lists the design's `depends_on` entries under its Risks and dependencies section.
 - **The `coverage` block gains a Kind column** between Title and Tests when the technical design keeps a `## Verification plan` heading. The column shows the planned kind of test for each scenario: `unit`, `integration`, `acceptance`, `judged review` or `manual`, with `not planned` or `unknown (<word>)` otherwise. `compass issue lint` prints a note for each row with an unknown kind and does not change the exit code. A design with no such heading keeps the columns it had.
@@ -410,7 +410,7 @@ approaches:
 
 ## Word limits and low-level designs
 
-The catalogue gives a document kind a word limit per depth, `compass check` refuses a technical design far over its limit once the plan stage is over, and the full approach gains one low-level design per work unit. The decision is `architecture/decisions/ADR-067-word-limits-are-catalogue-obligations-and-a-low-level-design-is-one-document-per-work-unit.md`. `docs/artifact-catalogue.md` owns the field, the word rule and the kind, and `governance/guardrails.md` the check.
+The catalogue gives a document kind a word limit per depth, `compass check` refuses a technical design far over its limit once the plan stage is over, and the full approach gains one low-level design per work unit. The decision is `architecture/decisions/ADR-067-word-limits-are-catalogue-obligations-and-a-low-level-design-is-one-document-per-work-unit.md`. `docs/artifact-catalog.md` owns the field, the word rule and the kind, and `governance/guardrails.md` the check.
 
 ### What breaks
 
@@ -646,7 +646,7 @@ Nothing for an issue with no stage waiver. For an issue with one, reassess it so
 
 ## Design-decision scope, the regular requirements review and the hotfix bug report
 
-A project-scoped design decision cannot land without a decision record, a regular issue owes a short requirements review, and a hotfix owes a bug report. The decision is `architecture/decisions/ADR-072-a-project-scoped-design-decision-needs-a-record-and-regular-and-hotfix-owe-a-review-and-a-bug-report.md`. `docs/artifact-catalogue.md` owns the facts.
+A project-scoped design decision cannot land without a decision record, a regular issue owes a short requirements review, and a hotfix owes a bug report. The decision is `architecture/decisions/ADR-072-a-project-scoped-design-decision-needs-a-record-and-regular-and-hotfix-owe-a-review-and-a-bug-report.md`. `docs/artifact-catalog.md` owns the facts.
 
 ### What breaks
 

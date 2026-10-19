@@ -74,7 +74,7 @@ def test_wcl_23_declared_and_documented(tmp_path):
         assert check_registry.installed_version(name) == lock[name]["version"] == "1.0.0"
 
     # The owning docs name the field, the word rule, the placeholder and the kind.
-    catalogue = (ROOT / "docs" / "artifact-catalogue.md").read_text(encoding="utf-8")
+    catalogue = (ROOT / "docs" / "artifact-catalog.md").read_text(encoding="utf-8")
     for words in (FIELD, "whitespace-separated token", "<unit>", KIND):
         assert words in catalogue, words
     terms = (ROOT / "governance" / "terminology.yml").read_text(encoding="utf-8")

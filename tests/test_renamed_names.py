@@ -203,18 +203,162 @@ def test_trc_052():
     pytest.fail("owned by U6")
 
 
-def test_trc_053():
-    pytest.fail("owned by U6")
+OLD_BEHAVIOR = "behav" + "iour"
+NEW_BEHAVIOR = "behav" + "ior"
+
+
+def _compliance_json(tmp_path):
+    import json
+    import test_eval_session_compliance as cs
+
+    home = tmp_path / "claude"
+    root = cs._project(tmp_path, {"good-fix": "sess-good", "bad-fix": "sess-bad"})
+    cs._clean("good-fix").write(home, "sess-good")
+    cs._route_around("bad-fix").write(home, "sess-bad")
+    done = cs._report(root, home, "--json")
+    assert done.returncode == 0, done.stdout + done.stderr
+    return json.loads(done.stdout), cs._report(root, home).stdout
+
+
+def _old_keys_emitted(data):
+    """The old twin keys a result still emits, by where they are."""
+    found = [k for k in data if k == OLD_BEHAVIOR + "s"]
+    found += [f"row:{n}" for n, row in data[NEW_BEHAVIOR + "s"].items() if OLD_BEHAVIOR in row]
+    found += [f"failure:{f['issue']}" for f in data["failures"] if OLD_BEHAVIOR in f]
+    return found
+
+
+def test_trc_053(tmp_path):
+    from compass_pkg import old_names
+
+    data, text = _compliance_json(tmp_path)
+    # The result holds both spellings of the list, with the same content.
+    assert data[NEW_BEHAVIOR + "s"] == data[OLD_BEHAVIOR + "s"]
+    assert data[NEW_BEHAVIOR + "s"]["no_route_around"]["fail"] == 1
+    # Each row and each failure holds both spellings of its key, equal.
+    for name, row in data[NEW_BEHAVIOR + "s"].items():
+        assert row[NEW_BEHAVIOR] == row[OLD_BEHAVIOR] == name
+    assert data["failures"]
+    for failure in data["failures"]:
+        assert failure[NEW_BEHAVIOR] == failure[OLD_BEHAVIOR]
+    # A consumer that reads only the old keys gets what it got before.
+    assert {"issue": "bad-fix", OLD_BEHAVIOR: "no_route_around", "call": 2} in [
+        {k: v for k, v in f.items() if k != NEW_BEHAVIOR} for f in data["failures"]]
+    # The text view prints the US words only.
+    assert OLD_BEHAVIOR not in text and "no_route_around" in text
+    # The old keys end at 8.0.0: the table lists them, and at 8.0.0 a result
+    # that still emits one is a problem.
+    assert _old_keys_emitted(data)
+    problems = old_names.removal_problems("8.0.0")
+    assert any(f"json_key '{OLD_BEHAVIOR}'" in p for p in problems), problems
+    assert any(f"json_key '{OLD_BEHAVIOR}s'" in p for p in problems), problems
+    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    if old_names._version(version) >= (8, 0, 0):
+        assert _old_keys_emitted(data) == [], "an old JSON key is still emitted"
 
 
 # --- U7: the JSON keys, the headings and the term ----------------------------
 
-def test_trc_054():
-    pytest.fail("owned by U7")
+def test_trc_054(tmp_path):
+    from compass_pkg import flow, old_names
+
+    work = tmp_path / ".compass" / "work" / "old"
+    work.mkdir(parents=True)
+    (work / "manifest.yml").write_text(yaml.safe_dump({
+        "schema_version": "2.0", "issue": "old", "created": "2026-05-25",
+        "status": "landed", "land_timestamp": "2026-05-25T08:00:00+00:00",
+        "assessment": {"risk": "contained", "familiarity": "greenfield", "size": "small"},
+        "scenarios": [
+            {"id": "SCN-OLD", "title": "old way", "intent": "INT-1", "tests": [],
+             "superseded_by": ["SCN-NEW"]},
+            {"id": "SCN-NEW", "title": "new way", "intent": "INT-1", "tests": []},
+        ]}, sort_keys=False), encoding="utf-8")
+    spec, archive = (tmp_path / "docs" / "system-spec.md",
+                     tmp_path / "docs" / "system-spec-archive.md")
+    pairs = [(row["new"], row["old"]) for row in old_names.rows("spec_heading")]
+    assert [new for new, _ in pairs] == ["Current Behavior", "Archived Behavior"]
+
+    flow.derive_system_spec(str(tmp_path))
+    fresh = (spec.read_text(encoding="utf-8"), archive.read_text(encoding="utf-8"))
+    assert "## Current Behavior\n" in fresh[0] and "## Archived Behavior\n" in fresh[1]
+
+    # A file written by 6.1.0 holds the old headings.
+    for path in (spec, archive):
+        text = path.read_text(encoding="utf-8")
+        for new, old in pairs:
+            text = text.replace(f"## {new}\n", f"## {old}\n")
+        path.write_text(text, encoding="utf-8")
+    stale = spec.read_text(encoding="utf-8")
+    assert "## Current Behaviour\n" in stale
+    # The readers of the spec find its issues under either heading.
+    assert flow._issues_named(stale) == flow._issues_named(fresh[0]) == {"old"}
+
+    # The next derive is not an error and rewrites each file once.
+    flow.derive_system_spec(str(tmp_path))
+    again = (spec.read_text(encoding="utf-8"), archive.read_text(encoding="utf-8"))
+    assert again == fresh
+    for text in again:
+        assert not any(f"## {old}" in text for _, old in pairs)
+        assert sum(f"## {new}" in text for new, _ in pairs) == 1
+    # A second derive changes nothing.
+    flow.derive_system_spec(str(tmp_path))
+    assert (spec.read_text(encoding="utf-8"), archive.read_text(encoding="utf-8")) == again
 
 
-def test_trc_055():
-    pytest.fail("owned by U7")
+OLD_PAGE = "artifact-catalog" + "ue.md"
+NEW_PAGE = "artifact-catalog.md"
+
+
+def _links_that_do_not_resolve():
+    """Every relative Markdown link to the catalog page, in a top-level docs
+    page, that names no file. Other links are left to the site build: one
+    unpublished page holds a link of its own that is already broken."""
+    import re
+
+    broken = []
+    for page in sorted((ROOT / "docs").glob("*.md")):
+        for target in re.findall(r"\]\(([^)\s]+)\)", page.read_text(encoding="utf-8")):
+            path = target.split("#")[0]
+            if not path.startswith("artifact-catalog"):
+                continue
+            if not (page.parent / path).exists():
+                broken.append(f"{page.name} -> {target}")
+    return broken
+
+
+def test_trc_055(tmp_path):
+    import shutil
+    import subprocess
+
+    def terminology(word):
+        done = subprocess.run([sys.executable, str(CLI), "terminology", word],
+                              capture_output=True, text=True, timeout=120)
+        assert done.returncode == 0, done.stdout + done.stderr
+        return done.stdout
+
+    # Both terms print the same meaning.
+    assert terminology("catalog") == terminology("catalog" + "ue")
+    assert "catalog" in terminology("catalog")
+    # The page is renamed, and the old name is a stub that links to it.
+    assert (ROOT / "docs" / NEW_PAGE).is_file()
+    stub = (ROOT / "docs" / OLD_PAGE).read_text(encoding="utf-8").strip().splitlines()
+    assert 0 < len(stub) <= 5, stub
+    assert f"]({NEW_PAGE})" in "\n".join(stub)
+    # Nothing in docs/ links to the old name except the stub's own words, and
+    # no link in docs/ is broken.
+    for page in (ROOT / "docs").glob("*.md"):
+        if page.name != OLD_PAGE:
+            assert f"]({OLD_PAGE}" not in page.read_text(encoding="utf-8"), page.name
+    assert _links_that_do_not_resolve() == []
+    # The site lists the new page and not the old one.
+    site = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    assert f": {NEW_PAGE}" in site and OLD_PAGE not in site
+    # mkdocs builds the site without a broken link when it is installed.
+    if shutil.which("mkdocs") is None:
+        pytest.skip("mkdocs is not installed; the links of docs/ were checked by script")
+    built = subprocess.run(["mkdocs", "build", "--strict", "--site-dir", str(tmp_path / "site")],
+                           cwd=ROOT, capture_output=True, text=True, timeout=300)
+    assert built.returncode == 0, built.stdout + built.stderr
 
 
 # --- U4: the table ends at 8.0.0 ----------------------------------------------

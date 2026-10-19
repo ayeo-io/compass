@@ -1285,3 +1285,20 @@ def test_irl_31_merge_keeps_both_features():
         "verification-report"]["sections"]["thorough"]
     assert sections[-3:] == ["Decisions taken for the user", "Release line", "Gate"], sections
     assert not [s for s in sections if s[:1].isdigit()], sections
+
+
+# --- IRL-32 ---------------------------------------------------------------------------
+
+def test_irl_32_upgrade_guide_covers_a_replaced_approach():
+    """Scenario id: `TRC-001` in upgrade-guide-replaced-approach/acceptance-criteria.md.
+    The upgrade guide tells a project that replaced a shipping approach what to add,
+    and the release-line document no longer says a 5.x project owes no line or that a
+    landing with no `--issue` is always refused."""
+    upgrade = " ".join((ROOT / "docs" / "upgrade-7-0-0.md").read_text().split())
+    section = upgrade.split("## The lightweight intent and the release line")[1].split(" ## ")[0]
+    for word in ("`release_line: true`", "`intent`", "replaced", "waiver", "`compass policy lint`"):
+        assert word in section, word
+    line = " ".join((ROOT / "docs" / "release-line.md").read_text().split())
+    assert "has no generation and owes no line" not in line
+    assert "with no issue named is refused" not in line
+    assert "a commit with no issue named is not judged" not in line

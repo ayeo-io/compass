@@ -285,3 +285,32 @@ def test_unwritable_page_refuses_in_one_line(tmp_path):
     assert len(lines) == 1
     assert str(target) in lines[0]
     assert "Permission denied" in lines[0]
+
+
+def test_unwritable_flow_html_refuses_in_one_line(tmp_path):
+    """Scenario id: `TRC-001` in board-write-error-one-line/acceptance-criteria.md.
+    `compass flow --html` refuses a read-only folder in one line, as
+    `compass board render` does."""
+    _need_posix()
+    if os.getuid() == 0:
+        pytest.skip("root can write to a read-only folder")
+    import subprocess
+    root = _project(tmp_path, "proj")
+    (root / ".compass" / "work").mkdir()
+    locked = tmp_path / "locked"
+    locked.mkdir()
+    locked.chmod(0o500)
+    target = locked / "b.html"
+    try:
+        done = subprocess.run(
+            [sys.executable, str(ROOT / "cli" / "compass"), "flow",
+             "--html", str(target)],
+            cwd=str(root), capture_output=True, text=True)
+    finally:
+        locked.chmod(0o700)
+    assert done.returncode != 0
+    assert "Traceback" not in done.stderr
+    lines = done.stderr.strip().splitlines()
+    assert len(lines) == 1
+    assert str(target) in lines[0]
+    assert "Permission denied" in lines[0]

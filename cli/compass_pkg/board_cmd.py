@@ -74,13 +74,7 @@ def _open_in_browser(path):
 def _run(args, command, open_browser):
     root, work_root, path, mode = _target(args, command)
     text = build_page(root, work_root, args.worktrees, datetime.datetime.now())
-    try:
-        action = board_file.write_page(path, text, mode)
-    except OSError as err:
-        # The guards pass a path that the file system can still refuse
-        # (read-only folder, full disk); refuse in one line, not a traceback.
-        raise CompassError(f"{command}: cannot write {path}: "
-                           f"{err.strerror or err}") from err
+    action = board_file.write_page_or_refuse(command, path, text, mode)
     lines = ["%s: %s %s" % (command, action, path)]
     opened = None
     if open_browser:

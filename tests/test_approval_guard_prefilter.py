@@ -93,10 +93,10 @@ def test_trc_013_prefilter_starts_guard_only_where_needed(tmp_path):
             assert r.returncode == 0, (command, r.returncode, r.stderr)
         r, _ = _run(HOOK_PATH, project, "cat .compass/delegations/DL-1.yml")
         assert r.returncode == 2 and "[delegation-protected]" in r.stderr, r.stderr
-        # The glob form is refused by the guard code of the other subtask. Where
-        # that code is present the refusal must carry the protected-folder code.
+        # The glob form reaches the same folder and the guard must refuse it
+        # with the same code.
         r, _ = _run(HOOK_PATH, project, "cat .compass/deleg*/*")
-        if r.returncode == 2:
-            assert "[delegation-protected]" in r.stderr, r.stderr
+        assert r.returncode == 2 and "[delegation-protected]" in r.stderr, (
+            r.returncode, r.stderr)
     finally:
         shutil.rmtree(project, ignore_errors=True)

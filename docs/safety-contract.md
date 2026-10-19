@@ -168,8 +168,12 @@ because macOS opens a path in any case.
   `--as$X`, `x--as`, `--asmain` and `--assume-yes`, because the shell can
   turn it into a second `--as` that the hook cannot read. Quotes are removed
   first, so `"--as"` and `--a''s` count as `--as`. A word with white space is
-  read again as its parts. A command that is not a delegated approval, such as
-  `git update-index --assume-unchanged`, is not checked. The call is the main agent only when the hook input has neither
+  read again as its parts, so a quoted value is read word by word and a word
+  that holds `--as` inside it, such as `--reason 'fix--assets'`, is refused
+  too. That is the cost of refusing any word that holds `--as`; the refusal
+  names the word, so a person can rephrase it. A command that is not a
+  delegated approval, such as `git update-index --assume-unchanged`, is not
+  checked. The call is the main agent only when the hook input has neither
   `agent_type` nor `agent_id`, and the CLI takes no abbreviated flag, so
   `--deleg` cannot pass unseen. A command that only quotes a delegated
   approval, such as a commit message, needs a matching `--as` too;

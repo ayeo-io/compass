@@ -528,7 +528,7 @@ def test_arc_24_shape_and_compatibility(tmp_path):
     for needed in ("checkpoint_outcomes", "checkpoint-approval", "`waited`", "`skipped`",
                    "compass evidence approve --checkpoint", "compass issue checkpoint add",
                    "checkpoint-no-outcome", "judged issue", "not judged",
-                   "human judgment", "guardrailed", "autonomous", "autonomy ratio",
+                   "human judgement", "guardrailed", "autonomous", "autonomy ratio",
                    "complete usage", "cost per change", "usage.sessions", "too-large",
                    "no-window", "1 GiB", "USAGE_READ_LIMIT_BYTES", "IMPACT_SAMPLE_FLOOR",
                    "IMPACT_GROUP_FLOOR", "unmeasurable", "stage ends"):

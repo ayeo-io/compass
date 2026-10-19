@@ -1,8 +1,10 @@
 """CLI verb renames, the alias table and the verb convention (scenario group E).
 
-Every renamed verb follows `compass <noun> <verb>`. A spelling that a release
-tag holds keeps an alias until 7.0.0, listed in `cli/aliases.yml`. A spelling
-no release holds is an unknown command whose error names the new spelling.
+Every renamed verb follows `compass <noun> <verb>`. The aliases for released
+spellings ended at 7.0.0, so `cli/aliases.yml` lists none. The rewrite code
+stays, and the tests below prove it on a planted table. A spelling that is not
+a verb is an unknown command. Only the two removed released verbs that carry
+`removed_in` keep a hint line in the error.
 
 The expected outputs below are what each old spelling printed before the
 rename, recorded by running it, so a new spelling is checked against the old
@@ -83,9 +85,34 @@ def _notices(stderr):
     return [l for l in stderr.splitlines() if "works until 7.0.0" in l]
 
 
-# Each released alias: the old spelling with sample arguments, and the
-# new spelling that must do the same work. Written out by hand so the table
-# is checked against an independent list.
+# The 7 alias rows that 7.0.0 removed, kept here as a planted table. The rewrite
+# code stays, so these rows prove it. The real table lists none of them.
+PLANTED_ALIASES = [
+    {"old": ["approach", "summary"], "new": ["approach", "show"],
+     "kind": "verb", "released_in": "v5.6.0"},
+    {"old": ["issue", "set-status"], "new": ["issue", "status", "set"],
+     "kind": "verb", "released_in": "v5.6.0", "value_flags": ["--issue", "--reason"],
+     "values": {"active": ["issue", "status", "remove"],
+                "queued": ["issue", "status", "set", "backlog"],
+                "parked": ["issue", "status", "set", "backlog"],
+                "landed": ["issue", "status", "set", "done", "--close-reason", "completed"],
+                "abandoned": ["issue", "status", "set", "done", "--close-reason",
+                              "not-planned"]}},
+    {"old": ["policy", "review-rules"], "new": ["review-rule", "list"],
+     "kind": "verb", "released_in": "v5.6.0"},
+    {"old": ["issue", "artifact"], "new": ["issue", "artifact", "set"],
+     "kind": "verb", "released_in": "v5.6.0"},
+    {"old": ["migrate"], "new": ["issue", "migrate"], "kind": "verb",
+     "released_in": "v5.6.0"},
+    {"old": ["issue", "subtask", "update"], "new": ["issue", "subtask", "set"],
+     "kind": "verb", "released_in": "v5.6.0"},
+    {"old": ["run", "--stage", "build"], "new": ["run", "--stage", "implement"],
+     "kind": "value", "released_in": "v5.6.0"},
+]
+PLANTED_TABLE = {"aliases": PLANTED_ALIASES, "hints": []}
+
+# For each planted row: the old spelling with sample arguments, and the new
+# spelling that the rewrite must give.
 RELEASED = [
     (["approach", "summary"], ["approach", "show"]),
     (["issue", "set-status", "parked", "--reason", "later"],
@@ -97,12 +124,7 @@ RELEASED = [
     (["migrate"], ["issue", "migrate"]),
     (["issue", "subtask", "update", "s1", "--status", "done"],
      ["issue", "subtask", "set", "s1", "--status", "done"]),
-]
-
-
-# A released value of a flag: the old value works until 7.0.0 and is rewritten.
-VALUE_ROWS = [
-    (["run", "--stage", "build"], ["run", "--stage", "implement"]),
+    (["run", "multi", "--stage", "build"], ["run", "multi", "--stage", "implement"]),
 ]
 
 
@@ -185,6 +207,9 @@ KEPT_MARKERS = (
     # The 5.0.0 upgrade notes name the command a reader of that release ran,
     # beside its new name; tests/test_upgrade_notes_5_0_0.py needs the old one.
     ("docs/releasing.md", "run compass migrate"),
+    # The release guide lists the removed `run` stage spelling beside its
+    # replacement, in one table row. Only that row is exempt.
+    ("docs/releasing.md", "`run --stage build` | `run --stage implement`"),
 )
 
 
@@ -203,22 +228,43 @@ def _live_text_files():
             continue
 
 
-def test_vr_e1_no_live_text_teaches_a_retired_spelling():
+def retired_spelling_problems(files, kept=KEPT_MARKERS):
+    """The lines of `files` (pairs of path and text) that teach a retired spelling,
+    except a line that holds the marker kept for its path."""
     import re
     found = []
     # A line break, or a comment mark after one, can sit between the words of
     # a command, so the words are joined by any run of those.
     joined = [re.sub(r" ", r"(?:\\s|#|>|\\*)+", p) for p in RETIRED_SPELLINGS]
-    for rel, text in _live_text_files():
+    for rel, text in files:
         lines = text.splitlines()
         for pattern in joined:
             for match in re.finditer(pattern, text):
                 number = text.count("\n", 0, match.start()) + 1
                 line = lines[number - 1]
-                if any(p == rel and marker in line for p, marker in KEPT_MARKERS):
+                if any(p == rel and marker in line for p, marker in kept):
                     continue
                 found.append(f"{rel}:{number}: {line.strip()[:110]}")
+    return found
+
+
+def test_vr_e1_no_live_text_teaches_a_retired_spelling():
+    found = retired_spelling_problems(_live_text_files())
     assert not found, f"{len(found)} lines teach a retired spelling:\n" + "\n".join(found[:80])
+
+
+def test_vr_e1_the_releasing_table_row_is_exempt_and_no_other_line_is():
+    row = "| `run --stage build` | `run --stage implement` | the stage was renamed |"
+    planted = [("docs/releasing.md", f"# Releasing\n\n{row}\n")]
+    assert retired_spelling_problems(planted) == []
+    # A second line in the same file that holds the spelling is still reported.
+    second = [("docs/releasing.md",
+               f"# Releasing\n\n{row}\nRun `compass run x --stage build` to start.\n")]
+    problems = retired_spelling_problems(second)
+    assert len(problems) == 1 and problems[0].startswith("docs/releasing.md:4:"), problems
+    # The same row in another file is not exempt.
+    elsewhere = [("docs/other.md", f"{row}\n")]
+    assert retired_spelling_problems(elsewhere)
 
 
 def test_vr_e1_the_retired_spelling_scan_reports_a_planted_line():
@@ -231,54 +277,31 @@ def test_vr_e1_the_retired_spelling_scan_reports_a_planted_line():
 
 # --- VR-E2: each released alias does the new verb's work ---------------------
 
-def test_vr_e2_the_table_lists_exactly_the_released_spellings(tmp_path):
-    rows = _table()["aliases"]
-    listed = sorted(" ".join(r["old"]) for r in rows)
-    expected = sorted([" ".join(old[:len(r["old"])]) for old, _ in RELEASED
-                       for r in rows if old[:len(r["old"])] == r["old"]]
-                      + [" ".join(old) for old, _ in VALUE_ROWS])
-    assert listed == expected, (listed, expected)
-    assert len(listed) == len(RELEASED) + len(VALUE_ROWS) == 7, listed
-
-
 @pytest.mark.parametrize("old,new", RELEASED, ids=_ids(RELEASED))
-def test_vr_e2_an_alias_does_the_new_verbs_work(tmp_path, old, new):
-    a = _project(tmp_path / "a")
-    b = _project(tmp_path / "b")
-    rc_old, out_old, err_old = _run(old, a)
-    rc_new, out_new, err_new = _run(new, b)
-    assert len(_notices(err_old)) == 1, err_old
-    notice = _notices(err_old)[0]
+def test_vr_e2_a_planted_alias_row_rewrites_to_the_new_verb(old, new):
+    """The rewrite code stays after 7.0.0, so a planted row proves it."""
+    from compass_pkg import aliases
+    argv, notice = aliases.rewrite(old, PLANTED_TABLE)
+    assert argv == new, (argv, new)
+    assert notice and notice.count("\n") == 0, notice
     assert "compass: '" in notice and "' is now '" in notice, notice
-    assert " ".join(new[:2]) in notice or " ".join(new[:3]) in notice, notice
-    assert not _notices(err_new), err_new
-    # Both spellings failing alike would pass the comparison below, so a
-    # parse error on the new spelling is refused first.
-    assert "usage:" not in err_new and "invalid choice" not in err_new, err_new
-    assert rc_old == rc_new
-    assert _norm(out_old, a) == _norm(out_new, b)
-    without = "\n".join(l for l in err_old.splitlines() if "works until 7.0.0" not in l)
-    assert _norm(without.strip(), a) == _norm(err_new.strip(), b)
-    # The same work on disk: the two manifests end alike.
-    ma = (a / ".compass/work/sample/manifest.yml").read_text()
-    mb = (b / ".compass/work/sample/manifest.yml").read_text()
-    drop = lambda t: "\n".join(l for l in t.splitlines()
-                               if not l.startswith(("parked_at", "updated")))
-    assert drop(ma) == drop(mb)
+    # The new spelling is left as it is, and prints no notice.
+    assert aliases.rewrite(new, PLANTED_TABLE) == (new, None)
+
+
+def test_vr_e2_the_real_table_rewrites_no_removed_spelling():
+    from compass_pkg import aliases
+    for old, _ in RELEASED:
+        assert aliases.rewrite(old) == (old, None), old
 
 
 # --- VR-E3: JSON output stays clean ------------------------------------------
 
-def test_vr_e3_an_alias_run_with_json_keeps_standard_output_clean(tmp_path):
-    a = _project(tmp_path / "a")
-    b = _project(tmp_path / "b")
-    rc_old, out_old, err_old = _run(["approach", "summary", "--json"], a)
-    rc_new, out_new, err_new = _run(["approach", "show", "--json"], b)
-    assert rc_old == rc_new == 0
-    assert json.loads(out_old) == json.loads(out_new)
-    assert "works until 7.0.0" not in out_old
-    assert len(_notices(err_old)) == 1, err_old
-    assert not err_new.strip()
+def test_vr_e3_a_removed_spelling_with_json_prints_nothing_on_standard_output(tmp_path):
+    project = _project(tmp_path / "p")
+    rc, out, err = _run(["approach", "summary", "--json"], project)
+    assert rc == 2 and out == "", (rc, out, err)
+    assert not _notices(err), err
 
 
 # --- VR-E4: help lists the new verbs and no alias ----------------------------
@@ -325,15 +348,20 @@ def test_vr_e4_no_alias_old_spelling_is_a_verb_in_any_help(tmp_path):
 # --- VR-E5: aliases end at 7.0.0 ---------------------------------------------
 
 def test_vr_e5_a_test_fails_at_7_0_0_while_any_alias_remains():
+    """The check is proved on a planted table, because the real one is empty."""
     from compass_pkg import aliases
-    table = aliases.load_table()
-    assert table["aliases"], "the table has no rows to prove the check on"
+    table = PLANTED_TABLE
     assert aliases.removal_problems("5.6.0", table) == []
     planted = aliases.removal_problems("7.0.0", table)
-    assert planted, "a version of 7.0.0 with rows left must fail"
+    assert len(planted) == len(PLANTED_ALIASES), "each planted alias row must be reported"
     assert aliases.removal_problems("7.0.0", {"aliases": [], "hints": []}) == []
     assert aliases.removal_problems("7.1.2", table)
     assert aliases.removal_problems("6.9.9", table) == []
+    # A planted hint row without `removed_in` is reported, and one with both is not.
+    hint = {"old": ["frob", "nicate"], "new": ["frob", "set"]}
+    assert len(aliases.removal_problems("7.0.0", {"aliases": [], "hints": [hint]})) == 1
+    kept = dict(hint, released_in="v5.6.0", removed_in="7.0.0")
+    assert aliases.removal_problems("7.0.0", {"aliases": [], "hints": [kept]}) == []
 
 
 def test_vr_e5_the_real_table_is_empty_once_the_package_reaches_7_0_0():
@@ -344,29 +372,27 @@ def test_vr_e5_the_real_table_is_empty_once_the_package_reaches_7_0_0():
 
 # --- VR-E6: an unreleased spelling is refused, with a hint -------------------
 
-UNRELEASED = [
-    (["policy", "effective"], "policy show"),
-    (["approach", "diagram"], "approach render"),
-    (["issue", "refresh-spec"], "spec sync"),
-    (["issue", "migrate-config"], "issue migrate --config"),
-    (["issue", "template", "requirements-review"], "issue template show"),
-    (["scenario", "tests", "SCN-1", "--test", "tests/x.py::t"], "scenario tests set"),
-    (["issue", "friction", "--category", "tooling", "--phase", "assess", "--observed",
-      "evidence/red.log", "--fix", "Run the suite once"], "issue friction --stage"),
-    (["issue", "friction", "--category", "tooling", "--phase=assess", "--observed",
-      "evidence/red.log", "--fix", "Run the suite once"], "issue friction --stage"),
-]
+# The 9 hint rows for spellings no release held ended at 7.0.0, and
+# tests/test_removed_spellings_fail_with_the_parser_error.py proves each prints
+# no hint. The hint code stays for the two removed released verbs, so a planted
+# table proves it here.
+PLANTED_HINTS = {"aliases": [], "hints": [
+    {"old": ["policy", "effective"], "new": ["policy", "show"]},
+    {"old": ["issue", "friction", "--phase"], "new": ["issue", "friction", "--stage"]},
+]}
 
 
-@pytest.mark.parametrize("old,new", UNRELEASED, ids=[" ".join(o[:3]) for o, _ in UNRELEASED])
-def test_vr_e6_an_unreleased_spelling_is_refused_and_names_the_new_one(tmp_path, old, new):
-    project = _project(tmp_path / "p")
-    rc, out, err = _run(old, project)
-    assert rc == 2, (rc, out, err)
-    assert out == ""
-    assert "works until 7.0.0" not in err
-    assert f"is now '{new}'" in err, err
-    assert err.count("is now '") == 1, err
+def test_vr_e6_a_planted_hint_row_names_the_new_spelling_and_runs_nothing():
+    from compass_pkg import aliases
+    assert aliases.hint_for(["policy", "effective"], PLANTED_HINTS) == (
+        "'policy effective' is now 'policy show'.")
+    assert aliases.hint_for(["policy", "show"], PLANTED_HINTS) is None
+    assert aliases.hint_for(
+        ["issue", "friction", "--category", "tooling", "--phase=assess"], PLANTED_HINTS) == (
+        "'issue friction --phase' is now 'issue friction --stage'.")
+    assert aliases.hint_for(["policy", "effective"], {"aliases": [], "hints": []}) is None
+    assert aliases.rewrite(["policy", "effective"], PLANTED_HINTS) == (
+        ["policy", "effective"], None)
 
 
 def hint_problems(rows, project):
@@ -594,7 +620,9 @@ def test_vr_e13_each_row_names_a_release_that_holds_the_old_spelling(tmp_path):
     cli = _tag_cli()
     if cli is None:
         pytest.skip(f"tag {TAG} is not available in this clone")
-    rows = _table()["aliases"]
+    # The real table lists no alias row, so the planted rows prove the check.
+    assert _table()["aliases"] == []
+    rows = [r for r in PLANTED_ALIASES if r["kind"] == "verb"]
     assert rows
     assert release_problems(rows, cli, _project(tmp_path / "p")) == []
 
@@ -619,30 +647,23 @@ def test_vr_e13_the_table_file_has_a_release_on_every_row():
 
 # --- VR-E14: one rewrite step; the bare artifact spelling --------------------
 
-def test_vr_e14_the_bare_artifact_spelling_is_rewritten_with_one_notice(tmp_path):
+def test_vr_e14_a_planted_bare_artifact_row_is_rewritten_with_one_notice():
     from compass_pkg import aliases
-    argv, notice = aliases.rewrite(["issue", "artifact", "design", "--status", "omitted"])
+    table = PLANTED_TABLE
+    argv, notice = aliases.rewrite(["issue", "artifact", "design", "--status", "omitted"], table)
     assert argv == ["issue", "artifact", "set", "design", "--status", "omitted"]
     assert notice and notice.count("\n") == 0 and "'issue artifact' is now 'issue artifact set'" in notice
-    assert aliases.rewrite(["issue", "artifact", "set", "design"]) == (
+    assert aliases.rewrite(["issue", "artifact", "set", "design"], table) == (
         ["issue", "artifact", "set", "design"], None)
-    assert aliases.rewrite(["issue", "artifact", "--help"])[1] is None
-    assert aliases.rewrite(["issue", "artifact-path", "design"])[1] is None
-    a = _project(tmp_path / "a")
-    b = _project(tmp_path / "b")
-    rc_old, out_old, err_old = _run(
-        ["issue", "artifact", "design", "--status", "omitted", "--reason", "x"], a)
-    rc_new, out_new, err_new = _run(
-        ["issue", "artifact", "set", "design", "--status", "omitted", "--reason", "x"], b)
-    assert (rc_old, _norm(out_old, a)) == (rc_new, _norm(out_new, b))
-    assert len(_notices(err_old)) == 1 and not _notices(err_new)
+    assert aliases.rewrite(["issue", "artifact", "--help"], table)[1] is None
+    assert aliases.rewrite(["issue", "artifact-path", "design"], table)[1] is None
 
 
 def test_vr_e14_the_rewrite_reads_arguments_only_from_the_command_line():
     from compass_pkg import aliases
     assert aliases.rewrite(["check"]) == (["check"], None)
     assert aliases.rewrite([]) == ([], None)
-    argv, notice = aliases.rewrite(["migrate", "--apply"])
+    argv, notice = aliases.rewrite(["migrate", "--apply"], PLANTED_TABLE)
     assert argv == ["issue", "migrate", "--apply"] and notice
     # A removed verb is no alias: the line is left as it is and the parser refuses it.
     assert aliases.rewrite(["issue", "dashboard", "render"]) == (["issue", "dashboard", "render"], None)
@@ -683,35 +704,32 @@ def test_vr_e7_the_stage_help_lists_implement_and_not_build(tmp_path):
     assert "build" not in words, out
 
 
-def test_vr_e8_run_stage_build_runs_the_implement_stage_and_says_build_is_now_implement(
-        headless_project):
+def test_vr_e8_run_stage_build_is_refused_and_runs_no_stage(headless_project):
     result = _stub_run(headless_project, "--max-cycles", "1", plan=("touch",),
                        stage="build")
-    assert result.returncode == 4, result.stdout + result.stderr
-    notices = _notices(result.stderr)
-    assert len(notices) == 1, result.stderr
-    assert "'run --stage build' is now 'run --stage implement'" in notices[0], notices
-    message = _stub_calls(headless_project)[0]
-    assert "/compass:implement" in message[message.index("-p") + 1]
-    assert _stub_last_run(headless_project)["stage"] == "implement"
-    assert "implement" in result.stdout and "build" not in result.stdout, result.stdout
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert not _notices(result.stderr), result.stderr
+    assert "is now '" not in result.stderr, result.stderr
+    assert _stub_calls(headless_project) == []
 
 
-def test_vr_e8_the_equals_form_is_rewritten_too(headless_project):
+def test_vr_e8_the_equals_form_is_refused_too(headless_project):
     import subprocess as sp
     done = sp.run([sys.executable, str(CLI), "run", "multi", "--stage=build"],
                   cwd=str(headless_project), capture_output=True, text=True)
-    assert len(_notices(done.stderr)) == 1, done.stderr
-    assert "--stop-file is required" in done.stderr, done.stderr   # parsed as implement
+    assert done.returncode == 2, done.stderr
+    assert not _notices(done.stderr), done.stderr
+    assert "cannot run unattended" in done.stderr, done.stderr
 
 
-def test_vr_e14_run_stage_build_and_the_bare_artifact_spelling_share_one_rewrite_step():
+def test_vr_e14_a_planted_value_row_is_rewritten_in_both_forms():
     from compass_pkg import aliases
-    argv, notice = aliases.rewrite(["run", "multi", "--stage", "build", "--stop-file", "S"])
+    table = PLANTED_TABLE
+    argv, notice = aliases.rewrite(["run", "multi", "--stage", "build", "--stop-file", "S"], table)
     assert argv == ["run", "multi", "--stage", "implement", "--stop-file", "S"]
     assert notice and "\n" not in notice
     assert "'run --stage build' is now 'run --stage implement'" in notice
-    assert aliases.rewrite(["run", "multi", "--stage=build"])[0] == [
+    assert aliases.rewrite(["run", "multi", "--stage=build"], table)[0] == [
         "run", "multi", "--stage=implement"]
     # Nothing else is touched: another stage, the new word, another command,
     # and a slug or a path that spells the old word.
@@ -720,20 +738,8 @@ def test_vr_e14_run_stage_build_and_the_bare_artifact_spelling_share_one_rewrite
                       ["run", "build", "--stage", "verify"],
                       ["flow", "--stage", "build"],
                       ["run", "multi", "--stop-file", "build"]):
-        assert aliases.rewrite(untouched) == (untouched, None), untouched
-    assert aliases.rewrite(["run", "--help"])[1] is None
-
-
-def test_vr_e14_the_old_and_new_run_spelling_give_the_same_output_and_exit_code(tmp_path):
-    a = _project(tmp_path / "a")
-    b = _project(tmp_path / "b")
-    rc_old, out_old, err_old = _run(["run", "nope", "--stage", "build", "--stop-file", "S"], a)
-    rc_new, out_new, err_new = _run(["run", "nope", "--stage", "implement", "--stop-file", "S"], b)
-    assert rc_old == rc_new != 0
-    assert _norm(out_old, a) == _norm(out_new, b)
-    assert len(_notices(err_old)) == 1 and not _notices(err_new)
-    without = "\n".join(l for l in err_old.splitlines() if "works until 7.0.0" not in l)
-    assert _norm(without.strip(), a) == _norm(err_new.strip(), b)
+        assert aliases.rewrite(untouched, PLANTED_TABLE) == (untouched, None), untouched
+    assert aliases.rewrite(["run", "--help"], PLANTED_TABLE)[1] is None
 
 
 def test_vr_e13_a_planted_value_row_for_an_unreleased_value_fails(tmp_path):
@@ -780,6 +786,6 @@ def test_vr_e9_the_phase_flag_records_nothing(tmp_path):
                          "implement", "--observed", "evidence/red.log",
                          "--fix", "Run the suite once"], project)
     assert rc == 2 and out == "", (rc, out, err)
-    assert "'issue friction --phase' is now 'issue friction --stage'" in err, err
+    assert "is now '" not in err, err
     assert "works until 7.0.0" not in err
     assert (task / "manifest.yml").read_text() == before

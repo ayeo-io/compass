@@ -884,8 +884,19 @@ def test_vr_c15_the_board_and_its_json_show_new_state_words_only(tmp_path):
         assert word not in text.stdout, word
 
 
-def test_vr_c17_each_old_status_word_runs_the_new_setter_and_names_it():
+def test_vr_c17_a_planted_set_status_row_maps_each_old_word_to_the_new_setter():
+    """The row left `cli/aliases.yml` at 7.0.0; the rewrite code reads a planted one."""
     from compass_pkg import aliases
+    row = {"old": ["issue", "set-status"], "new": ["issue", "status", "set"],
+           "kind": "verb", "released_in": "v5.6.0", "value_flags": ["--issue", "--reason"],
+           "values": {"active": ["issue", "status", "remove"],
+                      "queued": ["issue", "status", "set", "backlog"],
+                      "parked": ["issue", "status", "set", "backlog"],
+                      "landed": ["issue", "status", "set", "done", "--close-reason",
+                                 "completed"],
+                      "abandoned": ["issue", "status", "set", "done", "--close-reason",
+                                    "not-planned"]}}
+    table = {"aliases": [row], "hints": []}
     wanted = {
         "active": ["issue", "status", "remove"],
         "queued": ["issue", "status", "set", "backlog"],
@@ -895,52 +906,32 @@ def test_vr_c17_each_old_status_word_runs_the_new_setter_and_names_it():
         "done": ["issue", "status", "set", "done"],
     }
     for word, new in wanted.items():
-        argv, notice = aliases.rewrite(["issue", "set-status", word, "--issue", "x"])
+        argv, notice = aliases.rewrite(["issue", "set-status", word, "--issue", "x"], table)
         assert argv == new + ["--issue", "x"], (word, argv)
         assert "issue set-status" in notice and "7.0.0" in notice, notice
         assert " ".join(new[:3]) in notice, notice
 
 
-def test_vr_c17_an_old_word_through_the_command_line_closes_under_the_same_gate_rule(
-        tmp_path):
+def test_vr_c17_the_new_setter_closes_under_the_same_gate_rule(tmp_path):
     import subprocess
     task = _project(tmp_path, gates=PENDING, land_timestamp=None)
     env = {"PATH": __import__("os").environ["PATH"], "HOME": str(tmp_path)}
     run = lambda *argv: subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), *argv],
                                        cwd=tmp_path, capture_output=True, text=True, env=env)
-    refused = run("issue", "set-status", "landed", "--issue", "the-issue")
+    refused = run("issue", "status", "set", "done", "--close-reason", "completed",
+                  "--issue", "the-issue")
     assert refused.returncode != 0 and "have not passed" in refused.stdout + refused.stderr
-    assert "is now 'issue status set done --close-reason completed'" in refused.stderr
     assert "status" not in _saved(task)
-    closed = run("issue", "set-status", "abandoned", "--issue", "the-issue")
+    closed = run("issue", "status", "set", "done", "--close-reason", "not-planned",
+                 "--issue", "the-issue")
     assert closed.returncode == 0, closed.stderr
     assert _saved(task)["status"] == "done" and _saved(task)["close_reason"] == "not-planned"
     run("issue", "status", "set", "backlog", "--issue", "the-issue")
     assert _saved(task)["status"] == "backlog"
-    ended = run("issue", "set-status", "active", "--issue", "the-issue")
+    ended = run("issue", "status", "remove", "--issue", "the-issue")
     assert ended.returncode == 0, ended.stderr
     assert "status" not in _saved(task)
-
-
-@pytest.mark.parametrize("closed", [{"status": "landed"},
-                                    {"status": "abandoned"},
-                                    {"status": "done", "close_reason": "completed"},
-                                    {"status": "done", "close_reason": "duplicate",
-                                     "duplicate_of": "other"}])
-def test_vr_c17_the_v5_6_0_active_spelling_still_reopens_a_closed_issue(tmp_path, closed):
-    """v5.6.0 `issue set-status active` reopened a landed issue and exited 0.
-    That script keeps working until 7.0.0."""
-    import subprocess
-    task = _project(tmp_path, gates=PENDING, **closed)
-    env = {"PATH": __import__("os").environ["PATH"], "HOME": str(tmp_path)}
-    run = lambda *argv: subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), *argv],
-                                       cwd=tmp_path, capture_output=True, text=True, env=env)
-    reopened = run("issue", "set-status", "active", "--issue", "the-issue")
-    assert reopened.returncode == 0, reopened.stderr
-    saved = _saved(task)
-    assert not {"status", "close_reason", "duplicate_of"} & set(saved), saved
-    assert saved["status_reason"], "the reopening leaves a reason"
-    assert "issue status remove" in reopened.stderr, reopened.stderr
+    # Reopening a closed issue is tested in tests/test_status_remove_reopens_a_closed_issue.py.
 
 
 def test_vr_c18_status_remove_ends_a_hold_and_refuses_when_there_is_none(tmp_path, monkeypatch):

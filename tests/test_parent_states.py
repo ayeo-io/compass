@@ -86,7 +86,7 @@ class Project:
         return code, json.loads(out)
 
     def summary(self):
-        code, out, err = self.run("approach", "summary", "--issue", "feature")
+        code, out, err = self.run("approach", "show", "--issue", "feature")
         assert code == 0, err
         return out
 
@@ -209,7 +209,7 @@ def test_lint_levels(tmp_path, state):
 
 @pytest.mark.parametrize("state", list(STATE_CODES))
 def test_summary_line(tmp_path, state):
-    """`approach summary` prints one line for the parent, with its state."""
+    """`approach show` prints one line for the parent, with its state."""
     project = Project(tmp_path)
     _bring_to(project, state)
     out = project.summary()
@@ -264,7 +264,7 @@ def test_an_unreadable_cached_file_is_not_up_to_date(tmp_path, monkeypatch):
 def test_a_project_file_that_repeats_a_key_does_not_crash_the_summary(tmp_path):
     project = Project(tmp_path)
     (project.root / "compass.yml").write_text("schema: 1\nschema: 2\n", encoding="utf-8")
-    code, out, err = project.run("approach", "summary", "--issue", "feature")
+    code, out, err = project.run("approach", "show", "--issue", "feature")
     assert "Traceback" not in err, err
     assert code == 0 and "Parent" not in out, (out, err)
 
@@ -283,7 +283,7 @@ def test_damaged_seen_does_not_crash(tmp_path):
     code, out, err = _no_traceback(project.run("policy", "lint", "--json"))
     report = json.loads(out)
     assert code == 1 and _only_state(report)["code"] == "S-PARENT-MODIFIED", (out, err)
-    out = _no_traceback(project.run("approach", "summary", "--issue", "feature"))[1]
+    out = _no_traceback(project.run("approach", "show", "--issue", "feature"))[1]
     assert "- locally modified" in out, out
     _no_traceback(project.run("policy", "show"))
     _no_traceback(project.run("approach", "evaluate", "--issue", "feature", "--write"))
@@ -304,7 +304,7 @@ def test_a_fetch_replaces_a_damaged_seen(tmp_path):
 def test_unreadable_project_file_does_not_crash(tmp_path):
     project = Project(tmp_path)
     (project.root / "compass.yml").write_bytes(b"schema: 1\nextends: \xff\xfe\x80\n")
-    code, out, err = _no_traceback(project.run("approach", "summary", "--issue", "feature"))
+    code, out, err = _no_traceback(project.run("approach", "show", "--issue", "feature"))
     assert code == 0, (out, err)
 
 

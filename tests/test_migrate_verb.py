@@ -55,7 +55,7 @@ def test_dry_run_reports_and_writes_nothing(tmp_path):
     root = _v1_project(tmp_path)
     before = sorted(p.name for p in
                     (root / ".compass" / "work" / "old-one").iterdir())
-    r = _run(root, "migrate")
+    r = _run(root, "issue", "migrate")
     assert r.returncode == 0, r.stderr[-400:]
     assert "would" in r.stdout.lower(), (
         "the dry-run report does not speak in the conditional:\n" + r.stdout)
@@ -73,7 +73,7 @@ def test_apply_migrates_a_v1_tree(tmp_path):
     """`TRC-2`: --apply renames the v1 artifacts and rewrites the manifest to
     schema 2.0 - keys, values, and filenames."""
     root = _v1_project(tmp_path)
-    r = _run(root, "migrate", "--apply")
+    r = _run(root, "issue", "migrate", "--apply")
     assert r.returncode == 0, r.stderr[-400:]
     d = root / ".compass" / "work" / "old-one"
     # `migrate` renames the file and moves it to
@@ -103,10 +103,10 @@ def test_apply_migrates_a_v1_tree(tmp_path):
 def test_second_apply_is_a_no_op(tmp_path):
     """`TRC-3`: idempotent - the second apply changes nothing and says so."""
     root = _v1_project(tmp_path)
-    _run(root, "migrate", "--apply")
+    _run(root, "issue", "migrate", "--apply")
     d = root / ".compass" / "work" / "old-one"
     snapshot = {p.name: p.read_bytes() for p in d.iterdir() if p.is_file()}
-    r = _run(root, "migrate", "--apply")
+    r = _run(root, "issue", "migrate", "--apply")
     assert r.returncode == 0, r.stderr[-400:]
     after = {p.name: p.read_bytes() for p in d.iterdir() if p.is_file()}
     assert snapshot == after, "the second apply changed the tree"
@@ -117,9 +117,9 @@ def test_second_apply_is_a_no_op(tmp_path):
 def test_the_reports_name_the_schema_the_manifest_is_written_in(tmp_path):
     """The apply writes schema 3.0, so the report must not say 2.0."""
     root = _v1_project(tmp_path)
-    applied = _run(root, "migrate", "--apply")
+    applied = _run(root, "issue", "migrate", "--apply")
     assert "schema 3.0" in applied.stdout and "schema 2.0" not in applied.stdout, applied.stdout
-    again = _run(root, "migrate", "--apply")
+    again = _run(root, "issue", "migrate", "--apply")
     assert "schema 3.0" in again.stdout and "schema 2.0" not in again.stdout, again.stdout
 
 
@@ -162,7 +162,7 @@ def test_apply_migrates_the_shape_value(tmp_path):
         d.mkdir(parents=True)
         manifest = dict(V1_SPINE); manifest["task"] = f"t{i}"; manifest["route"] = v1
         (d / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False))
-    r = _run(root, "migrate", "--apply")
+    r = _run(root, "issue", "migrate", "--apply")
     assert r.returncode == 0, r.stderr[-400:]
     for i, (v1, v2) in enumerate(cases.items()):
         manifest = yaml.safe_load(
@@ -181,7 +181,7 @@ def test_apply_migrates_the_shape_value(tmp_path):
 def test_report_pluralises_properly(tmp_path):
     """'1 issue directorie(s)' is not a sentence."""
     root = _v1_project(tmp_path)
-    r = _run(root, "migrate")
+    r = _run(root, "issue", "migrate")
     assert "directorie(s)" not in r.stdout, r.stdout
     assert "1 issue directory" in r.stdout, (
         "the singular case does not read as prose:\n" + r.stdout)

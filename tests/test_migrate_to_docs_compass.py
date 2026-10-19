@@ -73,7 +73,7 @@ def _is_pointer(path):
 
 def _migrate(project, *args):
     return subprocess.run(
-        [sys.executable, str(COMPASS_CLI), "migrate", *args],
+        [sys.executable, str(COMPASS_CLI), "issue", "migrate", *args],
         capture_output=True, text=True, timeout=300, cwd=str(project))
 
 

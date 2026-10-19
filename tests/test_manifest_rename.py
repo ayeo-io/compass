@@ -290,12 +290,12 @@ def test_nir_d1_an_old_named_file_still_loads(tmp_path):
 def test_nir_d2_migrate_renames_the_file_and_the_key(tmp_path):
     root, d = _legacy_project(tmp_path)
 
-    dry = subprocess.run([sys.executable, str(CLI), "migrate"],
+    dry = subprocess.run([sys.executable, str(CLI), "issue", "migrate"],
                          cwd=str(root), capture_output=True, text=True, timeout=120)
     assert (d / OLD_FILE).is_file(), (
         "the dry run wrote to disk - it is meant to report and change nothing")
 
-    run = subprocess.run([sys.executable, str(CLI), "migrate", "--apply"],
+    run = subprocess.run([sys.executable, str(CLI), "issue", "migrate", "--apply"],
                          cwd=str(root), capture_output=True, text=True, timeout=120)
     out = run.stdout + run.stderr
     assert (d / NEW_FILE).is_file(), f"migrate did not rename the file:\n{out}"
@@ -311,11 +311,11 @@ def test_nir_d2b_migrating_twice_changes_nothing(tmp_path):
     """Idempotence, which the migrator already has - this holds it for the
     new rows rather than assuming they inherit it."""
     root, d = _legacy_project(tmp_path)
-    subprocess.run([sys.executable, str(CLI), "migrate", "--apply"],
+    subprocess.run([sys.executable, str(CLI), "issue", "migrate", "--apply"],
                    cwd=str(root), capture_output=True, text=True, timeout=120)
     first = (d / NEW_FILE).read_text(encoding="utf-8")
 
-    again = subprocess.run([sys.executable, str(CLI), "migrate", "--apply"],
+    again = subprocess.run([sys.executable, str(CLI), "issue", "migrate", "--apply"],
                            cwd=str(root), capture_output=True, text=True, timeout=120)
     assert again.returncode == 0, (again.stdout + again.stderr)
     assert (d / NEW_FILE).read_text(encoding="utf-8") == first, (

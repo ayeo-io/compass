@@ -71,8 +71,9 @@ misread. Read the existing `delivery-approach.md` and `manifest.yml`, re-read th
 four dimensions, update the manifest's `assessment:` block, then re-run
 `compass approach evaluate --write --reason "..." --justify DIM="..."` to recompute
 the approach, with one `--justify` for each value you changed.
-**Always pass `--reason`** on a re-assessment: when the CLI sees the approach
-change, it records the event in the manifest's `reassessments:` log, and the
+**Always pass `--reason`** on a re-assessment: the CLI records the event in
+the manifest's `reassessments:` log (as kind `unchanged` when the approach did
+not move, which `compass retro` does not count), and the
 reason is the signal `compass retro` reads. Then write a **new
 revision** of `delivery-approach.md` (keep the prior revision visible). A
 re-assessment is a normal event. The failure is an issue that outgrows its

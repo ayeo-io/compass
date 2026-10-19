@@ -534,7 +534,9 @@ failure.*
 A re-assess is also *recorded as data*. `/compass:assess --reassess` re-runs
 `compass approach evaluate --write`, which detects that the delivery
 approach changed and appends an entry to `manifest.yml`'s `reassessments`
-log - `from_route`, `to_route`, the date, and the `--reason`. One entry is
+log - `from_route`, `to_route`, the date, and the `--reason`. A reassess that
+changes nothing records its `--reason` too, as an entry of kind `unchanged`
+that `compass retro` does not count. One entry is
 an anecdote; the log across every issue is the framework's feedback signal.
 `compass retro` reads it and reports the pattern: are reassessments mostly
 *up* (assessment is under-sizing) or *down* (over-sizing)? The triggers

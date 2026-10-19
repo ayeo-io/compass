@@ -15,7 +15,8 @@ build their text from the same dictionary.
 # compass_pkg.catalogue_spec, compass_pkg.core (CompassError,
 # reading_matches, the `when` key map), compass_pkg.obligations (the obligations function,
 # Refused, the dimension orders) and, for a check parameter's direction,
-# compass_pkg.check_registry. compass_pkg.locks imports it and reads `scan`,
+# compass_pkg.check_registry, and compass_pkg.classify_lists (a list
+# parameter as sets of entries). compass_pkg.locks imports it and reads `scan`,
 # `Scan`, `where`, `plain` and `Refused`; `compass_pkg.waivers` reads
 # `classify`.
 from __future__ import annotations
@@ -29,6 +30,7 @@ from compass_pkg import obligations
 from compass_pkg.catalogue_spec import (ARTIFACT_DEPTHS, CEILING_DIRECTIONS, DOCUMENT_CAP, LABEL_CAP,
                                         OBLIGATION_FIELDS, ON_SKIPPED, SEVERITIES)
 from compass_pkg.catalogue_spec import TIGHTER as DIRECTIONS
+from compass_pkg.classify_lists import entry_sets
 from compass_pkg.core import WHEN_KEY_MAP, CompassError, reading_matches
 from compass_pkg.obligations import (Refused, assessment_vocabulary,
                                      dimension_orders)
@@ -77,7 +79,12 @@ JSON_SCHEMA_VERSION = 1
 # layer holds a waiver keeps the issue's mode, so a waived breakdown from
 # `multiagent` to `skipped` is `incomparable` and refused unless the waiver's
 # approval is valid. Version 9 saw no effect there and read it as `equivalent`.
-CLASSIFIER_VERSION = 10
+#
+# Version 11: a list parameter whose registry direction is `superset` (the
+# trigger lists of `contracts-declared`) is compared as a set of exact entries,
+# so adding an entry is `tighter`, which version 10 read as `incomparable`
+# (ADR-073).
+CLASSIFIER_VERSION = 11
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")
@@ -323,7 +330,7 @@ def grid_at(assessment):
 
 # --- comparing one fact -----------------------------------------------------------
 
-TIGHTER_DIRECTIONS = (*DIRECTIONS, "none", "equivalent")
+TIGHTER_DIRECTIONS = (*DIRECTIONS, "none", "equivalent", "superset")
 
 EQUAL, TIGHTER, LOOSER, INCOMPARABLE = "equal", "tighter", "looser", "incomparable"
 
@@ -467,11 +474,19 @@ def _in_declared_choices(field, meta, p, c, ctx):
     return p in allowed and c in allowed
 
 
+def _list_rule(p, c):
+    """A `superset` list: one that holds every entry of the other and more is
+    stricter. An absent or malformed side is incomparable, never an error."""
+    sets = entry_sets(p, c)
+    return INCOMPARABLE if sets is None else _set_rule(None, None, *sets, None)
+
+
 def _ceiling_rule(field, key, p, c, ctx, meta=None):
     """As the registry declares: `higher` or `lower` is the stricter way, and
     `none` (the default) makes any change incomparable. `equivalent` makes a
     swap between two declared choices equal, and any other change
-    incomparable: it is never tighter or looser."""
+    incomparable: it is never tighter or looser. `superset` compares a list as
+    a set of entries (`_list_rule`)."""
     if p == c:
         return EQUAL
     # A readiness parameter one side leaves out runs with the implementation's
@@ -482,6 +497,8 @@ def _ceiling_rule(field, key, p, c, ctx, meta=None):
     direction = _direction(field, key, meta, ctx)
     if direction == "equivalent":
         return EQUAL if _in_declared_choices(field, meta, p, c, ctx) else INCOMPARABLE
+    if direction == "superset":
+        return _list_rule(p, c)
     np_, nc = _number(p), _number(c)
     if direction == "none" or np_ is None or nc is None:
         return INCOMPARABLE

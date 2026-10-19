@@ -32,12 +32,13 @@ rejection withdraws an approval. An approver's name is not authenticated, the
 same limit as every `human-approval` record. `compass evidence approve`
 writes a record; anyone who can write `manifest.yml` can also add one.
 """
-# DEPENDENCY: standard library (os); compass_pkg.layers (the project's owner);
+# DEPENDENCY: standard library (dataclasses, os);compass_pkg.layers (the project's owner);
 # compass_pkg.stable_ids (the id of guardrail `G5`).
 # It imports no command module, so the stage-list evaluator and the
 # `compass evidence approve` command can both use it.
 from __future__ import annotations
 
+import dataclasses
 import os
 
 from compass_pkg.stable_ids import GATE_G5
@@ -128,17 +129,103 @@ def provenance(record):
     return f"via {shown(via)}"
 
 
-def project_owner(task_dir):
-    """The `owner:` of the project file above the issue, or None when there is
-    no project file or it names no owner. Waivers read the owner from the same
-    file (`waivers.allowed_approvers`)."""
-    from compass_pkg import layers
+#: Why no owner can be named, one value per cause (`OwnerLookup.cause`).
+CAUSE_UNREADABLE = "unreadable"                    # the loader rejects compass.yml
+CAUSE_NOT_TEXT = "owner-not-text"
+CAUSE_CONFIG_ONLY = "owner-in-config-yml"
+CAUSE_FILE_ABOVE = "compass-yml-above"
+CAUSE_MISSING_IN_WORKTREE = "compass-yml-missing-in-worktree"
+CAUSE_MISSING = "compass-yml-missing"
+CAUSE_NO_OWNER = "no-owner"                        # reads fine, has no owner key
+
+
+@dataclasses.dataclass(frozen=True)
+class OwnerLookup:
+    """The project's owner, or the one cause that no owner can be named."""
+    owner: str | None        # the owner, stripped; None when none can be named
+    cause: str | None        # None when owner is set; else one CAUSE_*
+    detail: str = ""         # the loader's reason, or the kind of the owner value
+    root: str = ""           # the folder that holds .compass, where the file is read
+    found_in: str = ""       # the folder of the compass.yml found above root
+
+
+def _kind(value):
+    """The owner value's type in words; `bool` first because it is an `int`."""
+    if isinstance(value, bool):
+        return "a boolean"
+    if isinstance(value, (int, float)):
+        return "a number"
+    if isinstance(value, list):
+        return "a list"
+    if isinstance(value, dict):
+        return "a mapping"
+    return f"a {type(value).__name__}"
+
+
+def _text(value):
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def _owner_in_config(layers, root):
+    """Does `.compass/config.yml` hold a text `owner`? An unreadable file says no."""
+    path = os.path.join(root, ".compass", "config.yml")
+    if not os.path.isfile(path):
+        return False
     try:
-        loaded = layers.load_project_layer(layers.find_project_root(task_dir))
+        doc = layers._load(path)                       # noqa: SLF001
     except Exception:                                  # noqa: BLE001
-        return None
-    owner = loaded[0].doc.get("owner") if loaded else None
-    return owner.strip() if isinstance(owner, str) and owner.strip() else None
+        return False
+    return isinstance(doc, dict) and _text(doc.get("owner")) is not None
+
+
+def _file_above(root):
+    """The nearest folder above `root` that holds a `compass.yml`, or ''."""
+    node = os.path.dirname(root)
+    while node != root:
+        if os.path.isfile(os.path.join(node, "compass.yml")):
+            return node
+        root, node = node, os.path.dirname(node)
+    return ""
+
+
+def owner_and_cause(task_dir):
+    """An `OwnerLookup` for the project file above the issue. The first match
+    wins: the loader fails, the owner is text, the owner is not text, the owner
+    is only in `.compass/config.yml`, the file is above the project folder, the
+    file is missing, else the file names no owner."""
+    from compass_pkg import layers
+    root = layers.find_project_root(task_dir)
+    path = os.path.join(root, "compass.yml")
+    exists = os.path.isfile(path)
+    loaded = None
+    if exists:
+        try:
+            loaded = layers.load_project_layer(root)
+        except Exception as exc:                       # noqa: BLE001
+            detail = str(exc).replace(path + ": ", "").replace(path, "").strip()
+            return OwnerLookup(None, CAUSE_UNREADABLE, detail, root)
+    value = loaded[0].doc.get("owner") if loaded else None
+    if _text(value):
+        return OwnerLookup(_text(value), None, root=root)
+    if value is not None and not isinstance(value, str):
+        return OwnerLookup(None, CAUSE_NOT_TEXT, _kind(value), root)
+    if _owner_in_config(layers, root):
+        return OwnerLookup(None, CAUSE_CONFIG_ONLY, root=root)
+    if not exists:
+        above = _file_above(root)
+        if above:
+            return OwnerLookup(None, CAUSE_FILE_ABOVE, root=root, found_in=above)
+        cause = (CAUSE_MISSING_IN_WORKTREE if os.path.isfile(os.path.join(root, ".git"))
+                 else CAUSE_MISSING)
+        return OwnerLookup(None, cause, root=root)
+    return OwnerLookup(None, CAUSE_NO_OWNER, root=root)
+
+
+def project_owner(task_dir):
+    """The `owner:` of the project file above the issue, or None for every
+    cause that no owner can be named. Waivers read the owner from the same
+    file (`waivers.allowed_approvers`)."""
+    return owner_and_cause(task_dir).owner
 
 
 def approver_listed(listed, approver, owner=None):

@@ -706,6 +706,10 @@ case "${TOOL:-}" in Read|Grep) exit 0 ;; esac
 #
 # Returns 0 (true) if a change to $1 must be preceded by a failing test.
 MATCHED_RULE=""
+# The settings read once by is_enforced_path (see the code_globs block): whether
+# it ran, how it ended, the file it read, whether bash can match the globs
+# itself ("safe"), the globs as a JSON list, and the safe globs one to a line.
+GLOBS_LOADED=0 GLOBS_STATUS=0 GLOBS_ERR="" GLOBS_FILE="" GLOBS_KIND="" GLOBS_JSON="" GLOBS_LIST=""
 is_enforced_path() {
   local target="$1" rel base is_code=0 abs
 
@@ -884,21 +888,33 @@ is_enforced_path() {
   # with none costs no Python start on an edit to a path the sets above
   # neither guard nor exempt.
   if [ -d "$PROJECT_DIR/.compass" ] && compass_has_settings_file "$PROJECT_DIR"; then
-    local hit glob_status glob_err glob_out settings_name
+    local hit="" glob_out glob_status g g2 g3
     # A reader that ran and matched nothing means the path is not
     # project-guarded. A reader that could not run - no python3, a broken
     # install, or a config it cannot parse - means we do not know whether it
     # is, and answering "not guarded" to a question we could not ask is how a
     # broken install quietly stops guarding the very scripts that broke it.
-    glob_err="$(mktemp 2>/dev/null)" \
-      || compass_reader_failed "enforcement.code_globs reader" tmp
-    set +e
-    # The reader prints the settings file it read on its first line, so a
-    # refusal can name that file, and a match follows on the second line. On a
-    # failure the file is the one the error names, which can be the old file
-    # when `compass.yml` was the one read.
-    glob_out="$(compass_python - "$PROJECT_DIR" "$rel" 2>"$glob_err" <<'PYEOF'
-import fnmatch, sys
+    #
+    # The settings are read once per hook run, not once per path: a command
+    # with hundreds of write targets would otherwise start Python for each one
+    # (about 50 ms each). The outcome is kept in the GLOBS_* variables,
+    # including a failure, and every path is judged against it below, so a
+    # reader that failed refuses for every path, never only the first.
+    if [ "$GLOBS_LOADED" -eq 0 ]; then
+      GLOBS_LOADED=1
+      GLOBS_ERR="$(mktemp 2>/dev/null)" \
+        || compass_reader_failed "enforcement.code_globs reader" tmp
+      set +e
+      # The reader prints the settings file it read on its first line, so a
+      # refusal can name that file. Then come "safe" or "unsafe", the globs as
+      # a JSON list, and, when safe, the globs one to a line. A failure prints
+      # the file the error names, which can be the old file when `compass.yml`
+      # was the one read. A glob is safe when bash's `case` matches it as
+      # Python's fnmatch does: letters, digits, `*`, `?` and a few punctuation
+      # marks. Any other glob (a bracket set, a backslash, an empty glob) is
+      # matched by Python, one start for each path, as before.
+      glob_out="$(compass_python - "$PROJECT_DIR" 2>"$GLOBS_ERR" <<'PYEOF'
+import json, re, sys
 import compass_pkg
 from compass_pkg import project_settings
 try:
@@ -918,36 +934,80 @@ except Exception as exc:            # unreadable config -> cannot answer
     print(exc.shown if conflict else exc, file=sys.stderr)
     sys.exit(5 if conflict else 4)
 print(project_settings.settings_file(sys.argv[1]))
-path = sys.argv[2]
-for g in globs:
+# A safe glob is matched by the shell case statement exactly as
+# fnmatch.fnmatch(path, g) matches it (the three tests are in the matcher
+# below, for an unsafe glob). No apostrophe here: bash 3.2 miscounts quotes in
+# a heredoc inside a command substitution.
+safe = all(re.fullmatch(r"[A-Za-z0-9_./*?+=,:@%-]+", g) for g in globs)
+print("safe" if safe else "unsafe")
+print(json.dumps(globs))
+if safe:
+    for g in globs:
+        print(g)
+PYEOF
+)"
+      GLOBS_STATUS=$?
+      set -e
+      GLOBS_FILE="${glob_out%%$'\n'*}"
+      if [ "$GLOBS_STATUS" -eq 0 ]; then
+        # A warning the reader wrote (a `compass.yml` it ignored) is for the
+        # person, once; it does not change the decision.
+        [ -s "$GLOBS_ERR" ] && cat "$GLOBS_ERR" >&2 || true
+        rm -f "$GLOBS_ERR"
+        GLOBS_KIND="$(printf '%s\n' "$glob_out" | sed -n '2p')"
+        GLOBS_JSON="$(printf '%s\n' "$glob_out" | sed -n '3p')"
+        GLOBS_LIST="$(printf '%s\n' "$glob_out" | sed -n '4,$p')"
+      fi
+    fi
+    # The same outcome for every path: a failed read refuses each time.
+    if [ "$GLOBS_STATUS" -eq 5 ]; then
+      emit_refusal settings-conflict "target=${TARGET:-${candidate:-?}}" \
+        "tool=${TOOL:-?}" \
+        "keys=$(sed -n '1p' "$GLOBS_ERR")"
+      rm -f "$GLOBS_ERR"
+      exit 2
+    elif [ "$GLOBS_STATUS" -eq 4 ]; then
+      compass_reader_failed "enforcement.code_globs reader" "$GLOBS_STATUS" \
+        "$GLOBS_ERR" "$GLOBS_FILE"
+    elif [ "$GLOBS_STATUS" -ne 0 ]; then
+      compass_reader_failed "enforcement.code_globs reader" "$GLOBS_STATUS" "$GLOBS_ERR"
+    fi
+    if [ "$GLOBS_KIND" = safe ]; then
+      # Python's three tests, in the order it ran them: the glob as written,
+      # the glob as a folder, and the glob after any leading folders.
+      while IFS= read -r g; do
+        [ -n "$g" ] || continue
+        g2="$g"; while [ "${g2%/}" != "$g2" ]; do g2="${g2%/}"; done
+        g3="$g"; while [ "${g3#/}" != "$g3" ]; do g3="${g3#/}"; done
+        case "$rel" in
+          $g|$g2/*) hit="$g"; break ;;
+        esac
+        case "/$rel" in
+          */$g3) hit="$g"; break ;;
+        esac
+      done <<GLOBLIST
+$GLOBS_LIST
+GLOBLIST
+    else
+      set +e
+      hit="$(compass_python - "$rel" "$GLOBS_JSON" 2>"$GLOBS_ERR.m" <<'PYEOF'
+import fnmatch, json, sys
+path = sys.argv[1]
+for g in json.loads(sys.argv[2]):
     if fnmatch.fnmatch(path, g) or fnmatch.fnmatch(path, g.rstrip("/") + "/*") \
             or fnmatch.fnmatch("/" + path, "*/" + g.lstrip("/")):
         print(g)
         break
 PYEOF
 )"
-    glob_status=$?
-    set -e
-    settings_name="$(printf '%s\n' "$glob_out" | sed -n '1p')"
-    hit="$(printf '%s\n' "$glob_out" | sed -n '2p')"
-    if [ "$glob_status" -eq 5 ]; then
-      emit_refusal settings-conflict "target=${TARGET:-${candidate:-?}}" \
-        "tool=${TOOL:-?}" \
-        "keys=$(sed -n '1p' "$glob_err")"
-      rm -f "$glob_err"
-      exit 2
-    elif [ "$glob_status" -eq 4 ]; then
-      compass_reader_failed "enforcement.code_globs reader" "$glob_status" \
-        "$glob_err" "$settings_name"
-    elif [ "$glob_status" -ne 0 ]; then
-      compass_reader_failed "enforcement.code_globs reader" "$glob_status" "$glob_err"
+      glob_status=$?
+      set -e
+      [ "$glob_status" -eq 0 ] \
+        || compass_reader_failed "enforcement.code_globs reader" "$glob_status" "$GLOBS_ERR.m"
+      rm -f "$GLOBS_ERR.m"
     fi
-    # A warning the reader wrote (a `compass.yml` it ignored) is for the person;
-    # it does not change the decision.
-    [ -s "$glob_err" ] && cat "$glob_err" >&2 || true
-    rm -f "$glob_err"
     if [ -n "${hit:-}" ]; then
-      MATCHED_RULE="enforcement.code_globs pattern '$hit' in $settings_name"
+      MATCHED_RULE="enforcement.code_globs pattern '$hit' in $GLOBS_FILE"
       return 0
     fi
   fi
@@ -1353,6 +1413,8 @@ if [ "${TOOL:-}" = "Bash" ]; then
   esac
 
   if [ -z "$DETECTED" ]; then
+    # A target written again judges the same, so each is judged once, in the
+    # order it first appears: 200 identical `cp` lines cost one.
     while IFS= read -r candidate; do
       [ -z "$candidate" ] && continue
       # A quoted target names the same file as an unquoted one, so the quotes
@@ -1371,7 +1433,7 @@ if [ "${TOOL:-}" = "Bash" ]; then
         break
       fi
     done <<CANDIDATES
-$(bash_write_targets "$COMMAND")
+$(bash_write_targets "$COMMAND" | awk '!seen[$0]++')
 CANDIDATES
   fi
 

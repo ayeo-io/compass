@@ -17,6 +17,7 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import signal
 import subprocess
 import time
@@ -70,13 +71,16 @@ def _guest(tmp_path):
 
 
 def _call(root, tool, tool_input, tmp_path, transcript=None, locale=UTF8,
-          timeout=60):
+          timeout=60, path_prefix=None):
     """Run the hook once, in a UTF-8 locale when the machine has one. Returns
-    (seconds, completed process)."""
+    (seconds, completed process). `path_prefix` puts a folder first on PATH."""
     body = {"tool_name": tool, "session_id": "sess-time", "tool_input": tool_input}
     if transcript is not None:
         body["transcript_path"] = str(transcript)
-    env = {"PATH": "/usr/bin:/bin:/usr/local/bin",
+    path = "/usr/bin:/bin:/usr/local/bin"
+    if path_prefix is not None:
+        path = f"{path_prefix}:{path}"
+    env = {"PATH": path,
            "HOME": str(tmp_path / "home"), "CLAUDE_PROJECT_DIR": str(root)}
     if locale:
         env["LC_ALL"] = locale
@@ -306,6 +310,107 @@ def test_many_unclosed_substitutions_under_the_limit_end_in_time(tmp_path):
 
     assert r.returncode in (0, 2), (r.returncode, r.stderr)
     assert seconds < FAST, f"the hook took {seconds:.1f} s"
+
+
+# ---------------------------------------------------------------------------
+# Group D - many write candidates. The configuration reader is a Python start
+# of about 50 ms. It ran once for every candidate; it now runs once per call.
+# ---------------------------------------------------------------------------
+
+def _project_with_globs(tmp_path, globs_yaml: str):
+    """A project whose settings file declares `enforcement.code_globs`."""
+    root = _project(tmp_path)
+    (root / ".compass" / "config.yml").write_text(
+        f"version: 1.0.0\nenforcement:\n  code_globs: {globs_yaml}\n")
+    return root
+
+
+def _counting_python(tmp_path, fail=False):
+    """A folder with a `python3` that counts the starts of the code_globs reader
+    (one line in `counter` for each) and then runs the real one. With `fail`,
+    that reader exits 9 and does not run."""
+    folder = tmp_path / "counting-bin"
+    folder.mkdir(parents=True)
+    counter = tmp_path / "counter"
+    counter.write_text("")
+    real = shutil.which("python3", path="/usr/bin:/bin:/usr/local/bin")
+    wrapper = folder / "python3"
+    wrapper.write_text(
+        "#!/bin/bash\n"
+        'if [ "$1" != "-" ]; then exec ' + real + ' "$@"; fi\n'
+        'f="$(mktemp)"; cat > "$f"\n'
+        'if grep -q code_globs "$f"; then\n'
+        f'  echo x >> {counter}\n'
+        + ("  echo 'reader broke' >&2; exit 9\n" if fail else "") +
+        "fi\n"
+        'exec ' + real + ' "$@" < "$f"\n')
+    wrapper.chmod(0o755)
+    return folder, counter
+
+
+def _starts(counter) -> int:
+    return len(counter.read_text().split())
+
+
+@pytest.mark.serial
+def test_many_distinct_write_targets_read_the_configuration_once(tmp_path):
+    """Scenario id: `TRC-016` in pre-tool-hook-time-bounded/acceptance-criteria.md"""
+    root = _project_with_globs(tmp_path, '["*.zzz"]')
+    folder, counter = _counting_python(tmp_path)
+    command = "\n".join(f"cp a b{i}" for i in range(200))
+    seconds, r = _bash(root, command, tmp_path, path_prefix=folder)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert _starts(counter) == 1, f"the reader started {_starts(counter)} times"
+    assert seconds < 3.0, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("line, code", [
+    pytest.param("cp a b", 0, id="allowed"),
+    pytest.param("cp a src/app.py", 2, id="refused"),
+])
+def test_identical_write_targets_end_in_time_with_one_verdict(
+        tmp_path, line, code):
+    """Scenario id: `TRC-017` in pre-tool-hook-time-bounded/acceptance-criteria.md"""
+    root = _project_with_globs(tmp_path, '["*.zzz"]')
+    _, one = _bash(root, line, tmp_path)
+    seconds, many = _bash(root, "\n".join([line] * 200), tmp_path)
+
+    assert one.returncode == code, (one.returncode, one.stderr)
+    assert many.returncode == one.returncode, (many.returncode, many.stderr)
+    assert many.stderr == one.stderr, many.stderr
+    assert seconds < 1.0, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize("globs, last", [
+    pytest.param('["*.zzz"]', "x.zzz", id="plain-glob"),
+    pytest.param('["[x]*.qqq"]', "xfile.qqq", id="bracket-glob"),
+])
+def test_a_broken_configuration_reader_still_refuses_with_the_cache(
+        tmp_path, globs, last):
+    """Scenario id: `TRC-022` in pre-tool-hook-time-bounded/acceptance-criteria.md
+
+    A glob that matches a later candidate is still enforced after the first
+    read, and a reader that cannot run still refuses."""
+    many = "\n".join(f"cp a b{i}" for i in range(30))
+    root = _project_with_globs(tmp_path, globs)
+    _, r = _bash(root, f"{many}\ncp a {last}", tmp_path)
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert last in r.stderr, r.stderr
+
+    broken = _project_with_globs(tmp_path / "broken", '"not a list"')
+    _, r = _bash(broken, f"{many}\ncp a b", tmp_path)
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert "[config-invalid]" in r.stderr, r.stderr
+
+    folder, counter = _counting_python(tmp_path / "failing", fail=True)
+    root = _project_with_globs(tmp_path / "failing", '["*.zzz"]')
+    _, r = _bash(root, f"{many}\ncp a b", tmp_path, path_prefix=folder)
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert "[reader-failed]" in r.stderr, r.stderr
+    assert _starts(counter) == 1, "the failed reader started again"
 
 
 # ---------------------------------------------------------------------------

@@ -61,7 +61,7 @@ def test_the_decision_view_is_three_lines(repo):
              "--scenario", "Given the greeting, when read, then it says hello",
              "--test", "tests/test_greeting.py")
     assert r.returncode == 0, r.stdout + r.stderr
-    view = _run(repo, "approach", "summary", "--issue", "greeting")
+    view = _run(repo, "approach", "show", "--issue", "greeting")
     assert view.returncode == 0, view.stderr
     lines = view.stdout.strip().splitlines()
     assert len(lines) == 3, lines

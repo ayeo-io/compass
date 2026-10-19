@@ -298,7 +298,7 @@ The gate between requirements and plan/implementation: acceptance criteria exist
 
 ### delivery-approach
 
-The chosen shape for an issue: which artifacts exist, which gates apply, solo or parallel. Deterministic - same assessment plus same policy always gives the same approach. `full` is the name of the heaviest delivery approach and is not a stage mode: its stages run `thorough`, and the old mode word `full` reads as `thorough` until 7.0.0.
+The chosen shape for an issue: which artifacts exist, which gates apply, solo or parallel. Deterministic - same assessment plus same policy always gives the same approach. `full` is the name of the heaviest delivery approach and is not a stage mode: its stages run `thorough`, and the old mode word `full` reads as `thorough` until 8.0.0.
 
 **Related:** `assess`, `quality-gate`
 

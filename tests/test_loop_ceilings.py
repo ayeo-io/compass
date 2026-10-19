@@ -168,13 +168,13 @@ def test_lc_a_a_policy_without_the_rules_gives_no_ceiling_and_drift(repo):
 def test_lc_b_a_repeated_error_refuses_another_attempt(repo):
     _add(repo)
     # Whitespace differences are the same error.
-    _ok(repo, "update", "S1", "--status", "reported")
+    _ok(repo, "set", "S1", "--status", "reported")
     for text in (ERROR, ERROR.replace("\n  ", "\n    "), ERROR + "\n"):
-        _ok(repo, "update", "S1", "--error", text)
+        _ok(repo, "set", "S1", "--error", text)
     s = _subtask(repo)
     assert s["error_repeat_count"] == 3
     assert len(s["last_error_digest"]) == 16
-    refused = _cli(repo, "update", "S1", "--attempt")
+    refused = _cli(repo, "set", "S1", "--attempt")
     assert refused.returncode != 0
     assert "same error 3 times" in refused.stderr
     assert "RP-LOOP-005" in refused.stderr
@@ -186,25 +186,25 @@ def test_lc_b_a_repeated_error_refuses_another_attempt(repo):
 
 def test_lc_b_a_different_error_starts_the_count_again(repo):
     _add(repo)
-    _ok(repo, "update", "S1", "--error", ERROR)
-    _ok(repo, "update", "S1", "--error", ERROR)
-    _ok(repo, "update", "S1", "--error", "ImportError: no module named app")
+    _ok(repo, "set", "S1", "--error", ERROR)
+    _ok(repo, "set", "S1", "--error", ERROR)
+    _ok(repo, "set", "S1", "--error", "ImportError: no module named app")
     assert _subtask(repo)["error_repeat_count"] == 1
-    _ok(repo, "update", "S1", "--attempt")
+    _ok(repo, "set", "S1", "--attempt")
 
 
 # --- LC-C: the try ceiling ----------------------------------------------------
 
 def test_lc_c_the_attempt_ceiling_refuses_a_fourth_attempt(repo):
     _add(repo)
-    _ok(repo, "update", "S1", "--attempt")
-    _ok(repo, "update", "S1", "--attempt")
+    _ok(repo, "set", "S1", "--attempt")
+    _ok(repo, "set", "S1", "--attempt")
     # The third try is under way and permitted: `next` says it is the
     # last one, not that the subtask is refused.
     listed = _ok(repo, "next").stdout
     assert "S1  refused" not in listed
     assert "attempt 3 of 3" in listed
-    refused = _cli(repo, "update", "S1", "--attempt")
+    refused = _cli(repo, "set", "S1", "--attempt")
     assert refused.returncode != 0
     assert "3 attempts" in refused.stderr and "RP-LOOP-001" in refused.stderr
     assert _subtask(repo)["attempts"] == 3
@@ -212,16 +212,16 @@ def test_lc_c_the_attempt_ceiling_refuses_a_fourth_attempt(repo):
 
 def test_lc_c_a_refused_attempt_keeps_the_rest_of_the_call(repo):
     _add(repo)
-    _ok(repo, "update", "S1", "--error", ERROR)
-    _ok(repo, "update", "S1", "--error", ERROR)
-    refused = _cli(repo, "update", "S1", "--error", ERROR, "--round", "fail",
+    _ok(repo, "set", "S1", "--error", ERROR)
+    _ok(repo, "set", "S1", "--error", ERROR)
+    refused = _cli(repo, "set", "S1", "--error", ERROR, "--round", "fail",
                    "--attempt")
     assert refused.returncode != 0
     s = _subtask(repo)
     assert s["error_repeat_count"] == 3 and s["attempts"] == 1
     assert [r["verdict"] for r in s["review_rounds"]] == ["fail"]
     # The count the refused call recorded refuses the next try too.
-    assert _cli(repo, "update", "S1", "--attempt").returncode != 0
+    assert _cli(repo, "set", "S1", "--attempt").returncode != 0
 
 
 # --- LC-D: past the review-round ceiling, landing needs a reason --------------
@@ -229,8 +229,8 @@ def test_lc_c_a_refused_attempt_keeps_the_rest_of_the_call(repo):
 def _past_the_round_ceiling(repo):
     _add(repo)
     for verdict in ("fail", "fail", "fail", "pass"):
-        _ok(repo, "update", "S1", "--round", verdict)
-    _ok(repo, "update", "S1", "--status", "done")
+        _ok(repo, "set", "S1", "--round", verdict)
+    _ok(repo, "set", "S1", "--status", "done")
 
 
 def test_lc_d_rounds_past_the_ceiling_fail_the_check(repo):
@@ -244,15 +244,15 @@ def test_lc_d_rounds_past_the_ceiling_fail_the_check(repo):
 def test_lc_d_the_round_past_the_ceiling_is_recorded_with_a_warning(repo):
     _add(repo)
     for verdict in ("fail", "fail", "fail"):
-        _ok(repo, "update", "S1", "--round", verdict)
-    out = _ok(repo, "update", "S1", "--round", "fail").stdout
+        _ok(repo, "set", "S1", "--round", verdict)
+    out = _ok(repo, "set", "S1", "--round", "fail").stdout
     assert len(_subtask(repo)["review_rounds"]) == 4
     assert "past its ceiling" in out
 
 
 def test_lc_d_a_stop_reason_with_evidence_lets_it_land(repo):
     _past_the_round_ceiling(repo)
-    _ok(repo, "update", "S1", "--stop-reason", "four rounds: the brief was "
+    _ok(repo, "set", "S1", "--stop-reason", "four rounds: the brief was "
         "wrong twice", "--stop-evidence", f"{DOCS}/subtasks/S1/stop.md")
     stop = _subtask(repo)["stopped_reason"]
     assert stop["evidence"] == f"{DOCS}/subtasks/S1/stop.md"
@@ -263,8 +263,8 @@ def test_lc_d_a_stop_reason_with_evidence_lets_it_land(repo):
 def test_lc_d_a_stopped_subtask_passes_without_being_done(repo):
     _add(repo)
     for _ in range(3):
-        _ok(repo, "update", "S1", "--error", ERROR)
-    _ok(repo, "update", "S1", "--stop-reason", "same error three times",
+        _ok(repo, "set", "S1", "--error", ERROR)
+    _ok(repo, "set", "S1", "--stop-reason", "same error three times",
         "--stop-evidence", f"{DOCS}/subtasks/S1/stop.md")
     passed, detail = _check(repo)
     assert passed is True, detail
@@ -272,17 +272,17 @@ def test_lc_d_a_stopped_subtask_passes_without_being_done(repo):
 
 def test_lc_d_a_stop_reason_needs_an_existing_evidence_file(repo):
     _add(repo)
-    missing = _cli(repo, "update", "S1", "--stop-reason", "stopped",
+    missing = _cli(repo, "set", "S1", "--stop-reason", "stopped",
                    "--stop-evidence", f"{DOCS}/nope.md")
     assert missing.returncode != 0
-    alone = _cli(repo, "update", "S1", "--stop-reason", "stopped")
+    alone = _cli(repo, "set", "S1", "--stop-reason", "stopped")
     assert alone.returncode != 0
     assert "stopped_reason" not in _subtask(repo)
 
 
 def test_lc_d_a_stop_whose_evidence_was_deleted_fails(repo):
     _past_the_round_ceiling(repo)
-    _ok(repo, "update", "S1", "--stop-reason", "four rounds",
+    _ok(repo, "set", "S1", "--stop-reason", "four rounds",
         "--stop-evidence", f"{DOCS}/subtasks/S1/stop.md")
     (repo / DOCS / "subtasks" / "S1" / "stop.md").unlink()
     passed, detail = _check(repo)

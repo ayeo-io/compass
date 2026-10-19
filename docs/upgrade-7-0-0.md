@@ -2,6 +2,39 @@
 
 This page lists what 7.0.0 changes and what to do about it. Each section is one change. The decisions behind them are in `architecture/decisions/`.
 
+## The released spellings end, and the old readers stay until 8.0.0
+
+7.0.0 removes the command spellings that 6.0.0 renamed and kept working through an alias. The readers for old words, old approach names, copied 5.x governance and `.compass/config.yml` (when `compass.yml` is absent) do not end at 7.0.0: they stay until 8.0.0. The decision is `governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`.
+
+### What is removed
+
+Each spelling below exits 2 with the parser's usual error. The error for the 7 spellings that were aliases names no new spelling, so use this table. For `issue dashboard`, the error adds one line that names `issue render`.
+
+| Old | New |
+|---|---|
+| `approach summary` | `approach show` |
+| `issue set-status` | `issue status set`, or `issue status remove` for `active` |
+| `policy review-rules` | `review-rule list` |
+| `issue dashboard` | `issue render` |
+| `issue artifact` | `issue artifact set` |
+| `migrate` | `issue migrate` |
+| `issue subtask update` | `issue subtask set` |
+| `run --stage build` | `run --stage implement` |
+
+`issue labels sync` is removed too, and it is not one of the 8. Use `issue github sync`. The error for it adds one line that names the new spelling (see "The issue page on GitHub" below).
+
+### What is kept until 8.0.0
+
+- **Old words** in a manifest, a policy or a flag, such as the stage mode `full` and the size `standard`, are read until 8.0.0. The notice says "the old word is read until 8.0.0". `compass policy migrate --words` rewrites a project's `compass.yml`.
+- **Old approach names** are read until 8.0.0.
+- **Copied 5.x governance** and the generated views `governance/routing-policy.yml` and `governance/guardrails.yml` are read until 8.0.0.
+- **`.compass/config.yml`** is read until 8.0.0 when `compass.yml` is absent. `compass policy migrate` moves its settings into `compass.yml`.
+
+### What to do
+
+1. Replace each removed spelling in your scripts, notes and CI with the new one from the table. Before you run any migration below, copy `.compass/work` and `docs/compass` to a folder outside the project.
+2. Run `compass policy migrate --words` and `compass policy migrate` before 8.0.0, so that no project depends on a reader that 8.0.0 removes.
+
 ## Artifact status and decisions taken
 
 Stage commands now write the status of each registered document. A document that is not accepted does not ship. The decision is `architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md`.
@@ -48,7 +81,7 @@ Compass now writes the status, ticks and counts in an issue's documents from the
 
 ### What is removed
 
-- **The verb `compass issue dashboard render` and its alias.** A command line that still types it exits 2 with the parse error and one line: `'issue dashboard' is now 'issue render'`. The line runs nothing. It is the one hint row that stays at 7.0.0, because 5.6.0 held the spelling.
+- **The verb `compass issue dashboard render` and its alias.** A command line that still types it exits 2 with the parse error and one line: `'issue dashboard' is now 'issue render'`. The line runs nothing. It is one of the two hint rows that stay at 7.0.0 (the other is `issue labels sync`), because 5.6.0 held the spelling.
 - **The check `dashboard-current`.** `rendered-blocks-current` replaces it. An issue stored before 7.0.0 can still list the removed check in its generation. `compass check` reports it as "nothing to check", names the release and the replacement, and runs `rendered-blocks-current` in its place.
 - **The reminder after a command.** The line that told you to run the old verb is gone. The documents are rendered for you after each command that changes a record.
 - **The generated `README.md` beside the manifest** in `.compass/work/<issue>/`. Migration keeps each one as `README.md.v6.bak` (see below). The issue page is `docs/compass/<created>-<issue>/README.md`.

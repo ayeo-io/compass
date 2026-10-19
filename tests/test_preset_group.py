@@ -1,8 +1,8 @@
 """The `compass preset` group: `preset init` and `preset test` (scenario group F).
 
 Neither old spelling, `policy test` or `policy init-preset`, is in a release,
-so neither has an alias. Each is an unknown command whose error names the new
-spelling, and each new verb does what the old one did.
+so neither has an alias. Each is an unknown command, and each new verb does
+what the old one did.
 """
 from __future__ import annotations
 
@@ -118,11 +118,12 @@ def test_vr_f2_exit_codes_are_the_old_ones(preset, tmp_path):
     (["policy", "test"], "preset test"),
     (["policy", "init-preset", "somewhere", "--owner", "acme-team"], "preset init"),
 ])
-def test_vr_f3_the_old_spelling_is_unknown_and_names_the_new_one(tmp_path, old, new):
+def test_vr_f3_the_old_spelling_is_unknown_and_prints_no_hint(tmp_path, old, new):
     rc, out, err = _run(old, tmp_path)
     assert rc == 2, (out, err)
     assert out == ""
-    assert f"is now '{new}'" in err, err
+    # The hint rows for these two spellings ended at 7.0.0: the parser error stands alone.
+    assert "is now '" not in err, err
     assert "works until 7.0.0" not in err
     assert not (tmp_path / "somewhere").exists()
 

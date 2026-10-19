@@ -983,7 +983,7 @@ def project(tmp_path):
 
 
 COMMANDS = {"check": ("check",), "receipt": ("issue", "receipt"),
-            "summary": ("approach", "summary")}
+            "summary": ("approach", "show")}
 
 
 def _outputs(root):
@@ -1046,7 +1046,7 @@ def test_lk_8_the_receipt_line_stays_inside_the_receipts_width_and_before_the_ve
 
 def test_lk_8_the_summary_prints_its_three_lines_and_then_the_conformance_line(project):
     (project / "compass.yml").write_text(UNLOCK_FILE)
-    lines = _run(project, "approach", "summary").stdout.splitlines()
+    lines = _run(project, "approach", "show").stdout.splitlines()
     assert lines[0].startswith("Approach:") and lines[1].startswith("Gates:")
     assert lines[2].startswith("Writes:") and lines[3].startswith("Conformance:")
     assert len(lines) == 4

@@ -154,10 +154,10 @@ def test_read_side_migration_survives_for_the_archive_s_reason():
         "records already on disk - a delivery-approach record written months "
         "ago still says the retired word")
 
-    # An archived manifest still loads. `compass migrate` is the verb that
+    # An archived manifest still loads. `compass issue migrate` is the verb that
     # reads them, so its presence is the observable half.
-    code, out = _run("migrate", "--help")
-    assert code == 0, f"`compass migrate` no longer runs:\n{out[-400:]}"
+    code, out = _run("issue", "migrate", "--help")
+    assert code == 0, f"`compass issue migrate` no longer runs:\n{out[-400:]}"
 
 
 # ---------------------------------------------------------------------------

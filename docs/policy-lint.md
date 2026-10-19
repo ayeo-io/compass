@@ -196,10 +196,10 @@ mode as `thorough-with-follow-up` and the size `standard` as `medium`, in the
 fields that hold them and nowhere else. The lint prints one advisory line to standard
 error for each word it read that way. The line names the layer (a git parent by
 its ref and short sha), the path, the new word and that the old word is read
-until 7.0.0:
+until 8.0.0:
 
 ```
-advisory: project: stages.implement.set.modes reads 'full' as 'thorough'; the old word is read until 7.0.0
+advisory: project: stages.implement.set.modes reads 'full' as 'thorough'; the old word is read until 8.0.0
 ```
 
 An advisory is not a finding. It changes no exit status and no count, it is

@@ -271,7 +271,7 @@ def _with_stale_document(root: Path, env: dict) -> None:
     (work / "technical-design.md").write_text("# Design\n", encoding="utf-8")
     (work / "delivery-approach.md").write_text("# Delivery approach\n", encoding="utf-8")
     for kind in ("acceptance-criteria", "technical-design"):
-        _must(root, env, "issue", "artifact", kind, "--status", "draft",
+        _must(root, env, "issue", "artifact", "set", kind, "--status", "draft",
               "--issue", REGULAR_SLUG)
     manifest = yaml.safe_load((work / "manifest.yml").read_text(encoding="utf-8"))
     manifest["current_phase"] = "implement"

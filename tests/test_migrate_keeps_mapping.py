@@ -101,7 +101,7 @@ def test_rcd_f4c_migrate_still_runs(tmp_path):
 
     # `migrate` is dry by default; --apply makes the change.
     result = subprocess.run(
-        [sys.executable, str(CLI), "migrate"],
+        [sys.executable, str(CLI), "issue", "migrate"],
         cwd=str(tmp_path), capture_output=True, text=True, timeout=120,
     )
     combined = result.stdout + result.stderr

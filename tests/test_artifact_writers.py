@@ -130,7 +130,7 @@ def test_trc_b1_a_registered_document_is_found_where_it_was_written(tmp_path):
     doc.parent.mkdir(parents=True, exist_ok=True)
     doc.write_text("# Acceptance criteria\n", encoding="utf-8")
 
-    r = _cli(tmp_path, "issue", "artifact", "acceptance-criteria",
+    r = _cli(tmp_path, "issue", "artifact", "set", "acceptance-criteria",
              "--status", "draft", "--path", rel)
     assert r.returncode == 0, r.stdout + r.stderr
 
@@ -153,7 +153,7 @@ def test_trc_b1_a_path_outside_the_project_is_refused_at_write_time(tmp_path):
     to say no. Refusing only at read time means the bad entry is already
     recorded and the refusal is a surprise later."""
     task_dir = _project(tmp_path)
-    r = _cli(tmp_path, "issue", "artifact", "acceptance-criteria",
+    r = _cli(tmp_path, "issue", "artifact", "set", "acceptance-criteria",
              "--status", "draft", "--path", "../../outside.md")
     assert r.returncode != 0, (
         "the CLI recorded a registry path that climbs out of the project:\n"

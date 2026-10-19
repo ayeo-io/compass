@@ -115,7 +115,7 @@ def test_olh_2_a_subtasks_progress_is_recorded(repo):
                  ["--status", "reviewing", "--reviewed", "HEAD"],
                  ["--finding", "A-1 misses the empty input case"],
                  ["--round", "fail"], ["--round", "pass"], ["--attempt"]):
-        result = _cli(repo, "update", "S1", *args)
+        result = _cli(repo, "set", "S1", *args)
         assert result.returncode == 0, result.stderr
     s = _subtasks(repo)["S1"]
     assert s["report"].endswith("report.md") and s["status"] == "reviewing"
@@ -129,7 +129,7 @@ def test_olh_2_a_subtasks_progress_is_recorded(repo):
 
 def test_olh_2_a_report_that_does_not_exist_is_refused(repo):
     _add(repo)
-    result = _cli(repo, "update", "S1", "--report", f"{DOCS}/missing.md")
+    result = _cli(repo, "set", "S1", "--report", f"{DOCS}/missing.md")
     assert result.returncode != 0
     assert "report" not in _subtasks(repo)["S1"]
 
@@ -137,10 +137,10 @@ def test_olh_2_a_report_that_does_not_exist_is_refused(repo):
 def test_olh_3_an_interrupted_run_resumes_losing_nothing(repo):
     for sid in ("S1", "S2", "S3"):
         _add(repo, sid)
-    _cli(repo, "update", "S1", "--status", "done")
+    _cli(repo, "set", "S1", "--status", "done")
     head = _git(repo, "rev-parse", "HEAD")
-    _cli(repo, "update", "S2", "--status", "reviewing", "--reviewed", head)
-    _cli(repo, "update", "S2", "--finding", "S2 leaves a stray print")
+    _cli(repo, "set", "S2", "--status", "reviewing", "--reviewed", head)
+    _cli(repo, "set", "S2", "--finding", "S2 leaves a stray print")
     result = _cli(repo, "next")
     assert result.returncode == 0, result.stderr
     out = result.stdout
@@ -156,7 +156,7 @@ def test_olh_3_an_interrupted_run_resumes_losing_nothing(repo):
 
 def test_olh_3_with_every_subtask_done_next_says_so(repo):
     _add(repo)
-    _cli(repo, "update", "S1", "--status", "done")
+    _cli(repo, "set", "S1", "--status", "done")
     result = _cli(repo, "next")
     assert result.returncode == 0
     assert "every subtask is done" in result.stdout
@@ -164,16 +164,16 @@ def test_olh_3_with_every_subtask_done_next_says_so(repo):
 
 def test_olh_3_a_resolved_finding_is_not_carried(repo):
     _add(repo)
-    _cli(repo, "update", "S1", "--finding", "first")
-    _cli(repo, "update", "S1", "--finding", "second")
-    _cli(repo, "update", "S1", "--resolve", "1")
+    _cli(repo, "set", "S1", "--finding", "first")
+    _cli(repo, "set", "S1", "--finding", "second")
+    _cli(repo, "set", "S1", "--resolve", "1")
     out = _cli(repo, "next").stdout
     assert "second" in out and "first" not in out
 
 
 def test_olh_4_a_budget_overrun_is_a_finding(repo):
     _add(repo)
-    _cli(repo, "update", "S1", "--cost", "80000")
+    _cli(repo, "set", "S1", "--cost", "80000")
     s = _subtasks(repo)["S1"]
     assert s["cost"] == 80000
     assert any("80000" in f["text"] and "50000" in f["text"]
@@ -182,7 +182,7 @@ def test_olh_4_a_budget_overrun_is_a_finding(repo):
 
 def test_olh_4_a_cost_within_budget_is_not_a_finding(repo):
     _add(repo)
-    _cli(repo, "update", "S1", "--cost", "20000")
+    _cli(repo, "set", "S1", "--cost", "20000")
     assert not _subtasks(repo)["S1"].get("findings")
 
 
@@ -210,7 +210,7 @@ def test_olh_6_a_coaching_reviewer_brief_is_refused(repo, line):
     _add(repo)
     brief = repo / DOCS / "subtasks" / "S1" / "review-briefing.md"
     brief.write_text(f"Review S1 against A-1.\n{line}\n")
-    result = _cli(repo, "update", "S1", "--review-brief",
+    result = _cli(repo, "set", "S1", "--review-brief",
                   f"{DOCS}/subtasks/S1/review-briefing.md")
     assert result.returncode != 0
     assert line.strip() in result.stderr
@@ -221,7 +221,7 @@ def test_olh_6_a_brief_that_states_what_to_review_is_accepted(repo):
     _add(repo)
     brief = repo / DOCS / "subtasks" / "S1" / "review-briefing.md"
     brief.write_text("Review S1 against scenario A-1 and the package.\n")
-    result = _cli(repo, "update", "S1", "--review-brief",
+    result = _cli(repo, "set", "S1", "--review-brief",
                   f"{DOCS}/subtasks/S1/review-briefing.md")
     assert result.returncode == 0, result.stderr
     assert _subtasks(repo)["S1"]["review_brief"].endswith("review-briefing.md")
@@ -285,8 +285,8 @@ def test_olh_4_a_negative_budget_is_refused(repo, args):
 
 def test_olh_2_resolving_finding_zero_is_refused(repo):
     _add(repo)
-    _cli(repo, "update", "S1", "--finding", "one")
-    result = _cli(repo, "update", "S1", "--resolve", "0")
+    _cli(repo, "set", "S1", "--finding", "one")
+    result = _cli(repo, "set", "S1", "--resolve", "0")
     assert result.returncode != 0
 
 
@@ -294,7 +294,7 @@ def test_olh_2_a_new_attempt_records_its_new_brief(repo):
     _add(repo)
     second = repo / DOCS / "subtasks" / "S1" / "briefing-attempt-2.md"
     second.write_text("Fix the findings.\n")
-    result = _cli(repo, "update", "S1", "--attempt", "--brief",
+    result = _cli(repo, "set", "S1", "--attempt", "--brief",
                   f"{DOCS}/subtasks/S1/briefing-attempt-2.md")
     assert result.returncode == 0, result.stderr
     s = _subtasks(repo)["S1"]
@@ -309,7 +309,7 @@ def test_olh_5_each_attempt_gets_its_own_package(repo):
     first = _cli(repo, "package", "S1")
     assert first.returncode == 0, first.stderr
     p1 = _subtasks(repo)["S1"]["package"]
-    _cli(repo, "update", "S1", "--attempt")
+    _cli(repo, "set", "S1", "--attempt")
     (repo / "src" / "app.py").write_text("x = 3\n")
     _git(repo, "commit", "-q", "-am", "attempt 2")
     _cli(repo, "package", "S1")
@@ -352,7 +352,7 @@ def test_olh_6_a_reworded_coaching_line_is_still_refused(repo, text):
     _add(repo)
     brief = repo / DOCS / "subtasks" / "S1" / "review-briefing.md"
     brief.write_text(f"Review S1 against A-1.\n{text}\n")
-    result = _cli(repo, "update", "S1", "--review-brief",
+    result = _cli(repo, "set", "S1", "--review-brief",
                   f"{DOCS}/subtasks/S1/review-briefing.md")
     assert result.returncode != 0, text
 
@@ -361,7 +361,7 @@ def test_olh_6_a_brief_that_asks_for_a_case_is_not_refused(repo):
     _add(repo)
     brief = repo / DOCS / "subtasks" / "S1" / "review-briefing.md"
     brief.write_text("Review S1. Do not ignore the empty-input case.\n")
-    result = _cli(repo, "update", "S1", "--review-brief",
+    result = _cli(repo, "set", "S1", "--review-brief",
                   f"{DOCS}/subtasks/S1/review-briefing.md")
     assert result.returncode == 0, result.stderr
 

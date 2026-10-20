@@ -73,7 +73,8 @@ stop every `compass` command on the issue. The CLI quotes what it writes.
    the happy path, the realistic edges, and the failure modes that matter. No
    code may exist that no scenario describes; equally, do not write scenarios
    the delivery approach does not need.
-5. **Consult the architect when the issue touches boundaries.** Before
+5. **Read the architect's notes when the issue touches boundaries.** The
+   define command consults the architect before it invokes you. Before
    finalising scenarios, check `manifest.yml.assessment.labels`. If it contains:
    - the literal tag `public-api`, OR
    - any tag that matches a service name in `architecture/relations.md`
@@ -81,9 +82,10 @@ stop every `compass` command on the issue. The CLI quotes what it writes.
    - any tag listed as a `lens_trigger_tag` in `architecture/invariants.yml`
      (if that file exists in the project)
 
-   ...then invoke `/compass:consult architect` before scenarios are
-   finalised. The architect writes `architecture-notes.md` to the issue
-   directory. You read that file and incorporate its boundary risks and
+   ...then the architect has written `architecture-notes.md` to the issue
+   directory. If that file is not there, say so in the hand-off instead of
+   finalising scenarios. You cannot run `/compass:consult` yourself. When the
+   notes are there, read them and incorporate their boundary risks and
    invariant flags into the spec as observable Given/When/Then assertions
    (or record that no architectural risk applies).
 6. **Seed traceability.** Every scenario carries an intent reference. Load the

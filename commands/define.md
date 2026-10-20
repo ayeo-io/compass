@@ -29,6 +29,13 @@ contract, QA for coverage. Write it so all five roles can.
   policy floor forces this unless the change is atomic or small, with trivial
   or contained risk and no domain label; you cannot safely change what you have not first
   described.
+- Check `assessment.labels` in `manifest.yml`. On the regular or full
+  approach, when the labels include `public-api`, a service named in
+  `architecture/relations.md` (if the file exists) or a `lens_trigger_tag` in
+  `architecture/invariants.yml` (if the file exists), invoke the `architect`
+  agent first, the same condition as `/compass:consult architect`. It writes
+  `architecture-notes.md` to the issue directory. A subagent cannot run a
+  slash command, so this step is yours and not the `spec-author`'s.
 - Invoke the `spec-author` agent - it owns this stage.
 - Pass the computed model and effort when you invoke the `spec-author` agent:
   `compass approach show --model define` prints the `model`, and

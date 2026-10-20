@@ -43,7 +43,7 @@ single Given/When/Then. Three fields:
 This is the **cold-reader** strategy (write for a cold reader) applied to the spec itself. A
 reviewer opening a spec they did not write should be able to say what is being
 built and why before deciding whether to read the scenarios in detail. Without
-it they have to synthesise that picture from the Gherkin - easy for the author,
+it they have to synthesize that picture from the Gherkin - easy for the author,
 progressively harder for everyone else, and the point at which review quietly
 stops happening.
 
@@ -183,11 +183,11 @@ ticks. The requirements review:
 ## Anti-patterns
 
 - **The implementation scenario** - `Given the cache is warm, When flushCache()
-  is called…`. That tests the code's shape, not its behaviour. Scenarios outlive
+  is called…`. That tests the code's shape, not its behavior. Scenarios outlive
   implementations.
 - **The unfalsifiable Then** - "Then the user has a good experience." If it
   cannot fail, it cannot pass; it is not a scenario.
-- **The orphan-creating spec** - leaving real behaviour with no scenario.
+- **The orphan-creating spec** - leaving real behavior with no scenario.
   The acceptance-before-code guardrail forbids code that no stated acceptance criterion describes; the
   spec is where you prevent the orphan, not the verify stage.
 - **The novel** - a scenario with five `Given` lines and three `When` lines.

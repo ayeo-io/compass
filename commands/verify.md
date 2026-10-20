@@ -76,7 +76,7 @@ The rest of this command is for delivery work.
    `evidence/` - every scenario has a test, the suite passed
    (a green record on file), every changed file traces to a scenario, every
    `pass` gate has resolving evidence, and so on. It exits non-zero on any
-   failure. The `reviewer` agent still does the *judgement* dimensions
+   failure. The `reviewer` agent still does the *judgment* dimensions
    (clarity, security depth, governance-as-assessed) - `compass check` is
    the mechanical part, not the whole gate.
 
@@ -92,7 +92,7 @@ The rest of this command is for delivery work.
    (`compass policy show`; an unmigrated 5.x project runs on its own copied
    `governance/` until `compass policy migrate`): the guardrails (hard, evidence-backed -
    `compass check` is the mechanical part) and the applicable strategies
-   (assessed as judgement, reported distinctly). On a multiagent, check each subtask first, then again on the
+   (assessed as judgment, reported distinctly). On a multiagent, check each subtask first, then again on the
    combined result.
 5. **Update the gates in `manifest.yml`.** As each gate is cleared, the
    `verifier` registers the evidence, then passes the gate with it:
@@ -124,7 +124,7 @@ command." See `skills/compass-runtime/writing-voice.md`.
 
 - `compass check` passes (record its output with `compass evidence add` and link
   the record - that is the mechanical half);
-- every required *judgement* dimension passed with evidence;
+- every required *judgment* dimension passed with evidence;
 - every gate in `manifest.yml` is `pass` with a resolving evidence pointer;
 - `verification-report.md` is written, and the first five items of its
   **Definition of Done** - every scenario passes, the TDD suite is green,

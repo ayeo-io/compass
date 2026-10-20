@@ -61,7 +61,7 @@ policy `caps`):
 2. **Create the worktrees.** Run `scripts/multiagent.sh` - it creates one git
    worktree per subtask under the configured `worktree_root`. Each worktree
    is an isolated checkout so a builder can run a full red-to-green cycle
-   without destabilising siblings.
+   without destabilizing siblings.
 3. **Assign by file.** Write each builder's assignment - its worktree, its
    scenario set from the distribution map, its slice of the plan - to
    `docs/compass/<created>-<slug>/subtasks/<id>/briefing.md`. A builder works

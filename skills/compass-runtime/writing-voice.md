@@ -150,7 +150,7 @@ words were jargon. Someone a day inside the vocabulary cannot see them.
 | "at full weight" | "what is 'at full weight'?" | when that step is being done properly rather than skipped |
 | "borrowed process weight" | "a meaningless sentence to me" | the list of steps that were skipped earlier and have to be gone back and done |
 
-**The four families these come from**, so the next leak is recognisable before a
+**The four families these come from**, so the next leak is recognizable before a
 reader has to ask:
 
 - **stage weights** - thorough, lightweight, collapsed, skipped. Say what actually happens
@@ -184,31 +184,31 @@ links back here, or names only the three the check greps.
 
 1. **"I will now proceed"** - **findable**. The check greps this exact
    string.
-2. **"successfully" suffixed to a completed verb** - **judgement**. Look for
+2. **"successfully" suffixed to a completed verb** - **judgment**. Look for
    a report of a thing already done ("added successfully", "ran
    successfully") standing in for what actually changed.
-3. **"the X stage" used as dialogue** - **judgement**. Look for a pipeline
+3. **"the X stage" used as dialogue** - **judgment**. Look for a pipeline
    stage name doing the work of a sentence - "ready for the verify stage"
    reports to a dashboard, not to a person.
-4. **"accordingly"** - **judgement**. It has honest uses in conditional prose,
+4. **"accordingly"** - **judgment**. It has honest uses in conditional prose,
    so a grep for it would raise false alarms; a repository-wide search
    turned up exactly one hit, a sentence nobody would touch, so it stays a
    reader's call.
 5. **"utilize"** - **findable**. The check greps this exact string; "use"
    always beats it.
 6. **"Upon completion"** - **findable**. The check greps this exact string.
-7. **headings inside conversation** - **judgement**. Look for a heading
-   *labelling* the prose beneath it - "## Summary" over a summary, "## Status"
+7. **headings inside conversation** - **judgment**. Look for a heading
+   *labeling* the prose beneath it - "## Summary" over a summary, "## Status"
    over a status. The test is whether the heading answers a question the reader
    was already going to ask. "## Summary" does not; nobody asked for a summary.
    "What I need from you" does - it is one part of the reply shape (what I
    did, outstanding questions, what I need from you, what I intend to do
    next) working rather than this tell firing. A label is the tell; an
    answer is not.
-8. **restating the request before answering it** - **judgement**. Look for a
+8. **restating the request before answering it** - **judgment**. Look for a
    paragraph that repeats what was asked before it answers it - the person
    already knows what they asked.
 9. **status-report framing of something the person just watched happen** -
-   **judgement**. Look for a bare status word or field ("Status: PASS")
+   **judgment**. Look for a bare status word or field ("Status: PASS")
    standing in for the sentence a person would actually say about what
    happened - most of the pairs above are exactly this tell.

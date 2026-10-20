@@ -46,10 +46,10 @@ does it seed?*
   it, not invented alongside it.
 
 ### QA - the **coverage** perspective
-Reads each scenario asking: *which behaviours are exercised, and which edges are
+Reads each scenario asking: *which behaviors are exercised, and which edges are
 not described at all?*
 - Owns the gate at the verify stage. Checks that the scenario set actually covers the
-  behaviour space - not just that the listed scenarios pass, but that the
+  behavior space - not just that the listed scenarios pass, but that the
   unlisted edges were a deliberate choice, not an oversight.
 - Has a real power: QA **can send an issue back to define** if scenarios are
   uncoverable or the coverage has holes. Coverage gaps are a spec problem, found
@@ -57,7 +57,7 @@ not described at all?*
 
 ### Designer - the **contracts** perspective
 Reads - and *writes into* - the spec through UI contracts.
-- `ui-contract.md` expresses UI behaviour as scenarios, and those scenarios
+- `ui-contract.md` expresses UI behavior as scenarios, and those scenarios
   *flow into* define. The designer feeds the shared file rather than consuming
   a finished one.
 - A UI contract is a Given/When/Then like any other: given this state, when this

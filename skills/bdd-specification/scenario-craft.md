@@ -5,13 +5,13 @@ Reference on qualities, granularity and depth - consulted while writing.
 ## What a scenario is
 
 ```
-Scenario: <a behaviour, named as an outcome>
+Scenario: <a behavior, named as an outcome>
   Given <the world is in this concrete, specific state>
   When  <exactly one triggering action happens>
   Then  <this observable, checkable outcome holds>
 ```
 
-A scenario is a single behaviour with a single trigger. It is concrete enough
+A scenario is a single behavior with a single trigger. It is concrete enough
 that someone could run it by hand and concrete enough that a test can
 assert it automatically - those are the same bar.
 
@@ -25,7 +25,7 @@ assert it automatically - those are the same bar.
   value, a stored state, a rendered element, an emitted event. "Then it works"
   is not a Then. "Then the response is 402 and no charge row is written" is.
 - **Declarative, not procedural.** Describe *what* is true, not the click-path
-  to get there. The implementation can change; the behaviour must not.
+  to get there. The implementation can change; the behavior must not.
 - **Named as an outcome.** "Scenario: expired token is rejected" beats
   "Scenario: test token". The name is the first thing the product owner,
   marketer, and QA read.
@@ -34,10 +34,10 @@ assert it automatically - those are the same bar.
 
 - **Split** when a scenario has an "and" in its `When`, or branches in its
   `Then` ("Then either X or Y"), or needs a paragraph of `Given` - those are
-  multiple behaviours under one name.
+  multiple behaviors under one name.
 - **Merge** when two scenarios differ only in an incidental value and assert the
-  same behaviour - use a scenario outline / examples table instead of copying.
-- The unit is *one behaviour*, not one feature and not one line of code. A
+  same behavior - use a scenario outline / examples table instead of copying.
+- The unit is *one behavior*, not one feature and not one line of code. A
   feature is a set of scenarios; a line of code traces *up* to a scenario but is
   not one-to-one with it.
 
@@ -47,14 +47,14 @@ The vocabulary never changes. The depth does - and the approach tells you
 how much.
 
 - **Quick fix** - exactly one scenario. The happy path of the new
-  behaviour, no more. If you cannot capture it in one unambiguous
+  behavior, no more. If you cannot capture it in one unambiguous
   scenario, the assessment was misread: it is not a quick fix. Say so and
   send it back to the assess stage.
 - **Regular** - a small scenario set: the happy path, the realistic edges,
   and the failure modes that actually matter. Not every conceivable edge -
   the ones with real consequence.
 - **Full approach** - full discovery. Work `intent.md` and the problem space for
-  the whole behaviour set. Then **group the scenarios by independence** - disjoint
+  the whole behavior set. Then **group the scenarios by independence** - disjoint
   code, disjoint scenarios - because that grouping is what seeds the
   distribution map the Planner builds.
 - **Hotfix** - the scenario *is* a failing regression test that
@@ -63,7 +63,7 @@ how much.
   it gets promoted into a properly-formed Given/When/Then scenario as
   part of the mandatory follow-up.
 - **Spike** - the BDD strategy does **not** run. A spike has no acceptance
-  criteria - its output is knowledge, not behaviour - so the define stage
+  criteria - its output is knowledge, not behavior - so the define stage
   collapses to the *question* ("what do we need to learn, and what would
   a useful answer look like?") and the requirements review is skipped.
   You write no scenario file on a spike. If the spike graduates, real

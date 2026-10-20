@@ -20,7 +20,7 @@ Adopters declare each architecture check as a project guardrail in
   (`architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md`);
 - clears without checking anything when no project guardrails declare
   `command-passes`: a project that has not yet declared any architecture
-  checks sees no behavioural change
+  checks sees no behavioral change
   (`architecture/decisions/ADR-006-backward-compat-is-non-negotiable.md`;
   `architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md`). <!-- vocabulary-scan: allow - the record's own filename; ADR-009 keeps the words its decision was about, so a citation must name the real file -->
 

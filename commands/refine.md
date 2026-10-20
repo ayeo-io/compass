@@ -14,7 +14,7 @@ itself and against the governance in force - the guardrails and strategies.
 Read `delivery-approach.md`. The review is **collapsed on a quick fix** (the
 single scenario was certified unambiguous when it was defined), **collapsed
 on a hotfix** (the reproduction *is* the clarification), and **skipped on a
-spike** (there is nothing to QA - the behaviour is the unknown). If
+spike** (there is nothing to QA - the behavior is the unknown). If
 `delivery-approach.md` collapsed or skipped it, stop - say so, confirm the
 de-scope reason still holds, and point the user to `/compass:plan`. Do not
 re-add a stage the approach skipped, and do not skip one it kept.

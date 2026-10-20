@@ -1,6 +1,6 @@
 <!--
 TEMPLATE: delivery-approach.md
-Authority:   This is the audit centrepiece. It records the assessment, the
+Authority:   This is the audit centerpiece. It records the assessment, the
              delivery approach the policy computed, every policy rule that
              fired, and, as its own section, what was skipped and why it is safe.
              Rubric: the delivery-approach reference docs. Policy prose:
@@ -108,7 +108,7 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 ## The de-scope ledger
 
-<!-- THE AUDIT CENTREPIECE. Every stage or check that is collapsed or
+<!-- THE AUDIT CENTERPIECE. Every stage or check that is collapsed or
      skipped, each with an explicit "safe to skip because…" line. A stage
      with no justification CANNOT be skipped - it runs. On full-approach scale
      work this table is empty by definition; cap-driven reductions go in

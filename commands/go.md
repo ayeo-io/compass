@@ -32,12 +32,12 @@ compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
 
 - risk: `trivial`, `contained`, `cross-cutting` or `critical`
 - familiarity: `greenfield` (new code), `brownfield-mapped` (existing code
-  whose behaviour tests or docs pin) or `brownfield-unmapped`
+  whose behavior tests or docs pin) or `brownfield-unmapped`
 - size: `atomic`, `small`, `medium`, `large` or `product`
 - `--labels auth`, `payments`, `personal-data` or `migrations` when the
   change touches one; those bring the human sign-off
 
-A rating is a judgement with a reason, not a way to reach a lighter process.
+A rating is a judgment with a reason, not a way to reach a lighter process.
 When unsure, rate the size up.
 
 ## 3. Show the plan

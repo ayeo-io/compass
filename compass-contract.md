@@ -50,7 +50,7 @@ resumes from those files.
 7. verify
 8. ship
 
-Honour the delivery approach's stage weights.
+Honor the delivery approach's stage weights.
 
 **Record friction you observe.** If a step costs more than it returns and
 will recur, run `compass issue friction` with evidence and a one-line fix.

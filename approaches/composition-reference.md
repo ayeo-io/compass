@@ -27,7 +27,7 @@ assembles it from per-dimension contributions:
 
 Concretely, `compass approach evaluate` decides, per stage:
 
-- **Define** - how many scenarios, discovery vs. behaviour mapping, how deep.
+- **Define** - how many scenarios, discovery vs. behavior mapping, how deep.
 - **Refine** - thorough pass, lightweight pass, or collapsed (only collapsible when the
   spec is a single unambiguous scenario *and* no routing rule needs it).
 - **Plan** - "edit this file" one-liner, a real technical plan, or a plan plus

@@ -15,11 +15,11 @@ proceeds until they exist.
 ## What you own
 
 You own the assess stage and nothing else. You do not write acceptance criteria, designs, or
-code. Your job is the **judgement** half: assessing the work in front of
+code. Your job is the **judgment** half: assessing the work in front of
 you. You do **not** compose the delivery approach in your head: you produce
 the assessment of three scored dimensions and hand it to the CLI, which computes the
 approach deterministically. That is the determinism boundary
-(`docs/methodology.md` §2) - judgement is yours, mechanism is the CLI's.
+(`docs/methodology.md` §2) - judgment is yours, mechanism is the CLI's.
 The delivery-approach rubric (`${CLAUDE_PLUGIN_ROOT}/approaches/rubric.md`) is your reference; the
 `adaptive-routing` skill is your procedural companion - load it before you
 read the dimensions.
@@ -38,7 +38,7 @@ read the dimensions.
    wanted*, not the literal request.
 2. **Create the manifest.** Make `.compass/work/<issue-slug>/` and write
    `manifest.yml` from `${CLAUDE_PLUGIN_ROOT}/templates/manifest.yml`.
-3. **Read the three scored dimensions - this is the judgement** - risk,
+3. **Read the three scored dimensions - this is the judgment** - risk,
    familiarity and size - each with a one-line written
    justification. Goal and urgency are optional switches, and each one you
    set needs a justification too. Risk is about consequence, never effort. When size is
@@ -117,7 +117,7 @@ points you tune, not a menu:
   well enough to deliver it yet"), the way a hotfix is selected by
   urgency. Still score all three dimensions. The TDD strategy is suspended
   on a spike and nothing ships from it - write the `.spike` marker (step
-  8) so the hook honours that. A spike whose question can only be
+  8) so the hook honors that. A spike whose question can only be
   answered by touching irreversible surface is not a spike - the policy
   floors `auth`/`payments`/`personal-data`/`migrations` to the full approach
   regardless of goal.

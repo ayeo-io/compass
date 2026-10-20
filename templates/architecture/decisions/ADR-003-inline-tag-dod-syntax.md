@@ -53,7 +53,7 @@ Two inline tag forms on the DoD line itself:
 - Learning curve: contributors must learn the `(evidence: ...)` syntax.
 
 **Neutral / follow-on:**
-- Mistyped tags fail loudly, which is the desired behaviour.
+- Mistyped tags fail loudly, which is the desired behavior.
 
 ## References
 

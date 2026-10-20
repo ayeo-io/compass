@@ -11,18 +11,18 @@ Read when something has gone wrong, not while it is going right.
   or asserts something trivially true. It is green without testing anything.
 - **The test that never went red.** If you did not watch it fail, you do not
   know it can.
-- **Behaviour change during refactor.** Changing behaviour during the refactor
-  step. Behaviour changes start at red.
+- **Behavior change during refactor.** Changing behavior during the refactor
+  step. Behavior changes start at red.
 - **Skipping refactor under deadline.** The mess compounds. Refactor is
   part of the cycle, not optional - even a hotfix refactors,
   when the refactor is itself low-risk.
-- **Testing implementation, not behaviour.** Writing assertions that are coupled
+- **Testing implementation, not behavior.** Writing assertions that are coupled
   to how the code works internally - checking which methods were called, which
   internal variables were set, or which collaborators were invoked in which
   order. The test should observe *what* the code does from outside, not *how*
   it does it. A reliable check: **swap the implementation - does the test
   survive? It should.** If swapping a correct reimplementation breaks the test,
-  the test was asserting implementation details, not behaviour. Test what the
+  the test was asserting implementation details, not behavior. Test what the
   contract promises; let the implementation change freely underneath.
 
 ## When red does not become green

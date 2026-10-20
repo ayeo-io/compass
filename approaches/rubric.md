@@ -38,9 +38,9 @@ be `critical`.
 
 | Value | Test |
 |---|---|
-| `greenfield` | Net-new code with no existing behaviour to preserve. |
-| `brownfield-mapped` | Existing code, and its current behaviour is already captured in scenarios (or trivially readable). |
-| `brownfield-unmapped` | Existing code whose behaviour is *not* written down. A floor forces `behavior-mapping` here - you cannot safely change what you have not first described. On an atomic or small change with trivial or contained risk and no domain label it is advice instead (`RP-ADV-002`). |
+| `greenfield` | Net-new code with no existing behavior to preserve. |
+| `brownfield-mapped` | Existing code, and its current behavior is already captured in scenarios (or trivially readable). |
+| `brownfield-unmapped` | Existing code whose behavior is *not* written down. A floor forces `behavior-mapping` here - you cannot safely change what you have not first described. On an atomic or small change with trivial or contained risk and no domain label it is advice instead (`RP-ADV-002`). |
 
 ### Size - *how much work is this, honestly?*
 

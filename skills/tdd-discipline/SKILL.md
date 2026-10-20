@@ -48,9 +48,9 @@ the hotfix under time pressure.
 
 **Red → Green → Refactor**, one scenario at a time.
 
-1. **Red.** Write a test for the next behaviour and watch it fail *for the
+1. **Red.** Write a test for the next behavior and watch it fail *for the
    right reason*. A test that fails because of a typo is not a red - it has
-   not yet described the behaviour. The failure message should read like the
+   not yet described the behavior. The failure message should read like the
    absence of the feature. One case is still a red although pytest cannot
    collect the test: the test imports a module of this project that is not
    written yet. `compass tdd-red` records it as an **import red** when the
@@ -63,7 +63,7 @@ the hotfix under time pressure.
    earned in refactor, under a green suite.
 3. **Refactor.** With the suite green, improve the design - names, duplication,
    structure. The test does not change here; if it has to, you were refactoring
-   behaviour, which means going back to red.
+   behavior, which means going back to red.
 
 Then the next scenario. Small loops. A long gap between red and green is a sign
 the step was too big.
@@ -72,13 +72,13 @@ the step was too big.
 
 - The test exists and fails *before* the production code that satisfies it is
   written. Not after. Not "alongside."
-- It fails because the behaviour is absent - not because it is malformed.
+- It fails because the behavior is absent - not because it is malformed.
 - It is derived from a scenario in `acceptance-criteria.md`. The TDD strategy (red-before-green) and
   the BDD strategy are not two systems: the BDD scenario is the
   acceptance-level test and seeds the unit-level TDD cycle. The chain is
   scenario → test → code.
 - One red at a time. A wall of failing tests written up front is not TDD; it is
-  a test plan. Take them one behaviour at a time so each green is a real,
+  a test plan. Take them one behavior at a time so each green is a real,
   isolated step.
 
 ## Working under the pre-tool hook

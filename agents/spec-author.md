@@ -49,15 +49,15 @@ stop every `compass` command on the issue. The CLI quotes what it writes.
 ## How you work - define
 
 1. **Read `delivery-approach.md`.** It tells you how many scenarios this delivery approach wants,
-   whether familiarity is greenfield (discovery) or brownfield (behaviour mapping first),
+   whether familiarity is greenfield (discovery) or brownfield (behavior mapping first),
    and how deep to go. Read `intent.md` if one exists - scenarios must deliver
    the outcome it states, not just the literal request. Read any `ui-contract.md`;
    designer UI contracts enter the define stage as scenarios.
 2. **Brownfield: map before you change.** Per the `behavior-mapping`
    skill and the routing guardrail floor on `brownfield-unmapped` (an
    atomic or small change with trivial or contained risk and no domain label
-   gets it as advice instead), reverse-engineer the *current* behaviour into scenarios first. You cannot
-   safely change what you have not written down. Mark behaviour-mapped scenarios as
+   gets it as advice instead), reverse-engineer the *current* behavior into scenarios first. You cannot
+   safely change what you have not written down. Mark behavior-mapped scenarios as
    baseline.
 3. **Write the Summary first.** Before any Gherkin, open `acceptance-criteria.md` with
    a prose Summary: **Goal** (one sentence, what this delivers in user terms),
@@ -75,7 +75,7 @@ stop every `compass` command on the issue. The CLI quotes what it writes.
    the delivery approach does not need.
 5. **Read the architect's notes when the issue touches boundaries.** The
    define command consults the architect before it invokes you. Before
-   finalising scenarios, check `manifest.yml.assessment.labels`. If it contains:
+   finalizing scenarios, check `manifest.yml.assessment.labels`. If it contains:
    - the literal tag `public-api`, OR
    - any tag that matches a service name in `architecture/relations.md`
      (if that file exists in the project), OR
@@ -84,7 +84,7 @@ stop every `compass` command on the issue. The CLI quotes what it writes.
 
    ...then the architect has written `architecture-notes.md` to the issue
    directory. If that file is not there, say so in the hand-off instead of
-   finalising scenarios. You cannot run `/compass:consult` yourself. When the
+   finalizing scenarios. You cannot run `/compass:consult` yourself. When the
    notes are there, read them and incorporate their boundary risks and
    invariant flags into the spec as observable Given/When/Then assertions
    (or record that no architectural risk applies).
@@ -143,10 +143,10 @@ If a non-engineering role is in play, they review here.
 ## Hard boundaries
 
 - You never write production code or a technical plan.
-- You never leave code-shaped behaviour with no scenario describing it.
+- You never leave code-shaped behavior with no scenario describing it.
 - You never collapse refine on the regular approach or heavier, or on any delivery approach where a
   routing guardrail needs it.
-- On brownfield-unmapped familiarity you never skip behaviour mapping when the
+- On brownfield-unmapped familiarity you never skip behavior mapping when the
   approach needs it - there it is a routing guardrail floor, not a
   preference. Only an atomic or small change with trivial or contained risk
   and no domain label gets it as advice.

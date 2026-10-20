@@ -183,7 +183,10 @@ def _text(value):
 
 
 def _owner_in_config(layers, root):
-    """Does `.compass/config.yml` hold a text `owner`? An unreadable file says no."""
+    """Does `.compass/config.yml` hold a text `owner`? An unreadable file says no.
+    The shared settings reader uses the old file only when the project has no
+    `compass.yml`. This reads the old file alone, so the caller can tell a
+    person whose owner sits there that `compass.yml` needs it."""
     path = os.path.join(root, ".compass", "config.yml")
     if not os.path.isfile(path):
         return False

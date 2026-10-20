@@ -180,6 +180,16 @@ def test_a_command_that_is_not_simple_is_not_read(command):
     assert _simple(command) is None, command
 
 
+def test_the_module_docstring_lists_every_shape_the_gate_refuses():
+    """The docstring is where a maintainer looks for what the gate refuses, so each
+    refusal the review added must be named there."""
+    from compass_pkg import approval_words
+    doc = " ".join(approval_words.__doc__.split())
+    for shape in ("`^x`", "`a#`", "`<1-3>`", "`>!`", "`>&2`", "`>&2-`", "`\\2>`",
+                  "two digits"):
+        assert shape in doc, (shape, doc)
+
+
 def test_the_command_names_are_the_fixed_list():
     from compass_pkg import approval_words
     assert set(approval_words.COMMANDS) == {"git", "gh", "ls", "wc", "stat", "cat"}

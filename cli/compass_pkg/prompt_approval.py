@@ -245,7 +245,9 @@ def _no_approver(lookup):
     `no-owner` says "no approver can be named"; the others name what is wrong
     and the real next step. Each stays under 60 words for a folder name of ordinary
     length. A hostile name of one-letter words is cut at `SHOWN_FOLDER_MAX` characters
-    and can bring a message to about 80 words."""
+    (240, so 120 words). That brings a message to 143 words (compass.yml missing) up
+    to 273 words (compass.yml above, which shows two folder names), measured on a name
+    of 400 one-letter words. The 60-word cap holds for ordinary names only."""
     records = approval_records
     # The folder names come from the disk, so they are cleaned and cut like the reason.
     cause, root = lookup.cause, records.shown_text(lookup.root, records.SHOWN_FOLDER_MAX)

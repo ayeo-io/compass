@@ -12,7 +12,16 @@ A command is simple when it is one command, or plain commands joined by `&&`,
 - holds no pipe, `&`, `||`, parenthesis, backtick, heredoc, here-string,
   process substitution, comment or backslash at the end of a line;
 - holds no `$` in a word that is not message text, and no `$(`, `${`, `$'`,
-  `$"` or backtick in message text.
+  `$"` or backtick in message text;
+- holds no unquoted brace, glob, tilde, `^` or `#` character (zsh with
+  `extendedglob` reads `^x` and `a#` as patterns), and no word that starts
+  with `=` (zsh expands `=name` to a path);
+- holds no redirect that zsh reads in another way than bash: a number range
+  (`<1-3>`, `<->`, `<-5>`), `>!` and `>|`, a descriptor of two digits before
+  `>` or `<`, a quoted or escaped digit before `>` (`\\2>`), a copy of a
+  descriptor that is the whole command (`>&2`, because zsh runs `cat` for it),
+  a copy with two digits, and the move `>&2-` (zsh writes it to a file named
+  `2-`).
 
 Message text is the only text the guard does not judge. It is the value of
 `-m`, `-am` or `--message` for `git commit`, `tag`, `merge` and `revert`, and

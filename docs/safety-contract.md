@@ -152,11 +152,12 @@ its whole text. A command is simple when all of these hold:
   unquoted brace, glob, tilde, `^` or `#` character (`{ } * ? [ ~ ^ #`),
   because the shell expands such a word before the command runs and the guard
   judges the word as typed. It holds no zsh number range such as `<1-3>`, no
-  `>!`, no descriptor of two digits, no descriptor move (`>&2-`) and no quoted or escaped digit before a
-  redirect. A command that is only a redirect is not simple, because zsh runs
-  `cat` for it. A copy of a descriptor (`2>&1`, `>&2`) ends at a blank, a new
-  line, `;` or `&`; any other white space character is part of a file name in
-  the shell, so a copy followed by one is not simple;
+  `>!`, no descriptor of two digits, no descriptor move (`>&2-`) and no quoted
+  or escaped digit before a redirect. A command that is only a redirect is not
+  simple, because zsh runs `cat` for it. A copy of a descriptor (`2>&1`,
+  `>&2`) ends at a blank, a new line, `;` or `&`; any other white space
+  character is part of a file name in the shell, so a copy followed by one is
+  not simple;
 - it holds no `$` outside message text, and no `$(`, `${` or backtick inside
   message text. A message value must be one quoted word, never joined to its
   option, and never start with `@`.
@@ -165,12 +166,11 @@ The gate fails closed: a shape it does not name is not simple. A `git commit`,
 `tag`, `merge` or `revert` may hold only the options without a value that
 `GIT_FLAGS` and `GIT_LETTERS` list in `approval_words.py` (such as `-a`,
 `--amend`, `--no-edit` and `--allow-empty`) and a message option, because any
-other option may take the next
-word as its value (`--author -m <path>`) or read a file or a commit (`-F`,
-`-c`, `-C`, `-t`, `--template`). A `gh issue`, `pr` or `release` `create`,
-`edit` or `comment` (and `pr review` and `pr merge`) may hold only a message
-option. A global option before the verb (`git -C dir`, `git -c`, `gh -R`)
-makes the command not simple.
+other option may take the next word as its value (`--author -m <path>`) or
+read a file or a commit (`-F`, `-c`, `-C`, `-t`, `--template`). A `gh issue`,
+`pr` or `release` `create`, `edit` or `comment` (and `pr review` and `pr
+merge`) may hold only a message option. A global option before the verb (`git
+-C dir`, `git -c`, `gh -R`) makes the command not simple.
 
 **What the guard judges in a simple command.** It judges each command name,
 each redirect target and each argument by its text, with quotes removed as the
@@ -182,9 +182,10 @@ for each, and a widening is a visible change that needs a test row:
   `merge` and `revert`. A command with `-F`, `--file`, `-c` or `--exec` is
   not simple;
 - the quoted value of `--title`, `--body`, `--notes`, `-t` and `-b` of `gh
-  issue`, `gh pr` and `gh release`, only for the subcommands above. `--body-file`
-  makes the command not simple. `gh api`, `gh alias`, `gh extension` and `gh
-  pr checkout` have no message text, and the guard judges every word of them.
+  issue`, `gh pr` and `gh release`, only for the subcommands above.
+  `--body-file` makes the command not simple. `gh api`, `gh alias`, `gh
+  extension` and `gh pr checkout` have no message text, and the guard judges
+  every word of them.
 
 **What the guard judges by the whole text.** Every command that is not simple
 is judged as it was before this change: any text that names a protected thing
@@ -207,8 +208,8 @@ exemptions are:
 - `ls`, `wc` and `stat` may name a request path as a bare path argument, with
   no glob, brace or tilde. The path can be a request folder or a request file,
   so `wc -l <request>` and `stat <request>` pass: they show a count or the
-  file's metadata, not its content. `ls .compass/delegations` is refused: the delegation folder has no
-  exemption;
+  file's metadata, not its content. `ls .compass/delegations` is refused: the
+  delegation folder has no exemption;
 - `cat` may name `hooks/prompt-approval.sh` as a bare path argument. Every
   other command that names the script is refused, including `chmod`, `git add`,
   `cp`, a runner and a listing, and a `cat` in a pipe or beside another

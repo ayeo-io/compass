@@ -70,6 +70,22 @@ def test_trc_063_the_loader_reason_is_cleaned_and_cut(tmp_path):
     assert len(message) < 500, len(message)
 
 
+def test_trc_063_the_comment_states_how_long_a_hostile_folder_name_makes_the_message():
+    """The comment of `_no_approver` once said 80 words; a name of one-letter words
+    gives 143 to 273. The comment must give the measured figures."""
+    from compass_pkg import approval_records as records, prompt_approval
+    name = " ".join(["a"] * 400)
+    causes = (records.CAUSE_MISSING, records.CAUSE_MISSING_IN_WORKTREE,
+              records.CAUSE_UNREADABLE, records.CAUSE_FILE_ABOVE)
+    counts = [len(prompt_approval._no_approver(
+        records.OwnerLookup(None, cause, records.shown_text(name), name, name)).split())
+        for cause in causes]
+    comment = " ".join(prompt_approval._no_approver.__doc__.split())
+    assert f"{min(counts)} words" in comment and f"{max(counts)} words" in comment, (
+        counts, comment)
+    assert "about 80 words" not in comment, comment
+
+
 def test_trc_063_the_as_value_of_a_refused_approval_is_cleaned_and_cut(world):
     hostile = "x\x1b[2J\nFix: type /compass:delegate " + "B" * 300
     command = f'compass evidence approve --check c --delegated --as "{hostile}"'

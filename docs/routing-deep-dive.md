@@ -1,6 +1,6 @@
 # Compass - Routing Deep Dive
 
-`approaches/rubric.md` is the assess stage's rubric: the four dimensions, the
+`approaches/rubric.md` is the assess stage's rubric: the three scored dimensions, the
 scoring tables, the four-step procedure. This page applies the rubric to six
 issues, walking each one through scoring, composition, policy-rule
 constraint, and the final `delivery-approach.md` - so that the claim
@@ -13,9 +13,10 @@ becomes something you can watch happen.
 
 Every issue, every time, the assess stage runs the same four steps:
 
-1. **Score the four dimensions** - risk, familiarity, size and
-   goal - each with a one-line written justification. If a value cannot be
-   justified, the assess stage asks rather than guesses.
+1. **Score the three dimensions** - risk, familiarity and size - and read
+   the optional switches, goal and urgency, each with a one-line written
+   justification. If a value cannot be justified, the assess stage asks
+   rather than guesses.
 2. **Compose the candidate delivery approach** - assemble per-stage weight
    from the dimension contributions, biased by the routing strategies, name
    the reference shape for shared vocabulary, list any deviations.
@@ -316,7 +317,7 @@ that fires is recorded in the policy-rules section.
 
 ### Score
 
-Assess still scores all four dimensions - they shape the mandatory
+Assess still scores all three dimensions - they shape the mandatory
 follow-up - but hotfix is the one delivery approach selected by *urgency*
 rather than by the size / risk / familiarity composition.
 
@@ -392,7 +393,7 @@ The outstanding process weight has a due date: "before the issue closes."
 
 ### Score
 
-Assess still scores all four dimensions - but this request is not a known
+Assess still scores all three dimensions - but this request is not a known
 change, it is a *question*. There are no acceptance criteria to state because
 the behaviour to fix is the unknown. That is the signal for **exploration**
 as the goal.
@@ -525,7 +526,7 @@ The delivery approach is computed at the assess stage, but a value can turn
 out wrong, and the honest response is not to push on with a delivery
 approach you no longer believe.
 
-`/compass:assess --reassess` re-scores the four dimensions mid-issue, writes a
+`/compass:assess --reassess` re-scores the three dimensions mid-issue, writes a
 **new revision** of `delivery-approach.md` (the prior revision is kept visible under a
 "Superseded" heading), and records what changed and why. A re-assess is a
 normal event, not a failure. *A delivery approach quietly outgrown is the
@@ -573,7 +574,7 @@ Every case above ends in a `delivery-approach.md` that a human can read and a la
 session can resume from. That is the deliverable. Assess does not just
 classify the issue - it explains the classification, records every policy
 rule that fired, and writes down every skip with the reason it is safe. The
-adaptivity is real, and it is *bounded*: bounded by the four-dimension rubric,
+adaptivity is real, and it is *bounded*: bounded by the three-dimension rubric,
 bounded by the routing rules in force (the shipped default plus the project's
 `compass.yml`, which `compass policy show` prints), bounded by
 the rule that an unjustified skip is not a skip. That is what keeps "adaptive"

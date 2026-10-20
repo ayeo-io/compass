@@ -27,7 +27,7 @@ STAGES = STAGE_IDS
 
 # The three ways an issue goes back, whatever its approach.
 WAYS_BACK = (
-    ("A reassessment", "`/compass:assess --reassess` re-reads the four "
+    ("A reassessment", "`/compass:assess --reassess` re-scores the three "
      "dimensions when the work turns out bigger or riskier, and the approach "
      "is computed again."),
     ("A refusal from the pre-tool hook", "an edit is refused until its "

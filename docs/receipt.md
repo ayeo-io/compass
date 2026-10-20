@@ -1,6 +1,6 @@
 # The receipt - `compass issue receipt`
 
-The receipt is **one screen** that shows an issue's gates and evidence: the four-dimension assessment, the delivery approach the policy computed, the gates the issue cleared, and the typed evidence each gate cleared with. It is a *view* over the issue's recorded state - a render of what's on disk, not a re-run of the checks. Reading the receipt is reading the audit trail.
+The receipt is **one screen** that shows an issue's gates and evidence: the assessment, the delivery approach the policy computed, the gates the issue cleared, and the typed evidence each gate cleared with. It is a *view* over the issue's recorded state - a render of what's on disk, not a re-run of the checks. Reading the receipt is reading the audit trail.
 
 The receipt shows Compass's two differentiators made demonstrable in plain text - **per-issue computed routing** on the *Assessment* and *Approach* lines, and **typed, gate-binding evidence** in the *Gates* and *Evidence* sections.
 

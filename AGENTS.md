@@ -32,8 +32,9 @@ for the full contract.
 ## What any Compass runtime must do
 
 **1. Assess before changing anything.** Before an issue changes code, specs,
-or product artifacts, assess it: read the four assessment dimensions - risk,
-familiarity, size, and goal. Reading the four dimensions is judgement, so the
+or product artifacts, assess it: score the three dimensions - risk,
+familiarity and size - and read the optional switches, goal and urgency, and
+any domain labels. Reading them is judgement, so the
 runtime must do it. Composing the delivery approach *from* that assessment is
 mechanism, not judgement: a portable runtime must shell out to
 `compass approach evaluate` (the kit-layer CLI) rather than reimplement the

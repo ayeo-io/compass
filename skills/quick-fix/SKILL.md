@@ -9,7 +9,7 @@ What `/compass:quick-fix` needs to know, and nothing else. The heavier
 approaches read fuller versions of the same subjects; this is the light
 path's share of them.
 
-## Scoring the four dimensions
+## Scoring the three dimensions
 
 A value and a one-line justification each. If a value cannot be justified,
 ask - an unjustified value is worse than a question. `compass quick-fix

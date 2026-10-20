@@ -23,7 +23,7 @@ Typical: root-causing a mysterious defect, a viability prototype, a timeboxed
 to plan real work against it.
 
 Spike is selected by *goal*, the way Hotfix is selected by *urgency* - the
-assess stage still scores all four dimensions, but the `exploration` goal is
+assess stage still scores all three dimensions, but the `exploration` goal is
 what picks the shape.
 
 ## What is different about Spike

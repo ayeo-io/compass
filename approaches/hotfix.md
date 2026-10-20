@@ -14,7 +14,7 @@
 - role is typically `engineer`, often paired with `qa`.
 
 Hotfix is the one approach defined by *urgency* rather than by the size /
-risk / familiarity composition. Assess still scores all four
+risk / familiarity composition. Assess still scores all three
 dimensions - they shape the follow-up - but urgency is what selects the shape.
 
 ## Per-stage weight

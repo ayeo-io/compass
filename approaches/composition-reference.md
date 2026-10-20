@@ -3,7 +3,7 @@
 Assess does not load this file.
 
 This describes what `compass approach evaluate` does: how a candidate shape
-is composed from the four dimensions, and how floors, caps, immovable gates
+is composed from the three scored dimensions, and how floors, caps, immovable gates
 and artifact rules then constrain it. A session does not do any of it by hand -
 that is the determinism boundary. The CLI computes; you read the dimensions
 and run the command.

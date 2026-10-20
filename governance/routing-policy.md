@@ -1,7 +1,7 @@
 # Routing Policy - How the Delivery Approach Is Bounded and Biased
 
-Assess (see `approaches/rubric.md` for the sizing rubric) reads the four
-assessment dimensions and computes the delivery approach. This file
+Assess (see `approaches/rubric.md` for the sizing rubric) scores the three
+dimensions and computes the delivery approach. This file
 governs that computation, using
 the same split as the rest of `governance/`:
 
@@ -32,7 +32,7 @@ project with a `compass.yml` it renders the effective configuration, the
 with no `compass.yml` gets the page from `governance/routing-policy.yml`, as
 before.
 
-Assess applies this policy after reading the four dimensions
+Assess applies this policy after scoring the three dimensions
 and composing a candidate delivery approach, before writing `delivery-approach.md`. Every routing
 rule that fires is recorded in `delivery-approach.md` with its rationale - so any
 `delivery-approach.md` shows not just the delivery approach, but which bounds were active and why.
@@ -43,7 +43,7 @@ it has the live floors, caps, immovable gates, artifact rules, and default shape
 each with a stable id, and `compass approach evaluate` runs it deterministically.
 The YAML excerpts below are *illustrative*; where this prose and that file
 could be read to differ, the `.yml` wins. The crucial boundary: the
-four-dimension *assessment* is judgement (assess produces it, and that
+*assessment* (three scored dimensions, two switches and the domain labels) is judgement (assess produces it, and that
 judgement is the adaptivity); this policy governs only what happens *after* -
 composing and constraining the delivery approach from the assessment, which is deterministic.
 

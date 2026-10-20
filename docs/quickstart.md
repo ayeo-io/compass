@@ -7,8 +7,8 @@ walkthroughs - an engineer, a product owner, a marketer - because Compass has
 five roles. Each entry point writes that role's document, and the documents
 on disk shape the delivery approach.
 
-This document uses Compass's vocabulary: the eight-stage pipeline, the four
-dimensions, the default guardrails, the assess stage. Each term is
+This document uses Compass's vocabulary: the eight-stage pipeline, the three
+scored dimensions, the default guardrails, the assess stage. Each term is
 introduced as it comes up, so you can work through this page first and read
 `docs/methodology.md` afterwards for the design reasoning behind any of them.
 
@@ -133,7 +133,7 @@ where every engineer starts - at the assess stage.
 /compass:assess "Add rate limiting to the public API"
 ```
 
-Assess reads four dimensions - that part is judgement - and records them
+Assess scores three dimensions - that part is judgement - and records them
 in `.compass/work/add-rate-limiting/manifest.yml`. For this issue it scores
 something like: size `medium` (several files, one or two design
 decisions), risk `cross-cutting` (a misconfigured limiter degrades
@@ -157,7 +157,7 @@ It then **presents the delivery approach**. It is advisory until confirmed,
 and the session waits for you at assess only if the project's `autonomy`
 setting lists assess, which `compass approach show` reports. Under the default,
 `balanced`, a regular approach goes on and logs that it did not wait; it waits
-at define and plan. You read the four assessment values, you read the de-scope ledger
+at define and plan. You read the assessment values, you read the de-scope ledger
 - the regular approach collapses nothing major, so the ledger is short - and you confirm,
 or you override an assessment value and the override is recorded in
 `delivery-approach.md` with your name and reason.
@@ -316,7 +316,7 @@ request gets a different approach depending on the intent document behind it.
 Assess reads `intent.md` as part of the goal dimension - the goal is
 the *actual outcome wanted*, not the literal request. The `intent.md`
 on disk blocks Plan until the spec is checked against it (the
-**intent-fidelity gate**). The approach is the one the four dimensions give;
+**intent-fidelity gate**). The approach is the one the three scored dimensions give;
 the document adds the check, not extra weight.
 
 ### Define the acceptance criteria, then refine them

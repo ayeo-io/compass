@@ -1,5 +1,5 @@
-"""The quick-fix command and skill teach the two verbs, not the hand-run
-steps the verbs now carry out.
+"""The quick-fix command teaches the two verbs, not the hand-run steps the
+verbs now carry out.
 
 Before this issue, the command walked an agent through five hand-run
 stages - `compass init`, a manifest written from a template, `compass
@@ -7,9 +7,11 @@ approach evaluate`, `compass tdd-red`/`tdd-green`, `compass check`, `compass
 evidence add`, `compass gate pass` three times, a hand-written devlog line,
 `compass ship-commit` - each one a model call. `compass quick-fix start` and
 `compass quick-fix finish` now do the mechanical half of that in two calls;
-this file pins that the two prose files that teach them describe the two
-verbs, name no template to read, and stay under the same word ceiling every
-other measurement in this issue holds to.
+this file pins that the one prose file that teaches them describes the two
+verbs, names no template to read, and stays under a word ceiling. The command
+once had a skill of the same name beside it. The Skill tool resolved the name
+to the command, so the skill never loaded; its rules now live in the command
+(issue quick-fix-skill-not-hidden).
 
 Scenario id: QFO-6, in acceptance-criteria.md of issue quick-fix-overhead.
 """
@@ -21,7 +23,10 @@ ROOT = Path(__file__).resolve().parent.parent
 COMMAND = ROOT / "commands" / "quick-fix.md"
 SKILL = ROOT / "skills" / "quick-fix" / "SKILL.md"
 
-WORD_CEILING = 700
+#: The old reading path (one command and one skill) measured 11,203 words
+#: before the light path was inlined; the one file that carries it now stays
+#: far under that.
+WORD_CEILING = 1300
 
 
 def _text(path: Path) -> str:
@@ -32,9 +37,11 @@ def _words(path: Path) -> int:
     return len(_text(path).split())
 
 
-def test_qfo_6_both_files_exist():
-    missing = [str(p.relative_to(ROOT)) for p in (COMMAND, SKILL) if not p.is_file()]
-    assert not missing, f"the quick-fix teaching files are missing: {missing}"
+def test_qfo_6_the_command_exists_and_the_skill_does_not():
+    assert COMMAND.is_file(), "commands/quick-fix.md is missing"
+    assert not SKILL.exists(), (
+        "skills/quick-fix/SKILL.md is back: the command of the same name hides "
+        "it, so its text never reaches a session")
 
 
 def test_qfo_6_the_command_names_start_with_its_fixed_flags():
@@ -61,23 +68,18 @@ def test_qfo_6_the_command_names_the_red_and_the_green():
 
 
 def test_qfo_6_no_template_is_named_to_read():
-    for path in (COMMAND, SKILL):
-        text = _text(path)
-        assert "templates/" not in text, (
-            f"{path.relative_to(ROOT)} still names a template to read")
+    assert "templates/" not in _text(COMMAND), (
+        "commands/quick-fix.md still names a template to read")
 
 
 def test_qfo_6_no_hand_run_gate_or_evidence_step():
     """The verbs pass the gates and record the evidence internally now; an
-    agent following these files must never be told to run either by hand."""
-    for path in (COMMAND, SKILL):
-        text = _text(path)
-        assert "compass gate pass" not in text, (
-            f"{path.relative_to(ROOT)} still instructs a hand-run "
-            f"`compass gate pass`")
-        assert "compass evidence add" not in text, (
-            f"{path.relative_to(ROOT)} still instructs a hand-run "
-            f"`compass evidence add`")
+    agent following this file must never be told to run either by hand."""
+    text = _text(COMMAND)
+    assert "compass gate pass" not in text, (
+        "commands/quick-fix.md still instructs a hand-run `compass gate pass`")
+    assert "compass evidence add" not in text, (
+        "commands/quick-fix.md still instructs a hand-run `compass evidence add`")
 
 
 def test_qfo_6_the_command_keeps_the_wrong_path_list():
@@ -99,46 +101,11 @@ def test_qfo_6_the_command_keeps_the_directory_announcement_rule():
     assert "report" in text.lower()
 
 
-def test_qfo_6_the_skill_keeps_the_scoring_tables():
-    text = _text(SKILL)
-    for dimension in ("Risk", "Familiarity", "Size"):
-        assert dimension in text, f"skills/quick-fix/SKILL.md drops {dimension}"
-    for value in ("trivial", "contained", "cross-cutting", "critical",
-                  "greenfield", "brownfield-mapped", "brownfield-unmapped",
-                  "atomic", "small", "medium"):
-        assert f"`{value}`" in text, (
-            f"skills/quick-fix/SKILL.md drops the `{value}` scoring value")
-
-
-def test_qfo_6_the_skill_keeps_red_green_refactor():
-    text = _text(SKILL)
-    assert "**Red.**" in text
-    assert "**Green.**" in text
-    assert "**Refactor.**" in text
-
-
-def test_qfo_6_the_skill_description_is_unchanged():
-    """The frontmatter `description:` is resident on every turn whether the
-    skill loads or not; the intake fixes it and this issue does not touch
-    it."""
-    text = _text(SKILL)
-    assert ('description: "The light path: dimensions, red-green-refactor, '
-            'gates. Load with /compass:quick-fix."') in text
-
-
-def test_qfo_6_each_file_is_under_the_word_ceiling():
-    over = {p.relative_to(ROOT): n for p in (COMMAND, SKILL)
-            if (n := _words(p)) >= WORD_CEILING}
-    assert not over, f"over the {WORD_CEILING}-word ceiling: {over}"
-
-
-def test_qfo_6_the_two_files_combined_stay_well_under_the_old_reading_path():
-    """The path these two replace measured 11,203 words
-    (tests/test_prompt_layer.py's `QUICK_FIX_WORD_CEILING` docstring)."""
-    total = _words(COMMAND) + _words(SKILL)
-    assert total <= 3000, (
-        f"commands/quick-fix.md and skills/quick-fix/SKILL.md read {total} "
-        "words together, over the 3000-word ceiling")
+def test_qfo_6_the_command_is_under_the_word_ceiling():
+    words = _words(COMMAND)
+    assert words < WORD_CEILING, (
+        f"commands/quick-fix.md reads {words} words, over the "
+        f"{WORD_CEILING}-word ceiling")
 
 
 def test_qfo_6_finish_is_taught_with_the_test_command_and_no_commit():
@@ -170,6 +137,83 @@ def test_qfo_6_assess_sends_a_small_change_to_quick_fix_start():
     text = _text(ROOT / "commands" / "assess.md")
     assert "compass quick-fix start" in text
     assert "/compass:quick-fix" in text
+
+
+def _skill_names() -> dict[str, str]:
+    """Each skill's `name:` from its frontmatter, keyed by its directory."""
+    names = {}
+    for path in sorted((ROOT / "skills").glob("*/SKILL.md")):
+        for line in _text(path).splitlines():
+            if line.startswith("name:"):
+                names[path.parent.name] = line.split(":", 1)[1].strip().strip("\"'")
+                break
+    return names
+
+
+def test_qfs_176_no_skill_shares_a_command_name():
+    """The Skill tool resolves `compass:quick-fix` to the command, so a skill
+    of the same name is never loaded and its text never reaches a session. In
+    86 recorded Skill calls the command loaded 83 times and the skill never."""
+    commands = {p.stem for p in (ROOT / "commands").glob("*.md")}
+    shadowed = sorted(f"skills/{directory}/SKILL.md"
+                      for directory, name in _skill_names().items()
+                      if directory in commands or name in commands)
+    assert not shadowed, (
+        f"a skill shares its name with a command, so the command hides it: "
+        f"{shadowed}")
+
+
+#: Each rule the skill held, with a phrase the command must now carry. Each
+#: phrase is the shortest wording that carries the rule, so a rule that is
+#: reworded around it still passes, and a rule that is dropped does not.
+RULES_MOVED_FROM_THE_SKILL = {
+    "an unjustified value is worse than a question": "an unjustified value",
+    "risk is consequence, never effort": "never effort",
+    "risk: trivial test": "instantly reversible",
+    "risk: contained test": "recoverable without an incident",
+    "risk: cross-cutting test": "ecovery needs coordination",
+    "risk: critical test": "cannot be rolled back",
+    "familiarity: greenfield test": "net-new",
+    "familiarity: brownfield-mapped test": "trivially readable",
+    "familiarity: brownfield-unmapped does not stop a quick fix":
+        "pin with a test what the code does now",
+    "size: atomic test": "under about half an hour",
+    "size: small test": "solution pattern that already exists",
+    "size: medium and above test": "design decisions",
+    "size: estimate up when unsure": "estimate up",
+    "goal: an intent.md or positioning.md pulls the approach up": "positioning.md",
+    "goal: exploration is a spike": "exploration",
+    "the guardrail is tested before it lands": "tested before it lands",
+    "a light approach adapts surface, never whether a test exists": "never whether a test exists",
+    "red: fail for the right reason": "right reason",
+    "green: the smallest correct change": "smallest correct change",
+    "refactor: a changed test means back to red": "go back to red",
+    "the hook blocks an edit with no failing test; never work around it": "work around it",
+    "no natural failing test: use a guard that can fail": "guard that can fail",
+    "no natural failing test: the verified-by kinds": "regression|e2e|typecheck|live",
+    "a sanctioned red is not an exemption from red": "not an exemption from red",
+}
+
+
+def test_qfs_176_every_rule_of_the_skill_reaches_the_command():
+    """A session that runs `/compass:quick-fix` reads the command and nothing
+    else, so a rule must be in the command to be followed."""
+    text = " ".join(_text(COMMAND).split())
+    missing = sorted(rule for rule, phrase in RULES_MOVED_FROM_THE_SKILL.items()
+                     if phrase not in text)
+    assert not missing, f"commands/quick-fix.md lacks these rules: {missing}"
+
+
+def test_qfs_176_the_command_does_not_promise_a_skill_load():
+    """The old description, `Load with /compass:quick-fix`, described a load
+    that does not happen. No file may point a session at a quick-fix skill."""
+    stale = []
+    for path in sorted(ROOT.glob("skills/**/*.md")) + sorted(
+            ROOT.glob("commands/*.md")) + sorted(ROOT.glob("approaches/*.md")):
+        for n, line in enumerate(_text(path).splitlines(), 1):
+            if "`quick-fix` skill" in line or "quick-fix skill" in line:
+                stale.append(f"{path.relative_to(ROOT)}:{n}")
+    assert not stale, f"these lines name a quick-fix skill that is gone: {stale}"
 
 
 def test_qfo_6_assess_carries_the_whole_quick_fix_recipe():

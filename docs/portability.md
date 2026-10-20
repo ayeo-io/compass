@@ -39,7 +39,7 @@ agents/          router, spec-author, planner, orchestrator, builder,
 skills/          adaptive-routing, bdd-specification, behavior-mapping,
                  compass-runtime, evidence-gates, flow-management,
                  governance-check, intent-interview, plan-authoring,
-                 quick-fix, receiving-code-review, systematic-debugging,
+                 receiving-code-review, systematic-debugging,
                  tdd-discipline, worktree-multiagent
 hooks/           pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,
                  prompt-approval.sh, approval-summary.sh

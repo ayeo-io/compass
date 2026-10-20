@@ -39,7 +39,7 @@ approach and for `--reassess`.
 When assess computes a **quick fix**, the eight rows above collapse into one
 command: `/compass:quick-fix` carries the whole light path - assess, the one
 scenario, red-green, the check, the commit - inlined in a single file, and it
-is read with the `quick-fix` skill and nothing else. It is the same pipeline
+is read alone. It is the same pipeline
 at its lightest weight, not a way around it: if `compass approach evaluate`
 returns anything heavier, the rows above are what runs.
 

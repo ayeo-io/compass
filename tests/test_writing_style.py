@@ -1223,13 +1223,13 @@ _register(Rule(
             "RP-REQUIRE-003 is a real rule id, quoted as the literal "
             "printed text this comment explains."),
         Exemption(
-            "skills/quick-fix/SKILL.md", "--verified-by",
+            "commands/quick-fix.md", "--verified-by",
             "a real CLI flag (`cli/compass:246,258`, `dest=\"verified_by\"`) "
             "- the match lands mid-flag-name on the \"verified\" substring, "
             "not the standalone verb the word table means to catch."),
         Exemption(
             "tests/test_acceptance_verb.py", "--verified-by",
-            "the same real CLI flag false match as skills/quick-fix/SKILL.md "
+            "the same real CLI flag false match as commands/quick-fix.md "
             "above; found while fixing batch 7, not by the audit."),
         Exemption(
             "skills/tdd-discipline/no-natural-red.md", "terraform validate",

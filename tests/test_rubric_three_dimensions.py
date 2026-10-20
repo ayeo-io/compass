@@ -21,7 +21,40 @@ from compass_pkg.classify import EVALUATOR_REQUIRED  # noqa: E402
 
 RUBRIC_FILES = ("approaches/rubric.md", "skills/adaptive-routing/SKILL.md")
 
-FOUR_DIMENSIONS = re.compile(r"\bfour\s+(?:assessment\s+)?dimension", re.I)
+FOUR_DIMENSIONS = re.compile(
+    r"\bfour[\s-]+(?:assessment\s+|scored\s+)?dimension", re.I)
+
+# "risk, familiarity, size and goal" names goal as a scored dimension.
+GOAL_AS_SCORED = re.compile(
+    r"risk,\s+familiarity,\s+size,?\s+(?:and\s+)?goal", re.I)
+
+# The docs and agents a session or an adopter reads to learn how Compass
+# assesses a change. governance/routing-policy.yml is generated from the
+# default preset, so it is checked here and fixed at its source.
+DESCRIBING_FILES = (
+    "AGENTS.md",
+    "README.md",
+    "agents/router.md",
+    "approaches/README.md",
+    "approaches/assess-procedure.md",
+    "approaches/composition-reference.md",
+    "approaches/hotfix.md",
+    "approaches/spike.md",
+    "commands/assess.md",
+    "commands/status.md",
+    "docs/approach-diagram.html",
+    "docs/five-minutes.md",
+    "docs/index.md",
+    "docs/methodology.md",
+    "docs/portability.md",
+    "docs/quickstart.md",
+    "docs/receipt.md",
+    "docs/routing-deep-dive.md",
+    "docs/safety-contract.md",
+    "governance/routing-policy.md",
+    "governance/routing-policy.yml",
+    "skills/quick-fix/SKILL.md",
+)
 
 
 def _text(rel: str) -> str:
@@ -56,3 +89,15 @@ def test_rubric_names_three_scored_dimensions():
         for switch in _switches():
             assert f"`{switch}`" in text, (rel, switch)
         assert "domain label" in text, (rel, "domain label")
+
+
+def test_docs_and_agents_name_no_fourth_dimension():
+    """No doc or agent tells a reader to score four dimensions or goal."""
+    found = []
+    for rel in DESCRIBING_FILES:
+        text = _text(rel)
+        for pattern in (FOUR_DIMENSIONS, GOAL_AS_SCORED):
+            for match in pattern.finditer(text):
+                line = text.count("\n", 0, match.start()) + 1
+                found.append(f"{rel}:{line}: {match.group(0)!r}")
+    assert not found, "four scored dimensions still described:\n" + "\n".join(found)

@@ -25,7 +25,7 @@ PROCEDURE = ROOT / "approaches" / "assess-procedure.md"
 PROCEDURE_PARTS = (
     "## Setup", "## `--reassess`", "## Procedure",
     "1. **Create the manifest.**", "1a. **Load project architecture if present.**",
-    "2. **Read the four dimensions - this is the judgement**",
+    "2. **Read the three scored dimensions - this is the judgement**",
     "3. **Compute the delivery approach - this is the mechanism.**",
     "4. **Write `delivery-approach.md`**",
     "5. **Set the `.compass/current-task` pointer**",

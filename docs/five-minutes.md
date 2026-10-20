@@ -26,14 +26,17 @@ Start with a real, contained change:
 /compass:assess "Fix the misspelt invalid-token message"
 ```
 
-Compass assesses four dimensions:
+Compass scores three dimensions:
 
 | Dimension | What it asks |
 |---|---|
 | Risk | What happens if this goes wrong? |
 | Familiarity | Is the affected code understood? |
 | Size | How much delivery work is involved? |
-| Goal | What outcome is wanted? |
+
+Two optional switches, `goal` and `urgency`, lean the approach towards a
+reference shape (spike or hotfix). Domain labels, such as `auth`, raise the
+floor. Neither is scored.
 
 Judgement goes into the assessment. Everything after it is deterministic: the
 same assessment plus the same policy produces the same approach, every time.
@@ -52,7 +55,7 @@ assessment:
   goal: delivery
 ```
 
-Those four dimensions are the only judgement in the routing. Everything after
+Those three dimensions and the switches are the only judgement in the routing. Everything after
 them - the stages, the gates, the orchestration - is computed. Run
 `compass approach evaluate --verbose` against that assessment and it prints:
 
@@ -211,7 +214,7 @@ runtime can resume from these files without the original chat.
 
 ## The mental model in five points
 
-1. **Assess the work, do not choose a process.** Four dimensions are judgement;
+1. **Assess the work, do not choose a process.** Three dimensions are judgement;
    the approach is computed from them.
 2. **The approach decides the process weight.** Which stages run at what weight,
    which artifacts are earned, which gates apply.

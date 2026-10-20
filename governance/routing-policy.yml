@@ -9,8 +9,8 @@
 # mechanical parts of routing. `routing-policy.md` explains the why; this file
 # is what the deterministic evaluator (`compass approach evaluate`) actually runs.
 #
-# The split that matters: the four-dimension *assessment* (risk, familiarity,
-# size, goal, plus urgency and labels) is JUDGEMENT - the assess stage, an LLM or a
+# The split that matters: the *assessment* (three scored dimensions - risk,
+# familiarity and size - plus the goal and urgency switches and labels) is JUDGEMENT - the assess stage, an LLM or a
 # human, produces it, and it is not mechanisable, because that judgement
 # IS the adaptivity. This file governs only what happens *after* the assessment
 # is recorded: composing and constraining the delivery approach. That part is deterministic and

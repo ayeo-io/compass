@@ -94,7 +94,7 @@ decision, and no Compass vocabulary appears in it beyond issue names.
 Here the internals *are* the point. Report:
 
 - **Delivery approach** - from `delivery-approach.md` / `manifest.yml`: the
-  nearest reference shape, the four assessment dimensions, and any policy
+  nearest reference shape, the three scored dimensions, and any policy
   rule that fired.
 - **Stage** - inferred from which artifacts exist: `delivery-approach.md`
   -> assessed; `acceptance-criteria.md` -> criteria defined;

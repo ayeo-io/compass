@@ -18,6 +18,8 @@ the table does not exist, and when a doc in this folder is not listed.
 - [routing-deep-dive.md](routing-deep-dive.md) - how the assessment becomes a delivery approach.
 - [safety-contract.md](safety-contract.md) - what Compass enforces, and what it does not claim.
 - [refusal-codes.md](refusal-codes.md) - every reason the pre-tool hook can refuse with, generated.
+- [artifact-catalog.md](artifact-catalog.md) - the artifact catalog: the fields of a kind, the skeleton, the word limits, the documents that repeat, the documents per work unit and the table of shipped kinds.
+- `artifact-catalogue.md` - the old name of the artifact catalog page, kept until 8.0.0 so a link to it opens the new page.
 - [multiagent-protocol.md](multiagent-protocol.md) - how a multiagent issue is run, step by step.
 - [headless-runner.md](headless-runner.md) - `compass run`: one stage of one issue with nobody in the session.
 - [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.
@@ -77,6 +79,7 @@ same commit.
 | `hooks/`, `compass-contract.md`, `cli/compass_pkg/approval_guard.py`, `cli/compass_pkg/approval_words.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/tip_scope.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/manifest_store.py` | `docs/safety-contract.md` |
+| `cli/compass_pkg/comment_only_edit.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
 | `cli/compass_pkg/release_line.py` | `docs/release-line.md` |
 | `cli/compass_pkg/release_notes.py`, `cli/compass_pkg/shipped_issues.py` | `docs/release-notes.md` |
@@ -95,7 +98,7 @@ same commit.
 | `cli/compass_pkg/issue_depends.py` | `docs/issue-dependencies.md` |
 | `cli/compass_pkg/issue_config_cmd.py`, `cli/compass_pkg/config_preview.py` | `docs/issue-configure.md` |
 | `cli/compass_pkg/stage_lists.py`, `cli/compass_pkg/item_records.py`, `cli/compass_pkg/follow_up_cmd.py`, `cli/compass_pkg/doc_sections.py`, `cli/compass_pkg/approval_records.py`, `cli/compass_pkg/approvals.py`, `cli/compass_pkg/approval_requests.py`, `cli/compass_pkg/prompt_approval.py`, `cli/compass_pkg/delegations.py`, `cli/compass_pkg/approve_cmd.py`, `tests/test_human_checks.py`, `tests/fixtures/evidence-approve-example.json` | `docs/entry-exit-evaluation.md` |
-| `cli/compass_pkg/artifact_kinds.py`, `cli/compass_pkg/artifact_cmd.py`, `cli/compass_pkg/artifact_owed.py`, `cli/compass_pkg/justifications.py`, `cli/compass_pkg/template_lists.py`, `templates/*.md`, `scripts/measure-artifact-catalogue.py`, `cli/compass_pkg/decision_scope.py` | `docs/artifact-catalogue.md` |
+| `cli/compass_pkg/artifact_kinds.py`, `cli/compass_pkg/artifact_cmd.py`, `cli/compass_pkg/artifact_owed.py`, `cli/compass_pkg/justifications.py`, `cli/compass_pkg/template_lists.py`, `templates/*.md`, `scripts/measure-artifact-catalogue.py`, `cli/compass_pkg/decision_scope.py` | `docs/artifact-catalog.md` |
 | `cli/compass_pkg/review_records.py`, `cli/compass_pkg/review_cmd.py`, `tests/fixtures/evidence-review-example.json` | `docs/judged-checks.md` |
 | `cli/compass_pkg/freshness.py` | `docs/artifact-freshness.md` |
 | `cli/compass_pkg/replay.py` | `docs/policy-diff.md` |

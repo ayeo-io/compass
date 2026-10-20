@@ -143,7 +143,8 @@ def compact(readings, policy):
                                              and DEPTH_WAS.get(a["depth"]) == "light")),
                 "subtask_ceiling": r["subtask_ceiling"],
                 "required_artifacts": sorted(r["required_artifacts"]),
-                "required_skills": sorted(r["required_skills"]),
+                "required_skills": sorted(SPELLED_AS_5_6_0_SKILL.get(s, s)
+                                          for s in r["required_skills"]),
                 "blocked_phases": r["blocked_phases"],
                 "max_worktrees": r["max_worktrees"],
                 "rules_fired": [f["id"] for f in r["policy_rules_fired"]],
@@ -225,6 +226,10 @@ def legacy_spelling(result):
 SPELLED_AS_5_6_0_ARTIFACT = {"intent": "intent.md",
                              "launch-readiness": "launch-readiness.md"}
 SPELLED_AS_5_6_0_STAGE = {"ship": "land"}
+# The shipped policy names the skill in US English from 7.0.0; the baseline
+# holds the 5.6.0 spelling. `compact` maps this one name back, so any other
+# skill name still differs from the baseline.
+SPELLED_AS_5_6_0_SKILL = {"behavior-mapping": "behaviour-mapping"}  # us-english-scan: allow - 5.6.0 baseline name
 
 
 def routing_differences(policy, header, rows, first_only=False, layered=False):

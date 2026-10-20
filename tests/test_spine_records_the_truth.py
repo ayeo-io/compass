@@ -142,7 +142,7 @@ def test_scn_a4_entry_carries_a_kind(tmp_path):
     (root / ".compass" / "work" / "t" / "manifest.yml").write_text(
         yaml.safe_dump(t2, sort_keys=False))
     _run(root, "approach", "evaluate", "--issue", "t", "--write", "--reason", "bigger")
-    assert _task(root)["reassessments"][-1].get("kind") == "judgement", _task(root)["reassessments"]
+    assert _task(root)["reassessments"][-1].get("kind") == "judgment", _task(root)["reassessments"]
 
 
 def test_scn_a5_calibration_counts_only_judgement(tmp_path):
@@ -220,7 +220,7 @@ def test_scn_c1_superseded_by_validates(tmp_path):
     root = _project(tmp_path, _base(scenarios=scenarios))
     r = _run(root, "issue", "lint", "--issue", "t")
     assert r.returncode == 0, (
-        f"the schema still forbids what behaviour-mapping requires:\n"
+        f"the schema still forbids what behavior-mapping requires:\n"
         f"{r.stdout}{r.stderr}")
 
 

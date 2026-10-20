@@ -176,3 +176,65 @@ def test_idr_3_no_tracked_text_says_init_copies_governance():
     offenders = {rel: m.group(0) for rel, text in _tracked_text()
                  for m in [SAYS_INIT_COPIES.search(text)] if m}
     assert not offenders, offenders
+
+
+# The language question of issue language-key-and-us-english: the question
+# (TRC-027), a bad answer (TRC-028) and the preset line (TRC-029).
+def _question(text):
+    """Step 3 and the paragraph of it that asks about the language."""
+    step = _step(text, 3)
+    m = re.search(r"[^\n]*\blanguage\b.*?(?=\n\n)", step, flags=re.S)
+    assert m, "step 3 asks no question about the language"
+    return step, m.group(0)
+
+
+def test_trc_027_step_3_asks_one_optional_language_question():
+    step, question = _question(_init_text())
+    assert "`en-US`" in question and "`de`" in question, question
+    assert re.search(r"only when the person answers", question), question
+    assert re.search(r"leave (?:it )?blank", question, flags=re.I), question
+    assert "set none" in question, question
+    for word in ("LANG", "locale", "environment"):
+        assert word not in step, f"step 3 names {word}: init detects nothing"
+    blocks = [b for b in _yaml_blocks(step) if "schema:" in b]
+    assert blocks and "language" not in yaml.safe_load(blocks[0]), (
+        "the minimal block holds no language key: it is written only on an answer")
+
+
+def test_trc_027_the_minimal_block_still_lints(tmp_path):
+    step = _step(_init_text(), 3)
+    block = [b for b in _yaml_blocks(step) if "schema:" in b][0]
+    project = tmp_path / "fresh"
+    project.mkdir()
+    assert _compass(project, "init").returncode == 0
+    (project / "compass.yml").write_text(block, encoding="utf-8")
+    run = _compass(project, "policy", "lint")
+    assert run.returncode == 0, run.stdout + run.stderr
+
+
+def test_trc_028_a_bad_answer_is_linted_and_asked_again():
+    step, _ = _question(_init_text())
+    assert "`compass policy lint`" in step
+    assert re.search(r"`language`\s+finding", step), step
+    assert re.search(r"ask\s+again", step, flags=re.I), step
+    assert re.search(r"no\s+tag\s+that\s+lint\s+has\s+not\s+passed", step), step
+
+
+def test_init_names_the_shipped_default_preset():
+    """Issue 244: a new project extends the default that ships now, and the
+    major comes from the shipped preset folder, not from a pinned number."""
+    preset = yaml.safe_load(
+        (ROOT / "governance" / "presets" / "default" / "preset.yml")
+        .read_text(encoding="utf-8"))
+    major = str(preset["version"]).split(".")[0]
+    names = re.findall(r"extends: (compass:default@\d+)", _init_text())
+    assert names == [f"compass:default@{major}"] * 2, names
+
+
+def test_trc_029_the_question_leaves_the_extends_line_alone():
+    text = _init_text()
+    _, question = _question(text)
+    assert "extends:" not in question, question
+    lines = re.findall(r"extends: (compass:default@\d+)", text)
+    assert len(lines) == 2 and lines[0] == lines[1], (
+        "both extends lines in init.md must name the same preset", lines)

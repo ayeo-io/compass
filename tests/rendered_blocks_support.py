@@ -143,7 +143,7 @@ def rich_issue(tmp_path, compass_yml=None):
         {"id": "Q2", "question": "Which flag?", "resolution": "Neither",
          "by": "planner", "stage": "plan", "status": "open"}]
     body["reassessments"] = [
-        {"from_route": "regular", "to_route": "full", "kind": "judgement",
+        {"from_route": "regular", "to_route": "full", "kind": "judgment",
          "changed": {}, "reason": "The change reached more modules", "date": "2026-10-10"}]
     (Path(root) / WORK).mkdir(parents=True, exist_ok=True)
     manifest_file(root).write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")

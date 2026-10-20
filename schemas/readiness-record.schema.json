@@ -4,7 +4,8 @@
   "title": ".compass/readiness.yml",
   "description": "The readiness record `compass readiness` writes: each readiness signal's result for one checkout at one commit. Per checkout and never committed. cli/compass_pkg/readiness_record.py is its one reader and writer; docs/readiness.md describes the freshness rules.",
   "type": "object",
-  "required": ["schema", "measured_at", "head", "settings", "catalogue_digest", "budget", "signals"],
+  "required": ["schema", "measured_at", "head", "settings", "budget", "signals"],
+  "anyOf": [{"required": ["catalog_digest"]}, {"required": ["catalogue_digest"]}],
   "additionalProperties": false,
   "properties": {
     "schema": {"const": 1},
@@ -27,10 +28,15 @@
       },
       "description": "The settings file the run read and its digest. A layer change is a change of this file, so it makes the record stale."
     },
+    "catalog_digest": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "The digest of the readiness catalog this CLI ships. A preset change makes the record stale."
+    },
     "catalogue_digest": {
       "type": ["string", "null"],
       "pattern": "^sha256:[0-9a-f]{64}$",
-      "description": "The digest of the readiness catalogue this CLI ships. A preset change makes the record stale."
+      "description": "The old spelling of catalog_digest, written beside it with the same value and read until 8.0.0."
     },
     "budget": {
       "type": "object",

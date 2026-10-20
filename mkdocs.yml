@@ -53,6 +53,7 @@ exclude_docs: |
   !/github-labels.md
   !/github-labels-walkthrough.md
   !/waivers-and-locks.md
+  !/artifact-catalog.md
 
 nav:
   - Home: index.md
@@ -73,6 +74,7 @@ nav:
   - How it works:
       - Methodology: methodology.md
       - Roles: roles-guide.md
+      - Artifact catalog: artifact-catalog.md
       - Portability: portability.md
       - Codex: codex.md
       - Adapter behaviour checks: adapter-conformance.md

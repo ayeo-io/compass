@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre21
+version: 2.0.0-pre22
 
 terms:
 
@@ -627,7 +627,8 @@ terms:
     related: [dora-metrics, assess]
 
   # --- Configuration (the configuration vocabulary decision) ----------------
-  catalogue:
+  catalog:
+    also: catalogue
     means: >
       One of the nine maps of configuration entries keyed by id:
       `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`,
@@ -639,7 +640,7 @@ terms:
       One source of configuration: the shipped preset, a team parent, the
       project file or the issue. Layers merge in order, and each states only
       what it changes.
-    related: [catalogue, overlay, preset, project-file]
+    related: [catalog, overlay, preset, project-file]
   overlay:
     means: >
       A layer file that states only its differences from its parent, so it
@@ -654,7 +655,7 @@ terms:
     means: >
       A stored, numbered copy of the resolved configuration that an issue
       runs against, so the issue keeps the rules it started with.
-    related: [catalogue, layer]
+    related: [catalog, layer]
   waiver:
     means: >
       A recorded departure from a parent's value, with a reason and an
@@ -674,7 +675,7 @@ terms:
     means: >
       How a stage runs for an issue, such as `collapsed`. It is the `mode`
       field of a stage.
-    related: [catalogue]
+    related: [catalog]
   project-file:
     means: >
       `compass.yml` at the project root, the one file a person edits.
@@ -706,7 +707,7 @@ terms:
       One binary fact about a repository, such as "a lint command is declared
       and exits 0". An entry of the `readiness` catalogue, it is either
       `present` or `absent` and carries a one-line reason.
-    related: [readiness-floor, readiness-record, catalogue]
+    related: [readiness-floor, readiness-record, catalog]
   readiness-floor:
     means: >
       The readiness signals whose `required_for_autonomous` is true. A project
@@ -922,6 +923,8 @@ retired_values:
   - {field: close_reason, old: abandoned, new: not-planned}
   - {field: run_stage, old: build, new: implement}
   - {field: friction_keys, old: phase, new: stage}
+  - {field: reassessment_kind, old: judgement, new: judgment}  # us-english-scan: allow - old name read until 8.0.0
+  - {field: check_id, old: dor-behaviour-is-gwt, new: dor-behavior-is-gwt}  # us-english-scan: allow - old name read until 8.0.0
 
 # =============================================================================
 # BANNED v1 VOCABULARY - the house test scans user-facing surfaces for these.

@@ -1265,6 +1265,10 @@
         "strict"
       ]
     },
+    "language": {
+      "description": "The language of the prose an agent writes, as a BCP 47 tag: a language, an optional script and an optional region, joined by hyphens, such as `en-US`. Unset: no instruction; only the project's own `compass.yml` can hold it, never a parent, a preset or an issue.",
+      "type": "string"
+    },
     "models": {
       "additionalProperties": false,
       "description": "The model and effort of each tier `strong`, `standard` and `fast`, which `compass approach show --model <seat>` and `--effort <seat>` print for a stage command to pass to its agent. A tier is a model name, or `{model, effort}`; the shipped mapping is `strong` inherit (the session's model) at high, `standard` sonnet at medium and `fast` haiku at low.",

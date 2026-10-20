@@ -808,19 +808,76 @@ def test_vc7_every_term_the_accepted_decision_defines_is_in_the_glossary():
     assert len(wanted) >= 14, f"read only {len(wanted)} terms from the decision record"
     terms = _terminology()["terms"]
     glossary = (REPO_ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
-    missing = [t for t, _ in wanted if t.replace(" ", "-") not in terms]
+    def key_of(term):
+        """The entry's key: the term itself, or the entry that keeps the term
+        as its other form (`catalogue` is the other form of `catalog`)."""
+        name = term.replace(" ", "-")
+        if name in terms:
+            return name
+        for key, entry in terms.items():
+            if name in [w.strip() for w in str((entry or {}).get("also", "")).split(",")]:
+                return key
+        return None
+
+    missing = [t for t, _ in wanted if key_of(t) is None]
     assert not missing, f"terms the decision defines but terminology.yml lacks: {missing}"
     for term, _ in wanted:
-        entry = terms[term.replace(" ", "-")]
+        entry = terms[key_of(term)]
         assert len(str(entry.get("means", "")).split()) >= 8, (
             f"{term}: the definition is too short to be one")
         assert term.replace(" ", "-") in glossary, f"{term}: not in docs/glossary.md"
 
 
+def _version_is_past(version, number):
+    m = re.fullmatch(r"2\.0\.0-pre(\d+)", str(version))
+    return bool(m and int(m.group(1)) >= number)
+
+
 def test_vc7_the_version_is_bumped_past_the_one_before_these_terms():
-    m = re.fullmatch(r"2\.0\.0-pre(\d+)", str(_terminology()["version"]))
-    assert m and int(m.group(1)) >= 16, (
+    assert _version_is_past(_terminology()["version"], 16), (
         f"version {_terminology()['version']}: adding terms needs a bump past 2.0.0-pre15")
+
+
+# The `catalog` term row (TRC-069): renamed from `catalogue`, which stays as
+# its other form. The meaning is the one the entry had before the rename.
+CATALOG_MEANS = (
+    "One of the nine maps of configuration entries keyed by id: `dimensions`, "
+    "`stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts`, "
+    "`readiness` and `vocabulary`. An id is stable; a display name lives in "
+    "the `vocabulary` catalogue.")
+
+
+def test_trc_069_the_catalog_term_row_keeps_catalogue_as_its_other_form():
+    doc = _terminology()
+    terms = doc["terms"]
+    assert "catalog" in terms and "catalogue" not in terms
+    entry = terms["catalog"]
+    assert " ".join(str(entry["means"]).split()) == CATALOG_MEANS
+    assert "catalogue" in str(entry.get("also", ""))
+    assert not any("catalogue" in (e or {}).get("related", []) for e in terms.values()), (
+        "a related list still names the old key")
+    assert _version_is_past(doc["version"], 22), doc["version"]
+    glossary = (REPO_ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
+    assert "### catalog\n" in glossary and "### catalogue\n" not in glossary
+
+
+def test_trc_069_the_old_version_value_fails_the_version_check():
+    assert not _version_is_past("2.0.0-pre21", 22)
+    assert _version_is_past("2.0.0-pre22", 22)
+
+
+def test_trc_069_the_old_term_resolves_to_the_catalog_entry():
+    """`compass terminology catalogue` finds the entry that lists `catalogue`
+    as its other form."""
+    import subprocess
+    import sys
+
+    cli = Path(__file__).resolve().parent.parent / "cli" / "compass"
+    done = subprocess.run([sys.executable, str(cli), "terminology", "catalogue"],
+                          capture_output=True, text=True, timeout=120)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert done.stdout.startswith("catalog  (vocabulary"), done.stdout
+    assert "also:    catalogue" in done.stdout
 
 
 def test_every_term_states_its_meaning():

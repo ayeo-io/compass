@@ -244,9 +244,11 @@ A named switch for new blocking behaviour, off in the shipped default.
 
 **Related:** `lock`
 
-### catalogue
+### catalog
 
 One of the nine maps of configuration entries keyed by id: `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts`, `readiness` and `vocabulary`. An id is stable; a display name lives in the `vocabulary` catalogue.
+
+**Also:** catalogue
 
 **Related:** `layer`, `overlay`, `generation`
 
@@ -374,7 +376,7 @@ Work owed after an expedited ship (the hotfix's promoted scenario, the optional 
 
 A stored, numbered copy of the resolved configuration that an issue runs against, so the issue keeps the rules it started with.
 
-**Related:** `catalogue`, `layer`
+**Related:** `catalog`, `layer`
 
 ### guardrail
 
@@ -456,7 +458,7 @@ The deterministic consequence of a label, declared in policy: security/payments/
 
 One source of configuration: the shipped preset, a team parent, the project file or the issue. Layers merge in order, and each states only what it changes.
 
-**Related:** `catalogue`, `overlay`, `preset`, `project-file`
+**Related:** `catalog`, `overlay`, `preset`, `project-file`
 
 ### lld
 
@@ -588,7 +590,7 @@ The per-checkout file in which a project's readiness measurement is kept: each r
 
 One binary fact about a repository, such as "a lint command is declared and exits 0". An entry of the `readiness` catalogue, it is either `present` or `absent` and carries a one-line reason.
 
-**Related:** `readiness-floor`, `readiness-record`, `catalogue`
+**Related:** `readiness-floor`, `readiness-record`, `catalog`
 
 ### readiness-summary
 
@@ -708,7 +710,7 @@ A delivery approach for time-boxed exploration whose output is knowledge, not sh
 
 How a stage runs for an issue, such as `collapsed`. It is the `mode` field of a stage.
 
-**Related:** `catalogue`
+**Related:** `catalog`
 
 ### stands-for
 

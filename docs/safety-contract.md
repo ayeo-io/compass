@@ -436,8 +436,8 @@ The hooks and the CLI judge work against the current issue:
 `.compass/current-task`, or `COMPASS_ISSUE` when a session's environment
 sets it. `COMPASS_ISSUE` comes first, so two sessions in one project can work
 on two issues; `compass run` sets it for each unattended session. A value
-that names no issue is refused (`bad-session-issue`), never passed over for
-the pointer. That order holds in the session's own project. In a worktree
+that names no issue is refused (`bad-session-issue-restart`), never passed over
+for the pointer. That order holds in the session's own project. In a worktree
 the order reverses for Edit and Write: the worktree's own pointer names the
 issue, and `COMPASS_ISSUE` applies only when that pointer is empty (see the
 worktree paragraph below).
@@ -773,6 +773,201 @@ unless `set -E` is on, and that setting changes how every function in the hook
 behaves. The fix therefore covers the one path that was reproduced, and the
 other exits are stated here.
 
+### An Edit that changes only comments of Python or YAML needs no failing test
+
+The pre-tool hook refuses an Edit of production code unless a failing test is
+on record. A comment cannot change what code does, so an Edit of a `.py`,
+`.yml` or `.yaml` file that changes only comments, docstrings or layout runs
+with no failing test and no assessed issue. The hook proves this from the file
+on disk and never from the text of the Edit: it reads the file once, applies
+the Edit in memory and compares the file before and after
+(`cli/compass_pkg/comment_only_edit.py`). It prints nothing on an allow.
+
+| Language | Files | The Edit is comment-only when | Code, so refused |
+|---|---|---|---|
+| Python | `*.py` | the syntax trees are the same; a docstring's text may change only when it stays the first statement of its module, class or function, is not an f-string, and the file mentions none of `__doc__`, `getdoc`, `help`, `doctest`, `exec` and `eval` | a string that is not a docstring, a second string statement, an f-string first statement, a `#` inside a string, a line joined to code by a backslash |
+| YAML | `*.yml`, `*.yaml` | the parser's events are the same: data, key order, anchors, aliases, tags and merge keys; quote style and layout do not count | a duplicate key, aliases that expand to more than 100000 nodes, a `#` inside a block scalar or a quoted string |
+| Shell | files that `enforcement.code_globs` declares | never | every edit keeps its verdict |
+| Any other language | JavaScript, Go, SQL, Terraform, Dockerfile and the rest | never | every edit keeps its verdict |
+
+Shell and every other language are not covered. A line that starts with `#` is
+data inside a heredoc, a multi-line string or a command substitution, and every
+shell file that `enforcement.code_globs` declares in this repository (12 files)
+uses one of those. A reader that is wrong in the open direction would let a
+data line change with no failing test. `NotebookEdit` and `MultiEdit` are not
+wired to the hook and are unchanged.
+
+A comment that carries a pragma is code. The hook refuses an Edit that adds,
+changes or removes one: `# type: ignore`, `# noqa`, `# nosec`, `# fmt: off` and
+`# fmt: on`, `# pragma: no cover`, `# pylint:`, `# mypy:`, `# pyright:`,
+`# ruff:`, `# flake8`, `# isort:`, `# yamllint`, `# shellcheck`, a shebang
+line and an encoding line (`# -*- coding` or `# coding:`). It also refuses the
+directives of scanners and formatters that the list names: `# nosemgrep`,
+`# gitleaks`, `# checkov`, `# lgtm`, `# NOSONAR`, `# codeql`, `# yapf`,
+`# trivy` and `# tfsec`. The test is a superset of this list, so a prose
+comment that mentions one of these words needs a failing test. An Edit that
+adds a hidden character is refused too: a control character, a NUL byte, a
+bidirectional control or a zero-width character.
+
+The encoding cookie of the file is read for every Python Edit (PEP 263: a
+comment on line 1, or on line 2 when line 1 is blank or a comment, that holds
+`coding:` or `coding=` and a name). Python decodes the source with that name
+before it parses a line. A cookie such as `utf-7` or `unicode_escape` turns text
+inside a comment into a line break, and the hook reads UTF-8, so the Edit is
+code when the cookie before or after the Edit is not `utf-8`, `utf8` or
+`ascii`, and when the Edit adds, removes, changes or moves the cookie (two
+comment lines put above a cookie on line 2 move it out of the first two
+lines). When the cookie is `ascii`, an Edit that leaves a non-ASCII character in
+the file is code too, because Python cannot load such a file. A file whose first
+line starts with `#` and `template:` (cloud-init's
+`## template: jinja`) is rendered as a template before a YAML parser reads it,
+so an Edit of it is code too.
+
+The check fails closed. In each of these cases the Edit is judged as before the
+check existed, so it is refused unless a failing test is on record:
+
+- the file is over 1048576 bytes, is not a regular file, is a symbolic link or
+  is not UTF-8
+- the old text is not in the file, or is in it more than once without
+  `replace_all`
+- the file before or after the Edit does not parse
+- the Edit changes a pragma or adds a hidden character
+- the encoding cookie is not `utf-8`, `utf8` or `ascii`, or the Edit changes it
+- the file starts as a template
+- the check runs out of budget, runs past its alarm or fails for any reason
+
+The check runs in `python3`, with its standard library and the vendored YAML
+reader. A check that is over budget or fails returns "no", and the hook then
+judges the Edit as before. A missing `python3` still refuses with
+`python-missing`, as for every reader of the hook. A Write is never judged this
+way: a Write that replaces a file is judged as a code change.
+
+The hook reads the file once and cannot lock it, so a change to the file
+between the read and the Edit is not detected.
+
+These are stated limits of the comment-only check. They are not fixed in this
+version, and each lets an Edit through that a stricter check would refuse:
+
+- The docstring rule is a word list. A docstring may change its text unless the
+  file mentions `__doc__`, `getdoc`, `help`, `doctest`, `exec` or `eval`. A
+  docstring that a framework reads without the file naming it is editable: a
+  PLY grammar rule (`"""expr : expr PLUS term"""`), the help text of click or
+  typer, and a FastAPI description. A docstring that a framework reads as
+  grammar or help is not detected.
+- The directive rule is a deny list of words. A scanner or formatter directive
+  that is not on the list passes as a comment. The list now holds the common
+  ones; a tool that is not on it is not seen. The same holds for a first line
+  that a tool reads as a file type: an Edit that removes `#cloud-config` or
+  `#include` from the first line of a YAML file passes as a comment edit.
+- A template engine that reads comment text is relevant only where
+  `enforcement.code_globs` guards a template. A YAML comment such as
+  `# {{ "\nevil: true" }}` in a Helm template passes the YAML check, because
+  the parser sees a comment.
+- A symbolic link under `evals/*/seed/` that points at production code is
+  exempt, because a path is judged by its text and a symbolic link is not
+  followed. The same holds for `tests/` and `.compass/`.
+- The hook uses awk, for example to count the length of a write target in the C
+  locale. The hook was written and tested on the awk of macOS only. The
+  continuous-integration runners use Linux awk, and this contract does not claim
+  that the two give the same results.
+
+Reading a shell command by its grammar, so that prose in a message or a
+document is not taken for a write, is separate work (GitHub issue #247).
+
+The check is charged to the work budget (see the Shell-write section below) by
+the size of the larger of the two texts, before any parse. These constants are
+in the hook's cost table, in microseconds, and the hook explains each of them
+in a comment:
+
+- COST_EDIT_START 40000: python3 with the package and the YAML reader loaded
+- COST_EDIT_PARSE_PY 5000 and COST_EDIT_PARSE_YAML 5000: one parse and
+  comparison of a text of three lines, charged twice
+- COST_EDIT_KB_PY 3000 and COST_EDIT_KB_YAML 10000: for each KiB of both texts
+- EDIT_ALARM_SECONDS 3: the longest the check may run
+
+The charge is the start, plus twice the parse, plus the KiB of the larger text
+times the rate. An Edit whose charge is past what is left of the budget is not
+parsed. At these values a Python file is read up to about 780 KiB and a YAML
+file up to about 230 KiB, and a larger file keeps the old verdict. The rates are
+those of the slowest shape that was measured, so a file of comments is charged
+at the rate of dense code.
+
+The budget is a table and a hostile file breaks it: PyYAML takes about 90
+seconds for 100000 `[` characters, a file of 100 KiB. The bound that holds is
+`signal.alarm`. Its default action ends the process even inside C code, and the
+hook then gives the old verdict and charges the whole alarm. The alarm is the
+smaller of EDIT_ALARM_SECONDS and what is left before the 8 second fuse, less
+one second; with less than one second left no check starts. A YAML file whose
+aliases expand to more than 100000 nodes is refused without expanding it,
+because each anchor is counted once with a table.
+
+Worst cases, measured on 19 October 2026 on macOS with bash 3.2.57, Python
+3.11.9 and the bundled PyYAML 6.0.2 (no libyaml), in the whole hook:
+
+| Shape | Size | Seconds | Charge in microseconds |
+|---|---|---|---|
+| Python, statements of two bytes (`a`) | 700 KiB | 1.9 | 2153000 |
+| Python, calls (`f(a, b)`) | 700 KiB | 1.4 | 2153000 |
+| Python, 5000 lines of definitions and comments | 81 KiB | 0.1 | 293000 |
+| Python, comment lines | 512 KiB | 0.1 | 1586000 |
+| Python, comment lines | 1 MiB | 0.3 | none: not parsed |
+| YAML, flow sequences of one-digit numbers | 200 KiB | 2.0 | 2060000 |
+| YAML, list of mappings | 200 KiB | 1.4 | 2050000 |
+| 100000 nested parentheses | 100 KiB | 0.3 | parse error |
+| 30 anchors that each hold ten aliases of the last | 2 KiB | 0.3 | refused at 100000 nodes |
+| 100000 `[` characters | 100 KiB | 3.3 | alarm |
+
+For one file, per KiB of the two texts together, the slowest Python shape took
+2.7 ms (statements of two bytes), against 2.0 ms for calls and 0.03 ms for
+comment lines. The slowest YAML shape took 9.5 ms (flow sequences of one-digit
+numbers), against 6.6 ms for a list of mappings and 0.7 ms for comment lines.
+`tests/test_pre_tool_hook_comment_only_edit.py` holds each bound: the time of
+the hook is between 0.2 and 3 times the work it charged, and every hostile
+shape ends within 6 seconds.
+
+A slower machine refuses a file that is close to the limit. The check ends at
+the 3 second alarm and is charged the whole alarm, and the Edit keeps the old
+verdict. A file of statements of two bytes and 700 KiB is charged 2.15 seconds
+and takes 1.9 here, so a machine that is 1.6 times slower ends it at the alarm.
+A GitHub-hosted Linux runner did so on 19 October 2026 (the check ran past
+3 seconds). The refusal is safe, and the limit is for hostile files; a file that
+people write is far from it (81 KiB of definitions and comments takes 0.1
+seconds, in the table above). The model
+test therefore uses files of about 40% of the limit (300 KiB of Python, 90 KiB
+of YAML), which take 0.65 to 0.9 seconds here and leave a margin of 3.3 times
+before the alarm. A second test uses files at the limit (780 KiB of Python,
+230 KiB of YAML) and asserts only that the result is safe: a comment edit is
+allowed or refused as before, an edit of code is always refused, and the hook
+ends within 6 seconds.
+
+Three more rules sit beside this one:
+
+- Path classes. `evals/*/seed/` holds input that the eval harness copies into a
+  sandbox and never runs in place, so it is not production code and needs no
+  failing test. The pattern starts at the project root, and a `..` step cannot
+  borrow it. These stay guarded: `examples/`, `cli/vendor/` (every Compass
+  process runs it), `.github/scripts/` (CI runs it), `evals/` outside `seed/`,
+  `src/examples/` and `db/seed/`. The setting `enforcement.code_globs` only
+  ratchets up: no built-in exemption is wider than the code Compass can show is
+  not production code. The same classification serves a shell redirect.
+- Shell files. A file that `enforcement.code_globs` declares is guarded. A
+  shell script, makefile or extensionless script is not a built-in
+  production-code file type, so a project declares the ones it wants guarded.
+- Messages. The refusal for a missing failing test (`no-red-on-record`) names
+  `compass tdd-red` and `compass acceptance start`, for a change that has no
+  natural test. A `.compass/current-task` that names an issue with no folder
+  under `.compass/work/` is not a missing pointer: the hook says so, names the
+  issue it falls back to (the issue that changed most recently) and judges the
+  Edit by that issue, as before. `bad-session-issue` is for a
+  worktree and says to run `compass issue use <slug>` there.
+  `bad-session-issue-restart` is for the session's own project, where
+  `COMPASS_ISSUE` outranks the pointer, so `compass issue use` changes nothing
+  and a running session cannot change its environment: the person restarts
+  the session with `COMPASS_ISSUE` naming an existing issue, or without it.
+
+The rules and the reasons are in
+`governance/decisions/2026-10-19-a-comment-only-edit-of-code-needs-no-failing-test.md`.
+
 ### Shell-write detection is best-effort
 
 The Claude Code pre-tool hook completely covers supported file-editing tools.
@@ -954,8 +1149,9 @@ timeout is the only control there. `scripts/install.sh` and the Codex hook
 file do not set these keys, so a source install and a Codex session keep the
 default timeout of 600 seconds.
 
-Shell scripts, makefiles and extensionless scripts are not classified
-as production-code file types for red-before-green enforcement.
+A shell script, makefile or extensionless script is not a built-in
+production-code file type for red-before-green enforcement. A file that
+`enforcement.code_globs` declares is guarded, whatever its type.
 
 Inside a worktree, Edit and Write follow the worktree's own issue and failing
 test, because they name their file and the hook resolves the project from it.

@@ -55,7 +55,13 @@ reason code and are not in the generated list.
 
 **Blocked:** this edit
 **Why:** no issue can be named for {project}: '{slug}' is not an issue under its .compass/work/.
-**Fix:** in the session's own project, set COMPASS_ISSUE to a real slug or unset it. In a worktree, run compass issue use <slug> there.
+**Fix:** run compass issue use <slug> in that worktree, so its .compass/current-task names a real issue, then retry.
+
+### `bad-session-issue-restart`
+
+**Blocked:** this edit
+**Why:** no issue can be named for {project}: '{slug}' is not an issue under its .compass/work/.
+**Fix:** restart the session with COMPASS_ISSUE naming an existing issue, or without it. A running session cannot change it, and compass issue use does not override it. A worktree has its own pointer.
 
 ### `bash-command-too-complex`
 
@@ -108,14 +114,16 @@ reason code and are not in the generated list.
 ### `no-red-on-record`
 
 **Blocked:** edit to {target} (tool: {tool}, guarded by {guard})
-**Why:** no failing test is on record for issue '{slug}' - the red-before-green strategy applies here.
-**Fix:** run compass tdd-red --scenario <id> -- <your failing test command>, then retry this edit.
+**Why:** no failing test is on record for issue '{slug}'.
+**Fix:** run compass tdd-red --scenario <id> -- <failing test command>, or compass acceptance start if no test fits, then retry.
 
-### `not-initialised`
+### `not-initialized`
 
 **Blocked:** this edit
 **Why:** no issue has been assessed yet - {detail}.
 **Fix:** run /compass:assess before changing code, or /compass:quick-fix for a small, low-risk change.
+
+**Old code:** `not-initialised` is read until 8.0.0.
 
 ### `pointer-moved`
 

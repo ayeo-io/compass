@@ -55,7 +55,7 @@ treat a project without a `compass.yml` as missing a prerequisite.
 - `brownfield-unmapped` is not a judgement of code quality - it means the
   behaviour is not written down as scenarios. At medium size or more, with
   cross-cutting or critical risk, or with a domain label, it triggers a
-  routing guardrail floor: `behaviour-mapping` must run. Do not skip it. On
+  routing guardrail floor: `behavior-mapping` must run. Do not skip it. On
   an atomic or small change with trivial or contained risk and no domain
   label, the skill is advice (`RP-ADV-002`).
 - "Trivially readable" greenfield or brownfield can be treated as mapped, but

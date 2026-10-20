@@ -6,7 +6,7 @@
 > **Do not hand-edit** - the next derivation overwrites it.
 > Edit the source: the scenario in that manifest, and its prose in the issue's `acceptance-criteria.md` under `docs/compass/<created>-<slug>/`.
 
-## Current Behaviour
+## Current Behavior
 
 ### bdd-adapters-and-skill-length (completed )
 
@@ -4584,3 +4584,54 @@ Commands refuse an issue whose stored configuration was built by another major v
 
 - `IR-13` every command that reads the issue refuses
 - `IR-14` the commands that repair a mismatch still run
+
+### policy-migrate-undo (completed 2026-10-19)
+
+compass policy migrate --undo puts a project back in the state it had before compass policy migrate --apply. It restores the old settings and governance files from .compass/legacy/ and removes compass.yml and the migration marker. It is a dry run unless you pass --apply. It checks every file against the digests the migration recorded, and it writes nothing and exits 2 when a file was edited after the migration, a copy in .compass/legacy/ changed, or a signed record was made since the migration. A migration made by an earlier version has no digest of compass.yml, so the undo prints the manual steps instead.
+
+- `TRC-001` The marker records the digest of compass.yml
+- `TRC-002` The marker records the digest of state.yml when the migration created it
+- `TRC-003` The marker records no state digest when state.yml was already there
+- `TRC-004` The marker stays at schema 1 and keeps its earlier keys
+- `TRC-005` The marker records the time of the migration
+- `TRC-006` A migrated project's plain migrate refusal names --undo
+- `TRC-007` Apply restores the three sources byte for byte
+- `TRC-008` Apply removes the three files the migration wrote
+- `TRC-009` The steps run in a fixed order with the marker last
+- `TRC-010` The settings readers see what they saw before the migration
+- `TRC-011` A state file the migration did not create is kept
+- `TRC-012` The legacy folder is kept
+- `TRC-013` A governance file deleted since the migration is restored
+- `TRC-014` Migrate, undo, migrate gives the same project
+- `TRC-015` A stop before any undo step is finished by a rerun
+- `TRC-016` An undo finishes a migration that stopped before it removed the old file
+- `TRC-017` An undo finishes a migration that stopped before it wrote compass.yml
+- `TRC-018` A source that already equals its legacy copy counts as done
+- `TRC-019` An edited compass.yml is refused
+- `TRC-020` An edited state.yml is refused
+- `TRC-021` An edited governance file is refused
+- `TRC-022` An old settings file edited after a stop is refused
+- `TRC-023` A legacy copy that is changed or missing is refused
+- `TRC-024` A marker with no digest of compass.yml is refused with the manual steps
+- `TRC-025` A project with no marker is refused
+- `TRC-026` Signed records since the migration are refused and counted
+- `TRC-027` Records dated before the migration, and unsigned records, do not block
+- `TRC-028` A signed record with no readable timestamp counts as since the migration
+- `TRC-029` A refused undo makes no write and no removal
+- `TRC-030` The undo changes only 4 paths, whatever the marker names
+- `TRC-031` Every refusal message is short
+- `TRC-032` The dry run writes nothing
+- `TRC-033` The dry run lists the steps in the order apply takes them
+- `TRC-034` The dry run says how to apply
+- `TRC-035` The applied undo says the legacy folder is kept
+- `TRC-036` The JSON of a dry run has a fixed shape
+- `TRC-037` The JSON of an applied undo reports the result undone
+- `TRC-038` --undo is refused with the options of the other mode
+- `TRC-039` The help text describes --undo
+- `TRC-040` The document no longer says there is no --undo
+- `TRC-041` The document states the rules of --undo
+- `TRC-042` A marker without source digests is refused and writes nothing
+- `TRC-043` A binary marker gives a clean refusal of the undo
+- `TRC-044` A marker of another schema is refused and names the schema
+- `TRC-045` One marker reader serves the migrate and the undo
+- `TRC-046` A restored file keeps its mode

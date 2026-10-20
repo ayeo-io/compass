@@ -8,7 +8,7 @@
   decisions), **and**
 - risk is `contained` or a low end of `cross-cutting`, **and**
 - familiarity is either `greenfield` or brownfield (mapped or unmapped - if
-  unmapped, a routing rule (RP-FLOOR-002) adds `behaviour-mapping` to define,
+  unmapped, a routing rule (RP-FLOOR-002) adds `behavior-mapping` to define,
   or RP-ADV-002 gives it as advice on an atomic or small change with trivial or contained risk
   with no domain label),
   **and**

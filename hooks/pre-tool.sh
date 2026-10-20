@@ -617,6 +617,24 @@ set -e
 #   - COST_CANDIDATE_CHAR: the same, for each character of the target.
 #   - COST_GLOB: the same, for each glob of the settings that the target is
 #     tried against one by one.
+#   - COST_EDIT_START: the start of the comment-only check of an Edit
+#     (comment_only_edit_allowed): python3 with the package and the yaml
+#     importer loaded, before it reads anything.
+#   - COST_EDIT_PARSE_PY: one parse and comparison of a Python text of three
+#     lines, less the start. The check charges it twice, once for each text.
+#   - COST_EDIT_PARSE_YAML: the same for a YAML file.
+#   - COST_EDIT_KB_PY: for each 1024 bytes of the larger of the file before and
+#     after the Edit, the two texts together: the slowest Python shape that was
+#     measured, statements of two bytes each (2.7 ms), against 0.03 ms for
+#     comment lines and 1.9 ms for calls.
+#   - COST_EDIT_KB_YAML: the same for a YAML file, which the pure Python parser
+#     reads far more slowly than Python is parsed: flow sequences of one-digit
+#     numbers took 9.5 ms.
+#   - EDIT_ALARM_SECONDS: the most seconds the comment-only check may run. The
+#     alarm is the smaller of this and what is left before FUSE_SECONDS, less
+#     one second for the rest of the hook, and the check ends at the alarm. A
+#     hostile file (PyYAML needs 90 s for 100,000 opening brackets) is stopped
+#     by it, not by the table, and the Edit is judged as before.
 #
 # The budget is an estimate from a table, and the hook reads no clock to check
 # it, so a slower machine, or an interaction the table does not charge (bash
@@ -643,6 +661,12 @@ COST_NAME_PER_KB=200
 COST_CANDIDATE=3000
 COST_CANDIDATE_CHAR=10
 COST_GLOB=20
+COST_EDIT_START=40000
+COST_EDIT_PARSE_PY=5000
+COST_EDIT_PARSE_YAML=5000
+COST_EDIT_KB_PY=3000
+COST_EDIT_KB_YAML=10000
+EDIT_ALARM_SECONDS=3
 TARGET_BYTES_LIMIT=2048
 SKIP_WRITE_SCAN=0
 COMPASS_IN_USE=0
@@ -957,6 +981,16 @@ is_enforced_path() {
       tests/*|*/tests/*|test/*|*/test/*|spec/*|*/spec/*|\
       __tests__/*|*/__tests__/*|testdata/*|*/testdata/*) return 1 ;;
     esac
+    # Exempt: eval fixture input. `evals/<group>/<name>/seed/` holds files the
+    # eval harness copies into a sandbox and never runs in place, so it is not
+    # production code. `rel` is resolved and relative to the project, so the
+    # pattern starts at the project root and a `..` step cannot borrow it.
+    # `examples/`, `cli/vendor/`, `.github/scripts/`, `evals/` outside `seed/`,
+    # `src/examples/` and `db/seed/` stay guarded: enforcement.code_globs only
+    # ratchets up (ADR-011). In `case`, `*` also matches `/`.
+    case "$rel" in
+      evals/*/seed/*) return 1 ;;
+    esac
   fi
 
   # (a) recognised application source extensions.
@@ -1204,6 +1238,80 @@ PYEOF
     GLOB_HIT="${out#*$'\n'}"
   fi
   return 0
+}
+
+# --- an Edit that changes only comments ---------------------------------------
+# A comment cannot change what code does, so an Edit of a Python or YAML file
+# that changes only comments, docstrings or layout needs no failing test and no
+# assessed issue. cli/compass_pkg/comment_only_edit.py proves it: it reads the
+# file once, applies the Edit in memory and compares the file before and after.
+# Shell and every other language are not covered, and every doubt gives "no",
+# which is the verdict this hook gave before the check existed: a failed check,
+# an over-budget one, an alarm, a file over 1 MiB, a pragma. Only a missing
+# python3 refuses here, as every reader of this hook does (python-missing).
+#
+# The check starts no process for a target that is not an absolute .py, .yml or
+# .yaml path, or where Compass is not in use. It is charged to WORK_USED by the
+# figure the module prints, and the alarm is the smaller of EDIT_ALARM_SECONDS
+# and what is left before FUSE_SECONDS, less one second for the rest of the
+# hook; with less than one second left no check starts. A process that the
+# alarm ends gives no figure, so the whole alarm is charged. The old and new
+# text of the Edit go to python3 on its input, never through the command line.
+#
+# The check runs after is_enforced_path and before the issue lookup, so a
+# comment edit needs no assessed issue. It reads the file once and cannot lock
+# it: a change between the read and the Edit is not detected.
+comment_only_edit_allowed() {
+  [ "${COMPASS_IN_USE:-0}" -eq 1 ] || return 1
+  case "${TARGET:-}" in
+    /*.py|/*.yml|/*.yaml) ;;
+    *) return 1 ;;
+  esac
+  # An Edit names its old and new text. A call that holds neither has nothing to
+  # compare, and the check would answer "no", so it starts no process.
+  case "$INPUT" in
+    *'"old_string"'*'"new_string"'*|*'"new_string"'*'"old_string"'*) ;;
+    *) return 1 ;;
+  esac
+  if ! command -v python3 >/dev/null 2>&1; then
+    compass_reader_failed "comment-only check" 127
+  fi
+  local alarm remaining out status verdict charge
+  alarm=$((FUSE_SECONDS - (SECONDS - HOOK_START) - 1))
+  [ "$alarm" -le "$EDIT_ALARM_SECONDS" ] || alarm="$EDIT_ALARM_SECONDS"
+  [ "$alarm" -ge 1 ] || return 1
+  remaining=$((WORK_BUDGET - WORK_USED))
+  [ "$remaining" -gt "$COST_EDIT_START" ] || return 1
+  set +e
+  # The braces keep the message bash prints for a child ended by the alarm out
+  # of this hook's own output.
+  out="$({ printf '%s' "$INPUT" | compass_python -c '
+import sys
+
+import compass_pkg                      # noqa: F401 - puts vendor on sys.path
+from compass_pkg import comment_only_edit
+
+sys.exit(comment_only_edit.main(sys.argv[1:], sys.stdin))
+' "alarm=$alarm" "remaining=$remaining" "start=$COST_EDIT_START" \
+    "parse_py=$COST_EDIT_PARSE_PY" "parse_yaml=$COST_EDIT_PARSE_YAML" \
+    "kb_py=$COST_EDIT_KB_PY" "kb_yaml=$COST_EDIT_KB_YAML"; } 2>/dev/null)"
+  status=$?
+  set -e
+  verdict="${out%%$'\n'*}"
+  charge=""
+  case "$out" in *$'\n'*) charge="${out#*$'\n'}" ;; esac
+  # Anything but a plain "yes" and a charge of at most nine digits is "no". A
+  # run that failed is charged the whole alarm, the most it could have taken.
+  case "$charge" in
+    ""|*[!0-9]*) status=1 ;;
+    *) [ "${#charge}" -le 9 ] || status=1 ;;
+  esac
+  if [ "$status" -ne 0 ]; then
+    WORK_USED=$((WORK_USED + alarm * 1000000))
+    return 1
+  fi
+  WORK_USED=$((WORK_USED + 10#$charge))
+  [ "$verdict" = yes ]
 }
 
 # --- what a shell command can be known to write ------------------------------
@@ -1912,6 +2020,10 @@ else
   # No file path → nothing to enforce (e.g. a non-file tool). Allow.
   [ -z "${TARGET:-}" ] && exit 0
   is_enforced_path "$TARGET" || exit 0
+  # An Edit that changes only comments needs no failing test and no issue.
+  if [ "${TOOL:-}" = "Edit" ] && comment_only_edit_allowed; then
+    exit 0
+  fi
 fi
 
 
@@ -1929,7 +2041,7 @@ import sys
 import compass_pkg
 from compass_pkg import project_settings
 try:
-    rec = project_settings.state(sys.argv[1]).get("initialised")
+    rec = project_settings.state(sys.argv[1]).get("initialized")
 except Exception:
     sys.exit(0)
 if isinstance(rec, dict) and rec.get("by"):
@@ -1971,7 +2083,7 @@ fi
 
 if [ ! -d "$WORK_DIR" ]; then
   compass_say_how_this_project_opted_in
-  compass_block not-initialised "detail=no .compass/work/ exists in $PROJECT_DIR"
+  compass_block not-initialized "detail=no .compass/work/ exists in $PROJECT_DIR"
 fi
 
 # The current issue is named by the .compass/current-task pointer (written by
@@ -2014,11 +2126,13 @@ if [ "$FOREIGN" -eq 1 ]; then
   TASK_DIR="$WORK_DIR/$SLUG"
 elif [ -n "${COMPASS_ISSUE:-}" ]; then
   SLUG="$COMPASS_ISSUE"
+  # The session's own project: COMPASS_ISSUE outranks the pointer, so only a
+  # restart of the session changes the answer (bad-session-issue-restart).
   case "$SLUG" in
     .|..|*/*|*\\*)
-      compass_block bad-session-issue "slug=$SLUG" "project=$PROJECT_DIR" ;;
+      compass_block bad-session-issue-restart "slug=$SLUG" "project=$PROJECT_DIR" ;;
   esac
-  [ -d "$WORK_DIR/$SLUG" ] || compass_block bad-session-issue "slug=$SLUG" "project=$PROJECT_DIR"
+  [ -d "$WORK_DIR/$SLUG" ] || compass_block bad-session-issue-restart "slug=$SLUG" "project=$PROJECT_DIR"
   TASK_DIR="$WORK_DIR/$SLUG"
 elif [ -f "$POINTER" ]; then
   SLUG="$(tr -d '[:space:]' < "$POINTER" 2>/dev/null || true)"
@@ -2071,12 +2185,22 @@ if [ -z "$TASK_DIR" ]; then
   # fallback: most recently changed - ambiguous, so say so.
   TASK_DIR="$(ls -dt "$WORK_DIR"/*/ 2>/dev/null | head -n1 || true)"
   TASK_DIR="${TASK_DIR%/}"
-  [ -n "$TASK_DIR" ] && echo "Compass: no .compass/current-task pointer - falling back to the most recently modified issue ($(basename "$TASK_DIR")). Run compass issue use <slug> to be unambiguous." >&2
+  # The warning says which fault it is: a pointer that names an issue with no
+  # folder is not a missing pointer. An empty pointer file names nothing, so it
+  # keeps the first wording. The words after the dash are pinned by
+  # tests/compat_hook.py.
+  if [ -n "$TASK_DIR" ]; then
+    if [ -n "${SLUG:-}" ] && [ -f "$POINTER" ]; then
+      echo "Compass: .compass/current-task names '$SLUG', which has no folder under .compass/work/ - falling back to the most recently modified issue ($(basename "$TASK_DIR")). Run compass issue use <slug> to be unambiguous." >&2
+    else
+      echo "Compass: no .compass/current-task pointer - falling back to the most recently modified issue ($(basename "$TASK_DIR")). Run compass issue use <slug> to be unambiguous." >&2
+    fi
+  fi
 fi
 
 if [ -z "${TASK_DIR:-}" ]; then
   compass_say_how_this_project_opted_in
-  compass_block not-initialised "detail=no issue exists under $PROJECT_DIR/.compass/work/"
+  compass_block not-initialized "detail=no issue exists under $PROJECT_DIR/.compass/work/"
 fi
 
 TASK_SLUG="$(basename "$TASK_DIR")"

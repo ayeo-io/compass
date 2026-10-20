@@ -12,7 +12,9 @@
 # WHAT IT DOES
 #   Prints a JSON object carrying the contract as `additionalContext`, which
 #   Claude Code adds to the session. It never blocks - a SessionStart hook has
-#   nothing to refuse - so every path here exits 0.
+#   nothing to refuse - so every path here exits 0. When the project's
+#   compass.yml sets a valid `language`, it also adds one line telling the
+#   agent to write prose in that language; unset or invalid adds nothing.
 #
 # THE BOUNDARY
 #   A repository with no .compass/ has never opted into Compass, and this hook
@@ -146,6 +148,17 @@ except BaseException:  # noqa: BLE001 - the contract must still reach the sessio
     readiness = ""
 if readiness:
     contract = contract.rstrip("\n") + "\n\n" + readiness + "\n"
+
+# One line when the project sets `language`. It is built from the canonical
+# tag only (cli/compass_pkg/language.py), so a value in compass.yml cannot
+# carry text into the session. Unset, malformed or unreadable adds nothing.
+try:
+    from compass_pkg import language
+    tag_line = language.hook_line(sys.argv[3])
+except BaseException:  # noqa: BLE001 - the contract must still reach the session
+    tag_line = ""
+if tag_line:
+    contract = contract.rstrip("\n") + "\n\n" + tag_line + "\n"
 
 # Approvals made under a delegation that the person has not reviewed are
 # shown to the person, never recorded here (ADR-069 decision 5). A summary

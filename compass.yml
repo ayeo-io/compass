@@ -24,6 +24,11 @@ extends: compass:default@6
 # 2026-10-12-this-repository-names-its-owner).
 owner: jed72
 
+# The language of the prose an agent writes in this repository, as a BCP 47
+# tag. The framework's own text is US English. No other repository gets this
+# from the shipped default, which sets none. See docs/configuration.md.
+language: en-US
+
 # Whether a failed check blocks. `enforced`: compass check and compass ci return
 # non-zero on any failure. `advisory` reports every failure and returns 0.
 adoption: enforced

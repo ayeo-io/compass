@@ -955,8 +955,8 @@ def cmd_route_evaluate(args):
             # governance-driven weight-up as a plain re-assessment would read
             # as assessment under-sizing the work - and it is not: the
             # assessment was right, the policy under it moved. Only
-            # `judgement` feeds the re-sizing aggregate.
-            kind = getattr(args, "kind", None) or "judgement"
+            # `judgment` feeds the re-sizing aggregate.
+            kind = getattr(args, "kind", None) or "judgment"
             if kind == "unchanged":
                 raise CompassError("kind `unchanged` is recorded by the CLI "
                                    "only when nothing changed.")

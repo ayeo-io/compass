@@ -24,7 +24,7 @@ contract, QA for coverage. Write it so all five roles can.
   Honour it.
 - Load the `bdd-specification` skill.
 - If `delivery-approach.md` assesses familiarity as `brownfield-unmapped`,
-  also load `behaviour-mapping` - reverse-engineer the *current*
+  also load `behavior-mapping` - reverse-engineer the *current*
   behaviour into scenarios **before** writing the scenarios for the change. A
   policy floor forces this unless the change is atomic or small, with trivial
   or contained risk and no domain label; you cannot safely change what you have not first

@@ -131,15 +131,15 @@ def queue_ageing(work_root, today=None):
         rows.append((age, slug, signals))
     rows.sort(key=lambda r: (-r[0], r[1]))
     if not rows:
-        return "**Queue ageing:** No backlog issues.", "## Queue age\n\nNo backlog issues.\n"
+        return "**Queue aging:** No backlog issues.", "## Queue age\n\nNo backlog issues.\n"
     flagged = [f"{slug} ({age} days, {'; '.join(sig)})"
                for age, slug, sig in rows if age > QUEUE_AGE_DAYS and sig]
     if flagged:
-        top = (f"**Queue ageing:** {len(flagged)} backlog issue(s) older than "
+        top = (f"**Queue aging:** {len(flagged)} backlog issue(s) older than "
                f"{QUEUE_AGE_DAYS} days carry a recommendation or a guarded label: "
                + ", ".join(flagged) + ".")
     else:
-        top = (f"**Queue ageing:** no backlog issue older than {QUEUE_AGE_DAYS} days "
+        top = (f"**Queue aging:** no backlog issue older than {QUEUE_AGE_DAYS} days "
                f"carries a recommendation or a guarded label.")
     table = ["## Queue age", "", "| Issue | Age (days) | Signal |", "|---|---|---|"]
     table += [f"| {slug} | {age} | {'; '.join(sig) or '-'} |" for age, slug, sig in rows]

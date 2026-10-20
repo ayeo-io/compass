@@ -78,7 +78,7 @@ def test_trc_059_every_form_is_found_whole_and_in_any_case(word):
     assert [h[1] for h in words.scan_text(f"a {word} here")] == [word]
     assert [h[1] for h in words.scan_text(word.upper())] == [word]
     assert words.scan_text(f"a {word}ism here") == []
-    assert words.scan_text(f"un{word}") == []
+    assert words.scan_text(f"xx{word}") == []
     assert words.scan_text(f"{word}_name = 1") == []
 
 

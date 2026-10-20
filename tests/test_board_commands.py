@@ -171,7 +171,9 @@ def _one_of_each(root):
 
 
 LANE = re.compile(r'<section class="lane" aria-label="([^"]*)">(.*?)</section>', re.S)
-CARD = re.compile(r'<a class="card[^"]*" href="#(issue-\d+)">(.*?)</a>', re.S)
+# Each card carries its approach in data-approach, which the stylesheet reads.
+CARD = re.compile(r'<a class="card[^"]*" data-approach="[^"]*" href="#(issue-\d+)">(.*?)</a>',
+                  re.S)
 SLUG = re.compile(r'<span class="slug">(.*?)</span>')
 GENERATED = re.compile(r'^<p class="generated">.*</p>$', re.M)
 

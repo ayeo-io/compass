@@ -97,7 +97,7 @@ def test_verify_lists_each_descoped_mode():
 
 def test_the_subcommand_is_on_the_public_surface():
     """FM-D."""
-    assert "compass scenario descope" in (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "compass scenario descope" in (ROOT / "docs" / "cli.md").read_text(encoding="utf-8")
     assert "'scenario descope'" in (ROOT / "cli" / "compass_pkg" / "verb_help.py").read_text()
     assert "descope" in _compass(ROOT, "scenario", "--help").stdout
 

@@ -244,9 +244,9 @@ def test_a_lesson_does_not_change_compass_check(project):
 def test_the_verb_is_on_the_public_surface():
     assert "lesson" in json.loads(
         (ROOT / "tests" / "fixtures" / "cli-surface-baseline.json").read_text())["subcommands"]
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    cli_page = (ROOT / "docs" / "cli.md").read_text(encoding="utf-8")
     for sub in ("add", "list", "remove", "propose", "accept"):
-        assert f"compass lesson {sub}" in readme, sub
+        assert f"compass lesson {sub}" in cli_page, sub
     assert "'lesson add'" in (ROOT / "cli" / "compass_pkg" / "verb_help.py").read_text()
     assert list((ROOT / "architecture" / "decisions").glob("ADR-029-*.md"))
 

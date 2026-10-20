@@ -28,7 +28,7 @@ def board_html(project):
 
 def card(html, slug):
     """The markup of the card for `slug`."""
-    found = re.search(r'<a class="card[^"]*" href="#issue-\d+">(?:(?!</a>).)*?'
+    found = re.search(r'<a class="card[^"]*" data-approach="[^"]*" href="#issue-\d+">(?:(?!</a>).)*?'
                       r'<span class="slug">%s</span>(?:(?!</a>).)*</a>' % re.escape(slug), html, re.S)
     assert found, "no card for %s" % slug
     return found.group(0)
@@ -234,7 +234,7 @@ def test_dbi_20_shape_pinned_in_schema_and_doc():
     # The owning-docs table and the command surfaces.
     readme = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
     assert "| `cli/compass_pkg/issue_depends.py` | `docs/issue-dependencies.md` |" in readme
-    commands = (ROOT / "README.md").read_text(encoding="utf-8")
+    commands = (ROOT / "docs" / "cli.md").read_text(encoding="utf-8")
     helps = (ROOT / "cli" / "compass_pkg" / "verb_help.py").read_text(encoding="utf-8")
     for verb in ("issue depends add", "issue depends remove"):
         assert "compass " + verb in commands, verb

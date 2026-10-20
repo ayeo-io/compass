@@ -181,10 +181,10 @@ def test_reviewers_read_the_ledger():
 
 
 def test_the_verb_is_on_the_public_surface():
-    """DL-F: the baseline and the README name the decision verb."""
+    """DL-F: the baseline and the CLI page (docs/cli.md) name the decision verb."""
     baseline = json.loads((ROOT / "tests" / "fixtures" / "cli-surface-baseline.json").read_text())
     assert "decision" in baseline["subcommands"]
-    assert "compass decision" in (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "compass decision" in (ROOT / "docs" / "cli.md").read_text(encoding="utf-8")
 
 
 def test_the_ledger_holds_at_least_ten_entries():

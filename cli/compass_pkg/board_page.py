@@ -39,37 +39,58 @@ CAP = 10
 
 # Card borders differ by style as well as colour, so a flag does not rely on
 # colour alone: dashed for blocked, dotted for stale evidence.
+#
+# One meaning per colour, the same colours as the README's explainer: blue
+# is the computed approach (the heavier the approach, the stronger the
+# blue), yellow is a wait for a person, red is a block, green is done. The
+# page loads no font: the title falls back to the reader's serif, the rest to
+# the system sans. An empty lane folds to a sideways strip, so the pipeline
+# stays readable and the width goes to the lanes that hold cards.
 _STYLE = """
-:root{--bg:#0d0f12;--surface:#181c22;--line:#3a404a;--text:#e7e9ec;--muted:#98a1ac;--accent:#f0a83a}
-@media (prefers-color-scheme: light){:root{--bg:#f6f7f9;--surface:#ffffff;--line:#8c95a2;--text:#14171c;--muted:#4f5762;--accent:#8a4f00}}
+:root{--bg:#15171c;--surface:#1b1e25;--line:#30353f;--text:#e4e6ea;--muted:#9aa2ad;--faint:#848c97;
+--blue:#58c4dd;--blue-dim:#3c8ea3;--blue-deep:#1f5260;--yellow:#ffd93d;--red:#fc6255;--green:#83c167;--accent:#ffd93d}
+@media (prefers-color-scheme: light){:root{--bg:#f7f7f5;--surface:#ffffff;--line:#c9ccd3;--text:#17191e;--muted:#515864;--faint:#666d78;
+--blue:#166f87;--blue-dim:#5aa3b7;--blue-deep:#bfe3ec;--yellow:#8a6400;--red:#b5281c;--green:#2f7a2c;--accent:#8a6400}}
 *{box-sizing:border-box}
-body{margin:0;padding:24px 28px 40px;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.4}
+body{margin:0;padding:28px 32px 48px;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.45;display:flex;flex-direction:column}
+header{order:0}main{order:1}.legend{order:2;margin:18px 0 0}.unplaceable,.panel{order:3}
 code,.slug{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-h1{margin:0 0 6px;font-size:18px;font-weight:500}
-h2{margin:0 0 4px;font-size:20px;font-weight:500}
-h3{margin:0 0 6px;font-size:13px}
+h1{margin:0 0 10px;font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:28px;letter-spacing:.01em}
+h2{margin:0 0 4px;font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:24px}
+h3{margin:0 0 8px;font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 header p,.meta,.legend p{margin:2px 0;color:var(--muted);font-size:12px}
-.counts{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;padding:0;list-style:none}
-.counts li{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
-.legend{margin:12px 0}
-main{display:grid;grid-template-columns:repeat(10,minmax(160px,1fr));gap:10px;min-width:1700px;overflow-x:auto}
-.lane{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;min-height:220px}
-.lane h3{display:flex;justify-content:space-between}
-.count{color:var(--muted);font-weight:400}
-.card{display:flex;flex-direction:column;gap:6px;margin:0 0 8px;padding:8px 10px;background:var(--bg);color:var(--text);text-decoration:none;border-radius:8px;border-color:var(--line);border-width:1px;border-style:solid}
+.counts{display:flex;flex-wrap:wrap;gap:0 18px;margin:0 0 10px;padding:0;list-style:none;font-size:13px;color:var(--muted)}
+.counts li:first-child{color:var(--text)}
+main{display:flex;gap:10px;align-items:stretch;overflow-x:auto;margin-top:18px}
+.lane{flex:1 1 0;min-width:168px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;min-height:260px}
+.lane:not(:has(.card)){flex:0 0 36px;min-width:36px;padding:10px 0}
+.lane:not(:has(.card)) h3{writing-mode:vertical-rl;transform:rotate(180deg);margin:0 auto;display:block;color:var(--faint)}
+.lane h3{display:flex;justify-content:space-between;gap:8px}
+.count{color:var(--faint);font-weight:400;letter-spacing:0}
+.card{display:flex;flex-direction:column;gap:5px;margin:0 0 8px;padding:9px 10px 9px 12px;background:var(--bg);color:var(--text);text-decoration:none;border-radius:6px;border-color:var(--line);border-width:1px;border-style:solid;border-left-width:3px;border-left-color:var(--blue-deep)}
+.card[data-approach="regular"]{border-left-color:var(--blue-dim)}
+.card[data-approach="full"]{border-left-color:var(--blue)}
+.card[data-approach="hotfix"]{border-left-color:var(--red)}
+.card[data-approach="spike"]{border-left-color:var(--yellow)}
+.card[data-approach="not assessed"]{border-left-color:var(--line)}
 .card:hover,.card:focus-visible{border-color:var(--accent);outline:none}
-.card.dotted{border-style:dotted}
-.card.dashed{border-style:dashed}
-.slug{font-size:12px;word-break:break-word}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip,.flag{font-size:11px;padding:1px 6px;border-radius:4px;border:1px solid var(--line)}
-.flag{color:var(--accent)}
+.card.dotted{border-style:dotted;border-left-style:solid}
+.card.dashed{border-style:dashed;border-left-style:solid;border-color:var(--red)}
+.slug{font-size:13px;word-break:break-word;color:var(--text)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip,.flag{font-size:11px;line-height:1.3;padding:1px 6px;border-radius:3px;border:1px solid var(--line);color:var(--muted)}
+.chip:first-child{color:var(--blue);border-color:transparent;padding-left:0}
+.card[data-approach="hotfix"] .chip:first-child{color:var(--red)}
+.card[data-approach="spike"] .chip:first-child{color:var(--yellow)}
+.card[data-approach="not assessed"] .chip:first-child{color:var(--faint)}
+.flag{color:var(--accent);border-color:var(--accent)}
+.card.dashed .flag{color:var(--red);border-color:var(--red)}
 details{margin-top:6px}
-summary{color:var(--muted);cursor:pointer;margin-bottom:6px}
+summary{color:var(--muted);cursor:pointer;margin-bottom:6px;font-size:12px}
 .empty{color:var(--muted)}
 .panel{display:none}
 .panel:target{display:block}
-.panel{margin-top:24px;padding:18px 22px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.panel{margin-top:24px;padding:18px 22px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
 .part{margin:14px 0}
 .dims{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px}
 .dims dt{color:var(--muted)}
@@ -149,8 +170,9 @@ def _card(r, n):
         parts.append('<span class="flag">stale evidence</span>')
     if r.get("recommendation"):
         parts.append('<span class="flag">recommendation</span>')
-    return '<a class="card%s" href="#issue-%d">%s</a>' % (
-        " " + edge if edge else "", n, "".join(parts))
+    return '<a class="card%s" data-approach="%s" href="#issue-%d">%s</a>' % (
+        " " + edge if edge else "", _e(r.get("delivery_approach") or "not assessed"),
+        n, "".join(parts))
 
 
 _DIMENSIONS = ("risk", "familiarity", "size", "goal")

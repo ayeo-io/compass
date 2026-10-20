@@ -548,6 +548,14 @@ commit then differs from what the green tested, the commit stands but
 the issue is not marked done, and `ship-commit` names the files and
 exits non-zero.
 
+When `git commit` leaves HEAD where it was, `ship-commit` stops with the
+lines git printed, in git's own words, then says HEAD did not advance and
+the land did not happen. It adds that a pre-commit hook may be the cause
+only when git can run one here: the hook file exists, at the path git
+reports for `hooks/pre-commit` (so `core.hooksPath` counts), and is marked
+as runnable. A missing author identity therefore reports "Author identity
+unknown" and does not point at a hook.
+
 With nothing staged, `compass ship-commit --issue <slug>` lands at HEAD
 only when the issue's own commits at the tip stay inside its declared
 scope. It walks the first parent from HEAD. A commit that changes only

@@ -33,7 +33,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg import (checkpoint_outcomes, decision_scope, documents_present, issue_usage,
-                         release_line, status_words)
+                         release_line, ship_commit_reason, status_words)
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
@@ -610,7 +610,7 @@ def cmd_land_commit(args):
     # First try at the commit.
     _judge_index()
     before_commit = _disk_hashes()
-    c1 = _git(["commit", "-m", msg], cwd)
+    last_commit = _git(["commit", "-m", msg], cwd)
     head_after = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
 
     retried = False
@@ -621,19 +621,13 @@ def cmd_land_commit(args):
         retried = True
         if _git(["diff", "--cached", "--quiet"], cwd).returncode != 0:
             _judge_index()
-            _git(["commit", "-m", msg], cwd)
+            last_commit = _git(["commit", "-m", msg], cwd)
             head_after = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
 
     # (c) ALWAYS check that HEAD advanced - the land's evidence is the moved HEAD.
     if head_after == head_before:
-        log = ((c1.stdout or "") + (c1.stderr or ""))[-800:]
-        raise CompassError(
-            "compass ship-commit: HEAD did not advance"
-            + (" after a retry" if retried else "")
-            + " - the land did NOT happen. A pre-commit hook may be aborting "
-            "the commit repeatedly; resolve it and re-run.\n"
-            "--- commit output (tail) ---\n" + log
-        )
+        raise CompassError(ship_commit_reason.failure_message(
+            cwd, last_commit, retried))
 
     # Success. Mark the issue landed only now that HEAD is confirmed advanced -
     # AND only if its gates actually cleared.

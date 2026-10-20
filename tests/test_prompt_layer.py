@@ -102,17 +102,18 @@ def test_trc_f3_the_merge_removes_resident_cost():
         assert absorbed not in names, (
             f"{absorbed} is still a registered skill, so its description is "
             f"still paid for on every turn")
-    # 15 before this issue, minus the two merges above, plus `quick-fix`:
-    # the inlined light path is a skill of its own so a quick fix reads one
-    # command and one skill rather than five commands and three skills. A
-    # count rather than a floor, so a skill cannot creep back in unnoticed.
+    # 15 before this issue, minus the two merges above, plus `quick-fix`,
+    # minus `quick-fix` again: the light path's rules live in the command of
+    # that name, because a skill with a command's name is never loaded (the
+    # Skill tool resolves the name to the command). A count rather than a
+    # floor, so a skill cannot creep back in unnoticed.
     # A skill kept only as a redirect to its renamed successor ("Renamed to
     # ...") is not a skill of its own, so the count leaves it out.
     real = sorted(p.parent.name for p in skills
                   if "\ndescription: Renamed to " not in
                   p.read_text(encoding="utf-8"))
-    assert len(real) == 14, (
-        f"expected 14 skills - 15, less the two merges, plus quick-fix - "
+    assert len(real) == 13, (
+        f"expected 13 skills - 15, less the two merges and quick-fix - "
         f"found {len(real)}: " + ", ".join(real))
 
 
@@ -265,33 +266,27 @@ def test_trc_f5_the_contract_is_measured_separately_and_reported():
 
 
 # ---------------------------------------------------------------------------
-# `TRC-F1` - a quick fix reads one command file and one skill file
+# `TRC-F1` - a quick fix reads one command file
 # ---------------------------------------------------------------------------
 
-#: The two files a quick fix reads. The five stage commands and the three
+#: The one file a quick fix reads. The five stage commands and the three
 #: skills they load stay on disk and are read on the heavier delivery
 #: approaches; the quick-fix path inlines what it needs instead of
 #: delegating to them.
 QUICK_FIX_COMMAND = ROOT / "commands" / "quick-fix.md"
-QUICK_FIX_SKILL = ROOT / "skills" / "quick-fix" / "SKILL.md"
 
-#: From the scenario. The path these two replace measures 11,203 words.
+#: From the scenario. The path this one replaces measures 11,203 words.
 QUICK_FIX_WORD_CEILING = 3000
 
 
-def test_trc_f1_a_quick_fix_reads_one_command_and_one_skill():
-    """One command file, one skill file, and both together under the ceiling."""
-    missing = [str(p.relative_to(ROOT)) for p in (QUICK_FIX_COMMAND, QUICK_FIX_SKILL)
-               if not p.is_file()]
-    assert not missing, (
-        "the quick-fix reading path does not exist yet: " + ", ".join(missing))
+def test_trc_f1_a_quick_fix_reads_one_command():
+    """One command file, under the ceiling."""
+    assert QUICK_FIX_COMMAND.is_file(), (
+        "the quick-fix reading path does not exist yet: commands/quick-fix.md")
 
-    command_words = _words(QUICK_FIX_COMMAND)
-    skill_words = _words(QUICK_FIX_SKILL)
-    total = command_words + skill_words
-    assert total <= QUICK_FIX_WORD_CEILING, (
-        f"a quick fix reads {total} words - commands/quick-fix.md "
-        f"({command_words}) and skills/quick-fix/SKILL.md ({skill_words}) - "
+    words = _words(QUICK_FIX_COMMAND)
+    assert words <= QUICK_FIX_WORD_CEILING, (
+        f"a quick fix reads {words} words in commands/quick-fix.md, "
         f"over the {QUICK_FIX_WORD_CEILING}-word ceiling")
 
 
@@ -370,8 +365,8 @@ def test_trc_f1_the_off_path_list_names_verbs_that_still_exist():
 
 
 def test_trc_f1_the_quick_fix_command_sends_the_agent_nowhere_else():
-    """One command file and one skill file is a count of what it TELLS you to
-    read, not of what happens to exist.
+    """One command file is a count of what it TELLS you to read, not of what
+    happens to exist.
 
     A 200-word command whose first line is "now read commands/assess.md" would
     satisfy every word count above and change nothing about what a session
@@ -388,8 +383,8 @@ def test_trc_f1_the_quick_fix_command_sends_the_agent_nowhere_else():
             if f"commands/{name}" in line:
                 offenders.append(f"{n}: commands/{name}")
         for match in re.finditer(r"[Ll]oad(?:s|ing)?\s+(?:the\s+)?`([a-z0-9-]+)`", line):
-            if match.group(1) != "quick-fix":
-                offenders.append(f"{n}: load `{match.group(1)}`")
+            # No skill is loaded: the rules are in this file.
+            offenders.append(f"{n}: load `{match.group(1)}`")
         # Naming a slash command is a pointer too, and a file listing five of
         # them sends the agent everywhere while matching neither pattern
         # above. Exactly one is allowed: the way back out when the CLI says
@@ -399,7 +394,7 @@ def test_trc_f1_the_quick_fix_command_sends_the_agent_nowhere_else():
                 offenders.append(f"{n}: /compass:{match.group(1)}")
     assert not offenders, (
         "commands/quick-fix.md points the agent at other commands or skills, "
-        "so the quick-fix path is not one command and one skill:\n  "
+        "so the quick-fix path is not one command:\n  "
         + "\n  ".join(offenders))
 
 

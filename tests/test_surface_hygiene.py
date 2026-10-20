@@ -199,8 +199,9 @@ def test_trc_f7_skill_count_unchanged_on_net():
         "intent-interview",
         # Traceability lives in skills/evidence-gates/traceability.md and
         # role-translation lives in skills/intent-interview/role-translation.md,
-        # each read beside the skill it merged into.
-        "quick-fix",  # the inlined light path: one command and one skill
+        # each read beside the skill it merged into. The light path has no
+        # skill: commands/quick-fix.md carries its rules, because a skill
+        # named like a command is never loaded.
     }
     assert present == expected, (
         "the skill set changed without this allowlist being updated.\n"
@@ -223,7 +224,7 @@ def test_the_archive_exemption_is_scoped_to_per_issue_directories():
     assert _is_issue_archive(P("docs/compass/2026-08-03-a-slug/technical-design.md"))
     for live in ("docs/compass/2026-08-26-first-hour-intent.md",
                  "docs/methodology.md",
-                 "skills/quick-fix/SKILL.md"):
+                 "skills/tdd-discipline/SKILL.md"):
         assert not _is_issue_archive(P(live)), (
             f"{live} is exempt from the scan, and it is not an issue's record")
 

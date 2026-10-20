@@ -88,7 +88,6 @@ QUICK_FIX_READS = [
     "compass-contract.md",
     "CLAUDE.md",
     "commands/quick-fix.md",
-    "skills/quick-fix/SKILL.md",
 ]
 
 

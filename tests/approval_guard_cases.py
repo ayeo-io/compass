@@ -298,6 +298,16 @@ _MEMORY = (
         ("Write", {"file_path": _P + "/-p/memory"}, "TRC-018"),
         ("Read", {"file_path": _P + "/-p/memory.md"}, "TRC-018"),
     ], start=23)
+    # a glob, a brace or a tilde in the path: such a path is never "in" the folder,
+    # because the pattern can also match the transcript beside it (6)
+    + _tools("MEM", "memory-folder", TRN, [
+        ("Read", {"file_path": _P + "/*/memory/x.md"}, "TRC-018"),
+        ("Read", {"file_path": _P + "/{-p,-q}/memory/x.md"}, "TRC-018"),
+        ("Read", {"file_path": _P + "/**/memory/x.md"}, "TRC-018"),
+        ("Read", {"file_path": "~/.claude/projects/*/memory/x.md"}, "TRC-018"),
+        ("Write", {"file_path": _P + "/*/memory/x.md"}, "TRC-018"),
+        ("Read", {"file_path": "{memory}/*.md"}, "TRC-018"),
+    ], start=30)
 )
 
 # Two rows of the design's "wrong shape" family name a path that is not under a

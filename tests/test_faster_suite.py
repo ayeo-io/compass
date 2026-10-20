@@ -165,6 +165,8 @@ SERIAL_TESTS = {
     "tests/test_project_readiness.py::test_prc_37",
     "tests/test_issue_dependencies.py::test_dbi_12_hook_cost_budget",
     "tests/test_issue_usage.py::test_arc_10_hook_budget",
+    "tests/test_approval_guard_refusal_text.py::test_trc_032_a_long_command_is_judged_within_two_seconds",
+    "tests/test_approval_guard_refusal_text.py::test_trc_053_a_very_long_or_deeply_nested_command_is_judged_within_two_seconds",
     "tests/test_pre_tool_hook_time_bounded.py::test_a_bash_command_over_the_limit_is_refused_in_seconds",
     "tests/test_pre_tool_hook_time_bounded.py::test_a_bash_command_at_the_limit_is_judged_as_before",
     "tests/test_pre_tool_hook_time_bounded.py::test_a_repository_that_has_not_opted_in_is_not_refused_for_length",

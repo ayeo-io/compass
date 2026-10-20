@@ -163,7 +163,11 @@ def render_glossary(vocab: dict, artifacts: dict = None) -> str:
         for label, key in (("Also", "also"),
                            ("GitHub", "github"), ("Related", "related")):
             if e.get(key):
-                out.append(f"**{label}:** {_fmt(e[key])}")
+                line = f"**{label}:** {_fmt(e[key])}"
+                from compass_pkg import old_names
+                if key == "also" and old_names.is_old("term", str(e[key]).strip()):
+                    line += " <!-- us-english-scan: allow - old term, read until 8.0.0 -->"
+                out.append(line)
                 out.append("")
     rows = kind_rows(artifacts)
     if rows:

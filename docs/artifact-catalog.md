@@ -155,7 +155,7 @@ The table below is generated from the catalogue by `compass _derive-glossary`, w
 |---|---|---|---|---|---|
 | `delivery-approach` | `delivery-approach.md` | `assess` | router | project-plan | Anyone joining the issue reads it to see how much process the work gets and why. |
 | `verification-note` | `verification-note.md` | `verify` | verifier | test-summary | The person who ships a quick fix reads it to see the scenario, its test and the gates on one screen. |
-| `acceptance-criteria` | `acceptance-criteria.md` | `define` | spec-author | requirements | Every role reads it to agree the behaviour that will be built, and the builder turns each scenario into a test. |
+| `acceptance-criteria` | `acceptance-criteria.md` | `define` | spec-author | requirements | Every role reads it to agree the behavior that will be built, and the builder turns each scenario into a test. |
 | `technical-design` | `technical-design.md` | `plan` | planner | hld | A reviewer reads it to challenge the design before code is written. |
 | `low-level-design` | `low-level-design/<unit>.md` | `plan` | planner | lld | The builder of one work unit reads it for the signatures, contracts, files and tests that unit owns. |
 | `distribution-map` | `distribution-map.md` | `breakdown` | planner | work-breakdown | The orchestrator reads it to decide how many worktrees to start and which scenarios each one owns. |
@@ -194,7 +194,7 @@ Headings of each kind, in order:
 - `rollback-plan`, thorough: What breaks; How we go back; When this was last rehearsed
 - `launch-readiness`, thorough: Claims-to-scenarios traceability checklist; What is checked vs. not; Voice & positioning check; Go / No-Go
 - `ui-contract`, thorough: Surface; States; Interaction scenarios; Accessibility commitments; Handoff to define
-- `bug-report`, thorough: Observed behaviour; Expected behaviour; Reproduction steps; Impact
+- `bug-report`, thorough: Observed behavior; Expected behavior; Reproduction steps; Impact
 - `architecture-notes`, thorough: System under change; Invariants to preserve; Boundary risks; Candidate decision records; Recommendations; Items for a person to decide; Notes for the planner
 - `positioning`, thorough: Audience; Value proposition; Press release (working-backwards); Messaging - claims and their backing scenarios; Customer & internal FAQ; Honesty policy check (voice & positioning strategies); Handoff
 - `product-owner-review`, thorough: Verdict; Success signals and measures; Scope beyond the intent; Findings; Product strategies; Needs a decision; Hand-back to the plan stage

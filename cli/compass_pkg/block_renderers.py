@@ -22,7 +22,7 @@ them. A kind in `rendered_blocks.KINDS` with no entry in `RENDERERS` is left as 
 # readiness_record, rendered_blocks, issue_page, project_index.
 from __future__ import annotations
 
-from compass_pkg import artifact_owed, item_records, readiness_record
+from compass_pkg import artifact_owed, item_records, old_names, readiness_record
 from compass_pkg import rendered_blocks as rb
 from compass_pkg.render_inputs import (CROSS, OWN, Part, RenderInputs, code as _code,  # noqa: F401
                                        gather, link as _link, link_target as _link_target,
@@ -210,7 +210,7 @@ def decisions_taken(inputs, doc_rel):
         for r in again:
             lines.append("- %s to %s (%s): %s" % (
                 rb.field(r.get("from_route", "?")), rb.field(r.get("to_route", "?")),
-                rb.field(r.get("kind", "judgement")), rb.field(r.get("reason", ""))))
+                rb.field(old_names.current("reassessment_kind", r.get("kind", "judgment"))), rb.field(r.get("reason", ""))))
     return Part(OWN, lines)
 
 

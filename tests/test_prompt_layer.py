@@ -106,9 +106,14 @@ def test_trc_f3_the_merge_removes_resident_cost():
     # the inlined light path is a skill of its own so a quick fix reads one
     # command and one skill rather than five commands and three skills. A
     # count rather than a floor, so a skill cannot creep back in unnoticed.
-    assert len(skills) == 14, (
+    # A skill kept only as a redirect to its renamed successor ("Renamed to
+    # ...") is not a skill of its own, so the count leaves it out.
+    real = sorted(p.parent.name for p in skills
+                  if "\ndescription: Renamed to " not in
+                  p.read_text(encoding="utf-8"))
+    assert len(real) == 14, (
         f"expected 14 skills - 15, less the two merges, plus quick-fix - "
-        f"found {len(skills)}: " + ", ".join(sorted(names)))
+        f"found {len(real)}: " + ", ".join(real))
 
 
 def test_trc_f3_nothing_names_a_skill_that_does_not_exist():

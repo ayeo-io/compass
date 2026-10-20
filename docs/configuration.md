@@ -57,7 +57,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 
 - **What counts as a settings key in the old file:** `mode`, `autonomy`,
   `allow_project_commands`, `enforcement`, `record`, `project`, `prices`,
-  `models`, `multiagent`, `preset_index`, `governance_drift` and `github_labels`. The three keys the
+  `models`, `multiagent`, `preset_index`, `governance_drift`, `github_labels` and `language`. The three keys the
   multiagent scripts read, `worktree_root`, `max_worktrees` and `test_command`,
   also count when they sit outside `multiagent:` and `project:`, because the
   scripts find them at any depth in the old file.
@@ -92,6 +92,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `multiagent` | Where multiagent worktrees go | `worktree_root`, `max_worktrees` | `../.compass-worktrees`, 6 |
 | `allow_project_commands` | Lets `compass check` and `compass readiness` run commands the project declares | `true`, `false` | `false` |
 | `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
+| `language` | The language the agent writes prose in (see `language` below) | a BCP 47 tag such as `en-US` | unset: no instruction |
 | `preset_index` | Reserved for published presets; no behaviour yet | - | - |
 | `github_labels` | Whether Compass writes an issue's labels and page to its linked GitHub issue (see `docs/github-labels.md`) | `domain`, `status`, `page`: `true` or `false` each | all `false`; no GitHub call |
 
@@ -255,3 +256,75 @@ command calls GitHub.
 Any other value, such as `"yes"`, reads as off. The setting is read from the
 project's own file only. See `docs/github-labels.md` for the labels, the
 limits and the failure behaviour.
+
+### `language`
+
+The language the agent writes the project's prose in, as a BCP 47 tag:
+
+```yaml
+language: en-US
+```
+
+Unset means no instruction: Compass says nothing about language, and the
+agent follows the repository's existing prose. When it is set, the session-start
+hook adds one line that names the language. Code identifiers are out of scope.
+A preset cannot carry the key. The setting is read from the project's own
+settings file: `compass.yml`, or `.compass/config.yml` when `compass.yml` is
+absent or has no `schema:`. A malformed value adds no line to a session.
+`compass policy lint` refuses a malformed `language` key in `compass.yml`; it
+does not check `.compass/config.yml`.
+A project's own `CLAUDE.md` or `AGENTS.md` that names a language should drop
+that sentence when `language` is set, and Compass never edits those files.
+
+| Language | Tag |
+|---|---|
+| English (US) | `en-US` |
+| English (UK) | `en-GB` |
+| English (Australia) | `en-AU` |
+| English (Canada) | `en-CA` |
+| English (India) | `en-IN` |
+| English (Ireland) | `en-IE` |
+| English (New Zealand) | `en-NZ` |
+| English (South Africa) | `en-ZA` |
+| Spanish (Spain) | `es-ES` |
+| Spanish (Mexico) | `es-MX` |
+| Spanish (Latin America) | `es-419` |
+| Portuguese (Brazil) | `pt-BR` |
+| Portuguese (Portugal) | `pt-PT` |
+| French (France) | `fr-FR` |
+| French (Canada) | `fr-CA` |
+| German (Germany) | `de-DE` |
+| German (Switzerland) | `de-CH` |
+| Italian | `it` |
+| Dutch | `nl` |
+| Polish | `pl` |
+| Czech | `cs` |
+| Swedish | `sv` |
+| Danish | `da` |
+| Norwegian (Bokmål) | `nb` |
+| Finnish | `fi` |
+| Greek | `el` |
+| Turkish | `tr` |
+| Ukrainian | `uk` |
+| Russian | `ru` |
+| Hebrew | `he` |
+| Arabic | `ar` |
+| Hindi | `hi` |
+| Indonesian | `id` |
+| Vietnamese | `vi` |
+| Thai | `th` |
+| Japanese | `ja` |
+| Korean | `ko` |
+| Chinese (Simplified) | `zh-Hans` |
+| Chinese (Traditional) | `zh-Hant` |
+
+For a language not listed, see the
+[IANA language subtag registry](https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry).
+
+- A bare language (`de`) is fine when the region does not change spelling. Add
+  a region (`de-CH`) when it does.
+- Use `zh-Hans` and `zh-Hant` for Chinese. The script, not the region, decides
+  the characters.
+- Norwegian is `nb` or `nn` (`nb` is Bokmål and `nn` is Nynorsk). Do not write
+  an unquoted `no`: YAML reads it as false, and Compass refuses it. Hebrew is
+  `he`, not `iw`.

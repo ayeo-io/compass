@@ -757,17 +757,17 @@ def _derive(root, tmp_path, name):
     out = tmp_path / name
     code, text, err = _cli(root, "_derive-glossary", "--internal", "--root", str(root),
                            "--out", str(out / "glossary.md"),
-                           "--catalogue-out", str(out / "artifact-catalogue.md"))
+                           "--catalogue-out", str(out / "artifact-catalog.md"))
     assert code == 0, text + err
     return (out / "glossary.md").read_text(encoding="utf-8"), (
-        out / "artifact-catalogue.md").read_text(encoding="utf-8")
+        out / "artifact-catalog.md").read_text(encoding="utf-8")
 
 
 def _mini_root(tmp_path):
     """A copy of the files the generator reads and the two it writes."""
     mini = tmp_path / "mini"
     for rel in ("governance/terminology.yml", "governance/presets/default/artifacts.yml",
-                "docs/glossary.md", "docs/artifact-catalogue.md"):
+                "docs/glossary.md", "docs/artifact-catalog.md"):
         _write(mini / rel, (ROOT / rel).read_text(encoding="utf-8"))
     (mini / ".compass").mkdir()
     return mini
@@ -778,7 +778,7 @@ def test_acf_5(tmp_path):
     glossary, doc = _derive(mini, tmp_path, "fresh")
     # The committed files equal a fresh generation.
     assert glossary == (ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
-    assert doc == (ROOT / "docs" / "artifact-catalogue.md").read_text(encoding="utf-8")
+    assert doc == (ROOT / "docs" / "artifact-catalog.md").read_text(encoding="utf-8")
     for kind, entry in _preset().items():
         for text in (glossary, doc):
             assert kind in text, kind
@@ -786,7 +786,7 @@ def test_acf_5(tmp_path):
             assert entry["stands_for"] in text, kind
     owning = (ROOT / "docs" / "README.md").read_text(encoding="utf-8").split(
         "## Owning docs", 1)[1]
-    row = [r for r in owning.splitlines() if r.startswith("|") and "`docs/artifact-catalogue.md`" in r.split("|")[-2]]
+    row = [r for r in owning.splitlines() if r.startswith("|") and "`docs/artifact-catalog.md`" in r.split("|")[-2]]
     assert row and "artifact_kinds.py" in row[0] and "template_lists.py" in row[0]
     assert not [r for r in owning.splitlines()
                 if "template_lists.py" in r and "entry-exit-evaluation.md" in r]

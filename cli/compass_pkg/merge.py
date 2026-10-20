@@ -83,6 +83,9 @@ def apply(config, layer_doc, kind, name, provenance=None):
     errors = []
     removed = []
     ctx = _Context(kind, name, errors, prov)
+    conflicts = word_map.one_check_conflicts(layer_doc)
+    if conflicts:
+        raise MergeError(name, conflicts)
     for catalogue in spec.CATALOGUES:
         if catalogue not in layer_doc:
             continue

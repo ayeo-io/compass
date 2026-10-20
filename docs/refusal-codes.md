@@ -98,11 +98,13 @@ code from a refusal you hit.
 **Why:** no failing test is on record for issue '{slug}'.
 **Fix:** run compass tdd-red --scenario <id> -- <failing test command>, or compass acceptance start if no test fits, then retry.
 
-### `not-initialised`
+### `not-initialized`
 
 **Blocked:** this edit
 **Why:** no issue has been assessed yet - {detail}.
 **Fix:** run /compass:assess before changing code, or /compass:quick-fix for a small, low-risk change.
+
+**Old code:** `not-initialised` is read until 8.0.0.
 
 ### `pointer-moved`
 

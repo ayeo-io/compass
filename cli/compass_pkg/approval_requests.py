@@ -29,7 +29,7 @@ command for the person instead of the prompt to type. No code here reads an
 adapter's name.
 """
 # DEPENDENCY: standard library (hashlib, json, os, secrets, shlex, textwrap); compass_pkg.
-# approvals, atomic_io, core, terminal. artifact_cmd is imported inside the
+# approvals, atomic_io, core, old_names, terminal. artifact_cmd is imported inside the
 # function that digests a document.
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ import secrets
 import shlex
 import textwrap
 
-from compass_pkg import approval_records, approvals, atomic_io
+from compass_pkg import approval_records, approvals, atomic_io, old_names
 from compass_pkg.core import (CompassError, issue_arg, load_manifest, load_yaml, now_iso,
                               resolve_issue_dir)
 from compass_pkg.terminal import resolve_mode, say
@@ -309,7 +309,7 @@ def register(evidence_subs):
         "request", help="ask a person for an approval: write a pending request that Compass "
                         "shows them", allow_abbrev=False)
     form = p.add_mutually_exclusive_group(required=True)
-    form.add_argument("--check", help="id of the human check")
+    form.add_argument("--check", type=old_names.check_type, help="id of the human check")
     form.add_argument("--guardrail", metavar=approval_records.G5,
                       help="the sign-off of guardrail `G5`; needs --scope")
     form.add_argument("--artifact", metavar="KIND",

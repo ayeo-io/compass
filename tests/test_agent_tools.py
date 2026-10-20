@@ -45,7 +45,7 @@ SKILL = {
     "orchestrator": "it loads worktree-multiagent before it does anything",
     "planner": "it loads plan-authoring and governance-check, and "
                "worktree-multiagent for the decomposition",
-    "spec-author": "it loads bdd-specification, behaviour-mapping on "
+    "spec-author": "it loads bdd-specification, behavior-mapping on "
                    "brownfield ground, and evidence-gates for traceability",
     "reviewer": "it loads evidence-gates before it reviews",
     "verifier": "it loads evidence-gates before it starts",

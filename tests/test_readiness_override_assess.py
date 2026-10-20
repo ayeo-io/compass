@@ -17,7 +17,9 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+import pytest
+
+ROOT =Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
@@ -85,6 +87,10 @@ def _in_process(monkeypatch, capsys, run, slug):
     return json.loads(capsys.readouterr().out)
 
 
+# Serial, because the probe issue it plants in this checkout's archive would
+# fail the archive guard of a test session that runs beside it, such as the
+# `pytest --collect-only` run in tests/test_ci_shards.py.
+@pytest.mark.serial
 def test_roa_9_policy_commands_load_compass_yml_in_this_repository(
         tmp_path, monkeypatch, capsys):
     import os

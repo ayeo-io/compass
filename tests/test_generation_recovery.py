@@ -503,7 +503,7 @@ def test_cr_8_a_change_to_the_approach_keeps_its_own_kind_when_the_config_moves_
     fx.write_manifest(task_dir, assessment=body["assessment"])
     assert fx.reassess(root)[0] == 0
     entries = fx.manifest_of(task_dir)["reassessments"]
-    assert len(entries) == 1 and entries[0]["kind"] == "judgement"
+    assert len(entries) == 1 and entries[0]["kind"] == "judgment"
     assert entries[0]["generation"] == {"from": 1, "to": 2}
 
 
@@ -535,8 +535,9 @@ def test_cr_8_the_schema_and_the_cli_list_the_configuration_kind():
     import json
     schema = json.loads((ROOT / "schemas" / "manifest.schema.json").read_text(encoding="utf-8"))
     kinds = schema["properties"]["reassessments"]["items"]["properties"]["kind"]["enum"]
-    assert kinds == ["judgement", "policy-correction", "scope-change", "configuration",
-                     "unchanged"]
+    # The old spelling stays in the enum until 8.0.0, so an archived manifest still validates.
+    assert kinds == ["judgment", "judgement", "policy-correction", "scope-change",  # us-english-scan: allow - old name read until 8.0.0
+                     "configuration", "unchanged"]
     code, out, err = fx.run(ROOT, "approach", "evaluate", "--help")
     assert "configuration" in out
 

@@ -34,6 +34,7 @@
 # =============================================================================
 from __future__ import annotations
 
+from compass_pkg import old_names
 from compass_pkg.core import CompassError
 from compass_pkg.project_settings import CONFLICT_FIX, CONFLICT_WHY
 
@@ -67,7 +68,7 @@ REFUSALS: dict[str, dict[str, str]] = {
         "why": CONFLICT_WHY,
         "fix": CONFLICT_FIX,
     },
-    "not-initialised": {
+    "not-initialized": {
         "what": "this edit",
         "why": "no issue has been assessed yet - {detail}.",
         "fix": "run /compass:assess before changing code, or "
@@ -302,6 +303,8 @@ def render(code: str, **params) -> str:
     template field `params` does not give - both mean a call site and the
     registry have drifted apart, and failing loudly is how that gets found.
     """
+    # An old code is read until 8.0.0 and renders as its current code.
+    code = old_names.read("refusal_code", code)
     try:
         entry = REFUSALS[code]
     except KeyError:
@@ -327,6 +330,10 @@ def cmd_refusal(args):
             print(f"**Blocked:** {entry['what']}")
             print(f"**Why:** {entry['why']}")
             print(f"**Fix:** {entry['fix']}\n")
+            for row in old_names.rows("refusal_code"):
+                if row["new"] == code:
+                    print(f"**Old code:** `{row['old']}` is read until "
+                          f"{row['removed_in']}.\n")
         return 0
     code = getattr(args, "code", None)
     if not code:

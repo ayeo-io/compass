@@ -645,6 +645,12 @@ entries:
   project: initialised
   argv: ["next"]
   exit: 2
+# 2026-10-19, language-key-and-us-english: the code pins of the contract 5
+# corpus and this stdout pin stay as recorded 5.6.0 output. The state key and
+# the refusal code are written in US spelling from 7.0.0; the old forms are
+# still read, and tests/test_compat_contract_5.py proves it through the
+# old-names table. This stdout pin changes in the pull request that converts
+# the CLI messages to US spelling, not here.
 - id: init-fresh
   project: empty
   argv: ["init"]

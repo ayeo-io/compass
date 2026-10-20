@@ -2,4 +2,4 @@
 
 # System Specification - Archive (derived)
 
-> Scenarios whose manifest names a replacement in `superseded_by`. The current behaviour is in `docs/system-spec.md`.
+> Scenarios whose manifest names a replacement in `superseded_by`. The current behavior is in `docs/system-spec.md`.

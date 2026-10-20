@@ -844,7 +844,7 @@ CATALOG_MEANS = (
     "One of the nine maps of configuration entries keyed by id: `dimensions`, "
     "`stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts`, "
     "`readiness` and `vocabulary`. An id is stable; a display name lives in "
-    "the `vocabulary` catalogue.")
+    "the `vocabulary` catalog.")
 
 
 def test_trc_069_the_catalog_term_row_keeps_catalogue_as_its_other_form():

@@ -713,9 +713,11 @@ def test_trc_056_the_table_check_fails_for_a_row_that_is_missing(monkeypatch):
 
 def _guide_rows(text: str) -> set:
     """`(kind, old, new, removed_in)` for each row of the guide's table."""
+    import re
     section = text.split("## Renamed names", 1)[1].split("\n## ", 1)[0]
     found = set()
     for line in section.splitlines():
+        line = re.sub(r"\s*<!-- us-english-scan: allow - [^>]*-->\s*$", "", line)
         cells = [c.strip().strip("`") for c in line.strip().strip("|").split("|")]
         if line.startswith("|") and len(cells) == 4 and cells[3][:1].isdigit():
             found.add(tuple(cells))

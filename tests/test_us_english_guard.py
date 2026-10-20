@@ -5,8 +5,9 @@ file checks that the list is one constant, that each scan reads what it must
 and ignores what it must, that a planted British word fails in each file
 group, and that an exemption marker works on its own line only.
 
-The guard is live for the CLI string literals and the `--help` text. The
-other file groups have a row with `live` off until their files are
+The guard is live for every file group: the shipped prose, the hooks,
+schemas and adapters, the CLI string literals and the `--help` text. A
+row's `live` field turns its scan off only while its files are not
 converted.
 """
 from __future__ import annotations
@@ -268,8 +269,7 @@ def test_groups_have_one_row_for_each_file_group_of_the_scenario():
     for group in words.GROUPS:
         assert set(group) == {"name", "paths", "kind", "live"}
         assert group["kind"] in ("text", "python", "help")
-    live = sorted(g["name"] for g in words.GROUPS if g["live"])
-    assert live == ["cli help strings", "cli string literals"]
+    assert [g["name"] for g in words.GROUPS if not g["live"]] == []
 
 
 def test_each_live_field_is_on_its_own_line_three_lines_apart():
@@ -278,6 +278,180 @@ def test_each_live_field_is_on_its_own_line_three_lines_apart():
     numbers = [i for i, line in enumerate(lines, 1) if re.match(r'\s*"live":', line)]
     assert len(numbers) == len(words.GROUPS)
     assert all(b - a >= 3 for a, b in zip(numbers, numbers[1:])), numbers
+
+
+ENTRIES = [(g["name"], entry) for g in words.GROUPS for entry in g["paths"]]
+PLANTED = {"python": 'print("the behaviour of it")',
+           "help": 'parser.add_argument("--x", help="the behaviour of it")'}
+
+
+def _first_scanned_file(group, entry):
+    """The first file that a scan of this path entry reads."""
+    one = dict(group, paths=[entry])
+    python = group["kind"] in ("python", "help")
+    for target in words._files(one, ROOT):
+        rel = target.relative_to(ROOT).as_posix()
+        if python and not (rel.endswith(".py") or rel == "cli/compass"):
+            continue
+        if not python and not rel.endswith(words._TEXT_SUFFIXES):
+            continue
+        return rel
+    raise AssertionError(f"{entry} holds no scanned file")
+
+
+@pytest.mark.parametrize("name,entry", ENTRIES, ids=[f"{n}: {e}" for n, e in ENTRIES])
+def test_a_planted_breach_fails_each_live_group_and_a_marker_clears_it(name, entry, tmp_path):
+    """A British word planted in a copy of a file of each live path entry is
+    found by the group scan. The same line with a marker and a reason is not."""
+    group = next(g for g in words.GROUPS if g["name"] == name)
+    assert group["live"], f"{name} is not live"
+    rel = _first_scanned_file(group, entry)
+    copy = tmp_path / rel
+    copy.parent.mkdir(parents=True, exist_ok=True)
+    text = (ROOT / rel).read_text(encoding="utf-8")
+    copy.write_text(text, encoding="utf-8")
+    one = dict(group, paths=[entry])
+    assert words.scan_group(one, tmp_path) == [], f"{rel} is not clean"
+    line = PLANTED.get(group["kind"])
+    if line is None:
+        line = 'echo "the behaviour of it"' if rel.endswith(".sh") else "This line holds behaviour."
+    if rel.endswith(".py") or rel == "cli/compass":
+        line = PLANTED.get(group["kind"], 'print("the behaviour of it")')
+    planted = text if text.endswith("\n") else text + "\n"
+    number = planted.count("\n") + 1
+    copy.write_text(planted + line + "\n", encoding="utf-8")
+    hits = words.scan_group(one, tmp_path)
+    assert (rel, number, "behaviour") == hits[-1][:3], hits
+    marked = line + ("  # " if rel.endswith((".sh", ".py")) or rel == "cli/compass" else "  <!-- ")
+    marked += words.MARKER + "planted for the test"
+    marked += "" if rel.endswith((".sh", ".py")) or rel == "cli/compass" else " -->"
+    copy.write_text(planted + marked + "\n", encoding="utf-8")
+    assert words.scan_group(one, tmp_path) == [], words.render(words.scan_group(one, tmp_path))
+
+
+NINE_GROUPS = [
+    ("README.md", ["README.md"]),
+    ("the adopter docs", ["docs/quickstart.md", "docs/five-minutes.md", "docs/install-smoke-test.md",
+                          "docs/releasing.md", "docs/release-notes.md", "docs/upgrade-6-0-0.md",
+                          "docs/upgrade-7-0-0.md", "docs/configuration.md", "docs/safety-contract.md",
+                          "docs/policy-lint.md", "docs/readiness.md", "docs/refusal-codes.md",
+                          "docs/glossary.md", "docs/policy-migrate.md", "docs/routing-deep-dive.md",
+                          "docs/roles-guide.md"]),
+    ("the house files", ["CLAUDE.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md"]),
+    ("the review workflow", [".github/workflows/claude-review.yml"]),
+    ("skills", ["skills"]),
+    ("commands and agents", ["commands", "agents"]),
+    ("approaches and templates", ["approaches", "templates"]),
+    ("the contract", ["compass-contract.md"]),
+    ("hooks, schemas and adapters", ["hooks", "schemas", "adapters"]),
+]
+
+
+def _covering_group(path):
+    for group in words.GROUPS:
+        if group["kind"] == "text" and any(
+                path == entry or path.startswith(entry + "/") for entry in group["paths"]):
+            return group
+    return None
+
+
+@pytest.mark.parametrize("name,paths", NINE_GROUPS, ids=[n for n, _ in NINE_GROUPS])
+def test_trc_033(name, paths):
+    """Scenario id: `TRC-033` in language-key-and-us-english/acceptance-criteria.md
+
+    Each of the nine surface groups has a live row, and its files hold no
+    word of the list outside a marked line. A planted word in a file of the
+    group is reported."""
+    assert [g["name"] for g in words.GROUPS if not g["live"]] == []
+    for path in paths:
+        group = _covering_group(path)
+        assert group is not None and group["live"], f"no live row covers {path}"
+        assert (ROOT / path).exists(), path
+        one = dict(group, paths=[path])
+        hits = words.scan_group(one, ROOT)
+        assert hits == [], words.render(hits)
+    # A planted word in a copy of the first file of the group is a hit.
+    first = next(f for f in words._files(dict(_covering_group(paths[0]), paths=[paths[0]]), ROOT)
+                 if f.suffix in (".md", ".yml", ".sh", ".json"))
+    rel = first.relative_to(ROOT).as_posix()
+    line = 'echo "the behaviour"' if rel.endswith(".sh") else "This line holds behaviour."
+    planted, number = _plant(rel, line)
+    assert (rel, number, "behaviour") == words.scan_source(rel, planted, "text")[-1][:3]
+
+
+def test_trc_034(tmp_path):
+    """Scenario id: `TRC-034` in language-key-and-us-english/acceptance-criteria.md
+
+    A guide line that names `judgement` as the old form carries the marker
+    with a reason, and the lines around it are still scanned."""
+    guide = (ROOT / "docs" / "upgrade-7-0-0.md").read_text(encoding="utf-8")
+    lines = guide.splitlines()
+    index = next(i for i, ln in enumerate(lines) if "| kind | `judgement` |" in ln)
+    assert MARK in lines[index] and lines[index].split(MARK, 1)[1].split("-->")[0].strip()
+    assert words.scan_text(guide, "docs/upgrade-7-0-0.md") == []
+    # Without the marker the line is a hit; with a marker and no reason it is too.
+    bare = lines[index].split("<!--")[0].rstrip()
+    assert [h[:2] for h in words.scan_text(bare)] == [(1, "judgement")]
+    assert words.scan_text(bare + "  <!-- " + MARK.rstrip(" -") + " -->") != []
+    # The marker covers its own line only: a word on the line after is a hit.
+    around = "\n".join(lines[index - 1:index + 1]) + "\nThe behaviour here.\n"
+    assert [h[0] for h in words.scan_text(around)] == [3]
+    # The older guide holds no word either.
+    old = (ROOT / "docs" / "upgrade-6-0-0.md").read_text(encoding="utf-8")
+    assert words.scan_text(old, "docs/upgrade-6-0-0.md") == []
+
+
+def test_trc_038(tmp_path):
+    """Scenario id: `TRC-038` in language-key-and-us-english/acceptance-criteria.md
+
+    Every heading of a template is in US English, and a project that sets
+    another language gets the same headings, with a body written in German
+    under them left alone."""
+    headings = []
+    for template in sorted((ROOT / "templates").rglob("*.md")):
+        for number, line in enumerate(template.read_text(encoding="utf-8").splitlines(), 1):
+            if line.startswith("#"):
+                headings.append((template.relative_to(ROOT).as_posix(), number, line))
+    assert len(headings) > 40
+    for path, number, line in headings:
+        assert words.scan_text(line) == [], f"{path}:{number}: {line}"
+    # The fixed headings the CLI writes into the living spec (the `###` headings
+    # of that page are issue names, which are identifiers).
+    spec = (ROOT / "docs" / "system-spec.md").read_text(encoding="utf-8")
+    fixed = [ln for ln in spec.splitlines() if ln.startswith(("# ", "## "))]
+    assert fixed and words.scan_text("\n".join(fixed)) == []
+
+    import test_generation_store as store
+    shown = []
+    for language in (None, "de"):
+        root = tmp_path / (language or "plain")
+        root.mkdir()
+        cfg = {"schema": 1} if language is None else {"schema": 1, "language": language}
+        store._project(root, compass_yml=cfg)
+        assert store._evaluate_write(root)[0] == 0
+        code, out, err = store._run(root, "issue", "template", "show", "requirements-review",
+                                    "--issue", store.SLUG)
+        assert code == 0, out + err
+        german = out.rstrip("\n") + "\n\nDer deutsche Text unter der Ueberschrift.\n"
+        shown.append([ln for ln in german.splitlines() if ln.startswith("#")])
+    assert shown[0] == shown[1] and shown[0]
+
+
+def test_a_kept_line_of_a_json_file_is_covered_in_that_file_and_that_line_only():
+    """JSON has no comment, so the schema lines that keep `judgement` sit in
+    KEPT_LINES, each with a reason. The same line elsewhere is a hit."""
+    path = "schemas/manifest.schema.json"
+    for kept, fragment, reason in words.KEPT_LINES:
+        assert reason.strip() and len(reason.split()) > 1
+        text = (ROOT / kept).read_text(encoding="utf-8")
+        lines = [ln for ln in text.splitlines() if fragment in ln]
+        assert lines, f"the entry {fragment!r} matches no line of {kept}"
+        assert words.scan_text("\n".join(lines))
+        assert words.scan_source(kept, "\n".join(lines) + "\n", "text") == []
+        assert words.scan_source("schemas/other.schema.json", lines[0] + "\n", "text") != []
+    planted = '              "judgement",\n              "the behaviour of it",\n'
+    hits = words.scan_source(path, planted, "text")
+    assert [h[2] for h in hits] == ["behaviour"], hits
 
 
 @pytest.mark.parametrize("group", words.GROUPS, ids=[g["name"] for g in words.GROUPS])

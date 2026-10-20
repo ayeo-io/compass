@@ -83,3 +83,54 @@ def test_trc_064_the_older_record_is_unchanged():
                               capture_output=True, text=True)
     assert head.returncode == 0, head.stderr
     assert OLDER.read_text(encoding="utf-8") == head.stdout
+
+
+GUIDE = ROOT / "docs" / "upgrade-7-0-0.md"
+BEFORE = "## The released spellings end, and the old readers stay until 8.0.0"
+SECTION = "## Renamed names"
+MARK = "us-english-scan: allow - "
+
+
+def _guide_section(text):
+    start = text.index(SECTION + "\n")
+    rest = text[start + len(SECTION):]
+    end = re.search(r"^## ", rest, re.M)
+    return text[start:start + len(SECTION) + (end.start() if end else len(rest))]
+
+
+def test_trc_065():
+    """Scenario id: `TRC-065` in language-key-and-us-english/acceptance-criteria.md
+
+    The upgrade guide holds one "Renamed names" section after the section on
+    the released spellings. It lists each old name, its new name and 8.0.0,
+    says what to do about the refusal code, the JSON keys and the project
+    names, and marks every line that quotes an old name.
+    """
+    import sys
+    sys.path.insert(0, str(ROOT / "tests"))
+    import us_english_words as words
+
+    text = GUIDE.read_text(encoding="utf-8")
+    assert text.count(SECTION + "\n") == 1
+    assert text.index(BEFORE) < text.index(SECTION)
+    section = _guide_section(text)
+    rows = [ln for ln in section.splitlines() if ln.startswith("| ") and "`" in ln]
+    assert len(rows) == 11
+    for row in rows:
+        kind, old, new, until = [c.strip() for c in row.split("<!--")[0].strip().strip("|").split("|")]
+        assert old.startswith("`") and new.startswith("`") and old != new
+        assert until == "8.0.0"
+    flat = " ".join(section.split())
+    assert "match `not-initialized`" in flat
+    assert "`compass:behaviour-mapping` or `dor-behaviour-is-gwt` keeps working" in flat
+    assert "reads the refusal code or the `behaviour` JSON keys should move to the new names " \
+           "before 8.0.0" in flat
+    assert "No manifest, state file or readiness record needs a change" in flat
+
+    # Each line that quotes a listed old word carries the marker and a reason,
+    # so the guard reports nothing; the same section without them is reported.
+    assert words.scan_text(section) == []
+    quoting = [ln for ln in section.splitlines() if words.scan_text(ln.split("<!--")[0])]
+    assert len(quoting) >= 10 and all(MARK in ln for ln in quoting)
+    stripped = "\n".join(ln.split("<!--")[0] for ln in section.splitlines())
+    assert {h[1] for h in words.scan_text(stripped)} >= {"judgement", "behaviour", "catalogue"}

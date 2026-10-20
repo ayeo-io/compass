@@ -4151,6 +4151,60 @@ Agent instructions now say to name an issue by its GitHub number and title, neve
 
 - `TRC-001` Given AGENTS.md and CLAUDE.md When an agent reads them Then each states that issues are named by GitHub issue number, as #N [title] or owner/repo#N [title], and never by an internal row id
 
+### approve-inside-claude-code (completed 2026-10-16)
+
+- `TRC-A1` The guardrail 5 sign-off is recorded from a typed prompt
+- `TRC-A2` Each subject form is recorded as its terminal form records it
+- `TRC-A3` Rejecting a human check withdraws its approval
+- `TRC-A4` Rejecting a document sends it back to draft
+- `TRC-A5` Rejecting the guardrail 5 sign-off writes no approval record
+- `TRC-B1` The agent asks for an approval with the CLI
+- `TRC-B2` Compass shows a pending request to the person at the end of the turn
+- `TRC-B3` A new request for the same subject replaces the pending one
+- `TRC-B4` A request the approval would refuse is refused when asked
+- `TRC-C1` Nothing is waiting
+- `TRC-C2` Several requests are waiting
+- `TRC-C3` The issue moved to a new generation after the request
+- `TRC-C4` The document changed after the request
+- `TRC-C5` The request has not been shown
+- `TRC-C6` The approve command takes only a request number
+- `TRC-C7` No approver can be named
+- `TRC-C8` The approver is not listed for the check
+- `TRC-C9` The hook cannot run
+- `TRC-C10` The command reaches the agent without a result
+- `TRC-D1` The agent writes the request with a misleading scope
+- `TRC-D2` The agent changes the request after it was shown
+- `TRC-D3` The agent writes an approval into the manifest by hand
+- `TRC-D4` The agent invokes the approve command itself
+- `TRC-D5` The agent schedules or sends the approve command
+- `TRC-D6` A prompt that is not the approve command records nothing
+- `TRC-D7` The agent runs the terminal verb from its shell
+- `TRC-E1` The terminal fallback keeps working
+- `TRC-E2` The plugin registers the commands and the hook
+- `TRC-E3` A host whose adapter cannot show a typed command uses the terminal
+- `TRC-E4` The safety documents describe the new path
+- `TRC-C11` The session's issue cannot be named, or the request is for another issue
+- `TRC-C12` A request is answered once
+- `TRC-D8` The agent edits a request file with its edit tools
+- `TRC-F1` A person delegates approvals to a named agent
+- `TRC-F2` The guardrail 5 sign-off is covered only when named
+- `TRC-F3` A delegation outside its limits is refused
+- `TRC-F4` A delegated agent records the guardrail 5 sign-off
+- `TRC-F5` An agent with no delegation cannot approve
+- `TRC-F6` An expired delegation cannot be used
+- `TRC-F7` An approval outside the delegation's scope is refused
+- `TRC-F8` Another agent cannot use the delegation
+- `TRC-F9` The model cannot create or extend a delegation
+- `TRC-F10` The agent cannot edit a delegation file
+- `TRC-F11` A person revokes a delegation early
+- `TRC-F12` The person sees what was approved under a delegation
+- `TRC-F13` The person overrules a delegated guardrail 5 sign-off
+- `TRC-F14` The person overrules a delegated check or document approval
+- `TRC-F15` A withdrawal never fails a landed issue
+- `TRC-G1` A project with no configuration records the sign-off
+- `TRC-G2` Evidence add refuses a human-approval record
+- `TRC-G3` The fix text names the approval path
+
 ### migrate-archive-safety (completed 2026-10-16)
 
 - `MAS-1` A document in both places is a change once and an item for a person after that
@@ -4307,6 +4361,28 @@ The 7.0.0 upgrade guide now names git clean as well as git reset --hard to undo 
 
 - `TRC-001` Given the upgrade guide for 7.0.0 When a reader reads the Copy first paragraph Then it names git reset --hard and git clean to undo an apply, warns that git clean removes every untracked file, and suggests a dry run with git clean -n limited to the two folders
 
+### config-rewrite-tool (completed 2026-10-16)
+
+compass policy migrate --words rewrites a project's compass.yml and its policy-test fixtures in the 6.0.0 words, so 7.0.0 does not refuse them. It shows a diff first, keeps comments and layout, writes only inside the project and only over files git can restore, and lists any condition that reads the retired role dimension for a hand edit.
+
+- `CRW-1` The dry run shows each change to compass.yml and writes nothing
+- `CRW-2` The dry run covers the fixtures, grouped ones included
+- `CRW-3` A word outside the mapped fields is left alone
+- `CRW-4` Apply keeps comments, order and quoting
+- `CRW-5` After apply the lint is quiet and a second run changes nothing
+- `CRW-6` A file the text rewrite cannot place is refused by name
+- `CRW-7` A folder outside the project is refused
+- `CRW-8` A linked file is refused
+- `CRW-9` A file git cannot restore is refused unless the adopter has a copy
+- `CRW-10` Outside a git repository the write needs the adopter's copy
+- `CRW-11` A rule that reads role is listed for a hand edit
+- `CRW-12` A project that declares its own role dimension is not told to edit it
+- `CRW-13` An edit to a retired rule set names its replacement
+- `CRW-14` A fixture that records a role keeps it, with a note
+- `CRW-15` The JSON report
+- `CRW-16` Nothing to change
+- `CRW-17` The word flags need --words
+
 ### migrate-copy-check-gaps (completed 2026-10-16)
 
 `compass issue migrate` no longer lists a distribution map rename in the dry run when `distribution-map.md.v6.bak` already exists, since `--apply` keeps the backup. `--apply` without `--i-have-a-copy` now refuses when `.compass/work` or `docs/compass` is a symbolic link to a folder outside the project's git repository, and its copy command follows the link. The migrate no longer renames a distribution map whose path lies outside the project; both runs report it instead.
@@ -4462,11 +4538,23 @@ The CLI and the docs now use only the current vocabulary, and the guards fail on
 - `RWP-7` A floor that forces a stage names the current mode
 - `RWP-8` The quick-fix help names the implement stage
 
+### stored-6x-generation-keeps-role-rules (completed 2026-10-17)
+
+A CLI test now checks that an issue on a stored 6.x generation keeps its role rules until it is re-assessed.
+
+- `TRC-001` Given an issue whose stored generation 1 was committed by Compass 6.0.1 with role product-owner, when compass approach evaluate runs without --write, then RP-ROLE-002 fires and plan is blocked; when it runs with --write, the re-assessment commits generation 2 on the 7.0.0 default and no role rule fires
+
 ### rubric-three-scored-dimensions (completed 2026-10-17)
 
 The assessment rubric now describes the three scored dimensions, the two switches and the domain labels instead of four dimensions.
 
 - `TRC-001` Given role is no longer an assessment dimension, When a session reads approaches/rubric.md or skills/adaptive-routing/SKILL.md, Then they describe three scored dimensions (risk, familiarity, size), two switches (goal, urgency) and domain labels, not four dimensions
+
+### policy-migrate-keeps-ui-contract (completed 2026-10-17)
+
+compass policy migrate no longer lists the UI contract as removed, because the shipped default still includes it.
+
+- `PM-16` Given a project with an unedited copy of the 6.0.1 governance files, When it runs compass policy migrate, Then the adopted list does not list as removed any entry the shipped default preset still declares, such as artifacts.ui-contract
 
 ### owner-reassess-overrides-label-floor (completed 2026-10-17)
 
@@ -4563,6 +4651,35 @@ Compass 6.1.0 is released.
 
 - `TRC-001` Given the release files When the version consistency test runs Then every file states 6.1.0
 
+### one-unit-breakdown (completed 2026-10-19)
+
+A multiagent breakdown with one unit of work is now recorded from a units: 1 line in the distribution map, with no subtask record and no waiver.
+
+- `OUB-1` A one-unit map records one single-unit subtask
+- `OUB-2` The verification report completes the record
+- `OUB-3` compass check passes a one-unit issue with no subtask call
+- `OUB-4` A map edited to two units fails the check
+- `OUB-5` No verification report fails the check
+- `OUB-6` A gate not passed fails the check
+- `OUB-7` Two units record nothing and remove a one-unit record
+- `OUB-8` A multiagent map with no units line is refused
+- `OUB-9` Solo and skipped breakdowns are unchanged
+- `OUB-10` The units line reads a number or a list
+- `OUB-11` One unit with two mapped subtasks is refused
+- `OUB-12` Recording one unit is the breakdown stage record
+- `OUB-13` Hand-recorded subtasks are left alone
+- `OUB-14` A critical single-unit record needs a passing review round
+- `OUB-15` a single unit record beside another subtask fails
+- `OUB-16` a map found by its flat filename is refused too
+- `OUB-17` a units line below one is refused
+- `OUB-18` diagnose names a single-unit record as run by this session
+
+### upgrade-guide-replaced-approach (completed 2026-10-19)
+
+A project that replaced a shipping approach in its compass.yml must add the release line and, on regular and full, the intent, or compass policy lint fails.
+
+- `TRC-001` Given the 7.0.0 upgrade guide When an adopter reads the section on the lightweight intent and the release line Then it says a replaced shipping approach must set release_line true, owe intent, or carry a waiver
+
 ### design-scope-review-and-bug-report (completed 2026-10-19)
 
 A design decision that declares Scope: project now needs a decision record before the issue lands. A regular issue owes a short requirements review and a hotfix owes a bug report.
@@ -4578,12 +4695,54 @@ A design decision that declares Scope: project now needs a decision record befor
 - `DSR-9` A project with no decisions folder is told the first record to write
 - `DSR-10` An issue assessed before the change owes neither document
 
+### ownership-doc-template-readers (completed 2026-10-19)
+
+The architecture docs now name the two CLI paths that read templates/.
+
+- `TRC-001` Given the CLI source When a test scans it for reads of the templates folder Then exactly the compass issue template show and policy lint paths read it, and templates/architecture is read by none
+
+### adr-061-process-group-fix (completed 2026-10-19)
+
+The decision records now say a readiness command's process group stops with SIGTERM, then SIGKILL, on every exit path.
+
+- `TRC-001` Given the readiness runner stops a command's process group on every exit path When a person reads the decision records on readiness commands Then the record says the group is sent SIGTERM then SIGKILL on every exit path, and the issue_detail docstring names every import the module has
+
+### policy-show-copied-governance (completed 2026-10-19)
+
+compass policy show now says when an unmigrated 5.x project runs on its own copy of governance/.
+
+- `TRC-001` Given a project with a copied governance folder and no compass.yml, When the person runs compass policy show, Then the output says the project runs on its copy of governance and that compass policy migrate converts it; and a project with a compass.yml or with no copy prints no such line.
+
+### name-file-on-non-utf8-manifest (completed 2026-10-19)
+
+A manifest that is not valid UTF-8 now stops Compass with an error that names the file, instead of a decode traceback.
+
+- `TRC-A13` Given an issue manifest that is not valid UTF-8, when Compass reads it, then it stops with a Compass error that names the manifest file and no UnicodeDecodeError traceback
+
 ### refuse-on-major-version-mismatch (completed 2026-10-19)
 
 Commands refuse an issue whose stored configuration was built by another major version of Compass, and name the command that repairs it.
 
 - `IR-13` every command that reads the issue refuses
 - `IR-14` the commands that repair a mismatch still run
+
+### retro-reads-each-manifest-once (completed 2026-10-19)
+
+compass retro --impact now reads each manifest once, so it runs faster on projects with many issues.
+
+- `TRC-001` Given a project with several manifests, When compass retro --impact runs, Then each manifest.yml is read exactly once and the decisions row is unchanged
+
+### rebuild-ci-shard-timings (completed 2026-10-19)
+
+CI splits the test files across its four shards using timings for most files, so the shards take about the same time.
+
+- `TRC-001` Given the shard timing table and the test files in the repository, When the table is read, Then it holds a duration for at least 95 percent of the test files and the old table's split, weighed with the table's durations, is at most 1.3 times the new split's slowest shard
+
+### record-ci-hook-cost-ratio (completed 2026-10-19)
+
+The hook cost test now records the ratio that CI measures beside its limits.
+
+- `TRC-001` Given the comment above MAX_MARGINAL_OVER_REFERENCE in tests/test_issue_dependencies.py When a reader opens it Then it names the CI measurement date, the run count, both medians and the job log step that prints them
 
 ### policy-migrate-undo (completed 2026-10-19)
 
@@ -4635,3 +4794,9 @@ compass policy migrate --undo puts a project back in the state it had before com
 - `TRC-044` A marker of another schema is refused and names the schema
 - `TRC-045` One marker reader serves the migrate and the undo
 - `TRC-046` A restored file keeps its mode
+
+### ship-commit-names-git-reason (completed 2026-10-20)
+
+compass ship-commit now shows the reason git gave when a commit fails, for example a missing author identity, before it says the land did not happen. It suggests a pre-commit hook only when one can run.
+
+- `TRC-001` Given a repository with no author identity When compass ship-commit cannot commit Then the error starts with the tool's own reason and does not blame a pre-commit hook

@@ -675,7 +675,7 @@ def build_parser():
     p_gloss.add_argument("--internal", action="store_true", help=argparse.SUPPRESS)
     p_gloss.add_argument("--out", help=argparse.SUPPRESS)
     p_gloss.add_argument("--root", help=argparse.SUPPRESS)
-    p_gloss.add_argument("--catalogue-out", help=argparse.SUPPRESS)  # us-english-scan: allow - flag name kept until 8.0.0
+    p_gloss.add_argument("--catalogue-out", help=argparse.SUPPRESS)  # us-english-scan: allow - flag name kept for existing callers
     p_gloss.set_defaults(func=cmd_derive_glossary, output_kind="report")
 
     # Private entry point for the archive migration core that `compass

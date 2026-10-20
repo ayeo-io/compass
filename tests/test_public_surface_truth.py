@@ -579,6 +579,16 @@ def test_d2_repairs_change_only_retired_names():
     words, brace expansion, a tool option with its own glob, a glob rooted
     elsewhere and a glob the prefilter does not see.
 
+    Two more were re-baselined by `hooks-comment-only-edits-and-prose`:
+    `docs/safety-contract.md` (list_items 85 -> 97, table_rows 17 -> 35, one
+    more `###` heading) gained the section on an Edit that changes only
+    comments, with its language table, its fail-closed list, its budget
+    constants and its table of measured worst cases, and
+    `architecture/relations.md` (table_rows 31 -> 32) gained the row for the
+    hook's comment-only check. The security review of the same issue added
+    to the section the stated limits of the check, five bullets, and two more
+    bullets to its fail-closed list (list_items 97 -> 104).
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

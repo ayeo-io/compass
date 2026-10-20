@@ -182,19 +182,13 @@ def _text(value):
     return value.strip() if isinstance(value, str) and value.strip() else None
 
 
-def _owner_in_config(layers, root):
-    """Does `.compass/config.yml` hold a text `owner`? An unreadable file says no.
-    The shared settings reader uses the old file only when the project has no
-    `compass.yml`. This reads the old file alone, so the caller can tell a
-    person whose owner sits there that `compass.yml` needs it."""
-    path = os.path.join(root, ".compass", "config.yml")
-    if not os.path.isfile(path):
-        return False
-    try:
-        doc = layers._load(path)                       # noqa: SLF001
-    except Exception:                                  # noqa: BLE001
-        return False
-    return isinstance(doc, dict) and _text(doc.get("owner")) is not None
+def _owner_in_config(root):
+    """Does the old settings file hold a text `owner`? An unreadable file says no.
+    The shared settings reader (`project_settings`) is the only code that names the
+    old file; this asks it, so the caller can tell a person whose owner sits there
+    that `compass.yml` needs it."""
+    from compass_pkg import project_settings
+    return project_settings.old_file_text(root, "owner") is not None
 
 
 def _file_above(root):
@@ -228,7 +222,7 @@ def owner_and_cause(task_dir):
         return OwnerLookup(_text(value), None, root=root)
     if value is not None and not isinstance(value, str):
         return OwnerLookup(None, CAUSE_NOT_TEXT, _kind(value), root)
-    if _owner_in_config(layers, root):
+    if _owner_in_config(root):
         return OwnerLookup(None, CAUSE_CONFIG_ONLY, root=root)
     if not exists:
         above = _file_above(root)

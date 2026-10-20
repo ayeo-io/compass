@@ -203,6 +203,18 @@ def settings_conflict(project_root):
     return _old_settings_keys(project_root)
 
 
+def old_file_text(project_root, key):
+    """The text value of the top-level `key` in the old settings file, or None
+    when the file is missing, cannot be read, or holds no text there. The
+    approver message uses it to tell a person whose `owner` sits only in the
+    old file to move it to `compass.yml`."""
+    try:
+        value = _load(os.path.join(project_root, OLD_CONFIG), strict=False).get(key)
+    except CompassError:
+        return None
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
 #: Roots already warned about, so a command that reads settings many times
 #: warns once.
 WARNED = set()

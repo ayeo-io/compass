@@ -53,7 +53,7 @@ DESCRIBING_FILES = (
     "docs/safety-contract.md",
     "governance/routing-policy.md",
     "governance/routing-policy.yml",
-    "skills/quick-fix/SKILL.md",
+    "commands/quick-fix.md",
 )
 
 

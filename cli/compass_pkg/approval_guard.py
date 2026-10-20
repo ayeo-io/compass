@@ -12,9 +12,10 @@ r"""Decide whether the agent's tool call touches approval state it must not
     substring, except the message text of `git commit`, `tag`, `merge` and
     `revert` (`-m`, `-am`, `--message`) and of `gh issue`, `pr` and `release`
     (`--title`, `--body`, `--notes`, `-t`, `-b`).
-  - A command that stands alone, with no redirect, may name what `EXEMPT`
-    says in a bare path argument: a request folder for `ls`, `wc` and `stat`,
-    and the prompt hook script for `cat`. The exemption does not hold for a
+  - A command that stands alone, with no redirect to a file, one operand and
+    only the plain options of `EXEMPT_OPTIONS`, may name what `EXEMPT` says in
+    a bare path argument with no `..` segment: a request folder or file for
+    `ls`, `wc` and `stat`, and the prompt hook script for `cat`. The exemption does not hold for a
     `VAR=` word, an option such as `--output=<path>`, or the word after `-f`,
     `--file`, `--files0-from`, `--output`, `--pre` or `--exec`.
   - A Bash word that holds a glob or brace character in the name of a
@@ -188,6 +189,10 @@ EXEMPT = {"ls": ("request",), "wc": ("request",), "stat": ("request",), "cat": (
 #: Options whose value is a path, a command or a file to write, never a bare path argument.
 PATH_OPTIONS = frozenset(("-f", "--file", "--files0-from", "--output", "--pre", "--exec"))
 ASSIGNMENT = re.compile(r"[A-Za-z_]\w*=")
+#: The letters of the short options an exempt command may carry. Each takes no value and
+#: shows names, sizes or counts. Any other option, `--` and a second operand void the
+#: exemption, because an option such as `ls -I` or `stat -f` changes what is read.
+EXEMPT_OPTIONS = {"ls": "lah1", "wc": "lcwm", "stat": "", "cat": ""}
 
 
 def exempt_commands():
@@ -710,17 +715,29 @@ def _bare(words, i):
                 or words[i - 1] in PATH_OPTIONS)
 
 
+def _one_plain_operand(words):
+    """True when an exempt command has one operand and only the plain options of
+    `EXEMPT_OPTIONS`: no `--`, no second path and no option that takes a value."""
+    letters = EXEMPT_OPTIONS.get(words[0], "")
+    operands = [w for w in words[1:] if not w.startswith("-")]
+    return len(operands) == 1 and all(
+        len(w) > 1 and set(w[1:]) <= set(letters) for w in words[1:] if w.startswith("-"))
+
+
 def _judge_words(commands, event, folder):
     """The Bash checks on the words of a simple command: every word and redirect target
     except message text. An exemption holds only for a command that stands alone and has
-    no redirect."""
+    no redirect to a file (a copy of a descriptor, `2>&1`, names no file), with one operand
+    and plain options, and only for a word with no `..` segment."""
     items, top = [], []
     for command in commands:
         words = command.words
-        allowed = EXEMPT.get(words[0], ()) if len(commands) == 1 and not command.targets else ()
+        allowed = (EXEMPT.get(words[0], ()) if len(commands) == 1 and not command.targets
+                   and _one_plain_operand(words) else ())
         for i, word in enumerate(words):
             if i not in command.text:
-                items.append((word, allowed if _bare(words, i) else (), False))
+                items.append((word, allowed if _bare(words, i) and ".." not in word.split("/")
+                              else (), False))
                 top.append(word)
         for target in command.targets:
             items.append((target, (), False))

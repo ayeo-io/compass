@@ -243,7 +243,9 @@ _SET_APPROVER = "or set COMPASS_APPROVER before starting Claude Code."
 def _no_approver(lookup):
     """The refusal for the cause that no owner can be named. Only the cause
     `no-owner` says "no approver can be named"; the others name what is wrong
-    and the real next step. Each stays under 60 words."""
+    and the real next step. Each stays under 60 words for a folder name of ordinary
+    length. A hostile name of one-letter words is cut at `SHOWN_FOLDER_MAX` characters
+    and can bring a message to about 80 words."""
     records = approval_records
     # The folder names come from the disk, so they are cleaned and cut like the reason.
     cause, root = lookup.cause, records.shown_text(lookup.root, records.SHOWN_FOLDER_MAX)

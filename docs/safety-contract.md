@@ -149,9 +149,14 @@ its whole text. A command is simple when all of these hold:
   path, no `VAR=` word before it and no function or alias definition;
 - it holds no pipe, `&`, `||`, parenthesis, backtick, comment, heredoc,
   here-string, process substitution, `eval`, `$'...'` or `$"..."`, and no
-  unquoted brace, glob or tilde character (`{ } * ? [ ~`), because the shell
-  expands such a word before the command runs and the guard judges the word as
-  typed;
+  unquoted brace, glob, tilde, `^` or `#` character (`{ } * ? [ ~ ^ #`),
+  because the shell expands such a word before the command runs and the guard
+  judges the word as typed. It holds no zsh number range such as `<1-3>`, no
+  `>!`, no descriptor of two digits and no quoted or escaped digit before a
+  redirect. A command that is only a redirect is not simple, because zsh runs
+  `cat` for it. A copy of a descriptor (`2>&1`, `>&2`) ends at a blank, a new
+  line, `;` or `&`; any other white space character is part of a file name in
+  the shell, so a copy followed by one is not simple;
 - it holds no `$` outside message text, and no `$(`, `${` or backtick inside
   message text. A message value must be one quoted word, never joined to its
   option, and never start with `@`.
@@ -191,12 +196,19 @@ command that the gate does not list. For example `git commit -m "$(cat
 allowed when it names none. A broader reading of text moved to a later
 release (ayeo-io/compass-delivery-record#247).
 
-**The exemptions.** An exemption removes one thing from one word, and holds
-only when the command stands alone and has no redirect. The exemptions are:
+**The exemptions.** An exemption removes one thing from one word. It holds
+only when the command stands alone, has no redirect to a file (a copy of a
+descriptor such as `2>&1` names no file), has one operand, and carries only the
+plain options `ls -lah1` and `wc -lcwm` allow (`stat` and `cat` carry none; `--`
+and any other option void the exemption). It does not hold for a path with a
+`..` segment, so `ls <request folder>/../../../delegations` is refused. The
+exemptions are:
 
-- `ls`, `wc` and `stat` may name a request folder as a bare path argument, with
-  no glob, brace or tilde. `ls .compass/delegations` is refused: the delegation
-  folder has no exemption;
+- `ls`, `wc` and `stat` may name a request path as a bare path argument, with
+  no glob, brace or tilde. The path can be a request folder or a request file,
+  so `wc -l <request>` and `stat <request>` pass: they show a count or the
+  file's metadata, not its content. `ls .compass/delegations` is refused: the delegation folder has no
+  exemption;
 - `cat` may name `hooks/prompt-approval.sh` as a bare path argument. Every
   other command that names the script is refused, including `chmod`, `git add`,
   `cp`, a runner and a listing, and a `cat` in a pipe or beside another

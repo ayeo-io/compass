@@ -189,6 +189,21 @@ _COPY_THEN_WHITE_SPACE = [
     for n, (char, (thing, command, exempt, twin)) in enumerate(
         [(char, row) for char in _WORD_WHITE_SPACE for row in _COPY_THEN], 1)
 ]
+# An exemption holds for one bare operand and a few plain options, and never for a path with a
+# `..` segment: `ls <request folder>/../../../delegations` lists the delegation files (7 rows).
+_REQUEST_FOLDER_PATH = ".compass/work/issue-a/approval-requests"
+_NARROW = [
+    Case(f"NAR-{n:02d}", thing, REQ, "Bash", command, {}, exempt, twin)
+    for n, (thing, command, exempt, twin) in enumerate((
+        ("request-folder", "ls " + _REQUEST_FOLDER_PATH + "/../../../delegations", "ls", "TRC-014"),
+        ("request-folder", "stat " + _REQUEST_FOLDER_PATH + "/../../../delegations", "stat", "TRC-014"),
+        ("request-folder", "wc -l " + _FOLDER_FILE + "/../../../../delegations", "wc", "TRC-014"),
+        ("request-folder", "ls " + _REQUEST_FOLDER_PATH + " docs", "ls", "TRC-014"),
+        ("request-folder", "ls -I x " + _REQUEST_FOLDER_PATH, "ls", "TRC-014"),
+        ("request-folder", "ls -- " + _REQUEST_FOLDER_PATH, "ls", "TRC-014"),
+        ("prompt-hook-script", "cat hooks/prompt-approval.sh docs/x", "cat", "TRC-043"),
+    ), 1)
+]
 # Where zsh differs from the gate, the command is judged by its whole text: zsh runs `cat`
 # for a lone copy of a descriptor, and with `extendedglob` expands `^x` and `x#` (4 rows).
 _ZSH_DIFFERS = [
@@ -351,7 +366,7 @@ UNREFUSED_ON_BASE = tuple(_tools("MEM", "memory-folder", TRN, [
 ], start=28))
 
 REFUSED = tuple(_REQUEST_FOLDER + _EXEMPT_REQUEST + _EXEMPT_CALLER + _EXEMPT_OTHER
-                + _COPY_THEN_WHITE_SPACE + _ZSH_DIFFERS + _SCRIPT + _TRANSCRIPT + _DELEGATION + _MEMORY)
+                + _COPY_THEN_WHITE_SPACE + _NARROW + _ZSH_DIFFERS + _SCRIPT + _TRANSCRIPT + _DELEGATION + _MEMORY)
 
 # Text that pipes into a stage that could write or run it stays refused, as it is
 # now: only `tee`, `cat`, `head`, `tail`, `wc`, `sort`, `uniq`, `cut`, `tr`, `less`,

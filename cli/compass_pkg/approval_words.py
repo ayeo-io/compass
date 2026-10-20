@@ -48,9 +48,9 @@ GH_SUBS = {"issue": ("create", "edit", "comment"),
 GH_TEXT = ("--title", "--body", "--notes", "-t", "-b")
 #: A descriptor copied by a redirect (`2>&1`, `>&2`, `>&-`) names no path. One digit, then
 #: a blank, a new line, `;`, `&` or the end: the shell ends the copy at those and no other
-#: white space, so `>&2<CR>x` writes a file named `2<CR>x`. A descriptor of two digits is
-#: not read.
-_DUPLICATE = re.compile(r"(?:[0-9]-?|-)(?=[ \t\n;&]|\Z)")
+#: white space, so `>&2<CR>x` writes a file named `2<CR>x`. A descriptor of two digits and a
+#: move (`>&2-`) are not read: zsh writes `>&2-` to a file named `2-`.
+_DUPLICATE = re.compile(r"[0-9-](?=[ \t\n;&]|\Z)")
 #: zsh reads `<1-3>`, `<->` and `<-5>` as a glob that matches the names of numbers.
 _NUMBER_RANGE = re.compile(r"[0-9]*-[0-9]*>")
 _DIGITS = re.compile(r"[0-9]+")

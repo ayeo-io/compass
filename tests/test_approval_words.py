@@ -160,6 +160,8 @@ NOT_SIMPLE = [
     *[f"ls >&2{c}x" for c in ("\r", "\x0c", "\x0b", "\x85", "\xa0", " ", " ")],
     *[f"ls 2>&1{c}" for c in ("\r", "\x0c", "\x0b", "\x85", "\xa0", " ", " ")],
     "ls >&1\r", "ls >&-\xa0", "ls >&22", "ls >&2x", "ls >&2-x",
+    # zsh writes `>&1-` to a file named `1-`, where bash moves the descriptor
+    "ls >&2-", "ls 2>&1-", "ls -2>&1- dir/sub a-b 0<t2", "ls >&2- ; ls",
     # zsh reads a number range as a glob
     "cat x <1-3> -l", "ls <->", "wc<-5> -1", "ls <1-3>x", "ls <3->",
     # zsh with `extendedglob` reads `^x` and `x#` as a glob

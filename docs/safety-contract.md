@@ -152,7 +152,7 @@ its whole text. A command is simple when all of these hold:
   unquoted brace, glob, tilde, `^` or `#` character (`{ } * ? [ ~ ^ #`),
   because the shell expands such a word before the command runs and the guard
   judges the word as typed. It holds no zsh number range such as `<1-3>`, no
-  `>!`, no descriptor of two digits and no quoted or escaped digit before a
+  `>!`, no descriptor of two digits, no descriptor move (`>&2-`) and no quoted or escaped digit before a
   redirect. A command that is only a redirect is not simple, because zsh runs
   `cat` for it. A copy of a descriptor (`2>&1`, `>&2`) ends at a blank, a new
   line, `;` or `&`; any other white space character is part of a file name in

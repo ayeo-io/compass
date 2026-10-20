@@ -42,7 +42,7 @@ capabilities:
   - capability: Post-action issue logging
     obligation: 6
     claude-code: {status: full, path: hooks/post-tool.sh}
-    codex: {status: partial, path: adapters/codex/runtime.py, note: "Patch targets reach the shared edit logger. Shell edits and specialised tool paths are not logged as file edits."}
+    codex: {status: partial, path: adapters/codex/runtime.py, note: "Patch targets reach the shared edit logger. Shell edits and specialized tool paths are not logged as file edits."}
   - capability: Session-end status check
     obligation: 4
     claude-code: {status: full, path: hooks/stop.sh}

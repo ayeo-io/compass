@@ -45,7 +45,7 @@
     },
     "design_smell": {
       "type": "array",
-      "description": "Advisory patterns assessed by the reviewer agent at verify - judgement, never a gate. A match is a prompt to investigate a potential design problem. Projects extend by editing their own signals.yml.",
+      "description": "Advisory patterns assessed by the reviewer agent at verify - judgment, never a gate. A match is a prompt to investigate a potential design problem. Projects extend by editing their own signals.yml.",
       "items": { "type": "string", "minLength": 1 },
       "minItems": 0,
       "uniqueItems": true

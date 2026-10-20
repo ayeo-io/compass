@@ -85,7 +85,7 @@
         },
         "params": {
           "type": "object",
-          "description": "Optional parameters for a parameterised check."
+          "description": "Optional parameters for a parameterized check."
         }
       }
     }

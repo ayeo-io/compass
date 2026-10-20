@@ -900,7 +900,7 @@ is_enforced_path() {
   # points somewhere unknowable, so it is judged inside the project, as the
   # text comparison did before.
   local proj inside=0 unknowable=0
-  normalise_path "$PROJECT_DIR"; proj="$NORMALISED"
+  normalise_path "$PROJECT_DIR"; proj="$NORMALISED"  # us-english-scan: allow - shell variable name, not prose
   case "$abs" in
     *'$'*|*'`'*|*'~'*|*'{'*)
       case "/$abs/" in
@@ -908,7 +908,7 @@ is_enforced_path() {
       esac ;;
   esac
   if [ "$unknowable" -eq 0 ]; then
-    normalise_path "$abs"; abs="$NORMALISED"
+    normalise_path "$abs"; abs="$NORMALISED"  # us-english-scan: allow - shell variable name, not prose
   fi
   case "$abs" in
     "$proj"/*) inside=1 ;;
@@ -2053,9 +2053,9 @@ PYEOF
   _at="$(printf '%s\n' "$_rec" | sed -n '2p')"
   [ -n "$_by" ] || return 0
   if [ -n "$_at" ]; then
-    echo "  This project was initialised by $_by on $_at, which is when it opted into Compass." >&2
+    echo "  This project was initialized by $_by on $_at, which is when it opted into Compass." >&2
   else
-    echo "  This project was initialised by $_by, which is when it opted into Compass." >&2
+    echo "  This project was initialized by $_by, which is when it opted into Compass." >&2
   fi
 }
 
@@ -2293,7 +2293,7 @@ try:
         raise ValueError
 except Exception:
     # Exit 0 means ALLOW, and that is deliberate: an unreadable or missing
-    # manifest falls back to the behaviour this hook had before the check
+    # manifest falls back to the behavior this hook had before the check
     # existed, rather than inventing a block. A false block on unreadable
     # state trains people to bypass the hook, which costs more than the case
     # it would catch. Pinned by

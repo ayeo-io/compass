@@ -188,7 +188,7 @@ classDiagram
 
 **Security:** {{what an attacker gains if this is wrong, and what stops them -
 or "no new surface". If a threat model was earned, link it rather than
-summarising it.}}
+summarizing it.}}
 
 **Privacy:** {{what personal data this touches, where it goes, and how long it
 stays - or "none".}}
@@ -221,7 +221,7 @@ Name only the ones it touches.}}
 - **Decision:** {{what was chosen}}
 - **Alternatives considered:** {{what else, and why not}}
 - **Consequences:** {{what this commits us to; what it rules out}}
-- **Governance tie:** {{which guardrail or engineering strategy this honours - or "n/a"}}
+- **Governance tie:** {{which guardrail or engineering strategy this honors - or "n/a"}}
 
 ### `DD-2` - {{DECISION TITLE}}
 
@@ -311,17 +311,17 @@ Dependencies on other issues:
      behind the rules and states no rule, so it is read when one looks
      arbitrary rather than on every check. A failed guardrail here blocks the stage - fix the
      plan, do not note the violation and move on. A strategy not followed is
-     a recorded judgement, not an automatic block. This is the
+     a recorded judgment, not an automatic block. This is the
      `governance-check` skill's output. Keep the evidence side and the
-     judgement side visibly separate. -->
+     judgment side visibly separate. -->
 
 | Area | Result | Evidence / note |
 |---|---|---|
 | Guardrails (the five defaults + project) | {{pass \| fail}} | {{e.g. "acceptance criteria stated before implementation; traceability chains designed in; coverage targets the guardrail floor"}} |
-| Method strategies (defaults + project) | {{followed \| deviation recorded}} | {{e.g. "BDD + TDD apply; simplest-thing honoured. Any deviation noted with its reason."}} |
-| Product strategies | {{followed \| deviation recorded \| n/a}} | {{e.g. "plan delivers intent.md's outcome; honours the product strategies in the shipped strategies or your project's strategies file, if it has one"}} |
+| Method strategies (defaults + project) | {{followed \| deviation recorded}} | {{e.g. "BDD + TDD apply; simplest-thing honored. Any deviation noted with its reason."}} |
+| Product strategies | {{followed \| deviation recorded \| n/a}} | {{e.g. "plan delivers intent.md's outcome; honors the product strategies in the shipped strategies or your project's strategies file, if it has one"}} |
 | Voice & positioning strategies | {{followed \| deviation recorded \| n/a}} | {{n/a unless positioning.md is present; if so, claims traceable}} |
-| Routing policy | {{pass \| fail}} | {{plan does not need to skip anything delivery-approach.md kept; floors honoured}} |
+| Routing policy | {{pass \| fail}} | {{plan does not need to skip anything delivery-approach.md kept; floors honored}} |
 
 ---
 

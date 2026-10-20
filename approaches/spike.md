@@ -23,7 +23,7 @@ Typical: root-causing a mysterious defect, a viability prototype, a timeboxed
 to plan real work against it.
 
 Spike is selected by *goal*, the way Hotfix is selected by *urgency* - the
-assess stage still scores all four dimensions, but the `exploration` goal is
+assess stage still scores all three dimensions, but the `exploration` goal is
 what picks the shape.
 
 ## What is different about Spike
@@ -45,7 +45,7 @@ acceptance-before-code, and traceability guardrails apply in full.
 |---|---|
 | Assess | Lightweight but real. `delivery-approach.md` is written - even a spike is accountable. It records the **question** and the **timebox**. |
 | Define | **Collapsed** into the question. The spike's spec is "what do we need to learn, and what would a useful answer look like?" - not acceptance criteria for code. |
-| Refine | **Skipped.** There is nothing to QA the spec against - the behaviour is the unknown, and discovering it is the point. |
+| Refine | **Skipped.** There is nothing to QA the spec against - the behavior is the unknown, and discovering it is the point. |
 | Plan | **Collapsed** to a timebox and an approach sketch in `delivery-approach.md`. |
 | Breakdown | **Skipped.** Solo. |
 | Implement | **= Explore.** Write code freely to answer the question. TDD strategy suspended; the hook does not block. Code here is assumed throwaway. |
@@ -66,7 +66,7 @@ Solo. No worktree.
 
 | Stage | Action | Standing justification |
 |---|---|---|
-| Define | collapsed to a question | A spike has no acceptance criteria - its output is knowledge, not behaviour. |
+| Define | collapsed to a question | A spike has no acceptance criteria - its output is knowledge, not behavior. |
 | Refine | skipped | Nothing to QA; the unknown is the point. |
 | Plan | collapsed to a timebox | The plan for exploration is "explore, with a clock." |
 | Breakdown | skipped | One person, one question. |
@@ -92,7 +92,7 @@ When a spike answers its question and the team wants to act on it:
 Graduation *is* re-assessment. There is no path from spike code to `main` that
 skips a real approach - that is the whole safety model.
 
-## Discard - the honourable other ending
+## Discard - the honorable other ending
 
 A spike that concludes "this approach is not viable" or "the bug is X, fixable
 in Y" has succeeded. Discard it: record the finding in `devlog.md`, note any

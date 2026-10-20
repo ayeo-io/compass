@@ -477,7 +477,7 @@ a document.
 ## Printing a template
 
 `compass issue template show <kind> [--depth D] [--issue SLUG] [--json]` prints
-the skeleton of that kind, which [the artifact catalogue](artifact-catalogue.md)
+the skeleton of that kind, which [the artifact catalogue](artifact-catalog.md)
 describes. The requirements review and the verification report hold an empty
 rendered block for each list, and the skeleton keeps each block marker as the
 template holds it: the blocks fill when the document is registered and

@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre21
+version: 2.0.0-pre23
 
 terms:
 
@@ -106,7 +106,7 @@ terms:
     related: [issue-type, feature-file]
   bug:
     means: >
-      An issue type: a defect in existing behaviour, not live-urgent. Starts
+      An issue type: a defect in existing behavior, not live-urgent. Starts
       from a bug report; the failing reproduction test is written before the
       fix. A live incident is fixed through the hotfix delivery approach
       instead.
@@ -180,7 +180,7 @@ terms:
     related: [intent, slice, initiative]
   bug-report:
     means: >
-      The intake for a bug fix: observed behaviour, expected behaviour,
+      The intake for a bug fix: observed behavior, expected behavior,
       reproduction steps.
     related: [bug]
   incident:
@@ -198,8 +198,8 @@ terms:
     related: [scenario, step, acceptance-criteria]
   assessment:
     means: >
-      The four-dimension judgement the assess stage produces - risk, familiarity, size
-      and goal, plus the domain labels. It is the only judgement field in the
+      The four-dimension judgment the assess stage produces - risk, familiarity, size
+      and goal, plus the domain labels. It is the only judgment field in the
       issue manifest; everything below it is computed from it deterministically.
       The assessment is read; `compass approach evaluate` computes the
       delivery approach from it.
@@ -238,13 +238,13 @@ terms:
       them to the CLI, and writes the delivery-approach record. It assesses;
       it does not choose a process. Named for what it does - Anthropic's
       platform docs call this shape "Routing", classifying input and directing
-      it to a specialised path - and for the file it runs, routing-policy.yml.
+      it to a specialized path - and for the file it runs, routing-policy.yml.
       The approach is computed from the assessment by `compass approach
       evaluate`, which is the determinism boundary.
     related: [assess, assessment, delivery-approach]
   scenario:
     means: >
-      The atomic unit of acceptance: one behaviour, one Given/When/Then,
+      The atomic unit of acceptance: one behavior, one Given/When/Then,
       one executable test. Everything traces to scenarios.
     related: [feature-file, step, acceptance-criteria]
   step:
@@ -278,7 +278,7 @@ terms:
     related: [design-doc, word_ceiling]
   word_ceiling:
     means: >
-      The word limit a document kind carries in the artifacts catalogue, per
+      The word limit a document kind carries in the artifacts catalog, per
       depth, such as 4,000 words for a thorough technical design. Words are
       counted from the visible text only: rendered blocks and HTML comments
       do not count. `compass issue lint` notes a document over its limit, and
@@ -296,7 +296,7 @@ terms:
   assess:
     means: >
       Sizing up incoming work: risk, familiarity, size, and goal - producing
-      an issue type, labels, and a delivery approach. The human judgement
+      an issue type, labels, and a delivery approach. The human judgment
       step; everything after it is mechanism. Named for what it produces: the
       stage writes an `assessment:` block, the flag is --assessment, and the
       policy section is assessment_vocabulary. This stage sizes up one piece
@@ -312,25 +312,25 @@ terms:
     related: [assess, quality-gate]
   audience:
     means: >
-      The one line in an artifact's catalogue entry that says who reads the
+      The one line in an artifact's catalog entry that says who reads the
       document and what the reader decides from it.
     related: [delivery-approach, technical-design]
   stands-for:
     means: >
       The name the industry uses for the kind of document an artifact is,
       such as `hld` for the technical design. It is a field of the artifact's
-      catalogue entry.
+      catalog entry.
     related: [audience, technical-design]
   sections:
     means: >
       The headings of an artifact's document, in order, for each depth the
       document can be written at (`lightweight` and `thorough`). It is a field
-      of the artifact's catalogue entry. A document that is one rendered block
+      of the artifact's catalog entry. A document that is one rendered block
       has an empty list.
     related: [audience, rendered-block]
   required-when:
     means: >
-      A condition in an artifact's catalogue entry. The document is owed only
+      A condition in an artifact's catalog entry. The document is owed only
       when the condition holds. The one condition today is a minimum number of
       subtasks, so the distribution map is owed from two subtasks.
     related: [audience, delivery-approach]
@@ -627,19 +627,20 @@ terms:
     related: [dora-metrics, assess]
 
   # --- Configuration (the configuration vocabulary decision) ----------------
-  catalogue:
+  catalog:
+    also: catalogue
     means: >
       One of the nine maps of configuration entries keyed by id:
       `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`,
       `artifacts`, `readiness` and `vocabulary`. An id is stable; a display
-      name lives in the `vocabulary` catalogue.
+      name lives in the `vocabulary` catalog.
     related: [layer, overlay, generation]
   layer:
     means: >
       One source of configuration: the shipped preset, a team parent, the
       project file or the issue. Layers merge in order, and each states only
       what it changes.
-    related: [catalogue, overlay, preset, project-file]
+    related: [catalog, overlay, preset, project-file]
   overlay:
     means: >
       A layer file that states only its differences from its parent, so it
@@ -654,7 +655,7 @@ terms:
     means: >
       A stored, numbered copy of the resolved configuration that an issue
       runs against, so the issue keeps the rules it started with.
-    related: [catalogue, layer]
+    related: [catalog, layer]
   waiver:
     means: >
       A recorded departure from a parent's value, with a reason and an
@@ -668,13 +669,13 @@ terms:
     related: [waiver, classifier]
   capability:
     means: >
-      A named switch for new blocking behaviour, off in the shipped default.
+      A named switch for new blocking behavior, off in the shipped default.
     related: [lock]
   stage-mode:
     means: >
       How a stage runs for an issue, such as `collapsed`. It is the `mode`
       field of a stage.
-    related: [catalogue]
+    related: [catalog]
   project-file:
     means: >
       `compass.yml` at the project root, the one file a person edits.
@@ -704,9 +705,9 @@ terms:
   readiness-signal:
     means: >
       One binary fact about a repository, such as "a lint command is declared
-      and exits 0". An entry of the `readiness` catalogue, it is either
+      and exits 0". An entry of the `readiness` catalog, it is either
       `present` or `absent` and carries a one-line reason.
-    related: [readiness-floor, readiness-record, catalogue]
+    related: [readiness-floor, readiness-record, catalog]
   readiness-floor:
     means: >
       The readiness signals whose `required_for_autonomous` is true. A project
@@ -882,7 +883,7 @@ codes:
       Review rule. One rule in governance/review-rules.yml that a reviewer
       applies to the files it names, with the incident that justifies it and
       what not to flag. `compass review-rule list` prints the rules that
-      match a change. A review rule guides a reviewer's judgement of a
+      match a change. A review rule guides a reviewer's judgment of a
       change.
     referent: One rule in the review rules file.
     appears_in: [review-rules.yml, review findings]
@@ -922,6 +923,8 @@ retired_values:
   - {field: close_reason, old: abandoned, new: not-planned}
   - {field: run_stage, old: build, new: implement}
   - {field: friction_keys, old: phase, new: stage}
+  - {field: reassessment_kind, old: judgement, new: judgment}  # us-english-scan: allow - old name read until 8.0.0
+  - {field: check_id, old: dor-behaviour-is-gwt, new: dor-behavior-is-gwt}  # us-english-scan: allow - old name read until 8.0.0
 
 # =============================================================================
 # BANNED v1 VOCABULARY - the house test scans user-facing surfaces for these.

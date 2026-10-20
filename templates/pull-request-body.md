@@ -27,7 +27,7 @@ honestly described - trim the story, never the substance.
 
 ## What breaks
 
-<!-- Behaviour changes, removed flags, changed output, migrations. "Nothing"
+<!-- Behavior changes, removed flags, changed output, migrations. "Nothing"
      is a valid answer and is worth stating - a reviewer should not have to
      infer it from silence. -->
 

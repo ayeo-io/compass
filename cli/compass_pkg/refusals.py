@@ -34,6 +34,7 @@
 # =============================================================================
 from __future__ import annotations
 
+from compass_pkg import old_names
 from compass_pkg.core import CompassError
 from compass_pkg.project_settings import CONFLICT_FIX, CONFLICT_WHY
 
@@ -67,7 +68,7 @@ REFUSALS: dict[str, dict[str, str]] = {
         "why": CONFLICT_WHY,
         "fix": CONFLICT_FIX,
     },
-    "not-initialised": {
+    "not-initialized": {
         "what": "this edit",
         "why": "no issue has been assessed yet - {detail}.",
         "fix": "run /compass:assess before changing code, or "
@@ -85,9 +86,24 @@ REFUSALS: dict[str, dict[str, str]] = {
         "what": "this edit",
         "why": "no issue can be named for {project}: '{slug}' is not an "
                "issue under its .compass/work/.",
-        "fix": "in the session's own project, set COMPASS_ISSUE to a real "
-               "slug or unset it. In a worktree, run compass issue use "
-               "<slug> there.",
+        # The worktree form. A worktree is judged by its own pointer, so
+        # `compass issue use` run there fixes it. The own project has its own
+        # code below, because there the same command changes nothing.
+        "fix": "run compass issue use <slug> in that worktree, so its "
+               ".compass/current-task names a real issue, then retry.",
+    },
+    # The session's own project, with COMPASS_ISSUE set to a missing issue.
+    # COMPASS_ISSUE outranks .compass/current-task there, so `compass issue
+    # use` changes nothing, and a running session cannot change its
+    # environment. The code name holds the other one's, which a test pins.
+    "bad-session-issue-restart": {
+        "what": "this edit",
+        "why": "no issue can be named for {project}: '{slug}' is not an "
+               "issue under its .compass/work/.",
+        "fix": "restart the session with COMPASS_ISSUE naming an existing "
+               "issue, or without it. A running session cannot change it, "
+               "and compass issue use does not override it. A worktree "
+               "has its own pointer.",
     },
     "tree-not-tied": {
         "what": "this edit",
@@ -154,26 +170,24 @@ REFUSALS: dict[str, dict[str, str]] = {
     },
     "no-red-on-record": {
         "what": "edit to {target} (tool: {tool}, guarded by {guard})",
-        "why": "no failing test is on record for issue '{slug}' - the "
-               "red-before-green strategy applies here.",
-        "fix": "run compass tdd-red --scenario <id> -- <your failing test "
-               "command>, then retry this edit.",
+        "why": "no failing test is on record for issue '{slug}'.",
+        "fix": "run compass tdd-red --scenario <id> -- <failing test "
+               "command>, or compass acceptance start if no test fits, "
+               "then retry.",
     },
     # The approval guards (approval_guard.py, ADR-068 decision 10, ADR-069).
     "approval-request-protected": {
         "what": "{target} (tool: {tool})",
-        "why": "approval requests and the approval hook belong to Compass; an "
-               "approval binds to the request a person was shown.",
-        "fix": "ask for an approval with compass evidence request, then ask the "
-               "person to type /compass:approve.",
+        "why": "an approval binds to the request a person was shown.",
+        "fix": "do not read, change or run these files. Ask with compass "
+               "evidence request; the person answers with /compass:approve.",
     },
     "delegation-protected": {
         "what": "{target} (tool: {tool})",
-        "why": "a delegation is a person's decision, written only from a typed "
-               "/compass:delegate, and its folder holds the check for the code "
-               "that confirms one.",
-        "fix": "ask the person to type /compass:delegate or /compass:revoke; "
-               "never read or write a delegation file yourself.",
+        "why": "a delegation is a person's decision, and its folder holds the "
+               "check for its confirmation code.",
+        "fix": "do not read or write these files; the person types "
+               "/compass:delegate or /compass:revoke.",
     },
     "delegation-caller-mismatch": {
         "what": "delegated approval (--as {named})",
@@ -185,10 +199,9 @@ REFUSALS: dict[str, dict[str, str]] = {
     },
     "transcript-protected": {
         "what": "{target} (tool: {tool})",
-        "why": "the session transcript holds what Compass showed only to the "
-               "person, such as the code that confirms a delegation.",
-        "fix": "work from the conversation and the files in the project; ask the "
-               "person for anything you need from the transcript.",
+        "why": "the transcript holds what Compass showed only to the person.",
+        "fix": "use the project's files, or the Read, Grep, Edit or Write tool "
+               "on the auto-memory folder; ask the person for the rest.",
     },
     # A landing refusal of `compass ship-commit` and `quick-fix finish`
     # (checkpoint_outcomes.landing_refusal), not a hook refusal. `is` and `it`
@@ -287,6 +300,8 @@ def render(code: str, **params) -> str:
     template field `params` does not give - both mean a call site and the
     registry have drifted apart, and failing loudly is how that gets found.
     """
+    # An old code is read until 8.0.0 and renders as its current code.
+    code = old_names.read("refusal_code", code)
     try:
         entry = REFUSALS[code]
     except KeyError:
@@ -312,6 +327,11 @@ def cmd_refusal(args):
             print(f"**Blocked:** {entry['what']}")
             print(f"**Why:** {entry['why']}")
             print(f"**Fix:** {entry['fix']}\n")
+            for row in old_names.rows("refusal_code"):
+                if row["new"] == code:
+                    print(f"**Old code:** `{row['old']}` is read until "
+                          f"{row['removed_in']}. "
+                          "<!-- us-english-scan: allow - old code, read until 8.0.0 -->\n")
         return 0
     code = getattr(args, "code", None)
     if not code:

@@ -38,7 +38,7 @@ ROLE_LINES = (
     "- **Engineer** - reads for *tests*: scenarios are the acceptance suite and seed the TDD "
     "red→green cycle.",
     "- **QA** - reads for *coverage*: which scenarios are exercised, which edges are not.",
-    "- **Designer** - UI behaviour authored in `ui-contract.md` flows in here as scenarios.",
+    "- **Designer** - UI behavior authored in `ui-contract.md` flows in here as scenarios.",
 )
 #: A leading section number: "1. ", "5a. " or "4b ".
 NUMBERED = re.compile(r"^\d{1,2}[a-z]?\.?\s+")
@@ -1673,7 +1673,7 @@ def _u3_archive_shape(tmp_path, shape):
 U3_SHAPES = {
     "first": ("no-generation", "the issue predates the section checks"),
     "second": ("closed", "the issue is closed"),
-    "third": ("no-section", 'the catalogue of generation 1 does not list'),
+    "third": ("no-section", 'the catalog of generation 1 does not list'),
     "fourth": ("not-registered", "is registered with a path"),
 }
 
@@ -2143,7 +2143,7 @@ U5_PRESET = ROOT / "governance" / "presets" / "default"
 U5_CHECKS = ("nfr-rows-resolved", "contracts-declared")
 U5_SECTIONS = ("Non-functional requirements", "Data and interfaces", "Verification plan",
                "Risks and dependencies")
-U5_DOCS = ("docs/artifact-catalogue.md", "docs/rendered-blocks.md", "docs/upgrade-7-0-0.md")
+U5_DOCS = ("docs/artifact-catalog.md", "docs/rendered-blocks.md", "docs/upgrade-7-0-0.md")
 #: What each of the three docs must name: the four sections, the two checks, the two
 #: new blocks and the Kind column.
 U5_NAMES = U5_SECTIONS + U5_CHECKS + ("document-header", "dependencies", "Kind")
@@ -2165,7 +2165,7 @@ def _u5_derive(tmp_path):
     generator reads."""
     mini = tmp_path / "mini"
     for rel in ("governance/terminology.yml", "governance/presets/default/artifacts.yml",
-                "docs/glossary.md", "docs/artifact-catalogue.md"):
+                "docs/glossary.md", "docs/artifact-catalog.md"):
         target = mini / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text((ROOT / rel).read_text(encoding="utf-8"), encoding="utf-8")
@@ -2173,10 +2173,10 @@ def _u5_derive(tmp_path):
     out = tmp_path / "fresh"
     code, text, err = _cli(mini, "_derive-glossary", "--internal", "--root", str(mini),
                            "--out", str(out / "glossary.md"),
-                           "--catalogue-out", str(out / "artifact-catalogue.md"))
+                           "--catalogue-out", str(out / "artifact-catalog.md"))
     assert code == 0, text + err
     return ((out / "glossary.md").read_text(encoding="utf-8"),
-            (out / "artifact-catalogue.md").read_text(encoding="utf-8"))
+            (out / "artifact-catalog.md").read_text(encoding="utf-8"))
 
 
 def test_dss_30_checks_declared_and_documented(tmp_path):
@@ -2218,7 +2218,7 @@ def test_dss_30_checks_declared_and_documented(tmp_path):
     # The generated table and the glossary equal a fresh generation.
     glossary, document = _u5_derive(tmp_path)
     assert glossary == (ROOT / "docs/glossary.md").read_text(encoding="utf-8")
-    assert document == (ROOT / "docs/artifact-catalogue.md").read_text(encoding="utf-8")
+    assert document == (ROOT / "docs/artifact-catalog.md").read_text(encoding="utf-8")
     # No capability switch and no alias governs the checks.
     assert set(_u5_yaml(U5_PRESET / "preset.yml")["capabilities"]) == {
         "entry-exit-evaluation", "artifact-freshness"}

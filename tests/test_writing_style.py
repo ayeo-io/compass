@@ -458,6 +458,7 @@ def _register(rule: Rule) -> Rule:
 # Reused rather than copied (DD-1): `tests/test_terminology.py` already holds
 # the tuned, fixture-proven pattern for every banned term. A second copy
 # would be a second list to correct, which is exactly what `S14` refuses.
+import us_english_words  # noqa: E402
 from test_terminology import BAN_PATTERNS  # noqa: E402
 
 # The one definition of the per-line scan exemption marker (allow_marker.py),
@@ -948,7 +949,7 @@ WORD_TABLE: tuple[tuple[tuple[str, ...], str], ...] = (
     (("previously", "prior to"), "before"),
     (("ensure",), "make sure"),
     (("indicate", "denote"), "show"),
-    (("utilise", "leverage", "employ"), "use"),
+    (("utilise", "utilize", "leverage", "employ"), "use"),
     (("in order to",), "to"),
     (("sufficient",), "enough"),
     (("obtain", "acquire"), "get"),
@@ -1015,7 +1016,7 @@ def _find_word_table(span: ProseSpan) -> list[Finding]:
 # `review-dimensions.md`, found four such dead pairs (each row, both files)
 # and removed them rather than leave them to accumulate.
 _SHORTER_WORD_TABLE_ROWS: tuple[str, ...] = (
-    "| utilise, leverage | use |",
+    "| utilize, leverage | use |",
     "| obtain, acquire | get |",
     "| provide, supply | give |",
     "| indicate, denote | show |",
@@ -1039,10 +1040,17 @@ _SHORTER_WORD_TABLE_EXEMPTIONS: tuple[Exemption, ...] = tuple(
     for row in _SHORTER_WORD_TABLE_ROWS
 )
 
+_UTILIZE_TELL_REASON = ("the writing-voice check greps the exact string `utilize` as a tell, so "
+                        "the line quotes the word it retires")
+
 _register(Rule(
     "PBW-A2", "The shorter word stands where the word is not an "
     "identifier", _find_word_table,
     exemptions=_SHORTER_WORD_TABLE_EXEMPTIONS + (
+        Exemption("scripts/voice-tells.py", "utilize", _UTILIZE_TELL_REASON),
+        Exemption("tests/test_voice_tells.py", '"Upon completion", "utilize"', _UTILIZE_TELL_REASON),
+        Exemption("skills/compass-runtime/writing-voice.md", '**"utilize"** - **findable**',
+                  _UTILIZE_TELL_REASON),
         Exemption(
             "cli/compass_pkg/parent_states.py",
             "- `locally modified`: the cached `compass.yml` no longer",
@@ -1223,13 +1231,13 @@ _register(Rule(
             "RP-REQUIRE-003 is a real rule id, quoted as the literal "
             "printed text this comment explains."),
         Exemption(
-            "skills/quick-fix/SKILL.md", "--verified-by",
+            "commands/quick-fix.md", "--verified-by",
             "a real CLI flag (`cli/compass:246,258`, `dest=\"verified_by\"`) "
             "- the match lands mid-flag-name on the \"verified\" substring, "
             "not the standalone verb the word table means to catch."),
         Exemption(
             "tests/test_acceptance_verb.py", "--verified-by",
-            "the same real CLI flag false match as skills/quick-fix/SKILL.md "
+            "the same real CLI flag false match as commands/quick-fix.md "
             "above; found while fixing batch 7, not by the audit."),
         Exemption(
             "skills/tdd-discipline/no-natural-red.md", "terraform validate",
@@ -1438,7 +1446,7 @@ _register(Rule(
             "verb."),
         Exemption(
             "schemas/signals.schema.json",
-            "reviewer agent at verify - judgement",
+            "reviewer agent at verify - judgment",
             "the JSON mirror of the already-exempted governance/signals.yml "
             "line above - names the Verify stage, not the verb."),
         Exemption(
@@ -1760,7 +1768,21 @@ def _analyze_exempt(text: str, match: re.Match) -> bool:
     return False
 
 
+def _in_us_english_set(path: str) -> bool:
+    """True for a file the US English pass converted. PBW-A3 asks for the British
+    spelling, which is the opposite of what those files now say, so it does not read them.
+    The comments and docstrings of the CLI files stay in view (the set holds the text
+    groups of `us_english_words.GROUPS`, not the Python ones)."""
+    if us_english_words.is_excluded(path):
+        return False
+    return any(path == entry or path.startswith(entry + "/")
+               for group in us_english_words.GROUPS if group["kind"] == "text"
+               for entry in group["paths"])
+
+
 def _find_spelling(span: ProseSpan) -> list[Finding]:
+    if _in_us_english_set(span.path):
+        return []
     findings = []
     for pattern, replacement in _SPELLING_PATTERNS:
         for match in pattern.finditer(span.text):
@@ -1815,17 +1837,6 @@ _register(Rule(
                    "the `EV-ANALYZE-` prefix",
                    "evidence-id prefix, a machine identifier - same case as "
                    "the ADR-007 exemption above."),
-        # Disagrees with the audit's finding for this line. The manifesto
-        # this file quotes is the real, external body's own name, spelt
-        # with the American form of the word - confirmed by the domain it
-        # names two lines below, threatmodelingmanifesto.org, which uses
-        # the same spelling. Changing the spelling would misname the source
-        # the file instructs the reader not to reword.
-        Exemption("templates/threat-model.md",
-                   "Threat Modeling",
-                   "the real name of the external manifesto this file "
-                   "quotes, confirmed by threatmodelingmanifesto.org's own "
-                   "spelling two lines below; not the ordinary word."),
         Exemption("cli/compass_pkg/analyze.py",
                    "id prefix `EV-ANALYZE-<task>-<ts>`",
                    "evidence-id prefix, a machine identifier - the same "
@@ -1876,9 +1887,10 @@ _register(Rule(
 # PBW-A4 - "artifact" is the only spelling
 # ---------------------------------------------------------------------------
 
-# The one exception to British English (audit section 7): "artifact" matches
-# the manifest key `artifacts:`, the verb `compass issue artifact` and the
-# evidence type `artifact`, so the prose is spelled to match the identifier.
+# "artifact" is the only spelling, in US English as before: it matches the manifest key
+# `artifacts:`, the verb `compass issue artifact` and the evidence type `artifact`. The
+# rule runs on every file, converted or not. Decision:
+# governance/decisions/2026-10-19-framework-prose-is-us-english-a-project-sets-its-language.md.
 _ARTEFACT_RE = re.compile(r"\bartefacts?\b", re.IGNORECASE)
 
 
@@ -2803,6 +2815,9 @@ _register(Rule(
             "the same conditional artifact reference as agents/architect.md."),
         Exemption(
             "commands/consult.md", "architecture/invariants.yml",
+            "the same conditional artifact reference as agents/architect.md."),
+        Exemption(
+            "commands/define.md", "architecture/invariants.yml",
             "the same conditional artifact reference as agents/architect.md."),
         Exemption(
             "templates/architecture/ownership.md", "architecture/invariants.yml",
@@ -5026,3 +5041,39 @@ def test_dcj_103_pbw_a6_counts_only_committed_ignore_rules(tmp_path):
     git("add", "-f", "kept/.gitignore")
     assert _ignored_by_committed_rules("kept/x.json", tmp_path)
     assert not _ignored_by_committed_rules("local/x.json", tmp_path)
+
+
+def test_trc_037():
+    """Scenario id: `TRC-037` in language-key-and-us-english/acceptance-criteria.md
+
+    PBW-A3 stops reading the files that moved to US English and reads every
+    other file as before, the comments and docstrings of the CLI files
+    included. PBW-A4 keeps running everywhere and cites the new decision
+    record. PBW-A2 keeps `utilise` and gains `utilize`.
+    """
+    def spelling(path, text, kind="markdown"):
+        return _find_spelling(ProseSpan(path, 1, text, kind))
+
+    # The US spelling of "label" in README.md is not reported; the same word
+    # in a docstring outside the set, and in a comment of a CLI file, still is.
+    assert spelling("README.md", "a labeled thing") == []
+    assert spelling("docs/quickstart.md", "a labeled thing") == []
+    assert [f.detail for f in spelling("tests/test_x.py", "a labeled thing", "docstring")] \
+        == ['"labeled" -> "labelled"']
+    assert spelling("cli/compass_pkg/core.py", "a labeled thing", "comment") != []
+    assert spelling("docs/architecture-notes.md", "a toward b") != []
+
+    # PBW-A4 reads every file, converted or not.
+    for path in ("README.md", "docs/architecture-notes.md", "cli/compass_pkg/core.py"):
+        found = _find_artefact(ProseSpan(path, 1, "an artefact here", "markdown"))
+        assert [f.detail for f in found] == ['"artefact" -> "artifact"'], path
+    source = Path(__file__).read_text(encoding="utf-8")
+    assert "2026-10-19-framework-prose-is-us-english-a-project-sets-its-language" in source
+    assert "the one exception to " "British English" not in source
+    assert (REPO_ROOT / "governance" / "decisions" /
+            "2026-10-19-framework-prose-is-us-english-a-project-sets-its-language.md").is_file()
+
+    # PBW-A2 keeps `utilise` and gains `utilize`.
+    for word in ("utilise", "utilize"):
+        found = _find_word_table(ProseSpan("docs/x.md", 1, f"We {word} it.", "markdown"))
+        assert [f.detail for f in found] == [f'"{word}" -> "use"'], word

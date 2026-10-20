@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob
 
 The `compass init` verb creates `.compass/` - a state file and the work
 directory, and no settings file - and your first Compass command runs it for you and says that it
-did. So the command you wanted to run initialises the project,
+did. So the command you wanted to run initializes the project,
 not a setup step you had to know about first.
 
 What `/compass:init` adds is **`compass.yml`**, the one file a person edits. It
@@ -21,7 +21,7 @@ them on day one. This command is not a gate you must clear before the first
 issue.
 
 `/compass:init` copies nothing. A new project's `compass.yml` extends the
-shipped default (`extends: compass:default@6`) and holds only what differs from
+shipped default (`extends: compass:default@7`) and holds only what differs from
 it, so "the shipped defaults and nothing project-specific yet" is a complete,
 valid configuration. Copying `governance/` into a project, which 5.x versions
 of this command did, is what `compass policy migrate` now converts.
@@ -78,16 +78,25 @@ it is exempt from assessment.
 
    ```yaml
    schema: 1
-   extends: compass:default@6
+   extends: compass:default@7
    owner: <the person who approves waivers>
    project:
      name: <the project's name>
      test_command: <the command that runs the tests, such as "pytest -q">
    ```
 
+   Then ask one optional question: "Which language should the agent write
+   prose in, such as `en-US` or `de`? Leave it blank to set none." Add
+   `language: <the tag>` to the file only when the person answers. A blank
+   answer adds no key, and nothing is written in its place. Do not guess the
+   language from anywhere else. The tag is a BCP 47 tag, and
+   `docs/configuration.md` lists the usual ones.
+
    The name is `project.name` and the command is `project.test_command`.
    `compass init` writes no settings file, so this is the first one. Run
-   `compass policy lint` and report that it passes. Do not add keys the team has
+   `compass policy lint` and report that it passes. If it reports a `language`
+   finding, show it, ask again and lint again. Write no tag that lint has not
+   passed. Do not add keys the team has
    not asked for: every other setting has a default (see
    `docs/configuration.md`), and a missing key is a complete state.
 
@@ -112,7 +121,7 @@ it is exempt from assessment.
      ready), `enforcement.code_globs`, `multiagent`, `record`. Routing rules do
      not go there.
    - **Changes to the shipped checks, gates, rules and approaches** are entries in
-     the file's catalogue keys, and each is checked against the default:
+     the file's catalog keys, and each is checked against the default:
      tightening needs nothing, and loosening needs a waiver with an approver.
      Add one only when the team hits something that must never recur. Run
      `compass policy lint` after every edit, and `compass policy show` to
@@ -126,7 +135,7 @@ it is exempt from assessment.
    `.compass/current-task` (the pointer the CLI uses to resolve which issue
    a `compass` call acts on); it does not need to be created now.
 
-6. **Report.** Summarise what was created or migrated, what the team chose to
+6. **Report.** Summarize what was created or migrated, what the team chose to
    leave at the default (a valid state, not owed work), and the next
    command: `/compass:assess` for an engineer, or a role entry point -
    `/compass:intent` (product owner/manager), `/compass:position` (product

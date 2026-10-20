@@ -47,7 +47,7 @@ work.
   - **Where to record it:** as `test-run` evidence on `verify.regression`.
   - **When to re-run it:** after the change. This is soft (assessed, never
     gating), but it is captured up front, not as an afterthought - it
-    catches a high-consequence break in behaviour you did not mean to touch.
+    catches a high-consequence break in behavior you did not mean to touch.
 
 ## The cycle, per scenario
 

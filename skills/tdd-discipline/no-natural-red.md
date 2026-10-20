@@ -2,11 +2,11 @@
 
 Covers config edits, pure refactors and dead-code removal, not the ordinary cycle.
 
-Some legitimate changes have no behavioural red to write, and pretending
+Some legitimate changes have no behavioral red to write, and pretending
 otherwise is what produces dishonest tests. A compose `mem_limit`, a CI
 `exit-code`, a Prometheus rule, a Terraform runbook, a dead-code removal: for a
-refactor in particular, the *whole point* is that behaviour does not change, so
-there is no new behaviour to be absent.
+refactor in particular, the *whole point* is that behavior does not change, so
+there is no new behavior to be absent.
 
 Authors have satisfied
 the hook with a red like
@@ -16,7 +16,7 @@ compass tdd-red --verified-by regression -- '! grep -q "_ = is_unique" solver.py
 ```
 
 which asserts that a **string appears in a file**. That is the "testing
-implementation, not behaviour" anti-pattern in `anti-patterns.md`, that only
+implementation, not behavior" anti-pattern in `anti-patterns.md`, that only
 looks compliant.
 
 **Declare an acceptance instead.** State what would convince a reviewer, before
@@ -39,16 +39,16 @@ compass acceptance record -- <the same command>
   or ignore it before declaring. A change to an ignored path, such as `.env`,
   is not seen, so declare before making it.
 - **`refactor`** - a command that passes now must **still** pass afterwards,
-  across a source tree that demonstrably changed. Behaviour preservation is the
+  across a source tree that demonstrably changed. Behavior preservation is the
   contract, so the baseline is needed, and green-then-green with an unchanged
   tree is refused: that is two runs, not a refactor.
 
-It writes its own `.acceptance` marker, which the hook honours. `.red` keeps
+It writes its own `.acceptance` marker, which the hook honors. `.red` keeps
 meaning exactly one thing - a real failure was observed here - and the recorded
 acceptance counts as the issue's run, so there is nothing left to gain by faking
 a red.
 
 This is not an exemption for ordinary code. A change that *does* have a
-natural behavioural red still owes one; reaching for `acceptance` because the
+natural behavioral red still owes one; reaching for `acceptance` because the
 red is inconvenient is the same bypass as any other.
 

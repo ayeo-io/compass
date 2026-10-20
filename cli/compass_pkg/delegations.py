@@ -270,7 +270,7 @@ def _confirmation(body):
         g5 = "not the guardrail 5 sign-off"
     extra = ""
     if body.get("labels"):
-        extra += f"; only issues labelled {', '.join(body['labels'])}"
+        extra += f"; only issues labeled {', '.join(body['labels'])}"
     if body.get("max_uses"):
         extra += f"; at most {body['max_uses']} approval(s)"
     return HookResult(
@@ -421,7 +421,7 @@ def _why_not(delegation, agent, slug, task, form, value, now):
     if COVERS[form] not in forms and not (form == "check" and f"check:{value}" in forms):
         return f"{name} covers {_covers_words(forms)}, not {WORDS[COVERS[form]]}"
     if delegation.get("labels") and not (_labels(task) & set(delegation["labels"])):
-        return f"{name} covers only issues labelled {', '.join(delegation['labels'])}"
+        return f"{name} covers only issues labeled {', '.join(delegation['labels'])}"
     return ""
 
 

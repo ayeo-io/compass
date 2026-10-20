@@ -31,13 +31,13 @@ incorrect. Not before.
 
 ## Pattern analysis (phase 2)
 
-**Find a working case and compare.** Almost every bug has a neighbour that
+**Find a working case and compare.** Almost every bug has a neighbor that
 works: a sibling test, an earlier commit, a different input, another
 environment.
 
 Run the working case and the failing case side by side, and write down the
 delta. Keep narrowing it until one difference remains. That difference is not
-always the cause, but it is the only honest place to start hypothesising.
+always the cause, but it is the only honest place to start hypothesizing.
 
 ## Single-hypothesis test (phase 3)
 
@@ -77,7 +77,7 @@ the bug" and becomes "why do I keep being wrong about this".
 In Compass terms that is a **re-assessment** signal, not just a debugging one. An issue
 whose fixes keep failing is usually an issue whose risk, familiarity or
 size was misread at the assess stage - most often familiarity scored `brownfield-mapped`
-when the behaviour was never actually written down.
+when the behavior was never actually written down.
 
 So:
 
@@ -86,10 +86,10 @@ So:
 ```
 
 Re-score the dimensions honestly. If familiarity is genuinely unmapped, the
-unmapped-familiarity floor (`RP-FLOOR-002`) will force `behaviour-mapping`
+unmapped-familiarity floor (`RP-FLOOR-002`) will force `behavior-mapping`
 (on an atomic or small change with trivial or contained risk and no domain
 label, `RP-ADV-002` gives it as advice),
-and writing the current behaviour down is very often the thing that ends the
+and writing the current behavior down is very often the thing that ends the
 bug hunt. A re-assess here is the system working; a fourth guess is not.
 
 ## Anti-patterns

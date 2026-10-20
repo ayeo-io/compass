@@ -30,9 +30,9 @@ for every path.
   change, as the `FAILED` lines in the pull request body. `compass tdd-red`
   records it; a test that has never failed has not been shown to test anything.
 - **The house rules.** No em dash anywhere: write a plain hyphen. No line
-  crediting an AI agent in a commit or pull request. British English, except
-  "artifact". `tests/test_house_style.py` enforces the first two in tracked
-  files; read your commit message and pull request body yourself.
+  crediting an AI agent in a commit or pull request. US English.
+  `tests/test_house_style.py` enforces the first two in tracked files; read
+  your commit message and pull request body yourself.
 - **No rival product name.** Another product is named only by its code, R1
   to R9, in files, paths, branch names, commit messages and pull requests.
   CI checks all of them. To have your commit messages checked before the
@@ -55,7 +55,7 @@ small change from start to finish.
 
 ## Where to start
 
-Issues labelled
+Issues labeled
 [good first issue](https://github.com/ayeo-io/compass/labels/good%20first%20issue)
 are small, checked against the current code, and each says what to change.
 Comment on one before you start, so two people do not do the same work.
@@ -65,7 +65,7 @@ Comment on one before you start, so two people do not do the same work.
 Report a vulnerability privately, as `SECURITY.md` describes, never in a
 public issue. Everyone taking part follows `CODE_OF_CONDUCT.md`.
 
-## Licence
+## License
 
 By contributing, you agree that your contribution is licensed under the
 Apache License 2.0, as the rest of Compass is (`LICENSE`).

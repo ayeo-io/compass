@@ -16,7 +16,7 @@ cheapest moment to change it. Everything below serves that.
 ## The six optional sections
 
 `templates/technical-design.md` offers six sections beyond the ones every plan has. They
-are optional individually, and the judgement about which to use is the craft
+are optional individually, and the judgment about which to use is the craft
 this skill teaches.
 
 | Section | Include when | Omit when |
@@ -26,7 +26,7 @@ this skill teaches.
 | **3. Structure** (class/module diagram) | New components, changed relationships, or a contract the work units assume. | The change adds no new boundary. |
 | **4. Design patterns invoked** | A real named pattern is genuinely being applied *and* you can say what it buys this change. | You cannot name it, or cannot say what it buys. |
 | **5. The shape of the change** (code) | The shape of an interface, type, or API is itself a decision worth arguing with. | The shape is obvious from section 1. |
-| **5a. Cross-cutting concerns** | The change touches security, privacy, or what you can see in production. *Design Docs at Google* (<https://www.industrialempathy.com/posts/design-docs-at-google/>) names these three as concerns of the design rather than documents of their own. | It touches none of them - or a label earned a full threat-model.md or rollback-plan.md, in which case link that rather than summarising it here. |
+| **5a. Cross-cutting concerns** | The change touches security, privacy, or what you can see in production. *Design Docs at Google* (<https://www.industrialempathy.com/posts/design-docs-at-google/>) names these three as concerns of the design rather than documents of their own. | It touches none of them - or a label earned a full threat-model.md or rollback-plan.md, in which case link that rather than summarizing it here. |
 
 Where the delivery approach plans in full, section 5a also names the well-architected
 pillars the change touches and what the design does about each. That is

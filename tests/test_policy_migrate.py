@@ -273,7 +273,7 @@ def test_PM_5_settings_fold_into_compass_yml_and_state_goes_to_state_yml(tmp_pat
     assert list(doc) == ["schema", "extends", "adoption", "autonomy", "governance_drift",
                          "enforcement", "multiagent", "project"]
     assert made.result == "ready"
-    assert made.state == {"initialised": {"by": "compass init", "at": "2026-01-01"},
+    assert made.state == {"initialized": {"by": "compass init", "at": "2026-01-01"},
                           "records_signed_since": "2026-09-24"}
     assert made.moved == [
         {"key": "mode", "to": "adoption"}, {"key": "autonomy", "to": "autonomy"},
@@ -513,7 +513,9 @@ def test_PM_10_the_pinned_example_is_the_real_output(tmp_path):
     text = page.read_text(encoding="utf-8") if page.is_file() else ""
     shown = [block for block in re.findall(r"```json\n(.*?)```", text, re.S)
              if '"mode": "dry-run"' in block]
-    assert len(shown) == 1 and _masked(shown[0]) == pinned.strip()
+    assert len(shown) == 1
+    unmarked = re.sub(r"[ ]*<!-- us-english-scan: allow - [^>]*-->", "", shown[0])
+    assert _masked(unmarked) == pinned.strip()
 
 
 # --- PM-11 ------------------------------------------------------------------------

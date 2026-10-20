@@ -258,7 +258,7 @@ def test_contract_5_decides_as_recorded_under(c5_install, entry, kind):
     hook_root, base = c5_install
     exit_code, code, _out, err = compat_hook.run_entry(
         hook_root, base, entry, mutate=with_configuration(kind))
-    assert (exit_code, code) == (entry["exit"], entry["code"]), err
+    assert (exit_code, code) == (entry["exit"], compat_hook.recorded_code(entry)), err
     if "stderr_contains" in entry:
         assert entry["stderr_contains"] in err
     if "stderr_excludes" in entry:

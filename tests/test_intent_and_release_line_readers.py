@@ -362,7 +362,7 @@ ARCHIVE_SPEC = """\
 > **Do not hand-edit** - the next derivation overwrites it.
 > Edit the source: the scenario in that manifest, and its prose in the issue's `acceptance-criteria.md` under `docs/compass/<created>-<slug>/`.
 
-## Current Behaviour
+## Current Behavior
 
 ### first-issue (completed 2026-09-01)
 
@@ -389,9 +389,9 @@ ARCHIVE_ARCHIVE = """\
 
 # System Specification - Archive (derived)
 
-> Scenarios whose manifest names a replacement in `superseded_by`. The current behaviour is in `docs/system-spec.md`.
+> Scenarios whose manifest names a replacement in `superseded_by`. The current behavior is in `docs/system-spec.md`.
 
-## Archived Behaviour
+## Archived Behavior
 
 > These scenarios name a replacement in `superseded_by`.
 

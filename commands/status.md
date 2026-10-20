@@ -77,7 +77,7 @@ READY TO SHIP (1)
   its commit made.
 
 IN PROGRESS (5)
-  import-coordinate-crs-normalisation is furthest along (criteria defined and
+  import-coordinate-crs-normalization is furthest along (criteria defined and
   designed, not verified). The other four are barely started.
 
 NEXT UP
@@ -94,7 +94,7 @@ decision, and no Compass vocabulary appears in it beyond issue names.
 Here the internals *are* the point. Report:
 
 - **Delivery approach** - from `delivery-approach.md` / `manifest.yml`: the
-  nearest reference shape, the four assessment dimensions, and any policy
+  nearest reference shape, the three scored dimensions, and any policy
   rule that fired.
 - **Stage** - inferred from which artifacts exist: `delivery-approach.md`
   -> assessed; `acceptance-criteria.md` -> criteria defined;

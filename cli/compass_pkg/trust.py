@@ -149,14 +149,14 @@ def contribution_trust(env=None, project_root=None):
     if declared == "trusted":
         return TRUSTED, (
             "the environment declares this contribution trusted "
-            "(COMPASS_CONTRIBUTION_TRUST=trusted) and Compass recognises no "
+            "(COMPASS_CONTRIBUTION_TRUST=trusted) and Compass recognizes no "
             "CI provider here that could contradict it"
         )
 
     if is_ci(env):
         return UNKNOWN, (
             "this is a CI runner, but Compass could not establish that the "
-            "contribution is trusted: it recognises no provider here and no "
+            "contribution is trusted: it recognizes no provider here and no "
             "signal says the contribution is trusted. Set "
             "COMPASS_CONTRIBUTION_TRUST=trusted from the runner - not from a "
             "file in the repository - if this build is running your own work"
@@ -226,7 +226,7 @@ def _github_trust(env, project_root):
 
     return UNTRUSTED, (
         f"this is a GitHub Actions run on event {event or '(unset)'}, which "
-        f"Compass cannot confirm as trusted. An unrecognised or blanked event "
+        f"Compass cannot confirm as trusted. An unrecognized or blanked event "
         f"name is treated as untrusted rather than as absent"
     )
 

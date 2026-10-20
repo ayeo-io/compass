@@ -220,5 +220,5 @@ def test_tr_9_the_owning_doc_says_what_renders_and_the_router_names_the_module()
         assert phrase in flat, phrase
     router = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
     # The module's owning doc is the artifact catalogue, which owns the skeleton the verb prints.
-    assert re.search(r"`cli/compass_pkg/template_lists\.py`[^\n]*\| `docs/artifact-catalogue\.md` \|",
+    assert re.search(r"`cli/compass_pkg/template_lists\.py`[^\n]*\| `docs/artifact-catalog\.md` \|",
                      router)

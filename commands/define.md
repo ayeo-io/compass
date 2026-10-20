@@ -21,14 +21,21 @@ contract, QA for coverage. Write it so all five roles can.
     learn, and what would a useful answer look like), not acceptance
     criteria for code.
 
-  Honour it.
+  Honor it.
 - Load the `bdd-specification` skill.
 - If `delivery-approach.md` assesses familiarity as `brownfield-unmapped`,
-  also load `behaviour-mapping` - reverse-engineer the *current*
-  behaviour into scenarios **before** writing the scenarios for the change. A
+  also load `behavior-mapping` - reverse-engineer the *current*
+  behavior into scenarios **before** writing the scenarios for the change. A
   policy floor forces this unless the change is atomic or small, with trivial
   or contained risk and no domain label; you cannot safely change what you have not first
   described.
+- Check `assessment.labels` in `manifest.yml`. On the regular or full
+  approach, when the labels include `public-api`, a service named in
+  `architecture/relations.md` (if the file exists) or a `lens_trigger_tag` in
+  `architecture/invariants.yml` (if the file exists), invoke the `architect`
+  agent first, the same condition as `/compass:consult architect`. It writes
+  `architecture-notes.md` to the issue directory. A subagent cannot run a
+  slash command, so this step is yours and not the `spec-author`'s.
 - Invoke the `spec-author` agent - it owns this stage.
 - Pass the computed model and effort when you invoke the `spec-author` agent:
   `compass approach show --model define` prints the `model`, and
@@ -49,8 +56,8 @@ contract, QA for coverage. Write it so all five roles can.
 
 ## Procedure
 
-1. **Discovery or behaviour mapping.** Greenfield: discover scenarios from the
-   intent document or request. Brownfield-unmapped: map current behaviour
+1. **Discovery or behavior mapping.** Greenfield: discover scenarios from the
+   intent document or request. Brownfield-unmapped: map current behavior
    first, then
    add the change scenarios.
 2. **Write scenarios** as Given/When/Then - happy path, the realistic edges,
@@ -115,7 +122,7 @@ and the TDD red. Write that test now, against the reproduction steps of
 On a spike, this stage is **collapsed into the question**: the spike's spec
 is "what do we need to learn, and what would a useful answer look like?" -
 not Given/When/Then acceptance criteria: a spike has no acceptance
-criteria, because its output is knowledge, not behaviour. Record the question
+criteria, because its output is knowledge, not behavior. Record the question
 and the timebox; the BDD strategy does not apply here. See `${CLAUDE_PLUGIN_ROOT}/approaches/spike.md`.
 
 ## Hand-off
@@ -180,7 +187,7 @@ On delivery work:
 - `acceptance-criteria.md` exists;
 - every scenario is Given/When/Then;
 - every scenario traces to an intent;
-- no described behaviour is missing a scenario;
+- no described behavior is missing a scenario;
 - `manifest.yml`'s `scenarios:` block mirrors it - each with an id, a linked
   intent, and at least one test.
 

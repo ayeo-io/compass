@@ -68,7 +68,7 @@ a parallel spec.
    "none - issue does not introduce architectural decisions".
 
    ### 5. Notes for the planner
-   Summarise your findings in terms the planner can use when composing
+   Summarize your findings in terms the planner can use when composing
    `technical-design.md` §6 (Design decisions). On the regular or full approach,
    name the well-architected pillars the change touches and any trade-off
    between them (strategy `S15`, pillars from
@@ -104,9 +104,9 @@ a parallel spec.
 - **quick fix / hotfix** - invoked only if explicitly requested via
   `/compass:consult architect`. Not auto-triggered on light delivery
   approaches.
-- **regular / full** - auto-triggered by spec-author when the issue's
+- **regular / full** - convened by the define command when the issue's
   labels include `public-api`, a service in `architecture/relations.md`, or
-  a `lens_trigger_tag` (see `agents/spec-author.md`). Produces a full
+  a `lens_trigger_tag` (see `commands/define.md`). Produces a full
   `architecture-notes.md` per the five sections above.
 - **spike** - not invoked. Spike output is throwaway; architectural notes
   are only warranted when a spike graduates into a delivery approach.

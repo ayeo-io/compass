@@ -32,10 +32,11 @@ for the full contract.
 ## What any Compass runtime must do
 
 **1. Assess before changing anything.** Before an issue changes code, specs,
-or product artifacts, assess it: read the four assessment dimensions - risk,
-familiarity, size, and goal. Reading the four dimensions is judgement, so the
+or product artifacts, assess it: score the three dimensions - risk,
+familiarity and size - and read the optional switches, goal and urgency, and
+any domain labels. Reading them is judgment, so the
 runtime must do it. Composing the delivery approach *from* that assessment is
-mechanism, not judgement: a portable runtime must shell out to
+mechanism, not judgment: a portable runtime must shell out to
 `compass approach evaluate` (the kit-layer CLI) rather than reimplement the
 composition, so that the same assessment plus the same policy yield the same
 approach on every runtime. The runtime records the assessment in the manifest
@@ -93,7 +94,7 @@ which are skipped - and why. Each stage emits its artifact (templates in
    it procedurally. But what a runtime must always enforce is the
    guardrail *outcome* (tested before it ships), not the ritual.
 
-   The guardrail *checks* are mechanism, not judgement - so a portable
+   The guardrail *checks* are mechanism, not judgment - so a portable
    runtime must run them via the kit-layer CLI rather than reimplement
    them: `compass check` runs the `governance/guardrails.yml` checks against
    the issue's manifest and `evidence/`, and `compass tdd-red` /
@@ -123,7 +124,7 @@ artifact.
 
 **5. Support solo / pair / multiagent orchestrations.** On larger delivery
 approaches, the plan stage produces a distribution map and the breakdown
-stage parallelises across isolated workspaces (git worktrees in the
+stage parallelizes across isolated workspaces (git worktrees in the
 reference implementation), one agent per subtask, with a coordinating
 orchestrator that owns integration at ship time. A runtime without
 worktrees must give equivalent isolation or cap itself at solo/pair.
@@ -132,7 +133,7 @@ worktrees must give equivalent isolation or cap itself at solo/pair.
 commands complete the contract, and a portable runtime must call them
 rather than reinvent them. `compass ci` runs the full mechanical gate suite
 (`policy lint` + `issue lint` + `check` for every issue) and aggregates exit
-codes - the CI integration is "run `compass ci`, honour the exit code" (see
+codes - the CI integration is "run `compass ci`, honor the exit code" (see
 `ci/README.md`). `compass retro` aggregates the `reassessments` log across
 issues and reports whether assessment is systematically over- or under-sizing
 the process - the framework's own retrospective signal. The adapter wires
@@ -146,7 +147,7 @@ them.
 | The eight stages | Invocable commands or equivalent |
 | Assess | A routine that produces the assessment, then *calls the kit* (`compass approach evaluate`) to compose the delivery approach |
 | The kit-layer CLI | A shell-out, not a reimplementation - the adapter runs `compass approach evaluate`, `compass check`, `compass tdd-red/green`, and `compass analyze` (cross-artifact consistency check) for the deterministic parts |
-| CI and the feedback loop | A shell-out to `compass ci` (honour the exit code), `compass retro` (the retrospective signal), `compass rework-scan` (cross-issue rework signal), and `compass flow` (cross-issue view; `--digest` writes a dated digest combining rework-scan and the retrospective signal) |
+| CI and the feedback loop | A shell-out to `compass ci` (honor the exit code), `compass retro` (the retrospective signal), `compass rework-scan` (cross-issue rework signal), and `compass flow` (cross-issue view; `--digest` writes a dated digest combining rework-scan and the retrospective signal) |
 | Subagents (`router`, `spec-author`, `planner`, `orchestrator`, `builder`, `verifier`, `reviewer`, `product-owner`, `product-marketer`, `architect`) | Distinct agent contexts or personas. The 10th - `architect` - applies the architect perspective (not an entry-point role): reads the project's `architecture/` artifacts (system-context, relations, ownership, decision records) at the assess stage and annotates the technical design via `architecture-notes.md`. Consulted by `spec-author` and `planner`; never writes feature code |
 | Skills | Loadable procedural-knowledge modules |
 | Guardrail enforcement | `compass check` for the mechanical checks; hooks if available for red-before-green, procedural checks otherwise |
@@ -199,14 +200,13 @@ fewer words with the same terms.
 - Use a vertical list for a set of items, conditions or steps.
 - Use "must" for a requirement, "can" for a possibility and "do not" for a
   prohibition.
-- Use British English, except "artifact". It is also a manifest key and a
-  command name, so prose spells it the same way.
+- Use US English.
 
 Use the shorter word:
 
 | Not | Use |
 |---|---|
-| utilise, leverage | use |
+| utilize, leverage | use |
 | obtain, acquire | get |
 | provide, supply | give |
 | indicate, denote | show |

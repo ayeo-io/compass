@@ -358,7 +358,7 @@ def cmd_tdd_red(args):
     verified_by = getattr(args, "verified_by", None)
     if verified_by and verified_by not in _VERIFIED_BY_KINDS:
         raise CompassError(
-            f"compass tdd-red: --verified-by '{verified_by}' is not a recognised "
+            f"compass tdd-red: --verified-by '{verified_by}' is not a recognized "
             f"kind. Allowed: {sorted(_VERIFIED_BY_KINDS)}. A verified-by red ties "
             f"the scenario's acceptance to a non-unit guard (a typecheck, an e2e "
             f"or regression suite, a live run) for changes with no natural unit red."
@@ -409,7 +409,7 @@ def cmd_tdd_red(args):
             "compass tdd-red: NO TEST FAILED - %s.\n"
             "A .red marker means a real, observed failure is on record; the "
             "pre-tool hook unlocks code edits on the strength of it. Make a "
-            "test fail for the missing behaviour, then try again.\n"
+            "test fail for the missing behavior, then try again.\n"
             "  command: %s\n--- output (tail) ---\n%s"
             % (rejection, " ".join(command), excerpt)
         )
@@ -453,7 +453,7 @@ def cmd_tdd_red(args):
     moved = artifact_status.moved_line(artifact_status.record_stage(
         task_dir, artifact_status.STAGE_IMPLEMENT, artifact_status.BY_TDD_RED))
     bound = f" (bound to {scenario})" if scenario else " (unbound - consider --scenario)"
-    judged = ([("judged by exit code only: Compass does not recognise this "
+    judged = ([("judged by exit code only: Compass does not recognize this "
                 "runner, and it wrote no pytest report")]
               if red_kind == "exit-code" else [])
     return say(args,
@@ -599,7 +599,7 @@ def cmd_tdd_green(args):
     if verified_by and verified_by not in _VERIFIED_BY_KINDS:
         raise CompassError(
             f"compass tdd-green: --verified-by '{verified_by}' is not a "
-            f"recognised kind. Allowed: {sorted(_VERIFIED_BY_KINDS)}.")
+            f"recognized kind. Allowed: {sorted(_VERIFIED_BY_KINDS)}.")
     command = _micro_command(args, task_dir)
     if not command:
         raise CompassError("compass tdd-green needs a test command (-- <cmd>) "
@@ -625,7 +625,7 @@ def cmd_tdd_green(args):
             f"  expected : {red_path}\n"
             f"  Run `compass tdd-red --scenario {scenario} -- <test command>` "
             f"first. For work with no natural red - config, docs, a "
-            f"behaviour-preserving refactor - declare it before the change "
+            f"behavior-preserving refactor - declare it before the change "
             f"with `compass acceptance start --kind validation|refactor -- "
             f"<command>`."
         )
@@ -896,7 +896,7 @@ def cmd_acceptance_start(args):
             "  validation - a validator must pass after the change (config, "
             "manifests, schemas, docs that carry a checkable contract)\n"
             "  refactor   - a passing command must still pass afterwards, "
-            "across a changed tree (behaviour preservation)"
+            "across a changed tree (behavior preservation)"
         )
 
     task_dir = resolve_issue_dir(getattr(args, "task", None))
@@ -949,7 +949,7 @@ def cmd_acceptance_start(args):
         if code != 0:
             raise CompassError(
                 f"compass acceptance start: the baseline command FAILED "
-                f"(exit {code}), so there is no passing behaviour to preserve. "
+                f"(exit {code}), so there is no passing behavior to preserve. "
                 f"A refactor acceptance means 'this was green and still is'.\n"
                 f"--- output (tail) ---\n{excerpt}")
         payload["baseline"] = {"passed": True, "exit_code": code,
@@ -1008,7 +1008,7 @@ def cmd_acceptance_record(args):
             raise CompassError(
                 "compass acceptance record: the source tree has not changed "
                 "since the baseline. Green then green with nothing changed in "
-                "between is two runs, not a refactor - there is no behaviour "
+                "between is two runs, not a refactor - there is no behavior "
                 "preservation to record.")
 
     tree_ids = ids_for(task_dir)   # the tree the test runs on, named before it runs

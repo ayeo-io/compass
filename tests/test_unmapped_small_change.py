@@ -48,9 +48,9 @@ def test_ua_1_a_small_unmapped_change_gets_the_mapped_route(size, risk):
                        size=size, intent="delivery")
     assert unmapped["delivery_approach"] == mapped["delivery_approach"]
     assert "RP-FLOOR-002" not in _fired(unmapped)
-    assert "behaviour-mapping" not in unmapped["required_skills"]
+    assert "behavior-mapping" not in unmapped["required_skills"]
     advice = [s["strategy"] for s in unmapped["applicable_strategies"]]
-    assert "behaviour-mapping" in advice, advice
+    assert "behavior-mapping" in advice, advice
 
 
 @pytest.mark.parametrize("readings", [
@@ -66,7 +66,7 @@ def test_the_floor_still_applies_beyond_small_unlabelled_work(readings):
                        **readings)
     assert "RP-FLOOR-002" in _fired(result)
     assert result["stages"].get("define") == "thorough"
-    assert "behaviour-mapping" in result["required_skills"]
+    assert "behavior-mapping" in result["required_skills"]
 
 
 @pytest.mark.parametrize("readings, floor", [
@@ -107,4 +107,4 @@ def test_ua_2_quick_fix_start_takes_it_and_records_the_advice(repo):
     text = record.read_text(encoding="utf-8")
     assert "## Advice" in text, text
     advice = text.split("## Advice", 1)[1].split("\n## ", 1)[0]
-    assert "behaviour-mapping" in advice and "RP-ADV-002" in advice, advice
+    assert "behavior-mapping" in advice and "RP-ADV-002" in advice, advice

@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 import compass_pkg  # noqa: E402,F401
 import yaml  # noqa: E402
+from compass_pkg import old_names  # noqa: E402
 
 CORPUS = ROOT / "tests" / "fixtures" / "compat" / "contract-5-hook.yml"
 SLUG = "corpus"
@@ -385,6 +386,13 @@ def capture(path=CORPUS, force=False):
                           allow_unicode=True, width=1000)
     path.write_text(_HEADER.format(version=version, commit=commit) + body)
     return [entry["id"] for entry in dropped]
+
+
+def recorded_code(entry):
+    """The refusal code the corpus entry records, as the hook prints it now.
+    The corpus keeps the code as 5.6.0 wrote it; an old code is read through
+    the old-names table, so a removed row fails the comparison."""
+    return old_names.current("refusal_code", entry["code"])
 
 
 def load(path=CORPUS):

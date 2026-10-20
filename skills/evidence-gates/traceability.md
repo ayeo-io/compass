@@ -56,7 +56,7 @@ at the end is a chain that was guessed.
 ## What a break looks like - and what to do
 
 - **Orphan code** - a unit with no scenario above it. Either it implements
-  behaviour that needs a scenario (file it with the Spec Author), or it is dead
+  behavior that needs a scenario (file it with the Spec Author), or it is dead
   code (delete it). Code does not get to exist unexplained.
 - **Orphan scenario** - a scenario with no intent above it. Either find the
   intent it serves, or question whether the scenario should exist. Scenarios
@@ -95,6 +95,6 @@ property the chain *has* - but only if every link was made when the work was.
 - **Letting Hotfix skip it** - "we were in a hurry." The reproduction test
   traces to the defect; the promoted scenario traces to an intent. The chain
   holds under time pressure too.
-- **Claims that outrun scenarios** - drafting launch copy for behaviour the spec
+- **Claims that outrun scenarios** - drafting launch copy for behavior the spec
   does not yet describe and intending to write the scenario later. The scenario
   comes first, or the claim is not real.

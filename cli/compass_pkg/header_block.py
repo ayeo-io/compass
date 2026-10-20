@@ -107,11 +107,11 @@ def document_header(inputs, doc_rel):
     approach = display_shape(task.get("delivery_approach"))
     return Part(OWN, _lines(
         rb.field(inputs.slug), rb.field(approach or "not assessed"),
-        rb.field(stage or "not in the catalogue"),
-        rb.field(_flat(body.get("owner")) or "not in the catalogue"),
+        rb.field(stage or "not in the catalog"),
+        rb.field(_flat(body.get("owner")) or "not in the catalog"),
         rb.field(status), rb.field(date or "not recorded"),
         _reads(inputs, doc_rel, here, catalogue) if here is not None else "none",
-        rb.field(_flat(body.get("audience")) or "not in the catalogue")))
+        rb.field(_flat(body.get("audience")) or "not in the catalog")))
 
 
 RENDERERS = {"document-header": document_header}

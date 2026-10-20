@@ -130,7 +130,7 @@ Routing policy rule. One rule in routing-policy.yml that biases or constrains th
 
 ### `RR-`
 
-Review rule. One rule in governance/review-rules.yml that a reviewer applies to the files it names, with the incident that justifies it and what not to flag. `compass review-rule list` prints the rules that match a change. A review rule guides a reviewer's judgement of a change.
+Review rule. One rule in governance/review-rules.yml that a reviewer applies to the files it names, with the incident that justifies it and what not to flag. `compass review-rule list` prints the rules that match a change. A review rule guides a reviewer's judgment of a change.
 
 **Refers to:** One rule in the review rules file.
 
@@ -184,19 +184,19 @@ Architecture decision record: one real decision, the alternatives considered, th
 
 ### assess
 
-Sizing up incoming work: risk, familiarity, size, and goal - producing an issue type, labels, and a delivery approach. The human judgement step; everything after it is mechanism. Named for what it produces: the stage writes an `assessment:` block, the flag is --assessment, and the policy section is assessment_vocabulary. This stage sizes up one piece of work; `compass flow` sorts between issues by urgency.
+Sizing up incoming work: risk, familiarity, size, and goal - producing an issue type, labels, and a delivery approach. The human judgment step; everything after it is mechanism. Named for what it produces: the stage writes an `assessment:` block, the flag is --assessment, and the policy section is assessment_vocabulary. This stage sizes up one piece of work; `compass flow` sorts between issues by urgency.
 
 **Related:** `delivery-approach`, `label`, `issue-type`, `assessment`
 
 ### assessment
 
-The four-dimension judgement the assess stage produces - risk, familiarity, size and goal, plus the domain labels. It is the only judgement field in the issue manifest; everything below it is computed from it deterministically. The assessment is read; `compass approach evaluate` computes the delivery approach from it.
+The four-dimension judgment the assess stage produces - risk, familiarity, size and goal, plus the domain labels. It is the only judgment field in the issue manifest; everything below it is computed from it deterministically. The assessment is read; `compass approach evaluate` computes the delivery approach from it.
 
 **Related:** `assess`, `delivery-approach`, `router`
 
 ### audience
 
-The one line in an artifact's catalogue entry that says who reads the document and what the reader decides from it.
+The one line in an artifact's catalog entry that says who reads the document and what the reader decides from it.
 
 **Related:** `delivery-approach`, `technical-design`
 
@@ -222,13 +222,13 @@ A user-defined view column (Design, UAT, Staging...). Maps to exactly one workfl
 
 ### bug
 
-An issue type: a defect in existing behaviour, not live-urgent. Starts from a bug report; the failing reproduction test is written before the fix. A live incident is fixed through the hotfix delivery approach instead.
+An issue type: a defect in existing behavior, not live-urgent. Starts from a bug report; the failing reproduction test is written before the fix. A live incident is fixed through the hotfix delivery approach instead.
 
 **Related:** `bug-report`, `issue-type`, `hotfix`
 
 ### bug-report
 
-The intake for a bug fix: observed behaviour, expected behaviour, reproduction steps.
+The intake for a bug fix: observed behavior, expected behavior, reproduction steps.
 
 **Related:** `bug`
 
@@ -240,13 +240,15 @@ Releasing to a small slice of traffic/users first, watching SLIs.
 
 ### capability
 
-A named switch for new blocking behaviour, off in the shipped default.
+A named switch for new blocking behavior, off in the shipped default.
 
 **Related:** `lock`
 
-### catalogue
+### catalog
 
-One of the nine maps of configuration entries keyed by id: `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts`, `readiness` and `vocabulary`. An id is stable; a display name lives in the `vocabulary` catalogue.
+One of the nine maps of configuration entries keyed by id: `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts`, `readiness` and `vocabulary`. An id is stable; a display name lives in the `vocabulary` catalog.
+
+**Also:** catalogue <!-- us-english-scan: allow - old term, read until 8.0.0 -->
 
 **Related:** `layer`, `overlay`, `generation`
 
@@ -374,7 +376,7 @@ Work owed after an expedited ship (the hotfix's promoted scenario, the optional 
 
 A stored, numbered copy of the resolved configuration that an issue runs against, so the issue keeps the rules it started with.
 
-**Related:** `catalogue`, `layer`
+**Related:** `catalog`, `layer`
 
 ### guardrail
 
@@ -456,7 +458,7 @@ The deterministic consequence of a label, declared in policy: security/payments/
 
 One source of configuration: the shipped preset, a team parent, the project file or the issue. Layers merge in order, and each states only what it changes.
 
-**Related:** `catalogue`, `overlay`, `preset`, `project-file`
+**Related:** `catalog`, `overlay`, `preset`, `project-file`
 
 ### lld
 
@@ -586,9 +588,9 @@ The per-checkout file in which a project's readiness measurement is kept: each r
 
 ### readiness-signal
 
-One binary fact about a repository, such as "a lint command is declared and exits 0". An entry of the `readiness` catalogue, it is either `present` or `absent` and carries a one-line reason.
+One binary fact about a repository, such as "a lint command is declared and exits 0". An entry of the `readiness` catalog, it is either `present` or `absent` and carries a one-line reason.
 
-**Related:** `readiness-floor`, `readiness-record`, `catalogue`
+**Related:** `readiness-floor`, `readiness-record`, `catalog`
 
 ### readiness-summary
 
@@ -610,7 +612,7 @@ The lines between `<!-- compass:render KIND -->` and `<!-- /compass:render -->` 
 
 ### required-when
 
-A condition in an artifact's catalogue entry. The document is owed only when the condition holds. The one condition today is a minimum number of subtasks, so the distribution map is owed from two subtasks.
+A condition in an artifact's catalog entry. The document is owed only when the condition holds. The one condition today is a minimum number of subtasks, so the distribution map is owed from two subtasks.
 
 **Related:** `audience`, `delivery-approach`
 
@@ -646,7 +648,7 @@ How the change reaches users safely: feature flags, canary or incremental rollou
 
 ### router
 
-The agent that runs assess: reads the four assessment dimensions, hands them to the CLI, and writes the delivery-approach record. It assesses; it does not choose a process. Named for what it does - Anthropic's platform docs call this shape "Routing", classifying input and directing it to a specialised path - and for the file it runs, routing-policy.yml. The approach is computed from the assessment by `compass approach evaluate`, which is the determinism boundary.
+The agent that runs assess: reads the four assessment dimensions, hands them to the CLI, and writes the delivery-approach record. It assesses; it does not choose a process. Named for what it does - Anthropic's platform docs call this shape "Routing", classifying input and directing it to a specialized path - and for the file it runs, routing-policy.yml. The approach is computed from the assessment by `compass approach evaluate`, which is the determinism boundary.
 
 **Related:** `assess`, `assessment`, `delivery-approach`
 
@@ -658,13 +660,13 @@ Operational how-to for the service. Updated as an initiative-scale output when t
 
 ### scenario
 
-The atomic unit of acceptance: one behaviour, one Given/When/Then, one executable test. Everything traces to scenarios.
+The atomic unit of acceptance: one behavior, one Given/When/Then, one executable test. Everything traces to scenarios.
 
 **Related:** `feature-file`, `step`, `acceptance-criteria`
 
 ### sections
 
-The headings of an artifact's document, in order, for each depth the document can be written at (`lightweight` and `thorough`). It is a field of the artifact's catalogue entry. A document that is one rendered block has an empty list.
+The headings of an artifact's document, in order, for each depth the document can be written at (`lightweight` and `thorough`). It is a field of the artifact's catalog entry. A document that is one rendered block has an empty list.
 
 **Related:** `audience`, `rendered-block`
 
@@ -708,11 +710,11 @@ A delivery approach for time-boxed exploration whose output is knowledge, not sh
 
 How a stage runs for an issue, such as `collapsed`. It is the `mode` field of a stage.
 
-**Related:** `catalogue`
+**Related:** `catalog`
 
 ### stands-for
 
-The name the industry uses for the kind of document an artifact is, such as `hld` for the technical design. It is a field of the artifact's catalogue entry.
+The name the industry uses for the kind of document an artifact is, such as `hld` for the technical design. It is a field of the artifact's catalog entry.
 
 **Related:** `audience`, `technical-design`
 
@@ -780,7 +782,7 @@ A recorded departure from a parent's value, with a reason and an approver.
 
 ### word_ceiling
 
-The word limit a document kind carries in the artifacts catalogue, per depth, such as 4,000 words for a thorough technical design. Words are counted from the visible text only: rendered blocks and HTML comments do not count. `compass issue lint` notes a document over its limit, and the check `design-within-word-ceiling` refuses a technical design over 1.5 times its limit once plan exit is due. An issue stored before a kind had a limit keeps no limit.
+The word limit a document kind carries in the artifacts catalog, per depth, such as 4,000 words for a thorough technical design. Words are counted from the visible text only: rendered blocks and HTML comments do not count. `compass issue lint` notes a document over its limit, and the check `design-within-word-ceiling` refuses a technical design over 1.5 times its limit once plan exit is due. An issue stored before a kind had a limit keeps no limit.
 
 **Related:** `lld`, `design-doc`
 
@@ -792,13 +794,13 @@ The fixed semantic lifecycle Compass owns: backlog, ready, in-progress, in-revie
 
 ## Document kinds
 
-The kinds of document a process writes, from the artifacts catalogue of the
+The kinds of document a process writes, from the artifacts catalog of the
 shipped default. Each entry gives who reads the document, the name the
 industry uses for it, and where it lives.
 
 ### `acceptance-criteria`
 
-Every role reads it to agree the behaviour that will be built, and the builder turns each scenario into a test.
+Every role reads it to agree the behavior that will be built, and the builder turns each scenario into a test.
 
 **Traditional name:** requirements
 

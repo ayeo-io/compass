@@ -313,7 +313,7 @@ CAPABILITIES = ("entry-exit-evaluation", "artifact-freshness")
 LAYER_KEYS = ("schema", "extends", "owner", "approvers", "capabilities") + CATALOGUES
 SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement",
                  "record", "project", "prices", "models", "multiagent", "governance_drift",
-                 "preset_index", "github_labels")
+                 "preset_index", "github_labels", "language")
 #: The three switches inside `github_labels`, all off by default.
 GITHUB_LABEL_SWITCHES = ("domain", "status", "page")
 RESERVED_KEYS = ("preset",)
@@ -343,8 +343,8 @@ CATALOGUE_DESCRIPTIONS = {
                  "artifact id.",
     "readiness": "The readiness signals: binary facts about a repository that show whether it "
                  "is fit for unattended agent work. Each key is a readiness signal id.",
-    "vocabulary": "The display names and aliases of catalogue entries. Each key is "
-                  "`<catalogue>.<id>`, for example `approaches.quick-fix`.",
+    "vocabulary": "The display names and aliases of catalog entries. Each key is "
+                  "`<catalog>.<id>`, for example `approaches.quick-fix`.",
 }
 
 ENTRY_DESCRIPTIONS = {
@@ -358,7 +358,7 @@ ENTRY_DESCRIPTIONS = {
                  "headings per depth and what it builds on.",
     "readiness": "One readiness signal: what it asserts, the implementation that decides it and "
                  "whether the readiness floor needs it.",
-    "vocabulary": "The display name of one catalogue entry, and the other names a person may type "
+    "vocabulary": "The display name of one catalog entry, and the other names a person may type "
                   "for it.",
 }
 
@@ -530,7 +530,7 @@ FIELD_DESCRIPTIONS = {
     "vocabulary": {
         "name": "The display name of the entry, shown to people in place of its id.",
         "aliases": "Other names a person may type for the entry. A name or alias may belong "
-                   "to only one entry of a catalogue.",
+                   "to only one entry of a catalog.",
     },
 }
 
@@ -554,7 +554,7 @@ TOP_DESCRIPTIONS = {
                               "the owner approves.",
     "approvers.project-waiver": "The names that may approve a waiver in the project file. A "
                                 "parent writes the list; when it is absent, the owner approves.",
-    "capabilities": "Named switches for new blocking behaviour. Each is off in the shipped "
+    "capabilities": "Named switches for new blocking behavior. Each is off in the shipped "
                     "default.",
     "capabilities.entry-exit-evaluation": "Whether the entry and exit checks of each stage are "
                                           "evaluated. Off in the shipped default.",
@@ -564,6 +564,10 @@ TOP_DESCRIPTIONS = {
     "autonomy": "How often a session stops for a person at a stage hand-off: `controlled` at "
                 "every listed hand-off, `balanced` at fewer, `autonomous` never. "
                 "The shipped default is `balanced`.",
+    "language": "The language of the prose an agent writes, as a BCP 47 tag: a language, an "
+                "optional script and an optional region, joined by hyphens, such as `en-US`. "
+                "Unset: no instruction; only the project's own `compass.yml` can hold it, "
+                "never a parent, a preset or an issue.",
     "adoption": "Whether a failed check blocks: `enforced` makes `compass check` and "
                 "`compass ci` exit non-zero, and `advisory` reports the failure and exits 0. "
                 "The shipped default is `enforced`.",
@@ -589,7 +593,7 @@ TOP_DESCRIPTIONS = {
               "command to pass to its agent. A tier is a model name, or `{model, effort}`; the "
               "shipped mapping is `strong` inherit (the session's model) at high, `standard` "
               "sonnet at medium and `fast` haiku at low.",
-    "models.strong": "The strong tier, for judgement seats: a model name, or `{model, effort}`. "
+    "models.strong": "The strong tier, for judgment seats: a model name, or `{model, effort}`. "
                      "The default is `inherit`, the session's model, at effort `high`.",
     "models.standard": "The standard tier, for the builder: a model name, or `{model, effort}`. "
                        "The default is `sonnet` at effort `medium`.",
@@ -597,7 +601,7 @@ TOP_DESCRIPTIONS = {
                    "default is `haiku` at effort `low`.",
     "multiagent": "Where multiagent worktrees go and how many are allowed. Holds `worktree_root`"
                   " (default `../.compass-worktrees`) and `max_worktrees` (default 6).",
-    "preset_index": "Reserved for published presets. It has no behaviour yet.",
+    "preset_index": "Reserved for published presets. It has no behavior yet.",
     "github_labels": "Whether Compass writes an issue's labels and page to its linked GitHub "
                      "issue, through the switches `domain`, `status` and `page`. All three are "
                      "off by default, and with all three off no command calls GitHub.",

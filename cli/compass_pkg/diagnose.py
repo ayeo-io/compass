@@ -262,7 +262,7 @@ def _checkpoint_lines(m, task_dir):
         lines.append("  bands: not counted (the issue's configuration cannot be read)")
     else:
         units = autonomy_cost.UNITS
-        lines.append("  bands: human judgement %d (%s), guardrailed %d (%s), autonomous %d (%s)"
+        lines.append("  bands: human judgment %d (%s), guardrailed %d (%s), autonomous %d (%s)"
                      % (band["human_judgement"], units["human_judgement"], band["guardrailed"],
                         units["guardrailed"], band["autonomous"], units["autonomous"]))
     return lines + _cost_lines(m)

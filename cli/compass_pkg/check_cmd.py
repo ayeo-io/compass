@@ -124,7 +124,7 @@ CHECK_GUIDANCE = {
     "changed-code-traces-to-scenario": {
         "why": "Compass requires every production change to trace back to a stated acceptance criterion (the traceability guardrail).",
         "do": 'Trace each file: `compass changed-file add <path> --scenario TRC-<id>`.',
-        "fix": "Edit manifest.yml: under each `changed_files:` entry, list the scenario id(s) that drove the change. Add a new scenario if the behaviour was unspecified.",
+        "fix": "Edit manifest.yml: under each `changed_files:` entry, list the scenario id(s) that drove the change. Add a new scenario if the behavior was unspecified.",
     },
     "scenario-has-id-and-intent": {
         "why": "Each scenario needs a stable id and an intent link so claims, tests, and code can reference it.",

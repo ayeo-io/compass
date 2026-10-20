@@ -1162,7 +1162,7 @@ def test_irl_21_key_and_verb_documented(tmp_path):
                    "names the issue"):
         assert phrase in doc, phrase
 
-    catalogue = (ROOT / "docs" / "artifact-catalogue.md").read_text().splitlines()
+    catalogue = (ROOT / "docs" / "artifact-catalog.md").read_text().splitlines()
     assert "- `intent`, lightweight: Problem; Desired outcome; Success signals; Non-goals" \
         in catalogue
     report = next(line for line in catalogue if line.startswith("- `verification-report`,"))

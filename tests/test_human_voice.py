@@ -313,18 +313,18 @@ def test_trc_a3_the_tells_list_names_all_nine_and_marks_the_findable_ones():
         entry = next((e for e in entries if tell in e), None)
         assert entry is not None, f"no numbered entry names {tell!r}"
         assert "**findable**" in entry, f"the entry for {tell!r} must be marked findable"
-        assert "**judgement**" not in entry, f"the entry for {tell!r} must not also be marked judgement"
+        assert "**judgment**" not in entry, f"the entry for {tell!r} must not also be marked judgment"
 
     for tell in JUDGEMENT_TELLS:
         entry = next((e for e in entries if tell in e), None)
         assert entry is not None, f"no numbered entry names {tell!r}"
-        assert "**judgement**" in entry, f"the entry for {tell!r} must be marked judgement"
+        assert "**judgment**" in entry, f"the entry for {tell!r} must be marked judgment"
         assert "**findable**" not in entry, f"the entry for {tell!r} must not also be marked findable"
 
     assert text.count("**findable**") == 3, (
         "exactly three tells must be marked findable - the check's set"
     )
-    assert text.count("**judgement**") == 6, (
+    assert text.count("**judgment**") == 6, (
         "exactly six tells must be marked judgement"
     )
 
@@ -604,11 +604,16 @@ def test_trc_b1_claude_md_and_agents_md_carry_the_voice_paragraph():
         "pasted twice"
     )
 
+    # The shorter-word table lists `utilize` as a word to avoid. That is the rule's own table, not a
+    # copy of the tells list, so its rows are left out of this check.
+    def _prose(section):
+        return "\n".join(ln for ln in section.splitlines() if not ln.startswith("|"))
+
     for tell in FINDABLE_TELLS + JUDGEMENT_TELLS:
         if tell == "accordingly":
             continue
-        assert tell not in claude_section, f"CLAUDE.md must not copy the tells list ({tell!r})"
-        assert tell not in agents_section, f"AGENTS.md must not copy the tells list ({tell!r})"
+        assert tell not in _prose(claude_section), f"CLAUDE.md must not copy the tells list ({tell!r})"
+        assert tell not in _prose(agents_section), f"AGENTS.md must not copy the tells list ({tell!r})"
 
 
 def test_trc_b2_assess_refine_and_verify_point_at_the_reference():

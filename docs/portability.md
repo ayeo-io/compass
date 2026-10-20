@@ -36,10 +36,10 @@ commands/        the stage interface (the /compass: namespace)
 agents/          router, spec-author, planner, orchestrator, builder,
                  verifier, reviewer, product-owner, product-marketer,
                  architect
-skills/          adaptive-routing, bdd-specification, behaviour-mapping,
+skills/          adaptive-routing, bdd-specification, behavior-mapping,
                  compass-runtime, evidence-gates, flow-management,
                  governance-check, intent-interview, plan-authoring,
-                 quick-fix, receiving-code-review, systematic-debugging,
+                 receiving-code-review, systematic-debugging,
                  tdd-discipline, worktree-multiagent
 hooks/           pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,
                  prompt-approval.sh, approval-summary.sh
@@ -59,7 +59,7 @@ user does not type an explicit Compass command.
 
 Before the first delivery change it must:
 
-1. assess risk, familiarity, size and goal;
+1. assess risk, familiarity and size, and any goal or urgency switch;
 2. record the assessment in the manifest;
 3. call `compass approach evaluate --write`; and
 4. present the human-readable approach for approval.

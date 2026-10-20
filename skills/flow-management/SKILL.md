@@ -81,7 +81,7 @@ When an issue is blocked or stalled:
    working an in-progress or in-review issue can also flag it with
    `compass issue blocked set --reason`, and the board then shows the reason.
 4. **Escalate by surfacing, not by routing.** Flow management has no authority
-   to reassign or reprioritise - it makes the blocker *visible* at the top of
+   to reassign or reprioritize - it makes the blocker *visible* at the top of
    the flow report and, if a human decision is needed, says so plainly.
 
 ## The digest format

@@ -26,7 +26,7 @@
      architecture/invariants.yml, an optional freeform YAML file the assess
      stage already reads into architecture-loaded.yml - no schema constrains
      its shape yet. -->
-<!-- absorbed: "architecture/invariants.yml once the schema is finalised. --\>" -->
+<!-- absorbed: "architecture/invariants.yml once the schema is finalized. --\>" -->
 
 - <!-- example: a change to a service's public API must be approved by that service's
        owning team before it can land. -->

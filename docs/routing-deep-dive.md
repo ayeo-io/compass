@@ -1,6 +1,6 @@
 # Compass - Routing Deep Dive
 
-`approaches/rubric.md` is the assess stage's rubric: the four dimensions, the
+`approaches/rubric.md` is the assess stage's rubric: the three scored dimensions, the
 scoring tables, the four-step procedure. This page applies the rubric to six
 issues, walking each one through scoring, composition, policy-rule
 constraint, and the final `delivery-approach.md` - so that the claim
@@ -13,9 +13,10 @@ becomes something you can watch happen.
 
 Every issue, every time, the assess stage runs the same four steps:
 
-1. **Score the four dimensions** - risk, familiarity, size and
-   goal - each with a one-line written justification. If a value cannot be
-   justified, the assess stage asks rather than guesses.
+1. **Score the three dimensions** - risk, familiarity and size - and read
+   the optional switches, goal and urgency, each with a one-line written
+   justification. If a value cannot be justified, the assess stage asks
+   rather than guesses.
 2. **Compose the candidate delivery approach** - assemble per-stage weight
    from the dimension contributions, biased by the routing strategies, name
    the reference shape for shared vocabulary, list any deviations.
@@ -44,7 +45,7 @@ What follows is six cases. Read them in order; they build on each other.
 
 | Dimension | Value | Justification |
 |---|---|---|
-| risk | `trivial` | The wrong outcome is a misspelt word in an error string - cosmetic, instantly obvious, instantly reversible. No data, no money, no auth *behaviour* touched. |
+| risk | `trivial` | The wrong outcome is a misspelt word in an error string - cosmetic, instantly obvious, instantly reversible. No data, no money, no auth *behavior* touched. |
 | Familiarity | `brownfield-mapped` | Existing code; the error path is trivially readable. |
 | Size | `atomic` | One file, one string, no design decision, well under thirty minutes. |
 | Goal | `delivery` | Feature pipeline ownership; no `intent.md` or `positioning.md` is present. |
@@ -113,8 +114,8 @@ purpose.
 | Dimension | Value | Justification |
 |---|---|---|
 | risk | `contained` | A broken saved-view is annoying and bounded to the dashboard; recoverable, no data loss, no other surface affected. |
-| Familiarity | `brownfield-mapped` | The dashboard's filter behaviour is already captured in scenarios. |
-| Size | `medium` | Several files - a persistence layer, the filter serialisation, the UI - and one or two design decisions, 1–3 days. |
+| Familiarity | `brownfield-mapped` | The dashboard's filter behavior is already captured in scenarios. |
+| Size | `medium` | Several files - a persistence layer, the filter serialization, the UI - and one or two design decisions, 1–3 days. |
 | Goal | `delivery` | No `intent.md`; a well-understood feature is being implemented. |
 
 Domain tags: `labels: [persistence]` might carry, but nothing on the
@@ -142,7 +143,7 @@ appear here. No artifact rule fires, because neither `intent.md` nor
 `positioning.md` exists.
 
 **Model tiers.** The shipped defaults apply: implement `standard`
-(RP-TIER-006), `verify` `fast`, and every judgement seat, the reviewer among
+(RP-TIER-006), `verify` `fast`, and every judgment seat, the reviewer among
 them, `strong`. No model floor fires (RP-MODEL-001, RP-MODEL-002 and
 RP-MODEL-003).
 
@@ -260,7 +261,7 @@ map is the record of *what could have been parallel and why it wasn't* - here,
 | Dimension | Value | Justification |
 |---|---|---|
 | risk | `cross-cutting` | Notifications touch many features; a delivery failure degrades something many users see. Recovery needs coordination, but it is not data-loss or money - not `critical`. |
-| Familiarity | `greenfield` | Net-new code; no existing behaviour to preserve. |
+| Familiarity | `greenfield` | Net-new code; no existing behavior to preserve. |
 | Size | `product` | A new subsystem - three delivery channels, a preferences model, a delivery log. 2+ weeks, many independent work subtasks. |
 | Goal | `delivery` | A subsystem that serves a stated outcome. A designer and a product owner may well be consulted (preferences are a user-facing surface). |
 
@@ -294,7 +295,7 @@ solo* (critical risk, capped); Case 4 is *heavy and parallel*
 (cross-cutting risk, uncapped). Same full-approach reference shape,
 genuinely different orchestration - because the dimensions read differently.
 
-**Model tiers.** Greenfield ground above small has no mapped behaviour for a
+**Model tiers.** Greenfield ground above small has no mapped behavior for a
 cheaper builder to lean on, so implement runs on `strong` (RP-MODEL-002).
 
 ### Final `delivery-approach.md`
@@ -316,7 +317,7 @@ that fires is recorded in the policy-rules section.
 
 ### Score
 
-Assess still scores all four dimensions - they shape the mandatory
+Assess still scores all three dimensions - they shape the mandatory
 follow-up - but hotfix is the one delivery approach selected by *urgency*
 rather than by the size / risk / familiarity composition.
 
@@ -356,7 +357,7 @@ raise the approach to the full approach, under incident command, instead.
 
 The architecture-check requirement fires on the `cross-cutting` value and adds
 `verify.architecture` to hotfix's gate set, so this hotfix runs six gates, not
-the base five. `never_skip: [refine, verify, ship]` is honoured by hotfix's
+the base five. `never_skip: [refine, verify, ship]` is honored by hotfix's
 structure regardless of risk (the review is collapsed *into* the
 reproduction, not skipped; verify and ship run full). hotfix is the delivery
 approach that compresses the stages *before* verify and never verify itself.
@@ -392,15 +393,15 @@ The outstanding process weight has a due date: "before the issue closes."
 
 ### Score
 
-Assess still scores all four dimensions - but this request is not a known
+Assess still scores all three dimensions - but this request is not a known
 change, it is a *question*. There are no acceptance criteria to state because
-the behaviour to fix is the unknown. That is the signal for **exploration**
+the behavior to fix is the unknown. That is the signal for **exploration**
 as the goal.
 
 | Dimension | Value | Justification |
 |---|---|---|
 | risk | `contained` | The investigation itself touches nothing irreversible - reading logs, adding instrumentation behind a flag, reproducing in a sandbox. |
-| Familiarity | `brownfield-unmapped` | The queue's behaviour under load is exactly what is *not* written down. |
+| Familiarity | `brownfield-unmapped` | The queue's behavior under load is exactly what is *not* written down. |
 | Size | `small` | The investigation is timeboxed; the eventual fix is unknown and not in scope here. |
 | Goal | `exploration` | "I need to understand this before I can assess it" - not a delivery request. |
 
@@ -412,7 +413,7 @@ composes towards hotfix - the routing strategy
 light but real: `delivery-approach.md` records the **question** ("what is
 dropping ~2% of jobs under load?") and a **timebox**. The define stage
 collapses to that question. The requirements review is skipped - there is
-nothing to QA against, the behaviour is the unknown. The plan stage
+nothing to QA against, the behavior is the unknown. The plan stage
 collapses to a timebox and an approach sketch. Implementation becomes
 **exploration**: the engineer instruments and reproduces freely, and the
 **TDD strategy is suspended** - the pre-tool hook is approach-aware and does
@@ -525,7 +526,7 @@ The delivery approach is computed at the assess stage, but a value can turn
 out wrong, and the honest response is not to push on with a delivery
 approach you no longer believe.
 
-`/compass:assess --reassess` re-scores the four dimensions mid-issue, writes a
+`/compass:assess --reassess` re-scores the three dimensions mid-issue, writes a
 **new revision** of `delivery-approach.md` (the prior revision is kept visible under a
 "Superseded" heading), and records what changed and why. A re-assess is a
 normal event, not a failure. *A delivery approach quietly outgrown is the
@@ -573,7 +574,7 @@ Every case above ends in a `delivery-approach.md` that a human can read and a la
 session can resume from. That is the deliverable. Assess does not just
 classify the issue - it explains the classification, records every policy
 rule that fired, and writes down every skip with the reason it is safe. The
-adaptivity is real, and it is *bounded*: bounded by the four-dimension rubric,
+adaptivity is real, and it is *bounded*: bounded by the three-dimension rubric,
 bounded by the routing rules in force (the shipped default plus the project's
 `compass.yml`, which `compass policy show` prints), bounded by
 the rule that an unjustified skip is not a skip. That is what keeps "adaptive"

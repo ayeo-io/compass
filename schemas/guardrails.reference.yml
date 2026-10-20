@@ -41,8 +41,8 @@ project:           # (required, may be empty list) list of maps - project-added
                    #   guardrails. SAME shape as a `defaults` entry. Each MUST
                    #   reference at least one `checks:` name - a would-be guardrail
                    #   with no mechanical check is a strategy, not a guardrail.
-                   #   May also carry a `params:` map for parameterised checks.
+                   #   May also carry a `params:` map for parameterized checks.
 
 # Note the asymmetry, by design: guardrails get a machine-readable file because
 # they are CHECKABLE; strategies (governance/strategies.md) do not, because they
-# are ASSESSED - the reviewer's judgement, not a mechanical pass/fail.
+# are ASSESSED - the reviewer's judgment, not a mechanical pass/fail.

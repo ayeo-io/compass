@@ -10,10 +10,13 @@ edits with the classifier, or says exactly what it could not express. From
 a change to a key, its order or a code is a breaking change.
 
 The code is `cli/compass_pkg/policy_migrate.py` (the plan, the writes and the
-report), `cli/compass_pkg/shipped_releases.py` (the table of releases) and
+report), `cli/compass_pkg/policy_migrate_undo.py` (the undo),
+`cli/compass_pkg/shipped_releases.py` (the table of releases) and
 `cli/compass_pkg/policy_cmd.py` (the command). The decisions behind it are
 ADR-037 (classification), ADR-039 (waivers), ADR-042 (the shipped preset and
-the legacy views) and ADR-043 (one project file).
+the legacy views), ADR-043 (one project file) and the record
+`governance/decisions/2026-10-19-the-migration-marker-records-what-an-undo-needs.md`
+(what the marker holds so that an undo can check the project).
 
 ## When the overlay takes effect
 
@@ -65,8 +68,9 @@ What happens to each old file:
 The kept copies and the overlay are two sources that can differ. The digest of
 each kept copy is in `migration.yml`. Removing the copies is a follow-up for
 when the readers move; the `legacy` folder already holds them, so nothing is
-lost. A person restores an old file by copying it back from the `legacy`
-folder. There is no `--undo` yet.
+lost. `compass policy migrate --undo` puts the old files back (see "Going back
+with `--undo`" below). A person can also copy an old file back from the
+`legacy` folder by hand.
 
 If a run stops after step 4 and before step 5, `compass.yml` and the old file
 exist together. The next `--apply` sees `migration.yml` and a digest of the old
@@ -81,7 +85,7 @@ writes nothing.
 | Cause | Reason |
 |---|---|
 | The project is the Compass framework repository | Its governance files are generated from the shipped preset |
-| `compass.yml` exists and `migration.yml` records that this command wrote it | The settings now live in `compass.yml`. The message says how to go back: copy the old files from the `legacy` folder, then remove `compass.yml` and `migration.yml`. It never advises moving `compass.yml` away, which would put the settings back to their defaults |
+| `compass.yml` exists and `migration.yml` records that this command wrote it | The settings now live in `compass.yml`. The message names `compass policy migrate --undo`, which restores the old files from the `legacy` folder. It gives no copy-back steps, and it warns against deleting `compass.yml` by hand, which would put the settings back to their defaults |
 | `compass.yml` exists, has `schema:`, and no marker | Compass reads it, so there is nothing to migrate into. When `.compass/config.yml` still sets keys, the message names them. This covers both settings files being present, which Compass does not merge |
 | `compass.yml` exists and has no `schema:` | Compass does not read it, so it is another tool's file. The message says to move it to another name or add `schema: 1` |
 | One of the two governance files is present without the other | A copy needs both |
@@ -91,13 +95,13 @@ The one exception to the `compass.yml` refusals is the interrupted run above.
 
 ## The base release and the overlay
 
-1. Convert the project's two files to catalogue form with the legacy adapter. Call the result the copy.
+1. Convert the project's two files to catalog form with the legacy adapter. Call the result the copy.
 2. Find the base release in the table of shipped releases, in this order:
    - the release whose `version:` lines (both files carry one) match the copy's, and the newest when two tags shipped the same files;
    - else the release that gives the fewest overlay entries, and the newest of equals;
    - else, when even the nearest needs more than 40 entries, the files this install ships, reported as `as-built`.
    The `current` release is the pair of files this install ships. The version lines are a hint: the classifier check below runs whichever way the release was found.
-3. Compare the copy with the base release entry by entry, in catalogue order and then id order. These are the local edits:
+3. Compare the copy with the base release entry by entry, in catalog order and then id order. These are the local edits:
    - an id only in the copy is an `add`;
    - an id only in the base release is a `remove`;
    - an entry with a changed field is a `set` of that field. A map field is written as `{set, remove}`, so one changed rule is one entry of the overlay;
@@ -112,9 +116,9 @@ They are listed in the report and in `adopted`, as entry and operation, from the
 base release to the current default. An entry the shipped preset still declares
 is never listed as removed, even where the current legacy files no longer name
 it: the UI contract is one. An entry the project also edited keeps its
-edit for the fields it edited. The report also gives the `behaviour`: the
+edit for the fields it edited. The report also gives the `behaviour`: the  <!-- us-english-scan: allow - JSON key kept for old readers -->
 classifier's verdict on the copy against the migrated configuration, and how
-many grid points differ. Adopting a default can change behaviour; that is
+many grid points differ. Adopting a default can change behavior; that is
 reported, and it does not block.
 
 The copy is compared with a release of the legacy files, not with the preset,
@@ -122,7 +126,7 @@ because the preset holds fields the legacy format cannot state: stage entry and
 exit lists and three Definition of Done checks. Comparing with the preset would
 copy those back as removals.
 
-A value only the legacy views hold, which the catalogue cannot state, blocks by
+A value only the legacy views hold, which the catalog cannot state, blocks by
 name as `MIG-UNEXPRESSED`. Two things can differ:
 
 - The list of stages a guardrail is checked at. A gate keeps its first stage,
@@ -190,11 +194,11 @@ key in file order. The table says where each key goes in `compass.yml`:
 
 | Key | Goes to |
 |---|---|
-| A key the catalogue lists as a settings key | `compass.yml`, same name |
+| A key the catalog lists as a settings key | `compass.yml`, same name |
 | `mode` | `compass.yml` as `adoption` |
 | A key `cli/migrate-map.yml` renames under `config_keys` | `compass.yml`, new name |
 | `worktree_root`, `max_worktrees` or `test_command` found outside `multiagent` and `project` | `compass.yml` under `multiagent` or `project`, where the scripts read it |
-| `initialised`, `records_signed_since` | The state file in `.compass/` |
+| `initialized`, `records_signed_since` | The state file in `.compass/` |
 | `version` | Dropped: `schema: 1` replaces it |
 | Anything else | Listed as unread and not copied. It stays in the copy of the old file in the `legacy` folder |
 
@@ -227,7 +231,7 @@ longer matches its tag. Run the script after cutting a release tag.
 |---|---|
 | 0 | A dry run that is ready, an applied migration, or nothing to migrate |
 | 1 | Blocked: the base release plus the overlay is not shown equivalent to the copy, a value cannot be written, a merge or lint error stands, or a waiver stub is unapproved. Nothing is written |
-| 2 | A refusal, or a source that cannot be read |
+| 2 | A refusal, including a refusal by `--undo`, or a source that cannot be read |
 
 ## Output
 
@@ -267,177 +271,177 @@ reassess), and the `compass.yml` it would write.
   ],
   "adopted": [
     {
-      "catalogue": "dimensions",
+      "catalogue": "dimensions",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "role",
       "operation": "remove"
     },
     {
-      "catalogue": "approaches",
+      "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "full",
       "operation": "set"
     },
     {
-      "catalogue": "approaches",
+      "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "hotfix",
       "operation": "set"
     },
     {
-      "catalogue": "approaches",
+      "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "quick-fix",
       "operation": "set"
     },
     {
-      "catalogue": "approaches",
+      "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "regular",
       "operation": "set"
     },
     {
-      "catalogue": "approaches",
+      "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "spike",
       "operation": "set"
     },
     {
-      "catalogue": "rules",
+      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "advisory",
       "operation": "set"
     },
     {
-      "catalogue": "rules",
+      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "artifact_rules",
       "operation": "add"
     },
     {
-      "catalogue": "rules",
+      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "biases",
       "operation": "set"
     },
     {
-      "catalogue": "rules",
+      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "default_shapes",
       "operation": "set"
     },
     {
-      "catalogue": "rules",
+      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "floors",
       "operation": "set"
     },
     {
-      "catalogue": "rules",
+      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "loop_ceilings",
       "operation": "set"
     },
     {
-      "catalogue": "rules",
+      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "model_floors",
       "operation": "add"
     },
     {
-      "catalogue": "rules",
+      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "model_tiers",
       "operation": "add"
     },
     {
-      "catalogue": "rules",
+      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "role_defaults",
       "operation": "remove"
     },
     {
-      "catalogue": "rules",
+      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "role_rules",
       "operation": "remove"
     },
     {
-      "catalogue": "checks",
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "artifacts-approved",
       "operation": "add"
     },
     {
-      "catalogue": "checks",
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "contracts-declared",
       "operation": "add"
     },
     {
-      "catalogue": "checks",
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "dashboard-current",
       "operation": "remove"
     },
     {
-      "catalogue": "checks",
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "design-within-word-ceiling",
       "operation": "add"
     },
     {
-      "catalogue": "checks",
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "dod-evidence-typed",
       "operation": "set"
     },
     {
-      "catalogue": "checks",
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "multiagent-run-recorded",
       "operation": "set"
     },
     {
-      "catalogue": "checks",
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "nfr-rows-resolved",
       "operation": "add"
     },
     {
-      "catalogue": "checks",
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "rendered-blocks-current",
       "operation": "add"
     },
     {
-      "catalogue": "gates",
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "G4",
       "operation": "set"
     },
     {
-      "catalogue": "gates",
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "G5",
       "operation": "set"
     },
     {
-      "catalogue": "artifacts",
+      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "bug-report",
       "operation": "add"
     },
     {
-      "catalogue": "artifacts",
+      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "spike-conclusion",
       "operation": "add"
     },
     {
-      "catalogue": "artifacts",
+      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "verification-note",
       "operation": "add"
     },
     {
-      "catalogue": "vocabulary",
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.artifacts-approved",
       "operation": "add"
     },
     {
-      "catalogue": "vocabulary",
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.contracts-declared",
       "operation": "add"
     },
     {
-      "catalogue": "vocabulary",
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.dashboard-current",
       "operation": "remove"
     },
     {
-      "catalogue": "vocabulary",
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.design-within-word-ceiling",
       "operation": "add"
     },
     {
-      "catalogue": "vocabulary",
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.nfr-rows-resolved",
       "operation": "add"
     },
     {
-      "catalogue": "vocabulary",
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.rendered-blocks-current",
       "operation": "add"
     }
@@ -451,7 +455,7 @@ reassess), and the `compass.yml` it would write.
     },
     "entries": [
       {
-        "catalogue": "rules",
+        "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
         "id": "floors",
         "operation": "set",
         "waiver": null
@@ -482,7 +486,7 @@ reassess), and the `compass.yml` it would write.
     "points": 0,
     "scan": "identical"
   },
-  "behaviour": {
+  "behaviour": {  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
     "result": "incomparable",
     "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, role engineer, labels none, documents none: approaches.checkpoints (autonomous) is [\"assess\", \"define\"] in the parent and [] in the child",
     "points": 0,
@@ -542,16 +546,16 @@ reassess), and the `compass.yml` it would write.
 | `result` | string | `ready`, `blocked`, `applied` or `nothing-to-migrate` |
 | `base_release` | object or null | `release` (a tag, `current`, or null for `as-built`) and `chosen_by` (`version`, `fewest-entries` or `as-built`). Null when there is no copy of the governance files, and on a resumed run |
 | `sources` | list | Each file read, as `path` and `digest` (SHA-256 of its bytes), in this order: the routing policy, the guardrails, the old settings file. A resumed run lists the old settings file only |
-| `adopted` | list | Each default that moved from the base release to the current default, as `catalogue`, `id` and `operation` |
-| `overlay` | object | `counts` (`add`, `set`, `replace`, `remove`) and `entries`, each with `catalogue`, `id`, `operation` and `waiver` (`UNAPPROVED` for a stub, `LEGACY` for a waiver migrated from `waived:`, else null) |
+| `adopted` | list | Each default that moved from the base release to the current default, as `catalogue`, `id` and `operation` |  <!-- us-english-scan: allow - JSON key kept for old readers -->
+| `overlay` | object | `counts` (`add`, `set`, `replace`, `remove`) and `entries`, each with `catalogue`, `id`, `operation` and `waiver` (`UNAPPROVED` for a stub, `LEGACY` for a waiver migrated from `waived:`, else null) |  <!-- us-english-scan: allow - JSON key kept for old readers -->
 | `settings` | object | `moved` (each with `key` and `to`), `state` (the keys that go to `state.yml`), `dropped` (each with `key` and `reason`) and `unread` |
 | `equivalence` | object or null | The classifier's verdict on the copy against the base release plus the overlay: `result`, `reason`, `points` (grid points evaluated) and `scan`. Null when there is no copy of the governance files, or the overlay did not merge |
-| `behaviour` | object or null | The classifier's verdict on the copy against the migrated configuration: `result`, `reason`, `points` and `changed` (points that differ). Null in the same cases |
+| `behaviour` | object or null | The classifier's verdict on the copy against the migrated configuration: `result`, `reason`, `points` and `changed` (points that differ). Null in the same cases |  <!-- us-english-scan: allow - JSON key kept for old readers -->
 | `blocked_by` | list | Each item has `code`, `path` and `message` |
 | `files` | list | Each item has `action` (`copy`, `write`, `remove` or `keep`), `path` and `to` (the copy's destination, else null), in the order the command acts |
 | `compass_yml` | string or null | The text of the file. Null when there is nothing to write: nothing to migrate, or a resumed run |
 
-Entries are in catalogue order, then id order. The document holds no time and
+Entries are in catalog order, then id order. The document holds no time and
 no path outside the project, so the same input gives the same bytes.
 `tests/test_policy_migrate.py` pins each key list, and pins this example with
 each `digest`, `points` and `changed` replaced, because a digest follows the
@@ -564,10 +568,83 @@ A refusal prints no document: the reason is on stderr and the exit is 2.
 | Code | Meaning |
 |---|---|
 | `MIG-NOT-EQUIVALENT` | The classifier does not find the base release plus the overlay equivalent to the copy. The message gives its reason |
-| `MIG-UNEXPRESSED` | The copy changed a value only the legacy views hold, which the catalogue cannot state. The path names it |
+| `MIG-UNEXPRESSED` | The copy changed a value only the legacy views hold, which the catalog cannot state. The path names it |
 | `MIG-UNCLASSIFIABLE` | The classifier cannot read one of the configurations |
 | An `M-*` code | The overlay does not merge, such as `M-MAP-REMOVE-ABSENT` or `M-REF-REMOVED` |
 | Any other lint code | A finding of `compass policy lint` on the file the command would write: `K-LOCK-REFUSED`, `C-LOOSENING`, `C-INCOMPARABLE`, `W-UNAPPROVED`, `W-NO-OWNER` and the rest of [the lint codes](policy-lint.md) |
+
+## Going back with `--undo`
+
+`compass policy migrate --undo` puts a project back in the state it had before
+`--apply`. The code is `cli/compass_pkg/policy_migrate_undo.py`.
+
+**Dry run and `--apply`.** The command is a dry run unless it is given
+`--apply`. A dry run lists the files it would restore and remove and writes
+nothing. It refuses in the same way as `--apply`, because the checks run before
+any write: a dry run that says "ready" and an apply that refuses would mislead.
+
+**What it checks.** `migration.yml`, the marker, holds a digest of each source
+and the time of the migration (`migrated_at`). It holds a digest of
+`compass.yml` and, when the migration made it, of `state.yml`. The undo checks
+every digest before it writes anything:
+
+- `compass.yml` and `state.yml`;
+- each governance file and the old `.compass/config.yml`;
+- each copy in `.compass/legacy/`. A copy that is changed or missing is a
+  refusal, because the undo could not restore the file byte for byte.
+
+A file that is absent is not a mismatch. A deleted source is restored from its
+copy.
+
+**What it refuses.** Each refusal exits 2, names its file, and writes nothing:
+
+- an edited `compass.yml`, `state.yml`, governance file or old settings file.
+  The undo does not discard an edit;
+- a changed or missing copy in `.compass/legacy/`;
+- no `migration.yml`: nothing records that a migration ran;
+- a marker with no digest of `compass.yml`, which an earlier version of the
+  command wrote. The message prints the manual steps below;
+- a marker whose `schema` is not 1. The message names the schema;
+- a signed record made since the migration. The undo counts the signed records
+  in `.compass/work/<slug>/evidence/*.json` dated at or after `migrated_at`, or
+  with no readable date, and refuses when the count is above 0. The message
+  says how many. It reads no other record, so a record kept in an archive is
+  not counted;
+- `--words`, `DIR` or `--i-have-a-copy`, which belong to the other mode.
+
+There is no override. The undo has no flag that skips a check.
+
+**A `compass.yml` edited after `--apply` is refused.** An unapproved waiver
+stub blocks `--apply` itself, so a project with a stub has no marker: the
+person puts `compass.yml` in place by hand and the undo reports nothing to undo.
+Only a `compass.yml` edited after `--apply` makes the undo refuse, because
+discarding that edit would discard the person's work. A project in that state
+goes back by the manual steps. An earlier marker gets the same steps in its
+refusal:
+
+1. Copy the old files back from `.compass/legacy/` to their places.
+2. Remove `compass.yml` and `migration.yml`.
+3. Remove `.compass/state.yml` only when the marker says the migration made it.
+
+**What it does.** The steps run in this order:
+
+1. Restore `.compass/config.yml`, and any governance file that was deleted,
+   from `.compass/legacy/`.
+2. Remove `compass.yml`.
+3. Remove `state.yml`, only if the migration made it.
+4. Remove `migration.yml` last.
+
+The marker is the proof that an undo is owed. If the undo stops, `migration.yml`
+is still there, so the undo finishes when it is run again: a source that
+already equals its copy counts as done. The undo keeps `.compass/legacy/`. The
+migration copies each source with its file mode, and the undo restores a file
+with the mode of its copy.
+
+**`--json`.** One document at schema 1, with the keys `schema`, `mode`,
+`result`, `sources` and `files`, in that order. `mode` is `undo` for a dry run
+and for an applied undo. `result` is `ready` for a dry run and `undone` after
+`--apply`. A refusal prints no document: the reason is on stderr and the exit is
+2.
 
 ## Rewriting the configuration in the 6.0.0 words (`--words`)
 
@@ -669,7 +746,7 @@ for a list position.
 
 ## What it does not do
 
-- It has no `--undo` and no `--adopt-defaults`.
+- It has no `--adopt-defaults`.
 - It does not remove the governance copies.
 - It does not run the six compatibility contracts. The classifier is the proof it gives.
 - It does not call `compass policy diff`. The dry run classifies directly with `classify.classify`.

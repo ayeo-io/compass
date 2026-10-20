@@ -40,7 +40,7 @@ and their integration safe.
      worktrees at 1.
 2. **Create the worktrees.** Run `scripts/multiagent.sh` to create one git
    worktree per subtask. Each worktree is an isolated checkout so a builder
-   can run a full red→green TDD cycle without destabilising siblings.
+   can run a full red→green TDD cycle without destabilizing siblings.
 3. **Hand each builder the path of its brief file, never a paste.** Write
    the assignment - its worktree, its scenario group, its slice of the plan -
    to `docs/compass/<created>-<slug>/subtasks/<id>/briefing.md` and name that

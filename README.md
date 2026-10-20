@@ -9,15 +9,15 @@
 [![Self-check](https://github.com/ayeo-io/compass/actions/workflows/compass.yml/badge.svg?branch=main)](https://github.com/ayeo-io/compass/actions/workflows/compass.yml)
 [![Docs](https://github.com/ayeo-io/compass/actions/workflows/docs.yml/badge.svg?branch=main)](https://docs.ayeo.io/compass/)
 [![Latest release](https://img.shields.io/github/v/release/ayeo-io/compass)](https://github.com/ayeo-io/compass/releases)
-[![Licence](https://img.shields.io/github/license/ayeo-io/compass)](LICENSE)
+[![License](https://img.shields.io/github/license/ayeo-io/compass)](LICENSE)
 
 > Enough process for the work at hand. No more.
 
 A typo fix should not need an architecture pack. A payments rewrite should
 not begin with an unstructured prompt.
 
-Compass assesses each change by **risk, familiarity, size and goal**, then
-composes the right delivery approach: the artifacts worth writing, the checks
+Compass assesses each change by **risk, familiarity and size**, with optional
+switches for goal and urgency, then composes the right delivery approach: the artifacts worth writing, the checks
 worth running, the human decisions needed and the number of agents that can
 work safely in parallel.
 
@@ -72,12 +72,12 @@ Writing the artifacts is its own craft: see
 ## What Compass changes
 
 Compass chooses the process for each change from its assessment of risk,
-familiarity, size and goal. It adapts the depth without abandoning discipline.
+familiarity and size. It adapts the depth without abandoning discipline.
 
 | Work | Typical Compass response |
 |---|---|
 | **Quick fix** | One clear criterion, a focused change and evidence that it works. |
-| **Regular** | Behavioural specification in Gherkin, proportionate technical design and review. |
+| **Regular** | Behavioral specification in Gherkin, proportionate technical design and review. |
 | **Full** | intent document, architecture and delivery plan, with detailed design and test strategy only where useful. |
 | **Hotfix** | Reproduce first, fix safely, then do the follow-up work skipped for speed (promote the reproduction to a scenario; optional postmortem). |
 | **Spike** | Time-boxed exploration. Record the learning; ship nothing directly. |
@@ -110,7 +110,7 @@ product:
 
 ![The Compass board for an invented invoicing product: a backlog lane, one lane per stage from assess to ship, and a done lane, with cards such as sso-saml-login blocked in implement and four issues done this week](assets/board-example.png)
 
-## Rigour without ritual
+## Rigor without ritual
 
 Compass separates two things that process frameworks often confuse:
 
@@ -123,7 +123,7 @@ Compass separates two things that process frameworks often confuse:
   bureaucracy: BDD, TDD, ADRs, visual architecture models and other practices
   that apply when they add value.
 
-Judgement goes into the assessment. Everything after it is deterministic: the
+Judgment goes into the assessment. Everything after it is deterministic: the
 same assessment plus the same policy produces the same approach, every time.
 
 ## One delivery language
@@ -132,7 +132,7 @@ same assessment plus the same policy produces the same approach, every time.
 assess → define → plan → implement → verify → ship
 ```
 
-The stages stay recognisable while their depth adapts. Each role enters the
+The stages stay recognizable while their depth adapts. Each role enters the
 same issue through its own command. For example, a product owner can start
 upstream with `/compass:intent`; see the
 **[roles guide](docs/roles-guide.md)** for the others.
@@ -195,7 +195,7 @@ compass issue migrate      bring older issue directories up to the current schem
 compass issue render       rewrite the rendered blocks of an issue's documents and the project index from its records; --all for every issue
 compass issue artifact set set a document's status in the review pack
 compass issue artifact-path  where one of an issue's documents is
-compass issue template show  the skeleton of a document kind from the catalogue, at a depth; --depth lightweight | thorough
+compass issue template show  the skeleton of a document kind from the catalog, at a depth; --depth lightweight | thorough
 compass issue status set   backlog, or done with --close-reason completed | not-planned | duplicate
 compass issue status remove  end a backlog hold; the state then follows the records
 compass issue blocked set  flag an in-progress or in-review issue as blocked, with a reason
@@ -224,7 +224,7 @@ compass scenario tests set replace the tests a scenario declares
 compass changed-file add   trace a changed file to the scenario that asked for it
 compass evidence add       append a typed evidence record
 compass evidence approve   record a person's approval of a human check, the sign-off on an irreversible change (--guardrail), a document (--artifact), the decisions agents took (--decisions) or a checkpoint hand-off (--checkpoint)
-compass evidence review    record a judgement against a judged check
+compass evidence review    record a judgment against a judged check
 compass terminology        what a term means here, from the frozen vocabulary
 compass quick-fix start    assess, evaluate and record a quick fix in one call
 compass quick-fix finish   trace, check, gate and ship a quick fix in one call

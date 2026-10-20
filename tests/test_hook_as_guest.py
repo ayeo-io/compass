@@ -301,7 +301,7 @@ def test_hag_c4_the_first_block_explains_an_automatic_opt_in(tmp_path):
     out = (r.stdout + r.stderr)
 
     assert r.returncode == BLOCK, out
-    assert "initialis" in out.lower(), (
+    assert "initializ" in out.lower(), (
         "the block does not mention that the project was initialised, so a "
         f"user who never ran init has no idea why Compass is here:\n{out}")
     assert "compass init" in out.lower(), (

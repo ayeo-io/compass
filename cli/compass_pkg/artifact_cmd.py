@@ -388,10 +388,10 @@ def cmd_issue_artifact(args):
         # kind is a document nobody had to ask for. The typo guard is
         # membership of the catalogue.
         raise CompassError(
-            "%r is not a kind this issue's catalogue declares (it declares: %s). "
+            "%r is not a kind this issue's catalog declares (it declares: %s). "
             "A document the assessment earned is registered by `compass approach "
             "evaluate --write`; any other kind must be declared in the artifacts "
-            "catalogue first." % (args.kind, ", ".join(sorted(known)) or "none"))
+            "catalog first." % (args.kind, ", ".join(sorted(known)) or "none"))
     repeating = (spec is not None and artifact_kinds.repeats(spec)) or any(
         isinstance(a.get("round"), int) for a in held)
     if asked is not None and not repeating:

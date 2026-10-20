@@ -23,7 +23,8 @@ freshness needs neither the layer chain nor the check implementations.
 """
 # DEPENDENCY: standard library (dataclasses, datetime, hashlib, os, subprocess),
 # the bundled PyYAML, compass_pkg.atomic_io (the YAML reader and the atomic
-# writer), compass_pkg.project_settings (which settings file counts) and
+# writer), compass_pkg.project_settings (which settings file counts),
+# compass_pkg.old_names (a leaf that reads the old digest key) and
 # compass_pkg.readiness_registry (the shipped versions). A leaf: the
 # session-start hook imports it, so it must not load the policy, the checks
 # or a command module. tests/test_project_readiness.py pins this list.
@@ -37,7 +38,7 @@ from dataclasses import dataclass
 
 import yaml
 
-from compass_pkg import atomic_io, project_settings, readiness_registry
+from compass_pkg import atomic_io, old_names, project_settings, readiness_registry
 
 RECORD = ".compass/readiness.yml"
 SCHEMA = 1
@@ -112,9 +113,12 @@ def new_record(root, signals, budget, measured_at=None):
     commit, the settings file and the shipped catalogue they were measured
     against."""
     when = measured_at or now_utc()
-    return {"schema": SCHEMA, "measured_at": when.strftime(TIME_FORMAT), "head": head(root),
-            "settings": settings_identity(root), "catalogue_digest": catalogue_digest(),
-            "budget": budget, "signals": list(signals)}
+    # The old digest key is written beside the new one, with the same value,
+    # until 8.0.0, so a CLI that reads only the old key still finds the record fresh.
+    return old_names.twins("readiness_key", {
+        "schema": SCHEMA, "measured_at": when.strftime(TIME_FORMAT), "head": head(root),
+        "settings": settings_identity(root), "catalog_digest": catalogue_digest(),
+        "budget": budget, "signals": list(signals)})
 
 
 def write(root, record):
@@ -165,8 +169,8 @@ def fresh(root, record, now=None):
     if current != {"path": recorded.get("path"), "digest": recorded.get("digest")}:
         name = current["path"] or recorded.get("path") or "the settings file"
         return Freshness(False, f"{name} changed since the record was written")
-    if record.get("catalogue_digest") != catalogue_digest():
-        return Freshness(False, "the readiness catalogue this CLI ships changed since the "
+    if old_names.pick(record, "readiness_key", "catalog_digest") != catalogue_digest():
+        return Freshness(False, "the readiness catalog this CLI ships changed since the "
                                 "record was written")
     for signal in record["signals"]:
         shipped = readiness_registry.installed_version(signal.get("impl"))

@@ -515,7 +515,7 @@ def cmd_plan_lint(args):
     print(f"compass plan lint: {len(findings)} possible {noun} in {relative_to_project(path)} [advisory]")
     for lineno, phrase in findings:
         print(f"  line {lineno}: {phrase}")
-    print("\n  Advisory, not a gate - this exits 0. Assess these as judgement in "
+    print("\n  Advisory, not a gate - this exits 0. Assess these as judgment in "
           "the strategies\n  walk of the governance check, and either fill them in "
           "or record why they stand.")
     return 0

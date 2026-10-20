@@ -228,7 +228,7 @@ def test_sr3_init_writes_state_and_no_settings_file(tmp_path):
     subprocess.run([sys.executable, str(CLI), "init"], cwd=proj, env=env,
                    check=True, capture_output=True)
     state = (proj / ".compass" / "state.yml").read_text()
-    assert "initialised:" in state and "records_signed_since:" in state
+    assert "initialized:" in state and "records_signed_since:" in state
     assert not (proj / "compass.yml").exists()
     # The hook reads `initialised` through project_settings, so init no longer
     # writes the interim `.compass/config.yml` that held it.
@@ -236,7 +236,7 @@ def test_sr3_init_writes_state_and_no_settings_file(tmp_path):
     # The cutoff reads from the state file.
     assert red_first.signed_since(str(proj / ".compass" / "work")) \
         == datetime.date.today()
-    assert project_settings.state(str(proj))["initialised"]["by"] \
+    assert project_settings.state(str(proj))["initialized"]["by"] \
         == "compass init"
 
 
@@ -254,7 +254,7 @@ def test_sr3_hook_explanation_still_reads_from_a_new_project(tmp_path):
     out = subprocess.run(["bash", str(ROOT / "hooks" / "pre-tool.sh")],
                          input=payload, text=True, capture_output=True,
                          env=env, cwd=proj)
-    assert "initialised by compass init" in out.stderr, out.stderr
+    assert "initialized by compass init" in out.stderr, out.stderr
 
 
 # SR-4: no reader is left on the old file.
@@ -390,7 +390,7 @@ def _hook_says_initialised_by(proj, who):
     out = subprocess.run(["bash", str(ROOT / "hooks" / "pre-tool.sh")],
                          input=payload, text=True, capture_output=True,
                          env=env, cwd=proj)
-    return f"initialised by {who}" in out.stderr, out.stderr
+    return f"initialized by {who}" in out.stderr, out.stderr
 
 
 def test_sh4_init_writes_no_old_settings_file_in_a_new_project(tmp_path):

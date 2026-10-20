@@ -32,7 +32,7 @@ DONE_TEMPLATE = ROOT / "templates" / "verification-report.md"
 CAPABILITY = "entry-exit-evaluation"
 
 READY_IDS = [
-    "dor-summary-filled", "dor-problem-traces-up", "dor-behaviour-is-gwt",
+    "dor-summary-filled", "dor-problem-traces-up", "dor-behavior-is-gwt",
     "dor-traceability-ids", "dor-affected-surface-named", "dor-no-open-questions",
     "dor-approach-still-fits",
 ]
@@ -256,7 +256,7 @@ def test_rd_5_a_drifted_preset_or_template_names_the_item_that_differs():
 
     changed = list(ready)
     changed[2] = changed[2] + " Edited."
-    assert any("dor-behaviour-is-gwt" in p and "differs" in p
+    assert any("dor-behavior-is-gwt" in p and "differs" in p
                for p in problems(base, changed, done))
 
     missing = copy.deepcopy(base)

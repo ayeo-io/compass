@@ -327,7 +327,7 @@ def test_arc_16_autonomy_ratio_and_band_split(tmp_path):
     # Counted by hand over the 12 autonomous and 8 waited issues of the fixture.
     assert (total("human_judgement"), total("guardrailed"), total("autonomous")) == (16, 40, 84)
     assert row_lines(text, "bands") == [
-        "  bands         human judgement 16 (checkpoints and human checks), guardrailed 40 "
+        "  bands         human judgment 16 (checkpoints and human checks), guardrailed 40 "
         "(gates), autonomous 84 (stages); over 20 issue(s)"]
     # An issue in flight is in no count: dropping both changes nothing.
     issues = {k: v for k, v in ratio_fixture().items() if not k.startswith("flight")}

@@ -59,6 +59,7 @@ import fnmatch
 import re as _re
 
 from compass_pkg import core as _core  # noqa: F401
+from compass_pkg import old_names  # noqa: E402
 from compass_pkg._all import *  # noqa: F401,F403
 from compass_pkg.subtasks import register as register_subtask_parser  # noqa: E402
 from compass_pkg.status_cmd import register as register_status_parser  # noqa: E402
@@ -111,7 +112,7 @@ def build_parser():
     p = argparse.ArgumentParser(
         prog="compass",
         description="The Compass CLI - the deterministic half of an adaptive "
-                    "framework. Judgement produces the assessment; this "
+                    "framework. Judgment produces the assessment; this "
                     "applies the policy and runs the checks.",
     )
     p.add_argument("--version", action="version",
@@ -147,10 +148,11 @@ def build_parser():
                           "the reason - it is the retrospective signal. A "
                           "reassess that changes nothing records it too, as "
                           "an unchanged entry")
-    pre.add_argument("--kind", choices=["judgement", "policy-correction",
-                                        "scope-change", "configuration"],
+    pre.add_argument("--kind", type=old_names.kind_type,
+                     choices=["judgment", "policy-correction",
+                              "scope-change", "configuration"],
                      help="what kind of re-assessment this is (default: "
-                          "judgement). Only judgement feeds the retrospective "
+                          "judgment). Only judgment feeds the retrospective "
                           "re-sizing signal - a policy correction is not "
                           "assessment mis-reading the work. A reassess that "
                           "changes only the issue's config: layer is recorded "
@@ -250,7 +252,7 @@ def build_parser():
     pcal.add_argument(
         "--compliance", action="store_true",
         help="score real sessions from their transcripts against the "
-             "process behaviours (advisory; exit 0)")
+             "process behaviors (advisory; exit 0)")
     pcal.add_argument("--days", type=int, metavar="N",
                       help="with --compliance: issues started in the last N "
                            "days (default 14)")
@@ -389,7 +391,7 @@ def build_parser():
     ptag = pts.add_parser("artifact", help="a document's status in the issue's review pack")
     pta = ptag.add_subparsers(dest="artifact_cmd", required=True).add_parser(
         "set", help="set a document's status in the issue's review pack")
-    pta.add_argument("kind", help="document kind, e.g. technical-design (any kind the issue's catalogue declares)")
+    pta.add_argument("kind", help="document kind, e.g. technical-design (any kind the issue's catalog declares)")
     pta.add_argument("--status", required=True, choices=list(ARTIFACT_STATUSES),
                      help="new status")
     pta.add_argument("--reason", help="why - required when omitting")
@@ -408,7 +410,7 @@ def build_parser():
     issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
     pttg = pts.add_parser("template", help="document templates")
     ptt = pttg.add_subparsers(dest="template_cmd", required=True).add_parser(
-        "show", help="print the skeleton of a document kind from the catalogue, or a template that is not a kind as the file")
+        "show", help="print the skeleton of a document kind from the catalog, or a template that is not a kind as the file")
     ptt.add_argument("kind", help="document kind or template name, e.g. requirements-review or verification-report")
     ptt.add_argument("--depth", help="the depth to print, lightweight or thorough; default is the depth the issue registers the kind at, else thorough")
     issue_arg(ptt)
@@ -425,7 +427,7 @@ def build_parser():
     pacc = sub.add_parser(
         "acceptance",
         help="declare and record acceptance for a change with no natural red "
-             "(config, docs, behaviour-preserving refactor)")
+             "(config, docs, behavior-preserving refactor)")
     paccs = pacc.add_subparsers(dest="subcmd", required=True)
     pas = paccs.add_parser("start", help="declare the acceptance before the change")
     pas.add_argument("--kind", required=True,
@@ -632,10 +634,10 @@ def build_parser():
         "init",
         help="make this directory a Compass project - create .compass/ "
              "(safe to run twice)")
-    pinit.add_argument("--by", help="what is initialising - the entry-point command, if not a person")
+    pinit.add_argument("--by", help="what is initializing - the entry-point command, if not a person")
     pinit.add_argument(
         "--readiness", action="store_true",
-        help="after initialising, measure the repository when compass.yml exists and "
+        help="after initializing, measure the repository when compass.yml exists and "
              "print the absent readiness signals; exits 0 whatever happens "
              "(/compass:init passes it)")
     pinit.set_defaults(func=cmd_init, output_kind="hand-off")
@@ -673,7 +675,7 @@ def build_parser():
     p_gloss.add_argument("--internal", action="store_true", help=argparse.SUPPRESS)
     p_gloss.add_argument("--out", help=argparse.SUPPRESS)
     p_gloss.add_argument("--root", help=argparse.SUPPRESS)
-    p_gloss.add_argument("--catalogue-out", help=argparse.SUPPRESS)
+    p_gloss.add_argument("--catalogue-out", help=argparse.SUPPRESS)  # us-english-scan: allow - flag name kept for existing callers
     p_gloss.set_defaults(func=cmd_derive_glossary, output_kind="report")
 
     # Private entry point for the archive migration core that `compass

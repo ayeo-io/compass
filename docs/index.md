@@ -1,7 +1,7 @@
 # Compass
 
 Compass is adaptive spec-driven development for Claude Code. You describe
-the work; Compass reads its risk, familiarity, size and goal, and a
+the work; Compass scores its risk, familiarity and size, and a
 deterministic CLI computes how much process it needs. Five guardrails hold
 on every approach: every change lands with a passing test, acceptance
 criteria come before code, code traces to a criterion, evidence is a

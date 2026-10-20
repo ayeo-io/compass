@@ -303,7 +303,7 @@ def test_arc_22_diagnose_shows_bands_and_cost(tmp_path):
                 f"at {outcomes[stage]['at']}" for stage in ("assess", "define", "refine", "plan")]
     assert shown[:4] == expected, shown
     assert shown[4:] == [
-        "  bands: human judgement 2 (checkpoints and human checks), guardrailed 7 (gates), "
+        "  bands: human judgment 2 (checkpoints and human checks), guardrailed 7 (gates), "
         "autonomous 5 (stages)",
         "  cost: $4.2500 over 8 request(s)",
         "    define       $1.5000  3 request(s)",
@@ -333,7 +333,7 @@ def test_arc_22_diagnose_shows_bands_and_cost(tmp_path):
     body["usage"] = {"recorded": False, "reason": "no-transcript", "sessions": ["sess-1"]}
     co.write_manifest(root, body)
     again = section(diagnose(root), "Checkpoints and cost")
-    assert again[4:] == ["  bands: human judgement 2 (checkpoints and human checks), "
+    assert again[4:] == ["  bands: human judgment 2 (checkpoints and human checks), "
                          "guardrailed 7 (gates), autonomous 5 (stages)",
                          "  cost: not recorded (no-transcript)"], again
 

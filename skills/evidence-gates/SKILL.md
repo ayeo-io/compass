@@ -19,20 +19,20 @@ mode the evidence-not-assertion guardrail exists to prevent.
 
 - **Guardrails are *checkable*.** They are cleared with evidence - a test ran, a
   scan passed, a human approved, the artifact exists. A guardrail clears or it
-  does not, and "clears" means there is recorded output a sceptic could re-run. A
+  does not, and "clears" means there is recorded output a skeptic could re-run. A
   failed guardrail is a no-pass. A guardrail beats any strategy.
-- **Strategies are *assessed*.** They are the reviewer's judgement - is this the
+- **Strategies are *assessed*.** They are the reviewer's judgment - is this the
   simplest thing that works, does it follow the team's engineering or voice
   strategies, was a departure recorded. There is no pass/fail artifact for a
-  strategy; there is an honest opinion, and it must be **labelled as judgement**,
+  strategy; there is an honest opinion, and it must be **labeled as judgment**,
   not dressed up as evidence. A strategy not followed is a note and a
   conversation, not an automatic gate failure.
 
-Naming them differently is what stops a judgement call being presented as a
+Naming them differently is what stops a judgment call being presented as a
 hard gate, and stops a hard gate being waved through on an opinion. When you
 write the `governance` dimension into `verification-report.md`, the guardrail
 findings and the strategy assessment go in clearly separated - evidence on one
-side, judgement on the other.
+side, judgment on the other.
 
 ## Evidence vs. assertion
 
@@ -101,11 +101,11 @@ A vocabulary - commit, acceptance, and the rest - in
   something a person reads - it becomes a transcript with a summary at the top.
   The record belongs in `evidence/`; the report cites it and states what it
   shows.
-- The **Reviewer** does the judgement half: applies the review dimensions to
+- The **Reviewer** does the judgment half: applies the review dimensions to
   that evidence and the change, and renders pass / no-pass. It decides whether
   what is true is good enough.
 
-Judgement rests on evidence. The Reviewer never passes a gate without the
+Judgment rests on evidence. The Reviewer never passes a gate without the
 Verifier's artifacts in hand.
 
 ## The review-dimension checklists

@@ -44,7 +44,7 @@ treat a project without a `compass.yml` as missing a prerequisite.
 - Critical risk alone does not bring the human sign-off of guardrail 5
   (`G5`); the labels do. When the change is one of them, apply `auth`,
   `payments`, `personal-data` or `migrations` as well as the risk. A
-  migration that can lose data is labelled `migrations`, whatever its risk.
+  migration that can lose data is labeled `migrations`, whatever its risk.
 - The sign of `trivial`: is the worst case cosmetic, instantly obvious, and
   instantly reversible - with no data, money, auth, or other team touched?
 - The common mistake: scoring risk by how hard the change is. A hard
@@ -52,10 +52,10 @@ treat a project without a `compass.yml` as missing a prerequisite.
   failure, not the work.
 
 **Familiarity** - *new code, or old code, and is the old code mapped?*
-- `brownfield-unmapped` is not a judgement of code quality - it means the
-  behaviour is not written down as scenarios. At medium size or more, with
+- `brownfield-unmapped` is not a judgment of code quality - it means the
+  behavior is not written down as scenarios. At medium size or more, with
   cross-cutting or critical risk, or with a domain label, it triggers a
-  routing guardrail floor: `behaviour-mapping` must run. Do not skip it. On
+  routing guardrail floor: `behavior-mapping` must run. Do not skip it. On
   an atomic or small change with trivial or contained risk and no domain
   label, the skill is advice (`RP-ADV-002`).
 - "Trivially readable" greenfield or brownfield can be treated as mapped, but
@@ -65,7 +65,7 @@ treat a project without a `compass.yml` as missing a prerequisite.
 - People under-estimate size far more than they over-estimate it. When
   genuinely torn between two values, take the higher one. Collapsing a stage
   that turned out easy is cheap; discovering during implementation that the
-  delivery approach was too light is expensive and demoralising.
+  delivery approach was too light is expensive and demoralizing.
 - Anchor on concrete tests: `atomic` is one file and no design decision;
   `medium` has one or two design decisions; `large` has real architecture and
   is plausibly parallelisable.
@@ -97,7 +97,7 @@ the domain labels, and run
 `compass approach evaluate --write --justify DIM="<why>"`, with one
 `--justify` for each new or changed dimension or switch; it composes the first approach and
 applies the floors, caps, immovable gates and artifact rules. That split is the
-determinism boundary and it is the point of the whole design: judgement
+determinism boundary and it is the point of the whole design: judgment
 produces the assessment, mechanism produces the approach.
 
 The detail - including how a spike is composed - is in

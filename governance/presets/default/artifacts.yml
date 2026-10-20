@@ -45,7 +45,7 @@ artifacts:
     file: acceptance-criteria.md
     stage: define
     owner: spec-author
-    audience: Every role reads it to agree the behaviour that will be built, and the builder turns each
+    audience: Every role reads it to agree the behavior that will be built, and the builder turns each
       scenario into a test.
     stands_for: requirements
     sections:
@@ -254,8 +254,8 @@ artifacts:
     stands_for: bug-report
     sections:
       thorough:
-      - Observed behaviour
-      - Expected behaviour
+      - Observed behavior
+      - Expected behavior
       - Reproduction steps
       - Impact
     depends_on: []

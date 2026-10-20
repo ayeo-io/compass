@@ -12,7 +12,7 @@ ships nothing, so it has only its own Conclude gate.)
 
 **correctness** - Does the change do what the scenarios describe? Is the green
 genuine, or green-by-skipped-test? Do the acceptance scenarios actually exercise
-the new behaviour, not just run near it?
+the new behavior, not just run near it?
 
 **governance** - Two distinct checks under one dimension, and keeping them
 distinct *is* the check:
@@ -20,9 +20,9 @@ distinct *is* the check:
   guardrail - the five shipped defaults and any project guardrails? Each is cleared with the
   verifier's artifacts, never a claim. A failed guardrail is a no-pass; a
   guardrail beats any strategy. See the `governance-check` skill.
-- *Strategies (assessed as judgement).* Did the work follow the applicable
+- *Strategies (assessed as judgment).* Did the work follow the applicable
   default and project strategies - and where it departed, is the departure
-  recorded? This is honestly the reviewer's opinion; record it *as* judgement,
+  recorded? This is honestly the reviewer's opinion; record it *as* judgment,
   clearly separated from the guardrail evidence. A strategy not followed is a
   note, not an automatic gate failure. On a sweep, rename, or cleanup that
   touches many files, this includes whether verification came from a fresh

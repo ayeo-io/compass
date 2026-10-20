@@ -33,7 +33,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg import (checkpoint_outcomes, decision_scope, documents_present, issue_usage,
-                         release_line, status_words)
+                         release_line, ship_commit_reason, status_words)
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
@@ -610,7 +610,7 @@ def cmd_land_commit(args):
     # First try at the commit.
     _judge_index()
     before_commit = _disk_hashes()
-    c1 = _git(["commit", "-m", msg], cwd)
+    last_commit = _git(["commit", "-m", msg], cwd)
     head_after = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
 
     retried = False
@@ -621,19 +621,13 @@ def cmd_land_commit(args):
         retried = True
         if _git(["diff", "--cached", "--quiet"], cwd).returncode != 0:
             _judge_index()
-            _git(["commit", "-m", msg], cwd)
+            last_commit = _git(["commit", "-m", msg], cwd)
             head_after = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
 
     # (c) ALWAYS check that HEAD advanced - the land's evidence is the moved HEAD.
     if head_after == head_before:
-        log = ((c1.stdout or "") + (c1.stderr or ""))[-800:]
-        raise CompassError(
-            "compass ship-commit: HEAD did not advance"
-            + (" after a retry" if retried else "")
-            + " - the land did NOT happen. A pre-commit hook may be aborting "
-            "the commit repeatedly; resolve it and re-run.\n"
-            "--- commit output (tail) ---\n" + log
-        )
+        raise CompassError(ship_commit_reason.failure_message(
+            cwd, last_commit, retried))
 
     # Success. Mark the issue landed only now that HEAD is confirmed advanced -
     # AND only if its gates actually cleared.
@@ -914,7 +908,7 @@ def _eval_ids(project_root):
             tree = None
         for node in getattr(tree, "body", []):
             if (isinstance(node, ast.Assign) and isinstance(node.value, ast.Dict)
-                    and any(isinstance(t, ast.Name) and t.id == "BEHAVIOURS"
+                    and any(isinstance(t, ast.Name) and t.id == "BEHAVIOURS"  # us-english-scan: allow - name of a data table in the eval files
                             for t in node.targets)):
                 ids |= {k.value for k in node.value.keys
                         if isinstance(k, ast.Constant) and isinstance(k.value, str)}
@@ -929,7 +923,7 @@ def slug_problem(project_root, slug):
     for ident in sorted(_eval_ids(project_root)):
         if re.search(rf"(?<![A-Za-z0-9_]){re.escape(ident)}(?![A-Za-z0-9_])",
                      slug or ""):
-            return (f"it names the eval scenario or behaviour {ident}; the living "
+            return (f"it names the eval scenario or behavior {ident}; the living "
                     f"spec lists every landed issue by slug and ships in the eval "
                     f"plugin copy, which must name none. Pick a slug that "
                     f"describes the change instead.")
@@ -947,7 +941,7 @@ def title_problem(project_root, title):
                     f"instead.")
     for ident in sorted(_eval_ids(project_root)):
         if re.search(rf"(?<![\w-]){re.escape(ident)}(?![\w-])", title or ""):
-            return (f"it names the eval scenario or behaviour {ident}; the living spec "
+            return (f"it names the eval scenario or behavior {ident}; the living spec "
                     f"ships in the eval plugin copy, which must name none. Describe the "
                     f"run instead.")
     from compass_pkg import public_copy
@@ -957,7 +951,7 @@ def title_problem(project_root, title):
                 "the test sets instead.")
     if public_copy.first_match(title, public_copy.OUTSIDE_USER_PATTERNS):
         return ("it claims an outside user's experience, which the living spec, "
-                "as public copy, must not claim. Describe the behaviour instead.")
+                "as public copy, must not claim. Describe the behavior instead.")
     return None
 
 

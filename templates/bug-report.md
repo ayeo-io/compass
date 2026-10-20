@@ -13,12 +13,12 @@ Fill every {{PLACEHOLDER}}.
 <!-- compass:render document-header -->
 <!-- /compass:render -->
 
-## Observed behaviour
+## Observed behavior
 
 {{What actually happens, stated as an observation - the output, the error,
 the wrong state. Paste real output where you have it.}}
 
-## Expected behaviour
+## Expected behavior
 
 {{What should happen instead, and on what authority - a spec, a doc, an
 acceptance criterion, or plain reasonable expectation. Cite it if it

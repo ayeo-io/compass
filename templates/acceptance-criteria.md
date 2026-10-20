@@ -12,7 +12,7 @@ distribution map at the plan stage. Every scenario carries a traceability id
 and a link back to the intent it serves - that is the traceability
 guardrail at work.
 
-Fill every {{PLACEHOLDER}}. Keep the Gherkin clean: one behaviour per
+Fill every {{PLACEHOLDER}}. Keep the Gherkin clean: one behavior per
 scenario, concrete Given/When/Then, no implementation detail.
 -->
 <!-- absorbed: "criteria, read by every role through its own perspective - and it is read" -->

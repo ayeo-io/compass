@@ -7,7 +7,7 @@ project.
 Run the checklist separately for each runtime. Keep the host version, framework
 revision, OS, installation method, hook trust state, raw output and expected
 versus observed result. Use `passed`, `failed`, `unsupported` or `unmeasured`
-for each case. The [adapter behaviour guide](adapter-conformance.md) explains
+for each case. The [adapter behavior guide](adapter-conformance.md) explains
 why local subprocess results cannot fill native or independent acceptance.
 
 | Step | Claude Code | Codex |

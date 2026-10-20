@@ -357,7 +357,7 @@ def load_manifest(task_dir):
             raise CompassError(
                 f"{path}: schema_version is '{sv}', but this CLI handles "
                 f"'{COMPASS_SCHEMA_VERSION}' (and reads 1.x by key "
-                f"normalisation). Update Compass, or migrate the manifest.yml."
+                f"normalization). Update Compass, or migrate the manifest.yml."
             )
     task = normalize_spine(task)
     task = manifest_store.track(task, path, data)  # the version a save merges against

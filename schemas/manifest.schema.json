@@ -20,7 +20,7 @@
     },
     "task": {
       "type": "string",
-      "description": "RETIRED. Declared only so a manifest written before the rename does not trip additionalProperties on its way to the normaliser, which maps it to `issue`. Never written."
+      "description": "RETIRED. Declared only so a manifest written before the rename does not trip additionalProperties on its way to the normalizer, which maps it to `issue`. Never written."
     },
     "created": {
       "type": "string",
@@ -789,7 +789,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Optional. Scenario id(s) that replace this one. behaviour-mapping names silent supersession as an anti-pattern: a target scenario replacing a behaviour-mapped baseline is a recorded decision, not a silent overwrite. Without the link a reader cannot tell a baseline that failed because the change landed as intended from one that failed because something broke."
+            "description": "Optional. Scenario id(s) that replace this one. behavior-mapping names silent supersession as an anti-pattern: a target scenario replacing a behavior-mapped baseline is a recorded decision, not a silent overwrite. Without the link a reader cannot tell a baseline that failed because the change landed as intended from one that failed because something broke."
           }
         }
       }
@@ -877,7 +877,7 @@
     },
     "follow_ups": {
       "type": "array",
-      "description": "Work this issue deferred and still owes (e.g. a hotfix's). `compass check` fails while any is unresolved. The v2 states are outstanding/resolved; the 1.x spellings (owed/paid) stay schema-legal so an unmigrated manifest still lints - readers normalise them.",
+      "description": "Work this issue deferred and still owes (e.g. a hotfix's). `compass check` fails while any is unresolved. The v2 states are outstanding/resolved; the 1.x spellings (owed/paid) stay schema-legal so an unmigrated manifest still lints - readers normalize them.",
       "items": {
         "type": "object",
         "required": [
@@ -950,13 +950,14 @@
           "kind": {
             "type": "string",
             "enum": [
+              "judgment",
               "judgement",
               "policy-correction",
               "scope-change",
               "configuration",
               "unchanged"
             ],
-            "description": "What kind of re-assessment this was. Only 'judgement' feeds compass retro's re-sizing signal - a policy correction, a scope change, a change to the issue's own config: layer (configuration) or a reassess that left the approach as it was (unchanged, which keeps only its reason) is not the assessment having misread the work."
+            "description": "What kind of re-assessment this was. 'judgement' is the old spelling of 'judgment', read until 8.0.0. Only 'judgment' feeds compass retro's re-sizing signal - a policy correction, a scope change, a change to the issue's own config: layer (configuration) or a reassess that left the approach as it was (unchanged, which keeps only its reason) is not the assessment having misread the work."
           },
           "generation": {
             "type": "object",

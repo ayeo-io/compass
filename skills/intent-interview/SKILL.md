@@ -116,7 +116,7 @@ the two side by side.
 >
 > Worth a read before the acceptance criteria are written. Specifically:
 > - **Anything I have put in your words that is not what you meant** - I
->   reorganised the source, and reorganising can change emphasis.
+>   reorganized the source, and reorganizing can change emphasis.
 > - **The sections marked as left open** - they are deliberate, not missing,
 >   and if that is wrong now is the cheap moment.
 > - **The first slice**, if one was agreed. Everything downstream follows it.

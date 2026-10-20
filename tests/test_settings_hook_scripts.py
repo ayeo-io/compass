@@ -129,21 +129,21 @@ def test_sh2_the_refusal_says_who_initialised_the_project(box, where):
     kwargs = {"state": STATE} if where == "state" else {"old": STATE}
     exit_code, _code, err = _refusal(box, **kwargs)
     assert exit_code == 2
-    assert "initialised by compass init on 2026-09-05" in err, err
+    assert "initialized by compass init on 2026-09-05" in err, err
 
 
 def test_sh2_the_state_file_wins_over_the_old_file(box):
     _e, _c, err = _refusal(box, state=STATE,
                            old=STATE.replace("compass init", "an old init"))
-    assert "initialised by compass init" in err, err
+    assert "initialized by compass init" in err, err
 
 
 @pytest.mark.parametrize("body", [None, "initialised: [broken\n",
                                   "initialised: just-text\n", "other: 1\n"])
 def test_sh2_a_missing_or_broken_record_adds_nothing(box, body):
     exit_code, code, err = _refusal(box, state=body)
-    assert (exit_code, code) == (2, "not-initialised"), err
-    assert "initialised by" not in err, err
+    assert (exit_code, code) == (2, "not-initialized"), err
+    assert "initialized by" not in err, err
 
 
 # SH-3: the scripts read the worktree root, cap and test command.

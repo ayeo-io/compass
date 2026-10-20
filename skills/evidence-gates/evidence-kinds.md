@@ -1,6 +1,6 @@
 # The kinds of evidence, and what each is for
 
-A vocabulary, looked up when you meet a kind you do not recognise.
+A vocabulary, looked up when you meet a kind you do not recognize.
 
 ## Pipeline stage vocabulary - commit, acceptance, and beyond
 
@@ -16,7 +16,7 @@ pre-tool hook enforces the ordering (the TDD strategy); the evidence-not-asserti
 that the evidence is real, not asserted.
 
 **The acceptance/releasability stage** is `verify.correctness` - the checks
-that decide whether the work is releasable. This is the gate that says *yes, this behaviour is
+that decide whether the work is releasable. This is the gate that says *yes, this behavior is
 what was specified* (acceptance-before-code in evidence form) and *yes, the tests pass* (tested-before-ship in
 evidence form). `verify.correctness` accepts only `test-run` evidence - not
 assertions, not opinions, not coverage numbers. An issue that clears

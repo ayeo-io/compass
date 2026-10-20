@@ -20,7 +20,7 @@ launch's worth of work.
 | Stage | Weight on the full approach |
 |---|---|
 | Assess | Thorough, plus explicit labels - the full approach is where domain floors most often fire. |
-| Define | **Thorough BDD discovery.** Greenfield: scenario discovery from `intent.md`. Brownfield: `behaviour-mapping` of current behaviour *then* the new scenarios. Scenarios are grouped by independence - this grouping seeds the distribution map. |
+| Define | **Thorough BDD discovery.** Greenfield: scenario discovery from `intent.md`. Brownfield: `behavior-mapping` of current behavior *then* the new scenarios. Scenarios are grouped by independence - this grouping seeds the distribution map. |
 | Refine | **Thorough pass.** Self-QA, governance QA, and an explicit ambiguity ledger. Non-engineering roles review here. |
 | Plan | **Thorough `technical-design.md` + `distribution-map.md`.** Architecture, every design decision recorded as an ADR-style note, governance check, and the mapping of scenario groups → independent work subtasks. |
 | Breakdown | **Multiagent.** `scripts/multiagent.sh` creates one git worktree per subtask; one `builder` agent per worktree; one `orchestrator` agent that writes no feature code. |

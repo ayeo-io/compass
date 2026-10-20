@@ -3,7 +3,7 @@
 Assess does not load this file.
 
 This describes what `compass approach evaluate` does: how a candidate shape
-is composed from the four dimensions, and how floors, caps, immovable gates
+is composed from the three scored dimensions, and how floors, caps, immovable gates
 and artifact rules then constrain it. A session does not do any of it by hand -
 that is the determinism boundary. The CLI computes; you read the dimensions
 and run the command.
@@ -27,7 +27,7 @@ assembles it from per-dimension contributions:
 
 Concretely, `compass approach evaluate` decides, per stage:
 
-- **Define** - how many scenarios, discovery vs. behaviour mapping, how deep.
+- **Define** - how many scenarios, discovery vs. behavior mapping, how deep.
 - **Refine** - thorough pass, lightweight pass, or collapsed (only collapsible when the
   spec is a single unambiguous scenario *and* no routing rule needs it).
 - **Plan** - "edit this file" one-liner, a real technical plan, or a plan plus

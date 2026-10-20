@@ -33,7 +33,7 @@ stages:
     modes:
       collapsed: {rank: 1}
       thorough: {rank: 3}
-    entry: [dor-summary-filled, dor-problem-traces-up, dor-behaviour-is-gwt, dor-traceability-ids,
+    entry: [dor-summary-filled, dor-problem-traces-up, dor-behavior-is-gwt, dor-traceability-ids,
       dor-affected-surface-named, dor-no-open-questions, dor-approach-still-fits]
   breakdown:
     order: 5

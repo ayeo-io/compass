@@ -17,7 +17,10 @@ nothing recorded. For one of the four it refuses, writing nothing, when:
 - the session's issue cannot be named: `COMPASS_ISSUE`, then
   `.compass/current-task`, refusing a pointer another session moved. It never
   guesses the most recently changed issue;
-- no approver can be named: `COMPASS_APPROVER`, else the project's `owner:`;
+- no approver can be named: `COMPASS_APPROVER`, else the project's `owner:`.
+  The message names which of seven causes applies (`compass.yml` unreadable,
+  `owner:` not text, `owner:` only in `.compass/config.yml`, the file above the
+  project folder, the file missing in a worktree or elsewhere, no `owner:`);
 - the input has no `prompt_id`, or a record already holds it, so one typed
   command is recorded once. `/compass:revoke` is exempt from the missing
   `prompt_id`: it only ends delegations, and a person can always end one.
@@ -234,20 +237,60 @@ def _issue(compass_dir, env, session_id):
     return slug
 
 
+_SET_APPROVER = "or set COMPASS_APPROVER before starting Claude Code."
+
+
+def _no_approver(lookup):
+    """The refusal for the cause that no owner can be named. Only the cause
+    `no-owner` says "no approver can be named"; the others name what is wrong
+    and the real next step. Each stays under 60 words for a folder name of ordinary
+    length. A hostile name of one-letter words is cut at `SHOWN_FOLDER_MAX` characters
+    (240, so 120 words). That brings a message to 143 words (compass.yml missing) up
+    to 273 words (compass.yml above, which shows two folder names), measured on a name
+    of 400 one-letter words. The 60-word cap holds for ordinary names only."""
+    records = approval_records
+    # The folder names come from the disk, so they are cleaned and cut like the reason.
+    cause, root = lookup.cause, records.shown_text(lookup.root, records.SHOWN_FOLDER_MAX)
+    found_in = records.shown_text(lookup.found_in, records.SHOWN_FOLDER_MAX)
+    if cause == records.CAUSE_UNREADABLE:
+        text = (f"compass.yml in {root} cannot be read: {lookup.detail}. "
+                f"Fix that file, {_SET_APPROVER}")
+    elif cause == records.CAUSE_NOT_TEXT:
+        text = (f"owner in compass.yml is {lookup.detail}, not text. "
+                f'Quote it, for example owner: "123", {_SET_APPROVER}')
+    elif cause == records.CAUSE_CONFIG_ONLY:
+        text = ("The approver is read from compass.yml only, and owner is set only in "
+                f".compass/config.yml. Add owner: <your id> to compass.yml, {_SET_APPROVER}")
+    elif cause == records.CAUSE_FILE_ABOVE:
+        text = (f"compass.yml is in {found_in}, but .compass is in {root}. Compass "
+                f"reads compass.yml only from the folder that holds .compass. Copy it "
+                f"there, {_SET_APPROVER}")
+    elif cause == records.CAUSE_MISSING_IN_WORKTREE:
+        text = (f"{root} is a git worktree with no compass.yml. A worktree holds only "
+                f"tracked files, and git does not copy an untracked one. Copy compass.yml "
+                f"into it, {_SET_APPROVER}")
+    elif cause == records.CAUSE_MISSING:
+        text = (f"There is no compass.yml in {root}. Add one with owner: <your id>, "
+                f"{_SET_APPROVER}")
+    else:
+        return ("Compass: no approver can be named, so nothing was written. Add "
+                f"`owner: <your id>` to compass.yml, {_SET_APPROVER}")
+    return _plain(f"nothing was written. {' '.join(text.split())}")
+
+
 def resolve_approver(task_dir, env):
     """`(name, role, source)`: `COMPASS_APPROVER` from the session's start-up
     environment, else the project's `owner:`. Refuses when neither names a
     person, and refuses the agent."""
-    owner = approval_records.project_owner(task_dir)
+    lookup = approval_records.owner_and_cause(task_dir)
+    owner = lookup.owner
     named = " ".join(str(env.get(APPROVER_ENV) or "").split())
     if named:
         name, source = named, "environment"
     elif owner:
         name, source = owner, "owner"
     else:
-        raise Refused("Compass: no approver can be named, so nothing was written. Add "
-                      "`owner: <your id>` to compass.yml, or set COMPASS_APPROVER before "
-                      "starting Claude Code.")
+        raise Refused(_no_approver(lookup))
     try:
         name = approvals.approver_name(name)
     except CompassError as exc:

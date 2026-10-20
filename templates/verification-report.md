@@ -56,7 +56,7 @@ evidence block is an automatic fail.
      security (scaled or full), clarity, claims. Each gets pass/fail AND
      evidence.
 
-     "Assessed by" records WHO reached the judgement: the `reviewer` agent, a
+     "Assessed by" records WHO reached the judgment: the `reviewer` agent, a
      named person, or "author" where the person who did the work also graded
      it. Be accurate rather than flattering. An author-assessed dimension is
      weaker evidence than an independently assessed one - the author cannot
@@ -70,7 +70,7 @@ evidence block is an automatic fail.
 | Dimension | Applies on this delivery approach? | Result | Assessed by | Evidence |
 |---|---|---|---|---|
 | correctness | always | {{PASS \| FAIL}} | {{reviewer \| name \| author}} | {{every scenario in the Scenario acceptance results passes}} |
-| governance | always | {{PASS \| FAIL}} | {{…}} | {{honours governance/ - guardrails clear with evidence, strategy deviations recorded; cite checks}} |
+| governance | always | {{PASS \| FAIL}} | {{…}} | {{honors governance/ - guardrails clear with evidence, strategy deviations recorded; cite checks}} |
 | traceability | always | {{PASS \| FAIL}} | {{…}} | {{code→scenario→intent and claim→scenario chains intact}} |
 | regression | {{yes / no}} | {{PASS \| FAIL \| n/a}} | {{…}} | {{nothing that was passing before now fails - link the record}} |
 | security | {{full / scaled / no}} | {{PASS \| FAIL \| n/a}} | {{…}} | {{OWASP-style pass, scaled to the assessed risk}} |

@@ -513,7 +513,9 @@ def test_PM_10_the_pinned_example_is_the_real_output(tmp_path):
     text = page.read_text(encoding="utf-8") if page.is_file() else ""
     shown = [block for block in re.findall(r"```json\n(.*?)```", text, re.S)
              if '"mode": "dry-run"' in block]
-    assert len(shown) == 1 and _masked(shown[0]) == pinned.strip()
+    assert len(shown) == 1
+    unmarked = re.sub(r"[ ]*<!-- us-english-scan: allow - [^>]*-->", "", shown[0])
+    assert _masked(unmarked) == pinned.strip()
 
 
 # --- PM-11 ------------------------------------------------------------------------

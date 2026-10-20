@@ -22,7 +22,7 @@ every reader of a setting follows the same file.
   the adoption setting is called `mode`; in `compass.yml` it is called
   `adoption`. No 6.0.0 command writes this file.
 - **The state file in `.compass/`** holds what the CLI writes, not what a
-  person edits: `initialised` (what created the project, and when) and
+  person edits: `initialized` (what created the project, and when) and
   `records_signed_since`. Do not edit it. `compass init` writes this file and
   no other, so a new project has `.compass/state.yml` and no
   `.compass/config.yml`. A project created before ADR-043 keeps both values in
@@ -51,7 +51,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `compass.yml` | `.compass/config.yml` | What happens |
 |---|---|---|
 | has `schema:` | holds a settings key | Compass refuses (`settings-conflict`). |
-| has `schema:` | holds only `initialised`, `records_signed_since` or unread keys | `compass.yml` is read. |
+| has `schema:` | holds only `initialized`, `records_signed_since` or unread keys | `compass.yml` is read. |
 | has no `schema:` | present | `.compass/config.yml` is read, and a warning on stderr says `compass.yml` is ignored. Add `schema:` if it is Compass's file. |
 | only file | absent | `compass.yml` is read, with or without `schema:`. |
 
@@ -93,7 +93,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `allow_project_commands` | Lets `compass check` and `compass readiness` run commands the project declares | `true`, `false` | `false` |
 | `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
 | `language` | The language the agent writes prose in (see `language` below) | a BCP 47 tag such as `en-US` | unset: no instruction |
-| `preset_index` | Reserved for published presets; no behaviour yet | - | - |
+| `preset_index` | Reserved for published presets; no behavior yet | - | - |
 | `github_labels` | Whether Compass writes an issue's labels and page to its linked GitHub issue (see `docs/github-labels.md`) | `domain`, `status`, `page`: `true` or `false` each | all `false`; no GitHub call |
 
 ### `adoption`
@@ -144,7 +144,7 @@ changed how often a session stops would give no sign.
 - `bdd_run_command`: the command the `compass bdd` run step uses when none is given.
 - `lint_command`, `format_check_command`, `build_command` and `typecheck_command`:
   the commands that decide the repository's readiness signals (see the
-  `readiness` catalogue in `governance/presets/default/readiness.yml`). Each is
+  `readiness` catalog in `governance/presets/default/readiness.yml`). Each is
   optional. Declare the check form of a formatter in `format_check_command`, the
   one that reports a difference and changes no file. `compass readiness` runs
   them, with `test_command`, only when `allow_project_commands` is `true` and the
@@ -170,8 +170,8 @@ file the hook read, `compass.yml` or `.compass/config.yml`.
 The hook reads this setting for an edit to a path that its built-in rules
 neither guard nor exempt, and only when the project has a settings file. A
 project with neither file costs the hook no Python start for that edit. It
-reads `initialised` only when it is about to refuse an edit, to say who
-initialised the project.
+reads `initialized` only when it is about to refuse an edit, to say who
+initialized the project.
 
 ### `models`
 
@@ -235,7 +235,7 @@ the contribution is trusted and this setting is `true`. `compass readiness`
 runs the project's build, test, lint, type-check and format-check commands
 under the same two conditions, in the same order; with the setting off, each of
 those readiness signals is absent and names this setting. The setting is read
-from the project's own file only, so a published preset cannot authorise its
+from the project's own file only, so a published preset cannot authorize its
 own commands. See `docs/security.md`.
 
 ### `github_labels`
@@ -255,7 +255,7 @@ command calls GitHub.
 
 Any other value, such as `"yes"`, reads as off. The setting is read from the
 project's own file only. See `docs/github-labels.md` for the labels, the
-limits and the failure behaviour.
+limits and the failure behavior.
 
 ### `language`
 

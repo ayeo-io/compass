@@ -15,10 +15,10 @@ A threat you are deliberately not acting on is written `risk accepted` with
 the reason - a decision rather than a shrug. `compass check` reports any row
 that is neither.
 
-The ThoughtWorks Technology Radar has had threat modelling in Adopt since
+The ThoughtWorks Technology Radar has had threat modeling in Adopt since
 Nov 2015 and names the same output form: "evil user stories".
 
-REVISIT IT. The Radar's warning is the "security sandwich" - threat modelling
+REVISIT IT. The Radar's warning is the "security sandwich" - threat modeling
 done once at the start and never again. Re-run this when the design changes.
 
 Keep it under 120 lines. Delete this comment block when you fill it in.

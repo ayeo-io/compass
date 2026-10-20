@@ -6,7 +6,7 @@ question asked, and every resolution is recorded here. Collapsed on a
 quick fix when the criteria are a single scenario certified unambiguous
 at assess (and no policy rule needs the review), and on a hotfix where
 the reproduction is the clarification. Skipped entirely on a spike - the
-behaviour is the unknown, so there is nothing to QA. On the regular approach
+behavior is the unknown, so there is nothing to QA. On the regular approach
 or anything heavier this file always exists.
 
 Fill every {{PLACEHOLDER}}. Each entry is a closed loop: question →

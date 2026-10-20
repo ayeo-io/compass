@@ -6,7 +6,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 
 # /compass:quick-fix
 
-The change is small, safe, and in code whose behaviour is already written
+The change is small, safe, and in code whose behavior is already written
 down. Three calls: `compass quick-fix start` records the assessment,
 `compass tdd-red` records the failing test, and `compass quick-fix finish`
 checks the fix. Read nothing else unless one of them refuses.
@@ -19,7 +19,7 @@ Stop and run the full pipeline if any of these is true:
 
 - the failure would spread past one feature, lose data, lose money, or touch
   auth (that is not a quick fix, whatever the diff size);
-- the existing behaviour you are changing is not written down anywhere, and
+- the existing behavior you are changing is not written down anywhere, and
   the change is more than small and contained (a small, contained one pins it
   first, below);
 - it is more than about three files, or there is a design decision in it;

@@ -68,7 +68,7 @@ a parallel spec.
    "none - issue does not introduce architectural decisions".
 
    ### 5. Notes for the planner
-   Summarise your findings in terms the planner can use when composing
+   Summarize your findings in terms the planner can use when composing
    `technical-design.md` §6 (Design decisions). On the regular or full approach,
    name the well-architected pillars the change touches and any trade-off
    between them (strategy `S15`, pillars from

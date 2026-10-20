@@ -15,7 +15,7 @@ depends_on:      # (optional) list of maps - the issues this one waits for; writ
     until:       #   (required in entry) [done, in-review, define, refine, plan, breakdown, implement, verify, ship] - done when not given
 github:          # (optional) map {repo, number} - the GitHub issue this issue is linked to (compass issue link set --github); labels are written there only when compass.yml sets github_labels
 
-assessment:        # (required) map - the four-dimension JUDGEMENT assessment (assess)
+assessment:        # (required) map - the four-dimension JUDGMENT assessment (assess)
   risk:  # (required) [trivial, contained, cross-cutting, critical]
   familiarity:       # (required) [greenfield, brownfield-mapped, brownfield-unmapped]
   size:     # (required) [atomic, small, medium, large, product]

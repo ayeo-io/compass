@@ -4,17 +4,17 @@ Compass gives product, design, engineering, marketing and QA distinct ways to
 enter the same issue. They do not maintain separate specifications.
 
 All roles share one file: `acceptance-criteria.md` - one set of observable
-behaviours, read from different professional perspectives.
+behaviors, read from different professional perspectives.
 
 ## Entry points and ownership
 
 | Role | Entry point | Primary artifacts | Governing question |
 |---|---|---|---|
 | Product owner or manager | `/compass:intent` | `intent.md` | Does the specification deliver the intended outcome? |
-| Product marketer | `/compass:position` | `positioning.md`, `launch-readiness.md` | Which claims does tested behaviour support? |
+| Product marketer | `/compass:position` | `positioning.md`, `launch-readiness.md` | Which claims does tested behavior support? |
 | Designer | `/compass:design` | `ui-contract.md` | Are interaction states and accessibility expectations specified? |
 | Engineer | `/compass:assess` | approach, design, code and tests | How will each scenario become tested software? |
-| QA | `/compass:verify` | `verification-report.md` | Is the behaviour covered, and is the evidence enough? |
+| QA | `/compass:verify` | `verification-report.md` | Is the behavior covered, and is the evidence enough? |
 
 A role is a perspective a session consults. It does not change the issue's
 assessment. The documents on disk decide: `positioning.md` adds the claims
@@ -29,7 +29,7 @@ Every spec is read by all five roles. Each reads it for a different reason:
 - **Product marketer** - reads for *claims*: every line of launch copy must point at a scenario id here.
 - **Engineer** - reads for *tests*: scenarios are the acceptance suite and seed the TDD red→green cycle.
 - **QA** - reads for *coverage*: which scenarios are exercised, which edges are not.
-- **Designer** - UI behaviour authored in `ui-contract.md` flows in here as scenarios.
+- **Designer** - UI behavior authored in `ui-contract.md` flows in here as scenarios.
 
 This guide holds the only copy of these lines for new specs.
 
@@ -63,22 +63,22 @@ connection to the intended outcome, the specification is not ready.
 
 The marketer can support “Export your month-end ledger in seconds” because the
 scenario states a measurable threshold. They cannot support “Export any report
-from anywhere” because no scenario establishes that behaviour.
+from anywhere” because no scenario establishes that behavior.
 
 Each public claim in `positioning.md` must trace to a scenario.
 `launch-readiness.md` records whether that scenario passed before release.
 
-### Design: interaction behaviour
+### Design: interaction behavior
 
-The designer contributes behaviours, not annotations on a finished build. A
+The designer contributes behaviors, not annotations on a finished build. A
 UI contract might add scenarios for progress, retry, empty, error and keyboard
 states. Those scenarios flow into the shared acceptance criteria before
 implementation.
 
 Visual artifacts can support the contract where they clarify the experience;
-the observable behaviour remains in the shared specification.
+the observable behavior remains in the shared specification.
 
-### Engineering: executable behaviour
+### Engineering: executable behavior
 
 The engineer turns the scenario into acceptance and lower-level tests. The
 permission check, entry filtering and response timing can each drive a focused
@@ -93,7 +93,7 @@ QA asks what the scenario does not say: no permission, zero entries, very large
 exports, concurrent updates and partial failure. Some gaps become scenarios;
 others become explicit non-goals.
 
-QA can return the issue to definition when a behaviour is ambiguous,
+QA can return the issue to definition when a behavior is ambiguous,
 uncoverable or unsupported by evidence. That is a specification correction,
 not late-stage polish.
 
@@ -102,15 +102,15 @@ not late-stage polish.
 ```mermaid
 flowchart TD
     PO["Product: intent"] --> SPEC["Shared acceptance criteria"]
-    DES["Design: UI behaviour"] --> SPEC
+    DES["Design: UI behavior"] --> SPEC
     MKT["Marketing: claims"] <--> SPEC
     SPEC --> ENG["Engineering: tests and code"]
     SPEC --> QA["QA: coverage and evidence"]
 ```
 
 - Product enters upstream, before the specification is settled.
-- Design feeds behaviour into the specification.
-- Marketing works alongside it, keeping claims within proven behaviour.
+- Design feeds behavior into the specification.
+- Marketing works alongside it, keeping claims within proven behavior.
 - Engineering implements it.
 - QA owns the final coverage and evidence decision.
 
@@ -130,7 +130,7 @@ Use `/compass:consult` when a decision crosses roles, such as:
 
 - a scope cut that invalidates a launch claim;
 - a security constraint that changes the interaction;
-- an architectural boundary that changes the proposed behaviour; or
+- an architectural boundary that changes the proposed behavior; or
 - a coverage gap that changes the planned work.
 
 The consult records the decision and its trade-offs. A guardrail always
@@ -142,13 +142,13 @@ shape.
 
 ## Anti-patterns
 
-| Anti-pattern | Better behaviour |
+| Anti-pattern | Better behavior |
 |---|---|
 | A private specification for each role | Contribute to and review the shared scenarios. |
 | Product, design or marketing consulted after implementation | Bring them in through their entry points while change is still inexpensive. |
 | A brief flattened directly into an engineering issue | Preserve `intent.md` and check the scenarios against it. |
-| Claims written without scenario links | Change the claim or add the behaviour needed to support it. |
-| QA asked only whether tests passed | Ask whether the behaviour space and evidence are enough. |
+| Claims written without scenario links | Change the claim or add the behavior needed to support it. |
+| QA asked only whether tests passed | Ask whether the behavior space and evidence are enough. |
 
 Delivery management is a cross-issue capability rather than a sixth role.
 `/compass:flow` reads issue state from the artifacts and surfaces blockers,

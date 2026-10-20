@@ -330,7 +330,8 @@ def cmd_refusal(args):
             for row in old_names.rows("refusal_code"):
                 if row["new"] == code:
                     print(f"**Old code:** `{row['old']}` is read until "
-                          f"{row['removed_in']}.\n")
+                          f"{row['removed_in']}. "
+                          "<!-- us-english-scan: allow - old code, read until 8.0.0 -->\n")
         return 0
     code = getattr(args, "code", None)
     if not code:

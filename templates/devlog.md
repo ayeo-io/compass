@@ -32,7 +32,7 @@ short - what happened, evidence pointer, what's next.
 
 ## {{YYYY-MM-DD HH:MM}} - Define
 
-- **Event:** {{scenarios authored \| existing behaviour mapped first, then new scenarios authored}}.
+- **Event:** {{scenarios authored \| existing behavior mapped first, then new scenarios authored}}.
 - **Artifact:** `acceptance-criteria.md` - {{N}} scenarios in {{M}} groups.
 - **Next:** {{requirements review \| plan, if the review collapsed}}.
 

@@ -41,6 +41,6 @@ can on the batch path; fixed there."*
 ## Anti-patterns
 
 - **Reflexive agreement** - implementing without checking.
-- **Reflexive defence** - explaining why the code is fine before reading properly.
+- **Reflexive defense** - explaining why the code is fine before reading properly.
 - **Silent compliance** - changing it with no reply, so the reasoning is lost.
 - **Deferring on authority** - the code does not know who filed the comment.

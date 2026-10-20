@@ -67,7 +67,7 @@ issue.
    against the product strategies in `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md`
    (an unmigrated 5.x project reads its own copied `governance/`) - what the
    product is for, who it serves, what it avoids, the
-   tie-breaker preferences. These are strategies: they bias the judgement, they
+   tie-breaker preferences. These are strategies: they bias the judgment, they
    are assessed not gated, and a recorded departure is allowed. The hard line is
    the intent-fidelity gate above.
 

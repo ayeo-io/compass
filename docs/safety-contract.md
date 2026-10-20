@@ -16,7 +16,7 @@ guarantee with no version beside it has held since the contract began.
 
 ### 1. Routing is deterministic after assessment
 
-Risk, familiarity and size need judgement, as do the goal and urgency switches. Once those values
+Risk, familiarity and size need judgment, as do the goal and urgency switches. Once those values
 are recorded, `compass approach evaluate` applies the routing policy as a pure
 function.
 
@@ -52,7 +52,7 @@ findings into production work.
 
 ### 5. Irreversible work needs recorded human approval
 
-Human approvals are needed for an issue labelled:
+Human approvals are needed for an issue labeled:
 
 - `auth` - auth and access-control changes;
 - `payments` - payments or movement of money;
@@ -979,7 +979,7 @@ The rules and the reasons are in
 ### Shell-write detection is best-effort
 
 The Claude Code pre-tool hook completely covers supported file-editing tools.
-For shell commands it recognises these write shapes, and only these:
+For shell commands it recognizes these write shapes, and only these:
 
 - `>`, `>>` and `>|` redirects, including the `cat > file <<EOF` heredoc
   form and a quoted target such as `> "src/app.ts"`
@@ -1086,7 +1086,7 @@ the same command, and it would take longer.
 
 The fuse is checked between write targets and between steps of the walk, so
 it does not interrupt a process that is running, such as the settings reader,
-or one write target. The quote strip and the path normaliser on one target
+or one write target. The quote strip and the path normalizer on one target
 take time that grows with the square of its length (a target of 10 KB ran for
 about 20 seconds, and one of 90 KB for 25 seconds), which is why a target over
 2048 bytes is refused and not left to the fuse. The worst accepted single
@@ -1145,7 +1145,7 @@ the other limits still refuse their commands, but a command that runs past
 the time limit can let the call run. Not every timeout fails closed.
 
 Not measured: only one version of Claude Code was available, so the
-behaviour of older versions is from its documentation.
+behavior of older versions is from its documentation.
 
 A machine without `jq` has no time bound. The hook then reads the input with
 `grep` before it knows the command's length, and that read slows quickly as
@@ -1214,7 +1214,7 @@ Each built-in check implementation carries a version, and a fixture corpus of
 cases with known verdicts. A build rule fails when a corpus verdict changes
 and the major version does not. Across majors, Compass is designed to refuse
 rather than reinterpret. Within a major, compatibility is shown on the corpus
-cases and nowhere else. A change of behaviour that no case exercises is not
+cases and nowhere else. A change of behavior that no case exercises is not
 detected, and the corpus is small (two cases for each check at first).
 
 **An approval of a waiver is a name and a date, and is not authenticated.** A waiver that loosens the shipped default carries `approved_by` and, for a

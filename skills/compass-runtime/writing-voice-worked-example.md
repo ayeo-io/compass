@@ -18,7 +18,7 @@ single issue's tools live (`lint` checks one, `receipt` renders one), and
 folding a renderer into `compass check` would have made a checking command
 do something that is not checking. If anyone would rather keep the spike's
 literal wording, every scenario only needs its invocation string swapped -
-the behaviour does not move.
+the behavior does not move.
 
 ## Whether the receipt re-runs anything
 

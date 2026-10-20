@@ -38,7 +38,7 @@ ROLE_LINES = (
     "- **Engineer** - reads for *tests*: scenarios are the acceptance suite and seed the TDD "
     "red→green cycle.",
     "- **QA** - reads for *coverage*: which scenarios are exercised, which edges are not.",
-    "- **Designer** - UI behaviour authored in `ui-contract.md` flows in here as scenarios.",
+    "- **Designer** - UI behavior authored in `ui-contract.md` flows in here as scenarios.",
 )
 #: A leading section number: "1. ", "5a. " or "4b ".
 NUMBERED = re.compile(r"^\d{1,2}[a-z]?\.?\s+")

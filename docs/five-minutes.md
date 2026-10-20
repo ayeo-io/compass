@@ -38,12 +38,12 @@ Two optional switches, `goal` and `urgency`, lean the approach towards a
 reference shape (spike or hotfix). Domain labels, such as `auth`, raise the
 floor. Neither is scored.
 
-Judgement goes into the assessment. Everything after it is deterministic: the
+Judgment goes into the assessment. Everything after it is deterministic: the
 same assessment plus the same policy produces the same approach, every time.
 
 For a contained typo, Compass will normally choose a quick-fix-shaped approach.
 It writes the manifest to `.compass/work/<issue>/` and the issue's documents to
-`docs/compass/<date>-<issue>/`, and the manifest records the judgement it was
+`docs/compass/<date>-<issue>/`, and the manifest records the judgment it was
 computed from. The part of `manifest.yml` that matters here:
 
 ```yaml
@@ -55,7 +55,7 @@ assessment:
   goal: delivery
 ```
 
-Those three dimensions and the switches are the only judgement in the routing. Everything after
+Those three dimensions and the switches are the only judgment in the routing. Everything after
 them - the stages, the gates, the orchestration - is computed. Run
 `compass approach evaluate --verbose` against that assessment and it prints:
 
@@ -127,7 +127,7 @@ Run:
 For this change, one Gherkin scenario is enough:
 
 ```gherkin
-Scenario: The invalid-token message is spelt correctly
+Scenario: The invalid-token message is spelled correctly
   Given a request contains an invalid token
   When authentication rejects the request
   Then the response says "invalid token"
@@ -214,7 +214,7 @@ runtime can resume from these files without the original chat.
 
 ## The mental model in five points
 
-1. **Assess the work, do not choose a process.** Three dimensions are judgement;
+1. **Assess the work, do not choose a process.** Three dimensions are judgment;
    the approach is computed from them.
 2. **The approach decides the process weight.** Which stages run at what weight,
    which artifacts are earned, which gates apply.

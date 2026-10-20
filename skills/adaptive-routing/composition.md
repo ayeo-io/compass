@@ -9,7 +9,7 @@ with the skill.
 
 Go stage by stage, not approach by approach:
 
-- **Define** - scenario count and discovery depth; behaviour mapping if brownfield.
+- **Define** - scenario count and discovery depth; behavior mapping if brownfield.
 - **Refine** - thorough / lightweight / collapsed. Collapsed is permitted *only* when the
   spec is a single unambiguous scenario *and* no routing guardrail needs the requirements review.
 - **Plan** - one-liner / real `technical-design.md` / plan + distribution map.

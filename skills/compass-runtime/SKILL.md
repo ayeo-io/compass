@@ -5,7 +5,7 @@ description: Which command runs each stage, which agent owns it, where issue sta
 
 # Compass - the stage map
 
-The rules of behaviour are in `compass-contract.md`, and the SessionStart hook
+The rules of behavior are in `compass-contract.md`, and the SessionStart hook
 puts them in every session before you read this. They are not repeated here,
 so the two cannot disagree.
 
@@ -72,7 +72,7 @@ and a reader knows where their evidence went without guessing.
 - **Assess** - load the `adaptive-routing` skill; consider the `router`
   agent.
 - **Define and refine** - load `bdd-specification`; on brownfield work whose
-  behaviour is not yet written down, also load `behavior-mapping`. The
+  behavior is not yet written down, also load `behavior-mapping`. The
   `spec-author` agent owns both stages.
 - **Plan** - load `plan-authoring` (which optional design sections earn a
   place) and `governance-check` (how to check the design against the
@@ -113,7 +113,7 @@ is no worktree - work on the current branch.
 ```
 compass.yml                     The one file a person edits: settings, and the project's edits to the shipped default (written by /compass:init or compass policy migrate)
 .compass/
-├── state.yml                   What the CLI wrote: what initialised the project, and when
+├── state.yml                   What the CLI wrote: what initialized the project, and when
 ├── config.yml                  Projects from 5.x only: read until the project moves its settings with compass policy migrate; no 6.0.0 command writes it
 ├── legacy/, migration.yml      Written by compass policy migrate: the superseded files, and the digests of them
 ├── current-task                One-line pointer to the active issue

@@ -7,7 +7,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep
 # /compass:assess
 
 Assessing is the one stage that never skips. You score the three dimensions -
-judgement - and `compass approach evaluate` computes the delivery approach
+judgment - and `compass approach evaluate` computes the delivery approach
 from `governance/routing-policy.yml`. You do not pick a process.
 
 **Issue:** $ARGUMENTS

@@ -5,7 +5,7 @@ is making, when `compass quick-fix start` computed a heavier approach, or
 on `--reassess`. The light path stays in `commands/assess.md`.
 
 Assessing is the one stage that never skips. It reads the three scored
-dimensions - that is **judgement** - and then hands them to the CLI, which
+dimensions - that is **judgment** - and then hands them to the CLI, which
 **computes** the delivery approach deterministically. You do not pick a
 process, and you do not compose the approach in your head: you assess the
 work, record the assessment, and `compass approach evaluate` applies
@@ -107,9 +107,9 @@ force; if it is still a spike, leave the marker in place.
     `architecture-loaded.yml` in the issue directory - that file is what
     downstream agents read for architectural context; no CLI verb does this
     yet. A project without one keeps working. Do **not** write load state
-    into the manifest's `assessment:` block; that block is the judgement only.
+    into the manifest's `assessment:` block; that block is the judgment only.
 
-2. **Read the three scored dimensions - this is the judgement** - risk,
+2. **Read the three scored dimensions - this is the judgment** - risk,
    familiarity and size, plus the optional switches (`goal` and `urgency`) and
    the `labels:` domain tags. Each dimension and each switch you set gets a
    value and a one-line justification; labels need none. If a value cannot be justified, ask the user
@@ -117,7 +117,7 @@ force; if it is still a spike, leave the marker in place.
    **exploration goal** - "I cannot state this well enough to deliver it
    yet" - leads towards a **spike**, the way live-defect urgency leads towards
    a hotfix. Write these into the manifest's `assessment:` block. The assessment
-   is the only part of the computation that is judgement - everything below
+   is the only part of the computation that is judgment - everything below
    is mechanism.
    Apply `auth`, `payments`, `personal-data` or `migrations` whenever the
    change is one of those: these labels, not the risk, bring the sign-off of

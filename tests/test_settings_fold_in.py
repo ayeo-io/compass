@@ -254,7 +254,7 @@ def test_sr3_hook_explanation_still_reads_from_a_new_project(tmp_path):
     out = subprocess.run(["bash", str(ROOT / "hooks" / "pre-tool.sh")],
                          input=payload, text=True, capture_output=True,
                          env=env, cwd=proj)
-    assert "initialised by compass init" in out.stderr, out.stderr
+    assert "initialized by compass init" in out.stderr, out.stderr
 
 
 # SR-4: no reader is left on the old file.
@@ -390,7 +390,7 @@ def _hook_says_initialised_by(proj, who):
     out = subprocess.run(["bash", str(ROOT / "hooks" / "pre-tool.sh")],
                          input=payload, text=True, capture_output=True,
                          env=env, cwd=proj)
-    return f"initialised by {who}" in out.stderr, out.stderr
+    return f"initialized by {who}" in out.stderr, out.stderr
 
 
 def test_sh4_init_writes_no_old_settings_file_in_a_new_project(tmp_path):

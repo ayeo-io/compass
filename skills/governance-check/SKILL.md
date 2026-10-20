@@ -47,7 +47,7 @@ as a reason to stop.
 If the project has `governance/decisions/`, read it too. Each entry records a
 product decision a named person made, and never changes. A design that
 reverses one is reported as "settled by <path>", for the person to reopen
-with a new entry, not passed or failed on your judgement.
+with a new entry, not passed or failed on your judgment.
 
 ## Walk 1 - the guardrails (hard, evidence)
 
@@ -96,14 +96,14 @@ project strategies (product, engineering, voice & positioning).
 The standard here is different and you must keep it different. A strategy is
 **assessed**, not cleared:
 
-- Did the work follow the strategy? This is honest judgement - is this the
+- Did the work follow the strategy? This is honest judgment - is this the
   simplest thing that works, does it follow the team's engineering
   strategies, does the copy fit the voice strategies.
 - Where it departed from a strategy, **is the departure recorded?** A recorded
   departure is the system working, not a failure. An *unrecorded* departure is
   the thing to flag - not because the departure is wrong, but because it was
   silent.
-- Record the result **as judgement**, clearly labelled as judgement - never
+- Record the result **as judgment**, clearly labeled as judgment - never
   dressed up as evidence. A strategy not followed is a note and a conversation,
   not an automatic stop.
 
@@ -121,7 +121,7 @@ promise tests without naming any: a decision quietly deferred to whoever
 builds it, who then makes it alone and unrecorded.
 
 **A reported hit is a note, rather than a stop.** The command always exits 0.
-Assess each hit as judgement: fill the gap in, or record why the placeholder
+Assess each hit as judgment: fill the gap in, or record why the placeholder
 legitimately stands (a deferred decision with a named owner is a plan, an
 unowned `TBD` is a gap). It never blocks the plan stage, and no floor promotes
 it to a gate.
@@ -158,12 +158,12 @@ Confirm the plan is consistent with `routing-policy.md`:
 2. Walk 1 - guardrails - against `technical-design.md` and the spec it builds on. Record
    per guardrail: **clears** (with evidence or the plan element that produces
    it) or **fails** (with the specific guardrail).
-3. Walk 2 - strategies - against the same. Record per strategy as **judgement**:
+3. Walk 2 - strategies - against the same. Record per strategy as **judgment**:
    followed, or departed-and-recorded, or departed-silently (flag it).
 4. Walk 3 - routing policy - confirm the plan's assumed delivery approach is within the
    routing guardrails and consistent with the routing strategies.
 5. Write all three results into `technical-design.md`, with the guardrail findings and the
-   strategy assessment **visibly separate** - evidence on one side, judgement
+   strategy assessment **visibly separate** - evidence on one side, judgment
    on the other.
 6. A failed guardrail **stops the plan** - revise or re-assess. A strategy
    departure does **not** stop the plan; record it and, if it matters, raise it.
@@ -180,14 +180,14 @@ Confirm the plan is consistent with `routing-policy.md`:
 
 - **The one-line pass** - "governance check: pass" with no per-guardrail,
   per-strategy detail. If you cannot name what you checked, you did not check.
-- **Conflating the two walks** - clearing a guardrail on judgement, or treating
+- **Conflating the two walks** - clearing a guardrail on judgment, or treating
   a strategy departure as a hard stop. The standards of proof are different on
   purpose; collapsing them is the failure the strategies/guardrails split was
   built to prevent.
 - **The dressed-up strategy** - recording a strategy assessment as if it were
-  evidence-backed. It is judgement; label it.
+  evidence-backed. It is judgment; label it.
 - **The convenience override** - treating a guardrail as advisory because
-  honouring it is inconvenient. A guardrail beats every strategy and every
+  honoring it is inconvenient. A guardrail beats every strategy and every
   deadline; inconvenience is not a counter-argument.
 - **Checking the stale file** - reviewing against a remembered copy of the
   governance, so the check runs against wording that has since changed.

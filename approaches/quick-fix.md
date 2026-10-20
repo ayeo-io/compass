@@ -25,7 +25,7 @@ small variant of an existing pattern, a config change with a known shape.
 | Stage | Weight on quick fix |
 |---|---|
 | Assess | Thorough. Always runs, always writes `delivery-approach.md`. ~minutes. |
-| Define | **One scenario.** A single Given/When/Then that names the new behaviour. That scenario is the spec. |
+| Define | **One scenario.** A single Given/When/Then that names the new behavior. That scenario is the spec. |
 | Refine | **Collapsed** - permitted only because the one scenario is unambiguous. If it is not unambiguous, the assessment does not produce quick fix. |
 | Plan | **Collapsed** to a one-line "edit which file(s)" note in `delivery-approach.md`. No `technical-design.md`. |
 | Breakdown | **Skipped.** Solo, current branch, no worktree. |

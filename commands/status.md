@@ -77,7 +77,7 @@ READY TO SHIP (1)
   its commit made.
 
 IN PROGRESS (5)
-  import-coordinate-crs-normalisation is furthest along (criteria defined and
+  import-coordinate-crs-normalization is furthest along (criteria defined and
   designed, not verified). The other four are barely started.
 
 NEXT UP

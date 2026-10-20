@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob
 
 The `compass init` verb creates `.compass/` - a state file and the work
 directory, and no settings file - and your first Compass command runs it for you and says that it
-did. So the command you wanted to run initialises the project,
+did. So the command you wanted to run initializes the project,
 not a setup step you had to know about first.
 
 What `/compass:init` adds is **`compass.yml`**, the one file a person edits. It
@@ -121,7 +121,7 @@ it is exempt from assessment.
      ready), `enforcement.code_globs`, `multiagent`, `record`. Routing rules do
      not go there.
    - **Changes to the shipped checks, gates, rules and approaches** are entries in
-     the file's catalogue keys, and each is checked against the default:
+     the file's catalog keys, and each is checked against the default:
      tightening needs nothing, and loosening needs a waiver with an approver.
      Add one only when the team hits something that must never recur. Run
      `compass policy lint` after every edit, and `compass policy show` to
@@ -135,7 +135,7 @@ it is exempt from assessment.
    `.compass/current-task` (the pointer the CLI uses to resolve which issue
    a `compass` call acts on); it does not need to be created now.
 
-6. **Report.** Summarise what was created or migrated, what the team chose to
+6. **Report.** Summarize what was created or migrated, what the team chose to
    leave at the default (a valid state, not owed work), and the next
    command: `/compass:assess` for an engineer, or a role entry point -
    `/compass:intent` (product owner/manager), `/compass:position` (product

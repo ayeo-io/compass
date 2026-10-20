@@ -23,7 +23,7 @@ choices in it.
 | Stage | Weight on the regular approach |
 |---|---|
 | Assess | Thorough. `delivery-approach.md` written. |
-| Define | A small **feature set** of scenarios - happy path, the realistic edges, the failure modes that matter. Brownfield-unmapped: map current behaviour into scenarios first. |
+| Define | A small **feature set** of scenarios - happy path, the realistic edges, the failure modes that matter. Brownfield-unmapped: map current behavior into scenarios first. |
 | Refine | **Lightweight pass.** Resolve ambiguities, QA the spec against itself and against governance. Writes `requirements-review.md`. |
 | Plan | **Real `technical-design.md`.** Technical approach, the one or two design decisions stated, governance check run. If the work splits into 2–3 independent units, a short distribution map. |
 | Breakdown | **Solo or pair.** Solo on the current branch by default; pair (2–3 worktrees) if the distribution map shows clean independence and the multiagent settings in `compass.yml` (or `.compass/config.yml` in a project without one) are met. |

@@ -1,13 +1,13 @@
 <!--
 TEMPLATE: ui-contract.md
 Role in the pipeline: the designer's artifact, written through `/compass:design`. The designer feeds INTO
-Define - UI behaviour here is authored as Given/When/Then scenarios so it
+Define - UI behavior here is authored as Given/When/Then scenarios so it
 flows directly into acceptance-criteria.md as scenarios, not as a separate track.
 That is how the designer is a full participant in the pipeline and not a
 downstream consumer. Accessibility commitments here are checked against the
 project's accessibility strategy, if the shipped strategies or your project's strategies file have one.
 
-Fill every {{PLACEHOLDER}}. Write behaviour as scenarios - the same Gherkin
+Fill every {{PLACEHOLDER}}. Write behavior as scenarios - the same Gherkin
 shape the spec uses - so the handoff into the define stage is mechanical.
 -->
 
@@ -39,7 +39,7 @@ shape the spec uses - so the handoff into the define stage is mechanical.
 
 ## Interaction scenarios
 
-<!-- Behaviour as Given/When/Then. These are written to be lifted straight
+<!-- Behavior as Given/When/Then. These are written to be lifted straight
      into acceptance-criteria.md - give each a traceability id now so the chain is
      unbroken across the handoff. -->
 

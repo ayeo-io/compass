@@ -20,7 +20,7 @@ schema_version: "3.0"     # the manifest schema this file follows
                           # '2.0': the v2 vocabulary keys (assessment, labels,
                           #         delivery_approach, stages, follow_ups,
                           #         reassessments). 1.x manifests are read by key
-                          #         normalisation until migrated.
+                          #         normalization until migrated.
                           # '3.0': the stored status is only `backlog` (a hold)
                           #         or `done` with a `close_reason`.
 issue: "{{ISSUE_SLUG}}"
@@ -31,7 +31,7 @@ created: "{{DATE}}"
 # blocked set` flags an in-progress or in-review issue as blocked.
 
 # --- the delivery approach ---------------------------------------------------
-# `assessment` is JUDGEMENT - the assess stage (an LLM or a human) produces it.
+# `assessment` is JUDGMENT - the assess stage (an LLM or a human) produces it.
 # Everything below `assessment` is MECHANICAL - the evaluator
 # (`compass approach evaluate --write`) computes it deterministically from
 # `assessment` + routing-policy.yml.

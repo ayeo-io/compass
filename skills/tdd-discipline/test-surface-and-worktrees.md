@@ -5,7 +5,7 @@ Reference for how much test to write and what the tests are telling you, plus th
 ## How test surface scales with risk
 
 This is the dimension the delivery approach *does* adapt. "More surface" means more of the
-behaviour's space is pinned by tests - more edges, more failure modes, more
+behavior's space is pinned by tests - more edges, more failure modes, more
 adversarial inputs - not "tests at all," which is constant.
 
 - **`trivial` risk** - the scenario and its obvious edges. Quick-fix
@@ -13,7 +13,7 @@ adversarial inputs - not "tests at all," which is constant.
 - **`contained`** - the scenario, its realistic edges, the failure modes
   that matter. Regular-approach territory.
 - **`cross-cutting`** - the above plus the interaction surface: how this
-  behaviour holds when adjacent features are also exercised.
+  behavior holds when adjacent features are also exercised.
 - **`critical`** - the above plus adversarial and boundary inputs, the rollback
   path, and the failure modes that lose data or money. Plus whatever any
   project coverage or security guardrail floor requires.
@@ -27,7 +27,7 @@ never need less.
 
 On a multiagent you run the full cycle - including a red, failing suite - inside
 your own git worktree. That isolation is the point: your red does not
-destabilise a sibling. Keep every change inside your subtask. If a test you need
+destabilize a sibling. Keep every change inside your subtask. If a test you need
 to write reaches into another subtask's surface, that is a signal for the
 orchestrator, not a reason to reach across.
 
@@ -49,7 +49,7 @@ design pressure towards simplicity.
 
 Signs of a design problem:
 
-- You cannot test the new behaviour without instantiating five other classes.
+- You cannot test the new behavior without instantiating five other classes.
 - Your test setup is longer than the assertion.
 - You need to reach into private state or patch internal calls to set up the
   scenario.

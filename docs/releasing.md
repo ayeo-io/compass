@@ -36,7 +36,7 @@ readers for old forms until 8.0.0. The facts are in `docs/upgrade-7-0-0.md`.
 
 **What the release contains**
 
-- The document set: the artifact catalogue describes each document (who writes
+- The document set: the artifact catalog describes each document (who writes
   it, who reads it and its sections), the delivery-approach record lives in the
   documents folder, and rendered blocks keep the status, ticks and counts of a
   document in step with the manifest and the evidence.
@@ -187,7 +187,7 @@ copied governance and `.compass/config.yml`) are read in their old words until
 | A 5.x user who migrates | `compass policy migrate` shows a dry run, and `--apply` moves the settings to `compass.yml`, the state to `.compass/state.yml`, and the old files to `.compass/legacy/`. |
 | This repository | A settings-only `compass.yml`. It keeps its generated governance files and the legacy lint. |
 
-**Behaviour changes**
+**Behavior changes**
 
 - A project with a `compass.yml` sees `approach evaluate` name the intent
   document `intent`, the launch document `launch-readiness` and the last stage
@@ -289,9 +289,9 @@ past this boundary.
 **When a change looks like it forces a major, removing the break is a
 legitimate response; redefining the break is not.** In 3.1.0, the assess
 stage started recording a subtask ceiling where it had recorded an
-orchestration, and nothing normalised the old field - so every manifest
-written earlier read as `None`. That was a major. Normalising old manifests
-on read made it a minor, and normalising was owed under ADR-006 regardless
+orchestration, and nothing normalized the old field - so every manifest
+written earlier read as `None`. That was a major. Normalizing old manifests
+on read made it a minor, and normalizing was owed under ADR-006 regardless
 of what it did to the number. The test is whether you would make the change
 with the version hidden.
 
@@ -343,7 +343,7 @@ with the version hidden.
 
    If any of the drift-guard tests fail, **do not bump VERSION further.**
    A failed drift-guard means a public-facing artifact has not been
-   updated for a behaviour change - the framework's own traceability guardrail (`G3`)
+   updated for a behavior change - the framework's own traceability guardrail (`G3`)
    is at risk. Fix the docs to catch up, re-run, then bump.
 
 4. **`make ci`** - must be green. Runs `compass policy lint`, then `issue
@@ -400,7 +400,7 @@ with the version hidden.
    only shows up once the tarball is unpacked somewhere else.
 
 9. **Check the queue against this release.** Run `compass flow --digest`
-   and read its queue ageing line and table. For each backlog issue that
+   and read its queue aging line and table. For each backlog issue that
    touches what this release changes, either pull it in or say why it
    waits. Put the answer in the release notes under
    "Queued against this release", or write "None" there. A backlog fix
@@ -413,7 +413,7 @@ with the version hidden.
    `python3 scripts/generate-shipped-releases.py` and land the updated
    `governance/shipped-releases.yml` and `governance/shipped-releases.tar.xz`
    through a pull request. `compass policy migrate` reads this table to
-   recognise a project's copied governance, and `test_PM_12` fails wherever
+   recognize a project's copied governance, and `test_PM_12` fails wherever
    tags are fetched until the table lists the new tag.
    `python3 scripts/generate-shipped-releases.py --check` exits 0 once it
    does.
@@ -466,10 +466,10 @@ Run these on top of steps 1 to 9, before step 10.
    - Contract 5 runs the hook corpus with the settings in a `compass.yml` that
      extends the default (B), and with the 5.6.0 governance copy added beside
      `.compass/config.yml` (C).
-   - Each parametrisation has a partner test that plants a fault in the
+   - Each parametrization has a partner test that plants a fault in the
      configuration builder and expects a difference.
 3. **The framework's own file.** `tests/test_framework_compass_yml.py` fails when
-   this repository's `compass.yml` holds a catalogue key, a waiver, an unlock or
+   this repository's `compass.yml` holds a catalog key, a waiver, an unlock or
    a capability, because this repository's issues must run the shipped default
    unchanged. `tests/test_old_settings_file_sweep.py` and
    `tests/test_settings_prose.py` fail when a source or a document names
@@ -479,8 +479,8 @@ Run these on top of steps 1 to 9, before step 10.
    command the tarball lacks.
 5. **Release notes.** The notes are the body of the GitHub release, which the
    repository does not track. Use the shape of the 5.6.0 notes: what is new, the
-   changed behaviour, what is fixed, and "Queued against this release" (step 9).
-   Say plainly that nothing is removed, and name the behaviour changes listed
+   changed behavior, what is fixed, and "Queued against this release" (step 9).
+   Say plainly that nothing is removed, and name the behavior changes listed
    above.
 
 ---
@@ -521,7 +521,7 @@ Before the change is merged:
    The baseline is the latest eval report in `docs/compass/`, named
    `<date>-eval-*.md`; the first is `2026-09-26-eval-pilot.md`.
 
-A change that lowers a behaviour's pass rate against the baseline does not
+A change that lowers a behavior's pass rate against the baseline does not
 merge without a written reason. This blocks only when both reports have at
 least five runs per scenario and condition: with fewer, one flipped result
 can be chance, so the comparison goes in the PR and does not block. The
@@ -756,4 +756,4 @@ catch common drift:
 | The release tarball contains no noise files | `scripts/release.sh` (built into `make release`) |
 
 These tests are not formalities - they are what makes a Compass
-release credibly reproducible. Run them; honour them.
+release credibly reproducible. Run them; honor them.

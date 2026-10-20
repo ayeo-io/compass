@@ -119,6 +119,17 @@ EXCLUDED = (
     "cli/vendor",
 )
 
+# Lines that keep a British word on purpose in a file that cannot hold a
+# marker, because JSON has no comment. Each entry is (file, a fragment of
+# the line, the reason). It covers the lines that hold the fragment, in that
+# file only; a test fails when an entry matches no line.
+KEPT_LINES = (
+    ("schemas/manifest.schema.json", '"judgement",',
+     "the stored value of a re-assessment kind, which the CLI still reads until 8.0.0"),
+    ("schemas/manifest.schema.json", "'judgement' is the old spelling",
+     "names the stored value above, which keeps the old spelling until 8.0.0"),
+)
+
 # One row for each file group. Each `live` field is on a line of its own, at
 # least three lines from the next, so three units can switch three rows on
 # without a merge conflict. A row that is not live is not scanned yet,
@@ -128,7 +139,7 @@ GROUPS = [
         "name": "README",
         "paths": ["README.md"],
         "kind": "text",
-        "live": False,
+        "live": True,
     },
     {
         "name": "adopter docs",
@@ -143,49 +154,49 @@ GROUPS = [
             "docs/roles-guide.md",
         ],
         "kind": "text",
-        "live": False,
+        "live": True,
     },
     {
         "name": "house files",
         "paths": ["CLAUDE.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md"],
         "kind": "text",
-        "live": False,
+        "live": True,
     },
     {
         "name": "review workflow",
         "paths": [".github/workflows/claude-review.yml"],
         "kind": "text",
-        "live": False,
+        "live": True,
     },
     {
         "name": "skills",
         "paths": ["skills"],
         "kind": "text",
-        "live": False,
+        "live": True,
     },
     {
         "name": "commands and agents",
         "paths": ["commands", "agents"],
         "kind": "text",
-        "live": False,
+        "live": True,
     },
     {
         "name": "approaches and templates",
         "paths": ["approaches", "templates"],
         "kind": "text",
-        "live": False,
+        "live": True,
     },
     {
         "name": "contract",
         "paths": ["compass-contract.md"],
         "kind": "text",
-        "live": False,
+        "live": True,
     },
     {
         "name": "hooks, schemas and adapters",
         "paths": ["hooks", "schemas", "adapters"],
         "kind": "text",
-        "live": False,
+        "live": True,
     },
     {
         "name": "cli string literals",
@@ -384,7 +395,12 @@ def scan_source(path, text, kind):
         found = scan_python(text, path)
     else:
         found = scan_text(text, path)
-    return [(str(path), number, word, line) for number, word, line in found]
+    return [(str(path), number, word, line) for number, word, line in found
+            if not _kept_line(str(path), line)]
+
+
+def _kept_line(path, line):
+    return any(path == kept and fragment in line for kept, fragment, _ in KEPT_LINES)
 
 
 def _files(group, root):

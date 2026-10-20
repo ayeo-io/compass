@@ -69,7 +69,7 @@ Practical decomposition heuristics:
 A git worktree is a second working directory backed by the same repository -
 its own checked-out branch, its own files, sharing one `.git`. That isolation
 is what lets a builder run a full red→green TDD cycle, including a failing
-suite, without destabilising siblings.
+suite, without destabilizing siblings.
 
 - `scripts/multiagent.sh` creates one worktree per subtask and prints the
   launch plan; it launches nothing. The orchestrator starts one `builder`
@@ -184,4 +184,4 @@ stash is not.
 - **Skipping combined regression** - trusting per-subtask green. The integration
   is exactly where the untested interactions live.
 - **Running a critical change as a multiagent** - ignoring the cap. The cap is a routing
-  guardrail; honour it.
+  guardrail; honor it.

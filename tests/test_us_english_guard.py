@@ -171,6 +171,15 @@ def test_trc_062_a_marker_with_a_reason_covers_its_line():
     assert words.scan_shell(f'echo "judgement" # {MARK}old form\n') == []
 
 
+def test_trc_062_a_comment_ended_by_bang_closer_is_read_like_one_ended_by_dashes():
+    """A browser ends an HTML comment at `--!>` as well as `-->`."""
+    assert words.scan_text(f"the judgement <!-- {MARK}old form --!>\n") == []
+    bare = words.scan_text(f"the judgement <!-- {MARK}--!>\n")
+    assert [(h[0], h[1]) for h in bare] == [(1, "judgement")]
+    after = words.scan_text(f"the judgement <!-- {MARK}old form --!>\nthe colour\n")
+    assert [(h[0], h[1]) for h in after] == [(2, "colour")]
+
+
 def test_trc_062_a_marker_with_no_reason_fails():
     for line in (f'x = "judgement"  # {MARK.strip()}\n',
                  'x = "judgement"  # us-english-scan: allow\n',

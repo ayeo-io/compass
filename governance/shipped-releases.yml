@@ -199,3 +199,10 @@ releases:
   guardrails:
     version: 1.33.0
     digest: d3c4f1fa566bdd999879318167420c73aaf1ee77f44ccd3fe1fc3bb2359e1a71
+- tag: v7.0.0
+  routing_policy:
+    version: 3.3.0
+    digest: 446bc89d68ccfd3f73657714d8ecb266effae1ecb687459de14080c6d0550af5
+  guardrails:
+    version: 1.33.1
+    digest: ad0dba9f9c8a5ebf089876cb2c1f68356653b77171b151fb83b4050523709198

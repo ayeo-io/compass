@@ -171,6 +171,36 @@ _EXEMPT_OTHER = [
     Case("EXM-94", "prompt-hook-script", REQ, "Bash", "rg --pre {script} x .", {}, "rg", "TRC-043"),
 ]
 
+# A copied descriptor (`>&2`, `2>&1`, `>&1`) ends at a blank, a new line, `;` or `&` in
+# the shell. Any other white space character is a word character there, so the shell
+# writes a file named `2<char><rest>` and the rest is a path, not a word. The gate must
+# not read such a command as a copy followed by a word (7 characters x 5 commands).
+_WORD_WHITE_SPACE = ("\r", "\x0c", "\x0b", "\x85", "\xa0", "\u2003", "\u2028")
+_FOLDER_FILE = ".compass/work/issue-a/approval-requests/pending/1.yml"
+_COPY_THEN = (
+    ("request-folder", "ls >&2{c}/../" + _FOLDER_FILE, "ls", "TRC-014"),
+    ("request-folder", "wc 2>&1{c}/../" + _FOLDER_FILE, "wc", "TRC-014"),
+    ("request-folder", "stat >&1{c}/../" + _FOLDER_FILE, "stat", "TRC-014"),
+    ("prompt-hook-script", "cat hooks/prompt-approval.sh >&2{c}", "cat", "TRC-043"),
+    ("prompt-hook-script", "cat evil >&2{c}/../hooks/prompt-approval.sh", "cat", "TRC-043"),
+)
+_COPY_THEN_WHITE_SPACE = [
+    Case(f"DUP-{n:02d}", thing, REQ, "Bash", command.replace("{c}", char), {}, exempt, twin)
+    for n, (char, (thing, command, exempt, twin)) in enumerate(
+        [(char, row) for char in _WORD_WHITE_SPACE for row in _COPY_THEN], 1)
+]
+# Where zsh differs from the gate, the command is judged by its whole text: zsh runs `cat`
+# for a lone copy of a descriptor, and with `extendedglob` expands `^x` and `x#` (4 rows).
+_ZSH_DIFFERS = [
+    Case(f"ZSH-{n:02d}", "request-folder", REQ, "Bash", command, {}, exempt, "TRC-014")
+    for n, (command, exempt) in enumerate((
+        ("ls .compass/work/issue-a/approval-requests\n>&2", "ls"),
+        ("stat " + _FOLDER_FILE + "; >&2", "stat"),
+        ("ls .compass/work/issue-a/approval-requests ^x", "ls"),
+        ("wc -l " + _FOLDER_FILE + " a#", "wc"),
+    ), 1)
+]
+
 # --- the prompt hook script: 27 rows ----------------------------------------------------------
 
 _SCRIPT = _bash("SCR", "prompt-hook-script", REQ, [
@@ -321,7 +351,7 @@ UNREFUSED_ON_BASE = tuple(_tools("MEM", "memory-folder", TRN, [
 ], start=28))
 
 REFUSED = tuple(_REQUEST_FOLDER + _EXEMPT_REQUEST + _EXEMPT_CALLER + _EXEMPT_OTHER
-                + _SCRIPT + _TRANSCRIPT + _DELEGATION + _MEMORY)
+                + _COPY_THEN_WHITE_SPACE + _ZSH_DIFFERS + _SCRIPT + _TRANSCRIPT + _DELEGATION + _MEMORY)
 
 # Text that pipes into a stage that could write or run it stays refused, as it is
 # now: only `tee`, `cat`, `head`, `tail`, `wc`, `sort`, `uniq`, `cut`, `tr`, `less`,

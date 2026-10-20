@@ -46,8 +46,14 @@ GH_SUBS = {"issue": ("create", "edit", "comment"),
            "pr": ("create", "edit", "comment", "review", "merge"),
            "release": ("create", "edit")}
 GH_TEXT = ("--title", "--body", "--notes", "-t", "-b")
-#: A descriptor copied by a redirect (`2>&1`, `>&2`, `>&-`) names no path.
-_DUPLICATE = re.compile(r"(?:\d+-?|-)(?![^\s;&])")
+#: A descriptor copied by a redirect (`2>&1`, `>&2`, `>&-`) names no path. One digit, then
+#: a blank, a new line, `;`, `&` or the end: the shell ends the copy at those and no other
+#: white space, so `>&2<CR>x` writes a file named `2<CR>x`. A descriptor of two digits is
+#: not read.
+_DUPLICATE = re.compile(r"(?:[0-9]-?|-)(?=[ \t\n;&]|\Z)")
+#: zsh reads `<1-3>`, `<->` and `<-5>` as a glob that matches the names of numbers.
+_NUMBER_RANGE = re.compile(r"[0-9]*-[0-9]*>")
+_DIGITS = re.compile(r"[0-9]+")
 
 
 class Command(NamedTuple):
@@ -68,29 +74,33 @@ def _dollar(t, i):
 def _split(t):
     """`(words, targets)` of each command; each word is `(value, flag, bare)`. The flag is
     the strongest `$` it held (0, 1 or 2, see `_dollar`), and `bare` is true when the word
-    holds a character outside quotes. An unquoted brace, glob or tilde character makes the
-    command not simple: the shell expands the word before the command runs."""
+    holds a character outside quotes. An unquoted brace, glob, tilde, `^` or `#` character
+    makes the command not simple: the shell expands the word before the command runs. So do
+    a zsh number range (`<1-3>`), `>!` and a descriptor of two digits. A command that is only
+    a copy of a descriptor (`>&2`) is not simple, because zsh runs `cat` for it."""
     n, i = len(t), 0
     commands, words, targets = [], [], []
     word, flag, bare, redirect, joined = None, 0, False, False, False
+    quoted, copied = False, False       # a quote or backslash in the word; a copy in the command
 
     def end_word():
-        nonlocal word, flag, bare, redirect
+        nonlocal word, flag, bare, redirect, quoted
         if word is not None:
             (targets if redirect else words).append((word, flag, bare))
             redirect = False
-        word, flag, bare = None, 0, False
+        word, flag, bare, quoted = None, 0, False, False
 
     def end_command(blank_ok):
-        nonlocal words, targets
+        nonlocal words, targets, copied
         end_word()
-        if redirect:
+        # zsh runs `cat` for a command that is only a redirect, even `>&2`.
+        if redirect or (copied and not words):
             raise _Refuse
         if words or targets:
             commands.append((words, targets))
         elif not blank_ok:
             raise _Refuse
-        words, targets = [], []
+        words, targets, copied = [], [], False
 
     while i < n:
         c = t[i]
@@ -108,27 +118,38 @@ def _split(t):
         elif c in "|()`":
             raise _Refuse
         elif c in "<>":
-            if word is not None and word.isdigit() and not flag:
-                word = None                     # the descriptor of `2>`
+            # The descriptor of `2>` is one unquoted digit. A quoted or escaped digit (`\2>`)
+            # is an argument to the shell, and a longer number is a descriptor the gate does
+            # not read, so neither is simple.
+            if word is not None and _DIGITS.fullmatch(word) and not flag:
+                if quoted or len(word) > 1:
+                    raise _Refuse
+                word = None
             if redirect and word is None:
                 raise _Refuse
             end_word()
             after = t[i + 1:i + 2]
             if after == "(" or (c == "<" and after in "<>") or (c == ">" and after == "|"):
                 raise _Refuse
+            if c == "<" and _NUMBER_RANGE.match(t, i + 1):
+                raise _Refuse
             if after == "&":
                 found = _DUPLICATE.match(t, i + 2)
                 if not found:
                     raise _Refuse
+                copied = True
                 i = found.end() - 1
             else:
                 redirect = True
                 i += after == ">" and c == ">"
+                if c == ">" and t[i + 1:i + 2] in ("|", "!"):     # zsh `>!f` writes `f`
+                    raise _Refuse
         elif c in "#=" and word is None:     # a comment; zsh expands `=name` to a path
             raise _Refuse
         else:
             joined = False
             word = "" if word is None else word
+            quoted = quoted or c in "\\'\""
             if c == "\\":
                 if i + 1 >= n or t[i + 1] == "\n":
                     raise _Refuse
@@ -157,7 +178,7 @@ def _split(t):
                 if i >= n:
                     raise _Refuse
             else:
-                if c in "{}*?[~":
+                if c in "{}*?[~^#":             # zsh with `extendedglob` reads `^x` and `x#`
                     raise _Refuse
                 if c == "$":
                     flag = max(flag, _dollar(t, i))

@@ -155,6 +155,21 @@ NOT_SIMPLE = [
     # zsh expands a word that starts with = to the path of a command
     "ls =cat", "cat =ls", "ls a =cat",
     "", "   ", ";", "ls ; ;", "ls ;& ls", "ls <> f", "ls >| f",
+    # a copy of a descriptor ends only at a blank, a new line, `;` or `&`: the shell reads any
+    # other white space character as part of a file name
+    *[f"ls >&2{c}x" for c in ("\r", "\x0c", "\x0b", "\x85", "\xa0", " ", " ")],
+    *[f"ls 2>&1{c}" for c in ("\r", "\x0c", "\x0b", "\x85", "\xa0", " ", " ")],
+    "ls >&1\r", "ls >&-\xa0", "ls >&22", "ls >&2x", "ls >&2-x",
+    # zsh reads a number range as a glob
+    "cat x <1-3> -l", "ls <->", "wc<-5> -1", "ls <1-3>x", "ls <3->",
+    # zsh with `extendedglob` reads `^x` and `x#` as a glob
+    "ls ^x", "ls a#", "cat a#b", "ls ^",
+    # zsh runs `cat` for a command that is only a redirect, a copy of a descriptor too
+    ">&2", "2>&1", "ls; >&2", "ls\n>&2", "ls && >&2", "ls ; 2>&1 ;",
+    # zsh writes `>!f` to `f`, and `>>!f` too
+    "ls >!f", "ls >>!f", "ls >! f",
+    # a quoted or escaped digit is an argument to the shell, and a long number is a descriptor
+    "ls \\2>f", "ls '2'>f", 'ls "2">f', "ls 11>f", "ls 22>&1", "ls 007>f",
 ]
 
 

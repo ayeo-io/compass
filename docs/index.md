@@ -13,6 +13,7 @@ recorded command output, and a person approves anything irreversible.
 - [Quickstart](quickstart.md) - from an empty machine to a finished first issue.
 - [Install check](install-smoke-test.md) - confirm an install works.
 - [Configuration](configuration.md) - project settings live in one file, `compass.yml`; `compass policy show` prints the configuration in force.
+- [Upgrading to 7.0.0](upgrade-7-0-0.md) - coming from 6.x: each change, what breaks and what to do.
 - [Upgrading to 6.0.0](upgrade-6-0-0.md) - coming from 5.x: the renamed words and commands, and what reads the old form until 8.0.0.
 
 ## What Compass guarantees

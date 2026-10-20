@@ -208,7 +208,7 @@ def test_at_least_ten_rules_each_with_an_openable_incident():
 
 def test_the_verb_is_on_the_public_surface():
     """RV-F."""
-    assert "compass review-rule list" in (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "compass review-rule list" in (ROOT / "docs" / "cli.md").read_text(encoding="utf-8")
     assert "review-rule list" in (ROOT / "cli" / "compass_pkg" / "verb_help.py").read_text(
         encoding="utf-8")
     help_out = _compass(ROOT, "--help").stdout

@@ -214,7 +214,7 @@ def test_a_landed_issue_in_this_repository(tmp_path):
 
 def test_the_verb_is_on_the_public_surface():
     """SD-E."""
-    assert "compass issue diagnose" in (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "compass issue diagnose" in (ROOT / "docs" / "cli.md").read_text(encoding="utf-8")
     assert "'issue diagnose'" in (ROOT / "cli" / "compass_pkg" / "verb_help.py").read_text(
         encoding="utf-8")
     assert "diagnose" in _compass(ROOT, "issue", "--help").stdout

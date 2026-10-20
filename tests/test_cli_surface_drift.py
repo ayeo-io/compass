@@ -65,15 +65,16 @@ def _cli_block_in(file_path):
 # Group A - public-facing CLI surface blocks
 # ---------------------------------------------------------------------------
 
-def test_trc_a1_readme_cli_block_tracks_compass_help():
-    """README.md's CLI surface block names every subcommand `compass --help` reports."""
+def test_trc_a1_cli_page_block_tracks_compass_help():
+    """docs/cli.md's CLI surface block names every subcommand `compass --help`
+    reports. docs/cli.md owns the verb list; the README links to it."""
     subs = _subcommands_from_help()
-    block = _cli_block_in("README.md")
+    block = _cli_block_in("docs/cli.md")
     missing = sorted(
         s for s in subs if not re.search(rf"(?<![\w-])compass {re.escape(s)}(?![\w-])", block)
     )
     assert not missing, (
-        f"README.md CLI block is missing {missing} from compass --help's subcommands. "
+        f"docs/cli.md CLI block is missing {missing} from compass --help's subcommands. "
         f"Full subcommand set: {sorted(subs)}.\n\nBlock content:\n{block}"
     )
 
@@ -92,15 +93,15 @@ def _sub_verbs(parent):
 
 
 def test_trc_a3_task_sub_verbs_tracked_in_cli_blocks():
-    """README.md's CLI block names every `compass issue` sub-verb (lint,
+    """docs/cli.md's CLI block names every `compass issue` sub-verb (lint,
     receipt, ...). The earlier tests cover top-level verbs; this one covers
     the sub-verbs under `issue` so a new one cannot ship undocumented
     behind a top-level no-op (e.g. `compass issue receipt` adding to
     existing `compass issue lint`). docs/five-minutes.md carries no CLI
-    block of its own - it points readers at README's.
+    block of its own - it points readers at docs/cli.md.
     """
     sub_verbs = _sub_verbs("issue")
-    for doc_file in ("README.md",):
+    for doc_file in ("docs/cli.md",):
         block = _cli_block_in(doc_file)
         missing = sorted(
             v for v in sub_verbs

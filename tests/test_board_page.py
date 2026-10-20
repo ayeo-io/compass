@@ -514,8 +514,11 @@ def test_trc_c10_done_panel_shows_close_reason_and_no_next_command():
 
 # --- group D: page safety and colour ------------------------------------------
 
+# Every family the page may name is one the reader's system has, so the page
+# loads no font. The serif pair is for the title only.
 SYSTEM_FONTS = {"system-ui", "-apple-system", "segoe ui", "sans-serif", "ui-monospace",
-                "sfmono-regular", "menlo", "consolas", "monospace"}
+                "sfmono-regular", "menlo", "consolas", "monospace",
+                "georgia", "times new roman", "serif"}
 
 
 def every_state_page():

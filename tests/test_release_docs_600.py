@@ -497,17 +497,16 @@ S4_VERBS = ("approach show", "approach render", "policy migrate", "policy update
             "evidence approve", "evidence review", "issue blocked remove")
 
 
-def s4_findings(readme, index, docs_readme, upgrade):
+def s4_findings(readme, cli, index, docs_readme, upgrade):
     found = []
     start = readme[:readme.index("## What Compass changes")]
     for needle in ("compass.yml", "docs/configuration.md", "docs/upgrade-6-0-0.md",
                    "docs/github-labels.md"):
         if needle not in start:
             found.append(f"README 'Start here' does not name {needle}")
-    block = readme[readme.index("## The CLI"):readme.index("## What the repository contains")]
     for verb in S4_VERBS:
-        if not re.search(rf"^compass {re.escape(verb)}\s", block, re.M):
-            found.append(f"README command list lacks compass {verb}")
+        if not re.search(rf"^compass {re.escape(verb)}\s", cli, re.M):
+            found.append(f"docs/cli.md command list lacks compass {verb}")
     for needle in ("configuration.md", "upgrade-6-0-0.md"):
         if f"]({needle})" not in index:
             found.append(f"docs/index.md does not link {needle}")
@@ -522,7 +521,7 @@ def s4_findings(readme, index, docs_readme, upgrade):
 
 
 def test_trc_s4_front_pages_route_to_compass_yml():
-    found = s4_findings(_read("README.md"), _read("docs/index.md"),
+    found = s4_findings(_read("README.md"), _read("docs/cli.md"), _read("docs/index.md"),
                         _read("docs/README.md"), _read("docs/upgrade-6-0-0.md"))
     assert not found, found
     for verb in S4_VERBS:
@@ -530,9 +529,9 @@ def test_trc_s4_front_pages_route_to_compass_yml():
 
 
 def test_trc_s4_the_scan_reports_the_old_front_pages():
-    readme = ("## Start here\nx\n## What Compass changes\n## The CLI\n"
-              "compass init   x\n## What the repository contains\n")
-    found = s4_findings(readme, "# Compass\n", "how to roll back.", "6.0.0 has no rollback")
+    readme = "## Start here\nx\n## What Compass changes\n"
+    found = s4_findings(readme, "compass init   x\n", "# Compass\n",
+                        "how to roll back.", "6.0.0 has no rollback")
     assert any("compass.yml" in f for f in found)
     assert any("compass approach show" in f for f in found)
     assert any("configuration.md" in f for f in found)

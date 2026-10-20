@@ -175,12 +175,12 @@ def test_json_output_matches_the_pinned_fixture(run_cli, issue):
     assert list(got) == list(pinned)
 
 
-def test_the_verb_is_in_the_help_and_the_readme():
+def test_the_verb_is_in_the_help_and_the_cli_page():
     from compass_pkg.verb_help import VERB_DESCRIPTIONS
 
     assert "scenario tests set" in VERB_DESCRIPTIONS
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "compass scenario tests set" in readme
+    cli_page = (ROOT / "docs" / "cli.md").read_text(encoding="utf-8")
+    assert "compass scenario tests set" in cli_page
 
 
 # --- a changed test list cannot keep a stale green -------------------------

@@ -59,6 +59,46 @@ They run locally with the same permissions as your user. The shipped hooks do
 not need network access, but check the installed revision rather than
 relying on this document.
 
+## What Compass runs, sends and fetches
+
+Compass works on your machine and in your repository. It reaches the network
+only in the cases below, and each one starts only when you ask for it.
+
+- **Fetches** a brief you name over HTTPS, with `compass intent ingest --from
+  <url>`. It refuses any scheme but `https`, on redirects too.
+- **Fetches** a git parent when the project's `extends:` names one
+  (`github:<owner>/<repo>@<ref>#<sha>`). It runs `git` for the one pinned
+  commit, reads its `compass.yml` as data, and caches it under
+  `.compass/cache/parents/`. Only `compass policy lint`, `compass policy show`,
+  `compass policy diff` (when a reference is a git parent), `compass policy
+  update`, `compass preset test` and `compass approach evaluate --write` fetch,
+  and only a commit that is not cached yet; never `compass check`.
+  `compass issue configure --commit` fetches too, because it runs the
+  reassess. `compass policy update` always asks the remote which commit its
+  ref names, unless
+  `COMPASS_OFFLINE=1` is set. `--offline` or `COMPASS_OFFLINE=1` stops the others
+  fetching. `COMPASS_PARENT_REMOTE_BASE`
+  names a mirror in place of `https://github.com`. Git runs with your own git
+  configuration, so your credential helper runs
+  ([git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md)).
+- **Sends** your delivery record to a git repository you configure, with
+  `compass record sync`, which `compass ship-commit` also runs. It happens
+  only when `compass.yml` (or `.compass/config.yml` in a project without one)
+  names a `record:` remote; it redacts
+  credentials, and rival product names when `record.names_key` is set.
+- **Starts** host sessions (`claude -p`) with `compass run`, which sends their
+  prompts through Claude Code as any session does. Those sessions may not push
+  or merge.
+- **Runs** commands on your machine: the test command you give `compass
+  tdd-red`, `compass tdd-green` and `compass quick-fix finish`, your
+  project's own guardrails declared with `check: command-passes`, git in your
+  repository, and the CLI itself from the plugin's hooks.
+- **Reads** the current Claude Code session's own transcript when a quick fix
+  finishes, keeping only token counts, model names and times
+  (`docs/headless-runner.md`).
+- **Clones and installs** other frameworks only in the evaluation harness,
+  `evals/harness.py`, which maintainers run by hand to compare conditions.
+
 ## Git parents
 
 A project can extend a git parent, `github:<owner>/<repo>@<ref>#<sha>`, which

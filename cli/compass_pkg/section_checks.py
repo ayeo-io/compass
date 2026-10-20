@@ -116,7 +116,7 @@ def declines(task, task_dir, kind, heading):
         return "no %s is registered with a path" % kind
     depth = entry.get("depth")
     if not _listed(task_dir, kind, depth, heading):
-        return ('the catalogue of generation %s does not list "%s" for %s at %s'
+        return ('the catalog of generation %s does not list "%s" for %s at %s'
                 % (number, heading, kind, "depth %s" % depth if depth else "no depth"))
     return None
 

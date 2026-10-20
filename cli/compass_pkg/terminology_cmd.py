@@ -168,7 +168,7 @@ def render_glossary(vocab: dict, artifacts: dict = None) -> str:
     rows = kind_rows(artifacts)
     if rows:
         out += ["## Document kinds", "",
-                "The kinds of document a process writes, from the artifacts catalogue of the",
+                "The kinds of document a process writes, from the artifacts catalog of the",
                 "shipped default. Each entry gives who reads the document, the name the",
                 "industry uses for it, and where it lives.", ""]
         for row in sorted(rows, key=lambda r: r["kind"]):
@@ -181,8 +181,8 @@ def render_glossary(vocab: dict, artifacts: dict = None) -> str:
 
 #: The lines in `docs/artifact-catalog.md` between which `_derive-glossary`
 #: writes the table of kinds. The text around them is written by hand.
-REGION_START = "<!-- compass:catalogue-table -->"
-REGION_END = "<!-- /compass:catalogue-table -->"
+REGION_START = "<!-- compass:catalogue-table -->"  # us-english-scan: allow - region marker already in generated documents
+REGION_END = "<!-- /compass:catalogue-table -->"  # us-english-scan: allow - region marker already in generated documents
 
 
 def render_catalogue_region(artifacts: dict) -> str:

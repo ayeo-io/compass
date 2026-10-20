@@ -264,7 +264,7 @@ def _convert(policy, guardrails, where):
     try:
         return _strip(legacy_adapter.adapt(policy, guardrails))
     except (KeyError, TypeError, AttributeError, ValueError) as exc:
-        raise CompassError(f"cannot convert {where} to catalogue form: "
+        raise CompassError(f"cannot convert {where} to catalog form: "
                            f"{type(exc).__name__}: {exc}") from exc
 
 
@@ -342,7 +342,7 @@ def overlay_between(base, legacy):
                 change = _entry_change(catalogue, before[entry_id], after[entry_id])
             if change:
                 overlay.setdefault(catalogue, {})[entry_id] = change[1]
-                ops.append({"catalogue": catalogue, "id": entry_id,
+                ops.append({"catalogue": catalogue, "id": entry_id,  # us-english-scan: allow - the key is stored in the migration record
                             "operation": change[0], "waiver": None})
     return overlay, ops
 
@@ -465,7 +465,7 @@ def _needs_excuse(base_config, overlay, ops):
     cannot be compared with it. Those are the ones a waiver must excuse."""
     needed = []
     for op in ops:
-        entry = {op["catalogue"]: {op["id"]: overlay[op["catalogue"]][op["id"]]}}
+        entry = {op["catalogue"]: {op["id"]: overlay[op["catalogue"]][op["id"]]}}  # us-english-scan: allow - the key is stored in the migration record
         try:
             alone = merge.apply(base_config, entry, "project", "project")[0]
             refused = classify.classify(base_config, alone, early_exit=True).result \
@@ -550,11 +550,11 @@ def _legacy_waiver(release, legacy, op, recorded, cache):
         return cache[key]
 
     def entry(conf):
-        return (conf.get(op["catalogue"]) or {}).get(op["id"])
+        return (conf.get(op["catalogue"]) or {}).get(op["id"])  # us-english-scan: allow - the key is stored in the migration record
 
     def swapped(body):
         out = copy.deepcopy(base)
-        table = out.setdefault(op["catalogue"], {})
+        table = out.setdefault(op["catalogue"], {})  # us-english-scan: allow - the key is stored in the migration record
         if body is None:
             table.pop(op["id"], None)
         else:
@@ -608,10 +608,10 @@ def _derive(root, made, settings):
     # owes, so a document the shipped preset still declares, such as the UI
     # contract once the role rules went, is missing from them. The project
     # extends that preset, so such an entry is not removed.
-    made.adopted = [{k: op[k] for k in ("catalogue", "id", "operation")}
+    made.adopted = [{k: op[k] for k in ("catalogue", "id", "operation")}  # us-english-scan: allow - the key is stored in the migration record
                     for op in overlay_between(base, current)[1]
                     if op["operation"] != "remove"
-                    or op["id"] not in (parent_config.get(op["catalogue"]) or {})]
+                    or op["id"] not in (parent_config.get(op["catalogue"]) or {})]  # us-english-scan: allow - the key is stored in the migration record
     overlay, ops = overlay_between(base, legacy)
     made.ops = ops
     made.blocked += _retired_edits(overlay)
@@ -629,7 +629,7 @@ def _derive(root, made, settings):
             recorded, cache = _recorded_waivers(policy), {}
             for op in _needs_excuse(base, overlay, ops):
                 waiver = _legacy_waiver(release, legacy, op, recorded, cache) or _stub()
-                overlay[op["catalogue"]][op["id"]]["waiver"] = waiver
+                overlay[op["catalogue"]][op["id"]]["waiver"] = waiver  # us-english-scan: allow - the key is stored in the migration record
                 op["waiver"] = waiver["approved_by"]
         made.doc = _layer_document(overlay, settings)
         shown, made.equivalence = _verdict(legacy, faithful, parent_name="copy",
@@ -854,13 +854,13 @@ def report_json(made, mode):
         "sources": [{"path": rel, "digest": made.digests.get(rel)} for rel in made.sources],
         "adopted": made.adopted,
         "overlay": {"counts": counts,
-                    "entries": [{"catalogue": o["catalogue"], "id": o["id"],
+                    "entries": [{"catalogue": o["catalogue"], "id": o["id"],  # us-english-scan: allow - JSON key kept for old readers
                                  "operation": o["operation"], "waiver": o["waiver"]}
                                 for o in made.ops]},
         "settings": {"moved": made.moved, "state": list(made.state),
                      "dropped": made.dropped, "unread": made.unread},
         "equivalence": made.equivalence,
-        "behaviour": made.behaviour,
+        "behaviour": made.behaviour,  # us-english-scan: allow - JSON key kept for old readers
         "blocked_by": made.blocked,
         "files": made.files,
         "compass_yml": made.compass_yml or None,
@@ -894,11 +894,11 @@ def _base_lines(made):
     if made.adopted:
         lines.append(f"  adopted from the current default, with no waiver ({len(made.adopted)} "
                      "entries; an entry you also edited keeps your edit):")
-        lines += [f"    {a['operation']:<8}{a['catalogue']}.{a['id']}" for a in made.adopted]
+        lines += [f"    {a['operation']:<8}{a['catalogue']}.{a['id']}" for a in made.adopted]  # us-english-scan: allow - reads the stored key
     else:
         lines.append("  adopted from the current default: nothing")
     if made.behaviour:
-        lines.append(f"  behaviour: against the copy the migrated project is "
+        lines.append(f"  behavior: against the copy the migrated project is "
                      f"{made.behaviour['result']} ({made.behaviour['changed']} of "
                      f"{made.behaviour['points']} points differ)")
     return lines
@@ -920,7 +920,7 @@ def report_text(made, mode):
         lines += _base_lines(made)
         if made.ops:
             lines.append(f"  overlay: {len(made.ops)} entries")
-            lines += [f"    {o['operation']:<8}{o['catalogue']}.{o['id']}"
+            lines += [f"    {o['operation']:<8}{o['catalogue']}.{o['id']}"  # us-english-scan: allow - reads the stored key
                       + _WAIVER_NOTE.get(o["waiver"], "")
                       for o in made.ops]
         else:

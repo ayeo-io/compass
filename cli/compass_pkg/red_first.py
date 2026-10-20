@@ -321,7 +321,7 @@ def missing_first_failure(task, task_dir):
     return ("the greens on record show the suite passes, but no red is on "
             "record for this issue, so nothing shows a test failed first. Run "
             "`compass tdd-red -- <test command>` on a failing test. For work "
-            "with no natural red - config, docs, a behaviour-preserving "
+            "with no natural red - config, docs, a behavior-preserving "
             "refactor - declare it before the change with `compass "
             "acceptance start --kind validation|refactor -- <command>` and "
             "finish with `compass acceptance record`." + why)

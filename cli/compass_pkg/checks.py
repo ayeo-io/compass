@@ -626,7 +626,7 @@ def dod_tag_problems(rest, ev_registry, backfills):
             )
         elif bf_entry.get("status") not in ("outstanding", "resolved"):
             problems.append(
-                f"follow-up '{bf_id}' has unrecognised status "
+                f"follow-up '{bf_id}' has unrecognized status "
                 f"'{bf_entry.get('status')}' (must be 'outstanding' "
                 "or 'resolved')"
             )

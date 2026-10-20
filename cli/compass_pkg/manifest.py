@@ -908,7 +908,7 @@ def _eval_ids(project_root):
             tree = None
         for node in getattr(tree, "body", []):
             if (isinstance(node, ast.Assign) and isinstance(node.value, ast.Dict)
-                    and any(isinstance(t, ast.Name) and t.id == "BEHAVIOURS"
+                    and any(isinstance(t, ast.Name) and t.id == "BEHAVIOURS"  # us-english-scan: allow - name of a data table in the eval files
                             for t in node.targets)):
                 ids |= {k.value for k in node.value.keys
                         if isinstance(k, ast.Constant) and isinstance(k.value, str)}
@@ -923,7 +923,7 @@ def slug_problem(project_root, slug):
     for ident in sorted(_eval_ids(project_root)):
         if re.search(rf"(?<![A-Za-z0-9_]){re.escape(ident)}(?![A-Za-z0-9_])",
                      slug or ""):
-            return (f"it names the eval scenario or behaviour {ident}; the living "
+            return (f"it names the eval scenario or behavior {ident}; the living "
                     f"spec lists every landed issue by slug and ships in the eval "
                     f"plugin copy, which must name none. Pick a slug that "
                     f"describes the change instead.")
@@ -941,7 +941,7 @@ def title_problem(project_root, title):
                     f"instead.")
     for ident in sorted(_eval_ids(project_root)):
         if re.search(rf"(?<![\w-]){re.escape(ident)}(?![\w-])", title or ""):
-            return (f"it names the eval scenario or behaviour {ident}; the living spec "
+            return (f"it names the eval scenario or behavior {ident}; the living spec "
                     f"ships in the eval plugin copy, which must name none. Describe the "
                     f"run instead.")
     from compass_pkg import public_copy
@@ -951,7 +951,7 @@ def title_problem(project_root, title):
                 "the test sets instead.")
     if public_copy.first_match(title, public_copy.OUTSIDE_USER_PATTERNS):
         return ("it claims an outside user's experience, which the living spec, "
-                "as public copy, must not claim. Describe the behaviour instead.")
+                "as public copy, must not claim. Describe the behavior instead.")
     return None
 
 

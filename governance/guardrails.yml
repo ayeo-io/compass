@@ -21,7 +21,7 @@
 #
 # Note the asymmetry, and that it is deliberate: GUARDRAILS get a .yml because
 # they are checkable. STRATEGIES do not - `strategies.md` stays prose-only,
-# because a strategy is *assessed* (the reviewer's judgement), not *checked*.
+# because a strategy is *assessed* (the reviewer's judgment), not *checked*.
 # That asymmetry is the guardrail/strategy distinction made physical: if a
 # thing can be given a named, mechanical check, it can be a guardrail; if it
 # can only be judged, it is a strategy.
@@ -230,7 +230,7 @@ gate_evidence_requirements:
   verify.governance: [command-output, manual-review, artifact]
   verify.traceability: [command-output, artifact]
   verify.claims: [claim-review, command-output, artifact]
-  verify.clarity: [manual-review, artifact]       # inherently judgement - and now visibly so
+  verify.clarity: [manual-review, artifact]       # inherently judgment - and now visibly so
   spike.conclude: [spike-conclusion]              # SPECIFIC: a generic artifact will not do
   verify.analyze: [consistency-check]              # SPECIFIC: advisory command-output does NOT clear this gate
   verify.architecture: [test-run, command-output]    # architecture checks: command-output from command-passes, or a test-run

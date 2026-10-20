@@ -748,7 +748,7 @@ def test_acf_61(tmp_path):
         assert "**Audience:**" not in out
     code, out, err = _template_show(root, "devlog", "--depth", "thorough")
     assert code == 2, out + err
-    assert "devlog" in err and "not a catalogue kind" in err and "no sections" in err
+    assert "devlog" in err and "not a catalog kind" in err and "no sections" in err
     # The heading test does not read them.
     assert not [p for p in _heading_problems(TEMPLATES, _preset()) if "devlog" in p]
 

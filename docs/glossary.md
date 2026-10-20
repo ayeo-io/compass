@@ -794,7 +794,7 @@ The fixed semantic lifecycle Compass owns: backlog, ready, in-progress, in-revie
 
 ## Document kinds
 
-The kinds of document a process writes, from the artifacts catalogue of the
+The kinds of document a process writes, from the artifacts catalog of the
 shipped default. Each entry gives who reads the document, the name the
 industry uses for it, and where it lives.
 

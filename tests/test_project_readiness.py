@@ -344,7 +344,7 @@ def test_prc_8_record_freshness_settings_catalogue_and_versions(tmp_path, monkey
     other.write_text("schema: 1\nreadiness: {}\n", encoding="utf-8")
     monkeypatch.setattr(readiness_record, "SHIPPED_CATALOGUE", str(other))
     verdict = _fresh(project)
-    assert not verdict.fresh and "catalogue" in verdict.reason
+    assert not verdict.fresh and "catalog" in verdict.reason
     monkeypatch.undo()
 
     # An implementation version changed.

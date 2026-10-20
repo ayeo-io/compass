@@ -39,8 +39,8 @@ POLICY_TEMPLATE = """\
 # is what the deterministic evaluator (`compass approach evaluate`) actually runs.
 #
 # The split that matters: the *assessment* (three scored dimensions - risk,
-# familiarity and size - plus the goal and urgency switches and labels) is JUDGEMENT - the assess stage, an LLM or a
-# human, produces it, and it is not mechanisable, because that judgement
+# familiarity and size - plus the goal and urgency switches and labels) is JUDGMENT - the assess stage, an LLM or a
+# human, produces it, and it is not mechanisable, because that judgment
 # IS the adaptivity. This file governs only what happens *after* the assessment
 # is recorded: composing and constraining the delivery approach. That part is deterministic and
 # reproducible - same assessment + same policy => same delivery approach, every time.
@@ -206,7 +206,7 @@ GUARDRAILS_TEMPLATE = """\
 #
 # Note the asymmetry, and that it is deliberate: GUARDRAILS get a .yml because
 # they are checkable. STRATEGIES do not - `strategies.md` stays prose-only,
-# because a strategy is *assessed* (the reviewer's judgement), not *checked*.
+# because a strategy is *assessed* (the reviewer's judgment), not *checked*.
 # That asymmetry is the guardrail/strategy distinction made physical: if a
 # thing can be given a named, mechanical check, it can be a guardrail; if it
 # can only be judged, it is a strategy.
@@ -374,7 +374,7 @@ ENTRY_COMMENTS = {
 # A comment on the same line as a value, as (spaces before it, the comment).
 INLINE_COMMENTS = {
     ('RP-ART-001', 'gate'): (16, "# adds the claims gate to the approach's set"),
-    ('gate_evidence_requirements', GATE_VERIFY_CLARITY): (7, '# inherently judgement - and now visibly so'),
+    ('gate_evidence_requirements', GATE_VERIFY_CLARITY): (7, '# inherently judgment - and now visibly so'),
     ('gate_evidence_requirements', GATE_SPIKE_CONCLUDE): (14, '# SPECIFIC: a generic artifact will not do'),
     ('gate_evidence_requirements', GATE_VERIFY_ANALYZE): (14, '# SPECIFIC: advisory command-output does NOT clear this gate'),
     ('gate_evidence_requirements', GATE_VERIFY_ARCHITECTURE): (4, '# architecture checks: command-output from command-passes, or a test-run'),

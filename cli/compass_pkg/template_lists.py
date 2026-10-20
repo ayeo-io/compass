@@ -250,7 +250,7 @@ def cmd_issue_template(args):
     else:
         if asked:
             raise CompassError(
-                f"compass issue template show: '{kind}' is not a catalogue kind and has no "
+                f"compass issue template show: '{kind}' is not a catalog kind and has no "
                 f"sections, so --depth does not apply. Print it without --depth.")
         rendered = render(template_text, view, kind)
     if terminal.resolve_mode(args) == "json":

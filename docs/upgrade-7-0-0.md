@@ -50,7 +50,7 @@ Stage commands now write the status of each registered document. A document that
 - **A re-assessment keeps a written document as `superseded`.** An entry the new approach no longer registers stays when it has a path, with a reason that names the re-assessment.
 - **`compass ship-commit` refuses an unapproved document.** The blocking check `artifacts-approved` fails on a document that reads `draft` or `awaiting-approval`, and on one omitted with no reason. Each failure names the command that fixes it. A document the approach earned and nobody wrote must be written, or omitted with `compass issue artifact set <kind> --status omitted --reason "<why>"`.
 - **A quick fix gains no stop.** `compass quick-fix finish` approves the quick fix's document after `compass check` passes.
-- **A project artifact with no `stage` is owned by ship.** Add `stage: <stage>` to its catalogue entry to have an earlier stage approve it. `compass ship-commit` approves the ship-owned ones.
+- **A project artifact with no `stage` is owned by ship.** Add `stage: <stage>` to its catalog entry to have an earlier stage approve it. `compass ship-commit` approves the ship-owned ones.
 - **`compass issue migrate` settles the status of done issues.** On a done issue, each `draft` or `awaiting-approval` document becomes `approved` (close reason `completed`, `approved_by: compass issue migrate`) or `superseded` (`not-planned` or `duplicate`), with the reason "migrated from a 6.0.0 record". Documents in any other status and open issues are left as they are. The dry run reports the counts the apply makes. It counts each entry the apply registers before this step, for a relocated document or a verification note. It leaves out a stub distribution map that the apply renames and supersedes before this step. A second run changes nothing.
 - **A decision an agent took for the person is shown at the next checkpoint.** `compass issue decision add` (and `--from-ledger`) records it in `decisions_taken`. On `balanced` and `controlled` autonomy, `compass next` reports `Waiting at the <stage> checkpoint` until a person confirms the set with `compass evidence approve --decisions` or reopens a decision with `compass issue decision set`. On `autonomous` it lists the decisions and does not wait. The approver is a name in the project file's `approvers:` lists, or its `owner` when there are none. The confirmation is an `artifact-approval` record, never a `human-approval` record.
 - **`compass retro --decisions` reports how those decisions were settled.** It gives the share confirmed, changed and never confirmed on a done issue.
@@ -65,7 +65,7 @@ Stage commands now write the status of each registered document. A document that
 
 | Name | Where | Meaning |
 |---|---|---|
-| `stage` | an artifact in the catalogue | The stage that owns the artifact |
+| `stage` | an artifact in the catalog | The stage that owns the artifact |
 | `approved_by`, `approved_at` | an artifact entry in `manifest.yml` | Who approved the document, and when |
 | `artifact-approval` | the type of an evidence record | A person's approval of a document or of a set of decisions |
 | `artifacts-approved` | a check in the default preset | The ship refusal |
@@ -135,9 +135,9 @@ After `--apply`, run `compass issue render --all --dry-run` to see the files and
 | `evidence[].meets`, `follow_ups[].defers`, `page_ticks` | `manifest.yml` | The records that meet an item. Only migration writes `page_ticks` |
 | `<!-- compass:render KIND -->` | marker in a document | The start of a block Compass writes. Do not edit between the markers |
 
-## The artifact catalogue, the delivery-approach record and the archive
+## The artifact catalog, the delivery-approach record and the archive
 
-The artifact catalogue now describes each document: who writes it, who reads it, its traditional name and its sections. The delivery-approach record lives in the documents folder on every approach, each assessed value carries a justification, and a review round is a file of its own. `compass issue migrate` moves and renames the archive's documents to match. The decisions are ADR-053 to ADR-056 in `architecture/decisions/`. The facts are in `docs/artifact-catalog.md`.
+The artifact catalog now describes each document: who writes it, who reads it, its traditional name and its sections. The delivery-approach record lives in the documents folder on every approach, each assessed value carries a justification, and a review round is a file of its own. `compass issue migrate` moves and renames the archive's documents to match. The decisions are ADR-053 to ADR-056 in `architecture/decisions/`. The facts are in `docs/artifact-catalog.md`.
 
 ### What breaks
 
@@ -148,12 +148,12 @@ The artifact catalogue now describes each document: who writes it, who reads it,
 - **The spike conclusion's flag is `--next-issue`.** `compass issue artifact set spike-conclusion --decision graduate-to-delivery --next-issue <slug>` names the delivery issue. The flag is new in 7.0.0 and has no alias. A pre-release build spelled it with the retired word, so only a script written against that build is affected.
 - **The migrate renames and moves documents.** Review rounds become `review-<n>.md`, the delivery-approach record moves into the documents folder, and a one-subtask stub map becomes `distribution-map.md.v6.bak`. A script or note that names an old filename must use the new one. Each registry entry's reason names the old filename.
 - **The migrate removes the compatibility pointer.** A `pre-tool.sh` hook installed before 5.0.0 looks for the record beside the manifest only, so it blocks every edit once the pointer is gone. Update the plugin before you migrate.
-- **Two new blocking checks can fail a new issue at `verify`.** `nfr-rows-resolved` fails when a row of the spec's Non-functional requirements table names no scenario and gives no reason. `contracts-declared` fails when a changed file is a trigger path and the design's Data and interfaces section declares no contract. The shipped preset places neither on a gate, a stage or an artifact, so no locked guardrail changes. Both decline, reporting `nothing to check`, on an issue stored before they existed, on a closed issue, and on an issue whose document is not registered or whose catalogue does not list the section. The rules are in `governance/guardrails.md`. A project that wants more trigger paths sets the whole `trigger_paths` list in its layer, because the merge grammar has no `add:` for a check's `params`. Adding entries needs no waiver. Removing or replacing an entry needs a project waiver where the check is placed on a gate, a stage or an artifact. The shipped preset places `contracts-declared` on none, so it asks for no waiver until a project places the check.
-- **A heading carries no number.** Every shipped template and every section list in the catalogue names its headings without `1.` or `4a.`. A reader finds a section by name and ignores a leading number, so a numbered document written earlier is still read. `templates/delivery-approach.md` names its sections Per-stage weight, Gate set and Multiagent orchestration.
+- **Two new blocking checks can fail a new issue at `verify`.** `nfr-rows-resolved` fails when a row of the spec's Non-functional requirements table names no scenario and gives no reason. `contracts-declared` fails when a changed file is a trigger path and the design's Data and interfaces section declares no contract. The shipped preset places neither on a gate, a stage or an artifact, so no locked guardrail changes. Both decline, reporting `nothing to check`, on an issue stored before they existed, on a closed issue, and on an issue whose document is not registered or whose catalog does not list the section. The rules are in `governance/guardrails.md`. A project that wants more trigger paths sets the whole `trigger_paths` list in its layer, because the merge grammar has no `add:` for a check's `params`. Adding entries needs no waiver. Removing or replacing an entry needs a project waiver where the check is placed on a gate, a stage or an artifact. The shipped preset places `contracts-declared` on none, so it asks for no waiver until a project places the check.
+- **A heading carries no number.** Every shipped template and every section list in the catalog names its headings without `1.` or `4a.`. A reader finds a section by name and ignores a leading number, so a numbered document written earlier is still read. `templates/delivery-approach.md` names its sections Per-stage weight, Gate set and Multiagent orchestration.
 
 ### What changes
 
-- **`compass issue template show <kind>` prints a skeleton** built from the catalogue, at `--depth lightweight` or `thorough`. A template that is not a kind is printed as the file. The skeleton opens with a `document-header` block of six lines in place of the Audience, Stage, Owner, Home, Traditional name and Depth lines. The home path and the traditional name are in `docs/artifact-catalog.md` and the glossary.
+- **`compass issue template show <kind>` prints a skeleton** built from the catalog, at `--depth lightweight` or `thorough`. A template that is not a kind is printed as the file. The skeleton opens with a `document-header` block of six lines in place of the Audience, Stage, Owner, Home, Traditional name and Depth lines. The home path and the traditional name are in `docs/artifact-catalog.md` and the glossary.
 - **Four sections are new.** Non-functional requirements (the spec), and Data and interfaces, Verification plan and Risks and dependencies (the design). The Non-functional requirements section holds a table with a row for each of seven concerns. The role block `How each role reads this file` is gone from every template and section list; `docs/roles-guide.md` holds it.
 - **Two new block kinds:** `document-header` opens every document written from a template, and `dependencies` lists the design's `depends_on` entries under its Risks and dependencies section.
 - **The `coverage` block gains a Kind column** between Title and Tests when the technical design keeps a `## Verification plan` heading. The column shows the planned kind of test for each scenario: `unit`, `integration`, `acceptance`, `judged review` or `manual`, with `not planned` or `unknown (<word>)` otherwise. `compass issue lint` prints a note for each row with an unknown kind and does not change the exit code. A design with no such heading keeps the columns it had.
@@ -193,16 +193,16 @@ The dry run lists each move, rename, registration, re-point, pointer removal and
 3. Run `compass issue migrate --apply --i-have-a-copy`. Its totals should equal the dry run's.
 4. Run `compass issue lint` on every issue. No file should be reported outside the issues step 3 named.
 5. Run `compass issue render --all --dry-run`, then `compass issue render --all`.
-6. To go back, restore both folders from the copy, together. The rollback plan of the issue that added the catalogue fields gives the commands.
+6. To go back, restore both folders from the copy, together. The rollback plan of the issue that added the catalog fields gives the commands.
 
 ### New flags and keys
 
 | Name | Where | Meaning |
 |---|---|---|
-| `owner`, `audience`, `stands_for`, `sections` | an artifact in the catalogue | Who writes the document, who reads it, its traditional name, and its headings per depth. Required with `file` and `stage` |
-| `required_when: {subtasks: {min: N}}` | an artifact in the catalogue | The document is owed only with at least N subtasks |
-| `every_approach: true` | an artifact in the catalogue | Every approach owes the document |
-| `<n>` in `file` | an artifact in the catalogue | The kind repeats, one file per round |
+| `owner`, `audience`, `stands_for`, `sections` | an artifact in the catalog | Who writes the document, who reads it, its traditional name, and its headings per depth. Required with `file` and `stage` |
+| `required_when: {subtasks: {min: N}}` | an artifact in the catalog | The document is owed only with at least N subtasks |
+| `every_approach: true` | an artifact in the catalog | Every approach owes the document |
+| `<n>` in `file` | an artifact in the catalog | The kind repeats, one file per round |
 | `--justify DIM=TEXT` | flag of `compass approach evaluate --write` | The justification of an assessed value |
 | `justifications` | `manifest.yml`, beside `assessment` | One line per assessed dimension |
 | `round` | an artifact entry in `manifest.yml` | The round of a kind that repeats |
@@ -297,7 +297,7 @@ Then run `compass readiness` again and assess.
 | `compass readiness [--json] [--fix-list]` | verb | Measure the repository and write the readiness record, or list the absent signals from a fresh record |
 | `project.lint_command`, `project.format_check_command`, `project.build_command`, `project.typecheck_command` | `compass.yml` | The project commands `compass readiness` runs |
 | `project.secret_scan`, `project.structured_logging` | `compass.yml` | Declarations; a non-empty string makes the signal present |
-| `readiness` | catalogue in a preset or project layer | The readiness signals |
+| `readiness` | catalog in a preset or project layer | The readiness signals |
 | `required_for_autonomous` | field of a readiness signal | `true` puts the signal on the floor |
 | `.compass/readiness.yml` | per checkout, never committed | The readiness record |
 | `readiness` | `manifest.yml` | The repository's readiness when the issue was assessed |
@@ -401,7 +401,7 @@ approaches:
 
 | Name | Where | Meaning |
 |---|---|---|
-| `release_line` | an approach in the catalogue | Whether an issue on the approach owes a release line |
+| `release_line` | an approach in the catalog | Whether an issue on the approach owes a release line |
 | `release_note` | `manifest.yml` | The issue's release line |
 | `--release-note` | a flag of `compass ship-commit`, `compass acceptance record` and `compass quick-fix finish` | Write the release line |
 | `release-line-missing`, `release-line-heading` | refusal codes | A landing of an issue that owes a line and has none, and a line that starts with `#` |
@@ -410,26 +410,26 @@ approaches:
 
 ## Word limits and low-level designs
 
-The catalogue gives a document kind a word limit per depth, `compass check` refuses a technical design far over its limit once the plan stage is over, and the full approach gains one low-level design per work unit. The decision is `architecture/decisions/ADR-067-word-limits-are-catalogue-obligations-and-a-low-level-design-is-one-document-per-work-unit.md`. `docs/artifact-catalog.md` owns the field, the word rule and the kind, and `governance/guardrails.md` the check.
+The catalog gives a document kind a word limit per depth, `compass check` refuses a technical design far over its limit once the plan stage is over, and the full approach gains one low-level design per work unit. The decision is `architecture/decisions/ADR-067-word-limits-are-catalogue-obligations-and-a-low-level-design-is-one-document-per-work-unit.md`. `docs/artifact-catalog.md` owns the field, the word rule and the kind, and `governance/guardrails.md` the check.  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
 
 ### What breaks
 
 - **A new blocking check, `design-within-word-ceiling`, can fail an issue after plan.** It fails a technical design whose word count is over its limit times 1.5: 6,000 words at thorough and 1,800 at lightweight. Registered low-level designs do not lift it; only a shorter design does. It sits in no gate, so no locked guardrail changes, and an issue waiver can make it advisory.
-- **`compass policy migrate` reports an unedited copy of the 5.x governance files as `incomparable`.** The 5.x files cannot hold `word_ceiling`, and the adapter never fills it, so the copied catalogue owes no word limit where the shipped default does. This is expected; the migrate itself is not blocked.
+- **`compass policy migrate` reports an unedited copy of the 5.x governance files as `incomparable`.** The 5.x files cannot hold `word_ceiling`, and the adapter never fills it, so the copied catalog owes no word limit where the shipped default does. This is expected; the migrate itself is not blocked.
 
 ### What changes
 
-- **A new catalogue field, `word_ceiling`**, a map from depth to a whole number of words. The shipped default sets `technical-design` to 4,000 (thorough) and 1,200 (lightweight), and `acceptance-criteria` to 5,000 and 1,500. A stored generation never gains it from the shipped default, and the classifier compares it by identity, so a layer that changes a shipped kind's limit needs a waiver.
+- **A new catalog field, `word_ceiling`**, a map from depth to a whole number of words. The shipped default sets `technical-design` to 4,000 (thorough) and 1,200 (lightweight), and `acceptance-criteria` to 5,000 and 1,500. A stored generation never gains it from the shipped default, and the classifier compares it by identity, so a layer that changes a shipped kind's limit needs a waiver.
 - **A word is a whitespace-separated token of the visible text.** Rendered block interiors, marker lines and HTML comments are left out; headings, prose, tables and code fences count.
 - **`compass issue lint` prints two new notes**, neither of which changes the exit code: a registered document over its limit, and on the full approach a work unit of the design's Work units table with no registered low-level design.
 - **A new kind, `low-level-design`**, with the file `low-level-design/<unit>.md`, where a unit is `U` and a whole number from 1. It holds a unit's signatures, contracts, file-level plan and tests. No approach owes it: the planner writes and registers one per unit at plan.
 - **`compass issue artifact set` and `compass issue artifact-path` take `--unit U<n>`.** Each unit is one registry entry. `artifact-path` with no `--unit` refuses when two or more units are registered, and names them.
 - **The design template's Work units table gains a Low-level design column**, which links each unit's file on the full approach.
-- **`scripts/measure-artifact-catalogue.py --design-size --json`** reports the median design size per approach on a copy of an archive. It refuses a root that holds `.git`.
+- **`scripts/measure-artifact-catalogue.py --design-size --json`** reports the median design size per approach on a copy of an archive. It refuses a root that holds `.git`.  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
 
 ### What to do
 
-1. Nothing for issues already assessed. An issue adopts the word limits, the check and the kind at its next `compass approach evaluate --write`. An issue with no stored generation, a closed issue and an issue whose catalogue has no word limit are never judged.
+1. Nothing for issues already assessed. An issue adopts the word limits, the check and the kind at its next `compass approach evaluate --write`. An issue with no stored generation, a closed issue and an issue whose catalog has no word limit are never judged.
 2. On the full approach, write `low-level-design/U<n>.md` for each unit at plan and register it with `compass issue artifact set low-level-design --unit U<n> --status draft --path <file>`.
 3. Aim for a technical design within its limit of 4,000 words at thorough. `issue lint` notes a design over 4,000, and `compass check` refuses one over 6,000. Move each unit's signatures, contracts, file plan and tests to its low-level design.
 
@@ -437,13 +437,13 @@ The catalogue gives a document kind a word limit per depth, `compass check` refu
 
 | Name | Where | Meaning |
 |---|---|---|
-| `word_ceiling` | an artifact in the catalogue | The word limit per depth |
-| `<unit>` in `file` | an artifact in the catalogue | The kind has one document per work unit |
-| `low-level-design` | a kind in the catalogue | One unit's signatures, contracts, file plan and tests |
+| `word_ceiling` | an artifact in the catalog | The word limit per depth |
+| `<unit>` in `file` | an artifact in the catalog | The kind has one document per work unit |
+| `low-level-design` | a kind in the catalog | One unit's signatures, contracts, file plan and tests |
 | `unit` | an artifact entry in `manifest.yml` | The work unit of a low-level design |
 | `--unit U<n>` | a flag of `compass issue artifact set` and `compass issue artifact-path` | Name one unit |
 | `design-within-word-ceiling` | a check outside every gate | Refuse a design over 1.5 times its word limit after plan |
-| `--design-size` | a flag of `scripts/measure-artifact-catalogue.py` | Report the median design size per approach |
+| `--design-size` | a flag of `scripts/measure-artifact-catalogue.py` | Report the median design size per approach |  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
 
 ## Role is not an assessment dimension
 
@@ -532,7 +532,7 @@ A person approves or rejects by typing `/compass:approve` or `/compass:reject` i
 
 ## Shell writes through a variable, and `tee`, `cp` and `mv` targets
 
-The pre-tool hook reads more exactly which files a Bash command writes. `docs/safety-contract.md` describes the behaviour, under "Shell-write detection is best-effort".
+The pre-tool hook reads more exactly which files a Bash command writes. `docs/safety-contract.md` describes the behavior, under "Shell-write detection is best-effort".
 
 ### What breaks
 
@@ -678,23 +678,25 @@ A project-scoped design decision cannot land without a decision record, a regula
 
 ## Renamed names
 
-Compass spells its own names in US English from 7.0.0. Each old name below is still read until 8.0.0, and the new name is the one written. `compass approach evaluate --kind judgement` records `judgment`, and a manifest that holds `judgement` reads as `judgment` and is rewritten, with a `.v5.bak` copy, on its next save. The table below is checked against the table the CLI reads (`old_names:` in `cli/migrate-map.yml`).
+Compass spells its own names in US English from 7.0.0. Each old name below is still read until 8.0.0, and the new name is the one written. `compass approach evaluate --kind judgement` records `judgment`, and a manifest that holds `judgement` reads as `judgment` and is rewritten, with a `.v5.bak` copy, on its next save. The table below is checked against the table the CLI reads (`old_names:` in `cli/migrate-map.yml`).  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
 
 | Kind | Old name | New name | Read until |
 |---|---|---|---|
-| kind | `judgement` | `judgment` | 8.0.0 |
-| check | `dor-behaviour-is-gwt` | `dor-behavior-is-gwt` | 8.0.0 |
-| skill | `behaviour-mapping` | `behavior-mapping` | 8.0.0 |
-| refusal code | `not-initialised` | `not-initialized` | 8.0.0 |
-| state key | `initialised` | `initialized` | 8.0.0 |
+| kind | `judgement` | `judgment` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+| check | `dor-behaviour-is-gwt` | `dor-behavior-is-gwt` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+| skill | `behaviour-mapping` | `behavior-mapping` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+| refusal code | `not-initialised` | `not-initialized` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+| state key | `initialised` | `initialized` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
 | readiness key | `catalogue_digest` | `catalog_digest` | 8.0.0 |
-| JSON key | `behaviour` | `behavior` | 8.0.0 |
-| JSON key | `behaviours` | `behaviors` | 8.0.0 |
-| heading | `Current Behaviour` | `Current Behavior` | 8.0.0 |
-| heading | `Archived Behaviour` | `Archived Behavior` | 8.0.0 |
-| term | `catalogue` | `catalog` | 8.0.0 |
+| JSON key | `behaviour` | `behavior` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+| JSON key | `behaviours` | `behaviors` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+| heading | `Current Behaviour` | `Current Behavior` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+| heading | `Archived Behaviour` | `Archived Behavior` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+| term | `catalogue` | `catalog` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
 
-If a script or a rule matches the refusal code that the session-start hook prints, change it to match `not-initialized`. The hook prints only the new code. `compass _refusal not-initialised` still renders the refusal, and the saved output of an earlier run that holds the old code still reads.
+If a script or a rule matches the refusal code that the session-start hook prints, change it to match `not-initialized`. The hook prints only the new code. `compass _refusal not-initialised` still renders the refusal, and the saved output of an earlier run that holds the old code still reads.  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+
+A project that names `compass:behaviour-mapping` or `dor-behaviour-is-gwt` keeps working until 8.0.0. A script that reads the refusal code or the `behaviour` JSON keys should move to the new names before 8.0.0. No manifest, state file or readiness record needs a change by hand, because each old name is still read.  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
 
 ### The `language` setting
 

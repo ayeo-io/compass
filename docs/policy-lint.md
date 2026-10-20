@@ -100,7 +100,7 @@ earlier one. Warnings never stop it and never fail it.
 | `S-PARENT-STALE` | warning | `seen.yml` holds another commit for the parent's ref, which this machine fetched last. It can be older or newer than the pin. The pin does not move |
 | `S-PARENT-MODIFIED` | error | The cached `compass.yml` no longer matches the digest recorded when it was fetched, or `seen.yml` holds no digest for it. The lint stops at the first group |
 | `S-PARENT-BOTH` | error | Stale, and the cached file was edited. The lint stops at the first group |
-| `M-REF-UNKNOWN` | error | A field, or a rule's effect (`EFFECT_TARGETS` in `catalogue_spec.py` says which catalogue each effect names), names an id that no entry defines, or an artifact's `owner` is neither an agent, a perspective (engineer, product-owner, product-marketer, designer or qa) nor a value of a `role` dimension the project declares |
+| `M-REF-UNKNOWN` | error | A field, or a rule's effect (`EFFECT_TARGETS` in `catalogue_spec.py` says which catalog each effect names), names an id that no entry defines, or an artifact's `owner` is neither an agent, a perspective (engineer, product-owner, product-marketer, designer or qa) nor a value of a `role` dimension the project declares |
 | `M-WHEN-RETIRED` | error | A rule, check or gate's `when` reads `role`, which 7.0.0 removed from the assessment, in a configuration that declares no `role` dimension. A rule can read the documents on disk with `artifacts_any` instead, and any `when` can read a label (ADR-070) |
 | `M-WHEN-DOCUMENTS` | error | A check or gate's `when` reads `artifacts_any`. Only a rule's evaluation reads the documents on disk; `compass check` does not, so the condition would never match there (ADR-070) |
 | `M-WEIGHT-TIE` | error | Two delivery approaches have the same weight |
@@ -109,7 +109,7 @@ earlier one. Warnings never stop it and never fail it.
 | `M-READINESS-PARAM` | error | A readiness signal sets a parameter its implementation does not take, a parameter of the wrong type, or a value outside the implementation's allowed choices |
 | `M-HIT-MISSING` | error | A rule set uses an effect and names no `hit:` policy for it. `EFFECT_POLICIES` in `catalogue_spec.py` lists the effects and the policies each allows |
 | `M-HIT-DISALLOWED` | error | A `hit:` policy the effect does not allow, or an unknown effect |
-| `M-ALIAS-COLLISION` | error | One name or alias belongs to two entries of a catalogue |
+| `M-ALIAS-COLLISION` | error | One name or alias belongs to two entries of a catalog |
 | `M-CYCLE` | error | Artifacts depend on each other in a cycle. The message gives the path, such as `a -> b -> a`, and the finding sits on the `depends_on` of the first artifact in id order |
 | `M-BOOKKEEPING-INPUT` | error | An artifact lists in `depends_on` an artifact marked `bookkeeping: true`, a record the framework keeps about the work (the dashboard, the receipt, the verification report). A bookkeeping artifact may itself depend on others. The finding sits on the dependent artifact's `depends_on` |
 | `M-DIRECTORY-DEPENDENCY` | error | An artifact lists in `depends_on` an artifact whose `file` ends in `/`, a directory. An artifact depends on files, so a verification report names the evidence ids it cites instead. The finding sits on the dependent artifact's `depends_on` |
@@ -127,7 +127,7 @@ earlier one. Warnings never stop it and never fail it.
 | `M-LIST-ADD-PRESENT` | error | `add:` of an item the list already holds |
 | `M-MAP-OP-OUTSIDE-SET` | error | `set:` or `remove:` on a map outside `set:` |
 | `M-MAP-REMOVE-ABSENT` | error | `remove:` of a key the map does not hold |
-| `M-FIELD-UNKNOWN` | error | `set:` names a field the catalogue does not define |
+| `M-FIELD-UNKNOWN` | error | `set:` names a field the catalog does not define |
 | `M-FIELD-LAYER` | error | A field this layer may not set, such as a stage's `mode` outside the issue layer |
 | `M-FIELD-SHAPE` | error | A value of the wrong shape, or a blank name or alias. In the `resolved` group it also covers the fields of an artifacts entry: a `sections` key that is not an artifact depth, a `sections` value that is not a list of headings, an empty list for a document that is not one rendered block, a blank `audience`, `owner` or `stands_for`, a `file` that is not a bare file name (one folder is allowed only in a name that holds `<unit>`), a `file` that holds both `<n>` and `<unit>`, a `required_when` condition that is not `subtasks: {min: N}`, and a `word_ceiling` that is not a map, holds a limit that is not a whole number of at least 1, or names a depth the kind's `sections` does not list. All are reported in one run |
 | `M-REF-REMOVED` | error | `remove: true` on an entry something still refers to |
@@ -292,7 +292,7 @@ A project with no `compass.yml` shows the shipped default alone.
 ### Which fields are listed
 
 - `capabilities.<name>`, then `owner`, then `approvers.<kind>`: each takes the value of the last layer that holds it.
-- Then each catalogue in this order: `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts`, `vocabulary`. Within one, entries are in id order, and fields are in the order of the field table in `catalogue_spec.py`.
+- Then each catalog in this order: `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts`, `vocabulary`. Within one, entries are in id order, and fields are in the order of the field table in `catalogue_spec.py`.
 - A field is listed only when its entry holds it. After an entry's fields comes `<entry>.locked` when a lock holds the entry, read from the layers: `true` or `"hard"`, with the layer that declared it. A lock an owner's unlock lifted is not listed.
 - Settings keys (`autonomy`, `adoption` and the others) are not part of a layer and are not listed.
 
@@ -341,14 +341,14 @@ Each field has these keys, in this order:
 
 | Key | Type | Meaning |
 |---|---|---|
-| `path` | string | `catalogue.id.field`, or `capabilities.name`, `owner`, `approvers.kind` |
+| `path` | string | `catalog.id.field`, or `capabilities.name`, `owner`, `approvers.kind` |
 | `value` | any | The resolved value |
 | `source` | string | `default@<version>`, `project` or `issue` |
 | `op` | string | `add`, `replace` or `set` |
 | `waiver` | object or null | The waiver that excuses this field, or null |
 | `note` | string or null | `inactive: <capability> off` for a stage list that is switched off |
 
-A waiver object has these keys, in this order: `id` (`scope:catalogue.entry`),
+A waiver object has these keys, in this order: `id` (`scope:catalog.entry`),
 `scope` (`project` or `issue`), `approved_by` (a name for a project waiver,
 an evidence id for an issue waiver) and `approved_on` (a date for a project
 waiver, null for an issue waiver, whose approval record carries its own

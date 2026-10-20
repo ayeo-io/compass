@@ -74,7 +74,7 @@ you do not need it to continue.
 
 One thing to know going in: the `pre-tool.sh` hook enforces the red-before-green
 TDD strategy. Once Compass is installed, the hook blocks an edit to a
-recognised code file when no failing test is on record for the current
+recognized code file when no failing test is on record for the current
 issue - exit code 2, edit denied. That is not a bug to work around; it is
 the TDD strategy, enforced by the hook, serving the tested-before-ship
 guardrail (tested before it lands). The hook is approach-aware: on a
@@ -133,7 +133,7 @@ where every engineer starts - at the assess stage.
 /compass:assess "Add rate limiting to the public API"
 ```
 
-Assess scores three dimensions - that part is judgement - and records them
+Assess scores three dimensions - that part is judgment - and records them
 in `.compass/work/add-rate-limiting/manifest.yml`. For this issue it scores
 something like: size `medium` (several files, one or two design
 decisions), risk `cross-cutting` (a misconfigured limiter degrades
@@ -398,7 +398,7 @@ claim shipping on a scenario that does not back it.
 
 Some work is not a known change - it is a question. Root-causing a mysterious
 defect, evaluating whether an approach is even viable, learning an unfamiliar
-API. You cannot state acceptance criteria for it because the behaviour is the
+API. You cannot state acceptance criteria for it because the behavior is the
 unknown. That is not an exemption from assessment; it is the **spike**.
 Assess still runs (`delivery-approach.md` records the question and a
 timebox), but the define stage collapses to the question, the
@@ -463,10 +463,10 @@ Piped output, and any run inside Claude Code, keeps the plain one-line form,
 so scripts and the model see no change. Two environment variables change the
 rail:
 
-- `NO_COLOR` removes the colour.
+- `NO_COLOR` removes the color.
 - `COMPASS_COLOR=never` uses the ASCII markers `[x] [>] [ ] [-]` and no
-  colour. `COMPASS_COLOR=always` shows the rail even when the output is piped.
-  `NO_COLOR` still removes the colour.
+  color. `COMPASS_COLOR=always` shows the rail even when the output is piped.
+  `NO_COLOR` still removes the color.
 
 If a project turns on the capability `entry-exit-evaluation`, the line also
 names the entry checks of the current stage that are not met, for example
@@ -527,7 +527,7 @@ is the view across all of them - triage, blockers, and a periodic digest;
 Two more CLI commands work across the whole board. `compass ci` runs the full
 mechanical gate suite - `policy lint`, then `issue lint` and `check` for every
 issue - and exits non-zero if anything fails; wiring Compass into CI is just
-"run `compass ci`, honour the exit code" (see `ci/README.md`). And
+"run `compass ci`, honor the exit code" (see `ci/README.md`). And
 `compass retro` reads the re-assessment log across every issue and
 reports whether assessment is systematically over- or under-sizing the
 process - the framework's own feedback loop, the way you find out if the

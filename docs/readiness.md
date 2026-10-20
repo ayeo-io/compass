@@ -21,7 +21,7 @@ compass readiness [--json] [--fix-list]
   `floor_met`, `below_floor` and `path` added.
 - **`--fix-list`:** read a fresh record and print a checklist, one
   `- [ ] <signal>: <change> (<file>)` item per absent signal. The signals on
-  the floor come first, then the higher weight, then the catalogue order. It
+  the floor come first, then the higher weight, then the catalog order. It
   runs nothing and writes nothing. With no fresh record it prints the readiness
   line and asks for `compass readiness`.
 
@@ -31,9 +31,9 @@ string; then it writes no record.
 
 ## The signals
 
-A readiness signal is one entry of the `readiness` catalogue. The default
+A readiness signal is one entry of the `readiness` catalog. The default
 preset ships eleven in `governance/presets/default/readiness.yml`. A project
-layer in `compass.yml` can add, change or remove one, as for any catalogue;
+layer in `compass.yml` can add, change or remove one, as for any catalog;
 taking a signal off the floor needs the owner's waiver in that entry.
 
 Each signal names an implementation, registered with a version in
@@ -151,7 +151,8 @@ add` of HEAD in the system temp folder, named
 - `schema: 1`, `measured_at` (UTC) and `head`, the commit measured;
 - `settings`: the path and digest of the settings file read (`compass.yml`, or
   `.compass/config.yml` in a project without one; both null with neither);
-- `catalogue_digest`: the digest of the readiness catalogue this CLI ships;
+- `catalog_digest`: the digest of the readiness catalog this CLI ships (the record also holds
+  the old key `catalogue_digest` with the same value, until 8.0.0);
 - `budget`: the command seconds and the seconds the run used;
 - `signals`: each signal's `id`, `impl`, `version`, `weight`,
   `required_for_autonomous`, `result`, `reason` and `not_run`, and for an
@@ -172,7 +173,7 @@ edit, like the project commands themselves.
 all of these hold, tested in this order:
 
 1. the settings file has the digest the record holds;
-2. the shipped catalogue has the digest the record holds, and every recorded
+2. the shipped catalog has the digest the record holds, and every recorded
    implementation version is the one this CLI ships;
 3. `measured_at` is at most seven days before now, and not after now;
 4. the recorded commit exists, and is in HEAD's history
@@ -187,7 +188,7 @@ first rule that failed. A missing record is "not measured", and one that
 cannot be read or parsed is "unreadable".
 
 A layer change is a change of the settings file, and a preset change is a
-change of the shipped catalogue, so freshness needs neither the layer chain
+change of the shipped catalog, so freshness needs neither the layer chain
 nor the check implementations. The module imports only the standard library,
 the YAML reader, `project_settings` and `readiness_registry`, so the
 session-start hook can import it cheaply; a test pins that list.
@@ -236,7 +237,7 @@ Every refusal names `autonomy` as the setting to change; `balanced` and
 `controlled` are never refused. Every `--write` writes the summary into the
 manifest's `readiness:` key, outside the generation (`docs/generation-store.md`).
 `governance/routing-policy.md` describes the refusal with the other routing
-behaviour.
+behavior.
 
 ## Modules
 
@@ -247,4 +248,4 @@ behaviour.
 | `cli/compass_pkg/readiness_run.py` | the temporary worktree, the order, the budget and the process-group stop |
 | `cli/compass_pkg/readiness_record.py` | the record: read, write, freshness, summary and line |
 | `cli/compass_pkg/readiness_registry.py` | the implementations and their versions |
-| `cli/compass_pkg/readiness_catalogue.py` | the catalogue in force and the floor |
+| `cli/compass_pkg/readiness_catalogue.py` | the catalog in force and the floor |

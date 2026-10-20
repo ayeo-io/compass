@@ -1,6 +1,6 @@
 # Compass - Operating Instructions for Claude Code
 
-**The rules of behaviour are in `compass-contract.md`**, which the SessionStart
+**The rules of behavior are in `compass-contract.md`**, which the SessionStart
 hook puts into every session. This file is the Claude Code adapter: what is
 specific to running Compass in this repository.
 
@@ -170,14 +170,13 @@ fewer words with the same terms.
 - Use a vertical list for a set of items, conditions or steps.
 - Use "must" for a requirement, "can" for a possibility and "do not" for a
   prohibition.
-- Use British English, except "artifact". It is also a manifest key and a
-  command name, so prose spells it the same way.
+- Use US English.
 
 Use the shorter word:
 
 | Not | Use |
 |---|---|
-| utilise, leverage | use |
+| utilize, leverage | use |
 | obtain, acquire | get |
 | provide, supply | give |
 | indicate, denote | show |

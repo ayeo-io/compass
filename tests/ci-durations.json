@@ -398,6 +398,7 @@
   "tests/test_ship_commit_derives.py": 5.74,
   "tests/test_ship_commit_keeps_living_spec_edits.py": 3.25,
   "tests/test_ship_commit_message_file.py": 1.84,
+  "tests/test_ship_commit_names_git_reason.py": 1.2,
   "tests/test_ship_commit_refuses_a_stale_green.py": 15.42,
   "tests/test_ship_commit_refuses_unapproved.py": 434.13,
   "tests/test_shipped_releases.py": 5.62,

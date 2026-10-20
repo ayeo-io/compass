@@ -33,6 +33,6 @@ td.skipped, td.collapsed { color: #555; }
 </table></div>
 <p>These are the defaults for each approach. A floor for critical risk or a domain label (auth, payments, personal data, migrations) can raise an issue to a heavier approach, and other rules and roles can add gates, documents or a sign-off that no autonomy setting removes. <code>governance/routing-policy.md</code> explains each rule; <code>compass approach show</code> shows what one issue gets.</p>
 <h2>How work comes back</h2>
-<ul><li><strong>A reassessment</strong>: `/compass:assess --reassess` re-reads the four dimensions when the work turns out bigger or riskier, and the approach is computed again.</li><li><strong>A refusal from the pre-tool hook</strong>: an edit is refused until its precondition holds, such as a failing test on record.</li><li><strong>A failed `compass check`</strong>: the guardrail checks refuse to pass a gate until the evidence they need is on disk.</li></ul>
+<ul><li><strong>A reassessment</strong>: `/compass:assess --reassess` re-scores the three dimensions when the work turns out bigger or riskier, and the approach is computed again.</li><li><strong>A refusal from the pre-tool hook</strong>: an edit is refused until its precondition holds, such as a failing test on record.</li><li><strong>A failed `compass check`</strong>: the guardrail checks refuse to pass a gate until the evidence they need is on disk.</li></ul>
 </body>
 </html>

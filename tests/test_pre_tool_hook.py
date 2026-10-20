@@ -291,6 +291,7 @@ def test_d8_request_files_protected():
             assert r.returncode == 2, (tool, tool_input, r.stderr)
             assert "[approval-request-protected]" in r.stderr, r.stderr
             assert "compass evidence request" in r.stderr, r.stderr
+            assert "/compass:approve" in r.stderr, r.stderr
         for command in ("compass evidence request --guardrail G5 --scope 'refund'", "ls"):
             r = _guard_run(project, "Bash", tool_input={"command": command})
             assert r.returncode == 0, (command, r.stderr)

@@ -3,11 +3,36 @@ r"""Decide whether the agent's tool call touches approval state it must not
 (ADR-068 decision 10, ADR-069 decisions 4 and 8). `hooks/pre-tool.sh` calls
 `check` with the hook input and blocks with the code it returns.
 
+- **How a Bash command is judged.** `approval_words.simple` reads a command
+  as words only when the whole command is simple (one command, or plain
+  commands joined by `&&`, `;` or a new line, each starting with a name on
+  `COMMANDS`; the gate fails closed). Any other command is judged by its
+  whole text: any text that names a protected thing is refused.
+  - In a simple command the guard judges each word and redirect target by its
+    substring, except the message text of `git commit`, `tag`, `merge` and
+    `revert` (`-m`, `-am`, `--message`) and of `gh issue`, `pr` and `release`
+    (`--title`, `--body`, `--notes`, `-t`, `-b`).
+  - A command that stands alone, with no redirect to a file, one operand and
+    only the plain options of `EXEMPT_OPTIONS`, may name what `EXEMPT` says in
+    a bare path argument with no `..` segment: a request folder or file for
+    `ls`, `wc` and `stat`, and the prompt hook script for `cat`. The exemption does not hold for a
+    `VAR=` word, an option such as `--output=<path>`, or the word after `-f`,
+    `--file`, `--files0-from`, `--output`, `--pre` or `--exec`.
+  - A Bash word that holds a glob or brace character in the name of a
+    protected folder is judged as before.
+- **The auto-memory folder.** Read, Grep, Edit and Write skip the
+  transcript tests for `<configuration folder>/projects/<one
+  folder>/memory/...`, after the path is joined to the call's `cwd`,
+  normalised and case-folded, and its symbolic links are resolved
+  (`in_memory_folder`). A path with a glob or brace character, a Grep glob
+  with a `..` segment, and a path that leaves the folder are not in it. A
+  Bash command that names the folder is refused. A symbolic link inside the
+  folder that a Grep over it follows is not detected.
 - **Request files.** Edit or Write on a file under an issue's
-  `approval-requests/`, or a Bash command that names that folder or the
+  `approval-requests/`, or a Bash word that names that folder or the
   prompt hook's entry point, gives `approval-request-protected`.
 - **Delegation files.** Edit or Write under `.compass/delegations/`, Read or
-  Grep that names that folder by path or by Grep glob, or a Bash command that
+  Grep that names that folder by path or by Grep glob, or a Bash word that
   names it, gives `delegation-protected`. The folder holds the salt and hash
   of the code that confirms a g5 delegation.
 - **The session transcript.** Claude Code writes a hook's block message to
@@ -17,7 +42,7 @@ r"""Decide whether the agent's tool call touches approval state it must not
   - Read or Grep on the transcript's folder, inside it, or on any folder
     above it, with `~` and `$HOME` expanded and a relative path joined to
     the call's `cwd`; a Grep with no path searches its `cwd`;
-  - Read, Grep, Edit or Write, or a Bash command, that names a
+  - Read, Grep, Edit or Write, or a Bash word, that names a
     `.claude*/projects` folder, a configuration folder directly under the
     home folder (`~/.claude*`, ending there) or `CLAUDE_CONFIG_DIR`. A
     project's own `.claude` folder does not count;
@@ -27,8 +52,9 @@ r"""Decide whether the agent's tool call touches approval state it must not
 - **A delegated approval's caller.** A Bash command is a delegated approval
   when one of its words is `approve` and one is `--delegated`, a prefix of
   it of five characters or more, or `--delegated=...`; the earlier rule,
-  `evidence approve` beside any word that starts `--del`, also counts. The
-  words are read twice: as the shell splits the command, and again with
+  `evidence approve` beside any word that starts `--del`, also counts. Only
+  judged words count, so a commit message that names `--delegated` is text.
+  The words are read twice: as the shell splits the command, and again with
   every word that holds a space split once more, to any depth, so `bash -c`,
   `eval` and a pipe into `sh` are read too. Either reading must name the
   caller with
@@ -84,8 +110,15 @@ Each check ignores letter case, because macOS opens a path in any case. The
 earlier guard's checks run first, in its order and case, so a call it refused
 keeps its refusal code. The glob check is the last Bash check.
 
-The Bash checks match text, as the hook's other Bash checks do. They stop the
-agent's ordinary use, not a deliberate workaround. What they do not stop:
+The guard is defence in depth against an accidental or injected read of the
+transcript or of an approval request. It is not a hard boundary: a script that
+one call writes with the Write tool and another call runs was open before this
+guard. What it does not stop:
+  - a script that one call writes and another call runs, with Bash or the
+    Write tool;
+  - a command, function or alias that an earlier Bash call defined, and a
+    git alias, git hook or git config that runs a command;
+  - any word built at run time;
   - a flag or path built from a variable, command substitution, or a value
     read from a file or the environment;
   - arguments built by `xargs` or `printf`;
@@ -110,14 +143,19 @@ agent's ordinary use, not a deliberate workaround. What they do not stop:
     call.
 The safety contract states these limits.
 """
-# DEPENDENCY: standard library (os, re, shlex). Runs inside hooks/pre-tool.sh,
-# so it keeps to syntax the hook's oldest supported python3 reads.
+# DEPENDENCY: standard library (fnmatch, os, re, shlex, unicodedata),
+# and compass_pkg.approval_words (the simple-command gate). Runs inside
+# hooks/pre-tool.sh, so it keeps to syntax the hook's oldest supported python3
+# reads (3.10) and imports no third-party module.
 from __future__ import annotations
 
 import fnmatch
 import os
 import re
 import shlex
+import unicodedata
+
+from compass_pkg.approval_words import simple
 
 REQUEST_FOLDER = "approval-requests"
 HOOK_ENTRY = "prompt-approval.sh"
@@ -136,6 +174,47 @@ BRACE = re.compile(r"\{[^{}]*(?:,|\.\.)[^{}]*\}")
 #: How deep a command nested in quoted words is read, such as
 #: `bash -c "bash -c '...'"`.
 NESTING = 8
+#: The longest part of a refused word that a refusal shows.
+SHOWN_MAX = 80
+#: Control, format and line-separator characters: none reaches a person's screen.
+HIDDEN = ("Cc", "Cf", "Zl", "Zp")
+NONE = frozenset()
+
+# --- the policy tables: a widening is a one-line diff that needs a twin test row ---------------
+
+#: What a bare path argument of a command that stands alone may name. `ls`, `wc` and `stat`
+#: show names and counts, so they may name a request folder. `cat` may name the prompt hook
+#: script, and nothing else does: a copy of the script that the agent can change would run.
+EXEMPT = {"ls": ("request",), "wc": ("request",), "stat": ("request",), "cat": ("script",)}
+#: Options whose value is a path, a command or a file to write, never a bare path argument.
+PATH_OPTIONS = frozenset(("-f", "--file", "--files0-from", "--output", "--pre", "--exec"))
+ASSIGNMENT = re.compile(r"[A-Za-z_]\w*=")
+#: The letters of the short options an exempt command may carry. Each takes no value and
+#: shows names, sizes or counts. Any other option, `--` and a second operand void the
+#: exemption, because an option such as `ls -I` or `stat -f` changes what is read.
+EXEMPT_OPTIONS = {"ls": "lah1", "wc": "lcwm", "stat": "", "cat": ""}
+
+
+def exempt_commands():
+    """The commands that hold an exemption or a text position, named as
+    `tests/approval_guard_cases.py` counts them. A test ties this set to the table of
+    counter-examples, so a widening needs three calls that stay refused."""
+    return set(EXEMPT) | {"git commit", "gh"}
+
+
+def shown_word(word, found=""):
+    """A refused word as a refusal shows it: no control, format or line-separator
+    character, and at most `SHOWN_MAX` characters, so a hostile word cannot add text to
+    the message. A longer word is cut around `found`, the protected part, so it is shown."""
+    kept = "".join(c for c in str(word) if unicodedata.category(c) not in HIDDEN)
+    if len(kept) <= SHOWN_MAX:
+        return kept
+    at = kept.lower().find(str(found).lower()) if found else -1
+    if at < 0:
+        return kept[:SHOWN_MAX]
+    start = at if len(found) >= SHOWN_MAX else at - (SHOWN_MAX - len(found)) // 2
+    start = max(0, min(start, len(kept) - SHOWN_MAX))
+    return kept[start:start + SHOWN_MAX]
 
 
 def _path(text):
@@ -167,19 +246,20 @@ def _words(command):
         return command.split()
 
 
-def _nested_words(command):
-    """The command's words, then the words of each word that holds a space,
-    such as the argument of `bash -c` or `eval`, read again to `NESTING`."""
-    found = []
-    level = [command]
-    for _ in range(NESTING):
+def _nested_words(words):
+    """The words, then the words of each word that holds a space, such as the
+    argument of `bash -c` or `eval`, read again. The first reading of the
+    command is the caller's, so the rereads go to `NESTING - 1` levels."""
+    found = list(words)
+    level = [w for w in found if re.search(r"\s", w)]
+    for _ in range(NESTING - 1):
+        if not level:
+            break
         following = []
         for text in level:
-            words = _words(text)
-            found.extend(words)
-            following.extend(w for w in words if re.search(r"\s", w))
-        if not following:
-            break
+            parts = _words(text)
+            found.extend(parts)
+            following.extend(w for w in parts if re.search(r"\s", w))
         level = following
     return found
 
@@ -233,41 +313,41 @@ ESCAPED_COMMAND = re.compile(
     r"(?:^|[;&|(`\n]|\$\()\s*(?:\w+=\S*\s+)*\S*\$'[^']*\\")
 
 
-def _names_evidence(command):
+def _names_evidence(words, nested):
     """True when a word is `evidence`, or a quoted word holds `compass
     evidence` (the argument of `bash -c`, `eval` or a pipe into `sh`), or a
     word is the `--delegated` flag."""
-    words = _words(command)
     return (any(w == "evidence" or "compass evidence" in w for w in words)
-            or any(_delegated_flag(w) for w in _nested_words(command)))
+            or any(_delegated_flag(w) for w in nested))
 
 
-def _built_word(command):
+def _built_word(words, nested, raw, compass, escaped):
     """A word of a command that names evidence and holds ANSI-C quoting or a
     brace expansion, else None. The shell turns `$'appro\\x76e'` into
     `approve` and `--{delegated,x}` into `--delegated`; the guard does not
-    decode them, so it refuses the command whether or not `--delegated` shows."""
-    text = command.replace("\\\n", "")
-    found = ANSI_C.search(text)
+    decode them, so it refuses the command whether or not `--delegated` shows.
+    `raw` is the words as written, `compass` is true when a word is `compass`,
+    and `escaped` when a command name is spelled with an escape."""
+    found = ANSI_C.search(raw)
     # A command that holds `compass` (or spells it with an escape in command
     # position) may spell every word with an escape, so `evidence` need not
     # show: `compass $'\x65vidence' $'appro\x76e'` runs `evidence approve`.
-    if found and (_names_evidence(command) or "compass" in text.lower()
-                  or ESCAPED_COMMAND.search(text)):
+    evidence = _names_evidence(words, nested)
+    if found and (evidence or compass or escaped):
         return found.group(0)
-    if not _names_evidence(command):
+    if not evidence:
         return None
-    for word in _nested_words(command):
+    for word in nested:
         if BRACE.search(word) and not re.search(r"\s", word):
             return word
     return None
 
 
-def _caller_mismatch(command, who):
+def _caller_mismatch(words, nested, who):
     """`(named, caller)` when a delegated approval does not name its caller.
     The top-level words keep the earlier guard's rule, so nothing it refused
     is allowed now."""
-    for words, earlier in ((_words(command), True), (_nested_words(command), False)):
+    for words, earlier in ((words, True), (nested, False)):
         if not _delegated_approve(words, earlier):
             continue
         values = _as_values(words)
@@ -305,12 +385,41 @@ def _config_folder():
                       r"(?=$|[\s\"'`;|&()<>])" % home, re.I)
 
 
+def _names_request(text, exempt=NONE, fold=False):
+    """The request folder or prompt hook script name that `text` holds, unless
+    the exemption covers it; else an empty string."""
+    held = text.lower() if fold else text
+    for fragment, thing in ((REQUEST_FOLDER, "request"), (HOOK_ENTRY, "script")):
+        if fragment in held and thing not in exempt:
+            return fragment
+    return ""
+
+
+def _names_delegation(text, fold=False):
+    held = text.lower() if fold else text
+    return DELEGATION_FOLDER if DELEGATION_FOLDER in held else ""
+
+
+def _transcript_text(text, folder, fold):
+    """The transcript name that `text` holds, in one letter case."""
+    held = _path(text).lower() if fold else _path(text)
+    base = folder.lower() if fold else folder
+    found = TRANSCRIPTS.search(held)
+    if found:
+        return found.group(0)
+    return folder if folder and base in held else ""
+
+
+def _names_config(text):
+    found = _config_folder().search(_path(text))
+    return found.group(0) if found else ""
+
+
 def _names_transcript(text, folder):
-    text = _path(text)
-    lower = text.lower()
-    return (bool(TRANSCRIPTS.search(text)) or bool(folder and folder in text)
-            or bool(TRANSCRIPTS.search(lower)) or bool(folder and folder.lower() in lower)
-            or bool(_config_folder().search(text)))
+    """The transcript name that a tool path holds, in either letter case, or a
+    configuration folder."""
+    return (_transcript_text(text, folder, False) or _transcript_text(text, folder, True)
+            or _names_config(text))
 
 
 def _expand_home(text):
@@ -366,6 +475,50 @@ def _word_above(word, folder):
     path, folder = _norm(path), _norm(folder)
     return path != "/" and (folder == path or folder.startswith(path + "/")
                             or path.startswith(folder + "/"))
+
+
+def _memory_tail(path, folder):
+    """What follows `memory` in a normalised path of the shape
+    `<configuration folder>/projects/<one folder>/memory[/...]`, else None. The
+    configuration folder ends in a `.claude*` segment, or its `projects` folder is
+    the transcript's own."""
+    found = re.fullmatch(r"(.*/\.claude[^/]*)/projects/[^/]+/memory(/.*)?", path)
+    if found:
+        return found.group(2) or ""
+    if folder:
+        own = {_norm(os.path.dirname(folder)), _norm(os.path.realpath(os.path.dirname(folder)))}
+        for projects in own:
+            found = re.fullmatch(re.escape(projects) + r"/[^/]+/memory(/.*)?", path)
+            if found:
+                return found.group(1) or ""
+    return None
+
+
+def in_memory_folder(path, cwd, folder, inside=False):
+    """True when a tool path is in the agent's auto-memory folder, so the
+    transcript tests do not apply to it. The path is joined to the call's
+    `cwd`, normalised and case-folded, and its symbolic links are resolved; both
+    forms must have the shape of `_memory_tail`. A glob or brace character in the
+    path is never in the folder. With `inside`, the folder itself does not count
+    (a Write or Edit names a file)."""
+    text = _expand_home(_path(path))
+    if not text or GLOB.search(text):
+        return False
+    if not os.path.isabs(text):
+        text = os.path.join(_path(cwd) or os.getcwd(), text)
+    try:
+        resolved = _path(os.path.realpath(text))
+    except (OSError, ValueError):
+        return False
+    tails =(_memory_tail(_norm(text), folder), _memory_tail(_norm(resolved), folder))
+    return None not in tails and not (inside and not tails[0].strip("/"))
+
+
+def _glob_climbs(glob):
+    """True when a Grep glob holds a `..` segment, as `../*.jsonl` does, or a brace
+    expansion that holds `..`, as `{..,x}/*.jsonl` does: ripgrep expands braces."""
+    text = _path(glob)
+    return ".." in re.split(r"[/\\,\s]+", text) or ("{" in text and ".." in text)
 
 
 #: A delegation path and the ordinary path of the same shape outside the
@@ -459,6 +612,7 @@ def _grep_glob_reaches(pattern, searched, cwd):
 
 
 def _bash_glob_reaches(words, cwd):
+    """The first word whose glob can match the delegation files, else ''."""
     root = _resolved(".", cwd)
     relative = [(s, p) for s, p in DELEGATION_SAMPLES]
     absolute = [(root + "/" + s, root + "/" + p) for s, p in DELEGATION_SAMPLES]
@@ -471,13 +625,13 @@ def _bash_glob_reaches(words, cwd):
             part = _expand_home(_path(part))
             if os.path.isabs(part):
                 if _glob_selects(_norm(part), absolute, False):
-                    return True
+                    return word
                 continue
             while part.startswith("./"):
                 part = part[2:]
             if _glob_selects(os.path.normpath(part), relative, False):
-                return True
-    return False
+                return word
+    return ""
 
 
 def _in_delegations(tool_input, cwd):
@@ -502,78 +656,159 @@ def check(event):
     if not isinstance(tool_input, dict):
         return None
     folder = _transcript_folder(event)
+    cwd = str(event.get("cwd") or "")
     if tool in READ_TOOLS:
-        cwd = str(event.get("cwd") or "")
         target = _path(tool_input.get("file_path") or tool_input.get("path"))
-        if target and (_names_transcript(target, folder)
-                       or _config_folder().search(_resolved(target, cwd))):
-            return "transcript-protected", {"target": target, "tool": tool}
-        named = _in_delegations(tool_input, cwd)
-        if named:
-            return "delegation-protected", {"target": named, "tool": tool}
         # A Grep with no path searches its working folder.
         searched = target or (cwd if tool == "Grep" else "")
-        if searched and _above_or_in(_resolved(searched, cwd), folder):
-            return "transcript-protected", {"target": searched, "tool": tool}
+        # The auto-memory folder skips the transcript tests and no other test.
+        memory = bool(searched) and in_memory_folder(searched, cwd, folder) and not (
+            tool == "Grep" and _glob_climbs(tool_input.get("glob") or ""))
+        if not memory and target and (_names_transcript(target, folder)
+                                      or _config_folder().search(_resolved(target, cwd))):
+            return _deny("transcript-protected", target, tool, folder)
+        named = _in_delegations(tool_input, cwd)
+        if named:
+            return _deny("delegation-protected", named, tool, DELEGATION_FOLDER)
+        if not memory and searched and _above_or_in(_resolved(searched, cwd), folder):
+            return _deny("transcript-protected", searched, tool, folder)
         return None
     if tool in EDIT_TOOLS:
         target = _path(tool_input.get("file_path") or tool_input.get("path")
                        or tool_input.get("notebook_path"))
+        memory = in_memory_folder(target, cwd, folder, inside=True)
         # The earlier guard's checks first, in its order, so a call it refused
         # keeps its code; then the same checks in any letter case.
         for path in (target, target.lower()):
             if f"/{REQUEST_FOLDER}/" in path and ".compass/" in path:
-                return "approval-request-protected", {"target": target, "tool": tool}
+                return _deny("approval-request-protected", target, tool, REQUEST_FOLDER)
             if f"{DELEGATION_FOLDER}/" in path:
-                return "delegation-protected", {"target": target, "tool": tool}
-            if _names_transcript(path, folder):
-                return "transcript-protected", {"target": target, "tool": tool}
+                return _deny("delegation-protected", target, tool, DELEGATION_FOLDER)
+            if not memory and _names_transcript(path, folder):
+                return _deny("transcript-protected", target, tool, folder)
         return None
     if tool != "Bash":
         return None
     command = str(tool_input.get("command") or "")
-    text = _path(command)
-    # The earlier guard's checks run first, in its order and letter case, so a
-    # call it refused keeps the code it was refused with. The checks this
-    # issue added follow.
-    if REQUEST_FOLDER in command or HOOK_ENTRY in command:
-        return "approval-request-protected", {
-            "target": "a command naming approval requests", "tool": tool}
-    if DELEGATION_FOLDER in command:
-        return "delegation-protected", {
-            "target": "a command naming .compass/delegations", "tool": tool}
-    if TRANSCRIPTS.search(text) or (folder and folder in text):
-        return "transcript-protected", {
-            "target": "a command naming a session transcript", "tool": tool}
-    built = _built_word(command)
+    commands = simple(command)
+    if commands is None:
+        return _judge_text(command, event, folder)
+    return _judge_words(commands, event, folder)
+
+
+def _deny(code, target, tool, found):
+    """A refusal for a tool path. The path is the agent's, so it is cleaned and cut around
+    `found` as a refused Bash word is. A path that names the transcript's configuration
+    folder and not its exact folder is cut around the configuration folder."""
+    if found.lower() not in target.lower():
+        match = TRANSCRIPTS.search(target.lower())
+        found = match.group(0) if match else ""
+    return code, {"target": shown_word(target, found), "tool": tool}
+
+
+# --- Bash: the words of a simple command, or the whole text ------------------------------------
+
+def _bare(words, i):
+    """True when `words[i]` is a bare path argument: not the command name, an option, a
+    `VAR=` word or the value of an option that takes a path."""
+    return not (i == 0 or words[i].startswith("-") or ASSIGNMENT.match(words[i])
+                or words[i - 1] in PATH_OPTIONS)
+
+
+def _one_plain_operand(words):
+    """True when an exempt command has one operand and only the plain options of
+    `EXEMPT_OPTIONS`: no `--`, no second path and no option that takes a value."""
+    letters = EXEMPT_OPTIONS.get(words[0], "")
+    operands = [w for w in words[1:] if not w.startswith("-")]
+    return len(operands) == 1 and all(
+        len(w) > 1 and set(w[1:]) <= set(letters) for w in words[1:] if w.startswith("-"))
+
+
+def _judge_words(commands, event, folder):
+    """The Bash checks on the words of a simple command: every word and redirect target
+    except message text. An exemption holds only for a command that stands alone and has
+    no redirect to a file (a copy of a descriptor, `2>&1`, names no file), with one operand
+    and plain options, and only for a word with no `..` segment."""
+    items, top = [], []
+    for command in commands:
+        words = command.words
+        allowed = (EXEMPT.get(words[0], ()) if len(commands) == 1 and not command.targets
+                   and _one_plain_operand(words) else ())
+        for i, word in enumerate(words):
+            if i not in command.text:
+                items.append((word, allowed if _bare(words, i) and ".." not in word.split("/")
+                              else (), False))
+                top.append(word)
+        for target in command.targets:
+            items.append((target, (), False))
+            top.append(target)
+    return _judge(event, folder, items, top, " ".join(top), False, False)
+
+
+def _judge_text(command, event, folder):
+    """The Bash checks on the whole text of a command that is not simple: any text that
+    names a protected thing is refused."""
+    text = command.replace("\\\n", "")
+    return _judge(event, folder, [(command, (), True)], _words(command), text,
+                  bool(ESCAPED_COMMAND.search(text)), True)
+
+
+def _refusal(code, tool, text, found, whole):
+    if whole:
+        target = "text that holds '%s'" % shown_word(found)
+    else:
+        target = "the Bash word '%s'" % shown_word(text, found)
+    return code, {"target": target, "tool": tool}
+
+
+def _first(items, find):
+    """`(found, text, whole)` for the first item that `find(text, exempt)` names."""
+    for text, exempt, whole in items:
+        found = find(text, exempt)
+        if found:
+            return found, text, whole
+    return None
+
+
+def _judge(event, folder, items, top, raw, escaped, whole):
+    """`(code, params)` for a Bash call to refuse, else None. The checks keep the
+    order of the earlier guard, so a call it refused keeps its code: the request,
+    delegation and transcript names; the caller rules; then the same names in any
+    letter case, a configuration folder, a folder above the transcript and a glob."""
+    tool = "Bash"
+    for code, find in (
+            ("approval-request-protected", lambda t, e: _names_request(t, e)),
+            ("delegation-protected", lambda t, e: _names_delegation(t)),
+            ("transcript-protected", lambda t, e: _transcript_text(t, folder, False))):
+        hit = _first(items, find)
+        if hit:
+            return _refusal(code, tool, hit[1], hit[0], hit[2])
+    nested = _nested_words(top)
+    compass = "compass" in raw.lower()
+    built = _built_word(top, nested, raw, compass, escaped)
     if built:
         return "delegation-caller-mismatch", {
-            "named": built, "caller": caller(event) or "an agent with no agent type"}
-    found = _caller_mismatch(command, caller(event))
+            "named": shown_word(built),
+            "caller": shown_word(caller(event) or "an agent with no agent type")}
+    found = _caller_mismatch(top, nested, caller(event))
     if found:
         named, who = found
         return "delegation-caller-mismatch", {
-            "named": named or "no --as", "caller": who or "an agent with no agent type"}
-    lower = command.lower()
-    if REQUEST_FOLDER in lower or HOOK_ENTRY in lower:
-        return "approval-request-protected", {
-            "target": "a command naming approval requests", "tool": tool}
-    if DELEGATION_FOLDER in lower:
-        return "delegation-protected", {
-            "target": "a command naming .compass/delegations", "tool": tool}
-    if TRANSCRIPTS.search(_path(lower)) or (folder and folder.lower() in lower):
-        return "transcript-protected", {
-            "target": "a command naming a session transcript", "tool": tool}
-    if _config_folder().search(text):
-        return "transcript-protected", {
-            "target": "a command naming a Claude Code configuration folder", "tool": tool}
-    if any(_word_above(w, folder) for w in _nested_words(command)):
-        return "transcript-protected", {
-            "target": "a command naming a folder above the session transcript",
-            "tool": tool}
+            "named": shown_word(named or "no --as"),
+            "caller": shown_word(who or "an agent with no agent type")}
+    for code, find in (
+            ("approval-request-protected", lambda t, e: _names_request(t, e, True)),
+            ("delegation-protected", lambda t, e: _names_delegation(t, True)),
+            ("transcript-protected", lambda t, e: _transcript_text(t, folder, True)),
+            ("transcript-protected", lambda t, e: _names_config(t))):
+        hit = _first(items, find)
+        if hit:
+            return _refusal(code, tool, hit[1], hit[0], hit[2])
+    for word in nested:
+        if _word_above(word, folder):
+            return _refusal("transcript-protected", tool, word, word, False)
     # Last, so a call an earlier check refuses keeps its code.
-    if _bash_glob_reaches(_nested_words(command), str(event.get("cwd") or "")):
-        return "delegation-protected", {
-            "target": "a command with a glob that can match .compass/delegations",
-            "tool": tool}
+    word = _bash_glob_reaches(nested, str(event.get("cwd") or ""))
+    if word:
+        return _refusal("delegation-protected", tool, word, word, False)
     return None

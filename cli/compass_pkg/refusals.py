@@ -178,18 +178,16 @@ REFUSALS: dict[str, dict[str, str]] = {
     # The approval guards (approval_guard.py, ADR-068 decision 10, ADR-069).
     "approval-request-protected": {
         "what": "{target} (tool: {tool})",
-        "why": "approval requests and the approval hook belong to Compass; an "
-               "approval binds to the request a person was shown.",
-        "fix": "ask for an approval with compass evidence request, then ask the "
-               "person to type /compass:approve.",
+        "why": "an approval binds to the request a person was shown.",
+        "fix": "do not read, change or run these files. Ask with compass "
+               "evidence request; the person answers with /compass:approve.",
     },
     "delegation-protected": {
         "what": "{target} (tool: {tool})",
-        "why": "a delegation is a person's decision, written only from a typed "
-               "/compass:delegate, and its folder holds the check for the code "
-               "that confirms one.",
-        "fix": "ask the person to type /compass:delegate or /compass:revoke; "
-               "never read or write a delegation file yourself.",
+        "why": "a delegation is a person's decision, and its folder holds the "
+               "check for its confirmation code.",
+        "fix": "do not read or write these files; the person types "
+               "/compass:delegate or /compass:revoke.",
     },
     "delegation-caller-mismatch": {
         "what": "delegated approval (--as {named})",
@@ -201,10 +199,9 @@ REFUSALS: dict[str, dict[str, str]] = {
     },
     "transcript-protected": {
         "what": "{target} (tool: {tool})",
-        "why": "the session transcript holds what Compass showed only to the "
-               "person, such as the code that confirms a delegation.",
-        "fix": "work from the conversation and the files in the project; ask the "
-               "person for anything you need from the transcript.",
+        "why": "the transcript holds what Compass showed only to the person.",
+        "fix": "use the project's files, or the Read, Grep, Edit or Write tool "
+               "on the auto-memory folder; ask the person for the rest.",
     },
     # A landing refusal of `compass ship-commit` and `quick-fix finish`
     # (checkpoint_outcomes.landing_refusal), not a hook refusal. `is` and `it`

@@ -2805,6 +2805,9 @@ _register(Rule(
             "commands/consult.md", "architecture/invariants.yml",
             "the same conditional artifact reference as agents/architect.md."),
         Exemption(
+            "commands/define.md", "architecture/invariants.yml",
+            "the same conditional artifact reference as agents/architect.md."),
+        Exemption(
             "templates/architecture/ownership.md", "architecture/invariants.yml",
             "the same conditional artifact reference as agents/architect.md."),
         Exemption(

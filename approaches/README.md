@@ -2,8 +2,8 @@
 
 A **delivery approach** is the computed shape of the pipeline for one issue:
 how heavy each of the eight stages is, which gates apply, and whether the work
-runs solo or as a multiagent orchestration. Approaches are *composed* from the four assessment
-dimensions - see `rubric.md` - not picked from this list.
+runs solo or as a multiagent orchestration. Approaches are *composed* from the three scored
+dimensions, two switches and the domain labels - see `rubric.md` - not picked from this list.
 
 The five files here are **reference shapes**: the common shapes that
 composition lands near. Assess names the nearest one in the issue's

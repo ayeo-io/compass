@@ -1,12 +1,12 @@
 ---
-description: Assess risk, familiarity, size and goal, and compute the delivery approach
+description: Assess risk, familiarity and size, and compute the delivery approach
 argument-hint: "<issue description> [--reassess]"
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---
 
 # /compass:assess
 
-Assessing is the one stage that never skips. You read the four dimensions -
+Assessing is the one stage that never skips. You score the three dimensions -
 judgement - and `compass approach evaluate` computes the delivery approach
 from `governance/routing-policy.yml`. You do not pick a process.
 

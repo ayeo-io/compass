@@ -589,6 +589,13 @@ def test_d2_repairs_change_only_retired_names():
     to the section the stated limits of the check, five bullets, and two more
     bullets to its fail-closed list (list_items 97 -> 104).
 
+    A file already counted above was re-baselined again by
+    `hooks-stop-refusing-harmless-work`:
+    `docs/safety-contract.md` (list_items 104 -> 121) gained the bullets of
+    the approval guard's section: what the guard is, how it reads a Bash
+    command as words, what it judges in a simple command and the limits that
+    remain.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

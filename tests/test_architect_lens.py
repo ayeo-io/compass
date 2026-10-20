@@ -369,3 +369,77 @@ def test_consult_agent_roster_section():
     ), (
         "commands/consult.md does not have a section documenting the agent roster"
     )
+
+
+# --------------------------------------------------------------------------
+# The define command convenes the architect, not the spec-author, because a
+# subagent cannot run a slash command or start another agent (`TRC-001`)
+# --------------------------------------------------------------------------
+
+
+def _flat(path: Path) -> str:
+    """File text with each run of whitespace folded to one space, so a
+    phrase wrapped across two lines still matches."""
+    return " ".join(path.read_text(encoding="utf-8").split())
+
+
+def test_define_command_names_the_trigger_condition():
+    """commands/define.md names the same three trigger conditions as
+    commands/consult.md: the `public-api` label, a service in
+    architecture/relations.md, a `lens_trigger_tag` in
+    architecture/invariants.yml (`TRC-001`).
+    """
+    define = _flat(command_file("define.md"))
+    for term in ("public-api", "architecture/relations.md", "lens_trigger_tag"):
+        assert term in define, f"commands/define.md does not name the trigger: {term}"
+
+
+def test_define_command_convenes_the_architect_before_the_spec_author():
+    """commands/define.md invokes the architect agent, and does so before the
+    line that invokes the spec-author agent (`TRC-001`).
+    """
+    define = _flat(command_file("define.md")).lower()
+    convene = define.find("invoke the `architect` agent")
+    spec_author = define.find("invoke the `spec-author` agent")
+    assert convene != -1, "commands/define.md does not invoke the architect agent"
+    assert spec_author != -1, "commands/define.md does not invoke the spec-author agent"
+    assert convene < spec_author, (
+        "commands/define.md invokes the architect after the spec-author"
+    )
+
+
+def test_spec_author_no_longer_invokes_a_slash_command():
+    """agents/spec-author.md does not tell the agent to run /compass:consult
+    (a subagent cannot), and still mentions the architect consultation and
+    the `public-api` tag (`TRC-001`, and the wording `TRC-B2` needs).
+    """
+    content = _flat(agent_file("spec-author.md"))
+    assert "invoke `/compass:consult" not in content.lower(), (
+        "agents/spec-author.md still tells the agent to invoke /compass:consult"
+    )
+    assert "architect" in content
+    assert "public-api" in content
+    assert "architecture-notes.md" in content
+
+
+def test_spec_author_reports_missing_notes_in_the_hand_off():
+    """When the labels match and there are no notes, the spec-author says so
+    in the hand-off (`TRC-001`).
+    """
+    content = _flat(agent_file("spec-author.md"))
+    assert "say so in the hand-off" in content, (
+        "agents/spec-author.md does not say what to do when the notes are missing"
+    )
+
+
+def test_architect_is_triggered_by_the_define_command():
+    """agents/architect.md says the define command convenes it, not the
+    spec-author (`TRC-001`).
+    """
+    content = _flat(agent_file("architect.md"))
+    assert "by the define command" in content, (
+        "agents/architect.md does not say the define command convenes it"
+    )
+    assert "auto-triggered by spec-author" not in content, (
+        "agents/architect.md still says the spec-author triggers it"
+    )

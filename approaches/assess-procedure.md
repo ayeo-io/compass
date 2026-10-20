@@ -4,7 +4,7 @@ Read by `/compass:assess` when the change is not a small one an engineer
 is making, when `compass quick-fix start` computed a heavier approach, or
 on `--reassess`. The light path stays in `commands/assess.md`.
 
-Assessing is the one stage that never skips. It reads the four assessment
+Assessing is the one stage that never skips. It reads the three scored
 dimensions - that is **judgement** - and then hands them to the CLI, which
 **computes** the delivery approach deterministically. You do not pick a
 process, and you do not compose the approach in your head: you assess the
@@ -51,7 +51,7 @@ what `/compass:init` offers separately.
   `compass.yml`. The same `compass.yml` holds the project's changes to the
   routing rules.
 - For a non-trivial or ambiguous issue, invoke the `router` agent to read
-  the four dimensions.
+  the three scored dimensions.
 - Pass the computed model and effort when you invoke the `router` agent:
   `compass approach show --model assess` prints the `model`, and
   `compass approach show --effort assess` prints the `effort`. On
@@ -68,7 +68,7 @@ what `/compass:init` offers separately.
 If `--reassess` is passed, this is a re-assessment during the work, not a new
 assessment - typically because implementation revealed the assessment was
 misread. Read the existing `delivery-approach.md` and `manifest.yml`, re-read the
-four dimensions, update the manifest's `assessment:` block, then re-run
+three scored dimensions, update the manifest's `assessment:` block, then re-run
 `compass approach evaluate --write --reason "..." --justify DIM="..."` to recompute
 the approach, with one `--justify` for each value you changed.
 **Always pass `--reason`** on a re-assessment: the CLI records the event in
@@ -109,9 +109,10 @@ force; if it is still a spike, leave the marker in place.
     yet. A project without one keeps working. Do **not** write load state
     into the manifest's `assessment:` block; that block is the judgement only.
 
-2. **Read the four dimensions - this is the judgement** - risk, familiarity,
-   size and goal, plus the `labels:` domain tags. Each gets a value and a
-   one-line justification. If a value cannot be justified, ask the user
+2. **Read the three scored dimensions - this is the judgement** - risk,
+   familiarity and size, plus the optional switches (`goal` and `urgency`) and
+   the `labels:` domain tags. Each dimension and each switch you set gets a
+   value and a one-line justification; labels need none. If a value cannot be justified, ask the user
    rather than guessing. When size is unsure, estimate *up*. Note:
    **exploration goal** - "I cannot state this well enough to deliver it
    yet" - leads towards a **spike**, the way live-defect urgency leads towards
@@ -158,7 +159,7 @@ force; if it is still a spike, leave the marker in place.
    issue's documents folder), from the CLI's output. Then register it with
    `compass issue artifact set delivery-approach --status draft --path <that
    path>`. It must contain:
-   - the four dimensions with justifications;
+   - the three scored dimensions and any switches, with justifications;
    - the computed approach;
    - every policy rule the CLI reported as fired (with its rationale);
    - the final per-stage weight, gate set, and orchestration;

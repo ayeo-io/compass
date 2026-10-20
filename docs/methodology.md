@@ -59,7 +59,7 @@ Compass has eight methodological stages, one command per stage:
 
 | Command | Methodological stage | Purpose |
 |---|---|---|
-| `/compass:assess` | Assess | Read the four dimensions and compute the delivery approach. |
+| `/compass:assess` | Assess | Score the three dimensions and compute the delivery approach. |
 | `/compass:define` | Define | State observable behaviour. |
 | `/compass:refine` | Requirements review | Resolve ambiguity. |
 | `/compass:plan` | Plan | Decide how to build it. |

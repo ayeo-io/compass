@@ -16,8 +16,8 @@
 A typo fix should not need an architecture pack. A payments rewrite should
 not begin with an unstructured prompt.
 
-Compass assesses each change by **risk, familiarity, size and goal**, then
-composes the right delivery approach: the artifacts worth writing, the checks
+Compass assesses each change by **risk, familiarity and size**, with optional
+switches for goal and urgency, then composes the right delivery approach: the artifacts worth writing, the checks
 worth running, the human decisions needed and the number of agents that can
 work safely in parallel.
 
@@ -72,7 +72,7 @@ Writing the artifacts is its own craft: see
 ## What Compass changes
 
 Compass chooses the process for each change from its assessment of risk,
-familiarity, size and goal. It adapts the depth without abandoning discipline.
+familiarity and size. It adapts the depth without abandoning discipline.
 
 | Work | Typical Compass response |
 |---|---|

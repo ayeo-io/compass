@@ -59,7 +59,7 @@ user does not type an explicit Compass command.
 
 Before the first delivery change it must:
 
-1. assess risk, familiarity, size and goal;
+1. assess risk, familiarity and size, and any goal or urgency switch;
 2. record the assessment in the manifest;
 3. call `compass approach evaluate --write`; and
 4. present the human-readable approach for approval.

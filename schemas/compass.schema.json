@@ -421,7 +421,7 @@
     },
     "capabilities": {
       "additionalProperties": false,
-      "description": "Named switches for new blocking behaviour. Each is off in the shipped default.",
+      "description": "Named switches for new blocking behavior. Each is off in the shipped default.",
       "properties": {
         "artifact-freshness": {
           "description": "Whether a change to an artifact marks the artifacts and check results that depend on it as stale. Off in the shipped default.",
@@ -1323,7 +1323,7 @@
         },
         "strong": {
           "additionalProperties": false,
-          "description": "The strong tier, for judgement seats: a model name, or `{model, effort}`. The default is `inherit`, the session's model, at effort `high`.",
+          "description": "The strong tier, for judgment seats: a model name, or `{model, effort}`. The default is `inherit`, the session's model, at effort `high`.",
           "properties": {
             "effort": {
               "description": "The effort level: `low`, `medium`, `high`, `xhigh` or `max`.",
@@ -1361,7 +1361,7 @@
       "type": "object"
     },
     "preset_index": {
-      "description": "Reserved for published presets. It has no behaviour yet.",
+      "description": "Reserved for published presets. It has no behavior yet.",
       "type": "string"
     },
     "prices": {
@@ -1698,14 +1698,14 @@
     },
     "vocabulary": {
       "additionalProperties": false,
-      "description": "The display names and aliases of catalogue entries. Each key is `<catalogue>.<id>`, for example `approaches.quick-fix`.",
+      "description": "The display names and aliases of catalog entries. Each key is `<catalog>.<id>`, for example `approaches.quick-fix`.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
-          "description": "The display name of one catalogue entry, and the other names a person may type for it.",
+          "description": "The display name of one catalog entry, and the other names a person may type for it.",
           "properties": {
             "aliases": {
-              "description": "Other names a person may type for the entry. A name or alias may belong to only one entry of a catalogue.",
+              "description": "Other names a person may type for the entry. A name or alias may belong to only one entry of a catalog.",
               "oneOf": [
                 {
                   "description": "The whole list, written out in full.",
@@ -1752,7 +1752,7 @@
               "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
                 "aliases": {
-                  "description": "Other names a person may type for the entry. A name or alias may belong to only one entry of a catalogue.",
+                  "description": "Other names a person may type for the entry. A name or alias may belong to only one entry of a catalog.",
                   "oneOf": [
                     {
                       "description": "The whole list, written out in full.",

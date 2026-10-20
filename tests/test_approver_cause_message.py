@@ -1,7 +1,8 @@
 """Group D of issue `hooks-stop-refusing-harmless-work`: when `/compass:approve`
 cannot name an approver, its message names the real cause.
 
-Scenarios: `TRC-020` to `TRC-028`. The new contract is
+Scenarios: `TRC-020` to `TRC-028`, and `TRC-069` for an old settings file that
+cannot be read. The new contract is
 `approval_records.owner_and_cause(task_dir)`, which returns an `OwnerLookup`
 (`owner`, `cause`, `detail`, `root`, `found_in`) with one of seven `CAUSE_*`
 values. `project_owner` keeps returning the owner or None, and
@@ -226,3 +227,51 @@ def test_owner_and_cause_gives_the_owner_or_one_of_seven_causes(setup, tmp_path)
     assert records.owner_and_cause(str(task_dir(root))).cause == records.CAUSE_NO_OWNER
     (root / "compass.yml").unlink()
     assert records.owner_and_cause(str(task_dir(root))).cause == records.CAUSE_MISSING
+
+
+# --- an old settings file that cannot be read gives the no-owner cause --------------------------
+
+def _hostile_pipe(path):
+    os.mkfifo(path)
+
+
+def _hostile_device(path):
+    os.symlink("/dev/zero", path)
+
+
+def _hostile_folder(path):
+    os.mkdir(path)
+
+
+def _hostile_text(text):
+    return lambda path: Path(path).write_text(text, encoding="utf-8")
+
+
+LOOKUP = (
+    "import sys; sys.path.insert(0, sys.argv[1])\n"
+    "from compass_pkg import approval_records\n"
+    "print(approval_records.owner_and_cause(sys.argv[2]).cause)\n"
+)
+
+
+@pytest.mark.parametrize("make", [
+    pytest.param(_hostile_pipe, id="a named pipe"),
+    pytest.param(_hostile_device, id="a symbolic link to a device"),
+    pytest.param(_hostile_folder, id="a folder"),
+    pytest.param(_hostile_text("[" * 3000), id="3000 nested brackets"),
+    pytest.param(_hostile_text("owner: !!timestamp 99999-01-01\n"), id="a date no calendar holds"),
+])
+def test_trc_069_an_old_settings_file_that_cannot_be_read_gives_the_no_owner_cause(setup, make):
+    root, _ = setup
+    _write_yml(root, "schema: 1\n")
+    make(str(root / ".compass" / "config.yml"))
+    # A separate process with a time limit: a read that waits on a named pipe
+    # fails the test here instead of stopping the whole run.
+    try:
+        run = subprocess.run(
+            [sys.executable, "-c", LOOKUP, str(ROOT / "cli"), str(task_dir(root))],
+            capture_output=True, text=True, timeout=10)
+    except subprocess.TimeoutExpired:
+        pytest.fail("the cause lookup did not return within 10 seconds")
+    assert run.returncode == 0, run.stderr[-400:]
+    assert run.stdout.strip() == "no-owner", run.stdout + run.stderr[-400:]

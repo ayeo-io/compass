@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -357,7 +358,7 @@ def test_gls_11_failing_gh_is_reported_and_recovers(repo, gh):
     assert "out of sync" in lint.stdout and "not logged in" in lint.stdout
     down = run(repo, gh, "issue", "status", "remove", "--issue", SLUG, mode="down")
     assert down.returncode == 0, down.stdout + down.stderr
-    assert "api.github.com" in _one_line_about_github(down)
+    assert re.search(r"\bapi\.github\.com\b", _one_line_about_github(down))
     fixed = sync(repo, gh)
     assert fixed.returncode == 0, fixed.stdout + fixed.stderr
     assert gh.labels() == {"infra", "ci", "status:ready"}

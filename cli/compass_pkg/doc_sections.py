@@ -29,7 +29,6 @@ NAMED_HEADINGS = {(STAGE_PLAN, "entry"): "Definition of Ready",
                   (STAGE_VERIFY, "exit"): "Definition of Done"}
 
 _STAGE_ID = re.compile(catalogue_spec.ID_PATTERN)
-_COMMENT_TOKEN = re.compile(r"<!--|-->")
 _TAG = re.compile(r"^\((?:evidence|follow-up):[^)]*\)\s*")
 
 

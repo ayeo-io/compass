@@ -14,7 +14,7 @@
 # inside the project, so the project can never commit it by mistake.
 #
 # DEPENDENCY: standard library (hashlib, os, shutil, subprocess) and
-# compass_pkg (core, generation, redact, rival_names).
+# compass_pkg (core, effective, redact, rival_names).
 # =============================================================================
 """`compass record sync|restore`: the delivery record in its own repository."""
 from __future__ import annotations
@@ -25,7 +25,7 @@ import posixpath
 import shutil
 import subprocess
 
-from compass_pkg import generation, project_settings
+from compass_pkg import project_settings
 from compass_pkg.core import CompassError, find_compass_dir, load_yaml
 from compass_pkg.redact import MARK as REDACTED, redact
 from compass_pkg import rival_names
@@ -394,8 +394,11 @@ def _redacted_generation_file(parts, full):
     """Is the record file at `full`, at path `parts`, one of a generation's
     stored files with a line a sync before 7.0.0 redacted? The generation's
     marker holds a digest of each file, so a restored copy breaks it."""
-    if len(parts) < 3 or parts[-3] != generation.DIRECTORY \
-            or parts[-1] not in generation.FILES:
+    # Only `effective` imports the generation store (ADR-036), so the names
+    # come from there, and only when a restore runs.
+    from compass_pkg.effective import GENERATION_DIRECTORY, GENERATION_FILES
+    if len(parts) < 3 or parts[-3] != GENERATION_DIRECTORY \
+            or parts[-1] not in GENERATION_FILES:
         return False
     with open(full, "rb") as fh:
         return REDACTED.encode() in fh.read()

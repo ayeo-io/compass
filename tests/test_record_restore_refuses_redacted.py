@@ -44,7 +44,7 @@ def test_rrr_1_restore_refuses_a_redacted_generation_file(project, tmp_path):
 
 
 def test_rrr_1_a_redacted_file_outside_a_generation_still_restores(project, tmp_path):
-    # The sync redacts the key in docs/analysis/plan.md; that copy restores.
+    # The sync redacts the key in the fixture's plan; that copy restores.
     remote = _remote(tmp_path)
     _configure(project, remote)
     assert _cli(project, "record", "sync").returncode == 0

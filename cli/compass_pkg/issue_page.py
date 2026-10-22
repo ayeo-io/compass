@@ -146,7 +146,7 @@ def _trim(lines):
     # A line that is only an HTML comment is the template's instruction, not the ask. A
     # quoted marker is the author's text and stays (neutralised).
     return [x for x in kept
-            if not re.match(r"^\s*<!--.*--!?>\s*$", x) or "compass:render" in x]
+            if not re.match(r"^\s*<!--.*--!?>\s*$", x, re.S) or "compass:render" in x]
 
 
 ASK_SECTIONS = (("Problem", "problem"), ("Desired outcome", "desired outcome"),

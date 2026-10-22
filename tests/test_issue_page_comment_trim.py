@@ -13,6 +13,11 @@ def test_a_line_holding_only_a_comment_is_dropped_whichever_way_it_ends():
     assert issue_page._trim(lines) == ["The ask."]
 
 
+def test_a_comment_that_holds_a_newline_is_dropped():
+    # Code scanning alert py/bad-tag-filter: the pattern must not stop at a newline.
+    assert issue_page._trim(["<!-- one\nline -->", "The ask."]) == ["The ask."]
+
+
 def test_a_quoted_marker_and_the_render_marker_stay():
     lines = ["text <!-- not alone --> more", "<!-- compass:render coverage -->"]
     assert issue_page._trim(lines) == lines

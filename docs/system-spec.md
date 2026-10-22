@@ -4800,3 +4800,9 @@ compass policy migrate --undo puts a project back in the state it had before com
 compass ship-commit now shows the reason git gave when a commit fails, for example a missing author identity, before it says the land did not happen. It suggests a pre-commit hook only when one can run.
 
 - `TRC-001` Given a repository with no author identity When compass ship-commit cannot commit Then the error starts with the tool's own reason and does not blame a pre-commit hook
+
+### migrate-keeps-one-unit-map (completed 2026-10-22)
+
+compass issue migrate no longer renames a distribution map that declares units: 1, so multiagent-run-recorded still passes on that issue after the migration.
+
+- `TRC-001` Given a 6.x issue whose lightweight distribution map declares units: 1, When compass issue migrate runs as a dry run and then with --apply, Then it renames no map, the map keeps its name and text, and its registry entry keeps its status and path

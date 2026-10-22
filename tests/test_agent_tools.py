@@ -122,6 +122,29 @@ def test_define_and_plan_commands_allow_bash(command):
     assert "Bash" in [t.strip() for t in allowed.split(",")]
 
 
+def _commands_that_restrict_tools():
+    """Commands that declare `allowed-tools`, as (name, tools, flat body)."""
+    found = []
+    for path in sorted(COMMANDS.glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        match = re.search(r"^allowed-tools: (.*)$", text, re.M)
+        if match:
+            tools = [t.strip() for t in match.group(1).split(",")]
+            found.append((path.stem, tools, " ".join(text.split("---", 2)[2].split())))
+    return found
+
+
+@pytest.mark.parametrize(
+    "name, tools, body",
+    _commands_that_restrict_tools(),
+    ids=[name for name, _, _ in _commands_that_restrict_tools()],
+)
+def test_commands_that_run_compass_verbs_list_bash(name, tools, body):
+    """A command whose text names a `compass` verb must list Bash."""
+    if re.search(r"`compass [a-z]", body):
+        assert "Bash" in tools, f"{name}: its text runs a compass verb, so it needs Bash"
+
+
 def _skills_it_is_told_to_load(name):
     """The skills named in a sentence of the agent's text that says "load"."""
     _, text = _frontmatter(name)

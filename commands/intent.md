@@ -1,7 +1,7 @@
 ---
 description: Product owner entry point - capture intent before acceptance criteria
 argument-hint: "<what you want and why>"
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # /compass:intent

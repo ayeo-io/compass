@@ -1,7 +1,7 @@
 ---
 description: Designer entry point - the UI contract as scenarios
 argument-hint: "<surface or interaction being designed>"
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # /compass:design

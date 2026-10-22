@@ -1,7 +1,7 @@
 ---
 description: Pick up an issue with state on disk
 argument-hint: "<issue-slug>"
-allowed-tools: Read, Write, Glob, Grep
+allowed-tools: Read, Write, Bash, Glob, Grep
 ---
 
 # /compass:resume

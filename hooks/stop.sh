@@ -47,7 +47,9 @@
 #   `scripts/install.sh` registers this for you.
 #
 # I/O CONTRACT
-#   stdin : JSON session-stop payload (unused - we inspect disk state).
+#   stdin : JSON session-stop payload. Only its string `cwd` is read, to find
+#           the project of a session isolated to a git worktree; the rest is
+#           disk state.
 #   stdout: {"systemMessage": ...} when an approval request of the session's
 #           issue has not been shown yet (below). Claude Code shows it to the
 #           person under the reply; the model does not see it (measured on
@@ -68,7 +70,10 @@ set -euo pipefail
 # shellcheck source=../scripts/lib/compass-python.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/lib/compass-python.sh"
 
-cat >/dev/null || true   # drain stdin; we do not need it
+# Claude Code passes the session's folder as `cwd`. In a session isolated to a
+# git worktree, CLAUDE_PROJECT_DIR is the folder the session started in, not the
+# worktree that holds the issue, so `cwd` is the second place to look.
+STOP_INPUT="$(cat || true)"
 
 # Under `set -e`, a failing `compass_python` would end the script with exit
 # 127 on a machine without python3, so check first and exit 0.
@@ -103,9 +108,41 @@ else
     exit 0
   fi
 fi
+
+# The project root of the hook input's `cwd`, by the same ancestor walk. A
+# missing, malformed or non-string `cwd` leaves it empty and changes nothing.
+CWD_ROOT=""
+_cwd="$(printf '%s' "$STOP_INPUT" | compass_python -c '
+import json, sys
+try:
+    cwd = json.load(sys.stdin).get("cwd")
+except Exception:
+    cwd = None
+if isinstance(cwd, str) and cwd.startswith("/") and "\n" not in cwd:
+    print(cwd)
+' 2>/dev/null || true)"
+if [ -n "$_cwd" ]; then
+  _search="$_cwd"
+  while [ -n "$_search" ]; do
+    [ -d "$_search/.compass" ] && { CWD_ROOT="$_search"; break; }
+    [ -e "$_search/.git" ] && break
+    [ "$_search" = "/" ] && break
+    _search="$(dirname "$_search")"
+  done
+fi
+
 COMPASS_DIR="$PROJECT_DIR/.compass"
 WORK_DIR="$COMPASS_DIR/work"
-[ -d "$WORK_DIR" ] || exit 0
+if [ ! -d "$WORK_DIR" ]; then
+  # CLAUDE_PROJECT_DIR holds no work folder: use the project of `cwd` instead.
+  if [ -n "$CWD_ROOT" ] && [ -d "$CWD_ROOT/.compass/work" ]; then
+    PROJECT_DIR="$CWD_ROOT"
+    COMPASS_DIR="$PROJECT_DIR/.compass"
+    WORK_DIR="$COMPASS_DIR/work"
+  else
+    exit 0
+  fi
+fi
 
 WARNINGS=()
 
@@ -381,7 +418,9 @@ fi
 
 # --- approval requests the person has not seen ------------------------------
 # The only output on stdout: Claude Code reads it as the hook's JSON.
-compass_python - "$COMPASS_DIR" 2>/dev/null <<'PYEOF' || true
+# Each distinct root is asked once: the hook's project and the project of the
+# input's `cwd`. A folder without `.compass` is never asked.
+compass_python - "$COMPASS_DIR" "${CWD_ROOT:+$CWD_ROOT/.compass}" 2>/dev/null <<'PYEOF' || true
 import json
 import os
 import sys
@@ -389,9 +428,19 @@ import sys
 import compass_pkg                      # noqa: F401 - puts vendor on sys.path
 from compass_pkg import approval_requests
 
-text = approval_requests.stop_message(sys.argv[1], os.environ)
-if text:
-    print(json.dumps({"systemMessage": text}))
+seen, texts = set(), []
+for folder in sys.argv[1:]:
+    if not folder or not os.path.isdir(folder):
+        continue
+    real = os.path.realpath(folder)
+    if real in seen:
+        continue
+    seen.add(real)
+    text = approval_requests.stop_message(folder, os.environ)
+    if text:
+        texts.append(text)
+if texts:
+    print(json.dumps({"systemMessage": "\n\n".join(texts)}))
 PYEOF
 
 exit 0

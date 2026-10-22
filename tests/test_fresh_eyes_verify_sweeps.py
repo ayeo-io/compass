@@ -343,8 +343,8 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
     # 97 since the repository-readiness terms joined: readiness-signal,
     # readiness-floor, readiness-record, readiness-summary and temporary-worktree.
     # 98 since ADR-063 added checkpoint-outcome. 99 since ADR-067 added
-    # word_ceiling.
-    assert len(terminology["terms"]) == 99, (
+    # word_ceiling. 101 since ADR-076 added execution-profile and component-registry.
+    assert len(terminology["terms"]) == 101, (
         "governance/terminology.yml gained or lost a term without this count "
         "moving. A vocabulary change is a decision (ADR-012); make it one."
     )
@@ -364,6 +364,7 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         "run",  # headless-runner (ADR-030): a stage run with nobody in the session
         "record",  # delivery-record (ADR-031): the record kept off the laptop
         "board",  # compass-board (ADR-046): the delivery board page
+        "profile",  # execution-profile-manifests (ADR-076): `profile lint|add|show`
         "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
         "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
     }

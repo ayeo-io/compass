@@ -115,6 +115,7 @@ Rules:
 | [ADR-073](ADR-073-a-list-parameter-tightens-by-superset-and-narrowing-it-is-a-waiver.md) | A list parameter tightens by superset; narrowing it is a waiver | accepted | amends ADR-037 and ADR-064 for `trigger_paths` and `trigger_contents` of `contracts-declared` only; with ADR-039 |
 | [ADR-074](ADR-074-the-tree-being-edited-names-the-issue-that-judges-an-edit.md) | The tree being edited names the issue that judges an edit | accepted | extends ADR-005 and ADR-063; with ADR-006 and ADR-048 |
 | [ADR-075](ADR-075-a-readiness-commands-process-group-stops-with-sigterm-then-sigkill-after-two-seconds.md) | A readiness command's process group stops with SIGTERM, then SIGKILL after two seconds | accepted | amends ADR-061 decision 5; with ADR-009 and ADR-025 |
+| [ADR-076](ADR-076-execution-profile-manifests.md) | Execution profiles are committed in a top-level profiles folder, with two new terms | proposed | extends ADR-012 rule 4; with ADR-072 |
 
 ## Principle → ADR mapping
 

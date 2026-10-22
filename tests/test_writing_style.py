@@ -3801,8 +3801,10 @@ _GROWING_REACH = {
     #    which hold key-value lines and no prose;
     # 121 with the 9 check-corpus case labels of design-within-word-ceiling;
     # 122 with tests/fixtures/v6.0.1-generation.tgz, a packed 6.0.1 issue
-    #    that holds no prose a scan can read.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 122),
+    #    that holds no prose a scan can read;
+    # 131 with the nine plain YAML files of tests/fixtures/execution-profiles/, which
+    #    hold key-value lines and no prose.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 131),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

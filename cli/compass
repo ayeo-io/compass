@@ -515,6 +515,8 @@ def build_parser():
     _register_board(sub)
     from compass_pkg.readiness_cmd import register as _register_readiness
     _register_readiness(sub)
+    from compass_pkg.execution_profile_cmd import register as _register_profile
+    _register_profile(sub)
     from compass_pkg.release_notes import register as _register_release_notes
     _register_release_notes(sub)
 

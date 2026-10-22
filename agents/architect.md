@@ -37,6 +37,13 @@ a parallel spec.
    - the issue's `technical-design.md` (the technical approach)
    - `.compass/work/<task>/architecture-loaded.yml` (the assess stage's load
      record, if present)
+
+   The define command convenes you before the spec-author, so
+   `acceptance-criteria.md` may not exist yet. When `acceptance-criteria.md`
+   is missing, do not stop and do not guess scenarios. Work from `intent.md`,
+   the labels in `manifest.yml` and `architecture/`. State in
+   `architecture-notes.md` that the criteria did not exist yet, so the reader
+   knows the notes were written without them.
 3. **Degrade gracefully when architecture/ is absent.** If there is no
    `architecture/` directory, write `architecture-notes.md` with the first
    line exactly:

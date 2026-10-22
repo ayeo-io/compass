@@ -432,6 +432,23 @@ def test_spec_author_reports_missing_notes_in_the_hand_off():
     )
 
 
+def test_architect_works_from_intent_when_criteria_are_missing():
+    """The define command convenes the architect before the spec-author
+    writes `acceptance-criteria.md`, so the agent says what to do when that
+    file is missing (`TRC-001`).
+    """
+    content = _flat(agent_file("architect.md"))
+    assert "`acceptance-criteria.md` is missing" in content, (
+        "agents/architect.md has no rule for a missing acceptance-criteria.md"
+    )
+    for source in ("`intent.md`", "the labels", "`architecture/`"):
+        assert source in content, f"agents/architect.md does not name {source}"
+    assert "did not exist yet" in content, (
+        "agents/architect.md does not tell the architect to record that the "
+        "criteria did not exist yet"
+    )
+
+
 def test_architect_is_triggered_by_the_define_command():
     """agents/architect.md says the define command convenes it, not the
     spec-author (`TRC-001`).

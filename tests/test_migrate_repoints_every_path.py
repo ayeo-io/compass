@@ -457,6 +457,13 @@ EXCLUDED = {
     "repairs": "an issue slug",
     "scenarios[].verifiable": "a scenario taxonomy label",
     "subtasks[].last_error_digest": "a digest of an error message",
+    "intent_source.origin": "where the ingested brief came from, a web address or a "
+                            "file outside the project; no migration moves it",
+    "intent_source.scheme": "the scheme of the source, such as https or file",
+    "intent_source.sha256": "a digest of the source, not a path",
+    "intent_source.snapshot": "a bare file name in the issue's own folder under "
+                              "`.compass/work`, resolved against that folder when "
+                              "read; it has no folder part to repoint",
 }
 
 

@@ -258,6 +258,7 @@
   "tests/test_migrate_config.py": 49.3,
   "tests/test_migrate_copy_check_project.py": 0.12,
   "tests/test_migrate_keeps_mapping.py": 0.25,
+  "tests/test_migrate_keeps_one_unit_map.py": 0.51,
   "tests/test_migrate_map_parsed_once.py": 0.02,
   "tests/test_migrate_rendered_blocks.py": 168.51,
   "tests/test_migrate_repoints_every_path.py": 22.04,

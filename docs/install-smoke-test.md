@@ -40,7 +40,13 @@ Compass project says so in place of the operating contract;
 
 ### Plugin marketplace
 
-Inside Claude Code:
+From a shell, in one line:
+
+```bash
+claude plugin install compass --marketplace ayeo-io/compass
+```
+
+Or inside Claude Code, in two commands:
 
 ```text
 /plugin marketplace add ayeo-io/compass

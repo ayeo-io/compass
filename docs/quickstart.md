@@ -21,7 +21,12 @@ There are two ways in. Pick one.
 **The plugin marketplace is the fastest.** No clone, no install script:
 
 ```bash
-# In Claude Code:
+claude plugin install compass --marketplace ayeo-io/compass
+```
+
+Or type two commands inside Claude Code:
+
+```text
 /plugin marketplace add ayeo-io/compass
 /plugin install compass@compass
 ```

@@ -7,7 +7,13 @@ checked result.
 
 You need Claude Code and Python 3.10 or later. Compass CI tests Python 3.11.
 
-Install Compass inside Claude Code:
+Install Compass from a shell, in one line:
+
+```bash
+claude plugin install compass --marketplace ayeo-io/compass
+```
+
+Or type two commands inside Claude Code:
 
 ```text
 /plugin marketplace add ayeo-io/compass

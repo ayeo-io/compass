@@ -276,6 +276,12 @@ Why an issue is done: completed (the work shipped), not-planned (it will not be 
 
 **Related:** `workflow-state`, `issue`
 
+### component-registry
+
+The file `component-registry.yml` in the `profiles` folder. It lists the skills, prompt fragments and tool guidance that exist, each at an exact revision, with the runner versions it supports and a recorded approval. `compass profile show` reads it and never writes it.
+
+**Related:** `execution-profile`
+
 ### decision-taken
 
 A requirement decision an agent took for the person: the question, the resolution, which agent took it and at which stage. It is recorded in the manifest's `decisions_taken`, shown to the person at the next checkpoint on `balanced` and `controlled` autonomy, and confirmed as a set by one `compass evidence approve --decisions`. Changing one reopens it and the checkpoint keeps waiting. It is distinct from a decision record in `governance/decisions/`, which a person makes about the product.
@@ -341,6 +347,12 @@ The unreliability an SLO allows. Paces rollout speed on initiatives: budget spen
 A recorded, typed artifact that clears a gate: a test run, a review, a sign-off. A claim without evidence clears nothing.
 
 **Related:** `guardrail`, `definition-of-done`
+
+### execution-profile
+
+One fixed, versioned way of working, kept as a file in the `profiles` folder of the project. It names a model tier and an effort, the exact revision of every skill, prompt fragment and piece of tool guidance, and the limits of an unattended run. It decides how eligible work is done, never whether it is allowed. Content that does not change gives the same digest, and a change gives a new version.
+
+**Related:** `component-registry`
 
 ### feature
 

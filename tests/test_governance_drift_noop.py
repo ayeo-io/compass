@@ -237,6 +237,7 @@ EXPECTED_SUBCOMMANDS = {
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
     "review-rule", "spec", "preset",  # `review-rule list`, `spec sync`, `preset init|test`
+    "profile",                    # `profile lint|add|show` - execution profiles
     # `init` creates `.compass/config.yml` and `.compass/work/`, and is safe
     # to run twice. It exists because no other command owns initialisation,
     # and the five entry points call it directly.

@@ -1,8 +1,8 @@
 # Schemas
 
-Schemas for the six machine-readable Compass files. Each of the first three
-comes in two forms; `signals.yml`, `compass.yml` and the readiness record have
-no readable companion.
+Schemas for the seven machine-readable Compass files. Each of the first three
+comes in two forms; `signals.yml`, `compass.yml`, the readiness record and the
+execution profile file have no readable companion.
 
 | File | Executable schema | Readable companion |
 |---|---|---|
@@ -13,6 +13,7 @@ no readable companion.
 | `governance/signals.yml` | `signals.schema.json` | none |
 | `compass.yml` (a project's configuration file, ADR-043) | `compass.schema.json` | none |
 | `.compass/readiness.yml` (the readiness record, per checkout; see `docs/readiness.md`) | `readiness-record.schema.json` | none |
+| `profiles/<id>.<version>.yml` (an execution profile file, committed with the project; see `docs/execution-profiles.md`) | `execution-profile.schema.json` | none |
 
 **The `.schema.json` files are real, executable JSON Schema** (draft-07;
 `compass.schema.json` declares 2020-12 and uses only what draft-07 also
@@ -21,7 +22,10 @@ generated from `cli/compass_pkg/catalogue_spec.py` and is never edited by
 hand. **The `.reference.yml` files are the
 human-readable companions** - JSON Schema is precise but hard to read at a
 glance, so each field is also documented in a plain annotated YAML file. Where
-the two could be read to differ, the `.schema.json` wins.
+the two could be read to differ, the `.schema.json` wins. The exception is
+`execution-profile.schema.json`: only tests check files against it, the code of
+`compass profile` is the authority on that format, and the schema names no
+model tier, effort level or runner ceiling.
 
 ## How validation works
 

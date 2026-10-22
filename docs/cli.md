@@ -67,6 +67,9 @@ compass flow               blockers, owed follow-ups, the periodic digest
 compass board render       write the delivery board as one page and open it (--no-open, --out, --worktrees)
 compass board refresh      rewrite that page in place, without opening a browser
 compass readiness          measure whether the repository is fit for unattended agent work (--json, --fix-list)
+compass profile lint       check one execution profile file against every rule (--json)
+compass profile add        store a checked profile file as a new, unchangeable version
+compass profile show       resolve a stored profile version to exact component revisions (--version, --json)
 compass next               which stage this issue reached, and what comes next
 compass follow-up add      record a follow-up the issue owes
 compass follow-up resolve  settle an owed follow-up

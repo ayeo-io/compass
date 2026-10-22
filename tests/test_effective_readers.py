@@ -677,7 +677,7 @@ EXPECTED_READS = {
     # judged reads guardrails.yml only after view_or_legacy returns None (ADR-050); it
     # runs every check outside a gate (ADR-064).
     ("outside_gate", "judged"): 1, ("check_cmd", "cmd_check"): 2, ("checks", "_check_gate_evidence"): 1,
-    ("github_labels", "declared_labels"): 1,
+    ("github_labels", "declared_labels"): 1, ("execution_profile", "ceilings"): 1,
     ("checks", "_check_command_passes"): 1, ("flow", "_routing_labels"): 1,
     ("lessons", "_guardrail_ids"): 1, ("loop_ceilings", "loop_ceilings"): 1,
     ("manifest", "_load_gate_requirements"): 1, ("quick_fix_cmd", "_quick_fix_blockers"): 1,

@@ -118,12 +118,15 @@ def base_ref(root=ROOT):
 
 def decision_problems(root, base):
     """One line for each merged record that is changed or removed since `base`.
-    A new record is fine."""
+    A new record is fine. The index `README.md` is not a record: a new record
+    adds a row to it."""
     out = _git(root, "diff", "--name-status", "-M", base, "--", *DECISIONS)
     assert out.returncode == 0, out.stderr
     problems = []
     for line in out.stdout.splitlines():
         status, *names = line.split("\t")
+        if Path(names[0]).name == "README.md":
+            continue
         if status[0] in "MDRT":
             problems.append(f"{names[0]} was changed or removed ({status})")
     return problems
@@ -222,6 +225,13 @@ def test_trc_039_a_planted_respelling_in_a_merged_record_fails(tmp_path):
         added = repo / folder / "2026-02-02-new.md"
         added.write_text("A new record.\n", encoding="utf-8")
         assert decision_problems(repo, "HEAD") == [], "a new record is allowed"
+        index = repo / folder / "README.md"
+        index.write_text("| A record |\n", encoding="utf-8")
+        assert decision_problems(repo, "HEAD") == [], "a new index file is allowed"
+        _git(repo, "add", "-A")
+        assert _git(repo, "commit", "-q", "-m", "index").returncode == 0
+        index.write_text("| A record |\n| A new record |\n", encoding="utf-8")
+        assert decision_problems(repo, "HEAD") == [], "a new row in the index is allowed"
         record.write_text("# A record\n\nIt is behaviour.\n", encoding="utf-8")
         assert decision_problems(repo, "HEAD") == [
             f"{folder}/2026-01-01-a-record.md was changed or removed (M)"]

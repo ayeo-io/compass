@@ -1,0 +1,40 @@
+schema: 1
+id: lean-implement
+version: 2
+digest: sha256:a0e8faa1ec21f946034fa65ee0c56d27a18c654d3bd7588422bd558fa45c6f85
+parent:
+  version: 1
+  digest: sha256:61603a87b612e45d42a7d81f3ae7c516948fa1f20bb6f5b579384cccae120daa
+owner: jed72
+approval:
+  state: approved
+  by: jed72
+  at: '2026-10-22'
+applies_to:
+  task_classes:
+  - feature
+  - bugfix
+  repositories:
+  - example/service
+runner_versions:
+- 7.0.0
+model:
+  tier: standard
+  effort: medium
+  provider_revision: example-model-2026-10-01
+components:
+  skills:
+  - id: tdd-discipline
+    revision: sha256:0aaada3712a77173e9f92797bafd84fbab931e0bebf185ffa16b40c9a47a0859
+  - id: evidence-gates
+    revision: sha256:6c45d41d8d4b1479abe342a09fa6d7c9285dfcef96d99fe79177c796d0abfbe2
+  prompt_fragments:
+  - id: terse-status
+    revision: sha256:0bb769d70e9472804814396df21f80208528d2b8917394616cb6bde365598956
+  tool_guidance:
+  - id: read-only-first
+    revision: sha256:14a65a3dcfc41cfa6dfd9e9a971818dfb954d71b920d0caed78baac2bbae3adb
+runner_settings:
+  max_cycles: 10
+  max_minutes: 60
+  max_cost_usd: 2

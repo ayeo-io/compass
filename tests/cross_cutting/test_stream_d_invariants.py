@@ -81,6 +81,7 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
     "terminology",                # the CLI-voice slice: the glossary verb
     "review-rule", "spec",        # `review-rule list` and `spec sync`
     "preset",                     # `preset init` and `preset test`
+    "profile",                    # `profile lint`, `add` and `show` - execution profiles
     "analyze", "next",            # cross-issue-architectural-integrity
     "ship-commit",                # framework-field-feedback `R5`
     "gate", "scenario", "changed-file", "evidence",  # framework-field-feedback `R6`/`R9`

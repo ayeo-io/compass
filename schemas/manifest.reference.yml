@@ -44,6 +44,14 @@ checkpoint_outcomes: # (optional) list of maps - one outcome per checkpoint stag
     outcome:     #   skipped: the autonomy setting passed it, recorded with compass issue checkpoint add --outcome skipped
     by:          #   the agent that went on, such as spec-author
     at:          #   ISO 8601, the time of the command; a skipped outcome has no evidence
+intent_source:   # (optional) map - the brief ingested with compass intent ingest; absent when intent.md was written in the issue:
+  origin:        #   (optional) string - the file path or URL the brief came from
+  scheme:        #   (optional) string - how it was read, such as file
+  sha256:        #   (optional) string - digest of the brief as read
+  ingested_at:   #   (optional) string - ISO 8601 time of the ingest
+  snapshot:      #   (optional) string - file name of the unedited copy of the brief in the issue directory
+  interview:     #   (optional) list of maps - each question asked, with its answer or null; [] before any is asked
+  sections:      #   (optional) list of maps {name, from [source, answer, unanswered], answer_id} - where each section of intent.md came from
 readiness:       # (optional) map - the repository's readiness at the last approach evaluate --write: {status: measured, score, signals, floor_met, absent[], measured_at} or {status: not-measured, reason: missing | stale | unreadable, detail}; outside the generation
 
 evidence:        # (optional) list of maps - the typed evidence registry gates reference by id:

@@ -1,7 +1,7 @@
 ---
 description: Assess risk, familiarity and size, and compute the delivery approach
 argument-hint: "<issue description> [--reassess]"
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # /compass:assess

@@ -57,3 +57,11 @@ def test_la_1_the_procedure_keeps_every_step():
 
 def test_la_1_the_procedure_is_not_a_slash_command():
     assert not (ROOT / "commands" / "assess-procedure.md").exists()
+
+
+def test_la_1_step_one_reuses_the_issue_the_pointer_names():
+    text = PROCEDURE.read_text(encoding="utf-8")
+    start = text.index("1. **Create the manifest.**")
+    step = " ".join(text[start:text.index("1a. **Load project")].split())
+    assert ".compass/current-task" in step, "step 1 does not name the pointer"
+    assert "reuse that issue" in step, "step 1 does not say to reuse the pointed issue"

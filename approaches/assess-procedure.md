@@ -98,8 +98,11 @@ force; if it is still a spike, leave the marker in place.
 
 ## Procedure (follows the delivery-approach rubric exactly)
 
-1. **Create the manifest.** Pick a slug, make `.compass/work/<issue-slug>/`,
-   and write `manifest.yml` from `${CLAUDE_PLUGIN_ROOT}/templates/manifest.yml` into it. This is the
+1. **Create the manifest.** First read `.compass/current-task`. If it names
+   an issue whose folder `.compass/work/<issue-slug>/` exists, reuse that
+   issue and do not make a second one. If not, pick a slug and make
+   `.compass/work/<issue-slug>/`. Write `manifest.yml` from
+   `${CLAUDE_PLUGIN_ROOT}/templates/manifest.yml` into the folder. This is the
    machine-readable manifest the CLI reads and writes.
 1a. **Load project architecture if present.** If the project has an
     `architecture/` directory at the project root, write its narrative files,

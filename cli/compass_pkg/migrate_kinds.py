@@ -635,6 +635,11 @@ def stub_map(task_dir, data, project, plan=None):
     count = len(subtasks) if isinstance(subtasks, list) else _map_rows(source)
     if count >= 2:
         return None
+    # A map that declares one work unit is the record `multiagent-run-recorded` reads
+    # from the registry, not a stub, so the rename would fail that check.
+    from compass_pkg.multiagent_check import declared_units
+    if declared_units(source) == 1:
+        return None
     stub = {"entry": entry.get("id"), "from": rel, "to": rel + ".v6.bak"}
     # `blocked` says why the rename is not made, so the dry run and the apply skip the
     # same maps. The path comes from a manifest, and the migrate changes no file whose

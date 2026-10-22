@@ -30,6 +30,15 @@ def store_path(root, profile_id, version):
     return os.path.join(root, STORE_DIR, f"{profile_id}.{version}.yml")
 
 
+def _folder_faults(root):
+    """A `profiles/` folder that is a link could send a stored file outside the
+    project, so it is refused."""
+    folder = os.path.join(root, STORE_DIR)
+    if os.path.islink(folder):
+        return [(ep.FILE_UNREADABLE, f"{folder}: the folder is a symbolic link")]
+    return []
+
+
 def _existing(dest, data):
     """What a stored file at `dest` means for a file with the content `data`:
     `(ALREADY_STORED, [])` for the same content, else `version-immutable`."""
@@ -68,6 +77,9 @@ def add(root, source):
     `STORED` or `ALREADY_STORED`, and `faults` is empty, or holds the reasons the
     file was refused and nothing was written."""
     data, faults = ep.check_file(source, root)
+    if faults:
+        return None, None, faults
+    faults = _folder_faults(root)
     if faults:
         return None, None, faults
     dest = store_path(root, data["id"], data["version"])
@@ -153,15 +165,9 @@ def load_registry(root):
         return {}, set(), [(ep.FILE_UNREADABLE, f"{path}: the file is a symbolic link")]
     if not os.path.exists(path):
         return {}, set(), []
-    try:
-        with open(path, "rb") as handle:
-            data = atomic_io.load_yaml_strict_text(handle.read().decode("utf-8"), path)
-    except UnicodeDecodeError:
-        return {}, set(), [(ep.FILE_UNREADABLE, f"{path}: the file is not UTF-8 text")]
-    except OSError as exc:
-        return {}, set(), [(ep.FILE_UNREADABLE, f"{path}: cannot read: {exc.strerror or exc}")]
-    except atomic_io.StrictYamlError as exc:
-        return {}, set(), [(ep.FILE_UNREADABLE, str(exc))]
+    data, faults = ep.read_yaml(path)
+    if faults:
+        return {}, set(), faults
     if not isinstance(data, dict):
         return {}, set(), [(ep.FILE_UNREADABLE, f"{path}: the file does not hold a mapping")]
     faults = [(ep.FIELD_MALFORMED, f"{path}: {key} is not a key of the registry; the only "
@@ -238,10 +244,14 @@ def resolve(root, profile_id, version):
     if version is None:
         return None, [(ep.VERSION_REQUIRED, "give --version N; no version is chosen as "
                                             "the latest")]
-    number = int(version) if re.fullmatch(r"[1-9][0-9]*", str(version)) else None
+    # Nine digits is far above any real version; a longer text is no stored version.
+    number = (int(version) if re.fullmatch(r"[1-9][0-9]{0,8}", str(version)) else None)
     if number is None or not ep.ID_FORMAT.fullmatch(str(profile_id)):
         return None, [(ep.PROFILE_MISSING,
                        f"{profile_id} version {version} is not in the store")]
+    faults = _folder_faults(root)
+    if faults:
+        return None, faults
     path = store_path(root, profile_id, number)
     if not os.path.isfile(path):
         return None, [(ep.PROFILE_MISSING, f"{profile_id} version {number} is not in the "

@@ -23,7 +23,8 @@ The store and the component registry are in the `profiles` folder at the top of 
 - A stored version is `profiles/<id>.<version>.yml`, one flat file for each id and version.
 - The component registry is the file `component-registry.yml` in `profiles/`. The commands read it and never write it. A person edits it, and a pull request reviews the change.
 - The commands build exact names and list nothing. They ignore other files in `profiles/`.
-- A symbolic link in `profiles/`, as a stored version or as the registry, is refused as `file-unreadable`.
+- A symbolic link in `profiles/`, as a stored version or as the registry, is refused as `file-unreadable`. The `profiles/` folder itself as a symbolic link is refused the same way by `add` and `show`, and `add` writes no file.
+- Input the YAML reader cannot hold is refused as `file-unreadable`, never as a traceback: a number of more than 4300 digits, nesting deeper than the stack, or a key that is not text. A `show --version` of more than nine digits is `profile-missing`.
 - `show` refuses a stored file whose id or version is not the one its name gives, as `field-malformed`. The reason reads, for example, "the file name says version 2 but the file holds version 1".
 - `add` creates `profiles/` when it is absent.
 

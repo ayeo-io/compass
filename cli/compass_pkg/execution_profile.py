@@ -97,8 +97,10 @@ def is_int(value):
 
 
 def is_number(value):
-    return (isinstance(value, (int, float)) and not isinstance(value, bool)
-            and math.isfinite(value))
+    if isinstance(value, bool):
+        return False
+    # An int is finite; math.isfinite fails on one too large for a float.
+    return isinstance(value, int) or (isinstance(value, float) and math.isfinite(value))
 
 
 def is_text(value):
@@ -106,6 +108,27 @@ def is_text(value):
 
 
 # --- reading --------------------------------------------------------------------
+
+def read_yaml(path):
+    """`(data, faults)` for the YAML at `path`: the loaded value, or one
+    `file-unreadable` fault. Input the YAML reader cannot hold - a number of more
+    than 4300 digits, nesting deeper than the stack, a key that is a list - is
+    refused here, never raised."""
+    try:
+        with open(path, "rb") as handle:
+            text = handle.read().decode("utf-8")
+        return atomic_io.load_yaml_strict_text(text, path), []
+    except UnicodeDecodeError:
+        return None, [(FILE_UNREADABLE, f"{path}: the file is not UTF-8 text")]
+    except OSError as exc:
+        return None, [(FILE_UNREADABLE, f"{path}: cannot read: {exc.strerror or exc}")]
+    except atomic_io.StrictYamlError as exc:
+        return None, [(FILE_UNREADABLE, str(exc))]
+    except (ValueError, RecursionError, TypeError):
+        return None, [(FILE_UNREADABLE, f"{path}: the YAML cannot be read: a number with too "
+                                        "many digits, nesting that is too deep, or a key "
+                                        "that is not text")]
+
 
 def read_text_file(path, follow_links=True):
     """`(mapping, faults)` for the YAML file at `path`. A file that is missing, is a
@@ -116,16 +139,9 @@ def read_text_file(path, follow_links=True):
     path = os.fspath(path)
     if not follow_links and os.path.islink(path):
         return None, [(FILE_UNREADABLE, f"{path}: the file is a symbolic link")]
-    try:
-        with open(path, "rb") as handle:
-            text = handle.read().decode("utf-8")
-        data = atomic_io.load_yaml_strict_text(text, path)
-    except UnicodeDecodeError:
-        return None, [(FILE_UNREADABLE, f"{path}: the file is not UTF-8 text")]
-    except OSError as exc:
-        return None, [(FILE_UNREADABLE, f"{path}: cannot read: {exc.strerror or exc}")]
-    except atomic_io.StrictYamlError as exc:
-        return None, [(FILE_UNREADABLE, str(exc))]
+    data, faults = read_yaml(path)
+    if faults:
+        return None, faults
     if not isinstance(data, dict) or not data:
         return None, [(FILE_UNREADABLE, f"{path}: the file does not hold a mapping of fields")]
     return data, []

@@ -1239,3 +1239,79 @@ def test_epm_8_symlink_in_profiles_is_refused(tmp_path):
     # A file that lint is given by name is read as before, even through a link.
     code, out, err = profile(other, "lint", str(real))
     assert code == 0, out + err
+
+
+# --- input the YAML reader cannot hold: a refusal, never a traceback ---
+
+
+def refused_once(out, err, code, expected="file-unreadable"):
+    assert code == 2, out + err
+    assert codes(out) == [expected], out
+    no_trace(out, err)
+
+
+def test_epm_35_integer_too_large_for_a_float_is_over_the_ceiling(tmp_path):
+    data = valid()
+    data["runner_settings"]["max_minutes"] = 10 ** 400
+    project, code, out, err = lint_data(tmp_path, finish(data))
+    refused_once(out, err, code, "runner-setting-over-ceiling")
+
+
+def test_epm_8_integer_of_5000_digits_is_refused_in_a_profile_and_the_registry(tmp_path):
+    project = make(tmp_path)
+    digits = "9" * 5000
+    text = yaml.safe_dump(valid(), sort_keys=False).replace("version: 1\n",
+                                                            f"version: {digits}\n", 1)
+    path = put(project / "work", text)
+    code, out, err = profile(project, "lint", str(path))
+    refused_once(out, err, code)
+    code, out, err = profile(project, "add", str(path))
+    refused_once(out, err, code)
+    data = valid()
+    store(project, data)
+    write_registry(project, f"components:\n  - revision: {digits}\n")
+    code, out, err = profile(project, "show", "lean-implement", "--version", "1")
+    refused_once(out, err, code)
+
+
+def test_epm_20_show_version_of_5000_digits_is_missing(tmp_path):
+    project = make(tmp_path)
+    code, out, err = profile(project, "show", "lean-implement", "--version", "9" * 5000)
+    refused_once(out, err, code, "profile-missing")
+
+
+def test_epm_8_deeply_nested_brackets_are_refused(tmp_path):
+    project = make(tmp_path)
+    path = put(project / "work", "[" * 100000)
+    code, out, err = profile(project, "lint", str(path))
+    refused_once(out, err, code)
+    store(project, valid())
+    write_registry(project, "components: " + "[" * 100000)
+    code, out, err = profile(project, "show", "lean-implement", "--version", "1")
+    refused_once(out, err, code)
+
+
+def test_epm_8_complex_key_is_refused(tmp_path):
+    project = make(tmp_path)
+    path = put(project / "work", "? [a]\n: b\n")
+    code, out, err = profile(project, "lint", str(path))
+    refused_once(out, err, code)
+    store(project, valid())
+    write_registry(project, "? [a]\n: b\n")
+    code, out, err = profile(project, "show", "lean-implement", "--version", "1")
+    refused_once(out, err, code)
+
+
+def test_epm_14_profiles_folder_that_is_a_symbolic_link_is_refused(tmp_path):
+    project = make(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (project / "profiles").symlink_to(outside)
+    path = put(project / "work", valid())
+    code, out, err = profile(project, "add", str(path))
+    refused_once(out, err, code)
+    assert "symbolic link" in out, out
+    assert list(outside.iterdir()) == []
+    code, out, err = profile(project, "show", "lean-implement", "--version", "1")
+    refused_once(out, err, code)
+    assert "symbolic link" in out, out

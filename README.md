@@ -30,7 +30,13 @@ assessment plus the same policy gives the same approach, every time.
 
 ## Install
 
-From inside Claude Code:
+From a shell, in one line:
+
+```bash
+claude plugin install compass --marketplace ayeo-io/compass
+```
+
+Or from inside Claude Code, in two commands:
 
 ```text
 /plugin marketplace add ayeo-io/compass

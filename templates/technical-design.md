@@ -306,8 +306,8 @@ Dependencies on other issues:
 
 ## Governance check
 
-<!-- Run against ALL of governance/ - guardrails.md, strategies.md, and
-     routing-policy.md. Not strategies-rationale.md: it holds the incidents
+<!-- Run against ALL of the governance in force - the shipped guardrails, the
+     shipped strategies and the routing policy. Not the strategies rationale: it holds the incidents
      behind the rules and states no rule, so it is read when one looks
      arbitrary rather than on every check. A failed guardrail here blocks the stage - fix the
      plan, do not note the violation and move on. A strategy not followed is

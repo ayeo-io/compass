@@ -4812,3 +4812,9 @@ compass issue migrate no longer renames a distribution map that declares units: 
 compass record restore now refuses, and copies nothing, when a generation file in the record holds [REDACTED], instead of restoring a copy that compass check reports as broken.
 
 - `TRC-001` Given a delivery record whose generation file holds [REDACTED], When compass record restore runs, with or without --force, Then it copies nothing, exits non-zero, names the file and says how to repair the generation
+
+### archive-under-skips-own-cache (completed 2026-10-23)
+
+The release-time full-archive compatibility run no longer copies the checkout into its own cache, and removes a copy whose build fails.
+
+- `TRC-001` Given a checkout whose .compass/archive-sample-cache holds earlier files, When archive_under copies it and when building the configuration fails, Then the copy holds no archive-sample-cache folder and a failed call leaves no config- folder in the cache

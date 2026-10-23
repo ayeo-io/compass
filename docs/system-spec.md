@@ -4818,3 +4818,9 @@ compass record restore now refuses, and copies nothing, when a generation file i
 The release-time full-archive compatibility run no longer copies the checkout into its own cache, and removes a copy whose build fails.
 
 - `TRC-001` Given a checkout whose .compass/archive-sample-cache holds earlier files, When archive_under copies it and when building the configuration fails, Then the copy holds no archive-sample-cache folder and a failed call leaves no config- folder in the cache
+
+### quick-fix-start-recovers-metadata-failure (completed 2026-10-23)
+
+compass quick-fix start now refuses, with the folder named and no traceback, when it cannot write its start record in the git directory, and leaves nothing behind, so the same start can run again.
+
+- `TRC-001` Given a git metadata folder that quick-fix start cannot write, When quick-fix start runs and then runs again once the folder is writable, Then the first run exits non-zero with no traceback, names the folder and leaves no issue folder or pointer to it, and the retry starts the issue

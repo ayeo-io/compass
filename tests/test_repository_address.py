@@ -28,6 +28,6 @@ def test_ra_1_no_tracked_file_names_the_old_address():
 def test_ra_1_the_plugin_manifests_name_the_new_home():
     plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())
     assert plugin["repository"] == "https://github.com/ayeo-io/compass"
-    assert plugin["homepage"] == "https://github.com/ayeo-io/compass"
+    assert plugin["homepage"] == "https://ayeo.io/#compass"
     market = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text())
     assert market["owner"]["url"] == "https://github.com/ayeo-io"

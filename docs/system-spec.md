@@ -4830,3 +4830,9 @@ compass quick-fix start now refuses, with the folder named and no traceback, whe
 The plugin icon is now the ayeo Design System's Compass mark on a navy tile, and plugin.json names it in an icon field for the plugin directory.
 
 - `TRC-001` Given plugin.json, when the directory validator reads its icon field, then it names a square PNG in the plugin of 512 to 2048 px and under 2 MB
+
+### listing-copy (completed 2026-10-23)
+
+The plugin listing now shows the name Compass, the author ayeo and a description of what Compass does for the person installing it. The plugin, its marketplace entry and the Codex plugin share that description, and the marketplace entry gains a category, tags and wider keywords.
+
+- `TRC-001` Given the plugin manifests, then the display name is Compass, the author is ayeo with https://ayeo.io, the homepage is https://ayeo.io/#compass, and the plugin, its marketplace entry and the Codex manifest share one description

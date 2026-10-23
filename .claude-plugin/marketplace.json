@@ -5,27 +5,42 @@
     "url": "https://github.com/ayeo-io"
   },
   "metadata": {
-    "description": "Compass - adaptive spec-driven development for Claude Code.",
+    "description": "Adaptive spec-driven development for Claude Code.",
     "version": "7.0.0"
   },
   "plugins": [
     {
       "name": "compass",
       "source": "./",
-      "description": "Adaptive spec-driven development. Assess reads risk, familiarity, size, and goal; a deterministic CLI computes the delivery approach; BDD/TDD strategies and five hard guardrails keep work honest. Ships the /compass: pipeline, agents, skills, hooks, and the compass CLI.",
+      "description": "Enough process for the work at hand. No more. Compass assesses each change by risk, familiarity and size, then picks the approach to match: what to write, what to check, and when to ask a human. A typo fix stays light. A payments rewrite gets specs, tests and review. Five guardrails hold on every change, such as a passing test for each one.",
       "version": "7.0.0",
       "author": {
-        "name": "ayeo.io"
+        "name": "ayeo",
+        "url": "https://ayeo.io"
       },
-      "homepage": "https://github.com/ayeo-io/compass",
+      "homepage": "https://ayeo.io/#compass",
+      "repository": "https://github.com/ayeo-io/compass",
       "license": "Apache-2.0",
       "keywords": [
         "spec-driven-development",
+        "specs",
+        "requirements",
+        "acceptance-criteria",
         "bdd",
         "tdd",
-        "governance",
+        "testing",
+        "planning",
+        "code-review",
         "guardrails",
+        "governance",
         "workflow"
+      ],
+      "category": "development",
+      "tags": [
+        "spec-driven-development",
+        "tdd",
+        "bdd",
+        "code-review"
       ]
     }
   ]

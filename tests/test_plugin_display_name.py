@@ -1,11 +1,14 @@
-"""The plugin carries the display name and author chosen for its listing.
+"""The plugin carries the name, author and description chosen for its listing.
 
 The maintainer chose, for the plugin directory listing: keep the name
-`compass` (it is the command prefix), display it as "Compass Adaptive
-Spec-Driven Development", and credit the organisation, ayeo.io. Claude
-Code's strict plugin check, which rejects unknown fields, accepts both.
+`compass` (it is the command prefix), display it as "Compass", and credit the
+organisation as `ayeo`, lower case as the brand writes it, with its site. The
+homepage is the Compass section of that site. The Claude Code plugin, its
+marketplace entry and the Codex plugin carry one description, so the listings
+do not drift apart. Claude Code's strict plugin check, which rejects unknown
+fields, accepts every field here.
 
-Scenario id: PN-1 (issue `plugin-display-name`).
+Scenario id: PN-1 (issue `plugin-display-name`), TRC-001 (issue `listing-copy`).
 """
 from __future__ import annotations
 
@@ -15,11 +18,37 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_pn_1_the_manifests_carry_the_listing_name_and_author():
+def _manifests():
     plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())
-    assert plugin["name"] == "compass"
-    assert plugin["displayName"] == "Compass Adaptive Spec-Driven Development"
-    assert plugin["author"]["name"] == "ayeo.io"
     market = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text())
     entry = next(p for p in market["plugins"] if p["name"] == "compass")
-    assert entry["author"]["name"] == "ayeo.io"
+    codex = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text())
+    return plugin, market, entry, codex
+
+
+def test_pn_1_the_manifests_carry_the_listing_name_and_author():
+    plugin, _, entry, _ = _manifests()
+    assert plugin["name"] == "compass"
+    assert plugin["displayName"] == "Compass"
+    for manifest in (plugin, entry):
+        assert manifest["author"] == {"name": "ayeo", "url": "https://ayeo.io"}
+        assert manifest["homepage"] == "https://ayeo.io/#compass"
+
+
+def test_trc_001_the_listings_share_one_description():
+    plugin, market, entry, codex = _manifests()
+    text = plugin["description"]
+    assert text.startswith("Enough process for the work at hand. No more."), text
+    assert entry["description"] == text
+    assert codex["description"] == text
+    assert market["metadata"]["description"] == "Adaptive spec-driven development for Claude Code."
+
+
+def test_trc_001_the_marketplace_entry_is_findable():
+    plugin, _, entry, _ = _manifests()
+    assert entry["category"] == "development"
+    assert entry["repository"] == plugin["repository"]
+    for word in ("specs", "planning", "testing", "code-review"):
+        assert word in plugin["keywords"], word
+    assert entry["keywords"] == plugin["keywords"]
+    assert entry["tags"]

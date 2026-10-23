@@ -4836,3 +4836,9 @@ The plugin icon is now the ayeo Design System's Compass mark on a navy tile, and
 The plugin listing now shows the name Compass, the author ayeo and a description of what Compass does for the person installing it. The plugin, its marketplace entry and the Codex plugin share that description, and the marketplace entry gains a category, tags and wider keywords.
 
 - `TRC-001` Given the plugin manifests, then the display name is Compass, the author is ayeo with https://ayeo.io, the homepage is https://ayeo.io/#compass, and the plugin, its marketplace entry and the Codex manifest share one description
+
+### shard-durations-min (completed 2026-10-23)
+
+The CI shard jobs now log a duration for every test, the ones under 0.005 seconds included, so the shard timing table can be rebuilt with a time for every test file.
+
+- `TRC-001` Given the CI shard job's pytest options, when they run over a fast test and a slow test, then the durations list names every test, the fast ones included

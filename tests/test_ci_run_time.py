@@ -152,3 +152,18 @@ def test_crt_19_ci_prints_counts_and_durations(tmp_path):
         # --durations=0, which lists every test.
         assert re.search(r"slowest (\d+ )?durations", output), (job, output[-2000:])
         assert "test_sleeps_a_little" in output, (job, output[-2000:])
+
+
+def test_trc_001_the_shard_durations_name_every_test(tmp_path):
+    """scripts/ci-durations.py rebuilds the shard weights from the shard
+    jobs' durations list, and a file the list leaves out drops out of the
+    table. pytest leaves out a test under 0.005 seconds unless told not to,
+    so a rebuilt table missed the fastest files and fell under the 80 percent
+    the table must cover. Scenario `TRC-001` of issue `shard-durations-min`."""
+    import re
+    run = _run_options(_pytest_options("shard"), tmp_path, serial=False)
+    output = run.stdout + run.stderr
+    assert run.returncode == 0, output[-2000:]
+    durations = re.split(r"=+ slowest (?:\d+ )?durations =+", output)[-1]
+    for name in ("test_fast_one", "test_fast_two", "test_sleeps_a_little"):
+        assert f"::{name}" in durations, (name, durations[-2000:])

@@ -10,7 +10,7 @@ job named "shard (N)", and sums, per test file, every setup, call and
 teardown duration listed under pytest's "slowest durations" heading. It
 writes {"run": RUN_ID, "seconds": {file: seconds}} to PATH
 (tests/ci-durations.json by default), files sorted, seconds rounded to
-hundredths.
+hundredths, and never below 0.01.
 
 A file the logs do not list is left out of the table, and ci-shard.py
 weighs it at the table's median.
@@ -85,8 +85,10 @@ def build(run_id: int) -> dict:
     for job in shards:
         log = _gh("run", "view", "--job", str(job["databaseId"]), "--log")
         sum_log(log, job["name"], seconds)
+    # A file faster than half a hundredth rounds to 0.00, and the table holds
+    # only positive weights, so it keeps the smallest one the table shows.
     return {"run": run_id,
-            "seconds": {f: round(s, 2) for f, s in sorted(seconds.items())}}
+            "seconds": {f: max(round(s, 2), 0.01) for f, s in sorted(seconds.items())}}
 
 
 def main(argv: list[str]) -> int:

@@ -263,9 +263,12 @@ def test_crt_22_the_committed_table_partitions_the_collected_files():
 def test_crt_22_the_committed_table_covers_the_test_files():
     """A file the table lacks weighs the median, so a table that lists only
     a few files splits the rest by guesswork. The table must hold a
-    duration for at least 80 percent of the files the shards split. A table
-    built from a full run holds about 86 percent of the files; a table of
-    the slowest tests alone held about 8 percent."""
+    duration for at least 80 percent of the files the shards split. The
+    shard jobs list every test's duration (`--durations-min=0`), so a table
+    built from a full run holds a duration for each file whose shard log is
+    whole; run 39961442769 gave 547 of 602 files, because one shard's log
+    stopped partway through its list. A table of the slowest tests alone
+    held about 8 percent."""
     sys.path.insert(0, str(ROOT / "scripts"))
     try:
         import importlib.util
@@ -301,7 +304,7 @@ def _log(job: str, lines: list[str]) -> str:
                    for line in lines)
 
 
-def _durations(tmp_path: Path, conclusions: list[str]):
+def _durations(tmp_path: Path, conclusions: list[str], fast: tuple[str, ...] = ()):
     work = tmp_path / "gh"
     (work / "bin").mkdir(parents=True)
     shim = work / "bin" / "gh"
@@ -323,6 +326,7 @@ def _durations(tmp_path: Path, conclusions: list[str]):
         _log("shard (1)", [
             "=" * 29 + " slowest durations " + "=" * 29,
             "0.50s teardown tests/test_x.py::test_two",
+            *fast,
             "(3 durations < 0.005s hidden.  Use -vv to show these durations.)",
             "4 passed in 1.00s",
         ]),
@@ -355,3 +359,18 @@ def test_crt_22_durations_table_rebuilds_from_a_run(tmp_path):
     assert r.returncode == 1, (r.stdout, r.stderr)
     assert "shard (1)" in r.stderr and "cancelled" in r.stderr, r.stderr
     assert not out.exists()
+
+
+def test_trc_001_a_file_faster_than_a_hundredth_keeps_a_positive_weight(tmp_path):
+    """With every duration listed, a file whose tests together take under
+    0.005 seconds rounds to 0.00, and the table holds only positive weights.
+    It keeps the smallest weight the table can show, 0.01, so it stays
+    covered. Scenario `TRC-001` of issue `shard-durations-min`."""
+    fast = ("0.00s setup    tests/test_quick.py::test_q",
+            "0.00s call     tests/test_quick.py::test_q",
+            "0.00s teardown tests/test_quick.py::test_q")
+    r, out = _durations(tmp_path, ["success", "success"], fast)
+    assert r.returncode == 0, (r.stdout, r.stderr)
+    seconds = json.loads(out.read_text())["seconds"]
+    assert seconds["tests/test_quick.py"] == 0.01, seconds
+    assert seconds["tests/test_x.py"] == 85.77, seconds

@@ -38,6 +38,9 @@ def test_rrr_1_restore_refuses_a_redacted_generation_file(project, tmp_path):
         assert GENERATION in result.stderr, result.stderr
         assert "[REDACTED]" in result.stderr, result.stderr
         assert "compass approach evaluate --write" in result.stderr, result.stderr
+        # A sync still redacts a credential-shaped line, so the message must
+        # not promise that a sync from a whole copy always repairs the record.
+        assert "shaped like a credential" in result.stderr, result.stderr
         # Nothing is copied, not even the files that are whole.
         assert not (fresh / ".compass" / "work" / "one").exists()
         assert not (fresh / "docs" / "analysis").exists()

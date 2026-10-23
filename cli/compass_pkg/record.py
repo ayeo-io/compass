@@ -392,8 +392,10 @@ def sync(project_root, prune=False, only=None):
 
 def _redacted_generation_file(parts, full):
     """Is the record file at `full`, at path `parts`, one of a generation's
-    stored files with a line a sync before 7.0.0 redacted? The generation's
-    marker holds a digest of each file, so a restored copy breaks it."""
+    stored files with a line a sync redacted? A sync before 7.0.0 redacted
+    ordinary lines too; a sync now redacts only a line shaped like a
+    credential. The generation's marker holds a digest of each file, so a
+    restored copy breaks it."""
     # Only `effective` imports the generation store (ADR-036), so the names
     # come from there, and only when a restore runs.
     from compass_pkg.effective import GENERATION_DIRECTORY, GENERATION_FILES
@@ -413,8 +415,9 @@ def _redacted_refusal(redacted):
         f"hold {REDACTED}, so a restored copy would make the generation broken and "
         f"compass check would refuse the issue:\n  {shown}\n"
         f"Restored nothing. Run `compass record sync` on a machine whose copy of "
-        f"the folder is whole, to replace the record's copy. If no whole copy "
-        f"exists, remove the folder from the record, restore, then remove the "
+        f"the folder is whole, to replace the record's copy. That works only when "
+        f"the file has no line shaped like a credential, which a sync redacts again. "
+        f"Otherwise remove the folder from the record, restore, then remove the "
         f"`generation:` line of the issue's manifest.yml and run `compass approach "
         f"evaluate --write` to store a new generation.")
 

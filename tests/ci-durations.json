@@ -325,6 +325,7 @@
   "tests/test_quick_fix_finish_captures_friction.py": 48.93,
   "tests/test_quick_fix_labels.py": 19.96,
   "tests/test_quick_fix_shows_settled_decisions.py": 8.19,
+  "tests/test_quick_fix_start_metadata_failure.py": 1.68,
   "tests/test_quick_fix_verbs.py": 1005.14,
   "tests/test_readable_specs_and_flow.py": 35.46,
   "tests/test_readiness_override_assess.py": 137.35,

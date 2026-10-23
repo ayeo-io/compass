@@ -41,6 +41,7 @@
   "tests/test_archive_citations_resolve.py": 1.17,
   "tests/test_archive_quote_manifest.py": 0.01,
   "tests/test_archive_sample.py": 79.02,
+  "tests/test_archive_under_skips_cache.py": 0.02,
   "tests/test_artifact_catalogue_fields.py": 953.3,
   "tests/test_artifact_freshness.py": 734.4,
   "tests/test_artifact_graph.py": 0.08,

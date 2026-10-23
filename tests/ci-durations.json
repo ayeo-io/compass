@@ -291,6 +291,7 @@
   "tests/test_phase2_invariants.py": 60.0,
   "tests/test_plain_language.py": 3.31,
   "tests/test_plain_words.py": 3.02,
+  "tests/test_plugin_icon.py": 0.01,
   "tests/test_pointer_lease.py": 18.6,
   "tests/test_policy_diff.py": 50.07,
   "tests/test_policy_integrity.py": 3.95,

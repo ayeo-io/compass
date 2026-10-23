@@ -9,6 +9,7 @@
   "homepage": "https://github.com/ayeo-io/compass",
   "repository": "https://github.com/ayeo-io/compass",
   "license": "Apache-2.0",
+  "icon": "assets/compass-icon.png",
   "keywords": [
     "spec-driven-development",
     "bdd",

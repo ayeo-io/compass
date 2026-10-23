@@ -1,8 +1,9 @@
-<p align="center">
-  <img src="assets/compass-icon.png" alt="Compass" width="180">
-</p>
-
-# Compass
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/compass-header-dark.svg">
+    <img src="assets/compass-header-light.svg" alt="Compass" height="64">
+  </picture>
+</h1>
 
 **Adaptive spec-driven development for Claude Code.**
 

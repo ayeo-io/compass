@@ -4824,3 +4824,9 @@ The release-time full-archive compatibility run no longer copies the checkout in
 compass quick-fix start now refuses, with the folder named and no traceback, when it cannot write its start record in the git directory, and leaves nothing behind, so the same start can run again.
 
 - `TRC-001` Given a git metadata folder that quick-fix start cannot write, When quick-fix start runs and then runs again once the folder is writable, Then the first run exits non-zero with no traceback, names the folder and leaves no issue folder or pointer to it, and the retry starts the issue
+
+### brand-icon (completed 2026-10-23)
+
+The plugin icon is now the ayeo Design System's Compass mark on a navy tile, and plugin.json names it in an icon field for the plugin directory.
+
+- `TRC-001` Given plugin.json, when the directory validator reads its icon field, then it names a square PNG in the plugin of 512 to 2048 px and under 2 MB

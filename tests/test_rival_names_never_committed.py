@@ -687,7 +687,7 @@ def test_rn_10_the_committed_pin_file_holds_only_hashes_and_paths():
         assert re.fullmatch(r"[0-9a-f]{40} [^ ].*", line), \
             "a pin file line is a 40-character hash, a space and a path"
     assert sorted(line[41:] for line in lines[:-1]) == [
-        "assets/compass-icon.png", "tests/fixtures/archive-sample.tar.gz"]
+        "tests/fixtures/archive-sample.tar.gz"]
 
 
 def test_rn_10_record_sync_honours_the_same_pin(tmp_path):

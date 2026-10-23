@@ -1,4 +1,5 @@
-"""`plugin.json` names the plugin's icon, in the shape the plugin directory accepts.
+"""`plugin.json` names the plugin's icon, in the shape the plugin directory
+accepts, and the README header shows the icon beside the name.
 
 The directory takes the listing icon from the `icon` field the first time the
 plugin is submitted, and never again, so a missing or rejected icon cannot be
@@ -33,3 +34,16 @@ def test_trc_001_plugin_json_names_a_square_png_icon_the_directory_accepts():
     assert width == height, (width, height)
     assert 512 <= width <= 2048, width
     assert icon.stat().st_size < 2 * 1024 * 1024, icon.stat().st_size
+
+
+def test_trc_001_readme_header_shows_the_icon_beside_the_name():
+    # GitHub markdown cannot size text to match an image, so the header is one
+    # image per theme: the icon tile with the name outlined beside it.
+    head = (ROOT / "README.md").read_text(encoding="utf-8").split("\n\n", 1)[0]
+    assert head.startswith("<h1>"), head
+    for theme in ("light", "dark"):
+        name = f"assets/compass-header-{theme}.svg"
+        assert name in head, name
+        svg = (ROOT / name).read_text(encoding="utf-8")
+        assert 'aria-label="Compass"' in svg, name
+        assert 'fill="#0E3A5F"' in svg, f"{name} has no navy icon tile"

@@ -8,7 +8,9 @@ marketplace entry and the Codex plugin carry one description, so the listings
 do not drift apart. Claude Code's strict plugin check, which rejects unknown
 fields, accepts every field here.
 
-Scenario id: PN-1 (issue `plugin-display-name`), TRC-001 (issue `listing-copy`).
+Scenario ids: the listing name and author is PN-1 (issue
+`plugin-display-name`), and the shared description with the findable
+marketplace entry is `TRC-001` (issue `listing-copy`).
 """
 from __future__ import annotations
 

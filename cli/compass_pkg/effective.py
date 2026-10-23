@@ -712,6 +712,9 @@ FIX_MAJOR = generation.FIX_MAJOR
 MajorRefusal = generation.MajorRefusal
 refuse_other_major = generation.refuse_other_major
 version_major = generation._major
+# `record restore` names a generation's stored files to refuse a redacted copy.
+GENERATION_DIRECTORY = generation.DIRECTORY
+GENERATION_FILES = generation.FILES
 
 
 def stored_documents(task_dir, manifest):

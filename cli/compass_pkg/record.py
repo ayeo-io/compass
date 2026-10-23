@@ -14,7 +14,7 @@
 # inside the project, so the project can never commit it by mistake.
 #
 # DEPENDENCY: standard library (hashlib, os, shutil, subprocess) and
-# compass_pkg (core, redact, rival_names).
+# compass_pkg (core, effective, redact, rival_names).
 # =============================================================================
 """`compass record sync|restore`: the delivery record in its own repository."""
 from __future__ import annotations
@@ -27,7 +27,7 @@ import subprocess
 
 from compass_pkg import project_settings
 from compass_pkg.core import CompassError, find_compass_dir, load_yaml
-from compass_pkg.redact import redact
+from compass_pkg.redact import MARK as REDACTED, redact
 from compass_pkg import rival_names
 
 #: The branch the record is kept on.
@@ -390,9 +390,42 @@ def sync(project_root, prune=False, only=None):
     return f"record synced to {remote} at {head}" + note
 
 
+def _redacted_generation_file(parts, full):
+    """Is the record file at `full`, at path `parts`, one of a generation's
+    stored files with a line a sync redacted? A sync before 7.0.0 redacted
+    ordinary lines too; a sync now redacts only a line shaped like a
+    credential. The generation's marker holds a digest of each file, so a
+    restored copy breaks it."""
+    # Only `effective` imports the generation store (ADR-036), so the names
+    # come from there, and only when a restore runs.
+    from compass_pkg.effective import GENERATION_DIRECTORY, GENERATION_FILES
+    if len(parts) < 3 or parts[-3] != GENERATION_DIRECTORY \
+            or parts[-1] not in GENERATION_FILES:
+        return False
+    with open(full, "rb") as fh:
+        return REDACTED.encode() in fh.read()
+
+
+def _redacted_refusal(redacted):
+    shown = "\n  ".join(sorted(redacted)[:10])
+    if len(redacted) > 10:
+        shown += f"\n  ... and {len(redacted) - 10} more"
+    return (
+        f"compass record restore: {len(redacted)} generation file(s) in the record "
+        f"hold {REDACTED}, so a restored copy would make the generation broken and "
+        f"compass check would refuse the issue:\n  {shown}\n"
+        f"Restored nothing. Run `compass record sync` on a machine whose copy of "
+        f"the folder is whole, to replace the record's copy. That works only when "
+        f"the file has no line shaped like a credential, which a sync redacts again. "
+        f"Otherwise remove the folder from the record, restore, then remove the "
+        f"`generation:` line of the issue's manifest.yml and run `compass approach "
+        f"evaluate --write` to store a new generation.")
+
+
 def restore(project_root, force=False):
     """Copy the record's paths back into the project. Refuses to overwrite
-    a file that differs unless `force`."""
+    a file that differs unless `force`, and refuses, whatever `force`, a
+    redacted generation file."""
     found = settings(project_root)
     if found is None:
         raise CompassError("compass record restore: no record is configured "
@@ -400,7 +433,7 @@ def restore(project_root, force=False):
                                project_root, "record"))
     remote, paths = found
     clone = _fresh_clone(remote)
-    pairs, differ = [], []
+    pairs, differ, redacted = [], [], []
     for rel in paths:
         source = os.path.join(clone, rel)
         files = [source] if os.path.isfile(source) else [
@@ -414,8 +447,14 @@ def restore(project_root, force=False):
                 with open(full, "rb") as a, open(target, "rb") as b:
                     if a.read() == b.read():
                         continue
+            if _redacted_generation_file(parts, full):
+                redacted.append(os.path.relpath(target, project_root))
+                continue
+            if os.path.isfile(target):
                 differ.append(os.path.relpath(target, project_root))
             pairs.append((full, target))
+    if redacted:
+        raise CompassError(_redacted_refusal(redacted))
     if differ and not force:
         shown = "\n  ".join(sorted(differ)[:10])
         more = f"\n  ... and {len(differ) - 10} more" if len(differ) > 10 else ""

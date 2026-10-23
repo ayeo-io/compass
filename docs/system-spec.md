@@ -4806,3 +4806,9 @@ compass ship-commit now shows the reason git gave when a commit fails, for examp
 compass issue migrate no longer renames a distribution map that declares units: 1, so multiagent-run-recorded still passes on that issue after the migration.
 
 - `TRC-001` Given a 6.x issue whose lightweight distribution map declares units: 1, When compass issue migrate runs as a dry run and then with --apply, Then it renames no map, the map keeps its name and text, and its registry entry keeps its status and path
+
+### record-restore-refuses-redacted (completed 2026-10-23)
+
+compass record restore now refuses, and copies nothing, when a generation file in the record holds [REDACTED], instead of restoring a copy that compass check reports as broken.
+
+- `TRC-001` Given a delivery record whose generation file holds [REDACTED], When compass record restore runs, with or without --force, Then it copies nothing, exits non-zero, names the file and says how to repair the generation

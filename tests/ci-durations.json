@@ -334,6 +334,7 @@
   "tests/test_receipt_provenance.py": 145.31,
   "tests/test_receipt_render.py": 10.22,
   "tests/test_record_keeping_integrity.py": 67.48,
+  "tests/test_record_restore_refuses_redacted.py": 1.37,
   "tests/test_red_for_an_unknown_scenario.py": 5.88,
   "tests/test_red_must_show_a_failure.py": 13.2,
   "tests/test_red_needs_a_test_to_run.py": 1.24,

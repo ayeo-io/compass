@@ -143,12 +143,13 @@ guard. What it does not stop:
     call.
 The safety contract states these limits.
 """
-# DEPENDENCY: standard library (fnmatch, os, re, shlex, unicodedata),
+# DEPENDENCY: standard library (bisect, fnmatch, os, re, shlex, unicodedata),
 # and compass_pkg.approval_words (the simple-command gate). Runs inside
 # hooks/pre-tool.sh, so it keeps to syntax the hook's oldest supported python3
 # reads (3.10) and imports no third-party module.
 from __future__ import annotations
 
+import bisect
 import fnmatch
 import os
 import re
@@ -170,7 +171,15 @@ TRANSCRIPTS = re.compile(r"\.claude[\w.-]*/projects(?:/|\b)|CLAUDE_CONFIG_DIR")
 #: expands to.
 GLOB = re.compile(r"[*?\[{]")
 #: A brace expansion: `{` with a `,` or `..` before the closing `}`.
+#: `_has_brace` finds what this pattern finds. The pattern retried from each
+#: `,` and took 19 seconds on `{` and 90,000 commas.
 BRACE = re.compile(r"\{[^{}]*(?:,|\.\.)[^{}]*\}")
+_BRACE_PAIR = re.compile(r"\{([^{}]*)\}")
+
+
+def _has_brace(word):
+    """True when `BRACE` would match `word`, in linear time."""
+    return any("," in m.group(1) or ".." in m.group(1) for m in _BRACE_PAIR.finditer(word))
 #: How deep a command nested in quoted words is read, such as
 #: `bash -c "bash -c '...'"`.
 NESTING = 8
@@ -302,15 +311,70 @@ def _unreadable_as(words):
             and not re.search(r"\s", w)]
 
 
-#: A word that holds ANSI-C quoting with an escape: `$'--a\x73'` runs as
-#: `--as`. Without a backslash, `$'--as'` is the quoted text, which `_words`
-#: already reads.
-ANSI_C = re.compile(r"\S*\$'[^']*\\\S*")
+#: ANSI-C quoting with an escape: `$'--a\x73'` runs as `--as`. Without a
+#: backslash, `$'--as'` is the quoted text, which `_words` already reads. The
+#: pattern starts at `$'`; `_ansi_c_word` widens the match to its word. A
+#: leading `\S*` in the pattern tried every start in a long word and took 10
+#: seconds on 90 KB.
+ANSI_C = re.compile(r"\$'[^']*\\")
+
+
+def _ansi_c_word(raw):
+    """The whitespace-delimited word around the first ANSI-C escape, else None."""
+    found = ANSI_C.search(raw)
+    if not found:
+        return None
+    left, right = found.start(), found.end()
+    while left > 0 and not raw[left - 1].isspace():
+        left -= 1
+    while right < len(raw) and not raw[right].isspace():
+        right += 1
+    return raw[left:right]
+
 
 #: A word with an escape in command position (the start, or after an
 #: operator or a variable assignment): `$'\x63ompass'` runs as `compass`.
+#: `_escaped_command` finds what this pattern finds; the pattern retried
+#: from every operator and took 5 seconds on a word of 45,000 `x;`.
 ESCAPED_COMMAND = re.compile(
     r"(?:^|[;&|(`\n]|\$\()\s*(?:\w+=\S*\s+)*\S*\$'[^']*\\")
+_ASSIGNMENT = re.compile(r"\w+=")
+
+
+def _escaped_command(text):
+    """True when `ESCAPED_COMMAND` would match `text`, in linear time.
+
+    A word is in command position when it starts the text or a line, or when
+    the word before it holds an operator followed by nothing or by an
+    assignment, or is itself an assignment in command position. An escape
+    matches when its word is in command position or holds an operator before
+    the escape (`\\S*` after the operator reaches it)."""
+    words = [(m.start(), m.group()) for m in re.finditer(r"\S+", text)]
+    starts = [start for start, _ in words]
+    # Each word's first operator, found once: rescanning the word for every
+    # escape in it was quadratic in a word of many `$'\'`.
+    first_operator = []
+    command_position = []
+    for index, (start, word) in enumerate(words):
+        found = re.search(r"[;&|(`]", word)
+        first_operator.append(start + found.start() if found else None)
+        if index == 0:
+            here = True  # `^` then `\s*`
+        else:
+            before_start, before = words[index - 1]
+            gap = text[before_start + len(before):start]
+            here = ("\n" in gap
+                    or bool(re.search(r"[;&|(`](?:$|\w+=)", before))
+                    or (bool(_ASSIGNMENT.match(before)) and command_position[index - 1]))
+        command_position.append(here)
+    for found in ANSI_C.finditer(text):
+        at = found.start()
+        # The word that holds the `$'`; `$'` is not white space, so one does.
+        index = bisect.bisect_right(starts, at) - 1
+        operator = first_operator[index]
+        if command_position[index] or (operator is not None and operator < at):
+            return True
+    return False
 
 
 def _names_evidence(words, nested):
@@ -328,17 +392,17 @@ def _built_word(words, nested, raw, compass, escaped):
     decode them, so it refuses the command whether or not `--delegated` shows.
     `raw` is the words as written, `compass` is true when a word is `compass`,
     and `escaped` when a command name is spelled with an escape."""
-    found = ANSI_C.search(raw)
+    found = _ansi_c_word(raw)
     # A command that holds `compass` (or spells it with an escape in command
     # position) may spell every word with an escape, so `evidence` need not
     # show: `compass $'\x65vidence' $'appro\x76e'` runs `evidence approve`.
     evidence = _names_evidence(words, nested)
     if found and (evidence or compass or escaped):
-        return found.group(0)
+        return found
     if not evidence:
         return None
     for word in nested:
-        if BRACE.search(word) and not re.search(r"\s", word):
+        if _has_brace(word) and not re.search(r"\s", word):
             return word
     return None
 
@@ -361,7 +425,7 @@ def _caller_mismatch(words, nested, who):
             return unreadable[0], who
         # Brace expansion turns `--a{s=main,s=x}` into two `--as=` words. A
         # word that holds a space (a quoted value) is read again as its parts.
-        braced = [w for w in words if BRACE.search(w) and not re.search(r"\s", w)]
+        braced = [w for w in words if _has_brace(w) and not re.search(r"\s", w)]
         if braced:
             return braced[0], who
     return None
@@ -536,31 +600,68 @@ def _flatten_classes(glob):
     (`[:x:]`), collating symbol (`[.x.]`) or equivalence class (`[=x=]`) with
     `?`. `fnmatch` reads none of them, and a replacement inside the set would
     leave `[?x]`, which matches only `?` or `x`."""
+    # The scan inside a bracket stops at the first `]` that is not the end of
+    # a class, jumping over each class. Where a scan that starts at position
+    # j stops, and whether it jumped over a class on the way, is found once
+    # for every j, from right to left; scanning again from each `[` took 56
+    # seconds on 20,000 `[a`, past the hook's time limit
+    # (ayeo-io/compass-delivery-record#246).
+    n = len(glob)
+    ends = {k: [m.start() for m in re.finditer(re.escape(k + "]"), glob)] for k in ":.="}
+    stop, crossed = [n] * (n + 1), [False] * (n + 1)
+    for j in range(n - 1, -1, -1):
+        if glob[j] == "]":
+            stop[j] = j
+            continue
+        kind = glob[j + 1] if glob[j] == "[" and j + 1 < n else ""
+        end = -1
+        if kind in (":", ".", "="):
+            at = bisect.bisect_left(ends[kind], j + 2)
+            end = ends[kind][at] if at < len(ends[kind]) else -1
+        if end >= 0:
+            stop[j], crossed[j] = stop[min(end + 2, n)], True
+        else:
+            stop[j], crossed[j] = stop[j + 1], crossed[j + 1]
     out, i = [], 0
-    while i < len(glob):
+    while i < n:
         if glob[i] != "[":
             out.append(glob[i])
             i += 1
             continue
-        j, special = i + 1, False
-        if j < len(glob) and glob[j] in "!^":
+        j = i + 1
+        if j < n and glob[j] in "!^":
             j += 1
-        if j < len(glob) and glob[j] == "]":
+        if j < n and glob[j] == "]":
             j += 1
-        while j < len(glob) and glob[j] != "]":
-            kind = glob[j + 1] if glob[j] == "[" and j + 1 < len(glob) else ""
-            end = glob.find(kind + "]", j + 2) if kind in (":", ".", "=") and kind else -1
-            if end >= 0:
-                special, j = True, end + 2
-            else:
-                j += 1
-        if j >= len(glob):
+        special = crossed[j]
+        j = stop[j]
+        if j >= n:
+            # Left bare: `fnmatch` can still close this `[` at a `]` the scan
+            # above skipped as the end of a class, as in `x[[:a:]y`.
             out.append(glob[i])
             i += 1
         else:
             out.append("?" if special else glob[i:j + 1])
             i = j + 1
     return "".join(out)
+
+
+def _glob_pattern(glob):
+    """`fnmatch`'s pattern for `glob`, compiled. After the last `]` no `[` can
+    close, and `fnmatch.translate` searches to the end of the glob for each
+    such `[` before reading it as a literal. Those are swapped for a
+    character the glob does not hold before the translation and turned back
+    into a literal `[` after it, so the pattern matches exactly what
+    `fnmatch` would and the translation stays linear
+    (ayeo-io/compass-delivery-record#246)."""
+    tail = glob.rfind("]") + 1
+    if "[" not in glob[tail:]:
+        return re.compile(fnmatch.translate(glob))
+    # A private-use character the glob does not hold; a NUL could, since the
+    # hook's JSON input can carry one.
+    mark = next(chr(c) for c in range(0xE000, 0xF900) if chr(c) not in glob)
+    swapped = glob[:tail] + glob[tail:].replace("[", mark)
+    return re.compile(fnmatch.translate(swapped).replace(mark, re.escape("[")))
 
 
 def _glob_selects(glob, pairs, grep):
@@ -574,6 +675,7 @@ def _glob_selects(glob, pairs, grep):
     # `fnmatch` reads neither. A class becomes `?`, which keeps a refusal
     # that names the delegation folder and accepts a glob that picks every name.
     glob = _flatten_classes(glob).replace("[^", "[!")
+    pattern = _glob_pattern(glob)
 
     def matches(path):
         path = path.lower()
@@ -582,7 +684,7 @@ def _glob_selects(glob, pairs, grep):
             tries.append("/" + path)
             if "/" not in glob:
                 tries.append(path.rpartition("/")[2])
-        return any(fnmatch.fnmatchcase(t, glob) for t in tries)
+        return any(pattern.match(t) for t in tries)
 
     return any(matches(sample) and not matches(plain) for sample, plain in pairs)
 
@@ -649,6 +751,47 @@ def _in_delegations(tool_input, cwd):
     return ""
 
 
+def _join_continuations(command):
+    """The command with each backslash-newline removed where the shell removes
+    it: outside quotes and inside double quotes. A protected name split that
+    way runs as the whole name. Single quotes and ANSI-C quoting keep the two
+    characters, as the shell does."""
+    if "\\\n" not in command:
+        return command
+    out, i, n = [], 0, len(command)
+    quote = ""  # "", "'", '"' or "$'"
+    while i < n:
+        c = command[i]
+        if quote == "'":
+            out.append(c)
+            if c == "'":
+                quote = ""
+            i += 1
+            continue
+        if c == "\\" and i + 1 < n:
+            if command[i + 1] == "\n" and quote != "$'":
+                i += 2
+                continue
+            out.append(command[i:i + 2])
+            i += 2
+            continue
+        if quote == "$'":
+            if c == "'":
+                quote = ""
+        elif quote == '"':
+            if c == '"':
+                quote = ""
+        elif c == "'":
+            # An escaped `\$` is kept as one two-character piece, so only a
+            # bare `$` opens ANSI-C quoting.
+            quote = "$'" if out and out[-1] == "$" else "'"
+        elif c == '"':
+            quote = '"'
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def check(event):
     """`(code, params)` for a call to refuse, else None."""
     tool = event.get("tool_name") or ""
@@ -689,7 +832,7 @@ def check(event):
         return None
     if tool != "Bash":
         return None
-    command = str(tool_input.get("command") or "")
+    command = _join_continuations(str(tool_input.get("command") or ""))
     commands = simple(command)
     if commands is None:
         return _judge_text(command, event, folder)
@@ -749,8 +892,14 @@ def _judge_text(command, event, folder):
     """The Bash checks on the whole text of a command that is not simple: any text that
     names a protected thing is refused."""
     text = command.replace("\\\n", "")
-    return _judge(event, folder, [(command, (), True)], _words(command), text,
-                  bool(ESCAPED_COMMAND.search(text)), True)
+    # The name checks also read the text with every backslash-newline joined.
+    # `_join_continuations` keeps one after an apostrophe that it reads as a
+    # quote, and in a comment, an unquoted heredoc or a quote inside `$( )`
+    # the shell does not, so it joins the name. Joining everywhere can only
+    # add refusals of a protected name.
+    items = [(command, (), True)] + ([(text, (), True)] if text != command else [])
+    return _judge(event, folder, items, _words(command), text,
+                  _escaped_command(text), True)
 
 
 def _refusal(code, tool, text, found, whole):

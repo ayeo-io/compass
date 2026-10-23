@@ -392,6 +392,22 @@ def cmd_quick_fix_start(args):
                     f"in the fixed table.")
             ledger.append((stage, weight, reason))
 
+    # The start record lives in the git directory, which a linked worktree
+    # may not be allowed to write. It is written before the pointer moves,
+    # and a failure takes this call's issue folder away, so a retry with the
+    # same slug can start again.
+    try:
+        _write_start_state(project_root, slug)
+    except OSError as exc:
+        import shutil
+        shutil.rmtree(task_dir, ignore_errors=True)
+        where = os.path.abspath(exc.filename) if exc.filename else "the git directory"
+        raise CompassError(
+            f"compass quick-fix start: cannot write the start record in "
+            f"{where} ({exc.strerror or exc}). "
+            f"Nothing was kept. Give this session write access to that "
+            f"folder, then run the same start again.") from None
+
     # Written only once the approach is a quick fix, so a heavier result
     # leaves the pointer on whatever issue it named before.
     with open(os.path.join(project_root, ".compass", "current-task"),
@@ -402,8 +418,6 @@ def cmd_quick_fix_start(args):
     from compass_pkg.session_lease import SESSION_ENV, record
     record(os.path.join(project_root, ".compass"),
            os.environ.get(SESSION_ENV, ""), slug)
-
-    _write_start_state(project_root, slug)
 
     doc_dir_rel = docs_dir(task_dir)
     doc_path_rel = f"{doc_dir_rel}/delivery-approach.md"

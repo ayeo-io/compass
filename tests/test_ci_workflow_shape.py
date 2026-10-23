@@ -463,7 +463,7 @@ def test_crt_2_shard_matrix():
     assert 'count/shard-$SHARD-of-$SHARDS' in counting, counting
     running = _step_named(job, "Run this shard's tests")["run"]
     assert ('python3 -m pytest -p xdist.plugin -n auto -m "not serial" '
-            '--durations=0 "${files[@]}"') in running, running
+            '--durations=0 --durations-min=0 "${files[@]}"') in running, running
     assert " -q" not in running, "pytest.ini already sets -q"
 
     uploads = [s for s in job["steps"] if "upload-artifact" in s.get("uses", "")]

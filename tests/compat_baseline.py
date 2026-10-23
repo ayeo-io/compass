@@ -459,14 +459,27 @@ def archive_under(kind, fault=None):
     """A copy of the archive sample, after `issue migrate` and `issue render --all`
     (`archive.checkable_root`), with configuration `kind` added. It sits
     beside the sample's cache, inside this checkout, because some checks ask
-    git about the commits an issue names. The caller removes it."""
+    git about the commits an issue names. The caller removes it; a call that
+    raises removes it first, because the caller never learns its path."""
     import shutil
     import tempfile
 
-    from archive import CACHE, checkable_root
+    import archive
 
-    CACHE.mkdir(exist_ok=True)
-    root = Path(tempfile.mkdtemp(dir=CACHE, prefix=f"config-{kind}-"))
-    shutil.copytree(checkable_root(), root, dirs_exist_ok=True, symlinks=True)
-    build_configuration(kind, root, fault)
+    cache = archive.CACHE
+    cache.mkdir(exist_ok=True)
+    root = Path(tempfile.mkdtemp(dir=cache, prefix=f"config-{kind}-"))
+
+    # With COMPASS_FULL_ARCHIVE=1 the source is this checkout, which holds the
+    # cache, so the copy would recurse into itself until the disk is full.
+    def skip_cache(folder, names):
+        return [n for n in names if Path(folder, n) == cache]
+
+    try:
+        shutil.copytree(archive.checkable_root(), root, dirs_exist_ok=True,
+                        symlinks=True, ignore=skip_cache)
+        build_configuration(kind, root, fault)
+    except BaseException:
+        shutil.rmtree(root, ignore_errors=True)
+        raise
     return root

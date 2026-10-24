@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
 
 from approval_support import OWNER, SLUG, event, manifest_of, project, run, task_dir  # noqa: E402
+from delegation_support import delegated  # noqa: E402
 from test_delegation import ARCHITECT, _soon  # noqa: E402
 
 
@@ -37,8 +38,8 @@ def test_f13_withdrawal_fails_g5_in_flight(tmp_path):
     first = _type(root, f"--agent {ARCHITECT} --until {_soon()} --for g5", "compass:delegate")
     code = re.search(r"confirm (\S+)", first.message).group(1)
     assert not _type(root, f"confirm {code}", "compass:delegate").block
-    done = run(root, "evidence", "approve", "--issue", SLUG, "--guardrail", "G5", "--scope",
-               "the release tag", "--delegated", "--as", ARCHITECT)
+    done = delegated(root, ARCHITECT, "--issue", SLUG, "--guardrail", "G5", "--scope",
+                     "the release tag")
     assert done[0] == 0, done
     ok, _ = checks._check_human_approval(manifest_of(root), str(task_dir(root)))
     assert ok

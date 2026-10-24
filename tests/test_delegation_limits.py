@@ -204,3 +204,46 @@ def test_TRC_099_a_delegated_checkpoint_or_decisions_approval_cannot_be_overrule
     answer = _type(root, f"{record['id']} wrong call", command="compass:reject")
     assert answer.block and "compass issue decision set" in answer.message, answer
     assert len(manifest_of(root)["evidence"]) == count
+
+
+# --- what a delegated approval still cannot do ---------------------------------------------
+
+def _session_delegation(tmp_path, args=""):
+    from delegation_support import repo
+    from delegation_support import type_ as type_in
+    top = repo(tmp_path)
+    assert not type_in(top, args, session="sess-S").block
+    return top
+
+
+def test_TRC_073_a_delegated_agent_cannot_record_a_rejection(tmp_path):
+    from approval_support import CHECK, task_dir
+    from delegation_support import delegated, evidence_count
+    top = _session_delegation(tmp_path)
+    count = evidence_count(task_dir(top))
+    code, out, err = delegated(top, "main", "--check", CHECK, "--scope", "s", "--issue",
+                               "feature", "--decision", "rejected", session="sess-S")
+    assert code != 0 and "never covers a rejection" in out + err, out + err
+    assert evidence_count(task_dir(top)) == count
+
+
+def test_TRC_075_a_delegation_without_for_g5_does_not_cover_the_guardrail_5_sign(tmp_path):
+    from delegation_support import delegated
+    top = _session_delegation(tmp_path)
+    code, out, err = delegated(top, "main", "--guardrail", "G5", "--scope", "tag v8",
+                               "--issue", "feature", session="sess-S")
+    assert code != 0 and "DL-1" in out + err, out + err
+    assert "not the guardrail 5 sign-off" in out + err, out + err
+
+
+def test_TRC_080_max_ends_the_delegation_after_its_last_approval(tmp_path):
+    from approval_support import CHECK
+    from delegation_support import delegated
+    top = _session_delegation(tmp_path, "--max 2")
+    path = _store(top) / "DL-1.yml"
+    body = yaml.safe_load(path.read_text(encoding="utf-8"))
+    body["uses"] = 2
+    path.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    code, out, err = delegated(top, "main", "--check", CHECK, "--scope", "s", "--issue",
+                               "feature", session="sess-S")
+    assert code != 0 and "DL-1 reached its max of 2 use(s)" in out + err, out + err

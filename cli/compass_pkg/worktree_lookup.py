@@ -1,6 +1,6 @@
 # compass_pkg.worktree_lookup - find an issue in any git worktree, and the common store
-"""One lookup for every question that crosses git worktrees (delegation-everywhere,
-DD-1 and DD-3): which folder holds an issue, and where the delegation store is.
+"""One lookup for every question that crosses git worktrees: which folder holds an
+issue, and where the delegation store is (issue delegation-everywhere).
 
 `list_worktrees` runs `git worktree list --porcelain` once and returns the
 trees a command may read: bare and prunable entries and missing folders are
@@ -127,6 +127,21 @@ def _repo_top(start):
         up = os.path.dirname(node)
         if up == node:
             return None, False
+        node = up
+
+
+def project_folder(cwd):
+    """The Compass project a working folder is in: the nearest folder at or
+    above it that holds `.compass`, stopping at the top of the repository, else
+    the folder itself."""
+    node = os.path.abspath(cwd)
+    while True:
+        if (os.path.isdir(os.path.join(node, ".compass"))
+                or os.path.exists(os.path.join(node, ".git"))):
+            return node
+        up = os.path.dirname(node)
+        if up == node:
+            return os.path.abspath(cwd)
         node = up
 
 

@@ -4,7 +4,7 @@
 `--on` looks an issue up in every worktree that `git worktree list` names, and
 the delegation is written to the one common store in the main checkout.
 
-Scenario ids: `TRC-022` to `TRC-025` and `TRC-028` to `TRC-032`. Each test name
+Scenario ids: `TRC-020` to `TRC-032`, `TRC-095` and `TRC-096`. Each test name
 starts with its scenario id.
 """
 from __future__ import annotations
@@ -123,3 +123,94 @@ def test_TRC_032_a_project_in_a_subfolder_of_the_repository_is_found_at_the_same
     found = delegations(session_root)
     assert found["DL-1"]["issues"] == {"wt-issue": 2}
     assert not delegations(top)
+
+
+# --- a delegated approval across worktrees -------------------------------------------------
+
+def _linked(tmp_path, slug="wt-issue", generation=None):
+    from delegation_support import copy_issue
+    top = repo(tmp_path)
+    work = add_worktree(top, "w")
+    copy_issue(top, work, slug, generation)
+    return top, work
+
+
+def _approve(cwd, slug, agent="compass:architect", session="sess-S"):
+    from approval_support import CHECK
+    from delegation_support import delegated
+    return delegated(cwd, agent, "--check", CHECK, "--scope", "s", "--issue", slug,
+                     session=session)
+
+
+def _last(task_dir):
+    import yaml
+    body = yaml.safe_load((Path(task_dir) / "manifest.yml").read_text(encoding="utf-8"))
+    return body["evidence"][-1]
+
+
+def test_TRC_020_with_no_on_an_issue_created_after_the_delegation_is_covered(tmp_path):
+    from delegation_support import copy_issue
+    top = repo(tmp_path)
+    work = add_worktree(top, "w")
+    assert not type_(top, "", session="sess-S").block
+    new = copy_issue(top, work, "new-issue")
+    code, out, err = _approve(work, "new-issue")
+    assert code == 0, out + err
+    assert _last(new)["delegation"] == "DL-1"
+
+
+def test_TRC_021_with_no_on_an_issue_at_a_later_generation_is_still_covered(tmp_path):
+    from approval_support import task_dir
+    from delegation_support import set_generation
+    top = repo(tmp_path)
+    assert not type_(top, "", session="sess-S").block
+    set_generation(task_dir(top), 3)
+    code, out, err = _approve(top, SLUG, agent="main")
+    assert code == 0, out + err
+    assert _last(task_dir(top))["delegation"] == "DL-1"
+
+
+def test_TRC_026_on_still_narrows_the_delegation_to_the_named_issues(tmp_path):
+    top, work = _linked(tmp_path)
+    assert not type_(top, f"--on {SLUG}", session="sess-S").block
+    code, out, err = _approve(work, "wt-issue")
+    assert code != 0 and f"DL-1 covers {SLUG}, not wt-issue" in out + err, out + err
+
+
+def test_TRC_027_on_still_binds_each_issue_to_its_generation(tmp_path):
+    from delegation_support import set_generation
+    top, work = _linked(tmp_path, generation=4)
+    assert not type_(top, "--on wt-issue", session="sess-S").block
+    wt = work / ".compass" / "work" / "wt-issue"
+    set_generation(wt, 5)
+    code, out, err = _approve(work, "wt-issue")
+    assert code != 0, out + err
+    assert "DL-1 covers wt-issue at generation 4, and it is at generation 5" in out + err
+
+
+def test_TRC_095_an_issue_named_with_on_that_is_later_copied_into_a_second(tmp_path):
+    from delegation_support import copy_issue, evidence_count
+    top, work = _linked(tmp_path)
+    assert not type_(top, "--on wt-issue", session="sess-S").block
+    copy_issue(top, top, "wt-issue")
+    wt = work / ".compass" / "work" / "wt-issue"
+    count = evidence_count(wt)
+    code, out, err = _approve(work, "wt-issue")
+    assert code != 0, out + err
+    assert str(top / ".compass" / "work" / "wt-issue") in out + err
+    assert str(wt) in out + err or os.path.relpath(wt, work) in out + err
+    assert evidence_count(wt) == count
+
+
+def test_TRC_096_a_delegated_approval_on_an_issue_that_two_worktrees_hold_is_refused(
+        tmp_path):
+    from delegation_support import copy_issue
+    top, work = _linked(tmp_path)
+    assert not type_(top, "", session="sess-S").block
+    copy_issue(top, top, "wt-issue")
+    code, out, err = _approve(work, "wt-issue")
+    assert code != 0, out + err
+    assert str(top / ".compass" / "work" / "wt-issue") in out + err
+    held = work / ".compass" / "work" / "wt-issue"
+    assert str(held) in out + err or os.path.relpath(held, work) in out + err
+    assert delegations(top)["DL-1"]["uses"] == 0

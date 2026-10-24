@@ -1,0 +1,23 @@
+{
+ "claude_code_version": "2.1.309",
+ "source": "delegation-everywhere/evidence/session-id-measurement/a-subagent-cd-into-worktree.jsonl, case a: a general-purpose subagent ran cd into a linked worktree. Paths and the command are replaced; session_id, agent_type and agent_id are as Claude Code sent them.",
+ "input": {
+  "session_id": "3c6cc94e-af1e-41fa-93e1-6ab16597e78c",
+  "transcript_path": "{{TRANSCRIPT}}",
+  "cwd": "{{CWD}}",
+  "prompt_id": "101fd6f5-eb8c-4eaf-8203-ffbadab8ca20",
+  "permission_mode": "auto",
+  "agent_id": "ab4eee6bfdcbc4cdf",
+  "agent_type": "general-purpose",
+  "effort": {
+   "level": "medium"
+  },
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+   "command": "{{COMMAND}}",
+   "description": "Print working directory and git top-level path"
+  },
+  "tool_use_id": "toolu_01PjG3ayuKarAUyPyHKa7jCR"
+ }
+}

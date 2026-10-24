@@ -46,6 +46,7 @@ write `manifest.yml` can add one by hand.
 from __future__ import annotations
 
 import os
+import re
 import sys
 
 from compass_pkg import approval_records, approvals, old_names
@@ -111,6 +112,72 @@ def cmd_evidence_approve(args):
     return say(args, done.outcome, detail=done.detail, **done.data)
 
 
+def _delegated_places(slug):
+    """`(issue folder, store folder)` of a delegated approval. The issue is found
+    by its exact slug in every worktree of the repository, so a slug that two
+    hold is refused, naming both. The store is the common store."""
+    from compass_pkg import worktree_lookup
+    project = worktree_lookup.project_folder(os.getcwd())
+    listing = worktree_lookup.list_worktrees(project)
+    try:
+        task_dir = worktree_lookup.find_issue(listing, slug)
+    except worktree_lookup.HeldTwice as exc:
+        raise CompassError(f"compass evidence approve: the issue '{slug}' is held by more "
+                           f"than one worktree: {' and '.join(exc.folders)}. Compass cannot "
+                           f"tell which one is meant. Nothing was written.") from None
+    except worktree_lookup.NotFound as exc:
+        note = f" {exc.note[0].upper()}{exc.note[1:]}." if exc.note else ""
+        raise CompassError(f"compass evidence approve: the issue '{slug}' is in none of the "
+                           f"work folders searched: {', '.join(exc.searched)}.{note} "
+                           f"Nothing was written.") from None
+    store = worktree_lookup.common_store(project)
+    if store.folder is None:
+        raise CompassError(f"compass evidence approve: {store.why_none}. Nothing was "
+                           f"written.")
+    return task_dir, store.folder
+
+
+def _raw_words():
+    """The words the command line gave after `evidence approve`, which the
+    pre-tool hook's ticket binds to."""
+    argv = sys.argv[1:]
+    for i in range(len(argv) - 1):
+        if argv[i] == "evidence" and argv[i + 1] == "approve":
+            return argv[i + 2:]
+    raise CompassError("compass evidence approve: Compass could not read this command line, "
+                       "so it cannot match it to the pre-tool hook's ticket. Nothing was "
+                       "written.")
+
+
+def _take_ticket(store, agent):
+    """The pre-tool hook's ticket for this call, taken under the store lock.
+    The session comes from it and never from the environment, which a command
+    can set to any value."""
+    from compass_pkg import delegation_tickets
+    try:
+        return delegation_tickets.take(store, _raw_words(), agent)
+    except delegation_tickets.TicketRefused as exc:
+        raise CompassError(f"compass evidence approve: {exc} Nothing was written.") from None
+
+
+def _stray_files(task_dir, store_compass):
+    """A sentence that names each delegation file in the issue's own `.compass/`
+    when that is not the common store: Compass 7.0.0 read it, and no longer does."""
+    own = os.path.dirname(os.path.dirname(os.path.normpath(task_dir)))
+    if os.path.realpath(own) == os.path.realpath(store_compass):
+        return ""
+    folder = os.path.join(own, "delegations")
+    try:
+        names = sorted(n for n in os.listdir(folder) if re.fullmatch(r"DL-\d+\.yml", n))
+    except OSError:
+        return ""
+    if not names:
+        return ""
+    paths = ", ".join(os.path.join(folder, n) for n in names)
+    return (f" {paths} is a delegation file that Compass no longer reads: a delegation is "
+            f"kept in the main checkout's common store now. Type /compass:delegate again.")
+
+
 def _delegated(args):
     """An agent's approval under a delegation a person typed (ADR-069). It needs
     no terminal: the delegation is the person's decision. The record names the
@@ -127,22 +194,39 @@ def _delegated(args):
     if args.decision != approval_records.APPROVED:
         raise CompassError("compass evidence approve: a delegation never covers a rejection. "
                            "Tell the person what you found, and stop.")
+    if not args.task:
+        raise CompassError("compass evidence approve: a delegated approval names its issue "
+                           "with --issue <slug>, such as --issue my-issue. Nothing was "
+                           "written.")
     draft = answer_of(args, {})
-    task_dir = resolve_issue_dir(args.task)
-    # The delegation lock, taken inside the issue lock in the order the prompt
-    # hook takes them, keeps a /compass:revoke or another use from landing
-    # between the check and the count.
-    with approvals.lock(task_dir), delegations.locked(os.path.dirname(os.path.dirname(task_dir))):
-        delegation = delegations.authorise(task_dir, draft.form, draft.value, agent)
-        provenance = {"via": "delegation", "approved_by_agent": agent,
-                      "delegation": delegation["id"],
-                      "session_id": os.environ.get("CLAUDE_CODE_SESSION_ID", "")}
-        answer = approvals.checked(approvals.Answer(
-            draft.form, draft.value, approval_records.APPROVED,
-            delegation["delegated_by"], delegation.get("role") or "owner", draft.scope,
-            provenance))
-        done = approvals.record(task_dir, answer)
-        delegations.record_use(task_dir, delegation, agent, done, done.outcome)
+    task_dir, store = _delegated_places(args.task)
+    store_compass = os.path.dirname(store)
+    if not os.path.isdir(store):
+        # No delegation was ever made: refuse without creating the folder.
+        raise CompassError(f"compass evidence approve: no delegation in force names "
+                           f"{agent}. Ask the person with `compass evidence request` and "
+                           f"stop. Nothing was written."
+                           + _stray_files(task_dir, store_compass))
+    try:
+        # The delegation lock, taken inside the issue lock in the order the prompt
+        # hook takes them, keeps a /compass:revoke or another use from landing
+        # between the check and the count. The ticket is taken under it too.
+        with approvals.lock(task_dir), delegations.locked(store_compass):
+            ticket = _take_ticket(store, agent)
+            delegation = delegations.authorise(task_dir, draft.form, draft.value, agent,
+                                               ticket["session_id"], store_compass)
+            provenance = {"via": "delegation", "approved_by_agent": agent,
+                          "delegation": delegation["id"],
+                          "session_id": ticket["session_id"]}
+            answer = approvals.checked(approvals.Answer(
+                draft.form, draft.value, approval_records.APPROVED,
+                delegation["delegated_by"], delegation.get("role") or "owner", draft.scope,
+                provenance))
+            done = approvals.record(task_dir, answer)
+            delegations.record_use(task_dir, delegation, agent, done, done.outcome,
+                                   store_compass)
+    except CompassError as exc:
+        raise CompassError(str(exc) + _stray_files(task_dir, store_compass)) from None
     if done.note:
         print(done.note)
     return say(args, done.outcome + f" Under {delegation['id']}, by {agent}.",

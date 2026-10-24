@@ -487,13 +487,19 @@ def _labels(task):
     return set((task.get("assessment") or {}).get("labels") or [])
 
 
-def _why_not(delegation, agent, slug, task, form, value, now):
+def _why_not(delegation, agent, slug, task, form, value, now, session_id=""):
     name = delegation.get("id")
-    if delegation.get("agent") != agent:
+    session_scope = (_is_format_2(delegation) and not delegation.get("agent")
+                     and bool(delegation.get("covers_session")))
+    if not session_scope and delegation.get("agent") != agent:
         return None
     if delegation.get("created_via") != "prompt":
         return (f"{name} was not written by a typed /compass:delegate (created_via: "
                 f"{delegation.get('created_via')})")
+    # A session delegation covers the agents of the session it was typed in, as
+    # the pre-tool hook's ticket reports it, and no other.
+    if session_scope and not (session_id and delegation["covers_session"] == session_id):
+        return f"{name} covers only the agents of the session it was typed in"
     reason = ended(delegation, now)
     if reason:
         return reason
@@ -513,16 +519,18 @@ def _why_not(delegation, agent, slug, task, form, value, now):
     return ""
 
 
-def authorise(task_dir, form, value, agent):
-    """The delegation in force that lets `agent` record this approval.
-    Raises CompassError naming why none does."""
-    compass_dir = os.path.dirname(os.path.dirname(task_dir))
+def authorise(task_dir, form, value, agent, session_id="", compass_dir=None):
+    """The delegation in force that lets `agent`, in session `session_id`, record
+    this approval. `compass_dir` is the common store's `.compass/` folder; it
+    defaults to the issue's own, as in a project with one checkout. Raises
+    CompassError naming why none does."""
+    compass_dir = compass_dir or os.path.dirname(os.path.dirname(task_dir))
     slug = os.path.basename(os.path.normpath(task_dir))
     task, _ = load_manifest(task_dir)
     now = _now()
     reasons = []
     for delegation in all_delegations(compass_dir):
-        why = _why_not(delegation, agent, slug, task, form, value, now)
+        why = _why_not(delegation, agent, slug, task, form, value, now, session_id)
         if why == "":
             return delegation
         if why:
@@ -534,12 +542,18 @@ def authorise(task_dir, form, value, agent):
                        f"evidence request` and stop. Nothing was written.")
 
 
-def record_use(task_dir, delegation, agent, done, subject):
-    """Count the use on the delegation and write the devlog's audit line."""
-    compass_dir = os.path.dirname(os.path.dirname(task_dir))
+def record_use(task_dir, delegation, agent, done, subject, compass_dir=None):
+    """Count the use on the delegation, index the record in the delegation file
+    (`records`: the issue, its folder, the record ids and the time, so a summary
+    reads only the folders that hold a record) and write the devlog's audit
+    line. `compass_dir` is the common store's `.compass/` folder."""
+    compass_dir = compass_dir or os.path.dirname(os.path.dirname(task_dir))
     path = os.path.join(folder(compass_dir), f"{delegation['id']}.yml")
     body = load_yaml(path)
     body["uses"] = int(body.get("uses") or 0) + 1
+    body.setdefault("records", []).append(
+        {"issue": os.path.basename(os.path.normpath(task_dir)), "folder": str(task_dir),
+         "ids": list(done.evidence_ids), "at": _iso(_now())})
     _write(path, body)
     line = (f"- {_iso(_now())} - {', '.join(done.evidence_ids)} recorded by {agent} under "
             f"{delegation['id']} for {delegation.get('delegated_by')}: {subject}.\n")

@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from approval_support import (CHECK, OWNER, SLUG, event, manifest_of,  # noqa: E402
                               project, run, save_manifest, task_dir)
+from delegation_support import delegated  # noqa: E402
 
 ARCHITECT = "compass:architect"
 
@@ -62,8 +63,8 @@ def _soon(hours=2):
 
 
 def _approve(root, *argv, agent=ARCHITECT):
-    return run(root, "evidence", "approve", "--issue", SLUG, *argv, "--delegated", "--as",
-               agent)
+    """A delegated approval, with the ticket the pre-tool hook would write for it."""
+    return delegated(root, agent, "--issue", SLUG, *argv)
 
 
 # --- a person delegates approvals to a named agent (`TRC-F1`) ---------------------------------
@@ -209,8 +210,8 @@ def test_f7_out_of_scope_refused(tmp_path):
     other = root / ".compass" / "work" / "other"
     other.mkdir()
     (other / "manifest.yml").write_text((task_dir(root) / "manifest.yml").read_text())
-    code, out, err = run(root, "evidence", "approve", "--issue", "other", "--check", CHECK,
-                         "--scope", "x", "--delegated", "--as", ARCHITECT)
+    code, out, err = delegated(root, ARCHITECT, "--issue", "other", "--check", CHECK,
+                               "--scope", "x")
     assert code != 0 and "DL-1" in out + err, out + err
     # Another generation.
     body = manifest_of(root)
@@ -287,9 +288,8 @@ def _overnight(root):
     assert not _type(root, f"--agent {ARCHITECT} --until {_soon()}").block
     for argv in (["--check", CHECK, "--scope", "the review"],
                  ["--artifact", "technical-design"], ["--decisions"]):
-        code, out, err = run(root, "evidence", "approve", "--issue", SLUG, *argv,
-                             "--delegated", "--as", ARCHITECT,
-                             CLAUDE_CODE_SESSION_ID="sess-agent")
+        code, out, err = delegated(root, ARCHITECT, "--issue", SLUG, *argv,
+                                   session="sess-agent")
         assert code == 0, out + err
     return [e["id"] for e in manifest_of(root)["evidence"] if e.get("via") == "delegation"]
 

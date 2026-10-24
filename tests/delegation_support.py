@@ -83,3 +83,55 @@ def set_owner(project_dir, owner):
     body = yaml.safe_load(path.read_text(encoding="utf-8"))
     body["owner"] = owner
     path.write_text(yaml.safe_dump(body), encoding="utf-8")
+
+
+def copy_issue(src_project, dst_project, slug, generation=None):
+    """Copy the template issue `feature` of one project into another as `slug`,
+    so the approval verbs can run on it. The issue name in the manifest follows."""
+    src = Path(src_project) / ".compass" / "work" / "feature"
+    dst = Path(dst_project) / ".compass" / "work" / slug
+    shutil.copytree(src, dst)
+    manifest = dst / "manifest.yml"
+    body = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+    body["issue"] = slug
+    if generation is not None:
+        body["generation"] = generation
+    manifest.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    return dst
+
+
+def set_generation(task_dir, generation):
+    """Move an issue to another generation. The generation's folder is copied
+    from the one it had, so the issue still reads as whole."""
+    manifest = Path(task_dir) / "manifest.yml"
+    body = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+    old = Path(task_dir) / "generations" / str(body["generation"])
+    new = Path(task_dir) / "generations" / str(generation)
+    if old.is_dir() and not new.exists():
+        shutil.copytree(old, new)
+    body["generation"] = generation
+    manifest.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+
+
+def evidence_count(task_dir):
+    body = yaml.safe_load((Path(task_dir) / "manifest.yml").read_text(encoding="utf-8"))
+    return len(body.get("evidence") or [])
+
+
+def delegated(cwd, agent, *argv, session="sess-1", ticket=True, env=None):
+    """A delegated approval as an agent runs it: the ticket the pre-tool hook
+    would write for the call (unless `ticket` is False), then the CLI run in
+    `cwd`. `argv` is what follows `compass evidence approve`, without
+    `--delegated` and `--as`. Returns the CLI's (code, out, err)."""
+    import shlex
+
+    from approval_support import run
+    from compass_pkg import delegation_tickets
+    words = [*argv, "--delegated", "--as", agent]
+    if ticket:
+        call = {"tool_name": "Bash", "session_id": session, "cwd": str(cwd),
+                "tool_input": {"command": "compass evidence approve " + shlex.join(words)}}
+        if agent != "main":
+            call.update(agent_type=agent, agent_id="agent-1")
+        delegation_tickets.issue(call)
+    return run(cwd, "evidence", "approve", *words, **(env or {}))

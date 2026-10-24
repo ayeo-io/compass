@@ -133,7 +133,7 @@ An approach can lower the process weight. It never removes a guardrail.
   agents of this session approve for you on every issue, until
   `/compass:revoke` ends it. Flags narrow it: `--agent`, `--until`, `--on`, `--for`
   and `--max`. `--for g5`, which covers irreversible work, needs a code that
-  you type back. Compass lists each delegation with no end time at every
+  you type back. Compass lists each delegation with no end time at each new
   session start. Every delegated approval is on record, and you can overrule
   one.
 - **Autonomy is a setting, not a promise.** `autonomy: controlled | balanced

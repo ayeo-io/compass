@@ -378,8 +378,15 @@ person who delegated as `approver`, with `approved_by_agent`, `delegation` and
 a plain command that the pre-tool hook reads. The hook writes a call ticket into
 the common store (`cli/compass_pkg/delegation_tickets.py`): the session and the
 caller that Claude Code reported, and a digest of the words after `evidence
-approve`. The CLI takes the matching ticket under the store lock and reads the
-session from it, never from the environment. The verb refuses, writing
+approve`, cut at the first shell operator, comment or redirect such as `2>&1`.
+The hook writes one only when `compass` is the command that runs, never when it
+is an argument of `echo`, `printf` or `xargs`. The CLI takes the matching ticket
+under the store lock and reads the session from it, never from the environment.
+A ticket is deleted when its call finishes, fails or has its permission denied
+(the post-tool hook, registered for `PostToolUse`, `PostToolUseFailure` and
+`PermissionDenied`), and every unused ticket of a session is deleted at its
+Stop and at its next prompt; an untaken ticket expires after 10 minutes. The
+verb refuses, writing
 nothing, when it has no ticket, no `--issue`, or an issue that two worktrees
 hold; or when no delegation in force names the agent or covers its session, or
 the one that does has ended, was revoked, reached its `max`, was not written by
@@ -407,8 +414,9 @@ in the next summary.
 issue of each worktree for pending request n, and `--issue <slug>` reaches any
 issue in any worktree. With more than one match they refuse and list the
 `--issue` forms. The approver is read from the folder that holds the chosen
-request, after the choice. Session start lists each delegation with no end time
-(`delegations.session_start_lines`).
+request, after the choice. The session-start hook lists each delegation with no
+end time (`delegations.session_start_lines`) on a new session, after `/clear`
+and after compaction, but not on a resumed session.
 
 ### `compass evidence request`
 

@@ -152,8 +152,8 @@ where every engineer starts - at the assess stage.
 Assess scores three dimensions - that part is judgment - and records them
 in `.compass/work/add-rate-limiting/manifest.yml`. For this issue it scores
 something like: size `medium` (several files, one or two design
-decisions), risk `cross-cutting` (a misconfigured limiter degrades
-something every API consumer touches), familiarity `brownfield-mapped`. It tags `labels: [public-api]`.
+decisions), risk `cross-cutting` (a misconfigured limiter slows or blocks
+requests from every API consumer), familiarity `brownfield-mapped`. It tags `labels: [public-api]`.
 
 Then the CLI computes the rest. `/compass:assess` runs
 `compass approach evaluate --write`, which applies the project's resolved
@@ -306,7 +306,7 @@ each one readable by anyone who picks the issue up later.
 ## 4. First issue - the product owner
 
 You are a product owner. You do not start at the assess stage - you start
-*upstream* of the spec, with intent.
+*before* the spec, with intent.
 
 ### Intent
 
@@ -531,7 +531,7 @@ What happens next depends on the project's `autonomy` setting:
 - On `autonomous`, `compass next` lists the decisions below its usual line and
   does not wait. They stay open.
 
-`compass retro --decisions` reports, across the board, how many of these
+`compass retro --decisions` reports, across all issues, how many of these
 decisions were confirmed as taken, how many were changed, and how many were
 never confirmed on a finished issue.
 
@@ -560,5 +560,5 @@ issue - and exits non-zero if anything fails, under the default
 "run `compass ci`, honor the exit code" (see `ci/README.md`). And
 `compass retro` reads the re-assessment log across every issue and
 reports whether assessment is systematically over- or under-sizing the
-process - the framework's own feedback loop, the way you find out if the
+process - the way you find out, from the framework's own records, if the
 routing policy needs changes.

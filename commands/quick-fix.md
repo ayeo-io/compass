@@ -75,8 +75,8 @@ nothing else:
     design decisions. This is heavier than a quick fix.
 
 `--goal` takes `VALUE - reason`; the goal is `delivery` on this path. An
-`intent.md` or `positioning.md` on disk changes the approach from quick fix
-to a heavier one. So does a goal of `exploration` ("I cannot state this well enough to
+`intent.md` or `positioning.md` on disk adds a check to the quick fix, not
+weight. A goal of `exploration` changes the approach ("I cannot state this well enough to
 deliver it yet"): that is a spike, not a small change. `--role` is ignored. `--test` can repeat. The scenario id is `TRC-001` unless you pass `--scenario-id`.
 
 Pass `--labels` with the domains touched, comma-separated. Only `auth`,
@@ -96,7 +96,7 @@ and reasons go into its approach record.
 
 ## 2. Red
 
-The guardrail is that a change is tested before it is merged: no code
+The guardrail is that a change is tested before it lands: no code
 reaches main without a passing automated test it traces to. A light approach
 changes how much of the code the tests cover - the one scenario and its
 obvious edge cases - never whether a test exists.

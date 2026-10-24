@@ -18,8 +18,8 @@ behaviors, read from different professional perspectives.
 
 A role is a perspective a session consults. It does not change the issue's
 assessment. The documents on disk decide: `positioning.md` adds the claims
-gate, and `intent.md` adds a check, which the `product-owner` agent runs
-before plan, that the spec matches it. If you write one after the issue is assessed, re-assess the issue.
+gate, and `intent.md` adds a check before plan: the `product-owner` agent
+checks that the spec matches it. If you write one after the issue is assessed, re-assess the issue.
 
 ## How each role reads the spec
 

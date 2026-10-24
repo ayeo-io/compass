@@ -121,7 +121,7 @@ Compass keeps two kinds of rule apart:
 - **Guardrails** are few and checkable: tested before shipping, acceptance
   defined before implementation, every change traced to a criterion,
   evidence rather than assertion, and a person's approval for a change
-  labelled `auth`, `payments`, `personal-data` or `migrations`. `compass
+  labeled `auth`, `payments`, `personal-data` or `migrations`. `compass
   check` fails on a breach under enforced adoption, and the
   [safety contract](docs/safety-contract.md) lists what it cannot see.
 - **Strategies** are strong defaults that improve the work without becoming
@@ -180,7 +180,7 @@ assess → define → refine → plan → breakdown → implement → verify →
 
 The stages stay the same while their depth adapts. Engineer, product owner,
 designer, product marketer and QA each enter the same issue through their own
-command; a product owner starts upstream with `/compass:intent`. A role is a
+command; a product owner starts before the spec, with `/compass:intent`. A role is a
 perspective a session consults. A document a role writes, such as
 `positioning.md`, adds the gates that check it. See
 the [roles guide](docs/roles-guide.md).
@@ -211,7 +211,7 @@ hooks/        pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,
 cli/compass   the kit: routing, checks and the manifest
 bin/compass   the shim that puts the kit on your PATH
 governance/   guardrails, strategies, routing policy, frozen vocabulary
-approaches/   the reference shapes, and the artifacts each one earns
+approaches/   the reference shapes, and the documents each one writes
 architecture/ Compass's own invariants and decision records
 .claude-plugin/  the plugin manifest and marketplace entry
 ```
@@ -251,7 +251,8 @@ full account is in [docs/security.md](docs/security.md).
   also git in your repository, and the CLI itself from the plugin's hooks.
 - **Writes** to the linked GitHub issue with `gh`, only when `github_labels`
   is on in `compass.yml`: label names and, with `page` on, the issue's README
-  as a comment ([docs/security.md](docs/security.md)).
+  as a comment and the ask from `intent.md` into an empty issue body
+  ([docs/security.md](docs/security.md)).
 - **Reads** the current Claude Code session's own transcript when a quick fix
   finishes, keeping only token counts, model names and times.
 - **Clones and installs** other frameworks only in the evaluation harness,

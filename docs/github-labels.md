@@ -59,7 +59,7 @@ An assessed label that is not declared is not written. A declared label whose na
 
 ## The issue page
 
-The page lets the readers of the GitHub issue read the issue's documents, and they can be many more people than can read the repository. That is why `page` is off by default: the issue's prose, decisions and file names leave the project when it is on, and no label switch turns it on.
+The page widens the audience of the issue's documents to the readers of the GitHub issue, who can be many more people than can read the repository. That is why `page` is off by default: the issue's prose, decisions and file names leave the project when it is on, and no label switch turns it on.
 
 ### What it posts
 

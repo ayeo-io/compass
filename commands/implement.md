@@ -57,7 +57,7 @@ work.
    `.red` marker - only after a real failure. If the test passes,
    the CLI refuses and says so: you skipped red. The `hooks/pre-tool.sh`
    hook reads `.red` to allow the code edit. Do not touch markers by hand -
-   only the CLI writes them. (On a spike the hook does not block - the TDD strategy
+   leave them to the CLI. (On a spike the hook does not block - the TDD strategy
    is suspended; see the spike note.)
 2. **Green.** Write the smallest correct change that makes the test pass,
    then run `compass tdd-green -- <test command>`. The CLI asserts it

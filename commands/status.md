@@ -95,7 +95,7 @@ Here the internal details *are* what the reader wants. Report:
 
 - **Delivery approach** - from `delivery-approach.md` / `manifest.yml`: the
   nearest reference shape, the three scored dimensions, and any policy
-  rule that matched.
+  rule that fired.
 - **Stage** - inferred from which artifacts exist: `delivery-approach.md`
   -> assessed; `acceptance-criteria.md` -> criteria defined;
   `requirements-review.md` -> requirements reviewed; `technical-design.md` ->

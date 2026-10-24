@@ -45,7 +45,8 @@ reference shape (spike or hotfix). Domain labels, such as `auth`, can raise the
 floor: the lightest approach the policy allows. Neither is scored.
 
 Judgment goes into the assessment. Everything after it is deterministic: the
-same assessment plus the same policy produces the same approach, every time.
+same assessment, configuration and documents on disk produce the same
+approach, every time.
 
 For a contained typo, Compass will normally choose a quick-fix-shaped approach.
 It writes the manifest to `.compass/work/<issue>/` and the issue's documents to

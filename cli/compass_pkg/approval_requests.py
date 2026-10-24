@@ -40,7 +40,7 @@ import secrets
 import shlex
 import textwrap
 
-from compass_pkg import approval_records, approvals, atomic_io, old_names
+from compass_pkg import approval_records, approvals, atomic_io, launcher, old_names
 from compass_pkg.core import (CompassError, issue_arg, load_manifest, load_yaml, now_iso,
                               resolve_issue_dir)
 from compass_pkg.terminal import resolve_mode, say
@@ -292,12 +292,14 @@ def _form_of(args):
 def _terminal_command(request):
     """The exact `compass evidence approve` command for a person's terminal."""
     form, value = request["form"], request["value"]
-    words = ["compass", "evidence", "approve", "--issue", request["issue"]]
+    words = ["evidence", "approve", "--issue", request["issue"]]
     words += ["--decisions"] if form == "decisions" else [f"--{form}", value]
     words += ["--approver", "<you>", "--role", "<role>"]
     if request.get("scope"):
         words += ["--scope", request["scope"]]
-    return " ".join(w if w in ("<you>", "<role>") else shlex.quote(w) for w in words)
+    word, _ = launcher.terminal_command()
+    return " ".join([word] + [w if w in ("<you>", "<role>") else shlex.quote(w)
+                              for w in words])
 
 
 def cmd_evidence_request(args):
@@ -336,6 +338,9 @@ def cmd_evidence_request(args):
         print(textwrap.fill(tell, 96, initial_indent="  ", subsequent_indent="  "))
         if command:
             print("    " + command)
+            hint = launcher.terminal_command()[1]
+            if hint:
+                print("  " + hint)
     return code
 
 

@@ -251,9 +251,12 @@ def cmd_decision_add(args):
 def cmd_decision_set(args):
     from compass_pkg.approve_cmd import _terminal_attached
     if not _terminal_attached():
+        from compass_pkg import launcher
+        word, hint = launcher.terminal_command()
         raise CompassError("compass issue decision set: this needs a terminal on standard "
                            "input. Changing a decision is a person's act, so run the "
-                           "command yourself in a terminal.")
+                           f"command yourself in a terminal, as `{word} issue decision "
+                           "set ...`." + (f" {hint}" if hint else ""))
     if args.status != REOPENED:
         raise CompassError("compass issue decision set: only --status reopened is accepted. "
                            "A decision becomes confirmed through `compass evidence approve "

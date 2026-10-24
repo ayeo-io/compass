@@ -32,7 +32,15 @@ Or type two commands inside Claude Code:
 ```
 
 Enabling the plugin namespaces the commands as `/compass:…`, registers the
-hooks, and puts the `compass` CLI on your PATH. Skip to step 2.
+hooks, and puts the `compass` CLI on the PATH of the commands Claude Code runs,
+inside Claude Code only. Your own terminal does not get it. The first session
+start writes a launcher that does not change between versions, at
+`~/.claude/plugins/data/compass-compass/compass` (under your profile's folder
+if you use another one). When Compass asks you to run a command in your own
+terminal, it names that launcher. To type `compass` instead, add the folder to
+your `PATH`, for example with
+`export PATH="$HOME/.claude/plugins/data/compass-compass:$PATH"` in `~/.zshrc`.
+Skip to step 2.
 
 **Install from source** if you want to read or edit the framework as you go.
 `scripts/install.sh` wires everything in by symlink, so edits to your clone are

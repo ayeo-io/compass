@@ -1,5 +1,5 @@
 """The call ticket the pre-tool hook writes for a delegated approval (issue
-`delegation-everywhere`, DD-2 and the threat model).
+`delegation-everywhere`, and its threat model).
 
 These cases pin what binds a ticket: the words after `evidence approve`, the
 caller and a short life. They run on `delegation_tickets` directly, without a

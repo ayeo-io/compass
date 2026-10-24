@@ -1,6 +1,6 @@
 # compass_pkg.delegation_tickets - the pre-tool hook's record of a delegated approval it read
 """A call ticket is what lets `compass evidence approve --delegated` know which
-Claude Code session and agent made the call (delegation-everywhere, DD-2).
+Claude Code session and agent made the call (issue delegation-everywhere).
 
 Only a hook receives `session_id` from Claude Code. A command can set any
 environment variable, so the CLI never reads the session from the environment.

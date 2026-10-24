@@ -188,6 +188,10 @@ def test_the_quickstart_limits_the_path_entry_to_claude_code():
     ("type /compass:approve 3", "type /compass:approve 3"),
     ("`/d/compass evidence approve`", "`/d/compass evidence approve`"),
     ("run compass check", "run compass check"),
+    ("compass: compass issue decision set: this needs a terminal",
+     "compass: compass issue decision set: this needs a terminal"),
+    ("an agent runs compass evidence approve --delegated --as <agent>",
+     "an agent runs compass evidence approve --delegated --as <agent>"),
 ])
 def test_person_only_commands_name_the_launcher(text, expected):
     """Scenario `TRC-001`: only the commands a person runs in their own
@@ -206,7 +210,8 @@ def test_every_message_from_a_plugin_install_names_the_launcher(tmp_path, projec
                        cwd=project, capture_output=True, text=True,
                        stdin=subprocess.DEVNULL, env=_clean_env(), timeout=60)
     assert r.returncode != 0
-    assert f"{data / 'compass'} evidence approve" in r.stderr + r.stdout, r.stderr
+    word, _ = launcher.terminal_command(plugin, path="/usr/bin:/bin")
+    assert f"{word} evidence approve" in r.stderr + r.stdout, r.stderr
 
 
 def test_an_exported_plugin_root_does_not_redirect_the_launcher(tmp_path, project):

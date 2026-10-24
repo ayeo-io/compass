@@ -44,8 +44,12 @@ def terminal_command(root: Path | None = None,
 
 # A person-only command written as plain `compass`, which a person's own
 # terminal does not have for a plugin install. Not when `compass` is the end
-# of a path, so a launcher path already in the text is left alone.
-_PERSON_ONLY = re.compile(r"(?<![\w/.'-])compass (?=evidence approve\b|issue decision set\b)")
+# of a path, so a launcher path already in the text is left alone. Not a
+# verb label (`compass issue decision set: ...`) and not a delegated approval,
+# which an agent runs inside Claude Code, where `compass` resolves.
+_PERSON_ONLY = re.compile(
+    r"(?<![\w/.'-])compass (?=(?:evidence approve|issue decision set)\b(?!:)"
+    r"(?![^\n`]*--delegated))")
 
 
 def name_commands(text: str, word: str) -> str:

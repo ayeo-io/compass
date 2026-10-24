@@ -59,6 +59,7 @@ from __future__ import annotations
 import contextlib
 import datetime
 import hashlib
+import json
 import os
 import re
 import secrets
@@ -584,28 +585,70 @@ def _waiting(record):
             and record.get("type") in DELEGATED_TYPES and not record.get("reviewed_at"))
 
 
+def _store_compass(compass_dir):
+    """The common store's `.compass/` folder for the project that holds
+    `compass_dir`, or None when there is no store."""
+    from compass_pkg import worktree_lookup
+    store = worktree_lookup.common_store(os.path.dirname(compass_dir))
+    return None if store.folder is None else os.path.dirname(store.folder)
+
+
+def _moved(slug, compass_dir):
+    """The folder of an indexed issue that was moved: found again by its slug."""
+    from compass_pkg import worktree_lookup
+    try:
+        return worktree_lookup.find_issue(
+            worktree_lookup.list_worktrees(os.path.dirname(compass_dir)), str(slug))
+    except (worktree_lookup.NotFound, worktree_lookup.HeldTwice):
+        return None
+
+
+def _want(wanted, folder, ids):
+    """Note that `folder` is read for the records `ids`, or for every waiting
+    record when `ids` is None."""
+    key = os.path.realpath(folder)
+    old = wanted.get(key)
+    if key in wanted and (old[1] is None or ids is None):
+        wanted[key] = (old[0], None)
+    elif key in wanted:
+        wanted[key] = (old[0], old[1] | set(ids))
+    else:
+        wanted[key] = (folder, None if ids is None else set(ids))
+
+
 def unreviewed(compass_dir):
     """`[(folder, manifest, record)]` for each approval made under a delegation
-    that the person has not marked reviewed. Only the issues a delegation names
-    are read, so a project with no delegation reads no manifest: the summary
-    runs on every prompt."""
-    named, every = set(), False
-    for delegation in all_delegations(compass_dir):
-        issues = delegation.get("issues") or {}
-        # A format 2 file with no issue list covers every issue. This reads each
-        # manifest until the records index (DD-8) names the folders.
-        if _is_format_2(delegation) and not issues:
-            every = True
-        named.update(issues)
+    that the person has not marked reviewed, in any worktree. Only the folders
+    the delegations' `records` index names are read, plus the issues a 7.0.0
+    file names, so a project with no delegation file starts no git process
+    from a main checkout and opens no manifest: the summary runs on every
+    prompt."""
+    store = _store_compass(compass_dir)
+    if store is None:
+        return []
+    wanted = {}
+    for delegation in all_delegations(store):
+        for entry in delegation.get("records") or []:
+            if not isinstance(entry, dict):
+                continue
+            folder = entry.get("folder")
+            if not (folder and os.path.isdir(folder)) and entry.get("issue"):
+                folder = _moved(entry["issue"], compass_dir)
+            if folder:
+                _want(wanted, folder, entry.get("ids") or [])
+        if not _is_format_2(delegation):
+            for slug in delegation.get("issues") or {}:
+                folder = os.path.join(compass_dir, "work", str(slug))
+                if os.path.isdir(folder):
+                    _want(wanted, folder, None)
     found = []
-    for task_dir in _issue_dirs(compass_dir):
-        if not every and os.path.basename(task_dir) not in named:
-            continue
+    for folder, ids in sorted(wanted.values(), key=lambda item: item[0]):
         try:
-            task, _ = load_manifest(task_dir)
+            task, _ = load_manifest(folder)
         except CompassError:
             continue
-        found += [(task_dir, task, r) for r in task.get("evidence") or [] if _waiting(r)]
+        found += [(folder, task, r) for r in task.get("evidence") or []
+                  if _waiting(r) and (ids is None or r.get("id") in ids)]
     return found
 
 
@@ -631,64 +674,148 @@ def _self_written(task, record):
     return bool(session) and entry.get("registered_session") == session
 
 
-def review_summary(compass_dir):
-    """The display-only summary of delegated approvals not yet reviewed, or ''.
-    It never writes a record."""
-    rows = unreviewed(compass_dir)
-    if not rows:
-        return ""
+def _project_of(task_dir):
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.normpath(task_dir))))
+
+
+def _summary_text(rows):
     lines = [f"Compass: {len(rows)} approval(s) made under a delegation wait for your "
              f"review:"]
     for task_dir, task, record in rows:
         flag = (" - the agent approved a document it wrote in the same session"
                 if _self_written(task, record) else "")
         lines.append(f"  {record.get('id')} - {_subject(record)}, issue "
-                     f"{os.path.basename(task_dir)}, by {record.get('approved_by_agent')} "
-                     f"under {record.get('delegation')} at {record.get('timestamp')}{flag}")
+                     f"{os.path.basename(task_dir)} ({_project_of(task_dir)}), by "
+                     f"{record.get('approved_by_agent')} under {record.get('delegation')} "
+                     f"at {record.get('timestamp')}{flag}")
     lines.append("Type /compass:approve to mark them reviewed, or /compass:reject <record id> "
                  "<reason> to overrule one.")
     return "\n".join(lines)
 
 
-def review_dirs(compass_dir):
-    """The issue folders that hold a delegated approval not yet reviewed: the
-    issue locks `/compass:approve` with nothing pending must hold."""
-    return sorted({row[0] for row in unreviewed(compass_dir)})
+def review_summary(compass_dir):
+    """The display-only summary of delegated approvals not yet reviewed, or ''.
+    It never writes a record."""
+    rows = unreviewed(compass_dir)
+    return _summary_text(rows) if rows else ""
 
 
-def mark_reviewed(session, held):
-    """`/compass:approve` with no request pending: mark every delegated approval
-    reviewed. None when there is nothing to review.
+def _row_digest(task, record):
+    """The digest of what the person is shown of one row, so a record changed
+    after it was shown is not marked reviewed."""
+    shown = [record.get("id"), _subject(record), record.get("approved_by_agent"),
+             record.get("delegation"), str(record.get("timestamp")),
+             _self_written(task, record)]
+    return hashlib.sha256(json.dumps(shown).encode("utf-8")).hexdigest()
+
+
+#: The shown list keeps this many summaries for each session: the latest, and the
+#: one before it, because the prompt hook of a typed command can run after the
+#: summary hook of the same prompt.
+SHOWN_KEPT = 2
+
+
+def _shown_path(store_compass, session_id):
+    safe = re.sub(r"[^A-Za-z0-9_-]", "_", session_id)
+    return os.path.join(folder(store_compass), "shown", f"{safe}.json")
+
+
+def _read_shown(store_compass, session_id):
+    try:
+        with open(_shown_path(store_compass, session_id), encoding="utf-8") as fh:
+            body = json.load(fh)
+    except (OSError, ValueError):
+        return []
+    entries = body.get("entries") if isinstance(body, dict) else None
+    return [e for e in entries or [] if isinstance(e, dict)]
+
+
+def summary_for_hook(project, session_id, prompt_id):
+    """What a summary hook prints for the session `session_id`, and the record of
+    what it showed: the store's `shown/<session>.json` gets one entry holding
+    the prompt id, the time and each row's folder, issue, record id and digest.
+    Nothing is written when there is nothing to show, or when the hook input
+    names no session. A write that fails leaves the rows unrecorded, so the
+    next summary shows them again."""
+    compass_dir = os.path.join(project, ".compass")
+    rows = unreviewed(compass_dir)
+    if not rows:
+        return ""
+    if session_id:
+        try:
+            store = _store_compass(compass_dir)
+            entries = _read_shown(store, session_id)[-(SHOWN_KEPT - 1):]
+            entries.append({"prompt_id": prompt_id or "", "shown_at": _iso(_now()),
+                            "records": [{"folder": folder, "issue": os.path.basename(folder),
+                                         "id": record.get("id"),
+                                         "digest": _row_digest(task, record)}
+                                        for folder, task, record in rows]})
+            path = _shown_path(store, session_id)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            atomic_io.atomic_write_text(path, json.dumps({"entries": entries}))
+        except (OSError, TypeError):
+            pass
+    return _summary_text(rows)
+
+
+def last_shown(compass_dir, session_id, prompt_id):
+    """The latest summary shown in this session whose prompt id differs from
+    `prompt_id`, or None. A summary shown for the prompt that holds the command
+    does not count, whichever of the two hooks ran first."""
+    store = _store_compass(compass_dir)
+    if store is None or not session_id:
+        return None
+    for entry in reversed(_read_shown(store, session_id)):
+        if entry.get("prompt_id", "") != (prompt_id or ""):
+            return entry
+    return None
+
+
+def mark_reviewed(session, entry, held):
+    """`/compass:approve` with no request pending: mark reviewed the rows of the
+    summary `entry` that the session was shown, and only those whose record is
+    still waiting and still shows what it showed (the digest). None when none is
+    marked.
 
     `held` names the issue folders whose approval locks the caller holds,
     taken in one sorted order with the session's own (`approvals.lock_all`).
     Taking another lock here, while holding the session's own, let two
-    sessions on two issues wait for each other for ever. An approval on an
-    issue outside `held`, made after the caller took its locks, is left for
-    the next `/compass:approve`; the review summary still shows it."""
+    sessions on two issues wait for each other for ever. A row outside `held`
+    is left for the next `/compass:approve`; the review summary still shows
+    it."""
     from compass_pkg.core import save_manifest
     from compass_pkg.prompt_approval import HookResult
-    compass_dir = os.path.dirname(os.path.dirname(session.task_dir))
     locked_dirs = {os.path.realpath(d) for d in held}
-    rows = [row for row in unreviewed(compass_dir)
-            if os.path.realpath(row[0]) in locked_dirs]
-    if not rows:
-        return None
+    by_folder = {}
+    for item in (entry or {}).get("records") or []:
+        by_folder.setdefault(item.get("folder"), []).append(item)
     stamp = _iso(_now())
     ids = []
-    for task_dir in sorted({row[0] for row in rows}):
-        task, path = load_manifest(task_dir)
-        for record in task.get("evidence") or []:
-            if _waiting(record):
+    for folder_name, items in sorted(by_folder.items(), key=lambda kv: str(kv[0])):
+        if not folder_name or os.path.realpath(folder_name) not in locked_dirs:
+            continue
+        try:
+            task, path = load_manifest(folder_name)
+        except CompassError:
+            continue
+        changed = False
+        for item in items:
+            record = next((r for r in task.get("evidence") or []
+                           if isinstance(r, dict) and r.get("id") == item.get("id")), None)
+            if _waiting(record) and _row_digest(task, record) == item.get("digest"):
                 record.update(reviewed_by=session.approver, reviewed_at=stamp)
-                ids.append(record.get("id"))
-        save_manifest(task, path)
+                ids.append(record["id"])
+                changed = True
+        if changed:
+            save_manifest(task, path)
+    if not ids:
+        return None
     return HookResult(False, f"Compass: marked {len(ids)} delegated approval(s) reviewed by "
                              f"{session.approver}: {', '.join(ids)}.",
                       f"The person reviewed the delegated approvals {', '.join(ids)}.")
 
 
-def overrule(session, args):
+def overrule(session, args, where=""):
     """`/compass:reject <record id> <reason>`: overrule one approval made under
     a delegation. A check gets a `rejected` record, a document returns to
     draft, and a guardrail 5 sign-off gets an `approval-withdrawal` record.
@@ -745,8 +872,8 @@ def overrule(session, args):
     said = f": {reason}" if reason else ""
     return HookResult(
         False,
-        f"Compass: overruled {record_id} ({subject}) for {session.approver}{said} - "
-        f"{written}. This records your disagreement; it does not reverse anything the "
+        f"Compass: overruled {record_id} ({subject}) on issue {session.slug}{where} for "
+        f"{session.approver}{said} - {written}. This records your disagreement; it does not reverse anything the "
         f"agent already did.",
         f"The person overruled {record_id} ({subject}){said}. Do not rely on that "
         f"approval; ask the person what should change.")

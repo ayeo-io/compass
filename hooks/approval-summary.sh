@@ -13,13 +13,16 @@
 # goes on.
 #
 # I/O CONTRACT
-#   stdin : the UserPromptSubmit input JSON (unused - it reads disk state).
+#   stdin : the UserPromptSubmit input JSON; only session_id and prompt_id are
+#           read, to record what the summary showed. The rest is disk state.
 #   stdout: {"systemMessage": ...} when there is something to review.
 #   exit  : always 0.
 # =============================================================================
 
 set -u
-cat >/dev/null || true
+# The input names the session and the prompt, so the summary can record what
+# this session was shown (delegations.summary_for_hook).
+INPUT="$(cat 2>/dev/null || true)"
 
 HOOK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [ -f "$HOOK_ROOT/scripts/lib/compass-python.sh" ] || exit 0
@@ -38,14 +41,21 @@ if [ -z "$PROJECT_DIR" ]; then
 fi
 [ -n "$PROJECT_DIR" ] && [ -d "$PROJECT_DIR/.compass/work" ] || exit 0
 
-compass_python - "$PROJECT_DIR/.compass" 2>/dev/null <<'PYEOF' || true
+compass_python - "$PROJECT_DIR" "$INPUT" 2>/dev/null <<'PYEOF' || true
 import json
 import sys
 
 import compass_pkg                      # noqa: F401 - puts vendor on sys.path
 from compass_pkg import delegations
 
-text = delegations.review_summary(sys.argv[1])
+try:
+    event = json.loads(sys.argv[2])
+except ValueError:
+    event = {}
+if not isinstance(event, dict):
+    event = {}
+text = delegations.summary_for_hook(sys.argv[1], str(event.get("session_id") or ""),
+                                    str(event.get("prompt_id") or ""))
 if text:
     print(json.dumps({"systemMessage": text}))
 PYEOF

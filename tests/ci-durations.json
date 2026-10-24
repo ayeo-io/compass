@@ -136,6 +136,7 @@
   "tests/test_delegate_flags.py": 6.0,
   "tests/test_delegation.py": 32.19,
   "tests/test_delegation_limits.py": 8.0,
+  "tests/test_delegation_review.py": 20.0,
   "tests/test_delegation_sessions.py": 15.0,
   "tests/test_delegation_tickets.py": 2.0,
   "tests/test_delegation_worktrees.py": 9.0,

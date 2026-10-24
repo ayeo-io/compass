@@ -64,6 +64,12 @@ compass_write_statusline_launcher() {
 }
 compass_write_statusline_launcher >/dev/null 2>&1 || true
 
+# The input names the session, so the review summary can record what the
+# session was shown. Read only when a pipe or file gives it: a terminal would
+# wait for typing.
+INPUT=""
+[ -t 0 ] || INPUT="$(cat 2>/dev/null || true)"
+
 INVOKED_FROM="$(pwd)"
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
   PROJECT_DIR="$CLAUDE_PROJECT_DIR"
@@ -125,7 +131,7 @@ esac
 # record or settings file that cannot be read loses the line, never the
 # contract, and the hook still exits 0.
 PYTHONPATH="$FRAMEWORK_ROOT/cli${PYTHONPATH:+:$PYTHONPATH}" \
-python3 - "$CONTRACT" "$PROJECT_DIR/.compass" "$PROJECT_DIR" <<'PY' 2>/dev/null || exit 0
+python3 - "$CONTRACT" "$PROJECT_DIR/.compass" "$PROJECT_DIR" "$INPUT" <<'PY' 2>/dev/null || exit 0
 import json
 import sys
 
@@ -165,7 +171,14 @@ if tag_line:
 # that cannot be built is left out.
 try:
     from compass_pkg import delegations
-    review = delegations.review_summary(sys.argv[2])
+    try:
+        event = json.loads(sys.argv[4])
+    except ValueError:
+        event = {}
+    if not isinstance(event, dict):
+        event = {}
+    # A session start has no prompt id, so the entry it records holds none.
+    review = delegations.summary_for_hook(sys.argv[3], str(event.get("session_id") or ""), "")
 except BaseException:  # noqa: BLE001 - the contract must still reach the session
     review = ""
 

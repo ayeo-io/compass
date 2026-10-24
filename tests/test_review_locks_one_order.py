@@ -1,9 +1,9 @@
 """Two sessions that type `/compass:approve` on two issues at once both finish
 (issue `review-locks-one-order`, board issue 145).
 
-With nothing pending, `/compass:approve` marks every delegated approval
-reviewed, on every issue a delegation names. The prompt hook takes each
-issue's approval lock for that, and the locks wait with no timeout. When a
+With nothing pending, `/compass:approve` marks reviewed the delegated approvals
+that the session's last summary showed, on every issue the summary named. The
+prompt hook takes each issue's approval lock for that, and the locks wait with no timeout. When a
 session took its own issue's lock first and the others after, two sessions on
 two issues could each hold one lock and wait for the other's. The hook now
 takes every lock it needs in one sorted order before it marks anything.
@@ -80,6 +80,11 @@ def test_trc001_two_sessions_approve_at_once_and_both_finish(tmp_path, monkeypat
     from compass_pkg import prompt_approval
     root = project(tmp_path)
     _two_issues(root)
+    # Each session was shown the summary of both issues before it types the
+    # command, as the review rule needs (`delegations.last_shown`).
+    from compass_pkg import delegations
+    for slug in (SLUG, OTHER):
+        assert delegations.summary_for_hook(str(root), f"sess-{slug}", "p-summary")
 
     # The barrier stands just after the hook took its locks, where each
     # session holds what it took and is about to ask for any lock it lacks.

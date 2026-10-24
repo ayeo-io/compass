@@ -657,11 +657,12 @@ def _answer(session, env):
 
 
 def _review(session, env, listing):
-    """`/compass:approve` with nothing pending in any worktree: mark the
-    delegated approvals reviewed. The issue and the approver are this checkout's,
-    as before; every issue lock it may need is taken with the session's own, in
-    one sorted order, since holding the own lock while waiting for another let
-    two sessions wait on each other."""
+    """`/compass:approve` with nothing pending in any worktree: mark reviewed the
+    delegated approvals that the latest summary shown in this session listed,
+    before this command (`delegations.last_shown`). The issue and the approver
+    are this checkout's. The issue lock of each shown row is taken with the
+    session's own, in one sorted order, since holding the own lock while waiting
+    for another let two sessions wait on each other."""
     import dataclasses
 
     from compass_pkg import delegations
@@ -671,37 +672,68 @@ def _review(session, env, listing):
     approver, role, source = resolve_approver(task_dir, env)
     own = dataclasses.replace(session, task_dir=task_dir, slug=slug, approver=approver,
                               role=role, approver_source=source)
-    held = [task_dir] + delegations.review_dirs(compass_dir)
+    entry = delegations.last_shown(compass_dir, session.session_id, session.prompt_id)
+    held = [task_dir] + [item["folder"] for item in (entry or {}).get("records") or []
+                         if item.get("folder")]
     with approvals.lock_all(held):
         _refuse_used_prompt(own)
         if _pending(own)[0]:
             raise Refused("Compass: a request was raised while Compass checked. Nothing was "
                           "written; type /compass:approve again.")
-        reviewed = delegations.mark_reviewed(own, held)
+        reviewed = delegations.mark_reviewed(own, entry, held)
         if reviewed is not None:
             return reviewed
+        if delegations.unreviewed(compass_dir):
+            raise Refused("Compass: nothing was marked reviewed. The last summary shown in "
+                          "this session before this command did not list any approval that "
+                          "still waits. Nothing was written; the next summary lists them.")
     raise Refused(f"Nothing is waiting for your approval on issue {slug}. Nothing was "
                   f"written.")
 
 
-def _overrule(session, env, listing, reason):
+def _overrule(session, env, listing, text):
     """`/compass:reject <record id> <reason>`: the issue is the one `--issue`
-    names, else this checkout's current issue."""
+    names, else the one issue that holds a delegated approval with that id, in
+    any worktree. Two holders are refused with the `--issue` form. With no
+    holder, this checkout's current issue gives the refusal."""
     import dataclasses
 
     from compass_pkg import delegations
+    record_id = text.partition(" ")[0]
     if session.issue:
-        task_dir, slug = _find(listing, session.issue), session.issue
+        task_dir = _find(listing, session.issue)
     else:
-        compass_dir = os.path.join(session.project, ".compass")
-        slug = _issue(compass_dir, env, session.session_id)
-        task_dir = os.path.join(compass_dir, "work", slug)
+        holders = []
+        for folder in _every_issue_dir(listing):
+            try:
+                task, _ = load_manifest(folder)
+            except CompassError:
+                continue
+            if any(isinstance(r, dict) and r.get("id") == record_id
+                   and r.get("via") == "delegation" for r in task.get("evidence") or []):
+                holders.append(folder)
+        if len(holders) > 1:
+            lines = [f"Compass: the record {record_id} is held by more than one issue; "
+                     f"nothing was written. Choose one:"]
+            lines += [f"  issue {os.path.basename(h)} ({_project_of(h)})" for h in holders]
+            lines.append("Type " + " or ".join(
+                f"/compass:reject {record_id} <reason> --issue {os.path.basename(h)}"
+                for h in holders) + ".")
+            raise Refused("\n".join(lines))
+        if holders:
+            task_dir = holders[0]
+        else:
+            compass_dir = os.path.join(session.project, ".compass")
+            task_dir = os.path.join(compass_dir, "work",
+                                    _issue(compass_dir, env, session.session_id))
+    slug = os.path.basename(task_dir)
     approver, role, source = resolve_approver(task_dir, env)
     own = dataclasses.replace(session, task_dir=task_dir, slug=slug, approver=approver,
                               role=role, approver_source=source)
+    where = f", folder {_project_of(task_dir)}" if len(listing.trees) > 1 else ""
     with approvals.lock_all([task_dir]):
         _refuse_used_prompt(own)
-        return delegations.overrule(own, reason)
+        return delegations.overrule(own, text, where)
 
 
 def _approve(session, request, where=""):

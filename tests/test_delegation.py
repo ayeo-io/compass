@@ -305,9 +305,9 @@ def test_f12_review_summary_until_acknowledged(tmp_path, monkeypatch):
     monkeypatch.undo()
     ids = _overnight(root)
     assert len(ids) == 3, ids
-    start = _hook_json("session-start.sh", root, {"session_id": "s", "source": "startup"})
+    start = _hook_json("session-start.sh", root, {"session_id": "sess-1","source": "startup"})
     prompt = _hook_json("approval-summary.sh", root,
-                        {"session_id": "s", "hook_event_name": "UserPromptSubmit",
+                        {"session_id": "sess-1","hook_event_name": "UserPromptSubmit",
                          "prompt": "good morning", "cwd": str(root)})
     for shown in (start["systemMessage"], prompt["systemMessage"]):
         for needle in ids + [SLUG, ARCHITECT, "/compass:approve", "/compass:reject"]:
@@ -317,7 +317,7 @@ def test_f12_review_summary_until_acknowledged(tmp_path, monkeypatch):
     # Shown again until the person marks them reviewed; nothing was written.
     before = (task_dir(root) / "manifest.yml").read_bytes()
     again = _hook_json("approval-summary.sh", root,
-                       {"session_id": "s", "hook_event_name": "UserPromptSubmit",
+                       {"session_id": "sess-1","hook_event_name": "UserPromptSubmit",
                         "prompt": "next", "cwd": str(root)})
     assert again["systemMessage"] == prompt["systemMessage"]
     assert (task_dir(root) / "manifest.yml").read_bytes() == before
@@ -327,7 +327,7 @@ def test_f12_review_summary_until_acknowledged(tmp_path, monkeypatch):
         if rec["id"] in ids:
             assert rec["reviewed_by"] == OWNER and rec["reviewed_at"], rec
     after = _hook_json("approval-summary.sh", root,
-                       {"session_id": "s", "hook_event_name": "UserPromptSubmit",
+                       {"session_id": "sess-1","hook_event_name": "UserPromptSubmit",
                         "prompt": "next", "cwd": str(root)})
     assert "systemMessage" not in after, after
 

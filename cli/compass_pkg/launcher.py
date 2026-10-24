@@ -2,11 +2,13 @@
 
 Claude Code adds the plugin's `bin/` to the PATH of the commands it runs, not
 to the person's shell, and the plugin's folder names its version. So the
-session-start hook keeps a launcher at `<config>/plugins/data/
-<plugin>-<marketplace>/compass`, which does not move between versions. The Bash tool does not
-pass `CLAUDE_PLUGIN_DATA` on, so the folder is worked out from where this CLI
-is installed: `<config>/plugins/cache/<marketplace>/<plugin>/<version>/`.
+session-start hook keeps a launcher at
+`<config>/plugins/data/<plugin>-<marketplace>/compass`, which does not move
+between versions. The Bash tool does not pass `CLAUDE_PLUGIN_DATA` on, so the
+folder is worked out from where this CLI is installed:
+`<config>/plugins/cache/<marketplace>/<plugin>/<version>/`.
 """
+# DEPENDENCY: standard library only.
 from __future__ import annotations
 
 import os

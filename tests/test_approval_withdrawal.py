@@ -34,7 +34,7 @@ def _type(root, args, command):
 def test_f13_withdrawal_fails_g5_in_flight(tmp_path):
     from compass_pkg import checks, waivers
     root = project(tmp_path)
-    first = _type(root, f"{ARCHITECT} until {_soon()} for g5", "compass:delegate")
+    first = _type(root, f"--agent {ARCHITECT} --until {_soon()} --for g5", "compass:delegate")
     code = re.search(r"confirm (\S+)", first.message).group(1)
     assert not _type(root, f"confirm {code}", "compass:delegate").block
     done = run(root, "evidence", "approve", "--issue", SLUG, "--guardrail", "G5", "--scope",

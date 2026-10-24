@@ -369,7 +369,7 @@ def test_f8_cli_refuses_an_agent_the_delegation_does_not_name(tmp_path):
     until = (datetime.datetime.now().astimezone() + datetime.timedelta(hours=2))
     done = prompt_approval.handle(
         event(root, command="compass:delegate",
-              args=f"compass:architect until {until:%H:%M}"), {},
+              args=f"--agent compass:architect --until {until:%H:%M}"), {},
         plugin_root=str(FRAMEWORK_ROOT))
     assert not done.block, done
     before = (task_dir(root) / "manifest.yml").read_bytes()

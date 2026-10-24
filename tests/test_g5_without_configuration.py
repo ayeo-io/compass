@@ -80,7 +80,7 @@ def test_g1_each_path_passes_on_default_preset(tmp_path):
     until = datetime.datetime.now().astimezone() + datetime.timedelta(hours=2)
     first = prompt_approval.handle(
         event(root, command="compass:delegate",
-              args=f"compass:architect until {until:%H:%M} for g5"), env,
+              args=f"--agent compass:architect --until {until:%H:%M} --for g5"), env,
         plugin_root=str(ROOT))
     code = re.search(r"confirm (\S+)", first.message).group(1)
     done = prompt_approval.handle(event(root, command="compass:delegate",

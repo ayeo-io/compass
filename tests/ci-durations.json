@@ -133,6 +133,7 @@
   "tests/test_declared_test_ids_resolve.py": 0.01,
   "tests/test_default_preset.py": 10.9,
   "tests/test_default_views.py": 5.6,
+  "tests/test_delegate_flags.py": 6.0,
   "tests/test_delegation.py": 32.19,
   "tests/test_delegation_limits.py": 7.0,
   "tests/test_delivery_board.py": 19.84,

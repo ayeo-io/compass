@@ -66,7 +66,7 @@ def _type(root, args, command="compass:delegate", session="sess-1", **kw):
                                         **kw), {}, plugin_root=str(ROOT))
 
 
-# --- TRC-072 -------------------------------------------------------------------------------
+# --- no CLI verb creates a delegation (TRC-072) --------------------------------------------
 
 @pytest.mark.parametrize("command", [
     "delegate --agent main",
@@ -86,7 +86,7 @@ def test_TRC_072_no_cli_verb_creates_a_delegation(tmp_path, command):
     assert _bytes(root) == before, command
 
 
-# --- TRC-074 -------------------------------------------------------------------------------
+# --- the agent's tools cannot reach the store from a worktree (TRC-074) --------------------
 
 def _git(cwd, *argv):
     subprocess.run(["git", "-c", "user.email=t@example.com", "-c", "user.name=t", *argv],
@@ -133,7 +133,29 @@ def test_TRC_074_the_agent_s_tools_cannot_reach_the_common_store_from_a_linked(t
         shutil.rmtree(holder, ignore_errors=True)
 
 
-# --- TRC-077 -------------------------------------------------------------------------------
+# --- a wrong, late or other session's code writes nothing (TRC-076) ------------------------
+
+@pytest.mark.parametrize("who,wrong_code,minutes", [
+    ("sess-1", True, 2),
+    ("sess-1", False, 11),
+    ("sess-2", False, 2),
+])
+def test_TRC_076_a_wrong_late_or_other_session_s_confirmation_code_writes_no_delegation(
+        tmp_path, monkeypatch, who, wrong_code, minutes):
+    from compass_pkg import delegations
+    root = project(tmp_path)
+    first = _type(root, "--for g5", prompt_id="p-first")
+    assert first.block, first
+    code = re.search(r"/compass:delegate confirm (\S+)", first.message).group(1)
+    typed = "0000-0000-0000-0000" if wrong_code else code
+    later = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=minutes)
+    monkeypatch.setattr(delegations, "_now", lambda: later)
+    answer = _type(root, f"confirm {typed}", session=who, prompt_id="p-second")
+    assert answer.block, answer
+    assert not list(_store(root).glob("DL-*.yml"))
+
+
+# --- a typed command is answered once (TRC-077) --------------------------------------------
 
 def test_TRC_077_a_typed_compass_delegate_is_answered_once(tmp_path):
     root = project(tmp_path)
@@ -146,7 +168,7 @@ def test_TRC_077_a_typed_compass_delegate_is_answered_once(tmp_path):
         k: v for k, v in before.items() if k.startswith("DL-")}
 
 
-# --- TRC-099 -------------------------------------------------------------------------------
+# --- a delegated checkpoint or decisions approval stays (TRC-099) --------------------------
 
 @pytest.mark.parametrize("record", [
     {"id": "EV-CP-1", "type": "checkpoint-approval", "checkpoint": "plan"},

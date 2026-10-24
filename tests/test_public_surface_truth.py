@@ -599,8 +599,8 @@ def test_d2_repairs_change_only_retired_names():
     One more was re-baselined by `delegation-everywhere`:
     `docs/safety-contract.md` list_items 121 -> 127, the delegation section
     rewritten as a list of the defaults, the common store and the call ticket;
-    then 127 -> 129 in the same issue, when its verify review added the
-    ticket's deletion points and the limits that come from the person's
+    then 127 -> 129 in the same issue, when its review before ship added
+    the ticket's deletion points and the limits that come from the person's
     operating system user as two list items of their own.
 
     One more was re-baselined by `install-docs-show-the-one-line-form`:

@@ -106,8 +106,8 @@ limit on how long a delegation lasts or on how many are in force:
   delegation can have no end time and cover every issue, so one typed-back code
   can cover several irreversible changes. `--labels` is not a flag.
 - The agent runs `compass evidence approve --issue <slug> --delegated --as
-  <agent>` as a plain command in its Bash tool, with `compass` as the command
-  that runs, not as an argument of `echo` or another command. The pre-tool
+  <agent>` as a plain command in its Bash tool, with `compass` in command
+  position, not as an argument of `echo` or another command. The pre-tool
   hook reads the command and writes a call ticket into the store: the session
   and the caller that Claude Code reported, and a digest of the command's
   words. The CLI takes the matching ticket and tests the session from it. It
@@ -118,13 +118,15 @@ limit on how long a delegation lasts or on how many are in force:
   soon as it cannot be used for that call: when the call finishes or fails,
   when Claude Code reports the call's permission denied, when the turn ends,
   and when the person submits the next prompt. A ticket that is never taken
-  also expires after 10 minutes. Two windows stay open. When the person
+  also expires after 10 minutes. Three windows stay open. When the person
   denies a permission prompt, Claude Code runs no hook until the next prompt,
   so a process the agent had already started in the background can take the
   ticket before then. When auto mode's check denies a call and Claude Code
   sends no hook for it, the agent can take the ticket from a script in the
-  same turn. In both cases the ticket names only the session and the agent
-  that made the call.
+  same turn. When the shell skips a `compass` command in command position,
+  as after `true ||` or `false &&` or on a heredoc line, a program that the
+  same call starts can take its ticket before the call ends. In each case the
+  ticket names only the session and the agent that made the call.
 - Two limits come from running as the person's operating system user. A
   process running as that user can write a ticket into the store. A process
   that can start Claude Code as that user can resume a session by its id, as
@@ -406,7 +408,7 @@ folder link) states where the guard is exact:
   the file. A command that is not simple and names a protected thing in the
   same call is refused. A delegated approval is the exception: a script the
   hook never read has no call ticket of its own, so the CLI refuses it, apart
-  from the two windows the delegation section above names. What holds
+  from the three windows the delegation section above names. What holds
   depends on what the script reads:
   - for the delegation files, the stored hash and the 64-bit code. The hash is
     stored and the code is not, so a script cannot read the code from the

@@ -379,7 +379,7 @@ a plain command that the pre-tool hook reads. The hook writes a call ticket into
 the common store (`cli/compass_pkg/delegation_tickets.py`): the session and the
 caller that Claude Code reported, and a digest of the words after `evidence
 approve`, cut at the first shell operator, comment or redirect such as `2>&1`.
-The hook writes one only when `compass` is the command that runs, never when it
+The hook writes one only when `compass` stands in command position, never when it
 is an argument of `echo`, `printf` or `xargs`. The CLI takes the matching ticket
 under the store lock and reads the session from it, never from the environment.
 A ticket is deleted when its call finishes, fails or has its permission denied

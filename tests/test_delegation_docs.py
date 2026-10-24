@@ -151,3 +151,23 @@ def test_TRC_105_no_current_document_states_a_delegation_limit_that_no_longer_ho
             continue
         found += [(name, phrase) for phrase in stale if phrase in text]
     assert not found, found
+
+
+def test_TRC_118_the_evidence_type_texts_name_the_issue_form():
+    guardrails = yaml.safe_load(_text("governance/guardrails.yml"))
+    preset = yaml.safe_load(_text("governance/presets/default/evidence-types.yml"))
+
+    def find(node):
+        if isinstance(node, dict):
+            if "human-approval" in node and isinstance(node["human-approval"], dict):
+                return node["human-approval"].get("description", "")
+            for value in node.values():
+                found = find(value)
+                if found:
+                    return found
+        return ""
+
+    for label, doc in (("governance/guardrails.yml", guardrails),
+                       ("governance/presets/default/evidence-types.yml", preset)):
+        text = _flat(find(doc))
+        assert "--issue <slug> --delegated --as <agent>" in text, (label, text)

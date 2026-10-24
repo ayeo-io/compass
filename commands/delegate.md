@@ -1,6 +1,6 @@
 ---
-description: Let a named agent approve for you
-argument-hint: "<agent> until <time> [on <issues>] [for <forms>] [labels <labels>] [max <n>]"
+description: Let this session's agents, or one agent, approve for you until you revoke it
+argument-hint: "[--agent <name>] [--until <time>] [--on <issues>] [--for <forms>] [--max <n>]"
 disable-model-invocation: true
 ---
 

@@ -26,7 +26,8 @@ Strategies, such as testing first, can be stepped off with a recorded reason;
 guardrails cannot.
 
 **Approvals.** Approve only under a delegation naming you, with `compass
-evidence approve --delegated --as <you>`. Otherwise run `compass
+evidence approve --issue <slug> --delegated --as <you>`, run as a plain
+command in your Bash tool and never from a script. Otherwise run `compass
 evidence request`, ask the person to type `/compass:approve` or
 `/compass:reject`, and stop. Never create, extend or revoke a delegation.
 

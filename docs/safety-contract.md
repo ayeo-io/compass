@@ -80,14 +80,43 @@ terminal a person runs `compass evidence approve --guardrail` and the value `G5`
 giving `--approver`, `--role` and `--scope`; on a host whose adapter
 has no person-only approval event, such as Codex, that is the only path.
 
-From 7.0.0 a person can also delegate approvals to one named agent with
-`/compass:delegate`, for at most 24 hours and a stated scope (ADR-069). The
-guardrail 5 sign-off is covered only when typed, and only after the person
-types back a code the hook showed them. The record names the person, the
-agent and the delegation. The person sees a summary of delegated approvals
-until they mark them reviewed, and `/compass:reject <record id>` overrules
-one; for the sign-off it writes an `approval-withdrawal` record, which never
-reverses an action already taken and never fails a landed issue.
+A person can also delegate approvals with `/compass:delegate [--agent <name>]
+[--until <time>] [--on <issues>] [--for <forms>] [--max <n>]` (ADR-069,
+amended by ADR-077). The person sets the bounds, and Compass puts no upper
+limit on how long a delegation lasts or on how many are in force:
+
+- With no `--until`, a delegation lasts until `/compass:revoke`. Compass lists
+  each delegation with no end time at every session start, with its age, who it
+  covers and how many approvals it has given.
+- With no `--agent`, a delegation covers the session it was typed in: its main
+  agent and its subagents, including built-in ones such as general-purpose, in
+  any worktree. With `--agent <name>`, it covers that agent in any session.
+  `any` is refused.
+- With no `--on`, a delegation covers every issue in the repository's
+  worktrees, at any generation. With `--on <issues>`, it covers those issues, each
+  at the generation it had when the delegation was made.
+- Every worktree reads one common store: `.compass/delegations/` in the main
+  checkout. A delegation file in a linked worktree's own folder gives no
+  approval.
+- The guardrail 5 sign-off is covered only with `--for g5`, and only after the
+  person types back a code the hook showed them. After that code, the
+  delegation can have no end time and cover every issue, so one typed-back code
+  can cover several irreversible changes. `--labels` is not a flag.
+- The agent runs `compass evidence approve --issue <slug> --delegated --as
+  <agent>` as a plain command in its Bash tool. The pre-tool hook reads the
+  command and writes a call ticket into the store: the session and the caller
+  that Claude Code reported, and a digest of the command's words. The CLI takes
+  the matching ticket and tests the session from it. It never reads the
+  session from the environment. A script the hook never read has no ticket, so
+  the CLI refuses it. A process running as the same operating system user can
+  still write a ticket.
+
+The record names the person, the agent and the delegation. The person sees a
+summary of delegated approvals, from any worktree, until they mark them
+reviewed. `/compass:approve` with nothing pending marks reviewed only the
+approvals that the session's last summary showed. `/compass:reject <record id>`
+overrules one; for the sign-off it writes an `approval-withdrawal` record, which
+never reverses an action already taken and never fails a landed issue.
 
 What holds the boundary, and what does not:
 
@@ -353,7 +382,9 @@ folder link) states where the guard is exact:
   a later Bash call is the same. This is an accepted limit, because the
   earlier hook allowed a Write tool call followed by a shell command that runs
   the file. A command that is not simple and names a protected thing in the
-  same call is refused. What holds depends on what the script reads:
+  same call is refused. A delegated approval is the exception: a script the
+  hook never read has no call ticket, so the CLI refuses it. What holds
+  depends on what the script reads:
   - for the delegation files, the stored hash and the 64-bit code. The hash is
     stored and the code is not, so a script cannot read the code from the
     files;

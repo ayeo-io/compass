@@ -115,12 +115,15 @@ keys, the form earlier sign-offs use, still counts. In Claude Code a person
 records the sign-off by typing `/compass:approve` for the request the agent
 made with `compass evidence request`; the prompt hook records it, and the
 model cannot raise that event (ADR-068). A person can also delegate the
-sign-off, for a named agent, a stated time of at most 24 hours and a stated
-scope, with `/compass:delegate ... for g5`; the agent then records it with
-`compass evidence approve --guardrail` and the value `G5`, with
-`--delegated --as <agent>` (ADR-069).
-So the guardrail reads, in practice: a person signs off, or delegates the
-sign-off for a named agent, time and scope. The person can withdraw a
+sign-off with `/compass:delegate --for g5`, after typing back a code that the
+hook shows. The delegation can have no end time and cover every issue, and the
+person can narrow it with `--agent`, `--until`, `--on` and `--max`. The agent
+then records the sign-off with `compass evidence approve --guardrail` and the
+value `G5`, with `--issue <slug> --delegated --as <agent>` (ADR-069, amended by
+ADR-077).
+So the guardrail reads, in practice: a person signs off, or types one
+confirmation that lets a session's agents, or one named agent, sign off
+irreversible work until the person revokes it. The person can withdraw a
 delegated sign-off with `/compass:reject <record id>`, which writes an
 `approval-withdrawal` record; it reverses nothing already done. At a terminal
 a person records it with `compass evidence approve --guardrail` and

@@ -336,40 +336,79 @@ changed since, and blocks with the reason otherwise. A rejected check gets a
 its file is unchanged; a rejected guardrail 5, checkpoint or decisions request
 writes no record.
 
-A person can let one named agent approve for them with `/compass:delegate
-<agent> until <time> [on <issues>] [for <forms>] [labels <labels>] [max <n>]`
-(`cli/compass_pkg/delegations.py`, ADR-069). The end time is at most 24 hours
-ahead, at most five delegations are in force, and `g5` is covered only when
-typed, after the person types back a code the hook shows them. The code is
+A person can let agents approve for them with `/compass:delegate [--agent <name>]
+[--until <time>] [--on <issues>] [--for <forms>] [--max <n>]`
+(`cli/compass_pkg/delegations.py`, ADR-069 as amended by ADR-077). Every flag
+is optional and the flags come in any order; `delegations.parse_flags` reads
+them. The old positional form and `--labels` are refused with the flag form.
+The person sets the bounds, and no limit is put on how long a delegation lasts
+or on how many are in force:
+
+- with no `--agent`, the file names the session (`covers_session`) and covers its
+  main agent and its subagents; with `--agent <name>` it covers that agent in
+  any session, and `any` is refused;
+- with no `--until`, it lasts until `/compass:revoke`;
+- with no `--on`, it covers every issue in the repository's worktrees at any
+  generation; `--on` looks each issue up in every worktree
+  (`cli/compass_pkg/worktree_lookup.py`) and refuses a name that no worktree
+  holds, or that two hold;
+- a new file has `format: 2`; a file with no `format` is read by the 7.0.0 rules;
+- the file is kept in the common store, `.compass/delegations/` in the main
+  checkout, which every worktree reads. `/compass:delegate` and `/compass:revoke`
+  take the approver from the folder that holds it and need no current issue.
+
+`g5` is covered only with `--for g5`, after the person types back a code the
+hook shows them. The code is
 16 hex characters in four groups, such as `1a2b-3c4d-5e6f-7a8b`, typed with
 or without the hyphens. A `/compass:approve`, `/compass:reject` or
 `/compass:delegate` whose input has no prompt id is refused, and so is a
 `/compass:delegate` whose prompt id a delegation already holds; a confirmed
 g5 delegation keeps the first command's prompt id as `requested_prompt_id`.
-`/compass:revoke [DL-n]` ends delegations early. The agent records with:
+`/compass:revoke [DL-n]` ends delegations early and names what each covered.
+The agent records with:
 
 ```
 compass evidence approve (--check ID | --guardrail G5 | --artifact KIND | --decisions
-                          | --checkpoint STAGE) [--scope TEXT] --delegated --as AGENT
+                          | --checkpoint STAGE) [--scope TEXT] --issue SLUG --delegated --as AGENT
 ```
 
 It needs no terminal and no `--approver` or `--role`: the record names the
 person who delegated as `approver`, with `approved_by_agent`, `delegation` and
-`via: delegation`, and a line goes to the issue's devlog. It refuses, writing
-nothing, when no delegation in force names the agent, or the one that does has
-ended, was revoked, reached its `max`, was not written by a typed command, or
-does not cover the issue, its generation, the form or the labels. The
+`via: delegation`, and a line goes to the issue's devlog. The command must be
+a plain command that the pre-tool hook reads. The hook writes a call ticket into
+the common store (`cli/compass_pkg/delegation_tickets.py`): the session and the
+caller that Claude Code reported, and a digest of the words after `evidence
+approve`. The CLI takes the matching ticket under the store lock and reads the
+session from it, never from the environment. The verb refuses, writing
+nothing, when it has no ticket, no `--issue`, or an issue that two worktrees
+hold; or when no delegation in force names the agent or covers its session, or
+the one that does has ended, was revoked, reached its `max`, was not written by
+a typed command, or does not cover the issue, its generation, the form or the
+labels of a 7.0.0 file. A delegation file in a linked worktree's own folder
+gives no approval, and the refusal names it. The
 pre-tool hook also refuses the call when `--as` is not exactly the agent
 Claude Code reports.
 
-The person sees each delegated approval in a summary until they mark it
-reviewed. `/compass:approve` with nothing pending marks every one reviewed,
-on every issue a delegation names. The prompt hook takes the approval lock
-of each of those issues, with the session's own, in one sorted order before
-it marks anything (`approvals.lock_all`). So two sessions that type it on
-two issues at once never each hold one lock while waiting for the other's.
-An approval recorded on another issue after the hook took its locks stays in
-the summary for the next `/compass:approve`.
+The person sees each delegated approval, from any worktree, in a summary until
+they mark it reviewed. Each delegation file indexes its records
+(`records`), so the summary reads only the issue folders that hold one. Both
+summary hooks write the rows they show into the store's
+`shown/<session>.json`. `/compass:approve` with nothing pending marks reviewed
+only the approvals the session was shown: the rows of the latest summary shown
+in the same session before the command, whose digest still matches. A summary
+shown for the `/compass:approve` prompt itself does not count. The prompt hook
+takes the approval lock of each shown issue, with the session's own, in one
+sorted order before it marks anything (`approvals.lock_all`). So two sessions
+that type it on two issues at once never each hold one lock while waiting for
+the other's. An approval recorded after the summary stays unmarked and appears
+in the next summary.
+
+`/compass:approve <n>` and `/compass:reject <n> <reason>` search the current
+issue of each worktree for pending request n, and `--issue <slug>` reaches any
+issue in any worktree. With more than one match they refuse and list the
+`--issue` forms. The approver is read from the folder that holds the chosen
+request, after the choice. Session start lists each delegation with no end time
+(`delegations.session_start_lines`).
 
 ### `compass evidence request`
 

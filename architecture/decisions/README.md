@@ -108,7 +108,7 @@ Rules:
 | [ADR-066](ADR-066-an-approval-names-its-subject-and-guardrail-5-counts-only-an-approval-given-for-it.md) | An approval names its subject, and guardrail 5 counts only an approval given for it | accepted | extends ADR-038 and ADR-063; with ADR-006 and ADR-039 |
 | [ADR-067](ADR-067-word-limits-are-catalogue-obligations-and-a-low-level-design-is-one-document-per-work-unit.md) | Word limits are catalogue obligations, the design-size check never judges an earlier catalogue, and a low-level design is one registered document per work unit | accepted | extends ADR-053 and ADR-054; follows ADR-064; with ADR-006, ADR-033, ADR-036, ADR-038, ADR-044 and ADR-050 |
 | [ADR-068](ADR-068-a-person-approves-inside-claude-code-through-an-event-the-model-cannot-raise.md) | A person approves inside Claude Code through an event the model cannot raise, and the agent only requests | accepted | amends ADR-050 decision 2; with ADR-006 and ADR-066 |
-| [ADR-069](ADR-069-a-person-can-delegate-approvals-to-a-named-agent-for-a-stated-time-and-scope.md) | A person can delegate approvals to a named agent for a stated time and scope | accepted | amends ADR-068 decision 1; with ADR-038 and ADR-066 |
+| [ADR-069](ADR-069-a-person-can-delegate-approvals-to-a-named-agent-for-a-stated-time-and-scope.md) | A person can delegate approvals to a named agent for a stated time and scope | accepted | amends ADR-068 decision 1; amended by ADR-077 (decisions 1, 2, 3 and 5); with ADR-038 and ADR-066 |
 | [ADR-070](ADR-070-role-is-not-an-assessment-dimension-and-documents-on-disk-bring-the-claims-gate-and-the-intent-block.md) | Role is not an assessment dimension, and the documents on disk bring the claims gate and the intent block | proposed | narrows ADR-004 and ADR-007; with ADR-001, ADR-006, ADR-036 and ADR-037 |
 | [ADR-071](ADR-071-a-one-unit-breakdown-is-recorded-from-the-distribution-maps-units-line.md) | A one-unit breakdown is recorded from the distribution map's units line | proposed | amends ADR-025; with ADR-006, ADR-038 and ADR-050 |
 | [ADR-072](ADR-072-a-project-scoped-design-decision-needs-a-record-and-regular-and-hotfix-owe-a-review-and-a-bug-report.md) | A project-scoped design decision needs a decision record before it lands, and the regular and hotfix approaches owe a review and a bug report | proposed | with ADR-036 and ADR-037 |
@@ -116,6 +116,7 @@ Rules:
 | [ADR-074](ADR-074-the-tree-being-edited-names-the-issue-that-judges-an-edit.md) | The tree being edited names the issue that judges an edit | accepted | extends ADR-005 and ADR-063; with ADR-006 and ADR-048 |
 | [ADR-075](ADR-075-a-readiness-commands-process-group-stops-with-sigterm-then-sigkill-after-two-seconds.md) | A readiness command's process group stops with SIGTERM, then SIGKILL after two seconds | accepted | amends ADR-061 decision 5; with ADR-009 and ADR-025 |
 | [ADR-076](ADR-076-execution-profile-manifests.md) | Execution profiles are committed in a top-level profiles folder, with two new terms | proposed | extends ADR-012 rule 4; with ADR-072 |
+| [ADR-077](ADR-077-delegations-cover-the-typing-session-until-revoked.md) | Delegations cover the typing session until revoked | proposed | amends ADR-069 decisions 1, 2, 3 and 5; with ADR-068 and ADR-038 |
 
 ## Principle → ADR mapping
 

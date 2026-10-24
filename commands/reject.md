@@ -1,13 +1,14 @@
 ---
 description: Reject a request, or overrule a delegated approval
-argument-hint: "[request number | record id] <reason>"
+argument-hint: "[<n> | <record id>] <reason> [--issue <slug>]"
 disable-model-invocation: true
 ---
 
 # /compass:reject
 
 The person typed this command. Compass's prompt hook has already acted on it
-before you read this.
+before you read this. The person can name the request's issue with `--issue
+<slug>`, and the hook finds the request in any worktree.
 
 **When Compass's result is in your context** (a line that says the person
 rejected a request), do not go on with the work that waited for it. Say what

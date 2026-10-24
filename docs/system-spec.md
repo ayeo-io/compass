@@ -4966,8 +4966,8 @@ The approval guard now refuses a protected folder name split by a backslash and 
 - `TRC-097` The request names --issue when another worktree's current issue holds the same number
 - `TRC-099` A delegated checkpoint or decisions approval cannot be overruled with /compass:reject <record id>
 - `TRC-100` The README's delegation bullet says the person sets the bounds
-- `TRC-101` Governance/guardrails.md states what a guardrail 5 delegation covers now
-- `TRC-102` Docs/entry-exit-evaluation.md describes the delegation and review behavior that holds now
+- `TRC-101` The guardrails prose in governance/guardrails.md states what a guardrail 5 delegation covers now
+- `TRC-102` The owning doc docs/entry-exit-evaluation.md describes the delegation and review behavior that holds now
 - `TRC-103` The decision index names the record that amends ADR-069
 - `TRC-104` The upgrade guide of the release that ships this change says what breaks
 - `TRC-105` No current document states a delegation limit that no longer holds

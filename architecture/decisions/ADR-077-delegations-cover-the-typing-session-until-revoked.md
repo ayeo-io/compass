@@ -1,11 +1,10 @@
 ---
 id: ADR-077
 title: Delegations cover the typing session until revoked
-status: proposed
+status: accepted
 date: 2026-10-24
 supersedes: ''
 superseded_by: ''
-amends: ADR-069
 ---
 
 ## Context

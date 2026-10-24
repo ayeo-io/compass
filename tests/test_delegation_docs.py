@@ -81,10 +81,15 @@ def test_TRC_083_a_decision_record_amends_adr_069():
                    "A forgotten delegation would outlive the run it was meant for",
                    "session-start list"):
         assert needle in text, needle
-    # ADR-069 is accepted and frozen, so the relation is recorded in ADR-077's
-    # front matter and in the index, and ADR-069 itself is not edited.
-    front = _front(str(_adr_077().relative_to(ROOT)))
-    assert front["amends"] == "ADR-069", front
+    # ADR-069 is accepted and frozen, so the relation is recorded the way every
+    # decision record states an amendment: in ADR-077's text and in both rows
+    # of the decision index. ADR-069 itself is not edited.
+    assert "This record amends ADR-069 decisions 1, 2, 3 and 5" in text
+    index = _text("architecture/decisions/README.md")
+    row_077 = next(line for line in index.splitlines() if "[ADR-077]" in line)
+    row_069 = next(line for line in index.splitlines() if "[ADR-069]" in line)
+    assert "amends ADR-069 decisions 1, 2, 3 and 5" in row_077, row_077
+    assert "amended by ADR-077" in row_069, row_069
 
 
 def test_TRC_100_the_readme_s_delegation_bullet_says_the_person_sets_the_bounds():

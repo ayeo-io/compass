@@ -129,10 +129,13 @@ An approach can lower the process weight. It never removes a guardrail.
 - **Approvals happen in the session.** `/compass:approve` and
   `/compass:reject` are the only way an approval is recorded. An agent cannot
   raise the event that records one.
-- **Delegation is bounded.** `/compass:delegate <agent> until <time>` lets a
-  named agent approve for you, for at most 24 hours and a stated scope.
-  `/compass:revoke` ends it. Every delegated approval is on record, and you
-  can overrule one.
+- **You set the bounds of a delegation.** A bare `/compass:delegate` lets the
+  agents of this session approve for you on every issue, until
+  `/compass:revoke` ends it. Flags narrow it: `--agent`, `--until`, `--on`, `--for`
+  and `--max`. `--for g5`, which covers irreversible work, needs a code that
+  you type back. Compass lists each delegation with no end time at each new
+  session start. Every delegated approval is on record, and you can overrule
+  one.
 - **Autonomy is a setting, not a promise.** `autonomy: controlled | balanced
   | autonomous` in `compass.yml` says how often a session stops for a person.
   An autonomous project must first pass the readiness floor: an agent

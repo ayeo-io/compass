@@ -167,9 +167,40 @@ def _generation(request):
     return "none" if value is None else value
 
 
-def shown_text(request):
+def _pointer_issue(project):
+    """The issue a project's `.compass/current-task` names, or None."""
+    try:
+        with open(os.path.join(project, ".compass", "current-task"), encoding="utf-8") as fh:
+            slug = fh.read().strip()
+    except OSError:
+        return None
+    if not slug or slug in (".", "..") or "/" in slug or "\\" in slug:
+        return None
+    task_dir = os.path.join(project, ".compass", "work", slug)
+    return task_dir if os.path.isdir(task_dir) else None
+
+
+def same_number_elsewhere(task_dir, number, timeout=5):
+    """True when the current issue of another worktree holds a pending request
+    with this number, so `/compass:approve <n>` alone would be ambiguous and the
+    person is given the `--issue` form."""
+    from compass_pkg import worktree_lookup
+    project = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(task_dir))))
+    listing = worktree_lookup.list_worktrees(project, timeout=timeout)
+    here = os.path.realpath(project)
+    for tree in listing.trees:
+        if os.path.realpath(tree.project) == here:
+            continue
+        other = _pointer_issue(tree.project)
+        if other and any(r["number"] == number for r in pending(other)):
+            return True
+    return False
+
+
+def shown_text(request, issue_form=False):
     """What Compass shows the person: the facts the CLI derived first, then
-    the agent's words, marked as such."""
+    the agent's words, marked as such. With `issue_form`, the commands name
+    the issue."""
     labels = ", ".join(request.get("labels") or []) or "none"
     lines = [f"Compass: approval request {request['number']} - {subject_text(request)}",
              f"  issue {request.get('issue')}, generation {_generation(request)}, "
@@ -178,8 +209,9 @@ def shown_text(request):
         lines.append(f"  document digest {str(request['document_digest'])[:12]}")
     if request.get("scope"):
         lines.append(f"  the agent's description: \"{request['scope']}\"")
-    lines.append(f"  Type /compass:approve {request['number']} or /compass:reject "
-                 f"{request['number']} <reason>.")
+    flag = f" --issue {request.get('issue')}" if issue_form else ""
+    lines.append(f"  Type /compass:approve {request['number']}{flag} or /compass:reject "
+                 f"{request['number']} <reason>{flag}.")
     return "\n".join(lines)
 
 
@@ -213,7 +245,8 @@ def stop_message(compass_dir, env):
         for request in pending(task_dir):
             if request.get("shown_at") or request.get("issue") != slug:
                 continue
-            shown.append(shown_text(mark_shown(task_dir, request)))
+            shown.append(shown_text(mark_shown(task_dir, request),
+                                    same_number_elsewhere(task_dir, request["number"])))
     return "\n".join(shown)
 
 
@@ -285,9 +318,12 @@ def cmd_evidence_request(args):
         tell = ("This host has no person-only approval event, so give the person this exact "
                 "command for their own terminal, with no `!` prefix, and stop:")
     else:
-        tell = (f"Ask the person to type /compass:approve {request['number']} or "
-                f"/compass:reject {request['number']} <reason>, and stop. Compass shows them "
-                f"the request at the end of your turn; never record the approval yourself.")
+        flag = (f" --issue {request['issue']}"
+                if same_number_elsewhere(task_dir, request["number"]) else "")
+        tell = (f"Ask the person to type /compass:approve {request['number']}{flag} or "
+                f"/compass:reject {request['number']} <reason>{flag}, and stop. Compass "
+                f"shows them the request at the end of your turn; never record the "
+                f"approval yourself.")
     code = say(args, f"{VERB}: request {request['number']} written - {subject}.",
                detail=[f"request    : {os.path.join(folder(task_dir), str(request['number']))}.yml",
                        f"issue      : {request['issue']}, generation {_generation(request)}"],

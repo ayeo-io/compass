@@ -317,7 +317,7 @@ def test_c6_bad_argument_blocks(setup):
     for args in ("everything", "7"):
         result = _handle(root, plugin, args=args)
         assert result.block and not _records(root), args
-        assert "no argument or one pending request number" in result.message, result.message
+        assert "/compass:approve <n> --issue <issue>" in result.message, result.message
 
 
 # --- no approver can be named (`TRC-C7`) ---------------------------------------------------

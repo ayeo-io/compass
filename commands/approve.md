@@ -1,13 +1,14 @@
 ---
 description: Approve the request Compass showed you
-argument-hint: "[request number]"
+argument-hint: "[<n> [--issue <slug>]]"
 disable-model-invocation: true
 ---
 
 # /compass:approve
 
 The person typed this command. Compass's prompt hook has already acted on it
-before you read this.
+before you read this. The person can name the request's issue with `--issue
+<slug>`, and the hook finds the request in any worktree.
 
 **When Compass's result is in your context** (a line that starts "Compass
 recorded"), the approval is recorded. Say in one line what was recorded, then

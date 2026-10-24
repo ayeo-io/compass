@@ -6,17 +6,27 @@ A delegation is a file, `.compass/delegations/DL-<n>.yml`, written only by the
 prompt hook from a typed `/compass:delegate` (`handle_delegate`). No CLI verb
 writes one. It names:
 
-- one agent, exactly as Claude Code reports it, plugin prefix included
-  (`compass:architect`), or `main` for the session's main agent; `any` is
-  refused;
-- an end time, required, in the future and at most 24 hours after creation;
-- the issues it covers, each at the generation it had when the delegation was
-  made (default: the session's issue);
+It is typed with flags, each optional and in any order (`parse_flags`):
+`/compass:delegate [--agent <name>] [--until <time>] [--on <issues>]
+[--for <forms>] [--max <n>]`. A file written now has `format: 2` and names:
+
+- who it covers: one agent, exactly as Claude Code reports it, plugin prefix
+  included (`compass:architect`), or `main` for the session's main agent
+  (`--agent`; `any` is refused); with no `--agent`, the agents of the typing
+  session (`covers_session`);
+- an end time (`--until`), in the future, with no upper limit; with none, it
+  lasts until revoked;
+- the issues it covers (`--on`), each at the generation it had when the
+  delegation was made; with none, every issue at any generation;
 - the forms it covers: `checks`, `documents`, `checkpoints`, `decisions`,
   `check:<id>`, and `g5` only when typed (default: the first four);
-- optionally `labels` an issue must carry, and `max_uses`.
+- optionally `max_uses`.
 
-At most five are in force at once. A delegation that covers `g5` takes effect
+A file with no `format` is a 7.0.0 file. It is read by the 7.0.0 rules: a
+missing `until` or `issues` grants nothing, and `labels` is read but never
+written. No limit is put on how many are in force.
+
+A delegation that covers `g5` takes effect
 only when the person types back a code the hook showed them in its block
 message (`confirm`), because a prompt suggestion accepted with Tab lets the
 model word the first command (measured on Claude Code 2.1.300; the owner's
@@ -49,6 +59,7 @@ from __future__ import annotations
 import contextlib
 import datetime
 import hashlib
+import json
 import os
 import re
 import secrets
@@ -57,14 +68,17 @@ from compass_pkg import approvals, atomic_io
 from compass_pkg.core import CompassError, load_manifest, load_yaml
 
 FOLDER = "delegations"
-MAX_HOURS = 24
-MAX_IN_FORCE = 5
+FORMAT = 2
 CONFIRM_MINUTES = 10
 #: The confirmation code's length in bytes: 64 bits, 16 hex characters.
 CODE_BYTES = 8
 DEFAULT_FORMS = ("checks", "documents", "checkpoints", "decisions")
 FORMS = ("g5",) + DEFAULT_FORMS
+#: The words of the old positional form, which `parse_flags` refuses.
 KEYWORDS = ("until", "on", "for", "labels", "max")
+FLAGS = ("--agent", "--until", "--on", "--for", "--max")
+FLAG_FORM = ("/compass:delegate [--agent <name>] [--until <time>] [--on <issues>] "
+             "[--for <forms>] [--max <n>]")
 #: The form word that covers each subject form of an approval.
 COVERS = {"guardrail": "g5", "check": "checks", "artifact": "documents",
           "checkpoint": "checkpoints", "decisions": "decisions"}
@@ -126,17 +140,24 @@ def all_delegations(compass_dir):
     return sorted(found, key=lambda d: int(str(d.get("id", "DL-0"))[3:] or 0))
 
 
+def _is_format_2(delegation):
+    return delegation.get("format") == FORMAT
+
+
 def ended(delegation, now=None):
     """Why a delegation is not in force, or None when it is."""
     now = now or _now()
     if delegation.get("revoked_at"):
         return f"{delegation.get('id')} was revoked at {delegation['revoked_at']}"
-    try:
-        until = _parse_iso(delegation.get("until"))
-    except (TypeError, ValueError):
-        return f"{delegation.get('id')} has no readable end time"
-    if until <= now:
-        return f"{delegation.get('id')} ended at {delegation.get('until')}"
+    # No end time means until revoked, in a format 2 file only: in a 7.0.0 file a
+    # missing `until` is damage and grants nothing.
+    if not (_is_format_2(delegation) and delegation.get("until") is None):
+        try:
+            until = _parse_iso(delegation.get("until"))
+        except (TypeError, ValueError):
+            return f"{delegation.get('id')} has no readable end time"
+        if until <= now:
+            return f"{delegation.get('id')} ended at {delegation.get('until')}"
     cap = delegation.get("max_uses")
     if cap and int(delegation.get("uses") or 0) >= int(cap):
         return f"{delegation.get('id')} reached its max of {cap} use(s)"
@@ -164,77 +185,124 @@ def _end_time(text, now):
         hour, minute = (int(x) for x in text.split(":"))
         if hour > 23 or minute > 59:
             raise _refused(f"'{text}' is not an end time.")
-        when = local.replace(hour=hour, minute=minute, second=0, microsecond=0)
-        if when <= local:
+        # A wall-clock time is read in the machine's time zone on that day, so a
+        # day that changes to or from summer time still ends at the time typed.
+        when = local.replace(tzinfo=None, hour=hour, minute=minute, second=0,
+                             microsecond=0)
+        if when.astimezone() <= local:
             when += datetime.timedelta(days=1)
-        return when
+        return when.astimezone()
     try:
         when = datetime.datetime.fromisoformat(text)
     except ValueError:
         raise _refused(f"'{text}' is not an end time. Give one as HH:MM or "
                        f"YYYY-MM-DDTHH:MM.") from None
-    return when if when.tzinfo else when.replace(tzinfo=local.tzinfo)
+    return when if when.tzinfo else when.astimezone()
+
+
+def parse_flags(words):
+    """The flags of `/compass:delegate`, as `{name: text}` with the dashes cut
+    off, from words already split on white space. Case matters. A word in a
+    value position is a value unless it starts with `--`, so `--max -1` is
+    refused by the `--max` check and `--agent --until 08:00` as a flag with no
+    value. Refuses the old positional form, `--labels`, an unknown flag, a flag
+    given twice, `--flag=value` and a stray word."""
+    if words and not words[0].startswith("-") and any(w in KEYWORDS for w in words[1:]):
+        raise _refused(f"the form '/compass:delegate <agent> until <time> ...' is no longer "
+                       f"used. Type {FLAG_FORM}.")
+    found = {}
+    i = 0
+    while i < len(words):
+        word = words[i]
+        if not word.startswith("-"):
+            raise _refused(f"'{word}' belongs to no flag. Type {FLAG_FORM}.")
+        if word.startswith("--") and "=" in word:
+            name, _, value = word.partition("=")
+            raise _refused(f"'{word}' joins a flag to its value with '='. Write "
+                           f"'{name} {value}' instead.")
+        if word == "--labels":
+            raise _refused("--labels is no longer a flag. Name the issues with "
+                           "--on <issues>.")
+        if word not in FLAGS:
+            raise _refused(f"'{word}' is not a flag of /compass:delegate. Type {FLAG_FORM}.")
+        if word[2:] in found:
+            raise _refused(f"{word} is given twice.")
+        if i + 1 >= len(words) or words[i + 1].startswith("--"):
+            raise _refused(f"{word} needs a value. Type {FLAG_FORM}.")
+        found[word[2:]] = words[i + 1]
+        i += 2
+    return found
+
+
+def _issues_named(slugs, session):
+    """`{slug: generation}` for the issues `--on` names, each looked up in every
+    worktree of the repository. Refuses a name that is not one folder name, an
+    issue no worktree holds (naming the folders searched) and an issue that two
+    worktrees hold (naming both)."""
+    from compass_pkg import worktree_lookup
+    for slug in slugs:
+        if not slug or slug in (".", "..") or "/" in slug or "\\" in slug:
+            raise _refused(f"'{slug}', named after --on, is not the name of one issue "
+                           f"folder.")
+    listing = worktree_lookup.list_worktrees(session.project)
+    issues = {}
+    for slug in slugs:
+        try:
+            task_dir = worktree_lookup.find_issue(listing, slug)
+        except worktree_lookup.HeldTwice as exc:
+            raise _refused(f"'{slug}', named after --on, is held by more than one "
+                           f"worktree: {' and '.join(exc.folders)}. Compass cannot tell "
+                           f"which one is meant; remove or rename one.") from None
+        except worktree_lookup.NotFound as exc:
+            note = f" {exc.note[0].upper()}{exc.note[1:]}." if exc.note else ""
+            raise _refused(f"'{slug}', named after --on, is in none of the work folders "
+                           f"searched: {', '.join(exc.searched)}.{note}") from None
+        task, _ = load_manifest(task_dir)
+        issues[slug] = task.get("generation")
+    return issues
 
 
 def parse(args, session, now):
     """The delegation `/compass:delegate <args>` asks for. Refuses anything
     outside the limits."""
-    words = args.split()
-    if not words:
-        raise _refused("/compass:delegate needs an agent and an end time, such as "
-                       "/compass:delegate compass:architect until 08:00.")
-    agent, rest = words[0], words[1:]
-    if agent.lower() == "any":
-        raise _refused("a delegation names one agent; 'any' is refused, so that each "
+    found = parse_flags(args.split())
+    agent = found.get("agent")
+    if agent is not None and agent.lower() == "any":
+        raise _refused("a delegation names one agent, and 'any' is refused, so that each "
                        "approval names who made it.")
-    if agent in KEYWORDS or agent == "confirm":
-        raise _refused("/compass:delegate needs the agent first, such as "
-                       "/compass:delegate compass:architect until 08:00.")
-    found = {}
-    i = 0
-    while i < len(rest):
-        key = rest[i]
-        if key not in KEYWORDS or i + 1 >= len(rest):
-            if found.get("until") is not None and key not in KEYWORDS:
-                raise _refused(f"the end time must be one value such as 08:00, not "
-                               f"'{' '.join(rest[i - 1:])}'.")
-            raise _refused(f"'{key}' is not part of /compass:delegate. It takes <agent> "
-                           f"until <time> [on <issues>] [for <forms>] [labels <labels>] "
-                           f"[max <n>].")
-        found[key] = rest[i + 1]
-        i += 2
-    if "until" not in found:
-        raise _refused("a delegation needs an end time: add until <HH:MM>, at most "
-                       f"{MAX_HOURS} hours ahead.")
-    until = _end_time(found["until"], now)
-    if until <= now:
-        raise _refused(f"the end time {_local(until)} has passed.")
-    if until - now > datetime.timedelta(hours=MAX_HOURS):
-        raise _refused(f"the end time {_local(until)} is more than {MAX_HOURS} hours "
-                       f"ahead; a delegation lasts at most {MAX_HOURS} hours.")
+    if agent is None and not session.session_id:
+        raise _refused("Compass cannot name this session, so it cannot cover this "
+                       "session's agents. Type --agent <name> to name an agent instead.")
+    until = None
+    if "until" in found:
+        until = _end_time(found["until"], now)
+        if until <= now:
+            raise _refused(f"the end time '{found['until']}' has passed ({_local(until)}).")
     forms = found.get("for", ",".join(DEFAULT_FORMS)).split(",")
     for form in forms:
         if form not in FORMS and not re.fullmatch(r"check:[\w.-]+", form):
             raise _refused(f"'{form}' is not a form a delegation covers; use g5, checks, "
                            f"documents, checkpoints, decisions or check:<id>.")
-    compass_dir = os.path.dirname(os.path.dirname(session.task_dir))
-    issues = {}
-    for slug in found.get("on", session.slug).split(","):
-        task_dir = os.path.join(compass_dir, "work", slug)
-        if (not slug or slug in (".", "..") or "/" in slug or "\\" in slug
-                or not os.path.isdir(task_dir)):
-            raise _refused(f"'{slug}', named after `on`, is not an issue in this project.")
-        task, _ = load_manifest(task_dir)
-        issues[slug] = task.get("generation")
-    body = {"agent": agent, "delegated_by": session.approver, "role": session.role,
-            "approver_source": session.approver_source, "created_at": _iso(now),
-            "until": _iso(until), "issues": issues, "forms": forms}
-    if found.get("labels"):
-        body["labels"] = found["labels"].split(",")
-    if found.get("max"):
+    issues = _issues_named(found["on"].split(","), session) if "on" in found else {}
+    cap = None
+    if "max" in found:
         if not found["max"].isdigit() or int(found["max"]) < 1:
-            raise _refused(f"max takes a whole number of approvals, not '{found['max']}'.")
-        body["max_uses"] = int(found["max"])
+            raise _refused(f"--max takes a whole number of approvals, at least 1, not "
+                           f"'{found['max']}'.")
+        cap = int(found["max"])
+    body = {"format": FORMAT, "delegated_by": session.approver, "role": session.role,
+            "approver_source": session.approver_source, "created_at": _iso(now)}
+    if agent is not None:
+        body["agent"] = agent
+    else:
+        body["covers_session"] = session.session_id
+    if until is not None:
+        body["until"] = _iso(until)
+    if issues:
+        body["issues"] = issues
+    body["forms"] = forms
+    if cap is not None:
+        body["max_uses"] = cap
     body.update(uses=0, created_via="prompt", session_id=session.session_id,
                 prompt_id=session.prompt_id)
     return body
@@ -258,14 +326,27 @@ def _write_delegation(compass_dir, body):
     return body
 
 
+def _who(body):
+    """Who a delegation covers, as the person reads it."""
+    return body["agent"] if body.get("agent") else "this session's agents"
+
+
+def _until_words(body):
+    """When a delegation ends, as the person reads it."""
+    if body.get("until") is None:
+        return "until you type /compass:revoke"
+    return f"until {_local(_parse_iso(body['until']))}"
+
+
 def _confirmation(body):
     from compass_pkg.prompt_approval import HookResult
-    until = _parse_iso(body["until"])
-    issues = ", ".join(body["issues"])
+    issues = (", ".join(body["issues"]) if body.get("issues")
+              else "every issue in the repository's worktrees")
     covers = _covers_words(body["forms"])
+    who = _who(body)
     if "g5" in body["forms"]:
-        g5 = (f"{body['agent']} may sign off irreversible work, such as an archive "
-              f"migration or a release tag, until {until.astimezone():%H:%M}")
+        g5 = (f"{who} may sign off irreversible work, such as an archive "
+              f"migration or a release tag, {_until_words(body)}")
     else:
         g5 = "not the guardrail 5 sign-off"
     extra = ""
@@ -273,14 +354,25 @@ def _confirmation(body):
         extra += f"; only issues labeled {', '.join(body['labels'])}"
     if body.get("max_uses"):
         extra += f"; at most {body['max_uses']} approval(s)"
+    if body.get("agent"):
+        scope = (f"{body['agent']} approves in any session. The other agents of this "
+                 f"session are not covered.")
+        use = f"Only {body['agent']} may use it"
+        name = body["agent"]
+    else:
+        scope = ("The agents of other sessions are not covered; --agent <name> covers "
+                 "that agent in any session.")
+        use = "Only the agents of this session may use it"
+        name = "<your own agent name>"
     return HookResult(
         False,
-        f"Compass: {body['id']} lets {body['agent']} approve for {body['delegated_by']} "
-        f"until {_local(until)} on {issues}: {covers}; {g5}{extra}. Type /compass:revoke "
-        f"to end it early.",
-        f"The person delegated approvals to {body['agent']} as {body['id']} until "
-        f"{body['until']}, covering {covers} on {issues}. Only {body['agent']} may use "
-        f"it, with `compass evidence approve ... --delegated --as {body['agent']}`.")
+        f"Compass: {body['id']} lets {who} approve for {body['delegated_by']} "
+        f"{_until_words(body)} on {issues}: {covers}; {g5}{extra}. {scope} Type "
+        f"/compass:revoke to end it early.",
+        f"The person delegated approvals to {who} as {body['id']} {_until_words(body)}, "
+        f"covering {covers} on {issues}. {use}, with `compass evidence approve ... "
+        f"--delegated --as {name}`, where {name} is the agent's own name: `main` for the "
+        f"main agent.")
 
 
 def _refuse_used_prompt(compass_dir, prompt_id):
@@ -317,7 +409,7 @@ def _typed_code(text):
 
 
 def handle_delegate(session):
-    compass_dir = os.path.dirname(os.path.dirname(session.task_dir))
+    compass_dir = session.compass_dir
     now = _now()
     words = session.args.split()
     with _lock(compass_dir):
@@ -325,9 +417,6 @@ def handle_delegate(session):
         if words[:1] == ["confirm"]:
             return _confirm(compass_dir, session, words[1] if len(words) > 1 else "", now)
         body = parse(session.args, session, now)
-        if len(in_force(compass_dir, now)) >= MAX_IN_FORCE:
-            raise _refused(f"five delegations are in force, the most allowed. Type "
-                           f"/compass:revoke DL-<n> to end one first.")
         if "g5" in body["forms"]:
             code = secrets.token_hex(CODE_BYTES)
             salt = secrets.token_hex(8)
@@ -336,9 +425,9 @@ def handle_delegate(session):
                     "salt": salt, "code_hash": _hash(salt, code), "delegation": body})
             from compass_pkg.prompt_approval import Refused
             raise Refused(
-                f"Compass: this delegation would let {body['agent']} sign off irreversible "
-                f"work, such as an archive migration or a release tag, until "
-                f"{_local(_parse_iso(body['until']))}. Nothing is written until you "
+                f"Compass: this delegation would let {_who(body)} sign off irreversible "
+                f"work, such as an archive migration or a release tag, "
+                f"{_until_words(body)}. Nothing is written until you "
                 f"confirm. To confirm, type /compass:delegate confirm {_show_code(code)} in this "
                 f"session within {CONFIRM_MINUTES} minutes.")
         return _confirmation(_write_delegation(compass_dir, body))
@@ -362,21 +451,28 @@ def _confirm(compass_dir, session, code, now):
         os.remove(path)
         raise _refused(f"the code is more than {CONFIRM_MINUTES} minutes old; type the "
                        f"/compass:delegate command again.")
-    if len(in_force(compass_dir, now)) >= MAX_IN_FORCE:
-        raise _refused("five delegations are in force, the most allowed.")
     os.remove(path)
     body = dict(waiting["delegation"], prompt_id=session.prompt_id,
                 requested_prompt_id=waiting["delegation"].get("prompt_id"))
-    if _parse_iso(body["until"]) <= now:
+    if body.get("until") is not None and _parse_iso(body["until"]) <= now:
         raise _refused("the end time of that delegation has passed.")
     return _confirmation(_write_delegation(compass_dir, body))
 
 
 # --- /compass:revoke ------------------------------------------------------------------------
 
+def _covered(delegation, session_id):
+    """Who a delegation covers, relative to the session that reads it."""
+    if delegation.get("agent"):
+        return f"{delegation['agent']} in every session"
+    if delegation.get("covers_session") and delegation["covers_session"] == session_id:
+        return "this session"
+    return "another session"
+
+
 def handle_revoke(session):
     from compass_pkg.prompt_approval import HookResult
-    compass_dir = os.path.dirname(os.path.dirname(session.task_dir))
+    compass_dir = session.compass_dir
     now = _now()
     named = session.args.split()[0] if session.args.split() else ""
     with _lock(compass_dir):
@@ -389,8 +485,10 @@ def handle_revoke(session):
             body.update(revoked_by=session.approver, revoked_at=_iso(now))
             _write(os.path.join(folder(compass_dir), f"{body['id']}.yml"), body)
     ids = ", ".join(d["id"] for d in live)
+    covered = "; ".join(f"{d['id']} covered {_covered(d, session.session_id)}" for d in live)
     return HookResult(False, f"Compass: revoked {ids}; no agent may approve under "
-                             f"{'it' if len(live) == 1 else 'them'} from now on.",
+                             f"{'it' if len(live) == 1 else 'them'} from now on. "
+                             f"{covered}.",
                       f"The person revoked {ids}. Do not run a delegated approval under "
                       f"{'it' if len(live) == 1 else 'them'}.")
 
@@ -401,22 +499,30 @@ def _labels(task):
     return set((task.get("assessment") or {}).get("labels") or [])
 
 
-def _why_not(delegation, agent, slug, task, form, value, now):
+def _why_not(delegation, agent, slug, task, form, value, now, session_id=""):
     name = delegation.get("id")
-    if delegation.get("agent") != agent:
+    session_scope = (_is_format_2(delegation) and not delegation.get("agent")
+                     and bool(delegation.get("covers_session")))
+    if not session_scope and delegation.get("agent") != agent:
         return None
     if delegation.get("created_via") != "prompt":
         return (f"{name} was not written by a typed /compass:delegate (created_via: "
                 f"{delegation.get('created_via')})")
+    # A session delegation covers the agents of the session it was typed in, as
+    # the pre-tool hook's ticket reports it, and no other.
+    if session_scope and not (session_id and delegation["covers_session"] == session_id):
+        return f"{name} covers only the agents of the session it was typed in"
     reason = ended(delegation, now)
     if reason:
         return reason
     issues = delegation.get("issues") or {}
-    if slug not in issues:
-        return f"{name} covers {', '.join(issues) or 'no issue'}, not {slug}"
-    if issues[slug] != task.get("generation"):
-        return (f"{name} covers {slug} at generation {issues[slug]}, and it is at "
-                f"generation {task.get('generation')}")
+    # A format 2 file that names no issue covers every issue, at any generation.
+    if not (_is_format_2(delegation) and not issues):
+        if slug not in issues:
+            return f"{name} covers {', '.join(issues) or 'no issue'}, not {slug}"
+        if issues[slug] != task.get("generation"):
+            return (f"{name} covers {slug} at generation {issues[slug]}, and it is at "
+                    f"generation {task.get('generation')}")
     forms = delegation.get("forms") or []
     if COVERS[form] not in forms and not (form == "check" and f"check:{value}" in forms):
         return f"{name} covers {_covers_words(forms)}, not {WORDS[COVERS[form]]}"
@@ -425,16 +531,18 @@ def _why_not(delegation, agent, slug, task, form, value, now):
     return ""
 
 
-def authorise(task_dir, form, value, agent):
-    """The delegation in force that lets `agent` record this approval.
-    Raises CompassError naming why none does."""
-    compass_dir = os.path.dirname(os.path.dirname(task_dir))
+def authorise(task_dir, form, value, agent, session_id="", compass_dir=None):
+    """The delegation in force that lets `agent`, in session `session_id`, record
+    this approval. `compass_dir` is the common store's `.compass/` folder; it
+    defaults to the issue's own, as in a project with one checkout. Raises
+    CompassError naming why none does."""
+    compass_dir = compass_dir or os.path.dirname(os.path.dirname(task_dir))
     slug = os.path.basename(os.path.normpath(task_dir))
     task, _ = load_manifest(task_dir)
     now = _now()
     reasons = []
     for delegation in all_delegations(compass_dir):
-        why = _why_not(delegation, agent, slug, task, form, value, now)
+        why = _why_not(delegation, agent, slug, task, form, value, now, session_id)
         if why == "":
             return delegation
         if why:
@@ -446,12 +554,18 @@ def authorise(task_dir, form, value, agent):
                        f"evidence request` and stop. Nothing was written.")
 
 
-def record_use(task_dir, delegation, agent, done, subject):
-    """Count the use on the delegation and write the devlog's audit line."""
-    compass_dir = os.path.dirname(os.path.dirname(task_dir))
+def record_use(task_dir, delegation, agent, done, subject, compass_dir=None):
+    """Count the use on the delegation, index the record in the delegation file
+    (`records`: the issue, its folder, the record ids and the time, so a summary
+    reads only the folders that hold a record) and write the devlog's audit
+    line. `compass_dir` is the common store's `.compass/` folder."""
+    compass_dir = compass_dir or os.path.dirname(os.path.dirname(task_dir))
     path = os.path.join(folder(compass_dir), f"{delegation['id']}.yml")
     body = load_yaml(path)
     body["uses"] = int(body.get("uses") or 0) + 1
+    body.setdefault("records", []).append(
+        {"issue": os.path.basename(os.path.normpath(task_dir)), "folder": str(task_dir),
+         "ids": list(done.evidence_ids), "at": _iso(_now())})
     _write(path, body)
     line = (f"- {_iso(_now())} - {', '.join(done.evidence_ids)} recorded by {agent} under "
             f"{delegation['id']} for {delegation.get('delegated_by')}: {subject}.\n")
@@ -482,24 +596,88 @@ def _waiting(record):
             and record.get("type") in DELEGATED_TYPES and not record.get("reviewed_at"))
 
 
-def unreviewed(compass_dir):
+#: The longest a hook waits for git, in seconds. The hooks run on every prompt, and
+#: a hook that waits longer is stopped by its own time limit.
+HOOK_GIT_SECONDS = 8
+
+
+def _store_compass(compass_dir, timeout=HOOK_GIT_SECONDS):
+    """The common store's `.compass/` folder for the project that holds
+    `compass_dir`, or None when there is no store."""
+    from compass_pkg import worktree_lookup
+    store = worktree_lookup.common_store(os.path.dirname(compass_dir), timeout=timeout)
+    return None if store.folder is None else os.path.dirname(store.folder)
+
+
+def _moved(slug, compass_dir, listing, timeout):
+    """The folder of an indexed issue that was moved: found again by its slug.
+    `listing` is a dict that holds the worktree listing once it is made, so one
+    summary lists the worktrees once, however many records are indexed."""
+    from compass_pkg import worktree_lookup
+    if "listing" not in listing:
+        listing["listing"] = worktree_lookup.list_worktrees(os.path.dirname(compass_dir),
+                                                            timeout=timeout)
+    try:
+        return worktree_lookup.find_issue(listing["listing"], str(slug))
+    except (worktree_lookup.NotFound, worktree_lookup.HeldTwice):
+        return None
+
+
+def _want(wanted, folder, ids):
+    """Note that `folder` is read for the records `ids`, or for every waiting
+    record when `ids` is None."""
+    key = os.path.realpath(folder)
+    old = wanted.get(key)
+    if key in wanted and (old[1] is None or ids is None):
+        wanted[key] = (old[0], None)
+    elif key in wanted:
+        wanted[key] = (old[0], old[1] | set(ids))
+    else:
+        wanted[key] = (folder, None if ids is None else set(ids))
+
+
+def unreviewed(compass_dir, timeout=HOOK_GIT_SECONDS):
     """`[(folder, manifest, record)]` for each approval made under a delegation
-    that the person has not marked reviewed. Only the issues a delegation names
-    are read, so a project with no delegation reads no manifest: the summary
-    runs on every prompt."""
-    named = set()
-    for delegation in all_delegations(compass_dir):
-        named.update(delegation.get("issues") or {})
+    that the person has not marked reviewed, in any worktree. Only the folders
+    the delegations' `records` index names are read, plus the issues a 7.0.0
+    file names, so a project with no delegation file starts no git process
+    from a main checkout and opens no manifest: the summary runs on every
+    prompt."""
+    return _review_state(compass_dir, timeout)[1]
+
+
+def _review_state(compass_dir, timeout=HOOK_GIT_SECONDS):
+    """`(store, rows, has_delegations)`: the store's `.compass/` folder (None when
+    there is none), the rows `unreviewed` returns, and whether the store holds
+    any delegation file."""
+    store = _store_compass(compass_dir, timeout)
+    if store is None:
+        return None, [], False
+    wanted, listing = {}, {}
+    files = all_delegations(store)
+    for delegation in files:
+        for entry in delegation.get("records") or []:
+            if not isinstance(entry, dict):
+                continue
+            folder = entry.get("folder")
+            if not (folder and os.path.isdir(folder)) and entry.get("issue"):
+                folder = _moved(entry["issue"], compass_dir, listing, timeout)
+            if folder:
+                _want(wanted, folder, entry.get("ids") or [])
+        if not _is_format_2(delegation):
+            for slug in delegation.get("issues") or {}:
+                folder = os.path.join(compass_dir, "work", str(slug))
+                if os.path.isdir(folder):
+                    _want(wanted, folder, None)
     found = []
-    for task_dir in _issue_dirs(compass_dir):
-        if os.path.basename(task_dir) not in named:
-            continue
+    for folder, ids in sorted(wanted.values(), key=lambda item: item[0]):
         try:
-            task, _ = load_manifest(task_dir)
+            task, _ = load_manifest(folder)
         except CompassError:
             continue
-        found += [(task_dir, task, r) for r in task.get("evidence") or [] if _waiting(r)]
-    return found
+        found += [(folder, task, r) for r in task.get("evidence") or []
+                  if _waiting(r) and (ids is None or r.get("id") in ids)]
+    return store, found, bool(files)
 
 
 def _subject(record):
@@ -524,64 +702,218 @@ def _self_written(task, record):
     return bool(session) and entry.get("registered_session") == session
 
 
-def review_summary(compass_dir):
-    """The display-only summary of delegated approvals not yet reviewed, or ''.
-    It never writes a record."""
-    rows = unreviewed(compass_dir)
-    if not rows:
+def _plural(number, word):
+    return f"{number} {word}" if number == 1 else f"{number} {word}s"
+
+
+def session_start_lines(project, session_id, source, now=None):
+    """What session start tells the person about delegations in force with no
+    end time: one line each, with its age in whole days, who it covers, whether
+    it covers the session that is starting and how many approvals it has given.
+    After `/clear`, a line also says that a session delegation of the earlier
+    session no longer covers this one: `/clear` gives a new session id and no
+    field names the old one, so Compass cannot say a session ended, only that
+    it is not this one. '' when there is none."""
+    now = now or _now()
+    store = _store_compass(os.path.join(project, ".compass"))
+    if store is None:
         return ""
+    listed = [d for d in all_delegations(store)
+              if _is_format_2(d) and d.get("until") is None and ended(d, now) is None]
+    if not listed:
+        return ""
+    lines = ["Compass: delegations in force with no end time:"]
+    for d in listed:
+        name = d.get("id")
+        try:
+            days = max(0, (now - _parse_iso(d.get("created_at"))).days)
+        except (TypeError, ValueError):
+            days = 0
+        tail = (f"In force for {_plural(days, 'day')}; "
+                f"{_plural(int(d.get('uses') or 0), 'approval')}.")
+        if d.get("agent"):
+            text = (f"{name} has no end time and covers {d['agent']} in every session, "
+                    f"including this one. It stays in force until you type "
+                    f"/compass:revoke {name}.")
+        elif d.get("covers_session") and d["covers_session"] == session_id:
+            text = (f"{name} has no end time and covers the agents of the session it was "
+                    f"typed in. That is this session. It stays in force until you type "
+                    f"/compass:revoke {name}.")
+        else:
+            text = (f"{name} has no end time and covers the agents of the session it was "
+                    f"typed in. That is not this session. Compass cannot tell whether that "
+                    f"session is still open, so it covers that session's agents until you "
+                    f"type /compass:revoke {name}.")
+        lines.append(f"  {text} {tail}")
+    if source == "clear" and any(not d.get("agent") for d in listed):
+        lines.append("/clear started a new session. A delegation typed before /clear "
+                     "without --agent does not cover this session. Type /compass:delegate "
+                     "to cover it.")
+    return "\n".join(lines)
+
+
+def _project_of(task_dir):
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.normpath(task_dir))))
+
+
+def _summary_text(rows):
     lines = [f"Compass: {len(rows)} approval(s) made under a delegation wait for your "
              f"review:"]
     for task_dir, task, record in rows:
         flag = (" - the agent approved a document it wrote in the same session"
                 if _self_written(task, record) else "")
         lines.append(f"  {record.get('id')} - {_subject(record)}, issue "
-                     f"{os.path.basename(task_dir)}, by {record.get('approved_by_agent')} "
-                     f"under {record.get('delegation')} at {record.get('timestamp')}{flag}")
+                     f"{os.path.basename(task_dir)} ({_project_of(task_dir)}), by "
+                     f"{record.get('approved_by_agent')} under {record.get('delegation')} "
+                     f"at {record.get('timestamp')}{flag}")
     lines.append("Type /compass:approve to mark them reviewed, or /compass:reject <record id> "
                  "<reason> to overrule one.")
     return "\n".join(lines)
 
 
-def review_dirs(compass_dir):
-    """The issue folders that hold a delegated approval not yet reviewed: the
-    issue locks `/compass:approve` with nothing pending must hold."""
-    return sorted({row[0] for row in unreviewed(compass_dir)})
+def review_summary(compass_dir):
+    """The display-only summary of delegated approvals not yet reviewed, or ''.
+    It never writes a record."""
+    rows = unreviewed(compass_dir)
+    return _summary_text(rows) if rows else ""
 
 
-def mark_reviewed(session, held):
-    """`/compass:approve` with no request pending: mark every delegated approval
-    reviewed. None when there is nothing to review.
+def _row_digest(task, record):
+    """The digest of what the person is shown of one row, so a record changed
+    after it was shown is not marked reviewed."""
+    shown = [record.get("id"), _subject(record), record.get("approved_by_agent"),
+             record.get("delegation"), str(record.get("timestamp")),
+             _self_written(task, record)]
+    return hashlib.sha256(json.dumps(shown).encode("utf-8")).hexdigest()
+
+
+#: The shown list keeps this many summaries for each session: the latest, and the
+#: one before it, because the prompt hook of a typed command can run after the
+#: summary hook of the same prompt.
+SHOWN_KEPT = 2
+
+
+def _shown_path(store_compass, session_id):
+    safe = re.sub(r"[^A-Za-z0-9_-]", "_", session_id)
+    return os.path.join(folder(store_compass), "shown", f"{safe}.json")
+
+
+def _read_shown(store_compass, session_id):
+    try:
+        with open(_shown_path(store_compass, session_id), encoding="utf-8") as fh:
+            body = json.load(fh)
+    except (OSError, ValueError):
+        return []
+    entries = body.get("entries") if isinstance(body, dict) else None
+    return [e for e in entries or [] if isinstance(e, dict)]
+
+
+def summary_for_hook(project, session_id, prompt_id):
+    """What a summary hook prints for the session `session_id`, and the record of
+    what it showed: the store's `shown/<session>.json` gets one entry holding
+    the prompt id, the time and each row's folder, issue, record id and digest.
+    Nothing is written when there is nothing to show, or when the hook input
+    names no session. A write that fails leaves the rows unrecorded, so the
+    next summary shows them again."""
+    state = summary_state(project)
+    text = _summary_text(state[1]) if state[1] else ""
+    record_shown(state, session_id, prompt_id)
+    return text
+
+
+def summary_state(project):
+    """What a summary hook needs: `(store, rows, has_delegations)`. A hook builds
+    its whole message from it first, prints it, and only then calls
+    `record_shown`, so a row is never recorded as shown without having been
+    shown."""
+    return _review_state(os.path.join(project, ".compass"))
+
+
+def summary_text(state):
+    """The summary of the rows of a `summary_state`, or ''."""
+    return _summary_text(state[1]) if state[1] else ""
+
+
+def record_shown(state, session_id, prompt_id):
+    """Write the shown-list entry for a summary. With no row to show, the entry
+    holds no rows, so an earlier summary is not used again for `/compass:approve`;
+    that is written only when the store holds a delegation file, so a project with
+    none writes nothing. A write that fails leaves the rows unrecorded."""
+    store, rows, has_delegations = state
+    if not session_id or store is None or not has_delegations:
+        return
+    try:
+        entries = _read_shown(store, session_id)[-(SHOWN_KEPT - 1):]
+        entries.append({"prompt_id": prompt_id or "", "shown_at": _iso(_now()),
+                        "records": [{"folder": folder, "issue": os.path.basename(folder),
+                                     "id": record.get("id"),
+                                     "digest": _row_digest(task, record)}
+                                    for folder, task, record in rows]})
+        path = _shown_path(store, session_id)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        atomic_io.atomic_write_text(path, json.dumps({"entries": entries}))
+    except (OSError, TypeError):
+        pass
+
+
+def last_shown(compass_dir, session_id, prompt_id):
+    """The latest summary shown in this session whose prompt id differs from
+    `prompt_id`, or None. A summary shown for the prompt that holds the command
+    does not count, whichever of the two hooks ran first."""
+    store = _store_compass(compass_dir)
+    if store is None or not session_id:
+        return None
+    for entry in reversed(_read_shown(store, session_id)):
+        if entry.get("prompt_id", "") != (prompt_id or ""):
+            return entry
+    return None
+
+
+def mark_reviewed(session, entry, held):
+    """`/compass:approve` with no request pending: mark reviewed the rows of the
+    summary `entry` that the session was shown, and only those whose record is
+    still waiting and still shows what it showed (the digest). None when none is
+    marked.
 
     `held` names the issue folders whose approval locks the caller holds,
     taken in one sorted order with the session's own (`approvals.lock_all`).
     Taking another lock here, while holding the session's own, let two
-    sessions on two issues wait for each other for ever. An approval on an
-    issue outside `held`, made after the caller took its locks, is left for
-    the next `/compass:approve`; the review summary still shows it."""
+    sessions on two issues wait for each other for ever. A row outside `held`
+    is left for the next `/compass:approve`; the review summary still shows
+    it."""
     from compass_pkg.core import save_manifest
     from compass_pkg.prompt_approval import HookResult
-    compass_dir = os.path.dirname(os.path.dirname(session.task_dir))
     locked_dirs = {os.path.realpath(d) for d in held}
-    rows = [row for row in unreviewed(compass_dir)
-            if os.path.realpath(row[0]) in locked_dirs]
-    if not rows:
-        return None
+    by_folder = {}
+    for item in (entry or {}).get("records") or []:
+        by_folder.setdefault(item.get("folder"), []).append(item)
     stamp = _iso(_now())
     ids = []
-    for task_dir in sorted({row[0] for row in rows}):
-        task, path = load_manifest(task_dir)
-        for record in task.get("evidence") or []:
-            if _waiting(record):
+    for folder_name, items in sorted(by_folder.items(), key=lambda kv: str(kv[0])):
+        if not folder_name or os.path.realpath(folder_name) not in locked_dirs:
+            continue
+        try:
+            task, path = load_manifest(folder_name)
+        except CompassError:
+            continue
+        changed = False
+        for item in items:
+            record = next((r for r in task.get("evidence") or []
+                           if isinstance(r, dict) and r.get("id") == item.get("id")), None)
+            if _waiting(record) and _row_digest(task, record) == item.get("digest"):
                 record.update(reviewed_by=session.approver, reviewed_at=stamp)
-                ids.append(record.get("id"))
-        save_manifest(task, path)
+                ids.append(record["id"])
+                changed = True
+        if changed:
+            save_manifest(task, path)
+    if not ids:
+        return None
     return HookResult(False, f"Compass: marked {len(ids)} delegated approval(s) reviewed by "
                              f"{session.approver}: {', '.join(ids)}.",
                       f"The person reviewed the delegated approvals {', '.join(ids)}.")
 
 
-def overrule(session, args):
+def overrule(session, args, where=""):
     """`/compass:reject <record id> <reason>`: overrule one approval made under
     a delegation. A check gets a `rejected` record, a document returns to
     draft, and a guardrail 5 sign-off gets an `approval-withdrawal` record.
@@ -638,8 +970,8 @@ def overrule(session, args):
     said = f": {reason}" if reason else ""
     return HookResult(
         False,
-        f"Compass: overruled {record_id} ({subject}) for {session.approver}{said} - "
-        f"{written}. This records your disagreement; it does not reverse anything the "
+        f"Compass: overruled {record_id} ({subject}) on issue {session.slug}{where} for "
+        f"{session.approver}{said} - {written}. This records your disagreement; it does not reverse anything the "
         f"agent already did.",
         f"The person overruled {record_id} ({subject}){said}. Do not rely on that "
         f"approval; ask the person what should change.")

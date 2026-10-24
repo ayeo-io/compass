@@ -235,13 +235,18 @@ def test_gv_5_the_script_writes_and_checks(tmp_path):
     assert SCRIPT.is_file(), "scripts/generate-legacy-views.py is missing"
     root = _root_copy(tmp_path)
     assert _run("--check", root=root).returncode == 0
-    _edit(root / VIEWS[1], "version: 1.33.1", "version: 1.33.2")
+    # Hand-edit the view's version to one the generator would not write. The
+    # current version is read, so a later bump of the view does not break
+    # this test.
+    current = yaml.safe_load((root / VIEWS[1]).read_text(encoding="utf-8"))["version"]
+    edited = f"{current}.9"
+    _edit(root / VIEWS[1], f"version: {current}", f"version: {edited}")
     checked = _run("--check", root=root)
     assert checked.returncode == 1
     assert VIEWS[1] in checked.stdout + checked.stderr
     assert COMMAND in checked.stdout + checked.stderr
     # `--check` writes nothing.
-    assert "version: 1.33.2" in (root / VIEWS[1]).read_text(encoding="utf-8")
+    assert f"version: {edited}" in (root / VIEWS[1]).read_text(encoding="utf-8")
     written = _run(root=root)
     assert written.returncode == 0, written.stderr
     first = {v: (root / v).read_bytes() for v in VIEWS}

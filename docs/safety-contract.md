@@ -80,14 +80,67 @@ terminal a person runs `compass evidence approve --guardrail` and the value `G5`
 giving `--approver`, `--role` and `--scope`; on a host whose adapter
 has no person-only approval event, such as Codex, that is the only path.
 
-From 7.0.0 a person can also delegate approvals to one named agent with
-`/compass:delegate`, for at most 24 hours and a stated scope (ADR-069). The
-guardrail 5 sign-off is covered only when typed, and only after the person
-types back a code the hook showed them. The record names the person, the
-agent and the delegation. The person sees a summary of delegated approvals
-until they mark them reviewed, and `/compass:reject <record id>` overrules
-one; for the sign-off it writes an `approval-withdrawal` record, which never
-reverses an action already taken and never fails a landed issue.
+A person can also delegate approvals with `/compass:delegate [--agent <name>]
+[--until <time>] [--on <issues>] [--for <forms>] [--max <n>]` (ADR-069,
+amended by ADR-077). The person sets the bounds, and Compass puts no upper
+limit on how long a delegation lasts or on how many are in force:
+
+- With no `--until`, a delegation lasts until `/compass:revoke`. Compass lists
+  each delegation with no end time when a session starts, after `/clear` and
+  after the conversation is compacted, with its age, who it covers and how
+  many approvals it has given. A session resumed with `--resume` or
+  `--continue` keeps its session id, so a delegation typed in it still covers
+  it, but Compass shows no list for a resumed session.
+- With no `--agent`, a delegation covers the session it was typed in: its main
+  agent and its subagents, including built-in ones such as general-purpose, in
+  any worktree. With `--agent <name>`, it covers that agent in any session.
+  `any` is refused.
+- With no `--on`, a delegation covers every issue in the repository's
+  worktrees, at any generation. With `--on <issues>`, it covers those issues, each
+  at the generation it had when the delegation was made.
+- Every worktree reads one common store: `.compass/delegations/` in the main
+  checkout. A delegation file in a linked worktree's own folder gives no
+  approval.
+- The guardrail 5 sign-off is covered only with `--for g5`, and only after the
+  person types back a code the hook showed them. After that code, the
+  delegation can have no end time and cover every issue, so one typed-back code
+  can cover several irreversible changes. `--labels` is not a flag.
+- The agent runs `compass evidence approve --issue <slug> --delegated --as
+  <agent>` as a plain command in its Bash tool, with `compass` in command
+  position, not as an argument of `echo` or another command. The pre-tool
+  hook reads the command and writes a call ticket into the store: the session
+  and the caller that Claude Code reported, and a digest of the command's
+  words. The CLI takes the matching ticket and tests the session from it. It
+  never reads the session from the environment. A call the hook never read,
+  such as one inside a script, has no ticket of its own, so the CLI refuses
+  it.
+- The hook writes the ticket before the call runs, so Compass deletes it as
+  soon as it cannot be used for that call: when the call finishes or fails,
+  when Claude Code reports the call's permission denied, when the turn ends,
+  and when the person submits the next prompt. A ticket that is never taken
+  also expires after 10 minutes. Three windows stay open. When the person
+  denies a permission prompt, Claude Code runs no hook until the next prompt,
+  so a process the agent had already started in the background can take the
+  ticket before then. When auto mode's check denies a call and Claude Code
+  sends no hook for it, the agent can take the ticket from a script in the
+  same turn. When the shell skips a `compass` command in command position,
+  as after `true ||` or `false &&` or on a heredoc line, a program that the
+  same call starts can take its ticket before the call ends. In each case the
+  ticket names only the session and the agent that made the call.
+- Two limits come from running as the person's operating system user. A
+  process running as that user can write a ticket into the store. A process
+  that can start Claude Code as that user can resume a session by its id, as
+  `claude --resume <session id>` does, and its hooks then report that
+  session, so it can use a delegation typed in that session without
+  `--agent`. Session ids appear in the issue's records. Neither limit is
+  closed: a process that can do either can already act as the person.
+
+The record names the person, the agent and the delegation. The person sees a
+summary of delegated approvals, from any worktree, until they mark them
+reviewed. `/compass:approve` with nothing pending marks reviewed only the
+approvals that the session's last summary showed. `/compass:reject <record id>`
+overrules one; for the sign-off it writes an `approval-withdrawal` record, which
+never reverses an action already taken and never fails a landed issue.
 
 What holds the boundary, and what does not:
 
@@ -353,7 +406,10 @@ folder link) states where the guard is exact:
   a later Bash call is the same. This is an accepted limit, because the
   earlier hook allowed a Write tool call followed by a shell command that runs
   the file. A command that is not simple and names a protected thing in the
-  same call is refused. What holds depends on what the script reads:
+  same call is refused. A delegated approval is the exception: a script the
+  hook never read has no call ticket of its own, so the CLI refuses it, apart
+  from the three windows the delegation section above names. What holds
+  depends on what the script reads:
   - for the delegation files, the stored hash and the 64-bit code. The hash is
     stored and the code is not, so a script cannot read the code from the
     files;

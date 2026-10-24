@@ -5,8 +5,7 @@ code, specs or artifacts. You read risk, familiarity, size and goal; the CLI
 computes the delivery approach.
 
 **Never skip assessment.** Only conversation is exempt: answering,
-explaining, reading. Before a tool call changes a file, the issue must be
-assessed.
+explaining, reading. Assess before a tool call changes a file.
 
 **Trigger on intent, not on the command.** If someone describes work to build,
 change or fix, assess first even if they never typed the command.
@@ -26,7 +25,8 @@ Strategies, such as testing first, can be stepped off with a recorded reason;
 guardrails cannot.
 
 **Approvals.** Approve only under a delegation naming you, with `compass
-evidence approve --delegated --as <you>`. Otherwise run `compass
+evidence approve --delegated --as <you> --issue <slug>`, as a plain Bash
+command, not a script. Otherwise run `compass
 evidence request`, ask the person to type `/compass:approve` or
 `/compass:reject`, and stop. Never create, extend or revoke a delegation.
 
@@ -53,7 +53,7 @@ resumes from those files.
 Honor the delivery approach's stage weights.
 
 **Record friction you observe.** If a step costs more than it returns and
-will recur, run `compass issue friction` with evidence and a one-line fix.
+will recur, run `compass issue friction` with evidence and a fix.
 
 **Where to look.** `compass <verb> --help` explains a verb; the
 `compass-runtime` skill maps the stages.

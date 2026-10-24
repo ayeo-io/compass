@@ -369,12 +369,13 @@ def test_f8_cli_refuses_an_agent_the_delegation_does_not_name(tmp_path):
     until = (datetime.datetime.now().astimezone() + datetime.timedelta(hours=2))
     done = prompt_approval.handle(
         event(root, command="compass:delegate",
-              args=f"compass:architect until {until:%H:%M}"), {},
+              args=f"--agent compass:architect --until {until:%H:%M}"), {},
         plugin_root=str(FRAMEWORK_ROOT))
     assert not done.block, done
     before = (task_dir(root) / "manifest.yml").read_bytes()
-    code, out, err = run(root, "evidence", "approve", "--issue", SLUG, "--check", CHECK,
-                         "--scope", "x", "--delegated", "--as", "compass:builder")
+    from delegation_support import delegated
+    code, out, err = delegated(root, "compass:builder", "--issue", SLUG, "--check", CHECK,
+                               "--scope", "x")
     assert code != 0 and "no delegation in force names compass:builder" in out + err
     # The CLI takes no abbreviated flag, so the pre-tool check cannot be passed by one.
     code, out, err = run(root, "evidence", "approve", "--issue", SLUG, "--check", CHECK,

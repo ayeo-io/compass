@@ -23,8 +23,8 @@ evidence_types:
       for guardrail `G5` clears `human-approval-present`: one with no check, waiver, checkpoint, artifact
       or decisions key, and a guardrail key that is absent or exactly `G5`. A person records one by typing
       `/compass:approve` in Claude Code, or with `compass evidence approve --guardrail` and the value
-      `G5` at a terminal; an agent under a delegation that covers g5 records one with `--delegated --as
-      <agent>`.'}
+      `G5` at a terminal; an agent under a delegation that covers g5 records one with `--issue <slug>
+      --delegated --as <agent>`.'}
   artifact-approval: {description: A person's approval of one document or of a set of decisions taken
       for the person. Meets an artifact's human check; never a sign-off for guardrail `G5`.}
   approval-withdrawal: {description: 'A person''s withdrawal of a guardrail `G5` sign-off made under a

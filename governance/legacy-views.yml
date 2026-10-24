@@ -22,7 +22,7 @@ routing_policy:
     RP-ROLE-002: {replaced_by: RP-ART-002, retired_in: 7.0.0}
     RP-SROLE-001: {replaced_by: null, retired_in: 7.0.0}
 guardrails:
-  version: 1.33.1
+  version: 1.33.2
   project: []
   when_keys: {risk: blast_radius, labels_any: touches_any}
   checked_at:

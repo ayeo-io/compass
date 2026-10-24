@@ -4861,3 +4861,129 @@ The approval guard now refuses a protected folder name split by a backslash and 
 - `TRC-012` A long escape tail after a protected name is refused within 2 seconds
 - `TRC-013` Bracket words with a class end are decided within 2 seconds
 - `TRC-014` A long brace word is decided within 2 seconds
+
+### delegation-everywhere (completed 2026-10-24)
+
+/compass:delegate takes optional flags (--agent, --until, --on, --for, --max). With none, a delegation covers this session's agents on every issue until /compass:revoke, with no time limit and no cap. Delegations, /compass:approve and /compass:reject now work across git worktrees, a delegated approval names --issue and its session comes from the pre-tool hook, and /compass:approve marks reviewed only the approvals the session was shown.
+
+- `TRC-001` A bare /compass:delegate covers this session, every issue and the default forms until revoked
+- `TRC-002` The flags can come in any order
+- `TRC-003` --agent names one agent exactly as Claude Code reports it
+- `TRC-004` --agent any is refused
+- `TRC-005` --until has no upper limit
+- `TRC-006` An end time that has passed or cannot be read is refused
+- `TRC-007` --max takes a whole number of at least 1
+- `TRC-008` --for takes only the forms a delegation covers
+- `TRC-009` A sixth delegation in force is accepted
+- `TRC-010` The old positional form is refused with the flag form
+- `TRC-011` --labels is refused with a pointer to --on
+- `TRC-012` An unknown flag is refused and named
+- `TRC-013` A flag given twice is refused and named
+- `TRC-014` A flag with no value is refused
+- `TRC-015` A flag joined to its value with an equals sign is refused
+- `TRC-016` A word that belongs to no flag is refused
+- `TRC-017` A delegation with no --agent needs a session id
+- `TRC-018` --for g5 with no end time waits for the confirmation code
+- `TRC-019` The typed-back code writes the guardrail 5 delegation with no end time
+- `TRC-020` With no --on, an issue created after the delegation is covered
+- `TRC-021` With no --on, an issue at a later generation is still covered
+- `TRC-022` --on accepts an issue that only another worktree holds
+- `TRC-023` --on accepts issues from two worktrees in one list
+- `TRC-024` --on refuses an issue no worktree holds and names the worktrees searched
+- `TRC-025` --on refuses an issue that two worktrees hold and names both
+- `TRC-026` --on still narrows the delegation to the named issues
+- `TRC-027` --on still binds each issue to its generation
+- `TRC-028` --on refuses a name that is not one folder name
+- `TRC-029` An issue folder that is a symbolic link out of its worktree is not found
+- `TRC-030` A worktree whose folder is missing is skipped
+- `TRC-031` When the worktrees cannot be listed, only this checkout is searched
+- `TRC-032` A project in a subfolder of the repository is found at the same path in each worktree
+- `TRC-033` The main agent of the delegating session approves under a session delegation
+- `TRC-034` A subagent of the delegating session approves on an issue in another worktree
+- `TRC-035` An agent of another session is refused under a session delegation
+- `TRC-036` An agent that claims the delegating session's id in its command is refused
+- `TRC-037` A delegated approval that reports no session id is not covered by a session delegation
+- `TRC-038` Two sessions' delegations each cover only their own session
+- `TRC-039` A delegation that names an agent covers that agent in any session
+- `TRC-040` A delegation that names an agent refuses every other agent
+- `TRC-041` A delegation typed in a session in a linked worktree is kept in the common store
+- `TRC-042` A delegation file in a linked worktree's own folder gives no approval
+- `TRC-043` A delegation written by Compass 7.0.0 keeps its limits
+- `TRC-044` /compass:approve <n> records the request on the issue in the worktree that holds it
+- `TRC-045` The request is found when the session's folder has no compass.yml and its pointer names another issue
+- `TRC-046` COMPASS_APPROVER names the approver for a request in another worktree
+- `TRC-047` A request in another worktree that was not shown is shown first
+- `TRC-048` Two worktrees with pending request n are refused, and the refusal lists the issue form
+- `TRC-049` /compass:approve <issue> <n> records request n of that issue
+- `TRC-050` /compass:approve <issue> <n> refuses an issue that two worktrees hold
+- `TRC-051` /compass:approve <issue> <n> refuses an issue that no worktree holds
+- `TRC-052` When no worktree holds pending request n, the refusal says so and gives no approver advice
+- `TRC-053` The worktree that holds the request has no approver
+- `TRC-054` /compass:approve with arguments of neither form is refused with both forms
+- `TRC-055` A typed command already answered on an issue in another worktree is refused
+- `TRC-056` /compass:reject <n> <reason> rejects the request in the worktree that holds it
+- `TRC-057` /compass:reject refuses two worktrees with pending request n and lists the issue form
+- `TRC-058` /compass:reject <issue> <n> <reason> rejects request n of that issue
+- `TRC-059` /compass:approve with nothing pending marks reviewed only what the last summary showed
+- `TRC-060` An approval recorded after the summary appears in the next summary
+- `TRC-061` A summary shown in answer to the /compass:approve prompt itself does not count
+- `TRC-062` The summary lists delegated approvals on issues in other worktrees
+- `TRC-063` /compass:approve with nothing pending marks a shown approval in another worktree reviewed
+- `TRC-064` A summary shown in another session does not count
+- `TRC-065` /compass:reject <record id> overrules a delegated approval in another worktree
+- `TRC-066` /compass:reject <record id> held by two issues is refused and lists the issue form
+- `TRC-067` With no delegation file, the summary starts no git process and reads no manifest
+- `TRC-068` Session start lists each open-ended delegation with its age and its approvals
+- `TRC-069` The list shows when nothing waits for review
+- `TRC-070` A delegation that has an end time or is no longer in force is not listed as open-ended
+- `TRC-071` A session started in a linked worktree lists the open-ended delegations of the common store
+- `TRC-072` No CLI verb creates a delegation
+- `TRC-073` A delegated agent cannot record a rejection
+- `TRC-074` The agent's tools cannot reach the common store from a linked worktree
+- `TRC-075` A delegation without --for g5 does not cover the guardrail 5 sign-off
+- `TRC-076` A wrong, late or other session's confirmation code writes no delegation
+- `TRC-077` A typed /compass:delegate is answered once
+- `TRC-078` /compass:revoke DL-n ends one of several, from a session in any worktree
+- `TRC-079` /compass:revoke with no id ends every delegation in force
+- `TRC-080` --max ends the delegation after its last approval
+- `TRC-081` The command file shows the flag form
+- `TRC-082` The safety contract states the limits that hold now
+- `TRC-083` A decision record amends ADR-069
+- `TRC-095` An issue named with --on that is later copied into a second worktree is refused
+- `TRC-096` A delegated approval on an issue that two worktrees hold is refused under a delegation with no --on
+- `TRC-091` /compass:delegate takes the approver from the folder that holds the common store
+- `TRC-092` /compass:delegate is refused when the folder that holds the common store names no approver
+- `TRC-093` /compass:delegate and /compass:revoke work when the session's folder names no current issue
+- `TRC-094` When the main checkout has no .compass/ folder, a delegation still reaches every worktree
+- `TRC-098` A recorded hook input from a real subagent in a linked worktree is covered by its session's delegation
+- `TRC-084` A pending request on an issue that is not its worktree's current issue is not found by /compass:approve <n>
+- `TRC-085` /compass:approve <n> --issue <slug> reaches an issue that is not a worktree's current issue
+- `TRC-086` A worktree with no current issue is skipped
+- `TRC-087` A bare /compass:approve answers the one request pending across worktrees
+- `TRC-088` A bare /compass:approve refuses when more than one request is pending across worktrees
+- `TRC-089` A bare /compass:reject <reason> rejects the one request pending across worktrees
+- `TRC-090` --issue can come anywhere in /compass:reject and is not part of the reason
+- `TRC-097` The request names --issue when another worktree's current issue holds the same number
+- `TRC-099` A delegated checkpoint or decisions approval cannot be overruled with /compass:reject <record id>
+- `TRC-100` The README's delegation bullet says the person sets the bounds
+- `TRC-101` The guardrails prose in governance/guardrails.md states what a guardrail 5 delegation covers now
+- `TRC-102` The owning doc docs/entry-exit-evaluation.md describes the delegation and review behavior that holds now
+- `TRC-103` The decision index names the record that amends ADR-069
+- `TRC-104` The upgrade guide of the release that ships this change says what breaks
+- `TRC-105` No current document states a delegation limit that no longer holds
+- `TRC-106` A delegated approval with no pre-tool hook ticket is refused
+- `TRC-107` A delegated approval with no --issue is refused and shows the --issue form
+- `TRC-108` After /clear, session start says the earlier session's delegation no longer covers this session
+- `TRC-109` Session start says Compass cannot tell whether another session's delegation is still in use
+- `TRC-110` A ticket is written only when compass is in command position
+- `TRC-111` The post-tool hook deletes the tickets of the call that finished
+- `TRC-112` The stop hook deletes the unused tickets of the session
+- `TRC-113` A redirect is not part of the words a ticket binds
+- `TRC-114` A removed worktree does not stop a bare approve, and an empty summary is recorded
+- `TRC-115` The summary lists the worktrees once, with the hook timeout
+- `TRC-116` Session start records the shown list only for rows it shows
+- `TRC-117` The summary hook reads only the session and prompt ids
+- `TRC-118` The evidence type texts name the issue form of a delegated approval
+- `TRC-119` A failed call deletes its ticket
+- `TRC-120` A denied permission deletes the ticket of that call
+- `TRC-121` A prompt deletes the unused tickets of the session

@@ -35,6 +35,42 @@
 set -euo pipefail
 
 INPUT="$(cat || true)"
+
+# A Bash call that has finished, failed or been denied: delete the call tickets
+# the pre-tool hook wrote for it, so a ticket never outlives its call
+# (cli/compass_pkg/delegation_tickets.py). Python starts only for a command that
+# holds `--delegated`, so an ordinary Bash call starts none. A Bash call writes no
+# devlog line, so this branch ends the hook.
+HOOK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if command -v jq >/dev/null 2>&1; then
+  _tool="$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)"
+else
+  _tool="$(printf '%s' "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)"
+fi
+if [ "$_tool" = "Bash" ]; then
+  case "$INPUT" in
+    *--delegated*)
+      if [ -f "$HOOK_ROOT/scripts/lib/compass-python.sh" ]; then
+        # shellcheck source=../scripts/lib/compass-python.sh
+        . "$HOOK_ROOT/scripts/lib/compass-python.sh"
+        printf '%s' "$INPUT" | compass_python -c '
+import json, sys
+
+import compass_pkg                      # noqa: F401 - puts vendor on sys.path
+from compass_pkg import delegation_tickets
+
+try:
+    event = json.load(sys.stdin)
+except ValueError:
+    event = {}
+if isinstance(event, dict):
+    delegation_tickets.drop_call(event)
+' 2>/dev/null || true
+      fi ;;
+  esac
+  exit 0
+fi
+
 # Find the project with the same ancestor walk as hooks/pre-tool.sh, so the
 # devlog line is written from any subdirectory. The hook never blocks. When
 # it finds no project it prints a note on stderr and exits 0.

@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from approval_support import (CHECK, OWNER, SLUG, event, manifest_of,  # noqa: E402
                               project, run, save_manifest, task_dir)
+from delegation_support import delegated  # noqa: E402
 
 ARCHITECT = "compass:architect"
 
@@ -62,20 +63,22 @@ def _soon(hours=2):
 
 
 def _approve(root, *argv, agent=ARCHITECT):
-    return run(root, "evidence", "approve", "--issue", SLUG, *argv, "--delegated", "--as",
-               agent)
+    """A delegated approval, with the ticket the pre-tool hook would write for it."""
+    return delegated(root, agent, "--issue", SLUG, *argv)
 
 
 # --- a person delegates approvals to a named agent (`TRC-F1`) ---------------------------------
 
 def test_f1_delegate_written_and_confirmed(tmp_path, clock):
     root = project(tmp_path)
-    result = _type(root, f"{ARCHITECT} until 08:00 for checks,documents")
+    result = _type(root, f"--agent {ARCHITECT} --until 08:00 --on {SLUG} "
+                         f"--for checks,documents")
     assert not result.block, result
     found = _delegations(root)
     assert list(found) == ["DL-1"], found
     dl = found["DL-1"]
-    end = (clock + datetime.timedelta(days=1)).replace(hour=8, minute=0)
+    end = datetime.datetime.combine((clock + datetime.timedelta(days=1)).date(),
+                                    datetime.time(8, 0)).astimezone()
     assert dl["agent"] == ARCHITECT and dl["delegated_by"] == OWNER
     assert dl["created_via"] == "prompt" and dl["session_id"] == "sess-1" and dl["nonce"]
     assert datetime.datetime.fromisoformat(dl["until"].replace("Z", "+00:00")) == end
@@ -92,11 +95,11 @@ def test_f1_delegate_written_and_confirmed(tmp_path, clock):
 
 def test_f2_g5_only_when_named(tmp_path, clock):
     root = project(tmp_path)
-    assert not _type(root, f"{ARCHITECT} until 08:00").block
+    assert not _type(root, f"--agent {ARCHITECT} --until 08:00").block
     assert _delegations(root)["DL-1"]["forms"] == ["checks", "documents", "checkpoints",
                                                     "decisions"]
     # Naming g5 is blocked until the person types back the code shown to them.
-    first = _type(root, f"{ARCHITECT} until 08:00 for g5,checks")
+    first = _type(root, f"--agent {ARCHITECT} --until 08:00 --for g5,checks")
     assert first.block and list(_delegations(root)) == ["DL-1"]
     code = re.search(r"/compass:delegate confirm (\S+)", first.message).group(1)
     assert code not in (first.context or "")
@@ -121,29 +124,31 @@ def test_f2_g5_only_when_named(tmp_path, clock):
 
 def test_f3_limits_refused(tmp_path, clock):
     root = project(tmp_path)
-    for args, cause in ((ARCHITECT, "end time"),
-                        (f"{ARCHITECT} until 23:00 tomorrow", "end time"),
-                        ("any until 08:00", "any"),
-                        (f"{ARCHITECT} until 08:00 for everything", "everything"),
-                        (f"{ARCHITECT} until 08:00 on no-such-issue", "no-such-issue"),
-                        (f"{ARCHITECT} until 08:00 on ..", "'..'"),
-                        (f"{ARCHITECT} until 08:00 on .", "'.'")):
+    for args, cause in ((ARCHITECT, ARCHITECT),
+                        (f"--agent {ARCHITECT} --until 23:00 tomorrow", "tomorrow"),
+                        ("--agent any --until 08:00", "any"),
+                        (f"--agent {ARCHITECT} --until 08:00 --for everything", "everything"),
+                        (f"--agent {ARCHITECT} --until 08:00 --on no-such-issue",
+                         "no-such-issue"),
+                        (f"--agent {ARCHITECT} --until 08:00 --on ..", "'..'"),
+                        (f"--agent {ARCHITECT} --until 08:00 --on .", "'.'")):
         result = _type(root, args)
         assert result.block and cause in result.message, (args, result.message)
+    # The 24-hour and five-in-force limits of 7.0.0 are gone: a delegation can end
+    # 25 hours ahead, and a sixth can be in force.
     end = clock + datetime.timedelta(hours=25)
-    result = _type(root, f"{ARCHITECT} until {end.strftime('%Y-%m-%dT%H:%M')}")
-    assert result.block and "24 hours" in result.message, result.message
+    assert not _type(root, f"--agent {ARCHITECT} --until {end.strftime('%Y-%m-%dT%H:%M')}"
+                     ).block
     for n in range(5):
-        assert not _type(root, f"agent-{n} until 08:00").block
-    result = _type(root, f"{ARCHITECT} until 08:00")
-    assert result.block and "five" in result.message, result.message
-    assert len(_delegations(root)) == 5
+        assert not _type(root, f"--agent agent-{n} --until 08:00").block
+    assert len(_delegations(root)) == 6
 
 
 # --- a delegated agent records the guardrail 5 sign-off (`TRC-F4`) ---------------------------
 
 def _g5_delegation(root, hours=2):
-    first = _type(root, f"{ARCHITECT} until {_soon(hours)} for g5,checks,documents")
+    first = _type(root, f"--agent {ARCHITECT} --until {_soon(hours)} "
+                        f"--for g5,checks,documents")
     code = re.search(r"/compass:delegate confirm (\S+)", first.message).group(1)
     assert not _type(root, f"confirm {code}").block
 
@@ -181,7 +186,7 @@ def test_f5_no_delegation_refused(tmp_path):
 
 def test_f6_expired_refused(tmp_path):
     root = project(tmp_path)
-    assert not _type(root, f"{ARCHITECT} until {_soon()}").block
+    assert not _type(root, f"--agent {ARCHITECT} --until {_soon()}").block
     path = root / ".compass" / "delegations" / "DL-1.yml"
     body = yaml.safe_load(path.read_text())
     body["until"] = "2026-01-01T08:00:00Z"
@@ -197,15 +202,16 @@ def test_f6_expired_refused(tmp_path):
 
 def test_f7_out_of_scope_refused(tmp_path):
     root = project(tmp_path)
-    assert not _type(root, f"{ARCHITECT} until {_soon()} for checks,documents max 1").block
+    assert not _type(root, f"--agent {ARCHITECT} --until {_soon()} --on {SLUG} "
+                           f"--for checks,documents --max 1").block
     code, out, err = _approve(root, "--guardrail", "G5", "--scope", "x")
     assert code != 0 and "DL-1" in out + err and "checks" in out + err, out + err
     # Another issue.
     other = root / ".compass" / "work" / "other"
     other.mkdir()
     (other / "manifest.yml").write_text((task_dir(root) / "manifest.yml").read_text())
-    code, out, err = run(root, "evidence", "approve", "--issue", "other", "--check", CHECK,
-                         "--scope", "x", "--delegated", "--as", ARCHITECT)
+    code, out, err = delegated(root, ARCHITECT, "--issue", "other", "--check", CHECK,
+                               "--scope", "x")
     assert code != 0 and "DL-1" in out + err, out + err
     # Another generation.
     body = manifest_of(root)
@@ -233,7 +239,7 @@ def test_f7_out_of_scope_refused(tmp_path):
 
 def test_f11_revoke_ends_delegation(tmp_path):
     root = project(tmp_path)
-    assert not _type(root, f"{ARCHITECT} until {_soon()}").block
+    assert not _type(root, f"--agent {ARCHITECT} --until {_soon()}").block
     result = _type(root, "", command="compass:revoke")
     assert not result.block and "DL-1" in result.message, result
     dl = _delegations(root)["DL-1"]
@@ -279,12 +285,11 @@ def _overnight(root):
     body["decisions_taken"] = [{"id": "DEC-1", "question": "q", "resolution": "r",
                                 "by": "spec-author", "stage": "define", "status": "open"}]
     save_manifest(root, body)
-    assert not _type(root, f"{ARCHITECT} until {_soon()}").block
+    assert not _type(root, f"--agent {ARCHITECT} --until {_soon()}").block
     for argv in (["--check", CHECK, "--scope", "the review"],
                  ["--artifact", "technical-design"], ["--decisions"]):
-        code, out, err = run(root, "evidence", "approve", "--issue", SLUG, *argv,
-                             "--delegated", "--as", ARCHITECT,
-                             CLAUDE_CODE_SESSION_ID="sess-agent")
+        code, out, err = delegated(root, ARCHITECT, "--issue", SLUG, *argv,
+                                   session="sess-agent")
         assert code == 0, out + err
     return [e["id"] for e in manifest_of(root)["evidence"] if e.get("via") == "delegation"]
 
@@ -300,9 +305,9 @@ def test_f12_review_summary_until_acknowledged(tmp_path, monkeypatch):
     monkeypatch.undo()
     ids = _overnight(root)
     assert len(ids) == 3, ids
-    start = _hook_json("session-start.sh", root, {"session_id": "s", "source": "startup"})
+    start = _hook_json("session-start.sh", root, {"session_id": "sess-1","source": "startup"})
     prompt = _hook_json("approval-summary.sh", root,
-                        {"session_id": "s", "hook_event_name": "UserPromptSubmit",
+                        {"session_id": "sess-1","hook_event_name": "UserPromptSubmit",
                          "prompt": "good morning", "cwd": str(root)})
     for shown in (start["systemMessage"], prompt["systemMessage"]):
         for needle in ids + [SLUG, ARCHITECT, "/compass:approve", "/compass:reject"]:
@@ -312,7 +317,7 @@ def test_f12_review_summary_until_acknowledged(tmp_path, monkeypatch):
     # Shown again until the person marks them reviewed; nothing was written.
     before = (task_dir(root) / "manifest.yml").read_bytes()
     again = _hook_json("approval-summary.sh", root,
-                       {"session_id": "s", "hook_event_name": "UserPromptSubmit",
+                       {"session_id": "sess-1","hook_event_name": "UserPromptSubmit",
                         "prompt": "next", "cwd": str(root)})
     assert again["systemMessage"] == prompt["systemMessage"]
     assert (task_dir(root) / "manifest.yml").read_bytes() == before
@@ -322,7 +327,7 @@ def test_f12_review_summary_until_acknowledged(tmp_path, monkeypatch):
         if rec["id"] in ids:
             assert rec["reviewed_by"] == OWNER and rec["reviewed_at"], rec
     after = _hook_json("approval-summary.sh", root,
-                       {"session_id": "s", "hook_event_name": "UserPromptSubmit",
+                       {"session_id": "sess-1","hook_event_name": "UserPromptSubmit",
                         "prompt": "next", "cwd": str(root)})
     assert "systemMessage" not in after, after
 

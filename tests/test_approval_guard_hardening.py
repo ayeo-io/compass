@@ -155,7 +155,7 @@ def test_a2_confirmation_code_is_64_bits_and_typeable(tmp_path):
     for n, typed in enumerate((lambda c: c, lambda c: c.replace("-", ""), lambda c: c.upper())):
         (tmp_path / str(n)).mkdir()
         root = project(tmp_path / str(n))
-        first = _type(root, f"main until {_soon()} for g5")
+        first = _type(root, f"--agent main --until {_soon()} --for g5")
         assert first.block, first
         code = _code(first.message)
         assert re.fullmatch(r"[0-9a-f]{4}(-[0-9a-f]{4}){3}", code), code
@@ -166,7 +166,7 @@ def test_a2_confirmation_code_is_64_bits_and_typeable(tmp_path):
 
 def test_a3_short_or_wrong_code_refused(tmp_path):
     root = project(tmp_path)
-    first = _type(root, f"main until {_soon()} for g5")
+    first = _type(root, f"--agent main --until {_soon()} --for g5")
     code = _code(first.message)
     plain = code.replace("-", "")
     wrong = ("0" if plain[0] != "0" else "1") + plain[1:]
@@ -269,8 +269,8 @@ def test_c1_event_without_prompt_id_refused(tmp_path):
     approval_requests.mark_shown(str(task_dir(root)), req)
     for value in (None, "", "   "):
         for command, args in (("compass:approve", ""), ("compass:reject", "no"),
-                              ("compass:delegate", f"main until {_soon()}"),
-                              ("compass:delegate", f"main until {_soon()} for g5")):
+                              ("compass:delegate", f"--agent main --until {_soon()}"),
+                              ("compass:delegate", f"--agent main --until {_soon()} --for g5")):
             before = _state(root)
             result = _without_prompt_id(root, command, args, value)
             assert result.block, (command, value, result)
@@ -283,7 +283,7 @@ def test_c1_event_without_prompt_id_refused(tmp_path):
 
 def test_c2_revoke_without_prompt_id_revokes(tmp_path):
     root = project(tmp_path)
-    assert not _type(root, f"{ARCHITECT} until {_soon()}").block
+    assert not _type(root, f"--agent {ARCHITECT} --until {_soon()}").block
     result = _without_prompt_id(root, "compass:revoke")
     assert not result.block, result
     assert _delegations(root)["DL-1"]["revoked_by"] == OWNER
@@ -291,26 +291,26 @@ def test_c2_revoke_without_prompt_id_revokes(tmp_path):
 
 def test_c3_replayed_delegation_refused(tmp_path):
     root = project(tmp_path)
-    assert not _type(root, f"{ARCHITECT} until {_soon()}", prompt_id="p-1").block
-    again = _type(root, f"{ARCHITECT} until {_soon()}", prompt_id="p-1")
+    assert not _type(root, f"--agent {ARCHITECT} --until {_soon()}", prompt_id="p-1").block
+    again = _type(root, f"--agent {ARCHITECT} --until {_soon()}", prompt_id="p-1")
     assert again.block and "already answered" in again.message, again
     assert list(_delegations(root)) == ["DL-1"]
     # A revoked delegation's prompt id is still used.
     assert not _type(root, "", command="compass:revoke", prompt_id="p-2").block
-    assert _type(root, f"{ARCHITECT} until {_soon()}", prompt_id="p-1").block
+    assert _type(root, f"--agent {ARCHITECT} --until {_soon()}", prompt_id="p-1").block
     # A g5 delegation: the first command, replayed, is refused while it waits
     # and after it is confirmed; so is a replayed confirm.
-    first = _type(root, f"main until {_soon()} for g5", prompt_id="p-3")
+    first = _type(root, f"--agent main --until {_soon()} --for g5", prompt_id="p-3")
     code = _code(first.message)
-    replay = _type(root, f"main until {_soon()} for g5", prompt_id="p-3")
+    replay = _type(root, f"--agent main --until {_soon()} --for g5", prompt_id="p-3")
     assert replay.block and "already answered" in replay.message, replay
     assert code not in replay.message
     assert not _type(root, f"confirm {code}", prompt_id="p-4").block
     assert list(_delegations(root)) == ["DL-1", "DL-2"]
     dl = _delegations(root)["DL-2"]
     assert dl["prompt_id"] == "p-4" and dl["requested_prompt_id"] == "p-3"
-    for prompt_id, args in (("p-3", f"main until {_soon()} for g5"),
-                            ("p-4", f"main until {_soon()}"),
+    for prompt_id, args in (("p-3", f"--agent main --until {_soon()} --for g5"),
+                            ("p-4", f"--agent main --until {_soon()}"),
                             ("p-4", f"confirm {code}")):
         result = _type(root, args, prompt_id=prompt_id)
         assert result.block and "already answered" in result.message, (prompt_id, result)

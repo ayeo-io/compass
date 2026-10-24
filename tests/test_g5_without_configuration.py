@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
 
+from delegation_support import delegated  # noqa: E402
 from test_approval_scoped_to_guardrail_5 import SLUG, _project, _run  # noqa: E402
 
 
@@ -80,15 +81,14 @@ def test_g1_each_path_passes_on_default_preset(tmp_path):
     until = datetime.datetime.now().astimezone() + datetime.timedelta(hours=2)
     first = prompt_approval.handle(
         event(root, command="compass:delegate",
-              args=f"compass:architect until {until:%H:%M} for g5"), env,
+              args=f"--agent compass:architect --until {until:%H:%M} --for g5"), env,
         plugin_root=str(ROOT))
     code = re.search(r"confirm (\S+)", first.message).group(1)
     done = prompt_approval.handle(event(root, command="compass:delegate",
                                         args=f"confirm {code}"), env, plugin_root=str(ROOT))
     assert not done.block, done
-    code, out, err = _run(root, "evidence", "approve", "--issue", SLUG, "--guardrail", "G5",
-                          "--scope", "refund migration", "--delegated", "--as",
-                          "compass:architect")
+    code, out, err = delegated(root, "compass:architect", "--issue", SLUG, "--guardrail",
+                               "G5", "--scope", "refund migration")
     assert code == 0, out + err
     passes(root)
 

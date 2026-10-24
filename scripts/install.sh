@@ -178,7 +178,11 @@ register_hooks() {
         "hooks": {
           "PreToolUse":  [ { "matcher": "Edit|Write|Bash|Read|Grep",
                              "hooks": [ { "type": "command", "command": "$pre" } ] } ],
-          "PostToolUse": [ { "matcher": "Edit|Write",
+          "PostToolUse": [ { "matcher": "Edit|Write|Bash",
+                             "hooks": [ { "type": "command", "command": "$post" } ] } ],
+          "PostToolUseFailure": [ { "matcher": "Bash",
+                             "hooks": [ { "type": "command", "command": "$post" } ] } ],
+          "PermissionDenied": [ { "matcher": "Bash",
                              "hooks": [ { "type": "command", "command": "$post" } ] } ],
           "Stop":        [ { "hooks": [ { "type": "command", "command": "$stop" } ] } ],
           "SessionStart": [ { "matcher": "startup|clear|compact",
@@ -206,7 +210,11 @@ EOF
     .hooks.PreToolUse  = ( (.hooks.PreToolUse  // []) | map(select(notcompass([$pre])))  )
       + [ { matcher: "Edit|Write|Bash|Read|Grep", hooks: [ { type: "command", command: $pre } ] } ] |
     .hooks.PostToolUse = ( (.hooks.PostToolUse // []) | map(select(notcompass([$post]))) )
-      + [ { matcher: "Edit|Write", hooks: [ { type: "command", command: $post } ] } ] |
+      + [ { matcher: "Edit|Write|Bash", hooks: [ { type: "command", command: $post } ] } ] |
+    .hooks.PostToolUseFailure = ( (.hooks.PostToolUseFailure // []) | map(select(notcompass([$post]))) )
+      + [ { matcher: "Bash", hooks: [ { type: "command", command: $post } ] } ] |
+    .hooks.PermissionDenied = ( (.hooks.PermissionDenied // []) | map(select(notcompass([$post]))) )
+      + [ { matcher: "Bash", hooks: [ { type: "command", command: $post } ] } ] |
     .hooks.Stop        = ( (.hooks.Stop        // []) | map(select(notcompass([$stop]))) )
       + [ { hooks: [ { type: "command", command: $stop } ] } ] |
     .hooks.SessionStart = ( (.hooks.SessionStart // []) | map(select(notcompass([$session]))) )
@@ -237,6 +245,8 @@ unregister_hooks() {
     if .hooks then
       .hooks.PreToolUse   = ((.hooks.PreToolUse   // []) | strip($pre)) |
       .hooks.PostToolUse  = ((.hooks.PostToolUse  // []) | strip($post)) |
+      .hooks.PostToolUseFailure = ((.hooks.PostToolUseFailure // []) | strip($post)) |
+      .hooks.PermissionDenied = ((.hooks.PermissionDenied // []) | strip($post)) |
       .hooks.Stop         = ((.hooks.Stop         // []) | strip($stop)) |
       .hooks.SessionStart = ((.hooks.SessionStart // []) | strip($session)) |
       .hooks.UserPromptExpansion = ((.hooks.UserPromptExpansion // []) | strip($approval)) |

@@ -461,6 +461,15 @@ def _confirm(compass_dir, session, code, now):
 
 # --- /compass:revoke ------------------------------------------------------------------------
 
+def _covered(delegation, session_id):
+    """Who a delegation covers, relative to the session that reads it."""
+    if delegation.get("agent"):
+        return f"{delegation['agent']} in every session"
+    if delegation.get("covers_session") and delegation["covers_session"] == session_id:
+        return "this session"
+    return "another session"
+
+
 def handle_revoke(session):
     from compass_pkg.prompt_approval import HookResult
     compass_dir = session.compass_dir
@@ -476,8 +485,10 @@ def handle_revoke(session):
             body.update(revoked_by=session.approver, revoked_at=_iso(now))
             _write(os.path.join(folder(compass_dir), f"{body['id']}.yml"), body)
     ids = ", ".join(d["id"] for d in live)
+    covered = "; ".join(f"{d['id']} covered {_covered(d, session.session_id)}" for d in live)
     return HookResult(False, f"Compass: revoked {ids}; no agent may approve under "
-                             f"{'it' if len(live) == 1 else 'them'} from now on.",
+                             f"{'it' if len(live) == 1 else 'them'} from now on. "
+                             f"{covered}.",
                       f"The person revoked {ids}. Do not run a delegated approval under "
                       f"{'it' if len(live) == 1 else 'them'}.")
 
@@ -672,6 +683,56 @@ def _self_written(task, record):
                   if isinstance(a, dict) and a.get("kind") == record["artifact"]), {})
     session = record.get("session_id")
     return bool(session) and entry.get("registered_session") == session
+
+
+def _plural(number, word):
+    return f"{number} {word}" if number == 1 else f"{number} {word}s"
+
+
+def session_start_lines(project, session_id, source, now=None):
+    """What session start tells the person about delegations in force with no
+    end time: one line each, with its age in whole days, who it covers, whether
+    it covers the session that is starting and how many approvals it has given.
+    After `/clear`, a line also says that a session delegation of the earlier
+    session no longer covers this one: `/clear` gives a new session id and no
+    field names the old one, so Compass cannot say a session ended, only that
+    it is not this one. '' when there is none."""
+    now = now or _now()
+    store = _store_compass(os.path.join(project, ".compass"))
+    if store is None:
+        return ""
+    listed = [d for d in all_delegations(store)
+              if _is_format_2(d) and d.get("until") is None and ended(d, now) is None]
+    if not listed:
+        return ""
+    lines = ["Compass: delegations in force with no end time:"]
+    for d in listed:
+        name = d.get("id")
+        try:
+            days = max(0, (now - _parse_iso(d.get("created_at"))).days)
+        except (TypeError, ValueError):
+            days = 0
+        tail = (f"In force for {_plural(days, 'day')}; "
+                f"{_plural(int(d.get('uses') or 0), 'approval')}.")
+        if d.get("agent"):
+            text = (f"{name} has no end time and covers {d['agent']} in every session, "
+                    f"including this one. It stays in force until you type "
+                    f"/compass:revoke {name}.")
+        elif d.get("covers_session") and d["covers_session"] == session_id:
+            text = (f"{name} has no end time and covers the agents of the session it was "
+                    f"typed in. That is this session. It stays in force until you type "
+                    f"/compass:revoke {name}.")
+        else:
+            text = (f"{name} has no end time and covers the agents of the session it was "
+                    f"typed in. That is not this session. Compass cannot tell whether that "
+                    f"session is still open, so it covers that session's agents until you "
+                    f"type /compass:revoke {name}.")
+        lines.append(f"  {text} {tail}")
+    if source == "clear" and any(not d.get("agent") for d in listed):
+        lines.append("/clear started a new session. A delegation typed before /clear "
+                     "without --agent does not cover this session. Type /compass:delegate "
+                     "to cover it.")
+    return "\n".join(lines)
 
 
 def _project_of(task_dir):

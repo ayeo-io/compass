@@ -247,3 +247,22 @@ def test_TRC_080_max_ends_the_delegation_after_its_last_approval(tmp_path):
     code, out, err = delegated(top, "main", "--check", CHECK, "--scope", "s", "--issue",
                                "feature", session="sess-S")
     assert code != 0 and "DL-1 reached its max of 2 use(s)" in out + err, out + err
+
+
+# --- a bare revoke ends every delegation in force (TRC-079) --------------------------------
+
+def test_TRC_079_compass_revoke_with_no_id_ends_every_delegation_in_force(tmp_path):
+    from delegation_support import repo
+    from delegation_support import type_ as type_in
+    top = repo(tmp_path)
+    assert not type_in(top, "", session="sess-S").block
+    assert not type_in(top, "", session="sess-T").block
+    assert not type_in(top, "--agent compass:architect", session="sess-S").block
+    result = type_in(top, "", command="compass:revoke", session="sess-S")
+    assert not result.block, result
+    found = {p.stem: yaml.safe_load(p.read_text(encoding="utf-8"))
+             for p in sorted(_store(top).glob("DL-*.yml"))}
+    assert all(body["revoked_at"] for body in found.values()), found
+    for needle in ("DL-1 covered this session", "DL-2 covered another session",
+                   "DL-3 covered compass:architect in every session"):
+        assert needle in result.message, (needle, result.message)

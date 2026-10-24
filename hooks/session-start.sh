@@ -178,7 +178,13 @@ try:
     if not isinstance(event, dict):
         event = {}
     # A session start has no prompt id, so the entry it records holds none.
-    review = delegations.summary_for_hook(sys.argv[3], str(event.get("session_id") or ""), "")
+    session = str(event.get("session_id") or "")
+    review = delegations.summary_for_hook(sys.argv[3], session, "")
+    # Each delegation with no end time is listed, whether or not anything
+    # waits for review.
+    lines = delegations.session_start_lines(sys.argv[3], session,
+                                            str(event.get("source") or ""))
+    review = "\n".join(part for part in (lines, review) if part)
 except BaseException:  # noqa: BLE001 - the contract must still reach the session
     review = ""
 

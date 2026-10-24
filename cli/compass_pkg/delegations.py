@@ -596,20 +596,29 @@ def _waiting(record):
             and record.get("type") in DELEGATED_TYPES and not record.get("reviewed_at"))
 
 
-def _store_compass(compass_dir):
+#: The longest a hook waits for git, in seconds. The hooks run on every prompt, and
+#: a hook that waits longer is stopped by its own time limit.
+HOOK_GIT_SECONDS = 8
+
+
+def _store_compass(compass_dir, timeout=HOOK_GIT_SECONDS):
     """The common store's `.compass/` folder for the project that holds
     `compass_dir`, or None when there is no store."""
     from compass_pkg import worktree_lookup
-    store = worktree_lookup.common_store(os.path.dirname(compass_dir))
+    store = worktree_lookup.common_store(os.path.dirname(compass_dir), timeout=timeout)
     return None if store.folder is None else os.path.dirname(store.folder)
 
 
-def _moved(slug, compass_dir):
-    """The folder of an indexed issue that was moved: found again by its slug."""
+def _moved(slug, compass_dir, listing, timeout):
+    """The folder of an indexed issue that was moved: found again by its slug.
+    `listing` is a dict that holds the worktree listing once it is made, so one
+    summary lists the worktrees once, however many records are indexed."""
     from compass_pkg import worktree_lookup
+    if "listing" not in listing:
+        listing["listing"] = worktree_lookup.list_worktrees(os.path.dirname(compass_dir),
+                                                            timeout=timeout)
     try:
-        return worktree_lookup.find_issue(
-            worktree_lookup.list_worktrees(os.path.dirname(compass_dir)), str(slug))
+        return worktree_lookup.find_issue(listing["listing"], str(slug))
     except (worktree_lookup.NotFound, worktree_lookup.HeldTwice):
         return None
 
@@ -627,24 +636,32 @@ def _want(wanted, folder, ids):
         wanted[key] = (folder, None if ids is None else set(ids))
 
 
-def unreviewed(compass_dir):
+def unreviewed(compass_dir, timeout=HOOK_GIT_SECONDS):
     """`[(folder, manifest, record)]` for each approval made under a delegation
     that the person has not marked reviewed, in any worktree. Only the folders
     the delegations' `records` index names are read, plus the issues a 7.0.0
     file names, so a project with no delegation file starts no git process
     from a main checkout and opens no manifest: the summary runs on every
     prompt."""
-    store = _store_compass(compass_dir)
+    return _review_state(compass_dir, timeout)[1]
+
+
+def _review_state(compass_dir, timeout=HOOK_GIT_SECONDS):
+    """`(store, rows, has_delegations)`: the store's `.compass/` folder (None when
+    there is none), the rows `unreviewed` returns, and whether the store holds
+    any delegation file."""
+    store = _store_compass(compass_dir, timeout)
     if store is None:
-        return []
-    wanted = {}
-    for delegation in all_delegations(store):
+        return None, [], False
+    wanted, listing = {}, {}
+    files = all_delegations(store)
+    for delegation in files:
         for entry in delegation.get("records") or []:
             if not isinstance(entry, dict):
                 continue
             folder = entry.get("folder")
             if not (folder and os.path.isdir(folder)) and entry.get("issue"):
-                folder = _moved(entry["issue"], compass_dir)
+                folder = _moved(entry["issue"], compass_dir, listing, timeout)
             if folder:
                 _want(wanted, folder, entry.get("ids") or [])
         if not _is_format_2(delegation):
@@ -660,7 +677,7 @@ def unreviewed(compass_dir):
             continue
         found += [(folder, task, r) for r in task.get("evidence") or []
                   if _waiting(r) and (ids is None or r.get("id") in ids)]
-    return found
+    return store, found, bool(files)
 
 
 def _subject(record):
@@ -798,25 +815,45 @@ def summary_for_hook(project, session_id, prompt_id):
     Nothing is written when there is nothing to show, or when the hook input
     names no session. A write that fails leaves the rows unrecorded, so the
     next summary shows them again."""
-    compass_dir = os.path.join(project, ".compass")
-    rows = unreviewed(compass_dir)
-    if not rows:
-        return ""
-    if session_id:
-        try:
-            store = _store_compass(compass_dir)
-            entries = _read_shown(store, session_id)[-(SHOWN_KEPT - 1):]
-            entries.append({"prompt_id": prompt_id or "", "shown_at": _iso(_now()),
-                            "records": [{"folder": folder, "issue": os.path.basename(folder),
-                                         "id": record.get("id"),
-                                         "digest": _row_digest(task, record)}
-                                        for folder, task, record in rows]})
-            path = _shown_path(store, session_id)
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            atomic_io.atomic_write_text(path, json.dumps({"entries": entries}))
-        except (OSError, TypeError):
-            pass
-    return _summary_text(rows)
+    state = summary_state(project)
+    text = _summary_text(state[1]) if state[1] else ""
+    record_shown(state, session_id, prompt_id)
+    return text
+
+
+def summary_state(project):
+    """What a summary hook needs: `(store, rows, has_delegations)`. A hook builds
+    its whole message from it first, prints it, and only then calls
+    `record_shown`, so a row is never recorded as shown without having been
+    shown."""
+    return _review_state(os.path.join(project, ".compass"))
+
+
+def summary_text(state):
+    """The summary of the rows of a `summary_state`, or ''."""
+    return _summary_text(state[1]) if state[1] else ""
+
+
+def record_shown(state, session_id, prompt_id):
+    """Write the shown-list entry for a summary. With no row to show, the entry
+    holds no rows, so an earlier summary is not used again for `/compass:approve`;
+    that is written only when the store holds a delegation file, so a project with
+    none writes nothing. A write that fails leaves the rows unrecorded."""
+    store, rows, has_delegations = state
+    if not session_id or store is None or not has_delegations:
+        return
+    try:
+        entries = _read_shown(store, session_id)[-(SHOWN_KEPT - 1):]
+        entries.append({"prompt_id": prompt_id or "", "shown_at": _iso(_now()),
+                        "records": [{"folder": folder, "issue": os.path.basename(folder),
+                                     "id": record.get("id"),
+                                     "digest": _row_digest(task, record)}
+                                    for folder, task, record in rows]})
+        path = _shown_path(store, session_id)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        atomic_io.atomic_write_text(path, json.dumps({"entries": entries}))
+    except (OSError, TypeError):
+        pass
 
 
 def last_shown(compass_dir, session_id, prompt_id):

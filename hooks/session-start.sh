@@ -169,24 +169,37 @@ if tag_line:
 # Approvals made under a delegation that the person has not reviewed are
 # shown to the person, never recorded here (ADR-069 decision 5). A summary
 # that cannot be built is left out.
+#
+# The whole message is built before anything is recorded, and each part is
+# guarded on its own: a damaged delegation file can cost the list of open-ended
+# delegations or the review summary, never the contract, and a row is recorded
+# as shown only after the message that shows it is out.
+try:
+    event = json.loads(sys.argv[4])
+except ValueError:
+    event = {}
+if not isinstance(event, dict):
+    event = {}
+session = str(event.get("session_id") or "")
 try:
     from compass_pkg import delegations
-    try:
-        event = json.loads(sys.argv[4])
-    except ValueError:
-        event = {}
-    if not isinstance(event, dict):
-        event = {}
-    # A session start has no prompt id, so the entry it records holds none.
-    session = str(event.get("session_id") or "")
-    review = delegations.summary_for_hook(sys.argv[3], session, "")
+except BaseException:  # noqa: BLE001 - the contract must still reach the session
+    delegations = None
+lines, review, state = "", "", None
+if delegations is not None:
     # Each delegation with no end time is listed, whether or not anything
     # waits for review.
-    lines = delegations.session_start_lines(sys.argv[3], session,
-                                            str(event.get("source") or ""))
-    review = "\n".join(part for part in (lines, review) if part)
-except BaseException:  # noqa: BLE001 - the contract must still reach the session
-    review = ""
+    try:
+        lines = delegations.session_start_lines(sys.argv[3], session,
+                                                str(event.get("source") or ""))
+    except BaseException:  # noqa: BLE001
+        lines = ""
+    try:
+        state = delegations.summary_state(sys.argv[3])
+        review = delegations.summary_text(state)
+    except BaseException:  # noqa: BLE001
+        state, review = None, ""
+message = "\n".join(part for part in (lines, review) if part)
 
 out = {
     "hookSpecificOutput": {
@@ -194,7 +207,13 @@ out = {
         "additionalContext": contract,
     }
 }
-if review:
-    out["systemMessage"] = review
-print(json.dumps(out))
+if message:
+    out["systemMessage"] = message
+print(json.dumps(out), flush=True)
+if state is not None:
+    try:
+        # A session start has no prompt id, so the entry it records holds none.
+        delegations.record_shown(state, session, "")
+    except BaseException:  # noqa: BLE001
+        pass
 PY

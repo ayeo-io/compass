@@ -117,3 +117,30 @@ def test_TRC_109_session_start_says_compass_cannot_tell_whether_another_sessions
                    "Compass cannot tell whether that session is still open",
                    "it covers that session's agents until you type /compass:revoke DL-2"):
         assert needle in message, (needle, message)
+
+
+@pytest.mark.parametrize("damage", ["max_uses", "ids"])
+def test_TRC_116_session_start_records_the_shown_list_only_for_rows_it_shows(
+        tmp_path, damage):
+    import yaml
+    from approval_support import CHECK
+    from delegation_support import delegated, type_
+    top = repo(tmp_path)
+    assert not type_(top, "", session="sess-S").block
+    code, out, err = delegated(top, ARCH, "--check", CHECK, "--scope", "s", "--issue",
+                               "feature", session="sess-S")
+    assert code == 0, out + err
+    path = top / ".compass" / "delegations" / "DL-1.yml"
+    body = yaml.safe_load(path.read_text(encoding="utf-8"))
+    record_id = body["records"][0]["ids"][0]
+    if damage == "max_uses":
+        body["max_uses"] = "ten"
+    else:
+        body["records"][0]["ids"] = 5
+    path.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    message = _start(top, "sess-N")
+    shown = top / ".compass" / "delegations" / "shown" / "sess-N.json"
+    if damage == "max_uses":
+        assert record_id in message and shown.exists(), message
+    else:
+        assert record_id not in message and not shown.exists(), message

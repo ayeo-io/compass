@@ -673,8 +673,10 @@ def _review(session, env, listing):
     own = dataclasses.replace(session, task_dir=task_dir, slug=slug, approver=approver,
                               role=role, approver_source=source)
     entry = delegations.last_shown(compass_dir, session.session_id, session.prompt_id)
+    # A folder that no longer exists (a worktree that was merged and removed)
+    # has no lock to take and nothing to mark.
     held = [task_dir] + [item["folder"] for item in (entry or {}).get("records") or []
-                         if item.get("folder")]
+                         if item.get("folder") and os.path.isdir(item["folder"])]
     with approvals.lock_all(held):
         _refuse_used_prompt(own)
         if _pending(own)[0]:

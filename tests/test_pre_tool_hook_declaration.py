@@ -19,9 +19,34 @@ ROOT = Path(__file__).resolve().parent.parent
 # The entries of the five other events, written out so that a change to one of
 # them fails this test (the file is read as it stood before the keys were added).
 _OTHER_EVENTS = {
+    # The Bash matcher and the two events after it let post-tool.sh delete the
+    # call ticket of a delegated approval when its call ends (issue
+    # `delegation-everywhere`).
     "PostToolUse": [
         {
-            "matcher": "Edit|Write",
+            "matcher": "Edit|Write|Bash",
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/post-tool.sh\"",
+                }
+            ],
+        }
+    ],
+    "PostToolUseFailure": [
+        {
+            "matcher": "Bash",
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/post-tool.sh\"",
+                }
+            ],
+        }
+    ],
+    "PermissionDenied": [
+        {
+            "matcher": "Bash",
             "hooks": [
                 {
                     "type": "command",

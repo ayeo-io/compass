@@ -10,6 +10,7 @@ and `TRC-107`. Each test name starts with its scenario id.
 """
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import sys
@@ -284,3 +285,170 @@ def test_TRC_107_a_delegated_approval_with_no_issue_is_refused_and_shows_the_iss
                                session="sess-S")
     assert code != 0 and "--issue <slug>" in out + err, out + err
     assert evidence_count(task_dir(top)) == before
+
+
+# --- what a ticket binds, and how long it lives --------------------------------------------
+
+SESSION_S = "sess-S"
+_WORDS = f"--check {CHECK} --scope s --issue {SLUG} --delegated --as main"
+
+
+def _store_tickets(top):
+    folder = top / ".compass" / "delegations" / "tickets"
+    return sorted(folder.glob("*.json")) if folder.is_dir() else []
+
+
+def _ticket_ids(top):
+    return sorted(json.loads(p.read_text())["tool_use_id"] for p in _store_tickets(top))
+
+
+def _bash_event(top, command, session=SESSION_S, tool_use_id="toolu_1"):
+    return {"tool_name": "Bash", "session_id": session, "cwd": str(top),
+            "tool_use_id": tool_use_id, "tool_input": {"command": command}}
+
+
+def _spy_python(tmp_path):
+    """A folder whose python3 logs each start, then runs the real one."""
+    spy = tmp_path / "pyspy"
+    spy.mkdir()
+    log = tmp_path / "pyspy.log"
+    (spy / "python3").write_text(
+        f'#!/bin/sh\necho start >> "{log}"\nexec {shutil.which("python3")} "$@"\n')
+    (spy / "python3").chmod(0o755)
+    return {"PATH": f"{spy}:" + os.environ.get("PATH", "/usr/bin:/bin")}, log
+
+
+def _delegated_top(tmp_path):
+    top = repo(tmp_path)
+    assert not type_(top, "", session=SESSION_S).block
+    return top
+
+
+@pytest.mark.parametrize("prefix,tickets", [
+    ("", 1), ("cd /tmp && ", 1), ("false; ", 1), ("A=1 B=2 ", 1),
+    ("echo ", 0), ("printf '%s' ", 0), ("xargs ", 0),
+])
+def test_TRC_110_a_ticket_is_written_only_when_compass_is_in_command_position(
+        tmp_path, prefix, tickets):
+    from compass_pkg import delegation_tickets
+    top = _delegated_top(tmp_path)
+    delegation_tickets.issue(_bash_event(top, f"{prefix}compass evidence approve {_WORDS}"))
+    assert len(_store_tickets(top)) == tickets
+
+
+def _two_tickets(top):
+    from compass_pkg import delegation_tickets
+    first = f"compass evidence approve {_WORDS}"
+    delegation_tickets.issue(_bash_event(top, first, tool_use_id="T1"))
+    delegation_tickets.issue(_bash_event(top, first + " --scope other", tool_use_id="T2"))
+    assert _ticket_ids(top) == ["T1", "T2"]
+    return first
+
+
+def test_TRC_111_the_post_tool_hook_deletes_the_tickets_of_the_call_that_finished(tmp_path):
+    from test_delegation import _hook_json
+    top = _delegated_top(tmp_path)
+    first = _two_tickets(top)
+    _hook_json("post-tool.sh", top, dict(_bash_event(top, first, tool_use_id="T1"),
+                                         hook_event_name="PostToolUse"))
+    assert _ticket_ids(top) == ["T2"]
+
+
+def test_TRC_111_an_ordinary_bash_call_starts_no_python_in_the_post_tool_hook(tmp_path):
+    from test_delegation import _hook_json
+    top = _delegated_top(tmp_path)
+    env, log = _spy_python(tmp_path)
+    _hook_json("post-tool.sh", top, dict(_bash_event(top, "git status"),
+                                         hook_event_name="PostToolUse"), **env)
+    assert not log.exists(), log.read_text()
+
+
+def _declared(event):
+    hooks = json.loads((ROOT / "hooks" / "hooks.json").read_text())["hooks"]
+    return [(e.get("matcher"), h["command"]) for e in hooks.get(event, [])
+            for h in e["hooks"]]
+
+
+def test_TRC_111_post_tool_use_runs_the_post_tool_hook_for_bash():
+    (matcher, command), = _declared("PostToolUse")
+    assert command.endswith('/hooks/post-tool.sh"') and "Bash" in matcher.split("|")
+
+
+def test_TRC_119_a_failed_call_deletes_its_ticket(tmp_path):
+    from test_delegation import _hook_json
+    (matcher, command), = _declared("PostToolUseFailure")
+    assert command.endswith('/hooks/post-tool.sh"') and matcher == "Bash"
+    top = _delegated_top(tmp_path)
+    first = _two_tickets(top)
+    _hook_json("post-tool.sh", top, dict(_bash_event(top, first, tool_use_id="T1"),
+                                         hook_event_name="PostToolUseFailure"))
+    assert _ticket_ids(top) == ["T2"]
+
+
+def test_TRC_120_a_denied_permission_deletes_the_ticket_of_that_call(tmp_path):
+    from test_delegation import _hook_json
+    (matcher, command), = _declared("PermissionDenied")
+    assert command.endswith('/hooks/post-tool.sh"') and matcher == "Bash"
+    top = _delegated_top(tmp_path)
+    first = _two_tickets(top)
+    _hook_json("post-tool.sh", top, dict(_bash_event(top, first, tool_use_id="T1"),
+                                         hook_event_name="PermissionDenied"))
+    assert _ticket_ids(top) == ["T2"]
+
+
+def _two_sessions_tickets(top):
+    from compass_pkg import delegation_tickets
+    store = str(top / ".compass" / "delegations")
+    words = _WORDS.split()
+    delegation_tickets.write_ticket(store, SESSION_S, "main", words, "T1")
+    delegation_tickets.write_ticket(store, "sess-T", "main", words + ["x"], "T2")
+
+
+def test_TRC_112_the_stop_hook_deletes_the_unused_tickets_of_the_session(tmp_path):
+    from test_delegation import _hook_json
+    top = _delegated_top(tmp_path)
+    _two_sessions_tickets(top)
+    _hook_json("stop.sh", top, {"hook_event_name": "Stop", "session_id": SESSION_S,
+                                "cwd": str(top)})
+    assert _ticket_ids(top) == ["T2"]
+
+
+def test_TRC_121_a_prompt_deletes_the_unused_tickets_of_the_session(tmp_path):
+    from test_delegation import _hook_json
+    top = _delegated_top(tmp_path)
+    _two_sessions_tickets(top)
+    _hook_json("approval-summary.sh", top,
+               {"hook_event_name": "UserPromptSubmit", "prompt": "hello", "prompt_id": "p-1",
+                "session_id": SESSION_S, "cwd": str(top)})
+    assert _ticket_ids(top) == ["T2"]
+
+
+def test_TRC_121_a_prompt_with_no_ticket_folder_starts_no_extra_python(tmp_path):
+    from test_delegation import _hook_json
+    top = _delegated_top(tmp_path)
+    env, log = _spy_python(tmp_path)
+    body = {"hook_event_name": "UserPromptSubmit", "prompt": "hello", "prompt_id": "p-1",
+            "session_id": SESSION_S, "cwd": str(top)}
+    _hook_json("approval-summary.sh", top, body, **env)
+    without = len(log.read_text().splitlines()) if log.exists() else 0
+    delegation_tickets_dir = top / ".compass" / "delegations" / "tickets"
+    delegation_tickets_dir.mkdir()
+    (delegation_tickets_dir / "x.json").write_text(json.dumps(
+        {"session_id": "sess-T", "caller": "main", "words_sha256": "0", "issued_at": 1,
+         "tool_use_id": "T9"}))
+    log.unlink(missing_ok=True)
+    _hook_json("approval-summary.sh", top, body, **env)
+    with_tickets = len(log.read_text().splitlines()) if log.exists() else 0
+    assert with_tickets == without, (without, with_tickets)
+
+
+@pytest.mark.parametrize("redirect", ["2>&1", "2>/dev/null", "1>out.txt", "&>out.txt",
+                                      "2>&1 | tail -3"])
+def test_TRC_113_a_redirect_is_not_part_of_the_words_a_ticket_binds(tmp_path, redirect):
+    from compass_pkg import delegation_tickets
+    top = _delegated_top(tmp_path)
+    delegation_tickets.issue(_bash_event(
+        top, f"compass evidence approve {_WORDS} {redirect}"))
+    code, out, err = run(top, "evidence", "approve", *_WORDS.split())
+    assert code == 0, out + err
+    assert delegations(top)["DL-1"]["uses"] == 1

@@ -420,14 +420,23 @@ fi
 # The only output on stdout: Claude Code reads it as the hook's JSON.
 # Each distinct root is asked once: the hook's project and the project of the
 # input's `cwd`. A folder without `.compass` is never asked.
-compass_python - "$COMPASS_DIR" "${CWD_ROOT:+$CWD_ROOT/.compass}" 2>/dev/null <<'PYEOF' || true
+#
+# The same pass deletes the call tickets of the session that no command used,
+# so a ticket never outlives the turn that wrote it. The input goes in on
+# standard input, and the program is a variable, so one Python start does both.
+STOP_PROGRAM="$(cat <<'PYEOF'
 import json
 import os
 import sys
 
 import compass_pkg                      # noqa: F401 - puts vendor on sys.path
-from compass_pkg import approval_requests
+from compass_pkg import approval_requests, delegation_tickets
 
+try:
+    event = json.load(sys.stdin)
+except ValueError:
+    event = {}
+session = str(event.get("session_id") or "") if isinstance(event, dict) else ""
 seen, texts = set(), []
 for folder in sys.argv[1:]:
     if not folder or not os.path.isdir(folder):
@@ -436,11 +445,14 @@ for folder in sys.argv[1:]:
     if real in seen:
         continue
     seen.add(real)
+    delegation_tickets.drop_session(os.path.dirname(folder), session)
     text = approval_requests.stop_message(folder, os.environ)
     if text:
         texts.append(text)
 if texts:
     print(json.dumps({"systemMessage": "\n\n".join(texts)}))
 PYEOF
+)"
+printf '%s' "$STOP_INPUT" | compass_python -c "$STOP_PROGRAM" "$COMPASS_DIR" "${CWD_ROOT:+$CWD_ROOT/.compass}" 2>/dev/null || true
 
 exit 0

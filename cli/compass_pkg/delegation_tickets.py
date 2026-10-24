@@ -42,6 +42,10 @@ TICKET_MINUTES = 10
 #: CLI, so no ticket is written for it.
 UNSAFE = re.compile(r"[$`*?\[{~\\\n]")
 OPERATORS = re.compile(r"[();<>|&]+")
+#: A word that ends one command and starts the next.
+SEPARATOR = re.compile(r"[();|&]+")
+#: A `NAME=value` word before a command is an environment assignment.
+ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=.*", re.S)
 #: The most evidence-approve commands one call can hold a ticket for.
 MOST_PER_CALL = 5
 
@@ -62,23 +66,41 @@ def _tokens(command):
     return list(lexer)
 
 
+def _command_position(tokens, index):
+    """True when the word at `index` starts a command: it is the first word, or the
+    first word after `&&`, `||`, `;`, `|`, `(` or `&`, with only `NAME=value`
+    assignments between."""
+    j = index - 1
+    while j >= 0 and ASSIGNMENT.fullmatch(tokens[j]):
+        j -= 1
+    return j < 0 or SEPARATOR.fullmatch(tokens[j]) is not None
+
+
 def approve_words(command):
     """The word lists that follow each `compass evidence approve` of a plain
     command, each cut at the first shell operator or comment. An empty list
     when the command is not plain."""
     try:
-        tokens = _tokens(command.replace("\\\n", ""))
+        # A new line ends a command, as `;` does.
+        tokens = _tokens(command.replace("\\\n", "").replace("\n", " ; "))
     except ValueError:
         return []
     found = []
     for i in range(1, len(tokens) - 1):
         if tokens[i] != "evidence" or tokens[i + 1] != "approve":
             continue
-        if os.path.basename(tokens[i - 1]) != "compass":
+        # `compass` must be the command, not an argument of another command such as
+        # `echo`, `printf` or `xargs`, which would only print or pass the words on.
+        if os.path.basename(tokens[i - 1]) != "compass" or not _command_position(
+                tokens, i - 1):
             continue
         words = []
         for word in tokens[i + 2:]:
             if OPERATORS.fullmatch(word) or word.startswith("#"):
+                # A digit just before a redirect (`2>&1`, `1>file`) belongs to the
+                # redirect: the shell does not pass it to the CLI.
+                if ("<" in word or ">" in word) and words and words[-1].isdigit():
+                    words.pop()
                 break
             words.append(word)
         if any(UNSAFE.search(w) for w in words):
@@ -205,3 +227,61 @@ def take(store, words, agent, now=None):
     issued, path, body = min(live, key=lambda item: item[0])
     os.remove(path)
     return {"session_id": str(body.get("session_id") or ""), "caller": agent}
+
+
+def _tickets_of(cwd, timeout):
+    """`[(path, body)]` for each ticket in the common store that the project of
+    `cwd` uses. Empty when the store has no tickets folder."""
+    from compass_pkg import worktree_lookup
+    store = worktree_lookup.common_store(worktree_lookup.project_folder(cwd), timeout=timeout)
+    if store.folder is None:
+        return []
+    folder = _folder(store.folder)
+    found = []
+    try:
+        names = os.listdir(folder)
+    except OSError:
+        return []
+    for name in names:
+        path = os.path.join(folder, name)
+        try:
+            with open(path, encoding="utf-8") as fh:
+                body = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        if isinstance(body, dict):
+            found.append((path, body))
+    return found
+
+
+def _drop(cwd, keep, timeout):
+    for path, body in _tickets_of(cwd, timeout):
+        if not keep(body):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+
+
+def drop_call(event, timeout=5):
+    """Delete the tickets that the pre-tool hook wrote for one Bash call, when the
+    call has finished, failed or been denied: a ticket must not outlive its call.
+    Never raises."""
+    try:
+        call = str(event.get("tool_use_id") or "")
+        cwd = str(event.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or "")
+        if call and cwd:
+            _drop(cwd, lambda body: str(body.get("tool_use_id") or "") != call, timeout)
+    except Exception:                                   # noqa: BLE001 - see the docstring
+        return
+
+
+def drop_session(cwd, session_id, timeout=5):
+    """Delete every unused ticket of one session, at the end of its turn or when the
+    person types the next prompt (a turn that ends as Interrupted runs no Stop
+    hook). Never raises."""
+    try:
+        if session_id and cwd:
+            _drop(cwd, lambda body: str(body.get("session_id") or "") != session_id, timeout)
+    except Exception:                                   # noqa: BLE001 - see the docstring
+        return

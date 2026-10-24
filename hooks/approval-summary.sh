@@ -21,8 +21,9 @@
 
 set -u
 # The input names the session and the prompt, so the summary can record what
-# this session was shown (delegations.summary_for_hook).
-INPUT="$(cat 2>/dev/null || true)"
+# this session was shown (delegations.summary_for_hook). Python reads it from
+# standard input and keeps only those two ids: a prompt can be larger than one
+# command-line argument may be.
 
 HOOK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [ -f "$HOOK_ROOT/scripts/lib/compass-python.sh" ] || exit 0
@@ -41,22 +42,30 @@ if [ -z "$PROJECT_DIR" ]; then
 fi
 [ -n "$PROJECT_DIR" ] && [ -d "$PROJECT_DIR/.compass/work" ] || exit 0
 
-compass_python - "$PROJECT_DIR" "$INPUT" 2>/dev/null <<'PYEOF' || true
+PROGRAM="$(cat <<'PYEOF'
 import json
 import sys
 
 import compass_pkg                      # noqa: F401 - puts vendor on sys.path
-from compass_pkg import delegations
+from compass_pkg import delegation_tickets, delegations
 
 try:
-    event = json.loads(sys.argv[2])
+    event = json.load(sys.stdin)
 except ValueError:
     event = {}
 if not isinstance(event, dict):
     event = {}
-text = delegations.summary_for_hook(sys.argv[1], str(event.get("session_id") or ""),
-                                    str(event.get("prompt_id") or ""))
+session = str(event.get("session_id") or "")
+# A new prompt ends the turn before it, which may have ended as Interrupted
+# with no Stop hook: a ticket that no command used must not outlive that turn.
+delegation_tickets.drop_session(sys.argv[1], session)
+state = delegations.summary_state(sys.argv[1])
+text = delegations.summary_text(state)
 if text:
-    print(json.dumps({"systemMessage": text}))
+    print(json.dumps({"systemMessage": text}), flush=True)
+# The rows are recorded as shown only after the message is out.
+delegations.record_shown(state, session, str(event.get("prompt_id") or ""))
 PYEOF
+)"
+compass_python -c "$PROGRAM" "$PROJECT_DIR" 2>/dev/null || true
 exit 0

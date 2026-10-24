@@ -206,3 +206,57 @@ def test_the_summary_hooks_write_the_shown_list_and_keep_two_entries(tmp_path):
     assert [e["prompt_id"] for e in shown["entries"]] == ["p-1", "p-2"]
     row = shown["entries"][-1]["records"][0]
     assert row["id"] == record and row["issue"] == SLUG and row["digest"]
+
+
+def _worktree_with_records(tmp_path, count):
+    top, work = _setup(tmp_path)
+    for number in range(count):
+        _approved(work, work, WT, f"scope {number}")
+    return top, work
+
+
+def test_TRC_114_a_removed_worktree_does_not_stop_a_bare_approve_and_an_empty_summary_is_recorded(
+        tmp_path):
+    from compass_pkg import delegations
+    from delegation_support import git
+    top, work = _worktree_with_records(tmp_path, 1)
+    assert _summary(top, "p-1")
+    git(top, "worktree", "remove", "--force", str(work))
+    result = _approve(top, prompt_id="p-2")
+    assert result.block, result.message
+    assert ("Nothing is waiting" in result.message
+            or "nothing was marked reviewed" in result.message), result.message
+    assert "FileNotFoundError" not in result.message and "could not record" not in result.message
+    # A summary with no rows, while delegation files exist, is recorded as empty.
+    compass_dir = str(top / ".compass")
+    assert _summary(top, "p-3") == ""
+    entry = delegations.last_shown(compass_dir, SESSION, "p-4")
+    assert entry["prompt_id"] == "p-3" and entry["records"] == [], entry
+
+
+def test_TRC_115_the_summary_lists_the_worktrees_once_with_the_hook_timeout(
+        tmp_path, monkeypatch):
+    from compass_pkg import worktree_lookup
+    from delegation_support import git
+    top, work = _worktree_with_records(tmp_path, 6)
+    git(top, "worktree", "remove", "--force", str(work))
+    calls = []
+    real = worktree_lookup.run_git
+
+    def spy(folder, *args, timeout=worktree_lookup.GIT_TIMEOUT_SECONDS):
+        calls.append((args, timeout))
+        return real(folder, *args, timeout=timeout)
+
+    monkeypatch.setattr(worktree_lookup, "run_git", spy)
+    assert _summary(top, "p-1") == ""
+    assert len(calls) <= 1, calls
+    assert all(timeout <= 8 for _, timeout in calls), calls
+
+
+def test_TRC_117_the_summary_hook_reads_only_the_session_and_prompt_ids(tmp_path):
+    top, _ = _setup(tmp_path)
+    _approved(top, top, SLUG)
+    body = {"session_id": SESSION, "prompt_id": "p-big", "hook_event_name": "UserPromptSubmit",
+            "prompt": "x" * 2_000_000, "cwd": str(top)}
+    out = _hook_json("approval-summary.sh", top, body)
+    assert "approval(s) made under a delegation" in out["systemMessage"], out

@@ -67,7 +67,7 @@ def _refused(root, args, *needles, **kw):
     return result
 
 
-# --- TRC-001 to TRC-004 --------------------------------------------------------------------
+# --- defaults, flag order and --agent ------------------------------------------------------
 
 def test_TRC_001_a_bare_compass_delegate_covers_this_session_every_issue_and_the_default(
         tmp_path):
@@ -140,7 +140,7 @@ def test_TRC_004_agent_any_is_refused(tmp_path, name):
     _refused(root, f"--agent {name}", "names one agent", "'any' is refused")
 
 
-# --- TRC-005 to TRC-009 --------------------------------------------------------------------
+# --- end time, --max, --for and the count in force -----------------------------------------
 
 def test_TRC_005_until_has_no_upper_limit(tmp_path, clock):
     root = project(tmp_path)
@@ -181,7 +181,7 @@ def test_TRC_009_a_sixth_delegation_in_force_is_accepted(tmp_path):
     assert all(not found[f"DL-{n}"].get("revoked_at") for n in range(1, 6))
 
 
-# --- TRC-010 to TRC-016: what the parser refuses -------------------------------------------
+# --- what the parser refuses ---------------------------------------------------------------
 
 def test_TRC_010_the_old_positional_form_is_refused_with_the_flag_form(tmp_path):
     root = project(tmp_path)
@@ -229,7 +229,7 @@ def test_TRC_016_a_word_that_belongs_to_no_flag_is_refused(tmp_path):
     _refused(root, f"--until 08:00 {ARCHITECT}", f"'{ARCHITECT}'", FLAG_FORM)
 
 
-# --- TRC-017 to TRC-019 --------------------------------------------------------------------
+# --- session id and the guardrail 5 code ---------------------------------------------------
 
 def test_TRC_017_a_delegation_with_no_agent_needs_a_session_id(tmp_path):
     root = project(tmp_path)

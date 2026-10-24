@@ -155,6 +155,25 @@ def test_TRC_076_a_wrong_late_or_other_session_s_confirmation_code_writes_no_del
     assert not list(_store(root).glob("DL-*.yml"))
 
 
+# --- revoke from a session in any worktree (TRC-078) ---------------------------------------
+
+def test_TRC_078_compass_revoke_dl_n_ends_one_of_several_from_a_session_in(tmp_path):
+    from delegation_support import add_issue, add_worktree, repo, set_owner
+    from delegation_support import type_ as type_in
+    top = repo(tmp_path)
+    work = add_worktree(top, "w")
+    add_issue(work, "wt-issue", current=True)
+    set_owner(work, "pat")
+    _write_dl(top, 1, until=None, format=2)
+    _write_dl(top, 2, until=None, format=2)
+    result = type_in(work, "DL-1", command="compass:revoke", session="sess-w")
+    assert not result.block, result
+    found = {p.stem: yaml.safe_load(p.read_text(encoding="utf-8"))
+             for p in sorted(_store(top).glob("DL-*.yml"))}
+    assert found["DL-1"]["revoked_by"] == "jed72" and found["DL-1"]["revoked_at"]
+    assert not found["DL-2"].get("revoked_at")
+
+
 # --- a typed command is answered once (TRC-077) --------------------------------------------
 
 def test_TRC_077_a_typed_compass_delegate_is_answered_once(tmp_path):

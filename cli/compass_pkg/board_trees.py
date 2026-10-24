@@ -29,7 +29,8 @@ The source dict:
 The `trees` summary: {"read": [labels], "skipped": int, "note": str or None}.
 `note` says why worktrees could not be listed.
 """
-# DEPENDENCY: standard library (os, stat, subprocess); compass_pkg.core.
+# DEPENDENCY: standard library (os, stat, subprocess); compass_pkg.core,
+# compass_pkg.worktree_lookup (the porcelain parser).
 from __future__ import annotations
 
 import os
@@ -37,6 +38,8 @@ import stat
 import subprocess
 
 from compass_pkg.core import manifest_path
+# The porcelain parser lives with the worktree lookup, which delegations share.
+from compass_pkg.worktree_lookup import parse_porcelain as _worktree_entries
 
 THIS_CHECKOUT = "this checkout"
 _GIT_TIMEOUT_SECONDS = 60
@@ -61,22 +64,6 @@ def _git(project_root, *args):
             reason = reason[len("fatal: "):]
         return False, reason
     return True, done.stdout
-
-
-def _worktree_entries(listing):
-    """Parse `git worktree list --porcelain` into dicts of path and flags."""
-    entries = []
-    for block in listing.split("\n\n"):
-        lines = [ln for ln in block.splitlines() if ln.strip()]
-        if not lines or not lines[0].startswith("worktree "):
-            continue
-        flags = {ln.split(" ", 1)[0] for ln in lines[1:]}
-        entries.append({
-            "path": lines[0][len("worktree "):],
-            "bare": "bare" in flags,
-            "prunable": "prunable" in flags,
-        })
-    return entries
 
 
 def _inside(path, top):

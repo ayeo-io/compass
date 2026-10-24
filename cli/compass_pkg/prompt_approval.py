@@ -92,6 +92,9 @@ class Session:
     role: str
     approver_source: str
     entrypoint: str
+    #: The common store's `.compass/` folder, for `/compass:delegate` and
+    #: `/compass:revoke`, which name no issue (`task_dir` and `slug` are empty).
+    compass_dir: str = ""
 
 
 def handle(event, env, plugin_root=None):
@@ -138,7 +141,7 @@ def _handle(event, env, plugin_root):
     # reviewed on other issues too. Every issue lock it may need is taken
     # here, with the session's own, in one sorted order: holding the own lock
     # while waiting for another issue's let two sessions wait on each other.
-    held = [session.task_dir]
+    held = [session.task_dir] if session.task_dir else []
     if command == "approve" and not session.args:
         from compass_pkg import delegations
         held += delegations.review_dirs(os.path.dirname(os.path.dirname(session.task_dir)))
@@ -196,12 +199,30 @@ def _session(event, env, command, entrypoint):
                       "folder above it), so nothing was written.")
     compass_dir = os.path.join(project, ".compass")
     session_id = str(event.get("session_id") or "")
+    if command in ("delegate", "revoke"):
+        return _store_session(event, env, command, entrypoint, project, session_id)
     slug = _issue(compass_dir, env, session_id)
     approver, role, source = resolve_approver(os.path.join(compass_dir, "work", slug), env)
     return Session(command, " ".join(str(event.get("command_args") or "").split()),
                    session_id, str(event.get("prompt_id") or ""), project,
                    os.path.join(compass_dir, "work", slug), slug, approver, role, source,
                    entrypoint)
+
+
+def _store_session(event, env, command, entrypoint, project, session_id):
+    """The session of `/compass:delegate` and `/compass:revoke`. They name no
+    issue. The delegation is kept in the common store, and the approver is
+    read from the folder that holds it, whichever worktree the person typed
+    in (DD-1)."""
+    from compass_pkg import worktree_lookup
+    store = worktree_lookup.common_store(project)
+    if store.folder is None:
+        raise Refused(f"Compass: {store.why_none}, so nothing was written.")
+    approver, role, source = resolve_approver(store.project, env)
+    return Session(command, " ".join(str(event.get("command_args") or "").split()),
+                   session_id, str(event.get("prompt_id") or ""), project, "", "",
+                   approver, role, source, entrypoint,
+                   compass_dir=os.path.dirname(store.folder))
 
 
 def _one_segment(slug):
@@ -313,6 +334,8 @@ def _refuse_used_prompt(session):
         raise Refused(f"Compass: Claude Code sent /compass:{session.command} with no prompt "
                       f"id, so Compass cannot tell it from a repeat of a command already "
                       f"answered. Nothing was written. Type the command again.")
+    if not session.task_dir:
+        return          # no issue: `delegations` compares the delegation files
     task, _ = load_manifest(session.task_dir)
     for entry in task.get("evidence") or []:
         if isinstance(entry, dict) and entry.get("prompt_id") == session.prompt_id:

@@ -233,6 +233,34 @@ def parse_flags(words):
     return found
 
 
+def _issues_named(slugs, session):
+    """`{slug: generation}` for the issues `--on` names, each looked up in every
+    worktree of the repository. Refuses a name that is not one folder name, an
+    issue no worktree holds (naming the folders searched) and an issue that two
+    worktrees hold (naming both)."""
+    from compass_pkg import worktree_lookup
+    for slug in slugs:
+        if not slug or slug in (".", "..") or "/" in slug or "\\" in slug:
+            raise _refused(f"'{slug}', named after --on, is not the name of one issue "
+                           f"folder.")
+    listing = worktree_lookup.list_worktrees(session.project)
+    issues = {}
+    for slug in slugs:
+        try:
+            task_dir = worktree_lookup.find_issue(listing, slug)
+        except worktree_lookup.HeldTwice as exc:
+            raise _refused(f"'{slug}', named after --on, is held by more than one "
+                           f"worktree: {' and '.join(exc.folders)}. Compass cannot tell "
+                           f"which one is meant; remove or rename one.") from None
+        except worktree_lookup.NotFound as exc:
+            note = f" {exc.note[0].upper()}{exc.note[1:]}." if exc.note else ""
+            raise _refused(f"'{slug}', named after --on, is in none of the work folders "
+                           f"searched: {', '.join(exc.searched)}.{note}") from None
+        task, _ = load_manifest(task_dir)
+        issues[slug] = task.get("generation")
+    return issues
+
+
 def parse(args, session, now):
     """The delegation `/compass:delegate <args>` asks for. Refuses anything
     outside the limits."""
@@ -254,15 +282,7 @@ def parse(args, session, now):
         if form not in FORMS and not re.fullmatch(r"check:[\w.-]+", form):
             raise _refused(f"'{form}' is not a form a delegation covers; use g5, checks, "
                            f"documents, checkpoints, decisions or check:<id>.")
-    compass_dir = os.path.dirname(os.path.dirname(session.task_dir))
-    issues = {}
-    for slug in found["on"].split(",") if "on" in found else []:
-        task_dir = os.path.join(compass_dir, "work", slug)
-        if (not slug or slug in (".", "..") or "/" in slug or "\\" in slug
-                or not os.path.isdir(task_dir)):
-            raise _refused(f"'{slug}', named after --on, is not an issue in this project.")
-        task, _ = load_manifest(task_dir)
-        issues[slug] = task.get("generation")
+    issues = _issues_named(found["on"].split(","), session) if "on" in found else {}
     cap = None
     if "max" in found:
         if not found["max"].isdigit() or int(found["max"]) < 1:
@@ -388,7 +408,7 @@ def _typed_code(text):
 
 
 def handle_delegate(session):
-    compass_dir = os.path.dirname(os.path.dirname(session.task_dir))
+    compass_dir = session.compass_dir
     now = _now()
     words = session.args.split()
     with _lock(compass_dir):
@@ -442,7 +462,7 @@ def _confirm(compass_dir, session, code, now):
 
 def handle_revoke(session):
     from compass_pkg.prompt_approval import HookResult
-    compass_dir = os.path.dirname(os.path.dirname(session.task_dir))
+    compass_dir = session.compass_dir
     now = _now()
     named = session.args.split()[0] if session.args.split() else ""
     with _lock(compass_dir):

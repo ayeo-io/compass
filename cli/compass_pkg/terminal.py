@@ -697,7 +697,12 @@ def run_with_mode(args, fn):
     (141), the status a shell reports for a process that SIGPIPE ended. The
     non-zero status tells a script under `set -o pipefail` that the output
     was cut short.
+
+    For a plugin install, the output names the `compass` launcher in each
+    command a person runs in their own terminal (`launcher.py`).
     """
+    from compass_pkg import launcher
+    launcher.name_commands_in_output()
     try:
         return _run_with_mode(args, fn)
     except BrokenPipeError:

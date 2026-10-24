@@ -45,24 +45,30 @@ CONTRACT="$FRAMEWORK_ROOT/compass-contract.md"
 # everywhere. Rewritten only when its content differs, through a temporary
 # file and a rename, so a status line refresh never runs half a script. It
 # prints nothing and never fails the session.
-compass_write_statusline_launcher() {
-  local data="${CLAUDE_PLUGIN_DATA:-}" target launcher want tmp
+#
+# The same folder holds a `compass` launcher for the person's own terminal,
+# which Claude Code does not give the plugin's bin/. Compass sends the person
+# there for the commands an agent must not run, such as `compass evidence
+# approve`, and names this launcher when it does (cli/compass_pkg/launcher.py).
+# Unlike the status line, it says so when its target is gone, because a person
+# typed it and waits for an answer.
+compass_write_launcher() {
+  local name="$1" want="$2" data="${CLAUDE_PLUGIN_DATA:-}" launcher tmp
   [ -n "$data" ] || return 0
   mkdir -p "$data" 2>/dev/null
   [ -d "$data" ] && [ -w "$data" ] || return 0
-  target="$FRAMEWORK_ROOT/bin/compass-statusline"
-  launcher="$data/compass-statusline"
-  want="$(printf '#!/usr/bin/env bash\n# Written by the Compass session-start hook, and rewritten when the plugin\n# moves, so the statusLine setting can name this file and never change.\ntarget=%q\n[ -x "$target" ] || exit 0\nexec "$target"' "$target")"
+  launcher="$data/$name"
   if [ -f "$launcher" ] && [ "$(cat "$launcher" 2>/dev/null)" = "$want" ]; then
     return 0
   fi
-  tmp="$(mktemp "$data/.compass-statusline.XXXXXX" 2>/dev/null)" || return 0
+  tmp="$(mktemp "$data/.$name.XXXXXX" 2>/dev/null)" || return 0
   if printf '%s\n' "$want" > "$tmp" && chmod 755 "$tmp" && mv -f "$tmp" "$launcher"; then
     return 0
   fi
   rm -f "$tmp"
 }
-compass_write_statusline_launcher >/dev/null 2>&1 || true
+compass_write_launcher compass-statusline "$(printf '#!/usr/bin/env bash\n# Written by the Compass session-start hook, and rewritten when the plugin\n# moves, so the statusLine setting can name this file and never change.\ntarget=%q\n[ -x "$target" ] || exit 0\nexec "$target"' "$FRAMEWORK_ROOT/bin/compass-statusline")" >/dev/null 2>&1 || true
+compass_write_launcher compass "$(printf '#!/usr/bin/env bash\n# Written by the Compass session-start hook, and rewritten when the plugin\n# moves, so this path runs the installed Compass CLI after an upgrade.\ntarget=%q\nif [ ! -x "$target" ]; then\n  echo "compass: the Compass plugin is not at $target; start a Claude Code session with the plugin enabled to update this launcher." >&2\n  exit 1\nfi\n# bin/compass prefers CLAUDE_PLUGIN_ROOT, which names another copy if the\n# shell exports it.\nexec env -u CLAUDE_PLUGIN_ROOT "$target" "$@"' "$FRAMEWORK_ROOT/bin/compass")" >/dev/null 2>&1 || true
 
 # The input names the session, so the review summary can record what the
 # session was shown. Read only when a pipe or file gives it: a terminal would

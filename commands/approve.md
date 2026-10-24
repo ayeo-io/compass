@@ -21,5 +21,8 @@ Then:
 - tell the person that nothing was recorded;
 - tell them the fallback: they run `compass evidence approve` with the form
   the request names, `--approver <their id>`, `--role <role>` and `--scope`,
-  in their own terminal;
+  in their own terminal. With a plugin install their terminal has no
+  `compass` until they add it to `PATH`, so name the launcher in its place:
+  `compass-compass/compass` in the `plugins/data/` folder of their Claude
+  Code configuration (`~/.claude` unless they use another profile);
 - never record the approval yourself, by any command or file edit, and stop.

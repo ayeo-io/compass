@@ -49,7 +49,7 @@ import os
 import re
 import sys
 
-from compass_pkg import approval_records, approvals, old_names
+from compass_pkg import approval_records, approvals, launcher, old_names
 from compass_pkg.core import CompassError, issue_arg, resolve_issue_dir
 from compass_pkg.terminal import say
 
@@ -94,10 +94,13 @@ def cmd_evidence_approve(args):
         raise CompassError("compass evidence approve: --as names the agent of a delegated "
                            "approval, so it needs --delegated.")
     if not _terminal_attached():
+        word, hint = launcher.terminal_command()
         raise CompassError("compass evidence approve: this needs a terminal on standard "
                            "input. An approval is a person's act, so run the command "
-                           "yourself in a terminal; an agent session cannot record one. "
-                           "An agent asks for an approval with `compass evidence request`.")
+                           f"yourself in a terminal, as `{word} evidence approve ...`; an "
+                           "agent session cannot record one. An agent asks for an "
+                           "approval with `compass evidence request`."
+                           + (f" {hint}" if hint else ""))
     missing = [flag for flag, value in (("--approver", args.approver), ("--role", args.role))
                if value is None]
     if missing:

@@ -5000,3 +5000,9 @@ The pre-tool hook now treats perl -pi, ruby -pi and inline interpreter scripts t
 - `TRC-006` A script that reads a production file and writes elsewhere is not refused
 - `TRC-007` An ordinary Bash call starts no Python
 - `TRC-008` The safety contract lists exactly the shapes the hook catches
+
+### compass-cli-on-path (completed 2026-10-24)
+
+A plugin install now has a compass launcher for your own terminal, and every command Compass asks you to run there names it, with the folder to add to your PATH.
+
+- `TRC-001` Given the plugin is installed and its session-start hook has run, when a message tells the person to run compass evidence approve in their own terminal, then it names the launcher in the plugin's data folder, which runs the installed CLI

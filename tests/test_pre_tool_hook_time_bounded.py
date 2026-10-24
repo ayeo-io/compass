@@ -1749,3 +1749,33 @@ def test_expand_command_variable_gives_the_same_results_as_before(tmp_path):
         if r.returncode != 0 or r.stdout != want:
             bad.append((key, target, expected, r.returncode, r.stdout[:80], r.stderr[:80]))
     assert not bad, bad[:5]
+
+
+@pytest.mark.serial
+def test_a_script_with_many_write_target_names_finishes_in_time(tmp_path):
+    """Scenario `TRC-007` in hook-interpreter-writes/acceptance-criteria.md:
+    the hook follows each write call's name to the strings assigned to it,
+    and that must stay one pass over the command however many names it
+    holds. 5000 names in 84 KB took 54 s when each name had its own scan."""
+    root = _project(tmp_path)
+    body = "".join(f"open(n{k}, 'w')\n" for k in range(5000))
+    seconds, r = _bash(root, f"python3 - <<'EOF'\n{body}EOF", tmp_path)
+
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert seconds < FAST, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_many_write_target_names_with_assignments_are_judged_in_time(tmp_path):
+    """Scenario `TRC-007` in hook-interpreter-writes/acceptance-criteria.md:
+    with an assignment for every name, the join still runs in one pass and
+    the hook still finds the guarded write among them."""
+    root = _project(tmp_path)
+    body = "".join(f"n{k} = '/tmp/out{k}'\nopen(n{k}, 'w')\n"
+                   for k in range(300))
+    body += "last = 'src/app.py'\nopen(last, 'w')\n"
+    seconds, r = _bash(root, f"python3 - <<'EOF'\n{body}EOF", tmp_path)
+
+    assert r.returncode == 2 and "no-red-on-record" in r.stderr, (
+        r.returncode, r.stderr)
+    assert seconds < FAST, f"the hook took {seconds:.1f} s"

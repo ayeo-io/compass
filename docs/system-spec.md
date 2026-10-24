@@ -4987,3 +4987,16 @@ The approval guard now refuses a protected folder name split by a backslash and 
 - `TRC-119` A failed call deletes its ticket
 - `TRC-120` A denied permission deletes the ticket of that call
 - `TRC-121` A prompt deletes the unused tickets of the session
+
+### hook-interpreter-writes (completed 2026-10-24)
+
+The pre-tool hook now treats perl -pi, ruby -pi and inline interpreter scripts that write a path held in a variable as writes to production code, so they need a failing test on record first.
+
+- `TRC-001` perl -pi is a write
+- `TRC-002` ruby -pi is a write
+- `TRC-003` perl that only reads is not a write
+- `TRC-004` A Python heredoc that writes a path held in a variable is a write
+- `TRC-005` python3 -c that writes a path held in a variable is a write
+- `TRC-006` A script that reads a production file and writes elsewhere is not refused
+- `TRC-007` An ordinary Bash call starts no Python
+- `TRC-008` The safety contract lists exactly the shapes the hook catches

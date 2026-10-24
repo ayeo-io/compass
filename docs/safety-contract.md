@@ -1048,7 +1048,9 @@ For shell commands it recognizes these write shapes, and only these:
 
 - `>`, `>>` and `>|` redirects, including the `cat > file <<EOF` heredoc
   form and a quoted target such as `> "src/app.ts"`
-- `sed -i`, `perl -i`
+- `sed -i`, and `perl` and `ruby` with `-i` in any flag group, such as
+  `-pi`, `-lpi`, `-i.bak` or a `-i` after `-e '...'`, also inside a
+  `bash -c` or `sh -c` string
 - the arguments of `tee`, and the last argument of `cp` and `mv`, found in
   the same simple command as the `tee`, `cp` or `mv` word, including behind
   a wrapper such as `sudo` or `timeout`; a file that another command in the
@@ -1057,11 +1059,21 @@ For shell commands it recognizes these write shapes, and only these:
   bracket inside a span does not hide the words after it, and a write
   inside such a span is found
 - `patch -p<n>` and `git apply` - writers with unknowable targets
-- an inline interpreter script (`python3 -c`, `node -e`, a heredoc) that opens
-  a file for writing
+- an inline interpreter script (`python3 -c`, `node -e`, a heredoc) whose
+  write call names its target as a string, or as a name the same script
+  assigns a string to (`p = 'app.ts'`). The write calls are `open` with
+  a write mode as its second argument, `Path(...).write_text` and
+  `write_bytes`, the second argument of `os.replace`, `os.rename`,
+  `shutil.copy`, `shutil.copy2`, `shutil.copyfile` and `shutil.move`, and
+  the first argument of `writeFileSync`, `appendFileSync` and `File.write`.
+  A name that no write call takes is not a target
 
-Anything else runs unchecked: a write through a script, a build step, or an
-interpreter reached via a wrapper is not detected. Unknown commands are allowed
+Anything else runs unchecked: a write through a script file, a build step,
+an interpreter reached via a wrapper, a write call in another form (such as
+`open(p, mode='w')`, `Path(p).open('w')`, a first argument holding brackets
+such as `os.replace(str(x), 'app.ts')`, or a call split over lines), or a
+path built at run time (joined from parts, returned by a function or read
+from the environment) is not detected. Unknown commands are allowed
 rather than blocking ordinary development indiscriminately. These writes to
 production code, for example, are not detected:
 

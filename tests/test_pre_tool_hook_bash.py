@@ -354,7 +354,8 @@ def test_hook_is_registered_for_bash():
 
 
 # ---------------------------------------------------------------------------
-# hook-interpreter-writes (TRC-001..TRC-008, ayeo-io/compass-delivery-record#298)
+# perl and ruby in-place edits, and interpreter writes through a variable
+# (issue hook-interpreter-writes, ayeo-io/compass-delivery-record#298)
 # ---------------------------------------------------------------------------
 
 def _refused(command: str) -> subprocess.CompletedProcess:
@@ -380,13 +381,13 @@ def _assert_allowed(command: str) -> None:
 
 @pytest.mark.parametrize("flags", ["-pi", "-pie", "-i.bak", "-lpi"])
 def test_trc_001_perl_in_place_flag_groups_are_writes(flags):
-    """TRC-001 - the hook matched only the literal text `perl -i`, so a
+    """Scenario `TRC-001`: the hook matched only the literal text `perl -i`, so a
     combined flag group edited a source file with no red on record."""
     _assert_refused(f"perl {flags} -e 's/a/b/' src/app.py")
 
 
 def test_trc_002_ruby_in_place_is_a_write():
-    """TRC-002 - ruby's in-place flag edits the file the same way."""
+    """Scenario `TRC-002`: ruby's in-place flag edits the file the same way."""
     _assert_refused("ruby -pi -e 'gsub(/a/, \"b\")' src/app.py")
 
 
@@ -395,12 +396,12 @@ def test_trc_002_ruby_in_place_is_a_write():
     "perl -Mstrict -e 'print 1' src/app.py",
 ])
 def test_trc_003_perl_that_only_reads_is_not_a_write(command):
-    """TRC-003 - `-Mstrict` holds the letter i but edits nothing."""
+    """Scenario `TRC-003`: `-Mstrict` holds the letter i but edits nothing."""
     _assert_allowed(command)
 
 
 def test_trc_004_heredoc_writing_a_variable_path_is_a_write():
-    """TRC-004 - the shape an agent used twice in this project after the Edit
+    """Scenario `TRC-004`: the shape an agent used twice in this project after the Edit
     tool refused the same change."""
     _assert_refused(
         "python3 - <<'EOF'\n"
@@ -416,19 +417,19 @@ def test_trc_004_heredoc_writing_a_variable_path_is_a_write():
     "import os; dst = 'src/app.py'; os.replace('/tmp/new.py', dst)",
 ], ids=["open", "write_text", "os.replace"])
 def test_trc_005_inline_script_writing_a_variable_path_is_a_write(script):
-    """TRC-005 - a write call that takes a name, not a string."""
+    """Scenario `TRC-005`: a write call that takes a name, not a string."""
     _assert_refused(f'python3 -c "{script}"')
 
 
 def test_trc_005_node_write_through_a_variable_is_a_write():
-    """TRC-005 - the same rule for node's writeFileSync."""
+    """Scenario `TRC-005`: the same rule for node's writeFileSync."""
     _assert_refused(
         "node -e \"const p = 'src/app.py'; "
         "require('fs').writeFileSync(p, 'x')\"")
 
 
 def test_trc_006_reading_one_file_and_writing_another_is_not_refused():
-    """TRC-006 - generating a report from a source file must still run."""
+    """Scenario `TRC-006`: generating a report from a source file must still run."""
     _assert_allowed(
         "python3 - <<'EOF'\n"
         "src = 'src/app.py'\n"
@@ -440,7 +441,7 @@ def test_trc_006_reading_one_file_and_writing_another_is_not_refused():
 
 
 def test_trc_007_an_ordinary_call_starts_no_python(tmp_path):
-    """TRC-007 - the hook runs on every Bash call, so the new rules stay in
+    """Scenario `TRC-007`: the hook runs on every Bash call, so the new rules stay in
     bash and grep."""
     starts = tmp_path / "starts"
     shim = tmp_path / "bin"
@@ -466,7 +467,7 @@ def test_trc_007_an_ordinary_call_starts_no_python(tmp_path):
 
 
 def test_trc_008_the_contract_lists_the_shapes_the_hook_catches():
-    """TRC-008 - the contract claimed every inline interpreter write, while the
+    """Scenario `TRC-008`: the contract claimed every inline interpreter write, while the
     hook took only a path written inside the write call."""
     contract = (FRAMEWORK_ROOT / "docs" / "safety-contract.md").read_text(
         encoding="utf-8")

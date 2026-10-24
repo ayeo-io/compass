@@ -1380,8 +1380,9 @@ bash_write_targets() {
       *"sed -i"*|*"perl -i"*)
         printf '%s\n' "$cmd" | tr ' \t' '\n\n' | grep -vE '^-' || true ;;
       *perl*|*ruby*)
-        if printf '%s\n' "$cmd" | grep -qE \
-            '(^|[^[:alnum:]_.-])(perl|ruby)([[:space:]]+-[^[:space:]]+)*[[:space:]]+-[A-HJ-LN-Za-ln-z0-9]*i'; then
+        if printf '%s\n' "$cmd" | grep -E \
+            '(^|[^[:alnum:]_.-])(perl|ruby)([[:space:]]+-[^[:space:]]+)*[[:space:]]+-[A-HJ-LN-Za-ln-z0-9]*i' \
+            >/dev/null; then
           printf '%s\n' "$cmd" | tr ' \t' '\n\n' | grep -vE '^-' || true
         fi ;;
     esac

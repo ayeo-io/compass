@@ -750,26 +750,44 @@ case "${TOOL:-}" in
        *) _bare="$_text" ;;
      esac
      # prefilter-bare-end
-     case "$_text $_bare" in
+     # The shell removes a backslash-newline and joins the text around it, so
+     # `approval-req\<newline>uests` runs as the whole name
+     # (ayeo-io/compass-delivery-record#246). When the text holds one, every
+     # check below also reads two joined forms: `_joined`, the bare form with
+     # its newlines removed, and `_cjoined`, the command with each line that
+     # ends in a backslash joined to the next. Both can join more than the
+     # shell does, which only starts the guard; the guard decides.
+     _joined="" _cjoined=""
+     case "$_text" in
+       *\\$'\n'*)
+         if [ "${#_text}" -lt 256 ]; then
+           _joined="${_bare//$'\n'/}"
+           _cjoined="${COMMAND//\\$'\n'/}"
+         else
+           _joined="$(printf '%s' "$_bare" | LC_ALL=C tr -d '\n')"
+           _cjoined="$(printf '%s' "${COMMAND:-}" | LC_ALL=C awk '{ if (sub(/\\$/, "")) printf "%s", $0; else print }')"
+         fi ;;
+     esac
+     case "$_text $_bare $_joined" in
        *approval-requests*|*prompt-approval.sh*|*.compass/delegations*|*--del*|\
        *.claude*|*CLAUDE_CONFIG_DIR*) GUARD_RUN=1 ;;
      esac
      if [ "$GUARD_RUN" = 0 ] && [ "${TOOL:-}" = "Bash" ]; then
-       case "${COMMAND:-}" in *'~'*|*HOME*|*/.*|*//*) GUARD_RUN=1 ;; esac
-       case "${_text:-} ${_bare:-}" in *.compass/*[*?[]*|*deleg*[*?[]*) GUARD_RUN=1 ;; esac
+       case "${COMMAND:-} ${_cjoined:-}" in *'~'*|*HOME*|*/.*|*//*) GUARD_RUN=1 ;; esac
+       case "${_text:-} ${_bare:-} ${_joined:-}" in *.compass/*[*?[]*|*deleg*[*?[]*) GUARD_RUN=1 ;; esac
        # A flag or verb built with ANSI-C quoting or braces (`--{delegated,x}`)
        # shows no `--del`, so evidence beside `$'` or `{` starts the guard.
-       case "${_text:-}" in
-         *evidence*) case "${_text:-}" in *'$'\'*|*'{'*) GUARD_RUN=1 ;; esac ;;
+       case "${_text:-} ${_joined:-}" in
+         *evidence*) case "${_text:-} ${_cjoined:-}" in *'$'\'*|*'{'*) GUARD_RUN=1 ;; esac ;;
        esac
        # Every word of `compass $'\x65vidence' $'appro\x76e'` can hold an
        # escape, so `evidence` need not show: `$'` then a backslash starts it.
-       case "${_text:-}" in *'$'\'*'\'*) GUARD_RUN=1 ;; esac
+       case "${_text:-} ${_cjoined:-}" in *'$'\'*'\'*) GUARD_RUN=1 ;; esac
        _above=""
        case "${TRANSCRIPT:-}" in /*) _above="${TRANSCRIPT%/*}" ;; esac
-       case "${COMMAND:-}" in *"${_above:-//no transcript//}"*) GUARD_RUN=1 ;; esac
+       case "${COMMAND:-} ${_cjoined:-}" in *"${_above:-//no transcript//}"*) GUARD_RUN=1 ;; esac
        while [ "$GUARD_RUN" = 0 ] && [ -n "$_above" ]; do
-         case " ${COMMAND:-} " in
+         case " ${COMMAND:-} ${_cjoined:-} " in
            *[[:space:]\"\']"$_above"[[:space:]\"\']*|\
            *[[:space:]\"\']"$_above"/[[:space:]\"\'*]*|\
            *[[:space:]\"\']"$_above"/*[*?[{\"\'\\]*)

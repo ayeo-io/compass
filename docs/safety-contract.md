@@ -238,7 +238,16 @@ The guard refuses these calls:
   names `delegations`, and a Bash word that names that folder
   (`delegation-protected`). A Grep over the whole project still reaches the
   folder; the stored hash and the 64-bit code are what keep the confirmation
-  code of a delegation out of reach;
+  code of a delegation out of reach. For both folders, a Bash command is
+  read with each backslash and newline removed where the shell removes
+  them, outside quotes and inside double quotes, so a name split across two
+  lines, such as `.compass/deleg\<newline>ations`, counts as the whole name.
+  In a simple command, the shell keeps the two characters inside single
+  quotes, and so does the guard. A command that is not simple, such as one
+  with a comment, a heredoc or a command substitution, is also read with
+  every backslash and newline removed, because an apostrophe there may not
+  be a quote to the shell; a split name inside single quotes is refused
+  there too;
 - a Grep glob, or a Bash word with `*`, `?` or `[`, that can match the
   delegation folder or a file in it, such as `d*/*`, `deleg*/*`,
   `deleg?tions`, `**/confirm-*` or `cat .compass/deleg*/*`

@@ -4842,3 +4842,22 @@ The plugin listing now shows the name Compass, the author ayeo and a description
 The CI shard jobs now log a duration for every test, the ones under 0.005 seconds included, so the shard timing table can be rebuilt with a time for every test file.
 
 - `TRC-001` Given the CI shard job's pytest options, when they run over a fast test and a slow test, then the durations list names every test, the fast ones included
+
+### approval-prefilter-bounds (completed 2026-10-24)
+
+The approval guard now refuses a protected folder name split by a backslash and a newline, and decides long or unusual commands in well under the hook's time limit.
+
+- `TRC-001` A request folder name split by a backslash-newline is refused
+- `TRC-002` A delegation folder name split by a backslash-newline is refused
+- `TRC-003` A backslash-newline inside single quotes is read as the text it is
+- `TRC-004` An unclosed ANSI-C quote of 90 KB is decided within 2 seconds
+- `TRC-005` Unclosed brackets after .compass/ are decided within 2 seconds
+- `TRC-006` Nested class openers are decided within 2 seconds
+- `TRC-007` Ordinary commands still start no guard
+- `TRC-008` The guard's existing tests pass unchanged
+- `TRC-009` A long run of operators in an evidence command is decided within 2 seconds
+- `TRC-010` A split name after a quote the shell does not read is refused
+- `TRC-011` Split forms reach every prefilter check
+- `TRC-012` A long escape tail after a protected name is refused within 2 seconds
+- `TRC-013` Bracket words with a class end are decided within 2 seconds
+- `TRC-014` A long brace word is decided within 2 seconds

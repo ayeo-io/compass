@@ -1372,9 +1372,18 @@ bash_write_targets() {
 
     # In-place editors: hand over every argument and let the classifier
     # decide which of them is a production file.
+    # perl and ruby edit in place with `-i` anywhere in a flag group (`-pi`,
+    # `-lpi`, `-i.bak`), so the literal text `perl -i` misses most real uses.
+    # A group holding M, m or I before the i is `-Mstrict` or `-I<dir>`,
+    # which edits nothing.
     case "$cmd" in
       *"sed -i"*|*"perl -i"*)
         printf '%s\n' "$cmd" | tr ' \t' '\n\n' | grep -vE '^-' || true ;;
+      *perl*|*ruby*)
+        if printf '%s\n' "$cmd" | grep -qE \
+            '(^|[^[:alnum:]_.-])(perl|ruby)([[:space:]]+-[^[:space:]]+)*[[:space:]]+-[A-HJ-LN-Za-ln-z0-9]*i'; then
+          printf '%s\n' "$cmd" | tr ' \t' '\n\n' | grep -vE '^-' || true
+        fi ;;
     esac
 
     # `tee` writes its own arguments; `cp` and `mv` write the LAST argument of
@@ -1544,6 +1553,33 @@ bash_write_targets() {
     printf '%s\n' "$cmd" \
       | grep -oE "(writeFileSync|appendFileSync|File\.write)\([[:space:]]*['\"][^'\"]+['\"]" \
       | sed -E "s/^[A-Za-z_.]+\([[:space:]]*['\"]([^'\"]+)['\"].*/\1/" || true
+
+    # A write call whose target is a name rather than a string:
+    #     target = 'src/app.py'
+    #     open(target, 'w')
+    # Every string the same command assigns to that name is a target. Only
+    # names a write call uses count, so a script that reads a source file
+    # through one name and writes a report through another is judged on the
+    # report alone. A path built at run time is still not seen.
+    local _names _name
+    _names="$(printf '%s\n' "$cmd" | {
+      grep -oE "open\([[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*,[[:space:]]*['\"][^'\"]*[waxWAX+][^'\"]*['\"]" \
+        | sed -E 's/^open\([[:space:]]*([A-Za-z_][A-Za-z0-9_]*).*/\1/' || true
+      printf '%s\n' "$cmd" \
+        | grep -oE "Path\([[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\)\.(write_text|write_bytes)\(" \
+        | sed -E 's/^Path\([[:space:]]*([A-Za-z_][A-Za-z0-9_]*).*/\1/' || true
+      printf '%s\n' "$cmd" \
+        | grep -oE "(os\.replace|os\.rename|shutil\.copy2?|shutil\.copyfile|shutil\.move)\([^,()]*,[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*[,)]" \
+        | sed -E 's/.*,[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*[,)]$/\1/' || true
+      printf '%s\n' "$cmd" \
+        | grep -oE "(writeFileSync|appendFileSync|File\.write)\([[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*," \
+        | sed -E 's/^[A-Za-z_.]+\([[:space:]]*([A-Za-z_][A-Za-z0-9_]*).*/\1/' || true
+    } | sort -u)"
+    for _name in $_names; do
+      printf '%s\n' "$cmd" \
+        | grep -oE "(^|[^A-Za-z0-9_.])${_name}[[:space:]]*=[[:space:]]*['\"][^'\"]+['\"]" \
+        | sed -E "s/.*=[[:space:]]*['\"]([^'\"]+)['\"]$/\1/" || true
+    done
   } | grep -vE '^[[:space:]]*$' || true
 }
 
@@ -1854,8 +1890,10 @@ if [ "${TOOL:-}" = "Bash" ]; then
   # Cheap pre-filter, before any filesystem work: this hook now runs on every
   # Bash call in the session, and most of them write nothing.
   case "$COMMAND" in
-    *">"*|*"sed -i"*|*"perl -i"*|*"tee "*|*cp\ *|*mv\ *|\
-    *patch\ -p*|*"git apply"*|*open\(*|*write_text*|*writeFileSync*|*File.write*) ;;
+    *">"*|*"sed -i"*|*"perl "*|*"ruby "*|*"tee "*|*cp\ *|*mv\ *|\
+    *patch\ -p*|*"git apply"*|*open\(*|*write_text*|*write_bytes*|\
+    *writeFileSync*|*appendFileSync*|*File.write*|*os.replace*|*os.rename*|\
+    *shutil.copy*|*shutil.move*) ;;
     *) exit 0 ;;
   esac
 

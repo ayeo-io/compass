@@ -351,3 +351,130 @@ def test_hook_is_registered_for_bash():
     assert any("Bash" in m for m in matchers), (
         f"pre-tool.sh is not registered for Bash; PreToolUse matchers: {matchers}"
     )
+
+
+# ---------------------------------------------------------------------------
+# hook-interpreter-writes (TRC-001..TRC-008, ayeo-io/compass-delivery-record#298)
+# ---------------------------------------------------------------------------
+
+def _refused(command: str) -> subprocess.CompletedProcess:
+    project, _ = _project(red=False)
+    try:
+        return _run(project, _bash(command))
+    finally:
+        shutil.rmtree(project, ignore_errors=True)
+
+
+def _assert_refused(command: str) -> None:
+    result = _refused(command)
+    assert result.returncode == 2 and "no-red-on-record" in result.stderr, (
+        f"expected no-red-on-record for {command!r}, got exit "
+        f"{result.returncode}\nstderr: {result.stderr}")
+
+
+def _assert_allowed(command: str) -> None:
+    result = _refused(command)
+    assert result.returncode == 0, (
+        f"expected {command!r} to be allowed\nstderr: {result.stderr}")
+
+
+@pytest.mark.parametrize("flags", ["-pi", "-pie", "-i.bak", "-lpi"])
+def test_trc_001_perl_in_place_flag_groups_are_writes(flags):
+    """TRC-001 - the hook matched only the literal text `perl -i`, so a
+    combined flag group edited a source file with no red on record."""
+    _assert_refused(f"perl {flags} -e 's/a/b/' src/app.py")
+
+
+def test_trc_002_ruby_in_place_is_a_write():
+    """TRC-002 - ruby's in-place flag edits the file the same way."""
+    _assert_refused("ruby -pi -e 'gsub(/a/, \"b\")' src/app.py")
+
+
+@pytest.mark.parametrize("command", [
+    "perl -ne 'print' src/app.py",
+    "perl -Mstrict -e 'print 1' src/app.py",
+])
+def test_trc_003_perl_that_only_reads_is_not_a_write(command):
+    """TRC-003 - `-Mstrict` holds the letter i but edits nothing."""
+    _assert_allowed(command)
+
+
+def test_trc_004_heredoc_writing_a_variable_path_is_a_write():
+    """TRC-004 - the shape an agent used twice in this project after the Edit
+    tool refused the same change."""
+    _assert_refused(
+        "python3 - <<'EOF'\n"
+        "target = 'src/app.py'\n"
+        "with open(target, 'w') as fh:\n"
+        "    fh.write('x = 1\\n')\n"
+        "EOF")
+
+
+@pytest.mark.parametrize("script", [
+    "p = 'src/app.py'; open(p, 'w').write('x')",
+    "import pathlib; p = \"src/app.py\"; pathlib.Path(p).write_text('x')",
+    "import os; dst = 'src/app.py'; os.replace('/tmp/new.py', dst)",
+], ids=["open", "write_text", "os.replace"])
+def test_trc_005_inline_script_writing_a_variable_path_is_a_write(script):
+    """TRC-005 - a write call that takes a name, not a string."""
+    _assert_refused(f'python3 -c "{script}"')
+
+
+def test_trc_005_node_write_through_a_variable_is_a_write():
+    """TRC-005 - the same rule for node's writeFileSync."""
+    _assert_refused(
+        "node -e \"const p = 'src/app.py'; "
+        "require('fs').writeFileSync(p, 'x')\"")
+
+
+def test_trc_006_reading_one_file_and_writing_another_is_not_refused():
+    """TRC-006 - generating a report from a source file must still run."""
+    _assert_allowed(
+        "python3 - <<'EOF'\n"
+        "src = 'src/app.py'\n"
+        "out = '/tmp/report.txt'\n"
+        "text = open(src).read()\n"
+        "with open(out, 'w') as fh:\n"
+        "    fh.write(text)\n"
+        "EOF")
+
+
+def test_trc_007_an_ordinary_call_starts_no_python(tmp_path):
+    """TRC-007 - the hook runs on every Bash call, so the new rules stay in
+    bash and grep."""
+    starts = tmp_path / "starts"
+    shim = tmp_path / "bin"
+    shim.mkdir()
+    for name in ("python3", "python"):
+        (shim / name).write_text(
+            f'#!/bin/sh\necho start >> "{starts}"\n'
+            f'exec "{shutil.which("python3")}" "$@"\n', encoding="utf-8")
+        (shim / name).chmod(0o755)
+    project, _ = _project(red=False)
+    try:
+        env = dict(os.environ)
+        env["CLAUDE_PROJECT_DIR"] = str(project)
+        env["PATH"] = f"{shim}{os.pathsep}{env['PATH']}"
+        for command in ("ls", "git status", "perl -ne 'print' src/app.py"):
+            result = subprocess.run(
+                ["bash", str(HOOK_PATH)], input=json.dumps(_bash(command)),
+                capture_output=True, text=True, env=env)
+            assert result.returncode == 0, result.stderr
+    finally:
+        shutil.rmtree(project, ignore_errors=True)
+    assert not starts.exists(), starts.read_text(encoding="utf-8")
+
+
+def test_trc_008_the_contract_lists_the_shapes_the_hook_catches():
+    """TRC-008 - the contract claimed every inline interpreter write, while the
+    hook took only a path written inside the write call."""
+    contract = (FRAMEWORK_ROOT / "docs" / "safety-contract.md").read_text(
+        encoding="utf-8")
+    section = contract.split("### Shell-write detection is best-effort", 1)[1]
+    section = section.split("\n### ", 1)[0]
+    flat = " ".join(section.split())
+    assert "`perl` and `ruby` with `-i` in any flag group" in flat
+    assert "assigned to a name in the same script" in flat
+    assert "a path built at run time" in flat
+    assert ("an inline interpreter script (`python3 -c`, `node -e`, a "
+            "heredoc) that opens a file for writing") not in flat

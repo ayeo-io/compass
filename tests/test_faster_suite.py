@@ -176,6 +176,8 @@ SERIAL_TESTS = {
     "tests/test_pre_tool_hook_time_bounded.py::test_an_over_limit_command_naming_approval_state_is_still_refused_where_compass_is_not_in_use[transcript]",
     "tests/test_pre_tool_hook_time_bounded.py::test_an_over_limit_command_naming_approval_state_is_still_refused_where_compass_is_not_in_use[delegation-file]",
     "tests/test_pre_tool_hook_time_bounded.py::test_a_long_allowed_command_under_the_limit_finishes_in_time",
+    "tests/test_pre_tool_hook_time_bounded.py::test_a_script_with_many_write_target_names_finishes_in_time",
+    "tests/test_pre_tool_hook_time_bounded.py::test_many_write_target_names_with_assignments_are_judged_in_time",
     "tests/test_pre_tool_hook_time_bounded.py::test_a_long_allowed_command_that_starts_with_a_variable_finishes_in_time",
     "tests/test_pre_tool_hook_time_bounded.py::test_a_command_of_many_leading_statements_before_a_variable_finishes_in_time",
     "tests/test_pre_tool_hook_time_bounded.py::test_a_reassigned_variable_before_a_heredoc_over_a_pipe_buffer_is_still_not_expanded",

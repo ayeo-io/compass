@@ -596,6 +596,10 @@ def test_d2_repairs_change_only_retired_names():
     command as words, what it judges in a simple command and the limits that
     remain.
 
+    One more was re-baselined by `delegation-everywhere`:
+    `docs/safety-contract.md` list_items 121 -> 127, the delegation section
+    rewritten as a list of the defaults, the common store and the call ticket.
+
     One more was re-baselined by `install-docs-show-the-one-line-form`:
     `docs/quickstart.md` (fences 34 -> 36) gained a code block for the shell
     install line and a second block for the two in-session commands. The

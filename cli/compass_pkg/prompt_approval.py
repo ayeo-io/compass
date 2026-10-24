@@ -231,7 +231,7 @@ def _store_session(event, env, command, entrypoint, project, session_id):
     """The session of `/compass:delegate` and `/compass:revoke`. They name no
     issue. The delegation is kept in the common store, and the approver is
     read from the folder that holds it, whichever worktree the person typed
-    in (DD-1)."""
+    in."""
     from compass_pkg import worktree_lookup
     store = worktree_lookup.common_store(project)
     if store.folder is None:

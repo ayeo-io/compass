@@ -5,6 +5,7 @@ status: proposed
 date: 2026-10-24
 supersedes: ''
 superseded_by: ''
+amends: ADR-069
 ---
 
 ## Context

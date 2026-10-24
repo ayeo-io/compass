@@ -5,7 +5,6 @@ status: accepted
 date: 2026-10-15
 supersedes: ''
 superseded_by: ''
-amended_by: ADR-077
 ---
 
 ## Context

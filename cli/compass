@@ -770,6 +770,8 @@ def main(argv=None):
     # tdd-red/green: strip a leading "--" that argparse REMAINDER keeps
     if getattr(args, "command", None) and args.command and args.command[0] == "--":
         args.command = args.command[1:]
+    from compass_pkg import launcher
+    launcher.name_commands_in_output()
     try:
         before_command(args)
         return run_with_mode(args, lambda a: github_page.after_command(a, render_after_command(a, github_labels.after_command(a, args.func(a) or 0)))) or 0

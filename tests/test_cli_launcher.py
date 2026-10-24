@@ -7,7 +7,7 @@ that does not change between versions, and every message that sends the
 person to their terminal names that launcher
 (ayeo-io/compass-delivery-record#300).
 
-Scenario `TRC-001` in compass-cli-on-path/acceptance-criteria.md.
+The single scenario, `TRC-001`, is in compass-cli-on-path/delivery-approach.md.
 """
 from __future__ import annotations
 
@@ -178,3 +178,46 @@ def test_the_quickstart_limits_the_path_entry_to_claude_code():
     assert "puts the `compass` CLI on your PATH." not in text
     assert "inside Claude Code" in text
     assert "plugins/data/compass-compass" in text
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("run `compass evidence approve --check x` at a terminal",
+     "run `/d/compass evidence approve --check x` at a terminal"),
+    ("compass issue decision set Q1 --status reopened",
+     "/d/compass issue decision set Q1 --status reopened"),
+    ("type /compass:approve 3", "type /compass:approve 3"),
+    ("`/d/compass evidence approve`", "`/d/compass evidence approve`"),
+    ("run compass check", "run compass check"),
+])
+def test_person_only_commands_name_the_launcher(text, expected):
+    """Scenario `TRC-001`: only the commands a person runs in their own
+    terminal change, and a launcher path already in the text is kept."""
+    assert launcher.name_commands(text, "/d/compass") == expected
+
+
+def test_every_message_from_a_plugin_install_names_the_launcher(tmp_path, project):
+    """Scenario `TRC-001`: a message no one changed by hand, the refusal of
+    a hand-made approval record, names the launcher too."""
+    plugin = _plugin_root(tmp_path, "1.0.0")
+    data = _data(tmp_path)
+    assert _session(plugin, project, data).returncode == 0
+    r = subprocess.run([sys.executable, str(plugin / "cli" / "compass"), "evidence",
+                        "add", "EV-1", "--type", "human-approval", "--path", "x"],
+                       cwd=project, capture_output=True, text=True,
+                       stdin=subprocess.DEVNULL, env=_clean_env(), timeout=60)
+    assert r.returncode != 0
+    assert f"{data / 'compass'} evidence approve" in r.stderr + r.stdout, r.stderr
+
+
+def test_an_exported_plugin_root_does_not_redirect_the_launcher(tmp_path, project):
+    """Scenario `TRC-001`: bin/compass prefers CLAUDE_PLUGIN_ROOT, so a shell
+    that exports it must not make the launcher run another copy."""
+    plugin = _plugin_root(tmp_path, "1.0.0")
+    data = _data(tmp_path)
+    _session(plugin, project, data)
+    env = _clean_env()
+    env["CLAUDE_PLUGIN_ROOT"] = str(ROOT)
+    ran = subprocess.run([str(data / "compass"), "--version"], capture_output=True,
+                         text=True, env=env, timeout=60)
+    assert ran.returncode == 0, ran.stderr
+    assert str(plugin.resolve() / "cli") in "".join(ran.stdout.split())

@@ -68,7 +68,7 @@ compass_write_launcher() {
   rm -f "$tmp"
 }
 compass_write_launcher compass-statusline "$(printf '#!/usr/bin/env bash\n# Written by the Compass session-start hook, and rewritten when the plugin\n# moves, so the statusLine setting can name this file and never change.\ntarget=%q\n[ -x "$target" ] || exit 0\nexec "$target"' "$FRAMEWORK_ROOT/bin/compass-statusline")" >/dev/null 2>&1 || true
-compass_write_launcher compass "$(printf '#!/usr/bin/env bash\n# Written by the Compass session-start hook, and rewritten when the plugin\n# moves, so this path runs the installed Compass CLI after an upgrade.\ntarget=%q\nif [ ! -x "$target" ]; then\n  echo "compass: the Compass plugin is not at $target; start a Claude Code session with the plugin enabled to update this launcher." >&2\n  exit 1\nfi\nexec "$target" "$@"' "$FRAMEWORK_ROOT/bin/compass")" >/dev/null 2>&1 || true
+compass_write_launcher compass "$(printf '#!/usr/bin/env bash\n# Written by the Compass session-start hook, and rewritten when the plugin\n# moves, so this path runs the installed Compass CLI after an upgrade.\ntarget=%q\nif [ ! -x "$target" ]; then\n  echo "compass: the Compass plugin is not at $target; start a Claude Code session with the plugin enabled to update this launcher." >&2\n  exit 1\nfi\n# bin/compass prefers CLAUDE_PLUGIN_ROOT, which names another copy if the\n# shell exports it.\nexec env -u CLAUDE_PLUGIN_ROOT "$target" "$@"' "$FRAMEWORK_ROOT/bin/compass")" >/dev/null 2>&1 || true
 
 # The input names the session, so the review summary can record what the
 # session was shown. Read only when a pipe or file gives it: a terminal would

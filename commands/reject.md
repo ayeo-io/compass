@@ -19,5 +19,8 @@ was rejected and the reason, and ask the person what should change.
 - tell the person that nothing was recorded;
 - tell them the fallback for a human check: they run `compass evidence
   approve --check <id> --decision rejected` with `--approver`, `--role` and
-  `--scope` in their own terminal;
+  `--scope` in their own terminal. With a plugin install their terminal has
+  no `compass` until they add it to `PATH`, so name the launcher in its
+  place: `compass-compass/compass` in the `plugins/data/` folder of their
+  Claude Code configuration (`~/.claude` unless they use another profile);
 - never record the rejection or an approval yourself, and stop.

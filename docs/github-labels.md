@@ -8,7 +8,7 @@ The label sync is `cli/compass_pkg/github_labels.py`. The issue page is describe
 
 - A manifest field `github: {repo, number}` links a Compass issue to a GitHub issue.
 - When a project switches it on, Compass writes labels, and with `page` the issue page, to that GitHub issue through the `gh` command.
-- The Compass manifest is the source of truth. Compass writes to GitHub and never reads a label back into the manifest.
+- The Compass manifest decides the labels. Compass writes to GitHub and never reads a label back into the manifest.
 - Nothing is written unless the project asks. With all three switches off, no Compass command calls GitHub.
 
 ## The setting
@@ -59,7 +59,7 @@ An assessed label that is not declared is not written. A declared label whose na
 
 ## The issue page
 
-The page widens the audience of the issue's documents to the readers of the GitHub issue, who can be many more people than can read the repository. That is why `page` is off by default: the issue's prose, decisions and file names leave the project when it is on, and nothing about the label switches turns it on.
+The page lets the readers of the GitHub issue read the issue's documents, and they can be many more people than can read the repository. That is why `page` is off by default: the issue's prose, decisions and file names leave the project when it is on, and no label switch turns it on.
 
 ### What it posts
 
@@ -97,11 +97,11 @@ The README file is never changed.
 
 ### What may not leave the project
 
-Two checks read the comment and the body as it is posted, after the links are rewritten and the size bound applied. A block the size bound leaves out is not posted and is not checked. The checks look for private paths and credentials. The first hit refuses the post, and a refused post is refused whole: no part of it is posted, nothing is redacted and posted in its place, and no `gh` call is made. A refusal writes one line on standard error that names the place, never the hit, and records the refusal in `github-sync.yml`.
+Two checks read the comment and the body as it is posted, after the links are rewritten and the size bound applied. A block the size bound leaves out is not posted and is not checked. The checks look for private paths and credentials. The first match refuses the post, and a refused post is refused whole: no part of it is posted, nothing is redacted and posted in its place, and no `gh` call is made. A refusal writes one line on standard error that names where the match is, never the matched text, and records the refusal in `github-sync.yml`.
 
 | Check | What it refuses |
 |---|---|
-| Private path | A file under `.compass/private/`, and a file that git ignores. The whole text is decoded before any path is picked out of it: percent-encoding and HTML character references are undone until the text stops changing, and a backslash is read as a slash. Text still changing after ten rounds of decoding refuses, because it cannot be checked. Text that then names a file under `.compass/private/` refuses, wherever it appears and whatever word it is joined to. The decoded text is then cut into pieces at every character that cannot be part of a path, such as a space, a control character, `;`, `&`, `#` or `?`. Each piece is folded (`./`, `//` and `..`) and git is asked about it as written, so a tracked symlink is checked by its own path; the symlink is followed only to test whether it leads into `.compass/private/`. Each word and link address of the undecoded text, cut at whitespace, brackets and quotes, is also decoded on its own and asked of git as one path, so an encoded space or plus stays part of the name it is in. An absolute path inside the project, including the path part of a `file://` or `vscode://` URL, is checked as a path from its root. A path under `.compass/work/` or `docs/compass/`, a folder named without a file, and a web link's path, which lies outside the project, are not asked of git. A failed `git check-ignore` call refuses too. |
+| Private path | A file under `.compass/private/`, and a file that git ignores. The whole text is decoded before any path is picked out of it: percent-encoding and HTML character references are undone until the text stops changing, and a backslash is read as a slash. Text still changing after ten rounds of decoding refuses, because it cannot be checked. Text that then names a file under `.compass/private/` refuses, wherever it appears and whatever word it is joined to. The decoded text is then cut into pieces at every character that cannot be part of a path, such as a space, a control character, `;`, `&`, `#` or `?`. Each piece has its `./`, `//` and `..` parts resolved, and git is asked about it as written, so a tracked symlink is checked by its own path; the symlink is followed only to test whether it leads into `.compass/private/`. Each word and link address of the undecoded text, cut at whitespace, brackets and quotes, is also decoded on its own and asked of git as one path, so an encoded space or plus stays part of the name it is in. An absolute path inside the project, including the path part of a `file://` or `vscode://` URL, is checked as a path from its root. A path under `.compass/work/` or `docs/compass/`, a folder named without a file, and a web link's path, which lies outside the project, are not asked of git. A failed `git check-ignore` call refuses too. |
 | Credential | Text that holds a credential shape the redaction step would replace. This check reads no environment variable. |
 
 A refused or failed page stays as it was on GitHub until the next successful sync. `compass issue lint` reports it meanwhile.
@@ -145,17 +145,17 @@ Each write compares the labels Compass owns with the labels now on the GitHub is
 
 ## When GitHub does not match
 
-A label removed or added on GitHub is reported, not pulled back. `compass issue lint` prints a `github:` line under its result when the issue is linked and a switch is on:
+A label removed or added on GitHub is reported, not copied back into the manifest. `compass issue lint` prints a `github:` line under its result when the issue is linked and a switch is on:
 
 - `github: out of sync - missing on GitHub: ...` or `not wanted on GitHub: ...` when the labels differ;
 - `github: out of sync - the last sync failed: ...` when the last write failed;
 - `github: out of sync - cannot read the labels on GitHub: ...` when the lint itself cannot reach GitHub.
 
-The lint keeps its exit code, so an unreachable GitHub does not fail `compass ci`. The lint reads GitHub and never writes to it. The next write, or `compass issue github sync`, puts the labels right.
+The lint keeps its exit code, so an unreachable GitHub does not fail `compass ci`. The lint reads GitHub and never writes to it. The next write, or `compass issue github sync`, corrects the labels.
 
 ## When gh fails
 
-A sync never fails the command that triggered it. Each `gh` call is abandoned after 15 seconds, so a hung `gh` holds a command, or one linked issue in `compass ci`, for 15 seconds at most.
+A sync never fails the command that triggered it. Each `gh` call is abandoned after 15 seconds, so a `gh` call that stops responding delays a command, or one linked issue in `compass ci`, by 15 seconds at most.
 
 - If `gh` is not installed, is not logged in, or cannot reach GitHub, the command still succeeds.
 - Compass prints one line on standard error that names the problem, and writes the failure to `github-sync.yml` in the issue's folder. `compass issue lint` then reports the issue as out of sync.

@@ -128,7 +128,7 @@ Compass keeps two kinds of rule apart:
   bureaucracy: BDD, TDD, decision records, architecture models and other
   practices that apply when they add value.
 
-An approach can lower the process weight. On an approach that ships, it
+An approach can reduce the amount of process. On an approach that ships, it
 cannot remove a guardrail. A project can make failures non-blocking with
 `adoption: advisory` ([configuration](docs/configuration.md#adoption)), and
 can depart from the shipped guardrails only through the owner's recorded
@@ -181,7 +181,8 @@ assess → define → refine → plan → breakdown → implement → verify →
 The stages stay the same while their depth adapts. Engineer, product owner,
 designer, product marketer and QA each enter the same issue through their own
 command; a product owner starts upstream with `/compass:intent`. A role is a
-perspective a session consults. The documents it writes bring the gates. See
+perspective a session consults. A document a role writes, such as
+`positioning.md`, adds the gates that check it. See
 the [roles guide](docs/roles-guide.md).
 
 ## Built to port
@@ -192,7 +193,7 @@ Compass runs on Claude Code today, but its core is split on purpose:
 - **Kit:** the runtime-neutral Python CLI, schemas and policy engine.
 - **Adapter:** the commands, agents, skills and hooks for Claude Code.
 
-The slash commands are the pipeline; the CLI is the mechanism underneath them
+The slash commands are the pipeline; they call the CLI, which does the work
 ([docs/cli.md](docs/cli.md)). A future runtime adapter calls the same kit
 rather than reimplementing the rules ([docs/portability.md](docs/portability.md)).
 

@@ -18,10 +18,10 @@ engineering plan stage.)
   shape: a one-line "edit which file(s)" note (quick fix - no `technical-design.md`), a
   real `technical-design.md` (regular), or a full `technical-design.md` plus
   `distribution-map.md` (the full approach).
-- Read `acceptance-criteria.md` and `requirements-review.md` - the design is
-  built on the hardened spec.
+- Read `acceptance-criteria.md` and `requirements-review.md` - the design
+  uses the spec as the requirements review left it.
 - Load the `plan-authoring` skill - how to write the design itself: what a
-  work unit is, what makes one genuinely independent of another, and the
+  work unit is, what makes one independent of another, and the
   self-review the author owes the reviewer before the design is handed over.
 - Load the `governance-check` skill.
 - Invoke the `planner` agent - it owns this stage.
@@ -32,7 +32,7 @@ engineering plan stage.)
   `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot
   tell. Exit 1 means the issue sets nothing for that value: leave it out,
   so the agent's frontmatter applies.
-- If an `intent.md` exists, this is where the **intent-fidelity gate** lands: the
+- If an `intent.md` exists, this stage runs the **intent-fidelity gate**: the
   spec must be checked against `intent.md` before the design completes. Invoke
   `product-owner` to run it.
 
@@ -47,7 +47,7 @@ engineering plan stage.)
    `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` and `guardrails.md`. An
    unmigrated 5.x project runs on its own copied `governance/` until
    `compass policy migrate`. `compass policy lint` checks the structure of the project's `compass.yml` -
-   run it if the project has changed the rules. A design that crosses a guardrail
+   run it if the project has changed the rules. A design that breaks a guardrail
    does not pass - revise the design, never waive the guardrail. A design
    that departs from a strategy can pass, but the departure is recorded.
 3. **Distribution map** (when the work splits into independent units). Read
@@ -73,10 +73,10 @@ engineering plan stage.)
    **Where it goes.** `docs/compass/<created>-<issue-slug>/technical-design.md`, where the
    date is the manifest's `created:` field - not today's. Then register it:
    `compass issue artifact set technical-design --status draft --path <that path>`. The CLI
-   refuses a path that climbs out of the project, so the record is checked
+   refuses a path outside the project, so the record is checked
    rather than claimed. If you had to create `docs/compass/`, **say so in one
-   line** - a directory appearing with nothing said is how it gets deleted by
-   hand or committed by accident.
+   line** - if a directory appears and nobody says so, someone can delete it
+   by hand or commit it by mistake.
 
 ## Hand-off
 

@@ -5,22 +5,23 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 
 # /compass:refine
 
-Refine is the requirements review: it hardens the spec before any design is
-built on it. It resolves ambiguities and QAs `acceptance-criteria.md` against
+Refine is the requirements review: it makes the spec clear and complete
+before any design uses it. It resolves ambiguities and checks
+`acceptance-criteria.md` against
 itself and against the governance in force - the guardrails and strategies.
 
-## First: is the requirements review in play?
+## First: does the requirements review run?
 
 Read `delivery-approach.md`. The review is **collapsed on a quick fix** (the
 single scenario was certified unambiguous when it was defined), **collapsed
 on a hotfix** (the reproduction *is* the clarification), and **skipped on a
-spike** (there is nothing to QA - the behavior is the unknown). If
+spike** (there is nothing to check - the behavior is what the spike finds out). If
 `delivery-approach.md` collapsed or skipped it, stop - say so, confirm the
 de-scope reason still holds, and point the user to `/compass:plan`. Do not
 re-add a stage the approach skipped, and do not skip one it kept.
 
 On a collapsed- or skipped-review approach the **Definition of Ready** is
-satisfied by construction:
+met without further work:
 - a quick fix, by the assess stage certifying the single scenario
   unambiguous;
 - a hotfix, by the reproduction test being the spec;
@@ -42,24 +43,24 @@ stage, before handing the spec over: a **placeholder** scan, an
 self-review runs on every approach, including a quick fix.
 
 **Refine does not repeat them.** Re-running four mechanical scans over a file
-someone has just scanned spends a stage to find nothing. If you do hit one
-still outstanding, that means the self-review was skipped - say so, then fix
-it; do not quietly absorb it as your own work.
+someone has just scanned spends a stage to find nothing. If you find one
+that is still there, the self-review was skipped - say so, then fix it; do
+not fix it without saying so, as if it were your own work.
 
 What is left for you is everything the author could not settle alone:
 
 - **Contradictions** between scenarios that cannot both hold.
 - **Gaps** across the whole set - a stated outcome, or a `intent.md` success
   signal, with no scenario.
-- **Governance conflicts** - a scenario that crosses a guardrail, or departs
+- **Governance conflicts** - a scenario that breaks a guardrail, or departs
   from an applicable strategy with no recorded reason.
 - **Ambiguities that need a decision** rather than a correction, each
   recorded in `requirements-review.md` with its resolution and who made it.
 
-The dividing line is who can close the finding. An unfilled placeholder has
+The difference is who can settle the finding. An unfilled placeholder has
 one correct answer and the author already knows it. "Which of these two
 scenarios is wrong?" does not, and that is what a stage with a reviewer in it
-is for. The same split is written from the other side in
+is for. The same split is written from the spec-author's side in
 `skills/bdd-specification/SKILL.md`.
 
 ## Setup
@@ -74,23 +75,23 @@ is for. The same split is written from the other side in
   so the agent's frontmatter applies.
 - Run `compass policy show` for the rules in force, and read the reasons in
   `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md` and `strategies.md` - the
-  spec is QA'd against the guardrails and the applicable strategies. An
+  spec is checked against the guardrails and the applicable strategies. An
   unmigrated 5.x project runs on its own copied `governance/` until
   `compass policy migrate`.
-- If a non-engineering role is in play, this is where they review: invoke
+- If a non-engineering role takes part, they review at this stage: invoke
   `product-owner` (intent fidelity against `intent.md`) and/or `product-marketer`
   (every planned claim has a candidate scenario).
 
 ## Procedure
 
-1. **Self-QA the spec.** Contradictory scenarios? Undefined terms? Edges
-   named but not specified? Failure modes missing?
-2. **Governance QA.** Does the spec meet the guardrails (especially
+1. **Check the spec against itself.** Contradictory scenarios? Undefined
+   terms? Edge cases named but not specified? Failure modes missing?
+2. **Check the spec against governance.** Does the spec meet the guardrails (especially
    acceptance-before-code and traceability) and respect the applicable
    strategies, including the voice strategies where claims are involved?
 3. **Resolve.** For each ambiguity, either resolve it (update
    `acceptance-criteria.md`) or record it as an open question with an owner.
-   An unresolved ambiguity is not allowed to silently pass into design.
+   An unresolved ambiguity must not pass into design unrecorded.
 4. **Write `requirements-review.md`** from the output of
    `compass issue template show requirements-review`, which renders the checklist from the
    issue's entry lists: the ambiguity ledger, each entry resolved or assigned.
@@ -99,12 +100,12 @@ is for. The same split is written from the other side in
    date is the manifest's `created:` field - not today's. When the issue owes the
    document (regular at `lightweight`, full at `thorough`), register it:
    `compass issue artifact set requirements-review --status draft --path <that path>`. The CLI
-   refuses a path that climbs out of the project, so the record is checked
+   refuses a path outside the project, so the record is checked
    rather than claimed. A regular issue assessed before 7.0.0 does not owe it:
    write the file and leave it unregistered. `compass next`
    takes the file as refine's record. If you had to create `docs/compass/`, **say so in one
-   line** - a directory appearing with nothing said is how it gets deleted by
-   hand or committed by accident.
+   line** - if a directory appears and nobody says so, someone can delete it
+   by hand or commit it by mistake.
 
 5. **Record the decisions you took.** Run `compass issue decision add --from-ledger`.
    It reads the ledger and records each entry whose "Decided by" names an agent, so
@@ -116,7 +117,7 @@ is for. The same split is written from the other side in
 
 If the review reveals the spec is bigger or more ambiguous than the
 assessment assumed, **stop and re-assess** (`/compass:assess --reassess`) - do
-not push a regular-approach process through a problem that needs the full
+not use a regular-approach process on a problem that needs the full
 approach.
 
 ## Hand-off
@@ -171,15 +172,15 @@ the list in the hand-off.
 ## Voice
 
 The ambiguity ledger is read by the person who has to decide, not filled
-into a form. Say what was unclear, the call, and why - never a bare
+into a form. Say what was unclear, the decision, and why - never a bare
 label-and-status row. See `skills/compass-runtime/writing-voice.md`.
 
 ## Gate
 
 - `requirements-review.md` exists;
 - every ambiguity is resolved or owned;
-- the spec passes governance QA;
-- the **Definition of Ready** checklist at the foot of
+- the spec passes the check against governance;
+- the **Definition of Ready** checklist at the end of
   `requirements-review.md` is fully checked - that is the entry gate into
   the plan stage, and an unchecked box stops the plan stage from starting.
 

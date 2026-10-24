@@ -40,9 +40,9 @@ Compass scores three dimensions:
 | Familiarity | Is the affected code understood? |
 | Size | How much delivery work is involved? |
 
-Two optional switches, `goal` and `urgency`, lean the approach towards a
-reference shape (spike or hotfix). Domain labels, such as `auth`, raise the
-floor. Neither is scored.
+Two optional switches, `goal` and `urgency`, can move the approach towards a
+reference shape (spike or hotfix). Domain labels, such as `auth`, can raise the
+floor: the lightest approach the policy allows. Neither is scored.
 
 Judgment goes into the assessment. Everything after it is deterministic: the
 same assessment plus the same policy produces the same approach, every time.
@@ -113,7 +113,7 @@ Compass renders the page again after each command that changes a record, and
 
 To see every issue at once, with a lane for each stage, run
 `compass board render`. It writes one page and opens it in the browser;
-`compass board refresh` rewrites it after the work moves. `docs/board.md`
+`compass board refresh` rewrites it after an issue moves to another stage. `docs/board.md`
 describes the page.
 
 Correct the assessment if it is wrong: a good delivery approach depends on
@@ -193,7 +193,7 @@ Then run:
 ```
 
 Compass checks the issue record again before completing the delivery workflow.
-Your normal CI still owns tests, linting, security scanning, builds and
+Your normal CI is still responsible for tests, linting, security scanning, builds and
 deployment checks.
 
 ## What you should now have
@@ -223,12 +223,12 @@ runtime can resume from these files without the original chat.
 1. **Assess the work, do not choose a process.** Three dimensions are judgment;
    the approach is computed from them.
 2. **The approach decides the process weight.** Which stages run at what weight,
-   which artifacts are earned, which gates apply.
+   which artifacts are needed, which gates apply.
 3. **Guardrails are hard; strategies are defaults.** An approach can reduce
    process weight but never removes a guardrail.
 4. **Evidence, not assertion.** A gate clears with a record a reader can open.
 5. **If it is not on disk, it did not happen.** The manifest and its artifacts
-   outlive the conversation.
+   stay after the conversation ends.
 
 ## The CLI underneath
 

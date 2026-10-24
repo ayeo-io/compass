@@ -2,7 +2,7 @@
 
 This walks you from an empty machine to a finished first issue. It is
 deliberately concrete: real commands, in order, with the artifact each one
-leaves on disk and what the gates feel like when you hit them. There are three
+leaves on disk and what happens when you reach each gate. There are three
 walkthroughs - an engineer, a product owner, a marketer - because Compass has
 five roles. Each entry point writes that role's document, and the documents
 on disk shape the delivery approach.
@@ -16,7 +16,7 @@ introduced as it comes up, so you can work through this page first and read
 
 ## 1. Install
 
-There are two ways in. Pick one.
+There are two ways to install Compass. Pick one.
 
 **The plugin marketplace is the fastest.** No clone, no install script:
 
@@ -43,8 +43,8 @@ your `PATH`, for example with
 Skip to step 2.
 
 **Install from source** if you want to read or edit the framework as you go.
-`scripts/install.sh` wires everything in by symlink, so edits to your clone are
-picked up live:
+`scripts/install.sh` installs everything as symlinks, so Compass uses each edit
+to your clone at once:
 
 ```bash
 git clone https://github.com/ayeo-io/compass.git
@@ -58,10 +58,10 @@ Code config as a `compass` subdirectory (so nothing collides with your own
 files) and registers its hooks - `pre-tool.sh`, `post-tool.sh`, `stop.sh`,
 `session-start.sh`, `prompt-approval.sh` and `approval-summary.sh` - in
 `settings.json`. It is idempotent: re-running refreshes the
-links and never clobbers a file Compass did not create. `--global` makes the
+links and never overwrites a file Compass did not create. `--global` makes the
 `/compass:*` commands available in every project; `--copy` installs copies
 instead of symlinks if you prefer. Compass needs Python 3.10 or later. The YAML parser it
-uses travels inside the plugin, so there is nothing to install. `jsonschema`
+uses is included in the plugin, so there is nothing to install. `jsonschema`
 is a separate, genuinely optional library Compass does not bundle - install
 it yourself for full JSON Schema validation in `compass policy lint` and
 `compass issue lint` (without it the built-in linter still runs - see
@@ -83,10 +83,10 @@ Either way, what you have installed is three layers:
 - the **Claude Code adapter** - `commands/`, `agents/`, `skills/`, `hooks/`,
   whose commands call the kit underneath.
 
-`docs/methodology.md` §11 and `docs/portability.md` have the full picture;
-you do not need it to continue.
+`docs/methodology.md` §11 and `docs/portability.md` describe the layers in
+full; you do not need them to continue.
 
-One thing to know going in: the `pre-tool.sh` hook enforces the red-before-green
+Know this before you start: the `pre-tool.sh` hook enforces the red-before-green
 TDD strategy. In a project that uses Compass (it has a `.compass/` folder,
 which the first Compass command creates), the hook refuses an Edit or Write
 to a recognized code file when no failing test is on record for the current
@@ -103,13 +103,13 @@ against it.
 There is no required setup step between installing Compass and running your
 first issue. The **five default guardrails** and the **default method
 strategies** ship active with the framework, so `/compass:assess` works against
-the shipped `governance/` defaults on day one. The shipped defaults are a
+the shipped `governance/` defaults from the first issue. The shipped defaults are a
 complete governance state on their own: "the shipped defaults and nothing
 project-specific yet" is valid - see `governance/README.md`.
 
 `/compass:init` writes the project's own configuration file later, not a
 prerequisite. When you want to set the project's name and test command, or
-have opinions to encode, run it once from the project root:
+record the project's own rules, run it once from the project root:
 
 ```
 /compass:init
@@ -128,7 +128,7 @@ have opinions to encode, run it once from the project root:
    `compass policy migrate`: a dry run first, and `--apply` only when you say
    yes. See `docs/policy-migrate.md`.
 3. **Creates `.compass/work/`** - where every issue's state will live. Note
-   that `.compass/work/` **is committed**. It is the audit trail, not scratch.
+   that `.compass/work/` **is committed**. It is the audit trail, not temporary files.
 
 `compass init`, which every entry point runs for you, writes only a state file
 in `.compass/` and no settings file.
@@ -155,22 +155,22 @@ something like: size `medium` (several files, one or two design
 decisions), risk `cross-cutting` (a misconfigured limiter degrades
 something every API consumer touches), familiarity `brownfield-mapped`. It tags `labels: [public-api]`.
 
-Then the mechanism takes over. `/compass:assess` shells out to
+Then the CLI computes the rest. `/compass:assess` runs
 `compass approach evaluate --write`, which applies the project's resolved
 configuration (the shipped default, an optional git parent, `compass.yml`
 and the issue's own `config:`) deterministically - composing the candidate delivery approach, applying the
-floors and caps, assembling the gate set - and folds `delivery_approach`,
-`stages`, and `gates` back into `manifest.yml`. For this issue it lands on
+floors and caps, assembling the gate set - and writes `delivery_approach`,
+`stages`, and `gates` into `manifest.yml`. For this issue it computes
 **the regular approach, whose gates include the security review, with the
 architecture review added because risk is cross-cutting**; no routing
 policy rule forces a heavier delivery approach.
 Assess then writes the human-readable `delivery-approach.md` alongside it.
 The same assessment, resolved configuration and documents on disk give this
 exact delivery approach on any machine with the same Compass version - it is
-no longer something an agent composes in its head
+no longer something an agent decides without a written record
 ([safety contract](safety-contract.md#1-routing-is-deterministic-after-assessment)).
-`/compass:assess` also drops a `.compass/current-task` pointer so the CLI
-and the hooks know which issue is live.
+`/compass:assess` also writes a `.compass/current-task` pointer so the CLI
+and the hooks know which issue is active.
 
 It then **presents the delivery approach**. It is advisory until confirmed,
 and the session waits for you at assess only if the project's `autonomy`
@@ -181,11 +181,11 @@ at define and plan. You read the assessment values, you read the de-scope ledger
 or you override an assessment value and the override is recorded in
 `delivery-approach.md` with your name and reason.
 
-What the gate feels like: this is where the process shows its work and asks
+What happens at this gate: the process shows how it got the approach and asks
 you to agree the familiarity was read correctly. Confirming takes a
 moment. The point is that the process for this issue is now *written down* -
-any later session can read `delivery-approach.md` and know exactly what shape the pipeline
-takes.
+any later session can read `delivery-approach.md` and know exactly how the pipeline
+runs.
 
 ### Define the acceptance criteria
 
@@ -195,14 +195,14 @@ takes.
 
 The `spec-author` agent reads `delivery-approach.md`, sees "small feature set," and writes
 `acceptance-criteria.md` - Given/When/Then scenarios for the rate limiter: the happy
-path (a client under the limit is served), the realistic edges (a client at
-exactly the limit; the limit window rolling over), the failure modes that
-matter (a client over the limit gets a clean 429, not a dropped connection).
+path (a client under the limit is served), the realistic edge cases (a client at
+exactly the limit; the limit window resetting), the failure modes that
+matter (a client over the limit gets a 429 response, not a dropped connection).
 Each scenario carries a traceability id and links back to an intent.
 
 This file is the one every role would read if they were involved - but on a
 solo engineering issue, you are reading it for tests. The scenarios here become
-your acceptance suite and seed your TDD cycle.
+your acceptance suite and the first tests of your TDD cycle.
 
 ### The requirements review
 
@@ -211,7 +211,7 @@ your acceptance suite and seed your TDD cycle.
 ```
 
 On the regular approach, the requirements review is a lightweight-to-thorough pass - never skipped. The `spec-author`
-QAs the spec against itself (is "the limit" defined? per-client or global? what
+checks the spec against itself (is "the limit" defined? per-client or global? what
 about unauthenticated traffic?) and against governance. Each ambiguity is
 resolved into `acceptance-criteria.md` or recorded in `requirements-review.md` with an
 owner, so no open question passes silently into Plan. With the
@@ -239,7 +239,7 @@ guardrail cleared with evidence - and you record its result and link it.
 ```
 
 This is where the hook matters. The `builder` agent works one scenario
-at a time, driving the cycle through the CLI:
+at a time, and runs the cycle through the CLI:
 
 1. **Red.** Write the failing test for the scenario. Then run
    `compass tdd-red -- <test cmd>`: the CLI runs the test, *asserts it actually
@@ -296,9 +296,9 @@ fix it, or it goes back.
 Solo orchestration, so shipping commits on the current branch, runs regression across the
 result, updates any living docs the change touched, and checks the de-scope
 ledger for owed follow-ups (the regular approach owed none here). A final `devlog.md` entry
-records what landed and how it was checked. The issue is closed.
+records what changed and how it was checked. The issue is closed.
 
-That is the whole regular approach, walked end to end. Seven artifacts on disk,
+That is the whole regular approach, from start to end. Seven artifacts on disk,
 each one readable by anyone who picks the issue up later.
 
 ---
@@ -322,8 +322,8 @@ users, not files and functions - and writes `intent.md`: the **problem**
 month-end ticket volume drops), the **constraints**, and the **non-goals** (we
 are *not* building a full reporting suite). It checks the intent document
 against the product strategies in `governance/strategies.md` - the ones the
-product owner curates - and names any tension rather than passing it
-downstream silently.
+product owner curates - and names any conflict rather than passing it
+on to later stages without a record.
 
 Notice what the intent document is *not*: it is not "add a CSV export
 button." That is a solution. The intent document states the outcome, and
@@ -346,8 +346,8 @@ the document adds the check, not extra weight.
 
 `/compass:define` writes `acceptance-criteria.md` against the intent document -
 every success signal in it must have a scenario that delivers it. At
-`/compass:refine`, the `product-owner` agent reviews: it walks every success
-signal and finds the scenario behind it, flagging **drift** (a scenario that
+`/compass:refine`, the `product-owner` agent reviews: it takes each success
+signal in turn and finds the scenario behind it, flagging **drift** (a scenario that
 solves the literal request but misses the outcome), **gaps** (a signal with no
 scenario), and **scope creep** (scenarios beyond the intent document with no
 recorded decision).
@@ -368,7 +368,7 @@ on it.
 
 From here the pipeline continues as the approach specifies - implement,
 verify, ship -
-with the engineer carrying it. The product owner's involvement was not a
+with the engineer doing the work. The product owner's involvement was not a
 review added at the end; it changed the delivery approach from the start
 and put a gate before Plan.
 
@@ -376,8 +376,8 @@ and put a gate before Plan.
 
 ## 5. First issue - the product marketer
 
-You are a product marketer. You work *parallel* to the spec - not downstream
-of a finished engineering process.
+You are a product marketer. You work *at the same time* as the spec is
+written - not after a finished engineering process.
 
 ### Position
 
@@ -395,8 +395,8 @@ audience - reads the voice & positioning strategies in
   backs it. A claim with no backing scenario is not yet a claim: it is either
   a scenario that needs writing (raised with `spec-author` at the define stage) or a
   claim that has to be cut. The template leaves the backing-scenario slot
-  blank when there is nothing behind the claim yet - an empty slot is a
-  visible debt, which is the point.
+  blank when there is nothing behind the claim yet - an empty slot shows
+  the missing work, which is the point.
 - **`launch-readiness.md`** - the claims ledger: every claim, its backing
   scenario, and that scenario's verification status.
 
@@ -409,8 +409,8 @@ the `verify` stage that the scenario passes and backs the claim**. `verify.claim
 artifact rule adds it on every delivery approach while `positioning.md` is present.
 On an issue already assessed, re-assess after writing `positioning.md`.
 
-So the marketer's gate applies right up to the end. At `/compass:ship`, the
-`product-marketer` agent walks `launch-readiness.md`. Every row must be green: a
+So the marketer's gate applies until the last stage. At `/compass:ship`, the
+`product-marketer` agent checks each row of `launch-readiness.md`. Every row must be green: a
 claim, a backing scenario, that scenario passing at Verify. A red row - a
 claim whose scenario is missing, failing, or skipped - and the
 `product-marketer` agent does not pass the claims gate, so ship does not close
@@ -423,8 +423,8 @@ reviewer's judgment ([safety contract](safety-contract.md#compass-does-not-prove
 
 ## When you cannot frame it yet - a spike
 
-Some work is not a known change - it is a question. Root-causing a mysterious
-defect, evaluating whether an approach is even viable, learning an unfamiliar
+Some work is not a known change - it is a question. Finding the cause of a
+defect nobody understands, evaluating whether an approach is even viable, learning an unfamiliar
 API. You cannot state acceptance criteria for it because the behavior is the
 unknown. That is not an exemption from assessment; it is the **spike**.
 Assess still runs (`delivery-approach.md` records the question and a
@@ -433,7 +433,7 @@ requirements review is skipped, and implementation becomes exploration -
 the
 TDD strategy is suspended and the hook does not block, because red-before-green
 is the wrong discipline for code you are writing to learn something and may
-throw away. What keeps it honest: **nothing lands from a Spike**. The
+throw away. What limits the risk: **nothing lands from a Spike**. The
 only exit that keeps code is *graduating* - reassessing into a delivery
 approach where the guardrails apply in full - or discarding it with the
 finding recorded. See `approaches/spike.md`.
@@ -556,9 +556,9 @@ is the view across all of them - triage, blockers, and a periodic digest;
 Two more CLI commands work across the whole board. `compass ci` runs the full
 mechanical gate suite - `policy lint`, then `issue lint` and `check` for every
 issue - and exits non-zero if anything fails, under the default
-`adoption: enforced`; wiring Compass into CI is just
+`adoption: enforced`; to add Compass to CI, you only
 "run `compass ci`, honor the exit code" (see `ci/README.md`). And
 `compass retro` reads the re-assessment log across every issue and
 reports whether assessment is systematically over- or under-sizing the
 process - the framework's own feedback loop, the way you find out if the
-routing policy needs tuning.
+routing policy needs changes.

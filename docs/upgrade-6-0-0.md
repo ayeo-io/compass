@@ -51,5 +51,5 @@ A spelling that no release held has no alias. Its unknown-command message is the
 
 - Update every checkout and every installed plugin together.
 - Do not run a v5 `ship-commit` on a 6.0.0 tree. It does not read the new words and drops the issue from the living spec.
-- 6.0.0 offers no supported rollback. A problem is fixed forward in a 6.0.x release.
+- 6.0.0 offers no supported rollback. A problem is fixed in a later 6.0.x release.
 - The first rewrite of each manifest keeps the original as `manifest.yml.v5.bak`. Restoring it discards everything recorded after that rewrite.

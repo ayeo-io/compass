@@ -9,12 +9,12 @@ its executable expression.
 
 ## 1. Why adaptive process
 
-A fixed workflow fails at both ends:
+A fixed workflow fails for both small and large work:
 
 - it makes small, familiar changes too expensive; and
 - it gives large, risky or unfamiliar changes too little protection.
 
-A ladder of “light, medium, heavy” improves the situation but still collapses
+A three-level scale of “light, medium, heavy” improves the situation but still collapses
 different questions into one scale. A one-file migration can be small and
 dangerous. A large prototype can be exploratory and disposable.
 
@@ -36,12 +36,13 @@ Assessment is judgement. The assessor must explain uncertain or consequential
 choices, and a human can correct them before work proceeds.
 
 Routing is mechanism. Once the assessment exists, the kit applies the
-resolved configuration - the shipped routing policy plus the project's
-`compass.yml` - including floors, caps and immovable gates.
+resolved configuration - the shipped routing policy, an optional git parent,
+the project's `compass.yml` and the issue's own `config:` - including floors,
+caps and immovable gates, and reads which documents the issue has on disk.
 
 > Judgement goes into the assessment. Everything after it is deterministic:
-> the same assessment plus the same policy produces the same approach, every
-> time.
+> the same assessment, configuration and documents produce the same approach,
+> every time ([safety contract](safety-contract.md#1-routing-is-deterministic-after-assessment)).
 
 The kit writes the result to `delivery-approach.md`, including:
 
@@ -155,7 +156,7 @@ evidence, the markers and the devlog - is in `.compass/work/<issue>/`. The
 documents are in `docs/compass/<created>-<issue>/`, where `<created>` is the
 manifest's `created:` date.
 
-Two files anchor the pack, both in `.compass/work/<issue>/`:
+The pack has two main files, both in `.compass/work/<issue>/`:
 
 - `README.md` is the human dashboard: status, delivery approach, the decision
   awaited, the review pack, what was deliberately omitted and traceability.
@@ -235,7 +236,7 @@ surfaces. The delivery approach can cap parallelism for critical work even
 when the issue is large.
 
 The reference adapter uses Git worktrees so each subtask can run failing tests
-without destabilising its siblings. A different runtime must give each
+without destabilising the other subtasks. A different runtime must give each
 subtask its own workspace or reduce the orchestration.
 
 ## 10. Reassessment and the retrospective signal
@@ -243,7 +244,7 @@ subtask its own workspace or reduce the orchestration.
 An adaptive framework must learn whether it is adapting well.
 
 Reassess when risk, size, familiarity or goal changes materially. Record the
-reason instead of absorbing the change silently.
+reason. Do not continue as if nothing changed.
 
 Across issues, Compass exposes advisory signals:
 
@@ -251,7 +252,7 @@ Across issues, Compass exposes advisory signals:
   and, in order of assessment, the repository readiness each issue recorded (the score or
   "not measured", and whether the floor was met);
 - `compass rework-scan` identifies configured cross-issue churn patterns;
-- `compass flow` surfaces status, blockers and follow-ups; and
+- `compass flow` shows status, blockers and follow-ups; and
 - friction records highlight recurring over-weight, under-weight or
   tooling problems.
 

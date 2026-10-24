@@ -1,6 +1,6 @@
 # Walkthrough: labels on GitHub
 
-This page takes one issue from a project with no GitHub link to an issue whose labels follow its work. It needs the `gh` command, logged in with `gh auth login`, and a repository where you can edit labels. For the full rules, see [github-labels.md](github-labels.md).
+This page takes one issue from a project with no GitHub link to an issue whose labels change as its state changes. It needs the `gh` command, logged in with `gh auth login`, and a repository where you can edit labels. For the full rules, see [github-labels.md](github-labels.md).
 
 ## 1. Switch the labels on
 
@@ -61,7 +61,7 @@ Closing as `completed` is refused until every gate has passed, so the table clos
 
 Labels that you or your team added, such as `bug` or `customer-x`, stay. Compass removes only the labels it owns.
 
-## 5. See drift, and put it right
+## 5. See drift, and correct it
 
 Remove `infra` from the GitHub issue by hand, then run:
 

@@ -42,7 +42,7 @@ Four sections are named in the catalogue and read by name, so a checker finds th
 | Verification plan | `technical-design` | the `coverage` block, which adds a Kind column when the heading is present |
 | Risks and dependencies | `technical-design` | the `dependencies` block under its risk table |
 
-The role guide (`How each role reads the spec`) lives in `docs/roles-guide.md`; no template and no section list holds it. Both checks are blocking, sit in no gate and decline to judge an archived issue: see `governance/guardrails.md`.
+The role guide (`How each role reads the spec`) is in `docs/roles-guide.md`; no template and no section list holds it. Both checks are blocking, belong to no gate and decline to judge an archived issue: see `governance/guardrails.md`.
 
 `tests/test_artifact_catalogue_fields.py` compares each template's unmarked headings with `sections.thorough`, and checks that `sections.lightweight` is an ordered subset of it. A `{{...}}` token in a template heading and a `<...>` token in the catalogue count as the same placeholder.
 
@@ -59,7 +59,7 @@ A kind's `word_ceiling` sets the most words its document should hold at each dep
 - The limit applies at the depth the issue registers the document at. `word_ceiling.limit` reads it from the issue's own catalogue.
 - The field is an obligation field. An issue stored on a generation from before the field existed has no limit, because the reading of an earlier generation never fills the field from the shipped default. The classifier compares it by identity, as it compares `required_when`: a layer that changes a shipped kind's limit needs a waiver.
 - `compass issue lint` prints a note for each registered document over its limit, naming the document, its count, the limit and the depth. The note never changes the exit code. It is silent on an issue with no `generation` key, a closed issue, a document registered with no path and a catalogue with no limit at the registered depth.
-- The check `design-within-word-ceiling` refuses a technical design over 1.5 times its limit once plan exit is due. It sits in no gate: see `governance/guardrails.md`.
+- The check `design-within-word-ceiling` refuses a technical design over 1.5 times its limit once plan exit is due. It belongs to no gate: see `governance/guardrails.md`.
 
 ## Documents that repeat
 
@@ -137,7 +137,7 @@ On a multiagent breakdown, `compass issue artifact set distribution-map` reads t
 
 ## Measuring the archive
 
-`scripts/measure-artifact-catalogue.py --root <copy>` reads a copy of an archive and prints the figures this catalogue was built to move. It only reads, but run it on a copy.
+`scripts/measure-artifact-catalogue.py --root <copy>` reads a copy of an archive and prints the figures this catalogue was built to change. It only reads, but run it on a copy.
 
 - With no flag, it gives the figures before the 7.0.0 migrate: the kinds declared, the kinds in use that the catalogue does not declare, the regular issues with the record in the documents folder, the regular issues with a stub distribution map, and the distinct review filenames. `--catalogue` reads the kinds from another `artifacts.yml`, and `--list-kinds FILE` writes the undeclared names.
 - With `--after`, it gives the figures after the migrate: files in a documents folder that match no kind, regular issues that held a record before the migrate and lack it registered in the documents folder, other issues holding a record that is not registered there, regular issues with fewer than two subtasks that carry a map registered at lightweight depth, review filenames that are not `review-<n>.md`, and issues with two review files of one round. It names the issues behind each figure that is not zero. It also prints two counts that are not faults: regular issues that never had a record, for which the migrate writes none, and small maps the migrate adopted with no depth, which it keeps.

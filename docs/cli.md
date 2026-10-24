@@ -1,8 +1,9 @@
 # The CLI
 
-The slash commands are the pipeline; the CLI is the mechanism underneath them.
-`/compass:assess` runs `compass approach evaluate`, `/compass:verify` runs
-`compass check`. It is what makes the checks real rather than aspirational.
+A person runs the pipeline with the slash commands, and each slash command
+calls the CLI. `/compass:assess` runs `compass approach evaluate`,
+`/compass:verify` runs `compass check`. The CLI does the checks as a program,
+so a check is more than an instruction to the agent.
 
 Every verb describes itself: `compass <verb> --help` says what it does and
 what the result means. This page gives one line per verb; `--help` gives the

@@ -17,8 +17,8 @@ holds the project's settings (name, test command, autonomy, adoption mode) and,
 when the team wants them, its own edits to the shipped governance. Compass
 ships a default set of guardrails, method strategies and routing rules, all in
 force from install, and `/compass:assess` computes delivery approaches against
-them on day one. This command is not a gate you must clear before the first
-issue.
+them from the first issue. You do not have to run this command before the
+first issue.
 
 `/compass:init` copies nothing. A new project's `compass.yml` extends the
 shipped default (`extends: compass:default@7`) and holds only what differs from
@@ -105,7 +105,7 @@ it is exempt from assessment.
    autonomous project needs before them, each with the one change that makes it
    present. Show the person that list in plain words. It is advice: the command
    exits 0 whatever it finds, and when it cannot measure it says why and names
-   `compass readiness` to run later. Do not hold init back for it. Only this
+   `compass readiness` to run later. Do not delay init for it. Only this
    step passes `--readiness`, so no other entry point runs a project command.
 
    The readiness record is per checkout and never committed. On an autonomous
@@ -113,7 +113,7 @@ it is exempt from assessment.
    `compass readiness` (up to five minutes) before its first
    `compass approach evaluate --write`, or assess refuses the issue.
 
-4. **Walk the team through extending the defaults, if it wants to** - a few
+4. **Help the team extend the defaults, if it wants to** - a few
    questions at a time, in each role's own language. The team does not need to
    add anything.
    - **Settings** go in `compass.yml` beside `project:`: `autonomy`,
@@ -123,7 +123,7 @@ it is exempt from assessment.
    - **Changes to the shipped checks, gates, rules and approaches** are entries in
      the file's catalog keys, and each is checked against the default:
      tightening needs nothing, and loosening needs a waiver with an approver.
-     Add one only when the team hits something that must never recur. Run
+     Add one only when the team finds a problem that must never happen again. Run
      `compass policy lint` after every edit, and `compass policy show` to
      see the result.
 
@@ -131,7 +131,7 @@ it is exempt from assessment.
 
 5. **Check working state.** `compass init` already made `.compass/work/`. Add
    a `.gitkeep` if it is empty. Remind the user that `.compass/work/` **is committed** - it is
-   the audit trail, not scratch. `/compass:assess` will later write
+   the audit trail, not temporary files. `/compass:assess` will later write
    `.compass/current-task` (the pointer the CLI uses to resolve which issue
    a `compass` call acts on); it does not need to be created now.
 
@@ -162,6 +162,6 @@ that adopted Compass long ago still needs its status line.
 
 Init is complete when `compass.yml` exists with `schema:`, `compass policy lint`
 passes, and no placeholder remains in it. For an older project, init is complete
-when `compass policy migrate --apply` has run on the person's go-ahead, or the
+when `compass policy migrate --apply` has run after the person agreed, or the
 person has declined and the old files are untouched. The shipped defaults are in
 force regardless.

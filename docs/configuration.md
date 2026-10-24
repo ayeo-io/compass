@@ -59,7 +59,7 @@ The state decides what Compass reads, and no state loses a setting silently:
   `allow_project_commands`, `enforcement`, `record`, `project`, `prices`,
   `models`, `multiagent`, `preset_index`, `governance_drift`, `github_labels` and `language`. The three keys the
   multiagent scripts read, `worktree_root`, `max_worktrees` and `test_command`,
-  also count when they sit outside `multiagent:` and `project:`, because the
+  also count when they are outside `multiagent:` and `project:`, because the
   scripts find them at any depth in the old file.
 - **How the refusal shows.** The pre-tool hook exits 2 with `settings-conflict`
   for an edit to a path its built-in rules neither guard nor exempt. Each CLI
@@ -71,7 +71,7 @@ The state decides what Compass reads, and no state loses a setting silently:
   already has a `compass.yml` Compass reads.
 - **A broken file.** A file that cannot be parsed is refused and named, in
   either position, as for a lone file. A `compass.yml` that cannot be parsed
-  counts as Compass's file, so the old file cannot hide it.
+  counts as Compass's file, so Compass does not read the old file in its place.
 - **The marker.** Every `compass.yml` that Compass creates carries `schema:`.
   `compass init` writes no `compass.yml`. `/compass:init` and
   `compass policy migrate` write a project's first one. `compass policy update`
@@ -99,13 +99,13 @@ The state decides what Compass reads, and no state loses a setting silently:
 ### `adoption`
 
 - `enforced`: `compass check` and `compass ci` exit non-zero on any failure.
-  The gate is real.
+  A failed check blocks.
 - `advisory`: `compass check` and `compass ci` report every failure clearly
   but exit 0, so CI does not fail. The `compass ci` summary line still says
   FAIL when a check failed. The pre-tool hook still refuses a code edit
   with no failing test on record.
 
-Advisory mode suits piloting Compass without blocking delivery. A value other
+Use advisory mode to try Compass without blocking delivery. A value other
 than these two reads as `enforced`.
 
 ### `autonomy`
@@ -169,7 +169,7 @@ file the hook read, `compass.yml` or `.compass/config.yml`.
 
 The hook reads this setting for an edit to a path that its built-in rules
 neither guard nor exempt, and only when the project has a settings file. A
-project with neither file costs the hook no Python start for that edit. It
+project with neither file makes the hook start no Python process for that edit. It
 reads `initialized` only when it is about to refuse an edit, to say who
 initialized the project.
 
@@ -248,9 +248,9 @@ command calls GitHub.
 - `status`: write `status:<state>` and, on a closed issue, `status:done` and
   `close:<reason>`.
 - `page`: keep one comment on the linked GitHub issue equal to the issue's
-  README, and write the ask into an empty issue body once. It widens who
-  reads the issue's documents to everyone who can read the GitHub issue, which
-  is why it is off by default. A post is refused when it would carry a path
+  README, and write the ask into an empty issue body once. It lets everyone
+  who can read the GitHub issue read the issue's documents, which is why it is
+  off by default. A post is refused when it would carry a path
   the project keeps out of git, or a credential.
 
 Any other value, such as `"yes"`, reads as off. The setting is read from the
@@ -267,7 +267,7 @@ language: en-US
 
 Unset means no instruction: Compass says nothing about language, and the
 agent follows the repository's existing prose. When it is set, the session-start
-hook adds one line that names the language. Code identifiers are out of scope.
+hook adds one line that names the language. The setting does not apply to code identifiers.
 A preset cannot carry the key. The setting is read from the project's own
 settings file: `compass.yml`, or `.compass/config.yml` when `compass.yml` is
 absent or has no `schema:`. A malformed value adds no line to a session.

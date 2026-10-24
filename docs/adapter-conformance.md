@@ -8,7 +8,7 @@ each adapter entry. It does not start either runtime's model or grant hook trust
 python3 -m pytest tests/test_adapter_behaviour.py -q
 ```
 
-The runner lives in `tests/adapter_conformance/`. It removes inherited Git
+The runner is in `tests/adapter_conformance/`. It removes inherited Git
 repository selectors, binds each issue explicitly and keeps commands inside
 scratch projects. The Claude Code entry is `bin/compass`. The Codex entry gets
 the shared source root from the adapter's context command, then calls its CLI.
@@ -61,7 +61,7 @@ Record each native case with:
 - `passed`, `failed`, `unsupported` or `unmeasured`, with the reason;
 - tester identity and whether the tester is independent of the implementation.
 
-A clean-machine install needs a machine without prior Compass wiring. An
+A clean-machine install needs a machine without a prior Compass installation. An
 independent acceptance run needs another person to install Compass and complete
 an issue. Temporary configuration on the author's machine proves neither.
 These results remain unmeasured until the matching evidence exists.

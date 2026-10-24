@@ -5,7 +5,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 
 # /compass:ship
 
-Ship closes the issue: integrate the work, prove the combination, update the
+Ship closes the issue: integrate the work, check the combined result, update the
 living docs, and settle every follow-up the approach deferred. An issue with an
 unsettled follow-up is an open issue - ship refuses to close it.
 
@@ -28,16 +28,16 @@ for delivery work; on a spike, follow the graduate-or-discard step in
 
 1. **Integrate.**
    - **Solo orchestration:** commit on the current branch with
-     `compass ship-commit -m "<message>"` - it is robust to auto-fixing
-     pre-commit hooks (which otherwise silently no-op the commit and leave
-     HEAD unmoved), retries once after re-staging the hooks' fixes, and
-     **errors if HEAD did not advance** so a commit that did not happen
+     `compass ship-commit -m "<message>"` - it handles pre-commit hooks
+     that fix files themselves (these can otherwise stop the commit with no
+     error and leave HEAD where it was), retries once after re-staging the
+     hooks' fixes, and **fails if HEAD did not move** so a commit that did not happen
      cannot count as shipped. Pass `--issue <slug>` to mark the issue
      shipped only on a checked commit. An issue whose approach owes a
      release line is refused without one: give it once, with
      `--release-note "<text written for a user>"` (`docs/release-line.md`).
      For a long message, `-F <file>`
-     reads it from a file; never fall back to `git commit` around it.
+     reads it from a file; never use `git commit` in its place.
    - **Message rules:** the message follows the cold-reader strategy: say
      what changed and why, for someone who was not in the conversation; no
      `Co-Authored-By:` trailer for any agent and no "Generated with"
@@ -47,10 +47,10 @@ for delivery work; on a spike, follow the graduate-or-discard step in
      The orchestrator is the only agent allowed to resolve cross-subtask
      conflicts.
 2. **Combined regression.** Run regression across the *combined* result. On
-   a multiagent this is non-negotiable - per-subtask green does not imply
+   a multiagent this is required - per-subtask green does not imply
    integrated green. Record the run and link the record.
-3. **Update living docs.** Bring READMEs, architecture notes, and any docs
-   the change touched in line with reality. If the change is launch-visible
+3. **Update living docs.** Update READMEs, architecture notes, and any docs
+   the change touched, so they match the code. If the change is launch-visible
    (`positioning.md` is present), draft the release notes here
    too - pulled from `positioning.md`, so every line in the notes is already
    a scenario-backed claim. `product-marketer` owns their wording.
@@ -66,7 +66,7 @@ for delivery work; on a spike, follow the graduate-or-discard step in
    - **Marketer claims gate** (when `positioning.md` is present):
      every claim in `manifest.yml`'s `claims:` traces to a passing scenario id.
      Invoke `product-marketer` to confirm; `compass check`'s
-     `claim-traces-to-scenario` check is the mechanical backing. This gate
+     `claim-traces-to-scenario` check is the mechanical check behind it. This gate
      blocks shipping per the routing policy's artifact rule RP-ART-001.
    - Any other de-scoped artifact the ledger marked as owed.
 5. **Run `compass check` as the final mechanical gate.** It runs every
@@ -100,10 +100,10 @@ for delivery work; on a spike, follow the graduate-or-discard step in
    Cross-issue blocking: if another issue's `follow_ups:` has `target_task`
    pointing at the issue being shipped, and that follow-up is still
    `status: outstanding`, `compass check` fails at ship even if this issue's
-   own DoD section is clean. Pay the upstream follow-up first.
+   own DoD section is clean. Pay the other issue's follow-up first.
 6. **Capture process friction (advisory - never a gate).** With the gate
-   already cleared in step 5, record where Compass's *own* process weight cost
-   more than it returned between assess and ship.
+   already cleared in step 5, record where Compass's *own* process cost more
+   effort than it saved between assess and ship.
    - Run `compass _friction-capture --internal` - it assembles a draft
      `friction:` list from signals the CLI already computed (recorded
      re-assessments, absorbed assessment-debt) and writes it into
@@ -114,7 +114,7 @@ for delivery work; on a spike, follow the graduate-or-discard step in
      **Recording nothing is a valid, common outcome.**
    - Notes the agent recorded during the run with `compass issue friction`
      are kept. Each cites evidence and a fix; `compass retro --friction`
-     counts them in their own column, and they never make a lesson alone.
+     counts them in their own column, and on their own they never become a lesson.
    - This step never blocks shipping: it runs after the gate, writes only
      the `friction:` section (no follow-up, no gate), and
      `compass retro --friction` later aggregates it across issues as
@@ -127,7 +127,7 @@ for delivery work; on a spike, follow the graduate-or-discard step in
 7. **Final devlog entry.** One entry: what shipped, what checked it,
    what follow-ups were settled.
 8. **After a review fix.** If review of the pull request changes the
-   issue's own files after `ship-commit` landed it, commit the fix, re-run
+   issue's own files after `ship-commit` committed it, commit the fix, re-run
    `compass tdd-green`, then run `compass ship-commit --issue <slug> -m
    <message>` with nothing staged. It moves `land_commit` to HEAD, and
    refuses while the newest green does not name HEAD's files.

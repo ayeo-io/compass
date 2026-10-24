@@ -123,7 +123,7 @@ reassess; the preview and the proposal never fetch. Compass
 checks each cached parent against a digest it recorded at fetch, and `compass
 policy lint` fails on a mismatch. That catches an accidental edit of the cache,
 not a deliberate one by someone who can write the cache, because the digest
-sits beside the file and can be rewritten with it. If you doubt the cache,
+is stored next to the file and can be rewritten with it. If you doubt the cache,
 delete `.compass/cache/parents/`.
 Review
 [git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md).
@@ -187,7 +187,7 @@ workflows in `ci/` that you copy pin their actions the same way.
 A project guardrail can use `command-passes` - a shipped check **whose
 parameter is the command**, not a setting that selects one. `compass check`
 runs that string with `subprocess.run(..., shell=True)` from the project root. Its `command:` form still runs a shell; the `script:`
-form does not - it runs a file directly, so a value cannot smuggle in a
+form does not - it runs a file directly, so a value cannot add a
 pipeline or a substitution. That difference is the reason to prefer the script
 form, and it is the only reason.
 
@@ -217,7 +217,7 @@ allow_project_commands: true
 This prevents accidental execution; it is not a security boundary because a
 repository change can edit both the command and the setting. Since 6.0.0 a
 project can declare a `command-passes` check in `compass.yml`, the same file
-that holds `allow_project_commands`, so the setting sits beside the checks it
+that holds `allow_project_commands`, so the setting is in the same file as the checks it
 authorises and one change can add both. Before, the setting lived apart from
 the governance files that held the checks. That separation was never a
 control. The control is the trust decision, which runs first and reads nothing
@@ -290,7 +290,7 @@ trust a setting.
 
 **And the refusal is not unforgeable either.** On a `pull_request`
 event GitHub runs the workflow from the contribution's own merge ref, so the
-contribution controls every environment variable Compass sees. The cheap
+contribution controls every environment variable Compass sees. The simple
 attacks fail: blanking `GITHUB_EVENT_NAME` or `CI` refuses, claiming
 `COMPASS_CONTRIBUTION_TRUST=trusted` does not override GitHub's report of a
 fork, and a payload inside the checkout is rejected. What remains is a forged

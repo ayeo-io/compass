@@ -12,7 +12,7 @@
     {
       "name": "compass",
       "source": "./",
-      "description": "Enough process for the work at hand. No more. Compass assesses each change by risk, familiarity and size, then picks the approach to match: what to write, what to check, and when to ask a human. A typo fix stays light. A payments rewrite gets specs, tests and review. Five guardrails hold on every change that ships code, such as a passing test for each one.",
+      "description": "Enough process for the work at hand. No more. Compass assesses each change by risk, familiarity and size, then picks the approach to match: what to write, what to check, and when to ask a human. A typo fix stays light. A payments rewrite gets specs, tests and review. Five guardrails apply to every change that ships code, such as a passing test for each one.",
       "version": "7.0.0",
       "author": {
         "name": "ayeo",

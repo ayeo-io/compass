@@ -18,8 +18,8 @@ behaviors, read from different professional perspectives.
 
 A role is a perspective a session consults. It does not change the issue's
 assessment. The documents on disk decide: `positioning.md` adds the claims
-gate, and `intent.md` blocks the plan stage until the spec is checked against
-it. If you write one after the issue is assessed, re-assess the issue.
+gate, and `intent.md` adds a check, which the `product-owner` agent runs
+before plan, that the spec matches it. If you write one after the issue is assessed, re-assess the issue.
 
 ## How each role reads the spec
 
@@ -72,7 +72,7 @@ Each public claim in `positioning.md` must trace to a scenario.
 
 The designer contributes behaviors, not annotations on a finished build. A
 UI contract might add scenarios for progress, retry, empty, error and keyboard
-states. Those scenarios flow into the shared acceptance criteria before
+states. Those scenarios are added to the shared acceptance criteria before
 implementation.
 
 Visual artifacts can support the contract where they clarify the experience;
@@ -109,7 +109,7 @@ flowchart TD
 ```
 
 - Product enters upstream, before the specification is settled.
-- Design feeds behavior into the specification.
+- Design adds behavior to the specification.
 - Marketing works alongside it, keeping claims within proven behavior.
 - Engineering implements it.
 - QA owns the final coverage and evidence decision.
@@ -146,10 +146,10 @@ shape.
 |---|---|
 | A private specification for each role | Contribute to and review the shared scenarios. |
 | Product, design or marketing consulted after implementation | Bring them in through their entry points while change is still inexpensive. |
-| A brief flattened directly into an engineering issue | Preserve `intent.md` and check the scenarios against it. |
+| A brief rewritten directly as an engineering issue | Preserve `intent.md` and check the scenarios against it. |
 | Claims written without scenario links | Change the claim or add the behavior needed to support it. |
-| QA asked only whether tests passed | Ask whether the behavior space and evidence are enough. |
+| QA asked only whether tests passed | Ask whether the range of behaviors covered and the evidence are enough. |
 
 Delivery management is a cross-issue capability rather than a sixth role.
-`/compass:flow` reads issue state from the artifacts and surfaces blockers,
+`/compass:flow` reads issue state from the artifacts and shows blockers,
 follow-ups and retrospective signals without owning or gating the work.

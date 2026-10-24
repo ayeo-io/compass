@@ -6,9 +6,9 @@ allowed-tools: Read, Write, Bash, Glob, Grep
 
 # /compass:flow
 
-`/compass:status` looks *down* into one issue. `/compass:flow` looks
-*across* every issue - it is the delivery-management function as a
-capability, not a persona. Anyone can run it; it is not a role entry point.
+`/compass:status` reports on one issue. `/compass:flow` reports on
+every issue - it does the work of delivery management as a command, not
+as a role. Anyone can run it; it is not a role entry point.
 
 Compass is issue-centric by design: each issue carries its own delivery
 approach, artifacts, and gates. But a team runs many issues at once, and
@@ -21,7 +21,7 @@ dated digest file (see below).
 
 ## Setup
 
-- Load the `flow-management` skill - it carries the triage heuristics, the
+- Load the `flow-management` skill - it holds the triage heuristics, the
   blocker protocol, and the digest format.
 - This command reads broadly and writes only the digest, or the board page
   `compass flow --html <file>` names (never inside `.compass/` or
@@ -39,8 +39,8 @@ dated digest file (see below).
 
 2. **Assess each issue.** Apply the `flow-management` heuristics:
    - **No `delivery-approach.md`** -> a guardrail violation (work started
-     without an assessment). Surface this above everything else.
-   - **Stalled** -> an in-progress stage with no `devlog.md` movement for
+     without an assessment). Report this above everything else.
+   - **Stalled** -> an in-progress stage with no new `devlog.md` entry for
      longer than the approach's expected cadence. Flag it and name the
      likely blocker.
    - **Approach outgrown** -> signs in the devlog that the issue no longer
@@ -59,7 +59,7 @@ dated digest file (see below).
    `compass board render` writes that page to one file per checkout and opens
    it; `docs/board.md` describes it.
 
-4. **Surface blockers.** For every blocked or stalled issue, state what it
+4. **Report blockers.** For every blocked or stalled issue, state what it
    is blocked on and who or what can unblock it. Anything needing a human
    decision goes to the top.
 
@@ -73,14 +73,13 @@ dated digest file (see below).
    assess stage is systematically over- or under-sizing the process (a run
    of "up" re-assessments means the assess stage keeps rating work lighter
    than it is).
-   This is the framework's own feedback loop: a framework about
-   right-sizing process has to be able to tell whether the right-sizing is
-   any good. Report the signal; if most re-assessments go the same way, the
+   This is how Compass checks itself: a framework that sizes the process
+   to the work must be able to tell whether its sizing is correct. Report the signal; if most re-assessments go the same way, the
    fix is in the project's `compass.yml` (a reviewed change to the routing
    rules) or the delivery-approach rubric, not in any one issue.
 
 7. **Run rework-scan.** Run `compass rework-scan --format markdown` and
-   embed the output in the report as a "Rework scan" section. This surfaces
+   embed the output in the report as a "Rework scan" section. This shows
    cross-issue add-then-delete patterns within the configured window
    (`rework_scan.window_days` in `${CLAUDE_PLUGIN_ROOT}/governance/signals.yml`,
    or in the project's own copy of that file, which the scan reads first; an
@@ -100,8 +99,8 @@ With `--digest`, also write a dated digest to
 `.compass/flow/digest-{{DATE}}.md` using the format in the
 `flow-management` skill: shipped since the last digest, in flight, blocked,
 owed follow-ups, rework signals, and next up. The digest is the artifact a
-team reviews on a cadence - and `/compass:flow --digest` is a natural fit
-for a scheduled run (e.g. weekly). It is append-only history: never
+team reviews on a cadence - and `/compass:flow --digest` suits a
+scheduled run (e.g. weekly). It is append-only history: never
 overwrite a prior digest.
 
 The digest must include a **Rework scan** section produced by
@@ -111,7 +110,7 @@ block or gate anything.
 
 ## Note
 
-`/compass:flow` advises; it does not gate. The gates live in the per-issue
-pipeline where the evidence is. Flow's job is to make sure no issue is
-quietly stuck, off-approach, or owing a follow-up - not to add
+`/compass:flow` advises; it does not gate. The gates are in the per-issue
+pipeline, where the evidence is. Flow makes sure no issue is stuck without
+anyone noticing, off-approach, or owing a follow-up. It does not add
 another gate.

@@ -1069,7 +1069,8 @@ For shell commands it recognizes these write shapes, and only these:
 
 Anything else runs unchecked: a write through a script file, a build step,
 an interpreter reached via a wrapper, a write call in another form (such as
-`open(p, mode='w')`, `Path(p).open('w')` or a call split over lines), or a
+`open(p, mode='w')`, `Path(p).open('w')`, a first argument holding brackets
+such as `os.replace(str(x), 'app.ts')`, or a call split over lines), or a
 path built at run time (joined from parts, returned by a function or read
 from the environment) is not detected. Unknown commands are allowed
 rather than blocking ordinary development indiscriminately. These writes to

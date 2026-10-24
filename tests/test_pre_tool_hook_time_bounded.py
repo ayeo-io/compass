@@ -1763,3 +1763,18 @@ def test_a_script_with_many_write_target_names_finishes_in_time(tmp_path):
 
     assert r.returncode == 0, (r.returncode, r.stderr)
     assert seconds < FAST, f"the hook took {seconds:.1f} s"
+
+
+@pytest.mark.serial
+def test_many_write_target_names_with_assignments_are_judged_in_time(tmp_path):
+    """Scenario `TRC-007` in hook-interpreter-writes/acceptance-criteria.md:
+    with an assignment for every name, the join still runs in one pass and
+    the hook still finds the guarded write among them."""
+    root = _project(tmp_path)
+    body = "".join(f"n{k} = '/tmp/out{k}'\nopen(n{k}, 'w')\n"
+                   for k in range(2000))
+    body += "last = 'src/app.py'\nopen(last, 'w')\n"
+    seconds, r = _bash(root, f"python3 - <<'EOF'\n{body}EOF", tmp_path)
+
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert seconds < FAST, f"the hook took {seconds:.1f} s"

@@ -380,7 +380,8 @@ def _assert_allowed(command: str) -> None:
 
 
 @pytest.mark.parametrize("flags", [
-    "-pi", "-pie", "-i.bak", "-lpi", "-I lib -pi", "-pe 's/a/b/' -i"])
+    "-pi", "-pie", "-i.bak", "-lpi", "-I lib -pi", "-pe 's/a/b/' -i",
+    "-pe 's/a/b/; s/c/d/' -i", "-pe 's/a|b/c/' -i"])
 def test_trc_001_perl_in_place_flag_groups_are_writes(flags):
     """Scenario `TRC-001`: the hook matched only the literal text `perl -i`, so a
     combined flag group edited a source file with no red on record."""
@@ -405,6 +406,11 @@ def test_trc_002_ruby_in_place_is_a_write():
     "perl -Fi -ane 'print' src/app.py",
     "ruby -rdigest -e 'puts 1' src/app.py",
     "ruby -rtime -rfileutils -e 'puts 1' src/app.py",
+    "perl -le 'print -int(2.5)' src/app.py",
+    "perl -ne 'print if / -i/' src/app.py",
+    "perl scripts/gen.pl -i src/app.py",
+    "ruby bin/lint -include src/app.py",
+    "ruby -e 'puts 1' src/app.py -- -i",
 ])
 def test_trc_003_perl_that_only_reads_is_not_a_write(command):
     """Scenario `TRC-003`: `-Mstrict` holds the letter i but edits nothing."""
@@ -432,9 +438,15 @@ def test_trc_004_heredoc_writing_a_variable_path_is_a_write():
     "import shutil; shutil.move('/tmp/new.py', 'src/app.py')",
     "p = \\\"src/app.py\\\"; open(p, 'w').write('x')",
     "p = 'src/app.py'; open(p, \\\"w\\\").write('x')",
+    "p = 'src/app.py'; open(p, 'w'); open(p, 'a')",
+    "a = 'src/app.py'; b = '/tmp/x'; open(b, 'w'); shutil.copy(b, a)",
+    "open(\\\"src/app.py\\\", 'w').write('x')",
+    "open('src/app.py', \\\"w\\\").write('x')",
+    "import pathlib; pathlib.Path(\\\"src/app.py\\\").write_text('x')",
 ], ids=["open", "write_text", "os.replace", "os.replace-string",
         "os.rename-string", "shutil.copy-string", "shutil.move-string",
-        "escaped-path", "escaped-mode"])
+        "escaped-path", "escaped-mode", "two-writes", "copy-through-names",
+        "escaped-open-path", "escaped-open-mode", "escaped-Path"])
 def test_trc_005_inline_script_writing_a_variable_path_is_a_write(script):
     """Scenario `TRC-005`: a write call that takes a name, not a string."""
     _assert_refused(f'python3 -c "{script}"')

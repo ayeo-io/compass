@@ -1377,13 +1377,16 @@ bash_write_targets() {
     # `-pe '...' -i`), so the literal text `perl -i` misses most real uses.
     # Only switches that take no value may come before the i in its group:
     # `-Mstrict`, `-I<dir>`, `-Fi` and ruby's `-rdigest` hold an i and edit
-    # nothing.
+    # nothing. Each quoted span is first read as one word, so code such as
+    # `-e 'print -int(2)'` is not a switch, and the switches end at the first
+    # other word, so `perl gen.pl -i` passes `-i` to a script.
     case "$cmd" in
       *"sed -i"*|*"perl -i"*)
         printf '%s\n' "$cmd" | tr ' \t' '\n\n' | grep -vE '^-' || true ;;
       *perl*|*ruby*)
-        if printf '%s\n' "$cmd" | grep -E \
-            '(^|[^[:alnum:]_.-])(perl|ruby)([[:space:]][^;&|]*)?[[:space:]]-[0-9alnpsSwWtTuUcv]*i' \
+        if printf '%s\n' "$cmd" \
+            | sed -E "s/'[^']*'/__Q__/g; s/\"[^\"]*\"/__Q__/g" \
+            | grep -E '(^|[^[:alnum:]_.-])(perl|ruby)([[:space:]]+(-[ICrx][[:space:]]+[^-[:space:]][^[:space:]]*|-[^[:space:]]*|__Q__))*[[:space:]]+-[0-9alnpsSwWtTuUcv]*i' \
             >/dev/null; then
           printf '%s\n' "$cmd" | tr ' \t' '\n\n' | grep -vE '^-' || true
         fi ;;
@@ -1534,8 +1537,8 @@ bash_write_targets() {
 
     # open(PATH, "w"|"a"|"x"|"r+"|"wb"…) - a mode containing w, a, x or + .
     printf '%s\n' "$cmd" \
-      | grep -oE "open\([[:space:]]*['\"][^'\"]+['\"][[:space:]]*,[[:space:]]*['\"][^'\"]*[waxWAX+][^'\"]*['\"]" \
-      | sed -E "s/^open\([[:space:]]*['\"]([^'\"]+)['\"].*/\1/" || true
+      | grep -oE "open\([[:space:]]*\\\\?['\"][^'\"\\\\]+\\\\?['\"][[:space:]]*,[[:space:]]*\\\\?['\"][^'\"]*[waxWAX+][^'\"]*['\"]" \
+      | sed -E "s/^open\([[:space:]]*\\\\?['\"]([^'\"\\\\]+)\\\\?['\"].*/\1/" || true
 
     # pathlib. Covers both `Path(TARGET).write_text(...)` and the commoner
     # two-step form, where the write happens on a variable:
@@ -1548,15 +1551,15 @@ bash_write_targets() {
     case "$cmd" in
       *write_text\(*|*write_bytes\(*)
         printf '%s\n' "$cmd" \
-          | grep -oE "Path\([[:space:]]*['\"][^'\"]+['\"][[:space:]]*\)(\.[a-z_]+)?" \
+          | grep -oE "Path\([[:space:]]*\\\\?['\"][^'\"\\\\]+\\\\?['\"][[:space:]]*\)(\.[a-z_]+)?" \
           | grep -v "\.read_" \
-          | sed -E "s/^Path\([[:space:]]*['\"]([^'\"]+)['\"].*/\1/" || true ;;
+          | sed -E "s/^Path\([[:space:]]*\\\\?['\"]([^'\"\\\\]+)\\\\?['\"].*/\1/" || true ;;
     esac
 
     # node / ruby equivalents, where the path is the first argument.
     printf '%s\n' "$cmd" \
-      | grep -oE "(writeFileSync|appendFileSync|File\.write)\([[:space:]]*['\"][^'\"]+['\"]" \
-      | sed -E "s/^[A-Za-z_.]+\([[:space:]]*['\"]([^'\"]+)['\"].*/\1/" || true
+      | grep -oE "(writeFileSync|appendFileSync|File\.write)\([[:space:]]*\\\\?['\"][^'\"\\\\]+\\\\?['\"]" \
+      | sed -E "s/^[A-Za-z_.]+\([[:space:]]*\\\\?['\"]([^'\"\\\\]+)\\\\?['\"].*/\1/" || true
 
     # os.replace, os.rename, shutil.copy and shutil.move write their second
     # argument.
@@ -1594,8 +1597,8 @@ bash_write_targets() {
       printf '%s\n' "$cmd" \
         | grep -oE "(^|[^A-Za-z0-9_.])[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*\\\\?['\"][^'\"\\\\]+\\\\?['\"]" \
         | sed -E "s/^[^A-Za-z_]?([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=[[:space:]]*\\\\?['\"]([^'\"\\\\]+)\\\\?['\"]$/\1	\2/" \
-        | LC_ALL=C awk -F '\t' -v names="$_names" '
-            BEGIN { n = split(names, list, "\n"); for (i = 1; i <= n; i++) want[list[i]] = 1 }
+        | NAMES="$_names" LC_ALL=C awk -F '\t' '
+            BEGIN { n = split(ENVIRON["NAMES"], list, "\n"); for (i = 1; i <= n; i++) want[list[i]] = 1 }
             ($1 in want) { print $2 }' || true
     fi
   } | grep -vE '^[[:space:]]*$' || true

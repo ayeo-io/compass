@@ -10,7 +10,7 @@ This `compass.yml` waives one readiness signal. The signal is not locked, so the
 
 ```yaml
 schema: 1
-extends: compass:default@6
+extends: compass:default@7
 owner: ada
 readiness:
   tests-declared-and-under-two-minutes:
@@ -38,7 +38,7 @@ The layer keys of `compass.yml` are:
 
 | Key | Meaning |
 |---|---|
-| `extends` | The layer above. `compass:default@6` names the shipped default, major 6. |
+| `extends` | The layer above. `compass:default@7` names the shipped default, major 7. |
 | `owner` | The person who owns the project. The owner approves waivers and unlocks. |
 | `approvers` | Lists of names, by kind of approval: `issue-waiver` in the project file and `project-waiver` in a parent. |
 

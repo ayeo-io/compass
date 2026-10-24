@@ -20,8 +20,13 @@ Risk, familiarity and size need judgment, as do the goal and urgency switches. O
 are recorded, `compass approach evaluate` applies the routing policy as a pure
 function.
 
-The same assessment plus the same policy produces the same approach, every
-time.
+Its inputs are the recorded assessment, the project's resolved configuration
+(the shipped default, an optional git parent, `compass.yml` and the issue's
+own `config:`, which can name the approach with `compass issue configure
+--route`) and the documents the issue has on disk, such as `intent.md` and
+`positioning.md`. The same inputs produce the same approach, every time.
+Without `--write` it reads the
+configuration stored at the last evaluation; with `--write`, the current one.
 
 ### 2. A declared guardrail cannot silently become advice
 

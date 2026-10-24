@@ -2,10 +2,15 @@
 
 Compass is adaptive spec-driven development for Claude Code. You describe
 the work; Compass scores its risk, familiarity and size, and a
-deterministic CLI computes how much process it needs. Five guardrails hold
-on every approach: every change lands with a passing test, acceptance
-criteria come before code, code traces to a criterion, evidence is a
-recorded command output, and a person approves anything irreversible.
+deterministic CLI computes how much process it needs from that assessment,
+the project's configuration and the issue's documents. In a project that uses
+Compass, five guardrails apply to every approach that ships code: a recorded
+passing test run, acceptance criteria before code, code traced to a
+criterion, typed evidence rather than a written claim, and a person's
+approval for a change labelled `auth`, `payments`, `personal-data` or
+`migrations`. A spike ships nothing and has two spike guardrails of its own. The
+[safety contract](safety-contract.md) states what each guarantee covers and
+where it stops.
 
 ## Start here
 

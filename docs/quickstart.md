@@ -60,7 +60,7 @@ files) and registers its hooks - `pre-tool.sh`, `post-tool.sh`, `stop.sh`,
 `settings.json`. It is idempotent: re-running refreshes the
 links and never clobbers a file Compass did not create. `--global` makes the
 `/compass:*` commands available in every project; `--copy` installs copies
-instead of symlinks if you prefer. Compass needs Python 3. The YAML parser it
+instead of symlinks if you prefer. Compass needs Python 3.10 or later. The YAML parser it
 uses travels inside the plugin, so there is nothing to install. `jsonschema`
 is a separate, genuinely optional library Compass does not bundle - install
 it yourself for full JSON Schema validation in `compass policy lint` and
@@ -68,8 +68,9 @@ it yourself for full JSON Schema validation in `compass policy lint` and
 `schemas/README.md`).
 
 Unlike the plugin, `install.sh` does **not** change your PATH. If you want to
-call `compass` directly from your shell, add `$COMPASS_HOME/bin` to your
-`PATH` (or invoke the CLI as `python3 $COMPASS_HOME/cli/compass`). The slash
+call `compass` directly from your shell, add `<clone>/bin` to your `PATH`,
+where `<clone>` is the folder you cloned Compass into (or invoke the CLI as
+`python3 <clone>/cli/compass`). The slash
 commands run the CLI on your behalf, so this only matters when you call it
 directly.
 
@@ -86,9 +87,11 @@ Either way, what you have installed is three layers:
 you do not need it to continue.
 
 One thing to know going in: the `pre-tool.sh` hook enforces the red-before-green
-TDD strategy. Once Compass is installed, the hook blocks an edit to a
-recognized code file when no failing test is on record for the current
-issue - exit code 2, edit denied. That is not a bug to work around; it is
+TDD strategy. In a project that uses Compass (it has a `.compass/` folder,
+which the first Compass command creates), the hook refuses an Edit or Write
+to a recognized code file when no failing test is on record for the current
+issue - exit code 2, edit denied. It detects writes made through the shell in
+common forms only ([safety contract](safety-contract.md#shell-write-detection-is-best-effort)). That is not a bug to work around; it is
 the TDD strategy, enforced by the hook, serving the tested-before-ship
 guardrail (tested before it lands). The hook is approach-aware: on a
 **Spike** the TDD strategy is suspended and the hook does not block. The
@@ -115,7 +118,7 @@ have opinions to encode, run it once from the project root:
 `init` is exempt from assessment - it changes no application code. It:
 
 1. **Writes a minimal `compass.yml`** at the project root: `schema`, `extends:
-   compass:default@6`, an `owner` who approves waivers, and `project.name` and
+   compass:default@7`, an `owner` who approves waivers, and `project.name` and
    `project.test_command`. It copies no `governance/` files. The file holds only
    what differs from the shipped defaults, and the defaults are real, in-force
    content from the moment you install Compass. The team adds its own edits
@@ -154,15 +157,18 @@ something every API consumer touches), familiarity `brownfield-mapped`. It tags 
 
 Then the mechanism takes over. `/compass:assess` shells out to
 `compass approach evaluate --write`, which applies the project's resolved
-configuration (`compass.yml` over the shipped default)
-deterministically - composing the candidate delivery approach, applying the
+configuration (the shipped default, an optional git parent, `compass.yml`
+and the issue's own `config:`) deterministically - composing the candidate delivery approach, applying the
 floors and caps, assembling the gate set - and folds `delivery_approach`,
 `stages`, and `gates` back into `manifest.yml`. For this issue it lands on
-**the regular approach, with the `security` review dimension turned on because risk is
-cross-cutting**; no routing policy rule forces a heavier delivery approach.
+**the regular approach, whose gates include the security review, with the
+architecture review added because risk is cross-cutting**; no routing
+policy rule forces a heavier delivery approach.
 Assess then writes the human-readable `delivery-approach.md` alongside it.
-Same assessment + same policy would produce this exact delivery approach on
-any machine - it is no longer something an agent composes in its head.
+The same assessment, resolved configuration and documents on disk give this
+exact delivery approach on any machine with the same Compass version - it is
+no longer something an agent composes in its head
+([safety contract](safety-contract.md#1-routing-is-deterministic-after-assessment)).
 `/compass:assess` also drops a `.compass/current-task` pointer so the CLI
 and the hooks know which issue is live.
 
@@ -208,7 +214,9 @@ On the regular approach, the requirements review is a lightweight-to-thorough pa
 QAs the spec against itself (is "the limit" defined? per-client or global? what
 about unauthenticated traffic?) and against governance. Each ambiguity is
 resolved into `acceptance-criteria.md` or recorded in `requirements-review.md` with an
-owner. An unresolved ambiguity is not allowed to pass silently into Plan.
+owner, so no open question passes silently into Plan. With the
+`entry-exit-evaluation` capability on, `compass next` also shows plan as not
+ready while a question is open.
 
 ### Plan
 
@@ -267,15 +275,17 @@ not the sentence. It also runs `compass check`, which runs the
 `governance/guardrails.yml` checks against `manifest.yml` and `evidence/` - every
 scenario lists a test, the recorded suite passed, every changed file traces to
 a scenario, every `pass` gate has resolving evidence. The `reviewer` then
-applies the delivery approach's review dimensions: `correctness`, `governance`,
-`traceability` always, plus `regression`, `clarity`, and `security` scaled to
-the cross-cutting risk. The result is `verification-report.md`. A gate
+applies the delivery approach's review dimensions: `correctness`, `governance`
+and `traceability` on every approach that ships; `regression`, `clarity` and
+`security` on the regular approach; and `architecture` because risk is
+cross-cutting. The result is `verification-report.md`. A gate
 passes only with evidence attached, and that evidence is **typed** - a
-`{type, path}` record (`test-run`, `command-output`, `human-approval`,
-`artifact`), and `guardrails.yml` says which types each gate accepts, so a
+`{type, path}` record, such as `test-run`, `command-output`,
+`human-approval` or `artifact`, and `guardrails.yml` says which types each gate accepts, so a
 mechanical gate cannot be cleared with a written note. `compass check` fails an
-empty or wrongly-typed evidence block automatically. If anything fails, the
-issue does not advance - you fix it, or it goes back.
+empty or wrongly-typed evidence block automatically. Under the default
+`adoption: enforced`, the issue does not advance while anything fails - you
+fix it, or it goes back.
 
 ### Ship
 
@@ -328,8 +338,8 @@ request gets a different approach depending on the intent document behind it.
 
 Assess reads `intent.md` as part of the goal dimension - the goal is
 the *actual outcome wanted*, not the literal request. The `intent.md`
-on disk blocks Plan until the spec is checked against it (the
-**intent-fidelity gate**). The approach is the one the three scored dimensions give;
+on disk makes the approach name a check of the spec against it before Plan
+(the **intent-fidelity gate**), which the `product-owner` agent runs. The approach is the one the three scored dimensions give;
 the document adds the check, not extra weight.
 
 ### Define the acceptance criteria, then refine them
@@ -351,9 +361,10 @@ recorded decision).
 Per the routing policy's artifact rule RP-ART-002, when `intent.md` is present the
 spec **must be checked against `intent.md` before Plan completes**. The
 `product-owner` agent runs that check. If the spec drifts from the intent
-document - well-formed scenarios that nonetheless miss the outcome - Plan
-does not proceed; the spec goes back. Well-formed and faithful are different
-tests, and this gate is where the difference is enforced.
+document - well-formed scenarios that nonetheless miss the outcome - the
+spec goes back to define. Well-formed and faithful are different tests, and
+this gate is where an agent checks the difference; no CLI check refuses Plan
+on it.
 
 From here the pipeline continues as the approach specifies - implement,
 verify, ship -
@@ -392,18 +403,21 @@ audience - reads the voice & positioning strategies in
 ### How this shapes the approach, and the gate at ship time
 
 A `positioning.md` on disk turns on the `claims` review dimension and -
-per the artifact rule RP-ART-001 - **blocks shipping until every claim in `positioning.md`
-traces to a passing scenario**. `verify.claims` is a blocking gate: the
+per the artifact rule RP-ART-001 - **holds shipping until every claim recorded
+in the manifest names a scenario that exists, and the reviewer has judged at
+the `verify` stage that the scenario passes and backs the claim**. `verify.claims` is a blocking gate: the
 artifact rule adds it on every delivery approach while `positioning.md` is present.
 On an issue already assessed, re-assess after writing `positioning.md`.
 
 So the marketer's gate applies right up to the end. At `/compass:ship`, the
 `product-marketer` agent walks `launch-readiness.md`. Every row must be green: a
 claim, a backing scenario, that scenario passing at Verify. A red row - a
-claim whose scenario is missing, failing, or skipped - and ship refuses to
-close the issue. The marketer's only moves at that point are to soften the
-claim, cut it, or file the missing scenario. What cannot happen is a launch
-claim shipping on a scenario that does not back it.
+claim whose scenario is missing, failing, or skipped - and the
+`product-marketer` agent does not pass the claims gate, so ship does not close
+the issue. The marketer's moves at that point are to soften the claim, cut
+it, or file the missing scenario. Compass checks that each recorded claim
+names a scenario that exists; whether that scenario backs the claim is the
+reviewer's judgment ([safety contract](safety-contract.md#compass-does-not-prove-correctness)).
 
 ---
 
@@ -493,8 +507,10 @@ If the issue is at implement and waits for another issue that has not reached
 the point its `depends_on` entry names (`compass issue depends add`), the line
 ends with what it waits for, for example
 `Implement [gate: verify.correctness] | blocked: waits for b to reach done`.
-The pre-tool hook refuses production-code edits until the wait is met or the
-dependency is removed. Earlier stages show no wait, so a spec and a design can
+The pre-tool hook refuses production-code edits while it can read, in this
+checkout, that the wait is not met, until the dependency is removed. A fault
+in reading it allows the edit with a warning
+([safety contract](safety-contract.md#a-dependency-between-issues-is-read-from-this-checkout-and-a-fault-never-blocks)). Earlier stages show no wait, so a spec and a design can
 be written while the other issue is open. A dependency `compass next` cannot
 judge, such as one on an issue with no manifest in this checkout, is left out
 of the line; `compass issue lint` names it.
@@ -539,7 +555,8 @@ is the view across all of them - triage, blockers, and a periodic digest;
 
 Two more CLI commands work across the whole board. `compass ci` runs the full
 mechanical gate suite - `policy lint`, then `issue lint` and `check` for every
-issue - and exits non-zero if anything fails; wiring Compass into CI is just
+issue - and exits non-zero if anything fails, under the default
+`adoption: enforced`; wiring Compass into CI is just
 "run `compass ci`, honor the exit code" (see `ci/README.md`). And
 `compass retro` reads the re-assessment log across every issue and
 reports whether assessment is systematically over- or under-sizing the

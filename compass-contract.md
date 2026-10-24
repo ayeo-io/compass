@@ -5,10 +5,10 @@ code, specs or artifacts. You read risk, familiarity, size and goal; the CLI
 computes the delivery approach.
 
 **Never skip assessment.** Only conversation is exempt: answering,
-explaining, reading. Assess the issue before a tool call changes a file.
+explaining, reading. Assess before a tool call changes a file.
 
 **Trigger on intent, not on the command.** If someone describes work to build,
-change or fix, assess first, typed command or not.
+change or fix, assess first even if they never typed the command.
 Explicitly typing any Compass command
 always works. If `.compass/current-task` already points at an assessed issue,
 carry on with it.

@@ -1372,16 +1372,18 @@ bash_write_targets() {
 
     # In-place editors: hand over every argument and let the classifier
     # decide which of them is a production file.
-    # perl and ruby edit in place with `-i` anywhere in a flag group (`-pi`,
-    # `-lpi`, `-i.bak`), so the literal text `perl -i` misses most real uses.
-    # A group holding M, m or I before the i is `-Mstrict` or `-I<dir>`,
-    # which edits nothing.
+    # perl and ruby edit in place with `-i` in any flag group, wherever it
+    # stands among the switches (`-pi`, `-lpi`, `-i.bak`, `-I lib -pi`,
+    # `-pe '...' -i`), so the literal text `perl -i` misses most real uses.
+    # Only switches that take no value may come before the i in its group:
+    # `-Mstrict`, `-I<dir>`, `-Fi` and ruby's `-rdigest` hold an i and edit
+    # nothing.
     case "$cmd" in
       *"sed -i"*|*"perl -i"*)
         printf '%s\n' "$cmd" | tr ' \t' '\n\n' | grep -vE '^-' || true ;;
       *perl*|*ruby*)
         if printf '%s\n' "$cmd" | grep -E \
-            '(^|[^[:alnum:]_.-])(perl|ruby)([[:space:]]+-[^[:space:]]+)*[[:space:]]+-[A-HJ-LN-Za-ln-z0-9]*i' \
+            '(^|[^[:alnum:]_.-])(perl|ruby)([[:space:]][^;&|]*)?[[:space:]]-[0-9alnpsSwWtTuUcv]*i' \
             >/dev/null; then
           printf '%s\n' "$cmd" | tr ' \t' '\n\n' | grep -vE '^-' || true
         fi ;;
@@ -1523,9 +1525,10 @@ bash_write_targets() {
     #     write would block read-only verification commands - the hook
     #     stopping an author from checking their own work, which inverts what
     #     it is for.
-    #   - The path must come from the write call itself, not from scanning
-    #     the whole command. Lifting paths out of a heredoc body would demand
-    #     a failing test for a migration that a document merely *named*.
+    #   - A path counts only when a write call takes it: as a string inside
+    #     the call, or through a name the call takes (below). Lifting every
+    #     path out of a heredoc body would demand a failing test for a
+    #     migration that a document merely *named*.
     # A missed write is recoverable; a false block trains people to bypass the
     # hook, and nothing recovers from that.
 
@@ -1555,16 +1558,27 @@ bash_write_targets() {
       | grep -oE "(writeFileSync|appendFileSync|File\.write)\([[:space:]]*['\"][^'\"]+['\"]" \
       | sed -E "s/^[A-Za-z_.]+\([[:space:]]*['\"]([^'\"]+)['\"].*/\1/" || true
 
+    # os.replace, os.rename, shutil.copy and shutil.move write their second
+    # argument.
+    printf '%s\n' "$cmd" \
+      | grep -oE "(os\.replace|os\.rename|shutil\.copy2?|shutil\.copyfile|shutil\.move)\([^,()]*,[[:space:]]*\\\\?['\"][^'\"\\\\]+\\\\?['\"]" \
+      | sed -E "s/.*,[[:space:]]*\\\\?['\"]([^'\"\\\\]+)\\\\?['\"]$/\1/" || true
+
     # A write call whose target is a name rather than a string:
     #     target = 'src/app.py'
     #     open(target, 'w')
     # Every string the same command assigns to that name is a target. Only
-    # names a write call uses count, so a script that reads a source file
+    # names a write call takes count, so a script that reads a source file
     # through one name and writes a report through another is judged on the
-    # report alone. A path built at run time is still not seen.
-    local _names _name
+    # report alone. A path built at run time is still not seen. A quote may
+    # be escaped (`\"`), as it is inside `python3 -c "..."`.
+    #
+    # The names and the assignments are each found in one pass over the
+    # command and joined in awk, so the cost does not grow with the number
+    # of names: one scan per name took 54 s for 5000 names.
+    local _names
     _names="$(printf '%s\n' "$cmd" | {
-      grep -oE "open\([[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*,[[:space:]]*['\"][^'\"]*[waxWAX+][^'\"]*['\"]" \
+      grep -oE "open\([[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*,[[:space:]]*\\\\?['\"][^'\"]*[waxWAX+][^'\"]*['\"]" \
         | sed -E 's/^open\([[:space:]]*([A-Za-z_][A-Za-z0-9_]*).*/\1/' || true
       printf '%s\n' "$cmd" \
         | grep -oE "Path\([[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\)\.(write_text|write_bytes)\(" \
@@ -1575,12 +1589,15 @@ bash_write_targets() {
       printf '%s\n' "$cmd" \
         | grep -oE "(writeFileSync|appendFileSync|File\.write)\([[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*," \
         | sed -E 's/^[A-Za-z_.]+\([[:space:]]*([A-Za-z_][A-Za-z0-9_]*).*/\1/' || true
-    } | sort -u)"
-    for _name in $_names; do
+    })"
+    if [ -n "$_names" ]; then
       printf '%s\n' "$cmd" \
-        | grep -oE "(^|[^A-Za-z0-9_.])${_name}[[:space:]]*=[[:space:]]*['\"][^'\"]+['\"]" \
-        | sed -E "s/.*=[[:space:]]*['\"]([^'\"]+)['\"]$/\1/" || true
-    done
+        | grep -oE "(^|[^A-Za-z0-9_.])[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*\\\\?['\"][^'\"\\\\]+\\\\?['\"]" \
+        | sed -E "s/^[^A-Za-z_]?([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=[[:space:]]*\\\\?['\"]([^'\"\\\\]+)\\\\?['\"]$/\1	\2/" \
+        | LC_ALL=C awk -F '\t' -v names="$_names" '
+            BEGIN { n = split(names, list, "\n"); for (i = 1; i <= n; i++) want[list[i]] = 1 }
+            ($1 in want) { print $2 }' || true
+    fi
   } | grep -vE '^[[:space:]]*$' || true
 }
 
@@ -1891,7 +1908,7 @@ if [ "${TOOL:-}" = "Bash" ]; then
   # Cheap pre-filter, before any filesystem work: this hook now runs on every
   # Bash call in the session, and most of them write nothing.
   case "$COMMAND" in
-    *">"*|*"sed -i"*|*"perl "*|*"ruby "*|*"tee "*|*cp\ *|*mv\ *|\
+    *">"*|*"sed -i"*|*perl[[:space:]]*|*ruby[[:space:]]*|*"tee "*|*cp\ *|*mv\ *|\
     *patch\ -p*|*"git apply"*|*open\(*|*write_text*|*write_bytes*|\
     *writeFileSync*|*appendFileSync*|*File.write*|*os.replace*|*os.rename*|\
     *shutil.copy*|*shutil.move*) ;;

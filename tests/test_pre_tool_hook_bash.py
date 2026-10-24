@@ -379,21 +379,32 @@ def _assert_allowed(command: str) -> None:
         f"expected {command!r} to be allowed\nstderr: {result.stderr}")
 
 
-@pytest.mark.parametrize("flags", ["-pi", "-pie", "-i.bak", "-lpi"])
+@pytest.mark.parametrize("flags", [
+    "-pi", "-pie", "-i.bak", "-lpi", "-I lib -pi", "-pe 's/a/b/' -i"])
 def test_trc_001_perl_in_place_flag_groups_are_writes(flags):
     """Scenario `TRC-001`: the hook matched only the literal text `perl -i`, so a
     combined flag group edited a source file with no red on record."""
     _assert_refused(f"perl {flags} -e 's/a/b/' src/app.py")
 
 
+def test_trc_001_perl_after_a_tab_is_still_an_editor():
+    """Scenario `TRC-001`: a tab after `perl` must not hide the edit from the
+    cheap pre-filter."""
+    _assert_refused("perl\t-pi -e 's/a/b/' src/app.py")
+
+
 def test_trc_002_ruby_in_place_is_a_write():
     """Scenario `TRC-002`: ruby's in-place flag edits the file the same way."""
     _assert_refused("ruby -pi -e 'gsub(/a/, \"b\")' src/app.py")
+    _assert_refused("ruby -pe 'x' -i src/app.py")
 
 
 @pytest.mark.parametrize("command", [
     "perl -ne 'print' src/app.py",
     "perl -Mstrict -e 'print 1' src/app.py",
+    "perl -Fi -ane 'print' src/app.py",
+    "ruby -rdigest -e 'puts 1' src/app.py",
+    "ruby -rtime -rfileutils -e 'puts 1' src/app.py",
 ])
 def test_trc_003_perl_that_only_reads_is_not_a_write(command):
     """Scenario `TRC-003`: `-Mstrict` holds the letter i but edits nothing."""
@@ -415,7 +426,15 @@ def test_trc_004_heredoc_writing_a_variable_path_is_a_write():
     "p = 'src/app.py'; open(p, 'w').write('x')",
     "import pathlib; p = \"src/app.py\"; pathlib.Path(p).write_text('x')",
     "import os; dst = 'src/app.py'; os.replace('/tmp/new.py', dst)",
-], ids=["open", "write_text", "os.replace"])
+    "import os; os.replace('/tmp/new.py', 'src/app.py')",
+    "import os; os.rename('/tmp/new.py', 'src/app.py')",
+    "import shutil; shutil.copy('/tmp/new.py', 'src/app.py')",
+    "import shutil; shutil.move('/tmp/new.py', 'src/app.py')",
+    "p = \\\"src/app.py\\\"; open(p, 'w').write('x')",
+    "p = 'src/app.py'; open(p, \\\"w\\\").write('x')",
+], ids=["open", "write_text", "os.replace", "os.replace-string",
+        "os.rename-string", "shutil.copy-string", "shutil.move-string",
+        "escaped-path", "escaped-mode"])
 def test_trc_005_inline_script_writing_a_variable_path_is_a_write(script):
     """Scenario `TRC-005`: a write call that takes a name, not a string."""
     _assert_refused(f'python3 -c "{script}"')
@@ -475,7 +494,8 @@ def test_trc_008_the_contract_lists_the_shapes_the_hook_catches():
     section = section.split("\n### ", 1)[0]
     flat = " ".join(section.split())
     assert "`perl` and `ruby` with `-i` in any flag group" in flat
-    assert "assigned to a name in the same script" in flat
+    assert "a name the same script assigns a string to" in flat
+    assert "`os.replace`" in flat and "`shutil.move`" in flat
     assert "a path built at run time" in flat
     assert ("an inline interpreter script (`python3 -c`, `node -e`, a "
             "heredoc) that opens a file for writing") not in flat

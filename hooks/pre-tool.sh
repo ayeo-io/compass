@@ -1379,14 +1379,20 @@ bash_write_targets() {
     # `-Mstrict`, `-I<dir>`, `-Fi` and ruby's `-rdigest` hold an i and edit
     # nothing. Each quoted span is first read as one word, so code such as
     # `-e 'print -int(2)'` is not a switch, and the switches end at the first
-    # other word, so `perl gen.pl -i` passes `-i` to a script.
+    # other word or at `--`, so `perl gen.pl -i` passes `-i` to a script.
+    # The string a shell runs (`bash -c "perl -pi ..."`) is read as well,
+    # because agents are told to run a script that needs bash that way.
     case "$cmd" in
       *"sed -i"*|*"perl -i"*)
         printf '%s\n' "$cmd" | tr ' \t' '\n\n' | grep -vE '^-' || true ;;
       *perl*|*ruby*)
-        if printf '%s\n' "$cmd" \
-            | sed -E "s/'[^']*'/__Q__/g; s/\"[^\"]*\"/__Q__/g" \
-            | grep -E '(^|[^[:alnum:]_.-])(perl|ruby)([[:space:]]+(-[ICrx][[:space:]]+[^-[:space:]][^[:space:]]*|-[^[:space:]]*|__Q__))*[[:space:]]+-[0-9alnpsSwWtTuUcv]*i' \
+        if { printf '%s\n' "$cmd"
+             printf '%s\n' "$cmd" \
+               | grep -oE "(^|[^[:alnum:]_])(ba|z|da)?sh[[:space:]]+-c[[:space:]]+('[^']*'|\"([^\"\\\\]|\\\\.)*\")" \
+               | sed -E "s/^[^'\"]*['\"]//; s/['\"]$//" || true
+           } \
+            | sed -E "s/'[^']*'/__Q__/g; s/\"([^\"\\\\]|\\\\.)*\"/__Q__/g" \
+            | grep -E '(^|[^[:alnum:]_.-])(perl|ruby)([[:space:]]+(-[ICr][[:space:]]+[^-[:space:]][^[:space:]]*|-[^-[:space:]][^[:space:]]*|__Q__))*[[:space:]]+-[0-9alnpsSwWtTuUcv]*i' \
             >/dev/null; then
           printf '%s\n' "$cmd" | tr ' \t' '\n\n' | grep -vE '^-' || true
         fi ;;

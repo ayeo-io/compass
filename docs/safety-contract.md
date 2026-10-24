@@ -1049,7 +1049,8 @@ For shell commands it recognizes these write shapes, and only these:
 - `>`, `>>` and `>|` redirects, including the `cat > file <<EOF` heredoc
   form and a quoted target such as `> "src/app.ts"`
 - `sed -i`, and `perl` and `ruby` with `-i` in any flag group, such as
-  `-pi`, `-lpi`, `-i.bak` or a `-i` after `-e '...'`
+  `-pi`, `-lpi`, `-i.bak` or a `-i` after `-e '...'`, also inside a
+  `bash -c` or `sh -c` string
 - the arguments of `tee`, and the last argument of `cp` and `mv`, found in
   the same simple command as the `tee`, `cp` or `mv` word, including behind
   a wrapper such as `sudo` or `timeout`; a file that another command in the

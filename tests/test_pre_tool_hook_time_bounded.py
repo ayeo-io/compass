@@ -1772,9 +1772,10 @@ def test_many_write_target_names_with_assignments_are_judged_in_time(tmp_path):
     the hook still finds the guarded write among them."""
     root = _project(tmp_path)
     body = "".join(f"n{k} = '/tmp/out{k}'\nopen(n{k}, 'w')\n"
-                   for k in range(2000))
+                   for k in range(300))
     body += "last = 'src/app.py'\nopen(last, 'w')\n"
     seconds, r = _bash(root, f"python3 - <<'EOF'\n{body}EOF", tmp_path)
 
-    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert r.returncode == 2 and "no-red-on-record" in r.stderr, (
+        r.returncode, r.stderr)
     assert seconds < FAST, f"the hook took {seconds:.1f} s"

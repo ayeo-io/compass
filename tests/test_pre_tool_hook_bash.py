@@ -381,11 +381,22 @@ def _assert_allowed(command: str) -> None:
 
 @pytest.mark.parametrize("flags", [
     "-pi", "-pie", "-i.bak", "-lpi", "-I lib -pi", "-pe 's/a/b/' -i",
-    "-pe 's/a/b/; s/c/d/' -i", "-pe 's/a|b/c/' -i"])
+    "-pe 's/a/b/; s/c/d/' -i", "-pe 's/a|b/c/' -i",
+    '-pe "s/\\"a\\"/b/" -i'])
 def test_trc_001_perl_in_place_flag_groups_are_writes(flags):
     """Scenario `TRC-001`: the hook matched only the literal text `perl -i`, so a
     combined flag group edited a source file with no red on record."""
     _assert_refused(f"perl {flags} -e 's/a/b/' src/app.py")
+
+
+@pytest.mark.parametrize("command", [
+    "bash -c \"perl -pi -e 's/a/b/' src/app.py\"",
+    "sh -c 'perl -pi -e \"s/a/b/\" src/app.py'",
+])
+def test_trc_001_perl_inside_a_shell_string_is_still_an_editor(command):
+    """Scenario `TRC-001`: `bash -c "..."` is how this project tells agents to
+    run a script that needs bash, so the string a shell runs is read too."""
+    _assert_refused(command)
 
 
 def test_trc_001_perl_after_a_tab_is_still_an_editor():
@@ -411,6 +422,9 @@ def test_trc_002_ruby_in_place_is_a_write():
     "perl scripts/gen.pl -i src/app.py",
     "ruby bin/lint -include src/app.py",
     "ruby -e 'puts 1' src/app.py -- -i",
+    "perl -E 'say 1' -- -i src/app.py",
+    "perl -x script.pl -i src/app.py",
+    "git commit -m 'use perl -pi on src/app.py'",
 ])
 def test_trc_003_perl_that_only_reads_is_not_a_write(command):
     """Scenario `TRC-003`: `-Mstrict` holds the letter i but edits nothing."""

@@ -413,7 +413,7 @@ def state_source(project_root):
 def state(project_root):
     """`initialized` and `records_signed_since` as a dict, `{}` when neither
     file exists. A state file that exists is the whole answer. The key
-    `initialized` is read from either spelling until 8.0.0 and the new one
+    `initialized` is read from either spelling until 9.0.0 and the new one
     wins when both are there."""
     path = state_source(project_root)
     if path is None:

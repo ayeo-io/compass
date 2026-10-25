@@ -152,7 +152,7 @@ add` of HEAD in the system temp folder, named
 - `settings`: the path and digest of the settings file read (`compass.yml`, or
   `.compass/config.yml` in a project without one; both null with neither);
 - `catalog_digest`: the digest of the readiness catalog this CLI ships (the record also holds
-  the old key `catalogue_digest` with the same value, until 8.0.0);
+  the old key `catalogue_digest` with the same value, until 9.0.0);
 - `budget`: the command seconds and the seconds the run used;
 - `signals`: each signal's `id`, `impl`, `version`, `weight`,
   `required_for_autonomous`, `result`, `reason` and `not_run`, and for an

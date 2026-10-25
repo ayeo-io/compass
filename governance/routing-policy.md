@@ -416,7 +416,7 @@ decision is
 
 `governance/legacy-views.yml` holds what the two files contain that the
 catalogues have no field for. Only the generator of the views reads it, and it
-goes with the views at 8.0.0.
+goes with the views at 9.0.0.
 
 The conversion changes these things, and the test rebuilds the two files
 from the preset and `legacy-views.yml` to show nothing is lost:

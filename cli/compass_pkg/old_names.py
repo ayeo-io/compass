@@ -2,7 +2,7 @@
 """One reader-side table of old typed names, each with the version that ends it.
 
 The table is the `old_names:` section of `cli/migrate-map.yml`: kind, then old
-word, then `{new, removed_in}`. Every row ends at 8.0.0. A reader of one kind
+word, then `{new, removed_in}`. Every row ends at 9.0.0. A reader of one kind
 (the `--kind` argument, the state key, the readiness record, a skill, a check
 id) asks this module for the current word. A stored value in a manifest keeps
 the `word_map` mapping and its `.v5.bak` backup; `word_map.tables()` builds its
@@ -36,20 +36,20 @@ LABELS = {
 
 
 def _row(new):
-    return {"new": new, "removed_in": "8.0.0"}
+    return {"new": new, "removed_in": "9.0.0"}
 
 
 _FALLBACK = {
-    "reassessment_kind": {"judgement": _row("judgment")},  # us-english-scan: allow - old name read until 8.0.0
-    "check_id": {"dor-behaviour-is-gwt": _row("dor-behavior-is-gwt")},  # us-english-scan: allow - old name read until 8.0.0
-    "skill": {"behaviour-mapping": _row("behavior-mapping")},  # us-english-scan: allow - old name read until 8.0.0
-    "refusal_code": {"not-initialised": _row("not-initialized")},  # us-english-scan: allow - old name read until 8.0.0
-    "state_key": {"initialised": _row("initialized")},  # us-english-scan: allow - old name read until 8.0.0
+    "reassessment_kind": {"judgement": _row("judgment")},  # us-english-scan: allow - old name read until 9.0.0
+    "check_id": {"dor-behaviour-is-gwt": _row("dor-behavior-is-gwt")},  # us-english-scan: allow - old name read until 9.0.0
+    "skill": {"behaviour-mapping": _row("behavior-mapping")},  # us-english-scan: allow - old name read until 9.0.0
+    "refusal_code": {"not-initialised": _row("not-initialized")},  # us-english-scan: allow - old name read until 9.0.0
+    "state_key": {"initialised": _row("initialized")},  # us-english-scan: allow - old name read until 9.0.0
     "readiness_key": {"catalogue_digest": _row("catalog_digest")},
-    "json_key": {"behaviour": _row("behavior"), "behaviours": _row("behaviors")},  # us-english-scan: allow - old name read until 8.0.0
-    "spec_heading": {"Current Behaviour": _row("Current Behavior"),  # us-english-scan: allow - old name read until 8.0.0
-                     "Archived Behaviour": _row("Archived Behavior")},  # us-english-scan: allow - old name read until 8.0.0
-    "term": {"catalogue": _row("catalog")},  # us-english-scan: allow - old name read until 8.0.0
+    "json_key": {"behaviour": _row("behavior"), "behaviours": _row("behaviors")},  # us-english-scan: allow - old name read until 9.0.0
+    "spec_heading": {"Current Behaviour": _row("Current Behavior"),  # us-english-scan: allow - old name read until 9.0.0
+                     "Archived Behaviour": _row("Archived Behavior")},  # us-english-scan: allow - old name read until 9.0.0
+    "term": {"catalogue": _row("catalog")},  # us-english-scan: allow - old name read until 9.0.0
 }
 
 _READ = None
@@ -101,7 +101,7 @@ def _notice(kind, old, new):
         return
     _SEEN.add(key)
     print(f"compass: {LABELS.get(kind, kind)} {old} is now {new}; "
-          f"the old word is read until 8.0.0.", file=sys.stderr)
+          f"the old word is read until 9.0.0.", file=sys.stderr)
 
 
 def read(kind, value):
@@ -151,5 +151,5 @@ def removal_problems(version):
 kind_type = functools.partial(read, "reassessment_kind")
 
 # The parser type of a check id given to `compass evidence approve`, `request`
-# and `review`: a script written for 6.x still passes the old id until 8.0.0.
+# and `review`: a script written for 6.x still passes the old id until 9.0.0.
 check_type = functools.partial(read, "check_id")

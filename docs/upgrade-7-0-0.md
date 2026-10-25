@@ -2,9 +2,9 @@
 
 This page lists what 7.0.0 changes and what to do about it. Each section is one change. The decisions behind them are in `architecture/decisions/`.
 
-## The released spellings end, and the old readers stay until 8.0.0
+## The released spellings end, and the old readers stay until 9.0.0
 
-7.0.0 removes the command spellings that 6.0.0 renamed and kept working through an alias. The readers for old words, old approach names, copied 5.x governance and `.compass/config.yml` (when `compass.yml` is absent) do not end at 7.0.0: they stay until 8.0.0. The decision is `governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`.
+7.0.0 removes the command spellings that 6.0.0 renamed and kept working through an alias. The readers for old words, old approach names, copied 5.x governance and `.compass/config.yml` (when `compass.yml` is absent) do not end at 7.0.0: they stay until 9.0.0. The decision is `governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`.
 
 ### What is removed
 
@@ -23,17 +23,17 @@ Each spelling below exits 2 with the parser's usual error. The error for the 7 s
 
 `issue labels sync` is removed too, and it is not one of the 8. Use `issue github sync`. The error for it adds one line that names the new spelling (see "The issue page on GitHub" below).
 
-### What is kept until 8.0.0
+### What is kept until 9.0.0
 
-- **Old words** in a manifest, a policy or a flag, such as the stage mode `full` and the size `standard`, are read until 8.0.0. The notice says "the old word is read until 8.0.0". `compass policy migrate --words` rewrites a project's `compass.yml`.
-- **Old approach names** are read until 8.0.0.
-- **Copied 5.x governance** and the generated views `governance/routing-policy.yml` and `governance/guardrails.yml` are read until 8.0.0.
-- **`.compass/config.yml`** is read until 8.0.0 when `compass.yml` is absent. `compass policy migrate` moves its settings into `compass.yml`.
+- **Old words** in a manifest, a policy or a flag, such as the stage mode `full` and the size `standard`, are read until 9.0.0. The notice says "the old word is read until 9.0.0". `compass policy migrate --words` rewrites a project's `compass.yml`.
+- **Old approach names** are read until 9.0.0.
+- **Copied 5.x governance** and the generated views `governance/routing-policy.yml` and `governance/guardrails.yml` are read until 9.0.0.
+- **`.compass/config.yml`** is read until 9.0.0 when `compass.yml` is absent. `compass policy migrate` moves its settings into `compass.yml`.
 
 ### What to do
 
 1. Replace each removed spelling in your scripts, notes and CI with the new one from the table. Before you run any migration below, copy `.compass/work` and `docs/compass` to a folder outside the project.
-2. Run `compass policy migrate --words` and `compass policy migrate` before 8.0.0, so that no project depends on a reader that 8.0.0 removes.
+2. Run `compass policy migrate --words` and `compass policy migrate` before 9.0.0, so that no project depends on a reader that 9.0.0 removes.
 
 ## Artifact status and decisions taken
 
@@ -466,7 +466,7 @@ The assessment no longer reads a role. The claims gate and the intent-fidelity b
 - **A recorded role is not read.** A manifest that holds `assessment.role` evaluates and checks as before, without it.
 - **An issue with a stored 6.x generation keeps its role rules** until it is re-assessed. **A project on copied 6.x governance keeps them** until it runs `compass policy migrate`.
 - **An issue with no stored generation, in a project with a `compass.yml`, takes the new default at once.** A recorded role no longer changes its approach, and on the full approach it no longer owes `verify.claims`.
-- **`--justify role=` and `compass quick-fix start --role` are accepted and ignored until 8.0.0.** Each prints a notice on standard error and records nothing. Evaluating an issue whose manifest records a role prints the same notice.
+- **`--justify role=` and `compass quick-fix start --role` are accepted and ignored until 9.0.0.** Each prints a notice on standard error and records nothing. Evaluating an issue whose manifest records a role prints the same notice.
 - **A landing refuses an artifact rule the approach does not hold.** When a document is on disk whose artifact rule adds a gate or asks for a document and the last evaluation did not fire it, such as a `positioning.md` written after assess, `compass ship-commit` and `compass quick-fix finish` refuse with `artifact-rule-not-applied` and name the `compass approach evaluate --issue <slug> --write` that applies it.
 - **Assess drafts the intent before it writes the approach**, so RP-ART-002 fires on a regular or full issue (`approaches/assess-procedure.md`, step 3).
 - **`compass issue migrate` lists each recorded `assessment.role` as no longer read**, in the dry run and on `--apply`, and leaves the field in place.
@@ -678,25 +678,25 @@ A project-scoped design decision cannot land without a decision record, a regula
 
 ## Renamed names
 
-Compass spells its own names in US English from 7.0.0. Each old name below is still read until 8.0.0, and the new name is the one written. `compass approach evaluate --kind judgement` records `judgment`, and a manifest that holds `judgement` reads as `judgment` and is rewritten, with a `.v5.bak` copy, on its next save. The table below is checked against the table the CLI reads (`old_names:` in `cli/migrate-map.yml`).  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+Compass spells its own names in US English from 7.0.0. Each old name below is still read until 9.0.0, and the new name is the one written. `compass approach evaluate --kind judgement` records `judgment`, and a manifest that holds `judgement` reads as `judgment` and is rewritten, with a `.v5.bak` copy, on its next save. The table below is checked against the table the CLI reads (`old_names:` in `cli/migrate-map.yml`).  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
 
 | Kind | Old name | New name | Read until |
 |---|---|---|---|
-| kind | `judgement` | `judgment` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
-| check | `dor-behaviour-is-gwt` | `dor-behavior-is-gwt` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
-| skill | `behaviour-mapping` | `behavior-mapping` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
-| refusal code | `not-initialised` | `not-initialized` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
-| state key | `initialised` | `initialized` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
-| readiness key | `catalogue_digest` | `catalog_digest` | 8.0.0 |
-| JSON key | `behaviour` | `behavior` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
-| JSON key | `behaviours` | `behaviors` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
-| heading | `Current Behaviour` | `Current Behavior` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
-| heading | `Archived Behaviour` | `Archived Behavior` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
-| term | `catalogue` | `catalog` | 8.0.0 |  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+| kind | `judgement` | `judgment` | 9.0.0 |  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
+| check | `dor-behaviour-is-gwt` | `dor-behavior-is-gwt` | 9.0.0 |  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
+| skill | `behaviour-mapping` | `behavior-mapping` | 9.0.0 |  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
+| refusal code | `not-initialised` | `not-initialized` | 9.0.0 |  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
+| state key | `initialised` | `initialized` | 9.0.0 |  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
+| readiness key | `catalogue_digest` | `catalog_digest` | 9.0.0 |
+| JSON key | `behaviour` | `behavior` | 9.0.0 |  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
+| JSON key | `behaviours` | `behaviors` | 9.0.0 |  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
+| heading | `Current Behaviour` | `Current Behavior` | 9.0.0 |  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
+| heading | `Archived Behaviour` | `Archived Behavior` | 9.0.0 |  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
+| term | `catalogue` | `catalog` | 9.0.0 |  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
 
-If a script or a rule matches the refusal code that the session-start hook prints, change it to match `not-initialized`. The hook prints only the new code. `compass _refusal not-initialised` still renders the refusal, and the saved output of an earlier run that holds the old code still reads.  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+If a script or a rule matches the refusal code that the session-start hook prints, change it to match `not-initialized`. The hook prints only the new code. `compass _refusal not-initialised` still renders the refusal, and the saved output of an earlier run that holds the old code still reads.  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
 
-A project that names `compass:behaviour-mapping` or `dor-behaviour-is-gwt` keeps working until 8.0.0. A script that reads the refusal code or the `behaviour` JSON keys should move to the new names before 8.0.0. No manifest, state file or readiness record needs a change by hand, because each old name is still read.  <!-- us-english-scan: allow - old name, read until 8.0.0 -->
+A project that names `compass:behaviour-mapping` or `dor-behaviour-is-gwt` keeps working until 9.0.0. A script that reads the refusal code or the `behaviour` JSON keys should move to the new names before 9.0.0. No manifest, state file or readiness record needs a change by hand, because each old name is still read.  <!-- us-english-scan: allow - old name, read until 9.0.0 -->
 
 ### The `language` setting
 

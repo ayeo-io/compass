@@ -1,5 +1,5 @@
 """The 6.0.0 and 7.0.0 upgrade guides state what 7.0.0 removed and what stays
-until 8.0.0 (issue `release-7-0-0-prep`).
+until 9.0.0 (issue `release-7-0-0-prep`, moved by `release-8-0-0`).
 
 Scenario ids: `TRC-025` to `TRC-028` in release-7-0-0-prep/acceptance-criteria.md.
 Each check takes the text it reads, so a planted guide can show it fails.
@@ -51,7 +51,7 @@ def kept_readers_problems(text):
     if marker not in text:
         return ["the guide has no 'Artifact status and decisions taken' section"]
     before = re.sub(r"\s+", " ", text.split(marker, 1)[0])
-    return [p for p in READERS + ("until 8.0.0",) if p not in before]
+    return [p for p in READERS + ("until 9.0.0",) if p not in before]
 
 
 def guide_6_commands_problems(text):
@@ -66,7 +66,7 @@ def guide_6_dates_problems(text):
                        if line.startswith("- Configuration files"))
     return [name for name, part in (("opening paragraph", opening),
                                     ("configuration-files line", config_line))
-            if "until 8.0.0" not in part or "until 7.0.0" in part]
+            if "until 9.0.0" not in part or "until 7.0.0" in part]
 
 
 def test_the_7_0_0_guide_lists_each_removed_spelling_with_its_new_one():
@@ -87,7 +87,7 @@ def test_the_7_0_0_guide_lists_each_removed_spelling_with_its_new_one():
         assert result.returncode == 0, (new, result.stderr)
 
 
-def test_the_7_0_0_guide_says_the_readers_stay_until_8_0_0():
+def test_the_7_0_0_guide_says_the_readers_stay_until_9_0_0():
     """Scenario id: `TRC-026` in release-7-0-0-prep/acceptance-criteria.md."""
     assert kept_readers_problems(read("upgrade-7-0-0.md")) == []
 
@@ -97,7 +97,7 @@ def test_the_6_0_0_guide_says_the_aliases_were_removed_at_7_0_0():
     assert guide_6_commands_problems(read("upgrade-6-0-0.md")) == []
 
 
-def test_the_6_0_0_guide_says_the_readers_stay_until_8_0_0():
+def test_the_6_0_0_guide_says_the_readers_stay_until_9_0_0():
     """Scenario id: `TRC-028` in release-7-0-0-prep/acceptance-criteria.md."""
     assert guide_6_dates_problems(read("upgrade-6-0-0.md")) == []
 

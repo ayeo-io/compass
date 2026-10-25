@@ -114,7 +114,7 @@ def new_record(root, signals, budget, measured_at=None):
     against."""
     when = measured_at or now_utc()
     # The old digest key is written beside the new one, with the same value,
-    # until 8.0.0, so a CLI that reads only the old key still finds the record fresh.
+    # until 9.0.0, so a CLI that reads only the old key still finds the record fresh.
     return old_names.twins("readiness_key", {
         "schema": SCHEMA, "measured_at": when.strftime(TIME_FORMAT), "head": head(root),
         "settings": settings_identity(root), "catalog_digest": catalogue_digest(),

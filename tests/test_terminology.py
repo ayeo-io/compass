@@ -1933,4 +1933,4 @@ def test_glossary_prints_no_scanner_marker_and_gates_follow_the_approach():
     assert "depends on the issue type" not in gate
     assert "delivery approach" in gate and "label" in gate
     approach = " ".join(str(terms["delivery-approach"]["means"]).split())
-    assert "`full`" in approach and "thorough" in approach and "8.0.0" in approach
+    assert "`full`" in approach and "thorough" in approach and "9.0.0" in approach

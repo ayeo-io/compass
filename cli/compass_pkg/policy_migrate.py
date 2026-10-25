@@ -193,7 +193,7 @@ def refusals(root):
 
 # --- the settings --------------------------------------------------------------------
 
-STATE_KEYS = ("initialized", "initialised", "records_signed_since")  # us-english-scan: allow - old name read until 8.0.0
+STATE_KEYS = ("initialized", "initialised", "records_signed_since")  # us-english-scan: allow - old name read until 9.0.0
 DROPPED = {"version": "schema: 1 replaces it"}
 
 

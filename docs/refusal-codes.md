@@ -123,7 +123,7 @@ reason code and are not in the generated list.
 **Why:** no issue has been assessed yet - {detail}.
 **Fix:** run /compass:assess before changing code, or /compass:quick-fix for a small, low-risk change.
 
-**Old code:** `not-initialised` is read until 8.0.0. <!-- us-english-scan: allow - old code, read until 8.0.0 -->
+**Old code:** `not-initialised` is read until 9.0.0. <!-- us-english-scan: allow - old code, read until 9.0.0 -->
 
 ### `pointer-moved`
 

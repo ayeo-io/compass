@@ -50,8 +50,12 @@ def test_the_decision_names_8_0_0_and_each_reader():
 def test_the_settled_list_shows_the_new_entry_and_not_the_three():
     """Scenario id: `TRC-014` in release-7-0-0-prep/acceptance-criteria.md."""
     lines = decisions.settled(str(ROOT), limit=100)
-    new_slug = "legacy-readers-readable-until-8-0-0"
-    assert sum(1 for line in lines if line.startswith(new_slug + ":")) == 1
+    # 2026-10-25-legacy-readers-readable-until-9-0-0 moved the date again, so
+    # the 8.0.0 entry is superseded in turn and the 9.0.0 one is settled.
+    assert sum(1 for line in lines
+               if line.startswith("legacy-readers-readable-until-9-0-0:")) == 1
+    assert not any(line.startswith("legacy-readers-readable-until-8-0-0:")
+                   for line in lines)
     for name in THREE:
         slug = name[len("2026-10-06-"):]
         assert not any(line.startswith(slug + ":") for line in lines), slug

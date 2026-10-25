@@ -106,7 +106,7 @@ def test_trc_041():
 
 
 def test_trc_042():
-    notice = f"compass: kind {OLD_KIND} is now {NEW_KIND}; the old word is read until 8.0.0."
+    notice = f"compass: kind {OLD_KIND} is now {NEW_KIND}; the old word is read until 9.0.0."
     outcomes = {}
     for word in (OLD_KIND, NEW_KIND):
         with tempfile.TemporaryDirectory() as raw:

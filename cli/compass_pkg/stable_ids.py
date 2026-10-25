@@ -1,0 +1,93 @@
+# compass_pkg.stable_ids - the ids of the approaches, stages and gates (ADR-040)
+# DEPENDENCY: none (constants only; it imports nothing so every module can import it).
+APPROACH_SPIKE = "spike"
+APPROACH_QUICK_FIX = "quick-fix"
+APPROACH_REGULAR = "regular"
+APPROACH_HOTFIX = "hotfix"
+APPROACH_FULL = "full"
+APPROACH_IDS = (APPROACH_SPIKE, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_HOTFIX, APPROACH_FULL)
+
+LEGACY_APPROACH_ALIASES = {
+    "express": APPROACH_QUICK_FIX,
+    "standard": APPROACH_REGULAR,
+    "expedition": APPROACH_FULL,
+    "feature": APPROACH_REGULAR,
+    "initiative": APPROACH_FULL,
+}
+
+# The stage weights and artifact depths. `full` is also a delivery approach;
+# the depth that used to share its name is `thorough`. The retired spellings
+# sit in cli/migrate-map.yml (VR-G12), and a test keeps these constants equal
+# to the modes the default preset declares.
+MODE_THOROUGH = "thorough"
+MODE_LIGHTWEIGHT = "lightweight"
+MODE_THOROUGH_WITH_FOLLOW_UP = "thorough-with-follow-up"
+DEPTH_THOROUGH = "thorough"
+DEPTH_LIGHTWEIGHT = "lightweight"
+ARTIFACT_DEPTHS = (DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH)           # ascending strictness
+MODE_RANKS = {"skipped": 0, "collapsed": 1, MODE_LIGHTWEIGHT: 2, MODE_THOROUGH: 3,
+              MODE_THOROUGH_WITH_FOLLOW_UP: 4}
+
+STAGE_ASSESS = "assess"
+STAGE_DEFINE = "define"
+STAGE_REFINE = "refine"
+STAGE_PLAN = "plan"
+STAGE_BREAKDOWN = "breakdown"
+STAGE_IMPLEMENT = "implement"
+STAGE_VERIFY = "verify"
+STAGE_SHIP = "ship"
+STAGE_IDS = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN, STAGE_BREAKDOWN,
+             STAGE_IMPLEMENT, STAGE_VERIFY, STAGE_SHIP)
+
+# The model tiers, weakest first (`compass_pkg.model_tiers`). `standard` is also a
+# retired approach name; as a tier it names the model of the builder's seat.
+TIER_FAST = "fast"
+TIER_STANDARD = "standard"
+TIER_STRONG = "strong"
+MODEL_TIERS = (TIER_FAST, TIER_STANDARD, TIER_STRONG)
+# The effort levels a Claude Code subagent takes, lowest first. `medium` is also a
+# size value; as an effort it names how hard the model works.
+EFFORT_LOW = "low"
+EFFORT_MEDIUM = "medium"
+EFFORT_HIGH = "high"
+EFFORT_LEVELS = (EFFORT_LOW, EFFORT_MEDIUM, EFFORT_HIGH, "xhigh", "max")
+
+GATE_G1 = "G1"
+GATE_G2 = "G2"
+GATE_G3 = "G3"
+GATE_G4 = "G4"
+GATE_G5 = "G5"
+GATE_S1 = "S1"
+GATE_S2 = "S2"
+GATE_VERIFY_CORRECTNESS = "verify.correctness"
+GATE_VERIFY_REGRESSION = "verify.regression"
+GATE_VERIFY_SECURITY = "verify.security"
+GATE_VERIFY_GOVERNANCE = "verify.governance"
+GATE_VERIFY_TRACEABILITY = "verify.traceability"
+GATE_VERIFY_CLAIMS = "verify.claims"
+GATE_VERIFY_CLARITY = "verify.clarity"
+GATE_SPIKE_CONCLUDE = "spike.conclude"
+GATE_VERIFY_ANALYZE = "verify.analyze"
+GATE_VERIFY_ARCHITECTURE = "verify.architecture"
+GATE_IDS = (GATE_G1, GATE_G2, GATE_G3, GATE_G4, GATE_G5, GATE_S1, GATE_S2,
+            GATE_VERIFY_CORRECTNESS, GATE_VERIFY_REGRESSION, GATE_VERIFY_SECURITY,
+            GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY, GATE_VERIFY_CLAIMS,
+            GATE_VERIFY_CLARITY, GATE_SPIKE_CONCLUDE, GATE_VERIFY_ANALYZE,
+            GATE_VERIFY_ARCHITECTURE)
+
+# The names in an issue's documents folder that are not artifacts: the migrate
+# leaves them where they are and does not register them, and `compass issue
+# lint` does not report them. Framework-owned (ADR-040), read by both.
+# `*` stands for any text. `compare.md` and `report.md` are an evaluation run's
+# outputs, and `*.v6.bak` is a distribution map the migrate set aside.
+# `result.md` and `result-subtask-*.md` are a multiagent builder's hand-back,
+# the same class of file as its brief: no reader needs one registered.
+NOT_AN_ARTIFACT = (
+    "README.md", "devlog.md",
+    "*review-brief*.md",
+    "assignment-subtask-*.md", "brief-subtask-*.md",
+    "result.md", "result-subtask-*.md",
+    "architect-ruling.md", "recommendation.md", "released-verbs-v5.6.0.md",
+    "compare.md", "report.md",
+    "*.v6.bak",
+)

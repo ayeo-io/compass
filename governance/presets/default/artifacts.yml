@@ -1,0 +1,339 @@
+# The shipped default preset: the source of the shipped defaults.
+# The two files governance/routing-policy.yml and governance/guardrails.yml
+# are generated from these files and governance/legacy-views.yml.
+# Change a default here, then run python3 scripts/generate-legacy-views.py.
+# Also raise the version in legacy-views.yml, then run the script with --pin
+# and again with --pin-hashes, which update the digest and drift fixtures.
+# cli/compass_pkg/legacy_adapter.py wrote the first version of these files from
+# those two files. The preset is the source now; edit it here.
+schema: 1
+artifacts:
+  delivery-approach:
+    file: delivery-approach.md
+    stage: assess
+    owner: router
+    audience: Anyone joining the issue reads it to see how much process the work gets and why.
+    stands_for: project-plan
+    sections:
+      lightweight:
+      - The assessment
+      - Policy rules that fired
+      - The final delivery approach
+      - The de-scope ledger
+      thorough:
+      - The assessment
+      - The composed candidate
+      - Policy rules that fired
+      - The final delivery approach
+      - The de-scope ledger
+      - Owed follow-ups
+      - Human overrides
+      - Confirmation
+    depends_on: []
+    every_approach: true
+  verification-note:
+    file: verification-note.md
+    stage: verify
+    owner: verifier
+    audience: The person who ships a quick fix reads it to see the scenario, its test and the gates on
+      one screen.
+    stands_for: test-summary
+    sections:
+      lightweight: []
+    depends_on: []
+  acceptance-criteria:
+    file: acceptance-criteria.md
+    stage: define
+    owner: spec-author
+    audience: Every role reads it to agree the behavior that will be built, and the builder turns each
+      scenario into a test.
+    stands_for: requirements
+    sections:
+      lightweight:
+      - Summary
+      - Intent links
+      - Scenario group <letter> - <name>
+      - Non-functional requirements
+      - Coverage ledger
+      thorough:
+      - Summary
+      - Intent links
+      - Scenario group <letter> - <name>
+      - Failure-mode scenarios
+      - Non-functional requirements
+      - Coverage ledger
+    depends_on: []
+    word_ceiling:
+      thorough: 5000
+      lightweight: 1500
+  technical-design:
+    file: technical-design.md
+    stage: plan
+    owner: planner
+    audience: A reviewer reads it to challenge the design before code is written.
+    stands_for: hld
+    sections:
+      lightweight:
+      - Approach
+      - Design decisions (ADR-style)
+      - Data and interfaces
+      - Verification plan
+      - Risks and dependencies
+      - Governance check
+      - Gate
+      thorough:
+      - Approach
+      - Design decisions (ADR-style)
+      - Data and interfaces
+      - Verification plan
+      - Risks and dependencies
+      - Governance check
+      - Work units
+      - Gate
+    depends_on: []
+    word_ceiling:
+      thorough: 4000
+      lightweight: 1200
+  low-level-design:
+    file: low-level-design/<unit>.md
+    stage: plan
+    owner: planner
+    audience: The builder of one work unit reads it for the signatures, contracts, files and tests
+      that unit owns.
+    stands_for: lld
+    sections:
+      thorough:
+      - Signatures
+      - Contracts
+      - File-level plan
+      - Tests this unit writes
+    depends_on:
+    - technical-design
+  distribution-map:
+    file: distribution-map.md
+    stage: breakdown
+    owner: planner
+    audience: The orchestrator reads it to decide how many worktrees to start and which scenarios each
+      one owns.
+    stands_for: work-breakdown
+    sections:
+      lightweight:
+      - Work units
+      - Independence analysis
+      - Scenario-group → subtask mapping
+      - Gate
+      thorough:
+      - Work units
+      - Independence analysis
+      - Scenario-group → subtask mapping
+      - Proposed worktree orchestration
+      - The cap that applies
+      - Gate
+    depends_on: []
+    required_when:
+      subtasks:
+        min: 2
+  verification-report:
+    file: verification-report.md
+    stage: verify
+    owner: verifier
+    audience: The person who ships reads it to decide whether the evidence supports landing the change.
+    stands_for: test-report
+    sections:
+      thorough:
+      - Scenario acceptance results
+      - Test suite evidence
+      - Review dimensions
+      - Gate decision
+      - Failure modes de-scoped at define
+      - Decisions taken for the user
+      - Release line
+      - Gate
+    depends_on: []
+  intent:
+    file: intent.md
+    stage: assess
+    owner: product-owner
+    audience: The product owner and the spec author read it to agree which problem is solved and which
+      outcome counts as success.
+    stands_for: prd
+    sections:
+      lightweight:
+      - Problem
+      - Desired outcome
+      - Success signals
+      - Non-goals
+      thorough:
+      - Problem
+      - Desired outcome
+      - Success signals
+      - Constraints
+      - Non-goals
+      - Internal FAQ
+      - Affected roles
+      - Intent-fidelity check (filled at the pre-plan gate)
+    depends_on: []
+  requirements-review:
+    file: requirements-review.md
+    stage: refine
+    owner: spec-author
+    audience: The planner and the person who asked read it to confirm every open question is settled before
+      design starts.
+    stands_for: requirements-review
+    sections:
+      lightweight:
+      - Self-QA of the spec
+      - Ambiguity ledger
+      - Gate
+      thorough:
+      - Self-QA of the spec
+      - Governance QA of the spec
+      - Ambiguity ledger
+      - Gate
+    depends_on: []
+  threat-model:
+    file: threat-model.md
+    stage: plan
+    owner: planner
+    audience: A security reviewer reads it to judge whether the risks to data and access are handled before
+      the change lands.
+    stands_for: threat-model
+    sections:
+      thorough:
+      - What are we working on?
+      - What can go wrong?
+      - What are we going to do about it?
+      - Did we do a good enough job?
+    depends_on: []
+  rollback-plan:
+    file: rollback-plan.md
+    stage: plan
+    owner: planner
+    audience: The person who runs a release reads it to know how to undo the change and whether that was
+      rehearsed.
+    stands_for: rollback-plan
+    sections:
+      thorough:
+      - What breaks
+      - How we go back
+      - When this was last rehearsed
+    depends_on: []
+  launch-readiness:
+    file: launch-readiness.md
+    stage: verify
+    owner: product-marketer
+    audience: The marketer and the person who ships read it to decide whether every public claim is backed
+      by a passing scenario.
+    stands_for: release-readiness-review
+    sections:
+      thorough:
+      - Claims-to-scenarios traceability checklist
+      - What is checked vs. not
+      - Voice & positioning check
+      - Go / No-Go
+    depends_on: []
+  ui-contract:
+    file: ui-contract.md
+    stage: define
+    owner: designer
+    audience: The builder and the spec author read it to build the screens and states the designer specified.
+    stands_for: ui-specification
+    sections:
+      thorough:
+      - Surface
+      - States
+      - Interaction scenarios
+      - Accessibility commitments
+      - Handoff to define
+    depends_on: []
+  bug-report:
+    file: bug-report.md
+    stage: assess
+    owner: spec-author
+    audience: The assessor and the builder read it to reproduce the defect and size the fix.
+    stands_for: bug-report
+    sections:
+      thorough:
+      - Observed behavior
+      - Expected behavior
+      - Reproduction steps
+      - Impact
+    depends_on: []
+  architecture-notes:
+    file: architecture-notes.md
+    stage: define
+    owner: architect
+    audience: The spec author and the planner read it to keep the design inside the system's invariants.
+    stands_for: architecture-review
+    sections:
+      thorough:
+      - System under change
+      - Invariants to preserve
+      - Boundary risks
+      - Candidate decision records
+      - Recommendations
+      - Items for a person to decide
+      - Notes for the planner
+    depends_on: []
+  positioning:
+    file: positioning.md
+    stage: define
+    owner: product-marketer
+    audience: The marketer and the reviewer of claims read it to keep every public message tied to a scenario.
+    stands_for: positioning-statement
+    sections:
+      thorough:
+      - Audience
+      - Value proposition
+      - Press release (working-backwards)
+      - Messaging - claims and their backing scenarios
+      - Customer & internal FAQ
+      - Honesty policy check (voice & positioning strategies)
+      - Handoff
+    depends_on: []
+  product-owner-review:
+    file: product-owner-review.md
+    stage: plan
+    owner: product-owner
+    audience: The planner reads it to confirm the design still delivers the intent before implementation
+      starts.
+    stands_for: stakeholder-review
+    sections:
+      thorough:
+      - Verdict
+      - Success signals and measures
+      - Scope beyond the intent
+      - Findings
+      - Product strategies
+      - Needs a decision
+      - Hand-back to the plan stage
+    depends_on: []
+  review:
+    file: review-<n>.md
+    stage: verify
+    owner: reviewer
+    audience: The builder and the person who ships read each round to decide what must change before the
+      work passes.
+    stands_for: review-record
+    sections:
+      thorough:
+      - Scope
+      - Verdict
+      - Blocking
+      - Not blocking
+      - Security
+      - Probes
+    depends_on: []
+  spike-conclusion:
+    file: spike-conclusion.md
+    stage: verify
+    owner: builder
+    audience: The person who decides reads it to discard, graduate or defer the spike.
+    stands_for: spike-report
+    sections:
+      thorough:
+      - Question
+      - What we learned
+      - Decision
+      - What this spike did not decide
+    depends_on: []

@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://compass.dev/schemas/readiness-record.schema.json",
+  "title": ".compass/readiness.yml",
+  "description": "The readiness record `compass readiness` writes: each readiness signal's result for one checkout at one commit. Per checkout and never committed. cli/compass_pkg/readiness_record.py is its one reader and writer; docs/readiness.md describes the freshness rules.",
+  "type": "object",
+  "required": ["schema", "measured_at", "head", "settings", "budget", "signals"],
+  "anyOf": [{"required": ["catalog_digest"]}, {"required": ["catalogue_digest"]}],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "measured_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "description": "When the run measured, in UTC. A record older than seven days, or one after now, is stale."
+    },
+    "head": {
+      "type": ["string", "null"],
+      "description": "The HEAD commit measured; null in a folder with no Git history. Stale when the commit is unknown or HEAD is more than 25 commits past it."
+    },
+    "settings": {
+      "type": "object",
+      "required": ["path", "digest"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": ["string", "null"], "description": "compass.yml, .compass/config.yml, or null when the project has neither."},
+        "digest": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"}
+      },
+      "description": "The settings file the run read and its digest. A layer change is a change of this file, so it makes the record stale."
+    },
+    "catalog_digest": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "The digest of the readiness catalog this CLI ships. A preset change makes the record stale."
+    },
+    "catalogue_digest": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "The old spelling of catalog_digest, written beside it with the same value and read until 9.0.0."
+    },
+    "budget": {
+      "type": "object",
+      "required": ["commands_seconds", "used_seconds"],
+      "additionalProperties": false,
+      "properties": {
+        "commands_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 270},
+        "used_seconds": {"type": "number", "minimum": 0}
+      }
+    },
+    "signals": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/signal"}
+    }
+  },
+  "definitions": {
+    "signal": {
+      "type": "object",
+      "required": ["id", "impl", "version", "weight", "required_for_autonomous", "result", "reason", "not_run"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "impl": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "weight": {"type": "integer"},
+        "required_for_autonomous": {"type": "boolean"},
+        "result": {"enum": ["present", "absent"]},
+        "reason": {"type": "string", "minLength": 1},
+        "not_run": {
+          "enum": [null, "undeclared", "disabled", "untrusted", "budget", "no-checkout"],
+          "description": "Why a command signal's command did not run; null when it ran or the signal runs no command."
+        },
+        "fix": {
+          "type": "object",
+          "required": ["change", "file"],
+          "additionalProperties": false,
+          "properties": {
+            "change": {"type": "string", "minLength": 1},
+            "file": {"type": "string", "minLength": 1}
+          },
+          "description": "For an absent signal: the one change that makes it present, and the file it touches."
+        },
+        "key": {"type": "string", "description": "The project key a command signal runs."},
+        "command": {"type": "string", "description": "The command text that key declares."},
+        "duration_seconds": {"type": ["number", "null"], "description": "How long the timed test command ran."}
+      }
+    }
+  }
+}

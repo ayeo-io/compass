@@ -1,0 +1,48 @@
+# Schema reference for: governance/guardrails.yml
+# The machine-readable guardrail definitions. `compass policy lint` enforces this.
+# Notation: (required) / (optional); `type`; [enum] where the set is closed.
+
+version:           # (required) string
+
+checks:            # (required) map - the named mechanical checks the CLI knows.
+  <check-name>:    #   one entry per check; the key is the name guardrails reference
+    description:   #     (required) string - what the check checks
+
+evidence_types:    # (optional) map - the kinds of evidence a gate can be cleared with.
+  <type-name>:     #   one entry per evidence type
+    description:   #     (required) string - what this evidence type is
+
+gate_evidence_requirements:  # (optional) map - gate id -> the list of evidence
+                   #   types that gate will accept [test-run, command-output,
+                   #   manual-review, human-approval, security-review,
+                   #   migration-plan, rollback-plan, claim-review,
+                   #   spike-conclusion, consistency-check, artifact].
+                   #   A gate not listed accepts any type.
+  # The CLI must have an implementation for every check name used below. A
+  # project that adds a guardrail with a new check name also needs the check
+  # logic added to the CLI (CHECK_FNS); `compass policy lint` flags an unknown
+  # check reference.
+
+defaults:          # (required) list of maps - the shipped default guardrails (G1–G5):
+  - id:            #   (required) string - e.g. G1
+    name:          #   (required) string
+    statement:     #   (required) string - what the guardrail asserts
+    checks:        #   (required) list of strings - names declared under `checks:`
+    checked_at:    #   (optional) list of stage names - when the check runs
+    applies_when:  #   (optional) map - a `when` condition; the guardrail is only
+                   #     checked when it matches the issue's assessment (e.g. `G5`'s
+                   #     {labels_any: [auth, payments, personal-data, migrations]})
+
+spike_guardrails:  # (optional) list of maps - SAME shape as a `defaults` entry.
+                   #   Guardrails that apply only on a spike; `compass check` runs
+                   #   these instead of `defaults` when the delivery approach is spike.
+
+project:           # (required, may be empty list) list of maps - project-added
+                   #   guardrails. SAME shape as a `defaults` entry. Each MUST
+                   #   reference at least one `checks:` name - a would-be guardrail
+                   #   with no mechanical check is a strategy, not a guardrail.
+                   #   May also carry a `params:` map for parameterized checks.
+
+# Note the asymmetry, by design: guardrails get a machine-readable file because
+# they are CHECKABLE; strategies (governance/strategies.md) do not, because they
+# are ASSESSED - the reviewer's judgment, not a mechanical pass/fail.

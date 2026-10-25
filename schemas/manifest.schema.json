@@ -1,0 +1,1303 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://compass-sdd/schemas/manifest.schema.json",
+  "title": "Compass manifest.yml",
+  "description": "The manifest. Lives at .compass/work/<issue-slug>/manifest.yml. The human-readable companion is manifest.reference.yml.",
+  "type": "object",
+  "required": [
+    "issue",
+    "created"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "The Compass issue.yml schema version this file follows. The CLI warns/fails on incompatible versions. Optional in 1.0 for back-compat; recommended. '1.1' introduced the optional `status` and `land_timestamp` fields. '3.0' stores only `backlog` or `done` as the status, with `close_reason`; a CLI that reads majors 1 and 2 refuses it."
+    },
+    "issue": {
+      "type": "string",
+      "description": "The issue slug; matches the directory name. A manifest still carrying the retired root key loads - normalize_spine maps it forward through SPINE_KEY_MAP before anything reads it, and cli/migrate-map.yml records the pair."
+    },
+    "task": {
+      "type": "string",
+      "description": "RETIRED. Declared only so a manifest written before the rename does not trip additionalProperties on its way to the normalizer, which maps it to `issue`. Never written."
+    },
+    "created": {
+      "type": "string",
+      "description": "ISO date the issue was assessed."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "backlog",
+        "done"
+      ],
+      "description": "Optional. The stored status of the issue: 'backlog' is a hold a person set, and 'done' means it is closed, with a `close_reason`. An issue in flight stores no status; its state (backlog, ready, in-progress or in-review) is read from its records. Only 'done' with close reason 'completed' makes its scenarios eligible for the living system spec derivation (ADR-008), so a new value can never silently get it. A manifest written before schema 3.0 may hold queued, parked, active, landed or abandoned; they are read as the words above and rewritten on the next save."
+    },
+    "close_reason": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "not-planned",
+        "duplicate"
+      ],
+      "description": "Optional. Why a 'done' issue was closed: 'completed' means the work was delivered, 'not-planned' means it will not be, and 'duplicate' means another issue covers it (named in `duplicate_of`). Written by `compass issue status set done --close-reason` and by `compass ship-commit`. 'done' with no close reason is not read as completed, and `compass issue lint` reports it."
+    },
+    "duplicate_of": {
+      "type": "string",
+      "description": "Optional. The slug of the issue that covers this one. Only with close reason 'duplicate'. Written by `compass issue status set done --duplicate-of`."
+    },
+    "blocked": {
+      "type": "object",
+      "description": "Optional. Set while an in-progress or in-review issue waits for something. Written by `compass issue blocked set --reason`; cleared by `compass issue blocked remove` and when the issue is closed or set to backlog. A flag on an issue in any other state is ignored by readers and reported by `compass issue lint`.",
+      "additionalProperties": false,
+      "properties": {
+        "reason": {"type": "string", "description": "What the issue waits for."},
+        "at": {"type": "string", "description": "ISO-8601 timestamp of when the flag was set."}
+      }
+    },
+    "depends_on": {
+      "type": "array",
+      "description": "Optional. The issues this issue waits for. Written by `compass issue depends add` and `compass issue depends remove`. While the issue is at the implement stage, an entry whose issue has not reached `until` blocks it: `compass next` and the board show the wait, and the pre-tool hook refuses production-code edits. Nothing stores the block; every reader derives it (ADR-062).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["issue", "reason", "until"],
+        "properties": {
+          "issue": {"type": "string", "minLength": 1, "description": "Slug of the issue waited for: one path segment, not this issue's own slug."},
+          "reason": {"type": "string", "minLength": 1, "description": "Why this issue waits for it."},
+          "until": {
+            "type": "string",
+            "enum": ["done", "in-review", "define", "refine", "plan", "breakdown", "implement", "verify", "ship"],
+            "default": "done",
+            "description": "The point the other issue must reach: done (closed as completed), in-review, or a stage it must be at or past. Written on every entry; done when not given."
+          }
+        }
+      }
+    },
+    "landed_by": {
+      "type": "array",
+      "description": "Optional, and only meaningful on a landed issue. What delivered this issue's work, when the work happened somewhere else. Each entry names another issue or a commit. When it resolves, four checks about this issue carrying its OWN record stand down - the claim moves to whatever carries the evidence rather than being waived. An issue entry must name an issue that exists, has landed, carries a record, and names this one back in `delivered:`; a commit entry must resolve in the project's repository and say what it did. See the `landed-by-resolves` check.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "issue": {
+            "type": "string",
+            "description": "Slug of the issue that delivered this work. That issue must name this one in its `delivered:` list - the link is two-way, or anything could claim anyone's evidence."
+          },
+          "commit": {
+            "type": "string",
+            "description": "A commit in the project's own repository that delivered this work. The common case: most already-done issues were fixed by an ordinary commit with no issue opened."
+          },
+          "what": {
+            "type": "string",
+            "description": "Required alongside `commit`. What that commit did, in words. A bare sha is a reference nobody can act on, and on a shallow clone nobody can resolve."
+          }
+        }
+      }
+    },
+    "delivered": {
+      "type": "array",
+      "description": "Optional. Slugs of other issues whose work this issue delivered. The back-reference for `landed_by`: without it a pointer is one-way, and any issue could claim a landed issue's record for the price of typing a slug that exists.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tracked_at": {
+      "type": "string",
+      "description": "Optional. URL of the public issue tracking this work. The archive under .compass/work/ is not published, so a backlog issue that anyone outside the repository needs to see is raised as a GitHub issue and linked from here."
+    },
+    "land_timestamp": {
+      "type": "string",
+      "description": "Optional. ISO 8601 timestamp of when the issue was landed. Written by scripts/integrate.sh alongside status: landed. Used as the primary sort key for the living spec derivation order (ADR-008 §3)."
+    },
+    "started_at": {
+      "type": "string",
+      "description": "Optional. ISO 8601 time `compass quick-fix start` ran: where the assess stage ends for the tokens-per-stage record (#375)."
+    },
+    "finish_started_at": {
+      "type": "string",
+      "description": "Optional. ISO 8601 time `compass quick-fix finish` began: where the implement stage ends."
+    },
+    "committed_at": {
+      "type": "string",
+      "description": "Optional. ISO 8601 time `compass quick-fix finish` recorded usage, just before its commit: where the verify stage ends."
+    },
+    "usage": {
+      "type": "object",
+      "description": "Optional. Tokens the issue's sessions spent, read from their Claude Code transcripts. A quick fix's block is written by `compass quick-fix finish` (cli/compass_pkg/session_usage.py): `session`, `source`, `skipped_lines`, and either `stages` (`assess` and `implement` each with requests, subagent_requests, input, output, cache_write, cache_read, cost_usd and optionally shared; `verify` and `ship` as `measured: false` with a reason) or `recorded: false` with a fixed `reason`. Every other approach's block is written by `compass ship-commit` (cli/compass_pkg/issue_usage.py) for an issue that holds checkpoint_outcomes: `sessions`, `source`, `skipped_lines`, `total`, `unattributed` and `stages`, each count block holding the same keys, or `recorded: false` with a fixed `reason`. The reasons are the words in session_usage.REASONS. Numbers only; no transcript text or path.",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+          "description": "The session ids that worked on the issue, each once. The pre-tool hook appends a session the first time it judges a tool call for the issue; `compass ship-commit` adds the session that runs it."
+        },
+        "total": {
+          "type": "object",
+          "description": "Every request in the issue's span: requests, subagent_requests, input, output, cache_write, cache_read and cost_usd, and shared when another issue's span recording the same session overlaps it."
+        },
+        "unattributed": {
+          "type": "object",
+          "description": "The requests in the span after the last stage end: the same keys as total. The stages and unattributed add up to total."
+        }
+      }
+    },
+    "checkpoint_outcomes": {
+      "type": "array",
+      "description": "Optional. What happened at each checkpoint stage hand-off, one entry per stage: `waited` when a person answered it with `compass evidence approve --checkpoint`, citing the checkpoint-approval record, and `skipped` when an agent recorded that the autonomy setting passed it with `compass issue checkpoint add`. The first assessment of an issue writes it as an empty list; an issue without the key is not judged. Derived figures (bands, ratio) are computed by readers and never stored.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage", "outcome", "by", "at"],
+        "properties": {
+          "stage": {"enum": ["assess", "define", "refine", "plan"]},
+          "outcome": {"enum": ["waited", "skipped"]},
+          "by": {"type": "string", "description": "The person who answered (the approver of the record cited), or the agent that went on."},
+          "at": {"type": "string", "description": "ISO 8601: the record's timestamp for waited, else the time of the command."},
+          "evidence": {"type": "string", "description": "For waited: the id of the checkpoint-approval record."}
+        },
+        "if": {"properties": {"outcome": {"const": "waited"}}},
+        "then": {"required": ["evidence"]}
+      }
+    },
+    "land_commit": {
+      "type": "string",
+      "description": "The commit ship-commit made when it marked the issue landed. evidence-matches-tree compares the newest green's tree_id with this commit's tree."
+    },
+    "release_note": {
+      "type": "string",
+      "description": "The issue's release line: text written for a user, for the release notes. Written only by --release-note on compass acceptance record, compass ship-commit and compass quick-fix finish; the latest write wins. Optional: a landing refuses an issue whose stored configuration sets release_line: true on its approach and that holds none (docs/release-line.md)."
+    },
+    "subtasks": {
+      "type": "array",
+      "description": "The subtasks of a multiagent run, written only by `compass issue subtask`. Each records the files that crossed a boundary, the base commit, model, budget and cost, and the progress a resume needs. Optional: a manifest without it loads.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "brief",
+          "base_sha",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+          },
+          "brief": {
+            "type": "string",
+            "description": "The brief file the builder was handed."
+          },
+          "earlier_briefs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The briefs of earlier dispatches of this subtask, kept when a later one records its own."
+          },
+          "report": {
+            "type": "string",
+            "description": "The result file the builder returned (named result.md; a subagent is refused a file named like a report)."
+          },
+          "review_brief": {
+            "type": "string",
+            "description": "The reviewer's brief. Refused when registered if it matches a fixed list of phrases that say what not to flag."
+          },
+          "package": {
+            "type": "string",
+            "description": "The latest review package: the diff from base_sha, one file per dispatch."
+          },
+          "base_sha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$",
+            "description": "The full id of the commit the builder started from."
+          },
+          "model": {
+            "type": "string"
+          },
+          "tiers": {
+            "type": "array",
+            "items": {"enum": ["fast", "standard", "strong"]},
+            "description": "The model tier of each try, first to last. The second try is one tier above the first."
+          },
+          "effort": {
+            "enum": ["low", "medium", "high", "xhigh", "max"],
+            "description": "The effort of the latest try: the higher of its tier's effort and the implement seat's floor effort."
+          },
+          "budget": {
+            "type": "integer",
+            "description": "Tokens the dispatch may use.",
+            "minimum": 0
+          },
+          "cost": {
+            "type": "integer",
+            "description": "Tokens every try used, the sum of `costs`. A try over the budget adds a finding.",
+            "minimum": 0
+          },
+          "costs": {
+            "type": "object",
+            "description": "Tokens each try used, keyed by the try's number. A second cost for the same try replaces it.",
+            "patternProperties": {
+              "^[1-9][0-9]*$": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
+          },
+          "status": {
+            "enum": [
+              "dispatched",
+              "reported",
+              "reviewing",
+              "integrating",
+              "done"
+            ]
+          },
+          "attempts": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "dispatched_at": {
+            "type": "string"
+          },
+          "orchestration": {
+            "enum": [
+              "single-unit"
+            ],
+            "description": "Set when the distribution map declares `units: 1`: the main session ran the one unit itself, with the map as its brief and the verification report as its report. Written by `compass issue artifact set distribution-map` (ADR-071)."
+          },
+          "reviewed_revision": {
+            "type": "string",
+            "description": "The commit the latest review read.",
+            "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "text",
+                "resolved"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "resolved": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "review_rounds": {
+            "type": "array",
+            "description": "Every review round, appended. A round past the review_rounds ceiling in routing-policy.yml is recorded, and the run then needs a stop reason to land.",
+            "items": {
+              "type": "object",
+              "required": [
+                "round",
+                "verdict"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "round": {
+                  "type": "integer"
+                },
+                "verdict": {
+                  "enum": [
+                    "pass",
+                    "fail"
+                  ]
+                },
+                "at": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "last_error_digest": {
+            "type": "string",
+            "description": "The first 16 hex digits of the SHA-256 of the last error the builder reported, whitespace collapsed."
+          },
+          "error_repeat_count": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "How many times in a row the builder reported the error in last_error_digest. Another try is refused at the repeated_error ceiling."
+          },
+          "stopped_reason": {
+            "type": "object",
+            "description": "Why the subtask stopped short of done, or went past a loop ceiling, and the file that shows it. compass check accepts a stopped subtask in place of a done one.",
+            "required": [
+              "reason",
+              "evidence"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence": {
+                "type": "string",
+                "minLength": 1
+              },
+              "at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "runs": {
+      "type": "array",
+      "description": "Each unattended run of a stage, written by `compass run` (ADR-030).",
+      "items": {
+        "type": "object",
+        "required": [
+          "n",
+          "stage",
+          "outcome"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "n": {
+            "type": "integer"
+          },
+          "stage": {
+            "enum": [
+              "implement",
+              "verify"
+            ]
+          },
+          "started": {
+            "type": "string"
+          },
+          "ended": {
+            "type": "string"
+          },
+          "cycles": {
+            "type": "integer"
+          },
+          "cost_usd": {
+            "type": "number",
+            "description": "The total the run's sessions reported spending."
+          },
+          "outcome": {
+            "enum": [
+              "done",
+              "stopped"
+            ]
+          },
+          "stopped_reason": {
+            "type": "object",
+            "required": [
+              "reason",
+              "evidence"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence": {
+                "type": "string",
+                "minLength": 1
+              },
+              "at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "replans": {
+      "type": "array",
+      "description": "Each replan of a multiagent breakdown, written by `compass issue subtask replan`. Another is refused at the replans ceiling in routing-policy.yml.",
+      "items": {
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "description": "The four-dimension assessment the assess stage produces.",
+      "required": [
+        "risk",
+        "familiarity",
+        "size"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "risk": {
+          "enum": [
+            "trivial",
+            "contained",
+            "cross-cutting",
+            "critical"
+          ]
+        },
+        "familiarity": {
+          "enum": [
+            "greenfield",
+            "brownfield-mapped",
+            "brownfield-unmapped"
+          ]
+        },
+        "size": {
+          "enum": [
+            "atomic",
+            "small",
+            "medium",
+            "large",
+            "product"
+          ]
+        },
+        "urgency": {
+          "enum": [
+            "none",
+            "live-defect"
+          ]
+        },
+        "role": {
+          "enum": [
+            "engineer",
+            "product-owner",
+            "product-marketer",
+            "designer",
+            "qa"
+          ]
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "goal": {
+          "enum": [
+            "delivery",
+            "exploration"
+          ]
+        }
+      }
+    },
+    "delivery_approach": {
+      "description": "The final delivery approach; filled by `compass approach evaluate --write`. An approach name, or an old name read through cli/migrate-map.yml.",
+      "anyOf": [
+        {
+          "enum": [
+            "quick-fix",
+            "regular",
+            "full",
+            "hotfix",
+            "spike",
+            "express",
+            "standard",
+            "expedition",
+            "feature",
+            "initiative"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "orchestration": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Whether this issue is delivered by a single agent or by several. Set at breakdown, once the distribution map says whether independent subtasks exist; assess does not write it - see subtask_ceiling. Manifests written before ADR-023 carry the retired key name, which is read forward through cli/migrate-map.yml."
+    },
+    "subtask_ceiling": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "How many parallel subtasks this delivery approach permits, written by `compass approach evaluate`. A ceiling, not a decision: the evaluator has no concept of a work unit."
+    },
+    "policy_rules_fired": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "changed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "stages": {
+      "type": "object",
+      "description": "stage name -> weight string; filled by approach evaluate."
+    },
+    "evidence": {
+      "type": "array",
+      "description": "The issue's evidence registry - typed, id-tagged entries gates reference by id. Built incrementally across stages.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "type"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable id, e.g. EV-001 or EV-A1."
+          },
+          "type": {
+            "enum": [
+              "approval-withdrawal",
+              "artifact",
+              "artifact-approval",
+              "checkpoint-approval",
+              "claim-review",
+              "consistency-check",
+              "command-output",
+              "human-approval",
+              "manual-review",
+              "migration-plan",
+              "rollback-plan",
+              "security-review",
+              "spike-conclusion",
+              "test-run"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "Path to the evidence file (relative to the issue dir, or absolute)."
+          },
+          "scenario": {
+            "type": "string",
+            "description": "Scenario id this evidence is FOR (when applicable)."
+          },
+          "scope": {
+            "type": "string",
+            "description": "For human-approval: what the approval is for."
+          },
+          "check": {
+            "type": "string",
+            "description": "For human-approval: the human check this approves. It counts only with the issue slug in issue and the issue's generation in generation."
+          },
+          "issue": {
+            "type": "string",
+            "description": "For human-approval of a check: the issue slug it was given for. A record for another issue does not count."
+          },
+          "generation": {
+            "type": ["integer", "null"],
+            "description": "For human-approval of a check: the issue's generation when it was given, or null when the issue had none."
+          },
+          "approver": {
+            "type": "string",
+            "description": "For human-approval: the approver's identifier."
+          },
+          "role": {
+            "type": "string",
+            "description": "For human-approval: the approver's role."
+          },
+          "decision": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "discard",
+              "graduate-to-delivery",
+              "defer"
+            ],
+            "description": "For human-approval: pending | approved | rejected. For spike-conclusion: discard | graduate-to-delivery | defer."
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "ISO 8601."
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "For human-approval: any conditions attached to the approval."
+          },
+          "next_task": {
+            "type": "string",
+            "description": "For spike-conclusion with decision=graduate-to-delivery: the path to the new issue that owns the delivery work (e.g. .compass/work/<new-slug>/)."
+          },
+          "record_id": {
+            "type": "string",
+            "description": "The identity of the record this entry was created from. Stamped into the record at write time and copied here, so `evidence-identity-matches` can ask whether the file a gate cites is still that run. Absent on entries written before stamping existed - those are unverifiable, never verified."
+          },
+          "content_digest": {
+            "type": "string",
+            "description": "A digest over the record's content when this entry was created. A matching record_id with a differing digest means the record was edited in place rather than replaced."
+          },
+          "check": {
+            "type": "string",
+            "description": "For manual-review: the id of the judged check this review record is for. `compass evidence review` sets it, and a judged check reads only the records that carry its id. For artifact-approval: the human check the approval meets."
+          },
+          "meets": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "The Definition of Done or Ready items (check ids) this record meets, set with the `--meets` flag of `compass gate pass` and of the `add` verb."
+          },
+          "artifact": {
+            "type": "string",
+            "description": "For artifact-approval: the kind of the artifact the person approved. A record holds exactly one of artifact and decisions."
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "For artifact-approval: the ids of the decisions taken for the person that this record confirms. A record holds exactly one of artifact and decisions."
+          },
+          "stage": {
+            "type": "string",
+            "description": "For artifact-approval of decisions: the checkpoint stage the issue was at, when it was at one."
+          },
+          "checkpoint": {
+            "type": "string",
+            "description": "For checkpoint-approval: the checkpoint stage whose hand-off the person answered. The record has no check key: it meets no check, never guardrail `G5`, a human check or a waiver."
+          },
+          "guardrail": {
+            "type": "string",
+            "description": "For human-approval: the guardrail this sign-off is for; only `G5` is read. `compass evidence approve --guardrail` writes it, with the value `G5`. A human-approval record whose guardrail is not exactly `G5` never clears `human-approval-present`."
+          },
+          "waiver": {
+            "type": "object",
+            "description": "For human-approval of a waiver: the waiver this approval is for, naming its scope and entry. The record was given for that waiver, so it never clears `human-approval-present`, the check of guardrail `G5`."
+          }
+        }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "description": "Seeded by approach evaluate (status pending); each stage updates the gates it clears.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "pass",
+              "fail"
+            ]
+          },
+          "evidence": {
+            "description": "When status is `pass`, a list of evidence ids referencing entries in the top-level `evidence` registry. `null` or empty until cleared.",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "description": "The machine-readable index of acceptance-criteria.md; filled by the define stage.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "intent"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "intent": {
+            "description": "The intent id(s) this scenario traces to - a string or a list of strings (a scenario may serve more than one intent).",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            ]
+          },
+          "group": {
+            "type": "string",
+            "description": "Independence group seeding the distribution map."
+          },
+          "verifiable": {
+            "type": "string",
+            "description": "Scenario taxonomy, e.g. 'narrative' for a documentation-as-acceptance playbook."
+          },
+          "tests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "superseded_by": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional. Scenario id(s) that replace this one. behavior-mapping names silent supersession as an anti-pattern: a target scenario replacing a behavior-mapped baseline is a recorded decision, not a silent overwrite. Without the link a reader cannot tell a baseline that failed because the change landed as intended from one that failed because something broke."
+          }
+        }
+      }
+    },
+    "changed_files": {
+      "type": "array",
+      "description": "Every production file the issue changes, each traced to >=1 scenario id; filled at implement.",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "scenarios"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "scenarios": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "description": "Public/marketing claims, each traced to a backing scenario; filled by `/compass:position`.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "scenario"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "scenario": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "github": {
+      "type": "object",
+      "description": "The GitHub issue this issue is linked to. Set by `compass issue link set --github`. When the project sets `github_labels` in compass.yml, Compass writes the issue's labels there; the manifest stays the source of truth.",
+      "required": ["repo", "number"],
+      "additionalProperties": false,
+      "properties": {
+        "repo": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/(?!-)(?!\\.{1,2}$)[A-Za-z0-9._-]{1,100}$", "description": "The repository, as owner/repo."},
+        "number": {"type": "integer", "minimum": 1, "maximum": 999999999, "description": "The issue number in that repository."}
+      }
+    },
+    "raised_by": {
+      "type": "object",
+      "description": "The issue this one was found in, and where. Set by `quick-fix start --raised-by --found-at` or `compass issue raised-by`; read by `compass retro --lineage`. Advisory only.",
+      "required": ["issue", "found_at"],
+      "additionalProperties": false,
+      "properties": {
+        "issue": {"type": "string", "minLength": 1},
+        "found_at": {"enum": ["define", "plan", "implement", "verify", "review", "ci", "after-landing"]}
+      }
+    },
+    "page_ticks": {
+      "type": "array",
+      "description": "Definition of Done or Ready items that were ticked on a page before 7.0.0. Only `compass issue migrate` writes it, and only the item records read it; a person's approval never does.",
+      "items": {
+        "type": "object",
+        "required": ["check", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "check": {"type": "string", "minLength": 1},
+          "source": {"type": "string", "minLength": 1, "description": "The document the tick was read from."}
+        }
+      }
+    },
+    "follow_ups": {
+      "type": "array",
+      "description": "Work this issue deferred and still owes (e.g. a hotfix's). `compass check` fails while any is unresolved. The v2 states are outstanding/resolved; the 1.x spellings (owed/paid) stay schema-legal so an unmigrated manifest still lints - readers normalize them.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "description": "What is owed. `compass follow-up add --summary` writes it."
+          },
+          "defers": {
+            "type": "string",
+            "description": "The Definition of Done or Ready item (a check id) this follow-up carries to ship. The item reads met once the follow-up is resolved."
+          },
+          "status": {
+            "enum": [
+              "outstanding",
+              "resolved",
+              "owed",
+              "paid"
+            ]
+          },
+          "target_task": {
+            "type": "string",
+            "description": "Cross-issue follow-up: the issue whose ship is blocked until this is resolved."
+          },
+          "paid_at": {
+            "type": "string",
+            "description": "Optional audit field: when the follow-up was resolved."
+          },
+          "paid_note": {
+            "type": "string",
+            "description": "Optional audit field: a note recorded when resolving."
+          }
+        }
+      }
+    },
+    "reassessments": {
+      "type": "array",
+      "description": "Append-only log of re-assessments, written by `compass approach evaluate --write --reason`. Feeds the assessment calibration signal that `compass retro` reads.",
+      "items": {
+        "type": "object",
+        "required": [
+          "from_route",
+          "to_route",
+          "reason"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "from_route": {
+            "type": "string"
+          },
+          "to_route": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "judgment",
+              "judgement",
+              "policy-correction",
+              "scope-change",
+              "configuration",
+              "unchanged"
+            ],
+            "description": "What kind of re-assessment this was. 'judgement' is the old spelling of 'judgment', read until 9.0.0. Only 'judgment' feeds compass retro's re-sizing signal - a policy correction, a scope change, a change to the issue's own config: layer (configuration) or a reassess that left the approach as it was (unchanged, which keeps only its reason) is not the assessment having misread the work."
+          },
+          "generation": {
+            "type": "object",
+            "description": "The generation of the issue's stored configuration this re-assessment moved from and to (ADR-036). The two numbers are equal when the re-assessment committed nothing.",
+            "required": [
+              "from",
+              "to"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "from": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "to": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "changed": {
+            "type": "object",
+            "description": "What the recomputation actually moved - delivery approach, stages, gates, orchestration - each as a from/to pair. Written by the evaluator as the audit detail behind the reason."
+          }
+        }
+      }
+    },
+    "failure_modes_descoped": {
+      "type": "array",
+      "description": "Optional. Written at define by `compass scenario descope`. Each entry is a failure mode or input class the brief implies that no scenario covers, with the reason it is left out. The verifier lists each in the verification report, so none disappears silently. No gate reads it. Absent on issues that record none (ADR-006).",
+      "items": {
+        "type": "object",
+        "required": [
+          "mode",
+          "reason",
+          "recorded"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recorded": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "friction": {
+      "type": "array",
+      "description": "Optional. Written at ship. Records where Compass's own process weight cost more than it returned between assess and ship, and how the framework could have been configured to avoid it. A strategy-class signal (soft, advisory) - never gates ship. Absent on issues that hit no friction; nothing happens for a project that never writes it (ADR-006). Aggregated by `compass retro --friction`.",
+      "items": {
+        "type": "object",
+        "required": [
+          "category",
+          "source"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "stage": {
+            "enum": ["assess", "define", "refine", "plan", "breakdown", "implement", "verify", "ship", "frame", "specify", "clarify", "distribute", "build", "land"],
+            "description": "The stage the friction was felt in, by its current name. The retired names after `ship` are accepted for archived records; Compass maps them to the current name on load. A record written before schema 3.0 names this key `phase`; it is read as `stage` and rewritten on the next save."
+          },
+          "category": {
+            "enum": [
+              "over-weight",
+              "under-weight",
+              "mis-route",
+              "missing-strategy",
+              "tooling",
+              "docs",
+              "other"
+            ],
+            "description": "What kind of friction this was."
+          },
+          "observation": {
+            "type": "string",
+            "description": "What got in the way, stated concretely."
+          },
+          "proposed_change": {
+            "type": "string",
+            "description": "How the framework could have been configured to avoid it - the aggregation key."
+          },
+          "source": {
+            "enum": [
+              "derived",
+              "human",
+              "agent"
+            ],
+            "description": "derived: assembled automatically at ship from the reassessments log. human: given by the author. agent: recorded by the agent with `compass issue friction`, counted apart and never a lesson on its own."
+          },
+          "evidence": {
+            "type": "string",
+            "description": "An agent note's cited evidence: a file in the issue folder, or a devlog line as devlog.md:<line>."
+          },
+          "guardrail": {
+            "type": "boolean",
+            "description": "An agent note about a step a guardrail backs. Reported, never counted towards a lesson or a recurring cluster: friction cannot change a guardrail."
+          }
+        }
+      }
+    },
+    "repairs": {
+      "type": "string",
+      "minLength": 1,
+      "description": "hotfix approaches only: the slug of the issue this hotfix repairs. Read by `compass retro --impact` to compute the change-fail signal. Optional - a hotfix that declares none is reported as a coverage gap rather than silently counted as zero."
+    },
+    "parked_reason": {
+      "type": "string",
+      "description": "Optional. Why a parked issue was set aside - the thing a reader needs to decide whether to resume it."
+    },
+    "evaluated_assessment": {
+      "type": "object",
+      "description": "Optional. The assessment `compass approach evaluate --write` last computed from. Written by that command and read only by the next run of it, to notice a corrected dimension when the computed approach absorbs the correction. Not a second source of truth: `assessment` holds the four dimensions, and this is a copy of what was last evaluated.",
+      "additionalProperties": true
+    },
+    "intent_source": {
+      "type": "object",
+      "description": "Optional. The record of a brief ingested with `compass intent ingest`, which writes `origin`, `scheme`, `sha256`, `ingested_at`, `snapshot` and an empty `interview`. The intent-interview skill then adds `sections` and fills `interview`. Read by the intent-fidelity check to trace each section of `intent.md` to the source or to an answer. Absent when `intent.md` was written in the issue rather than ingested.",
+      "properties": {
+        "origin": {
+          "type": "string",
+          "description": "Where the brief came from: a file path or a URL."
+        },
+        "scheme": {
+          "type": "string",
+          "description": "How the brief was read, such as `file`."
+        },
+        "sha256": {
+          "type": "string",
+          "description": "Digest of the brief as it was read."
+        },
+        "ingested_at": {
+          "type": "string",
+          "description": "ISO 8601 time of the ingest."
+        },
+        "snapshot": {
+          "type": "string",
+          "description": "File name, in the issue directory, of the unedited copy of the brief."
+        },
+        "interview": {
+          "type": "array",
+          "description": "Every question asked, with its answer or null. Empty means nothing has been asked yet.",
+          "items": {"type": "object"}
+        },
+        "sections": {
+          "type": "array",
+          "description": "One entry per section of `intent.md`: `name`, `from` (`source`, `answer` or `unanswered`) and `answer_id` where it cites an answer.",
+          "items": {"type": "object"}
+        },
+        "elicitation": {
+          "type": "array",
+          "description": "RETIRED. The earlier name of `interview`. Still read when `interview` is absent. Never written.",
+          "items": {"type": "object"}
+        }
+      }
+    },
+    "justifications": {
+      "type": "object",
+      "description": "Optional. The reason given for each assessed value, one line per dimension (risk, familiarity, size, goal, role, urgency). It sits beside `assessment` and never inside it. `compass approach evaluate --write --justify DIM=TEXT` and `compass quick-fix start` write it. A new or changed value needs a line; an unchanged value keeps the line it has, or none on an issue that predates the key.",
+      "additionalProperties": {"type": "string"}
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional. The stored generation of the issue's configuration it runs against (ADR-036). `0` means the issue was assessed under 6.x and has no generation yet; absent means the issue predates 6.0.0 and reads live governance. Written by `compass approach evaluate --write`; never edit it by hand."
+    },
+    "config": {
+      "type": "object",
+      "description": "Optional. The issue's own configuration layer (ADR-036, ADR-043): a person-written input. Editing it changes nothing until `compass approach evaluate --write` commits it into a new generation. Its keys are checked by `compass policy lint --issue`.",
+      "additionalProperties": true
+    },
+    "status_reason": {
+      "type": "string",
+      "description": "Optional. Why the status was last changed, for any status other than parked - a re-opening, an abandonment, a landing out of the usual order. Written by `compass issue status set --reason`. Parking has its own key because a parked issue is the one a reader most often has to decide about."
+    },
+    "parked_at": {
+      "type": "string",
+      "description": "Optional. ISO-8601 timestamp recording when the issue was parked."
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "The issue's artifact registry: which documents this issue produced, where they are, and WHY each exists - or why it was deliberately not written. The reason is the point. A filename with no reason is a directory listing, so `reason` is required on every entry including the omitted ones. The CLI resolves a registered `path` first and the flat filename beside the manifest second, so an issue with no registry keeps working. An old entry, written before paths became project-relative, holds a bare filename. That filename no longer resolves from the registry, but the CLI still finds it beside the manifest and says that is how it found it, so an unmigrated entry is visible rather than silent. `compass issue migrate` rewrites them.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable id, e.g. ART-HLD."
+          },
+          "kind": {
+            "type": "string",
+            "description": "What kind of document this is - technical-design, intent, threat-model."
+          },
+          "path": {
+            "type": "string",
+            "description": "Where the document is, as a path measured from the PROJECT ROOT - not from the issue directory. That is what lets a human-facing document live under `docs/compass/<date>-<slug>/` while the manifest stays under `.compass/work/<slug>/`. A path that resolves outside the project is refused rather than read. Absent on an omitted entry, which has no document. NOTE: the `evidence:` registry is the other way round - its paths stay relative to the issue directory, because evidence does not move."
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "awaiting-approval",
+              "approved",
+              "superseded",
+              "omitted"
+            ],
+            "description": "`omitted` is the one that makes a decision visible: paired with a required reason, it records that a document was deliberately not written rather than forgotten."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why this document exists, or why it was omitted. Required either way."
+          },
+          "revision": {
+            "type": "integer",
+            "description": "Optional. Bumped when the document materially changes; an approval binds to it."
+          },
+          "round": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional. The round of a kind that repeats, such as `review-<n>.md`: one entry per round, each with its own id and path. Read from the filename. A reader that names no round gets the latest."
+          },
+          "unit": {
+            "type": "string",
+            "pattern": "^U[1-9][0-9]*$",
+            "description": "Optional. The work unit of a kind with one document per unit, such as `low-level-design/<unit>.md`: one entry per unit, each with its own id and path."
+          },
+          "digest": {
+            "type": "string",
+            "description": "Optional. `sha256:` and the digest of the document's file when it was last written. Only `compass issue artifact set` writes it, on every registration. It tells a rewrite of an approved document from a repeat registration."
+          },
+          "approved_by": {
+            "type": "string",
+            "description": "Optional. Present when status is approved. A person's id when a person approved the artifact, otherwise the command that approved it, such as `compass tdd-red` or `compass issue migrate`."
+          },
+          "approved_at": {
+            "type": "string",
+            "description": "Optional. ISO 8601 time of the approval. Present exactly when status is approved."
+          },
+          "upstream": {
+            "type": "object",
+            "description": "Optional. The digest of each artifact this document depends on, as it was when the document was written. The document is stale when one of them differs now. Only `compass issue artifact set` writes it. The stale-document refusals need the capability `artifact-freshness` on.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "decisions_taken": {
+      "type": "array",
+      "description": "The decisions an agent took for the person, from the requirements review's ambiguity ledger or recorded by hand with `compass issue decision add`. A person confirms them as a set at the stage checkpoint with `compass evidence approve --decisions`.",
+      "items": {
+        "type": "object",
+        "required": ["id", "question", "resolution", "by", "stage", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The ledger id, such as Q1, or the id given by hand. Unique in the issue."
+          },
+          "question": {
+            "type": "string"
+          },
+          "resolution": {
+            "type": "string"
+          },
+          "by": {
+            "type": "string",
+            "description": "The agent that took the decision."
+          },
+          "stage": {
+            "type": "string",
+            "description": "The stage the decision was taken in."
+          },
+          "status": {
+            "enum": ["open", "confirmed", "reopened"]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Written only by a reopen: why the decision came back. Never removed."
+          }
+        }
+      }
+    },
+    "readiness": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"enum": ["measured", "not-measured"]},
+        "score": {"type": "integer", "minimum": 0},
+        "signals": {"type": "integer", "minimum": 0},
+        "floor_met": {"type": "boolean"},
+        "absent": {"type": "array", "items": {"type": "string"}},
+        "measured_at": {"type": "string"},
+        "reason": {"enum": ["missing", "stale", "unreadable"]},
+        "detail": {"type": "string"}
+      },
+      "description": "Optional. The repository's readiness when the issue was last assessed, from the per-checkout readiness record (ADR-060). `measured` holds the score, the number of readiness signals, floor_met, the absent signal ids and measured_at; `not-measured` holds a reason of missing, stale or unreadable and a detail. Written by every `compass approach evaluate --write`; it is not part of the generation, so a new measurement never forces a new generation. Absent on an issue assessed before 7.0.0, which reads as not measured."
+    },
+    "models": {
+      "type": "object",
+      "description": "The model tier of each seat whose stage runs, from the routing policy's model_rules; filled by approach evaluate. `compass approach show --model <seat>` resolves a tier to a model name.",
+      "propertyNames": {"enum": ["assess", "define", "refine", "plan", "breakdown", "implement", "verify", "review", "ship"]},
+      "additionalProperties": {
+        "type": "object",
+        "required": ["tier", "by"],
+        "additionalProperties": false,
+        "properties": {
+          "tier": {"enum": ["fast", "standard", "strong"]},
+          "by": {"type": "string", "description": "The rule that set the tier."},
+          "effort": {"enum": ["low", "medium", "high", "xhigh", "max"], "description": "The effort a floor raised the seat to; the tier's own effort comes from the models setting."},
+          "effort_by": {"type": "string", "description": "The floor that raised the effort."},
+          "not_fired": {"type": "array", "items": {"type": "string"}, "description": "The floors for the seat that did not match."}
+        }
+      }
+    },
+    "checkpoints": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "assess",
+          "define",
+          "refine",
+          "plan"
+        ]
+      },
+      "uniqueItems": true,
+      "description": "The stage hand-offs that wait for a person, from the routing policy's autonomy_checkpoints table and the project's autonomy setting; filled by approach evaluate."
+    }
+  }
+}

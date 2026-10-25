@@ -1,0 +1,36 @@
+# CLI spellings that changed, and what to do when one is typed.
+#
+# aliases: a spelling a release tag holds, rewritten to the new spelling before
+#   the command line is parsed, with one notice on standard error. The aliases
+#   were removed at 7.0.0, so the list is empty. The rewrite code stays in
+#   cli/compass_pkg/aliases.py, and tests/test_cli_renames.py proves it on a
+#   planted table. `released_in` names the first release tag that held a spelling.
+#
+# hints: when the command line fails to parse, the error adds one line naming the
+#   new spelling. A hint row does not run anything. The two rows that remain are
+#   released verbs that 7.0.0 removed, and each carries `released_in` and
+#   `removed_in` (ADR-051, item 15).
+#
+# A test fails when the package version is 7.0.0 or later and an alias row remains, or a hint
+# row lacks `released_in` and `removed_in`, which together say that a release held the
+# spelling and 7.0.0 removed it (cli/compass_pkg/aliases.py, removal_problems).
+#
+# `old` and `new` are token lists. When `new` begins with `old` (issue
+# artifact -> issue artifact set), a command line that already holds the extra
+# tokens, or a help flag, is left as it is.
+
+aliases: []
+
+hints:
+  # A released verb that 7.0.0 removed. It runs nothing: the parse error adds this line.
+  # `released_in` names the first release tag that held the spelling, and `removed_in` the
+  # release that removed it. These are the two hint rows that end at 7.0.0 with both fields
+  # (ADR-051, amending ADR-044, which ended every row at 7.0.0).
+  - old: [issue, dashboard]
+    new: [issue, render]
+    released_in: v5.6.0
+    removed_in: 7.0.0
+  - old: [issue, labels, sync]
+    new: [issue, github, sync]
+    released_in: v6.0.0
+    removed_in: 7.0.0

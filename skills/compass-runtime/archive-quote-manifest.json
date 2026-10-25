@@ -1,0 +1,74 @@
+{
+  "_readme": [
+    "Hash manifest for archive-quote-verification. DO NOT hand-edit this",
+    "file. A hash typed in by hand - rather than computed from the real",
+    "archive file - defeats the one thing this file proves: that a quoted",
+    "passage still matches what it hashed to the last time someone with the",
+    "archive checked it. Regenerate it with:",
+    "",
+    "    python3 scripts/verify-archive-quotes.py --update",
+    "",
+    "which only works on a machine where .compass/work/ is checked out (the",
+    "archive is gitignored there permanently), and refuses to record a hash",
+    "for any span it cannot find, verbatim, in the file it cites.",
+    "",
+    "What this proves: the quoted span still hashes to the value below, so",
+    "any edit to the quote after the last --update run is caught, even",
+    "where the archive is absent (as it always is in continuous",
+    "integration). It does NOT prove the quote was ever real - only",
+    "--update, run against the real file, showed that."
+  ],
+  "version": 1,
+  "entries": [
+    {
+      "id": "pair-1",
+      "source": "cross-task-architectural-integrity/devlog.md",
+      "sha256": "cb949bb06807e4f749a84f10dfcd4dcee540b33f5e3e2cf44c139f5d9de4332a"
+    },
+    {
+      "id": "pair-2",
+      "source": "cross-task-architectural-integrity/devlog.md",
+      "sha256": "00f1a36150523f08c7594a27bad2e46cef59a5e3157397376c250d3b3b07a1b6"
+    },
+    {
+      "id": "pair-3",
+      "source": "swarm-script-strips-markdown/devlog.md",
+      "sha256": "550f30b72f8b51c53135f8f1115d2c4316680af07794f3db1de212647fa74232"
+    },
+    {
+      "id": "pair-4",
+      "source": "compass-self-architecture/devlog.md",
+      "sha256": "06e784032d8f718500d0a81c5f786ca217b5cac49ba6bfc405c102c63398d6e6"
+    },
+    {
+      "id": "pair-5",
+      "source": "compass-self-architecture/devlog.md",
+      "sha256": "4ffcc645e3b6fda8294fb1d16c2acb8404247071f54eb05de851273a0cb62249"
+    },
+    {
+      "id": "pair-6",
+      "source": "friction-loop/requirements-review.md",
+      "sha256": "a8b8150b0ca91f64e6118766c7b994d6a29d1485e7a3041a6c34cea6f7d86060"
+    },
+    {
+      "id": "pair-7",
+      "source": "make-receipt-render/requirements-review.md",
+      "sha256": "ef09a3adcdf901877c2f22958c4dc8b535ab4d3b0c56932e54bd8cfb2b999a37"
+    },
+    {
+      "id": "pair-8",
+      "source": "make-receipt-render/requirements-review.md",
+      "sha256": "cd1fd7769b009f25cb01125909ca1806451e90272694a6c107655a705f01c687"
+    },
+    {
+      "id": "worked-example-original-heading",
+      "source": "make-receipt-render/requirements-review.md",
+      "sha256": "b667dbfaa6b93050228806bc73f24711b4369921d498d0f8e1290228c84dd32b"
+    },
+    {
+      "id": "worked-example-original-decided-by",
+      "source": "make-receipt-render/requirements-review.md",
+      "sha256": "8b7e81ea749db8c834712a4018ef06afa3ae0406c6f089d3afd3fa8523dac367"
+    }
+  ]
+}

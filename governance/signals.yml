@@ -1,0 +1,46 @@
+# governance/signals.yml - pattern defaults for Compass mechanisms that surface
+# cross-issue signals (scope-bloat nudges from the stop-hook; rework detection
+# from `compass rework-scan`). Schema: schemas/signals.schema.json.
+#
+# Projects override by editing their own copy of this file (same pattern as
+# guardrails.yml and routing-policy.yml). The framework ships these defaults;
+# `/compass:init` copies nothing, so a project that wants different patterns
+# adds its own copy of this file.
+#
+
+version: 1.0.0
+
+scope_bloat_phrases:
+  - "more files than Plan estimated"
+  - "narrow scope and spawn sibling"
+  - "file deeper layer as a sibling issue at ship"
+  - "soften the gate"
+  - "(carried to ship)"
+  - "USER TO APPLY"
+
+# Advisory patterns assessed by the reviewer agent at Verify - judgement,
+# never a gate. A match is a prompt to the reviewer to investigate a
+# potential sign of a design problem; it does not fail any check. Projects
+# extend by editing their
+# own copy of signals.yml.
+design_smell:
+  - "tests dominated by mocking or setup"
+  - "assertions on internal method calls"
+  - "single test asserts more than one behaviour"
+
+# The framework's self-calibration signal (see `commands/ship.md`, `compass
+# retro --friction`). `recurrence_threshold` is the number of distinct
+# issues that must independently propose the same change before it is surfaced
+# as a recurring pattern - below it, an item is noise, not a trend. Read at
+# runtime, never hardcoded; advisory only, never a gate.
+friction:
+  recurrence_threshold: 2
+
+rework_scan:
+  window_days: 14
+  public_surface_patterns:
+    - "/api/v[0-9]+/"
+    - "pb\\."           # proto symbols
+  migration_paths:
+    - "migrations/*.sql"
+    - "**/migrations/*.sql"

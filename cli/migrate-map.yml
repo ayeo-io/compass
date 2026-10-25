@@ -1,0 +1,167 @@
+# =============================================================================
+# The v1-to-v2 migration map - DATA, deliberately exempt from the
+# vocabulary scan (`scan.exempt` in governance/terminology.yml).
+#
+# Why this file exists: `compass issue migrate` and the read-side normaliser must
+# name v1 spellings, inside a CLI whose string literals are scanned for those
+# spellings. The mapping lives here as data, so the enforced code never
+# carries a banned word in a literal.
+# =============================================================================
+
+# Manifest value renames. Read-side: the normaliser maps them on load.
+# Write-side: `compass issue migrate` rewrites them on disk.
+values:
+  # Evidence type and check name. ADR-023 renamed the concept; archived
+  # manifests carry the old spelling and must keep clearing their gate.
+  evidence_type:
+    coherence-check: consistency-check
+  check_name:
+    coherence-check-passes: consistency-check-passes
+  # Friction categories. ADR-023 retired `ceremony`; the enum keeps single
+  # tokens, so the pair became over-weight / under-weight.
+  friction_category:
+    over-ceremony: over-weight
+    under-ceremony: under-weight
+  follow_up_status:
+    owed: outstanding
+    paid: resolved
+  delivery_approach:
+    express: quick-fix
+    standard: regular
+    expedition: full
+    feature: regular
+    initiative: full
+  # Stage weights (issue vocabulary-and-cli-renames). Each table is read only
+  # in the fields it names, never as bare text: `full` is still the name of a
+  # delivery approach, and `delivery_approach: standard` is the row above, not
+  # a size. `collapsed`, `skipped` and the special modes keep their names.
+  # Stage mode: a manifest's `stages` values and a layer's stage modes.
+  stage_mode:
+    full: thorough
+    light: lightweight
+    full-plus-backfill: thorough-with-follow-up
+    swarm: multiagent
+  # Artifact depth: a manifest's `artifacts[].depth` and a layer's approach
+  # `artifacts` values.
+  artifact_depth:
+    full: thorough
+    light: lightweight
+  # Size: `assessment.size`, `evaluated_assessment.size`, the size
+  # dimension's values and each `size` atom of a condition.
+  size:
+    standard: medium
+  # Issue status. A manifest stores only `backlog` (a hold) or `done` with a
+  # close reason; the states of work in flight come from the records. `active`
+  # has no new word: nothing is stored for it, so its value is null.
+  # `close_reason` is keyed by the old status and holds the reason that status
+  # stood for. A close reason the manifest already names wins over it.
+  issue_status:
+    queued: backlog
+    parked: backlog
+    active: null
+    landed: done
+    abandoned: done
+  close_reason:
+    landed: completed
+    abandoned: not-planned
+  # Run stage: `compass run --stage` and a manifest's `runs[].stage`. The
+  # implement stage carries the stage id's own name.
+  run_stage:
+    build: implement
+
+# Manifest keys renamed by the same issue, read in the entries they name: a
+# `friction[]` entry's `phase` key is now `stage`. A `stage` already present
+# wins and `phase` is dropped. The entry's value goes through `stage_keys`.
+friction_keys:
+  phase: stage
+
+# Old route names -> the names the display layer prints. Manifests record
+# the route names themselves; an old name is read through the map above.
+shape_display:
+  express: quick fix
+  standard: regular
+  expedition: full
+  feature: regular
+  initiative: full
+  hotfix: hotfix
+  spike: spike
+
+# v1 artifact filenames -> v2, applied inside each issue directory.
+# The migration module consumes this section; the copy it keeps in code
+# is only the fallback for a tree with no framework install.
+artifacts:
+  # The issue's own record. `spine` was a metaphor the framework had to teach;
+  # `manifest` is what package.json and a Kubernetes manifest already are.
+  # Files written as task.yml keep loading - that is what this row is for.
+  task.yml: manifest.yml
+  brief.md: intent.md
+  spec.feature.md: acceptance-criteria.md
+  route.md: delivery-approach.md
+  clarifications.md: requirements-review.md
+  plan.md: technical-design.md      # v1 name, two renames ago
+  design.md: technical-design.md    # v2 name, renamed 2026-08-25
+  prd.md: intent.md
+  spec.feature: acceptance-criteria.feature
+
+# Stage keys: retired stage names mapped to the current ones.
+#
+# `plan` and `verify` are not listed because they are current keys. `plan` is
+# the planning stage's key, skill (`plan-authoring`), agent (`planner`) and
+# command, even though v1 used `plan.md` for the design document - see the
+# `artifacts:` section above.
+stage_keys:
+  frame: assess
+  specify: define
+  clarify: refine
+  distribute: breakdown
+  build: implement
+  land: ship
+
+# Gate ids. `compass check` prints the gate id on every run, so a reader
+# learns the vocabulary from it; it is not an internal name - which is why
+# ADR-023 renamed it with the concept rather than leaving it. Archived
+# manifests carry the old id.
+gate_ids:
+  verify.fitness: verify.architecture
+
+# Manifest keys renamed by ADR-023, to the words Anthropic's platform docs use.
+# The read side applies these through core.SPINE_KEY_MAP; this section is the
+# data a reader and the migration tool share.
+manifest_keys:
+  topology: orchestration
+  stream_ceiling: subtask_ceiling
+
+# Settings block names, as an adopter wrote them in `compass.yml` or in
+# `.compass/config.yml`. This is the one vocabulary file an adopter edits by
+# hand, so their existing spelling is read instead of needing to change.
+config_keys:
+  swarm: multiagent
+
+# Old typed names that 7.0.0 still reads (language-key-and-us-english). One
+# table of kind -> old word -> {new, removed_in}. Every row ends at 9.0.0:
+# `old_names.removal_problems` lists each row once the package version is 9.0.0
+# or later. A stored value (`reassessment_kind`, `check_id`) is also read by
+# `word_map` as a value section; the other kinds have a small reader of their
+# own that takes the old word from this table. `cli/aliases.yml` stays empty:
+# these are values and keys, not CLI spellings.
+old_names:
+  reassessment_kind:
+    judgement: {new: judgment, removed_in: 9.0.0}
+  check_id:
+    dor-behaviour-is-gwt: {new: dor-behavior-is-gwt, removed_in: 9.0.0}
+  skill:
+    behaviour-mapping: {new: behavior-mapping, removed_in: 9.0.0}
+  refusal_code:
+    not-initialised: {new: not-initialized, removed_in: 9.0.0}
+  state_key:
+    initialised: {new: initialized, removed_in: 9.0.0}
+  readiness_key:
+    catalogue_digest: {new: catalog_digest, removed_in: 9.0.0}
+  json_key:
+    behaviour: {new: behavior, removed_in: 9.0.0}
+    behaviours: {new: behaviors, removed_in: 9.0.0}
+  spec_heading:
+    Current Behaviour: {new: Current Behavior, removed_in: 9.0.0}
+    Archived Behaviour: {new: Archived Behavior, removed_in: 9.0.0}
+  term:
+    catalogue: {new: catalog, removed_in: 9.0.0}

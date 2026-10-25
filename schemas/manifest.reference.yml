@@ -1,0 +1,160 @@
+# Schema reference for: .compass/work/<issue-slug>/manifest.yml
+# The manifest. `compass issue lint` enforces this.
+# Notation: (required) / (optional); `type`; [enum] where the set is closed.
+
+schema_version:  # (optional, recommended) string - the manifest schema version this file follows
+issue:           # (required) string - the issue slug, matches the directory name
+created:         # (required) string - ISO date the issue was assessed
+status:          # (optional) [backlog, done] - absent while the issue is in flight; its state is read from its records
+close_reason:    # (optional) [completed, not-planned, duplicate] - why a done issue closed; done with none is not completed
+duplicate_of:    # (optional) string - the issue that covers this one; only with close reason duplicate
+blocked:         # (optional) map {reason, at} - set while an in-progress or in-review issue waits for something
+depends_on:      # (optional) list of maps - the issues this one waits for; written by compass issue depends add|remove:
+  - issue:       #   (required in entry) string - the slug of the issue waited for, one path segment
+    reason:      #   (required in entry) string - why this issue waits for it
+    until:       #   (required in entry) [done, in-review, define, refine, plan, breakdown, implement, verify, ship] - done when not given
+github:          # (optional) map {repo, number} - the GitHub issue this issue is linked to (compass issue link set --github); labels are written there only when compass.yml sets github_labels
+
+assessment:        # (required) map - the four-dimension JUDGMENT assessment (assess)
+  risk:  # (required) [trivial, contained, cross-cutting, critical]
+  familiarity:       # (required) [greenfield, brownfield-mapped, brownfield-unmapped]
+  size:     # (required) [atomic, small, medium, large, product]
+  goal:          # (optional) [delivery, exploration]   - defaults to delivery
+  urgency:       # (optional) [none, live-defect]        - defaults to none
+  role:          # (optional) [engineer, product-owner, product-marketer, designer, qa]
+  labels:        # (optional) list of strings - domain tags (auth, payments, …)
+
+generation:      # (optional) integer, at least 0 - the stored generation of configuration the issue runs against; 0 = assessed under 6.x with none yet; absent = pre-6.0.0, reads live governance
+config:          # (optional) map - the issue's own configuration layer, an input; it takes effect when approach evaluate --write commits it
+
+delivery_approach:  # (optional until approach evaluate) string - the final delivery approach name
+orchestration:       # (optional until approach evaluate) string - solo | pair | multiagent | …
+subtask_ceiling: # (optional) integer or null - how many parallel subtasks the delivery approach permits
+policy_rules_fired: # (optional) list of maps {id, kind, rationale, changed[]}
+stages:          # (optional until approach evaluate) map of stage -> weight string
+checkpoints:     # (optional until approach evaluate) list of the stage hand-offs that wait for a person: assess, define, refine, plan
+models:          # (optional until approach evaluate) map of seat -> {tier, by, not_fired[]} - the model tier of each seat whose stage runs; tier is fast | standard | strong
+checkpoint_outcomes: # (optional) list of maps - one outcome per checkpoint stage hand-off; the first assessment writes []; an issue without the key is not judged:
+  - stage:       #   (required in entry) [assess, define, refine, plan] - here define
+    outcome:     #   (required in entry) [waited, skipped] - waited: a person answered it with compass evidence approve --checkpoint
+    by:          #   (required in entry) string - the approver of the record it cites, such as jed72
+    at:          #   (required in entry) string - ISO 8601, the record's timestamp
+    evidence:    #   (required for waited) string - the checkpoint-approval record's id, such as EV-CHECKPOINT-define-1
+  - stage:       #   here refine
+    outcome:     #   skipped: the autonomy setting passed it, recorded with compass issue checkpoint add --outcome skipped
+    by:          #   the agent that went on, such as spec-author
+    at:          #   ISO 8601, the time of the command; a skipped outcome has no evidence
+intent_source:   # (optional) map - the brief ingested with compass intent ingest; absent when intent.md was written in the issue:
+  origin:        #   (optional) string - the file path or URL the brief came from
+  scheme:        #   (optional) string - how it was read, such as file
+  sha256:        #   (optional) string - digest of the brief as read
+  ingested_at:   #   (optional) string - ISO 8601 time of the ingest
+  snapshot:      #   (optional) string - file name of the unedited copy of the brief in the issue directory
+  interview:     #   (optional) list of maps - each question asked, with its answer or null; [] before any is asked
+  sections:      #   (optional) list of maps {name, from [source, answer, unanswered], answer_id} - where each section of intent.md came from
+readiness:       # (optional) map - the repository's readiness at the last approach evaluate --write: {status: measured, score, signals, floor_met, absent[], measured_at} or {status: not-measured, reason: missing | stale | unreadable, detail}; outside the generation
+
+evidence:        # (optional) list of maps - the typed evidence registry gates reference by id:
+  - id:          #   (required in entry) string - e.g. EV-001 or EV-A1
+    type:        #   (required in entry) [artifact, artifact-approval, checkpoint-approval,
+                 #     claim-review, consistency-check, command-output, human-approval,
+                 #     manual-review, migration-plan, rollback-plan, security-review,
+                 #     spike-conclusion, test-run]
+    path:        #   (optional) string - path to the evidence file
+    scenario:    #   (optional) string - the scenario id this evidence is for
+    check:       #   (optional) string - for manual-review, the judged check this review is for
+    approver:    #   (optional) string - for human-approval, the person's id
+    role:        #   (optional) string - for human-approval, the role the person acts in
+    scope:       #   (optional) string - for human-approval, what the approval covers
+    decision:    #   (optional) [approved, rejected, ...] - for human-approval, approved or rejected
+    timestamp:   #   (optional) string - ISO 8601, for human-approval
+    check:       #   (optional) string - for human-approval, the human check this approves
+    issue:       #   (optional) string - for human-approval of a check, the issue slug; another issue's record does not count
+    generation:  #   (optional) integer - for human-approval of a check, the issue's generation when it was given
+                 #     (`compass evidence approve` writes check, issue, generation and timestamp)
+    artifact:    #   (optional) string - for artifact-approval, the kind of the document approved
+    decisions:   #   (optional) list of strings - for artifact-approval, the decision ids confirmed
+    checkpoint:  #   (optional) string - for checkpoint-approval, the stage whose hand-off the person
+                 #     answered; the record has no check, so it never meets guardrail `G5`, a human check or a waiver
+    guardrail:   #   (optional) string - for human-approval, the guardrail this sign-off is for; only `G5` is read
+                 #     (`compass evidence approve --guardrail` writes it, with the value `G5`)
+    waiver:      #   (optional) map - for human-approval of a waiver, the waiver it approves (its scope and entry)
+                 #     A human-approval record that holds check, waiver, checkpoint, artifact or decisions, or a
+                 #     guardrail other than `G5`, never clears `human-approval-present` (ADR-066)
+
+gates:           # (optional until approach evaluate) list of maps:
+  - id:          #   (required in entry) string - e.g. verify.correctness
+    status:      #   (required in entry) [pending, pass, fail]
+    evidence:    #   (optional) list of strings, or null - evidence ids from the registry above
+
+scenarios:       # (optional until the define stage) list of maps:
+  - id:          #   (required in entry) string - stable id, e.g. TRC-001
+    title:       #   (optional) string
+    intent:      #   (required in entry) string or list of strings - intent id(s) it traces to
+    tests:       #   (optional until implement/verify) list of strings - test refs
+
+failure_modes_descoped: # (optional) list of maps - failure modes no scenario covers, written by `compass scenario descope`:
+  - mode:        #   (required in entry) string - the input class or failure mode
+    reason:      #   (required in entry) string - why no scenario covers it
+    recorded:    #   (required in entry) string - ISO date it was recorded
+
+started_at:      # (optional) string - ISO time `compass quick-fix start` ran; where the assess stage ends
+finish_started_at: # (optional) string - ISO time `compass quick-fix finish` began; where implement ends
+committed_at:    # (optional) string - ISO time `quick-fix finish` recorded usage, just before its commit
+usage:           # (optional) map - tokens from the issue's Claude Code transcripts. Numbers only, no text or path. A quick fix's block (quick-fix finish): session, source, skipped_lines, stages{assess, implement, ...: requests, subagent_requests, input, output, cache_write, cache_read, cost_usd, shared?}; or recorded: false with a fixed reason. Any other approach's block (ship-commit):
+  sessions:      #   (optional) list of strings - the session ids that worked on the issue, each once; the pre-tool hook appends them
+  source:        #   string - claude-code
+  skipped_lines: #   integer - transcript lines that were not JSON
+  total:         #   map - every request in the issue's span: requests, subagent_requests, input, output, cache_write, cache_read, cost_usd, shared?
+  unattributed:  #   map - the same keys, for requests after the last stage end; the stages and unattributed add up to total
+  stages:        #   map of stage -> the same keys, or {measured: false, reason: no-window}
+  recorded:      #   (only when nothing is counted) false, with reason: a word in session_usage.REASONS
+                 #     (not-claude-code, bad-session-id, no-transcript, unreadable, too-large, ...); sessions are kept
+changed_files:   # (optional until implement) list of maps:
+  - path:        #   (required in entry) string - the production file path
+    scenarios:   #   (required in entry) list of scenario ids it traces to
+
+claims:          # (optional; only when a marketer is in play) list of maps:
+  - id:          #   (required in entry) string
+    text:        #   (required in entry) string - the public claim
+    scenario:    #   (required in entry) string - the backing scenario id
+
+follow_ups:       # (optional) list of maps - work still outstanding:
+  - id:          #   (required in entry) string
+    description: #   (optional) string
+    summary:     #   (optional) string - what is owed (compass follow-up add --summary)
+    defers:      #   (optional) string - the Definition of Done or Ready item it carries to ship
+    status:      #   (required in entry) [outstanding, resolved]
+
+page_ticks:      # (optional) list of maps - items ticked on a page before 7.0.0 (compass issue migrate writes it):
+  - check:       #   (required in entry) string - the item's check id
+    source:      #   (required in entry) string - the document the tick was read from
+
+reassessments:   # (optional) list of maps - the append-only re-assessment log:
+  - from_route:  #   (required in entry) string - the delivery approach before
+    to_route:    #   (required in entry) string - the delivery approach after
+    reason:      #   (required in entry) string
+    date:        #   (optional) string
+
+artifacts:       # (optional) list of maps - the issue's document registry:
+  - id:          #   (required in entry) string - e.g. ART-INTENT
+    kind:        #   (required in entry) string - what kind of document this is
+    status:      #   (required in entry) string
+    reason:      #   (required in entry) string - why this document exists, or was deliberately not written
+    path:        #   (optional) string - project-root-relative path to the document
+    digest:      #   (optional) string - sha256 of the document's file when it was last written (recorded on every registration)
+    upstream:    #   (optional) map - artifact id to the sha256 of that artifact when this document was written
+    approved_by: #   (optional) string - present when status is approved: a person's id, or the command that approved it
+    approved_at: #   (optional) string - ISO 8601 time of the approval; present exactly when status is approved
+
+decisions_taken: # (optional) list of maps - decisions an agent took for the person:
+  - id:          #   (required in entry) string - the ledger id, such as Q1
+    question:    #   (required in entry) string
+    resolution:  #   (required in entry) string
+    by:          #   (required in entry) string - the agent that took it
+    stage:       #   (required in entry) string - the stage it was taken in
+    status:      #   (required in entry) [open, confirmed, reopened]
+    reason:      #   (optional) string - written only by a reopen
+
+# Human approval (guardrail `G5`) is not a separate top-level key: it is a
+# `human-approval` entry in the `evidence:` registry above.

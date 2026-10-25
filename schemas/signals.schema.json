@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compass.dev/schemas/signals.schema.json",
+  "title": "governance/signals.yml",
+  "description": "Structural validator for Compass's signals.yml - the file that ships pattern defaults consumed by the stop-hook (scope-bloat phrases) and `compass rework-scan` (window + public-surface + migration patterns). Projects override by editing their own governance/signals.yml; the schema is the contract.",
+  "type": "object",
+  "required": ["version", "scope_bloat_phrases", "rework_scan"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semver. Bump on incompatible schema changes."
+    },
+    "scope_bloat_phrases": {
+      "type": "array",
+      "description": "Substrings searched in agent-authored text (devlog, verification-report) by the stop-hook to prompt a re-assessment. Case-insensitive substring match - not regex.",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "rework_scan": {
+      "type": "object",
+      "required": ["window_days", "public_surface_patterns", "migration_paths"],
+      "additionalProperties": false,
+      "properties": {
+        "window_days": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Lookback window for `compass rework-scan`. Issues landed outside this window are not considered as candidates for the add→delete pairing."
+        },
+        "public_surface_patterns": {
+          "type": "array",
+          "description": "Regex patterns for paths/symbols whose churn within window_days is reported as a separate signal class (public-surface rework).",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 0
+        },
+        "migration_paths": {
+          "type": "array",
+          "description": "Glob patterns for migration files whose churn within window_days is reported as a separate signal class (migration rework).",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 0
+        }
+      }
+    },
+    "design_smell": {
+      "type": "array",
+      "description": "Advisory patterns assessed by the reviewer agent at verify - judgment, never a gate. A match is a prompt to investigate a potential design problem. Projects extend by editing their own signals.yml.",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "friction": {
+      "type": "object",
+      "description": "Config for the framework's self-calibration friction signal, aggregated by `compass retro --friction`. Advisory only - never a gate.",
+      "additionalProperties": false,
+      "properties": {
+        "recurrence_threshold": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of distinct issues that must independently propose the same change before it is reported as a recurring pattern. Below it, an item is noise, not a trend. Defaults to 2 when absent."
+        }
+      }
+    }
+  }
+}

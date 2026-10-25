@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://compass-sdd/schemas/guardrails.schema.json",
+  "title": "Compass governance/guardrails.yml",
+  "description": "The machine-readable guardrail definitions. The human-readable companion is guardrails.reference.yml; guardrails.md is the prose explanation. NOTE: JSON Schema cannot express the integrity rule that every guardrail's `checks` must also be implemented in the CLI's CHECK_FNS - `compass policy lint`'s built-in linter enforces that, and `compass check` fails on it at run time.",
+  "type": "object",
+  "required": ["version", "checks", "defaults"],
+  "properties": {
+    "version": { "type": "string" },
+
+    "checks": {
+      "type": "object",
+      "description": "The named mechanical checks. Each key is a check name a guardrail can reference.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["description"],
+        "properties": { "description": { "type": "string" } }
+      }
+    },
+
+    "evidence_types": {
+      "type": "object",
+      "description": "The kinds of evidence a gate can be cleared with.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["description"],
+        "properties": { "description": { "type": "string" } }
+      }
+    },
+
+    "gate_evidence_requirements": {
+      "type": "object",
+      "description": "gate id -> the list of evidence types that gate will accept. A gate not listed accepts any type.",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "enum": [
+            "test-run", "command-output", "manual-review", "human-approval",
+            "security-review", "migration-plan", "rollback-plan",
+            "claim-review", "spike-conclusion", "consistency-check", "artifact",
+            "artifact-approval", "checkpoint-approval"
+          ]
+        }
+      }
+    },
+
+    "defaults": {
+      "type": "array",
+      "description": "The shipped default guardrails (`G1`-`G5`).",
+      "items": { "$ref": "#/definitions/guardrail" }
+    },
+
+    "spike_guardrails": {
+      "type": "array",
+      "description": "Guardrails that apply ONLY on a spike. compass check runs these instead of the defaults when the delivery approach is spike.",
+      "items": { "$ref": "#/definitions/guardrail" }
+    },
+
+    "project": {
+      "type": "array",
+      "description": "Project-added guardrails. Same shape as a default. Each MUST reference a `checks` name that the CLI implements.",
+      "items": { "$ref": "#/definitions/guardrail" }
+    }
+  },
+
+  "definitions": {
+    "guardrail": {
+      "type": "object",
+      "required": ["id", "name", "statement", "checks"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "statement": { "type": "string" },
+        "checks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Named checks (declared under `checks:` AND implemented in the CLI). A guardrail with no checks is a strategy."
+        },
+        "checked_at": { "type": "array", "items": { "type": "string" } },
+        "applies_when": {
+          "type": "object",
+          "description": "An optional `when` condition; the guardrail is only checked when it matches the issue's assessment."
+        },
+        "params": {
+          "type": "object",
+          "description": "Optional parameters for a parameterized check."
+        }
+      }
+    }
+  }
+}

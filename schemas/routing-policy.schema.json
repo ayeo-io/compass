@@ -1,0 +1,586 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://compass-sdd/schemas/routing-policy.schema.json",
+  "title": "Compass governance/routing-policy.yml",
+  "description": "The machine-readable routing policy. The human-readable companion is routing-policy.reference.yml; routing-policy.md is the prose explanation.",
+  "type": "object",
+  "required": [
+    "version",
+    "routing_strategies",
+    "routing_guardrails",
+    "assessment_vocabulary",
+    "route_shapes"
+  ],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "routing_strategies": {
+      "type": "object",
+      "description": "The SOFT layer - biases the candidate delivery approach.",
+      "required": [
+        "default_shapes",
+        "default_route"
+      ],
+      "properties": {
+        "default_shapes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "when",
+              "lean_toward",
+              "rationale"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "when": {
+                "type": "object"
+              },
+              "lean_toward": {
+                "type": "string"
+              },
+              "rationale": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "default_route": {
+          "type": "string"
+        },
+        "biases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "role_defaults": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "when"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "when": {
+                "type": "object"
+              },
+              "suggest_artifact": {
+                "type": "string"
+              },
+              "rationale": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "routing_guardrails": {
+      "type": "object",
+      "description": "The HARD layer - bounds the delivery approach.",
+      "properties": {
+        "floors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "when",
+              "rationale"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "when": {
+                "type": "object"
+              },
+              "force_minimum_route": {
+                "type": "string"
+              },
+              "require_phase": {
+                "type": "string"
+              },
+              "require_skill": {
+                "type": "string"
+              },
+              "never_skip": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "add_gate": {
+                "type": "string"
+              },
+              "rationale": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "caps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "when",
+              "rationale"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "when": {
+                "type": "object"
+              },
+              "max_worktrees": {
+                "type": "integer"
+              },
+              "forbid_route": {
+                "type": "string"
+              },
+              "rationale": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "loop_ceilings": {
+          "type": "array",
+          "description": "How far a multiagent run may go before it stops with a reason. For each ceiling the lowest limit among the matching rules applies.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "ceiling",
+              "limit",
+              "rationale"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "ceiling": {
+                "type": "string",
+                "enum": [
+                  "builder_attempts",
+                  "review_rounds",
+                  "replans",
+                  "repeated_error",
+                  "run_cycles",
+                  "run_minutes",
+                  "run_cost_usd"
+                ]
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "when": {
+                "type": "object"
+              },
+              "rationale": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "immovable_gates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "gate",
+              "rationale"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "gate": {
+                "type": "string"
+              },
+              "rationale": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "artifact_rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "when",
+              "rationale"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "when": {
+                "type": "object"
+              },
+              "require_artifact": {
+                "type": "string"
+              },
+              "gate": {
+                "type": "string"
+              },
+              "block_phase": {
+                "type": "string"
+              },
+              "until": {
+                "type": "string"
+              },
+              "rationale": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "role_rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "when",
+              "rationale"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "when": {
+                "type": "object"
+              },
+              "require_artifact": {
+                "type": "string"
+              },
+              "gate": {
+                "type": "string"
+              },
+              "block_phase": {
+                "type": "string"
+              },
+              "until": {
+                "type": "string"
+              },
+              "rationale": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "waived": {
+          "type": "array",
+          "description": "Framework rules this project has deliberately chosen not to adopt. A waiver is a recorded decision, so it names the rule and says why - which is what distinguishes it from drift.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "reason"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The framework rule id being waived, e.g. RP-REQUIRE-003."
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Why this project does not adopt it. Required: a waiver with no reason records no decision."
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "assessment_vocabulary": {
+      "type": "object",
+      "description": "The closed value sets per assessment dimension.",
+      "required": [
+        "risk",
+        "familiarity",
+        "size",
+        "goal"
+      ],
+      "properties": {
+        "risk": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "familiarity": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "size": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "goal": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "urgency": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "role": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "labels_common": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "route_shapes": {
+      "type": "object",
+      "description": "The machine mirror of the five reference approaches. A policy copied before the approaches were renamed keys them by the old names, read as the new ones.",
+      "anyOf": [
+        {
+          "required": [
+            "spike",
+            "quick-fix",
+            "regular",
+            "hotfix",
+            "full"
+          ]
+        },
+        {
+          "required": [
+            "spike",
+            "express",
+            "standard",
+            "hotfix",
+            "expedition"
+          ]
+        }
+      ],
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "weight",
+          "stages",
+          "gates",
+          "subtask_ceiling"
+        ],
+        "properties": {
+          "weight": {
+            "type": "integer"
+          },
+          "stages": {
+            "type": "object"
+          },
+          "gates": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subtask_ceiling": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "How many parallel subtasks this shape permits: 1, 2, or null for unbounded. A number rather than a word since ADR-023 - the words solo/solo-or-pair/multiagent were only ever converted to these three values before use."
+          }
+        }
+      }
+    },
+    "autonomy_checkpoints": {
+      "type": "object",
+      "description": "Autonomy value -> approach -> the checkpoint stages that wait for a person. Only assess, define, refine and plan can be named.",
+      "additionalProperties": false,
+      "properties": {
+        "controlled": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "assess",
+                "define",
+                "refine",
+                "plan"
+              ]
+            },
+            "uniqueItems": true
+          }
+        },
+        "balanced": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "assess",
+                "define",
+                "refine",
+                "plan"
+              ]
+            },
+            "uniqueItems": true
+          }
+        },
+        "autonomous": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "assess",
+                "define",
+                "refine",
+                "plan"
+              ]
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "model_rules": {
+      "type": "object",
+      "description": "Which model tier and effort each seat runs on: default_tiers gives each seat its tier, and a matching floors rule raises its tier, its effort or both.",
+      "properties": {
+        "default_tiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "seat",
+              "tier"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "when": {
+                "type": "object"
+              },
+              "seat": {
+                "enum": [
+                  "assess",
+                  "define",
+                  "refine",
+                  "plan",
+                  "breakdown",
+                  "implement",
+                  "verify",
+                  "review",
+                  "ship"
+                ]
+              },
+              "tier": {
+                "enum": [
+                  "fast",
+                  "standard",
+                  "strong"
+                ]
+              },
+              "rationale": {
+                "type": "string"
+              },
+              "effort": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "floors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "seat"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "when": {
+                "type": "object"
+              },
+              "seat": {
+                "enum": [
+                  "assess",
+                  "define",
+                  "refine",
+                  "plan",
+                  "breakdown",
+                  "implement",
+                  "verify",
+                  "review",
+                  "ship"
+                ]
+              },
+              "tier": {
+                "enum": [
+                  "fast",
+                  "standard",
+                  "strong"
+                ]
+              },
+              "rationale": {
+                "type": "string"
+              },
+              "effort": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,363 @@
+# GENERATED FILE - do not edit by hand. The source is the default preset in
+# governance/presets/default/ and governance/legacy-views.yml. Change those,
+# then regenerate this file with: python3 scripts/generate-legacy-views.py
+# A test fails when this file differs from what that command writes.
+# =============================================================================
+# A CHECK DERIVES FROM THIS FILE'S STRUCTURE.
+# tests/plain_language_check.py builds its registry of what each code means from
+# the `gates` of the preset in governance/presets/default/, and from `defaults:`
+# and each entry's `id`, `name` and `statement` here when the preset is absent.
+# Change those key names or that nesting and the derivation fails loudly,
+# naming this file - it does not fall back to a hand-written table, because a
+# table would drift from this file in silence. This is the derivation-failure
+# criterion (`TRC-C9`).
+# =============================================================================
+# Compass - guardrails.yml
+# =============================================================================
+# THE MACHINE-READABLE GUARDRAIL DEFINITIONS. This file is authoritative for
+# how guardrails are *checked*. `guardrails.md` explains what each guardrail is
+# and why; this file says what evidence clears it, and `compass check` runs
+# those checks against an issue's `manifest.yml` and `evidence/`.
+#
+# Note the asymmetry, and that it is deliberate: GUARDRAILS get a .yml because
+# they are checkable. STRATEGIES do not - `strategies.md` stays prose-only,
+# because a strategy is *assessed* (the reviewer's judgment), not *checked*.
+# That asymmetry is the guardrail/strategy distinction made physical: if a
+# thing can be given a named, mechanical check, it can be a guardrail; if it
+# can only be judged, it is a strategy.
+#
+# The five default guardrails below ship active. A project may ADD guardrails
+# under `project:` - each needs a named check, or it is a strategy, not a
+# guardrail. `compass policy lint` checks this file against
+# schemas/guardrails.schema.json.
+# =============================================================================
+
+version: 1.33.2
+# -----------------------------------------------------------------------------
+# Named checks - the mechanical checks `compass check` knows how to run. Each
+# guardrail below references one or more of these by name. The check reads
+# manifest.yml and evidence/ - it does not re-run tests (that is tdd-green's job);
+# it checks the recorded state is coherent and backed by evidence.
+# -----------------------------------------------------------------------------
+checks:
+  borrowed-documents-answered:
+    description: "The threat model and the rollback plan, where they exist, are answered rather than merely written - every threat names a scenario or an accepted risk, and the rollback records a rehearsal that happened. Declines to check, rather than passing, when the issue earned neither document."
+  rendered-blocks-current:
+    description: "Every rendered block in the issue's documents and its issue page matches a fresh render from the records. A block drawn from the issue's own records fails the check at `verify` and `ship` and is advisory before; a block drawn from other issues or the project is always advisory."
+  landed-by-resolves:
+    description: "An issue whose work was delivered through a different issue points at it with `landed_by:`, and the pointer resolves: the named issue exists, has landed, carries a record of its own, and names this one back in `delivered:`. When it holds, four checks about this issue carrying its OWN record stand down - the claim moves rather than being waived. Declines to check when there is no pointer."
+  scenarios-have-tests:
+    description: "Every scenario in manifest.yml lists at least one test."
+  scenarios-are-executable:
+    description: "Every scenario in manifest.yml was accounted for by the project's BDD runner. Reads the record `compass bdd verify` writes; never runs the suite. No-ops when project.bdd_runner is unset."
+    # Assessment-scoped, exactly like a guardrail's `applies_when:`.
+    # Below this threshold a finding is reported without failing the
+    # run - most projects have wired no runner, and an advisory
+    # finding is the honest default (ADR-006).
+    blocking_when: { blast_radius: [cross-cutting, critical] }
+  declared-tests-resolve:
+    description: "Every declared test id points at a test that exists on disk. Fires only once an issue has claimed verify.correctness and is still active - before that the test legitimately does not exist yet; after landing the manifest is a historical record."
+  suite-passed:
+    description: >
+      A green record on file shows the full suite passing, recently. The
+      record is named by its binding - evidence/green-<scenario>.json when
+      bound, evidence/green.json when not - and the registry entry names
+      whichever was written. When the issue declares scenarios and was
+      created on or after 2026-09-24, or has an evidence record dated on or
+      after it, a red record (evidence/red.json or
+      evidence/red-<scenario>.json, recording a failed run) or an acceptance
+      record from `compass acceptance record` must also be on the issue. A
+      green alone shows the suite passes, not that a test failed first.
+  changed-code-traces-to-scenario:
+    description: "Every changed production file maps to >=1 scenario id."
+  scenario-has-id-and-intent:
+    description: "Every scenario has a stable id and a linked intent id."
+  claim-traces-to-scenario:
+    description: >
+      Every claim maps to a scenario id that exists. This checks
+      traceability, not truth; the reviewer at verify.claims checks whether
+      the claim is true.
+  gate-evidence-present:
+    description: "Every gate marked pass has an evidence pointer that resolves."
+  human-approval-present:
+    description: "An approval record exists for an irreversible change."
+  backfills-paid:
+    description: "The issue manifest's follow-ups list is empty or every item is resolved."
+  artifacts-approved:
+    description: "Every document the issue registered is accepted when it ships: no artifact reads draft or awaiting-approval, and an omitted artifact records a reason. Judges the state `compass ship-commit` would leave, so a document owned by the ship stage does not fail. Declines to check, rather than passing, until every gate has passed, and for an issue that has closed or does not ship."
+  nfr-rows-resolved:
+    description: "Every concern row of the spec's Non-functional requirements table (performance, capacity, compatibility, security, privacy, operability, accessibility, and any row added) names scenario ids the manifest holds or a reason the concern does not apply. At thorough depth each cited scenario states a number in its Then. Declines to check, rather than passing, for an issue with no generation, a closed issue, a spec not registered with a path, and a catalogue that does not list the section at the depth the spec is registered at."
+  contracts-declared:
+    description: "When a changed file matches a trigger pattern, the technical design's Data and interfaces section declares a contract: a field table (Name, Type, Required, Meaning, Written by, Read by) or a contract table (Inputs, Outputs, Exit codes, Errors) with a data row, or an erDiagram. A path pattern matches the project-relative path, and a contents pattern also needs the file to hold its text. Declines to check, rather than passing, when no changed file matches, and for an issue with no generation, a closed issue, a design not registered with a path, and a catalogue that does not list the section at the depth the design is registered at."
+  design-within-word-ceiling:
+    description: "Once plan exit is due, the technical design holds no more words than its word_ceiling at the depth it is registered at, times the factor in params. Words are counted from the visible text, and unit files never lift the limit. Declines to check, rather than passing, for an issue with no generation, a closed issue, a design not registered with a path, a catalogue with no word_ceiling for the design at its depth, and an issue that has not passed the plan stage."
+  spike-conclusion-present:
+    description: "A spike has a `spike-conclusion` evidence entry with a recorded decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue."
+  spike-no-production-changes:
+    description: "A Spike's `changed_files` is empty - a spike ships nothing; graduating to delivery is a fresh assessment, not a merge."
+  dod-evidence-typed:
+    description: >
+      Every item of the issue's Definition of Done (its `verify` exit list)
+      is met by a record in the manifest: evidence recorded with `--meets`,
+      a person's approval recorded with `compass evidence approve --check`,
+      or a follow-up recorded with `compass follow-up add --defers`. An item
+      with no record fails. A tick on a page counts for nothing.
+      Cross-issue: when another issue has a follow-up with target_task
+      pointing at this issue, that follow-up must be resolved before this
+      issue ships. Declines to check, rather than passing, when no
+      verification report is written yet.
+  consistency-check-passes:
+    description: "compass analyze reports zero consistency findings. Gate-clearing runs write type consistency-check evidence; advisory runs write command-output and do not clear verify.analyze."
+  no-trusted-rerun:
+    description: >
+      Every test-run evidence entry is checked for rerun integrity. A record
+      with rerun_without_change: true must have its test listed in the
+      project quarantine registry (governance/quarantine.yml) with a
+      tracking issue - a rerun-to-green without a quarantine entry is a `G4`
+      failure (`S5`: intermittency is failure). A record with `attempts` > 1
+      but no rerun_without_change marker is also rejected - incomplete
+      evidence cannot clear `G4`. Old evidence without an `attempts` field
+      passes trivially (backward compatibility, ADR-006, `TRC-A5`). May
+      carry attempts: <int> and rerun_without_change: <bool> to signal rerun
+      integrity (see strategy `S5`).
+  evidence-identity-matches:
+    description: >
+      Every registry entry still names the record it was created from.
+      Records are stamped at write time with a `record_id` (unique per
+      write) and a `content_digest` (over the payload); the entry stores
+      both. A different record_id means the file was replaced after it was
+      cited; a matching record_id with a different digest means it was
+      edited in place. An entry with no record_id predates stamping and is
+      UNVERIFIABLE - reported and counted apart from the passes, never
+      treated as checked, because an unstamped record cannot be checked
+      against its citation.
+
+  evidence-matches-tree:
+    description: >
+      The newest test record still names the tree that ships. Every red,
+      green and acceptance record carries tree_id, the git tree id of the
+      tracked files on disk plus the issue's untracked changed files, less
+      .compass/ and docs/compass/, and changes_id, a tree of the changed
+      files and the test files the scenarios declare. For an issue in flight
+      the check compares tree_id with the tree now, and fails only once
+      every gate has passed; before that a stale record is a note. For a
+      landed issue it compares changes_id with the same files in
+      land_commit, the commit ship-commit made. A record with no tree_id, or
+      a landed issue with no land_commit, is not judged; a land_commit that
+      is not a commit id fails. It shows which tree a record claims, not
+      that a trusted runner made the claim.
+
+  command-passes:
+    description: "Runs the project guardrail's declared `command:` via subprocess and checks it exits 0. On success: emits a command-output evidence entry. On failure: emits a command-output evidence entry with exit code + stderr. When verify.architecture is in the gate set and zero project guardrails declare command-passes, it passes without checking anything (no declarations means there are no architecture checks to run)."
+
+  multiagent-run-recorded:
+    description: >
+      A multiagent issue's manifest shows the run that built it completed:
+      every entry in `subtasks:` is `done`, with a last review round whose
+      verdict is `pass`. Declines to check an issue whose breakdown stage is
+      not multiagent, or one still in flight - not every gate has passed and
+      it has not landed. An issue that already records a `subtasks:` key is
+      judged on it whatever its date; one with no `subtasks:` key is judged
+      only if created on or after 2026-09-26 - a missing `created:` never
+      qualifies on the date alone. Once ready, fails on a manifest with no
+      `subtasks:`, a subtask that is not `done`, or a subtask whose last
+      review round is missing or `fail`. A subtask with a `stopped_reason`
+      is judged on the stop instead: it passes when the stop names a reason
+      and an evidence file that exists. For an issue created on or after
+      2026-10-03, a subtask with more tries or review rounds than its
+      `loop_ceilings` rule in routing-policy.yml fails unless it records a
+      stop reason.
+
+# -----------------------------------------------------------------------------
+# Evidence types - what KINDS of evidence a gate can be cleared with. Without
+# this, `gate-evidence-present` is circular: a gate could be marked `pass`
+# pointing at a weak markdown note and still clear the mechanical check. Typing
+# the evidence makes the *strength* of a gate's backing visible - and lets the
+# checker demand a real mechanical capture for the gates that need one.
+#
+# Evidence model: manifest.yml has a top-level `evidence:` REGISTRY of typed
+# entries (each {id, type, path, ...}); a gate's `evidence:` is a list of
+# evidence ids referencing the registry. Multiple gates can share one entry.
+# -----------------------------------------------------------------------------
+evidence_types:
+  test-run:
+    description: >
+      A recorded test execution - e.g. evidence/green-<scenario>.json from a
+      scenario-bound `compass tdd-green`, or evidence/green.json from an
+      unbound one. The strongest: a machine ran it. May carry attempts:
+      <int> and rerun_without_change: <bool> to signal rerun integrity (see
+      strategy `S5` and the no-trusted-rerun check).
+  command-output:
+    description: "Captured output of a command - a scanner, a linter, a coverage run, a `compass check` run."
+  manual-review:
+    description: "A recorded reviewer judgement - a code review or governance review captured in a file. Stronger than a generic artifact because it is a named review, not a stray note."
+  human-approval:
+    description: "A recorded human sign-off - for irreversible changes (guardrail `G5`). Has structured fields: approver, role, decision, timestamp, scope, conditions. Only a record given for guardrail `G5` clears `human-approval-present`: one with no check, waiver, checkpoint, artifact or decisions key, and a guardrail key that is absent or exactly `G5`. A person records one by typing `/compass:approve` in Claude Code, or with `compass evidence approve --guardrail` and the value `G5` at a terminal; an agent under a delegation that covers g5 records one with `--issue <slug> --delegated --as <agent>`."
+  artifact-approval:
+    description: "A person's approval of one document or of a set of decisions taken for the person. Meets an artifact's human check; never a sign-off for guardrail `G5`."
+  approval-withdrawal:
+    description: "A person's withdrawal of a guardrail `G5` sign-off made under a delegation, written only by `/compass:reject <record id>`. Names the record in `withdraws`; `human-approval-present` then skips that record while the issue is in flight. It reverses nothing already done."
+  checkpoint-approval:
+    description: "A person's answer to one checkpoint hand-off, written only by `compass evidence approve --checkpoint`. It never meets guardrail `G5` or a human check."
+  security-review:
+    description: "A recorded security review or scan result - for security-sensitive changes."
+  migration-plan:
+    description: "A recorded plan for a data, schema, or infrastructure migration."
+  rollback-plan:
+    description: >
+      A record showing the rollback was REHEARSED - what was run, when, and
+      against what. Not a plan: SWEBOK v4 §6.3.3 needs "a planned and
+      rehearsed rollback" before a new version is deployed, and a rollback
+      nobody has run is a guess. A guess recorded as a plan is the assertion
+      guardrail `G4` exists to reject.
+  claim-review:
+    description: "A recorded review of public/user-facing claims against backing scenarios - the marketer's audit trail."
+  spike-conclusion:
+    description: "A recorded close-out of a spike: what was learned, a decision (discard | graduate-to-delivery | defer), and any link to the next issue."
+  consistency-check:
+    description: "Output of compass analyze - a structured consistency findings list. Gate-clearing: zero findings. Only this type clears verify.analyze; advisory command-output entries do not."
+  artifact:
+    description: "A written record without a more specific type - a review note, a verification report. The weakest, by design: honest for judgement-shaped gates, never enough for a mechanical one."
+
+# gate_evidence_requirements - which evidence types each gate will accept. A
+# gate not listed here accepts any type. The point is the constrained ones:
+# you cannot clear `verify.correctness` with a markdown note, because
+# correctness is a mechanical fact and demands a `test-run`.
+gate_evidence_requirements:
+  verify.correctness: [test-run]
+  verify.regression: [test-run]
+  verify.security: [security-review, command-output, test-run]
+  verify.governance: [command-output, manual-review, artifact]
+  verify.traceability: [command-output, artifact]
+  verify.claims: [claim-review, command-output, artifact]
+  verify.clarity: [manual-review, artifact]       # inherently judgment - and now visibly so
+  spike.conclude: [spike-conclusion]              # SPECIFIC: a generic artifact will not do
+  verify.analyze: [consistency-check]              # SPECIFIC: advisory command-output does NOT clear this gate
+  verify.architecture: [test-run, command-output]    # architecture checks: command-output from command-passes, or a test-run
+
+# -----------------------------------------------------------------------------
+# DEFAULT GUARDRAILS - `G1`–`G5`. Shipped active. The floor under every delivery approach.
+# -----------------------------------------------------------------------------
+defaults:
+
+  - id: G1
+    name: "Tested before it lands"
+    statement: >
+      No code reaches main unless it traces to a declared test and a green
+      test run is on record. Compass checks that both exist and line up; it
+      does not observe the declared test running - see
+      docs/safety-contract.md for what a test-run record does and does not
+      establish.
+    # The red-before-green cycle is strategy `S2`, not this guardrail. `G1` is the
+    # outcome; `compass check` checks the outcome, the hook enforces `S2`.
+    # `declared-tests-resolve` closes the gap that a test being *named* is not
+    # the same as a test existing. It fires only once an issue has claimed
+    # verify.correctness and is still active - before that the test legitimately
+    # does not exist yet, and after landing the manifest is a historical record.
+    checks: [scenarios-have-tests, declared-tests-resolve, suite-passed,
+             changed-code-traces-to-scenario, scenarios-are-executable]
+    checked_at: [verify, ship]
+
+  - id: G2
+    name: "Acceptance defined before it is built"
+    statement: >
+      No code is written that no stated, checkable acceptance criterion
+      describes. BDD scenarios (strategy `S1`) are the default form.
+    checks: [scenario-has-id-and-intent]
+    checked_at: [refine, verify]
+
+  - id: G3
+    name: "Traceability holds"
+    statement: >
+      code -> acceptance criterion -> intent, and public claim -> criterion,
+      maintained continuously.
+    # `landed-by-resolves` is a traceability check: it is what makes a
+    # pointer at another issue's record a LINK rather than a claim. Both
+    # ends must name each other, the named issue must have landed, and it
+    # must carry a record of its own - otherwise a chain of empty issues
+    # could vouch for one another.
+    checks: [changed-code-traces-to-scenario, scenario-has-id-and-intent, claim-traces-to-scenario,
+             landed-by-resolves]
+    checked_at: [refine, implement, verify, ship]
+
+  - id: G4
+    name: "Evidence, not assertion"
+    statement: >
+      A guardrail is cleared with artifacts and command output, never a
+      claim. The Definition of Done is a typed gate: every item of the
+      Definition of Done is met by a record in the manifest (typed evidence,
+      a person's approval or a filed follow-up) - a tick on a page or a
+      narrative note never clears it.
+    checks: [gate-evidence-present, dod-evidence-typed, consistency-check-passes, no-trusted-rerun,
+             command-passes, evidence-identity-matches, evidence-matches-tree,
+             rendered-blocks-current, borrowed-documents-answered, multiagent-run-recorded]
+    checked_at: [verify, ship]
+
+  - id: G5
+    name: "A human signs off on the irreversible"
+    statement: >
+      A change labelled auth, payments, personal-data or migrations gets an
+      explicit human checkpoint before it lands: it can breach auth, move
+      money, expose personal data or lose data that cannot be restored.
+    checks: [human-approval-present]
+    # Fires on the four labels only. Their change is the one a merge cannot
+    # undo: a migration can lose data that cannot be restored, and auth,
+    # payments and personal data reach people outside the repository.
+    # Critical risk alone does not fire it: critical-risk code that carries
+    # none of the labels can be reverted at merge, and CI and review gate
+    # it (governance decision 2026-10-12, guardrail-5-triggers-on-the-
+    # irreversible-labels). A project that wants critical risk too sets
+    # `G5.when` back in compass.yml; the lock allows a stricter trigger.
+    applies_when: { touches_any: [auth, payments, personal-data, migrations] }
+    checked_at: [ship]
+
+# -----------------------------------------------------------------------------
+# SPIKE GUARDRAILS - apply only on a spike. A spike is intentionally
+# free of the delivery guardrails (`G1`-`G5` do not apply), but it is still
+# CONTROLLED: it must conclude, and it must not silently produce production
+# work. `compass check` runs these instead of the defaults on a spike.
+# -----------------------------------------------------------------------------
+spike_guardrails:
+
+  - id: S1
+    name: "Spike conclusion recorded"
+    statement: >
+      A Spike must record what it learned and a close-out decision: discard
+      the work, graduate to delivery, or defer. Without a recorded
+      conclusion a Spike is just untracked work.
+    checks: [spike-conclusion-present]
+    checked_at: [ship]
+
+  - id: S2
+    name: "No production change from a Spike"
+    statement: >
+      A Spike ships nothing - its `changed_files` must be empty. Exploration
+      code lives on a scratch branch; if the finding is acted on, a fresh
+      assessment owns the code under a real delivery approach's guardrails.
+      This is the safety model: a Spike cannot silently become delivery.
+    checks: [spike-no-production-changes]
+    checked_at: [ship]
+
+# -----------------------------------------------------------------------------
+# PROJECT GUARDRAILS - the team adds here. Each MUST reference a named check
+# (add new checks to `checks:` above, or ask the CLI maintainer to add the
+# check logic). A would-be guardrail with no mechanical check is a strategy -
+# put it in strategies.md instead. Leave this empty rather than padding it.
+# -----------------------------------------------------------------------------
+project: []
+# Empty on purpose, not by oversight: the framework ships no project guardrails,
+# so an adopting repo sees no project-level check until it declares one.
+#  - id: Q1
+#    name: "Coverage floor"
+#    statement: "Line coverage does not drop below 80%."
+#    checks: [coverage-floor]          # <- a project-added check
+#    params: { min_line_coverage: 80 }
+#    checked_at: [verify]
+#    # Coverage is a floor, never a target - a high coverage number is a side effect of test discipline, not its goal.
+
+# -----------------------------------------------------------------------------
+# Cross-cutting: the conflict rule (a guardrail beats a strategy) and the
+# Definition of Ready / Definition of Done checklists are governance too, but
+# they live where they are used - see governance/README.md, the foot of
+# templates/requirements-review.md (DoR) and templates/verification-report.md (DoD).
+# -----------------------------------------------------------------------------

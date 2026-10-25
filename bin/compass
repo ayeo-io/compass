@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# =============================================================================
+# Compass plugin shim: bin/compass
+# =============================================================================
+# Claude Code adds a plugin's bin/ to the Bash tool's PATH while the plugin is
+# enabled, so this makes `compass <subcommand>` resolve for the slash commands
+# and agents. The person's own shell does not get that PATH entry; the
+# session-start hook writes a launcher for it in the plugin's data folder.
+#
+# It is a thin wrapper, NOT a second implementation. The one canonical CLI is
+# cli/compass at the repo root; this execs it so there is never two copies to
+# keep in sync. Resolves the repo root from CLAUDE_PLUGIN_ROOT when present
+# (the plugin runtime sets it), otherwise from this script's own location so
+# the shim also works when invoked directly from a clone.
+# =============================================================================
+set -euo pipefail
+
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/cli/compass" ]; then
+  ROOT="${CLAUDE_PLUGIN_ROOT}"
+else
+  # Resolve this script's real directory, following symlinks (portable; no
+  # readlink -f, which BSD/macOS lacks). bin/ is one level under the repo root.
+  src="${BASH_SOURCE[0]}"
+  while [ -h "$src" ]; do
+    dir="$(cd -P "$(dirname "$src")" >/dev/null 2>&1 && pwd)"
+    src="$(readlink "$src")"
+    [ "${src#/}" = "$src" ] && src="$dir/$src"
+  done
+  ROOT="$(cd -P "$(dirname "$src")/.." >/dev/null 2>&1 && pwd)"
+fi
+
+exec python3 "$ROOT/cli/compass" "$@"

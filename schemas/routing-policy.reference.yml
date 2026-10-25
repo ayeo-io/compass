@@ -1,0 +1,80 @@
+# Schema reference for: governance/routing-policy.yml
+# The machine-readable routing policy. `compass policy lint` enforces this.
+# Notation: (required) / (optional); `type`; [enum] where the set is closed.
+
+version:               # (required) string
+
+routing_strategies:    # (required) map - the SOFT layer; biases the candidate delivery approach
+  default_shapes:      #   (required) list of maps, evaluated top to bottom:
+    - id:              #     (required) string - stable id, e.g. RP-SHAPE-001
+      when:            #     (required) map - match condition against the assessment
+      lean_toward:     #     (required) string - a delivery approach name from route_shapes
+      rationale:       #     (required) string
+  default_route:       #   (required) string - fallback when no shape matches
+  biases:              #   (optional) list of strings - free-text tie-breakers
+  role_defaults:       #   (optional, 6.x copies only) list of maps {id, when, suggest_artifact, rationale}
+
+routing_guardrails:    # (required) map - the HARD layer; bounds the delivery approach
+  floors:              #   (optional) list of maps:
+    - id:              #     (required) string - e.g. RP-FLOOR-001
+      when:            #     (required) map - match condition
+      force_minimum_route:  # (optional) string - raise the delivery approach to >= this weight
+      require_phase:   #     (optional) string - force a stage to full weight
+      require_skill:   #     (optional) string
+      never_skip:      #     (optional) list of stage names
+      add_gate:        #     (optional) string - a gate id to add
+      rationale:       #     (required) string
+  caps:                #   (optional) list of maps:
+    - id:              #     (required) string - e.g. RP-CAP-001
+      when:            #     (required) map
+      max_worktrees:   #     (optional) integer
+      forbid_route:    #     (optional) string
+      rationale:       #     (required) string
+  immovable_gates:     #   (optional) list of maps:
+    - id:              #     (required) string - e.g. RP-GATE-001
+      gate:            #     (required) string - a gate id, e.g. verify.correctness
+      rationale:       #     (required) string
+  artifact_rules:      #   (optional) list of maps - a document on disk that enforces a gate or a block:
+    - id:              #     (required) string - e.g. RP-ART-001
+      when:            #     (required) map - typically {artifacts_any: [<kind>]}
+      require_artifact: #    (optional) string
+      gate:            #     (optional) string - a gate id to add to the delivery approach's set
+      block_phase:     #     (optional) string - stage blocked until `until`
+      until:           #     (optional) string - the unblock condition
+      rationale:       #     (required) string
+  role_rules:          #   (optional, 6.x copies only) list of maps, read as artifact_rules are:
+    - id:              #     (required) string - e.g. RP-ROLE-001
+      when:            #     (required) map - typically {role: <role>}
+      require_artifact: #    (optional) string
+      gate:            #     (optional) string - a gate id to add to the delivery approach's set
+      block_phase:     #     (optional) string - stage blocked until `until`
+      until:           #     (optional) string - the unblock condition
+      rationale:       #     (required) string
+  waived:              #   (optional) list of maps - framework rules this project has chosen not to adopt:
+    - id:              #     (required) string - the framework rule id being waived, e.g. RP-REQUIRE-003
+      reason:          #     (required) string
+
+# `when` match conditions: keys are assessment dimension names (risk,
+# familiarity, size, goal, urgency) with a scalar or list value
+# (list = any-of), OR the special key `labels_any` with a list value
+# (intersect with assessment.labels), OR `artifacts_any` with a list of
+# document kinds (intersect with the issue's documents on disk).
+
+assessment_vocabulary: # (required) map - the closed value sets per assessment dimension
+  risk:        #   (required) list of strings
+  familiarity:             #   (required) list of strings
+  size:           #   (required) list of strings
+  goal:              #   (required) list of strings
+  urgency:             #   (optional) list of strings
+  role:                #   (optional, 6.x copies only) list of strings
+  labels_common:      #   (optional) list of strings - illustrative, not closed
+autonomy_checkpoints: # (optional) map of autonomy value -> map of approach -> list of checkpoint stages (assess, define, refine, plan) that wait for a person; without it every hand-off the approach runs waits
+
+route_shapes:          # (required) map - the machine mirror of the five reference delivery approaches
+  <approach-name>:     #   one entry per approach; spike/quick-fix/regular/hotfix/full required
+                        #   (an older policy keyed spike/express/standard/hotfix/expedition
+                        #   still reads, as the new names)
+    weight:            #     (required) integer - the force_minimum_route ladder position
+    stages:            #     (required) map of stage name -> weight string
+    gates:             #     (required) list of gate id strings
+    subtask_ceiling:  #     (required) integer or null

@@ -1,0 +1,1425 @@
+# =============================================================================
+# Compass v2 - the frozen vocabulary
+# =============================================================================
+# The single source of truth for what every v2 word means. The
+# `compass terminology [term]` command renders these entries;
+# tests/test_terminology.py enforces the bans and the ratchet.
+#
+# Three sections:
+#   terms:   every v2 term, its exact framework meaning, and disambiguations
+#   banned:  v1 vocabulary that must not appear on user-facing surfaces
+#   scan:    which surfaces the house test checks, which are exempt, and
+#            which still await their rename slice (pending_surfaces)
+#
+# Naming rule: if a term is not in common use across the industry, it does
+# not ship. Recorded reading (maintainer ruling, 2026-08-07): the rule's
+# intent is anti-jargon, not grammatical purity - an industry-standard noun
+# like "breakdown" (work breakdown structure) satisfies it; an invented
+# coinage does not. The rule governs renamed commands; established,
+# unbanned names keep theirs.
+#
+# This vocabulary is frozen. Changing it needs a decision record; the house
+# test pins each ban to tuned patterns and pins pending_surfaces to a
+# shrink-only baseline.
+# =============================================================================
+
+version: 2.0.0-pre24
+
+terms:
+
+  # --- The issue's own record ------------------------------------------------
+  manifest:
+    means: >
+      The machine-readable file at the root of an issue directory,
+      `.compass/work/<issue-slug>/manifest.yml`. It holds the assessment, the
+      computed delivery approach, the stages and gates, the scenarios, the
+      evidence registry and the changed files, and it points at the prose
+      artifacts beside it. Every command reads it; `compass check` checks
+      the guardrails against it. It is what a package.json, a Cargo.toml or
+      a Kubernetes manifest is: a machine-readable list of what a thing
+      contains.
+    github: none
+    related: [issue, evidence, scenario, acceptance-criteria]
+
+  # --- Work hierarchy (GitHub-aligned) --------------------------------------
+  epic:
+    means: >
+      A group of related issues that deliver one outcome, within one
+      milestone, under one intent. Larger than an issue and smaller than an
+      initiative. Compass defines the word and no command or field records
+      an epic yet.
+    related: [issue, initiative, milestone]
+  initiative:
+    means: >
+      A body of work that delivers several outcomes across milestones and
+      needs an intent document. Owns intent.md, the technical design, the
+      first-slice (80/20) decision, and the rollout strategy.
+    github: Project
+    related: [epic, milestone, intent, slice]
+  milestone:
+    means: >
+      A release checkpoint, not a level in the work hierarchy: a coherent
+      bundle of delivered issues with a review point. Every milestone leaves
+      the system releasable.
+    github: Milestone
+    related: [initiative, issue]
+  issue:
+    means: >
+      The atomic tracked unit of work: one assessed piece of work, one
+      delivery approach, shipping as one PR or a small PR series. Carries a
+      type, labels, and a workflow state.
+    github: Issue
+    related: [sub-issue, issue-type, label, workflow-state]
+  sub-issue:
+    means: >
+      The breakdown unit within an issue or initiative. A slice is tracked
+      as a sub-issue.
+    github: Sub-issue
+    related: [issue, slice]
+  slice:
+    means: >
+      An independently shippable vertical cut of a feature or initiative,
+      with its own acceptance criteria and its own PR. The bar: every slice
+      leaves the system releasable.
+    related: [sub-issue, milestone]
+  pr:
+    means: The unit of landing code. Small, trunk-based PRs preferred.
+    github: Pull request
+    related: [issue, ship]
+
+  # --- Issue types (what the assess stage assigns) --------------------------
+  issue-type:
+    means: >
+      The kind of work an issue is: feature, bug or task. The delivery
+      approach, not the type, decides which artifacts exist and which gates
+      apply. A quick fix, a hotfix and a spike are not issue types: quick fix,
+      hotfix and spike are delivery approaches. No manifest field records the
+      type yet.
+    github: Issue type
+    related: [issue, feature, bug, task, assess, delivery-approach, label]
+  feature:
+    means: >
+      An issue type: a self-contained change with its own acceptance
+      criteria that does not warrant a full intent document. Unqualified
+      "feature" always means this issue
+      type. The Gherkin artifact is always called a "feature file".
+    related: [issue-type, feature-file]
+  bug:
+    means: >
+      An issue type: a defect in existing behavior, not live-urgent. Starts
+      from a bug report; the failing reproduction test is written before the
+      fix. A live incident is fixed through the hotfix delivery approach
+      instead.
+    related: [bug-report, issue-type, hotfix]
+  task:
+    means: >
+      An issue type: work that changes nothing a user sees, such as upkeep,
+      a refactor or a migration step. Any piece of tracked work is an issue;
+      the type says what kind.
+    related: [issue-type, issue]
+  quick-fix:
+    means: >
+      A delivery approach for a small, low-risk change on familiar ground.
+      Produces a test and a PR - nothing else exists for it.
+    related: [delivery-approach]
+  hotfix:
+    means: >
+      A delivery approach for a live-incident fix, expedited: reproduce, fix,
+      ship, then pay the follow-up (promote the reproduction into proper
+      acceptance criteria; optional postmortem).
+    related: [delivery-approach, incident, follow-up, postmortem]
+  spike:
+    means: >
+      A delivery approach for time-boxed exploration whose output is
+      knowledge, not shipped code. Records the question, the timebox, and a
+      conclusion: discard, graduate (a fresh issue owns any real work), or
+      defer. Nothing ships from a spike.
+    related: [delivery-approach]
+
+  # --- The two words this rename freed ---------------------------------------
+  # `design` needed an entry because it named a command, an artifact, an
+  # artifact kind, a CLI verb and a role. `plan` took the engineering half.
+  # Both are defined here so neither is used for the other again.
+  design:
+    means: >
+      The DESIGNER's stage and its command, /compass:design. It produces the
+      UI contract (ui-contract.md) - scenarios written Given/When/Then that
+      flow into the acceptance criteria, not mockup annotations. The word
+      reads as UI work to most people, which is why the designer has it.
+      `design` names the UI contract and `plan` names the technical design,
+      never the other way round: the engineering design is the plan stage
+      (/compass:plan), whose output is technical-design.md. The placeholder
+      scan is the CLI verb `compass plan lint`.
+    related: [plan, technical-design, delivery-approach]
+  plan:
+    means: >
+      The engineering design stage: the command /compass:plan, the machine
+      key `plan` in a manifest's stages block, the `plan-authoring` skill, the
+      `planner` agent, and the CLI verb `compass plan lint`. Its output is
+      technical-design.md. The delivery approach is a separate thing: it is
+      computed at the assess stage and recorded in delivery-approach.md.
+    related: [technical-design, delivery-approach, design]
+
+  # --- Intake artifacts -----------------------------------------------------
+  technical-design:
+    means: >
+      The engineering plan for one issue: the approach, the design decisions
+      as ADR-style notes, the governance check, and the independent work
+      units. Written at the planning stage (/compass:plan) as
+      technical-design.md. The designer's work is the UI contract
+      (ui-contract.md), from /compass:design. In this repository TDD is
+      red-green-refactor and nothing else, so this artifact is never
+      abbreviated to TDD.
+    related: [technical-design, delivery-approach]
+  first-slice:
+    means: >
+      The 80/20 cut recorded in intent.md: the slice of an initiative that
+      ships first because it delivers most of the value, with what
+      deliberately waits stated beside it. The design and the work breakdown
+      follow the first slice, not the whole document.
+    related: [intent, slice, initiative]
+  bug-report:
+    means: >
+      The intake for a bug fix: observed behavior, expected behavior,
+      reproduction steps.
+    related: [bug]
+  incident:
+    means: >
+      The intake that triggers a hotfix: what broke in production, impact,
+      severity. SRE sense of the word.
+    related: [hotfix, postmortem]
+
+  # --- BDD (the triad, first-class) -----------------------------------------
+  feature-file:
+    means: >
+      A Gherkin file grouping the scenarios for one capability (the
+      `Feature:` keyword). The extraction target for executable acceptance
+      criteria.
+    related: [scenario, step, acceptance-criteria]
+  assessment:
+    means: >
+      The four-dimension judgment the assess stage produces - risk, familiarity, size
+      and goal, plus the domain labels. It is the only judgment field in the
+      issue manifest; everything below it is computed from it deterministically.
+      The assessment is read; `compass approach evaluate` computes the
+      delivery approach from it.
+    related: [assess, delivery-approach, router]
+  traceability:
+    means: >
+      The chain that makes a change accountable: code traces to a TRC- id,
+      which traces to an INT- id. Maintained as the work happens, not
+      reconstructed at the end. It is one of the five guardrails, and the
+      thing the `TRC-` prefix is named after.
+    related: [scenario, intent, acceptance-criteria]
+  intent:
+    means: >
+      Two related things, and the entry covers both deliberately. (1) The
+      document: intent.md, the originator's statement of what is wanted and
+      why, AUTHORED at the intake stage or INGESTED from a brief that already
+      exists - it does not presume authorship. (2) The goal it carries: the
+      outcome a change is meant to produce, the "why" end of the traceability
+      chain, carrying the INT- ids that scenarios trace back to. The document
+      holds the goals, which is why one name serves both.
+      As a document it carries problem, users, goals, non-goals, success
+      signals, constraints, open questions, and the first slice (the 80/20
+      cut) - iterated through review before the design is built. User stories
+      are welcome inside it as a format; acceptance criteria are derived from
+      them. As a goal it is sourced from intent.md's desired outcome, the UI
+      contract, or the issue description - a goal, not a requirement: the
+      functional requirement is the scenario. It goes further than the
+      request: "Add a CSV export" is a request; "let finance self-serve" is
+      the intent, and it may need filters and permissions the request never
+      mentioned.
+    also: The product owner's entry point, `/compass:intent`, captures it.
+    related: [first-slice, scenario, traceability]
+  router:
+    means: >
+      The agent that runs assess: reads the four assessment dimensions, hands
+      them to the CLI, and writes the delivery-approach record. It assesses;
+      it does not choose a process. Named for what it does - Anthropic's
+      platform docs call this shape "Routing", classifying input and directing
+      it to a specialized path - and for the file it runs, routing-policy.yml.
+      The approach is computed from the assessment by `compass approach
+      evaluate`, which is the determinism boundary.
+    related: [assess, assessment, delivery-approach]
+  scenario:
+    means: >
+      The atomic unit of acceptance: one behavior, one Given/When/Then,
+      one executable test. Everything traces to scenarios.
+    related: [feature-file, step, acceptance-criteria]
+  step:
+    means: >
+      A single Given/When/Then line, bound to a step definition in the
+      project's codebase.
+    related: [scenario]
+  acceptance-criteria:
+    means: >
+      The collective term: the set of scenarios for an issue. Executable
+      where a BDD runner is configured.
+    related: [scenario, definition-of-done]
+
+  # --- Design artifacts ------------------------------------------------------
+  design-doc:
+    means: >
+      The high-level design (HLD): approach, system context, components,
+      interfaces, data model, cross-cutting concerns - with sequence
+      diagrams, named design patterns, and illustrative code where they add
+      clarity.
+    also: HLD
+    related: [lld, adr, operability]
+  lld:
+    means: >
+      Low-level design: the signatures, contracts, file plan and tests of one
+      work unit, in its own document, `low-level-design/U<n>.md`. The planner
+      writes one per unit of the technical design's Work units table, so the
+      design stays short and each builder reads only its own unit. No approach
+      owes one; on the full approach, `compass issue lint` notes a unit that
+      has none.
+    related: [design-doc, word_ceiling]
+  word_ceiling:
+    means: >
+      The word limit a document kind carries in the artifacts catalog, per
+      depth, such as 4,000 words for a thorough technical design. Words are
+      counted from the visible text only: rendered blocks and HTML comments
+      do not count. `compass issue lint` notes a document over its limit, and
+      the check `design-within-word-ceiling` refuses a technical design over
+      1.5 times its limit once plan exit is due. An issue stored before a kind
+      had a limit keeps no limit.
+    related: [lld, design-doc]
+  adr:
+    means: >
+      Architecture decision record: one real decision, the alternatives
+      considered, the consequences. Only written when there was a decision.
+    related: [design-doc]
+
+  # --- Process & gates --------------------------------------------------------
+  assess:
+    means: >
+      Sizing up incoming work: risk, familiarity, size, and goal - producing
+      an issue type, labels, and a delivery approach. The human judgment
+      step; everything after it is mechanism. Named for what it produces: the
+      stage writes an `assessment:` block, the flag is --assessment, and the
+      policy section is assessment_vocabulary. This stage sizes up one piece
+      of work; `compass flow` sorts between issues by urgency.
+    related: [delivery-approach, label, issue-type, assessment]
+  delivery-approach:
+    means: >
+      The chosen shape for an issue: which artifacts exist, which gates
+      apply, solo or parallel. Deterministic - same assessment plus same policy
+      always gives the same approach. `full` is the name of the heaviest
+      delivery approach and is not a stage mode: its stages run `thorough`,
+      and the old mode word `full` reads as `thorough` until 9.0.0.
+    related: [assess, quality-gate]
+  audience:
+    means: >
+      The one line in an artifact's catalog entry that says who reads the
+      document and what the reader decides from it.
+    related: [delivery-approach, technical-design]
+  stands-for:
+    means: >
+      The name the industry uses for the kind of document an artifact is,
+      such as `hld` for the technical design. It is a field of the artifact's
+      catalog entry.
+    related: [audience, technical-design]
+  sections:
+    means: >
+      The headings of an artifact's document, in order, for each depth the
+      document can be written at (`lightweight` and `thorough`). It is a field
+      of the artifact's catalog entry. A document that is one rendered block
+      has an empty list.
+    related: [audience, rendered-block]
+  required-when:
+    means: >
+      A condition in an artifact's catalog entry. The document is owed only
+      when the condition holds. The one condition today is a minimum number of
+      subtasks, so the distribution map is owed from two subtasks.
+    related: [audience, delivery-approach]
+  review-round:
+    means: >
+      One review of an issue's work by a reviewer who did not write it. Each
+      round is its own document, `review-<n>.md`, and its own entry in the
+      artifact registry. Rounds count from 1.
+    related: [requirements-review, audience]
+  voluntary-kind:
+    means: >
+      A document kind that no delivery approach, rule or `every_approach`
+      flag names, so nothing owes it. A person registers it when it is
+      written, and a reassessment never supersedes it. `review` is one.
+    related: [required-when, review-round]
+  not-an-artifact-list:
+    means: >
+      The file names and patterns in an issue's documents folder that are
+      documents of no kind, such as `README.md` and the review briefs. The
+      migrate leaves them in place, and `compass issue lint` does not report
+      them.
+    related: [audience, sections]
+  check:
+    means: >
+      One test that Compass runs against an issue's work and reports as
+      pass, fail or skipped. A guardrail is made of checks, a gate is cleared
+      by evidence, and an obligation is anything the configuration asks for,
+      such as a check, a gate, an artifact or a stage mode.
+    related: [guardrail, quality-gate, evidence, obligation]
+  guardrail:
+    means: >
+      A hard rule cleared with evidence; a failed guardrail stops the work.
+      Few by design. Plain statement of the five: every change lands with a
+      passing test that covers it; acceptance criteria exist before the code
+      is written; every change traces to a stated reason; claims need
+      evidence; a human signs off on the irreversible.
+    related: [strategy, quality-gate, evidence]
+  strategy:
+    means: >
+      A strong default you can step off with a recorded reason. Assessed by
+      a reviewer, never mechanically blocking. TDD and BDD are strategies;
+      the outcomes they serve are guardrails.
+    related: [guardrail]
+  quality-gate:
+    means: >
+      A check that must pass before an issue moves state. Which gates apply
+      comes from the delivery approach and the label rules.
+    related: [workflow-state, definition-of-ready, definition-of-done]
+  definition-of-ready:
+    means: >
+      The gate between requirements and plan/implementation: acceptance criteria
+      exist, ambiguities resolved, intent.md reviewed where one exists.
+      Trivially
+      satisfied for a quick fix.
+    also: DoR
+    related: [quality-gate, workflow-state]
+  requirements-review:
+    means: >
+      The review pass that hardens requirements before plan or implementation:
+      ambiguities resolved into recorded decisions, contradictions and
+      gaps closed, intent.md reviewed where one exists. Satisfying it is
+      what makes an issue ready.
+    related: [intent, definition-of-ready, acceptance-criteria]
+  definition-of-done:
+    means: >
+      The gate before shipping: acceptance criteria pass, applicable
+      guardrails clear, every box backed by evidence.
+    also: DoD
+    related: [quality-gate, evidence]
+  evidence:
+    means: >
+      A recorded, typed artifact that clears a gate: a test run, a review, a
+      sign-off. A claim without evidence clears nothing.
+    related: [guardrail, definition-of-done]
+  follow-up:
+    means: >
+      Work owed after an expedited ship (the hotfix's promoted scenario, the
+      optional postmortem). Tracked with a state pair: outstanding (not yet
+      discharged) and resolved. An issue with an outstanding follow-up does
+      not fully close; `compass follow-up resolve` discharges one.
+    related: [hotfix, backlog]
+
+  decision-taken:
+    means: >
+      A requirement decision an agent took for the person: the question, the
+      resolution, which agent took it and at which stage. It is recorded in
+      the manifest's `decisions_taken`, shown to the person at the next
+      checkpoint on `balanced` and `controlled` autonomy, and confirmed as a
+      set by one `compass evidence approve --decisions`. Changing one
+      reopens it and the checkpoint keeps waiting. It is distinct from a
+      decision record in `governance/decisions/`, which a person makes about
+      the product.
+    related: [requirements-review, evidence]
+
+  checkpoint-outcome:
+    means: >
+      What happened at one checkpoint stage hand-off, recorded in the
+      manifest's `checkpoint_outcomes` as the stage, the outcome, who and
+      when. The outcome is `waited` when a person answered the hand-off with
+      `compass evidence approve --checkpoint`, which also writes a
+      `checkpoint-approval` record holding their answer, or `skipped` when an
+      agent went on because the autonomy setting passed the hand-off, recorded
+      with `compass issue checkpoint add`. A `checkpoint-approval` record
+      clears no gate and no human check. `compass ship-commit` refuses a
+      judged issue that lists a checkpoint with no outcome, and
+      `compass retro --impact` reads the outcomes to report how much work ran
+      without a person.
+    related: [decision-taken, evidence, issue]
+
+  receipt:
+    means: >
+      The per-issue proof summary rendered from the manifest and the evidence
+      registry: the assessment, the delivery approach, the gates and what
+      cleared them - one screen, shareable as-is. Evidence is the typed
+      records that clear gates; the receipt is the read-only summary that
+      cites them.
+    related: [evidence, quality-gate]
+
+  rendered-block:
+    means: >
+      The lines between `<!-- compass:render KIND -->` and
+      `<!-- /compass:render -->` in an issue's document. `compass issue render`
+      writes them from the manifest and the evidence and leaves every other
+      byte of the document as it is. A check, `rendered-blocks-current`,
+      compares each block with a fresh render. Every digest of a document and
+      every reader of its text leaves the lines inside a block out.
+    related: [issue-page, verification-note, project-index, item-record]
+
+  issue-page:
+    means: >
+      The README of an issue's documents folder,
+      `docs/compass/<created>-<slug>/README.md`. Its rendered blocks answer a
+      reader's questions in order: the header, the ask, the decision required,
+      the acceptance, the related issues, the decisions, the documents, the
+      traceability chart, the documents left out on purpose and the
+      follow-ups. `compass issue render` creates it when it is absent.
+    related: [rendered-block, project-index]
+
+  verification-note:
+    means: >
+      A quick fix's one-screen record of what was checked: the scenario, its
+      test, the red and green records, each gate with its status and the files
+      changed. It is one rendered block, written by `compass quick-fix finish`
+      and approved by it. A person can write prose above the block.
+    related: [rendered-block, quick-fix]
+
+  project-index:
+    means: >
+      The README.md directly in the folder `docs/compass`, one rendered block that lists every
+      issue once, in a table for its state, with a link to its issue page.
+      The last table is the issues completed in the 30 days before the newest
+      completion the project holds.
+    related: [rendered-block, issue-page]
+
+  item-record:
+    means: >
+      A record in the manifest that meets an item of the Definition of Done
+      or the Definition of Ready: evidence with `meets`, a person's approval
+      of the check, a follow-up that `defers` it, or a page tick that
+      `compass issue migrate` read from an older document. A command writes
+      each one. An item with none of them is open.
+    related: [definition-of-done, definition-of-ready, page-tick]
+
+  page-tick:
+    means: >
+      A ticked box that `compass issue migrate` read from a document written
+      before the item records existed, kept in the manifest's `page_ticks`.
+      The Definition of Done and Ready blocks count it as met. No other check
+      reads it, so it is never an approval.
+    related: [item-record]
+
+  # --- Workflow ---------------------------------------------------------------
+  workflow-state:
+    means: >
+      The fixed semantic lifecycle Compass owns: backlog, ready,
+      in-progress, in-review, done. Gates attach to the transitions;
+      transitions are earned (evidence), not dragged. A person sets only
+      backlog (a hold) and done (closed, with a close reason); Compass
+      derives the other states from the issue's records. Board columns are a
+      user-defined projection - every custom column maps to exactly one
+      state.
+    related: [quality-gate, board-column, blocked, close-reason]
+  close-reason:
+    means: >
+      Why an issue is done: completed (the work shipped), not-planned (it
+      will not be built) or duplicate (another issue holds the work, and the
+      record names it). Only completed counts as finished work.
+    related: [workflow-state, issue]
+  board-column:
+    means: >
+      A user-defined view column (Design, UAT, Staging...). Maps to exactly
+      one workflow state so gates keep firing regardless of board shape.
+    github: Project column / status field
+    related: [workflow-state]
+  blocked:
+    means: >
+      A flag, not a state - an issue is blocked while in-progress or
+      in-review. Carries a reason.
+    related: [workflow-state]
+  backlog:
+    means: >
+      Two senses, both standard: the workflow state an issue starts in, and
+      the list of deferred slices and follow-ups. Context disambiguates,
+      as it does on every real team.
+    related: [workflow-state, follow-up]
+
+  # --- Labels ------------------------------------------------------------------
+  label:
+    means: >
+      A plain-word tag on an issue carrying classification and risk surface.
+      Local-first (strings in the issue file). Compass writes them to the
+      linked GitHub issue only when the project sets github_labels in
+      compass.yml; with it off, no label leaves the issue file. Compass
+      never reads a GitHub label back into the issue file. Domain labels
+      never track workflow state.
+      The status labels Compass writes do: status:<state>, and on close
+      status:done with close:<reason>.
+    github: Label
+    related: [label-rule, issue]
+  label-rule:
+    means: >
+      The deterministic consequence of a label, declared in policy:
+      security/payments/personal-data/migration needs a security review,
+      user-facing needs a rollout plan, breaking-change needs human sign-off,
+      and ops-surface needs the operability section. Assess suggests labels,
+      the human confirms; the rules then apply mechanically.
+    related: [label, quality-gate]
+
+  # --- Ship & operate ------------------------------------------------------------
+  ship:
+    means: >
+      Merging and releasing the change: the PR lands, follow-ups are
+      recorded, the derived system spec is regenerated.
+    related: [pr, rollout-plan]
+  rollout-plan:
+    means: >
+      How the change reaches users safely: feature flags, canary or
+      incremental rollout, and the rollback plan. Required by label rule on
+      user-facing work; always present on initiatives.
+    related: [feature-flag, canary, rollback-plan]
+  feature-flag:
+    means: A runtime switch decoupling deploy from release.
+    related: [rollout-plan]
+  canary:
+    means: Releasing to a small slice of traffic/users first, watching SLIs.
+    related: [rollout-plan, sli]
+  rollback-plan:
+    means: The recorded way back if the change misbehaves in production.
+    related: [rollout-plan]
+  operability:
+    means: >
+      The design section answering "what tells us this works in
+      production?": the SLIs/SLOs the change affects, the alerts that watch
+      them, runbook updates where the ops surface changes. Required by the
+      ops-surface label rule; always present on initiatives.
+    related: [sli, slo, runbook]
+
+  # --- SRE ---------------------------------------------------------------------
+  sli:
+    means: >
+      Service level indicator - a measured signal of service health
+      (latency, error rate, availability).
+    related: [slo, operability]
+  slo:
+    means: >
+      Service level objective - the target an SLI must meet. Implies an
+      error budget.
+    related: [sli, error-budget]
+  error-budget:
+    means: >
+      The unreliability an SLO allows. Paces rollout speed on initiatives:
+      budget spent means slow down.
+    related: [slo, rollout-plan]
+  postmortem:
+    means: >
+      Blameless incident review - an optional follow-up artifact on a
+      hotfix.
+    related: [incident, follow-up]
+  runbook:
+    means: >
+      Operational how-to for the service. Updated as an initiative-scale
+      output when the ops surface changes.
+    related: [operability]
+  dora-metrics:
+    means: >
+      Lead time, deployment frequency, change failure rate, MTTR - what the
+      process-impact telemetry measures to ask whether the process itself
+      pays off.
+    related: [retrospective-signal]
+  retrospective-signal:
+    means: >
+      Compass's cross-issue self-check: is assess consistently over- or
+      under-sizing the process? Advisory, surfaced in retro language.
+    related: [dora-metrics, assess]
+
+  # --- Configuration (the configuration vocabulary decision) ----------------
+  catalog:
+    also: catalogue
+    means: >
+      One of the nine maps of configuration entries keyed by id:
+      `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`,
+      `artifacts`, `readiness` and `vocabulary`. An id is stable; a display
+      name lives in the `vocabulary` catalog.
+    related: [layer, overlay, generation]
+  layer:
+    means: >
+      One source of configuration: the shipped preset, a team parent, the
+      project file or the issue. Layers merge in order, and each states only
+      what it changes.
+    related: [catalog, overlay, preset, project-file]
+  overlay:
+    means: >
+      A layer file that states only its differences from its parent, so it
+      holds the changes and not a copy of the parent.
+    related: [layer, preset]
+  preset:
+    means: >
+      A named, versioned parent layer. `default` is the only preset Compass
+      ships.
+    related: [layer, overlay]
+  generation:
+    means: >
+      A stored, numbered copy of the resolved configuration that an issue
+      runs against, so the issue keeps the rules it started with.
+    related: [catalog, layer]
+  waiver:
+    means: >
+      A recorded departure from a parent's value, with a reason and an
+      approver.
+    related: [lock]
+  lock:
+    means: >
+      A mark on an entry that refuses a change from a lower layer that would
+      loosen it, or that the classifier cannot compare. Tightening stays
+      allowed.
+    related: [waiver, classifier]
+  capability:
+    means: >
+      A named switch for new blocking behavior, off in the shipped default.
+    related: [lock]
+  stage-mode:
+    means: >
+      How a stage runs for an issue, such as `collapsed`. It is the `mode`
+      field of a stage.
+    related: [catalog]
+  project-file:
+    means: >
+      `compass.yml` at the project root, the one file a person edits.
+    related: [layer, settings-key]
+  settings-key:
+    means: >
+      A top-level key of `compass.yml` that configures the CLI instead of the
+      process.
+    related: [project-file]
+  pin:
+    means: >
+      The `#<sha>` suffix on a git `extends:`, which names the parent commit
+      a project runs against.
+    related: [layer, preset]
+  obligation:
+    means: >
+      Anything the configuration asks for at an assessment: a stage mode, a
+      check on an entry or exit list, a gate, an artifact, a checkpoint or a
+      ceiling.
+    related: [classifier, stage-mode]
+  classifier:
+    means: >
+      The component that compares two configurations by their obligations.
+    related: [obligation, lock]
+
+  # --- Repository readiness (ADR-058 to ADR-061) ----------------------------
+  readiness-signal:
+    means: >
+      One binary fact about a repository, such as "a lint command is declared
+      and exits 0". An entry of the `readiness` catalog, it is either
+      `present` or `absent` and carries a one-line reason.
+    related: [readiness-floor, readiness-record, catalog]
+  readiness-floor:
+    means: >
+      The readiness signals whose `required_for_autonomous` is true. A project
+      with every one of them present can run `autonomy: autonomous`.
+    related: [readiness-signal, readiness-summary]
+  readiness-record:
+    means: >
+      The per-checkout file in which a project's readiness measurement is
+      kept: each readiness signal's result and implementation version, when
+      and at which commit it was measured, and the digest of the settings
+      file. Compass never commits it.
+    related: [readiness-signal, readiness-summary]
+  readiness-summary:
+    means: >
+      The `readiness:` key of an issue's manifest, written by every
+      `approach evaluate --write`: the score, whether the floor is met and
+      which signals are absent, or `not-measured` with the reason. It sits
+      outside the generation's digests.
+    related: [readiness-record, readiness-floor]
+  temporary-worktree:
+    means: >
+      The detached Git worktree of HEAD that a readiness measurement creates
+      in the system temp folder to run the project's commands. It is removed
+      when the measurement ends.
+    related: [readiness-record]
+
+  # --- Execution profiles (ADR-076) ------------------------------------------
+  execution-profile:
+    means: >
+      One fixed, versioned way of working, kept as a file in the `profiles`
+      folder of the project. It names a model tier and an effort, the exact
+      revision of every skill, prompt fragment and piece of tool guidance, and
+      the limits of an unattended run. It decides how eligible work is done,
+      never whether it is allowed. Content that does not change gives the same
+      digest, and a change gives a new version.
+    related: [component-registry]
+  component-registry:
+    means: >
+      The file `component-registry.yml` in the `profiles` folder. It lists the
+      skills, prompt fragments and tool guidance that exist, each at an exact
+      revision, with the runner versions it supports and a recorded approval.
+      `compass profile show` reads it and never writes it.
+    related: [execution-profile]
+
+# =============================================================================
+# CODES - the id prefixes that appear in artifacts
+# =============================================================================
+# `terms:` above defines the words. This defines the short codes a reader
+# actually meets: `TRC-A1` in a spec, `EV-003` in a manifest, `RP-FLOOR-001` in a
+# delivery-approach record. See ADR-016.
+#
+# docs/glossary.md is DERIVED from this section and from terms: above. Edit
+# here; the page is regenerated at ship and a drift guard fails the build if
+# the two disagree.
+#
+# The set is not maintained by hand: a guard scans shipped artifacts for
+# prefixes and needs an entry for each one it finds, so a new prefix
+# introduced without a definition fails on arrival.
+# A CHECK DERIVES FROM THIS BLOCK'S STRUCTURE.
+# tests/plain_language_check.py reads each entry's `means:` to know what plain
+# words count as explaining that prefix. Rename the block or the field and the
+# derivation fails loudly, naming this file. It is deliberately not a
+# hand-written table elsewhere: a second table would stop matching this block
+# without any test failing, and the check would keep passing while
+# describing codes that had been renamed. This is the derivation-failure
+# criterion (`TRC-C9`).
+
+codes:
+  TRC:
+    means: >
+      Traceability id. The join key of the traceability chain: code traces to
+      a TRC- id, which traces to an INT- id. It names the chain, not one node
+      on it - changed_files, claims, evidence records and Definition-of-Done
+      tags all point at it.
+    referent: The traced item, normally a scenario.
+    appears_in: [acceptance-criteria.md, "manifest.yml scenarios[].id"]
+    related: [INT, EV, SCN]
+  SCN:
+    means: >
+      The retired spelling of TRC-. Still present in shipped examples and
+      read wherever TRC- is. TRC- is canonical because the parser's anchor is
+      the literal keyword `traceability id:`, and because SCN- presumes every
+      traced item is a Given/When/Then - a non-functional requirement can be
+      traceable and testable without being a scenario.
+    referent: The traced item. Same referent as TRC-.
+    appears_in: [examples/]
+    related: [TRC]
+  INT:
+    means: >
+      Intent id. The "why" end of the traceability chain - the outcome the
+      work is meant to produce, sourced from intent.md's desired outcome, the
+      UI contract, or the issue description. A goal, not a requirement; the
+      requirement is the scenario.
+    referent: A stated desired outcome.
+    appears_in: [intent.md, acceptance-criteria.md, "manifest.yml scenarios[].intent"]
+    related: [TRC, intent]
+  EV:
+    means: >
+      Evidence id. Identifies one typed record in the issue's evidence
+      registry that clears a quality gate. One record can clear several
+      gates. The accepted types are fixed by guardrails.yml; a gate that
+      needs a mechanical type cannot be cleared with a written note.
+    referent: One typed evidence record.
+    appears_in: ["manifest.yml evidence[].id", "gates[].evidence", verification-report.md]
+    related: [quality-gate, evidence]
+  FU:
+    means: >
+      Follow-up id. Work this issue deferred to ship fast and still owes - the
+      hotfix's promoted scenario, a de-scoped artifact. Not "any outstanding
+      work": a newly found defect gets its own issue named by slug. A
+      follow-up may carry target_task, naming the issue whose ship it blocks.
+    referent: One piece of work this issue deferred and still owes.
+    appears_in: ["manifest.yml follow_ups[].id", verification-report.md]
+    related: [follow-up, definition-of-done]
+  BF:
+    means: >
+      The retired spelling of FU-. Still read by the Definition-of-Done tag
+      parser so archived verification reports keep resolving.
+    referent: A follow-up. Same referent as FU-.
+    appears_in: [".compass/work/ (archive)"]
+    related: [FU]
+  DD:
+    means: >
+      Design decision. Numbered within one technical-design.md: what was
+      chosen, what was rejected, and why. A decision with no alternative
+      recorded is not yet a decision.
+    referent: One decision inside a single issue's technical design.
+    appears_in: [technical-design.md]
+    related: [ADR, design]
+  ADR:
+    means: >
+      Architecture decision record. A DD- promoted to a standing decision
+      about the system rather than about one issue - it outlives the issue
+      and constrains later ones.
+    referent: One numbered file under architecture/decisions/.
+    appears_in: [architecture/decisions/]
+    related: [DD]
+  CLM:
+    means: >
+      Claim id. A public statement the product marketer intends to make.
+      Every claim must trace to a passing scenario before the issue ships;
+      the claims gate blocks on it.
+    referent: One planned public claim.
+    appears_in: [positioning.md, launch-readiness.md, "manifest.yml claims[].id"]
+    related: [TRC, launch-readiness]
+  PX:
+    means: >
+      Position exemption. One entry in `scan.position_exemptions` naming a
+      position the vocabulary scan does not read - a source comment, a machine
+      key - together with the reason a string in that position cannot reach a
+      user. The scan reads every position by default, so a PX- entry is the
+      only way a position is excluded. A PX- entry names a position within
+      a file that is scanned; `scan.exempt` separately names whole files the
+      scan skips.
+    referent: >
+      One position exemption: the positions it names, and the reason a
+      string there cannot reach a user.
+    appears_in: governance/terminology.yml, tests/test_terminology.py
+  RP:
+    means: >
+      Routing policy rule. One rule in routing-policy.yml that biases or
+      constrains the computed delivery approach. RP-SHAPE and RP-ADV are
+      soft - they bias the candidate. RP-FLOOR, RP-CAP, RP-GATE and RP-ART
+      are hard - they constrain the result. RP-ART is an artifact rule: it reads
+      the documents on disk, such as positioning.md or intent.md. RP-REQUIRE attaches a gate
+      without raising a minimum. A routing rule constrains which delivery
+      approach an issue ends up with; a guardrail is one of the five hard
+      rules cleared with evidence.
+    referent: One rule in the routing policy.
+    appears_in: [routing-policy.yml, delivery-approach.md, "manifest.yml policy_rules_fired[].id"]
+    related: [routing-policy, delivery-approach, guardrail]
+  LS:
+    means: >
+      Lesson. One rule in `lessons.yml` in the project's `.compass` folder that a person in this project
+      had to repeat, injected into later sessions when it applies always.
+      `compass lesson` adds, lists and removes them. A lesson is advice: no
+      check reads it, and a guardrail always wins over it.
+    referent: One lesson in the project's lessons file.
+    appears_in: [lessons.yml, "compass lesson list"]
+    related: [LP, guardrail]
+  LP:
+    means: >
+      Lesson proposal. A lesson held in `lessons-pending.yml` in the project's `.compass` folder until
+      someone runs `compass lesson accept`. `compass retro --lessons`
+      proposes, and the model is told to propose rather than add.
+    referent: One pending proposal.
+    appears_in: [lessons-pending.yml, "compass lesson list"]
+    related: [LS]
+  RR:
+    means: >
+      Review rule. One rule in governance/review-rules.yml that a reviewer
+      applies to the files it names, with the incident that justifies it and
+      what not to flag. `compass review-rule list` prints the rules that
+      match a change. A review rule guides a reviewer's judgment of a
+      change.
+    referent: One rule in the review rules file.
+    appears_in: [review-rules.yml, review findings]
+    related: [RP, guardrail]
+  RG:
+    means: The retired spelling of RP-. Kept in archived records, which keep the id that fired.
+    referent: A routing policy rule. Same referent as RP-.
+    appears_in: [".compass/work/ (archive)"]
+    related: [RP]
+  RS:
+    means: The retired spelling of RP- for the soft rules. Same replacement, same reason.
+    referent: A routing policy rule. Same referent as RP-.
+    appears_in: [".compass/work/ (archive)"]
+    related: [RP]
+
+# =============================================================================
+# RETIRED VALUES - words a field still reads and no longer writes.
+# =============================================================================
+# One row per `(field, old, new)`; `new: null` means the old word is no longer
+# stored. The rows are the same triples as the read-side tables in
+# cli/migrate-map.yml (`values:` and `friction_keys:`), and a test keeps the
+# two equal. A `friction_keys` row names the old and the new key.
+retired_values:
+  - {field: stage_mode, old: full, new: thorough}
+  - {field: stage_mode, old: full-plus-backfill, new: thorough-with-follow-up}
+  - {field: stage_mode, old: light, new: lightweight}
+  - {field: stage_mode, old: swarm, new: multiagent}
+  - {field: artifact_depth, old: full, new: thorough}
+  - {field: artifact_depth, old: light, new: lightweight}
+  - {field: size, old: standard, new: medium}
+  - {field: issue_status, old: queued, new: backlog}
+  - {field: issue_status, old: parked, new: backlog}
+  - {field: issue_status, old: active, new: null}
+  - {field: issue_status, old: landed, new: done}
+  - {field: issue_status, old: abandoned, new: done}
+  - {field: close_reason, old: landed, new: completed}
+  - {field: close_reason, old: abandoned, new: not-planned}
+  - {field: run_stage, old: build, new: implement}
+  - {field: friction_keys, old: phase, new: stage}
+  - {field: reassessment_kind, old: judgement, new: judgment}  # us-english-scan: allow - old name read until 9.0.0
+  - {field: check_id, old: dor-behaviour-is-gwt, new: dor-behavior-is-gwt}  # us-english-scan: allow - old name read until 9.0.0
+
+# =============================================================================
+# BANNED v1 VOCABULARY - the house test scans user-facing surfaces for these.
+# Each ban is pattern plus context, never a bare word: the context note here
+# is the intent, and the tuned, executable patterns live in
+# tests/test_terminology.py beside the fixtures that prove them.
+# =============================================================================
+banned:
+  - term: "spine / issue spine"
+    replacement: manifest
+    context: "As the name of the issue's machine-readable file. It was a metaphor the framework had to teach - 521 uses, no terms: entry, and 26 of them glossed it on use (\"the machine-readable issue spine\"), which is the sentence you write when you know a word will not land alone. `manifest` is what package.json and a Kubernetes manifest are, so a reader arrives knowing it. The file is manifest.yml and its root key is `issue:`; files written as task.yml with a `task:` key still load through cli/migrate-map.yml. 'spine' about an actual backbone, or a book, is fine."
+  - term: "Frame / the Needle"
+    replacement: assess
+    context: "As stage/agent name and command. The command is /compass:assess; /compass:frame was removed at the v2 major version. Points at the FINAL name, not at `triage` - `triage` is itself retired now, and a ban naming a banned replacement sends a reader to a word they must rename again. 'frame' as an ordinary verb is fine."
+  - term: "Triage"
+    replacement: assess
+    context: "As the stage name and command. The stage produces an `assessment:` block, the flag is --assessment and the policy section is assessment_vocabulary - a command called triage producing an assessment is the defect this replaced. Triage also means sorting BETWEEN cases by urgency, which is what `compass flow` does, not this stage. The command is /compass:assess; /compass:triage was removed at 4.0.0. 'triage' as an ordinary verb, about sorting between things, is fine."
+  - term: "reframe / re-frame"
+    replacement: re-assessment
+    context: "As the name of a changed assessment. The command is /compass:assess --reassess and the manifest key is `reassessments`, so the output and the docs say re-assessment too; two words for one event made a reader guess they were the same. 'reframe debt' is 'unrecorded re-assessments'. The retired manifest key `reframes` is still read so old manifests load. 'frame' as an ordinary verb is a different word and is fine."
+  - term: "Wireframe"
+    replacement: design
+    context: "As the designer's command. The designer's entry point is /compass:design again - it held that name before, and 'design' reads as UI work to most people. /compass:wireframe was removed at 4.0.0. 'wireframe' as an ordinary noun is fine."
+  - term: "reading / readings"
+    replacement: assessment
+    context: "As the four-dimension judgement. Ordinary uses of the word are fine."
+  - term: "route"
+    replacement: delivery approach
+    context: "As the computed process shape (route.md, route evaluate)."
+  - term: "Express"
+    replacement: quick fix
+    context: "Route name."
+  - term: "Expedition"
+    replacement: full approach
+    context: "Route name."
+  - term: "Specify / Clarify / Distribute / Land"
+    replacement: "define acceptance criteria / requirements review / break down the work / ship"
+    context: "As stage names and commands. The commands are /compass:define, /compass:refine, /compass:breakdown, /compass:ship (the planning stage's command is /compass:plan, and Build's is /compass:implement); the retired names were removed at 4.0.0. Capitalised/heading/command usage only; ordinary verbs fine. NOTE: `plan` is NOT retired - it is the planning stage's machine key, skill (plan-authoring), agent (planner) and, since 2026-08-25, its command. A name that was retired can come back; ADR-014 removes retired names, it does not reserve them."
+  - term: "PRD / prd.md"
+    replacement: intent.md
+    context: "As the intake document. /compass:intent writes intent.md - the command and its output had never agreed, and the ids the document sources are INT-. The wider industry name is in Anthropic's AI-Native SDLC playbook, which calls the same artifact intent.md. 'product requirements' as ordinary prose is fine."
+  - term: "lens"
+    replacement: role
+    context: "As the role-perspective concept."
+  # --- ADR-023: measured against Anthropic's platform documentation ---------
+  # Each entry below replaces a Compass-only word with the word Anthropic's
+  # docs use for the same thing, or with plain English where they have no
+  # counterpart. `ratchet` was on the candidate list and was deliberately kept
+  # (maintainer ruling, 2026-08-27).
+  - term: "swarm"
+    replacement: multiagent
+    context: "As the name for several agents working in parallel. Anthropic's docs call this multiagent orchestration; `swarm` is also the name of another vendor's agent framework, so it points a reader somewhere else entirely. Ordinary use about bees is fine."
+  - term: "topology"
+    replacement: orchestration
+    context: "As the manifest key and the word for whether work runs single-agent or multiagent. The key is `orchestration:` and its values are `single` and `multiagent`. `topology` in its ordinary network or mathematical sense is fine."
+  - term: "stream"
+    replacement: subtask
+    context: "As one independent unit of parallel work. Anthropic's docs fan out 'independent subtasks', and a subtask is a unit of work while a stream is a flow of data - the two are not the same shape. `upstream` and `downstream` are ordinary English and are NOT banned; the pattern skips them."
+  - term: "charter"
+    replacement: assignment
+    context: "As what a builder is handed - its worktree, its scenarios, its approach. Plain English, because Anthropic's nearest term (`agent definition`) means the model, system prompt and tools, which is a different thing."
+  - term: "ceremony"
+    replacement: process weight
+    context: "As the weight of process a delivery approach carries. Agile teams already own this word for a meeting - a standup is a ceremony - so 'pay back the ceremony borrowed for speed' reads as a missed meeting. Ordinary use about an actual ceremony is fine."
+  - term: "distillation"
+    replacement: behaviour mapping
+    context: "As reverse-engineering existing behaviour into scenarios. To anyone working near AI, distillation means training a smaller model from a larger one, so the wrong reading arrives first. The skill is `behaviour-mapping`, which also matches the `brownfield-mapped` familiarity value it serves."
+  - term: "coherence check"
+    replacement: consistency check
+    context: "As what `compass analyze` does across artifacts. Plain English; `coherent` about an argument is fine."
+  - term: "fitness function"
+    replacement: architecture check
+    context: "As a project-declared architectural rule. NOT renamed to `eval`: an eval measures model output against success criteria in Anthropic's docs, while this checks code structure, so borrowing the word would import a meaning it does not have. The gate is `verify.architecture`."
+  - term: "navigator"
+    replacement: router
+    context: "As the agent that reads the assessment and computes the delivery approach. It runs routing-policy.yml, and Anthropic's docs name this shape Routing."
+  - term: "roundtable"
+    replacement: consult
+    context: "As the command that convenes several roles on a question. An advisor in Anthropic's docs is one you consult mid-turn. /compass:roundtable was removed at 4.0.0."
+  - term: "elicitation"
+    replacement: interview
+    context: "As the act of drawing intent out of a person. Anthropic's onboarding documentation runs an interview; the skill is `intent-interview`."
+  - term: "blast radius"
+    replacement: risk
+    context: "As the assessment dimension (blast_radius key and prose)."
+  - term: "terrain"
+    replacement: familiarity
+    context: "As the assessment dimension."
+  - term: "magnitude"
+    replacement: size
+    context: "As the assessment dimension."
+  - term: "touches"
+    replacement: labels
+    context: "As the domain-tag mechanism (touches_any, touches_common)."
+  - term: "backfill"
+    replacement: follow-up
+    context: "All uses. The CLI verb renamed with the CLI-voice slice (compass follow-up resolve); no tolerated spelling remains."
+  - term: "task"
+    replacement: issue
+    context: "In human-facing prose only, where it means an issue or a piece of tracked work; machine state files exempt during transition. 'task' as an issue type (feature, bug or task) is a defined term and is not banned."
+  - term: "G1..G5 / S1..S14 codes, bare"
+    replacement: "the code followed by its plain statement, on first use"
+    context: "In anything a human reads - agent speech, printed output, generated artifacts. Expand on FIRST use in that piece of output; the bare code is correct and preferable afterwards. Never drop the code: it carries the traceability the machine checks read. `compass check` is the shipped example - it prints 'G5 A human signs off on the irreversible'. Codes may live bare in governance config, which is machine input rather than something a newcomer reads."
+  - term: "seam / seams"
+    replacement: "interface, contract, dependency injection, boundary, extension point, abstraction layer"
+    context: "For code structure, extension points and software boundaries. A vague structural metaphor lets a writer assert a structure they have not checked exists; naming the specific mechanism forces them to check. Use interface or contract for a declared Protocol, ABC or signature; dependency injection for substituting an implementation; boundary for where one package's or layer's responsibility ends; extension point for where a new implementation registers; abstraction layer when discussing decoupling. Ordinary non-structural use is fine - a garment has seams. Quoted from a tool's output, an API or an existing spec: keep it in quotation marks or a code span and say what it means, per the quoted-term exception below. Maintainer ruling, 2026-08-14."
+  - term: "vacuous / vacuity / orthogonal / elide / salient"
+    replacement: "everyday words, even if it takes more of them"
+    context: "In anything a human reads. Each is accurate and almost never used in ordinary speech, so it costs a junior or mid engineer a lookup at the moment they are trying to read a result. Prefer a longer plain sentence to a short exact one - 'the check passed without actually checking anything' rather than 'the check cleared by vacuity'. Keep a rare word only when it is quoted from a tool's output, an API or an existing spec and the reader needs it to search; then say what it means. `canonical` is deliberately NOT on this list - it is fine in identifiers such as canonical_shape(). Maintainer ruling, 2026-08-14."
+  - term: "brief.md"
+    replacement: intent.md
+    context: "Filename and references. Points at the FINAL name: brief.md became prd.md at the v2 freeze and prd.md became intent.md on 2026-08-25, and a ban naming a replacement this file also retires sends a reader to a word they must rename again."
+  - term: "spec.feature.md"
+    replacement: "acceptance criteria (feature file)"
+    context: "Filename and references."
+
+# =============================================================================
+# SCAN CONFIG - what tests/test_terminology.py checks.
+# =============================================================================
+scan:
+  surfaces:
+    - hooks/               # the enforcement path speaks to users too
+    - schemas/             # a schema's description is what a validation error quotes
+    - scripts/             # the shell a user runs, and what it prints
+    - architecture/        # the framework's own invariants and relations
+    - examples/           # shipped worked examples - what an adopter copies from
+    - governance/routing-policy.yml   # comments only, per the YAML rule
+    - governance/guardrails.yml
+    - governance/signals.yml
+    # This file. Scanned like any other prose, because docs/glossary.md is
+    # GENERATED from its `terms:` and `codes:` blocks and titled "Every word
+    # and every id prefix Compass uses" - so it is the single place a retired
+    # name is most likely to be taught as current, and it was the one place
+    # nobody checked. The blocks whose job is to name retired terms are
+    # exempt as REGIONS below; the file is not exempt.
+    - governance/terminology.yml
+    - templates/
+    - commands/
+    - skills/
+    - cli/compass          # user-facing string literals only
+    - cli/compass_pkg/     # widened at the CLI-voice slice: the user-facing
+                           # strings live in the package since the module
+                           # split; same string-literals-only rule
+    - README.md
+    - docs/five-minutes.md
+    # The most reader-facing prose the project has, and the first document a
+    # stranger meets.
+    - docs/launch-article.md
+    - governance/          # prose files
+    - .claude-plugin/      # manifests - first prose an adopter reads
+    # Session-facing instruction files: these teach every agent session the
+    # register it must write. In markdown surfaces the scan reads prose
+    # only - fenced blocks and inline code spans are machine identifiers,
+    # exempt while their referents keep v1 names.
+    - CLAUDE.md
+    - AGENTS.md
+    - agents/            # the ten agent definitions, same shape as the
+                         # root instruction files
+    # docs/system-spec.md stays exempt below - it is derived at ship time
+    # and hand-editing it is forbidden.
+    - approaches/
+    - docs/roles-guide.md
+    - docs/safety-contract.md
+    - docs/security.md
+    - docs/methodology.md
+    - docs/quickstart.md
+    - docs/portability.md
+    - docs/routing-deep-dive.md
+    - docs/desired-state.md
+    - docs/install-smoke-test.md
+    # docs/glossary.md is NOT scanned: it is derived from this file, so it
+    # is checked at its source. Hand-editing a derived page is how a
+    # derivation silently stops matching.
+    - docs/releasing.md
+    - docs/writing-specs-and-plans.md
+    - docs/receipt.md
+    - docs/case-study-compass-rebuilt-itself.md
+  # ---------------------------------------------------------------------------
+  # POSITION EXEMPTIONS - the inverted default.
+  #
+  # The scan reads every position in a scanned file. A string that gets
+  # printed is prose wherever it lives, so an exclusion must be declared
+  # here, must name the positions it covers, and must state why a string in
+  # that position cannot reach a user. A position not listed here is
+  # scanned. Adding an entry is a governance change.
+  # ---------------------------------------------------------------------------
+  position_exemptions:
+    - id: PX-1
+      positions: [source comments, python docstrings, shell comments]
+      reason: >
+        The parser discards them, so no string here can be printed, logged or
+        rendered - there is no path from a comment to a user. They are also
+        where the history lives: a comment explaining that a key used to be
+        called something else is the record, and banning the old name there
+        would delete the explanation.
+
+        Shell comments were added on 2026-08-27, for the second half of that
+        reason rather than the first. The position was covered for Python and
+        not for shell, so a truthful sentence in hooks/*.sh or scripts/*.sh
+        failed the scan while the same sentence in a .py file passed. Nothing
+        about a shell comment reaches a user either.
+    - id: PX-2
+      positions: [yaml keys, json keys, json enum values]
+      reason: >
+        These are the machine contract, not documentation. A spine on disk, a
+        policy file and a schema all agree on them, so a rename is a migration
+        with a back-compat shim rather than a text sweep. The prose that sits
+        beside them - descriptions, titles, rationales - is scanned.
+
+  exempt:
+    - architecture/decisions/   # ADRs may quote v1 terms
+    # Same rationale one level down, narrowly: the shipped SAMPLE decision
+    # records (ADR-001..005) are history in sample form, and the README is
+    # exempt only because its index names those sample files - its prose is
+    # kept clean regardless. The blank form (ADR-template.md) is NOT exempt:
+    # future decision records are written from it, so it is enforced. The
+    # sample whose title names a v1 concept is revisited when that
+    # concept's rename slice lands.
+    - templates/architecture/decisions/ADR-0
+    - templates/architecture/decisions/README.md
+  # Line ranges inside a scanned file where naming a retired term IS the job.
+  # A region rather than a whole-file exemption: exempting terminology.yml
+  # outright would stop scanning the glossary's prose, which is the half that
+  # matters. Each entry says why, and `blocks:` are top-level YAML keys - the
+  # region runs from that key to the next one at column zero.
+  exempt_regions:
+    - path: governance/terminology.yml
+      blocks: [banned, retired_machine_names, retired_machine_name_exempt, scan,
+               retired_in_output, retired_values]
+      why: >-
+        A ban must name the term it retires and a rename table must name both
+        spellings, so these blocks carry every retired word by necessity.
+        `scan:` names the exempt paths, `retired_in_output:` lists the
+        names the CLI must never print, and `retired_values:` lists the old and
+        new spelling of each word a field still reads.
+        Everything else in the file - `terms:`, `codes:`, `id_prefixes:` - is
+        read like any other surface.
+
+  # Where `vocabulary` catalogues live. Under `governance/` the line scan
+  # above gets only the markdown files, so a banned word in a display name or
+  # an alias in a YAML file would pass it. tests/test_terminology.py runs the
+  # same ban patterns over the names in every tracked YAML file under these
+  # paths that holds a top-level `vocabulary` mapping, whether the name sits
+  # on the entry or under its `set:`. A name that must keep a retired word
+  # carries the per-line marker with its reason, never a path exemption.
+  vocabulary_surfaces:
+    - governance/
+    - examples/
+
+  # The ratchet: surfaces not yet renamed. A slice's DoD includes removing
+  # its surface from this list; removed surfaces must stay clean forever.
+  # A meta-test asserts this list only ever shrinks. Every scanned surface
+  # is now enforced; this list never grows again.
+  pending_surfaces: []
+
+# =============================================================================
+# How an exemption is written: per line, never by path prefix
+# =============================================================================
+# **A path prefix lists nothing.** That is the whole argument, and it is about
+# countability rather than strictness.
+#
+#     grep -rn "vocabulary-scan: allow" .
+#
+# enumerates every per-line exemption in the repository, each carrying the
+# reason someone wrote for it. A directory prefix is one line hiding an unknown
+# number of instances, and nothing can report what it covers - not the scan, not
+# a reviewer, not the person who added it.
+#
+# This is the same finding as `tests/test_printed_output_vocabulary.py`'s own
+# guard one level across: what was missing there was never coverage but
+# ENUMERATION. With no list of print sites, nothing could report what was
+# uncovered, so 2 commands out of 24 looked exactly like 24.
+#
+# It matters because the instinct when a check is too noisy is always to reach
+# for a prefix, and a prefix is the one form of exemption that cannot be
+# audited. Measured 2026-08-14: narrowing ONE prefix - the bare-codes ban's
+# `governance/`, covering about five prose files - surfaced a real defect nobody
+# had noticed. Two prefixes in the `exempt:` list below still hide 30 tracked
+# files between them. Tracked as its own issue by slug
+# `path-prefix-exemptions-hide-their-contents`.
+#
+# So: reach for the marker first. Reach for a file list second. Reach for a
+# prefix only when the directory genuinely has no scannable content, and say so.
+
+# =============================================================================
+# The quoted-term exception - when a banned word may stay
+# =============================================================================
+# A ban exists so a reader is not made to look something up. That reason stops
+# applying when the word is not ours: if a tool's output, an API, a spec or a
+# standard uses the word, the reader needs the exact string to search
+# for it, and paraphrasing it costs them the thing the ban was protecting.
+#
+# So a banned word may stay when BOTH hold:
+#   1. It is quoted - inside quotation marks or a code span (backticks). That
+#      is how the scanners recognise it, and every ban pattern is written with
+#      a lookbehind and lookahead that skip a quoted or code-spanned use.
+#   2. The same sentence, or the one before it, says what it means in plain
+#      words. The quotation buys the reader a search term; it does not excuse
+#      the sentence from explaining itself.
+#
+# Both halves are required. A quoted word with no explanation is the original
+# defect with punctuation around it.
+quoted_term_exception:
+  applies_to: every entry under `banned:`
+  recognised_by: "a quotation mark or a code span around the word"
+  also_required: "a plain-words statement of the meaning in the same sentence or the one before"
+  why: "the reader needs the exact string to search for; paraphrasing it removes that"
+  worked_example: >-
+    governance/strategies.md quotes the command `git grep -n -i -E '\bseam\b'`
+    when explaining that a word-boundary scan returned nothing. "seam" is banned
+    and stays there, in a code span, because the sentence is about that exact
+    command and a reader retyping a paraphrase would not reproduce the result.
+
+# =============================================================================
+# Project-specific additions - NOT SUPPORTED YET (the name format exists)
+# =============================================================================
+# The ruling (maintainer, 2026-08-14): the everyday-words list ships as a
+# default, is extendable per project, and is never replaceable. The named
+# prohibitions are about plain English rather than domain vocabulary, so they
+# hold in any project; a team's own words are additions. A genuine domain term
+# that collides with the list is handled by the quoted-term exception above,
+# never by deleting the entry.
+#
+# WHAT IS TRUE TODAY:
+#   - The shipped list above applies as-is. That part works.
+#   - The `vocabulary` catalogue exists as a format: each entry maps a
+#     catalogue id to a display name and aliases, a lookup resolves an alias
+#     to its id, and a check refuses a name or alias that two entries share
+#     (an alias collision). The ban patterns are run over the names in this
+#     repository's own `vocabulary` catalogues (`scan:` above names where).
+#   - But no command reads a project's names yet. Nothing loads a project's
+#     compass.yml `vocabulary`, no shipped entries exist on this branch, and
+#     the scan never reads an adopter's file. So a project cannot yet give
+#     its own words a display name.
+#   - This file stays the frozen glossary; the catalogue sits beside it.
+#   - Extending the banned list itself is NOT SUPPORTED YET. A project-local
+#     governance/ now REPLACES the shipped defaults wholesale rather than
+#     layering onto them, and only when routing-policy.yml sits beside it - so
+#     there is no layer for a project's ban entries to be added to.
+#   - That part is tracked in `governance-merge-not-replace`. The acceptance
+#     criterion for it travels with that issue.
+#
+# This section states what is true rather than what is intended, deliberately.
+# Writing the end state in the present tense would be a governance file
+# asserting something it has not established.
+project_additions:
+  display_names: format_and_checks_exist_no_command_reads_them_yet
+  ban_list_extension: not_supported_yet
+  shipped_list_applies: true
+  tracked_in: governance-merge-not-replace
+
+# =============================================================================
+# RETIRED MACHINE NAMES - the identifiers, not the prose
+# =============================================================================
+# `banned:` above governs what a surface *teaches*: prose, printed sentences,
+# headings. This list governs what the code *uses*: manifest keys, artifact
+# filenames, flag spellings - names with no whitespace in them, which read as
+# machine identifiers rather than as English.
+#
+# The prose scan patterns are sentence-shaped (`route.md`, `route evaluate`),
+# so they miss a single-token identifier such as a dict key `'route'`. See
+# ADR-015.
+#
+# NOT listed here: `task`. `task.yml` is a legacy filename the loader still
+# reads, and `dest="task"` is an internal argument name - `banned:` already
+# says the word is banned in human-facing prose only, with machine state
+# exempt. Listing it would flag correct code.
+# =============================================================================
+retired_machine_names:
+  # spine keys, renamed at the v2 freeze
+  - name: route
+    replacement: delivery_approach
+  - name: readings
+    replacement: assessment
+  - name: phases
+    replacement: stages
+  - name: reframes
+    replacement: reassessments
+  - name: fired_guardrails
+    replacement: policy_rules_fired
+  - name: backfills
+    replacement: follow_ups
+  # artifact filenames
+  - name: route.md
+    replacement: delivery-approach.md
+  - name: plan.md
+    replacement: technical-design.md
+  - name: spec.feature.md
+    replacement: acceptance-criteria.md
+  - name: clarifications.md
+    replacement: requirements-review.md
+  - name: brief.md
+    replacement: intent.md
+  # renamed 2026-08-25: the planning artifact and the intake document took the
+  # names their stage and command already used. Both replacements are FINAL
+  # names - plan.md -> design.md -> technical-design.md is two renames, and
+  # the scan must point a reader at the end of that chain, not the middle.
+  - name: design.md
+    replacement: technical-design.md
+  - name: prd.md
+    replacement: intent.md
+  # flag spellings, removed outright at the major version (ADR-014)
+  - name: --task
+    replacement: --issue
+  - name: --reading
+    replacement: --assessment
+
+  # Files that must name these identifiers to do their job. Each is here with
+  # a reason, not as a blanket path exclusion - and each is a file whose
+  # SUBJECT is the rename rather than a file that merely uses it.
+  #
+  # ADR-015 originally said these would move into cli/migrate-map.yml as data.
+  # Implementation found that wrong: the spine loader reads these tables at
+  # import time, so sourcing them from a YAML file would make the thing that
+  # loads YAML depend on loading YAML first. Amended there.
+retired_machine_name_exempt:
+  - path: cli/compass_pkg/core.py
+    why: >-
+      Holds the read-side rename tables (SPINE_KEY_MAP, ASSESSMENT_KEY_MAP,
+      WHEN_KEY_MAP). Every loader normalises through them, which is what lets
+      the rest of the CLI speak one vocabulary while a 1.x spine still loads.
+      This is the single legitimate home for a retired spine key.
+  - path: cli/compass_pkg/migrate.py
+    why: >-
+      The migrator's in-code fallback copy of the artifact map, used when a
+      tree has no framework install to read cli/migrate-map.yml from. Reading
+      an old archive is translation, not a redirect (ADR-014).
+  - path: cli/migrate-map.yml
+    why: The translation table itself, as data.
+
+# =============================================================================
+# Retired names the CLI must never print. tests/test_printed_output_coverage.py
+# walks every string the CLI writes to the terminal and fails on any of these.
+# The prose scan cannot do this job: its patterns are capitalisation-scoped,
+# so a lowercase machine value or a retired command name passes it.
+#
+# `name` is matched literally; `whole_word: true` adds word boundaries, for a
+# name that is also part of longer words. Each entry names what replaced it,
+# so the list says where a reader should go instead.
+# =============================================================================
+retired_in_output:
+  - name: compass design lint
+    replacement: compass plan lint
+  - name: compass land-commit
+    replacement: compass ship-commit
+  - name: compass calibration
+    replacement: compass retro
+  - name: compass route evaluate
+    replacement: compass approach evaluate
+  - name: compass task lint
+    replacement: compass issue lint
+  - name: compass backfill
+    replacement: compass follow-up
+  - name: verify.fitness
+    replacement: verify.architecture
+  - name: coherence-check
+    replacement: consistency-check
+  - name: over-ceremony
+    replacement: over-weight
+  - name: stream_ceiling
+    replacement: subtask_ceiling
+  - name: expedition
+    whole_word: true
+    replacement: full
+  - name: spine
+    whole_word: true
+    replacement: manifest
+  # The status words and the stage word ADR-044 retired, as the CLI's own
+  # messages still printed them in 6.0.x. `landed` alone stays legal: "the
+  # commit landed" is the ordinary verb. Only the status phrase is retired.
+  - name: marked landed
+    replacement: marked done
+  - name: full-weight
+    whole_word: true
+    replacement: thorough
+  - name: queued
+    whole_word: true
+    replacement: backlog
+  - name: assess, build and ship
+    replacement: assess, implement and ship

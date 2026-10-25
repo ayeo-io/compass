@@ -1,0 +1,125 @@
+---
+description: Bring the role perspectives to one decision
+argument-hint: "<the question or decision to work through>"
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+---
+
+# /compass:consult
+
+Convene several role perspectives on one question, make the tradeoffs
+explicit, and record the decision. Use this when a choice affects more than
+one role - a scope cut that affects a marketing claim, an architecture
+decision that changes the user's experience, a priority conflict between intent
+and effort.
+
+**Question:** $ARGUMENTS
+
+## First: make sure this is a Compass project
+
+Run `compass init`. It creates `.compass/` if it is not there and reports that
+it did; if the project already exists it says so and changes nothing, so this
+is safe to run every time and you do not need to check first.
+
+**Report the result to the user in one line when it created the project.** If
+a `.compass/` directory appears and nobody says so, someone can delete it by
+hand, or commit it by mistake. It creates project state only - the
+shipped defaults stay in force, and writing a `compass.yml` for the project is
+what `/compass:init` offers separately.
+
+## Setup
+
+- Load `intent-interview` and read its `role-translation.md` - a consult reads one question
+  through several roles, and keeps each role's concern separate.
+- Read the relevant issue artifacts so the discussion uses what is on
+  disk: `delivery-approach.md`, `intent.md`,
+  `acceptance-criteria.md`, `technical-design.md`, `positioning.md`,
+  `ui-contract.md` - whichever bear on the question.
+- Run `compass policy show` for the rules in force, and read the reasons in
+  `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md` and `strategies.md` - a
+  consult cannot decide to set a guardrail aside. An unmigrated 5.x project
+  runs on its own copied `governance/` until `compass policy migrate`.
+  A consult exists to settle a conflict between two strategies; it cannot
+  change a guardrail.
+
+## Agent roster
+
+The following agents are part of the standard consult roster and can be
+convened by name:
+
+| Agent | Invocation | Auto-trigger condition |
+|---|---|---|
+| `product-owner` | `/compass:consult product-owner` | When a product owner takes part (`intent.md` exists) |
+| `product-marketer` | `/compass:consult product-marketer` | When a marketer takes part (`positioning.md` exists) |
+| `architect` | `/compass:consult architect` | When the manifest's `assessment.labels` contains `public-api`, a service name from `architecture/relations.md`, or a `lens_trigger_tag` from `architecture/invariants.yml` |
+| `planner` | `/compass:consult planner` | On request |
+| `reviewer` | `/compass:consult reviewer` | On request |
+
+**Registration contract:** a role's agent is invoked only if its agent file
+exists in `agents/`. If the file does not exist, `/compass:consult`
+skips that perspective and records the absence in `devlog.md` rather than
+failing. This stops a consult calling an agent that the current issue is
+still writing.
+
+**Named invocation:** pass the agent name as a positional argument:
+```
+/compass:consult architect
+```
+This convenes only the `architect` agent, regardless of auto-trigger
+conditions. It writes `architecture-notes.md` to the issue directory.
+
+**Auto-convene (no args):** when invoked with no positional agent name,
+`/compass:consult` auto-convenes every agent whose trigger condition is
+met for the current issue.
+
+## Procedure
+
+1. **Choose the roles.** Convene the roles the question actually needs - some
+   of `product-owner`, `product-marketer`, `architect`, `planner`,
+   `reviewer`, and the designer or QA perspective. Name which roles took
+   part and why.
+2. **State the question** clearly, with the constraints that bound it (the
+   guardrails, the delivery approach, fixed deadlines).
+3. **Each role speaks in its own vocabulary.** The product owner argues
+   intent fidelity; the marketer argues claims and voice; the planner
+   argues feasibility and architecture; the reviewer argues risk and the
+   guardrails. Do not let one role speak for another.
+4. **State the tradeoffs** explicitly - what each option costs each role.
+   Note where roles agree and where they genuinely conflict.
+5. **Record the decision.** Append to the issue's `devlog.md`: the
+   question, which roles took part, the options, the tradeoffs, the
+   decision, and the rationale. If the decision changes scope or the
+   delivery approach, that is a trigger to re-assess
+   (`/compass:assess --reassess`) - say so.
+
+## Reassessment trigger
+
+Some consult outcomes do more than record a tradeoff - they change the
+scope, the boundary, or the migration scope of the current issue. When
+that happens, a re-assessment is not optional.
+
+**Any consult outcome that changes a service boundary or migration scope
+must end with a re-assessment:**
+
+```
+/compass:assess --reassess --reason "<consult id> - <what changed and why>"
+```
+
+Examples of outcomes that need a re-assessment:
+
+- The consult decides to extend a planned migration to cover an adjacent
+  service that was not in the original scope.
+- A boundary call moves a module from one service to another, adding files
+  that were not in `technical-design.md`.
+- A scope cut removes a deliverable that was in `acceptance-criteria.md`.
+
+In all these cases, file the re-assessment immediately after the consult
+decision is recorded in `devlog.md`. `compass retro` reads the
+re-assessment. If the wrong assessment stays with no re-assessment, retro
+cannot see that it was wrong.
+
+## Gate
+
+The decision is written to `devlog.md` with its rationale and the tradeoffs
+it accepted. A consult that ends without a recorded decision has not
+finished. If the decision touches the delivery approach, follow it with a
+re-assessment.

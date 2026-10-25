@@ -1,0 +1,225 @@
+#!/usr/bin/env bash
+# =============================================================================
+# Compass hook: session-start.sh  -  PUT THE OPERATING CONTRACT IN THE SESSION
+# =============================================================================
+# Runs as a Claude Code SessionStart hook, on startup, clear and compact.
+#
+# WHY IT EXISTS
+#   Without this hook, the contract reaches a session only when the model
+#   loads the `compass-runtime` skill. CLAUDE.md applies only inside the
+#   Compass repository, so an adopter's session gets no rules.
+#
+# WHAT IT DOES
+#   Prints a JSON object carrying the contract as `additionalContext`, which
+#   Claude Code adds to the session. It never blocks - a SessionStart hook has
+#   nothing to refuse - so every path here exits 0. When the project's
+#   compass.yml sets a valid `language`, it also adds one line telling the
+#   agent to write prose in that language; unset or invalid adds nothing.
+#
+# THE BOUNDARY
+#   A repository with no .compass/ has never opted into Compass, and this hook
+#   is installed at user scope: it starts in every session on the machine.
+#   There it prints nothing at all. Same rule as hooks/pre-tool.sh, minus the
+#   half that cannot apply - there is no fail-closed case here, because there
+#   is no gate to close.
+#
+# WHERE THE CONTRACT LIVES
+#   compass-contract.md at the framework root, and only there. CLAUDE.md and
+#   skills/compass-runtime/SKILL.md point at it and do not restate it.
+# =============================================================================
+set -uo pipefail
+
+# The contract ships with the framework, so it is found from this script's own
+# location. That is right here and wrong in pre-tool.sh: this hook reads a file
+# the PLUGIN owns, where that one resolves a project the USER owns and must
+# never reach for its own tree instead.
+FRAMEWORK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONTRACT="$FRAMEWORK_ROOT/compass-contract.md"
+
+# The status line launcher. A statusLine setting must name a fixed path, but
+# the plugin's own path names its version and changes on every upgrade. So
+# keep a small launcher in the plugin's data folder, which Claude Code keeps
+# across updates, pointing at this version's bin/compass-statusline; the
+# setting names the launcher and never has to change. It is written in every
+# repository, before the opt-in check, because the status line runs
+# everywhere. Rewritten only when its content differs, through a temporary
+# file and a rename, so a status line refresh never runs half a script. It
+# prints nothing and never fails the session.
+#
+# The same folder holds a `compass` launcher for the person's own terminal,
+# which Claude Code does not give the plugin's bin/. Compass sends the person
+# there for the commands an agent must not run, such as `compass evidence
+# approve`, and names this launcher when it does (cli/compass_pkg/launcher.py).
+# Unlike the status line, it says so when its target is gone, because a person
+# typed it and waits for an answer.
+compass_write_launcher() {
+  local name="$1" want="$2" data="${CLAUDE_PLUGIN_DATA:-}" launcher tmp
+  [ -n "$data" ] || return 0
+  mkdir -p "$data" 2>/dev/null
+  [ -d "$data" ] && [ -w "$data" ] || return 0
+  launcher="$data/$name"
+  if [ -f "$launcher" ] && [ "$(cat "$launcher" 2>/dev/null)" = "$want" ]; then
+    return 0
+  fi
+  tmp="$(mktemp "$data/.$name.XXXXXX" 2>/dev/null)" || return 0
+  if printf '%s\n' "$want" > "$tmp" && chmod 755 "$tmp" && mv -f "$tmp" "$launcher"; then
+    return 0
+  fi
+  rm -f "$tmp"
+}
+compass_write_launcher compass-statusline "$(printf '#!/usr/bin/env bash\n# Written by the Compass session-start hook, and rewritten when the plugin\n# moves, so the statusLine setting can name this file and never change.\ntarget=%q\n[ -x "$target" ] || exit 0\nexec "$target"' "$FRAMEWORK_ROOT/bin/compass-statusline")" >/dev/null 2>&1 || true
+compass_write_launcher compass "$(printf '#!/usr/bin/env bash\n# Written by the Compass session-start hook, and rewritten when the plugin\n# moves, so this path runs the installed Compass CLI after an upgrade.\ntarget=%q\nif [ ! -x "$target" ]; then\n  echo "compass: the Compass plugin is not at $target; start a Claude Code session with the plugin enabled to update this launcher." >&2\n  exit 1\nfi\n# bin/compass prefers CLAUDE_PLUGIN_ROOT, which names another copy if the\n# shell exports it.\nexec env -u CLAUDE_PLUGIN_ROOT "$target" "$@"' "$FRAMEWORK_ROOT/bin/compass")" >/dev/null 2>&1 || true
+
+# The input names the session, so the review summary can record what the
+# session was shown. Read only when a pipe or file gives it: a terminal would
+# wait for typing.
+INPUT=""
+[ -t 0 ] || INPUT="$(cat 2>/dev/null || true)"
+
+INVOKED_FROM="$(pwd)"
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  PROJECT_DIR="$CLAUDE_PROJECT_DIR"
+else
+  PROJECT_DIR=""
+  _search="$INVOKED_FROM"
+  while [ -n "$_search" ]; do
+    [ -d "$_search/.compass" ] && { PROJECT_DIR="$_search"; break; }
+    # The repository is the outer bound. Walking past it would inject the
+    # contract because a stranger's project happens to sit above this one.
+    [ -e "$_search/.git" ] && break
+    [ "$_search" = "/" ] && break
+    _search="$(dirname "$_search")"
+  done
+  [ -n "$PROJECT_DIR" ] || exit 0
+fi
+
+# Not a Compass project: say nothing. An explicit CLAUDE_PROJECT_DIR is the
+# runtime naming a directory, not a statement that Compass lives in it - the
+# runtime sets it for every repository.
+[ -d "$PROJECT_DIR/.compass" ] || exit 0
+
+[ -f "$CONTRACT" ] || exit 0
+
+# Without Python 3.10 or later the CLI cannot run and pre-tool.sh refuses
+# code edits, so say so now, to the person and to the model, rather than let
+# the first refused edit be how they find out. The message is fixed ASCII
+# built with printf; the one variable part, the version, holds only digits
+# and dots (scripts/lib/python-check.sh), so the JSON stays valid. The hook
+# still never blocks.
+# shellcheck source=../scripts/lib/python-check.sh
+. "$FRAMEWORK_ROOT/scripts/lib/python-check.sh"
+PY_STATUS="$(compass_python_status)"
+case "$PY_STATUS" in
+  ok\ *) ;;
+  *)
+    case "$PY_STATUS" in
+      missing) found="python3 was not found on the PATH. Until it is installed, Compass refuses code edits in this project and its commands do not run." ;;
+      broken) found="a python3 is on the PATH but did not run. Until it runs, Compass refuses code edits in this project and its commands do not run." ;;
+      *) found="python3 ${PY_STATUS#old } was found, which the Compass CLI cannot run on. Without the CLI, an issue's assessment and failing test cannot be recorded, so Compass refuses the code edits that need them." ;;
+    esac
+    msg="Compass needs Python 3.10 or later, and $found Fix: install Python 3.10 or later and put python3 on the PATH, then start a new session."
+    printf '{"systemMessage": "%s", "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "%s"}}\n' "$msg" "$msg"
+    exit 0 ;;
+esac
+
+# Emitted as JSON by python3, which is how the rest of the kit reads and writes
+# JSON. A hand-rolled escape here would break on the first apostrophe in the
+# contract.
+
+# The project's `always` lessons follow the contract, under their own
+# 150-word cap (cli/compass_pkg/lessons.py, ADR-029). A failure to read them
+# loses the lessons, never the contract.
+#
+# Then one readiness line, for an autonomous project that is below the
+# readiness floor or has no fresh readiness record: assess will refuse it, and
+# the session should know before it starts (cli/compass_pkg/readiness_record.py,
+# ADR-058). It reads the record and runs nothing. It has its own guard, so a
+# record or settings file that cannot be read loses the line, never the
+# contract, and the hook still exits 0.
+PYTHONPATH="$FRAMEWORK_ROOT/cli${PYTHONPATH:+:$PYTHONPATH}" \
+python3 - "$CONTRACT" "$PROJECT_DIR/.compass" "$PROJECT_DIR" "$INPUT" <<'PY' 2>/dev/null || exit 0
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as fh:
+    contract = fh.read()
+
+try:
+    from compass_pkg.lessons import render_block
+    lessons = render_block(sys.argv[2])
+except BaseException:  # noqa: BLE001 - the contract must still reach the session
+    lessons = ""
+if lessons:
+    contract = contract.rstrip("\n") + "\n\n" + lessons + "\n"
+
+try:
+    from compass_pkg import project_settings, readiness_record
+    autonomy = str(project_settings.settings(sys.argv[3]).get("autonomy") or "balanced")
+    readiness = readiness_record.hook_line(sys.argv[3], autonomy.strip().lower())
+except BaseException:  # noqa: BLE001 - the contract must still reach the session
+    readiness = ""
+if readiness:
+    contract = contract.rstrip("\n") + "\n\n" + readiness + "\n"
+
+# One line when the project sets `language`. It is built from the canonical
+# tag only (cli/compass_pkg/language.py), so a value in compass.yml cannot
+# carry text into the session. Unset, malformed or unreadable adds nothing.
+try:
+    from compass_pkg import language
+    tag_line = language.hook_line(sys.argv[3])
+except BaseException:  # noqa: BLE001 - the contract must still reach the session
+    tag_line = ""
+if tag_line:
+    contract = contract.rstrip("\n") + "\n\n" + tag_line + "\n"
+
+# Approvals made under a delegation that the person has not reviewed are
+# shown to the person, never recorded here (ADR-069 decision 5). A summary
+# that cannot be built is left out.
+#
+# The whole message is built before anything is recorded, and each part is
+# guarded on its own: a damaged delegation file can cost the list of open-ended
+# delegations or the review summary, never the contract, and a row is recorded
+# as shown only after the message that shows it is out.
+try:
+    event = json.loads(sys.argv[4])
+except ValueError:
+    event = {}
+if not isinstance(event, dict):
+    event = {}
+session = str(event.get("session_id") or "")
+try:
+    from compass_pkg import delegations
+except BaseException:  # noqa: BLE001 - the contract must still reach the session
+    delegations = None
+lines, review, state = "", "", None
+if delegations is not None:
+    # Each delegation with no end time is listed, whether or not anything
+    # waits for review.
+    try:
+        lines = delegations.session_start_lines(sys.argv[3], session,
+                                                str(event.get("source") or ""))
+    except BaseException:  # noqa: BLE001
+        lines = ""
+    try:
+        state = delegations.summary_state(sys.argv[3])
+        review = delegations.summary_text(state)
+    except BaseException:  # noqa: BLE001
+        state, review = None, ""
+message = "\n".join(part for part in (lines, review) if part)
+
+out = {
+    "hookSpecificOutput": {
+        "hookEventName": "SessionStart",
+        "additionalContext": contract,
+    }
+}
+if message:
+    out["systemMessage"] = message
+print(json.dumps(out), flush=True)
+if state is not None:
+    try:
+        # A session start has no prompt id, so the entry it records holds none.
+        delegations.record_shown(state, session, "")
+    except BaseException:  # noqa: BLE001
+        pass
+PY

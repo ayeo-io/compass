@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "python3 \"${PLUGIN_ROOT}/adapters/codex/runtime.py\" hook", "timeout": 30}]}],
+    "PreToolUse": [{"matcher": ".*", "hooks": [{"type": "command", "command": "python3 \"${PLUGIN_ROOT}/adapters/codex/runtime.py\" hook", "timeout": 30}]}],
+    "PostToolUse": [{"matcher": ".*", "hooks": [{"type": "command", "command": "python3 \"${PLUGIN_ROOT}/adapters/codex/runtime.py\" hook", "timeout": 30}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "python3 \"${PLUGIN_ROOT}/adapters/codex/runtime.py\" hook", "timeout": 30}]}]
+  }
+}

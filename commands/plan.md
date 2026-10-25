@@ -1,0 +1,140 @@
+---
+description: Write the technical design and check it against governance
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+---
+
+# /compass:plan
+
+Plan turns the spec into a technical approach, checks it against
+governance, and - on larger work - decides the parallel orchestration.
+Parallelism is *decided here* and *carried out at breakdown*.
+
+(The designer's entry point is `/compass:design`. This command is the
+engineering plan stage.)
+
+## Setup
+
+- Read `delivery-approach.md`. Its weight for this stage tells you the
+  shape: a one-line "edit which file(s)" note (quick fix - no `technical-design.md`), a
+  real `technical-design.md` (regular), or a full `technical-design.md` plus
+  `distribution-map.md` (the full approach).
+- Read `acceptance-criteria.md` and `requirements-review.md` - the design
+  uses the spec as the requirements review left it.
+- Load the `plan-authoring` skill - how to write the design itself: what a
+  work unit is, what makes one independent of another, and the
+  self-review the author owes the reviewer before the design is handed over.
+- Load the `governance-check` skill.
+- Invoke the `planner` agent - it owns this stage.
+- Pass the computed model and effort when you invoke the `planner` agent:
+  `compass approach show --model plan` prints the `model`, and
+  `compass approach show --effort plan` prints the `effort`. On
+  `inherit`, pass the model family your session runs on (`opus`,
+  `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot
+  tell. Exit 1 means the issue sets nothing for that value: leave it out,
+  so the agent's frontmatter applies.
+- If an `intent.md` exists, this stage runs the **intent-fidelity gate**: the
+  spec must be checked against `intent.md` before the design completes. Invoke
+  `product-owner` to run it.
+
+## Procedure
+
+1. **Technical approach.** State the design. Record each design decision as
+   an ADR-style note - what was chosen, what was rejected, why.
+2. **Governance check.** Run `governance-check` against the governance in
+   force - the guardrails (hard, blocking) and the applicable engineering
+   strategies (soft, assessed). `compass policy show` prints the rules the CLI
+   runs against, and the reasons are in
+   `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` and `guardrails.md`. An
+   unmigrated 5.x project runs on its own copied `governance/` until
+   `compass policy migrate`. `compass policy lint` checks the structure of the project's `compass.yml` -
+   run it if the project has changed the rules. A design that breaks a guardrail
+   does not pass - revise the design, never waive the guardrail. A design
+   that departs from a strategy can pass, but the departure is recorded.
+3. **Distribution map** (when the work splits into independent units). Read
+   the scenario groups from `acceptance-criteria.md`; units that touch
+   disjoint code and satisfy disjoint scenarios can run in parallel.
+   - On the regular approach: a short list of 2-3 units is enough.
+   - On the full approach: write the full `distribution-map.md` from its
+     template.
+   - On a breakdown of `multiagent` (the regular and full approaches), the
+     map carries a line of its own in "Work units": `units: N`, or a list
+     such as `units: [U1, U2]`. Registering a multiagent map without it is
+     refused. When the change is one unit of work, write the map with
+     `units: 1` and register it: that records the breakdown as one subtask
+     this session runs itself, so breakdown needs no worktree, no builder,
+     no hand-made subtask record and no waiver.
+
+   Subtask count comes from the map; orchestration thresholds from
+   the multiagent settings in `compass.yml` (or `.compass/config.yml` in a
+   project without one); a policy cap can bound the count.
+4. **Write `technical-design.md`** from `${CLAUDE_PLUGIN_ROOT}/templates/technical-design.md`,
+   and `distribution-map.md` from its template when applicable.
+
+   **Where it goes.** `docs/compass/<created>-<issue-slug>/technical-design.md`, where the
+   date is the manifest's `created:` field - not today's. Then register it:
+   `compass issue artifact set technical-design --status draft --path <that path>`. The CLI
+   refuses a path outside the project, so the record is checked
+   rather than claimed. If you had to create `docs/compass/`, **say so in one
+   line** - if a directory appears and nobody says so, someone can delete it
+   by hand or commit it by mistake.
+
+## Hand-off
+
+Close the design by handing the technical approach to a human. This is the
+last review before code is written, and the cheapest point at which to change
+the design.
+
+> I have written the design to
+> `docs/compass/<created>-<issue-slug>/technical-design.md`
+> (and the distribution map to `distribution-map.md`).
+>
+> It records N design decisions, the governance check against all of the
+> governance in force, and M work units.
+>
+> Worth a read before implementation. Specifically, look for:
+> - **Design decisions you would make differently** - each records what was
+>   chosen and what was rejected, so the disagreement should be easy to
+>   locate.
+> - **A decision with no alternative considered** - that is usually not a
+>   decision yet.
+> - **Work units that are not as independent as claimed** - optimistic
+>   decomposition surfaces as a collision at integration, not here.
+> - **Anything still unfinished** - `compass plan lint` reports placeholder
+>   phrases, but a design can be vague without using one.
+>
+> On approval this goes to breakdown, or straight to implementation on solo
+> work.
+
+Wait for approval only if `plan` is in the manifest's `checkpoints:`.
+The project's `autonomy` setting, read from `compass.yml` (or from
+`.compass/config.yml` in a project without one), decides that list,
+and `compass approach show` shows it. If `plan` is not listed, still
+write the technical design and show this hand-off, then say you are going on without
+waiting and name the setting, with "Next" in place of "On approval". Record
+the passed hand-off with `compass issue checkpoint add plan --outcome skipped
+--by planner`, so the person can review it later and send the issue back. If
+`plan` is listed, ask with `compass evidence request --checkpoint plan` and
+wait: the person types `/compass:approve` in Claude Code, or runs `compass
+evidence approve --checkpoint plan --approver <name> --role <role>` at a
+terminal, which records the answer. An issue assessed before outcomes were recorded is not judged: both
+commands refuse it and write nothing, so say so and go on.
+
+If you resolved a requirement question
+yourself instead of asking, record it:
+`compass issue decision add <id> --question "<q>" --resolution "<r>" --by <your agent> --stage plan`.
+Before you hand off, run `compass next`. When its first line reads
+`Waiting at the plan checkpoint`, the issue holds decisions that no person has
+confirmed. Show the listed decisions in the hand-off and wait: the person
+confirms them all by typing `/compass:approve` after you run `compass evidence
+request --decisions` (or `compass evidence approve --decisions` at a terminal), or
+reopens one with
+`compass issue decision set`. Do not name the next stage while it waits. On
+`autonomous` autonomy `compass next` lists the decisions and does not wait; show
+the list in the hand-off.
+
+## Gate
+
+`technical-design.md` exists; the governance check passed (record its result and link
+the record); if an `intent.md` exists, the intent-fidelity gate passed; if the work is parallelisable, a
+distribution map exists. Log to `devlog.md`. Next: `/compass:breakdown` (or
+straight to `/compass:implement` on solo work).

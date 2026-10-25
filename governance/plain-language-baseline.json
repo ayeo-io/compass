@@ -1,0 +1,2020 @@
+{
+  "what": "Where the bare-code count started. A check that only reports cannot show a number moving unless something wrote down where it began.",
+  "captured_at": "2026-08-14",
+  "count": 466,
+  "files_scanned": 253,
+  "printed_output_reach": "covered 2 of 24 CLI commands at capture time - the printed-output guard reaches only `approach evaluate` and `issue receipt`, so a zero read against this baseline is NOT a zero across all printed output. Tracked in printed-output-guard-coverage.",
+  "locations": [
+    {
+      "file": "architecture/decisions/ADR-001-judgement-and-mechanism-are-separated.md",
+      "line": 2,
+      "code": "ADR-001"
+    },
+    {
+      "file": "architecture/decisions/ADR-002-framework-grows-by-adding-artifacts-not-rules.md",
+      "line": 2,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/ADR-002-framework-grows-by-adding-artifacts-not-rules.md",
+      "line": 32,
+      "code": "G1"
+    },
+    {
+      "file": "architecture/decisions/ADR-002-framework-grows-by-adding-artifacts-not-rules.md",
+      "line": 32,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/decisions/ADR-002-framework-grows-by-adding-artifacts-not-rules.md",
+      "line": 34,
+      "code": "G4"
+    },
+    {
+      "file": "architecture/decisions/ADR-002-framework-grows-by-adding-artifacts-not-rules.md",
+      "line": 74,
+      "code": "G4"
+    },
+    {
+      "file": "architecture/decisions/ADR-002-framework-grows-by-adding-artifacts-not-rules.md",
+      "line": 91,
+      "code": "S3"
+    },
+    {
+      "file": "architecture/decisions/ADR-003-flow-advises-but-never-gates.md",
+      "line": 2,
+      "code": "ADR-003"
+    },
+    {
+      "file": "architecture/decisions/ADR-004-one-spec-many-lenses.md",
+      "line": 2,
+      "code": "ADR-004"
+    },
+    {
+      "file": "architecture/decisions/ADR-005-state-lives-on-disk.md",
+      "line": 2,
+      "code": "ADR-005"
+    },
+    {
+      "file": "architecture/decisions/ADR-006-backward-compat-is-non-negotiable.md",
+      "line": 2,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md",
+      "line": 2,
+      "code": "ADR-007"
+    },
+    {
+      "file": "architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md",
+      "line": 16,
+      "code": "ADR-001"
+    },
+    {
+      "file": "architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md",
+      "line": 16,
+      "code": "TRC-A12"
+    },
+    {
+      "file": "architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md",
+      "line": 40,
+      "code": "G4"
+    },
+    {
+      "file": "architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md",
+      "line": 40,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md",
+      "line": 47,
+      "code": "TRC-A12"
+    },
+    {
+      "file": "architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md",
+      "line": 47,
+      "code": "ADR-001"
+    },
+    {
+      "file": "architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md",
+      "line": 48,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md",
+      "line": 69,
+      "code": "ADR-001"
+    },
+    {
+      "file": "architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md",
+      "line": 70,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/ADR-008-cross-task-derived-artifacts.md",
+      "line": 2,
+      "code": "ADR-008"
+    },
+    {
+      "file": "architecture/decisions/ADR-008-cross-task-derived-artifacts.md",
+      "line": 21,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-008-cross-task-derived-artifacts.md",
+      "line": 29,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-008-cross-task-derived-artifacts.md",
+      "line": 33,
+      "code": "ADR-004"
+    },
+    {
+      "file": "architecture/decisions/ADR-008-cross-task-derived-artifacts.md",
+      "line": 39,
+      "code": "ADR-004"
+    },
+    {
+      "file": "architecture/decisions/ADR-008-cross-task-derived-artifacts.md",
+      "line": 41,
+      "code": "S3"
+    },
+    {
+      "file": "architecture/decisions/ADR-008-cross-task-derived-artifacts.md",
+      "line": 63,
+      "code": "ADR-004"
+    },
+    {
+      "file": "architecture/decisions/ADR-008-cross-task-derived-artifacts.md",
+      "line": 64,
+      "code": "ADR-005"
+    },
+    {
+      "file": "architecture/decisions/ADR-008-cross-task-derived-artifacts.md",
+      "line": 65,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 2,
+      "code": "ADR-009"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 60,
+      "code": "ADR-007"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 67,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 73,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 74,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 75,
+      "code": "ADR-007"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 76,
+      "code": "ADR-007"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 83,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 84,
+      "code": "G4"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 101,
+      "code": "TRC-FM1"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 108,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 109,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-009-fitness-functions-are-project-guardrails.md",
+      "line": 110,
+      "code": "ADR-007"
+    },
+    {
+      "file": "architecture/decisions/ADR-010-governance-layers-rather-than-copies.md",
+      "line": 2,
+      "code": "ADR-010"
+    },
+    {
+      "file": "architecture/decisions/ADR-010-governance-layers-rather-than-copies.md",
+      "line": 20,
+      "code": "G1"
+    },
+    {
+      "file": "architecture/decisions/ADR-010-governance-layers-rather-than-copies.md",
+      "line": 20,
+      "code": "G4"
+    },
+    {
+      "file": "architecture/decisions/ADR-010-governance-layers-rather-than-copies.md",
+      "line": 63,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-010-governance-layers-rather-than-copies.md",
+      "line": 122,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-011-enforced-file-types-are-project-configurable.md",
+      "line": 2,
+      "code": "ADR-011"
+    },
+    {
+      "file": "architecture/decisions/ADR-011-enforced-file-types-are-project-configurable.md",
+      "line": 97,
+      "code": "G4"
+    },
+    {
+      "file": "architecture/decisions/ADR-011-enforced-file-types-are-project-configurable.md",
+      "line": 131,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-011-enforced-file-types-are-project-configurable.md",
+      "line": 133,
+      "code": "ADR-010"
+    },
+    {
+      "file": "architecture/decisions/ADR-012-the-v2-vocabulary-freeze.md",
+      "line": 2,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/ADR-012-the-v2-vocabulary-freeze.md",
+      "line": 15,
+      "code": "G1"
+    },
+    {
+      "file": "architecture/decisions/ADR-012-the-v2-vocabulary-freeze.md",
+      "line": 15,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/decisions/ADR-012-the-v2-vocabulary-freeze.md",
+      "line": 15,
+      "code": "S1"
+    },
+    {
+      "file": "architecture/decisions/ADR-012-the-v2-vocabulary-freeze.md",
+      "line": 15,
+      "code": "S7"
+    },
+    {
+      "file": "architecture/decisions/ADR-012-the-v2-vocabulary-freeze.md",
+      "line": 45,
+      "code": "ADR-010"
+    },
+    {
+      "file": "architecture/decisions/ADR-012-the-v2-vocabulary-freeze.md",
+      "line": 45,
+      "code": "ADR-011"
+    },
+    {
+      "file": "architecture/decisions/ADR-012-the-v2-vocabulary-freeze.md",
+      "line": 46,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/ADR-012-the-v2-vocabulary-freeze.md",
+      "line": 124,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/ADR-012-the-v2-vocabulary-freeze.md",
+      "line": 127,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-013-vendored-third-party-code.md",
+      "line": 2,
+      "code": "ADR-013"
+    },
+    {
+      "file": "architecture/decisions/ADR-013-vendored-third-party-code.md",
+      "line": 20,
+      "code": "G2"
+    },
+    {
+      "file": "architecture/decisions/ADR-013-vendored-third-party-code.md",
+      "line": 163,
+      "code": "TRC-F4"
+    },
+    {
+      "file": "architecture/decisions/ADR-013-vendored-third-party-code.md",
+      "line": 164,
+      "code": "TRC-F5"
+    },
+    {
+      "file": "architecture/decisions/ADR-013-vendored-third-party-code.md",
+      "line": 165,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/ADR-014-retired-names-are-removed-at-the-major-version.md",
+      "line": 2,
+      "code": "ADR-014"
+    },
+    {
+      "file": "architecture/decisions/ADR-014-retired-names-are-removed-at-the-major-version.md",
+      "line": 12,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/ADR-014-retired-names-are-removed-at-the-major-version.md",
+      "line": 25,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-014-retired-names-are-removed-at-the-major-version.md",
+      "line": 27,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/ADR-014-retired-names-are-removed-at-the-major-version.md",
+      "line": 60,
+      "code": "ADR-015"
+    },
+    {
+      "file": "architecture/decisions/ADR-014-retired-names-are-removed-at-the-major-version.md",
+      "line": 89,
+      "code": "S11"
+    },
+    {
+      "file": "architecture/decisions/ADR-014-retired-names-are-removed-at-the-major-version.md",
+      "line": 92,
+      "code": "ADR-015"
+    },
+    {
+      "file": "architecture/decisions/ADR-014-retired-names-are-removed-at-the-major-version.md",
+      "line": 97,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-014-retired-names-are-removed-at-the-major-version.md",
+      "line": 100,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/ADR-014-retired-names-are-removed-at-the-major-version.md",
+      "line": 102,
+      "code": "ADR-015"
+    },
+    {
+      "file": "architecture/decisions/ADR-014-retired-names-are-removed-at-the-major-version.md",
+      "line": 104,
+      "code": "S11"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 2,
+      "code": "ADR-015"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 7,
+      "code": "ADR-018"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 10,
+      "code": "ADR-018"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 10,
+      "code": "ADR-018"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 18,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 46,
+      "code": "ADR-014"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 52,
+      "code": "ADR-014"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 74,
+      "code": "ADR-014"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 79,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 81,
+      "code": "S10"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 88,
+      "code": "ADR-014"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 115,
+      "code": "S11"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 119,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 121,
+      "code": "ADR-014"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 123,
+      "code": "S10"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 123,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/decisions/ADR-015-the-vocabulary-scan-covers-code-positions.md",
+      "line": 126,
+      "code": "S11"
+    },
+    {
+      "file": "architecture/decisions/ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
+      "line": 2,
+      "code": "ADR-016"
+    },
+    {
+      "file": "architecture/decisions/ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
+      "line": 13,
+      "code": "TRC-A1"
+    },
+    {
+      "file": "architecture/decisions/ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
+      "line": 13,
+      "code": "INT-1"
+    },
+    {
+      "file": "architecture/decisions/ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
+      "line": 18,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
+      "line": 97,
+      "code": "TRC-A1"
+    },
+    {
+      "file": "architecture/decisions/ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
+      "line": 111,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
+      "line": 112,
+      "code": "ADR-015"
+    },
+    {
+      "file": "architecture/decisions/ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
+      "line": 114,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
+      "line": 116,
+      "code": "S10"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 2,
+      "code": "ADR-017"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 13,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 13,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 19,
+      "code": "G1"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 19,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 27,
+      "code": "G1"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 27,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 27,
+      "code": "S1"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 27,
+      "code": "S7"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 39,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 51,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 65,
+      "code": "S7"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 72,
+      "code": "S1"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 72,
+      "code": "S7"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 72,
+      "code": "S1"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 72,
+      "code": "S12"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 82,
+      "code": "ADR-016"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 82,
+      "code": "TRC-A1"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 82,
+      "code": "RP-FLOOR-002"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 102,
+      "code": "S7"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 113,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/ADR-017-an-identifier-is-a-key-not-jargon.md",
+      "line": 117,
+      "code": "S7"
+    },
+    {
+      "file": "architecture/decisions/ADR-018-the-scan-reads-every-position-by-default.md",
+      "line": 2,
+      "code": "ADR-018"
+    },
+    {
+      "file": "architecture/decisions/ADR-018-the-scan-reads-every-position-by-default.md",
+      "line": 6,
+      "code": "ADR-015"
+    },
+    {
+      "file": "architecture/decisions/ADR-018-the-scan-reads-every-position-by-default.md",
+      "line": 21,
+      "code": "ADR-015"
+    },
+    {
+      "file": "architecture/decisions/ADR-018-the-scan-reads-every-position-by-default.md",
+      "line": 61,
+      "code": "PX-1"
+    },
+    {
+      "file": "architecture/decisions/ADR-018-the-scan-reads-every-position-by-default.md",
+      "line": 66,
+      "code": "PX-2"
+    },
+    {
+      "file": "architecture/decisions/ADR-018-the-scan-reads-every-position-by-default.md",
+      "line": 87,
+      "code": "PX-1"
+    },
+    {
+      "file": "architecture/decisions/ADR-018-the-scan-reads-every-position-by-default.md",
+      "line": 125,
+      "code": "ADR-015"
+    },
+    {
+      "file": "architecture/decisions/ADR-018-the-scan-reads-every-position-by-default.md",
+      "line": 128,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/ADR-018-the-scan-reads-every-position-by-default.md",
+      "line": 129,
+      "code": "ADR-014"
+    },
+    {
+      "file": "architecture/decisions/ADR-018-the-scan-reads-every-position-by-default.md",
+      "line": 131,
+      "code": "S10"
+    },
+    {
+      "file": "architecture/decisions/ADR-018-the-scan-reads-every-position-by-default.md",
+      "line": 134,
+      "code": "S11"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 16,
+      "code": "ADR-001"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 16,
+      "code": "ADR-003"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 21,
+      "code": "ADR-001"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 21,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 21,
+      "code": "ADR-003"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 28,
+      "code": "ADR-001"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 29,
+      "code": "ADR-001"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 31,
+      "code": "ADR-003"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 31,
+      "code": "ADR-003"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 31,
+      "code": "ADR-007"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 32,
+      "code": "ADR-007"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 32,
+      "code": "ADR-003"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 37,
+      "code": "ADR-001"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 44,
+      "code": "ADR-001"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 44,
+      "code": "ADR-001"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 45,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 45,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 46,
+      "code": "ADR-003"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 46,
+      "code": "ADR-003"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 47,
+      "code": "ADR-004"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 47,
+      "code": "ADR-004"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 48,
+      "code": "ADR-005"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 48,
+      "code": "ADR-005"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 49,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 49,
+      "code": "ADR-006"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 50,
+      "code": "ADR-007"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 50,
+      "code": "ADR-007"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 51,
+      "code": "ADR-008"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 51,
+      "code": "ADR-008"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 52,
+      "code": "ADR-009"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 52,
+      "code": "ADR-009"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 52,
+      "code": "ADR-007"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 53,
+      "code": "ADR-010"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 53,
+      "code": "ADR-010"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 55,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 55,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 58,
+      "code": "ADR-016"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 58,
+      "code": "ADR-016"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 60,
+      "code": "ADR-018"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 60,
+      "code": "ADR-018"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 60,
+      "code": "ADR-015"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 60,
+      "code": "ADR-012"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 60,
+      "code": "ADR-014"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 61,
+      "code": "ADR-013"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 61,
+      "code": "ADR-013"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 61,
+      "code": "ADR-002"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 72,
+      "code": "G1"
+    },
+    {
+      "file": "architecture/decisions/README.md",
+      "line": 72,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/ownership.md",
+      "line": 58,
+      "code": "G1"
+    },
+    {
+      "file": "architecture/ownership.md",
+      "line": 58,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/ownership.md",
+      "line": 120,
+      "code": "G1"
+    },
+    {
+      "file": "architecture/ownership.md",
+      "line": 120,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/ownership.md",
+      "line": 127,
+      "code": "G1"
+    },
+    {
+      "file": "architecture/ownership.md",
+      "line": 127,
+      "code": "G1"
+    },
+    {
+      "file": "architecture/ownership.md",
+      "line": 152,
+      "code": "TRC-X1"
+    },
+    {
+      "file": "architecture/relations.md",
+      "line": 56,
+      "code": "TRC-D2"
+    },
+    {
+      "file": "architecture/relations.md",
+      "line": 60,
+      "code": "ADR-001"
+    },
+    {
+      "file": "architecture/relations.md",
+      "line": 64,
+      "code": "ADR-003"
+    },
+    {
+      "file": "architecture/system-context.md",
+      "line": 56,
+      "code": "G1"
+    },
+    {
+      "file": "architecture/system-context.md",
+      "line": 57,
+      "code": "G3"
+    },
+    {
+      "file": "architecture/system-context.md",
+      "line": 57,
+      "code": "G4"
+    },
+    {
+      "file": "architecture/system-context.md",
+      "line": 112,
+      "code": "G1"
+    },
+    {
+      "file": "architecture/system-context.md",
+      "line": 112,
+      "code": "G5"
+    },
+    {
+      "file": "architecture/system-context.md",
+      "line": 114,
+      "code": "ADR-009"
+    },
+    {
+      "file": "examples/README.md",
+      "line": 80,
+      "code": "RP-FLOOR-003"
+    },
+    {
+      "file": "examples/README.md",
+      "line": 85,
+      "code": "G5"
+    },
+    {
+      "file": "examples/README.md",
+      "line": 112,
+      "code": "G1"
+    },
+    {
+      "file": "examples/README.md",
+      "line": 112,
+      "code": "G5"
+    },
+    {
+      "file": "examples/README.md",
+      "line": 113,
+      "code": "S1"
+    },
+    {
+      "file": "examples/README.md",
+      "line": 114,
+      "code": "S2"
+    },
+    {
+      "file": "examples/bdd-adapters/behave/docs/compass/2026-08-03-reset-password/acceptance-criteria.md",
+      "line": 35,
+      "code": "TRC-A1"
+    },
+    {
+      "file": "examples/bdd-adapters/behave/docs/compass/2026-08-03-reset-password/acceptance-criteria.md",
+      "line": 46,
+      "code": "TRC-A2"
+    },
+    {
+      "file": "examples/bdd-adapters/behave/docs/compass/2026-08-03-reset-password/acceptance-criteria.md",
+      "line": 57,
+      "code": "TRC-A3"
+    },
+    {
+      "file": "examples/bdd-adapters/cucumber-js/docs/compass/2026-08-03-reset-password/acceptance-criteria.md",
+      "line": 35,
+      "code": "TRC-A1"
+    },
+    {
+      "file": "examples/bdd-adapters/cucumber-js/docs/compass/2026-08-03-reset-password/acceptance-criteria.md",
+      "line": 46,
+      "code": "TRC-A2"
+    },
+    {
+      "file": "examples/bdd-adapters/cucumber-js/docs/compass/2026-08-03-reset-password/acceptance-criteria.md",
+      "line": 57,
+      "code": "TRC-A3"
+    },
+    {
+      "file": "examples/bdd-adapters/godog/docs/compass/2026-08-03-reset-password/acceptance-criteria.md",
+      "line": 35,
+      "code": "TRC-A1"
+    },
+    {
+      "file": "examples/bdd-adapters/godog/docs/compass/2026-08-03-reset-password/acceptance-criteria.md",
+      "line": 46,
+      "code": "TRC-A2"
+    },
+    {
+      "file": "examples/bdd-adapters/godog/docs/compass/2026-08-03-reset-password/acceptance-criteria.md",
+      "line": 57,
+      "code": "TRC-A3"
+    },
+    {
+      "file": "examples/bdd-adapters/pytest-bdd/docs/compass/2026-08-03-reset-password/acceptance-criteria.md",
+      "line": 35,
+      "code": "TRC-A1"
+    },
+    {
+      "file": "examples/bdd-adapters/pytest-bdd/docs/compass/2026-08-03-reset-password/acceptance-criteria.md",
+      "line": 46,
+      "code": "TRC-A2"
+    },
+    {
+      "file": "examples/bdd-adapters/pytest-bdd/docs/compass/2026-08-03-reset-password/acceptance-criteria.md",
+      "line": 57,
+      "code": "TRC-A3"
+    },
+    {
+      "file": "examples/bdd-adapters/pytest-bdd/README.md",
+      "line": 47,
+      "code": "TRC-A1"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 41,
+      "code": "S3"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 59,
+      "code": "S3"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 66,
+      "code": "G1"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 66,
+      "code": "G5"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 66,
+      "code": "G2"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 66,
+      "code": "G1"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 66,
+      "code": "G3"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 66,
+      "code": "G5"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 67,
+      "code": "S1"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 67,
+      "code": "S4"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 67,
+      "code": "S1"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 67,
+      "code": "S2"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/technical-design.md",
+      "line": 67,
+      "code": "S3"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/requirements-review.md",
+      "line": 25,
+      "code": "S1"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/requirements-review.md",
+      "line": 25,
+      "code": "S2"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/requirements-review.md",
+      "line": 43,
+      "code": "S3"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/requirements-review.md",
+      "line": 73,
+      "code": "INT-1"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/requirements-review.md",
+      "line": 73,
+      "code": "INT-2"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md",
+      "line": 54,
+      "code": "G1"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md",
+      "line": 54,
+      "code": "G3"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md",
+      "line": 54,
+      "code": "G4"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md",
+      "line": 54,
+      "code": "G5"
+    },
+    {
+      "file": "examples/feature-api-change/docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md",
+      "line": 54,
+      "code": "S2"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/acceptance-criteria.md",
+      "line": 21,
+      "code": "FU-001"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
+      "line": 32,
+      "code": "RP-SHAPE-002"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
+      "line": 48,
+      "code": "RP-FLOOR-001"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
+      "line": 62,
+      "code": "FU-002"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
+      "line": 74,
+      "code": "FU-001"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
+      "line": 111,
+      "code": "FU-001"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
+      "line": 115,
+      "code": "FU-003"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
+      "line": 130,
+      "code": "FU-002"
+    },
+    {
+      "file": "examples/hotfix-regression/.compass/work/search-crash-on-empty-filter/devlog.md",
+      "line": 10,
+      "code": "FU-002"
+    },
+    {
+      "file": "examples/hotfix-regression/.compass/work/search-crash-on-empty-filter/devlog.md",
+      "line": 34,
+      "code": "FU-001"
+    },
+    {
+      "file": "examples/hotfix-regression/.compass/work/search-crash-on-empty-filter/devlog.md",
+      "line": 49,
+      "code": "FU-001"
+    },
+    {
+      "file": "examples/hotfix-regression/.compass/work/search-crash-on-empty-filter/devlog.md",
+      "line": 49,
+      "code": "INT-1"
+    },
+    {
+      "file": "examples/hotfix-regression/.compass/work/search-crash-on-empty-filter/devlog.md",
+      "line": 50,
+      "code": "FU-002"
+    },
+    {
+      "file": "examples/hotfix-regression/.compass/work/search-crash-on-empty-filter/devlog.md",
+      "line": 51,
+      "code": "FU-003"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/verification-report.md",
+      "line": 52,
+      "code": "G1"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/verification-report.md",
+      "line": 52,
+      "code": "G2"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/verification-report.md",
+      "line": 52,
+      "code": "G4"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/verification-report.md",
+      "line": 52,
+      "code": "S2"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/verification-report.md",
+      "line": 53,
+      "code": "INT-1"
+    },
+    {
+      "file": "examples/hotfix-regression/docs/compass/2026-05-11-search-crash-on-empty-filter/verification-report.md",
+      "line": 74,
+      "code": "FU-001"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/delivery-approach.md",
+      "line": 18,
+      "code": "RP-FLOOR-003"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/delivery-approach.md",
+      "line": 43,
+      "code": "RP-FLOOR-003"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/delivery-approach.md",
+      "line": 46,
+      "code": "RP-FLOOR-003"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/delivery-approach.md",
+      "line": 52,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/delivery-approach.md",
+      "line": 55,
+      "code": "RP-ROLE-002"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/delivery-approach.md",
+      "line": 72,
+      "code": "RP-ROLE-002"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/delivery-approach.md",
+      "line": 76,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/delivery-approach.md",
+      "line": 112,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/delivery-approach.md",
+      "line": 122,
+      "code": "RP-FLOOR-003"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 58,
+      "code": "S3"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 62,
+      "code": "INT-2"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 80,
+      "code": "G1"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 80,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 80,
+      "code": "G1"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 80,
+      "code": "G2"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 80,
+      "code": "G3"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 80,
+      "code": "G4"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 80,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 81,
+      "code": "S1"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 81,
+      "code": "S4"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 81,
+      "code": "S1"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 81,
+      "code": "S2"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 81,
+      "code": "S3"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 84,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/technical-design.md",
+      "line": 106,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/.compass/work/notifications-subsystem/devlog.md",
+      "line": 14,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/.compass/work/notifications-subsystem/devlog.md",
+      "line": 25,
+      "code": "RP-ROLE-002"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/.compass/work/notifications-subsystem/devlog.md",
+      "line": 31,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/.compass/work/notifications-subsystem/devlog.md",
+      "line": 59,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/.compass/work/notifications-subsystem/devlog.md",
+      "line": 61,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/.compass/work/notifications-subsystem/devlog.md",
+      "line": 68,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/intent.md",
+      "line": 90,
+      "code": "RP-ROLE-002"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/requirements-review.md",
+      "line": 22,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/requirements-review.md",
+      "line": 60,
+      "code": "S3"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/requirements-review.md",
+      "line": 91,
+      "code": "INT-1"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/requirements-review.md",
+      "line": 91,
+      "code": "INT-2"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/requirements-review.md",
+      "line": 91,
+      "code": "INT-3"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/requirements-review.md",
+      "line": 103,
+      "code": "RP-FLOOR-003"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/requirements-review.md",
+      "line": 105,
+      "code": "RP-ROLE-002"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/verification-report.md",
+      "line": 68,
+      "code": "G1"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/verification-report.md",
+      "line": 68,
+      "code": "G2"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/verification-report.md",
+      "line": 68,
+      "code": "G3"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/verification-report.md",
+      "line": 68,
+      "code": "G4"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/verification-report.md",
+      "line": 68,
+      "code": "G5"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/verification-report.md",
+      "line": 68,
+      "code": "S2"
+    },
+    {
+      "file": "examples/initiative-new-subsystem/docs/compass/2026-03-02-notifications-subsystem/verification-report.md",
+      "line": 105,
+      "code": "G5"
+    },
+    {
+      "file": "examples/quick-fix-typo/.compass/work/fix-timeout-error-message/devlog.md",
+      "line": 35,
+      "code": "G1"
+    },
+    {
+      "file": "examples/quick-fix-typo/.compass/work/fix-timeout-error-message/devlog.md",
+      "line": 35,
+      "code": "G2"
+    },
+    {
+      "file": "examples/quick-fix-typo/.compass/work/fix-timeout-error-message/devlog.md",
+      "line": 35,
+      "code": "G3"
+    },
+    {
+      "file": "examples/quick-fix-typo/.compass/work/fix-timeout-error-message/devlog.md",
+      "line": 35,
+      "code": "INT-1"
+    },
+    {
+      "file": "examples/quick-fix-typo/docs/compass/2026-05-04-fix-timeout-error-message/verification-note.md",
+      "line": 35,
+      "code": "G1"
+    },
+    {
+      "file": "examples/quick-fix-typo/docs/compass/2026-05-04-fix-timeout-error-message/verification-note.md",
+      "line": 35,
+      "code": "G2"
+    },
+    {
+      "file": "examples/quick-fix-typo/docs/compass/2026-05-04-fix-timeout-error-message/verification-note.md",
+      "line": 35,
+      "code": "G3"
+    },
+    {
+      "file": "examples/quick-fix-typo/docs/compass/2026-05-04-fix-timeout-error-message/verification-note.md",
+      "line": 35,
+      "code": "S2"
+    },
+    {
+      "file": "examples/spike-technical-unknown/docs/compass/2026-05-12-pdf-export-library-viability/delivery-approach.md",
+      "line": 35,
+      "code": "RP-SHAPE-001"
+    },
+    {
+      "file": "examples/spike-technical-unknown/docs/compass/2026-05-12-pdf-export-library-viability/delivery-approach.md",
+      "line": 51,
+      "code": "RP-FLOOR-003"
+    },
+    {
+      "file": "examples/spike-technical-unknown/docs/compass/2026-05-12-pdf-export-library-viability/delivery-approach.md",
+      "line": 55,
+      "code": "RP-FLOOR-002"
+    },
+    {
+      "file": "examples/spike-technical-unknown/docs/compass/2026-05-12-pdf-export-library-viability/delivery-approach.md",
+      "line": 73,
+      "code": "S2"
+    },
+    {
+      "file": "examples/spike-technical-unknown/docs/compass/2026-05-12-pdf-export-library-viability/delivery-approach.md",
+      "line": 83,
+      "code": "G1"
+    },
+    {
+      "file": "examples/spike-technical-unknown/docs/compass/2026-05-12-pdf-export-library-viability/delivery-approach.md",
+      "line": 83,
+      "code": "G3"
+    },
+    {
+      "file": "examples/spike-technical-unknown/.compass/work/pdf-export-library-viability/devlog.md",
+      "line": 66,
+      "code": "G1"
+    },
+    {
+      "file": "examples/spike-technical-unknown/.compass/work/pdf-export-library-viability/devlog.md",
+      "line": 66,
+      "code": "G3"
+    },
+    {
+      "file": "examples/spike-technical-unknown/.compass/work/pdf-export-library-viability/devlog.md",
+      "line": 72,
+      "code": "G1"
+    },
+    {
+      "file": "examples/spike-technical-unknown/.compass/work/pdf-export-library-viability/devlog.md",
+      "line": 72,
+      "code": "G2"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 31,
+      "code": "RP-SHAPE-001"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 35,
+      "code": "RP-SHAPE-002"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 39,
+      "code": "RP-SHAPE-003"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 43,
+      "code": "RP-SHAPE-004"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 47,
+      "code": "RP-SHAPE-005"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 76,
+      "code": "S6"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 79,
+      "code": "RP-ADV-001"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 104,
+      "code": "ADR-016"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 106,
+      "code": "RP-FLOOR-001"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 112,
+      "code": "RP-FLOOR-002"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 118,
+      "code": "RP-FLOOR-003"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 123,
+      "code": "RP-REQUIRE-001"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 128,
+      "code": "RP-REQUIRE-002"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 133,
+      "code": "RP-REQUIRE-003"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 138,
+      "code": "RP-REQUIRE-004"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 145,
+      "code": "RP-CAP-001"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 160,
+      "code": "RP-GATE-001"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 163,
+      "code": "RP-GATE-002"
+    },
+    {
+      "file": "governance/routing-policy.yml",
+      "line": 166,
+      "code": "RP-GATE-003"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 37,
+      "code": "ADR-006"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 75,
+      "code": "G4"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 75,
+      "code": "S5"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 78,
+      "code": "TRC-A5"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 80,
+      "code": "S5"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 100,
+      "code": "S5"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 140,
+      "code": "G1"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 140,
+      "code": "G5"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 144,
+      "code": "G1"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 158,
+      "code": "G2"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 162,
+      "code": "S1"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 166,
+      "code": "G3"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 174,
+      "code": "G4"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 183,
+      "code": "G5"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 207,
+      "code": "G1"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 207,
+      "code": "G5"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 213,
+      "code": "S1"
+    },
+    {
+      "file": "governance/guardrails.yml",
+      "line": 222,
+      "code": "S2"
+    },
+    {
+      "file": "templates/acceptance-criteria.md",
+      "line": 92,
+      "code": "TRC-A1"
+    },
+    {
+      "file": "templates/acceptance-criteria.md",
+      "line": 103,
+      "code": "TRC-A2"
+    },
+    {
+      "file": "templates/acceptance-criteria.md",
+      "line": 119,
+      "code": "TRC-B1"
+    },
+    {
+      "file": "templates/acceptance-criteria.md",
+      "line": 137,
+      "code": "TRC-F1"
+    },
+    {
+      "file": "templates/architecture/decisions/ADR-001-architecture-directory-location.md",
+      "line": 2,
+      "code": "ADR-001"
+    },
+    {
+      "file": "templates/architecture/decisions/ADR-002-architecture-loaded-yml-schema.md",
+      "line": 2,
+      "code": "ADR-002"
+    },
+    {
+      "file": "templates/architecture/decisions/ADR-003-inline-tag-dod-syntax.md",
+      "line": 2,
+      "code": "ADR-003"
+    },
+    {
+      "file": "templates/architecture/decisions/ADR-003-inline-tag-dod-syntax.md",
+      "line": 40,
+      "code": "EV-A1"
+    },
+    {
+      "file": "templates/architecture/decisions/ADR-003-inline-tag-dod-syntax.md",
+      "line": 41,
+      "code": "EV-A1"
+    },
+    {
+      "file": "templates/architecture/decisions/ADR-003-inline-tag-dod-syntax.md",
+      "line": 48,
+      "code": "G4"
+    },
+    {
+      "file": "templates/architecture/decisions/ADR-003-inline-tag-dod-syntax.md",
+      "line": 62,
+      "code": "G4"
+    },
+    {
+      "file": "templates/architecture/decisions/ADR-004-lens-first-planner-second.md",
+      "line": 2,
+      "code": "ADR-004"
+    },
+    {
+      "file": "templates/architecture/decisions/ADR-004-lens-first-planner-second.md",
+      "line": 55,
+      "code": "S4"
+    },
+    {
+      "file": "templates/architecture/decisions/ADR-005-signals-yml-governance-file.md",
+      "line": 2,
+      "code": "ADR-005"
+    },
+    {
+      "file": "templates/architecture/decisions/README.md",
+      "line": 18,
+      "code": "ADR-001"
+    },
+    {
+      "file": "templates/architecture/decisions/README.md",
+      "line": 18,
+      "code": "ADR-002"
+    },
+    {
+      "file": "templates/architecture/decisions/README.md",
+      "line": 41,
+      "code": "ADR-001"
+    },
+    {
+      "file": "templates/architecture/decisions/README.md",
+      "line": 41,
+      "code": "ADR-001"
+    },
+    {
+      "file": "templates/architecture/decisions/README.md",
+      "line": 42,
+      "code": "ADR-002"
+    },
+    {
+      "file": "templates/architecture/decisions/README.md",
+      "line": 42,
+      "code": "ADR-002"
+    },
+    {
+      "file": "templates/architecture/decisions/README.md",
+      "line": 43,
+      "code": "ADR-003"
+    },
+    {
+      "file": "templates/architecture/decisions/README.md",
+      "line": 43,
+      "code": "ADR-003"
+    },
+    {
+      "file": "templates/architecture/decisions/README.md",
+      "line": 44,
+      "code": "ADR-004"
+    },
+    {
+      "file": "templates/architecture/decisions/README.md",
+      "line": 44,
+      "code": "ADR-004"
+    },
+    {
+      "file": "templates/architecture/decisions/README.md",
+      "line": 45,
+      "code": "ADR-005"
+    },
+    {
+      "file": "templates/architecture/decisions/README.md",
+      "line": 45,
+      "code": "ADR-005"
+    },
+    {
+      "file": "templates/architecture/relations.md",
+      "line": 8,
+      "code": "TRC-B2"
+    },
+    {
+      "file": "templates/technical-design.md",
+      "line": 210,
+      "code": "TRC-A1"
+    },
+    {
+      "file": "templates/technical-design.md",
+      "line": 210,
+      "code": "TRC-A2"
+    },
+    {
+      "file": "templates/distribution-map.md",
+      "line": 55,
+      "code": "TRC-A1"
+    },
+    {
+      "file": "templates/distribution-map.md",
+      "line": 55,
+      "code": "TRC-A2"
+    },
+    {
+      "file": "templates/distribution-map.md",
+      "line": 56,
+      "code": "TRC-B1"
+    }
+  ],
+  "locations_truncated_at": 400,
+  "note": "Regenerating this is a deliberate act and a reviewable diff. It is never regenerated automatically - a baseline that rewrites itself always equals itself, which is a check that cannot fail.",
+  "exposure_to_known_gaps_in_the_check": {
+    "why_this_is_here": "This figure is a registered claim and the release has already corrected three numbers. Measured 2026-08-14, before shipping, so a target of zero is read against a figure whose limits are known. A target of zero against an inflated baseline is a number nobody can act on, and the first person to run it and get mostly false positives is the person who widens the matcher until it catches nothing.",
+    "fixed_width_columns": {
+      "exposure": "0 of 466 (0%)",
+      "what_the_gap_is": "TRC-C8's container test recognises markdown pipe-delimited cells and NOT column-aligned plain text. Run against `compass issue receipt`, this inflated the count 18-fold: 37 flagged, of which 35 were identifiers standing alone in a listing column.",
+      "why_the_baseline_is_unaffected": "The baseline scans the markdown surfaces in terminology.yml's scan.surfaces. None of them contains fixed-width column layout - that shape only appears in printed CLI output, which this baseline never covered. The gap is real and it is somewhere else.",
+      "consequence": "The baseline is NOT inflated by this. But it also says nothing about printed output, which is the most reader-facing surface the rule governs. Its reach is markdown documents only."
+    },
+    "fenced_code_blocks": {
+      "exposure": "18 of 466 (3%)",
+      "what_the_gap_is": "Codes inside ``` fences are counted. Most are legitimate quotation - ADR-017 quoting a vocabulary entry verbatim, docs/five-minutes.md showing `G1 Tested before it lands` as sample OUTPUT, a BDD example showing an `@TRC-A1` tag. The quoted-term exception covers a code span; a fenced block is the same act at greater length and is not exempt.",
+      "consequence": "Roughly 3% of the figure is quotation rather than unexplained prose. Small, and real."
+    },
+    "drift_since_capture": {
+      "captured_at_count": 459,
+      "recounted_2026_08_14": 466,
+      "why": "This session added S13, S14, the terminology.yml sections and the article passage after the baseline was taken. Drift is expected and is what a baseline is for - it is not regenerated automatically, because a baseline that rewrites itself always equals itself."
+    },
+    "what_this_means_for_the_target": "Zero is the target for unexplained codes in markdown prose. It is NOT a claim about printed output, and about 3% of the current figure is quotation the check should arguably not count. Both gaps are recorded rather than fixed: fixing either needs a scenario and a mutation proof, which is a separate piece of work. Tracked in receipt-and-scan-container-gaps."
+  },
+  "count_first_use_only": 321,
+  "THE_CHECK_IS_STRICTER_THAN_THE_RULE": {
+    "headline": "This check counts EVERY occurrence (466). S7 asks about FIRST USE per piece of output (321). The figure is 31% higher than the rule requires.",
+    "what_S7_actually_says": "'the first time a code appears in any one piece of output, it appears with its plain statement beside it; every mention after that is the bare code, which is shorter and reads better once the meaning is known.' A repeat mention is CORRECT by the rule. This check flags it.",
+    "how_it_was_found": "TRC-X5 pointed the check at this issue's own artifacts - documents whose subject IS the identifiers. 428 occurrences against 194 first uses. A spec naming forty scenarios cannot gloss each one forty times, and demanding it would produce worse writing than the defect.",
+    "why_this_is_a_DIFFERENT_failure_from_the_others": "Four numbers were corrected in this release because the MEASUREMENT was wrong - counting the wrong files, the wrong scope, things nobody reads. This one is the first where the CHECK is wrong: the count is accurate and the rule it implements is not the rule that was written. File it separately in your head; the fix is different.",
+    "not_fixed_here_and_why": "Fixing it is a matcher change plus a design decision - what constitutes one piece of output for a spec, for CLI output, for agent speech - and by S10 a matcher change stales every mutation proof established through it, all twenty. Deferred deliberately rather than designed at the final gate of a long session.",
+    "tracked_in": "plain-language-count-first-use-per-output"
+  }
+}

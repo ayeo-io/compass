@@ -1,0 +1,963 @@
+# compass_pkg.approval_guard - the pre-tool checks on approval state
+r"""Decide whether the agent's tool call touches approval state it must not
+(ADR-068 decision 10, ADR-069 decisions 4 and 8). `hooks/pre-tool.sh` calls
+`check` with the hook input and blocks with the code it returns.
+
+- **How a Bash command is judged.** `approval_words.simple` reads a command
+  as words only when the whole command is simple (one command, or plain
+  commands joined by `&&`, `;` or a new line, each starting with a name on
+  `COMMANDS`; the gate fails closed). Any other command is judged by its
+  whole text: any text that names a protected thing is refused.
+  - In a simple command the guard judges each word and redirect target by its
+    substring, except the message text of `git commit`, `tag`, `merge` and
+    `revert` (`-m`, `-am`, `--message`) and of `gh issue`, `pr` and `release`
+    (`--title`, `--body`, `--notes`, `-t`, `-b`).
+  - A command that stands alone, with no redirect to a file, one operand and
+    only the plain options of `EXEMPT_OPTIONS`, may name what `EXEMPT` says in
+    a bare path argument with no `..` segment: a request folder or file for
+    `ls`, `wc` and `stat`, and the prompt hook script for `cat`. The exemption does not hold for a
+    `VAR=` word, an option such as `--output=<path>`, or the word after `-f`,
+    `--file`, `--files0-from`, `--output`, `--pre` or `--exec`.
+  - A Bash word that holds a glob or brace character in the name of a
+    protected folder is judged as before.
+- **The auto-memory folder.** Read, Grep, Edit and Write skip the
+  transcript tests for `<configuration folder>/projects/<one
+  folder>/memory/...`, after the path is joined to the call's `cwd`,
+  normalised and case-folded, and its symbolic links are resolved
+  (`in_memory_folder`). A path with a glob or brace character, a Grep glob
+  with a `..` segment, and a path that leaves the folder are not in it. A
+  Bash command that names the folder is refused. A symbolic link inside the
+  folder that a Grep over it follows is not detected.
+- **Request files.** Edit or Write on a file under an issue's
+  `approval-requests/`, or a Bash word that names that folder or the
+  prompt hook's entry point, gives `approval-request-protected`.
+- **Delegation files.** Edit or Write under `.compass/delegations/`, Read or
+  Grep that names that folder by path or by Grep glob, or a Bash word that
+  names it, gives `delegation-protected`. The folder holds the salt and hash
+  of the code that confirms a g5 delegation.
+- **The session transcript.** Claude Code writes a hook's block message to
+  the session's transcript file (measured on Claude Code 2.1.301), and the
+  block message is where the person sees the code that confirms a g5
+  delegation. So `transcript-protected` is given for:
+  - Read or Grep on the transcript's folder, inside it, or on any folder
+    above it, with `~` and `$HOME` expanded and a relative path joined to
+    the call's `cwd`; a Grep with no path searches its `cwd`;
+  - Read, Grep, Edit or Write, or a Bash word, that names a
+    `.claude*/projects` folder, a configuration folder directly under the
+    home folder (`~/.claude*`, ending there) or `CLAUDE_CONFIG_DIR`. A
+    project's own `.claude` folder does not count;
+  - a Bash word that names the transcript's folder or a folder above it,
+    such as `~`, once `~`, `~<name>` and `$HOME` are expanded. A word with a
+    glob counts by the folder before the glob.
+- **A delegated approval's caller.** A Bash command is a delegated approval
+  when one of its words is `approve` and one is `--delegated`, a prefix of
+  it of five characters or more, or `--delegated=...`; the earlier rule,
+  `evidence approve` beside any word that starts `--del`, also counts. Only
+  judged words count, so a commit message that names `--delegated` is text.
+  The words are read twice: as the shell splits the command, and again with
+  every word that holds a space split once more, to any depth, so `bash -c`,
+  `eval` and a pipe into `sh` are read too. Either reading must name the
+  caller with
+  `--as`, and every `--as` must be the agent Claude Code reports: `main`
+  only when the input has neither `agent_type` nor `agent_id`, otherwise the
+  exact `agent_type`, plugin prefix included. An `agent_id` with no or an
+  empty `agent_type` is refused, because Claude Code's own internal agents
+  report that shape (the host measurement on Claude Code 2.1.300, ADR-069).
+  Anything else gives `delegation-caller-mismatch`. So does any word without
+  white space that holds `--as` and is neither `--as` nor `--as=...`, such
+  as `--as${IFS}compass:architect`, `$IFS--as`, `--asmain`, `--assume-yes`
+  or `--as-main`: the shell can turn it into `--as`, and the CLI keeps the
+  last value. A word with white space is read again as its parts. Quotes
+  are removed first, so `"--as"` and `--a''s` count as `--as`.
+- **A glob that reaches the delegation files.** A Grep glob, or a Bash word
+  with `*`, `?` or `[`, is tested with `fnmatch` against sample paths in
+  `.compass/delegations` and against an ordinary path of the same shape
+  (`.compass/zz`, or a file `file.yml` inside it). It gives `delegation-protected`
+  when it matches a sample and not the ordinary path. Refused: `d*/*`,
+  `deleg*/*`, `**/confirm-*`, `deleg?tions`, `**/DL-*.yml`. Accepted, as
+  they pick everything: `*`, `**/*`, `*.yml`, `**/*.yml`, `.compass/*`,
+  `**/*.md`, `src/*.py`. The samples are written relative to the Grep path
+  (so a path that cannot reach the folder, such as `src`, is accepted) or to
+  the call's `cwd` for Bash, where `./` is removed and an absolute word is
+  read under `cwd`. The line is a heuristic: a glob that picks the
+  delegation files together with others, such as `**/*l*.yml`, passes, and
+  the 64-bit code keeps the stored hash useless. The glob is read as the
+  shell reads it: `[^` counts as `[!`, a POSIX class counts as `?`, and a
+  backslash and newline are removed. A Grep glob is also split on commas.
+  A delegated approval with a brace expansion in a space-free word is
+  refused, because the shell expands `--a{s=main,s=x}` to two `--as=` words.
+  A bracket expression that holds a class, a collating symbol or an
+  equivalence class (`[[:lower:]x]`, `[[.d.]]`) is read as one character.
+- **ANSI-C quoting and braces in an evidence command.** A command that names
+  `evidence` (a word `evidence`, a quoted word that holds `compass evidence`,
+  or a `--delegated` flag) is refused, with the word named, when a word holds
+  ANSI-C quoting with an escape (`$'--a\x73'`, `$'appro\x76e'`) or a brace
+  expansion (`--{delegated,x}`, `appr{ove,x}`), whether or not `--delegated`
+  shows. The guard does not decode either spelling. `$'--as'` with no escape
+  is read as the quoted text. A value with a space or no comma, such as
+  `--note '{"a": 1}'`, passes; a compact value with a comma is refused, in
+  any `compass evidence` command. A command with the word `compass` (or an
+  escape-spelled `compass` in command position) and a word of ANSI-C quoting
+  with an escape is refused even when `evidence` is spelled with escapes too:
+  `compass $'\x65vidence' $'appro\x76e'` runs `evidence approve`.
+- **Limit: a text-matching guard cannot follow what the shell, a spelling or
+  an interpreter builds at run time** (variables, command substitution, a
+  glob that expands against a file the agent wrote, such as `appro?e` or
+  `--a?`, encodings, `python3 -c`). The stored confirmation hash and the
+  64-bit code (ayeo-io/compass#599) are the control that holds then.
+
+Each check ignores letter case, because macOS opens a path in any case. The
+earlier guard's checks run first, in its order and case, so a call it refused
+keeps its refusal code. The glob check is the last Bash check.
+
+The guard is defence in depth against an accidental or injected read of the
+transcript or of an approval request. It is not a hard boundary: a script that
+one call writes with the Write tool and another call runs was open before this
+guard. What it does not stop:
+  - a script that one call writes and another call runs, with Bash or the
+    Write tool;
+  - a command, function or alias that an earlier Bash call defined, and a
+    git alias, git hook or git config that runs a command;
+  - any word built at run time;
+  - a flag or path built from a variable, command substitution, or a value
+    read from a file or the environment;
+  - arguments built by `xargs` or `printf`;
+  - brace expansion in a glob, in Bash or in a Grep glob (`{d,x}eleg*/*`,
+    `**/{DL-*,x}.yml`); a brace expansion in a delegated approval is refused;
+  - patterns that only zsh reads (`.compass/(deleg\|x)ations/*`,
+    `.compass/deleg*/DL-<->.yml`);
+  - a case-sensitive glob (`.compass/*/[A-Z]*`, Grep `**/[A-Z]*.yml`): the
+    guard lower-cases the glob, so it counts as a glob that picks the
+    delegation files together with others, and passes;
+  - a Bash command that reads the folder without naming it (`grep -r x
+    .compass`, `find .compass -type f -exec cat {} +`);
+  - a tool option that takes its own glob (`rg -g`, `find -name`,
+    `--include`), and extended globs after `shopt -s extglob`;
+  - a Bash glob that spells neither .compass nor deleg, such as
+    `cat .c*/d*/*` (the hook does not start the guard for it). `cat
+    .c*/delegations` does start it: the hook tests the command twice, so a
+    glob before `deleg` comes after `deleg` in the other copy, and the guard
+    refuses it. A glob rooted at another folder than `cwd` (`$PWD/...`) is
+    also not stopped;
+  - a relative path after `cd`, because the guard sees only the `cwd` of the
+    call.
+The safety contract states these limits.
+"""
+# DEPENDENCY: standard library (bisect, fnmatch, os, re, shlex, unicodedata),
+# and compass_pkg.approval_words (the simple-command gate). Runs inside
+# hooks/pre-tool.sh, so it keeps to syntax the hook's oldest supported python3
+# reads (3.10) and imports no third-party module.
+from __future__ import annotations
+
+import bisect
+import fnmatch
+import os
+import re
+import shlex
+import unicodedata
+
+from compass_pkg.approval_words import simple
+
+REQUEST_FOLDER = "approval-requests"
+HOOK_ENTRY = "prompt-approval.sh"
+DELEGATION_FOLDER = ".compass/delegations"
+EDIT_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
+READ_TOOLS = ("Read", "Grep")
+#: A Claude Code configuration folder's transcripts, however it is spelled.
+#: macOS opens a path in any letter case, so each check also runs on the
+#: lower-cased text, after the earlier guard's checks.
+TRANSCRIPTS = re.compile(r"\.claude[\w.-]*/projects(?:/|\b)|CLAUDE_CONFIG_DIR")
+#: A shell glob or brace character: a word holding one names every path it
+#: expands to.
+GLOB = re.compile(r"[*?\[{]")
+#: A brace expansion: `{` with a `,` or `..` before the closing `}`.
+#: `_has_brace` finds what this pattern finds. The pattern retried from each
+#: `,` and took 19 seconds on `{` and 90,000 commas.
+BRACE = re.compile(r"\{[^{}]*(?:,|\.\.)[^{}]*\}")
+_BRACE_PAIR = re.compile(r"\{([^{}]*)\}")
+
+
+def _has_brace(word):
+    """True when `BRACE` would match `word`, in linear time."""
+    return any("," in m.group(1) or ".." in m.group(1) for m in _BRACE_PAIR.finditer(word))
+#: How deep a command nested in quoted words is read, such as
+#: `bash -c "bash -c '...'"`.
+NESTING = 8
+#: The longest part of a refused word that a refusal shows.
+SHOWN_MAX = 80
+#: Control, format and line-separator characters: none reaches a person's screen.
+HIDDEN = ("Cc", "Cf", "Zl", "Zp")
+NONE = frozenset()
+
+# --- the policy tables: a widening is a one-line diff that needs a twin test row ---------------
+
+#: What a bare path argument of a command that stands alone may name. `ls`, `wc` and `stat`
+#: show names and counts, so they may name a request folder. `cat` may name the prompt hook
+#: script, and nothing else does: a copy of the script that the agent can change would run.
+EXEMPT = {"ls": ("request",), "wc": ("request",), "stat": ("request",), "cat": ("script",)}
+#: Options whose value is a path, a command or a file to write, never a bare path argument.
+PATH_OPTIONS = frozenset(("-f", "--file", "--files0-from", "--output", "--pre", "--exec"))
+ASSIGNMENT = re.compile(r"[A-Za-z_]\w*=")
+#: The letters of the short options an exempt command may carry. Each takes no value and
+#: shows names, sizes or counts. Any other option, `--` and a second operand void the
+#: exemption, because an option such as `ls -I` or `stat -f` changes what is read.
+EXEMPT_OPTIONS = {"ls": "lah1", "wc": "lcwm", "stat": "", "cat": ""}
+
+
+def exempt_commands():
+    """The commands that hold an exemption or a text position, named as
+    `tests/approval_guard_cases.py` counts them. A test ties this set to the table of
+    counter-examples, so a widening needs three calls that stay refused."""
+    return set(EXEMPT) | {"git commit", "gh"}
+
+
+def shown_word(word, found=""):
+    """A refused word as a refusal shows it: no control, format or line-separator
+    character, and at most `SHOWN_MAX` characters, so a hostile word cannot add text to
+    the message. A longer word is cut around `found`, the protected part, so it is shown."""
+    kept = "".join(c for c in str(word) if unicodedata.category(c) not in HIDDEN)
+    if len(kept) <= SHOWN_MAX:
+        return kept
+    at = kept.lower().find(str(found).lower()) if found else -1
+    if at < 0:
+        return kept[:SHOWN_MAX]
+    start = at if len(found) >= SHOWN_MAX else at - (SHOWN_MAX - len(found)) // 2
+    start = max(0, min(start, len(kept) - SHOWN_MAX))
+    return kept[start:start + SHOWN_MAX]
+
+
+def _path(text):
+    return str(text or "").replace("\\", "/")
+
+
+def caller(event):
+    """The agent Claude Code reports for this call: `main`, its exact
+    `agent_type`, or None when the input does not name one."""
+    has_type = "agent_type" in event
+    has_id = event.get("agent_id") not in (None, "")
+    agent_type = event.get("agent_type")
+    if not has_type and not has_id:
+        return "main"
+    if isinstance(agent_type, str) and agent_type.strip():
+        return agent_type
+    return None
+
+
+def _words(command):
+    # shlex does not read ANSI-C quoting, so `$'approve'` would keep its `$`.
+    # Dropping the `$` reads the word as the quoted text the shell runs.
+    command = re.sub(r"\$(?=['\"])", "", command)
+    # The shell drops a backslash and newline: `--a\<newline>s` runs as `--as`.
+    command = command.replace("\\\n", "")
+    try:
+        return shlex.split(command)
+    except ValueError:
+        return command.split()
+
+
+def _nested_words(words):
+    """The words, then the words of each word that holds a space, such as the
+    argument of `bash -c` or `eval`, read again. The first reading of the
+    command is the caller's, so the rereads go to `NESTING - 1` levels."""
+    found = list(words)
+    level = [w for w in found if re.search(r"\s", w)]
+    for _ in range(NESTING - 1):
+        if not level:
+            break
+        following = []
+        for text in level:
+            parts = _words(text)
+            found.extend(parts)
+            following.extend(w for w in parts if re.search(r"\s", w))
+        level = following
+    return found
+
+
+def _as_values(words):
+    """Every value given to `--as`: the CLI keeps the last one."""
+    values = []
+    for i, word in enumerate(words):
+        if word == "--as" and i + 1 < len(words):
+            values.append(words[i + 1])
+        elif word.startswith("--as="):
+            values.append(word[len("--as="):])
+    return values
+
+
+def _delegated_flag(word):
+    """`--delegated`, a prefix of it of five characters or more, or
+    `--delegated=...`; not an unrelated flag such as `--delimiter`."""
+    return (len(word) >= 5 and "--delegated".startswith(word)) or word.startswith(
+        "--delegated=")
+
+
+def _delegated_approve(words, earlier=False):
+    """True for a command that may run a delegated `compass evidence approve`:
+    a word, or a part of one cut at a shell operator, is `approve`, and a
+    word is the `--delegated` flag. With `earlier`, the rule of the earlier
+    guard also counts: `evidence approve` and any word that starts `--del`."""
+    if earlier and any(a == "evidence" and b == "approve" for a, b in zip(words, words[1:])) \
+            and any(w.startswith("--del") for w in words):
+        return True
+    runs = any(part == "approve" for w in words for part in re.split(r"[;&|()<>`]+", w))
+    return runs and any(_delegated_flag(w) for w in words)
+
+
+def _unreadable_as(words):
+    """Space-free words that hold `--as` and are neither `--as` nor
+    `--as=...`. A word with white space is read again as its parts."""
+    return [w for w in words
+            if "--as" in w and w != "--as" and not w.startswith("--as=")
+            and not re.search(r"\s", w)]
+
+
+#: ANSI-C quoting with an escape: `$'--a\x73'` runs as `--as`. Without a
+#: backslash, `$'--as'` is the quoted text, which `_words` already reads. The
+#: pattern starts at `$'`; `_ansi_c_word` widens the match to its word. A
+#: leading `\S*` in the pattern tried every start in a long word and took 10
+#: seconds on 90 KB.
+ANSI_C = re.compile(r"\$'[^']*\\")
+
+
+def _ansi_c_word(raw):
+    """The whitespace-delimited word around the first ANSI-C escape, else None."""
+    found = ANSI_C.search(raw)
+    if not found:
+        return None
+    left, right = found.start(), found.end()
+    while left > 0 and not raw[left - 1].isspace():
+        left -= 1
+    while right < len(raw) and not raw[right].isspace():
+        right += 1
+    return raw[left:right]
+
+
+#: A word with an escape in command position (the start, or after an
+#: operator or a variable assignment): `$'\x63ompass'` runs as `compass`.
+#: `_escaped_command` finds what this pattern finds; the pattern retried
+#: from every operator and took 5 seconds on a word of 45,000 `x;`.
+ESCAPED_COMMAND = re.compile(
+    r"(?:^|[;&|(`\n]|\$\()\s*(?:\w+=\S*\s+)*\S*\$'[^']*\\")
+_ASSIGNMENT = re.compile(r"\w+=")
+
+
+def _escaped_command(text):
+    """True when `ESCAPED_COMMAND` would match `text`, in linear time.
+
+    A word is in command position when it starts the text or a line, or when
+    the word before it holds an operator followed by nothing or by an
+    assignment, or is itself an assignment in command position. An escape
+    matches when its word is in command position or holds an operator before
+    the escape (`\\S*` after the operator reaches it)."""
+    words = [(m.start(), m.group()) for m in re.finditer(r"\S+", text)]
+    starts = [start for start, _ in words]
+    # Each word's first operator, found once: rescanning the word for every
+    # escape in it was quadratic in a word of many `$'\'`.
+    first_operator = []
+    command_position = []
+    for index, (start, word) in enumerate(words):
+        found = re.search(r"[;&|(`]", word)
+        first_operator.append(start + found.start() if found else None)
+        if index == 0:
+            here = True  # `^` then `\s*`
+        else:
+            before_start, before = words[index - 1]
+            gap = text[before_start + len(before):start]
+            here = ("\n" in gap
+                    or bool(re.search(r"[;&|(`](?:$|\w+=)", before))
+                    or (bool(_ASSIGNMENT.match(before)) and command_position[index - 1]))
+        command_position.append(here)
+    for found in ANSI_C.finditer(text):
+        at = found.start()
+        # The word that holds the `$'`; `$'` is not white space, so one does.
+        index = bisect.bisect_right(starts, at) - 1
+        operator = first_operator[index]
+        if command_position[index] or (operator is not None and operator < at):
+            return True
+    return False
+
+
+def _names_evidence(words, nested):
+    """True when a word is `evidence`, or a quoted word holds `compass
+    evidence` (the argument of `bash -c`, `eval` or a pipe into `sh`), or a
+    word is the `--delegated` flag."""
+    return (any(w == "evidence" or "compass evidence" in w for w in words)
+            or any(_delegated_flag(w) for w in nested))
+
+
+def _built_word(words, nested, raw, compass, escaped):
+    """A word of a command that names evidence and holds ANSI-C quoting or a
+    brace expansion, else None. The shell turns `$'appro\\x76e'` into
+    `approve` and `--{delegated,x}` into `--delegated`; the guard does not
+    decode them, so it refuses the command whether or not `--delegated` shows.
+    `raw` is the words as written, `compass` is true when a word is `compass`,
+    and `escaped` when a command name is spelled with an escape."""
+    found = _ansi_c_word(raw)
+    # A command that holds `compass` (or spells it with an escape in command
+    # position) may spell every word with an escape, so `evidence` need not
+    # show: `compass $'\x65vidence' $'appro\x76e'` runs `evidence approve`.
+    evidence = _names_evidence(words, nested)
+    if found and (evidence or compass or escaped):
+        return found
+    if not evidence:
+        return None
+    for word in nested:
+        if _has_brace(word) and not re.search(r"\s", word):
+            return word
+    return None
+
+
+def _caller_mismatch(words, nested, who):
+    """`(named, caller)` when a delegated approval does not name its caller.
+    The top-level words keep the earlier guard's rule, so nothing it refused
+    is allowed now."""
+    for words, earlier in ((words, True), (nested, False)):
+        if not _delegated_approve(words, earlier):
+            continue
+        values = _as_values(words)
+        wrong = [v for v in values if v != who]
+        if not values or who is None or wrong:
+            return (wrong[0] if wrong else values[0] if values else None), who
+        # The shell can turn such a word into `--as` (`--as${IFS}x`), so the
+        # value the CLI records may differ from the one checked above.
+        unreadable = _unreadable_as(words)
+        if unreadable:
+            return unreadable[0], who
+        # Brace expansion turns `--a{s=main,s=x}` into two `--as=` words. A
+        # word that holds a space (a quoted value) is read again as its parts.
+        braced = [w for w in words if _has_brace(w) and not re.search(r"\s", w)]
+        if braced:
+            return braced[0], who
+    return None
+
+
+def _transcript_folder(event):
+    path = event.get("transcript_path")
+    return os.path.dirname(_path(path)) if path else ""
+
+
+def _home():
+    return os.environ.get("HOME") or os.path.expanduser("~")
+
+
+def _config_folder():
+    """A configuration folder directly under the home folder, as a word ends:
+    `~/.claude-x`, `$HOME/.claude-x/` or `<home>/.claude-x/*`. A project's
+    own `.claude` folder, or a file in either, does not match."""
+    home = re.escape(_path(_home()).rstrip("/"))
+    return re.compile(r"(?:~|\$\{?HOME\}?|%s)/+\.claude[\w.-]*/*\*?"
+                      r"(?=$|[\s\"'`;|&()<>])" % home, re.I)
+
+
+def _names_request(text, exempt=NONE, fold=False):
+    """The request folder or prompt hook script name that `text` holds, unless
+    the exemption covers it; else an empty string."""
+    held = text.lower() if fold else text
+    for fragment, thing in ((REQUEST_FOLDER, "request"), (HOOK_ENTRY, "script")):
+        if fragment in held and thing not in exempt:
+            return fragment
+    return ""
+
+
+def _names_delegation(text, fold=False):
+    held = text.lower() if fold else text
+    return DELEGATION_FOLDER if DELEGATION_FOLDER in held else ""
+
+
+def _transcript_text(text, folder, fold):
+    """The transcript name that `text` holds, in one letter case."""
+    held = _path(text).lower() if fold else _path(text)
+    base = folder.lower() if fold else folder
+    found = TRANSCRIPTS.search(held)
+    if found:
+        return found.group(0)
+    return folder if folder and base in held else ""
+
+
+def _names_config(text):
+    found = _config_folder().search(_path(text))
+    return found.group(0) if found else ""
+
+
+def _names_transcript(text, folder):
+    """The transcript name that a tool path holds, in either letter case, or a
+    configuration folder."""
+    return (_transcript_text(text, folder, False) or _transcript_text(text, folder, True)
+            or _names_config(text))
+
+
+def _expand_home(text):
+    """`~`, `~/...`, `~<name>`, `$HOME` and `${HOME}` at the start of a path,
+    expanded."""
+    for lead in ("~", "${HOME}", "$HOME"):
+        if text == lead or text.startswith(lead + "/"):
+            return _home() + text[len(lead):]
+    if text.startswith("~"):
+        return _path(os.path.expanduser(text))
+    return text
+
+
+def _norm(path):
+    """`os.path.normpath`, with leading slashes collapsed (POSIX keeps `//`)
+    and in lower case, since macOS opens a path in any case."""
+    return re.sub(r"^/+", "/", os.path.normpath(path)).lower()
+
+
+def _resolved(text, cwd):
+    """A Read or Grep path as the tool reads it: home expanded, relative to
+    the call's working folder, normalised."""
+    text = _expand_home(_path(text))
+    if not os.path.isabs(text):
+        text = os.path.join(_path(cwd) or os.getcwd(), text)
+    return _norm(text)
+
+
+def _above_or_in(path, folder):
+    """True when `path` is `folder`, inside it or a folder above it."""
+    if not folder:
+        return False
+    folder = _norm(folder)
+    if path == "/" or path == folder:
+        return True
+    return folder.startswith(path + "/") or path.startswith(folder + "/")
+
+
+def _word_above(word, folder):
+    """True when a Bash word names the transcript's folder, a path inside it
+    or a folder above it, once the shell has removed its quotes. A word with
+    a glob or brace character counts by the folder before the first one,
+    since it can expand to the transcript: `~/.claude-x/*/s.jsonl`.
+    The root folder alone is left out: `/` is also an argument of `tr`,
+    `cut` and `expr`, and the safety contract states the gap."""
+    path = _expand_home(_path(word))
+    glob = GLOB.search(path)
+    if glob:
+        path = path[:glob.start()].rpartition("/")[0]
+    path = re.sub(r"(?:/\*?|/\.)+$", "", path)
+    if not folder or not path.startswith("/"):
+        return False
+    path, folder = _norm(path), _norm(folder)
+    return path != "/" and (folder == path or folder.startswith(path + "/")
+                            or path.startswith(folder + "/"))
+
+
+def _memory_tail(path, folder):
+    """What follows `memory` in a normalised path of the shape
+    `<configuration folder>/projects/<one folder>/memory[/...]`, else None. The
+    configuration folder ends in a `.claude*` segment, or its `projects` folder is
+    the transcript's own."""
+    found = re.fullmatch(r"(.*/\.claude[^/]*)/projects/[^/]+/memory(/.*)?", path)
+    if found:
+        return found.group(2) or ""
+    if folder:
+        own = {_norm(os.path.dirname(folder)), _norm(os.path.realpath(os.path.dirname(folder)))}
+        for projects in own:
+            found = re.fullmatch(re.escape(projects) + r"/[^/]+/memory(/.*)?", path)
+            if found:
+                return found.group(1) or ""
+    return None
+
+
+def in_memory_folder(path, cwd, folder, inside=False):
+    """True when a tool path is in the agent's auto-memory folder, so the
+    transcript tests do not apply to it. The path is joined to the call's
+    `cwd`, normalised and case-folded, and its symbolic links are resolved; both
+    forms must have the shape of `_memory_tail`. A glob or brace character in the
+    path is never in the folder. With `inside`, the folder itself does not count
+    (a Write or Edit names a file)."""
+    text = _expand_home(_path(path))
+    if not text or GLOB.search(text):
+        return False
+    if not os.path.isabs(text):
+        text = os.path.join(_path(cwd) or os.getcwd(), text)
+    try:
+        resolved = _path(os.path.realpath(text))
+    except (OSError, ValueError):
+        return False
+    tails =(_memory_tail(_norm(text), folder), _memory_tail(_norm(resolved), folder))
+    return None not in tails and not (inside and not tails[0].strip("/"))
+
+
+def _glob_climbs(glob):
+    """True when a Grep glob holds a `..` segment, as `../*.jsonl` does, or a brace
+    expansion that holds `..`, as `{..,x}/*.jsonl` does: ripgrep expands braces."""
+    text = _path(glob)
+    return ".." in re.split(r"[/\\,\s]+", text) or ("{" in text and ".." in text)
+
+
+#: A delegation path and the ordinary path of the same shape outside the
+#: folder. A glob that matches the first and not the second picks the
+#: delegation files; one that matches both only picks "everything".
+DELEGATION_SAMPLES = (
+    (".compass/delegations", ".compass/zz"),
+    (".compass/delegations/DL-1.yml", ".compass/zz/file.yml"),
+    (".compass/delegations/confirm-s.yml", ".compass/zz/file.yml"),
+)
+
+
+def _flatten_classes(glob):
+    """Replace each whole bracket expression that holds a POSIX class
+    (`[:x:]`), collating symbol (`[.x.]`) or equivalence class (`[=x=]`) with
+    `?`. `fnmatch` reads none of them, and a replacement inside the set would
+    leave `[?x]`, which matches only `?` or `x`."""
+    # The scan inside a bracket stops at the first `]` that is not the end of
+    # a class, jumping over each class. Where a scan that starts at position
+    # j stops, and whether it jumped over a class on the way, is found once
+    # for every j, from right to left; scanning again from each `[` took 56
+    # seconds on 20,000 `[a`, past the hook's time limit
+    # (ayeo-io/compass-delivery-record#246).
+    n = len(glob)
+    ends = {k: [m.start() for m in re.finditer(re.escape(k + "]"), glob)] for k in ":.="}
+    stop, crossed = [n] * (n + 1), [False] * (n + 1)
+    for j in range(n - 1, -1, -1):
+        if glob[j] == "]":
+            stop[j] = j
+            continue
+        kind = glob[j + 1] if glob[j] == "[" and j + 1 < n else ""
+        end = -1
+        if kind in (":", ".", "="):
+            at = bisect.bisect_left(ends[kind], j + 2)
+            end = ends[kind][at] if at < len(ends[kind]) else -1
+        if end >= 0:
+            stop[j], crossed[j] = stop[min(end + 2, n)], True
+        else:
+            stop[j], crossed[j] = stop[j + 1], crossed[j + 1]
+    out, i = [], 0
+    while i < n:
+        if glob[i] != "[":
+            out.append(glob[i])
+            i += 1
+            continue
+        j = i + 1
+        if j < n and glob[j] in "!^":
+            j += 1
+        if j < n and glob[j] == "]":
+            j += 1
+        special = crossed[j]
+        j = stop[j]
+        if j >= n:
+            # Left bare: `fnmatch` can still close this `[` at a `]` the scan
+            # above skipped as the end of a class, as in `x[[:a:]y`.
+            out.append(glob[i])
+            i += 1
+        else:
+            out.append("?" if special else glob[i:j + 1])
+            i = j + 1
+    return "".join(out)
+
+
+def _glob_pattern(glob):
+    """`fnmatch`'s pattern for `glob`, compiled. After the last `]` no `[` can
+    close, and `fnmatch.translate` searches to the end of the glob for each
+    such `[` before reading it as a literal. Those are swapped for a
+    character the glob does not hold before the translation and turned back
+    into a literal `[` after it, so the pattern matches exactly what
+    `fnmatch` would and the translation stays linear
+    (ayeo-io/compass-delivery-record#246)."""
+    tail = glob.rfind("]") + 1
+    if "[" not in glob[tail:]:
+        return re.compile(fnmatch.translate(glob))
+    # A private-use character the glob does not hold; a NUL could, since the
+    # hook's JSON input can carry one.
+    mark = next(chr(c) for c in range(0xE000, 0xF900) if chr(c) not in glob)
+    swapped = glob[:tail] + glob[tail:].replace("[", mark)
+    return re.compile(fnmatch.translate(swapped).replace(mark, re.escape("[")))
+
+
+def _glob_selects(glob, pairs, grep):
+    """True when `glob` matches the delegation path of some pair and not its
+    ordinary counterpart. All text is lower case, because macOS opens a path
+    in any case and `fnmatch.fnmatch` would apply the operating system's
+    rule. With `grep`, each path is also tried as `/` plus the path, as
+    ripgrep reads `**/x`, and a glob without `/` as the bare name."""
+    glob = glob.lower()
+    # Bash and zsh read `[^x]` as `[!x]` and `[[:lower:]]` as one character;
+    # `fnmatch` reads neither. A class becomes `?`, which keeps a refusal
+    # that names the delegation folder and accepts a glob that picks every name.
+    glob = _flatten_classes(glob).replace("[^", "[!")
+    pattern = _glob_pattern(glob)
+
+    def matches(path):
+        path = path.lower()
+        tries = [path]
+        if grep:
+            tries.append("/" + path)
+            if "/" not in glob:
+                tries.append(path.rpartition("/")[2])
+        return any(pattern.match(t) for t in tries)
+
+    return any(matches(sample) and not matches(plain) for sample, plain in pairs)
+
+
+def _relative_pairs(root, searched):
+    """The samples written relative to the search path, only for those the
+    path can reach: the delegation folder is at or under it."""
+    pairs = []
+    for sample, plain in DELEGATION_SAMPLES:
+        full = _norm(root + "/" + sample)
+        if not (searched == "/" or full == searched or full.startswith(searched + "/")):
+            continue
+        rel = full[len(searched):].strip("/")
+        other = _norm(root + "/" + plain)
+        other_rel = (other[len(searched):].strip("/")
+                     if other.startswith(searched.rstrip("/") + "/") else "\0")
+        if rel:
+            pairs.append((rel, other_rel))
+    return pairs
+
+
+def _grep_glob_reaches(pattern, searched, cwd):
+    pairs = _relative_pairs(_resolved(".", cwd), _resolved(searched, cwd))
+    # Claude Code may split the glob on white space or commas; test all forms.
+    return any(_glob_selects(g, pairs, True)
+               for g in [pattern] + re.split(r"[\s,]+", pattern))
+
+
+def _bash_glob_reaches(words, cwd):
+    """The first word whose glob can match the delegation files, else ''."""
+    root = _resolved(".", cwd)
+    relative = [(s, p) for s, p in DELEGATION_SAMPLES]
+    absolute = [(root + "/" + s, root + "/" + p) for s, p in DELEGATION_SAMPLES]
+    for word in words:
+        if re.search(r"\s", word):
+            continue
+        for part in re.split(r"[;&|()<>`]+|(?<!\[)=+(?!\])", word):
+            if not any(c in part for c in "*?["):
+                continue
+            part = _expand_home(_path(part))
+            if os.path.isabs(part):
+                if _glob_selects(_norm(part), absolute, False):
+                    return word
+                continue
+            while part.startswith("./"):
+                part = part[2:]
+            if _glob_selects(os.path.normpath(part), relative, False):
+                return word
+    return ""
+
+
+def _in_delegations(tool_input, cwd):
+    target = _path(tool_input.get("file_path") or tool_input.get("path"))
+    if target:
+        resolved = _resolved(target, cwd) + "/"
+        if (f"/{DELEGATION_FOLDER}/" in resolved
+                or f"{DELEGATION_FOLDER}/" in target.lower() + "/"):
+            return target
+    pattern = _path(tool_input.get("glob"))
+    if "delegations" in pattern.lower():
+        return f"{target or cwd} with glob {pattern}"
+    if pattern and _grep_glob_reaches(pattern, target or cwd or ".", cwd):
+        return f"{target or cwd} with glob {pattern}"
+    return ""
+
+
+def _join_continuations(command):
+    """The command with each backslash-newline removed where the shell removes
+    it: outside quotes and inside double quotes. A protected name split that
+    way runs as the whole name. Single quotes and ANSI-C quoting keep the two
+    characters, as the shell does."""
+    if "\\\n" not in command:
+        return command
+    out, i, n = [], 0, len(command)
+    quote = ""  # "", "'", '"' or "$'"
+    while i < n:
+        c = command[i]
+        if quote == "'":
+            out.append(c)
+            if c == "'":
+                quote = ""
+            i += 1
+            continue
+        if c == "\\" and i + 1 < n:
+            if command[i + 1] == "\n" and quote != "$'":
+                i += 2
+                continue
+            out.append(command[i:i + 2])
+            i += 2
+            continue
+        if quote == "$'":
+            if c == "'":
+                quote = ""
+        elif quote == '"':
+            if c == '"':
+                quote = ""
+        elif c == "'":
+            # An escaped `\$` is kept as one two-character piece, so only a
+            # bare `$` opens ANSI-C quoting.
+            quote = "$'" if out and out[-1] == "$" else "'"
+        elif c == '"':
+            quote = '"'
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def check(event):
+    """`(code, params)` for a call to refuse, else None."""
+    tool = event.get("tool_name") or ""
+    tool_input = event.get("tool_input") or {}
+    if not isinstance(tool_input, dict):
+        return None
+    folder = _transcript_folder(event)
+    cwd = str(event.get("cwd") or "")
+    if tool in READ_TOOLS:
+        target = _path(tool_input.get("file_path") or tool_input.get("path"))
+        # A Grep with no path searches its working folder.
+        searched = target or (cwd if tool == "Grep" else "")
+        # The auto-memory folder skips the transcript tests and no other test.
+        memory = bool(searched) and in_memory_folder(searched, cwd, folder) and not (
+            tool == "Grep" and _glob_climbs(tool_input.get("glob") or ""))
+        if not memory and target and (_names_transcript(target, folder)
+                                      or _config_folder().search(_resolved(target, cwd))):
+            return _deny("transcript-protected", target, tool, folder)
+        named = _in_delegations(tool_input, cwd)
+        if named:
+            return _deny("delegation-protected", named, tool, DELEGATION_FOLDER)
+        if not memory and searched and _above_or_in(_resolved(searched, cwd), folder):
+            return _deny("transcript-protected", searched, tool, folder)
+        return None
+    if tool in EDIT_TOOLS:
+        target = _path(tool_input.get("file_path") or tool_input.get("path")
+                       or tool_input.get("notebook_path"))
+        memory = in_memory_folder(target, cwd, folder, inside=True)
+        # The earlier guard's checks first, in its order, so a call it refused
+        # keeps its code; then the same checks in any letter case.
+        for path in (target, target.lower()):
+            if f"/{REQUEST_FOLDER}/" in path and ".compass/" in path:
+                return _deny("approval-request-protected", target, tool, REQUEST_FOLDER)
+            if f"{DELEGATION_FOLDER}/" in path:
+                return _deny("delegation-protected", target, tool, DELEGATION_FOLDER)
+            if not memory and _names_transcript(path, folder):
+                return _deny("transcript-protected", target, tool, folder)
+        return None
+    if tool != "Bash":
+        return None
+    command = _join_continuations(str(tool_input.get("command") or ""))
+    commands = simple(command)
+    if commands is None:
+        return _judge_text(command, event, folder)
+    return _judge_words(commands, event, folder)
+
+
+def _deny(code, target, tool, found):
+    """A refusal for a tool path. The path is the agent's, so it is cleaned and cut around
+    `found` as a refused Bash word is. A path that names the transcript's configuration
+    folder and not its exact folder is cut around the configuration folder."""
+    if found.lower() not in target.lower():
+        match = TRANSCRIPTS.search(target.lower())
+        found = match.group(0) if match else ""
+    return code, {"target": shown_word(target, found), "tool": tool}
+
+
+# --- Bash: the words of a simple command, or the whole text ------------------------------------
+
+def _bare(words, i):
+    """True when `words[i]` is a bare path argument: not the command name, an option, a
+    `VAR=` word or the value of an option that takes a path."""
+    return not (i == 0 or words[i].startswith("-") or ASSIGNMENT.match(words[i])
+                or words[i - 1] in PATH_OPTIONS)
+
+
+def _one_plain_operand(words):
+    """True when an exempt command has one operand and only the plain options of
+    `EXEMPT_OPTIONS`: no `--`, no second path and no option that takes a value."""
+    letters = EXEMPT_OPTIONS.get(words[0], "")
+    operands = [w for w in words[1:] if not w.startswith("-")]
+    return len(operands) == 1 and all(
+        len(w) > 1 and set(w[1:]) <= set(letters) for w in words[1:] if w.startswith("-"))
+
+
+def _judge_words(commands, event, folder):
+    """The Bash checks on the words of a simple command: every word and redirect target
+    except message text. An exemption holds only for a command that stands alone and has
+    no redirect to a file (a copy of a descriptor, `2>&1`, names no file), with one operand
+    and plain options, and only for a word with no `..` segment."""
+    items, top = [], []
+    for command in commands:
+        words = command.words
+        allowed = (EXEMPT.get(words[0], ()) if len(commands) == 1 and not command.targets
+                   and _one_plain_operand(words) else ())
+        for i, word in enumerate(words):
+            if i not in command.text:
+                items.append((word, allowed if _bare(words, i) and ".." not in word.split("/")
+                              else (), False))
+                top.append(word)
+        for target in command.targets:
+            items.append((target, (), False))
+            top.append(target)
+    return _judge(event, folder, items, top, " ".join(top), False, False)
+
+
+def _judge_text(command, event, folder):
+    """The Bash checks on the whole text of a command that is not simple: any text that
+    names a protected thing is refused."""
+    text = command.replace("\\\n", "")
+    # The name checks also read the text with every backslash-newline joined.
+    # `_join_continuations` keeps one after an apostrophe that it reads as a
+    # quote, and in a comment, an unquoted heredoc or a quote inside `$( )`
+    # the shell does not, so it joins the name. Joining everywhere can only
+    # add refusals of a protected name.
+    items = [(command, (), True)] + ([(text, (), True)] if text != command else [])
+    return _judge(event, folder, items, _words(command), text,
+                  _escaped_command(text), True)
+
+
+def _refusal(code, tool, text, found, whole):
+    if whole:
+        target = "text that holds '%s'" % shown_word(found)
+    else:
+        target = "the Bash word '%s'" % shown_word(text, found)
+    return code, {"target": target, "tool": tool}
+
+
+def _first(items, find):
+    """`(found, text, whole)` for the first item that `find(text, exempt)` names."""
+    for text, exempt, whole in items:
+        found = find(text, exempt)
+        if found:
+            return found, text, whole
+    return None
+
+
+def _judge(event, folder, items, top, raw, escaped, whole):
+    """`(code, params)` for a Bash call to refuse, else None. The checks keep the
+    order of the earlier guard, so a call it refused keeps its code: the request,
+    delegation and transcript names; the caller rules; then the same names in any
+    letter case, a configuration folder, a folder above the transcript and a glob."""
+    tool = "Bash"
+    for code, find in (
+            ("approval-request-protected", lambda t, e: _names_request(t, e)),
+            ("delegation-protected", lambda t, e: _names_delegation(t)),
+            ("transcript-protected", lambda t, e: _transcript_text(t, folder, False))):
+        hit = _first(items, find)
+        if hit:
+            return _refusal(code, tool, hit[1], hit[0], hit[2])
+    nested = _nested_words(top)
+    compass = "compass" in raw.lower()
+    built = _built_word(top, nested, raw, compass, escaped)
+    if built:
+        return "delegation-caller-mismatch", {
+            "named": shown_word(built),
+            "caller": shown_word(caller(event) or "an agent with no agent type")}
+    found = _caller_mismatch(top, nested, caller(event))
+    if found:
+        named, who = found
+        return "delegation-caller-mismatch", {
+            "named": shown_word(named or "no --as"),
+            "caller": shown_word(who or "an agent with no agent type")}
+    for code, find in (
+            ("approval-request-protected", lambda t, e: _names_request(t, e, True)),
+            ("delegation-protected", lambda t, e: _names_delegation(t, True)),
+            ("transcript-protected", lambda t, e: _transcript_text(t, folder, True)),
+            ("transcript-protected", lambda t, e: _names_config(t))):
+        hit = _first(items, find)
+        if hit:
+            return _refusal(code, tool, hit[1], hit[0], hit[2])
+    for word in nested:
+        if _word_above(word, folder):
+            return _refusal("transcript-protected", tool, word, word, False)
+    # Last, so a call an earlier check refuses keeps its code.
+    word = _bash_glob_reaches(nested, str(event.get("cwd") or ""))
+    if word:
+        return _refusal("delegation-protected", tool, word, word, False)
+    return None

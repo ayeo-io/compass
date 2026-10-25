@@ -1,0 +1,197 @@
+---
+description: Acceptance criteria as BDD scenarios every role reads
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+---
+
+# /compass:define
+
+Define turns intent into Given/When/Then acceptance criteria. This is the
+**shared artifact** - the product owner reads it for intent fidelity, the
+marketer for claims, the engineer for tests, the designer for the UI
+contract, QA for coverage. Write it so all five roles can.
+
+## Setup
+
+- Read `delivery-approach.md`. Its weight for this stage tells you how deep
+  to go:
+  - one scenario (quick fix);
+  - a small feature set (regular);
+  - full BDD discovery (the full approach);
+  - on a **spike** - collapsed into *the question* (what do we need to
+    learn, and what would a useful answer look like), not acceptance
+    criteria for code.
+
+  Honor it.
+- Load the `bdd-specification` skill.
+- If `delivery-approach.md` assesses familiarity as `brownfield-unmapped`,
+  also load `behavior-mapping` - reverse-engineer the *current*
+  behavior into scenarios **before** writing the scenarios for the change. A
+  policy floor forces this unless the change is atomic or small, with trivial
+  or contained risk and no domain label; you cannot safely change what you have not first
+  described.
+- Check `assessment.labels` in `manifest.yml`. On the regular or full
+  approach, when the labels include `public-api`, a service named in
+  `architecture/relations.md` (if the file exists) or a `lens_trigger_tag` in
+  `architecture/invariants.yml` (if the file exists), invoke the `architect`
+  agent first, the same condition as `/compass:consult architect`. It writes
+  `architecture-notes.md` to the issue directory. A subagent cannot run a
+  slash command, so this step is yours and not the `spec-author`'s.
+- Invoke the `spec-author` agent - it owns this stage.
+- Pass the computed model and effort when you invoke the `spec-author` agent:
+  `compass approach show --model define` prints the `model`, and
+  `compass approach show --effort define` prints the `effort`. On
+  `inherit`, pass the model family your session runs on (`opus`,
+  `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot
+  tell. Exit 1 means the issue sets nothing for that value: leave it out,
+  so the agent's frontmatter applies.
+- Read any upstream role artifacts for this issue: `intent.md` (the outcome to
+  hit), `ui-contract.md` (designer scenarios that flow in here),
+  `positioning.md` (claims that will need backing scenarios).
+- When the issue registers an intent, as a regular issue does, the router
+  drafted it at assess. Read `intent.md` and correct it before you write any
+  scenario: the problem, the outcomes and their `INT-n` ids, the success
+  signals and the non-goals. Each scenario names the `INT-n` id it serves, and
+  you present the intent with the scenarios at the define checkpoint where the
+  issue has one.
+
+## Procedure
+
+1. **Discovery or behavior mapping.** Greenfield: discover scenarios from the
+   intent document or request. Brownfield-unmapped: map current behavior
+   first, then
+   add the change scenarios.
+2. **Write scenarios** as Given/When/Then - happy path, the realistic edge cases,
+   the failure modes that matter. Depth scales with the delivery approach,
+   but never to zero: "no scenario" is never a valid state. On a quick fix
+   the single scenario must be unambiguous, because the
+   requirements review is collapsed only because the scenario is unambiguous.
+   Then ask yourself which input classes and failure modes the brief
+   implies that no scenario yet covers. Each answer becomes a scenario, a
+   short one if needed, or is recorded with
+   `compass scenario descope "<mode>" --reason "<why>"`, which the verifier
+   lists in the verification report. Nothing named is dropped silently.
+   - **Worked example, a rate limit.** The brief says "limit search to 100
+     requests a minute". The happy path is one client under the limit. It
+     implies: a client exactly at 100, a client over it, two clients sharing
+     an address, and the counter's reset at the minute boundary. Each of the
+     first three becomes a scenario; the reset is de-scoped with the reason
+     "the limiter library's own tests cover the window".
+   - **Worked example, a CSV import.** The brief says "import customers from
+     a CSV file". It implies: an empty file, a header with no rows, a row
+     with a missing required column, a duplicate customer, and a file that
+     is not UTF-8. The first four become scenarios; the encoding case is
+     de-scoped with the reason "non-UTF-8 files are out of scope for this
+     release; a follow-up issue adds encoding detection".
+3. **Group by independence.** On larger work, group scenarios by which touch
+   separate parts of the code - the plan stage starts the distribution map
+   from this grouping.
+4. **Maintain traceability** - load `evidence-gates` and read its
+   `traceability.md`; each scenario traces to
+   an intent (`intent.md`, the request, the defect).
+5. **Write `acceptance-criteria.md`** from `${CLAUDE_PLUGIN_ROOT}/templates/acceptance-criteria.md` -
+   the prose spec every role reads.
+
+   **Where it goes.** `docs/compass/<created>-<issue-slug>/acceptance-criteria.md`, where the
+   date is the manifest's `created:` field - not today's. Then register it:
+   `compass issue artifact set acceptance-criteria --status draft --path <that path>`. The CLI
+   refuses a path outside the project, so the record is checked
+   rather than claimed. If you had to create `docs/compass/`, **say so in one
+   line** - if a directory appears and nobody says so, someone can delete it
+   by hand or commit it by mistake.
+6. **Record each scenario with `compass scenario add`** - the manifest's
+   `scenarios:` block is the machine-readable index of the prose spec. Run
+   `compass scenario add <id> --title "<title>" --intent <intent id> --test
+   <test>` for each scenario, so it gets a stable `id`, a `title`, a linked
+   `intent` id, and the `tests` that exercise it. Do not edit `manifest.yml`
+   by hand: an unquoted ` #` in a value breaks its YAML for every command on
+   the issue. The block is what
+   `compass check` reads to check the acceptance-before-code and
+   traceability guardrails; implementation then traces `changed_files` to
+   these ids. On a spike, there are no scenarios - the block stays empty.
+
+## Hotfix note
+
+On a hotfix, this stage is **reproduce-first**: the spec is a failing
+regression test that reproduces the defect - simultaneously the BDD scenario
+and the TDD red. Write that test now, against the reproduction steps of
+`bug-report.md`, which the hotfix owes; the proper scenario is promoted into
+`acceptance-criteria.md` as the follow-up owed at ship time.
+
+## Spike note
+
+On a spike, this stage is **collapsed into the question**: the spike's spec
+is "what do we need to learn, and what would a useful answer look like?" -
+not Given/When/Then acceptance criteria: a spike has no acceptance
+criteria, because its output is knowledge, not behavior. Record the question
+and the timebox; the BDD strategy does not apply here. See `${CLAUDE_PLUGIN_ROOT}/approaches/spike.md`.
+
+## Hand-off
+
+Close this stage by handing the spec to a human, in these words or close to
+them. This makes the review a deliberate step, not an implied one - a
+reviewer who is told what to look for finds more than one who
+is told a file is ready.
+
+> I have written the acceptance criteria to
+> `docs/compass/<created>-<issue-slug>/acceptance-criteria.md`.
+>
+> It opens with a Summary - Goal, Approach, and Why now / what changes - so
+> you can see what this delivers before reading any scenarios. Below that are
+> N scenarios in M groups, each traced to an intent.
+>
+> Worth a cold read. Specifically, look for:
+> - **Intent fidelity** - do these scenarios deliver the outcome you actually
+>   want, not just the request as literally phrased?
+> - **Untestable Thens** - any outcome that could not be observed from
+>   outside.
+> - **Missing failure modes** - what goes wrong here that no scenario covers?
+> - **Ambiguous quantifiers** - "quickly", "large", "most" with no number.
+>
+> On approval this goes to refine - the requirements review - which QAs it
+> against governance and resolves any ambiguity into a recorded decision.
+> Nothing is built from it until then.
+
+Fill in the real path, counts, and group names - a prompt that still says
+`<issue-slug>` has not been read by the person sending it.
+
+Wait for approval only if `define` is in the manifest's `checkpoints:`.
+The project's `autonomy` setting, read from `compass.yml` (or from
+`.compass/config.yml` in a project without one), decides that list,
+and `compass approach show` shows it. If `define` is not listed, still
+write the acceptance criteria and show this hand-off, then say you are going on without
+waiting and name the setting, with "Next" in place of "On approval". Record
+the passed hand-off with `compass issue checkpoint add define --outcome skipped
+--by spec-author`, so the person can review it later and send the issue back. If
+`define` is listed, ask with `compass evidence request --checkpoint define` and
+wait: the person types `/compass:approve` in Claude Code, or runs `compass
+evidence approve --checkpoint define --approver <name> --role <role>` at a
+terminal, which records the answer. An issue assessed before outcomes were recorded is not judged: both
+commands refuse it and write nothing, so say so and go on.
+
+If you resolved a requirement question
+yourself instead of asking, record it:
+`compass issue decision add <id> --question "<q>" --resolution "<r>" --by <your agent> --stage define`.
+Before you hand off, run `compass next`. When its first line reads
+`Waiting at the define checkpoint`, the issue holds decisions that no person has
+confirmed. Show the listed decisions in the hand-off and wait: the person
+confirms them all by typing `/compass:approve` after you run `compass evidence
+request --decisions` (or `compass evidence approve --decisions` at a terminal), or
+reopens one with
+`compass issue decision set`. Do not name the next stage while it waits. On
+`autonomous` autonomy `compass next` lists the decisions and does not wait; show
+the list in the hand-off.
+
+## Gate
+
+On delivery work:
+- `acceptance-criteria.md` exists;
+- every scenario is Given/When/Then;
+- every scenario traces to an intent;
+- no described behavior is missing a scenario;
+- `manifest.yml`'s `scenarios:` block mirrors it - each with an id, a linked
+  intent, and at least one test.
+
+On a spike: the question
+and timebox are recorded. Log to `devlog.md`. Next: `/compass:refine` (or
+straight to `/compass:plan` if `delivery-approach.md` collapsed the
+requirements review - and it is skipped entirely on a spike).

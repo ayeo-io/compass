@@ -1,0 +1,159 @@
+# =============================================================================
+# TEMPLATE: manifest.yml  -  the manifest
+# Produced by: the assess stage (creates it), then every later stage fills its part.
+#              Lives at: .compass/work/<issue-slug>/manifest.yml
+# =============================================================================
+# manifest.yml is the structured counterpart to the prose artifacts
+# (delivery-approach.md, acceptance-criteria.md, technical-design.md, …). The prose is
+# for humans; this is for the CLI. `compass approach evaluate` reads
+# `assessment` and writes `delivery_approach`/`stages`/`gates`;
+# `compass check` reads the rest and checks the guardrails.
+#
+# It is NOT extra process weight you hand-author. Each stage's command/agent fills
+# its section as a by-product of doing the stage - the assess stage writes the
+# assessment, the acceptance stage adds scenarios, implementation adds
+# changed_files, and so on. On a quick fix this file stays tiny.
+# `compass issue lint` checks it is well-formed.
+# =============================================================================
+
+schema_version: "3.0"     # the manifest schema this file follows
+                          # '2.0': the v2 vocabulary keys (assessment, labels,
+                          #         delivery_approach, stages, follow_ups,
+                          #         reassessments). 1.x manifests are read by key
+                          #         normalization until migrated.
+                          # '3.0': the stored status is only `backlog` (a hold)
+                          #         or `done` with a `close_reason`.
+issue: "{{ISSUE_SLUG}}"
+created: "{{DATE}}"
+# No `status` line: an issue in flight stores none. Its state (backlog, ready,
+# in-progress, in-review) is read from its records. `compass issue status set`
+# stores `backlog` or `done` (with `--close-reason`), and `compass issue
+# blocked set` flags an in-progress or in-review issue as blocked.
+
+# --- the delivery approach ---------------------------------------------------
+# `assessment` is JUDGMENT - the assess stage (an LLM or a human) produces it.
+# Everything below `assessment` is MECHANICAL - the evaluator
+# (`compass approach evaluate --write`) computes it deterministically from
+# `assessment` + routing-policy.yml.
+assessment:
+  risk: "{{trivial | contained | cross-cutting | critical}}"
+  familiarity: "{{greenfield | brownfield-mapped | brownfield-unmapped}}"
+  size: "{{atomic | small | medium | large | product}}"
+  goal: "{{delivery | exploration}}"
+  urgency: "{{none | live-defect}}"          # optional; omit if none
+  labels: []                                 # domain labels: [auth, payments, …]
+
+generation: 0                # 0 = assessed, no stored configuration yet; the evaluator
+                             # (--write) commits generation 1. Absent = a pre-6.0.0 issue.
+delivery_approach: null      # filled by the evaluator (--write)
+orchestration: null               # recorded by breakdown
+policy_rules_fired: []       # filled by the evaluator - [{id, kind, rationale, changed}]
+stages: {}                   # filled by the evaluator - {assess: thorough, define: lightweight, …}
+
+# --- evidence (the registry) -----------------------------------------------
+# A typed, id-tagged registry of every piece of evidence this issue has.
+# Built incrementally: `compass tdd-green --scenario TRC-... -- <cmd>` appends
+# a `test-run` entry; reviews and approvals are added by their stage/agent.
+# Gates below reference these entries by id - multiple gates can share one
+# piece of evidence, and `compass check` checks the *type* each gate
+# accepts. Types declared in governance/guardrails.yml.
+evidence: []
+#  - id: EV-001
+#    type: test-run
+#    path: evidence/green-TRC-001.json   # scenario-bound; an unbound run
+#                                        # writes evidence/green.json
+#    scenario: TRC-001
+
+# --- gates -----------------------------------------------------------------
+# Seeded by the evaluator (status: pending). Each stage updates the gates it
+# clears. `compass check` checks that every `pass` gate references evidence in
+# the registry above, of a type that gate accepts. Flip a gate with
+# `compass gate pass <id> --evidence <ids>`, which checks the type at
+# write time and rejects a mismatch.
+# On `--write`, each seeded gate gets an `# accepts: [...]` comment. It
+# names the evidence types the gate accepts, so the author knows them
+# before running `compass check`.
+#   accepts (from guardrails.yml gate_evidence_requirements):
+#     verify.correctness -> [test-run]
+#     verify.regression  -> [test-run]
+#     verify.governance  -> [command-output, manual-review, artifact]
+#     verify.claims      -> [claim-review, command-output, artifact]
+gates: []
+#  - id: verify.correctness
+#    # accepts: ['test-run']
+#    status: pending          # pending | pass | fail
+#    evidence: []             # evidence ids from the registry above
+
+# --- scenarios (filled when acceptance criteria are defined) ----------------
+# The machine-readable index of acceptance-criteria.md. Each scenario gets a
+# stable id, a linked intent id, and the test(s) that exercise it.
+scenarios: []
+#  - id: TRC-001
+#    title: "Finance exports the month-end ledger"
+#    intent: INT-1            # traces to intent.md / the issue description
+#    tests:
+#      - "tests/api/test_ledger_export.py::test_excludes_drafts"
+
+# --- changed_files (filled during implementation) ---------------------------
+# Every production file the issue changes, each traced to >=1 scenario id.
+# This is the code -> criterion half of the traceability guardrail.
+changed_files: []
+#  - path: "src/api/ledger_export.py"
+#    scenarios: [TRC-001]
+
+# --- claims (filled by positioning - only if positioning.md is present) ---------
+# Every public/marketing claim, each traced to a backing scenario id.
+# This is the claim -> criterion half of the traceability guardrail.
+claims: []
+#  - id: CLM-001
+#    text: "Export your month-end ledger in seconds"
+#    scenario: TRC-001
+
+# --- repairs (hotfixes only) -------------------------------------------------
+# The slug of the issue this hotfix repairs. `compass retro --impact`
+# reads it to compute the change-fail signal - which issue did we ship that
+# later needed fixing. Optional, and honest about being optional: a hotfix
+# that declares nothing is reported as a coverage gap, never counted as a
+# zero.
+# repairs: the-issue-this-fixes
+
+# --- follow_ups (work deferred - e.g. a hotfix's, or a de-scoped artifact) --
+# `compass check` fails while any follow-up is outstanding. Shipping refuses to
+# close the issue.
+follow_ups: []
+#  - id: FU-001
+#    description: "Promote the reproduction test into a real scenario"
+#    status: "{{outstanding | resolved}}"
+
+# --- reassessments (the assess stage's feedback signal) ----------------------
+# Append-only. `compass approach evaluate --write` adds an entry here whenever
+# it computes a delivery approach that differs from the one already recorded
+# - i.e. a re-assessment. `compass retro` aggregates these across all
+# issues: a pattern of "up" re-assessments means assessment is systematically
+# under-sizing and the routing policy (or the assessment rubric) needs
+# tuning. A re-assessment is a normal event; an unexamined pattern of them
+# is the failure.
+reassessments: []
+#  - from_route: express
+#    to_route: standard
+#    reason: "Implementation revealed the change spanned three modules, not one."
+#    date: "{{ISO date}}"
+
+# --- failure modes de-scoped at define ----------------------------------------
+# A failure mode or input class the brief implies that no scenario covers, with
+# the reason, written by `compass scenario descope`. The verifier lists each in
+# the verification report. Optional; no gate reads it.
+failure_modes_descoped: []
+
+# --- friction (the framework's self-calibration signal) ---------------------
+# Optional. Written at ship time. Records where Compass's own process weight cost
+# more than it returned; soft, advisory; it never gates shipping. Assembled
+# by `compass _friction-capture` and aggregated by `compass retro
+# --friction`.
+friction: []
+#  - stage: plan
+#    category: over-weight     # over-weight | under-weight | mis-route |
+#                                # missing-strategy | tooling | docs | other
+#    observation: "The full requirements review added a gate the change didn't need."
+#    proposed_change: "routing-policy.yml: lower the review weight for size=small."
+#    source: derived             # derived (auto) | human (given by the author)

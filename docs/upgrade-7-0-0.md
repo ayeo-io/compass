@@ -4,7 +4,7 @@ This page lists what 7.0.0 changes and what to do about it. Each section is one 
 
 ## The released spellings end, and the old readers stay until 9.0.0
 
-7.0.0 removes the command spellings that 6.0.0 renamed and kept working through an alias. The readers for old words, old approach names, copied 5.x governance and `.compass/config.yml` (when `compass.yml` is absent) do not end at 7.0.0: they stay until 9.0.0. The decision is `governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`.
+7.0.0 removes the command spellings that 6.0.0 renamed and kept working through an alias. The readers for old words, old approach names, copied 5.x governance and `.compass/config.yml` (when `compass.yml` is absent) do not end at 7.0.0: they stay until 9.0.0. The decision is `governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`.
 
 ### What is removed
 

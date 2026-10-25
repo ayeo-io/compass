@@ -43,7 +43,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [releasing.md](releasing.md) - how to cut a release.
 - [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 9.0.0, and why there is no supported rollback.
 - [upgrade-7-0-0.md](upgrade-7-0-0.md) - what 7.0.0 changes and what to do about it, one section per change.
-- [upgrade-8-0-0.md](upgrade-8-0-0.md) - what 8.0.0 changes about delegation, and what breaks: the flag form, `--issue` on a delegated approval and the common store. It takes the release's number as its name when the release ships.
+- [upgrade-8-0-0.md](upgrade-8-0-0.md) - what 8.0.0 changes about delegation, and what breaks: the flag form, `--issue` on a delegated approval and the common store.
 - [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it.
 - [waivers-and-locks.md](waivers-and-locks.md) - how an owner writes a waiver, a lock, an unlock, an approver list and a layer in `compass.yml`.
 - [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show` on a layered project: the order of the checks, the finding codes and both JSON shapes.

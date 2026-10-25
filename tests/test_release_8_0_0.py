@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
 import test_version_consistency as versions  # noqa: E402
+import waiver_fixtures as fx  # noqa: E402
 from compass_pkg import old_names, waivers  # noqa: E402
 
 RELEASE = "8.0.0"
@@ -29,13 +30,26 @@ RELEASE = "8.0.0"
 # Text that records what was promised at the time, and stays as written.
 _HISTORY = (
     "docs/compass/", "docs/system-spec", "governance/decisions/",
-    "architecture/decisions/", "docs/upgrade-6-0-0.md", "docs/upgrade-7-0-0.md",
-    "docs/releasing.md", "tests/", "examples/", ".compass/",
+    "architecture/decisions/", "tests/", "examples/", ".compass/",
 )
-# A sentence that ends an old form at a version.
+# A phrase that ends an old form at 8.0.0, in either order, across a line
+# break or a markup character.
 _ENDS_AT = re.compile(
-    r"(until|removed[_ ]in|ends? at|refuses it|goes with the views at|"
-    r"stays? until|kept until|read until|readable until)\W{0,6}8\.0\.0", re.I)
+    r"(?:\b(?:until|removed[_ ]in|ends? at|end at|goes with the views at|"
+    r"before|from|version is)\W{0,6}8\.0\.0)"
+    r"|(?:8\.0\.0\W{0,3}(?:refuses|stops reading|removes(?! no\b)))", re.I)
+# The one true sentence about history: 7.0.0 kept the readers until 8.0.0.
+_TRUE_HISTORY = "kept until 8.0.0 by\nthe 7.0.0 release"
+
+
+def stale_lines(text: str) -> list[str]:
+    """Each line of `text` where an old form ends at 8.0.0."""
+    text = text.replace(_TRUE_HISTORY, "")
+    found = []
+    for m in _ENDS_AT.finditer(text):
+        no = text.count("\n", 0, m.start()) + 1
+        found.append(f"{no}: {' '.join(m.group(0).split())}")
+    return found
 
 
 def test_trc_001_every_version_location_says_8_0_0():
@@ -51,12 +65,17 @@ def test_trc_001_every_version_location_says_8_0_0():
         assert found and set(found) == {RELEASE}, (rel, found)
 
 
-def test_trc_002_every_legacy_reader_still_reads_at_8_0_0():
+def test_trc_002_every_legacy_reader_still_reads_at_8_0_0(monkeypatch):
     """Scenario `TRC-002`: at 8.0.0 no old-name row is overdue, and a LEGACY
-    waiver is still read."""
+    waiver gives the warning W-LEGACY, not an error."""
     assert old_names.removal_problems(RELEASE) == []
-    assert waivers.LEGACY_READ_UNTIL > (8, 0, 0)
     assert all(r["removed_in"] == "9.0.0" for r in old_names.rows())
+    monkeypatch.setattr(waivers, "COMPASS_VERSION", RELEASE)
+    found, faults = waivers.find(fx.severity_layer(
+        fx.project_waiver(approved_by="LEGACY", approved_on=None)), "project")
+    assert not faults, faults
+    [finding] = waivers.check_shape(found[0], fx.TODAY)
+    assert (finding.code, finding.level) == ("W-LEGACY", "warning"), finding
 
 
 def test_trc_003_no_current_text_ends_an_old_form_at_8_0_0():
@@ -68,14 +87,34 @@ def test_trc_003_no_current_text_ends_an_old_form_at_8_0_0():
     for rel in files:
         if rel.startswith(_HISTORY) or not (ROOT / rel).is_file():
             continue
+        if rel.endswith(("package-lock.json", "shipped-releases.yml")):
+            continue
         try:
             text = (ROOT / rel).read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        for no, line in enumerate(text.splitlines(), 1):
-            if _ENDS_AT.search(line):
-                hits.append(f"{rel}:{no}: {line.strip()[:100]}")
+        hits += [f"{rel}:{line}" for line in stale_lines(text)]
     assert not hits, "these still end an old form at 8.0.0:\n" + "\n".join(hits)
+
+
+def test_trc_003_the_search_finds_each_form_of_the_old_date():
+    """Scenario `TRC-003`: the search catches each way the old date was
+    written, so a passing run means something."""
+    planted = [
+        "the old word is read until 8.0.0.",
+        "a row with removed_in: 8.0.0",
+        "advisory, and 8.0.0 refuses it.",
+        "# for the whole 7.x line. From 8.0.0 it is an error.",
+        "into `compass.yml`, and 8.0.0 stops reading it.",
+        "| `W-LEGACY` | warning before 8.0.0, error from 8.0.0 |",
+        "the old word is read until\n8.0.0. The original is kept.",
+        "once the package version is 8.0.0",
+    ]
+    for text in planted:
+        assert stale_lines(text), text
+    assert stale_lines("8.0.0 is a major release.") == []
+    assert stale_lines("8.0.0 removes no reader.") == []
+    assert stale_lines("kept until 8.0.0 by\nthe 7.0.0 release, are kept") == []
 
 
 def test_trc_004_a_decision_moves_the_date():

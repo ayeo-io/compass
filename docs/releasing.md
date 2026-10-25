@@ -32,7 +32,7 @@ recorded.
 ### What changed at 8.0.0
 
 8.0.0 is a major release because of one change: delegation works across git
-worktrees and takes optional flags, and three forms that 7.0.0 accepted are
+worktrees and takes optional flags, and four forms that 7.0.0 accepted are
 refused. It removes no reader: the readers for old forms, kept until 8.0.0 by
 the 7.0.0 release, are kept until 9.0.0
 (`governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`). The
@@ -54,9 +54,11 @@ facts are in `docs/upgrade-8-0-0.md`.
   `/compass:revoke`. `/compass:approve` and `/compass:reject` reach a request
   in any worktree.
 - A `compass` launcher in the plugin's data folder, for the person's own
-  terminal, named in every command Compass asks the person to run there.
-- The pre-tool hook catches `perl -pi`, `ruby -pi`, interpreter writes through
-  a variable, and protected folder names split across words.
+  terminal, named in the commands the CLI prints for the person to run there
+  (remaining gaps: ayeo-io/compass-delivery-record#302).
+- The pre-tool hook catches `perl -pi`, `ruby -pi` and interpreter writes
+  through a variable, and the approval guard joins a protected folder name
+  split over two lines with a backslash.
 - The front-page claims state the limits the safety contract gives.
 
 **Upgrade.** Update every checkout and every installed plugin together, then
@@ -107,7 +109,7 @@ that names the new spelling.
 governance (with the generated views `governance/routing-policy.yml` and
 `governance/guardrails.yml`) and `.compass/config.yml` (when `compass.yml` is
 absent) are read until 9.0.0, not 7.0.0. Only the command spellings end at 7.0.0
-(`governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`).
+(`governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`).
 
 **Upgrade and rollback.** Update every checkout and every installed plugin
 together. Take a copy of the two issue folders, `.compass/work` and
@@ -129,7 +131,7 @@ not because it removes a command. **It removes no command.** Every file and
 name that 5.x read is still read, and every released command spelling that 6.0.0
 renames still runs. 7.0.0 removed the command spellings, and the readers stay
 until 9.0.0
-(`governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`).
+(`governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`).
 It does remove one output shape: the `compass flow --json` keys held, next_up,
 landed_this_week and abandoned, replaced by backlog, ready, in_progress,
 in_review, done_this_week and closed.

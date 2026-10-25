@@ -86,7 +86,7 @@ def test_trc_064_the_older_record_is_unchanged():
 
 
 GUIDE = ROOT / "docs" / "upgrade-7-0-0.md"
-BEFORE = "## The released spellings end, and the old readers stay until 8.0.0"
+BEFORE = "## The released spellings end, and the old readers stay until 9.0.0"
 SECTION = "## Renamed names"
 MARK = "us-english-scan: allow - "
 
@@ -102,7 +102,7 @@ def test_trc_065():
     """Scenario id: `TRC-065` in language-key-and-us-english/acceptance-criteria.md
 
     The upgrade guide holds one "Renamed names" section after the section on
-    the released spellings. It lists each old name, its new name and 8.0.0,
+    the released spellings. It lists each old name, its new name and 9.0.0,
     says what to do about the refusal code, the JSON keys and the project
     names, and marks every line that quotes an old name.
     """
@@ -119,12 +119,12 @@ def test_trc_065():
     for row in rows:
         kind, old, new, until = [c.strip() for c in row.split("<!--")[0].strip().strip("|").split("|")]
         assert old.startswith("`") and new.startswith("`") and old != new
-        assert until == "8.0.0"
+        assert until == "9.0.0"
     flat = " ".join(section.split())
     assert "match `not-initialized`" in flat
     assert "`compass:behaviour-mapping` or `dor-behaviour-is-gwt` keeps working" in flat
     assert "reads the refusal code or the `behaviour` JSON keys should move to the new names " \
-           "before 8.0.0" in flat
+           "before 9.0.0" in flat
     assert "No manifest, state file or readiness record needs a change" in flat
 
     # Each line that quotes a listed old word carries the marker and a reason,

@@ -308,7 +308,7 @@ terms:
       apply, solo or parallel. Deterministic - same assessment plus same policy
       always gives the same approach. `full` is the name of the heaviest
       delivery approach and is not a stage mode: its stages run `thorough`,
-      and the old mode word `full` reads as `thorough` until 8.0.0.
+      and the old mode word `full` reads as `thorough` until 9.0.0.
     related: [assess, quality-gate]
   audience:
     means: >
@@ -941,8 +941,8 @@ retired_values:
   - {field: close_reason, old: abandoned, new: not-planned}
   - {field: run_stage, old: build, new: implement}
   - {field: friction_keys, old: phase, new: stage}
-  - {field: reassessment_kind, old: judgement, new: judgment}  # us-english-scan: allow - old name read until 8.0.0
-  - {field: check_id, old: dor-behaviour-is-gwt, new: dor-behavior-is-gwt}  # us-english-scan: allow - old name read until 8.0.0
+  - {field: reassessment_kind, old: judgement, new: judgment}  # us-english-scan: allow - old name read until 9.0.0
+  - {field: check_id, old: dor-behaviour-is-gwt, new: dor-behavior-is-gwt}  # us-english-scan: allow - old name read until 9.0.0
 
 # =============================================================================
 # BANNED v1 VOCABULARY - the house test scans user-facing surfaces for these.

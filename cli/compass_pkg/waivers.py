@@ -34,9 +34,9 @@ LEGACY = "LEGACY"
 UNAPPROVED = "UNAPPROVED"
 # From 7.0.0 `compass policy migrate` writes a LEGACY waiver for each rule a
 # project recorded under `waived:`, so lint reads the shape, with a warning,
-# for the whole 7.x line. From 8.0.0 it is an error. Decision:
-# governance/decisions/2026-10-17-legacy-waivers-readable-until-8-0-0.md.
-LEGACY_READ_UNTIL = (8, 0, 0)
+# for the whole 7.x and 8.x lines. From 9.0.0 it is an error. Decision:
+# governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md.
+LEGACY_READ_UNTIL = (9, 0, 0)
 # What a waiver writes. `covers` is not here on purpose: the covered revision
 # is derived, so a written one is a fault.
 WRITTEN = {"project": ("reason", "approved_by", "approved_on"),

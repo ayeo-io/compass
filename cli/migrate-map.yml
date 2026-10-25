@@ -138,30 +138,30 @@ config_keys:
   swarm: multiagent
 
 # Old typed names that 7.0.0 still reads (language-key-and-us-english). One
-# table of kind -> old word -> {new, removed_in}. Every row ends at 8.0.0:
-# `old_names.removal_problems` lists each row once the package version is 8.0.0
+# table of kind -> old word -> {new, removed_in}. Every row ends at 9.0.0:
+# `old_names.removal_problems` lists each row once the package version is 9.0.0
 # or later. A stored value (`reassessment_kind`, `check_id`) is also read by
 # `word_map` as a value section; the other kinds have a small reader of their
 # own that takes the old word from this table. `cli/aliases.yml` stays empty:
 # these are values and keys, not CLI spellings.
 old_names:
   reassessment_kind:
-    judgement: {new: judgment, removed_in: 8.0.0}
+    judgement: {new: judgment, removed_in: 9.0.0}
   check_id:
-    dor-behaviour-is-gwt: {new: dor-behavior-is-gwt, removed_in: 8.0.0}
+    dor-behaviour-is-gwt: {new: dor-behavior-is-gwt, removed_in: 9.0.0}
   skill:
-    behaviour-mapping: {new: behavior-mapping, removed_in: 8.0.0}
+    behaviour-mapping: {new: behavior-mapping, removed_in: 9.0.0}
   refusal_code:
-    not-initialised: {new: not-initialized, removed_in: 8.0.0}
+    not-initialised: {new: not-initialized, removed_in: 9.0.0}
   state_key:
-    initialised: {new: initialized, removed_in: 8.0.0}
+    initialised: {new: initialized, removed_in: 9.0.0}
   readiness_key:
-    catalogue_digest: {new: catalog_digest, removed_in: 8.0.0}
+    catalogue_digest: {new: catalog_digest, removed_in: 9.0.0}
   json_key:
-    behaviour: {new: behavior, removed_in: 8.0.0}
-    behaviours: {new: behaviors, removed_in: 8.0.0}
+    behaviour: {new: behavior, removed_in: 9.0.0}
+    behaviours: {new: behaviors, removed_in: 9.0.0}
   spec_heading:
-    Current Behaviour: {new: Current Behavior, removed_in: 8.0.0}
-    Archived Behaviour: {new: Archived Behavior, removed_in: 8.0.0}
+    Current Behaviour: {new: Current Behavior, removed_in: 9.0.0}
+    Archived Behaviour: {new: Archived Behavior, removed_in: 9.0.0}
   term:
-    catalogue: {new: catalog, removed_in: 8.0.0}
+    catalogue: {new: catalog, removed_in: 9.0.0}

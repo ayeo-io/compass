@@ -545,8 +545,9 @@ def test_pl_6_a_legacy_waiver_is_a_warning_and_still_excuses():
 
 
 @pytest.mark.parametrize("version, ok", [("7.0.0", True), ("7.9.9", True),
-                                         ("8.0.0", False)])
-def test_pl_6_lint_passes_a_legacy_waiver_on_7_x_and_fails_it_from_8_0_0(
+                                         ("8.0.0", True), ("8.9.9", True),
+                                         ("9.0.0", False)])
+def test_pl_6_lint_passes_a_legacy_waiver_on_7_and_8_x_and_fails_it_from_9_0_0(
         monkeypatch, version, ok):
     from compass_pkg import waivers
     monkeypatch.setattr(waivers, "COMPASS_VERSION", version)
@@ -554,7 +555,7 @@ def test_pl_6_lint_passes_a_legacy_waiver_on_7_x_and_fails_it_from_8_0_0(
     assert report.ok is ok
     found = _one(report, "W-LEGACY")
     assert found.level == ("warning" if ok else "error")
-    # From 8.0.0 the waiver no longer excuses the loosening it sits in.
+    # From 9.0.0 the waiver no longer excuses the loosening it sits in.
     assert ("C-LOOSENING" in _codes(report)) is not ok
 
 

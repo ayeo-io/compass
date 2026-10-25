@@ -75,8 +75,8 @@ FALLBACK["close_reason"] = {"landed": "completed", "abandoned": "not-planned"}
 FALLBACK["run_stage"] = {"build": "implement"}
 FALLBACK["friction_keys"] = {"phase": "stage"}
 # The two stored values of the `old_names:` table (`old_names` keeps the rest).
-FALLBACK["reassessment_kind"] = {"judgement": "judgment"}  # us-english-scan: allow - old name read until 8.0.0
-FALLBACK["check_id"] = {"dor-behaviour-is-gwt": "dor-behavior-is-gwt"}  # us-english-scan: allow - old name read until 8.0.0
+FALLBACK["reassessment_kind"] = {"judgement": "judgment"}  # us-english-scan: allow - old name read until 9.0.0
+FALLBACK["check_id"] = {"dor-behaviour-is-gwt": "dor-behavior-is-gwt"}  # us-english-scan: allow - old name read until 9.0.0
 
 _READ = None
 
@@ -464,7 +464,7 @@ def advisory_lines(layer):
     """One advisory line per change the mapping made to `layer`, for the lint
     and the preset test. It names the layer, the path and the new word."""
     return [f"advisory: {layer.name}: {path} reads '{old}' as '{new}'; "
-            f"the old word is read until 8.0.0"
+            f"the old word is read until 9.0.0"
             for path, old, new in getattr(layer, "changes", ())]
 
 
@@ -645,7 +645,7 @@ def _notice(path, old, new, backup, reading=None, issue=None):
         return (f"{lead}: '{old}' is no longer stored; the state now comes "
                 f"from the records{shown}. The original is in {backup}.")
     return (f"{lead}: '{old}' is now '{new}'; the old word is read until "
-            f"8.0.0. The original is in {backup}.")
+            f"9.0.0. The original is in {backup}.")
 
 
 def backup_and_notice(path, raw, rows=None, mapped=None):

@@ -208,7 +208,7 @@ def report(root, only=None, days=14):
         if name in judge.REAL_SESSION_NOT_JUDGED:
             row["not_judged"] = judge.REAL_SESSION_NOT_JUDGED[name]
     unmatched = 0 if only else len(_project_transcripts(root, days) - named)
-    # Both spellings of each key are written until 8.0.0, so a consumer that
+    # Both spellings of each key are written until 9.0.0, so a consumer that
     # reads only the old ones gets the data it got before.
     rows = {name: old_names.twins("json_key", {**row, "behavior": name})
             for name, row in rows.items()}

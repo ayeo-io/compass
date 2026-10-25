@@ -357,7 +357,7 @@ def test_vr_d19_each_layer_keeps_the_changes_the_mapping_made(rows):
     assert ("dimensions.size.values", "standard", "medium") in parent.changes
     lines = rows.advisory_lines(parent)
     assert any("dimensions.size.values" in line and "medium" in line
-               and "8.0.0" in line for line in lines), lines
+               and "9.0.0" in line for line in lines), lines
 
 
 # --- VR-D21 and VR-D8: the one manifest write path ----------------------------
@@ -674,7 +674,7 @@ def test_vr_d19_policy_lint_advises_and_keeps_its_exit_status(tmp_path):
     assert old[0] == new[0] == 0, (old, new)
     assert old[1] == new[1], "the report on standard output is the same"
     assert "stages.implement.set.modes" in old[2] and "thorough" in old[2], old[2]
-    assert "8.0.0" in old[2] and "project" in old[2], old[2]
+    assert "9.0.0" in old[2] and "project" in old[2], old[2]
     assert new[2] == "", "a layer in the new words gets no advisory"
 
 
@@ -688,7 +688,7 @@ def test_vr_d19_the_advisory_names_the_layer_and_a_git_parent_by_its_sha():
     lines = report.advisories
     assert lines and all("github:acme/team@1.0.0#abc1234" in line for line in lines), lines
     assert any("approaches.regular.set.stages" in line and "lightweight" in line
-               and "8.0.0" in line for line in lines), lines
+               and "9.0.0" in line for line in lines), lines
 
 
 def test_vr_d19_preset_test_advises_and_keeps_its_exit_status(tmp_path):
@@ -704,7 +704,7 @@ def test_vr_d19_preset_test_advises_and_keeps_its_exit_status(tmp_path):
             "expect": {"approach": "regular"}}), encoding="utf-8")
         results[name] = _cli(tmp_path, "preset", "test", str(folder))
     assert results["old"][0] == results["new"][0], results
-    assert "8.0.0" in results["old"][2] and "thorough" in results["old"][2], results["old"]
+    assert "9.0.0" in results["old"][2] and "thorough" in results["old"][2], results["old"]
     assert results["new"][2] == ""
 
 
@@ -713,6 +713,7 @@ def test_vr_d19_compass_check_prints_no_such_advisory(tmp_path):
     code, out, err = _cli(root, "check", "--issue", "t")
     assert "7.0.0" not in out + err, (out, err)
     assert "8.0.0" not in out + err, (out, err)
+    assert "9.0.0" not in out + err, (out, err)
 
 
 # --- VR-D21: the backup, from the shipped rows ----------------------------------

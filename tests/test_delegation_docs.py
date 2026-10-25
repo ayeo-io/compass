@@ -126,7 +126,7 @@ def test_TRC_103_the_decision_index_names_the_record_that_amends_adr_069():
 
 
 def test_TRC_104_the_upgrade_guide_of_the_release_that_ships_this_change_says_what():
-    text = _flat(_text("docs/upgrade-next.md"))
+    text = _flat(_text("docs/upgrade-8-0-0.md"))
     for needle in ("positional form of `/compass:delegate` is refused",
                    "`--labels` is refused",
                    "own `.compass/delegations/` gives no approval",

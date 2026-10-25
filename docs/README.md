@@ -20,7 +20,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [safety-contract.md](safety-contract.md) - what Compass enforces, and what it does not claim.
 - [refusal-codes.md](refusal-codes.md) - every reason the pre-tool hook can refuse with, generated.
 - [artifact-catalog.md](artifact-catalog.md) - the artifact catalog: the fields of a kind, the skeleton, the word limits, the documents that repeat, the documents per work unit and the table of shipped kinds.
-- `artifact-catalogue.md` - the old name of the artifact catalog page, kept until 8.0.0 so a link to it opens the new page.
+- `artifact-catalogue.md` - the old name of the artifact catalog page, kept until 9.0.0 so a link to it opens the new page.
 - [multiagent-protocol.md](multiagent-protocol.md) - how a multiagent issue is run, step by step.
 - [headless-runner.md](headless-runner.md) - `compass run`: one stage of one issue with nobody in the session.
 - [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.
@@ -41,9 +41,9 @@ the table does not exist, and when a doc in this folder is not listed.
 - [codex.md](codex.md) - Codex source installation, shared stages and the tested limits of the adapter.
 - [adapter-conformance.md](adapter-conformance.md) - local behaviour checks and the separate native and independent acceptance runs.
 - [releasing.md](releasing.md) - how to cut a release.
-- [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 8.0.0, and why there is no supported rollback.
+- [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 9.0.0, and why there is no supported rollback.
 - [upgrade-7-0-0.md](upgrade-7-0-0.md) - what 7.0.0 changes and what to do about it, one section per change.
-- [upgrade-next.md](upgrade-next.md) - what the next release changes about delegation, and what breaks: the flag form, `--issue` on a delegated approval and the common store. It takes the release's number as its name when the release ships.
+- [upgrade-8-0-0.md](upgrade-8-0-0.md) - what 8.0.0 changes about delegation, and what breaks: the flag form, `--issue` on a delegated approval and the common store.
 - [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it.
 - [waivers-and-locks.md](waivers-and-locks.md) - how an owner writes a waiver, a lock, an unlock, an approver list and a layer in `compass.yml`.
 - [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show` on a layered project: the order of the checks, the finding codes and both JSON shapes.

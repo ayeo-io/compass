@@ -130,9 +130,11 @@ def test_trc_002_the_repository_map_names_every_agent_and_hook():
 @pytest.mark.parametrize("rel", FRONT_PAGE)
 def test_trc_003_versions_match_the_code(rel):
     """Scenario `TRC-003`: the Python floor and the shipped default's major
-    version the page states are the ones the code uses."""
+    version the page states are the ones the code uses. The default has its
+    own version, which can lag the CLI's: CLI 8.0.0 ships default 7."""
     text = (ROOT / rel).read_text(encoding="utf-8")
-    major = (ROOT / "VERSION").read_text(encoding="utf-8").split(".")[0]
+    preset = yaml.safe_load((PRESET / "preset.yml").read_text(encoding="utf-8"))
+    major = str(preset["version"]).split(".")[0]
     for found in re.findall(r"compass:default@(\d+)", text):
         assert found == major, f"{rel} names compass:default@{found}; this is {major}"
     floor = re.search(r"Python (3\.\d+) or later",

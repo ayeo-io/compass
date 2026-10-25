@@ -87,7 +87,7 @@ def _reassess(project: Path, *kind_args):
 
 def test_trc_043():
     import tempfile
-    notice = f"compass: kind {OLD_KIND} is now {NEW_KIND}; the old word is read until 8.0.0."
+    notice = f"compass: kind {OLD_KIND} is now {NEW_KIND}; the old word is read until 9.0.0."
     cases = [
         (["--kind", NEW_KIND], True), (["--kind", OLD_KIND], True),
         (["--kind", NEW_KIND.upper()], False), (["--kind", "judg" + "emnt"], False),
@@ -414,7 +414,7 @@ def test_trc_050():
     assert f"### `{_U6_NEW_CODE}`" in page
     assert f"### `{_U6_OLD_CODE}`" not in page
     section = page.split(f"### `{_U6_NEW_CODE}`", 1)[1].split("###", 1)[0]
-    assert f"`{_U6_OLD_CODE}` is read until 8.0.0" in section
+    assert f"`{_U6_OLD_CODE}` is read until 9.0.0" in section
 
 
 def _u6_state_project(tmp: Path, name: str, body: str) -> Path:
@@ -557,14 +557,14 @@ def test_trc_053(tmp_path):
         {k: v for k, v in f.items() if k != NEW_BEHAVIOR} for f in data["failures"]]
     # The text view prints the US words only.
     assert OLD_BEHAVIOR not in text and broken in text
-    # The old keys end at 8.0.0: the table lists them, and at 8.0.0 a result
+    # The old keys end at 9.0.0: the table lists them, and at 9.0.0 a result
     # that still emits one is a problem.
     assert _old_keys_emitted(data)
-    problems = old_names.removal_problems("8.0.0")
+    problems = old_names.removal_problems("9.0.0")
     assert any(f"json_key '{OLD_BEHAVIOR}'" in p for p in problems), problems
     assert any(f"json_key '{OLD_BEHAVIOR}s'" in p for p in problems), problems
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-    if old_names._version(version) >= (8, 0, 0):
+    if old_names._version(version) >= (9, 0, 0):
         assert _old_keys_emitted(data) == [], "an old JSON key is still emitted"
 
 
@@ -672,7 +672,7 @@ def test_trc_055(tmp_path):
     assert built.returncode == 0, built.stdout + built.stderr
 
 
-# --- The table ends at 8.0.0 --------------------------------------------------
+# --- The table ends at 9.0.0 --------------------------------------------------
 
 def test_trc_056():
     from compass_pkg import aliases, core, old_names
@@ -680,11 +680,13 @@ def test_trc_056():
     found = old_names.rows()
     assert len(found) == 11, found
     assert len({r["kind"] for r in found}) == 9, found
-    assert {r["removed_in"] for r in found} == {"8.0.0"}, found
+    assert {r["removed_in"] for r in found} == {"9.0.0"}, found
     assert aliases.load_table()["aliases"] == []
 
-    # The table ends at 8.0.0: a planted version lists every row, 7.0.0 none.
-    assert len(old_names.removal_problems("8.0.0")) == 11
+    # The table ends at 9.0.0: a planted version lists every row, 8.x none.
+    assert len(old_names.removal_problems("9.0.0")) == 11
+    assert old_names.removal_problems("8.0.0") == []
+    assert old_names.removal_problems("8.1.0") == []
     assert len(old_names.removal_problems("9.1.0")) == 11
     assert old_names.removal_problems("7.0.0") == []
     assert old_names.removal_problems("7.10.0") == []    # tuples, not strings
@@ -706,7 +708,7 @@ def test_trc_056_the_table_check_fails_for_a_row_that_is_missing(monkeypatch):
     planted["term"] = {}
     monkeypatch.setattr(old_names, "_READ", lambda name, fallback: planted)
     assert len(old_names.rows()) == 10
-    assert old_names.removal_problems("8.0.0") and len(old_names.removal_problems("8.0.0")) == 10
+    assert old_names.removal_problems("9.0.0") and len(old_names.removal_problems("9.0.0")) == 10
 
 
 # --- The upgrade guide table is the reader table ------------------------------
@@ -737,7 +739,7 @@ def test_trc_070():
     assert len(guide) == 11
 
     # The comparison fails for a planted extra row, a missing row and a changed new name.
-    extra = text.replace("## Renamed names\n", "## Renamed names\n\n| term | `frob` | `frab` | 8.0.0 |\n", 1)
+    extra = text.replace("## Renamed names\n", "## Renamed names\n\n| term | `frob` | `frab` | 9.0.0 |\n", 1)
     assert _guide_rows(extra) != reader
     gone = "\n".join(ln for ln in text.splitlines() if "| `catalogue` |" not in ln)
     assert _guide_rows(gone) != reader

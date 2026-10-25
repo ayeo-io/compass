@@ -19,8 +19,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 
-ADVISORY = "the old word is read until 8.0.0"
-SIZE_NOTICE = "compass: size standard is now medium; the old word is read until 8.0.0."
+ADVISORY = "the old word is read until 9.0.0"
+SIZE_NOTICE = "compass: size standard is now medium; the old word is read until 9.0.0."
 
 SCANNED_ROOTS = ("cli/", "docs/", "governance/", "skills/", "commands/", "agents/")
 SKIPPED = ("governance/decisions/", "architecture/decisions/", "docs/system-spec.md", "tests/")

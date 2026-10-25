@@ -58,7 +58,7 @@ def problems_with_removals(text):
 def problems_with_kept_readers(text):
     body = re.sub(r"\s+", " ", section(text))
     return [p for p in ("old words", "old approach names", "copied 5.x governance",
-                        ".compass/config.yml", "8.0.0") if p not in body]
+                        ".compass/config.yml", "9.0.0") if p not in body]
 
 
 def problems_with_upgrade_steps(text):
@@ -85,7 +85,7 @@ def test_the_section_names_each_removed_spelling():
     assert "| `run --stage build` | `run --stage implement` |" in section(guide())
 
 
-def test_the_section_names_each_reader_kept_until_8_0_0():
+def test_the_section_names_each_reader_kept_until_9_0_0():
     """Scenario id: `TRC-021` in release-7-0-0-prep/acceptance-criteria.md."""
     assert problems_with_kept_readers(guide()) == []
 

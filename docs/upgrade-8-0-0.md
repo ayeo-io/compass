@@ -1,6 +1,8 @@
-# Upgrading to the next release
+# Upgrading to 8.0.0
 
-This page lists what the next release changes about delegation, and what to do about it. The release has no number yet. The owner chooses it when the change ships, and this page then takes that number as its name. The decision behind it is `architecture/decisions/ADR-077-delegations-cover-the-typing-session-until-revoked.md`.
+8.0.0 is a major release because of one change: delegation. This page lists what changes, what breaks, and what to do about it. The decision behind it is `architecture/decisions/ADR-077-delegations-cover-the-typing-session-until-revoked.md`.
+
+8.0.0 removes no reader. Old words, old approach names, copied 5.x governance, the generated governance views, `.compass/config.yml` when `compass.yml` is absent, and migrated LEGACY waivers are read until 9.0.0 (`governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`).
 
 ## Delegation
 

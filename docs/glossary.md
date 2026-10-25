@@ -248,7 +248,7 @@ A named switch for new blocking behavior, off in the shipped default.
 
 One of the nine maps of configuration entries keyed by id: `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts`, `readiness` and `vocabulary`. An id is stable; a display name lives in the `vocabulary` catalog.
 
-**Also:** catalogue <!-- us-english-scan: allow - old term, read until 8.0.0 -->
+**Also:** catalogue <!-- us-english-scan: allow - old term, read until 9.0.0 -->
 
 **Related:** `layer`, `overlay`, `generation`
 
@@ -306,7 +306,7 @@ The gate between requirements and plan/implementation: acceptance criteria exist
 
 ### delivery-approach
 
-The chosen shape for an issue: which artifacts exist, which gates apply, solo or parallel. Deterministic - same assessment plus same policy always gives the same approach. `full` is the name of the heaviest delivery approach and is not a stage mode: its stages run `thorough`, and the old mode word `full` reads as `thorough` until 8.0.0.
+The chosen shape for an issue: which artifacts exist, which gates apply, solo or parallel. Deterministic - same assessment plus same policy always gives the same approach. `full` is the name of the heaviest delivery approach and is not a stage mode: its stages run `thorough`, and the old mode word `full` reads as `thorough` until 9.0.0.
 
 **Related:** `assess`, `quality-gate`
 

@@ -146,7 +146,7 @@ earlier one. Warnings never stop it and never fail it.
 | `W-REASON` | error | A waiver has no reason |
 | `W-APPROVED-BY` | error | A waiver has no `approved_by` |
 | `W-UNAPPROVED` | error | `approved_by` is `UNAPPROVED` |
-| `W-LEGACY` | warning before 8.0.0, error from 8.0.0 | `approved_by: LEGACY`: no approval is recorded. Lint accepts the shape through every 7.x release, and from 8.0.0 the waiver no longer excuses its departure |
+| `W-LEGACY` | warning before 9.0.0, error from 9.0.0 | `approved_by: LEGACY`: no approval is recorded. Lint accepts the shape through every 7.x and 8.x release, and from 9.0.0 the waiver no longer excuses its departure |
 | `W-LEGACY-DATED` | error | A `LEGACY` waiver carries `approved_on` |
 | `W-LEGACY-ISSUE` | error | An issue waiver uses `LEGACY` |
 | `W-APPROVED-ON-MISSING` | error | A project waiver has no `approved_on` |
@@ -196,10 +196,10 @@ mode as `thorough-with-follow-up` and the size `standard` as `medium`, in the
 fields that hold them and nowhere else. The lint prints one advisory line to standard
 error for each word it read that way. The line names the layer (a git parent by
 its ref and short sha), the path, the new word and that the old word is read
-until 8.0.0:
+until 9.0.0:
 
 ```
-advisory: project: stages.implement.set.modes reads 'full' as 'thorough'; the old word is read until 8.0.0
+advisory: project: stages.implement.set.modes reads 'full' as 'thorough'; the old word is read until 9.0.0
 ```
 
 An advisory is not a finding. It changes no exit status and no count, it is

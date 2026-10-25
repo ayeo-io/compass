@@ -51,6 +51,7 @@ exclude_docs: |
   !/configuration.md
   !/upgrade-6-0-0.md
   !/upgrade-7-0-0.md
+  !/upgrade-8-0-0.md
   !/github-labels.md
   !/github-labels-walkthrough.md
   !/waivers-and-locks.md
@@ -69,6 +70,7 @@ nav:
       - GitHub labels walkthrough: github-labels-walkthrough.md
       - Upgrading to 6.0.0: upgrade-6-0-0.md
       - Upgrading to 7.0.0: upgrade-7-0-0.md
+      - Upgrading to 8.0.0: upgrade-8-0-0.md
   - Guarantees:
       - Safety contract: safety-contract.md
       - Refusal codes: refusal-codes.md

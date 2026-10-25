@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
-ADVISORY = "the old word is read until 8.0.0"
+ADVISORY = "the old word is read until 9.0.0"
 
 OLD_LAYER = (
     "# Our Compass settings.\n"

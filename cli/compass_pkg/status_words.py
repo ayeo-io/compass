@@ -4,7 +4,7 @@
 A manifest stores `backlog` (a hold a person set) or `done` (closed, with a
 `close_reason`). It stores no word for work in flight: that state comes from
 the records (`lifecycle.state_of`). Manifests written before 6.0.0 hold five
-other words, and this module reads them until 8.0.0, so a reader that asks
+other words, and this module reads them until 9.0.0, so a reader that asks
 `is_closed(manifest)` is right for old and new files alike. No other module
 compares a status word.
 """
@@ -23,11 +23,11 @@ COMPLETED, NOT_PLANNED, DUPLICATE = CLOSE_REASONS
 # refuses each and says so.
 DERIVED_STATES = ("ready", "in-progress", "in-review")
 
-# The five words stored before 6.0.0. They are read until 8.0.0 and never
+# The five words stored before 6.0.0. They are read until 9.0.0 and never
 # written.
 RETIRED_STATUSES = ("active", "queued", "parked", "landed", "abandoned")
 
-# Words stored before 6.0.0, read until 8.0.0: the close reason each closing
+# Words stored before 6.0.0, read until 9.0.0: the close reason each closing
 # word stood for, and the words that meant a hold.
 _RETIRED_CLOSE_REASON = {"landed": "completed", "abandoned": "not-planned"}
 _RETIRED_HOLDS = ("queued", "parked")

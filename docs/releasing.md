@@ -29,10 +29,46 @@ ADR-006 is the other half of this: backward compatibility is non-negotiable
 it, and a breaking change happens once, at a major version, with the reason
 recorded.
 
+### What changed at 8.0.0
+
+8.0.0 is a major release because of one change: delegation works across git
+worktrees and takes optional flags, and four forms that 7.0.0 accepted are
+refused. It removes no reader: the readers for old forms, kept until 8.0.0 by
+the 7.0.0 release, are kept until 9.0.0
+(`governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`). The
+facts are in `docs/upgrade-8-0-0.md`.
+
+**What breaks**
+
+- The positional form of `/compass:delegate`, and `--labels`, are refused; the
+  message shows the flag form.
+- A delegated approval needs `--issue <slug>`, as a plain command in the
+  agent's Bash tool.
+- A delegation file in a linked worktree's own folder gives no approval; the
+  main checkout's `.compass/delegations/` is the one store.
+
+**What the release adds**
+
+- `/compass:delegate [--agent] [--until] [--on] [--for] [--max]`: with no flag,
+  a delegation covers this session's agents on every issue until
+  `/compass:revoke`. `/compass:approve` and `/compass:reject` reach a request
+  in any worktree.
+- A `compass` launcher in the plugin's data folder, for the person's own
+  terminal, named in the commands the CLI prints for the person to run there
+  (remaining gaps: ayeo-io/compass-delivery-record#302).
+- The pre-tool hook catches `perl -pi`, `ruby -pi` and interpreter writes
+  through a variable, and the approval guard joins a protected folder name
+  split over two lines with a backslash.
+- The front-page claims state the limits the safety contract gives.
+
+**Upgrade.** Update every checkout and every installed plugin together, then
+type `/compass:delegate` again for any delegation you rely on. No archive
+migration is needed.
+
 ### What changed at 7.0.0
 
 7.0.0 removes the released command spellings that 6.0.0 renamed, and keeps the
-readers for old forms until 8.0.0. The facts are in `docs/upgrade-7-0-0.md`.
+readers for old forms until 9.0.0. The facts are in `docs/upgrade-7-0-0.md`.
 
 **What the release contains**
 
@@ -69,11 +105,11 @@ because it was removed with its own hint: use `issue github sync`. The hint
 rows for `issue dashboard` and `issue labels sync` stay and each prints one line
 that names the new spelling.
 
-**What is kept until 8.0.0.** Old words, old approach names, copied 5.x
+**What is kept until 9.0.0.** Old words, old approach names, copied 5.x
 governance (with the generated views `governance/routing-policy.yml` and
 `governance/guardrails.yml`) and `.compass/config.yml` (when `compass.yml` is
-absent) are read until 8.0.0, not 7.0.0. Only the command spellings end at 7.0.0
-(`governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`).
+absent) are read until 9.0.0, not 7.0.0. Only the command spellings end at 7.0.0
+(`governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`).
 
 **Upgrade and rollback.** Update every checkout and every installed plugin
 together. Take a copy of the two issue folders, `.compass/work` and
@@ -94,8 +130,8 @@ and ships together with the delivery approaches as data (the decision record
 not because it removes a command. **It removes no command.** Every file and
 name that 5.x read is still read, and every released command spelling that 6.0.0
 renames still runs. 7.0.0 removed the command spellings, and the readers stay
-until 8.0.0
-(`governance/decisions/2026-10-19-legacy-readers-readable-until-8-0-0.md`).
+until 9.0.0
+(`governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`).
 It does remove one output shape: the `compass flow --json` keys held, next_up,
 landed_this_week and abandoned, replaced by backlog, ready, in_progress,
 in_review, done_this_week and closed.
@@ -104,7 +140,7 @@ in_review, done_this_week and closed.
 becomes `thorough`, and the other two follow), the size `standard`, the run
 stage `build`, the friction `phase` key, the stored issue statuses and eight
 released command spellings. A manifest is written at schema `3.0`. The old words
-are read until 8.0.0. The eight command spellings were removed at 7.0.0. The full tables, the notice a
+are read until 9.0.0. The eight command spellings were removed at 7.0.0. The full tables, the notice a
 first save prints and the `manifest.yml.v5.bak` backup are in
 `docs/upgrade-6-0-0.md`. `issue status remove` also reopens a closed issue. A
 script that reopened one with the removed spelling now exits 2 and must run
@@ -121,7 +157,7 @@ reverse map, used only to rehearse a rollback before the tag, loses
 `blocked` flag, and the fact that a parked issue had no reason (it returns as
 a plain queued hold). The configuration files of a project (`compass.yml`,
 copied governance and `.compass/config.yml`) are read in their old words until
-8.0.0. `compass policy migrate --words` rewrites them.
+9.0.0. `compass policy migrate --words` rewrites them.
 
 **What the release contains**
 
@@ -131,7 +167,7 @@ copied governance and `.compass/config.yml`) are read in their old words until
   default. A 6.x release of the default never changes a value that 6.0.0 defines.
 - The shipped default is a preset directory, `governance/presets/default/`.
   `governance/routing-policy.yml` and `governance/guardrails.yml` are views
-  generated from it, and they stay until 8.0.0 for the projects, the drift
+  generated from it, and they stay until 9.0.0 for the projects, the drift
   report and the tests that read them.
 - A layer can add, set, replace or remove an entry. The classifier compares a
   layer with its parent. A change that loosens the parent needs a waiver with an

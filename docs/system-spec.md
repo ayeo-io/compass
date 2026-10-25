@@ -5033,3 +5033,9 @@ Compass 8.0.0 ships the delegation rework, keeps every legacy reader until 9.0.0
 compass policy migrate recognizes governance copied from the 8.0.0 release.
 
 - `TRC-001` Given the v8.0.0 tag, when the table of shipped releases is checked, then it holds a v8.0.0 row whose digests match the files the tag shipped
+
+### record-remote-rename (completed 2026-10-25)
+
+The project's delivery record now syncs to ayeo-io/compass-delivery, the renamed private repository.
+
+- `TRC-001` Given the delivery record repository is renamed to compass-delivery, When compass record sync reads compass.yml, Then the remote it pushes to names ayeo-io/compass-delivery

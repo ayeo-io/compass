@@ -5006,3 +5006,14 @@ The pre-tool hook now treats perl -pi, ruby -pi and inline interpreter scripts t
 A plugin install now has a compass launcher for your own terminal, and every command Compass asks you to run there names it, with the folder to add to your PATH.
 
 - `TRC-001` Given the plugin is installed and its session-start hook has run, when a message tells the person to run compass evidence approve in their own terminal, then it names the launcher in the plugin's data folder, which runs the installed CLI
+
+### front-page-plain-english (completed 2026-10-25)
+
+The README, the docs home page and the quickstart now state what each guarantee covers and where it stops, and the text an adopter reads is plain English.
+
+- `TRC-001` Each claim delivery-record #261 lists states the safety contract's limit
+- `TRC-002` Every command the front page names exists
+- `TRC-003` Every approach, stage and count the front page states matches the policy
+- `TRC-004` A planted wrong fact fails the check
+- `TRC-005` The in-scope files hold no idiom or metaphor
+- `TRC-006` The plain-English pass changes wording, not facts

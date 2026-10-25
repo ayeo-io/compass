@@ -129,7 +129,7 @@ readiness:
 # the backlog command are kept out of this public repository. `compass record
 # sync` copies them, with credentials redacted, into a private repository.
 record:
-  remote: https://github.com/ayeo-io/compass-delivery-record.git
+  remote: https://github.com/ayeo-io/compass-delivery.git
   # Rival product names are replaced by their codes before syncing
   # (governance/decisions/2026-10-04-rival-names-never-committed.md).
   names_key: .compass/private/rival-codes.yml

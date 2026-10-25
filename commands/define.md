@@ -60,14 +60,14 @@ contract, QA for coverage. Write it so all five roles can.
    intent document or request. Brownfield-unmapped: map current behavior
    first, then
    add the change scenarios.
-2. **Write scenarios** as Given/When/Then - happy path, the realistic edges,
+2. **Write scenarios** as Given/When/Then - happy path, the realistic edge cases,
    the failure modes that matter. Depth scales with the delivery approach,
    but never to zero: "no scenario" is never a valid state. On a quick fix
-   the single scenario must be genuinely unambiguous, because the
+   the single scenario must be unambiguous, because the
    requirements review is collapsed only because the scenario is unambiguous.
    Then ask yourself which input classes and failure modes the brief
    implies that no scenario yet covers. Each answer becomes a scenario, a
-   light one if need be, or is recorded with
+   short one if needed, or is recorded with
    `compass scenario descope "<mode>" --reason "<why>"`, which the verifier
    lists in the verification report. Nothing named is dropped silently.
    - **Worked example, a rate limit.** The brief says "limit search to 100
@@ -83,8 +83,8 @@ contract, QA for coverage. Write it so all five roles can.
      de-scoped with the reason "non-UTF-8 files are out of scope for this
      release; a follow-up issue adds encoding detection".
 3. **Group by independence.** On larger work, group scenarios by which touch
-   disjoint surface - this grouping seeds the distribution map at the plan
-   stage.
+   separate parts of the code - the plan stage starts the distribution map
+   from this grouping.
 4. **Maintain traceability** - load `evidence-gates` and read its
    `traceability.md`; each scenario traces to
    an intent (`intent.md`, the request, the defect).
@@ -94,10 +94,10 @@ contract, QA for coverage. Write it so all five roles can.
    **Where it goes.** `docs/compass/<created>-<issue-slug>/acceptance-criteria.md`, where the
    date is the manifest's `created:` field - not today's. Then register it:
    `compass issue artifact set acceptance-criteria --status draft --path <that path>`. The CLI
-   refuses a path that climbs out of the project, so the record is checked
+   refuses a path outside the project, so the record is checked
    rather than claimed. If you had to create `docs/compass/`, **say so in one
-   line** - a directory appearing with nothing said is how it gets deleted by
-   hand or committed by accident.
+   line** - if a directory appears and nobody says so, someone can delete it
+   by hand or commit it by mistake.
 6. **Record each scenario with `compass scenario add`** - the manifest's
    `scenarios:` block is the machine-readable index of the prose spec. Run
    `compass scenario add <id> --title "<title>" --intent <intent id> --test
@@ -128,8 +128,8 @@ and the timebox; the BDD strategy does not apply here. See `${CLAUDE_PLUGIN_ROOT
 ## Hand-off
 
 Close this stage by handing the spec to a human, in these words or close to
-them. The point is to make the review a deliberate moment rather than an
-implied one - a reviewer who is told what to look for finds more than one who
+them. This makes the review a deliberate step, not an implied one - a
+reviewer who is told what to look for finds more than one who
 is told a file is ready.
 
 > I have written the acceptance criteria to

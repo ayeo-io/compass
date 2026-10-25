@@ -19,7 +19,7 @@ The project must already exist. The installer links `.agents/skills/compass`
 to the source skill, appends a managed instruction block to `AGENTS.md`, and
 merges Compass entries into `hooks.json` in the project’s `.codex` directory. Other instructions and hooks
 remain. A conflicting skill, changed managed block or changed Compass hook
-stops installation before it writes anything. The receipt lives at
+stops installation before it writes anything. The receipt is at
 `codex-install.json` in the project’s `.compass` directory.
 
 Restart Codex, trust the project when prompted, then use `/hooks` to review
@@ -28,14 +28,14 @@ Installation never grants that trust. Keep the source checkout in place.
 After updating or moving it, run the installer again from its new location.
 Do not edit the managed instruction block; put project instructions outside it.
 
-Remove only the installed wiring with:
+Remove only what the installer added with:
 
 ```bash
 python3 adapters/codex/install.py --project /absolute/path/to/your/project --uninstall
 ```
 
 The installer preserves issue records and unrelated user files. If you changed
-owned wiring, it refuses removal and names the conflict for you to resolve.
+a link, block or hook entry that the installer added, it refuses removal and names the conflict for you to resolve.
 
 ## Use the shared stages
 
@@ -83,10 +83,10 @@ those labels do not mean enforced, advisory and absent.
 
 ## What has been checked
 
-The subprocess tests install, reinstall and remove wiring in scratch projects.
+The subprocess tests install, reinstall and remove the adapter in scratch projects.
 They check collisions, preserved instructions, patch target checks, the spike
 exception, shell payloads, contract injection and edit logging. The explicit
-native smoke checks the advertised skill name and that the four discovered
+native smoke test checks the advertised skill name and that the four discovered
 hooks remain untrusted. It sends no model turn. Run it on a host
 with Codex installed; it fails if Codex is missing:
 
@@ -94,7 +94,7 @@ with Codex installed; it fails if Codex is missing:
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/native_codex_smoke.py -q
 ```
 
-The portable suite does not collect this host smoke. The registry at `schemas/adapter-contract.yml` names each capability and its limitations.
+The portable suite does not collect this host smoke test. The registry at `schemas/adapter-contract.yml` names each capability and its limitations.
 
 These tests do not show that a native Codex session completed the pipeline.
 Cold resume, compaction, Linux host execution, clean-machine installation and

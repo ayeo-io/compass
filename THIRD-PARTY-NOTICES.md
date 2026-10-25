@@ -2,7 +2,7 @@
 
 Compass is Apache-2.0 licensed (see `LICENSE`). This file lists the
 third-party code redistributed inside the plugin, so a reader or an auditor
-can find the terms it travels under without having to go looking.
+can find its licence terms in one place.
 
 ## PyYAML
 
@@ -36,4 +36,4 @@ can find the terms it travels under without having to go looking.
 This is the CLI's only third-party dependency; everything else Compass
 ships is the Python 3 standard library. See `cli/vendor/README.md` for how
 every entry point resolves this copy, and `docs/security.md` for the audit
-posture this notice supports.
+steps this notice supports.

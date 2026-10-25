@@ -35,7 +35,7 @@ compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
   whose behavior tests or docs pin) or `brownfield-unmapped`
 - size: `atomic`, `small`, `medium`, `large` or `product`
 - `--labels auth`, `payments`, `personal-data` or `migrations` when the
-  change touches one; those bring the human sign-off
+  change touches one; those make the change need a person's sign-off
 
 A rating is a judgment with a reason, not a way to reach a lighter process.
 When unsure, rate the size up.

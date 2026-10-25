@@ -10,7 +10,7 @@ This `compass.yml` waives one readiness signal. The signal is not locked, so the
 
 ```yaml
 schema: 1
-extends: compass:default@6
+extends: compass:default@7
 owner: ada
 readiness:
   tests-declared-and-under-two-minutes:
@@ -25,7 +25,7 @@ Check a file like this with `compass policy lint --file compass.yml`. Exit 0 mea
 
 ## Layers
 
-Compass reads the configuration as layers. Each layer sits on the layer above it.
+Compass reads the configuration as layers. Each layer can change the layer above it.
 
 | Layer | Where it is written |
 |---|---|
@@ -38,7 +38,7 @@ The layer keys of `compass.yml` are:
 
 | Key | Meaning |
 |---|---|
-| `extends` | The layer above. `compass:default@6` names the shipped default, major 6. |
+| `extends` | The layer above. `compass:default@7` names the shipped default, major 7. |
 | `owner` | The person who owns the project. The owner approves waivers and unlocks. |
 | `approvers` | Lists of names, by kind of approval: `issue-waiver` in the project file and `project-waiver` in a parent. |
 
@@ -58,7 +58,7 @@ An entry holds one operation. A change that loosens what the layer above set nee
 
 ## Project waivers
 
-A waiver sits inside the entry it excuses, under the `waiver` key. A project waiver has three fields:
+A waiver is written inside the entry it excuses, under the `waiver` key. A project waiver has three fields:
 
 - `reason` - why the project departs.
 - `approved_by` - a name from the list that may approve, or the `owner`.
@@ -68,7 +68,7 @@ Compass works out which fields the waiver covers. There is no `covers` field to 
 
 ## Issue waivers
 
-An issue waiver sits in the issue's `config:` and has two fields, `reason` and `approved_by`. Here `approved_by` is the id of a human approval record in the issue's evidence. It has no `approved_on`, because the record holds a timestamp. The waiver ends when the issue lands. Use `compass issue configure` to propose a change to one issue's configuration and to see what it would do.
+An issue waiver is written in the issue's `config:` and has two fields, `reason` and `approved_by`. Here `approved_by` is the id of a human approval record in the issue's evidence. It has no `approved_on`, because the record holds a timestamp. The waiver ends when the issue lands. Use `compass issue configure` to propose a change to one issue's configuration and to see what it would do.
 
 ## Locks
 
@@ -87,7 +87,7 @@ For example, a waiver on `suite-passed` fails lint with `K-LOCK-REFUSED`, becaus
 
 ## Unlocks
 
-Only the project layer can write `unlock`. The project `owner` must approve it, and it needs a waiver. Write `unlock: true`, one operation (`set`, `replace` or `remove`) and the `waiver` together in the same entry. If the operation and the waiver are not in the entry with the `unlock`, lint reports `W-NO-OPERATION`. A parent, a preset or an issue that carries `unlock` fails lint. Compass reports a project that unlocks a shipped entry as not conforming, on every `compass check` run. This page gives no unlock example on purpose: an unlock leaves conformance, so decide it with the owner and read `ADR-039` first.
+Only the project layer can write `unlock`. The project `owner` must approve it, and it needs a waiver. Write `unlock: true`, one operation (`set`, `replace` or `remove`) and the `waiver` together in the same entry. If the operation and the waiver are not in the entry with the `unlock`, lint reports `W-NO-OPERATION`. A parent, a preset or an issue that carries `unlock` fails lint. Compass reports a project that unlocks a shipped entry as not conforming, on every `compass check` run. This page gives no unlock example on purpose: an unlock makes the project not conforming, so decide it with the owner and read `ADR-039` first.
 
 ## Commands
 

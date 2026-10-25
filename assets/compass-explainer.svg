@@ -162,7 +162,7 @@
   </g>
 
   <g transform="translate(40,400)">
-    <text class="guard" x="0" y="0">Five guardrails hold on every approach. No assessment removes one.</text>
+    <text class="guard" x="0" y="0">Five default guardrails apply to all work that ships code.</text>
     <g stroke="#83c167" stroke-width="3" stroke-linecap="round">
       <line x1="0" y1="18" x2="160" y2="18"/>
       <line x1="176" y1="18" x2="336" y2="18"/>
@@ -179,5 +179,5 @@
     </g>
   </g>
 
-  <text class="small" x="40" y="478">Same assessment + same policy = same approach, every time.</text>
+  <text class="small" x="40" y="478">Same assessment, configuration and documents = same approach, every time.</text>
 </svg>

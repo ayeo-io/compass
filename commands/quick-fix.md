@@ -1,5 +1,5 @@
 ---
-description: The whole light path for a small, safe change
+description: Run the whole quick-fix approach for a small, safe change
 argument-hint: "<what needs fixing>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
@@ -24,12 +24,12 @@ Stop and run the full pipeline if any of these is true:
   first, below);
 - it is more than about three files, or there is a design decision in it;
 - you cannot state in one sentence what will be true afterwards;
-- someone other than an engineer is driving - a product owner, a marketer or
+- someone other than an engineer is leading the work - a product owner, a marketer or
   a designer brings artifacts this path does not write.
 
-Guessing low here is the failure this path is most prone to. When unsure,
-choose the larger size: collapsing an easy stage later is cheap, discovering
-mid-build that the process was too light is not.
+The most common mistake here is to rate the work too low. When unsure,
+choose the larger size: it is cheap to collapse an easy stage later, but it
+is expensive to find during the build that the process was too light.
 
 ## 1. Start
 
@@ -54,8 +54,8 @@ nothing else:
     data, money, auth or other team.
   - `contained`: bounded to one feature, recoverable without an incident, no
     data lost.
-  - `cross-cutting`: spreads across features or services, or degrades
-    something many people touch. Recovery needs coordination.
+  - `cross-cutting`: spreads across features or services, or makes
+    something that many people use worse. Recovery needs coordination.
   - `critical`: can lose data or money, breach auth or privacy, or cannot be
     rolled back.
 - familiarity:
@@ -75,19 +75,20 @@ nothing else:
     design decisions. This is heavier than a quick fix.
 
 `--goal` takes `VALUE - reason`; the goal is `delivery` on this path. An
-`intent.md` or `positioning.md` on disk pulls the approach up out of quick
-fix. So does a goal of `exploration` ("I cannot state this well enough to
+`intent.md` or `positioning.md` on disk adds a check to the quick fix, not
+weight. A goal of `exploration` changes the approach ("I cannot state this well enough to
 deliver it yet"): that is a spike, not a small change. `--role` is ignored. `--test` can repeat. The scenario id is `TRC-001` unless you pass `--scenario-id`.
 
 Pass `--labels` with the domains touched, comma-separated. Only `auth`,
-`payments`, `personal-data` and `migrations` bring the heavier process and
-the human sign-off; a synonym such as `pii` does not.
+`payments`, `personal-data` and `migrations` make the change need the
+heavier process and a person's sign-off; a synonym such as `pii` does not.
 
 It runs `compass init`, records the assessment, computes the approach
 through `compass approach evaluate`, writes `delivery-approach.md`, and
 registers it with `compass issue artifact set`. If it prints a `created:` line
-naming `.compass/` or `docs/compass/`, report it to the user: a directory
-that appears unannounced gets deleted by hand or committed by accident.
+naming `.compass/` or `docs/compass/`, report it to the user: if a directory
+appears and nobody says so, someone can delete it by hand or commit it by
+mistake.
 
 If the approach is heavier than a quick fix, it stops and says so. Continue
 with `/compass:assess`: the manifest holds the values and the approach,
@@ -95,10 +96,10 @@ and reasons go into its approach record.
 
 ## 2. Red
 
-The guardrail is that a change is tested before it lands: no code reaches
-main without a passing automated test it traces to. A light approach adapts
-how much surface the tests cover, the one scenario and its obvious edges,
-never whether a test exists.
+The guardrail is that a change is tested before it lands: no code
+reaches main without a passing automated test it traces to. A light approach
+changes how much of the code the tests cover - the one scenario and its
+obvious edge cases - never whether a test exists.
 
 Write the failing test. It must fail for the right reason: a test that fails
 on a typo or a missing import has not described the behavior yet. Then:
@@ -113,7 +114,7 @@ write the failing test: never disable the hook, work around it, or touch the
 markers by hand.
 
 Then write the smallest correct change. Do not make it the most general:
-generality is earned in refactor, under a green suite. Refactor names and
+make it more general only in refactor, with the suite green. Refactor names and
 duplication with the suite green. If the test has to change, you were
 changing behavior: go back to red.
 
@@ -123,7 +124,7 @@ A config value, a documentation string or a dependency bump has no unit that
 can fail first. Use a guard that can fail: a regression run, a type check or
 an end-to-end check. Run it, watch it fail, then fix.
 `compass tdd-red --verified-by regression|e2e|typecheck|live` records which
-kind of guard stood in. The guard must still fail first: a sanctioned red is
+kind of guard took the place of a unit test. The guard must still fail first: a sanctioned red is
 not an exemption from red.
 
 ## 3. Finish
@@ -151,7 +152,7 @@ and run the same command again.
 
 The change grows - a second file, then a third, then a decision you did not
 expect. The assessment was wrong. Run `/compass:assess --reassess` with the
-real dimensions rather than push on. Three fixes in a row that did not hold
+real dimensions rather than continue. Three fixes in a row that did not hold
 mean the same thing.
 
 ## Gate

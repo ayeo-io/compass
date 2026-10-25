@@ -25,7 +25,7 @@ compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
 ```
 
 Pass `--labels` when the change touches `auth`, `payments`,
-`personal-data` or `migrations`: those tags bring the human sign-off.
+`personal-data` or `migrations`: those tags make the change need a person's sign-off.
 
 Risk is `trivial`, `contained`, `cross-cutting` or `critical`; familiarity
 is `greenfield`, `brownfield-mapped` or `brownfield-unmapped`; size is

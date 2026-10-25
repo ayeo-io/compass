@@ -20,8 +20,13 @@ Risk, familiarity and size need judgment, as do the goal and urgency switches. O
 are recorded, `compass approach evaluate` applies the routing policy as a pure
 function.
 
-The same assessment plus the same policy produces the same approach, every
-time.
+Its inputs are the recorded assessment, the project's resolved configuration
+(the shipped default, an optional git parent, `compass.yml` and the issue's
+own `config:`, which can name the approach with `compass issue configure
+--route`) and the documents the issue has on disk, such as `intent.md` and
+`positioning.md`. The same inputs produce the same approach, every time.
+Without `--write` it reads the configuration stored at the last evaluation;
+with `--write`, the current one.
 
 ### 2. A declared guardrail cannot silently become advice
 
@@ -684,7 +689,7 @@ could not ask would be a guardrail switched off silently.
 The same rule covers a project with both `compass.yml` and
 `.compass/config.yml`. When `compass.yml` is Compass's file (it has a
 top-level `schema:` key) and the old file still holds a setting such as
-`enforcement`, that setting would stop guarding without a word, so the hook
+`enforcement`, that setting would stop guarding without a warning, so the hook
 refuses with `settings-conflict` and the CLI commands that read settings stop
 with the same text. A `compass.yml` with no `schema:` is not taken for
 Compass's file: the old file keeps guarding and a warning says so. A
@@ -719,11 +724,11 @@ the issue. The hook reads the red record beside the marker -
 `evidence/red*.json` - and checks its `content_digest`; an empty marker
 unlocks nothing.
 
-**What that does not buy.** The digest is a plain `sha256` over the record's
+**What the digest does not protect against.** The digest is a plain `sha256` over the record's
 own fields, with no secret, so anyone who can write the file can compute a
 matching one. It is tamper evidence, not forgery resistance: it catches a
-record edited after it was written, and it does not catch one written from
-scratch by someone who knows the format. Forging a red record needs
+record edited after it was written, and it does not catch a new record
+written by someone who knows the format. Forging a red record needs
 valid JSON with a correct digest, not an empty file. It is still possible.
 
 A record with no identity - written before records carried one, or written
@@ -756,7 +761,7 @@ The hook's read has these limits:
 - It reads each dependency's manifest from this checkout's `.compass/work/`,
   through the manifest loader and never the parse cache, and runs no git
   command. A dependency finished only in another worktree still refuses here.
-  The refusal names both ways out: bring that issue's folder into this
+  The refusal names both ways to clear it: bring that issue's folder into this
   checkout, or run `compass issue depends remove <slug>`. No override flag
   exists.
 - It refuses only on a positive read of an unmet dependency. A dependency on
@@ -797,7 +802,7 @@ manifest.
   records the id. `compass` commands hold the same lock while they write a
   manifest.
 - It inserts the id into the file's text and checks that the parsed result
-  changed only `usage.sessions`, so no other byte moves. It replaces the file
+  changed only `usage.sessions`, so no other byte changes. It replaces the file
   atomically, after comparing the bytes on disk with those it read; a writer
   that changed the file in between is merged, not overwritten.
 - Any fault - a read-only manifest or folder, a failed write, a recorder that
@@ -867,7 +872,7 @@ the Edit in memory and compares the file before and after
 Shell and every other language are not covered. A line that starts with `#` is
 data inside a heredoc, a multi-line string or a command substitution, and every
 shell file that `enforcement.code_globs` declares in this repository (12 files)
-uses one of those. A reader that is wrong in the open direction would let a
+uses one of those. A reader that wrongly allows an Edit would let a
 data line change with no failing test. `NotebookEdit` and `MultiEdit` are not
 wired to the hook and are unchanged.
 
@@ -966,7 +971,8 @@ file up to about 230 KiB, and a larger file keeps the old verdict. The rates are
 those of the slowest shape that was measured, so a file of comments is charged
 at the rate of dense code.
 
-The budget is a table and a hostile file breaks it: PyYAML takes about 90
+The budget is a table, and a hostile file can take longer than the table
+predicts: PyYAML takes about 90
 seconds for 100000 `[` characters, a file of 100 KiB. The bound that holds is
 `signal.alarm`. Its default action ends the process even inside C code, and the
 hook then gives the old verdict and charges the whole alarm. The alarm is the
@@ -1014,12 +1020,12 @@ before the alarm. A second test uses files at the limit (780 KiB of Python,
 allowed or refused as before, an edit of code is always refused, and the hook
 ends within 6 seconds.
 
-Three more rules sit beside this one:
+Three more rules apply with this one:
 
 - Path classes. `evals/*/seed/` holds input that the eval harness copies into a
   sandbox and never runs in place, so it is not production code and needs no
-  failing test. The pattern starts at the project root, and a `..` step cannot
-  borrow it. These stay guarded: `examples/`, `cli/vendor/` (every Compass
+  failing test. The pattern starts at the project root, and a path with a `..`
+  step cannot get the exemption. These stay guarded: `examples/`, `cli/vendor/` (every Compass
   process runs it), `.github/scripts/` (CI runs it), `evals/` outside `seed/`,
   `src/examples/` and `db/seed/`. The setting `enforcement.code_globs` only
   ratchets up: no built-in exemption is wider than the code Compass can show is
@@ -1146,12 +1152,12 @@ charged at 2.4 seconds. The steps of the flattening reach the hook in a file
 that the hook makes and the flattening alone writes, as two numbers that the
 hook checks (nine digits at most). The text of a command is never read as
 that count: a write target named `compass-scan-work=5000000000000000000` once
-made the counter negative, so that the budget never tripped, and now it is a
+made the counter negative, so that the budget was never exceeded, and now it is a
 target like any other.
 
 The budget is an estimate from a table and reads no clock. It cannot see an
 interaction that the table does not charge, or a machine slower than the one
-that was timed. A wall-clock fuse is the backstop for those. The hook reads
+that was timed. A wall-clock fuse covers those cases. The hook reads
 bash's own count of seconds (`$SECONDS`, which starts no process) when the
 script starts, and checks it at each write target, at each variable name and
 at each pass of the walk. When 8 seconds have gone it stops as it does for the

@@ -8,7 +8,7 @@ Run the checklist separately for each runtime. Keep the host version, framework
 revision, OS, installation method, hook trust state, raw output and expected
 versus observed result. Use `passed`, `failed`, `unsupported` or `unmeasured`
 for each case. The [adapter behavior guide](adapter-conformance.md) explains
-why local subprocess results cannot fill native or independent acceptance.
+why local subprocess results cannot count as native or independent acceptance.
 
 | Step | Claude Code | Codex |
 |---|---|---|
@@ -85,10 +85,10 @@ compass 7.0.0 (issue schema 3.0)
 PyYAML 6.0.2 at .../cli/vendor/yaml/__init__.py
 ```
 
-The PyYAML path is the point: it must be the bundled copy, not one from your
+Check the PyYAML path: it must be the bundled copy, not one from your
 environment. Policy lint must end in `PASS`.
 
-To prove the CLI is not relying on packages from your Python environment:
+To check that the CLI does not use packages from your Python environment:
 
 ```bash
 python3 -m venv --without-pip /tmp/compass-bare-check
@@ -120,10 +120,8 @@ docs/compass/<date>-<issue-slug>/delivery-approach.md
 The exact slug can vary. The manifest, evidence and markers are in
 `.compass/work/<issue-slug>/`. The issue's documents are in
 `docs/compass/<date>-<issue-slug>/`, where `<date>` is the manifest's
-`created:` date. A change as small as this one is normally assessed as a quick fix, which
-keeps `delivery-approach.md` there. For a heavier approach the record sits
-beside the manifest. `compass issue artifact-path delivery-approach` prints its
-path either way.
+`created:` date. `delivery-approach.md` is there too, and
+`compass issue artifact-path delivery-approach` prints its path.
 
 Render the issue page:
 
@@ -137,7 +135,7 @@ acceptance scenarios, and each scenario's traceability. `compass next`
 names the next action.
 
 If `/compass:assess` is unknown, the adapter is not loaded. Restart Claude
-Code, then check the plugin installation or source-install wiring.
+Code, then check the plugin installation or the source installation.
 
 ## 5. Confirm an incomplete issue fails honestly
 
@@ -148,7 +146,7 @@ compass check --issue <issue-slug>
 ```
 
 For a newly assessed issue, failure is expected: acceptance, implementation
-and verification evidence do not exist yet. A healthy result:
+and verification evidence do not exist yet. A correct result:
 
 - names the failed check;
 - gives a fix; and
@@ -189,7 +187,7 @@ bash scripts/install.sh --global
 
 `--uninstall` removes the install that the same scope flag made. Without
 `--global` it looks in the current directory's `.claude` and, after a global
-install, removes nothing. Uninstall must remove only the Claude Code adapter wiring. Both reinstall
+install, removes nothing. Uninstall must remove only what the installer added for the Claude Code adapter. Both reinstall
 runs must succeed without duplicate hook entries.
 
 ## Troubleshooting
@@ -200,7 +198,7 @@ runs must succeed without duplicate hook entries.
 | `policy lint` cannot find governance | Run from the project or use the CLI from a complete Compass checkout. |
 | Edit is blocked | Record a failing test first, or confirm the issue is correctly assessed as a spike. |
 | Hooks were not registered | Install `jq` and rerun the source installer, or follow its manual instructions. |
-| Existing Compass directory is not overwritten | Move the unrelated directory aside; the installer fails safely. |
+| Existing Compass directory is not overwritten | Move the unrelated directory aside; the installer stops with an error and does not overwrite it. |
 
 If a failure is not covered here, report the exact command, exit code and
 output. Remove secrets before attaching logs.

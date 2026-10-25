@@ -6,7 +6,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 
 # /compass:intent
 
-The product owner / manager entry point. This sits **upstream of the
+The product owner / manager entry point. This comes **before the
 acceptance criteria** - an intent document is not an engineering issue and
 must not be
 collapsed into one. The spec will later be checked back against it.
@@ -19,9 +19,9 @@ Run `compass init`. It creates `.compass/` if it is not there and reports that
 it did; if the project already exists it says so and changes nothing, so this
 is safe to run every time and you do not need to check first.
 
-**Report the result to the user in one line when it created the project.** A
-`.compass/` directory appearing with no word said is how someone deletes it by
-hand, or commits it without meaning to. It creates project state only - the
+**Report the result to the user in one line when it created the project.** If
+a `.compass/` directory appears and nobody says so, someone can delete it by
+hand, or commit it by mistake. It creates project state only - the
 shipped defaults stay in force, and writing a `compass.yml` for the project is
 what `/compass:init` offers separately.
 
@@ -42,15 +42,16 @@ what `/compass:init` offers separately.
 
 1. **Write the intent.** From `${CLAUDE_PLUGIN_ROOT}/templates/intent.md`, capture:
    - **Problem** - what is wrong or missing today, for whom.
-   - **Outcome** - the change in the user's world this should create. Not
+   - **Outcome** - the change for the user that this should create. Not
      the feature; the result.
-   - **Success signals** - how anyone will know the outcome happened. These
-     become the seeds of scenarios and, later, of the marketer's claims.
+   - **Success signals** - how anyone will know the outcome happened. Scenarios
+     start from these, and later the marketer's claims do too.
    - **Constraints** - what is fixed: deadlines, platforms, things that
      must not change.
 2. **Check against governance.** Does this intent document meet the guardrails and
-   respect the product strategies? If it pulls against a product strategy,
-   name the tension now - do not pass it downstream silently.
+   respect the product strategies? If it conflicts with a product strategy,
+   name the conflict now - do not pass it on to a later stage without saying
+   so.
 3. **Write `intent.md`** into `docs/compass/<created>-<issue-slug>/`, then
    register it with `compass issue artifact set intent --status draft --path
    <that path>`. Say so in one line if you created `docs/compass/`.
@@ -64,7 +65,7 @@ against `intent.md` (the **intent-fidelity gate**). Assess reads
 
 ## Gate
 
-`intent.md` exists with all four sections real; it is consistent with the
-product strategies and guardrails in force, or the tension is named.
+`intent.md` exists with all four sections filled in; it is consistent with
+the product strategies and guardrails in force, or the conflict is named.
 Next: `/compass:assess` to compute the delivery approach - `intent.md` is now an
 input the assess stage reads.

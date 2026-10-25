@@ -8,8 +8,8 @@ allowed-tools: Read, Bash, Glob, Grep
 
 Report the state of Compass work on disk. Read-only - this changes nothing.
 
-**Scope:** $ARGUMENTS - if an issue slug is given, drill into just that
-issue; if empty, render the board across every issue under `.compass/work/`.
+**Scope:** $ARGUMENTS - if an issue slug is given, report on that issue
+in detail; if empty, render the board across every issue under `.compass/work/`.
 
 `/compass:status` answers *"what should I look at?"*. For the managed
 cross-issue view - triage, blockers, owed-follow-up aggregation, and the
@@ -19,16 +19,16 @@ browser, with a lane for each stage, run `compass board render`
 
 ## What this command is for
 
-Someone asking for status wants what they would get from glancing at a
-physical board: what is blocked, what is moving, what is next, what is done.
+Someone asking for status wants what they would get from a quick look at
+a physical board: what is blocked, what is moving, what is next, what is done.
 In plain English, in a few lines, with detail available if they ask.
 
 They do **not** want a per-issue dump of delivery approaches, stages, gate
 fractions and artifact codes. Those are Compass's internal vocabulary;
-making the reader decode them to find their own work inverts what the
-command is for.
+making the reader decode them to find their own work is the opposite of
+what the command is for.
 
-So: **the board is the default. Everything else is drill-down.**
+So: **the board is the default. Everything else is detail on request.**
 
 ## Procedure - no argument (the board)
 
@@ -42,7 +42,7 @@ So: **the board is the default. Everything else is drill-down.**
    |---|---|
    | **BLOCKED** | cannot progress without a decision or an owed follow-up being settled: `compass check` fails, an owed follow-up, a missing human approval on an irreversible change |
    | **READY TO SHIP** | all gates green and `compass check` passes, but not yet marked shipped - finished work nobody has closed |
-   | **IN PROGRESS** | started, not finished: an issue whose state is in-progress or in-review. An issue in flight stores no status; `compass flow` reads its state from its records |
+   | **IN PROGRESS** | started, not finished: an issue whose state is in-progress or in-review. An issue in progress stores no status; `compass flow` reads its state from its records |
    | **NEXT UP** | ready to start (defined and refined, no work yet), or held in the backlog |
    | **DONE** | a stored status of `done`, whatever its close reason |
 
@@ -56,7 +56,7 @@ So: **the board is the default. Everything else is drill-down.**
 
 4. **Account for what cannot be placed.** An issue with no readable
    `manifest.yml` cannot honestly go in any column. Report the count on
-   its own line. Do not quietly drop it and do not guess: a board that
+   its own line. Do not leave it out without saying so, and do not guess: a board that
    silently omits part of the work looks complete when it is not.
 
 5. **Lead with anything blocking a ship**, and keep the whole thing to one
@@ -91,7 +91,7 @@ decision, and no Compass vocabulary appears in it beyond issue names.
 
 ## Procedure - with an issue slug (drill-down)
 
-Here the internals *are* the point. Report:
+Here the internal details *are* what the reader wants. Report:
 
 - **Delivery approach** - from `delivery-approach.md` / `manifest.yml`: the
   nearest reference shape, the three scored dimensions, and any policy
@@ -108,7 +108,7 @@ Here the internals *are* the point. Report:
   and "0/N pass gates" are green lines that assert nothing; reading them as
   progress is how an issue ships untraced.
 - **Owed follow-ups** - scan `delivery-approach.md`'s de-scope ledger and
-  the approach's standing obligations. Flag loudly:
+  the approach's standing obligations. Report clearly:
   - an unsettled **hotfix follow-up** (the approach record not completed,
     reproduction test not promoted to a scenario, no root-cause devlog
     line);

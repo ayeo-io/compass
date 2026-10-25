@@ -143,7 +143,7 @@ marketing and QA. All five contribute to the same acceptance specification and
 produce their normal Compass artifacts.
 
 The adapter must preserve the gates the documents bring, such as intent fidelity and
-claim traceability. Otherwise the role is decorative rather than operational.
+claim traceability. Otherwise the role has no effect on delivery.
 
 ### 6. Persist state on disk
 
@@ -168,7 +168,7 @@ The adapter must support solo delivery. Pair and multiagent approaches need
 isolated workspaces plus a single integration owner.
 
 The reference adapter uses Git worktrees. A runtime can use another mechanism,
-but each subtask must be able to run a failing test cycle without destabilising
+but each subtask must be able to run a failing test cycle without affecting
 the others. If equivalent isolation is unavailable, cap the orchestration and state
 the limitation.
 
@@ -186,7 +186,7 @@ complete and lose the view across open issues:
 | `compass flow` | no view of blockers or owed follow-ups across issues |
 | `compass next` | the session guesses which stage comes next |
 | `compass retro` | no signal that assessment is systematically mis-sizing work |
-| `compass rework-scan` | add-then-delete churn stays invisible |
+| `compass rework-scan` | nothing reports a file that one issue adds and another issue deletes |
 | `compass follow-up` | an owed follow-up can never be settled, so shipping stays blocked |
 | `compass adr` | decision records are hand-numbered, and numbers get reused |
 

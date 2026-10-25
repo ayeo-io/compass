@@ -6,11 +6,11 @@ of `compass ship-commit` and `compass quick-fix finish` (`checkpoint-no-outcome`
 describes, and `project-decision-unrecorded`, which ADR-072 describes), generated
 from `cli/compass_pkg/refusals.py` by `compass _refusal --list`. Do not hand-edit
 the list below - regenerate it after any change to the registry, and
-`tests/test_refusal_registry.py` fails the build if it goes stale.
+`tests/test_refusal_registry.py` fails the build if it is out of date.
 
 A refusal always has three lines - `Blocked:`, `Why:`, `Fix:` - and ends
-with its code in brackets, e.g. `[no-red-on-record]`. Search this page for a
-code from a refusal you hit.
+with its code in brackets, e.g. `[no-red-on-record]`. Search this page for the
+code of a refusal you get.
 
 ## When `/compass:approve` cannot name an approver
 

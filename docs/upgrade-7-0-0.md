@@ -49,7 +49,7 @@ Stage commands now write the status of each registered document. A document that
 - **Digests are always recorded.** `compass issue artifact set` records the digest of the document on every registration. The stale-document refusals stay behind the capability `artifact-freshness`.
 - **A re-assessment keeps a written document as `superseded`.** An entry the new approach no longer registers stays when it has a path, with a reason that names the re-assessment.
 - **`compass ship-commit` refuses an unapproved document.** The blocking check `artifacts-approved` fails on a document that reads `draft` or `awaiting-approval`, and on one omitted with no reason. Each failure names the command that fixes it. A document the approach earned and nobody wrote must be written, or omitted with `compass issue artifact set <kind> --status omitted --reason "<why>"`.
-- **A quick fix gains no stop.** `compass quick-fix finish` approves the quick fix's document after `compass check` passes.
+- **A quick fix gets no new stop for an approval.** `compass quick-fix finish` approves the quick fix's document after `compass check` passes.
 - **A project artifact with no `stage` is owned by ship.** Add `stage: <stage>` to its catalog entry to have an earlier stage approve it. `compass ship-commit` approves the ship-owned ones.
 - **`compass issue migrate` settles the status of done issues.** On a done issue, each `draft` or `awaiting-approval` document becomes `approved` (close reason `completed`, `approved_by: compass issue migrate`) or `superseded` (`not-planned` or `duplicate`), with the reason "migrated from a 6.0.0 record". Documents in any other status and open issues are left as they are. The dry run reports the counts the apply makes. It counts each entry the apply registers before this step, for a relocated document or a verification note. It leaves out a stub distribution map that the apply renames and supersedes before this step. A second run changes nothing.
 - **A decision an agent took for the person is shown at the next checkpoint.** `compass issue decision add` (and `--from-ledger`) records it in `decisions_taken`. On `balanced` and `controlled` autonomy, `compass next` reports `Waiting at the <stage> checkpoint` until a person confirms the set with `compass evidence approve --decisions` or reopens a decision with `compass issue decision set`. On `autonomous` it lists the decisions and does not wait. The approver is a name in the project file's `approvers:` lists, or its `owner` when there are none. The confirmation is an `artifact-approval` record, never a `human-approval` record.
@@ -172,7 +172,7 @@ The artifact catalog now describes each document: who writes it, who reads it, i
 For each issue, in this order:
 
 1. It plans every move first. Two plain review files that claim one round stop that issue: it is left byte for byte as it was, and the report names it. The other issues go on.
-2. It sets the generated page aside, renames the filenames earlier releases retired and brings the manifest keys up to date, as before.
+2. It keeps the generated page as a backup, renames the filenames earlier releases retired and brings the manifest keys up to date, as before.
 3. It re-points a registered `design` to `technical-design` and `prd` to `intent`, keeping each entry's id, status and path. It removes the `recommendation` entry and leaves its file. An entry the 6.x migrate registered under a review filename (`review` with no round, `review-2`, `integrated-review-3`) becomes the round its file becomes, keeping its id, status and approval. Where that round is already registered, by an earlier 7.0.0 run, the two entries become one, so each file keeps one entry. The merged entry keeps the later approval and the id of the entry that held it. When only one entry is approved, it keeps that approval and id. When neither is, it keeps the round entry's id and status, the more current record. Two entries whose files both exist are not merged. The pair is left as it is, entries and files, until a person settles it: no step registers, moves or renames either file, and every run names both files for you to settle. The dry run and the apply name the id and approval kept and the id and approval dropped. An entry whose file is gone and that no document maps to is left, and the report says what to do.
 4. It registers each document it moves before it moves it, the delivery-approach record first and then each review round in order. A file named for a kind is registered under that kind, unless the kind is already registered at another file that exists: that path is kept, the file is left where it is, and the report names both. A review round is renamed `review-<n>.md`: a plain `review-<n>` keeps its number, a bare `review` is round 1 when that is free, and the other review names (`verify-*`, `integrated-review-*`, `security-review`, `review-claims`) take the next free numbers.
 5. It rewrites each manifest path that named a moved file: evidence, subtasks and gate evidence.
@@ -272,7 +272,7 @@ From 7.0.0 a project on `autonomy: autonomous` must meet the readiness floor bef
 
 ### What to do
 
-On an autonomous project, run `compass readiness`. If it reports the floor as not met, take one of three ways to carry on:
+On an autonomous project, run `compass readiness`. If it reports the floor as not met, take one of three ways to continue:
 
 1. **Change `autonomy`** to `balanced` or `controlled` in `compass.yml`. The stage hand-offs that value lists then wait for a person.
 2. **Make the absent signals present.** `compass readiness --fix-list` names the change for each, such as declaring `project.build_command`. For a long suite, set the test signal's `command` parameter to `test_micro_command` in a project layer, and declare a micro suite that passes within two minutes.
@@ -547,7 +547,7 @@ More Bash writes to production code are refused without a failing test on record
 
 ### What is newly allowed
 
-- **A scratch file named through a variable the command sets.** `S=/tmp/scratch && cat > $S/plant.ts` is judged at `/tmp/scratch/plant.ts`, outside the project. A variable whose value the command does not state for certain is judged inside the project, as before.
+- **A temporary file named through a variable the command sets.** `S=/tmp/scratch && cat > $S/plant.ts` is judged at `/tmp/scratch/plant.ts`, outside the project. A variable whose value the command does not state for certain is judged inside the project, as before.
 - **The input of `tee`.** `node src/cmp.ts | tee out.txt` no longer counts as a write to `src/cmp.ts`: `tee` writes only its own arguments.
 - **A file read after `cp` or `mv`.** `cp a b && grep x src/app.ts` no longer counts as a write to `src/app.ts`.
 - **A path that resolves outside the project, or to a test or a document.** `<project>/../elsewhere/app.ts` and `src/../tests/test_app.ts` are judged where they point.

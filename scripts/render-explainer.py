@@ -265,7 +265,7 @@ def render(policy):
   </g>
 
   <g transform="translate(40,400)">
-    <text class="guard" x="0" y="0">Five guardrails hold on every approach. No assessment removes one.</text>
+    <text class="guard" x="0" y="0">Five default guardrails apply to all work that ships code.</text>
     <g stroke="{GUARD}" stroke-width="3" stroke-linecap="round">
 {lines}
     </g>
@@ -274,7 +274,7 @@ def render(policy):
     </g>
   </g>
 
-  <text class="small" x="40" y="478">Same assessment + same policy = same approach, every time.</text>
+  <text class="small" x="40" y="478">Same assessment, configuration and documents = same approach, every time.</text>
 </svg>
 """
 

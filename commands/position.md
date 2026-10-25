@@ -6,8 +6,8 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 
 # /compass:position
 
-The product marketer entry point. The marketer works **parallel to the
-define stage** - not downstream of a finished engineering process. Every
+The product marketer entry point. The marketer works **at the same time as
+the define stage** - not after the engineering process has finished. Every
 public claim must trace to a passing scenario; the claims gate blocks
 shipping until it does.
 
@@ -19,9 +19,9 @@ Run `compass init`. It creates `.compass/` if it is not there and reports that
 it did; if the project already exists it says so and changes nothing, so this
 is safe to run every time and you do not need to check first.
 
-**Report the result to the user in one line when it created the project.** A
-`.compass/` directory appearing with no word said is how someone deletes it by
-hand, or commits it without meaning to. It creates project state only - the
+**Report the result to the user in one line when it created the project.** If
+a `.compass/` directory appears and nobody says so, someone can delete it by
+hand, or commit it by mistake. It creates project state only - the
 shipped defaults stay in force, and writing a `compass.yml` for the project is
 what `/compass:init` offers separately.
 
@@ -57,10 +57,10 @@ what `/compass:init` offers separately.
    **Where it goes.** `docs/compass/<created>-<issue-slug>/positioning.md`, where the
    date is the manifest's `created:` field - not today's. Then register it:
    `compass issue artifact set positioning --status draft --path <that path>`. The CLI
-   refuses a path that climbs out of the project, so the record is checked
+   refuses a path outside the project, so the record is checked
    rather than claimed. If you had to create `docs/compass/`, **say so in one
-   line** - a directory appearing with nothing said is how it gets deleted by
-   hand or committed by accident.
+   line** - if a directory appears and nobody says so, someone can delete it
+   by hand or commit it by mistake.
    `launch-readiness.md` goes to the same directory and is registered the
    same way, with `--path` naming its own file.
 

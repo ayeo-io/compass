@@ -61,7 +61,7 @@ The rest of this command is for delivery work.
   (`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S11`; an unmigrated 5.x
   project reads its own copied `governance/`).
 - QA owns this gate and can send the issue back to the define stage if
-  scenarios are uncoverable.
+  a test cannot cover the scenarios.
 
 ## Procedure
 
@@ -92,7 +92,7 @@ The rest of this command is for delivery work.
    (`compass policy show`; an unmigrated 5.x project runs on its own copied
    `governance/` until `compass policy migrate`): the guardrails (hard, evidence-backed -
    `compass check` is the mechanical part) and the applicable strategies
-   (assessed as judgment, reported distinctly). On a multiagent, check each subtask first, then again on the
+   (assessed as judgment, reported separately). On a multiagent, check each subtask first, then again on the
    combined result.
 5. **Update the gates in `manifest.yml`.** As each gate is cleared, the
    `verifier` registers the evidence, then passes the gate with it:
@@ -109,10 +109,10 @@ The rest of this command is for delivery work.
    **Where it goes.** `docs/compass/<created>-<issue-slug>/verification-report.md`, where the
    date is the manifest's `created:` field - not today's. Then register it:
    `compass issue artifact set verification-report --status draft --path <that path>`. The CLI
-   refuses a path that climbs out of the project, so the record is checked
+   refuses a path outside the project, so the record is checked
    rather than claimed. Registering the report approves it (`approved_by` names `compass issue artifact set`) only when every `verify` gate has passed; registered earlier, it reads `draft` until the last `verify` gate passes. If you had to create `docs/compass/`, **say so in one
-   line** - a directory appearing with nothing said is how it gets deleted by
-   hand or committed by accident.
+   line** - if a directory appears and nobody says so, someone can delete it
+   by hand or commit it by mistake.
 
 ## Voice
 
@@ -149,7 +149,7 @@ fails, the issue does not advance - fix it or send it back. Log to
 Load `receiving-code-review`. Check every suggestion against the code
 before acting on it: a suggestion that is right about the symptom and wrong
 about the cause is the normal case, and implementing it verbatim leaves the
-symptom and adds a change nobody needed. Where the reviewer is wrong, push
-back with technical reasoning rather than preference or seniority. Record
+symptom and adds a change nobody needed. Where the reviewer is wrong, say
+so, with technical reasons rather than preference or seniority. Record
 what you did with each comment - a resolved thread with no reply is a
 decision nobody can audit.

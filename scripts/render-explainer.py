@@ -265,7 +265,7 @@ def render(policy):
   </g>
 
   <g transform="translate(40,400)">
-    <text class="guard" x="0" y="0">Five guardrails apply to every approach that ships code.</text>
+    <text class="guard" x="0" y="0">Five default guardrails apply to all work that ships code.</text>
     <g stroke="{GUARD}" stroke-width="3" stroke-linecap="round">
 {lines}
     </g>

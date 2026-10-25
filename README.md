@@ -17,14 +17,14 @@
 A typo fix should not need an architecture pack. A payments rewrite should
 not begin with an unstructured prompt.
 
-Compass assesses each change by **risk, familiarity and size**, then a
-deterministic policy composes the delivery approach: which stages run at what
-depth, which documents are worth writing, which checks run, and where a person
-decides. In a project that uses Compass, five guardrails apply to every
-approach that ships code, and no assessment for that work removes one. A spike
-ships nothing, so two spike guardrails replace them: it must record a
-conclusion and change no production file
-([safety contract](docs/safety-contract.md#4-a-spike-cannot-silently-become-delivery)).
+Compass assesses each piece of work, new or existing, by **risk, familiarity
+and size**. A deterministic policy then composes the delivery approach: which
+stages run at what depth, which documents are worth writing, which checks run,
+and where a person decides. Five guardrails apply to all work that ships code,
+whatever the assessment. They are defaults: a project can add its own, report
+failures without blocking while it tries Compass, or loosen one with the
+owner's recorded waiver. A person's sign-off for irreversible work cannot be
+loosened ([safety contract](docs/safety-contract.md)).
 
 <p align="center">
   <img src="assets/compass-explainer.svg" alt="Three sliders for risk, familiarity and size feed a policy. As the work changes from a typo fix to a payments rewrite, the eight stage bars grow from a quick fix to the full approach, dots mark the stages where a person decides, and five guardrail lines stay the same." width="960">
@@ -128,12 +128,8 @@ Compass keeps two kinds of rule apart:
   bureaucracy: BDD, TDD, decision records, architecture models and other
   practices that apply when they add value.
 
-An approach can reduce the amount of process. On an approach that ships, it
-cannot remove a guardrail. A project can make failures non-blocking with
-`adoption: advisory` ([configuration](docs/configuration.md#adoption)), and
-can depart from the shipped guardrails only through the owner's recorded
-waiver, after which every `compass check` reports the project as
-non-conformant
+An approach can reduce the amount of process. It cannot remove a guardrail
+from work that ships code
 ([safety contract](docs/safety-contract.md#2-a-declared-guardrail-cannot-silently-become-advice)).
 
 ## A person stays in control
@@ -148,8 +144,8 @@ non-conformant
 - **You set the bounds of a delegation.** A bare `/compass:delegate` lets the
   agents of this session approve for you on every issue, until
   `/compass:revoke` ends it. Flags set its bounds: `--agent` names one agent,
-  in any session; `--until`, `--on`, `--for` and `--max` narrow it. `--for g5`, which covers irreversible work, needs a code that
-  you type back. Compass lists each delegation with no end time at each new
+  in any session; `--until`, `--on`, `--for` and `--max` narrow it. `--for
+  g5`, which covers irreversible work, needs a code that you type back. Compass lists each delegation with no end time at each new
   session start. Every delegated approval is on record, and you can overrule
   one; overruling a guardrail 5 sign-off does not undo work already landed.
 - **Autonomy is a setting, not a promise.** `autonomy: controlled | balanced

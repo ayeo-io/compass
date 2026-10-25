@@ -167,3 +167,13 @@ def test_trc_001_each_guarantee_links_the_safety_contract(rel):
             if _ABSOLUTE.search(sentence) and _SUBJECT.search(sentence):
                 bad.append(sentence[:100])
     assert not bad, f"{rel}: these sentences promise without the limit: {bad}"
+
+
+def test_trc_001_the_explainer_states_the_readme_guardrail_sentence():
+    """Scenario `TRC-001`: the image under the README's opening repeats its
+    guardrail sentence, so the picture cannot keep a claim the text dropped."""
+    svg = (ROOT / "assets" / "compass-explainer.svg").read_text(encoding="utf-8")
+    line = re.search(r'class="guard"[^>]*>([^<]+)<', svg).group(1)
+    readme = " ".join((ROOT / "README.md").read_text(encoding="utf-8").split())
+    assert line.replace("Five default guardrails", "Five guardrails").rstrip(".") in readme, (
+        f"the explainer says {line!r}, which the README does not")

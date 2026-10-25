@@ -25,8 +25,8 @@ Its inputs are the recorded assessment, the project's resolved configuration
 own `config:`, which can name the approach with `compass issue configure
 --route`) and the documents the issue has on disk, such as `intent.md` and
 `positioning.md`. The same inputs produce the same approach, every time.
-Without `--write` it reads the
-configuration stored at the last evaluation; with `--write`, the current one.
+Without `--write` it reads the configuration stored at the last evaluation;
+with `--write`, the current one.
 
 ### 2. A declared guardrail cannot silently become advice
 

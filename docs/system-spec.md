@@ -5027,3 +5027,9 @@ Compass 8.0.0 ships the delegation rework, keeps every legacy reader until 9.0.0
 - `TRC-003` No current text says an old form ends at 8.0.0
 - `TRC-004` A decision moves the reader date to 9.0.0
 - `TRC-005` The upgrade guide and release section are named for 8.0.0
+
+### shipped-releases-v8 (completed 2026-10-25)
+
+compass policy migrate recognizes governance copied from the 8.0.0 release.
+
+- `TRC-001` Given the v8.0.0 tag, when the table of shipped releases is checked, then it holds a v8.0.0 row whose digests match the files the tag shipped

@@ -454,6 +454,32 @@ with the version hidden.
    `python3 scripts/generate-shipped-releases.py --check` exits 0 once it
    does.
 
+11. **Publish the plugin copy.** Users and the plugin directory install
+   Compass from the `plugin` branch, which `.claude-plugin/marketplace.json`
+   names, not from `main`. Each commit on that branch holds the files one
+   release ships, and its only parent is the previous release's copy.
+   After the tag, run:
+
+   ```bash
+   git fetch origin plugin:plugin
+   python3 scripts/build-plugin-copy.py --ref v<version> --commit
+   git push origin plugin
+   ```
+
+   `--commit` takes only a `vX.Y.Z` tag newer than the release the branch
+   holds, and refuses a local branch that is missing or behind
+   `origin/plugin`, so the branch never starts a second history. Never
+   force-push `plugin`: users and the directory follow it.
+
+   The script reads the tag's tracked files, never the working folder. It
+   keeps only the files `scripts/plugin-files.txt` lists, and refuses the
+   copy when it has more than 512 files, a non-image file over 256 KiB, a
+   version that differs from the tag, or a `${CLAUDE_PLUGIN_ROOT}` path that
+   is not in it. `make release` runs the same check against `HEAD` at step
+   [4b]. A run for a release the branch already holds adds nothing. Users
+   get the new copy when the version number rises, as before; the
+   directory scans each push to the branch.
+
 ### Checks for 6.0.0
 
 Run these on top of steps 1 to 9, before step 10.

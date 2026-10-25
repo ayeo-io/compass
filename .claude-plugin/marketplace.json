@@ -11,7 +11,11 @@
   "plugins": [
     {
       "name": "compass",
-      "source": "./",
+      "source": {
+        "source": "github",
+        "repo": "ayeo-io/compass",
+        "ref": "plugin"
+      },
       "description": "Enough process for the work at hand. No more. Compass assesses each piece of work by risk, familiarity and size, then picks the approach to match: what to write, what to check, and when to ask a human. A typo fix stays light. A payments rewrite gets specs, tests and review. Five default guardrails apply to all work that ships code, such as a passing test for each change.",
       "version": "8.0.0",
       "author": {

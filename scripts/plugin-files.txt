@@ -1,0 +1,39 @@
+# The files an installed Compass reads, which scripts/build-plugin-copy.py
+# copies to the `plugin` branch. One path per line; a folder ends in `/`.
+# A line that starts with `!` leaves a path out of a folder listed above it.
+# A new folder ships only when it is added here; the build's path check
+# fails when a runtime file names a path that is not in the copy.
+# The marketplace is read from `main`, so its manifest stays out of the copy.
+.claude-plugin/plugin.json
+LICENSE
+README.md
+SECURITY.md
+THIRD-PARTY-NOTICES.md
+VERSION
+compass-contract.md
+adapters/
+agents/
+approaches/
+assets/
+bin/
+cli/
+commands/
+# `compass retro --compliance` runs the eval judge, which imports the harness.
+evals/__init__.py
+evals/harness.py
+evals/judge.py
+governance/
+# The decision records are the repository's history, not something a
+# project reads. A record that a shipped file sends the agent to is listed
+# by its full path, which ships it although its folder is left out.
+!governance/decisions/
+governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md
+hooks/
+schemas/
+scripts/integrate.sh
+scripts/lib/
+scripts/multiagent.sh
+scripts/statusline-setup.py
+scripts/voice-tells.py
+skills/
+templates/

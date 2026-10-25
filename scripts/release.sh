@@ -184,6 +184,13 @@ if [ -n "$missing" ]; then
 fi
 echo "    PASS - all 5 example manifest.yml(s) present"
 
+# --- 4b. the plugin copy can ship -------------------------------------------
+# The marketplace and the plugin directory install the copy on the `plugin`
+# branch, not this tree. Check it now, so a release whose copy would fail
+# stops before the tag; step 11 of docs/releasing.md commits it.
+echo "[4b] checking the plugin copy"
+python3 scripts/build-plugin-copy.py --ref HEAD || exit 1
+
 # --- 5. clear stale artifacts and build the tarball -------------------------
 echo "[5] building tarball"
 mkdir -p dist

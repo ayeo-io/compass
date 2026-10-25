@@ -290,14 +290,12 @@ def test_trc_s1_the_policy_show_scan_reports_a_mention_without_the_copy_wording(
 
 
 def test_trc_s1_the_plugin_ships_the_governance_prose_the_instructions_name():
-    """`${CLAUDE_PLUGIN_ROOT}` is the repository root, so the prose is there."""
+    """`${CLAUDE_PLUGIN_ROOT}` is the root of the plugin copy on the `plugin`
+    branch, which the file list builds; governance/ is in that list."""
     for name in ("strategies.md", "guardrails.md", "routing-policy.md"):
         assert (ROOT / "governance" / name).is_file(), name
-    import json
-    manifest = json.loads(
-        (ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
-    assert [p["source"] for p in manifest["plugins"]] == ["./"], (
-        "the plugin is the whole repository, which is why governance/ ships")
+    listed = (ROOT / "scripts" / "plugin-files.txt").read_text(encoding="utf-8").splitlines()
+    assert "governance/" in listed, "the plugin copy must ship governance/"
 
 
 # --- Instructions use evidence types, verbs and fields that exist -------------

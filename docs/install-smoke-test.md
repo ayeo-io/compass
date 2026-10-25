@@ -55,6 +55,12 @@ Or inside Claude Code, in two commands:
 
 Restart Claude Code if the new commands are not immediately visible.
 
+The marketplace installs the copy on the `plugin` branch, not the whole
+repository. Check that the install folder holds the copy: it has no
+`tests/` or `docs/` folder, and its `.claude-plugin/plugin.json` names the
+release's version. On a profile that has an earlier version, run `claude
+plugin update compass@compass` and check that the version rises.
+
 ### From source
 
 ```bash

@@ -15,7 +15,7 @@ jed72
 
 ## Decision
 
-Compass reads old words, old approach names, copied 5.x governance, the generated governance views (`governance/routing-policy.yml` and `governance/guardrails.yml`), `.compass/config.yml` and the LEGACY waivers that `compass policy migrate` writes until 9.0.0, not until 8.0.0. 8.0.0 ships the delegation rework (ayeo-io/compass#691) and removes no reader. Everything else in the two entries stands.
+Compass reads these until 9.0.0, not until 8.0.0: old words, old approach names, copied 5.x governance, the generated governance views (`governance/routing-policy.yml` and `governance/guardrails.yml`), `.compass/config.yml` when `compass.yml` is absent, and the LEGACY waivers that `compass policy migrate` writes. The role flags, `--justify role=` on `compass approach evaluate` and `compass quick-fix start --role`, stay accepted and ignored until 9.0.0, not 8.0.0 as ADR-070 set; ayeo-io/compass-delivery-record#178 [Remove the role flags from approach evaluate and quick-fix start] moves to 9.0.0. 8.0.0 ships the delegation rework (ayeo-io/compass#691) and removes no reader. Everything else in the two entries stands.
 
 ## Why
 
@@ -23,4 +23,4 @@ Compass reads old words, old approach names, copied 5.x governance, the generate
 
 ## Evidence
 
-The maintainer's choice of option B, "ship 8.0.0 and move the reader end to 9.0.0", in the Claude Code session of 25 October 2026 that prepared the 8.0.0 release, recorded with `compass decision record`, which takes the decider from git config. The issue is `release-8-0-0`.
+ayeo-io/compass-delivery-record#303 [Release Compass 8.0.0], which records the maintainer's decisions of 25 October 2026: the number 8.0.0, the readers kept until 9.0.0, and the role flags kept until 9.0.0.

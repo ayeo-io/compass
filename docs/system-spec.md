@@ -5039,3 +5039,16 @@ compass policy migrate recognizes governance copied from the 8.0.0 release.
 The project's delivery record now syncs to ayeo-io/compass-delivery, the renamed private repository.
 
 - `TRC-001` Given the delivery record repository is renamed to compass-delivery, When compass record sync reads compass.yml, Then the remote it pushes to names ayeo-io/compass-delivery
+
+### directory-validator-fixes (completed 2026-10-26)
+
+The hooks run their Python checks from files, and each command pre-approves only the compass CLI, so the plugin directory can read and review the plugin.
+
+- `TRC-A1` no hook script carries an inline program
+- `TRC-A2` no hook script is too long to read in full
+- `TRC-A3` the hooks behave as they did
+- `TRC-B1` no command pre-approves every shell command
+- `TRC-B2` a command that writes only issue state writes only there
+- `TRC-B3` a command that runs a compass verb still pre-approves it
+- `TRC-C1` gh gets only the variables it needs
+- `TRC-C2` the Codex adapter's shared hooks get only the variables they need

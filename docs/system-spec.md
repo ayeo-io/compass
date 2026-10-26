@@ -5052,3 +5052,9 @@ The hooks run their Python checks from files, and each command pre-approves only
 - `TRC-B3` a command that runs a compass verb still pre-approves it
 - `TRC-C1` gh gets only the variables it needs
 - `TRC-C2` the Codex adapter's shared hooks get only the variables they need
+
+### release-8-0-1 (completed 2026-10-26)
+
+Compass reports version 8.0.1.
+
+- `TRC-001` Given the release 8.0.1 is intended When the version guard runs Then every location that carries the version says 8.0.1

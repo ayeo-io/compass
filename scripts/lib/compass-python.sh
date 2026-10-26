@@ -2,9 +2,9 @@
 # =============================================================================
 # compass-python.sh - run python3 with the bundled PyYAML importable
 # =============================================================================
-# Shell scripts call compass_python, not python3, so every embedded reader
-# imports the bundled PyYAML in cli/vendor/yaml/ and not whatever copy the
-# machine has. The callers are hooks/pre-tool.sh, hooks/stop.sh,
+# Shell scripts call compass_python, not python3, so every Python program they
+# run imports the bundled PyYAML in cli/vendor/yaml/ and not whatever copy the
+# machine has. The callers are the hooks (their programs are in hooks/py/),
 # scripts/integrate.sh and scripts/multiagent.sh.
 #
 # This file does NOT know where cli/vendor/ is. It only knows the framework

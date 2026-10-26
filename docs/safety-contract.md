@@ -719,10 +719,13 @@ remove the dependency; ADR-028 records why Compass ships as a directory.
 
 The hooks run each Python check from its own file in `hooks/py/`, never from
 text inside the script, and `hooks/pre-tool.sh` sources the rest of its
-checks from parts in `hooks/lib/`. A part that is missing from the install
+checks from parts in `hooks/lib/`. The hook checks every part before it runs
+any of them. A part that is missing from the install, or that cannot be read,
 refuses every call the hook sees, in any project, with `reader-failed` naming
-the part: the hook never runs with some of its checks left out. A missing
-Python check file refuses the same way its check would if Python failed.
+the part. A missing file for a check in `hooks/py/` refuses the same way the
+check does when its Python fails. A missing file for a step that only records
+or displays, such as counting a block or recording the session, skips that
+step, as a Python failure there does.
 
 ### The red marker is checked against its record, and a record can still be written by hand
 

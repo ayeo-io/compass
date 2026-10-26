@@ -1,4 +1,5 @@
-"""The four layers hold their shape (ayeo-io/compass-delivery#306).
+"""The four layers hold their shape, for the pilot of the four-layer acceptance
+test model (ayeo-io/compass-delivery#306, in the private delivery record).
 
 | Scenario | What it checks |
 |---|---|
@@ -39,9 +40,14 @@ def _spec_functions():
 
 def test_trc_p1_the_dsl_makes_no_check():
     tree = ast.parse((HERE / "dsl.py").read_text(encoding="utf-8"))
-    found = [f"line {node.lineno}" for node in ast.walk(tree) if isinstance(node, ast.Assert)]
+    # A check in any form: an assert, a raise, or a call such as expect(),
+    # should() or pytest.fail().
+    found = [f"line {node.lineno}: {type(node).__name__}" for node in ast.walk(tree)
+             if isinstance(node, (ast.Assert, ast.Raise))]
     found += [f"line {node.lineno}: {node.id}" for node in ast.walk(tree)
               if isinstance(node, ast.Name) and node.id in ("expect", "should")]
+    found += [f"line {node.lineno}: {node.attr}" for node in ast.walk(tree)
+              if isinstance(node, ast.Attribute) and node.attr in ("fail", "expect", "should")]
     assert not found, f"the DSL checks something itself: {found}"
 
 

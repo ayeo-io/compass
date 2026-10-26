@@ -1,6 +1,6 @@
 # Pre-tool hook acceptance tests
 
-The pilot ayeo-io/compass-delivery#306 moved the client-observable scenarios of the pre-tool hook onto the four-layer model: executable specifications, a domain-specific language (DSL), protocol drivers and the system under test.
+The pilot ayeo-io/compass-delivery#306 ("Pilot the four-layer acceptance test model on the pre-tool hook tests", in the project's private delivery record) moved the client-observable scenarios of the pre-tool hook onto the four-layer model: executable specifications, a domain-specific language (DSL), protocol drivers and the system under test.
 
 | Layer | File | Holds |
 |---|---|---|
@@ -13,9 +13,9 @@ Each scenario runs once through Claude Code's hook interface and once through th
 
 ## What the pilot found
 
-1. **The Codex adapter cannot refuse without `python3`.** Its hook command runs `python3`, so with no `python3` it exits 127 where the Claude Code hook refuses as `python-missing`. ayeo-io/compass-delivery#308 tracks it.
-2. **Compass has no review form for the skill's stages 2 and 3.** `compass evidence request --checkpoint` takes assess, define, refine and plan only.
-3. **Compass does not accept the skill's stage-1 red.** An import red (a driver that does not exist yet) is a setup error to `compass tdd-red`, not a failing test.
+1. **The Codex adapter cannot refuse without `python3`.** Its hook command runs `python3`, so with no `python3` it exits 127 where the Claude Code hook refuses as `python-missing`. ayeo-io/compass-delivery#308 ("Refuse a Codex tool call when python3 is missing", in the private delivery record) tracks it.
+2. **Compass has no review form for the second and third stages of the `atdd` skill** (stage 2 writes the drivers, stage 3 tidies up and proves isolation). `compass evidence request --checkpoint` takes assess, define, refine and plan only.
+3. **Compass does not accept the red that ends the skill's first stage.** An import red (a driver that does not exist yet) is a setup error to `compass tdd-red`, not a failing test.
 
 ## What a change to the hook's layout touches
 
@@ -35,6 +35,8 @@ Only the first kind is client-observable. With those scenarios on the drivers, t
 | After | 19 |
 
 ## Recommendation for ayeo-io/compass-delivery#307
+
+ayeo-io/compass-delivery#307, in the private delivery record, proposes making the four-layer model a Compass strategy for the projects Compass governs, for changes a real client can observe.
 
 - **For Compass's own tests, do not extend the model further.** Most of the churn comes from tests that read the hook's source or check its internals on purpose. The model does not reach either kind; a shared helper such as `tests/hook_text.py` already confines most of the source-reading change.
 - **For the projects Compass governs, the model is worth it where the behaviour is client-observable**, which is the scope #307 already sets. The specifications and the DSL survived a layout change unchanged, and the same specifications ran through two clients and found a real gap in one of them.

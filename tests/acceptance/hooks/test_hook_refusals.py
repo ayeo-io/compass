@@ -5,7 +5,9 @@ Executable specifications for the client-observable scenarios of
 `tests/test_directory_validator.py` (TRC-A3). Each Given, When or Then line
 is one DSL call; the docstring holds the scenario as a person reads it.
 
-The pilot is ayeo-io/compass-delivery#306.
+The pilot is ayeo-io/compass-delivery#306, "Pilot the four-layer acceptance
+test model on the pre-tool hook tests", in the project's private delivery
+record.
 """
 from __future__ import annotations
 
@@ -50,12 +52,14 @@ def test_hfm_1_a_check_that_cannot_run_refuses_and_names_itself(dsl, check, stat
     And a python3 that fails for one check
     When the agent edits the file that check guards
     Then the hook refuses as reader-failed, naming the check
+    And it says the check could not run
     """
     dsl.install.isComplete()
     dsl.project.isOptedIn()
     dsl.machine.hasPythonThatFailsFor(check, status=status)
     dsl.agent.edits(CHECKS[check])
     dsl.hook.confirmRefused(code="reader-failed", naming=check)
+    dsl.hook.confirmRefusalSays("could not run")
 
 
 def test_hfm_1_the_red_record_refusal_gives_its_cause(dsl):
@@ -81,6 +85,7 @@ def test_hfm_2_with_no_python3_the_refusal_says_so(dsl, path):
     And a machine with no python3
     When the agent edits a code file
     Then the hook refuses as python-missing
+    And it says python3 was not found on the PATH
     And it does not say the assessment did not complete
     """
     dsl.install.isComplete()
@@ -88,6 +93,7 @@ def test_hfm_2_with_no_python3_the_refusal_says_so(dsl, path):
     dsl.machine.hasNoPython()
     dsl.agent.edits(path)
     dsl.hook.confirmRefused(code="python-missing")
+    dsl.hook.confirmRefusalSays("python3 was not found on the PATH")
     dsl.hook.confirmRefusalDoesNotSay("did not complete")
 
 
@@ -126,7 +132,7 @@ def test_hfm_3_settings_that_do_not_parse_refuse_and_name_the_fix(dsl):
     dsl.project.hasSettingsThatDoNotParse()
     dsl.agent.edits("packaging/app.cfg")
     dsl.hook.confirmRefused(code="config-invalid", naming="the settings file")
-    dsl.hook.confirmRefusalDoesNotSay("Fix the install")
+    dsl.hook.confirmRefusalDoesNotSay("fix the install")
 
 
 def test_hfm_3_a_shell_write_refusal_names_the_file_it_found(dsl):
@@ -189,14 +195,14 @@ def test_hfm_4_a_missing_approach_record_is_reported_as_missing(dsl):
     And an opted-in project
     And its issue has no delivery approach record
     When the agent edits a code file
-    Then the hook refuses, saying the record is missing
+    Then the hook refuses as no-delivery-approach, saying the record is missing
     And it does not say a check could not run
     """
     dsl.install.isComplete()
     dsl.project.isOptedIn()
     dsl.project.hasIssueWithNoApproachRecord()
     dsl.agent.edits("src/app.py")
-    dsl.hook.confirmRefused(naming="has no delivery-approach.md")
+    dsl.hook.confirmRefused(code="no-delivery-approach", naming="has no delivery-approach.md")
     dsl.hook.confirmRefusalDoesNotSay("could not run")
 
 

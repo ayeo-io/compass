@@ -87,7 +87,7 @@ python3 cli/compass policy lint
 Expect:
 
 ```text
-compass 8.0.0 (issue schema 3.0)
+compass 8.0.1 (issue schema 3.0)
 PyYAML 6.0.2 at .../cli/vendor/yaml/__init__.py
 ```
 

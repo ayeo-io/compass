@@ -53,16 +53,24 @@ def stale_lines(text: str) -> list[str]:
 
 
 def test_trc_001_every_version_location_says_8_0_0():
-    """Scenario `TRC-001`: every place that states the version says 8.0.0."""
-    assert versions.EXPECTED_VERSION == RELEASE
-    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == RELEASE
-    assert versions._read_compass_version_constant() == RELEASE
-    assert versions._read_core_version_constant() == RELEASE
-    assert versions._read_smoke_test_version() == RELEASE
+    """Scenario `TRC-001`: every place that states the version says 8.0.0.
+
+    8.0.0 shipped with every location at 8.0.0. A patch release of the 8.x
+    line moves them all together, so the check is that every location agrees
+    on one version and that the version is still in the 8.x line, at or
+    after 8.0.0. A bump to 9.0.0 fails here on purpose: the date logic the
+    other scenarios check belongs to 8.x."""
+    current = versions.EXPECTED_VERSION
+    major, minor, patch = (int(part) for part in current.split("."))
+    assert major == 8 and (minor, patch) >= (0, 0), current
+    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == current
+    assert versions._read_compass_version_constant() == current
+    assert versions._read_core_version_constant() == current
+    assert versions._read_smoke_test_version() == current
     for rel in (".claude-plugin/plugin.json", ".claude-plugin/marketplace.json"):
         text = (ROOT / rel).read_text(encoding="utf-8")
         found = re.findall(r'"version":\s*"([^"]+)"', text)
-        assert found and set(found) == {RELEASE}, (rel, found)
+        assert found and set(found) == {current}, (rel, found)
 
 
 def test_trc_002_every_legacy_reader_still_reads_at_8_0_0(monkeypatch):

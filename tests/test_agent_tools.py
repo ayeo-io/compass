@@ -119,7 +119,7 @@ def test_define_and_plan_commands_allow_bash(command):
     """The define and plan commands allow Bash (`TRC-003`)."""
     text = (COMMANDS / f"{command}.md").read_text(encoding="utf-8")
     allowed = re.search(r"^allowed-tools: (.*)$", text, re.M).group(1)
-    assert "Bash" in [t.strip() for t in allowed.split(",")]
+    assert "Bash(compass *)" in [t.strip() for t in allowed.split(",")]
 
 
 def _commands_that_restrict_tools():
@@ -142,7 +142,7 @@ def _commands_that_restrict_tools():
 def test_commands_that_run_compass_verbs_list_bash(name, tools, body):
     """A command whose text names a `compass` verb must list Bash."""
     if re.search(r"`compass [a-z]", body):
-        assert "Bash" in tools, f"{name}: its text runs a compass verb, so it needs Bash"
+        assert "Bash(compass *)" in tools, f"{name}: its text runs a compass verb, so it needs Bash"
 
 
 def _skills_it_is_told_to_load(name):

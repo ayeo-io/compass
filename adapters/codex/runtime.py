@@ -43,8 +43,20 @@ def patch_targets(command):
     return list(dict.fromkeys(targets))
 
 
+#: The variables the shared hooks read: where to find programs, including the
+#: settings a pyenv or asdf `python3` shim reads, the locale, the user's git
+#: configuration, and the Compass and Claude settings. Any other variable, such
+#: as a service's secret, is not passed.
+HOOK_ENV_KEEP = ("PATH", "HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "LANG", "TZ", "TERM",
+                 "COLUMNS", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "GIT_DIR", "GIT_WORK_TREE",
+                 "GIT_CEILING_DIRECTORIES", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM")
+HOOK_ENV_KEEP_PREFIXES = ("LC_", "COMPASS_", "CLAUDE_", "PYENV_", "ASDF_")
+
+
 def shared_hook(script, payload):
-    env = dict(os.environ, CLAUDE_PLUGIN_ROOT=str(ROOT))
+    env = {k: v for k, v in os.environ.items()
+           if k in HOOK_ENV_KEEP or k.startswith(HOOK_ENV_KEEP_PREFIXES)}
+    env["CLAUDE_PLUGIN_ROOT"] = str(ROOT)
     # The hook resolves the actual project from payload cwd and target paths.
     # Never carry a different runtime's project or plugin-data directory over.
     env.pop("CLAUDE_PROJECT_DIR", None)

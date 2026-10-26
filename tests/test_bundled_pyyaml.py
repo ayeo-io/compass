@@ -289,6 +289,13 @@ def _find_yaml_reader_violations(file_texts: dict) -> list:
             continue
         if rel.startswith("cli/vendor/"):
             continue
+        if rel.startswith("hooks/py/") and rel.endswith(".py"):
+            # A hook's program file, run through `compass_python` as its
+            # here-document was: its own text must import compass_pkg first.
+            for m in _IMPORT_YAML_RE.finditer(text):
+                if "import compass_pkg" not in text[:m.start()]:
+                    violations.append(f"{rel}:{text.count(chr(10), 0, m.start()) + 1}")
+            continue
         if not rel.endswith(".sh"):
             for m in _IMPORT_YAML_RE.finditer(text):
                 line_no = text.count("\n", 0, m.start()) + 1

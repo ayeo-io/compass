@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from hook_text import hook_sources  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 ADRS = ROOT / "architecture" / "decisions"
@@ -557,7 +558,7 @@ def scan_status_words() -> list[tuple[str, int, str, str]]:
     paths = [*sorted((cli / "compass_pkg").glob("*.py")), cli / "compass"]
     for path in paths:
         hits += status_word_hits(path.read_text(encoding="utf-8"), path.name)
-    for path in sorted((ROOT / "hooks").glob("*.sh")):
+    for path in hook_sources():
         hits += hook_status_hits(path.read_text(encoding="utf-8"), path.name)
     return hits
 
@@ -752,7 +753,7 @@ def hook_old_word_hits(text: str, name: str) -> list[tuple[str, int, str, str]]:
 
 def _hook_sources() -> dict[str, str]:
     return {p.name: p.read_text(encoding="utf-8")
-            for p in sorted((ROOT / "hooks").glob("*.sh"))}
+            for p in hook_sources()}
 
 
 def test_vr_g12_no_run_stage_or_friction_key_is_spelt_in_its_retired_form():

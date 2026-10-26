@@ -1,7 +1,7 @@
 ---
 description: Bring the role perspectives to one decision
 argument-hint: "<the question or decision to work through>"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Edit(./.compass/**), Edit(./docs/**), Bash(compass *), Glob, Grep
 ---
 
 # /compass:consult

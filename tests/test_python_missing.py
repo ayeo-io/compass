@@ -15,6 +15,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from hook_text import hook_text  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SESSION_HOOK = ROOT / "hooks" / "session-start.sh"
@@ -225,7 +226,7 @@ def test_the_safety_contract_states_the_degraded_mode():
     assert "permit" not in missing.lower() and "permit" not in old.lower()
     stop_missing, stop_old = rows["`hooks/stop.sh`"]
     assert "did not run" in stop_missing and "as usual" in stop_old
-    hook = (ROOT / "hooks" / "pre-tool.sh").read_text(encoding="utf-8")
+    hook = hook_text(ROOT / "hooks" / "pre-tool.sh")
     assert "[python-missing]" in hook
 
 

@@ -1,6 +1,6 @@
 ---
 description: Split the work into independent subtasks, one worktree each
-allowed-tools: Read, Write, Edit, Bash, Glob
+allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Edit(./.compass/**), Edit(./docs/**), Bash(compass *), Glob
 ---
 
 # /compass:breakdown

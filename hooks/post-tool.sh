@@ -53,19 +53,7 @@ if [ "$_tool" = "Bash" ]; then
       if [ -f "$HOOK_ROOT/scripts/lib/compass-python.sh" ]; then
         # shellcheck source=../scripts/lib/compass-python.sh
         . "$HOOK_ROOT/scripts/lib/compass-python.sh"
-        printf '%s' "$INPUT" | compass_python -c '
-import json, sys
-
-import compass_pkg                      # noqa: F401 - puts vendor on sys.path
-from compass_pkg import delegation_tickets
-
-try:
-    event = json.load(sys.stdin)
-except ValueError:
-    event = {}
-if isinstance(event, dict):
-    delegation_tickets.drop_call(event)
-' 2>/dev/null || true
+        printf '%s' "$INPUT" | compass_python "$HOOK_ROOT/hooks/py/post_tool_drop_tickets.py" 2>/dev/null || true
       fi ;;
   esac
   exit 0

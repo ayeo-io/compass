@@ -442,10 +442,17 @@ def _scan_units(path: Path) -> list[tuple[int, str]]:
                     and isinstance(body[0].value.value, str)):
                 docstrings.add(id(body[0].value))
         units = []
+        source = text.splitlines()
+        in_hook_program = path.parent == REPO_ROOT / "hooks" / "py"
         for node in ast.walk(tree):
             if isinstance(node, ast.Constant) and isinstance(node.value, str):
                 if id(node) in docstrings or " " not in node.value:
                     continue
+                # In a hook's program file, a reasoned marker in a comment on
+                # the literal's own line is emitted ahead of it, as the YAML
+                # branch does, so the scan can see it and exempt that literal.
+                if in_hook_program and ALLOW_MARKER_RE.search(source[node.lineno - 1]):
+                    units.append((node.lineno, source[node.lineno - 1]))
                 for offset, line in enumerate(node.value.splitlines()):
                     units.append((node.lineno + offset, line))
         return units
@@ -1180,7 +1187,12 @@ def _retired_name_hits() -> list[str]:
                 continue
             if path.suffix != ".py" and path != REPO_ROOT / "cli" / "compass":
                 continue
+            lines = path.read_text(encoding="utf-8").splitlines()
             for lineno, value in _python_literals(path):
+                # A line that reads an archived manifest's old key says so
+                # with the per-line marker, so each exemption is countable.
+                if rel.startswith("hooks/py/") and ALLOW_MARKER_RE.search(lines[lineno - 1]):
+                    continue
                 if value in RETIRED_NAMES:
                     hits.append(
                         f"{rel}:{lineno}: {value!r} is retired - use "

@@ -39,7 +39,7 @@ def gh(tmp_path):
 
 def run(root, gh, *args, mode="", present=True, fail="", env=None):
     full = gh.env(mode, present)
-    full["FAKE_GH_FAIL"] = fail
+    full["GH_FAKE_FAIL"] = fail
     full.update(env or {})
     return subprocess.run([sys.executable, str(CLI), *args], cwd=root,
                           capture_output=True, text=True, env=full)

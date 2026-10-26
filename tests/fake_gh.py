@@ -4,7 +4,10 @@
 Not a test module: pytest does not collect it. The test fixture writes a
 `gh` wrapper that runs this file with the same interpreter.
 
-State lives in the directory named by FAKE_GH_DIR:
+Its settings are named `GH_FAKE_*` because Compass passes `gh` only an
+allow-list of the environment, and that list keeps every `GH_*` variable.
+
+State lives in the directory named by GH_FAKE_DIR:
 
 - `calls.jsonl`: one JSON list per call, the argument list `gh` received;
 - `stdin.jsonl`: one JSON object per `api` call that read standard input,
@@ -14,10 +17,10 @@ State lives in the directory named by FAKE_GH_DIR:
   page `comments` (each issue's comments, `[{"id", "body"}]`), `bodies` and
   `titles` (keyed the same way) and `next_id`.
 
-FAKE_GH_MODE makes every call fail: `unauth` as `gh` does when it is not
+GH_FAKE_MODE makes every call fail: `unauth` as `gh` does when it is not
 logged in, `down` as it does when GitHub cannot be reached.
 
-FAKE_GH_FAIL makes one kind of call fail as `down` does: `api` fails every
+GH_FAKE_FAIL makes one kind of call fail as `down` does: `api` fails every
 `gh api` call (the issue page), `labels` fails every other call (the labels).
 """
 from __future__ import annotations
@@ -104,16 +107,16 @@ def _api(argv, base, state, state_path):
 
 
 def main(argv):
-    base = Path(os.environ["FAKE_GH_DIR"])
+    base = Path(os.environ["GH_FAKE_DIR"])
     with open(base / "calls.jsonl", "a", encoding="utf-8") as log:
         log.write(json.dumps(argv) + "\n")
-    mode = os.environ.get("FAKE_GH_MODE", "")
+    mode = os.environ.get("GH_FAKE_MODE", "")
     if mode == "unauth":
         sys.stderr.write("To get started with GitHub CLI, please run:  gh auth login\n")
         return 4
     if mode == "down":
         return _down()
-    fail = os.environ.get("FAKE_GH_FAIL", "")
+    fail = os.environ.get("GH_FAKE_FAIL", "")
     is_api = argv[:1] == ["api"]
     if (fail == "api" and is_api) or (fail == "labels" and not is_api):
         return _down()

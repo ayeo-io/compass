@@ -1,6 +1,6 @@
 ---
 description: Run the scenarios, apply the review, check the gates
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Edit(./.compass/**), Edit(./docs/**), Bash(compass *), Glob, Grep
 ---
 
 # /compass:verify

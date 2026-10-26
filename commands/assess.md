@@ -1,7 +1,7 @@
 ---
 description: Assess risk, familiarity and size, and compute the delivery approach
 argument-hint: "<issue description> [--reassess]"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Edit(./.compass/**), Edit(./docs/**), Bash(compass *), Glob, Grep
 ---
 
 # /compass:assess
@@ -45,7 +45,7 @@ compass quick-fix finish -m "<commit message>" --no-commit -- <test command>
 `--no-commit` only if the user asked for a commit. If `start` says the
 approach is heavier than a quick fix, the manifest holds the values and
 the approach: read the full procedure named below and continue from its step 4,
-giving each value its reason there.
+giving each value its reason.
 
 ## Anything else: the full procedure
 
@@ -57,5 +57,3 @@ before you write anything when any of these holds:
 - `--reassess` was passed; it re-runs `compass approach evaluate --write
   --reason "..." --justify DIM="..."`, which commits the next generation with any
   `compass issue configure` proposal; `--reset-config` drops `config:`.
-
-It holds the setup, `--reassess`, the full procedure and the gate.

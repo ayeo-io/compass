@@ -164,7 +164,7 @@ def test_tr_7_the_command_that_writes_a_checklist_document_takes_it_from_the_ver
     assert f"compass issue template show {kind}" in text
     assert f"templates/{kind}.md" not in text
     allowed = re.search(r"^allowed-tools: (.*)$", text, re.M).group(1)
-    assert "Bash" in allowed, "the command runs a compass verb, so it needs Bash"
+    assert "Bash(compass *)" in allowed, "the command runs a compass verb, so it needs Bash"
 
 
 def test_tr_7_no_skill_or_agent_copies_a_list_template_by_path():

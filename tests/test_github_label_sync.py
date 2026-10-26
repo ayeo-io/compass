@@ -53,8 +53,8 @@ class FakeGh:
 
     def env(self, mode="", present=True):
         env = dict(os.environ)
-        env["FAKE_GH_DIR"] = str(self.dir)
-        env["FAKE_GH_MODE"] = mode
+        env["GH_FAKE_DIR"] = str(self.dir)
+        env["GH_FAKE_MODE"] = mode
         env.pop("COMPASS_ISSUE", None)
         if present:
             env["PATH"] = str(self.bin) + os.pathsep + env.get("PATH", "")

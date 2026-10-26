@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from hook_text import hook_text  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACT = ROOT / "docs" / "safety-contract.md"
@@ -70,7 +71,7 @@ def test_contract_and_record_make_no_claim_of_the_dropped_unit():
         text = _normal(path)
         for claim in NOT_IN_THIS_CHANGE:
             assert claim not in text, f"{path.name} still says: {claim}"
-    hook = HOOK.read_text(encoding="utf-8")
+    hook = hook_text(HOOK)
     assert "mask_prose_data" not in hook
 
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from hook_text import hook_text  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACT = ROOT / "docs" / "safety-contract.md"
@@ -28,7 +29,7 @@ def _section(heading_words: str) -> str:
 
 
 def _hook_number(name: str) -> int:
-    found = re.search(rf"^{name}=(\d+)$", HOOK.read_text(encoding="utf-8"), re.M)
+    found = re.search(rf"^{name}=(\d+)$", hook_text(HOOK), re.M)
     assert found, f"hooks/pre-tool.sh does not set {name}"
     return int(found.group(1))
 

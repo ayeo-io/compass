@@ -33,6 +33,7 @@ import pytest
 
 from conftest import write_red_record
 import yaml
+from hook_text import hook_text  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 HOOK = ROOT / "hooks" / "pre-tool.sh"
@@ -298,8 +299,11 @@ def _hook_with_the_old_raw_comparison(tmp_path):
     for entry in ROOT.iterdir():
         if entry.name not in ("hooks", ".git", ".compass"):
             (root / entry.name).symlink_to(entry)
-    (root / "hooks").mkdir()
-    text = HOOK.read_text(encoding="utf-8")
+    shutil.copytree(ROOT / "hooks", root / "hooks",
+                    ignore=shutil.ignore_patterns("__pycache__"))
+    assert "pre_tool_acceptance_verdict.py" in hook_text(HOOK)
+    program = root / "hooks" / "py" / "pre_tool_acceptance_verdict.py"
+    text = program.read_text(encoding="utf-8")
     shipped = 'if weight == stable_ids.MODE_THOROUGH and not (task.get("scenarios") or []):'
     assert shipped in text, "the hook no longer holds the comparison this test replaces"
     old_raw = text.replace(shipped, 'if weight == "full" and not (task.get("scenarios") or []):')
@@ -307,7 +311,7 @@ def _hook_with_the_old_raw_comparison(tmp_path):
     assert marker in old_raw, "the hook no longer maps the mode before it compares"
     old_raw = "\n".join(line for line in old_raw.splitlines()
                         if not line.startswith(marker.rstrip()))
-    (root / "hooks" / "pre-tool.sh").write_text(old_raw + "\n", encoding="utf-8")
+    program.write_text(old_raw + "\n", encoding="utf-8")
     return root / "hooks" / "pre-tool.sh"
 
 

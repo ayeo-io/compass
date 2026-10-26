@@ -1,7 +1,7 @@
 ---
 description: Report on one issue, or list them all
 argument-hint: "[issue-slug]"
-allowed-tools: Read, Bash, Glob, Grep
+allowed-tools: Read, Bash(compass *), Glob, Grep
 ---
 
 # /compass:status

@@ -717,6 +717,13 @@ that exits without running, and with Python 3.9.6. A repository that never
 opted in sees none of this. Shipping the CLI as a single file would not
 remove the dependency; ADR-028 records why Compass ships as a directory.
 
+The hooks run each Python check from its own file in `hooks/py/`, never from
+text inside the script, and `hooks/pre-tool.sh` sources the rest of its
+checks from parts in `hooks/lib/`. A part that is missing from the install
+refuses every call the hook sees, in any project, with `reader-failed` naming
+the part: the hook never runs with some of its checks left out. A missing
+Python check file refuses the same way its check would if Python failed.
+
 ### The red marker is checked against its record, and a record can still be written by hand
 
 The pre-tool hook refuses a code edit unless a failing test is on record for

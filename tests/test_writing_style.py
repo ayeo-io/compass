@@ -3016,11 +3016,15 @@ _register(Rule(
             "$CLAUDE_PROJECT_DIR/hooks/pre-tool.sh is a real path once the "
             "shell variable expands."),
         Exemption(
-            "hooks/pre-tool.sh", "src/app.py",
+            "hooks/lib/pre-tool-targets.sh", "src/app.py",
             "an illustrative example path in a comment, not a citation of a "
             "file in this repository."),
         Exemption(
-            "hooks/pre-tool.sh", "github/workflows/ci.yml",
+            "hooks/lib/pre-tool-bash-writes.sh", "src/app.py",
+            "an illustrative example path in a comment, not a citation of a "
+            "file in this repository."),
+        Exemption(
+            "hooks/lib/pre-tool-targets.sh", "github/workflows/ci.yml",
             "a generic illustrative filename pair (with docker-compose.yml), "
             "not a citation of a file in this repository; kept per the "
             "audit's own replacement text."),

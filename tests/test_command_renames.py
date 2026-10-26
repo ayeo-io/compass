@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 
 import yaml
+from hook_text import hook_sources  # noqa: E402
 
 REPO_ROOT = Path(__file__).parent.parent
 COMMANDS = REPO_ROOT / "commands"
@@ -139,7 +140,7 @@ def test_no_live_surface_points_at_a_dead_command_name():
     surfaces += sorted((REPO_ROOT / "agents").glob("*.md"))
     surfaces += sorted((REPO_ROOT / "templates").rglob("*.md"))
     surfaces += sorted((REPO_ROOT / "cli").rglob("*.py"))
-    surfaces += sorted((REPO_ROOT / "hooks").glob("*.sh"))
+    surfaces += hook_sources()
     surfaces += sorted((REPO_ROOT / ".claude-plugin").glob("*.json"))
     hits = []
     for path in surfaces:

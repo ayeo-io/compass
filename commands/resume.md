@@ -1,7 +1,7 @@
 ---
 description: Continue an issue from its state on disk
 argument-hint: "<issue-slug>"
-allowed-tools: Read, Write, Bash, Glob, Grep
+allowed-tools: Read, Write, Bash(compass *), Glob, Grep
 ---
 
 # /compass:resume

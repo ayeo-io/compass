@@ -45,20 +45,9 @@ compass_python() {
 # cannot be read returns 1 with the reason on stderr, and the caller must stop:
 # a default in its place would be a silent cap or a skipped regression run.
 compass_setting() {
-  local value
-  if value="$(compass_python - "$1" "$2" "$3" <<'PYEOF'
-import sys
-
-import compass_pkg                      # noqa: F401 - puts vendor on sys.path
-from compass_pkg import project_settings
-
-try:
-    print(project_settings.scalar(sys.argv[1], sys.argv[2]))
-except project_settings.CompassError as exc:
-    print("compass: %s" % exc, file=sys.stderr)
-    sys.exit(4)
-PYEOF
-  )"; then
+  local value root
+  root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+  if value="$(compass_python "$root/hooks/py/lib_compass_setting.py" "$1" "$2" "$3" </dev/null)"; then
     printf '%s\n' "${value:-$3}"
   else
     return 1

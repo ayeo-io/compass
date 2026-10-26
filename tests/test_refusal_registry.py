@@ -33,6 +33,7 @@ from compass_pkg.refusals import REFUSALS, codes, render          # noqa: E402
 
 sys.path.insert(0, str(ROOT / "tests"))
 from test_terminology import _scan_text                          # noqa: E402
+from hook_text import hook_sources  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # One set of fixture parameters per code - what RTP-1 and RTP-2 render with.
@@ -196,6 +197,11 @@ if [ "${1:-}" = "-" ]; then
   printf '%s\\n' "$body" | REALPY "$@"
   exit $?
 fi
+# A reader run from its program file under hooks/py/.
+if [ -f "${1:-}" ] && [ -n "${FAKE_FAIL_ON:-}" ] && grep -qF -- "$FAKE_FAIL_ON" "$1"; then
+  echo "fake python3: failing on purpose" >&2
+  exit "${FAKE_EXIT:-1}"
+fi
 exec REALPY "$@"
 """
 
@@ -315,7 +321,7 @@ def test_rtp_4_every_code_has_a_call_site():
     """A code counts as used only where it is passed to the hook's refusal
     functions or to render() - a mention in a comment does not count."""
     text = ""
-    for p in (ROOT / "hooks").glob("*.sh"):
+    for p in hook_sources():
         text += p.read_text(encoding="utf-8")
     for p in (ROOT / "cli" / "compass_pkg").glob("*.py"):
         if p.name == "refusals.py":

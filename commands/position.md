@@ -1,7 +1,7 @@
 ---
 description: Marketer entry point - positioning and the claims it needs
 argument-hint: "<what is being positioned>"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Edit(./.compass/**), Edit(./docs/**), Bash(compass *), Glob, Grep
 ---
 
 # /compass:position

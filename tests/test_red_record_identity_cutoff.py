@@ -27,6 +27,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from hook_text import hook_text  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 HOOK = ROOT / "hooks" / "pre-tool.sh"
@@ -156,7 +157,7 @@ def test_ric_6_suite_passed_applies_the_same_identity_rule(project):
 
 
 def test_ric_7_the_hook_has_no_identity_rule_of_its_own():
-    text = HOOK.read_text(encoding="utf-8")
+    text = hook_text(HOOK)
     assert "from compass_pkg.red_first import verdict_line" in text
     assert "hashlib" not in text, (
         "hooks/pre-tool.sh computes a digest itself; the identity rule must "

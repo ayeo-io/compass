@@ -23,6 +23,7 @@ import subprocess
 import time
 
 import pytest
+from hook_text import copy_hooks, hook_text  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 HOOK = ROOT / "hooks" / "pre-tool.sh"
@@ -352,14 +353,15 @@ def _counting_python(tmp_path, fail=False, pattern="code_globs", sleep=0):
     wrapper = folder / "python3"
     wrapper.write_text(
         "#!/bin/bash\n"
-        'if [ "$1" != "-" ]; then exec ' + real + ' "$@"; fi\n'
-        'f="$(mktemp)"; cat > "$f"\n'
-        f'if grep -qE "{pattern}" "$f"; then\n'
+        '# A reader comes on standard input (`-`) or as its program file.\n'
+        'if [ "$1" = "-" ]; then f="$(mktemp)"; cat > "$f"; else f="$1"; fi\n'
+        f'if [ -f "$f" ] && grep -qE "{pattern}" "$f"; then\n'
         f'  echo x >> {counter}\n'
         + (f"  sleep {sleep}\n" if sleep else "")
         + ("  echo 'reader broke' >&2; exit 9\n" if fail else "") +
         "fi\n"
-        'exec ' + real + ' "$@" < "$f"\n')
+        'if [ "$1" = "-" ]; then exec ' + real + ' "$@" < "$f"; fi\n'
+        'exec ' + real + ' "$@"\n')
     wrapper.chmod(0o755)
     return folder, counter
 
@@ -731,7 +733,7 @@ def test_a_failed_matcher_refuses_the_command_with_unsafe_globs(tmp_path):
 
 def _hook_number(name: str) -> int:
     """A number the hook sets at the start of a line, such as `WORK_BUDGET=...`."""
-    found = re.search(rf"^{name}=(\d+)$", HOOK.read_text(encoding="utf-8"), re.M)
+    found = re.search(rf"^{name}=(\d+)$", hook_text(HOOK), re.M)
     assert found, f"hooks/pre-tool.sh does not set {name}"
     return int(found.group(1))
 
@@ -838,7 +840,7 @@ def test_the_hook_explains_each_number_of_the_work_budget():
     """Supports `TRC-025` in pre-tool-hook-time-bounded/acceptance-criteria.md:
     each cost is a measured time, so the hook names, in a comment before the
     numbers, what each one counts."""
-    text = HOOK.read_text(encoding="utf-8")
+    text = hook_text(HOOK)
     first = text.index("\nCOMMAND_LIMIT=")
     comment = text[:first]
     names = re.findall(r"^((?:WORK_BUDGET|COST_[A-Z_]+))=\d+$", text, re.M)
@@ -852,7 +854,7 @@ def test_the_hook_and_the_safety_contract_give_the_same_slowest_time():
     the hook's comment and docs/safety-contract.md each state the slowest
     accepted command, and the two must agree."""
     hook = re.search(r"worst command accepted took ([0-9.]+) s",
-                     HOOK.read_text(encoding="utf-8"))
+                     hook_text(HOOK))
     assert hook, "the comment in hooks/pre-tool.sh does not give the worst time"
     page = " ".join((ROOT / "docs" / "safety-contract.md").read_text().split())
     contract = re.search(r"in seconds: ([0-9.]+) for 260 write targets", page)
@@ -889,15 +891,12 @@ def _hook_copy(tmp_path, replacements: dict[str, str]):
     """A copy of the hook, with each `old` text replaced by its `new` once, in
     a folder that links the folders the hook reads. Returns the script's path."""
     tree = tmp_path / "hook-copy"
-    (tree / "hooks").mkdir(parents=True)
+    tree.mkdir(parents=True)
     for name in ("cli", "scripts", "governance"):
         (tree / name).symlink_to(ROOT / name)
-    text = HOOK.read_text(encoding="utf-8")
-    for old, new in replacements.items():
-        assert old in text, f"hooks/pre-tool.sh has no {old!r}"
-        text = text.replace(old, new, 1)
-    path = tree / "hooks" / "pre-tool.sh"
-    path.write_text(text, encoding="utf-8")
+    for old in replacements:
+        assert old in hook_text(HOOK), f"hooks/pre-tool.sh has no {old!r}"
+    path = copy_hooks(tree, replacements)
     path.chmod(0o755)
     return path
 
@@ -1042,7 +1041,7 @@ def test_the_fuse_has_no_override_in_the_environment():
     """Supports `TRC-026` in pre-tool-hook-time-bounded/acceptance-criteria.md:
     the fuse is set by an assignment, so no variable in the environment of the
     hook can lengthen it."""
-    text = HOOK.read_text(encoding="utf-8")
+    text = hook_text(HOOK)
     assert re.search(r"^FUSE_SECONDS=\d+$", text, re.M)
     assert not re.search(r"\$\{FUSE_SECONDS:-", text.split("expand_command_variable()")[0])
 
@@ -1195,7 +1194,7 @@ def _bash_run(script: str, *args: str, locale=UTF8):
 
 
 def _hook_block(begin: str, end: str) -> str:
-    text = HOOK.read_text(encoding="utf-8")
+    text = hook_text(HOOK)
     found = re.search(rf"^[ \t]*# {begin}.*?\n(.*?)^[ \t]*# {end}\n", text,
                       re.S | re.M)
     assert found, f"hooks/pre-tool.sh has no `{begin}` ... `{end}` block"
@@ -1663,7 +1662,7 @@ GOLDEN_ROWS = [
 
 
 def _expand_function() -> str:
-    text = HOOK.read_text(encoding="utf-8")
+    text = hook_text(HOOK)
     # The function and the helpers it calls, with the globals they keep.
     found = re.findall(r"^expand_command_variable[a-z_]*\(\) \{\n.*?^\}\n", text,
                        re.S | re.M)
@@ -1686,7 +1685,7 @@ def test_the_continuation_join_gives_the_same_text_as_the_bash_substitution(
     """The hook joins lines that end in a backslash with awk. The result is the
     text the old bash substitution gave, including the line end after it
     (supports `TRC-019` in pre-tool-hook-time-bounded/acceptance-criteria.md)."""
-    text = HOOK.read_text(encoding="utf-8")
+    text = hook_text(HOOK)
     found = re.search(r"awk ('\{ s = s \$0 \"\\n\" \}\n.*?\}')", text, re.S)
     assert found, "hooks/pre-tool.sh does not join continuations with awk"
     program = found.group(1)

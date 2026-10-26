@@ -26,6 +26,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from hook_text import hook_sources  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SLUG = "matrix"
@@ -59,6 +60,11 @@ if [ "${1:-}" = "-" ]; then
   fi
   printf '%s\\n' "$body" | REALPY "$@"
   exit $?
+fi
+# A reader run from its program file under hooks/py/.
+if [ -f "${1:-}" ] && [ -n "${FAKE_FAIL_ON:-}" ] && grep -qF -- "$FAKE_FAIL_ON" "$1"; then
+  echo "fake python3: failing on purpose" >&2
+  exit "${FAKE_EXIT:-1}"
 fi
 exec REALPY "$@"
 """
@@ -200,7 +206,7 @@ RETIRED = [
 
 def test_hfm_6_the_hooks_use_no_retired_word_or_tool_name():
     hits = []
-    for script in sorted((ROOT / "hooks").glob("*.sh")):
+    for script in hook_sources():
         for n, line in enumerate(script.read_text(encoding="utf-8").splitlines(), 1):
             # The acceptance check still reads the retired `specify` key from
             # archived manifests, and its comment says so; that is a key, not

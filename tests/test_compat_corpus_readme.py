@@ -11,6 +11,7 @@ import subprocess
 from pathlib import Path
 
 import yaml
+from hook_text import hook_text  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CORPUS = "tests/fixtures/compat"
@@ -58,7 +59,7 @@ def test_trc_057():
     assert list((ROOT / CORPUS).rglob("README*")) == []
     # The refusal-code pins of the hook corpus are as recorded 5.6.0 output.
     hook_path = CORPUS + "/contract-5-hook.yml"
-    hook = (ROOT / hook_path).read_text(encoding="utf-8")
+    hook = hook_text(ROOT / hook_path)
     assert "code: not-initialised" in hook and "code: not-initialized" not in hook
     base_hook = _recorded(hook_path)
     if base_hook is not None:

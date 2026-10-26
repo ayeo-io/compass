@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 import pytest
+from hook_text import hook_text  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 HOOK = ROOT / "hooks" / "session-start.sh"
@@ -252,4 +253,4 @@ def test_trc_066(tmp_path):
     run_hook(unset)  # warm the file cache
     assert median(setup) - median(unset) <= 0.1
     # No extra process: the line is built in the existing Python block.
-    assert "language.hook_line" in HOOK.read_text(encoding="utf-8")
+    assert "language.hook_line" in hook_text(HOOK)

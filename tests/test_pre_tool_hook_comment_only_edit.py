@@ -28,6 +28,7 @@ from pathlib import Path
 import pytest
 
 from test_session_issue import _issue
+from hook_text import copy_hooks, hook_text  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 HOOK = ROOT / "hooks" / "pre-tool.sh"
@@ -499,23 +500,23 @@ def _mutant(tmp_path, module=None, hook=None):
     """A copy of the hook and of the package, each with its `old` text replaced
     by its `new` once. Returns the script's path."""
     tree = tmp_path / "mutant"
-    (tree / "hooks").mkdir(parents=True)
-    (tree / "cli").mkdir()
+    (tree / "cli").mkdir(parents=True)
     for name in ("scripts", "governance"):
         (tree / name).symlink_to(ROOT / name)
     (tree / "cli" / "vendor").symlink_to(ROOT / "cli" / "vendor")
     shutil.copytree(ROOT / "cli" / "compass_pkg", tree / "cli" / "compass_pkg",
                     ignore=shutil.ignore_patterns("__pycache__"))
-    for path, edits in ((tree / "cli" / "compass_pkg" / "comment_only_edit.py", module),
-                        (tree / "hooks" / "pre-tool.sh", hook)):
-        text = (ROOT / "cli" / "compass_pkg" / "comment_only_edit.py"
-                if path.suffix == ".py" else HOOK).read_text(encoding="utf-8")
-        for old, new in (edits or {}).items():
-            assert text.count(old) == 1, f"{path.name} does not hold {old!r} once"
-            text = text.replace(old, new)
-        path.write_text(text, encoding="utf-8")
-    (tree / "hooks" / "pre-tool.sh").chmod(0o755)
-    return tree / "hooks" / "pre-tool.sh"
+    path = tree / "cli" / "compass_pkg" / "comment_only_edit.py"
+    text = path.read_text(encoding="utf-8")
+    for old, new in (module or {}).items():
+        assert text.count(old) == 1, f"{path.name} does not hold {old!r} once"
+        text = text.replace(old, new)
+    path.write_text(text, encoding="utf-8")
+    for old in hook or {}:
+        assert hook_text(HOOK).count(old) == 1, f"pre-tool.sh does not hold {old!r} once"
+    script = copy_hooks(tree, hook or {})
+    script.chmod(0o755)
+    return script
 
 
 def _run_mutant(hook, root, rel, old, new, *, replace_all=False, path=None,
@@ -849,16 +850,13 @@ def _hook_copy(tmp_path):
     """A copy of the hook that prints the work it had counted when it ended, in
     a folder that links the folders the hook reads. Returns the script's path."""
     tree = tmp_path / "hook-copy"
-    (tree / "hooks").mkdir(parents=True)
+    tree.mkdir(parents=True)
     for name in ("cli", "scripts", "governance"):
         (tree / name).symlink_to(ROOT / name)
-    text = HOOK.read_text(encoding="utf-8")
     old = "\nTARGET_BYTES_LIMIT=2048\n"
-    assert old in text
-    text = text.replace(
-        old, '\ntrap \'echo "WORK_USED=$WORK_USED" >&2\' EXIT\n' + old[1:], 1)
-    path = tree / "hooks" / "pre-tool.sh"
-    path.write_text(text, encoding="utf-8")
+    assert old in hook_text(HOOK)
+    path = copy_hooks(tree, {
+        old: '\ntrap \'echo "WORK_USED=$WORK_USED" >&2\' EXIT\n' + old[1:]})
     path.chmod(0o755)
     return path
 

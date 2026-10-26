@@ -1,6 +1,6 @@
 ---
 description: Integrate, run regression, update living docs, settle follow-ups
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 ---
 
 # /compass:ship

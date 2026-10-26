@@ -284,6 +284,11 @@ if [ "${1:-}" = "-" ]; then
   printf '%s\\n' "$body" | REALPY "$@"
   exit $?
 fi
+# A reader run from its program file under hooks/py/.
+if [ -f "${1:-}" ] && [ -n "${FAKE_FAIL_ON:-}" ] && grep -qF -- "$FAKE_FAIL_ON" "$1"; then
+  echo "fake python3: failing on purpose" >&2
+  exit 1
+fi
 exec REALPY "$@"
 """
 

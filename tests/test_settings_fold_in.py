@@ -36,6 +36,7 @@ from compass_pkg import core, governance, project_settings, record  # noqa: E402
 from compass_pkg import red_first  # noqa: E402
 from compass_pkg.project_commands import _project_commands_allowed  # noqa: E402
 from compass_pkg.tdd import _read_config  # noqa: E402
+from hook_text import hook_sources  # noqa: E402
 
 # One settings document, written as `.compass/config.yml` (adoption is `mode`)
 # or as `compass.yml` (adoption is `adoption`).
@@ -426,7 +427,7 @@ def test_sh4_an_old_project_is_left_as_it_is(tmp_path, old):
 SETTINGS_FILES_HELPER = ROOT / "scripts" / "lib" / "settings-files.sh"
 
 SHELL_READERS = [p for p in (
-    sorted((ROOT / "hooks").glob("*.sh"))
+    hook_sources()
     + [ROOT / "scripts" / "integrate.sh", ROOT / "scripts" / "multiagent.sh"]
     + sorted((ROOT / "scripts" / "lib").glob("*.sh")))
     if p != SETTINGS_FILES_HELPER]
@@ -550,24 +551,24 @@ def test_sh6_the_other_script_left_on_the_old_file_fails_too(copy):
 
 def test_sh6_a_hook_left_on_the_old_file_fails_the_behaviour_check(copy):
     framework, base = copy
-    _planted(framework, "hooks/pre-tool.sh",
+    _planted(framework, "hooks/py/pre_tool_code_globs.py",
              "cfg = project_settings.settings(sys.argv[1])",
              "import os, yaml\n"
              "    p = os.path.join(sys.argv[1], '.compass',\n"
              "                     ''.join(['con', 'fig', '.', 'y', 'ml']))\n"
              "    cfg = (yaml.safe_load(open(p)) or {}) if os.path.exists(p) else {}")
     assert not _shell_names_old_file(
-        (framework / "hooks" / "pre-tool.sh").read_text())
+        (framework / "hooks" / "py" / "pre_tool_code_globs.py").read_text())
     assert _honoured(framework, base)["hook"] is False
 
 
 def test_sh6_the_scan_flags_a_hook_that_names_the_old_file_plainly(copy):
     framework, _base = copy
-    _planted(framework, "hooks/pre-tool.sh",
+    _planted(framework, "hooks/py/pre_tool_code_globs.py",
              "cfg = project_settings.settings(sys.argv[1])",
              "cfg = open(sys.argv[1] + '/.compass/config.yml').read()")
     assert _shell_names_old_file(
-        (framework / "hooks" / "pre-tool.sh").read_text())
+        (framework / "hooks" / "py" / "pre_tool_code_globs.py").read_text())
 
 
 # SH-10: the helper that names the two settings files is pinned to

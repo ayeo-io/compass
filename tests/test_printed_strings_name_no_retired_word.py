@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import pathlib
 import re
+from hook_text import hook_sources  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -193,7 +194,7 @@ _LITERAL = re.compile(r"""(["'])(?:(?!\1).)*triage(?:(?!\1).)*\1""", re.I)
 def _all_cli_and_hook_sources():
     return ([ROOT / "cli" / "compass"]
             + sorted((ROOT / "cli" / "compass_pkg").glob("*.py"))
-            + sorted((ROOT / "hooks").glob("*.sh"))
+            + hook_sources()
             + sorted((ROOT / "scripts").glob("*.sh")))
 
 

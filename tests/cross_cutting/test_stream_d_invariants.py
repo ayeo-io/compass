@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from hook_text import hook_text  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 CLI = ROOT / "cli" / "compass"
@@ -323,7 +324,7 @@ def test_trc_d6_phases_and_gates_remain_enforced():
 def test_trc_d7_tdd_remains_a_strategy_spike_suspends():
     """The pre-tool hook still reads the .spike marker and
     suspends red-before-green on Spike delivery approaches (`TRC-D7`, `BR-016`)."""
-    hook = (ROOT / "hooks" / "pre-tool.sh").read_text(encoding="utf-8")
+    hook = hook_text(ROOT / "hooks" / "pre-tool.sh")
     assert ".spike" in hook, "pre-tool.sh must read the .spike marker to be route-aware"
     # The hook still enforces .red elsewhere - sanity that it's not been removed
     assert ".red" in hook, "pre-tool.sh must still enforce the .red marker contract"

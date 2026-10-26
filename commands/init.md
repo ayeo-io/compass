@@ -1,6 +1,6 @@
 ---
 description: Write the project's compass.yml, or migrate an older project to it
-allowed-tools: Read, Write, Edit, Bash, Glob
+allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Write(./compass.yml), Edit(./.compass/**), Edit(./docs/**), Edit(./compass.yml), Bash(compass *), Glob
 ---
 
 # /compass:init

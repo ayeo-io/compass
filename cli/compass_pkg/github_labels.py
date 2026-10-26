@@ -212,11 +212,30 @@ def _explain(stderr):
     return "gh failed: " + (text[:160] if text else "no message")
 
 
+#: The variables `gh` needs: where to find programs and its own configuration, the
+#: locale, the user's GitHub token and host (`GH_*`, `GITHUB_*`), the session bus
+#: that reaches a Linux keyring holding the token, certificates and proxies. Any
+#: other variable, such as another service's secret, is not passed.
+_GH_KEEP = ("PATH", "HOME", "USER", "LOGNAME", "TMPDIR", "LANG", "TZ", "TERM", "NO_COLOR",
+            "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME", "XDG_RUNTIME_DIR",
+            "DBUS_SESSION_BUS_ADDRESS", "SSL_CERT_FILE",
+            "SSL_CERT_DIR", "HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy",
+            "ALL_PROXY", "all_proxy", "NO_PROXY", "no_proxy")
+_GH_KEEP_PREFIXES = ("LC_", "GH_", "GITHUB_")
+
+
+def _gh_env():
+    env = {k: v for k, v in os.environ.items()
+           if k in _GH_KEEP or k.startswith(_GH_KEEP_PREFIXES)}
+    env["GH_PROMPT_DISABLED"] = "1"
+    return env
+
+
 def _gh(args, stdin=None):
     """Run `gh` with an argument list and no shell; return its standard output.
     Text to post goes in `stdin`, never in `args`, so it cannot be read as an
     option and does not show in the process list."""
-    env = dict(os.environ, GH_PROMPT_DISABLED="1")
+    env = _gh_env()
     try:
         done = subprocess.run(["gh", *args], capture_output=True, text=True, input=stdin,
                               timeout=_TIMEOUT, env=env, check=False)

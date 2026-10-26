@@ -887,6 +887,11 @@ if [ "${1:-}" = "-" ]; then
   printf '%s\\n' "$body" | REALPY "$@"
   exit $?
 fi
+# A reader run from its program file under hooks/py/.
+if [ -f "${1:-}" ] && [ -n "${FAKE_FAIL_ON:-}" ] && grep -qF -- "$FAKE_FAIL_ON" "$1"; then
+  echo "ModuleNotFoundError: No module named 'compass_pkg'" >&2
+  exit 1
+fi
 exec REALPY "$@"
 """
 
@@ -1011,7 +1016,8 @@ def test_dbi_11_hook_reads_this_checkout_uncached(tmp_path):
     assert done.returncode == 0, done
     assert os.path.realpath(entry) not in _events(opened, "open"), "the cache entry was read"
     # Neither the dependency reader nor the derivation it calls names the cache.
-    reader = HOOK.read_text(encoding="utf-8").split("hook_lines(", 1)[0].rsplit("<<'PYEOF'", 1)[1]
+    reader = (ROOT / "hooks" / "py" / "pre_tool_dependencies.py").read_text(encoding="utf-8")
+    assert "hook_lines(" in reader
     assert "parse_cache" not in reader
     assert "parse_cache" not in (CLI_DIR / "compass_pkg" / "lifecycle.py").read_text(encoding="utf-8")
     assert_no_gh_call(project.root)

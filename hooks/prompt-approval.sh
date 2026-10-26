@@ -47,22 +47,8 @@ fi
 source "$HOOK_ROOT/scripts/lib/compass-python.sh"
 
 ERR_FILE="$(mktemp 2>/dev/null)" || block_without_python "it could not create a temporary file"
-OUT="$(printf '%s' "$INPUT" | compass_python - "${CLAUDE_PLUGIN_ROOT:-$HOOK_ROOT}" \
-  3<&0 2>"$ERR_FILE" <<'PYEOF'
-import json
-import os
-import sys
-
-import compass_pkg                      # noqa: F401 - puts vendor on sys.path
-from compass_pkg import prompt_approval
-
-with os.fdopen(3) as fh:
-    event = prompt_approval.load_event(fh.read())
-result = prompt_approval.handle(event, dict(os.environ), plugin_root=sys.argv[1])
-if result is not None:
-    print(json.dumps(result.output()))
-PYEOF
-)"
+OUT="$(printf '%s' "$INPUT" | compass_python "$HOOK_ROOT/hooks/py/prompt_approval.py" \
+  "${CLAUDE_PLUGIN_ROOT:-$HOOK_ROOT}" 3<&0 2>"$ERR_FILE" </dev/null)"
 STATUS=$?
 if [ "$STATUS" -ne 0 ]; then
   CAUSE="$(sed -n '1p' "$ERR_FILE" 2>/dev/null)"

@@ -5058,3 +5058,13 @@ The hooks run their Python checks from files, and each command pre-approves only
 Compass reports version 8.0.1.
 
 - `TRC-001` Given the release 8.0.1 is intended When the version guard runs Then every location that carries the version says 8.0.1
+
+### atdd-hook-pilot (completed 2026-10-26)
+
+Compass's own hook refusal tests run through both the Claude Code and the Codex hook clients.
+
+- `TRC-P1` the hook scenarios run as layered specifications
+- `TRC-P2` the same specifications run through both hook clients
+- `TRC-P3` a change to the hook's layout changes only the driver
+- `TRC-P4` the suite runs in parallel and twice
+- `TRC-P5` the note measures the result

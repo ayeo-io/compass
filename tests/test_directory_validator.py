@@ -32,10 +32,10 @@ sys.path.insert(0, str(ROOT / "cli"))
 
 from compass_pkg import github_labels  # noqa: E402
 
-#: The hook scripts the agent maintains. The approval prompt hook is the
-#: owner's to change: the pre-tool hook refuses an agent read or edit of it.
+#: The hook scripts the plugin runs. Only the owner changes the approval prompt
+#: hook: the pre-tool hook refuses an agent read or edit of it.
 HOOKS = ("pre-tool.sh", "post-tool.sh", "stop.sh", "session-start.sh",
-         "approval-summary.sh")
+         "approval-summary.sh", "prompt-approval.sh")
 LONGEST = 700
 
 

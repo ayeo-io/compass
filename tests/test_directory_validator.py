@@ -20,12 +20,14 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "cli"))
@@ -258,3 +260,60 @@ def test_trc_a3_a_missing_part_refuses_the_call(tmp_path):
     done = run()
     assert done.returncode == 2, done
     assert "pre-tool-guards.sh" in done.stderr and "[reader-failed]" in done.stderr
+
+
+PARTS = ("pre-tool-project.sh", "pre-tool-guards.sh", "pre-tool-targets.sh",
+         "pre-tool-bash-writes.sh", "pre-tool-issue.sh", "pre-tool-checks.sh")
+
+
+@pytest.mark.parametrize("part", PARTS)
+def test_trc_a3_an_unreadable_part_refuses_the_call(tmp_path, part):
+    """A part that is on disk but cannot be read refuses like a missing one.
+    Sourcing it would fail under `set -e` with exit 1, which Claude Code does
+    not treat as a refusal, so the call would go through."""
+    install = tmp_path / "install"
+    for folder in ("hooks", "scripts", "cli"):
+        shutil.copytree(ROOT / folder, install / folder,
+                        ignore=shutil.ignore_patterns("__pycache__"))
+    project = tmp_path / "project"
+    project.mkdir()
+    event = json.dumps({"tool_name": "Read",
+                        "tool_input": {"file_path": str(project / "notes.txt")}})
+    path = install / "hooks" / "lib" / part
+    path.chmod(0)
+    try:
+        done = subprocess.run(["bash", str(install / "hooks" / "pre-tool.sh")],
+                              input=event, capture_output=True, text=True,
+                              cwd=project, timeout=60)
+    finally:
+        path.chmod(0o644)
+    assert done.returncode == 2, done
+    assert part in done.stderr and "[reader-failed]" in done.stderr
+
+
+@pytest.mark.parametrize("helper", ("compass-python.sh", "settings-files.sh"))
+def test_trc_a3_an_unreadable_shared_helper_still_refuses_a_code_edit(tmp_path, helper):
+    """The two shared helpers the hook sources fall back to a stand-in when they
+    cannot be used, so an opted-in project still refuses a code edit (exit 2)
+    rather than letting it through with exit 1."""
+    install = tmp_path / "install"
+    for folder in ("hooks", "scripts", "cli"):
+        shutil.copytree(ROOT / folder, install / folder,
+                        ignore=shutil.ignore_patterns("__pycache__"))
+    project = tmp_path / "project"
+    (project / "src").mkdir(parents=True)
+    (project / ".compass" / "work").mkdir(parents=True)
+    (project / "src" / "app.py").write_text("x = 1\n")
+    event = json.dumps({"tool_name": "Edit", "tool_input": {
+        "file_path": str(project / "src" / "app.py"),
+        "old_string": "x = 1", "new_string": "x = 2"}})
+    path = install / "scripts" / "lib" / helper
+    path.chmod(0)
+    try:
+        done = subprocess.run(["bash", str(install / "hooks" / "pre-tool.sh")],
+                              input=event, capture_output=True, text=True, cwd=project,
+                              env={**os.environ, "CLAUDE_PROJECT_DIR": str(project)},
+                              timeout=60)
+    finally:
+        path.chmod(0o644)
+    assert done.returncode == 2, done

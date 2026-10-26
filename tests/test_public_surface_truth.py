@@ -609,7 +609,12 @@ def test_d2_repairs_change_only_retired_names():
     `# In Claude Code:` comment line, which this check counts as a heading,
     is gone (one heading level removed).
 
-    The other 46 are untouched, and a NEW structural change to any of the 59
+    One more was re-baselined by `directory-validator-fixes`:
+    `architecture/relations.md` (table_rows 32 -> 34) gained a row for the
+    pre-tool hook's parts in `hooks/lib/` and a row for the `hooks/py/lib_*.py`
+    programs the shared shell libraries run.
+
+    The other 45 are untouched, and a NEW structural change to any of the 59
     still fails.
     """
     import json

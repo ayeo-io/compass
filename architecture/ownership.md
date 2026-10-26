@@ -22,7 +22,7 @@ exclusively, and what it must not do.
 | Component | Owns | Must own exclusively |
 |---|---|---|
 | `cli/compass` | Approach evaluation, gate checking, tdd-red/green evidence, rework-scan, retro, ADR helpers | All mechanism-produced writes to issue manifests and evidence directories |
-| `hooks/pre-tool.sh` | `.red` marker gate enforcement | The decision of whether to block a tool call |
+| `hooks/pre-tool.sh`, with its parts in `hooks/lib/` and its programs in `hooks/py/pre_tool_*.py` | `.red` marker gate enforcement | The decision of whether to block a tool call |
 | `hooks/stop.sh` | Session-end signal scanning, rework prompt | Detection of scope-bloat and rework signals |
 | `commands/*.md` | Phase slash-command definitions | The user-facing pipeline protocol |
 | `agents/*.md` | Role agent definitions | Agent instructions and hard boundary statements |

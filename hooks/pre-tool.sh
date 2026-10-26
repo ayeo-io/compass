@@ -89,13 +89,13 @@ TASK_DIR=""
 # reaches the bundled PyYAML the same way cli/compass does, rather than this
 # hook inventing its own answer to "where is the vendored copy".
 #
-# A missing helper must not end this script under `set -e` with exit 1, which
+# A missing or unreadable helper must not end this script under `set -e` with exit 1, which
 # the runtime lets through. Without it, a stand-in answers every reader with
 # exit 3 and a reason, so an opted-in project refuses and names the file, and
 # a repository that never opted in reaches its silent exit 0 as before.
 HOOK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPASS_PYTHON_SH="$HOOK_ROOT/scripts/lib/compass-python.sh"
-if [ -f "$COMPASS_PYTHON_SH" ]; then
+if [ -f "$COMPASS_PYTHON_SH" ] && [ -r "$COMPASS_PYTHON_SH" ]; then
   source "$COMPASS_PYTHON_SH"
 else
   compass_python() {
@@ -106,11 +106,11 @@ else
 fi
 
 # Whether the project has a settings file, so the code_globs reader below
-# starts Python only when there is one to read. A missing helper answers yes:
+# starts Python only when there is one to read. A missing or unreadable helper answers yes:
 # the reader then runs, and a reader that cannot run refuses, so a broken
 # install never turns "unknown" into "not guarded".
 SETTINGS_FILES_SH="$HOOK_ROOT/scripts/lib/settings-files.sh"
-if [ -f "$SETTINGS_FILES_SH" ]; then
+if [ -f "$SETTINGS_FILES_SH" ] && [ -r "$SETTINGS_FILES_SH" ]; then
   source "$SETTINGS_FILES_SH"
 else
   compass_has_settings_file() { return 0; }
@@ -121,7 +121,7 @@ fi
 # (spec D38); `compass _refusal <code> key=value ...` is the CLI command
 # that reads it, for docs generation and any external caller. This hook
 # reaches the registry directly - `import compass_pkg.refusals`, the same
-# narrow import every other reader in this file makes - rather than through
+# narrow import every other reader in hooks/py/ makes - rather than through
 # `cli/compass`, which pulls in every command module at start-up and needs
 # newer syntax than this hook's other readers do. A refusal is printed on
 # every blocked call in every session, so it needs no more to run than the
@@ -263,7 +263,11 @@ fi
 # short enough for a reader, and for the plugin directory's checks, to read in
 # full. Each part is sourced here, at the top level and in order, so the parts
 # run as one script: a variable a part sets is global, and an `exit` ends the
-# hook. A missing part refuses the call rather than run a partial guard.
+# hook.
+#
+# Every part is checked before any is sourced. A part that is missing, or that
+# cannot be read, refuses the call: sourcing an unreadable file fails without a
+# refusal, and an earlier part can end the hook before a later one is reached.
 #
 # The parts are found from this script's own path, not through `pwd` as
 # HOOK_ROOT is: in a working directory that was removed, `pwd` can name a
@@ -274,24 +278,21 @@ case "$PRE_TOOL_SELF" in /*) ;; *) PRE_TOOL_SELF="$PWD/$PRE_TOOL_SELF" ;; esac
 PRE_TOOL_PARTS="${PRE_TOOL_SELF%/*}/lib"
 compass_part_missing() {
   emit_refusal reader-failed "target=${TARGET:-?}" "tool=${TOOL:-?}" \
-    "reader=pre-tool hook part $1" "cause=Its file is missing from the install." "detail="
+    "reader=pre-tool hook part $1" "cause=Its file is missing from the install, or cannot be read." "detail="
   exit 2
 }
-[ -f "$PRE_TOOL_PARTS/pre-tool-project.sh" ] || compass_part_missing pre-tool-project.sh
+for _part in pre-tool-project.sh pre-tool-guards.sh pre-tool-targets.sh pre-tool-bash-writes.sh pre-tool-issue.sh pre-tool-checks.sh; do
+  [ -f "$PRE_TOOL_PARTS/$_part" ] && [ -r "$PRE_TOOL_PARTS/$_part" ] || compass_part_missing "$_part"
+done
 # shellcheck source=hooks/lib/pre-tool-project.sh
 . "$PRE_TOOL_PARTS/pre-tool-project.sh"
-[ -f "$PRE_TOOL_PARTS/pre-tool-guards.sh" ] || compass_part_missing pre-tool-guards.sh
 # shellcheck source=hooks/lib/pre-tool-guards.sh
 . "$PRE_TOOL_PARTS/pre-tool-guards.sh"
-[ -f "$PRE_TOOL_PARTS/pre-tool-targets.sh" ] || compass_part_missing pre-tool-targets.sh
 # shellcheck source=hooks/lib/pre-tool-targets.sh
 . "$PRE_TOOL_PARTS/pre-tool-targets.sh"
-[ -f "$PRE_TOOL_PARTS/pre-tool-bash-writes.sh" ] || compass_part_missing pre-tool-bash-writes.sh
 # shellcheck source=hooks/lib/pre-tool-bash-writes.sh
 . "$PRE_TOOL_PARTS/pre-tool-bash-writes.sh"
-[ -f "$PRE_TOOL_PARTS/pre-tool-issue.sh" ] || compass_part_missing pre-tool-issue.sh
 # shellcheck source=hooks/lib/pre-tool-issue.sh
 . "$PRE_TOOL_PARTS/pre-tool-issue.sh"
-[ -f "$PRE_TOOL_PARTS/pre-tool-checks.sh" ] || compass_part_missing pre-tool-checks.sh
 # shellcheck source=hooks/lib/pre-tool-checks.sh
 . "$PRE_TOOL_PARTS/pre-tool-checks.sh"

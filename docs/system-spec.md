@@ -5074,3 +5074,9 @@ Compass's own hook refusal tests run through both the Claude Code and the Codex 
 Each hook refusal test names the refusal code it expects.
 
 - `TRC-001` Given the hook refusal specifications When each checks a refusal Then each names a refusal code
+
+### shipped-releases-v8-0-1 (completed 2026-10-27)
+
+compass policy migrate recognizes governance copied from 8.0.1.
+
+- `TRC-001` Given the v8.0.1 tag is pushed When the generator runs its stale check Then it reports no stale release

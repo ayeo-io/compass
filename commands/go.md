@@ -1,7 +1,7 @@
 ---
 description: Start any change with one command - assess it, show the plan in three lines, then begin
 argument-hint: "<what you want>"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 ---
 
 # /compass:go

@@ -25,7 +25,7 @@ compass_python_status() {
     echo "missing"
     return 0
   fi
-  out="$(python3 -c 'import sys; v = sys.version_info; print("%d.%d.%d" % tuple(v[:3])); sys.exit(0 if v >= (3, 10) else 1)' 2>/dev/null)"
+  out="$(python3 "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/hooks/py/lib_python_version.py" </dev/null 2>/dev/null)"
   rc=$?
   case "$out" in
     ''|*[!0-9.]*) echo "broken" ;;

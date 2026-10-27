@@ -1,7 +1,7 @@
 ---
 description: Cross-issue view - blockers, owed follow-ups, the digest
 argument-hint: "[--digest | --html <file>]"
-allowed-tools: Read, Write, Bash, Glob, Grep
+allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Bash(compass *), Glob, Grep
 ---
 
 # /compass:flow

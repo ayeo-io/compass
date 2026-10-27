@@ -1,6 +1,6 @@
 ---
 description: Write the code, red-green-refactor through the CLI
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 ---
 
 # /compass:implement

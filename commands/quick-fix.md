@@ -1,7 +1,7 @@
 ---
 description: Run the whole quick-fix approach for a small, safe change
 argument-hint: "<what needs fixing>"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 ---
 
 # /compass:quick-fix

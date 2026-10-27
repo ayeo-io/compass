@@ -1,6 +1,6 @@
 ---
 description: Acceptance criteria as BDD scenarios every role reads
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 ---
 
 # /compass:define

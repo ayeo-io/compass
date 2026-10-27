@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import pytest
 
+from tests.acceptance.hooks.dsl import HOOK_PARTS
+
 #: The checks whose Python can fail on its own, each with the code path it
 #: guards, as the person names them.
 CHECKS = {
@@ -21,8 +23,6 @@ CHECKS = {
     "acceptance criteria": "src/app.py",
     "red record": "src/app.py",
 }
-PARTS = ("pre-tool-project.sh", "pre-tool-guards.sh", "pre-tool-targets.sh",
-         "pre-tool-bash-writes.sh", "pre-tool-issue.sh", "pre-tool-checks.sh")
 
 
 # --- every check passes --------------------------------------------------------------
@@ -141,14 +141,14 @@ def test_hfm_3_a_shell_write_refusal_names_the_file_it_found(dsl):
     And an opted-in project
     And its settings file does not parse
     When the agent runs a command that writes a file its code globs would guard
-    Then the hook refuses, naming that file
+    Then the hook refuses as config-invalid, naming that file
     And it names no unknown target
     """
     dsl.install.isComplete()
     dsl.project.isOptedIn()
     dsl.project.hasSettingsThatDoNotParse()
     dsl.agent.runs("echo x > packaging/app.cfg")
-    dsl.hook.confirmRefused(naming="packaging/app.cfg")
+    dsl.hook.confirmRefused(code="config-invalid", naming="packaging/app.cfg")
     dsl.hook.confirmRefusalDoesNotSay("Edit target: ?")
 
 
@@ -177,14 +177,14 @@ def test_hfm_1_unreadable_settings_still_refuse(dsl):
     And it has no issues
     And its settings file cannot be read
     When the agent edits a code file
-    Then the hook refuses
+    Then the hook refuses as not-initialized
     """
     dsl.install.isComplete()
     dsl.project.isOptedIn()
     dsl.project.hasNoIssues()
     dsl.project.hasUnreadableSettings()
     dsl.agent.edits("src/app.py")
-    dsl.hook.confirmRefused()
+    dsl.hook.confirmRefused(code="not-initialized")
 
 
 # --- the issue's own records ---------------------------------------------------------
@@ -213,12 +213,12 @@ def test_hfm_1_a_missing_python_helper_refuses_in_a_project(dsl):
     Given an install missing its Python helper
     And an opted-in project
     When the agent edits a code file
-    Then the hook refuses, naming the helper
+    Then the hook refuses as reader-failed, naming the helper
     """
     dsl.install.isMissing("compass-python.sh")
     dsl.project.isOptedIn()
     dsl.agent.edits("src/app.py")
-    dsl.hook.confirmRefused(naming="compass-python.sh")
+    dsl.hook.confirmRefused(code="reader-failed", naming="compass-python.sh")
 
 
 def test_hfm_1_a_missing_python_helper_stays_silent_in_a_guest_repository(dsl):
@@ -247,7 +247,7 @@ def test_trc_a3_a_complete_install_allows_a_read_in_a_guest_repository(dsl):
     dsl.hook.confirmAllowed()
 
 
-@pytest.mark.parametrize("part", PARTS)
+@pytest.mark.parametrize("part", HOOK_PARTS)
 def test_trc_a3_a_missing_part_refuses_every_call(dsl, part):
     """
     Given an install missing one part of the hook
@@ -261,7 +261,7 @@ def test_trc_a3_a_missing_part_refuses_every_call(dsl, part):
     dsl.hook.confirmRefused(code="reader-failed", naming=part)
 
 
-@pytest.mark.parametrize("part", PARTS)
+@pytest.mark.parametrize("part", HOOK_PARTS)
 def test_trc_a3_an_unreadable_part_refuses_every_call(dsl, part):
     """
     Given an install with one part of the hook it cannot read
@@ -282,10 +282,10 @@ def test_trc_a3_an_unreadable_helper_still_refuses_a_code_edit(dsl, helper):
     And an opted-in project
     And it has no issues
     When the agent edits a code file
-    Then the hook refuses
+    Then the hook refuses as not-initialized
     """
     dsl.install.hasUnreadable(helper)
     dsl.project.isOptedIn()
     dsl.project.hasNoIssues()
     dsl.agent.edits("src/app.py")
-    dsl.hook.confirmRefused()
+    dsl.hook.confirmRefused(code="not-initialized")

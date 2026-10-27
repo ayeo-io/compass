@@ -5068,3 +5068,9 @@ Compass's own hook refusal tests run through both the Claude Code and the Codex 
 - `TRC-P3` a change to the hook's layout changes only the driver
 - `TRC-P4` the suite runs in parallel and twice
 - `TRC-P5` the note measures the result
+
+### atdd-pilot-follow-ups (completed 2026-10-27)
+
+Each hook refusal test names the refusal code it expects.
+
+- `TRC-001` Given the hook refusal specifications When each checks a refusal Then each names a refusal code

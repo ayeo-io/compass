@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from tests.acceptance.hooks.alias import Aliases
 from tests.acceptance.hooks.drivers import driver_for
+from tests.acceptance.hooks.drivers.base import HOOK_PARTS  # noqa: F401  (for the specifications)
 
 #: The issue a scenario works on when it names none.
 DEFAULT_ISSUE = "matrix"
@@ -95,7 +96,7 @@ class Hook(_Part):
     def confirmAllowedSilently(self):
         self._driver.confirmAllowed(silently=True)
 
-    def confirmRefused(self, code=None, naming=None):
+    def confirmRefused(self, code, naming=None):
         self._driver.confirmRefused(code, naming)
 
     def confirmRefusalSays(self, text):

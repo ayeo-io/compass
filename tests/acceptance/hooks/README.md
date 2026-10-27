@@ -39,5 +39,5 @@ Only the first kind is client-observable. With those scenarios on the drivers, t
 ayeo-io/compass-delivery#307, in the private delivery record, proposes making the four-layer model a Compass strategy for the projects Compass governs, for changes a real client can observe.
 
 - **For Compass's own tests, do not extend the model further.** Most of the churn comes from tests that read the hook's source or check its internals on purpose. The model does not reach either kind; a shared helper such as `tests/hook_text.py` already confines most of the source-reading change.
-- **For the projects Compass governs, the model is worth it where the behaviour is client-observable**, which is the scope #307 already sets. The specifications and the DSL survived a layout change unchanged, and the same specifications ran through two clients and found a real gap in one of them.
+- **For the projects Compass governs, the model is worth it where the behavior is client-observable**, which is the scope #307 already sets. The specifications and the DSL survived a layout change unchanged, and the same specifications ran through two clients and found a real gap in one of them.
 - **Before #307 adds checks, settle the two Compass gaps above:** a review form for stages 2 and 3, and a way to record an import red.

@@ -70,6 +70,17 @@ def test_trc_p1_each_specification_is_one_dsl_call_per_step(function):
         f"{function.name}: {steps} Given/When/Then lines, {len(calls)} DSL calls")
 
 
+def test_trc_p1_every_refusal_check_names_a_code():
+    # The Codex adapter turns a hook that crashes into a refusal with no code,
+    # so a check that names no code passes on a crash.
+    bare = [f"{function.name} line {node.lineno}" for function in _spec_functions()
+            for node in ast.walk(function)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "confirmRefused"
+            and not any(k.arg == "code" for k in node.keywords)]
+    assert not bare, f"refusal checks that name no code: {bare}"
+
+
 class _PartsElsewhere(ClaudeCodeDriver):
     """A driver for a hook that keeps its parts in hooks/parts/, not hooks/lib/.
     The only change a move like that needs in the acceptance suite."""

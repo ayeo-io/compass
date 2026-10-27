@@ -28,6 +28,8 @@ INSTALL_PARTS = {
     "pre-tool-issue.sh": "hooks/lib/pre-tool-issue.sh",
     "pre-tool-checks.sh": "hooks/lib/pre-tool-checks.sh",
 }
+#: The parts of the hook itself, which the hook checks before it sources any.
+HOOK_PARTS = tuple(name for name in INSTALL_PARTS if name.startswith("pre-tool-"))
 
 #: Each check whose Python can fail on its own: a line only its program holds,
 #: and the words its refusal names it by.
@@ -212,10 +214,13 @@ exec /usr/bin/mktemp "$@"
 
     def confirmRefused(self, code, naming):
         said = self._said()
+        # Claude Code blocks a tool call only on exit 2. Any other non-zero exit
+        # is reported and the call goes ahead, so a hook that refuses with
+        # exit 1 has allowed the call.
         if self.result.returncode != 2:
             raise AssertionError(
                 f"Expected the call refused (exit 2), found exit {self.result.returncode}: {said}")
-        if code and f"[{code}]" not in said:
+        if f"[{code}]" not in said:
             raise AssertionError(f"Expected refusal code [{code}], found: {said}")
         if naming:
             words = CHECKS[naming][1] if naming in CHECKS else NAMES.get(naming, naming)

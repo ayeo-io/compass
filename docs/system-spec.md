@@ -5080,3 +5080,9 @@ Each hook refusal test names the refusal code it expects.
 compass policy migrate recognizes governance copied from 8.0.1.
 
 - `TRC-001` Given the v8.0.1 tag is pushed When the generator runs its stale check Then it reports no stale release
+
+### hooks-readable-commands (completed 2026-10-27)
+
+The plugin directory validator can read every command the pre-tool and post-tool hooks run.
+
+- `TRC-001` Given the pre-tool and post-tool hook scripts When a command's output is used Then the command is assigned first or stands on its own line, and no command sits inside a double-quoted string

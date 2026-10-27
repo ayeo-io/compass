@@ -7,6 +7,7 @@ environment it needs.
 | `TRC-A1` | no hook script holds a here-document or an inline Python program |
 | `TRC-A2` | no hook script is longer than the validator reads in full |
 | `TRC-A3` | a moved program reads the hook's standard input only where it did |
+| `TRC-A4` | no entry hook runs a command inside a double-quoted string |
 | `TRC-B1` | no command pre-approves bare `Bash` |
 | `TRC-B2` | a command that writes only issue state writes only there |
 | `TRC-B3` | a command that runs a `compass` verb pre-approves `compass` |
@@ -74,6 +75,59 @@ def test_trc_a2_no_hook_script_is_too_long():
     long = [f"{p.relative_to(ROOT)}: {n} lines" for p in _scripts()
             if (n := len(p.read_text(encoding="utf-8").splitlines())) > LONGEST]
     assert not long, "\n".join(long)
+
+
+#: The hooks the validator reads as entry points. It cannot read a command
+#: inside a double-quoted string, such as `x="$(cmd)"` or
+#: `"$(dirname "$(dirname "$d")")"`, so it refused both as running a program
+#: it cannot name (UNPINNED_NPX on the 8.0.1 copy).
+ENTRY_HOOKS = ("pre-tool.sh", "post-tool.sh")
+
+
+def _commands_inside_quotes(text):
+    """How many `$(` start inside a double-quoted string. Inside `$(...)`
+    quoting starts again, so the stack holds each context in turn."""
+    stack, found, i = [], 0, 0
+    while i < len(text):
+        c, top = text[i], (stack[-1] if stack else None)
+        if top == "'":
+            if c == "'":
+                stack.pop()
+        elif c == "\\":
+            i += 1
+        elif c == "$" and text[i + 1:i + 2] == "(":
+            found += top == '"'
+            stack.append("$(")
+            i += 1
+        elif top == '"':
+            if c == '"':
+                stack.pop()
+        elif c in "'\"":
+            stack.append(c)
+        elif c == "(":
+            stack.append("(")
+        elif c == ")" and top in ("$(", "("):
+            stack.pop()
+        i += 1
+    return found
+
+
+def test_trc_a4_no_entry_hook_runs_a_command_inside_a_quoted_string():
+    found = []
+    for name in ENTRY_HOOKS:
+        path = ROOT / "hooks" / name
+        for number, command in _commands_in(path):
+            if _commands_inside_quotes(command):
+                found.append(f"hooks/{name}:{number}: {command.strip()}")
+    assert not found, "\n".join(found)
+
+
+def test_trc_a4_the_quote_reader_finds_a_command_inside_quotes():
+    assert _commands_inside_quotes('x="$(cmd)"') == 1
+    assert _commands_inside_quotes('x="$(cd "$(dirname "$d")" && pwd)"') == 2
+    assert _commands_inside_quotes('x=$(cd "$(dirname "$d")" && pwd)') == 1
+    assert _commands_inside_quotes("x=$(printf '%s' \"$y\" | jq -r '.a')") == 0
+    assert _commands_inside_quotes("echo '\"$(not run)\"'") == 0
 
 
 #: Programs that read the hook's own standard input, as the `-c` program they

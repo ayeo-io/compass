@@ -93,7 +93,8 @@ TASK_DIR=""
 # the runtime lets through. Without it, a stand-in answers every reader with
 # exit 3 and a reason, so an opted-in project refuses and names the file, and
 # a repository that never opted in reaches its silent exit 0 as before.
-HOOK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+_hook_dir=$(dirname "${BASH_SOURCE[0]}")
+HOOK_ROOT=$(cd "$_hook_dir/.." && pwd)
 COMPASS_PYTHON_SH="$HOOK_ROOT/scripts/lib/compass-python.sh"
 if [ -f "$COMPASS_PYTHON_SH" ] && [ -r "$COMPASS_PYTHON_SH" ]; then
   source "$COMPASS_PYTHON_SH"
@@ -138,7 +139,7 @@ emit_refusal() {
   local code="$1"; shift
   local out status
   set +e
-  out="$(compass_python "$HOOK_ROOT/hooks/py/pre_tool_render_refusal.py" "$code" "$@" 2>&1 </dev/null)"
+  out=$(compass_python "$HOOK_ROOT/hooks/py/pre_tool_render_refusal.py" "$code" "$@" 2>&1 </dev/null)
   status=$?
   if [ "$status" -ne 0 ] || [ -z "$out" ]; then
     # The render failed. The refusal keeps its three lines and its code so
@@ -179,7 +180,11 @@ compass_block() {
 # must never change the block it counts.
 compass_count_block() {
   [ -n "${TASK_DIR:-}" ] && [ -d "$TASK_DIR" ] || return 0
-  compass_python "$HOOK_ROOT/hooks/py/pre_tool_count_block.py" "$(dirname "$(dirname "$TASK_DIR")")" "$(basename "$TASK_DIR")" \
+  local issues_dir project_dir issue
+  issues_dir=$(dirname "$TASK_DIR")
+  project_dir=$(dirname "$issues_dir")
+  issue=$(basename "$TASK_DIR")
+  compass_python "$HOOK_ROOT/hooks/py/pre_tool_count_block.py" "$project_dir" "$issue" \
     >/dev/null 2>&1 </dev/null
   return 0
 }
@@ -194,7 +199,7 @@ compass_reader_failed() {
   local reader="$1" status="$2" errfile="${3:-}" settings_name="${4:-}"
   local target="${TARGET:-${candidate:-?}}" tool="${TOOL:-?}" errline=""
   if [ -n "$errfile" ] && [ -s "$errfile" ]; then
-    errline="$(sed -n '1p' "$errfile")"
+    errline=$(sed -n '1p' "$errfile")
   fi
   set +e
   if [ "$status" = "tmp" ]; then
@@ -221,23 +226,23 @@ compass_reader_failed() {
 }
 
 # --- read the tool call from stdin ------------------------------------------
-INPUT="$(cat || true)"
+INPUT=$(cat || true)
 
 # Pull the target file path out of the JSON. Prefer jq; fall back to grep so the
 # hook still works on a machine without jq installed.
 if command -v jq >/dev/null 2>&1; then
-  TARGET="$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null || true)"
-  TOOL="$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)"
-  SESSION_ID="$(printf '%s' "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)"
-  COMMAND="$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)"
-  TRANSCRIPT="$(printf '%s' "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null || true)"
+  TARGET=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null || true)
+  TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
+  SESSION_ID=$(printf '%s' "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)
+  COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
+  TRANSCRIPT=$(printf '%s' "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null || true)
 else
   # A JSON string runs to the first quote that no backslash escapes, so a
   # command such as `bash -c "..."` is read in full, as jq reads it. The
   # bracket expression `[^"\\]` means the same to BSD and GNU grep.
   _json_string() {
     local found
-    found="$(printf '%s' "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*\"([^\"\\\\]|\\\\.)*\"" | head -n1 | sed -E 's/^"[^"]*"[[:space:]]*:[[:space:]]*"(.*)"$/\1/' || true)"
+    found=$(printf '%s' "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*\"([^\"\\\\]|\\\\.)*\"" | head -n1 | sed -E 's/^"[^"]*"[[:space:]]*:[[:space:]]*"(.*)"$/\1/' || true)
     # Undo the JSON escapes jq would undo. A doubled backslash is held as a
     # control character first, so `\\"` reads as a backslash and a quote.
     found="${found//\\\\/$'\001'}"
@@ -248,14 +253,14 @@ else
     found="${found//$'\001'/\\}"
     printf '%s' "$found"
   }
-  TARGET="$(_json_string file_path)"
+  TARGET=$(_json_string file_path)
   # A Grep names its folder as `path`, as jq's `// .tool_input.path` reads it.
   # The opening quote keeps `"transcript_path"` from matching.
-  [ -n "$TARGET" ] || TARGET="$(_json_string path)"
-  TRANSCRIPT="$(_json_string transcript_path)"
-  SESSION_ID="$(_json_string session_id)"
-  TOOL="$(_json_string tool_name)"
-  COMMAND="$(_json_string command)"
+  [ -n "$TARGET" ] || TARGET=$(_json_string path)
+  TRANSCRIPT=$(_json_string transcript_path)
+  SESSION_ID=$(_json_string session_id)
+  TOOL=$(_json_string tool_name)
+  COMMAND=$(_json_string command)
 fi
 
 # --- the rest of the hook, in parts ------------------------------------------

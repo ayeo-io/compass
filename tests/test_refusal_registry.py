@@ -23,6 +23,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from tests.path_folder import link_programs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
@@ -280,12 +281,7 @@ def _no_python_path(root):
     """A PATH holding every tool in /usr/bin and /bin except python."""
     bare = root / "barebin"
     bare.mkdir(exist_ok=True)
-    for d in ("/usr/bin", "/bin"):
-        for name in os.listdir(d):
-            if name.startswith("python") or (bare / name).exists():
-                continue
-            (bare / name).symlink_to(os.path.join(d, name))
-    return str(bare)
+    return link_programs(bare, lambda name: name.startswith("python"))
 
 
 @pytest.mark.parametrize("target", ["src/app.py", "packaging/app.cfg"])

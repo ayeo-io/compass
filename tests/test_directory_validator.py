@@ -152,10 +152,11 @@ def _single_quoted(line):
 
 
 def test_trc_a5_no_entry_hook_leaves_a_double_quote_unpaired():
-    """The validator still blocked the 8.0.2 copy after TRC-A4. The only lines
-    the two blocked hooks hold and the passing hooks do not are grep and sed
-    patterns such as `'"tool_name"...[^"]*"'`: a reader that pairs those
-    quotes reads the `| head | sed` after them as text in a string."""
+    """The validator still blocked the 8.0.2 copy once no command sat in a
+    double-quoted string. The only lines the two blocked hooks hold and the
+    passing hooks do not are grep and sed patterns such as
+    `'"tool_name"...[^"]*"'`: a reader that pairs those quotes reads the
+    `| head | sed` after them as text in a string."""
     found = []
     for name in ENTRY_HOOKS:
         for number, line in _code_lines(ROOT / "hooks" / name):

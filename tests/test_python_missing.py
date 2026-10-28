@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 from hook_text import hook_text  # noqa: E402
+from tests.path_folder import link_programs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SESSION_HOOK = ROOT / "hooks" / "session-start.sh"
@@ -60,11 +61,7 @@ def _full_toolbin(tmp_path: Path, python_body: str | None) -> Path:
     jq = shutil.which("jq")
     if jq:
         (d / "jq").symlink_to(jq)
-    for base in dirs:
-        for entry in sorted(Path(base).iterdir()):
-            if entry.name.startswith("python") or (d / entry.name).exists():
-                continue
-            (d / entry.name).symlink_to(entry)
+    link_programs(d, lambda name: name.startswith("python"), dirs)
     if python_body is not None:
         stub = d / "python3"
         stub.write_text("#!/bin/sh\n" + python_body + "\n")

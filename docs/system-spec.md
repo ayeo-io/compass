@@ -5111,8 +5111,14 @@ Compass 8.0.3: the plugin directory reads the pre-tool and post-tool hooks.
 
 - `TRC-001` Given the version is bumped When the version consistency test reads every place that states it Then each says 8.0.3
 
-### plugin-listing-links (completed 2026-10-28)
+### shipped-releases-v8-0-3 (completed 2026-10-28)
 
-The plugin directory listing links Compass's privacy policy, terms of service and support pages.
+compass policy migrate recognizes governance copied from 8.0.3.
 
-- `TRC-001` Given the plugin manifest When the directory reads its listing links Then it finds the privacy, terms and support pages on ayeo.io
+- `TRC-001` Given the v8.0.3 tag is pushed When the generator runs its stale check Then it reports no stale release
+
+### path-helpers-broken-links (completed 2026-10-28)
+
+The test suite passes on GitHub's current Ubuntu runner image, which holds a broken link in both /usr/bin and /bin.
+
+- `TRC-001` Given two program folders that both hold a broken link with one name When the helper links every program into one folder Then it links the name once and raises no error

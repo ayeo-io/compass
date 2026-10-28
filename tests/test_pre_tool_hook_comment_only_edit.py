@@ -26,6 +26,7 @@ import time
 from pathlib import Path
 
 import pytest
+from tests.path_folder import link_programs  # noqa: E402
 
 from test_session_issue import _issue
 from hook_text import copy_hooks, hook_text  # noqa: E402
@@ -428,12 +429,7 @@ def _path_without_python(tmp_path):
     """A PATH that holds every tool of /usr/bin and /bin except python."""
     bare = tmp_path / "barebin"
     bare.mkdir()
-    for d in ("/usr/bin", "/bin"):
-        for name in os.listdir(d):
-            if name.startswith("python") or (bare / name).exists():
-                continue
-            (bare / name).symlink_to(os.path.join(d, name))
-    return str(bare)
+    return link_programs(bare, lambda name: name.startswith("python"))
 
 
 def test_missing_python3_refuses_a_comment_edit(tmp_path):

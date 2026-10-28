@@ -34,6 +34,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from tests.path_folder import link_programs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
@@ -409,12 +410,7 @@ def _path_without_jq(tmp_path):
     d = tmp_path / "nojq"
     d.mkdir()
     (d / "python3").symlink_to(sys.executable)
-    for base in ("/usr/bin", "/bin"):
-        for entry in sorted(Path(base).iterdir()):
-            if entry.name == "jq" or entry.name.startswith("python") or (d / entry.name).exists():
-                continue
-            (d / entry.name).symlink_to(entry)
-    return str(d)
+    return link_programs(d, lambda name: name == "jq" or name.startswith("python"))
 
 
 def test_d3_grep_path_read_without_jq(guarded, home, tmp_path):

@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from tests.path_folder import link_programs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[4]
 
@@ -148,12 +149,7 @@ class HookDriverBase:
     def hasNoPython(self):
         bare = self.workspace / "barebin"
         bare.mkdir(exist_ok=True)
-        for folder in ("/usr/bin", "/bin"):
-            for name in os.listdir(folder):
-                if name.startswith("python") or (bare / name).exists():
-                    continue
-                (bare / name).symlink_to(os.path.join(folder, name))
-        self.path = str(bare)
+        self.path = link_programs(bare, lambda name: name.startswith("python"))
 
     def hasPythonThatFailsFor(self, check, status):
         line = CHECKS[check][0].replace("'", "'\\''")

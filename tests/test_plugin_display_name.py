@@ -54,3 +54,13 @@ def test_trc_001_the_marketplace_entry_is_findable():
         assert word in plugin["keywords"], word
     assert entry["keywords"] == plugin["keywords"]
     assert entry["tags"]
+
+
+def test_trc_001_the_listing_names_its_privacy_terms_and_support_pages():
+    """The directory's listing step shows "Not set" for each link the
+    manifest leaves out. The pages are on ayeo.io, with the trailing slash:
+    without it each address answers with a redirect."""
+    plugin, _, _, _ = _manifests()
+    assert plugin["privacyPolicyUrl"] == "https://ayeo.io/privacy/"
+    assert plugin["termsOfServiceUrl"] == "https://ayeo.io/terms/"
+    assert plugin["supportUrl"] == "https://ayeo.io/support/"

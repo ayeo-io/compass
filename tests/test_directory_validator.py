@@ -8,6 +8,7 @@ environment it needs.
 | `TRC-A2` | no hook script is longer than the validator reads in full |
 | `TRC-A3` | a moved program reads the hook's standard input only where it did |
 | `TRC-A4` | no entry hook runs a command inside a double-quoted string |
+| `TRC-A5` | no entry hook leaves a double quote unpaired inside a single-quoted string |
 | `TRC-B1` | no command pre-approves bare `Bash` |
 | `TRC-B2` | a command that writes only issue state writes only there |
 | `TRC-B3` | a command that runs a `compass` verb pre-approves `compass` |
@@ -21,6 +22,7 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -128,6 +130,81 @@ def test_trc_a4_the_quote_reader_finds_a_command_inside_quotes():
     assert _commands_inside_quotes('x=$(cd "$(dirname "$d")" && pwd)') == 1
     assert _commands_inside_quotes("x=$(printf '%s' \"$y\" | jq -r '.a')") == 0
     assert _commands_inside_quotes("echo '\"$(not run)\"'") == 0
+
+
+def _single_quoted(line):
+    """Each single-quoted string on the line, as the shell reads it."""
+    i, in_double = 0, False
+    while i < len(line):
+        c = line[i]
+        if c == "\\":
+            i += 2
+            continue
+        if c == '"':
+            in_double = not in_double
+        elif c == "'" and not in_double:
+            end = line.find("'", i + 1)
+            if end < 0:
+                return
+            yield line[i + 1:end]
+            i = end
+        i += 1
+
+
+def test_trc_a5_no_entry_hook_leaves_a_double_quote_unpaired():
+    """The validator still blocked the 8.0.2 copy after TRC-A4. The only lines
+    the two blocked hooks hold and the passing hooks do not are grep and sed
+    patterns such as `'"tool_name"...[^"]*"'`: a reader that pairs those
+    quotes reads the `| head | sed` after them as text in a string."""
+    found = []
+    for name in ENTRY_HOOKS:
+        for number, line in _code_lines(ROOT / "hooks" / name):
+            if any(s.count('"') % 2 for s in _single_quoted(line)):
+                found.append(f"hooks/{name}:{number}: {line.strip()}")
+    assert not found, "\n".join(found)
+
+
+def test_trc_a5_the_reader_finds_an_unpaired_quote():
+    def odd(line):
+        return [s for s in _single_quoted(line) if s.count('"') % 2]
+    assert odd("""grep -oE '"a":"[^"]*"' | head""") == ['"a":"[^"]*"']
+    assert odd("""printf '{"a": "%s"}' "$x\"" """) == []
+    assert odd("""x="it's" y='"'""") == ['"']
+    assert odd("""dq=\\" grep -oE "${dq}a${dq}" """) == []
+
+
+def _path_without_jq(tmp_path):
+    """Every tool in /usr/bin and /bin except jq."""
+    d = tmp_path / "nojq"
+    d.mkdir()
+    for base in ("/usr/bin", "/bin"):
+        for entry in sorted(Path(base).iterdir()):
+            if entry.name != "jq" and not (d / entry.name).exists():
+                (d / entry.name).symlink_to(entry)
+    return str(d)
+
+
+def test_trc_a5_post_tool_reads_the_call_without_jq(tmp_path):
+    """The post-tool hook's own patterns read the tool name and path when jq
+    is missing, as jq would: an edit is logged and a Bash call is not."""
+    project = tmp_path / "proj"
+    task = project / ".compass" / "work" / "logged"
+    task.mkdir(parents=True)
+    (project / ".compass" / "current-task").write_text("logged\n")
+    (task / "devlog.md").write_text("# Devlog\n")
+    (project / "src").mkdir()
+    path = _path_without_jq(tmp_path)
+    env = {"PATH": path, "HOME": str(tmp_path), "CLAUDE_PROJECT_DIR": str(project)}
+    for tool, tool_input in (("Bash", {"command": "ls"}),
+                             ("Edit", {"file_path": str(project / "src" / "app.py")})):
+        payload = '{"tool_name": "%s", "tool_input": %s}' % (
+            tool, str(tool_input).replace("'", '"'))
+        r = subprocess.run(["bash", str(ROOT / "hooks" / "post-tool.sh")], input=payload,
+                           text=True, capture_output=True, cwd=str(project), env=env)
+        assert r.returncode == 0, r.stderr
+    log = (task / "devlog.md").read_text()
+    assert log.count("edit:") == 1, log
+    assert "edit: src/app.py" in log and "**Tool:** Edit" in log, log
 
 
 #: Programs that read the hook's own standard input, as the `-c` program they

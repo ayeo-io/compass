@@ -43,10 +43,14 @@ INPUT=$(cat || true)
 # devlog line, so this branch ends the hook.
 _hook_dir=$(dirname "${BASH_SOURCE[0]}")
 HOOK_ROOT=$(cd "$_hook_dir/.." && pwd)
+# The patterns that read the call without jq name a double quote as $dq, so
+# no single-quoted string holds an unpaired one; with one, the plugin directory's
+# validator would read the rest of the line as text in a string.
+dq=\"
 if command -v jq >/dev/null 2>&1; then
   _tool=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
 else
-  _tool=$(printf '%s' "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)
+  _tool=$(printf '%s' "$INPUT" | grep -oE "${dq}tool_name${dq}[[:space:]]*:[[:space:]]*${dq}[^${dq}]*${dq}" | head -n1 | sed -E "s/.*:[[:space:]]*${dq}([^${dq}]*)${dq}/\\1/" || true)
 fi
 if [ "$_tool" = "Bash" ]; then
   case "$INPUT" in
@@ -91,8 +95,8 @@ if command -v jq >/dev/null 2>&1; then
   TARGET=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null || true)
   TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
 else
-  TARGET=$(printf '%s' "$INPUT" | grep -oE '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)
-  TOOL=$(printf '%s' "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)
+  TARGET=$(printf '%s' "$INPUT" | grep -oE "${dq}file_path${dq}[[:space:]]*:[[:space:]]*${dq}[^${dq}]*${dq}" | head -n1 | sed -E "s/.*:[[:space:]]*${dq}([^${dq}]*)${dq}/\\1/" || true)
+  TOOL=$(printf '%s' "$INPUT" | grep -oE "${dq}tool_name${dq}[[:space:]]*:[[:space:]]*${dq}[^${dq}]*${dq}" | head -n1 | sed -E "s/.*:[[:space:]]*${dq}([^${dq}]*)${dq}/\\1/" || true)
 fi
 [ -z "${TARGET:-}" ] && exit 0
 

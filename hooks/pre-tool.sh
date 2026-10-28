@@ -241,8 +241,9 @@ else
   # command such as `bash -c "..."` is read in full, as jq reads it. The
   # bracket expression `[^"\\]` means the same to BSD and GNU grep.
   _json_string() {
-    local found
-    found=$(printf '%s' "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*\"([^\"\\\\]|\\\\.)*\"" | head -n1 | sed -E 's/^"[^"]*"[[:space:]]*:[[:space:]]*"(.*)"$/\1/' || true)
+    # $dq is a double quote: see the same name in hooks/post-tool.sh.
+    local found dq=\"
+    found=$(printf '%s' "$INPUT" | grep -oE "${dq}$1${dq}[[:space:]]*:[[:space:]]*${dq}([^${dq}\\\\]|\\\\.)*${dq}" | head -n1 | sed -E "s/^${dq}[^${dq}]*${dq}[[:space:]]*:[[:space:]]*${dq}(.*)${dq}\$/\\1/" || true)
     # Undo the JSON escapes jq would undo. A doubled backslash is held as a
     # control character first, so `\\"` reads as a backslash and a quote.
     found="${found//\\\\/$'\001'}"

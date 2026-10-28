@@ -241,16 +241,25 @@ else
   # command such as `bash -c "..."` is read in full, as jq reads it. The
   # bracket expression `[^"\\]` means the same to BSD and GNU grep.
   _json_string() {
-    local found
-    found=$(printf '%s' "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*\"([^\"\\\\]|\\\\.)*\"" | head -n1 | sed -E 's/^"[^"]*"[[:space:]]*:[[:space:]]*"(.*)"$/\1/' || true)
+    # The plugin directory's validator blocks a hook that nests a quote inside
+    # a double-quoted string, so each quote and escape is named once here and
+    # every expansion below stays outside double quotes.
+    local found _bs _q _sl _tab _nl _ctl
+    _bs=\\
+    _q=\"
+    _sl=/
+    _tab=$'\t'
+    _nl=$'\n'
+    _ctl=$'\001'
+    found=$(printf '%s' "$INPUT" | grep -oE "${_q}$1${_q}[[:space:]]*:[[:space:]]*${_q}([^${_q}\\\\]|\\\\.)*${_q}" | head -n1 | sed -E 's/^"[^"]*"[[:space:]]*:[[:space:]]*"(.*)"$/\1/' || true)
     # Undo the JSON escapes jq would undo. A doubled backslash is held as a
     # control character first, so `\\"` reads as a backslash and a quote.
-    found="${found//\\\\/$'\001'}"
-    found="${found//\\\"/\"}"
-    found="${found//\\\//\/}"
-    found="${found//\\t/$'\t'}"
-    found="${found//\\n/$'\n'}"
-    found="${found//$'\001'/\\}"
+    found=${found//"$_bs$_bs"/"$_ctl"}
+    found=${found//"$_bs$_q"/"$_q"}
+    found=${found//"$_bs$_sl"/"$_sl"}
+    found=${found//"${_bs}t"/"$_tab"}
+    found=${found//"${_bs}n"/"$_nl"}
+    found=${found//"$_ctl"/"$_bs"}
     printf '%s' "$found"
   }
   TARGET=$(_json_string file_path)

@@ -5092,3 +5092,9 @@ The plugin directory validator can read every command the pre-tool and post-tool
 Compass 8.0.2: the plugin directory validator can read every hook command.
 
 - `TRC-001` Given the version is bumped When the version consistency test reads every place that states it Then each says 8.0.2
+
+### hooks-quote-balanced (completed 2026-10-28)
+
+The plugin directory can read the pre-tool and post-tool hooks' patterns for a machine without jq.
+
+- `TRC-001` Given the pre-tool and post-tool hooks When a reader pairs the double quotes inside each single-quoted string Then no string leaves a double quote unpaired, and both hooks still read the tool call without jq

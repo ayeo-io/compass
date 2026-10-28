@@ -5098,3 +5098,9 @@ Compass 8.0.2: the plugin directory validator can read every hook command.
 compass policy migrate recognizes governance copied from 8.0.2.
 
 - `TRC-001` Given the v8.0.2 tag is pushed When the generator runs its stale check Then it reports no stale release
+
+### hooks-no-nested-quotes (completed 2026-10-28)
+
+The plugin directory reads every command in the pre-tool and post-tool hooks; without jq, the pre-tool hook decodes \/ on macOS as jq does.
+
+- `TRC-001` Given the pre-tool and post-tool hooks When a reader looks for a quote inside a double-quoted string Then it finds none, and without jq a path written with escaped slashes is still read as that path

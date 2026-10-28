@@ -5110,3 +5110,9 @@ The plugin directory reads every command in the pre-tool and post-tool hooks; wi
 Compass 8.0.3: the plugin directory reads the pre-tool and post-tool hooks.
 
 - `TRC-001` Given the version is bumped When the version consistency test reads every place that states it Then each says 8.0.3
+
+### path-helpers-broken-links (completed 2026-10-28)
+
+The test suite passes on GitHub's current Ubuntu runner image, which holds a broken link in both /usr/bin and /bin.
+
+- `TRC-001` Given two program folders that both hold a broken link with one name When the helper links every program into one folder Then it links the name once and raises no error

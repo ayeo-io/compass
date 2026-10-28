@@ -5098,3 +5098,9 @@ Compass 8.0.2: the plugin directory validator can read every hook command.
 compass policy migrate recognizes governance copied from 8.0.2.
 
 - `TRC-001` Given the v8.0.2 tag is pushed When the generator runs its stale check Then it reports no stale release
+
+### hooks-source-literal (completed 2026-10-28)
+
+The plugin directory can name the functions the pre-tool and post-tool hooks call.
+
+- `TRC-001` Given an entry hook that calls compass_python or compass_has_settings_file When a reader looks for where the function comes from Then the hook sets HOOK_ROOT with the form stop.sh uses and loads the helper with source and a literal path under HOOK_ROOT

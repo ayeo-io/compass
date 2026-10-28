@@ -5110,3 +5110,9 @@ The plugin directory reads every command in the pre-tool and post-tool hooks; wi
 Compass 8.0.3: the plugin directory reads the pre-tool and post-tool hooks.
 
 - `TRC-001` Given the version is bumped When the version consistency test reads every place that states it Then each says 8.0.3
+
+### plugin-listing-links (completed 2026-10-28)
+
+The plugin directory listing links Compass's privacy policy, terms of service and support pages.
+
+- `TRC-001` Given the plugin manifest When the directory reads its listing links Then it finds the privacy, terms and support pages on ayeo.io

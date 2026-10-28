@@ -1,7 +1,7 @@
 {
   "name": "compass",
   "displayName": "Compass",
-  "version": "8.0.3",
+  "version": "8.0.4",
   "description": "Enough process for the work at hand. No more. Compass assesses each piece of work by risk, familiarity and size, then picks the approach to match: what to write, what to check, and when to ask a human. A typo fix stays light. A payments rewrite gets specs, tests and review. Five default guardrails apply to all work that ships code, such as a passing test for each change.",
   "author": {
     "name": "ayeo",
@@ -9,6 +9,9 @@
   },
   "homepage": "https://ayeo.io/#compass",
   "repository": "https://github.com/ayeo-io/compass",
+  "privacyPolicyUrl": "https://ayeo.io/privacy/",
+  "termsOfServiceUrl": "https://ayeo.io/terms/",
+  "supportUrl": "https://ayeo.io/support/",
   "license": "Apache-2.0",
   "icon": "assets/compass-icon.png",
   "keywords": [

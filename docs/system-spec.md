@@ -5092,3 +5092,9 @@ The plugin directory validator can read every command the pre-tool and post-tool
 Compass 8.0.2: the plugin directory validator can read every hook command.
 
 - `TRC-001` Given the version is bumped When the version consistency test reads every place that states it Then each says 8.0.2
+
+### shipped-releases-v8-0-2 (completed 2026-10-28)
+
+compass policy migrate recognizes governance copied from 8.0.2.
+
+- `TRC-001` Given the v8.0.2 tag is pushed When the generator runs its stale check Then it reports no stale release

@@ -5128,3 +5128,9 @@ The plugin directory listing links Compass's privacy policy, terms of service an
 The test suite passes on GitHub's current Ubuntu runner image, which holds a broken link in both /usr/bin and /bin.
 
 - `TRC-001` Given two program folders that both hold a broken link with one name When the helper links every program into one folder Then it links the name once and raises no error
+
+### release-8-0-4 (completed 2026-10-28)
+
+Compass 8.0.4: the plugin directory listing links the privacy policy, terms of service and support pages.
+
+- `TRC-001` Given the version is bumped When the version consistency test reads every place that states it Then each says 8.0.4

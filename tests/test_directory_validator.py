@@ -8,6 +8,7 @@ environment it needs.
 | `TRC-A2` | no hook script is longer than the validator reads in full |
 | `TRC-A3` | a moved program reads the hook's standard input only where it did |
 | `TRC-A4` | no entry hook runs a command inside a double-quoted string |
+| `TRC-A5` | no entry hook nests a quote inside a double-quoted string |
 | `TRC-B1` | no command pre-approves bare `Bash` |
 | `TRC-B2` | a command that writes only issue state writes only there |
 | `TRC-B3` | a command that runs a `compass` verb pre-approves `compass` |
@@ -128,6 +129,59 @@ def test_trc_a4_the_quote_reader_finds_a_command_inside_quotes():
     assert _commands_inside_quotes('x=$(cd "$(dirname "$d")" && pwd)') == 1
     assert _commands_inside_quotes("x=$(printf '%s' \"$y\" | jq -r '.a')") == 0
     assert _commands_inside_quotes("echo '\"$(not run)\"'") == 0
+
+
+def _quotes_inside_quotes(text):
+    """How many quotes sit inside a double-quoted string: an escaped `\\"`, a
+    `$'...'` string, or a quote inside a `${...}` expansion. The validator
+    still blocked the 8.0.2 copy once no command sat in a double-quoted
+    string; a test branch that rewrote only such lines in the two entry hooks
+    passed it."""
+    stack, found, i = [], 0, 0
+    while i < len(text):
+        c, top = text[i], (stack[-1] if stack else None)
+        if top == "'":
+            if c == "'":
+                stack.pop()
+        elif top == "${":
+            if c in "\"'":
+                found += 1
+            elif c == "}":
+                stack.pop()
+        elif c == "\\":
+            found += top == '"' and text[i + 1:i + 2] == '"'
+            i += 1
+        elif top == '"':
+            if c == '"':
+                stack.pop()
+            elif c == "$" and text[i + 1:i + 2] == "'":
+                found += 1
+            elif c == "$" and text[i + 1:i + 2] == "{":
+                stack.append("${")
+                i += 1
+        elif c in "'\"":
+            stack.append(c)
+        i += 1
+    return found
+
+
+def test_trc_a5_no_entry_hook_nests_a_quote_inside_a_quoted_string():
+    found = []
+    for name in ENTRY_HOOKS:
+        for number, command in _commands_in(ROOT / "hooks" / name):
+            if _quotes_inside_quotes(command):
+                found.append(f"hooks/{name}:{number}: {command.strip()}")
+    assert not found, "\n".join(found)
+
+
+def test_trc_a5_the_quote_reader_finds_a_quote_inside_quotes():
+    assert _quotes_inside_quotes('t="${a#"$b"/}"') == 2
+    assert _quotes_inside_quotes('f="${f//\\\\\\"/\\"}"') == 2
+    assert _quotes_inside_quotes("f=\"${f//x/$'\\t'}\"") == 2
+    assert _quotes_inside_quotes("echo \"a $'b'\"") == 1
+    assert _quotes_inside_quotes('t=${a:${#b}+1}') == 0
+    assert _quotes_inside_quotes('f=${f//"$bs$q"/"$q"}') == 0
+    assert _quotes_inside_quotes("x=\"$a ${b:-c}\" y='\"${z}\"'") == 0
 
 
 #: Programs that read the hook's own standard input, as the `-c` program they

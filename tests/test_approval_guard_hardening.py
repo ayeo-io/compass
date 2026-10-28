@@ -455,6 +455,23 @@ def test_d3_quoted_command_read_without_jq(guarded, home, tmp_path):
         assert r.returncode == 0, (command, r.stderr)
 
 
+def test_d3_the_jq_free_reader_decodes_as_json_does():
+    """Without jq, the hook's own reader decodes each string as jq does,
+    `\\/` included. The reader it replaced left `\\/` in place under bash
+    3.2, the macOS `/bin/bash`."""
+    text = HOOK_PATH.read_text(encoding="utf-8")
+    reader = re.search(r"^  _json_string\(\) \{\n.*?^  \}\n", text, re.M | re.S).group(0)
+    values = ['plain', 'a/b', 'git commit -m "a \\"q\\" word"', 'C:\\path\\to', 'end\\',
+              'tab\there', 'line\nbreak', '\\t literal', '\\/ literal', 'mix / \\ " \t \n *?[]$']
+    for value in values:
+        encoded = json.dumps({"command": value})
+        for document in (encoded, encoded.replace("/", "\\/")):
+            r = subprocess.run(["bash", "-c", reader + '_json_string command; printf x'],
+                               capture_output=True, text=True,
+                               env={"PATH": os.environ["PATH"], "INPUT": document})
+            assert r.stdout[:-1] == value, (document, r.stdout[:-1], r.stderr)
+
+
 def test_d2_named_home_folder_refused():
     """`~<name>` is the home folder of that user."""
     import getpass

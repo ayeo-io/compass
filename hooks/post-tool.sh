@@ -116,8 +116,10 @@ TARGET_DIR=$(cd "$_target_parent" 2>/dev/null && pwd -P) || exit 0
 REAL_ROOT=$(cd "$PROJECT_DIR" 2>/dev/null && pwd -P) || exit 0
 _target_name=$(basename "$ABS_TARGET")
 ABS_TARGET="$TARGET_DIR/$_target_name"
+# The prefix is cut by its length: the plugin directory's validator blocks a
+# hook that nests a quote inside a double-quoted string.
 case "$ABS_TARGET" in
-  "$REAL_ROOT"/*) TARGET="${ABS_TARGET#"$REAL_ROOT"/}" ;;
+  "$REAL_ROOT"/*) TARGET=${ABS_TARGET:${#REAL_ROOT}+1} ;;
   *) exit 0 ;;
 esac
 

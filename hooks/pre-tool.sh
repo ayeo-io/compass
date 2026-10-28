@@ -93,11 +93,14 @@ TASK_DIR=""
 # the runtime lets through. Without it, a stand-in answers every reader with
 # exit 3 and a reason, so an opted-in project refuses and names the file, and
 # a repository that never opted in reaches its silent exit 0 as before.
-_hook_dir=$(dirname "${BASH_SOURCE[0]}")
-HOOK_ROOT=$(cd "$_hook_dir/.." && pwd)
+# Keep this line, and each helper's `source` with a literal path under it,
+# as stop.sh writes them: the plugin directory names the functions a helper
+# defines only in that form, and blocks a call it cannot name
+# (tests/test_directory_validator.py).
+HOOK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPASS_PYTHON_SH="$HOOK_ROOT/scripts/lib/compass-python.sh"
 if [ -f "$COMPASS_PYTHON_SH" ] && [ -r "$COMPASS_PYTHON_SH" ]; then
-  source "$COMPASS_PYTHON_SH"
+  source "$HOOK_ROOT/scripts/lib/compass-python.sh"
 else
   compass_python() {
     cat >/dev/null
@@ -112,7 +115,7 @@ fi
 # install never turns "unknown" into "not guarded".
 SETTINGS_FILES_SH="$HOOK_ROOT/scripts/lib/settings-files.sh"
 if [ -f "$SETTINGS_FILES_SH" ] && [ -r "$SETTINGS_FILES_SH" ]; then
-  source "$SETTINGS_FILES_SH"
+  source "$HOOK_ROOT/scripts/lib/settings-files.sh"
 else
   compass_has_settings_file() { return 0; }
 fi

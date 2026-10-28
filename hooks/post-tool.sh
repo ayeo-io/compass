@@ -41,8 +41,11 @@ INPUT=$(cat || true)
 # (cli/compass_pkg/delegation_tickets.py). Python starts only for a command that
 # holds `--delegated`, so an ordinary Bash call starts none. A Bash call writes no
 # devlog line, so this branch ends the hook.
-_hook_dir=$(dirname "${BASH_SOURCE[0]}")
-HOOK_ROOT=$(cd "$_hook_dir/.." && pwd)
+# Keep this line, and each helper's `source` with a literal path under it,
+# as stop.sh writes them: the plugin directory names the functions a helper
+# defines only in that form, and blocks a call it cannot name
+# (tests/test_directory_validator.py).
+HOOK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if command -v jq >/dev/null 2>&1; then
   _tool=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
 else
@@ -53,7 +56,7 @@ if [ "$_tool" = "Bash" ]; then
     *--delegated*)
       if [ -f "$HOOK_ROOT/scripts/lib/compass-python.sh" ]; then
         # shellcheck source=../scripts/lib/compass-python.sh
-        . "$HOOK_ROOT/scripts/lib/compass-python.sh"
+        source "$HOOK_ROOT/scripts/lib/compass-python.sh"
         printf '%s' "$INPUT" | compass_python "$HOOK_ROOT/hooks/py/post_tool_drop_tickets.py" 2>/dev/null || true
       fi ;;
   esac

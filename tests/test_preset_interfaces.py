@@ -224,7 +224,7 @@ def test_pi_3_a_loosening_parent_is_stored_as_loosening_though_its_waiver_excuse
     stored = _commit_stored(tmp_path, monkeypatch, [_parent(LOOSENS)])
     found = stored["parents"][1]["classification"]
     assert found["result"] == "loosening"
-    assert found["against"] == "compass:default@7"
+    assert found["against"] == "compass:default@8"
     assert found["points"] > 0 and found["raw_points"] >= found["points"]
     assert found["complete"] is True
     assert found["first_looser"]["assessment"]

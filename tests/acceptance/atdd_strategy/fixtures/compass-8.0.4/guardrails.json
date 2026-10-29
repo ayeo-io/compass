@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "G1": [
+      "scenarios-have-tests",
+      "declared-tests-resolve",
+      "suite-passed",
+      "changed-code-traces-to-scenario",
+      "scenarios-are-executable"
+    ],
+    "G4": [
+      "gate-evidence-present",
+      "dod-evidence-typed",
+      "consistency-check-passes",
+      "no-trusted-rerun",
+      "command-passes",
+      "evidence-identity-matches",
+      "evidence-matches-tree",
+      "rendered-blocks-current",
+      "borrowed-documents-answered",
+      "multiagent-run-recorded"
+    ]
+  },
+  "spike_guardrails": [
+    "S1",
+    "S2"
+  ]
+}

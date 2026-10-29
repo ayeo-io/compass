@@ -8,7 +8,9 @@
 - `gate-set`: the gates in the manifest's order, and beside an added gate the rules that
   added it;
 - `model-tiers`: a row per seat, in seat order, with the tier the manifest records, the
-  rule that set it and the floors for that seat that did not fire.
+  rule that set it and the floors for that seat that did not fire;
+- `acceptance-strategy`: one line saying whether strategy `S17` applies, why, and how it
+  is routed on the issue's approach.
 
 Each takes a `RenderInputs` snapshot and the project-relative path of the document, and
 returns a `Part`, as the renderers in `block_renderers` do. `block_renderers` registers
@@ -127,10 +129,18 @@ def model_tiers(inputs, doc_rel):
     return Part(OWN, lines)
 
 
+def acceptance_strategy_line(inputs, doc_rel):
+    """Whether the four-layer acceptance strategy applies, why, and its routing on the
+    issue's approach, from the manifest's `acceptance_strategy` block."""
+    from compass_pkg import acceptance_strategy
+    return Part(OWN, [rb.field(acceptance_strategy.line(inputs.task))])
+
+
 RENDERERS = {
     "assessment": assessment,
     "policy-rules": policy_rules,
     "stage-weights": stage_weights,
     "gate-set": gate_set,
     "model-tiers": model_tiers,
+    "acceptance-strategy": acceptance_strategy_line,
 }

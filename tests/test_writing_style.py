@@ -383,6 +383,11 @@ def _is_excluded(rel: str) -> bool:
 
 _FIXTURE_PREFIX = "tests/fixtures/writing-style/"
 
+#: The stored configuration of the issue compass 8.0.4 assessed, which the four-layer
+#: acceptance strategy's older-issue scenario reads.
+_OLDER_ISSUE_RESOLVED = ("tests/acceptance/atdd_strategy/fixtures/assessed-by-8.0.4/"
+                         ".compass/work/older/generations/1/resolved.yml")
+
 # Other frameworks' own records. An eval scenario lays a `seed_R1/`
 # or `seed_R3/` overlay over its seed for a session under that
 # framework, in the words that framework writes. Compass's writing rules must
@@ -1537,6 +1542,35 @@ _register(Rule(
         Exemption("governance/presets/default@6/vocabulary.yml", "verify",
                    "the display name of the verify stage, not the verb; the "
                    "folder is a frozen copy of the v6.1.0 default preset."),
+        # The kept default@7 folder is a byte-identical copy of the live default
+        # at the v8.0.4 tag, the last release of major 7: the same four lines,
+        # the same reasons, and the copy must not change.
+        Exemption("governance/presets/default@7/checks.yml", "compass bdd verify",
+                   "compass bdd verify is a CLI verb, not the plain verb; the "
+                   "folder is a frozen copy of the v8.0.4 default preset."),
+        Exemption("governance/presets/default@7/checks.yml", "attempts: <int>",
+                   "attempts: <int> names the evidence field, not the verb "
+                   "\"attempt\"; the folder is a frozen copy of the v8.0.4 "
+                   "default preset."),
+        Exemption("governance/presets/default@7/evidence-types.yml", "attempts: <int>",
+                   "attempts: <int> names the evidence field, not the verb "
+                   "\"attempt\"; the folder is a frozen copy of the v8.0.4 "
+                   "default preset."),
+        Exemption("governance/presets/default@7/vocabulary.yml", "verify",
+                   "the display name of the verify stage, not the verb; the "
+                   "folder is a frozen copy of the v8.0.4 default preset."),
+        # The stored configuration of an issue compass 8.0.4 assessed, kept as
+        # the fixture the four-layer acceptance strategy's older-issue scenario
+        # reads. It holds the 7.0.0 preset's text as 8.0.4 wrote it.
+        Exemption(_OLDER_ISSUE_RESOLVED, "compass bdd verify",
+                   "compass bdd verify is a CLI verb; the file is a stored "
+                   "configuration compass 8.0.4 wrote."),
+        Exemption(_OLDER_ISSUE_RESOLVED, "attempts: <int>",
+                   "attempts: <int> names the evidence field; the file is a "
+                   "stored configuration compass 8.0.4 wrote."),
+        Exemption(_OLDER_ISSUE_RESOLVED, "verify",
+                   "the display name of the verify stage; the file is a stored "
+                   "configuration compass 8.0.4 wrote."),
         Exemption(
             "tests/fixtures/receipt-fixture-project/governance/guardrails.yml",
             "checked_at: [verify]",
@@ -3807,8 +3841,11 @@ _GROWING_REACH = {
     # 122 with tests/fixtures/v6.0.1-generation.tgz, a packed 6.0.1 issue
     #    that holds no prose a scan can read;
     # 131 with the nine plain YAML files of tests/fixtures/execution-profiles/, which
-    #    hold key-value lines and no prose.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 131),
+    #    hold key-value lines and no prose;
+    # 147 with the 12 fixture files of tests/acceptance/atdd_strategy/ (the issue compass
+    #    8.0.4 assessed and the recorded 8.0.4 output, plain JSON) and the four check-corpus
+    #    case labels of acceptance-applicability-agrees.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 147),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

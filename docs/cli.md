@@ -21,6 +21,7 @@ compass analyze            where an issue's artifacts disagree with each other
 compass retro              is triage systematically over- or under-sizing the process?
 compass retro --lineage    how many issues were found in another, and how many before it landed
 compass retro --decisions  how many decisions agents took for the person were confirmed, changed or never confirmed
+compass retro --acceptance the four-layer acceptance strategy's closed in-scope issues, with an opted-out project and each stepped-off issue apart
 compass issue raised-by    record the issue this one was found in, and where
 compass spec sync          merge main, resolving only conflicts in the derived living spec
 compass issue friction     record friction the agent observed, with evidence and a fix

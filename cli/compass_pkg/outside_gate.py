@@ -21,11 +21,12 @@ from compass_pkg.core import load_yaml, reading_matches
 
 #: The checks that sit in no gate, in the order `compass check` reports them.
 CHECKS = ("artifacts-approved", "nfr-rows-resolved", "contracts-declared",
-          "design-within-word-ceiling")
+          "design-within-word-ceiling", "acceptance-applicability-agrees")
 
 #: Those a spike runs too. `artifacts-approved` judges what ships, and a spike ships
 #: nothing; the section checks and the design-size check report that a spike
-#: registers no spec or design.
+#: registers no spec or design. The four-layer acceptance strategy is suspended on
+#: a spike, as strategy `S2` is, so none of its checks is here.
 SPIKE_CHECKS = ("nfr-rows-resolved", "contracts-declared", "design-within-word-ceiling")
 
 #: The label each check's row is reported under, where a gate row names its guardrail.
@@ -34,6 +35,7 @@ LABELS = {
     "nfr-rows-resolved": "non-functional requirements",
     "contracts-declared": "data and interfaces",
     "design-within-word-ceiling": "design size",
+    "acceptance-applicability-agrees": "four-layer acceptance strategy (`S17`)",
 }
 
 

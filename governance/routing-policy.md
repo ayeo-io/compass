@@ -347,6 +347,20 @@ round of a kind that repeats survives a reassessment. It never marks a voluntary
 (a kind no approach, rule or `every_approach` flag names) as `superseded`
 (`architecture/decisions/ADR-054-an-artifact-kind-can-repeat-keyed-by-round.md`).
 
+The live preset is version 8.0.0. It carries the four-layer acceptance
+strategy (`S17`): the advisory check `acceptance-applicability-agrees` in
+`checks.yml`, and `acceptance_strategy` on each approach in `approaches.yml`,
+which sets the strategy to `on` for regular and full, `existing-dsl` for
+quick-fix and `existing-dsl-isolation` for hotfix. An approach without the key
+reads `on` when it ships and `suspended` when it does not, so the locked spike
+entry, which ships nothing, stays as it was and reads `suspended`. The classifier does not compare the field
+(compare kind `never`), because the project setting `acceptance_strategy`
+turns the whole strategy off with no approval. `compass approach evaluate
+--write` stores the issue's applicability from it, as the strategy's entry in
+`governance/strategies.md` says. The 7.0.0 preset is kept, byte for byte as v8.0.4 shipped it, in
+`governance/presets/default@7/` for `compass policy update`; resolution reads
+only the live preset, whatever major a project's `extends:` names.
+
 - Change a default in the preset (or in `legacy-views.yml` for a value only the
   views hold), then run `python3 scripts/generate-legacy-views.py`.
   Never edit `routing-policy.yml` or `guardrails.yml` by hand: their first

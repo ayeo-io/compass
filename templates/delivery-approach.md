@@ -41,6 +41,14 @@ line is not skippable - it runs.
 <!-- compass:render readiness -->
 <!-- /compass:render -->
 
+<!-- Written by `compass issue render` from the manifest's `acceptance_strategy` block:
+     whether the four-layer acceptance strategy (`S17`) applies, why, and its routing on
+     this approach. `compass approach evaluate --write --expected-acceptance
+     none|validation|refactor` stores it at the first assessment. -->
+
+<!-- compass:render acceptance-strategy -->
+<!-- /compass:render -->
+
 ---
 
 ## The composed candidate

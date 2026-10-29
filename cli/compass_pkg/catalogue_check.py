@@ -28,7 +28,7 @@ import datetime
 import re
 
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import language, stable_ids, vocabulary
+from compass_pkg import acceptance_strategy, language, stable_ids, vocabulary
 
 _ID = re.compile(spec.ID_PATTERN)
 
@@ -42,6 +42,7 @@ _ENUMS = {
     ("gates", "locked"): spec.LOCKS,
     ("dimensions", "type"): spec.DIMENSION_TYPES,
     ("dimensions", "tighter"): spec.TIGHTER,
+    ("approaches", "acceptance_strategy"): tuple(acceptance_strategy.ROUTINGS),
 }
 _SETTINGS_ENUMS = {"autonomy": spec.AUTONOMY, "adoption": spec.ADOPTION}
 
@@ -131,6 +132,10 @@ def _check_top_values(doc):
         if text:
             # The `key: ` prefix is how the lint reads the path of a finding.
             errors.append(f"language: {text}")
+    if "acceptance_strategy" in doc:
+        text = acceptance_strategy.problem(doc["acceptance_strategy"])
+        if text:
+            errors.append(f"acceptance_strategy: {text}")
     caps = doc.get("capabilities")
     if caps is not None:
         if not isinstance(caps, dict):
@@ -526,6 +531,14 @@ def schema():
                                          for s in spec.GITHUB_LABEL_SWITCHES},
                           "additionalProperties": False},
         "preset": {"description": top["preset"], "type": "object"},
+        "acceptance_strategy": {
+            "description": top["acceptance_strategy"], "type": "object",
+            "properties": {
+                "state": {"description": top["acceptance_strategy.state"],
+                          "enum": list(acceptance_strategy.STATES)},
+                "reason": {"description": top["acceptance_strategy.reason"],
+                           "type": "string"}},
+            "required": ["state"], "additionalProperties": False},
     }
     for catalogue in spec.CATALOGUES:
         properties[catalogue] = {

@@ -118,7 +118,7 @@ record the project's own rules, run it once from the project root:
 `init` is exempt from assessment - it changes no application code. It:
 
 1. **Writes a minimal `compass.yml`** at the project root: `schema`, `extends:
-   compass:default@7`, an `owner` who approves waivers, and `project.name` and
+   compass:default@8`, an `owner` who approves waivers, and `project.name` and
    `project.test_command`. It copies no `governance/` files. The file holds only
    what differs from the shipped defaults, and the defaults are real, in-force
    content from the moment you install Compass. The team adds its own edits

@@ -95,6 +95,13 @@ checks:
       path, a catalogue with no word_ceiling for the design at its depth, and an issue that has not
       passed the plan stage.', kind: deterministic, impl: design-within-word-ceiling, severity: blocking,
     on_skipped: not-applicable, params: {factor: 1.5}}
+  acceptance-applicability-agrees: {statement: 'The four-layer acceptance strategy (`S17`) applies to
+      the issue as its delivery-approach record says: the applicability stored at assess agrees with
+      what the red and acceptance records decide, and the project setting has not changed since assess.
+      Advisory: a disagreement names the re-assess command and never fails the run. Declines to check,
+      rather than passing, for an issue assessed before the strategy shipped and for a project that
+      turned the strategy off.', kind: deterministic, impl: acceptance-applicability-agrees, severity: advisory,
+    on_skipped: not-applicable}
   spike-conclusion-present: {statement: A spike has a `spike-conclusion` evidence entry with a recorded
       decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue., kind: deterministic,
     impl: spike-conclusion-present, severity: blocking, on_skipped: fail, locked: true}

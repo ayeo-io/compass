@@ -262,6 +262,27 @@ _(none yet - the shipped default guardrails apply as-is)_
   - A spike runs it and reads `nothing to check`, because it registers no
     design. An issue stored on an earlier generation gains it at its next
     `compass approach evaluate --write`.
+- **`acceptance-applicability-agrees`** is the advisory check of the four-layer
+  acceptance strategy (`S17`, in `strategies.md`). It is unlocked, declares
+  `severity: advisory` and `on_skipped: not-applicable`, and sits in no gate,
+  no lock and not in the spike's checks. `compass check` runs it after the
+  design-size check, through `outside_gate.judged`, and labels its row "four-layer
+  acceptance strategy (`S17`)". The rules it applies are in
+  `cli/compass_pkg/acceptance_strategy.py`.
+  - It fails, as advice, when the project setting `acceptance_strategy`
+    changed since the issue was assessed, or when the applicability stored at
+    assess disagrees with the records: a red record puts an issue in scope,
+    and an acceptance of kind `validation` or `refactor` with no red takes it
+    out. The finding names the re-assess command.
+  - It declines, reporting `nothing to check`, when the stored block and the
+    setting both say off.
+  - An issue with no stored block was assessed before the strategy shipped.
+    `compass check` adds no row for it and prints the notice "four-layer
+    acceptance strategy (`S17`): does not apply - this issue was assessed
+    before the strategy shipped", so its rows and exit code are those of the
+    release it was assessed under.
+  - `compass check` refuses, with exit 2, a project whose
+    `acceptance_strategy` setting cannot be read, before any check runs.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart

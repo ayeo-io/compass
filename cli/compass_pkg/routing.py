@@ -652,6 +652,23 @@ def read_size(dimension, value):
     return new
 
 
+def _acceptance_block(task, task_dir, plan, result, args, evaluated_before):
+    """Store or replace the manifest's `acceptance_strategy` block, as
+    `cmd_route_evaluate` explains where it calls this."""
+    from compass_pkg import acceptance_strategy
+    from compass_pkg.layers import find_project_root
+    held = acceptance_strategy.stored(task)
+    if evaluated_before and held is None:
+        return
+    resolved = plan.resolution.resolved if plan is not None else None
+    if not acceptance_strategy.declared(resolved):
+        return
+    expected = getattr(args, "expected_acceptance", None) or (
+        held or {}).get("expected_acceptance") or "none"
+    task["acceptance_strategy"] = acceptance_strategy.block(
+        find_project_root(task_dir), resolved, result["delivery_approach"], expected)
+
+
 def cmd_route_evaluate(args):
     task = None
     task_path = None
@@ -701,6 +718,11 @@ def cmd_route_evaluate(args):
         key_errors = assessment_key_errors(readings)
         if key_errors:
             raise CompassError(f"{task_path}: " + "; ".join(key_errors))
+        # An unreadable strategy setting is refused before anything prints, with
+        # a message that names the key, the file and the accepted values.
+        from compass_pkg import acceptance_strategy
+        from compass_pkg.layers import find_project_root
+        acceptance_strategy.setting(find_project_root(task_dir))
         # The proposal, the waiver re-check and the flags are settled before
         # anything prints, so a refusal never follows a printed result.
         if getattr(args, "write", False):
@@ -991,6 +1013,11 @@ def cmd_route_evaluate(args):
         # issue assessed before outcomes existed is never judged by them.
         if not evaluated_before:
             task.setdefault("checkpoint_outcomes", [])
+        # The four-layer acceptance strategy's block follows the same rule: the
+        # first assessment adds it when the configuration it commits declares
+        # the strategy, and a reassessment replaces it but never adds it, so an
+        # issue assessed before the strategy shipped never gains it (ADR-006).
+        _acceptance_block(task, task_dir, plan, result, args, evaluated_before)
         # seed the gate list (status pending) without clobbering existing state
         existing = {g.get("id"): g for g in task.get("gates", []) if isinstance(g, dict)}
         task["gates"] = [
@@ -1106,6 +1133,9 @@ def cmd_route_evaluate(args):
             resolution=plan.resolution)
         print(f"\n  wrote the delivery approach, stages and gates -> {task_path}")
         print(f"  {committed.message}")
+        if "acceptance_strategy" in task:
+            from compass_pkg import acceptance_strategy
+            print(f"  {acceptance_strategy.line(task)}")
         for note in plan.notes:
             print(f"  {note}")
         configured = configuring and committed.committed

@@ -171,6 +171,11 @@ CHECK_GUIDANCE = {
         "do": "Shorten the design to the threshold the failure names.",
         "fix": "Move each work unit's signatures, contracts, file plan and tests to low-level-design/<unit>.md, register each with `compass issue artifact set low-level-design --unit U<n> --path <file>`, and cut the design until its word count is at or under the threshold. Unit files alone do not clear the check: the design's own count decides.",
     },
+    "acceptance-applicability-agrees": {
+        "why": "The delivery-approach record tells every reader whether the four-layer acceptance strategy applies. A line the records or the project setting no longer agree with misleads the reader and the strategy's checks alike.",
+        "do": "Re-assess the issue with the command the finding names.",
+        "fix": "Run `compass approach evaluate --write --expected-acceptance none|validation|refactor --reason \"...\"`, choosing the kind the records show, then `compass issue render` so the delivery-approach record shows the new line.",
+    },
     "spike-conclusion-present": {
         "why": "A Spike without a recorded conclusion is just untracked work - the conclusion is what makes the exploration accountable.",
         "do": 'Record the close-out: discard, graduate-to-delivery, or defer.',
@@ -271,6 +276,11 @@ class _CheckRun:
     def line(self, text):
         self.rows.append(("line", text))
 
+    def note(self, text):
+        """A notice for the full view and the JSON document only. The default
+        view leaves it out, so its line budget stays what it was."""
+        self.rows.append(("note", text))
+
     def guardrail(self, gid, name, skipped=None):
         self.current = gid
         self.rows.append(("guardrail", (gid, name, skipped)))
@@ -285,7 +295,7 @@ def _verbose_lines(run):
     out = ["compass check - issue '%s' (approach: %s)" % (run.slug, run.approach),
            run.mode_banner, ""]
     for kind, payload in run.rows:
-        if kind == "line":
+        if kind in ("line", "note"):
             out.append(payload)
         elif kind == "guardrail":
             gid, name, skipped = payload
@@ -490,7 +500,7 @@ def _emit_check(run, args):
             "nothing_to_check": run.nothing,
             "advisory": run.advisory,
             "notices": [t.strip() for kind, t in run.rows
-                        if kind == "line" and t.strip()],
+                        if kind in ("line", "note") and t.strip()],
             **({"generation": run.view.generation,
                 "parent_version": run.view.parent_version()}
                if run.view is not None else {}),
@@ -587,8 +597,18 @@ def _outside_gate_pass(run, task, task_dir, refused, checks=None):
     configuration that does not declare a check adds no row for it, so an issue
     stored before the check existed gains it at its next `compass approach
     evaluate --write`."""
+    from compass_pkg import acceptance_strategy
+
     ran = failed = nothing = advisory = 0
     for check in outside_gate.CHECKS if checks is None else checks:
+        # An issue assessed before the four-layer acceptance strategy shipped holds
+        # no stored applicability. It is told so as a notice, not a row: a notice is
+        # not a check, so its rows, count and exit code stay those of the release
+        # it was assessed under (ADR-006).
+        if check in acceptance_strategy.CHECKS and acceptance_strategy.stored(task) is None:
+            if check == acceptance_strategy.CHECK:
+                run.note("  " + acceptance_strategy.NOTICE)
+            continue
         verdict = outside_gate.judged(check, CHECK_FNS.get(check), task, task_dir, _judge)
         if verdict is None:
             continue
@@ -678,6 +698,11 @@ def cmd_check(args):
     mode = load_mode()
     task_dir = resolve_issue_dir(args.task)
     task, _ = load_manifest(task_dir)
+    # An unreadable strategy setting is refused before any check runs, as
+    # `approach evaluate` refuses it: a typo must not change what is checked.
+    from compass_pkg import acceptance_strategy
+    from compass_pkg.layers import find_project_root
+    acceptance_strategy.setting(find_project_root(task_dir))
     # A generation that is not whole is the authority being unreadable, so the
     # check refuses (ADR-036). An issue with no generation is not asked.
     from compass_pkg import effective

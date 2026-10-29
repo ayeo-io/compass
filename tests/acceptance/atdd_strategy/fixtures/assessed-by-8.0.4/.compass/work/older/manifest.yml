@@ -1,0 +1,129 @@
+schema_version: '3.0'
+issue: older
+created: '2026-10-29'
+assessment:
+  familiarity: brownfield-mapped
+  labels: &id001 []
+  risk: contained
+  size: medium
+  goal: delivery
+evidence:
+- id: EV-T
+  type: test-run
+  path: evidence/green.json
+  record_id: 0f8da7c0041b4f26
+  content_digest: sha256:f4586e5da1aa177867ca4a3211034b8c3647a037ac816a53fb69022698ee74fd
+evaluated_assessment:
+  familiarity: brownfield-mapped
+  labels: *id001
+  risk: contained
+  size: medium
+  goal: delivery
+justifications:
+  risk: 'Test fixture: the risk was judged.'
+  familiarity: 'Test fixture: the familiarity was judged.'
+  size: 'Test fixture: the size was judged.'
+  goal: 'Test fixture: the goal was judged.'
+delivery_approach: regular
+policy_rules_fired: []
+stages:
+  assess: thorough
+  define: thorough
+  refine: lightweight
+  plan: thorough
+  breakdown: multiagent
+  implement: thorough
+  verify: thorough
+  ship: thorough
+checkpoints:
+- define
+- plan
+models:
+  assess:
+    tier: strong
+    by: RP-TIER-001
+  define:
+    tier: strong
+    by: RP-TIER-002
+  refine:
+    tier: strong
+    by: RP-TIER-003
+  plan:
+    tier: strong
+    by: RP-TIER-004
+  breakdown:
+    tier: strong
+    by: RP-TIER-005
+  implement:
+    tier: standard
+    by: RP-TIER-006
+    not_fired:
+    - RP-MODEL-001
+    - RP-MODEL-002
+    - RP-MODEL-003
+  verify:
+    tier: fast
+    by: RP-TIER-007
+  review:
+    tier: strong
+    by: RP-TIER-008
+  ship:
+    tier: fast
+    by: RP-TIER-009
+checkpoint_outcomes: []
+gates:
+- id: verify.correctness
+  status: pending
+  evidence: []
+- id: verify.governance
+  status: pending
+  evidence: []
+- id: verify.traceability
+  status: pending
+  evidence: []
+- id: verify.regression
+  status: pending
+  evidence: []
+- id: verify.clarity
+  status: pending
+  evidence: []
+- id: verify.security
+  status: pending
+  evidence: []
+artifacts:
+- id: ART-INTENT
+  kind: intent
+  status: draft
+  depth: lightweight
+  reason: every regular approach carries a lightweight one
+- id: ART-ACCEPTANCE_CRITERIA
+  kind: acceptance-criteria
+  status: draft
+  depth: thorough
+  reason: every regular approach carries one
+- id: ART-REQUIREMENTS_REVIEW
+  kind: requirements-review
+  status: draft
+  depth: lightweight
+  reason: every regular approach carries a lightweight one
+- id: ART-TECHNICAL_DESIGN
+  kind: technical-design
+  status: draft
+  depth: thorough
+  reason: every regular approach carries one
+- id: ART-DISTRIBUTION_MAP
+  kind: distribution-map
+  status: draft
+  depth: lightweight
+  reason: every regular approach carries a lightweight one
+- id: ART-VERIFICATION_REPORT
+  kind: verification-report
+  status: draft
+  depth: thorough
+  reason: every regular approach carries one
+subtask_ceiling: 2
+readiness:
+  status: not-measured
+  reason: missing
+  detail: no record at .compass/readiness.yml - run `compass readiness`
+generation: 1

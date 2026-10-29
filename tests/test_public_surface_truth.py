@@ -614,6 +614,12 @@ def test_d2_repairs_change_only_retired_names():
     pre-tool hook's parts in `hooks/lib/` and a row for the `hooks/py/lib_*.py`
     programs the shared shell libraries run.
 
+    One more was re-baselined by `acceptance-strategy-core`:
+    `governance/strategies.md` (list_items 97 -> 103) gained the four-layer
+    acceptance strategy, one `###` heading and 6 list items, and
+    `governance/guardrails.md` (list_items 66 -> 71) gained the strategy's
+    advisory check, one list item and its four sub-items.
+
     The other 45 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

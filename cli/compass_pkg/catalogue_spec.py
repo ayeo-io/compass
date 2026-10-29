@@ -103,6 +103,10 @@ FIELDS = {
         "artifacts": _f("map", "map", "obligation-set"),
         "subtask_ceiling": _f("integer-or-null", "scalar", "ceiling"),
         "checkpoints": _f("map", "map", "obligation-set"),
+        # The classifier does not read it: the project setting turns the whole
+        # strategy off with no approval (the product decision of 2026-10-29), so
+        # one approach's routing needs no stronger control.
+        "acceptance_strategy": _f("string", "scalar", "never"),
     },
     "rules": {
         "kind": _f("string", "scalar", "identity", required=True),
@@ -313,7 +317,7 @@ CAPABILITIES = ("entry-exit-evaluation", "artifact-freshness")
 LAYER_KEYS = ("schema", "extends", "owner", "approvers", "capabilities") + CATALOGUES
 SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement",
                  "record", "project", "prices", "models", "multiagent", "governance_drift",
-                 "preset_index", "github_labels", "language")
+                 "preset_index", "github_labels", "language", "acceptance_strategy")
 #: The three switches inside `github_labels`, all off by default.
 GITHUB_LABEL_SWITCHES = ("domain", "status", "page")
 RESERVED_KEYS = ("preset",)
@@ -431,6 +435,10 @@ FIELD_DESCRIPTIONS = {
                            "for every approach except full, which has no limit.",
         "checkpoints": "For each autonomy value (`controlled`, `balanced`, `autonomous`), the "
                        "stages at which a session waits for a person.",
+        "acceptance_strategy": "What the four-layer acceptance strategy (`S17`) asks on the "
+                               "approach: `on`,`existing-dsl`, `existing-dsl-isolation` or "
+                               "`suspended`. Unset, it is `on` for an approach that ships and "
+                               "`suspended` for one that does not.",
     },
     "rules": {
         "kind": "What the rule set does: the shipped kinds are `shapes`, `floors`, `caps`, "
@@ -616,4 +624,10 @@ TOP_DESCRIPTIONS = {
                           "documents to the GitHub issue's readers.",
     "preset": "Reserved key for a published preset's own data. It is not part of a layer's "
               "digest.",
+    "acceptance_strategy": "Whether the four-layer acceptance strategy (`S17`) is on for the "
+                           "project: `state` is `on` or `off`, and `off` needs a `reason`, which "
+                           "assess records. Unset means on; only the project's own file can hold "
+                           "it.",
+    "acceptance_strategy.state": "`on` or `off`.",
+    "acceptance_strategy.reason": "Why the project turned the strategy off. Required with `off`.",
 }

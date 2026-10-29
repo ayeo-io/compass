@@ -45,7 +45,10 @@ waivers re-checked against the v6.1.0 values, because Compass stores no record
 of what an approval saw. The
 live default wins for its own major, so a kept folder never replaces it. The
 tests use a fixture framework folder that holds `default@6` and a changed
-`default` at major 7, so they hold before and after 7.0.0 ships.
+`default` at major 7, so they hold before and after 7.0.0 ships. The live
+default is now major 8, with the four-layer acceptance strategy, and the CLI
+keeps `default@6` and `default@7`. `default@7` is a byte copy of the preset
+v8.0.4 shipped, `version: 7.0.0`.
 
 A project two majors behind (on default@5 when the CLI keeps default@6 and
 default@7) can move only if its own major is kept. When it is, `--to` can skip

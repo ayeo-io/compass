@@ -344,7 +344,9 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
     # readiness-floor, readiness-record, readiness-summary and temporary-worktree.
     # 98 since ADR-063 added checkpoint-outcome. 99 since ADR-067 added
     # word_ceiling. 101 since ADR-076 added execution-profile and component-registry.
-    assert len(terminology["terms"]) == 101, (
+    # 109 since the four-layer acceptance strategy's eight terms joined
+    # (governance/decisions/2026-10-29-a-strategy-can-carry-checks-a-step-off-makes-advisory.md).
+    assert len(terminology["terms"]) == 109, (
         "governance/terminology.yml gained or lost a term without this count "
         "moving. A vocabulary change is a decision (ADR-012); make it one."
     )

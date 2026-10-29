@@ -354,7 +354,8 @@ def test_trc_c2_codex_shared_hooks_get_only_the_variables_they_need(monkeypatch,
 
 def _plugin_files():
     """The tracked files the plugin copy ships, by the rules of
-    scripts/plugin-files.txt. A new file counts once it is staged."""
+    scripts/plugin-files.txt, as the working tree holds them. A new file counts
+    once it is staged; a file deleted but not yet staged is left out."""
     spec = importlib.util.spec_from_file_location(
         "build_plugin_copy_under_test", ROOT / "scripts" / "build-plugin-copy.py")
     build = importlib.util.module_from_spec(spec)
@@ -362,42 +363,138 @@ def _plugin_files():
     keep, drop = build.wanted(str(ROOT), "HEAD")
     listed = subprocess.run(["git", "-C", str(ROOT), "ls-files", "-z"], capture_output=True,
                             text=True, check=True).stdout.split("\0")
-    return [p for p in listed if p and build._selected(p, keep, drop)]
+    return [p for p in listed
+            if p and build._selected(p, keep, drop) and (ROOT / p).is_file()]
 
 
-_RUNS = ("run", "Popen", "call", "check_call", "check_output")
+#: The `subprocess` functions that take `env=`, and those that cannot.
+_TAKES_ENV = ("run", "Popen", "call", "check_call", "check_output")
+_NO_ENV = ("getoutput", "getstatusoutput")
+#: The `os` functions that start a process. Each gets the whole environment or
+#: one passed by position, so each new call is judged by a reviewer.
+_OS_STARTS = re.compile(r"^(?:system|popen|exec\w*|spawn\w*|posix_spawn\w*)$")
+
+
+def _is_environ(node):
+    return (isinstance(node, ast.Attribute) and node.attr == "environ"
+            and isinstance(node.value, ast.Name) and node.value.id == "os")
+
+
+def _filters_by_name(comprehension):
+    """A comprehension that keeps only the names it lists: an `if` that tests
+    `k in (...)`, alone or with a prefix test. One that only leaves names out,
+    such as `if not k.startswith("GIT_")`, keeps the rest of the environment."""
+    return any(isinstance(node, ast.Compare) and isinstance(node.ops[0], ast.In)
+               for test in comprehension.ifs for node in ast.walk(test))
+
+
+def _copies_environment(node, assigned, depth=0):
+    """Does `node`, given as `env=`, hold the whole environment? A name is read
+    from its assignment in the nearest function that assigns it. `None`, a bare
+    `os.environ`, its copy, a `dict(...)` or `{**...}` built on it, and a
+    comprehension over it with no `if k in (...)` all do. Reading one name
+    from it, `os.environ.get("PATH")` or `os.environ["PATH"]`, does not."""
+    if depth > 5:
+        return False
+    again = lambda n: _copies_environment(n, assigned, depth + 1)  # noqa: E731
+    if isinstance(node, ast.Constant):
+        return node.value is None
+    if _is_environ(node):
+        return True
+    if isinstance(node, ast.Name):
+        for scope in reversed(assigned):
+            if node.id in scope:
+                return any(again(value) for value in scope[node.id])
+        return False
+    if isinstance(node, ast.Call):
+        func = node.func
+        if isinstance(func, ast.Attribute) and func.attr == "copy":
+            return again(func.value)
+        if isinstance(func, ast.Name) and func.id == "dict":
+            return any(again(arg) for arg in node.args)
+        return False
+    if isinstance(node, ast.BoolOp):
+        return any(again(value) for value in node.values)
+    if isinstance(node, ast.IfExp):
+        return again(node.body) or again(node.orelse)
+    if isinstance(node, ast.Dict):
+        return any(key is None and again(value) for key, value in zip(node.keys, node.values))
+    if isinstance(node, ast.DictComp):
+        source = node.generators[0]
+        over = source.iter.func.value if (isinstance(source.iter, ast.Call)
+                                          and isinstance(source.iter.func, ast.Attribute)) \
+            else source.iter
+        return again(over) and not _filters_by_name(source)
+    return False
 
 
 def _whole_environment_calls(source):
-    """Each `subprocess` call that gets the person's whole environment, as
-    (function, line): one with no `env=`, or with an `env=` built from
-    `os.environ`. A call that passes `**kwargs` is not judged, because its
-    caller chooses the environment."""
+    """Each call that starts a process with the person's whole environment, as
+    (function, line), where the function is named with its class or outer
+    function, such as `Runner.start` or `outer.inner`. A `subprocess` call with
+    no `env=`, or with an `env=` that `_copies_environment` judges whole, counts;
+    so do `getoutput`, `os.system`, `os.popen`, `os.exec*` and `os.spawn*`, under
+    any name they are imported as. A call that passes `**kwargs`, or an `env`
+    parameter it does not assign, is not judged: its caller chooses."""
+    tree = ast.parse(source)
+    modules, functions = set(), {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules |= {a.asname or a.name for a in node.names if a.name == "subprocess"}
+        elif isinstance(node, ast.ImportFrom) and node.module == "subprocess":
+            functions.update({a.asname or a.name: a.name for a in node.names})
     found = []
 
     class Calls(ast.NodeVisitor):
         def __init__(self):
-            self.functions = []
+            self.scopes, self.assigned = [], [{}]
+
+        def visit_ClassDef(self, node):
+            self.scopes.append(node.name)
+            self.generic_visit(node)
+            self.scopes.pop()
 
         def visit_FunctionDef(self, node):
-            self.functions.append(node.name)
+            assigned = {}
+            for inner in ast.walk(node):
+                if isinstance(inner, ast.Assign):
+                    for target in inner.targets:
+                        if isinstance(target, ast.Name):
+                            assigned.setdefault(target.id, []).append(inner.value)
+            self.scopes.append(node.name)
+            self.assigned.append(assigned)
             self.generic_visit(node)
-            self.functions.pop()
+            self.assigned.pop()
+            self.scopes.pop()
 
         visit_AsyncFunctionDef = visit_FunctionDef
 
+        def _name(self, func):
+            """The `subprocess` or `asyncio` function this call runs, or None."""
+            if isinstance(func, ast.Name):
+                return functions.get(func.id)
+            if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+                if func.value.id in modules:
+                    return func.attr
+                if func.value.id == "asyncio" and func.attr.startswith("create_subprocess_"):
+                    return "run"
+                if func.value.id == "os" and _OS_STARTS.match(func.attr):
+                    return "os"
+            return None
+
         def visit_Call(self, node):
-            func = node.func
-            if (isinstance(func, ast.Attribute) and func.attr in _RUNS
-                    and isinstance(func.value, ast.Name) and func.value.id == "subprocess"
-                    and not any(k.arg is None for k in node.keywords)):
+            name = self._name(node.func)
+            whole = False
+            if name in ("os",) + _NO_ENV:
+                whole = True
+            elif name in _TAKES_ENV and not any(k.arg is None for k in node.keywords):
                 env = [k.value for k in node.keywords if k.arg == "env"]
-                if not env or "os.environ" in ast.unparse(env[0]):
-                    found.append((self.functions[-1] if self.functions else "<module>",
-                                  node.lineno))
+                whole = not env or _copies_environment(env[0], self.assigned)
+            if whole:
+                found.append((".".join(self.scopes) or "<module>", node.lineno))
             self.generic_visit(node)
 
-    Calls().visit(ast.parse(source))
+    Calls().visit(tree)
     return found
 
 
@@ -405,45 +502,49 @@ _GIT = ("runs git in the person's repository, and git reads their configuration,
         "credential helper and SSH agent from the environment")
 _PROJECT = "runs the person's own test or project command, which needs their environment"
 
-#: The calls that keep the whole environment, with the reason. 8.0.4 passed the
-#: directory with each of them. A new call needs an allow-list, as the tests
+#: The functions whose calls keep the whole environment, with how many such calls
+#: each holds and the reason. 8.0.4 passed the directory with each of them. A new call needs an allow-list, as the tests
 #: above give `gh` and the Codex hooks, or an entry here that a reviewer accepts.
 INHERITS_ENVIRONMENT = {
-    ("cli/compass_pkg/analyze.py", "_git_out"): _GIT,
-    ("cli/compass_pkg/analyze.py", "_landed_before"): _GIT,
-    ("cli/compass_pkg/checks.py", "_git_out"): _GIT,
-    ("cli/compass_pkg/checks.py", "_check_command_passes"): _PROJECT,
-    ("cli/compass_pkg/decisions.py", "_git"): _GIT,
-    ("cli/compass_pkg/decisions.py", "history_problems"): _GIT,
-    ("cli/compass_pkg/effective.py", "_git_blob"): _GIT,
-    ("cli/compass_pkg/flow.py", "git"): _GIT,
-    ("cli/compass_pkg/github_links.py", "_git"): _GIT,
-    ("cli/compass_pkg/landed_by.py", "_git_commit_subject"): _GIT,
-    ("cli/compass_pkg/landed_by.py", "_git_is_usable"): _GIT,
-    ("cli/compass_pkg/lessons.py", "_decider"): _GIT,
-    ("cli/compass_pkg/manifest.py", "_git"): _GIT,
+    ("cli/compass_pkg/analyze.py", "_git_out"): (1, _GIT),
+    ("cli/compass_pkg/analyze.py", "_landed_before"): (1, _GIT),
+    ("cli/compass_pkg/binding.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/board_trees.py", "_git"): (1, _GIT + "; it leaves out only GIT_ variables"),
+    ("cli/compass_pkg/checks.py", "_git_out"): (1, _GIT),
+    ("cli/compass_pkg/checks.py", "_check_command_passes"): (1, _PROJECT),
+    ("cli/compass_pkg/decisions.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/decisions.py", "history_problems"): (1, _GIT),
+    ("cli/compass_pkg/effective.py", "_git_blob"): (1, _GIT),
+    ("cli/compass_pkg/flow.py", "_completed_on_this_branch.git"): (1, _GIT),
+    ("cli/compass_pkg/github_links.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/landed_by.py", "_git_commit_subject"): (1, _GIT),
+    ("cli/compass_pkg/landed_by.py", "_git_is_usable"): (1, _GIT),
+    ("cli/compass_pkg/lessons.py", "_decider"): (1, _GIT),
+    ("cli/compass_pkg/manifest.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/manifest.py", "cmd_land_commit"):
-        "runs the project's own pre-commit hooks, which need the person's environment",
-    ("cli/compass_pkg/publish_check.py", "_ignored"): _GIT,
-    ("cli/compass_pkg/quick_fix_cmd.py", "_untracked_paths"): _GIT,
-    ("cli/compass_pkg/quick_fix_cmd.py", "_write_start_state"): _GIT,
-    ("cli/compass_pkg/quick_fix_cmd.py", "_untraced_since_start"): _GIT,
-    ("cli/compass_pkg/quick_fix_cmd.py", "_commit_files"): _GIT,
-    ("cli/compass_pkg/quick_fix_cmd.py", "_write_verification_note"): _GIT,
-    ("cli/compass_pkg/readiness_record.py", "_git"): _GIT,
-    ("cli/compass_pkg/readiness_run.py", "_git"): _GIT,
-    ("cli/compass_pkg/readiness_run.py", "_run_one"): _PROJECT,
-    ("cli/compass_pkg/record.py", "_git"): _GIT,
-    ("cli/compass_pkg/release_notes.py", "_git"): _GIT,
-    ("cli/compass_pkg/replay.py", "_git"): _GIT,
-    ("cli/compass_pkg/ship_commit_reason.py", "_pre_commit_hook_can_run"): _GIT,
-    ("cli/compass_pkg/spec_refresh.py", "_git"): _GIT,
-    ("cli/compass_pkg/start_state.py", "_git_changed_paths"): _GIT,
-    ("cli/compass_pkg/start_state.py", "_record_path"): _GIT,
-    ("cli/compass_pkg/start_state.py", "_tracked_paths"): _GIT,
-    ("cli/compass_pkg/subtasks.py", "_git"): _GIT,
-    ("cli/compass_pkg/tdd.py", "_run_test"): _PROJECT,
-    ("cli/compass_pkg/tip_scope.py", "_git"): _GIT,
+        (1, "runs the project's own pre-commit hooks, which need the person's environment"),
+    ("cli/compass_pkg/publish_check.py", "_ignored"): (1, _GIT),
+    ("cli/compass_pkg/quick_fix_cmd.py", "_untracked_paths"): (1, _GIT),
+    ("cli/compass_pkg/quick_fix_cmd.py", "_write_start_state"): (3, _GIT),
+    ("cli/compass_pkg/quick_fix_cmd.py", "_untraced_since_start"): (1, _GIT),
+    ("cli/compass_pkg/quick_fix_cmd.py", "_commit_files"): (1, _GIT),
+    ("cli/compass_pkg/quick_fix_cmd.py", "_write_verification_note"): (1, _GIT),
+    ("cli/compass_pkg/readiness_record.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/readiness_run.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/readiness_run.py", "_run_one"): (1, _PROJECT),
+    ("cli/compass_pkg/record.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/release_notes.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/replay.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/ship_commit_reason.py", "_pre_commit_hook_can_run"): (1, _GIT),
+    ("cli/compass_pkg/spec_refresh.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/start_state.py", "_git_changed_paths"): (1, _GIT),
+    ("cli/compass_pkg/start_state.py", "_record_path"): (1, _GIT),
+    ("cli/compass_pkg/start_state.py", "_tracked_paths"): (1, _GIT),
+    ("cli/compass_pkg/migrate_copy_check.py", "_judge.git"): (1, _GIT),
+    ("cli/compass_pkg/subtasks.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/tdd.py", "_run_test"): (1, _PROJECT),
+    ("cli/compass_pkg/tip_scope.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/worktree_lookup.py", "run_git"): (1, _GIT + "; it leaves out only GIT_ variables"),
 }
 
 
@@ -489,18 +590,67 @@ def test_trc_k2_the_environment_reader_finds_a_whole_environment():
         ("inherits", 3), ("copies", 5), ("spreads", 7), ("names_it", 9)]
 
 
+def test_trc_k2_the_environment_reader_finds_each_way_to_start_a_process():
+    source = (
+        "import asyncio, os, subprocess as sp\n"
+        "from subprocess import run as go, getoutput\n"
+        "def held():\n"
+        "    env = dict(os.environ, A='1')\n"
+        "    sp.run(['x'], env=env)\n"
+        "def outer():\n"
+        "    env = os.environ.copy()\n"
+        "    def inner():\n"
+        "        go(['x'], env=env)\n"
+        "class Runner:\n"
+        "    def start(self):\n"
+        "        sp.Popen(['x'], env=None)\n"
+        "async def later():\n"
+        "    await asyncio.create_subprocess_exec('x')\n"
+        "def shells():\n"
+        "    os.system('x')\n"
+        "    os.popen('x')\n"
+        "    getoutput('x')\n"
+        "def drops_git():\n"
+        "    sp.run(['x'], env={k: v for k, v in os.environ.items() if not k.startswith('GIT_')})\n")
+    assert _whole_environment_calls(source) == [
+        ("held", 5), ("outer.inner", 9), ("Runner.start", 12), ("later", 14),
+        ("shells", 16), ("shells", 17), ("shells", 18), ("drops_git", 20)]
+
+
+def test_trc_k2_the_environment_reader_passes_a_named_allow_list():
+    source = (
+        "import os, subprocess\n"
+        "KEEP = ('PATH', 'HOME')\n"
+        "def kept():\n"
+        "    subprocess.run(['x'], env={k: v for k, v in os.environ.items() if k in KEEP})\n"
+        "def one_name():\n"
+        "    subprocess.run(['x'], env={'PATH': os.environ.get('PATH', '')})\n"
+        "def by_key():\n"
+        "    subprocess.run(['x'], env={'PATH': os.environ['PATH']})\n"
+        "def kept_with_prefix():\n"
+        "    env = {k: v for k, v in os.environ.items() if k in KEEP or k.startswith('LC_')}\n"
+        "    subprocess.run(['x'], env=env)\n"
+        "def passed_on(**kwargs):\n"
+        "    subprocess.run(['x'], **kwargs)\n")
+    assert _whole_environment_calls(source) == []
+
+
 def test_trc_k2_no_subprocess_gets_the_whole_environment():
-    found, seen = [], set()
+    found, lines = [], {}
     for path in _plugin_files():
         if not path.endswith(".py") or path.startswith("cli/vendor/"):
             continue
         for function, line in _whole_environment_calls((ROOT / path).read_text(encoding="utf-8")):
-            seen.add((path, function))
-            if (path, function) not in INHERITS_ENVIRONMENT:
-                found.append(f"{path}:{line}: {function} gives a subprocess the whole environment")
-    stale = sorted(set(INHERITS_ENVIRONMENT) - seen)
+            lines.setdefault((path, function), []).append(line)
+    for key, at in sorted(lines.items()):
+        allowed = INHERITS_ENVIRONMENT.get(key, (0, ""))[0]
+        if len(at) > allowed:
+            found.append(f"{key[0]}:{at[-1]}: {key[1]} gives a subprocess the whole environment "
+                         f"({len(at)} calls, {allowed} listed)")
+    stale = sorted(key for key, (count, _) in INHERITS_ENVIRONMENT.items()
+                   if len(lines.get(key, ())) < count)
     assert not found, "\n".join(found)
-    assert not stale, f"these exceptions match no call any more; remove them: {stale}"
+    assert not stale, f"these exceptions list more calls than there are; lower them: {stale}"
 
 
 def test_trc_k2_the_binary_reader_finds_a_binary_file():
@@ -522,14 +672,20 @@ def test_trc_k2_bin_holds_only_the_launchers():
 
 
 def test_trc_k1_the_plugin_copy_passes_the_directory_validator(tmp_path):
+    """The copy is built from HEAD, as the release builds it, so only committed
+    work is checked. CI has no `claude` command, so this runs on a machine that
+    has one."""
     claude = shutil.which("claude")
     if not claude:
-        pytest.skip("the claude command is not installed; the release checklist runs this")
+        pytest.skip("the claude command is not installed here; run this test where it is")
     copy = tmp_path / "copy"
     subprocess.run([sys.executable, str(ROOT / "scripts" / "build-plugin-copy.py"),
                     "--ref", "HEAD", "--out", str(copy)], check=True, capture_output=True)
-    run = subprocess.run([claude, "plugin", "validate", "--profile", "directory", "--strict",
-                          str(copy)], capture_output=True, text=True, timeout=300)
+    try:
+        run = subprocess.run([claude, "plugin", "validate", "--profile", "directory",
+                              "--strict", str(copy)], capture_output=True, text=True, timeout=300)
+    except subprocess.TimeoutExpired:
+        pytest.fail("claude plugin validate gave no answer within 300 seconds")
     assert run.returncode == 0, run.stdout + run.stderr
     assert "found nothing to report" in run.stdout, run.stdout
 

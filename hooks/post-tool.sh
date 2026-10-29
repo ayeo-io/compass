@@ -34,18 +34,19 @@
 
 set -euo pipefail
 
-INPUT="$(cat || true)"
+INPUT=$(cat || true)
 
 # A Bash call that has finished, failed or been denied: delete the call tickets
 # the pre-tool hook wrote for it, so a ticket never outlives its call
 # (cli/compass_pkg/delegation_tickets.py). Python starts only for a command that
 # holds `--delegated`, so an ordinary Bash call starts none. A Bash call writes no
 # devlog line, so this branch ends the hook.
-HOOK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+_hook_dir=$(dirname "${BASH_SOURCE[0]}")
+HOOK_ROOT=$(cd "$_hook_dir/.." && pwd)
 if command -v jq >/dev/null 2>&1; then
-  _tool="$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)"
+  _tool=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
 else
-  _tool="$(printf '%s' "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)"
+  _tool=$(printf '%s' "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)
 fi
 if [ "$_tool" = "Bash" ]; then
   case "$INPUT" in
@@ -62,7 +63,7 @@ fi
 # Find the project with the same ancestor walk as hooks/pre-tool.sh, so the
 # devlog line is written from any subdirectory. The hook never blocks. When
 # it finds no project it prints a note on stderr and exits 0.
-INVOKED_FROM="$(pwd)"
+INVOKED_FROM=$(pwd)
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
   PROJECT_DIR="$CLAUDE_PROJECT_DIR"
 else
@@ -72,7 +73,7 @@ else
     [ -d "$_search/.compass" ] && { PROJECT_DIR="$_search"; break; }
     [ -e "$_search/.git" ] && break
     [ "$_search" = "/" ] && break
-    _search="$(dirname "$_search")"
+    _search=$(dirname "$_search")
   done
   if [ -z "$PROJECT_DIR" ]; then
     echo "Compass: could not locate a Compass project at or above $INVOKED_FROM - no devlog line was written." >&2
@@ -87,11 +88,11 @@ WORK_DIR="$COMPASS_DIR/work"
 
 # --- extract the tool call details ------------------------------------------
 if command -v jq >/dev/null 2>&1; then
-  TARGET="$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null || true)"
-  TOOL="$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)"
+  TARGET=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null || true)
+  TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
 else
-  TARGET="$(printf '%s' "$INPUT" | grep -oE '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)"
-  TOOL="$(printf '%s' "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)"
+  TARGET=$(printf '%s' "$INPUT" | grep -oE '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)
+  TOOL=$(printf '%s' "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)
 fi
 [ -z "${TARGET:-}" ] && exit 0
 
@@ -110,11 +111,15 @@ case "$TARGET" in
   /*) ABS_TARGET="$TARGET" ;;
   *)  ABS_TARGET="$INVOKED_FROM/$TARGET" ;;
 esac
-TARGET_DIR="$(cd "$(dirname "$ABS_TARGET")" 2>/dev/null && pwd -P)" || exit 0
-REAL_ROOT="$(cd "$PROJECT_DIR" 2>/dev/null && pwd -P)" || exit 0
-ABS_TARGET="$TARGET_DIR/$(basename "$ABS_TARGET")"
+_target_parent=$(dirname "$ABS_TARGET")
+TARGET_DIR=$(cd "$_target_parent" 2>/dev/null && pwd -P) || exit 0
+REAL_ROOT=$(cd "$PROJECT_DIR" 2>/dev/null && pwd -P) || exit 0
+_target_name=$(basename "$ABS_TARGET")
+ABS_TARGET="$TARGET_DIR/$_target_name"
+# The prefix is cut by its length: the plugin directory's validator blocks a
+# hook that nests a quote inside a double-quoted string.
 case "$ABS_TARGET" in
-  "$REAL_ROOT"/*) TARGET="${ABS_TARGET#"$REAL_ROOT"/}" ;;
+  "$REAL_ROOT"/*) TARGET=${ABS_TARGET:${#REAL_ROOT}+1} ;;
   *) exit 0 ;;
 esac
 
@@ -131,19 +136,19 @@ if [ -n "${COMPASS_ISSUE:-}" ]; then
   [ -d "$WORK_DIR/$COMPASS_ISSUE" ] || exit 0
   TASK_DIR="$WORK_DIR/$COMPASS_ISSUE"
 elif [ -f "$POINTER" ]; then
-  SLUG="$(tr -d '[:space:]' < "$POINTER" 2>/dev/null || true)"
+  SLUG=$(tr -d '[:space:]' < "$POINTER" 2>/dev/null || true)
   if [ -n "$SLUG" ] && [ -d "$WORK_DIR/$SLUG" ]; then
     TASK_DIR="$WORK_DIR/$SLUG"
   fi
 fi
 if [ -z "$TASK_DIR" ]; then
-  TASK_DIR="$(ls -dt "$WORK_DIR"/*/ 2>/dev/null | head -n1 || true)"
+  TASK_DIR=$(ls -dt "$WORK_DIR"/*/ 2>/dev/null | head -n1 || true)
   TASK_DIR="${TASK_DIR%/}"
 fi
 [ -z "${TASK_DIR:-}" ] && exit 0
 
 DEVLOG="$TASK_DIR/devlog.md"
-NOW="$(date '+%Y-%m-%d %H:%M')"
+NOW=$(date '+%Y-%m-%d %H:%M')
 
 # --- append a devlog line ---------------------------------------------------
 # devlog.md is append-only; we only ever add to the bottom.

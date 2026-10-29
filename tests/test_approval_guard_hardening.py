@@ -34,6 +34,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from tests.path_folder import link_programs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
@@ -409,12 +410,7 @@ def _path_without_jq(tmp_path):
     d = tmp_path / "nojq"
     d.mkdir()
     (d / "python3").symlink_to(sys.executable)
-    for base in ("/usr/bin", "/bin"):
-        for entry in sorted(Path(base).iterdir()):
-            if entry.name == "jq" or entry.name.startswith("python") or (d / entry.name).exists():
-                continue
-            (d / entry.name).symlink_to(entry)
-    return str(d)
+    return link_programs(d, lambda name: name == "jq" or name.startswith("python"))
 
 
 def test_d3_grep_path_read_without_jq(guarded, home, tmp_path):
@@ -453,6 +449,23 @@ def test_d3_quoted_command_read_without_jq(guarded, home, tmp_path):
     for command in ('echo "hello \\"world\\""', 'git commit -m "a \\"quoted\\" word"'):
         r = _hook(guarded, "Bash", {"command": command}, env, path=path, **common)
         assert r.returncode == 0, (command, r.stderr)
+
+
+def test_d3_the_jq_free_reader_decodes_as_json_does():
+    """Without jq, the hook's own reader decodes each string as jq does,
+    `\\/` included. The reader it replaced left `\\/` in place under bash
+    3.2, the macOS `/bin/bash`."""
+    text = HOOK_PATH.read_text(encoding="utf-8")
+    reader = re.search(r"^  _json_string\(\) \{\n.*?^  \}\n", text, re.M | re.S).group(0)
+    values = ['plain', 'a/b', 'git commit -m "a \\"q\\" word"', 'C:\\path\\to', 'end\\',
+              'tab\there', 'line\nbreak', '\\t literal', '\\/ literal', 'mix / \\ " \t \n *?[]$']
+    for value in values:
+        encoded = json.dumps({"command": value})
+        for document in (encoded, encoded.replace("/", "\\/")):
+            r = subprocess.run(["bash", "-c", reader + '_json_string command; printf x'],
+                               capture_output=True, text=True,
+                               env={"PATH": os.environ["PATH"], "INPUT": document})
+            assert r.stdout[:-1] == value, (document, r.stdout[:-1], r.stderr)
 
 
 def test_d2_named_home_folder_refused():

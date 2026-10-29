@@ -5074,3 +5074,84 @@ Compass's own hook refusal tests run through both the Claude Code and the Codex 
 Each hook refusal test names the refusal code it expects.
 
 - `TRC-001` Given the hook refusal specifications When each checks a refusal Then each names a refusal code
+
+### shipped-releases-v8-0-1 (completed 2026-10-27)
+
+compass policy migrate recognizes governance copied from 8.0.1.
+
+- `TRC-001` Given the v8.0.1 tag is pushed When the generator runs its stale check Then it reports no stale release
+
+### hooks-readable-commands (completed 2026-10-27)
+
+The plugin directory validator can read every command the pre-tool and post-tool hooks run.
+
+- `TRC-001` Given the pre-tool and post-tool hook scripts When a command's output is used Then the command is assigned first or stands on its own line, and no command sits inside a double-quoted string
+
+### release-8-0-2 (completed 2026-10-27)
+
+Compass 8.0.2: the plugin directory validator can read every hook command.
+
+- `TRC-001` Given the version is bumped When the version consistency test reads every place that states it Then each says 8.0.2
+
+### shipped-releases-v8-0-2 (completed 2026-10-28)
+
+compass policy migrate recognizes governance copied from 8.0.2.
+
+- `TRC-001` Given the v8.0.2 tag is pushed When the generator runs its stale check Then it reports no stale release
+
+### hooks-no-nested-quotes (completed 2026-10-28)
+
+The plugin directory reads every command in the pre-tool and post-tool hooks; without jq, the pre-tool hook decodes \/ on macOS as jq does.
+
+- `TRC-001` Given the pre-tool and post-tool hooks When a reader looks for a quote inside a double-quoted string Then it finds none, and without jq a path written with escaped slashes is still read as that path
+
+### release-8-0-3 (completed 2026-10-28)
+
+Compass 8.0.3: the plugin directory reads the pre-tool and post-tool hooks.
+
+- `TRC-001` Given the version is bumped When the version consistency test reads every place that states it Then each says 8.0.3
+
+### shipped-releases-v8-0-3 (completed 2026-10-28)
+
+compass policy migrate recognizes governance copied from 8.0.3.
+
+- `TRC-001` Given the v8.0.3 tag is pushed When the generator runs its stale check Then it reports no stale release
+
+### plugin-listing-links (completed 2026-10-28)
+
+The plugin directory listing links Compass's privacy policy, terms of service and support pages.
+
+- `TRC-001` Given the plugin manifest When the directory reads its listing links Then it finds the privacy, terms and support pages on ayeo.io
+
+### path-helpers-broken-links (completed 2026-10-28)
+
+The test suite passes on GitHub's current Ubuntu runner image, which holds a broken link in both /usr/bin and /bin.
+
+- `TRC-001` Given two program folders that both hold a broken link with one name When the helper links every program into one folder Then it links the name once and raises no error
+
+### release-8-0-4 (completed 2026-10-28)
+
+Compass 8.0.4: the plugin directory listing links the privacy policy, terms of service and support pages.
+
+- `TRC-001` Given the version is bumped When the version consistency test reads every place that states it Then each says 8.0.4
+
+### shipped-releases-v8-0-4 (completed 2026-10-28)
+
+compass policy migrate recognizes governance copied from 8.0.4.
+
+- `TRC-001` Given the v8.0.4 tag is pushed When the generator runs its stale check Then it reports no stale release
+
+### plugin-branch-release (completed 2026-10-28)
+
+Installing Compass now downloads only the files it runs, about 400 instead of 1,700, from the plugin branch.
+
+- `TRC-A1` the copy holds only what an installed plugin reads
+- `TRC-A2` the copy's version is the release's version
+- `TRC-A3` every path the plugin names is in the copy
+- `TRC-A4` the CLI and the hooks run from the copy
+- `TRC-B1` a release adds one commit to the plugin branch
+- `TRC-B2` the marketplace fetches the plugin from the plugin branch
+- `TRC-B3` a user on 8.0.0 gets the next version from the branch
+- `TRC-F1` a missing runtime path stops the build
+- `TRC-F2` a copy over the directory's limits stops the build
+- `TRC-F3` building the same release twice adds nothing

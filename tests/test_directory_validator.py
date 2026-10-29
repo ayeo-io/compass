@@ -14,16 +14,25 @@ environment it needs.
 | `TRC-B3` | a command that runs a `compass` verb pre-approves `compass` |
 | `TRC-C1` | `gh` gets an allow-list of the environment |
 | `TRC-C2` | the Codex adapter's shared hooks get an allow-list of the environment |
+| `TRC-K1` | the plugin copy passes `claude plugin validate --profile directory --strict` |
+| `TRC-K2` | no new subprocess gets the whole environment, no new binary file, nothing new in `bin/` |
 
-The validator runs on the directory's servers only, so these tests check the
-rules its report states, not the validator itself.
+The directory's safety scan and policy review run on its servers only, so most
+of these tests check the rules its report states, not the validator itself.
+`TRC-K1` runs the subset of checks that `claude` runs locally, where it is
+installed. `TRC-K1` and `TRC-K2` are from ayeo-io/compass-delivery#319.
 """
 from __future__ import annotations
 
+import ast
 import importlib.util
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "cli"))
@@ -338,6 +347,191 @@ def test_trc_c2_codex_shared_hooks_get_only_the_variables_they_need(monkeypatch,
     assert seen["CLAUDE_PLUGIN_ROOT"] == str(ROOT)
     assert "CLAUDE_PROJECT_DIR" not in seen
     assert SECRET not in seen
+
+
+# --- what the plugin copy holds ----------------------------------------------------------------
+
+
+def _plugin_files():
+    """The tracked files the plugin copy ships, by the rules of
+    scripts/plugin-files.txt. A new file counts once it is staged."""
+    spec = importlib.util.spec_from_file_location(
+        "build_plugin_copy_under_test", ROOT / "scripts" / "build-plugin-copy.py")
+    build = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(build)
+    keep, drop = build.wanted(str(ROOT), "HEAD")
+    listed = subprocess.run(["git", "-C", str(ROOT), "ls-files", "-z"], capture_output=True,
+                            text=True, check=True).stdout.split("\0")
+    return [p for p in listed if p and build._selected(p, keep, drop)]
+
+
+_RUNS = ("run", "Popen", "call", "check_call", "check_output")
+
+
+def _whole_environment_calls(source):
+    """Each `subprocess` call that gets the person's whole environment, as
+    (function, line): one with no `env=`, or with an `env=` built from
+    `os.environ`. A call that passes `**kwargs` is not judged, because its
+    caller chooses the environment."""
+    found = []
+
+    class Calls(ast.NodeVisitor):
+        def __init__(self):
+            self.functions = []
+
+        def visit_FunctionDef(self, node):
+            self.functions.append(node.name)
+            self.generic_visit(node)
+            self.functions.pop()
+
+        visit_AsyncFunctionDef = visit_FunctionDef
+
+        def visit_Call(self, node):
+            func = node.func
+            if (isinstance(func, ast.Attribute) and func.attr in _RUNS
+                    and isinstance(func.value, ast.Name) and func.value.id == "subprocess"
+                    and not any(k.arg is None for k in node.keywords)):
+                env = [k.value for k in node.keywords if k.arg == "env"]
+                if not env or "os.environ" in ast.unparse(env[0]):
+                    found.append((self.functions[-1] if self.functions else "<module>",
+                                  node.lineno))
+            self.generic_visit(node)
+
+    Calls().visit(ast.parse(source))
+    return found
+
+
+_GIT = ("runs git in the person's repository, and git reads their configuration, "
+        "credential helper and SSH agent from the environment")
+_PROJECT = "runs the person's own test or project command, which needs their environment"
+
+#: The calls that keep the whole environment, with the reason. 8.0.4 passed the
+#: directory with each of them. A new call needs an allow-list, as `gh` and the
+#: Codex hooks have (TRC-C1, TRC-C2), or an entry here that a reviewer accepts.
+INHERITS_ENVIRONMENT = {
+    ("cli/compass_pkg/analyze.py", "_git_out"): _GIT,
+    ("cli/compass_pkg/analyze.py", "_landed_before"): _GIT,
+    ("cli/compass_pkg/checks.py", "_git_out"): _GIT,
+    ("cli/compass_pkg/checks.py", "_check_command_passes"): _PROJECT,
+    ("cli/compass_pkg/decisions.py", "_git"): _GIT,
+    ("cli/compass_pkg/decisions.py", "history_problems"): _GIT,
+    ("cli/compass_pkg/effective.py", "_git_blob"): _GIT,
+    ("cli/compass_pkg/flow.py", "git"): _GIT,
+    ("cli/compass_pkg/github_links.py", "_git"): _GIT,
+    ("cli/compass_pkg/landed_by.py", "_git_commit_subject"): _GIT,
+    ("cli/compass_pkg/landed_by.py", "_git_is_usable"): _GIT,
+    ("cli/compass_pkg/lessons.py", "_decider"): _GIT,
+    ("cli/compass_pkg/manifest.py", "_git"): _GIT,
+    ("cli/compass_pkg/manifest.py", "cmd_land_commit"):
+        "runs the project's own pre-commit hooks, which need the person's environment",
+    ("cli/compass_pkg/publish_check.py", "_ignored"): _GIT,
+    ("cli/compass_pkg/quick_fix_cmd.py", "_untracked_paths"): _GIT,
+    ("cli/compass_pkg/quick_fix_cmd.py", "_write_start_state"): _GIT,
+    ("cli/compass_pkg/quick_fix_cmd.py", "_untraced_since_start"): _GIT,
+    ("cli/compass_pkg/quick_fix_cmd.py", "_commit_files"): _GIT,
+    ("cli/compass_pkg/quick_fix_cmd.py", "_write_verification_note"): _GIT,
+    ("cli/compass_pkg/readiness_record.py", "_git"): _GIT,
+    ("cli/compass_pkg/readiness_run.py", "_git"): _GIT,
+    ("cli/compass_pkg/readiness_run.py", "_run_one"): _PROJECT,
+    ("cli/compass_pkg/record.py", "_git"): _GIT,
+    ("cli/compass_pkg/release_notes.py", "_git"): _GIT,
+    ("cli/compass_pkg/replay.py", "_git"): _GIT,
+    ("cli/compass_pkg/ship_commit_reason.py", "_pre_commit_hook_can_run"): _GIT,
+    ("cli/compass_pkg/spec_refresh.py", "_git"): _GIT,
+    ("cli/compass_pkg/start_state.py", "_git_changed_paths"): _GIT,
+    ("cli/compass_pkg/start_state.py", "_record_path"): _GIT,
+    ("cli/compass_pkg/start_state.py", "_tracked_paths"): _GIT,
+    ("cli/compass_pkg/subtasks.py", "_git"): _GIT,
+    ("cli/compass_pkg/tdd.py", "_run_test"): _PROJECT,
+    ("cli/compass_pkg/tip_scope.py", "_git"): _GIT,
+}
+
+
+def _is_binary(data):
+    """A file the directory reads as binary: a NUL byte, or bytes that are not UTF-8."""
+    if b"\0" in data:
+        return True
+    try:
+        data.decode("utf-8")
+    except UnicodeDecodeError:
+        return True
+    return False
+
+
+#: The binary files the plugin ships, each one in 8.0.4 when it passed the directory.
+BINARY_FILES = {
+    "assets/board-example.png": "the board image the README shows",
+    "assets/compass-icon.png": "the plugin's icon",
+    "governance/shipped-releases.tar.xz": "the governance files of each release, which "
+                                          "`compass policy migrate` reads",
+}
+
+#: The launchers in `bin/`. ayeo-io/compass-delivery#312 decides whether `bin/`
+#: moves; until then nothing is added to it.
+BIN_FILES = ("bin/compass", "bin/compass-statusline")
+
+
+
+def test_trc_k2_the_environment_reader_finds_a_whole_environment():
+    source = (
+        "import os, subprocess\n"
+        "def inherits():\n"
+        "    subprocess.run(['git', 'status'])\n"
+        "def copies():\n"
+        "    subprocess.run(['tool'], env=os.environ.copy())\n"
+        "def spreads():\n"
+        "    subprocess.Popen(['tool'], env={**os.environ, 'A': '1'})\n"
+        "def names_it():\n"
+        "    subprocess.check_output(['tool'], env=os.environ)\n"
+        "def allow_listed(env):\n"
+        "    subprocess.run(['gh'], env=env)\n")
+    assert _whole_environment_calls(source) == [
+        ("inherits", 3), ("copies", 5), ("spreads", 7), ("names_it", 9)]
+
+
+def test_trc_k2_no_subprocess_gets_the_whole_environment():
+    found, seen = [], set()
+    for path in _plugin_files():
+        if not path.endswith(".py") or path.startswith("cli/vendor/"):
+            continue
+        for function, line in _whole_environment_calls((ROOT / path).read_text(encoding="utf-8")):
+            seen.add((path, function))
+            if (path, function) not in INHERITS_ENVIRONMENT:
+                found.append(f"{path}:{line}: {function} gives a subprocess the whole environment")
+    stale = sorted(set(INHERITS_ENVIRONMENT) - seen)
+    assert not found, "\n".join(found)
+    assert not stale, f"these exceptions match no call any more; remove them: {stale}"
+
+
+def test_trc_k2_the_binary_reader_finds_a_binary_file():
+    assert _is_binary(b"\x89PNG\r\n\x1a\n\0\0")
+    assert _is_binary(b"caf\xe9")
+    assert not _is_binary("café → ok\n".encode("utf-8"))
+
+
+def test_trc_k2_no_plugin_file_is_binary():
+    found = [f"{path}: a binary file" for path in _plugin_files()
+             if path not in BINARY_FILES and _is_binary((ROOT / path).read_bytes())]
+    assert not found, "\n".join(found)
+
+
+def test_trc_k2_bin_holds_only_the_launchers():
+    found = [f"{path}: a file added to bin/" for path in _plugin_files()
+             if path.startswith("bin/") and path not in BIN_FILES]
+    assert not found, "\n".join(found)
+
+
+def test_trc_k1_the_plugin_copy_passes_the_directory_validator(tmp_path):
+    claude = shutil.which("claude")
+    if not claude:
+        pytest.skip("the claude command is not installed; the release checklist runs this")
+    copy = tmp_path / "copy"
+    subprocess.run([sys.executable, str(ROOT / "scripts" / "build-plugin-copy.py"),
+                    "--ref", "HEAD", "--out", str(copy)], check=True, capture_output=True)
+    run = subprocess.run([claude, "plugin", "validate", "--profile", "directory", "--strict",
+                          str(copy)], capture_output=True, text=True, timeout=300)
+    assert run.returncode == 0, run.stdout + run.stderr
+    assert "found nothing to report" in run.stdout, run.stdout
 
 
 # The hook scenarios a client observes - a missing or unreadable part, an

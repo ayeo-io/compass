@@ -5140,3 +5140,18 @@ Compass 8.0.4: the plugin directory listing links the privacy policy, terms of s
 compass policy migrate recognizes governance copied from 8.0.4.
 
 - `TRC-001` Given the v8.0.4 tag is pushed When the generator runs its stale check Then it reports no stale release
+
+### plugin-branch-release (completed 2026-10-28)
+
+Installing Compass now downloads only the files it runs, about 400 instead of 1,700, from the plugin branch.
+
+- `TRC-A1` the copy holds only what an installed plugin reads
+- `TRC-A2` the copy's version is the release's version
+- `TRC-A3` every path the plugin names is in the copy
+- `TRC-A4` the CLI and the hooks run from the copy
+- `TRC-B1` a release adds one commit to the plugin branch
+- `TRC-B2` the marketplace fetches the plugin from the plugin branch
+- `TRC-B3` a user on 8.0.0 gets the next version from the branch
+- `TRC-F1` a missing runtime path stops the build
+- `TRC-F2` a copy over the directory's limits stops the build
+- `TRC-F3` building the same release twice adds nothing

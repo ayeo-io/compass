@@ -5155,3 +5155,10 @@ Installing Compass now downloads only the files it runs, about 400 instead of 1,
 - `TRC-F1` a missing runtime path stops the build
 - `TRC-F2` a copy over the directory's limits stops the build
 - `TRC-F3` building the same release twice adds nothing
+
+### directory-conformance-checks (completed 2026-10-29)
+
+The directory tests now fail a new subprocess that gets the whole environment, a new binary file in the plugin, and a new file in bin/, and run the local directory validator on the plugin copy.
+
+- `TRC-K2` Given a branch with one forbidden addition planted (an inline hook program, a nested quote in a hook command, a command that pre-approves bare Bash, a subprocess given the whole environment, a binary file, or a file added to bin/) When tests/test_directory_validator.py runs Then it reports exactly 1 failure naming the hook, the command, the file and line, or the file; and 0 failures with none planted
+- `TRC-K1` The plugin copy passes the directory validator

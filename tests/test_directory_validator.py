@@ -14,13 +14,13 @@ environment it needs.
 | `TRC-B3` | a command that runs a `compass` verb pre-approves `compass` |
 | `TRC-C1` | `gh` gets an allow-list of the environment |
 | `TRC-C2` | the Codex adapter's shared hooks get an allow-list of the environment |
-| `TRC-K1` | the plugin copy passes `claude plugin validate --profile directory --strict` |
+| `TRC-K1` | the plugin copy passes the directory checks of the local `claude` command |
 | `TRC-K2` | no new subprocess gets the whole environment, no new binary file, nothing new in `bin/` |
 
 The directory's safety scan and policy review run on its servers only, so most
 of these tests check the rules its report states, not the validator itself.
-`TRC-K1` runs the subset of checks that `claude` runs locally, where it is
-installed. `TRC-K1` and `TRC-K2` are from ayeo-io/compass-delivery#319.
+The test for the local checks runs them where `claude` is installed. The two
+scenarios with the K ids are from ayeo-io/compass-delivery#319.
 """
 from __future__ import annotations
 
@@ -406,8 +406,8 @@ _GIT = ("runs git in the person's repository, and git reads their configuration,
 _PROJECT = "runs the person's own test or project command, which needs their environment"
 
 #: The calls that keep the whole environment, with the reason. 8.0.4 passed the
-#: directory with each of them. A new call needs an allow-list, as `gh` and the
-#: Codex hooks have (TRC-C1, TRC-C2), or an entry here that a reviewer accepts.
+#: directory with each of them. A new call needs an allow-list, as the tests
+#: above give `gh` and the Codex hooks, or an entry here that a reviewer accepts.
 INHERITS_ENVIRONMENT = {
     ("cli/compass_pkg/analyze.py", "_git_out"): _GIT,
     ("cli/compass_pkg/analyze.py", "_landed_before"): _GIT,

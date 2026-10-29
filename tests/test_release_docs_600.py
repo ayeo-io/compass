@@ -684,7 +684,8 @@ def test_trc_s7_quickstart_five_minutes_and_portability_match_the_code(tmp_path)
     real = sorted(p.name for p in (ROOT / "skills").iterdir()
                   if p.is_dir() and "\ndescription: Renamed to " not in
                   (p / "SKILL.md").read_text(encoding="utf-8"))
-    assert len(real) == 13
+    # 14 since `atdd` joined (issue atdd-skill).
+    assert len(real) == 14
     assert skills_listed(_read("docs/portability.md")) == real
 
 

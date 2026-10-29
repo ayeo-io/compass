@@ -108,13 +108,14 @@ def test_trc_f3_the_merge_removes_resident_cost():
     # Skill tool resolves the name to the command). A count rather than a
     # floor, so a skill cannot creep back in unnoticed.
     # A skill kept only as a redirect to its renamed successor ("Renamed to
-    # ...") is not a skill of its own, so the count leaves it out.
+    # ...") is not a skill of its own, so the count leaves it out. `atdd`
+    # joined later (issue atdd-skill): the four-layer acceptance tests.
     real = sorted(p.parent.name for p in skills
                   if "\ndescription: Renamed to " not in
                   p.read_text(encoding="utf-8"))
-    assert len(real) == 13, (
-        f"expected 13 skills - 15, less the two merges and quick-fix - "
-        f"found {len(real)}: " + ", ".join(real))
+    assert len(real) == 14, (
+        f"expected 14 skills - 15, less the two merges and quick-fix, plus "
+        f"atdd - found {len(real)}: " + ", ".join(real))
 
 
 def test_trc_f3_nothing_names_a_skill_that_does_not_exist():

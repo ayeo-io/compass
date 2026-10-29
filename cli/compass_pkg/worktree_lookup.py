@@ -9,7 +9,8 @@ listing carries a note that every refusal repeats.
 
 `find_issue` finds the one folder that holds an issue by its exact slug. It
 refuses a slug that two trees hold (`HeldTwice`) and one that none holds
-(`NotFound`). A folder, or a manifest, that leads out of its tree by a link is
+(`NotFound`). For a person's own approval, the tree it is typed in wins when
+it holds the issue. A folder, or a manifest, that leads out of its tree by a link is
 not found.
 
 `common_store` finds the one delegation store that every worktree of the
@@ -204,11 +205,20 @@ def _issue_in(tree, slug):
     return task_dir if _has_manifest(task_dir, tree_real) else None
 
 
-def find_issue(listing, slug):
-    """The folder that holds `slug`. Raises `NotFound` or `HeldTwice`."""
+def find_issue(listing, slug, *, prefer_here=False):
+    """The folder that holds `slug`. Raises `NotFound` or `HeldTwice`.
+
+    With `prefer_here`, the tree the command runs in wins when it holds the
+    issue. Only a person's own approval passes it: an issue triaged on `main`
+    and worked in a worktree is in both (compass-delivery#317). An agent's
+    delegated approval and `--on` do not, so identical words from two trees
+    never name two issues
+    (governance/decisions/2026-10-29-a-persons-approval-takes-the-issue-in-its-own-worktree.md)."""
     found = []
     for tree in listing.trees:
         task_dir = _issue_in(tree, slug)
+        if task_dir and prefer_here and tree.is_this:
+            return task_dir
         if task_dir:
             found.append(task_dir)
     if len(found) > 1:

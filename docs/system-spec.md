@@ -5162,3 +5162,11 @@ The directory tests now fail a new subprocess that gets the whole environment, a
 
 - `TRC-K2` Given a branch with one forbidden addition planted (an inline hook program, a nested quote in a hook command, a command that pre-approves bare Bash, a subprocess given the whole environment, a binary file, or a file added to bin/) When tests/test_directory_validator.py runs Then it reports exactly 1 failure naming the hook, the command, the file and line, or the file; and 0 failures with none planted
 - `TRC-K1` The plugin copy passes the directory validator
+
+### record-prune-hint (completed 2026-10-30)
+
+compass record sync no longer recommends a prune that deletes records: the hint names the files and the new --redact-existing, which rewrites them in place, and a prune lists what it would delete and needs --apply.
+
+- `TRC-001` after a sync, the hint names the earlier files masked and a fix that deletes nothing, never the prune option
+- `TRC-002` record sync with --redact-existing rewrites earlier files that name a rival in place and deletes no record
+- `TRC-003` record sync with --prune lists, masked, the record files it would delete and pushes nothing until --apply is given

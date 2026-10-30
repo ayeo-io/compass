@@ -348,9 +348,12 @@ Compass also accepts. Unset means on. `off` needs a reason that is not blank.
 Any other value makes `compass approach evaluate` and `compass check` exit 2
 with a message that names the key, the file and the accepted values, and
 `compass policy lint` reports it in `compass.yml`. In a project pinned at
-`compass:default@6` or `@7`, `compass check` and `compass retro --acceptance`
-ignore the value, while `compass approach evaluate --write` and `compass
-policy lint` still refuse it. The setting needs no
+`compass:default@6` or `@7` the strategy never reads the value, but
+`compass.yml` must still pass its schema check. `compass policy lint`,
+`compass approach evaluate --write` and `compass check` on an issue not yet
+assessed refuse a bad value there. `compass check` on an assessed issue reads
+the configuration stored with the issue, so it does not refuse it. The
+setting needs no
 owner's approval: the delivery-approach record and `compass retro
 --acceptance` show the choice. It takes effect for an issue at its next
 `compass approach evaluate --write`; until then `compass check` reports the

@@ -454,6 +454,18 @@ def test_trc_a13_an_empty_key_is_refused(tmp_path):
         assert code == 2 and "acceptance_strategy" in out + err, (argv, out + err)
 
 
+def test_trc_a23_a_pinned_compass_yml_still_passes_its_schema(tmp_path):
+    """The strategy ignores the setting in a pinned project, but `compass.yml`
+    must still pass its schema check, so an issue with no stored configuration
+    is refused (`TRC-A23`)."""
+    project = support.Project(tmp_path / "repo")
+    issue = project.issue("change")
+    (project.root / "compass.yml").write_text(
+        "schema: 1\nextends: compass:default@7\nacceptance_strategy: maybe\n", encoding="utf-8")
+    code, out, err = issue.run("check", "--issue", "change")
+    assert code == 2 and "acceptance_strategy" in out + err, out + err
+
+
 def test_trc_a23_a_bad_setting_does_not_stop_a_pinned_project(tmp_path):
     """The strategy's setting is not read in a project pinned before it (`TRC-A23`)."""
     project = support.Project(tmp_path / "repo")

@@ -72,9 +72,12 @@ def setting(project_root):
     `CompassError`, which the CLI reports with exit 2, as `core.load_autonomy`
     refuses an unknown `autonomy:`: a typo must not turn the strategy off, or
     on, without a word."""
-    value = project_settings.lenient(project_root).get(KEY)
-    if value is None:
+    held = project_settings.lenient(project_root)
+    # Only a missing key means on: a key with no value is refused, as the lint
+    # refuses it. A project pinned before the strategy never reads the setting.
+    if KEY not in held or pinned_below(project_root):
         return "on", None
+    value = held[KEY]
     state = _state(value.get("state")) if isinstance(value, dict) else None
     reason = value.get("reason") if isinstance(value, dict) else None
     reason = reason.strip() if isinstance(reason, str) else None

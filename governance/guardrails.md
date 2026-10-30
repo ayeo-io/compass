@@ -275,16 +275,17 @@ _(none yet - the shipped default guardrails apply as-is)_
     and an acceptance of kind `validation` or `refactor` with no red takes it
     out. The finding names the re-assess command.
   - It declines, reporting `nothing to check`, when the stored block and the
-    setting both say off.
-  - An issue with no stored block was assessed before the strategy shipped,
-    or belongs to a project whose `compass.yml` extends the shipped default at
-    major 6 or 7; that notice names the `extends:` value instead.
-    `compass check` adds no row for it and prints the notice "four-layer
-    acceptance strategy (`S17`): does not apply - this issue was assessed
-    before the strategy shipped", so its rows and exit code are those of the
-    release it was assessed under.
+    setting both say off, and when the stored routing is `suspended`.
+  - An issue with no stored block was assessed before the strategy shipped.
+    `compass check` adds no row for it and prints, in `--verbose` and
+    `--json`, the notice "four-layer acceptance strategy (`S17`): does not
+    apply - this issue was assessed before the strategy shipped", so its rows
+    and exit code are those of the release it was assessed under.
+  - An issue in a project whose `compass.yml` extends the shipped default at
+    major 6 or 7 also holds no block; its notice names the `extends:` value.
   - `compass check` refuses, with exit 2, a project whose
-    `acceptance_strategy` setting cannot be read, before any check runs.
+    `acceptance_strategy` setting cannot be read, before any check runs. A
+    project pinned at major 6 or 7 never reads the setting.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart

@@ -115,6 +115,11 @@ def register(sub, issue_arg):
                     help="scenario id (default: TRC-001)")
     st.add_argument("--test", action="append", required=True,
                     help="test node id that exercises the scenario (repeatable, at least one)")
+    st.add_argument("--expected-acceptance", dest="expected_acceptance",
+                    choices=["none", "validation", "refactor"], default=None,
+                    help="the acceptance kind the change is expected to have, as on "
+                         "`compass approach evaluate`: `validation` or `refactor` for a "
+                         "change no client can observe (default: none)")
     st.add_argument("--raised-by", metavar="SLUG",
                     help="the issue this was found in")
     st.add_argument("--found-at", metavar="WHERE",
@@ -355,7 +360,8 @@ def cmd_quick_fix_start(args):
 
     try:
         _quiet_run(cmd_route_evaluate, reading=None, task=slug, write=True,
-                   reason=None, kind=None)
+                   reason=None, kind=None,
+                   expected_acceptance=getattr(args, "expected_acceptance", None))
     except CompassError:
         # This call made the folder, so a refusal (a compass.yml the lint
         # rejects, for one) takes it away, and the slug stays free.

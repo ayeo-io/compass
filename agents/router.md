@@ -51,7 +51,10 @@ read the dimensions.
 5. **Compute the delivery approach - this is the mechanism, and it is the
    CLI's, not yours.** Run `compass approach evaluate --issue <slug>
    --write --justify risk="<why>" --justify familiarity="<why>" --justify
-   size="<why>"`, with a `--justify` for goal when you assessed it.
+   size="<why>"`, with a `--justify` for goal when you assessed it. Add
+   `--expected-acceptance validation` or `refactor` when the change has no
+   behavior a client can observe; the first write then records that the
+   four-layer acceptance strategy (`S17`) does not apply.
    The CLI refuses a new or changed value that has no justification, and
    records each one under the manifest's `justifications:` key. The CLI applies the routing rules in force:
    - composes the candidate shape, biased by the soft defaults;

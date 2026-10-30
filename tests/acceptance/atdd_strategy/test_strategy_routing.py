@@ -209,7 +209,7 @@ def test_trc_a13(tmp_path, value, command):
     message = out + err
     assert code == 2, message
     assert "acceptance_strategy" in message and "compass.yml" in message, message
-    assert "on" in message and "off" in message and "reason" in message, message
+    assert "`acceptance_strategy: {state: on}`" in message and "reason" in message, message
 
 
 # --- `TRC-A14` -----------------------------------------------------------------------------
@@ -396,3 +396,45 @@ def test_trc_a24(tmp_path):
     assert "acceptance_strategy: {state: off, reason:" in out + err, out + err
     shipped, _ = policy_lint.load_parent()
     assert acceptance_strategy.approach_routing(shipped.doc, "spike") == "suspended"
+
+
+def test_trc_a3_a_quick_fix_started_as_validation_costs_nothing(tmp_path):
+    """The quick-fix path records the expected kind too, so a docs quick fix
+    gets no strategy finding (`TRC-A3`)."""
+    project = support.Project(tmp_path / "repo")
+    code, out, err = project.run(
+        "quick-fix", "start", "docs", "--risk", "trivial - a docs edit",
+        "--familiarity", "brownfield-mapped - known file", "--size", "atomic - one line",
+        "--intent", "The README names the command.",
+        "--scenario", "A reader finds the command in the README",
+        "--test", "tests/test_readme.py::test_names_the_command",
+        "--expected-acceptance", "validation")
+    assert code == 0, out + err
+    issue = support.Issue(project, "docs")
+    assert issue.manifest()["acceptance_strategy"]["expected_acceptance"] == "validation"
+    issue.acceptance_start("validation")
+    assert support.strategy_findings(issue.check()[1]) == []
+
+
+def test_trc_a13_an_empty_key_is_refused(tmp_path):
+    """`acceptance_strategy:` with no value is refused, as the lint refuses it (`TRC-A13`)."""
+    project = support.Project(tmp_path / "repo")
+    issue = project.issue("change")
+    assert issue.assess()[0] == 0
+    (project.root / "compass.yml").write_text("schema: 1\nacceptance_strategy:\n",
+                                              encoding="utf-8")
+    for argv in (("check", "--issue", "change"), ("approach", "evaluate", "--issue", "change")):
+        code, out, err = issue.run(*argv)
+        assert code == 2 and "acceptance_strategy" in out + err, (argv, out + err)
+
+
+def test_trc_a23_a_bad_setting_does_not_stop_a_pinned_project(tmp_path):
+    """The strategy's setting is not read in a project pinned before it (`TRC-A23`)."""
+    project = support.Project(tmp_path / "repo")
+    issue = project.issue("change")
+    project.setting(None, extends="compass:default@7")
+    assert issue.assess()[0] == 0
+    (project.root / "compass.yml").write_text(
+        "schema: 1\nextends: compass:default@7\nacceptance_strategy: maybe\n", encoding="utf-8")
+    assert issue.run("check", "--issue", "change")[0] != 2
+    assert project.run("retro", "--acceptance")[0] == 0

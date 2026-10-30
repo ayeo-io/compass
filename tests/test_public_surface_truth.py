@@ -617,8 +617,8 @@ def test_d2_repairs_change_only_retired_names():
     One more was re-baselined by `acceptance-strategy-core`:
     `governance/strategies.md` (list_items 97 -> 104) gained the four-layer
     acceptance strategy, one `###` heading and 7 list items, and
-    `governance/guardrails.md` (list_items 66 -> 71) gained the strategy's
-    advisory check, one list item and its four sub-items.
+    `governance/guardrails.md` (list_items 66 -> 72) gained the strategy's
+    advisory check, one list item and its 5 sub-items.
 
     The other 45 are untouched, and a NEW structural change to any of the 59
     still fails.

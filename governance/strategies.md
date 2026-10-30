@@ -12,8 +12,9 @@ advisory.** Most strategies carry none: each is assessed by the `reviewer`
 agent at `verify` under the review dimension tagged beneath its heading, and a
 strategy not followed is a note and a conversation. A strategy that does carry
 checks keeps them outside every guardrail and every lock, so the guardrails
-keep their own checks, and a project or one issue steps off through an
-approved waiver that makes the checks advisory (strategy `S17` is the first).
+keep their own checks. A project turns such a strategy off with its setting,
+and one issue steps off through an approved issue waiver that makes the checks
+advisory (strategy `S17` is the first).
 
 The evidence behind these rules - the incidents, measurements and worked
 examples - is in `governance/strategies-rationale.md`. It is read when a rule

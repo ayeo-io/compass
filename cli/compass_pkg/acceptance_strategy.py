@@ -223,7 +223,7 @@ def stored(task):
 
 
 def line(task, task_dir=None):
-    """The applicability line of the delivery-approach record. With the task
+    """The applicability line of the delivery-approach record. With the issue
     folder it gives the pin reason for a pinned project, as `notice` does."""
     held = stored(task)
     if held is None:

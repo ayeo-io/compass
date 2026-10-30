@@ -5162,3 +5162,17 @@ The directory tests now fail a new subprocess that gets the whole environment, a
 
 - `TRC-K2` Given a branch with one forbidden addition planted (an inline hook program, a nested quote in a hook command, a command that pre-approves bare Bash, a subprocess given the whole environment, a binary file, or a file added to bin/) When tests/test_directory_validator.py runs Then it reports exactly 1 failure naming the hook, the command, the file and line, or the file; and 0 failures with none planted
 - `TRC-K1` The plugin copy passes the directory validator
+
+### atdd-skill (completed 2026-10-29)
+
+Compass now ships an atdd skill for four-layer acceptance tests, loaded at refine, implement and verify for a change a real client can observe.
+
+- `TRC-001` The adapted skill names its source and every adaptation
+- `TRC-002` The model's three stages land on refine, implement and verify
+- `TRC-003` The skill states one line to one DSL call and who owns each layer
+- `TRC-004` The scenarios every role reads extract as before
+- `TRC-005` Three skills describe one chain
+- `TRC-006` The skill sends a quick fix that needs a new DSL method back to assess
+- `TRC-007` The new text passes the vocabulary scans and never says a bare S2
+- `TRC-008` The review questions have one heading per stage
+- `TRC-009` The skill states how stage 1 ends in a red that unlocks no code

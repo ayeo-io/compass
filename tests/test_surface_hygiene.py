@@ -197,6 +197,9 @@ def test_trc_f7_skill_count_unchanged_on_net():
         # Turns a brief that already exists into intent.md by asking rather
         # than assuming: "the discipline is the skill".
         "intent-interview",
+        # The four-layer acceptance tests, loaded at the refine, implement and
+        # verify stage for a change a real client can observe (issue atdd-skill).
+        "atdd",
         # Traceability lives in skills/evidence-gates/traceability.md and
         # role-translation lives in skills/intent-interview/role-translation.md,
         # each read beside the skill it merged into. The light path has no

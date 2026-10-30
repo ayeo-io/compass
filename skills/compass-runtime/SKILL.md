@@ -69,8 +69,7 @@ and a reader knows where their evidence went without guessing.
 
 ## Which agent and which skill, per stage
 
-- **Assess** - load the `adaptive-routing` skill; consider the `router`
-  agent.
+- **Assess** - load the `adaptive-routing` skill; consider the `router` agent.
 - **Define and refine** - load `bdd-specification`; on brownfield work whose
   behavior is not yet written down, also load `behavior-mapping`. The
   `spec-author` agent owns both stages.
@@ -80,17 +79,17 @@ and a reader knows where their evidence went without guessing.
 - **Implementing in parallel** - load `worktree-multiagent`. The `orchestrator`
   agent coordinates; `builder` agents work, one per worktree, each loading
   `tdd-discipline`.
-- **Test & review** - the `verifier` and `reviewer` agents run; load
-  `evidence-gates`. Load `receiving-code-review` when answering their
-  comments.
-- **An unexpected test failure while implementing** - load
-  `systematic-debugging`, and after three failed fixes re-assess rather than
-  try a fourth.
+- **Test & review** - the `verifier` and `reviewer` agents run; load `evidence-gates`.
+  Load `receiving-code-review` when answering their comments.
+- **A change to behavior a real client can observe** - also load `atdd`:
+  stage 1 at refine, stage 2 at implement and stage 3 at verify. Each ends at
+  that stage's checkpoint. No stage or gate moves. Not for a refactor.
+- **An unexpected test failure while implementing** - load `systematic-debugging`,
+  and after three failed fixes re-assess rather than try a fourth.
 - **Role-facing work** - load `intent-interview` and read its
-  `role-translation.md`, which is how one set of
-  acceptance criteria is read through five role perspectives. The
-  `product-owner`, `product-marketer` and `architect` agents apply specific
-  ones.
+  `role-translation.md`, which is how one set of acceptance criteria is read
+  through five role perspectives. The `product-owner`, `product-marketer` and
+  `architect` agents apply specific ones.
 - `evidence-gates` carries `traceability.md`, read whenever an artifact is
   written.
 

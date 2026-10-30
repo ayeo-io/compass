@@ -141,6 +141,7 @@ same commit.
 | `cli/compass`, `cli/compass_pkg/verb_help.py`, `cli/compass_pkg/lineage.py` | `README.md` |
 | `scripts/release.sh`, `scripts/build-plugin-copy.py`, `scripts/plugin-files.txt`, `.claude-plugin/marketplace.json`, `Makefile`, `VERSION` | `docs/releasing.md` |
 | `.github/workflows/`, `scripts/ci-*.py` | `docs/releasing.md` |
+| `examples/atdd-adapters/python/`, `tests/acceptance/atdd_strategy/test_reference_example.py` | `examples/atdd-adapters/python/README.md` |
 | `scripts/render-document-set.py`, `architecture/document-set-7-0-0.svg`, `tests/test_document_set_diagram.py` | `docs/methodology.md` |
 | `scripts/install.sh`, `.claude-plugin/` | `docs/install-smoke-test.md` |
 | `hooks/hooks.json`, the adapter boundary | `docs/portability.md` |

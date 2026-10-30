@@ -1,0 +1,9 @@
+# The example's test tools, every package pinned to one exact version.
+# The system under test uses the Python standard library only.
+execnet==2.1.2
+iniconfig==2.3.0
+packaging==26.3
+pluggy==1.6.0
+pygments==2.21.0
+pytest==9.1.1
+pytest-xdist==3.8.0

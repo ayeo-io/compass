@@ -1,1 +1,1 @@
-"""The four-layer acceptance strategy's scenarios, run on fixture projects."""
+"""Tests of the four-layer acceptance test strategy."""

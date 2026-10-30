@@ -70,7 +70,7 @@ def _aggregate_argv(doc: dict, counts_dir: Path) -> tuple[list[str], str]:
 # The required jobs self-check needs besides the suite's own, so that its
 # result carries theirs on a title or body edit, where they skip (CRT-21).
 OTHER_REQUIRED = ["check-mutation", "bdd-adapter", "bdd-adapter-behave",
-                  "bdd-adapter-cucumber-js", "bdd-adapter-godog"]
+                  "bdd-adapter-cucumber-js", "bdd-adapter-godog", "atdd-adapter-python"]
 
 
 def _needs(**results) -> dict:
@@ -780,7 +780,7 @@ def test_crt_15_token_stays_read_only():
 
 SUITE_JOBS = ["checks", "count", "shard", "serial", "check-mutation", "harness-root",
               "bdd-adapter", "bdd-adapter-behave", "bdd-adapter-cucumber-js",
-              "bdd-adapter-godog"]
+              "bdd-adapter-godog", "atdd-adapter-python"]
 
 # (action, changes, the suite runs). A missing `changes` is what GitHub
 # sends on every action but edited.

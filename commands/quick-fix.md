@@ -153,7 +153,9 @@ and run the same command again.
 The change grows - a second file, then a third, then a decision you did not
 expect. The assessment was wrong. Run `/compass:assess --reassess` with the
 real dimensions rather than continue. Three fixes in a row that did not hold
-mean the same thing.
+mean the same thing. So does a scenario in a four-layer acceptance suite
+that needs a new DSL method: a quick fix reuses the existing DSL methods
+only, so run `/compass:assess --reassess` (the `atdd` skill).
 
 ## Gate
 

@@ -76,7 +76,13 @@ the step was too big.
 - It is derived from a scenario in `acceptance-criteria.md`. The TDD strategy (red-before-green) and
   the BDD strategy are not two systems: the BDD scenario is the
   acceptance-level test and seeds the unit-level TDD cycle. The chain is
-  scenario → test → code.
+  scenario → test → code. For a change a real client can observe, the `atdd`
+  skill spells it out: scenario, DSL, driver, unit tests. The scenario runs
+  through the DSL and a driver as the outer loop; the code behind the driver
+  is built here, one unit test at a time.
+- Implement adds no scenario the specification does not state. Refine settles
+  each implied failure mode with the person or descopes it, so a case you
+  think is missing goes back to the person, not into the suite.
 - One red at a time. A wall of failing tests written up front is not TDD; it is
   a test plan. Take them one behavior at a time so each green is a real,
   isolated step.

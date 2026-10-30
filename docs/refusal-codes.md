@@ -114,8 +114,8 @@ reason code and are not in the generated list.
 ### `no-red-on-record`
 
 **Blocked:** edit to {target} (tool: {tool}, guarded by {guard})
-**Why:** no failing test is on record for issue '{slug}'.
-**Fix:** run compass tdd-red --scenario <id> -- <failing test command>, or compass acceptance start if no test fits, then retry.
+**Why:** no failing test is recorded for issue '{slug}' in {project}.
+**Fix:** run compass tdd-red --scenario <id> -- <failing test command>, or compass acceptance start if none fits, then retry.
 
 ### `not-initialized`
 

@@ -117,9 +117,7 @@ def register(sub, issue_arg):
                     help="test node id that exercises the scenario (repeatable, at least one)")
     st.add_argument("--expected-acceptance", dest="expected_acceptance",
                     choices=["none", "validation", "refactor"], default=None,
-                    help="the acceptance kind the change is expected to have, as on "
-                         "`compass approach evaluate`: `validation` or `refactor` for a "
-                         "change no client can observe (default: none)")
+                    metavar="KIND", help="none, validation or refactor")
     st.add_argument("--raised-by", metavar="SLUG",
                     help="the issue this was found in")
     st.add_argument("--found-at", metavar="WHERE",

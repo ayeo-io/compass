@@ -285,7 +285,9 @@ _(none yet - the shipped default guardrails apply as-is)_
     major 6 or 7 also holds no block; its notice names the `extends:` value.
   - `compass check` refuses, with exit 2, a project whose
     `acceptance_strategy` setting cannot be read, before any check runs. A
-    project pinned at major 6 or 7 never reads the setting.
+    project pinned at major 6 or 7 never reads the setting, so `compass check`
+    ignores a bad value there; `compass approach evaluate --write` and
+    `compass policy lint` still refuse it.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart

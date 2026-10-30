@@ -130,6 +130,26 @@ def test_trc_a6(tmp_path, approach, routing):
     assert line.endswith(f"Routing on the {approach} approach: {routing}."), line
 
 
+def test_trc_a6_the_record_quick_fix_start_writes_shows_the_line(tmp_path):
+    """The quick-fix example of `TRC-A6`, on the record `quick-fix start` itself writes."""
+    project = support.Project(tmp_path / "repo")
+    code, out, err = project.run(
+        "quick-fix", "start", "docs", "--risk", "trivial - a docs edit",
+        "--familiarity", "brownfield-mapped - known file", "--size", "atomic - one line",
+        "--intent", "The README names the command.",
+        "--scenario", "A reader finds the command in the README",
+        "--test", "tests/test_readme.py::test_names_the_command",
+        "--expected-acceptance", "validation")
+    assert code == 0, out + err
+    code, out, err = project.run("issue", "render", "--issue", "docs")
+    assert code == 0, out + err
+    records = list((project.root / "docs" / "compass").glob("*-docs/delivery-approach.md"))
+    assert len(records) == 1
+    line = _strategy_line(records[0].read_text(encoding="utf-8"))
+    assert "(`S17`): does not apply - acceptance of kind validation" in line, line
+    assert line.endswith("Routing on the quick-fix approach: existing DSL only."), line
+
+
 # --- `TRC-A9` ------------------------------------------------------------------------------
 
 def test_trc_a9(tmp_path):
@@ -376,6 +396,12 @@ def test_trc_a23(tmp_path, major, applies):
     issue.red()
     code, document = issue.check()
     assert bool([c for c in document["checks"] if c["name"] == CHECK]) is applies
+    line = _strategy_line(issue.approach_record())
+    if applies:
+        assert "(`S17`): applies - " in line, line
+    else:
+        assert f"project extends compass:default@{major}, before the strategy" in line, line
+        assert "assessed before the strategy shipped" not in line, line
 
 
 # --- `TRC-A24` -----------------------------------------------------------------------------

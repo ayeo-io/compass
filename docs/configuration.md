@@ -347,7 +347,10 @@ Quote `"on"` and `"off"`: YAML reads them unquoted as true and false, which
 Compass also accepts. Unset means on. `off` needs a reason that is not blank.
 Any other value makes `compass approach evaluate` and `compass check` exit 2
 with a message that names the key, the file and the accepted values, and
-`compass policy lint` reports it in `compass.yml`. The setting needs no
+`compass policy lint` reports it in `compass.yml`. In a project pinned at
+`compass:default@6` or `@7`, `compass check` and `compass retro --acceptance`
+ignore the value, while `compass approach evaluate --write` and `compass
+policy lint` still refuse it. The setting needs no
 owner's approval: the delivery-approach record and `compass retro
 --acceptance` show the choice. It takes effect for an issue at its next
 `compass approach evaluate --write`; until then `compass check` reports the

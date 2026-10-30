@@ -18,7 +18,8 @@ entries share.
 What this does not check yet: whether an entry is complete enough to add
 (the merge), and whether a value loosens its parent (the classifier).
 """
-# DEPENDENCY: standard library (copy, datetime, re); compass_pkg.catalogue_spec;
+# DEPENDENCY: standard library (copy, datetime, re); compass_pkg.acceptance_strategy
+# (the routing names and the value check); compass_pkg.catalogue_spec;
 # compass_pkg.language; compass_pkg.stable_ids; compass_pkg.vocabulary. It does not import compass_pkg.waivers: the list of
 # modules that may is pinned, so the one date reader it needs is written here.
 from __future__ import annotations

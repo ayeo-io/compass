@@ -11,14 +11,19 @@ red record. An issue with no block was assessed before the strategy shipped,
 so the strategy never applies to it (ADR-006).
 
 Every check of the strategy calls `in_scope`, so two checks cannot disagree
-about scope. The module also holds the setting reader, the line the
+about scope. The one exception is the advisory check
+`acceptance-applicability-agrees`: it compares the stored line with what the
+records say, so it calls `records_say` and repeats the off and suspended
+branches itself. It must tell a changed project setting, an off or suspended
+issue and a line that disagrees with the records apart, each with its own
+message, and `in_scope` gives only one answer for all of them. The module also holds the setting reader, the line the
 delivery-approach record shows, the advisory check
 `acceptance-applicability-agrees` and `compass retro --acceptance`.
 
 Compass reads records here, never project code.
 """
 # DEPENDENCY: standard library (json, os); compass_pkg.check_results, core,
-# project_settings and red_first, and inside functions compass_pkg.layers,
+# project_settings and red_first, and inside functions compass_pkg.layers, parents,
 # effective and status_words. It imports no command
 # module and no check module at load time, so a check module can import it.
 from __future__ import annotations
@@ -217,10 +222,14 @@ def stored(task):
     return value if isinstance(value, dict) else None
 
 
-def line(task):
-    """The applicability line of the delivery-approach record."""
+def line(task, task_dir=None):
+    """The applicability line of the delivery-approach record. With the task
+    folder it gives the pin reason for a pinned project, as `notice` does."""
     held = stored(task)
     if held is None:
+        pinned = pinned_below(_project_root(task_dir)) if task_dir else None
+        if pinned:
+            return f"The {NAME} does not apply: the project extends {pinned}, before the strategy."
         return f"The {NAME} does not apply: {OLDER}."
     if held.get("state") == "off":
         status = "off for this project"
@@ -276,7 +285,8 @@ def acceptance_kind(task, task_dir):
 def records_say(task, task_dir):
     """`(applies, why)` as the records decide it, apart from the setting: a red
     record puts the issue in scope; an acceptance of kind validation or
-    refactor with no red takes it out (parent decision Q1)."""
+    refactor with no red takes it out (decision record
+    `governance/decisions/2026-10-29-a-strategy-can-carry-checks-a-step-off-makes-advisory.md`)."""
     if has_red(task_dir):
         return True, "a red record is on record"
     kind = acceptance_kind(task, task_dir)

@@ -183,12 +183,13 @@ def _empty_block(kind):
 
 def _delivery_approach_md(slug, intent_text, scenario_id, scenario_text, ledger, advice=()):
     """The quick fix's record as this command writes it. The header, the assessment and
-    the policy rules that fired are empty block pairs: `compass issue render` fills them
+    the policy rules that fired and the acceptance-strategy line are empty block pairs: `compass issue render` fills them
     from the manifest, so the record is never stale against it (ADR-051 decision 2). The
     advice, intent, scenario and de-scope ledger are prose this command writes once."""
     lines = [f"# Delivery approach - {slug}", "", *_empty_block("document-header"),
              "", "## Assessment", "", *_empty_block("assessment"),
-             "", "## Policy rules fired", "", *_empty_block("policy-rules")]
+             "", "## Policy rules fired", "", *_empty_block("policy-rules"),
+             "", "## Acceptance strategy", "", *_empty_block("acceptance-strategy")]
     if advice:
         # Advisory strategies: they never block, so the record is the only
         # place a session meets them.

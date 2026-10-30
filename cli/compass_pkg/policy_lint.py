@@ -19,7 +19,7 @@ public contract (`docs/policy-lint.md`), and `tests/test_policy_lint.py` pins
 both.
 """
 # DEPENDENCY: standard library (dataclasses, datetime, json, os, re);
-# compass_pkg.atomic_io, catalogue_check, catalogue_spec, check_registry,
+# compass_pkg.acceptance_strategy, atomic_io, catalogue_check, catalogue_spec, check_registry,
 # documents_present, layers, locks, merge, retired, waivers, word_map, core.
 from __future__ import annotations
 

@@ -22,8 +22,13 @@ Three answers about the four-layer acceptance strategy (`S17`):
 
 ## Why
 
-Compass resolves every issue against the live preset, whatever major `extends:` names, so the pin is what keeps a project that has not moved off the strategy. A suspended routing on a shipping approach would turn the strategy off with no recorded reason, which the settings key requires. The two corpus entries record the live major itself, so they cannot stay true across a major bump.
+Compass resolves every issue against the live preset, whatever major `extends:` names, so the pin is what keeps a project that has not moved its `extends:` to major 8 out of the strategy. A suspended routing on a shipping approach would turn the strategy off with no recorded reason, which the settings key requires. The two corpus entries record the live major itself, so they cannot stay true across a major bump.
 
 ## Evidence
 
-The answers to decisions Q1 and Q4 of the requirements review of the Compass issue `acceptance-strategy-core` and to the reviewer's question about the routing override, given on 2026-10-30, for ayeo-io/compass-delivery#321 [Add the four-layer acceptance strategy with applicability and opt-out].
+The answers to three questions, given on 2026-10-30, for ayeo-io/compass-delivery#321 [Add the four-layer acceptance strategy with applicability and opt-out]:
+
+- whether a pin at `compass:default@6` or `@7` keeps a project out of the strategy;
+- whether a shipping approach can suspend the strategy through its routing;
+- whether a major bump of the shipped preset may move the two frozen command entries that name the live major.
+

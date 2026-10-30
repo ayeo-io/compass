@@ -133,7 +133,7 @@ def acceptance_strategy_line(inputs, doc_rel):
     """Whether the four-layer acceptance strategy applies, why, and its routing on the
     issue's approach, from the manifest's `acceptance_strategy` block."""
     from compass_pkg import acceptance_strategy
-    return Part(OWN, [rb.field(acceptance_strategy.line(inputs.task))])
+    return Part(OWN, [rb.field(acceptance_strategy.line(inputs.task, inputs.task_dir))])
 
 
 RENDERERS = {

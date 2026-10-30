@@ -299,6 +299,7 @@ jobs:
       - bdd-adapter-behave
       - bdd-adapter-cucumber-js
       - bdd-adapter-godog
+      - atdd-adapter-python
     if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -334,7 +335,7 @@ jobs:
         run: >-
           python3 scripts/ci-self-check.py aggregate
           --needs-env NEEDS
-          --needed checks,count,shard,serial,check-mutation,bdd-adapter,bdd-adapter-behave,bdd-adapter-cucumber-js,bdd-adapter-godog
+          --needed checks,count,shard,serial,check-mutation,bdd-adapter,bdd-adapter-behave,bdd-adapter-cucumber-js,bdd-adapter-godog,atdd-adapter-python
           --exempt already-tested --counts "$RUNNER_TEMP/count"
       - name: A title or body edit reports the earlier suite result
         if: github.event.action == 'edited' && github.event.changes.base == null
@@ -493,6 +494,36 @@ jobs:
       - name: Run the extracted scenarios
         working-directory: examples/bdd-adapters/godog
         run: go test ./...
+
+  # The Python reference example of four-layer acceptance tests. It runs its
+  # specifications through each driver on two workers, then its layering test.
+  # tests/acceptance/atdd_strategy/test_reference_example.py asserts this shape.
+  atdd-adapter-python:
+    needs: already-tested
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Install the example's pinned test tools
+        run: pip install -r examples/atdd-adapters/python/requirements.txt
+
+      - name: Run the specifications through the API driver
+        working-directory: examples/atdd-adapters/python
+        run: python3 -m pytest -n 2 --driver api tests/acceptance/test_todos.py
+
+      - name: Run the specifications through the CLI driver
+        working-directory: examples/atdd-adapters/python
+        run: python3 -m pytest -n 2 --driver cli tests/acceptance/test_todos.py
+
+      - name: Run the layering test
+        working-directory: examples/atdd-adapters/python
+        run: python3 -m pytest tests/acceptance/test_layering.py
 
   # The eval harness's --session-user path runs as root and hands each session
   # to an unprivileged user. A test that only plays root cannot fail on

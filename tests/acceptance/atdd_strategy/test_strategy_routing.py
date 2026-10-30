@@ -476,3 +476,26 @@ def test_trc_a23_a_bad_setting_does_not_stop_a_pinned_project(tmp_path):
         "schema: 1\nextends: compass:default@7\nacceptance_strategy: maybe\n", encoding="utf-8")
     assert issue.run("check", "--issue", "change")[0] != 2
     assert project.run("retro", "--acceptance")[0] == 0
+
+
+def test_trc_a23_a_changed_pin_never_blocks_the_record(tmp_path):
+    """The pin line comes from the project's `compass.yml`, not the issue's own
+    records, so a changed `extends:` makes the block stale only as an advisory,
+    as for any block drawn from the project (`TRC-A23`)."""
+    project = support.Project(tmp_path / "repo")
+    project.setting(None, extends="compass:default@6")
+    issue = project.issue("change")
+    assert issue.assess()[0] == 0
+    issue.approach_record()
+    body = issue.manifest()
+    body["current_phase"] = "verify"
+    issue.write_manifest(body)
+    assert issue.run("issue", "render", "--issue", "change")[0] == 0
+
+    def status():
+        rows = [c for c in issue.check()[1]["checks"] if c["name"] == "rendered-blocks-current"]
+        return rows[0]["status"]
+
+    assert status() == "pass"
+    project.setting(None, extends="compass:default@8")
+    assert status() == "advisory"

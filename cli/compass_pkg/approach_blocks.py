@@ -22,7 +22,7 @@ them through `_add_modules`. They read only the manifest and the configuration v
 from __future__ import annotations
 
 from compass_pkg import rendered_blocks as rb
-from compass_pkg.render_inputs import OWN, Part, code as _code
+from compass_pkg.render_inputs import CROSS, OWN, Part, code as _code
 from compass_pkg.stable_ids import STAGE_IDS
 
 #: Shown for a dimension the manifest holds no justification for: an issue assessed
@@ -133,7 +133,11 @@ def acceptance_strategy_line(inputs, doc_rel):
     """Whether the four-layer acceptance strategy applies, why, and its routing on the
     issue's approach, from the manifest's `acceptance_strategy` block."""
     from compass_pkg import acceptance_strategy
-    return Part(OWN, [rb.field(acceptance_strategy.line(inputs.task, inputs.task_dir))])
+    line = rb.field(acceptance_strategy.line(inputs.task, inputs.task_dir))
+    # With no stored block the line can name the project's `extends:` pin, which
+    # the issue's records do not hold, so a stale line is only advisory.
+    scope = OWN if acceptance_strategy.stored(inputs.task) is not None else CROSS
+    return Part(scope, [line])
 
 
 RENDERERS = {

@@ -61,7 +61,7 @@ The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 | `gate-set` | In `delivery-approach.md` under Gate set. The gates in the manifest's order, and beside a gate a policy rule added, the ids of those rules |
 | `model-tiers` | In `delivery-approach.md` under Model tiers. One row for each seat the manifest's `models:` key records, in seat order, with its tier, the rule that set it and the floors for that seat that did not fire. It shows tiers, not model names, so a change to the `models` setting does not make it stale. An issue with no `models:` key shows one line saying the agents run on their frontmatter model. A delivery approach written before the block existed has no marker, so the render leaves it alone |
 | `plan-exit`, `breakdown-exit` | The configured `plan` or `breakdown` exit list under `## Gate` in `technical-design.md` and `distribution-map.md`, read like `dod`. Empty (the shipped default): `No exit checks are configured for the plan stage.` (or `breakdown`) |
-| `acceptance-strategy` | In `delivery-approach.md` under The assessment. One line from the manifest's `acceptance_strategy` block: whether the four-layer acceptance strategy (`S17`) applies, the reason, and its routing on the issue's approach, as in `Four-layer acceptance strategy (`S17`): applies - client-observable behavior. Routing on the regular approach: on.` An issue with no block, assessed before the strategy shipped, shows a line that says the strategy does not apply to it. A delivery approach written before the block existed has no marker, so the render leaves it alone |
+| `acceptance-strategy` | In `delivery-approach.md` under The assessment. One line from the manifest's `acceptance_strategy` block: whether the four-layer acceptance strategy (`S17`) applies, the reason, and its routing on the issue's approach, as in `Four-layer acceptance strategy (`S17`): applies - client-observable behavior. Routing on the regular approach: on.` An issue with no block shows a line that says the strategy does not apply to it: in a project whose `compass.yml` extends the shipped default at major 6 or 7 the line names that `extends:` value, and otherwise it says the issue was assessed before the strategy shipped. That line draws on the project, so a stale one is only advisory. The quick-fix record holds the block under Acceptance strategy. A delivery approach written before the block existed has no marker, so the render leaves it alone |
 | `readiness` | The one line `Repository readiness: 9 of 11 signals, floor met`, or `Repository readiness: not measured (<why>: <how to fix>)`, from the manifest's `readiness:` summary. The marker is in `templates/delivery-approach.md`, under The assessment. A delivery approach written before the block existed has no marker, so the render leaves it alone. The receipt and the board panel print the same line from the same function (`readiness_record.line`), and the manifest key is written by `compass approach evaluate --write`. A render only reads the key |
 | `release-line` | In the `## Release line` section of `templates/verification-report.md`, after "Decisions taken for the user" and before `## Gate`. The manifest's `release_note` on one line, or `No release line recorded yet.` with the command `compass ship-commit --release-note "<text written for a user>"`. The manifest is the only copy of the line (`docs/release-line.md`). A report written before the block existed has no marker, so the render leaves it alone |
 
@@ -146,8 +146,8 @@ comment or a fence does not count. `governance/guardrails.md` holds their rules.
 ## The quick-fix record
 
 `compass quick-fix start` writes the delivery-approach record with its own short headings. The record holds a
-`document-header` block after the title, an `assessment` block under Assessment and a `policy-rules` block under
-Policy rules fired, and no `**Approach:**` line. The command writes the marker pairs and no block text of its
+`document-header` block after the title, an `assessment` block under Assessment, a `policy-rules` block under
+Policy rules fired and an `acceptance-strategy` block under Acceptance strategy, and no `**Approach:**` line. The command writes the marker pairs and no block text of its
 own, then renders the record. The after-command render then renders the issue page and the project index.
 The command is in `RENDER_FURTHER`, not `EXEMPT`, for that reason. A record written before the blocks existed
 keeps its tables.
@@ -358,8 +358,8 @@ never through the parse cache.
 
 | Block | Draws on | At `verify`, `ship` and done | Before `verify` |
 |---|---|---|---|
-| `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`, `follow-ups`, `decisions-taken`, `assessment`, `policy-rules`, `stage-weights`, `gate-set`, `plan-exit`, `breakdown-exit`, `document-header`, the issue page | the issue's own records | fails | advisory |
-| `related`, `dependencies`, the governance lines of `decisions`, the issue's row of the index, the `Blocked: waits for` line of `header` | other issues or the project | advisory | advisory |
+| `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`, `follow-ups`, `decisions-taken`, `assessment`, `policy-rules`, `stage-weights`, `gate-set`, `plan-exit`, `breakdown-exit`, `document-header`, `acceptance-strategy` for an issue with a stored block, the issue page | the issue's own records | fails | advisory |
+| `related`, `dependencies`, the governance lines of `decisions`, the issue's row of the index, the `Blocked: waits for` line of `header`, `acceptance-strategy` for an issue with no stored block | other issues or the project | advisory | advisory |
 
 A missing issue page fails at `verify` and is advisory before. The message names
 the file, the block kind and `compass issue render`. A checkout that holds only

@@ -5176,3 +5176,16 @@ Compass now ships an atdd skill for four-layer acceptance tests, loaded at refin
 - `TRC-007` The new text passes the vocabulary scans and never says a bare S2
 - `TRC-008` The review questions have one heading per stage
 - `TRC-009` The skill states how stage 1 ends in a red that unlocks no code
+
+### atdd-python-example (completed 2026-10-30)
+
+A Python example in examples/atdd-adapters/python/ shows four-layer acceptance tests, with an API driver and a CLI driver chosen at start-up and a layering test.
+
+- `TRC-J1` One specification runs through two drivers chosen at start-up
+- `TRC-J2` The reference layering test fails each planted breach
+- `TRC-J3` The reference layering test passes the layered example within 5 seconds
+- `TRC-J4` A refactor leaves the specification alone
+- `TRC-F1` A driver that does not exist yet is a setup error, not a collection failure
+- `TRC-F2` A driver name the factory does not know is refused at start-up
+- `TRC-F3` The suite passes in parallel and one scenario twice, against one store
+- `TRC-F4` A CI job runs the example through both drivers and its layering test

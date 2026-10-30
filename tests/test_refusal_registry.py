@@ -70,7 +70,8 @@ FIXTURES = {
     # the registry keeps of a long parameter, so the 60-word cap is checked
     # where it is tightest.
     "no-red-on-record": dict(slug="a" * 40, target="src/app.py", tool="Edit",
-                             guard=" ".join(f"word{i}" for i in range(20))),
+                             guard=" ".join(f"word{i}" for i in range(20)),
+                             project="/work/" + "p" * 40),
     # The longest form: 40-character slugs, more unmet dependencies and a
     # closed state, so the 60-word cap is checked where it is tightest.
     "waits-for-issue": dict(slug="a" * 40, target="src/app.py", tool="Edit",

@@ -170,9 +170,14 @@ REFUSALS: dict[str, dict[str, str]] = {
     },
     "no-red-on-record": {
         "what": "edit to {target} (tool: {tool}, guarded by {guard})",
-        "why": "no failing test is on record for issue '{slug}'.",
+        # The project names the tree whose issue judged the edit: a worktree
+        # is judged by its own issue (ADR-074, ADR-078), and the reader must
+        # know where to run tdd-red. The wording keeps the longest form
+        # under 60 words (tests/test_refusal_registry.py).
+        "why": "no failing test is recorded for issue '{slug}' in "
+               "{project}.",
         "fix": "run compass tdd-red --scenario <id> -- <failing test "
-               "command>, or compass acceptance start if no test fits, "
+               "command>, or compass acceptance start if none fits, "
                "then retry.",
     },
     # The approval guards (approval_guard.py, ADR-068 decision 10, ADR-069).

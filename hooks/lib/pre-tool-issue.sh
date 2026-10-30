@@ -4,6 +4,134 @@
 # hooks/pre-tool.sh sources each part in order, at its top level, so the parts
 # run as one script in one shell. This file is not a hook of its own.
 
+# --- judge the write targets of a Bash command --------------------------------
+# Sets DETECTED to the first target in TARGET_LIST that needs a red, judged
+# against PROJECT_DIR. With `outside-tree`, only targets that land outside
+# BASH_TREE_DIR are judged, a relative one read against that tree (see the
+# caller). A target that the text alone cannot place - an unknown part, such
+# as `$PWD`, followed by `..` - counts as outside the tree, so it is judged
+# against the session's project, as before. With $2 set to `free`, the
+# targets are not charged to the work budget again: the other pass charged
+# each one already.
+bash_judge_targets() {
+  local mode="$1" charge="${2:-charge}"
+  GLOB_DEFER=1
+  GLOB_PENDING="" GLOB_PENDING_CANDIDATES=""
+  while IFS= read -r candidate; do
+    _kind="${candidate:0:1}"
+    candidate="${candidate:1}"
+    [ -z "$candidate" ] && continue
+    # Judging a path costs more for a long path and for each glob it is
+    # tried against (charged in is_enforced_path).
+    if [ "$charge" = charge ]; then
+      WORK_USED=$((WORK_USED + COST_CANDIDATE + COST_CANDIDATE_CHAR * ${#candidate}))
+    fi
+    if [ "$WORK_USED" -gt "$WORK_BUDGET" ] \
+        || [ $((SECONDS - HOOK_START)) -ge "$FUSE_SECONDS" ]; then work_over; fi
+    # A quoted target names the same file as an unquoted one, so awk took the
+    # quotes out above (`> "src/app.ts"`). Inside single quotes the shell
+    # expands nothing, so `'$S/x'` is a literal path (kind L) and is not
+    # expanded. Only a target that starts with `$` can be expanded, and
+    # passing the whole command to the function costs about 3 ms in a UTF-8
+    # locale at 90 KB, so the others do not call it.
+    if [ "$_kind" = E ]; then
+      case "$candidate" in
+        '$'*)
+          if [ -n "$EXPAND_MEMO_CMD" ]; then
+            expand_command_variable_into "$candidate" "" same
+          else
+            expand_command_variable_into "$candidate" "$COMMAND"
+          fi
+          candidate="$EXPANDED"
+          if [ "$WORK_OVER" -eq 1 ]; then work_over; fi
+          # Past NAME_LIMIT the command is too slow to read for every name.
+          if [ "$EXPAND_NAMES" -gt "$NAME_LIMIT" ]; then
+            [ "$COMPASS_IN_USE" -eq 1 ] \
+              && compass_block bash-command-too-complex \
+                   "has=$EXPAND_NAMES different variable names" \
+                   "over=more than $NAME_LIMIT variable names"
+            exit 0
+          fi ;;
+      esac
+    fi
+    [ -z "$candidate" ] && continue
+    if [ "$mode" = outside-tree ]; then
+      # A target with a part the hook cannot know (`~`, a variable it did
+      # not expand, a backtick or a brace) may name any folder, so it is
+      # judged unchanged against the session's project, as before the
+      # worktree rule. A relative target is read against the tree, where
+      # the call runs, so one that climbs out with `..` names the main
+      # checkout's file.
+      case "$candidate" in
+        *'$'*|*'`'*|*'~'*|*'{'*) ;;
+        /*) path_in_tree "$candidate" "$BASH_TREE_DIR" && continue ;;
+        *) candidate="$BASH_TREE_DIR/$candidate"
+           path_in_tree "$candidate" "$BASH_TREE_DIR" && continue ;;
+      esac
+    fi
+    # 0: enforced, 1: not, 2: only a glob bash cannot decide could enforce it.
+    # The paths of the third kind are kept for one Python start below.
+    _verdict=0
+    is_enforced_path "$candidate" || _verdict=$?
+    if [ "$_verdict" -eq 0 ]; then
+      DETECTED="$candidate"
+      break
+    elif [ "$_verdict" -eq 2 ]; then
+      GLOB_PENDING_CANDIDATES="$GLOB_PENDING_CANDIDATES$candidate"$'\n'
+    fi
+  done <<<"$TARGET_LIST"
+  GLOB_DEFER=0
+  # A path set aside comes before the one that ended the loop, so a glob that
+  # matches one of them names the first such path, as when each was judged in
+  # turn.
+  settle_deferred_globs
+  if [ "$GLOB_HIT_INDEX" -gt 0 ]; then
+    _rest="$GLOB_PENDING_CANDIDATES"
+    _n=1
+    while [ "$_n" -lt "$GLOB_HIT_INDEX" ]; do
+      _rest="${_rest#*$'\n'}"
+      _n=$((_n + 1))
+    done
+    DETECTED="${_rest%%$'\n'*}"
+    MATCHED_RULE="enforcement.code_globs pattern '$GLOB_HIT' in $GLOBS_FILE"
+  fi
+  return 0
+}
+
+# Whether absolute path $1 is inside folder $2, as is_enforced_path judges
+# containment: `.`, `..` and repeated slashes resolved as text, and letter
+# case ignored. A path with an unknown part (`$`, a backtick, `~` or a brace)
+# and a `..` step is not known to be inside.
+path_in_tree() {
+  local abs="$1" tree
+  case "$abs" in
+    *'$'*|*'`'*|*'~'*|*'{'*)
+      case "/$abs/" in */../*) return 1 ;; esac ;;
+  esac
+  normalise_path "$2"; tree="$NORMALISED"  # us-english-scan: allow - shell variable name, not prose
+  normalise_path "$abs"; abs="$NORMALISED"  # us-english-scan: allow - shell variable name, not prose
+  case "$abs" in "$tree"/*) return 0 ;; esac
+  [ "${#abs}" -gt "${#tree}" ] && [ "${abs:${#tree}:1}" = "/" ] \
+    && [ "$(printf '%s' "${abs:0:${#tree}}" | tr '[:upper:]' '[:lower:]')" = \
+         "$(printf '%s' "$tree" | tr '[:upper:]' '[:lower:]')" ]
+}
+
+# Whether the command text can change the folder a relative path, or a patch,
+# is read against: `cd` (also quoted, inside `bash -c` or a subshell),
+# `pushd`, `popd`, a `chdir` call in an inline script (Python, Node, Ruby),
+# `env -C`, `sudo -D` or `--chdir`, `ruby -C`, `find -execdir`, and
+# `patch -d` or `--directory`. The match is on the text and can hit a word
+# that only ends in `cd`; that costs the verdict the hook gave before the
+# worktree rule, never a missed check.
+bash_changes_folder() {
+  case "$COMMAND" in
+    *cd[[:space:]\;\&\|\)\"\']*|*cd|*pushd*|*popd*|*chdir*|\
+    *env[[:space:]]*-C*|*sudo[[:space:]]*-D*|*ruby*[[:space:]]-C*|\
+    *-execdir*|*patch*[[:space:]]-d*|*--directory*) return 0 ;;
+  esac
+  return 1
+}
+
 # --- decide whether this tool call needs a red on record ---------------------
 if [ "${TOOL:-}" = "Bash" ]; then
   [ -z "${COMMAND:-}" ] && exit 0
@@ -24,8 +152,16 @@ if [ "${TOOL:-}" = "Bash" ]; then
   # `patch` and `git apply` name their targets inside the diff, not on the
   # command line. They are known writers with an unknowable target, so they are
   # treated as enforced - the escape is the same as any other: record the red.
+  #
+  # From a worktree, a patch is the worktree's own unless the command can
+  # change folder: then where the patch lands is unknown, and the session's
+  # project and issue judge it, as before the worktree rule (ADR-078).
   case "$COMMAND" in
-    *patch\ -p*|*"git apply"*) DETECTED="(the files named in the patch)" ;;
+    *patch\ -p*|*"git apply"*)
+      DETECTED="(the files named in the patch)"
+      if [ "$BASH_FROM_TREE" -eq 1 ] && bash_changes_folder; then
+        PROJECT_DIR="$CLAUDE_PROJECT_DIR" FOREIGN=0 BASH_FROM_TREE=0
+      fi ;;
   esac
 
   if [ -z "$DETECTED" ]; then
@@ -127,69 +263,47 @@ if [ "${TOOL:-}" = "Bash" ]; then
       fi
     done <<<"$TARGET_LIST"
 
-    GLOB_DEFER=1
-    GLOB_PENDING="" GLOB_PENDING_CANDIDATES=""
-    while IFS= read -r candidate; do
-      _kind="${candidate:0:1}"
-      candidate="${candidate:1}"
-      [ -z "$candidate" ] && continue
-      # Judging a path costs more for a long path and for each glob it is
-      # tried against (charged in is_enforced_path).
-      WORK_USED=$((WORK_USED + COST_CANDIDATE + COST_CANDIDATE_CHAR * ${#candidate}))
-      if [ "$WORK_USED" -gt "$WORK_BUDGET" ] \
-          || [ $((SECONDS - HOOK_START)) -ge "$FUSE_SECONDS" ]; then work_over; fi
-      # A quoted target names the same file as an unquoted one, so awk took the
-      # quotes out above (`> "src/app.ts"`). Inside single quotes the shell
-      # expands nothing, so `'$S/x'` is a literal path (kind L) and is not
-      # expanded. Only a target that starts with `$` can be expanded, and
-      # passing the whole command to the function costs about 3 ms in a UTF-8
-      # locale at 90 KB, so the others do not call it.
-      if [ "$_kind" = E ]; then
-        case "$candidate" in
-          '$'*)
-            if [ -n "$EXPAND_MEMO_CMD" ]; then
-              expand_command_variable_into "$candidate" "" same
-            else
-              expand_command_variable_into "$candidate" "$COMMAND"
-            fi
-            candidate="$EXPANDED"
-            if [ "$WORK_OVER" -eq 1 ]; then work_over; fi
-            # Past NAME_LIMIT the command is too slow to read for every name.
-            if [ "$EXPAND_NAMES" -gt "$NAME_LIMIT" ]; then
-              [ "$COMPASS_IN_USE" -eq 1 ] \
-                && compass_block bash-command-too-complex \
-                     "has=$EXPAND_NAMES different variable names" \
-                     "over=more than $NAME_LIMIT variable names"
-              exit 0
-            fi ;;
-        esac
+    if [ "$BASH_FROM_TREE" -eq 1 ]; then
+      # The call runs in a worktree of the session's repository
+      # (pre-tool-project.sh, bash_follow_cwd). A target that lands outside
+      # that tree is judged first, against the session's project and issue,
+      # exactly as before, so a write into the main checkout from a worktree
+      # still needs the session issue's red. Only when none of those is
+      # guarded are the targets judged against the worktree.
+      #
+      # A command that can change its folder makes a relative target's
+      # folder unknown, so the session pass judges every target as before
+      # the worktree rule existed: a relative target then reads against the
+      # session's project (bash_changes_folder).
+      _session_mode=outside-tree
+      if bash_changes_folder; then _session_mode=all; fi
+      BASH_TREE_DIR="$PROJECT_DIR"
+      PROJECT_DIR="$CLAUDE_PROJECT_DIR"
+      # Each target is charged to the work budget once, in the pass that
+      # reads every target.
+      if [ "$_session_mode" = all ]; then
+        bash_judge_targets all
+      else
+        bash_judge_targets outside-tree free
       fi
-      [ -z "$candidate" ] && continue
-      # 0: enforced, 1: not, 2: only a glob bash cannot decide could enforce it.
-      # The paths of the third kind are kept for one Python start below.
-      _verdict=0
-      is_enforced_path "$candidate" || _verdict=$?
-      if [ "$_verdict" -eq 0 ]; then
-        DETECTED="$candidate"
-        break
-      elif [ "$_verdict" -eq 2 ]; then
-        GLOB_PENDING_CANDIDATES="$GLOB_PENDING_CANDIDATES$candidate"$'\n'
+      if [ -n "$DETECTED" ]; then
+        # The session's project judges the call, with the session's rules:
+        # COMPASS_ISSUE first, the pointer, and pointer-moved.
+        FOREIGN=0 BASH_FROM_TREE=0
+      else
+        PROJECT_DIR="$BASH_TREE_DIR"
+        # The settings were read from the session's project; read them again
+        # from the worktree's.
+        GLOBS_LOADED=0 GLOBS_STATUS=0 GLOBS_FILE="" GLOBS_KIND="" GLOBS_JSON="" GLOBS_LIST="" GLOBS_COUNT=0
+        MATCHED_RULE=""
+        if [ "$_session_mode" = all ]; then
+          bash_judge_targets all free
+        else
+          bash_judge_targets all
+        fi
       fi
-    done <<<"$TARGET_LIST"
-    GLOB_DEFER=0
-    # A path set aside comes before the one that ended the loop, so a glob that
-    # matches one of them names the first such path, as when each was judged in
-    # turn.
-    settle_deferred_globs
-    if [ "$GLOB_HIT_INDEX" -gt 0 ]; then
-      _rest="$GLOB_PENDING_CANDIDATES"
-      _n=1
-      while [ "$_n" -lt "$GLOB_HIT_INDEX" ]; do
-        _rest="${_rest#*$'\n'}"
-        _n=$((_n + 1))
-      done
-      DETECTED="${_rest%%$'\n'*}"
-      MATCHED_RULE="enforcement.code_globs pattern '$GLOB_HIT' in $GLOBS_FILE"
+    else
+      bash_judge_targets all
     fi
   fi
 

@@ -411,7 +411,13 @@ def test_foreign_worktree_edit_skips_the_session_table(tmp_path):
 # --- group C: Bash and the documents -------------------------------------------
 
 def test_bash_still_resolves_from_the_session_project(tmp_path):
-    """Scenario id: `TRC-019` in worktree-issue-from-edited-path/acceptance-criteria.md"""
+    """Scenario id: `TRC-019` in worktree-issue-from-edited-path/acceptance-criteria.md
+
+    The input names no `cwd`, so the hook's own working folder (the
+    worktree) does not move the project. A Bash call whose `cwd` is in the
+    worktree is judged by the worktree's issue
+    (tests/test_bash_follows_worktree_cwd.py).
+    """
     main = _setup(tmp_path, main_issues=(("alpha", False),),
                   main_pointer="alpha")
     wt = _linked(main)

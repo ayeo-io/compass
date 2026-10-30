@@ -95,7 +95,8 @@ def test_changed_refusals_stay_under_sixty_words():
     guard = " ".join(f"word{i}" for i in range(20))
     forms = {
         "no-red-on-record": dict(slug=slug, target="cli/compass_pkg/routing.py",
-                                 tool="Edit", guard=guard),
+                                 tool="Edit", guard=guard,
+                                 project="/work/" + "p" * 40),
         "bad-session-issue": dict(slug=slug, project="/work/" + "p" * 40),
         "bad-session-issue-restart": dict(slug=slug,
                                           project="/work/" + "p" * 40),

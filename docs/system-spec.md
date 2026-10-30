@@ -5162,3 +5162,9 @@ The directory tests now fail a new subprocess that gets the whole environment, a
 
 - `TRC-K2` Given a branch with one forbidden addition planted (an inline hook program, a nested quote in a hook command, a command that pre-approves bare Bash, a subprocess given the whole environment, a binary file, or a file added to bin/) When tests/test_directory_validator.py runs Then it reports exactly 1 failure naming the hook, the command, the file and line, or the file; and 0 failures with none planted
 - `TRC-K1` The plugin copy passes the directory validator
+
+### hooks-pilot-alias-run-id (completed 2026-10-30)
+
+The hooks acceptance tests give each parallel worker its own alias numbers, so two workers never reuse one name.
+
+- `TRC-001` Given two xdist workers of one run, When each aliases the same name, Then both aliases carry the run's shared id and differ by worker

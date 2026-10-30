@@ -276,7 +276,9 @@ _(none yet - the shipped default guardrails apply as-is)_
     out. The finding names the re-assess command.
   - It declines, reporting `nothing to check`, when the stored block and the
     setting both say off.
-  - An issue with no stored block was assessed before the strategy shipped.
+  - An issue with no stored block was assessed before the strategy shipped,
+    or belongs to a project whose `compass.yml` extends the shipped default at
+    major 6 or 7; that notice names the `extends:` value instead.
     `compass check` adds no row for it and prints the notice "four-layer
     acceptance strategy (`S17`): does not apply - this issue was assessed
     before the strategy shipped", so its rows and exit code are those of the

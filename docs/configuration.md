@@ -353,3 +353,11 @@ owner's approval: the delivery-approach record and `compass retro
 `compass approach evaluate --write`; until then `compass check` reports the
 changed setting as advice. The setting is read from `compass.yml`, or
 `.compass/config.yml` when `compass.yml` is absent or has no `schema:`.
+
+The strategy ships in the default preset from major 8. A project whose
+`compass.yml` extends `compass:default@6` or `compass:default@7` does not get
+it: assess stores no applicability and `compass check` adds no row for it. A
+project with no `compass.yml`, no `extends:` or a git parent runs on the live
+default and gets it. The setting is the one way to turn the strategy off:
+`compass policy lint` refuses `acceptance_strategy: suspended` on an approach
+that ships.

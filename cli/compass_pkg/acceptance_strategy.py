@@ -128,6 +128,54 @@ def approach_routing(resolved, approach):
     return "on" if body.get("ships", True) is not False else "suspended"
 
 
+#: The first major of the shipped default that carries the strategy.
+FIRST_MAJOR = 8
+
+
+def pinned_below(project_root):
+    """The `extends:` value when the project's `compass.yml` pins the shipped
+    default at a major before `FIRST_MAJOR`, else None. Resolution always reads
+    the live preset, whatever major `extends:` names, so the pin is what keeps
+    a project on @6 or @7 out of the strategy (decided by jed72, 2026-10-30). A
+    project with no `compass.yml`, no `extends:` or a git parent names no
+    shipped major and runs on the live default, so it is not pinned below."""
+    from compass_pkg import layers, parents
+    if not project_settings.compass_yml_counts(project_root):
+        return None
+    try:
+        doc = load_yaml(os.path.join(project_root, layers.PROJECT_FILE))
+        value = parents.extends_value((doc or {}).get("extends"))
+        name, major = layers.parse_extends(value)
+    except (CompassError, AttributeError, TypeError, ValueError):
+        return None
+    return value if name == "default" and major < FIRST_MAJOR else None
+
+
+def suspended_findings(resolved):
+    """`[(path, message)]` for each approach that ships and sets the routing
+    `suspended`. `compass policy lint` refuses them: that would turn the strategy
+    off with no recorded reason, and the settings key is the one way to turn it
+    off (decided by jed72, 2026-10-30). The spike, which ships nothing, keeps
+    `suspended`."""
+    out = []
+    for approach, body in sorted(((resolved or {}).get("approaches") or {}).items()):
+        if (isinstance(body, dict) and body.get(KEY) == "suspended"
+                and body.get("ships", True) is not False):
+            out.append((f"approaches.{approach}.{KEY}",
+                        f"the {approach} approach ships, so it cannot suspend the "
+                        f"four-layer acceptance strategy; turn the strategy off for the "
+                        f"project with the settings key `{KEY}: {{state: off, reason: <why>}}`"))
+    return out
+
+
+def notice(task_dir):
+    """The notice `compass check` gives an issue with no stored block."""
+    pinned = pinned_below(_project_root(task_dir))
+    if pinned:
+        return f"{NAME}: does not apply - the project extends {pinned}, before the strategy"
+    return NOTICE
+
+
 def declared(resolved):
     """True when a resolved configuration declares the strategy's check, which
     is how an issue's stored generation says the strategy shipped for it."""

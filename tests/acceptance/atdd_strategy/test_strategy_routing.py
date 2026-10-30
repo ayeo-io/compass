@@ -112,20 +112,6 @@ def test_trc_a5(tmp_path, line):
 
 # --- `TRC-A6` ------------------------------------------------------------------------------
 
-def test_trc_a5_a_project_routing_that_suspends_a_shipping_approach(tmp_path):
-    """An approach that ships, routed `suspended` by the project, gives its own
-    reason, and the advisory check has nothing to compare (`TRC-A5`)."""
-    project = support.Project(tmp_path / "repo")
-    project.setting(None, approaches={"regular": {"set": {"acceptance_strategy": "suspended"}}})
-    issue = project.issue("change")
-    code, out, err = issue.assess()
-    assert code == 0, out + err
-    line = _strategy_line(issue.approach_record())
-    assert "does not apply - suspended on the regular approach by the project" in line, line
-    issue.red()
-    assert _row(issue.check()[1])["status"] == "nothing-to-check"
-
-
 @pytest.mark.parametrize("approach, routing", [
     ("regular", "on"),
     ("full", "on"),
@@ -354,3 +340,59 @@ def _terms(doc):
             for name, body in value.items():
                 if isinstance(body, dict) and "means" in body:
                     yield name, body
+
+
+# --- `TRC-A22` -----------------------------------------------------------------------------
+
+def test_trc_a22():
+    """The compatibility corpus moves with a major preset bump, and only it."""
+    import sys
+    sys.path.insert(0, str(ROOT / "tests"))
+    import test_frozen_files_unchanged as frozen
+    corpus = ROOT / "tests" / "fixtures" / "compat" / "contract-4-commands.yml"
+    entries = {e["id"]: e for e in
+               yaml.safe_load(corpus.read_text(encoding="utf-8"))["entries"]}
+    assert entries["policy-effective-shipped"]["stdout_contains"] == "default@8.0.0"
+    assert entries["policy-update-major-not-kept"]["argv"] == ["policy", "update", "--to", "9"]
+    text = corpus.read_text(encoding="utf-8")
+    for entry in ("policy-effective-shipped", "policy-update-major-not-kept"):
+        body = text[text.index(f"- id: {entry}\n"):].split("\n- id:", 1)[0]
+        said = " ".join(line.strip().lstrip("#").strip() for line in body.splitlines())
+        assert "a major preset bump moves it" in said and "jed72, 2026-10-30" in said, entry
+    assert frozen.digest_problems(ROOT, frozen._pinned()) == []
+
+
+# --- `TRC-A23` -----------------------------------------------------------------------------
+
+@pytest.mark.parametrize("major, applies", [(6, False), (7, False), (8, True)])
+def test_trc_a23(tmp_path, major, applies):
+    """A project pinned to an earlier major does not get the strategy."""
+    project = support.Project(tmp_path / "repo")
+    project.setting(None, extends=f"compass:default@{major}")
+    issue = project.issue("change")
+    code, out, err = issue.assess()
+    assert code == 0, out + err
+    assert ("acceptance_strategy" in issue.manifest()) is applies
+    issue.red()
+    code, document = issue.check()
+    assert bool([c for c in document["checks"] if c["name"] == CHECK]) is applies
+
+
+# --- `TRC-A24` -----------------------------------------------------------------------------
+
+def test_trc_a24(tmp_path):
+    """A shipping approach cannot suspend the strategy; the spike keeps `suspended`."""
+    import sys
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import acceptance_strategy, policy_lint
+    project = support.Project(tmp_path / "repo")
+    project.setting(None, approaches={"regular": {"set": {"acceptance_strategy": "suspended"}}})
+    code, out, err = project.run("policy", "lint")
+    assert code != 0, out + err
+    assert "acceptance_strategy: {state: off, reason:" in out + err, out + err
+    issue = project.issue("change")
+    code, out, err = issue.assess()
+    assert code == 2, out + err
+    assert "acceptance_strategy: {state: off, reason:" in out + err, out + err
+    shipped, _ = policy_lint.load_parent()
+    assert acceptance_strategy.approach_routing(shipped.doc, "spike") == "suspended"

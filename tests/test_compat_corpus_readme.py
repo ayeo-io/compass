@@ -54,6 +54,12 @@ def test_trc_057():
             if name == "init-fresh":
                 assert entry["exit"] == now[name]["exit"]
                 continue
+            # The two entries that name the live major move with a major preset bump
+            # (decided by jed72, 2026-10-30); `test_trc_a22` of the four-layer
+            # acceptance strategy checks their new values.
+            if name in ("policy-effective-shipped", "policy-update-major-not-kept"):
+                assert entry["exit"] == now[name]["exit"], name
+                continue
             assert now[name] == entry, name
     assert now_text.count("stdout_contains: \"initialized Compass\"") == 1
     assert list((ROOT / CORPUS).rglob("README*")) == []

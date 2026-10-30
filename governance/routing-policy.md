@@ -359,7 +359,12 @@ turns the whole strategy off with no approval. `compass approach evaluate
 --write` stores the issue's applicability from it, as the strategy's entry in
 `governance/strategies.md` says. The 7.0.0 preset is kept, byte for byte as v8.0.4 shipped it, in
 `governance/presets/default@7/` for `compass policy update`; resolution reads
-only the live preset, whatever major a project's `extends:` names.
+only the live preset, whatever major a project's `extends:` names. So the pin
+decides instead: a project whose `compass.yml` extends `compass:default@6` or
+`@7` stores no applicability at assess and gets no row from the strategy's
+check. `compass policy lint` refuses `acceptance_strategy: suspended` on an
+approach that ships (`M-ACCEPTANCE-SUSPENDED`); the settings key is the one way
+to turn the strategy off (decided by jed72, 2026-10-30).
 
 - Change a default in the preset (or in `legacy-views.yml` for a value only the
   views hold), then run `python3 scripts/generate-legacy-views.py`.

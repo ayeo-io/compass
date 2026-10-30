@@ -615,8 +615,8 @@ def test_d2_repairs_change_only_retired_names():
     programs the shared shell libraries run.
 
     One more was re-baselined by `acceptance-strategy-core`:
-    `governance/strategies.md` (list_items 97 -> 103) gained the four-layer
-    acceptance strategy, one `###` heading and 6 list items, and
+    `governance/strategies.md` (list_items 97 -> 104) gained the four-layer
+    acceptance strategy, one `###` heading and 7 list items, and
     `governance/guardrails.md` (list_items 66 -> 71) gained the strategy's
     advisory check, one list item and its four sub-items.
 

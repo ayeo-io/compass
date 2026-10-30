@@ -150,8 +150,12 @@ commands write; it never reads project code.
   strategy's checks, with a reason, approved by the project's owner
   (ADR-039). Its findings then report as advice, and the retrospective
   reports the issue apart.
-- **Older issues.** An issue assessed before the strategy shipped has no
-  stored applicability, so the strategy never applies to it (ADR-006).
+- **Older issues and pinned projects.** An issue assessed before the
+  strategy shipped has no stored applicability, so the strategy never applies
+  to it (ADR-006). Nor does it apply in a project whose `compass.yml` extends
+  the shipped default at major 6 or 7: the strategy ships from major 8.
+- **Only the setting turns it off.** An approach that ships cannot set the
+  strategy to `suspended`; `compass policy lint` refuses it.
 - Its checks are unlocked and sit outside every gate, as
   `nfr-rows-resolved` does (ADR-064). Guardrails `G1` and `G4` keep their
   checks.

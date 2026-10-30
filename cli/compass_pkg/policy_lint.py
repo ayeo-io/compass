@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from compass_pkg import catalogue_check, documents_present, layers, locks
 from compass_pkg import merge, parent_states, parents, waivers
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import retired, word_map
+from compass_pkg import acceptance_strategy, retired, word_map
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 from compass_pkg.check_registry import READINESS, REGISTRY, REMOVED
 from compass_pkg.core import FRAMEWORK_ROOT, CompassError
@@ -53,7 +53,7 @@ FINDING_CODES = (
     "M-REF-UNKNOWN", "M-WEIGHT-TIE", "M-HIT-MISSING", "M-HIT-DISALLOWED", "M-CYCLE",
     "M-BOOKKEEPING-INPUT", "M-DIRECTORY-DEPENDENCY",
     "M-EFFECT-UNKNOWN", "M-LIST-KIND-UNEVALUATED", "M-FIELD-SHAPE", "M-READINESS-IMPL",
-    "M-READINESS-PARAM", "M-WHEN-RETIRED", "M-WHEN-DOCUMENTS",
+    "M-READINESS-PARAM", "M-WHEN-RETIRED", "M-WHEN-DOCUMENTS", "M-ACCEPTANCE-SUSPENDED",
     "K-LOCK-REFUSED", "K-UNLOCK-REFUSED", "K-UNPROVABLE",
     "E-EVALUATION",
     "C-LOOSENING", "C-INCOMPARABLE", "V-VOCABULARY-CHANGE",
@@ -677,10 +677,11 @@ def _readiness_findings(state):
 
 def _resolved_group(state):
     out = _unknown_references(state) + _effect_targets(state) + _list_kinds(state)
+    out += [_finding("resolved", "M-ACCEPTANCE-SUSPENDED", _layer_of(state, p), p, m)
+            for p, m in acceptance_strategy.suspended_findings(state["config"])]
     out += [_finding("resolved", code, _layer_of(state, path), path, message)
             for code, path, message in retired.condition_findings(state["config"])]
-    out += _readiness_findings(state)
-    out += _weight_ties(state) + _hit_policies(state)
+    out += _readiness_findings(state) + _weight_ties(state) + _hit_policies(state)
     out += [_finding("resolved", code, _layer_of(state, path), path, message)
             for code, path, message in catalogue_check.check_vocabulary(state["config"])]
     return out + _artifact_inputs(state) + _cycles(state) + _artifact_fields(state)

@@ -607,7 +607,7 @@ def _outside_gate_pass(run, task, task_dir, refused, checks=None):
         # it was assessed under (ADR-006).
         if check in acceptance_strategy.CHECKS and acceptance_strategy.stored(task) is None:
             if check == acceptance_strategy.CHECK:
-                run.note("  " + acceptance_strategy.NOTICE)
+                run.note("  " + acceptance_strategy.notice(task_dir))
             continue
         verdict = outside_gate.judged(check, CHECK_FNS.get(check), task, task_dir, _judge)
         if verdict is None:

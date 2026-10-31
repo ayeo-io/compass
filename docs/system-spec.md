@@ -5162,3 +5162,12 @@ The directory tests now fail a new subprocess that gets the whole environment, a
 
 - `TRC-K2` Given a branch with one forbidden addition planted (an inline hook program, a nested quote in a hook command, a command that pre-approves bare Bash, a subprocess given the whole environment, a binary file, or a file added to bin/) When tests/test_directory_validator.py runs Then it reports exactly 1 failure naming the hook, the command, the file and line, or the file; and 0 failures with none planted
 - `TRC-K1` The plugin copy passes the directory validator
+
+### land-commit-from-merged-pr (completed 2026-10-31)
+
+compass issue link set --pr records an issue's pull request and, once it is merged, sets land_commit to the merged commit. compass check shows an advisory row when the default branch does not reach a landed issue's land_commit.
+
+- `TRC-LC1` Given a landed issue whose pull request is merged, when compass issue link set --pr runs, then the manifest records the pull request and land_commit names its merge commit
+- `TRC-LC2` Given a pull request that is not merged, or an issue that has not landed, when compass issue link set --pr runs, then the pull request is recorded and land_commit does not change
+- `TRC-LC3` Given a landed issue, when compass check runs, then a land_commit the default branch does not reach is advice naming compass issue link set --pr, and one it reaches passes
+- `TRC-LC4` Given a --pr value that names no pull request, or one gh cannot read, when compass issue link set --pr runs, then it exits non-zero and writes nothing

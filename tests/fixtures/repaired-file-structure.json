@@ -775,7 +775,7 @@
       2,
       2
     ],
-    "list_items": 66,
+    "list_items": 72,
     "table_rows": 0
   },
   "governance/routing-policy.md": {
@@ -810,6 +810,7 @@
       3,
       3,
       3,
+      3,
       2,
       3,
       3,
@@ -825,7 +826,7 @@
       3,
       2
     ],
-    "list_items": 97,
+    "list_items": 104,
     "table_rows": 0
   },
   "skills/adaptive-routing/SKILL.md": {

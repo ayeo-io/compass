@@ -3,6 +3,9 @@
 # major version does not, and when an installed major is higher than the one
 # here (ADR-038). Update an entry in the same change that bumps the major.
 implementations:
+  acceptance-applicability-agrees:
+    verdict_digest: baea34d02ee85c6644cd8c6952d7edd0a933ddbe885ba1e6bb85984b86564ead
+    version: 1.0.0
   artifacts-approved:
     verdict_digest: 2b8b264f4e34df9c0cde464b3ed58cb558076b012c74e8a6551bad4b58a93e9f
     version: 1.0.0

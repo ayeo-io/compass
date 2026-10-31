@@ -71,7 +71,8 @@ RENDER_FURTHER = {
     "cmd_subtask_update": None,
     # The traceability chart of the issue page draws the files each scenario changed.
     "cmd_changed_file_add": None,
-    # The quick fix's record holds the header, assessment and policy-rules blocks.
+    # The quick fix's record holds the header, assessment, policy-rules and
+    # acceptance-strategy blocks.
     "cmd_quick_fix_start": None,
 }
 

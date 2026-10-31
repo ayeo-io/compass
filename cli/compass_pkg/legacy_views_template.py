@@ -205,11 +205,11 @@ GUARDRAILS_TEMPLATE = """\
 # those checks against an issue's `manifest.yml` and `evidence/`.
 #
 # Note the asymmetry, and that it is deliberate: GUARDRAILS get a .yml because
-# they are checkable. STRATEGIES do not - `strategies.md` stays prose-only,
-# because a strategy is *assessed* (the reviewer's judgment), not *checked*.
-# That asymmetry is the guardrail/strategy distinction made physical: if a
-# thing can be given a named, mechanical check, it can be a guardrail; if it
-# can only be judged, it is a strategy.
+# they are checkable and nobody steps off them. A STRATEGY is a strong default
+# you can step off with a recorded reason, so `strategies.md` holds it as prose.
+# A strategy can carry blocking checks that a recorded step-off makes advisory:
+# they sit outside every guardrail below, in no lock, so an approved waiver can
+# make them advisory (strategy `S17`). The guardrails keep their own checks.
 #
 # The five default guardrails below ship active. A project may ADD guardrails
 # under `project:` - each needs a named check, or it is a strategy, not a

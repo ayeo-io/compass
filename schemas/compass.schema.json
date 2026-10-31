@@ -3,6 +3,27 @@
   "additionalProperties": false,
   "description": "A project's one configuration file: its overlay on the shipped default and its settings. Generated from `cli/compass_pkg/catalogue_spec.py`; do not edit by hand.",
   "properties": {
+    "acceptance_strategy": {
+      "additionalProperties": false,
+      "description": "Whether the four-layer acceptance strategy (`S17`) is on for the project: `state` is `on` or `off`, and `off` needs a `reason`, which assess records. Unset means on; only the project's own file can hold it.",
+      "properties": {
+        "reason": {
+          "description": "Why the project turned the strategy off. Required with `off`.",
+          "type": "string"
+        },
+        "state": {
+          "description": "`on` or `off`.",
+          "enum": [
+            "on",
+            "off"
+          ]
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "type": "object"
+    },
     "adoption": {
       "description": "Whether a failed check blocks: `enforced` makes `compass check` and `compass ci` exit non-zero, and `advisory` reports the failure and exits 0. The shipped default is `enforced`.",
       "enum": [
@@ -22,6 +43,15 @@
           "additionalProperties": false,
           "description": "One delivery approach: its weight, the mode of each stage, and what it owes.",
           "properties": {
+            "acceptance_strategy": {
+              "description": "What the four-layer acceptance strategy (`S17`) asks on the approach: `on`,`existing-dsl`, `existing-dsl-isolation` or `suspended`. Unset, it is `on` for an approach that ships and `suspended` for one that does not.",
+              "enum": [
+                "on",
+                "existing-dsl",
+                "existing-dsl-isolation",
+                "suspended"
+              ]
+            },
             "artifacts": {
               "description": "The artifacts the approach owes, keyed by artifact id. Each value is a depth, `lightweight` or `thorough`.",
               "type": "object"
@@ -81,6 +111,15 @@
               "additionalProperties": false,
               "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
+                "acceptance_strategy": {
+                  "description": "What the four-layer acceptance strategy (`S17`) asks on the approach: `on`,`existing-dsl`, `existing-dsl-isolation` or `suspended`. Unset, it is `on` for an approach that ships and `suspended` for one that does not.",
+                  "enum": [
+                    "on",
+                    "existing-dsl",
+                    "existing-dsl-isolation",
+                    "suspended"
+                  ]
+                },
                 "artifacts": {
                   "description": "The artifacts the approach owes, keyed by artifact id. Each value is a depth, `lightweight` or `thorough`.",
                   "type": "object"

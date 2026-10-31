@@ -41,8 +41,14 @@ compass quick-fix start <slug> \
   --intent "<what will be true afterwards, one sentence>" \
   --scenario "Given ... When ... Then ..." \
   --test <test node id> \
-  [--labels <tag,...>]
+  [--labels <tag,...>] \
+  [--expected-acceptance validation|refactor]
 ```
+
+Pass `--expected-acceptance validation` or `refactor` when the change has no
+behavior a client can observe, such as a docs or config edit, so the
+delivery-approach record says the four-layer acceptance strategy (`S17`) does
+not apply.
 
 Give each dimension a value and a one-line reason. If you cannot justify a
 value, ask: an unjustified value is worse than a question. `start` refuses a

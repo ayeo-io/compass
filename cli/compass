@@ -163,6 +163,13 @@ def build_parser():
                      help="with --write: drop the issue's config: layer in the "
                           "generation this commits (refused while a change is "
                           "proposed; see `compass issue configure`)")
+    pre.add_argument("--expected-acceptance", dest="expected_acceptance",
+                     choices=["none", "validation", "refactor"],
+                     help="with --write: the acceptance kind the change is expected to "
+                          "have. `none` (the default) is client-observable behavior, to "
+                          "which the four-layer acceptance strategy applies; "
+                          "`validation` and `refactor` take the issue out of its scope. "
+                          "A reassess without it keeps the kind stored at the first one")
     pre.add_argument("--json", action="store_true", help="emit JSON")
     pre.set_defaults(func=cmd_route_evaluate, output_kind="hand-off")
     prsum = prs.add_parser(
@@ -266,6 +273,11 @@ def build_parser():
         "--models", action="store_true",
         help="count subtasks by the model tier of their first attempt and the "
              "issue's risk, with the mean number of review rounds (advisory; exit 0)")
+    pcal.add_argument(
+        "--acceptance", action="store_true",
+        help="the four-layer acceptance strategy's measures over closed issues, with an "
+             "opted-out project and each issue that stepped off reported apart "
+             "(advisory; exit 0)")
     pcal.add_argument(
         "--decisions", action="store_true",
         help="count how decisions agents took for the person were settled: confirmed, "

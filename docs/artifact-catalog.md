@@ -133,7 +133,7 @@ On a multiagent breakdown, `compass issue artifact set distribution-map` reads t
 
 ## The quick-fix record
 
-`compass quick-fix start` writes the delivery-approach record with its own short headings: Assessment, Policy rules fired, Advice, Intent, Scenario and De-scope ledger. After the title the record holds a `document-header` block. Under Assessment it holds an `assessment` block, and under Policy rules fired a `policy-rules` block, both filled by the render. The record has no `**Approach:**` line, because the header block names the approach. A record written before the blocks existed keeps its tables. They are not an ordered subset of the thorough headings. `sections.lightweight` describes the record a hotfix or a spike writes from the template.
+`compass quick-fix start` writes the delivery-approach record with its own short headings: Assessment, Policy rules fired, Acceptance strategy, Advice, Intent, Scenario and De-scope ledger. After the title the record holds a `document-header` block. Under Assessment it holds an `assessment` block, under Policy rules fired a `policy-rules` block and under Acceptance strategy an `acceptance-strategy` block, all filled by the render. The record has no `**Approach:**` line, because the header block names the approach. A record written before the blocks existed keeps its tables. They are not an ordered subset of the thorough headings. `sections.lightweight` describes the record a hotfix or a spike writes from the template.
 
 ## Measuring the archive
 

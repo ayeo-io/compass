@@ -7,8 +7,9 @@ point of this directory.
   happen. A guardrail is cleared only with evidence, and a failed guardrail
   stops the work. See `guardrails.md`.
 - **Strategies** - many, soft, directional, assessed. How the team tends to
-  work and what it prefers. A strategy *biases* a decision; it does not block
-  it. See `strategies.md`.
+  work and what it prefers. A strategy *biases* a decision. It can carry
+  blocking checks that a recorded step-off makes advisory, as the four-layer
+  acceptance strategy (`S17`) does. See `strategies.md`.
 
 A third file, `routing-policy.md`, applies the same split to assessment
 itself: routing rules *bound* what it may do, routing strategies *bias*
@@ -39,8 +40,9 @@ recorded as a project lesson (`compass lesson propose`), which is advice and
 never a gate.
 
 **It keeps honest things honest.** Guardrails are *checkable* - a test ran, a
-scan passed, a human approved. Strategies are *assessed* - is this clear, does
-it fit our voice, is this the simplest thing that works. Naming them
+scan passed, a human approved. Strategies are mostly *assessed* - is this clear,
+does it fit our voice, is this the simplest thing that works - and a team can
+step off one with a recorded reason. Naming them
 differently stops a judgement call being presented as a hard gate. The
 evidence-not-assertion guardrail (`G4`) applies cleanly to guardrails; strategies are
 honestly the reviewer's judgement, and are labelled as such.

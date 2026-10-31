@@ -238,6 +238,12 @@ Releasing to a small slice of traffic/users first, watching SLIs.
 
 **Related:** `rollout-plan`, `sli`
 
+### candidate
+
+The build an outer-loop green ran against: a deployed build, named by its build id, or a local build, named by the tree id of the code it was built from. The record says which.
+
+**Related:** `outer-loop`, `client-interface`
+
 ### capability
 
 A named switch for new blocking behavior, off in the shipped default.
@@ -269,6 +275,12 @@ What happened at one checkpoint stage hand-off, recorded in the manifest's `chec
 The component that compares two configurations by their obligations.
 
 **Related:** `obligation`, `lock`
+
+### client-interface
+
+The interface a real client uses to reach the system under test, such as an API, a web interface or a command line. A protocol driver speaks to exactly one.
+
+**Related:** `candidate`, `test-layer`
 
 ### close-reason
 
@@ -384,6 +396,12 @@ Work owed after an expedited ship (the hotfix's promoted scenario, the optional 
 
 **Related:** `hotfix`, `backlog`
 
+### four-layer-acceptance-strategy
+
+The strategy numbered `S17`. A change to behavior a real client can observe is accepted through four test layers: an executable specification in Given/When/Then, a domain-specific language that each line calls once, a protocol driver for one client interface, and the system under test. It applies unless the change's acceptance is of kind validation or refactor, and a project can turn it off with a recorded reason.
+
+**Related:** `strategy`, `outer-loop`, `inner-loop`, `test-layer`
+
 ### generation
 
 A stored, numbered copy of the resolved configuration that an issue runs against, so the issue keeps the rules it started with.
@@ -416,6 +434,12 @@ A body of work that delivers several outcomes across milestones and needs an int
 
 **Related:** `epic`, `milestone`, `intent`, `slice`
 
+### inner-loop
+
+The unit-level red, green, refactor loop of strategy `S2`, run inside the outer loop while the code that makes a scenario pass is written.
+
+**Related:** `outer-loop`
+
 ### intent
 
 Two related things, and the entry covers both deliberately. (1) The document: intent.md, the originator's statement of what is wanted and why, AUTHORED at the intake stage or INGESTED from a brief that already exists - it does not presume authorship. (2) The goal it carries: the outcome a change is meant to produce, the "why" end of the traceability chain, carrying the INT- ids that scenarios trace back to. The document holds the goals, which is why one name serves both. As a document it carries problem, users, goals, non-goals, success signals, constraints, open questions, and the first slice (the 80/20 cut) - iterated through review before the design is built. User stories are welcome inside it as a format; acceptance criteria are derived from them. As a goal it is sourced from intent.md's desired outcome, the UI contract, or the issue description - a goal, not a requirement: the functional requirement is the scenario. It goes further than the request: "Add a CSV export" is a request; "let finance self-serve" is the intent, and it may need filters and permissions the request never mentioned.
@@ -423,6 +447,12 @@ Two related things, and the entry covers both deliberately. (1) The document: in
 **Also:** The product owner's entry point, `/compass:intent`, captures it.
 
 **Related:** `first-slice`, `scenario`, `traceability`
+
+### isolation-proof
+
+A record, written only by its command, that the issue's acceptance tests passed when run in parallel and when each scenario's tests ran twice, so no scenario depends on another or on the order they run in.
+
+**Related:** `layering-record`, `outer-loop`
 
 ### issue
 
@@ -472,6 +502,12 @@ One source of configuration: the shipped preset, a team parent, the project file
 
 **Related:** `catalog`, `overlay`, `preset`, `project-file`
 
+### layering-record
+
+A record, written only by its command, of the project's layering test: the test that checks each test layer calls only the layer below it. Compass reads the record and never the project's code.
+
+**Related:** `isolation-proof`, `test-layer`
+
 ### lld
 
 Low-level design: the signatures, contracts, file plan and tests of one work unit, in its own document, `low-level-design/U<n>.md`. The planner writes one per unit of the technical design's Work units table, so the design stays short and each builder reads only its own unit. No approach owes one; on the full approach, `compass issue lint` notes a unit that has none.
@@ -517,6 +553,12 @@ Anything the configuration asks for at an assessment: a stage mode, a check on a
 The design section answering "what tells us this works in production?": the SLIs/SLOs the change affects, the alerts that watch them, runbook updates where the ops surface changes. Required by the ops-surface label rule; always present on initiatives.
 
 **Related:** `sli`, `slo`, `runbook`
+
+### outer-loop
+
+The acceptance loop of the four-layer acceptance strategy: the scenarios fail before the code is written and then pass through a client interface against a named candidate. It wraps the inner loop.
+
+**Related:** `inner-loop`, `candidate`, `client-interface`
 
 ### overlay
 
@@ -738,9 +780,9 @@ A single Given/When/Then line, bound to a step definition in the project's codeb
 
 ### strategy
 
-A strong default you can step off with a recorded reason. Assessed by a reviewer, never mechanically blocking. TDD and BDD are strategies; the outcomes they serve are guardrails.
+A strong default you can step off with a recorded reason. Most are assessed by a reviewer. A strategy can carry blocking checks that a recorded step-off makes advisory; they sit outside every guardrail. TDD and BDD are strategies; the outcomes they serve are guardrails.
 
-**Related:** `guardrail`
+**Related:** `guardrail`, `four-layer-acceptance-strategy`
 
 ### sub-issue
 
@@ -767,6 +809,12 @@ The engineering plan for one issue: the approach, the design decisions as ADR-st
 The detached Git worktree of HEAD that a readiness measurement creates in the system temp folder to run the project's commands. It is removed when the measurement ends.
 
 **Related:** `readiness-record`
+
+### test-layer
+
+One of the four layers of the four-layer acceptance strategy: specification, domain-specific language, protocol driver or system under test. The word `layer` alone names a configuration source.
+
+**Related:** `four-layer-acceptance-strategy`, `layer`, `layering-record`
 
 ### traceability
 

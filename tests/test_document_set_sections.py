@@ -874,9 +874,10 @@ def test_dss_28_quick_fix_record_blocks(tmp_path):
     root, record = _u2_quick_fix_project(tmp_path)
     text = record.read_text(encoding="utf-8")
     parsed = rendered_blocks.parse(text, record.name)
-    assert [b.kind for b in parsed.blocks] == ["document-header", "assessment", "policy-rules"]
+    assert [b.kind for b in parsed.blocks] == [
+        "document-header", "assessment", "policy-rules", "acceptance-strategy"]
     assert [_u2_heading_of(text, b.start) for b in parsed.blocks[1:]] == [
-        "Assessment", "Policy rules fired"]
+        "Assessment", "Policy rules fired", "Acceptance strategy"]
     header = _u2_block(record, "document-header")
     assert "> **Issue:** fix-it · **Approach:** quick fix" in header, header
     assessment = _u2_block(record, "assessment")
@@ -889,7 +890,8 @@ def test_dss_28_quick_fix_record_blocks(tmp_path):
         slug="fix-it", intent_text="Fix it.", scenario_id="TRC-001", scenario_text="S",
         ledger=[("plan", "collapsed", "no design decision on this size")], advice=())
     own = rendered_blocks.parse(written, "written.md")
-    assert [b.kind for b in own.blocks] == ["document-header", "assessment", "policy-rules"]
+    assert [b.kind for b in own.blocks] == [
+        "document-header", "assessment", "policy-rules", "acceptance-strategy"]
     assert all(b.end == b.start + 1 for b in own.blocks), written
     assert "cmd_quick_fix_start" in record_triggers.RENDER_TRIGGERS
     assert "cmd_quick_fix_start" not in record_triggers.EXEMPT
@@ -899,7 +901,8 @@ def test_dss_28_quick_fix_record_blocks(tmp_path):
     assert "| Risk |" not in masked and "| Dimension |" not in masked
     assert "RP-PROJECT-QF" not in masked
     assert [line[3:] for line in text.splitlines() if line.startswith("## ")] == [
-        "Assessment", "Policy rules fired", "Intent", "Scenario", "De-scope ledger"]
+        "Assessment", "Policy rules fired", "Acceptance strategy", "Intent", "Scenario",
+        "De-scope ledger"]
     assert "INT-1: Fix it." in masked and "TRC-001: A quick fix shows its reasons" in masked
     _u2_render(root, "fix-it")
     assert record.read_text(encoding="utf-8") == text
@@ -2206,7 +2209,7 @@ def test_dss_30_checks_declared_and_documented(tmp_path):
     # `compass check` runs the three through one helper. The design-size check of
     # ADR-067 runs after them through the same helper.
     assert outside_gate.CHECKS == ("artifacts-approved",) + U5_CHECKS + (
-        "design-within-word-ceiling",)
+        "design-within-word-ceiling", "acceptance-applicability-agrees")
     source = (ROOT / "cli/compass_pkg/check_cmd.py").read_text(encoding="utf-8")
     assert source.count("outside_gate.judged(") == 1
     assert source.count("def _outside_gate_pass(") == 1

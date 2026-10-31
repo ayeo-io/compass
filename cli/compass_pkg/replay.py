@@ -2,7 +2,7 @@
 """Compare two configurations by classifying them and by replaying
 assessments under both (`compass policy diff`, ADR-036 and ADR-037).
 
-This module has four parts: the references (`default@7`, `project`, a path
+This module has four parts: the references (`default@8`, `project`, a path
 and the others) that name a configuration; the replay of the grid, the label
 combinations and the archive; the comparison of open issues; and the one
 document the result becomes. It reads files and runs `git show`, writes no
@@ -150,7 +150,7 @@ def _default(label, kind, directory=None):
 
 
 def _default_ref(ref):
-    """The live default for `default`, `default@7` and `default@7.0.0` (the
+    """The live default for `default`, `default@8` and `default@8.0.0` (the
     major comes from the live preset's version), with or without the
     `compass:` prefix an `extends:` line uses. A major the framework keeps
     beside the live one, such as `default@6`, is read from its own folder."""

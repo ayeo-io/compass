@@ -1,0 +1,33 @@
+{
+  "exit": 1,
+  "rows": [
+    [
+      "spike-conclusion-present",
+      "fail"
+    ],
+    [
+      "spike-no-production-changes",
+      "pass"
+    ],
+    [
+      "nfr-rows-resolved",
+      "nothing-to-check"
+    ],
+    [
+      "contracts-declared",
+      "nothing-to-check"
+    ],
+    [
+      "design-within-word-ceiling",
+      "nothing-to-check"
+    ],
+    [
+      "assessment-keys",
+      "pass"
+    ],
+    [
+      "backfills-paid",
+      "pass"
+    ]
+  ]
+}

@@ -5189,3 +5189,25 @@ A Python example in examples/atdd-adapters/python/ shows four-layer acceptance t
 - `TRC-F2` A driver name the factory does not know is refused at start-up
 - `TRC-F3` The suite passes in parallel and one scenario twice, against one store
 - `TRC-F4` A CI job runs the example through both drivers and its layering test
+
+### acceptance-strategy-core (completed 2026-10-31)
+
+Compass now ships the four-layer acceptance strategy (S17): assess records whether it applies to an issue and why, each delivery approach routes it, and a project can turn it off with acceptance_strategy in compass.yml.
+
+- `TRC-A1` The strategy has its own entry under the next free strategy number
+- `TRC-A2` Assess records whether the strategy applies and why
+- `TRC-A3` Out of scope costs nothing
+- `TRC-A5` An applicability line that disagrees with the acceptance kind fails the check
+- `TRC-A6` The strategy is routed per delivery approach
+- `TRC-A9` A spike is exempt
+- `TRC-A11` The opt-out is recorded in the delivery-approach record
+- `TRC-A12` An opted-out project keeps today's checks and no more
+- `TRC-A13` An opt-out setting that cannot be read is refused
+- `TRC-A14` Turning the strategy off during an issue takes effect at re-assess
+- `TRC-A15` The retrospective reports an opted-out project apart
+- `TRC-A19` The strategy changes no locked guardrail
+- `TRC-A21` The retrospective reports an issue that stepped off apart
+- `TRC-X2` An issue created before the major version keeps passing
+- `TRC-A22` The compatibility corpus moves with a major preset bump
+- `TRC-A23` A project pinned to an earlier major does not get the strategy
+- `TRC-A24` A shipping approach cannot suspend the strategy

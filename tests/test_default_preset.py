@@ -82,6 +82,10 @@ def _adapter_part(preset):
         part["artifacts"] = {kind: {k: v for k, v in entry.items()
                                     if k not in ("every_approach", "word_ceiling")}
                              for kind, entry in part["artifacts"].items() if kind in named}
+    # The routing of the four-layer acceptance strategy is in no legacy file, so the
+    # adapter never writes it; copying it would give an old policy the strategy.
+    for approach in (part.get("approaches") or {}).values():
+        approach.pop("acceptance_strategy", None)
     return part
 
 
@@ -372,6 +376,10 @@ def test_dp_1_the_rendered_files_are_what_is_committed():
             # The preset gained the kinds nothing owes and `every_approach`
             # after the adapter wrote it.
             assert _adapter_part(_preset())["artifacts"] == yaml.safe_load(text)["artifacts"]
+        elif name == "approaches.yml":
+            # The preset gained the strategy's routing after the adapter wrote it.
+            kept = _adapter_part({"checks": {}, "stages": {}, **yaml.safe_load(committed)})
+            assert kept["approaches"] == yaml.safe_load(text)["approaches"]
         elif name in ("checks.yml", "stages.yml"):
             # These two gained the human checks and the stage lists after the
             # adapter wrote them; what the adapter wrote is unchanged.
@@ -394,10 +402,10 @@ def test_dp_1_the_rendered_files_are_what_is_committed():
 
 # --- the preset names itself and checks as a parent (`DP-2`) -------------------
 
-def test_dp_2_preset_yml_names_default_at_7_0_0_with_capabilities_off():
+def test_dp_2_preset_yml_names_default_at_8_0_0_with_capabilities_off():
     preset = _load(PRESET / "preset.yml")
     assert preset["id"] == "default"
-    assert preset["version"] == "7.0.0"
+    assert preset["version"] == "8.0.0"
     assert preset["schema"] == 1
     assert preset["capabilities"] == {name: False for name in catalogue_spec.CAPABILITIES}
 
@@ -812,7 +820,8 @@ def test_dp_6_the_checks_are_the_guardrail_files_registry():
         assert checks[name]["statement"] == entry["description"]
     blocking = checks["scenarios-are-executable"]
     assert blocking["blocking_when"] == {"risk": ["cross-cutting", "critical"]}
-    assert all(c["severity"] == "blocking" for c in checks.values())
+    assert all(c["severity"] == ("advisory" if n in legacy_adapter.ADVISORY_CHECKS
+                                 else "blocking") for n, c in checks.items())
 
 
 def test_dp_6_the_evidence_types_and_accepted_types_equal_the_guardrails_file():
@@ -865,6 +874,7 @@ EXPECTED_ON_SKIPPED = {
     "nfr-rows-resolved": "not-applicable",
     "contracts-declared": "not-applicable",
     "design-within-word-ceiling": "not-applicable",
+    "acceptance-applicability-agrees": "not-applicable",
     "declared-tests-resolve": "pass",
 }
 

@@ -28,7 +28,7 @@ from parent_fixtures import REAL_GIT, issue_project, make_remote  # noqa: E402
 from test_generation_store import MANIFEST, SLUG, _project  # noqa: E402
 
 CLI = ROOT / "cli" / "compass"
-DEFAULT = "default@7 (7.0.0)"
+DEFAULT = "default@8 (8.0.0)"
 PROJECT = "project (compass.yml)"
 ISSUE = "issue (config: in manifest.yml)"
 CHECK = "dor-affected-surface-named"
@@ -489,12 +489,12 @@ def test_rp_16_the_lock_summary_the_receipt_passes_in_names_the_lock():
     view = EffectiveView(
         "generation", "x", 1,
         {"checks": {"c": {"locked": True}}, "conformance": {"unlocked": ["stages.assess"]}},
-        {"parents": [{"ref": "compass:default@7", "version": "7.0.0", "source": "shipped"}]},
+        {"parents": [{"ref": "compass:default@8", "version": "8.0.0", "source": "shipped"}]},
         {"fields": {}, "waivers": {}})
     held = {"stages.assess": locks.Lock(True, "default")}
     rows = receipt_provenance.lines(view, {}, (), held, lambda h, i, w=100, indent=None: [h],
                                     100)
-    assert "lifts a true lock set by default@7 (7.0.0)" in re.sub(r"\s+", " ", " ".join(rows))
+    assert "lifts a true lock set by default@8 (8.0.0)" in re.sub(r"\s+", " ", " ".join(rows))
 
 
 # --- RP-17: the help text ----------------------------------------------------------------------

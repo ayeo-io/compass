@@ -79,8 +79,8 @@ def read_pr(text, project_root, verb):
 
 
 def apply(task, slug, repo, number, oid):
-    """Write the pull request, and the merge commit when it applies, into `task`.
-    Returns the lines that say what was written."""
+    """Write the pull request, and the merge commit when it applies, into the
+    issue's manifest. Returns the lines that say what was written."""
     task["pull_request"] = {"repo": repo, "number": number}
     lines = [f"{slug} -> pull request {repo}#{number}."]
     if oid is None:

@@ -161,13 +161,6 @@ hotfix and full on the shipped default) owes a release line, the manifest's
 `compass quick-fix finish` or `compass acceptance record`; a landing refuses
 the issue without one (`docs/release-line.md`).
 
-`compass issue link set --pr <n>` records the pull request that carries an
-issue, as the manifest's `pull_request`. Run it when the pull request opens
-and again after the merge. Once the pull request is merged and the issue has
-landed, it moves `land_commit` to the merge commit, which a squash merge
-makes different from the commit `ship-commit` recorded
-(`docs/github-labels.md`).
-
 A new project has no `governance/` directory: the shipped default preset is in
 force, and `compass.yml` holds only what differs from it. An unmigrated 5.x
 project runs on its own copied `governance/` until `compass policy migrate`

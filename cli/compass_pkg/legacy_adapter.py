@@ -103,7 +103,7 @@ DECLINING_CHECKS = (
     "borrowed-documents-answered", "evidence-matches-tree",
     "evidence-identity-matches", "dod-evidence-typed", "landed-by-resolves", "multiagent-run-recorded", "artifacts-approved",
     "nfr-rows-resolved", "contracts-declared", "design-within-word-ceiling",
-    "acceptance-applicability-agrees",
+    "acceptance-applicability-agrees", "outer-loop-recorded",
 )
 PASSING_CHECKS = ("declared-tests-resolve",)
 # The checks the preset declares `severity: advisory`. The legacy guardrails file
@@ -516,6 +516,7 @@ def _artifact_entry(name, shipped):
 # name; the display name says what the check asks today.
 DISPLAY_NAMES = {
     "checks.acceptance-applicability-agrees": "Acceptance strategy applicability agrees",
+    "checks.outer-loop-recorded": "Outer-loop red and green recorded",
     "checks.artifacts-approved": "Documents approved",
     "checks.backfills-paid": "Follow-ups resolved",
     "checks.dod-evidence-typed": "Definition of Done evidence is typed",

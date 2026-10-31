@@ -38,6 +38,7 @@ from compass_pkg import project_settings
 from compass_pkg.core import CompassError, find_upwards, load_manifest, manifest_path, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.manifest_store import load_file as load_manifest_file
 from compass_pkg import pytest_report
+from compass_pkg.acceptance_strategy import LOOPS
 from compass_pkg.binding import declared_test_paths, ids_for
 from compass_pkg.red_first import (
     ACCEPTANCE_KINDS as _ACCEPTANCE_KINDS, content_digest as _content_digest, has_red)
@@ -352,6 +353,16 @@ def _silent_red_reason(out, command, task_dir):
             "files, so no test ran")
 
 
+def _loop(args):
+    """The loop a red or green belongs to, from `--loop`. A caller that builds its
+    own arguments, such as `compass quick-fix finish`, gives none and records the
+    inner loop, the default (ADR-080). The parser refuses any other value."""
+    loop = getattr(args, "loop", None) or "inner"
+    if loop not in LOOPS:
+        raise CompassError(f"--loop {loop!r} is not a loop; use one of: {', '.join(LOOPS)}")
+    return loop
+
+
 def cmd_tdd_red(args):
     task_dir = resolve_issue_dir(args.task)
     scenario = _resolve_scenario(task_dir, getattr(args, "scenario", None))
@@ -428,6 +439,7 @@ def cmd_tdd_red(args):
         # The argument list as given: two lists can join to the same text.
         "argv": list(command),
         "scenario": scenario,          # the scenario this red is evidence FOR
+        "loop": _loop(args),
         "exit_code": code,
         "passed": False,
         "timestamp": now_iso(),
@@ -712,6 +724,7 @@ def cmd_tdd_green(args):
         # The argument list as given: two lists can join to the same text.
         "argv": list(command),
         "scenario": scenario,          # the scenario this green is evidence FOR
+        "loop": _loop(args),
         "exit_code": 0,
         "passed": True,
         "attempts": attempts,

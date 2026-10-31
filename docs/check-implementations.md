@@ -247,6 +247,14 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a test marked rerun-without-change with no quarantine |
 | `restored` | pass | the same input put right |
 
+### `outer-loop-recorded` (version 1.0.0)
+
+| Case | Verdict | What the input exercises |
+|---|---|---|
+| `broken` | fail | an in-scope issue whose red and green records have no loop field, so both read as inner |
+| `restored` | pass | an in-scope issue with an outer-loop red and an outer-loop green |
+| `suspended` | nothing-to-check | a block whose routing is suspended on an approach that ships, with inner-loop records |
+
 ### `rendered-blocks-current` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |

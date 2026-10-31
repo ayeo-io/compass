@@ -249,3 +249,19 @@ def build_older_issue_project(dest, cli):
     for path in list(dest.rglob("*.log")) + list(dest.rglob("*.lock")):
         path.unlink()
     return project
+
+
+def without_loop(issue, name):
+    """Rewrite `evidence/<name>.json` with no `loop` field, as a record written before
+    the field existed, and stamp it again so its identity covers what it holds."""
+    from compass_pkg.tdd import _stamp_identity
+    path = issue.dir / "evidence" / f"{name}.json"
+    record = json.loads(path.read_text(encoding="utf-8"))
+    record.pop("loop", None)
+    record_id, digest = _stamp_identity(record)
+    path.write_text(json.dumps(record, indent=2), encoding="utf-8")
+    body = issue.manifest()
+    for entry in body.get("evidence") or []:
+        if entry.get("path") == f"evidence/{name}.json":
+            entry["record_id"], entry["content_digest"] = record_id, digest
+    issue.write_manifest(body)

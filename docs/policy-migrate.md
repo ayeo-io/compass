@@ -392,6 +392,11 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "outer-loop-recorded",
+      "operation": "add"
+    },
+    {
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "rendered-blocks-current",
       "operation": "add"
     },
@@ -448,6 +453,11 @@ reassess), and the `compass.yml` it would write.
     {
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.nfr-rows-resolved",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "checks.outer-loop-recorded",
       "operation": "add"
     },
     {

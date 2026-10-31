@@ -297,6 +297,24 @@ _(none yet - the shipped default guardrails apply as-is)_
     issue not yet assessed refuse a bad value. `compass check` on an assessed
     issue reads the configuration stored with the issue and does not refuse
     it.
+- **`outer-loop-recorded`** is the outer-loop check of the four-layer
+  acceptance strategy (`S17`, ADR-080). It is unlocked, declares `severity:
+  blocking` and `on_skipped: not-applicable`, and sits in no gate, no lock and
+  not in the spike's checks. `compass check` runs it after
+  `acceptance-applicability-agrees` and labels its row the same way. The
+  rules it applies are in `cli/compass_pkg/outer_loop.py`.
+  - It reads the `loop` field that `compass tdd-red --loop outer|inner` and
+    `compass tdd-green --loop outer|inner` write; the default is inner, and a
+    record with no field reads as inner.
+  - It asks `acceptance_strategy.in_scope` whether the strategy applies, and
+    declines with "not required: the strategy does not apply" when it does not.
+  - On an in-scope issue it fails when no failed red record says loop outer,
+    when no registered green says loop outer, or when no outer-loop green
+    was recorded on the tree as it is now. One finding names the issue and
+    each fault. The tree is the one `evidence-matches-tree` reads; when git
+    cannot name it, or no outer-loop green names its tree, the tree is not
+    compared and the detail says so.
+  - It judges the issue, not each scenario. `suite-passed` does not change.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart

@@ -68,6 +68,7 @@ from compass_pkg.decisions import register as register_decision_parser  # noqa: 
 from compass_pkg.spec_refresh import register as register_refresh_spec_parser  # noqa: E402
 from compass_pkg.agent_friction import register as register_issue_friction_parser  # noqa: E402
 from compass_pkg.lineage import cmd_issue_raised_by  # noqa: E402
+from compass_pkg.acceptance_strategy import LOOPS  # noqa: E402
 from compass_pkg.approach_diagram import cmd_approach_diagram  # noqa: E402
 from compass_pkg.diagnose import register as register_diagnose_parser  # noqa: E402
 from compass_pkg.lessons import register as register_lesson_parser  # noqa: E402
@@ -308,6 +309,10 @@ def build_parser():
                      help="sanction a non-unit red for a change with no natural "
                           "unit test: regression | e2e | typecheck | live (R8). "
                           "The guard must still genuinely fail first.")
+    prd.add_argument("--loop", choices=LOOPS, default="inner",
+                     help="the loop this red belongs to: outer (the acceptance "
+                          "suite, through a client) or inner (a unit test). "
+                          "Default inner")
     prd.add_argument("command", nargs=argparse.REMAINDER,
                      help="the test command (after --)")
     prd.set_defaults(func=cmd_tdd_red, output_kind="hand-off")
@@ -320,6 +325,10 @@ def build_parser():
                     help="carry forward a verified-by guard kind (regression | "
                          "e2e | typecheck | live) - the green re-runs the guard "
                          "that stood in for a unit red (R8)")
+    pg.add_argument("--loop", choices=LOOPS, default="inner",
+                    help="the loop this green belongs to: outer (the acceptance "
+                         "suite, through a client) or inner (a unit test). "
+                         "Default inner")
     pg.add_argument("command", nargs=argparse.REMAINDER,
                     help="the test command (after --)")
     pg.set_defaults(func=cmd_tdd_green, output_kind="hand-off")

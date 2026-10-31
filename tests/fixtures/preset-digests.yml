@@ -34,7 +34,7 @@ default@8.0.0:
   files:
     approaches.yml: sha256:959920ba707af1a7670552fedaf985c4edfa42db6435639b83e0a32ee757a713
     artifacts.yml: sha256:0daaed5944cb0507f329d8bed740f5933d77ecfefb348241cd4bccf6888577eb
-    checks.yml: sha256:8d1b2ea255a106cca9e026b62cecac3dfa747e3cd3190fa60553fdee157ee165
+    checks.yml: sha256:7170c9de4b6b843151a220b1a5acd73956337eef01cc95caa58108bf6ad08701
     dimensions.yml: sha256:401eb199005f3f59a0de898a6e804301df7056727336581bfa0e5a396ef1467c
     evidence-types.yml: sha256:aab3aa2e58f835e8b98f0c91e7f7ba9d64a6dd9121a74b29f6f3cc0626dfe95a
     gates.yml: sha256:3737c10ec386c344c67b3f104e2ad63bf7b17d13a3ec54b9ed1150c3a7250660
@@ -42,5 +42,5 @@ default@8.0.0:
     readiness.yml: sha256:2b420d6d890b687e8e39750caa8ee3a96d0c9b359f8a8b61ab436994eb160cad
     rules.yml: sha256:5000d6ec64a350bcd96d250bde9fae3bff92d107253c248560dbdac2a7fd4b54
     stages.yml: sha256:31b45fd40d19e23dfaba50fe9b454314362db500a2d3a878ba2bffe46890851e
-    vocabulary.yml: sha256:b2ba788c5e63e12d4adf3cef07e6f2a189db231c653be3994b4f0d9943469afa
-  preset: sha256:adceae54ed62e264e510e27c14c6108d5aa8f3295ede67eb890ab71ba834b421
+    vocabulary.yml: sha256:1b729ddc505a4da865456f61c9c2b7064b02bf8ba12b704d3b75b2674df18f27
+  preset: sha256:105175af28ea31aa7cf971b7212b7ef315d851b4e1abc7f1518cdbddfb7edcdd

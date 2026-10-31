@@ -63,6 +63,9 @@ implementations:
   no-trusted-rerun:
     verdict_digest: ad2da5db60a39f075be271164795dce779783d540bfd8f2194757e0574fca505
     version: 1.0.0
+  outer-loop-recorded:
+    verdict_digest: 7e8e64e96ca3605804ee13912e9a8a629e0bec8fe96cc4439e7d115ab46d9b21
+    version: 1.0.0
   rendered-blocks-current:
     verdict_digest: 8942dbb4d40c6f28e25aa58db3e88567677c04c5e81768042df1ad36ec1134d1
     version: 1.0.0

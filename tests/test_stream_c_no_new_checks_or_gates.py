@@ -107,6 +107,10 @@ BASELINE_CHECKS = {
     # stored applicability of the four-layer acceptance strategy agrees with the
     # records. It sits in no guardrail, so `G1` and `G4` keep their checks.
     "acceptance-applicability-agrees",
+    # Added by loop-marking (ADR-080). The blocking check that an in-scope issue of the
+    # four-layer acceptance strategy has an outer-loop red and an outer-loop green on the
+    # current tree. It sits in no guardrail, so `G1` and `G4` keep their checks.
+    "outer-loop-recorded",
 }
 
 # The evidence types a branch may add to guardrails.yml, each named for the

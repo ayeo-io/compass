@@ -14,7 +14,10 @@
 
 Each takes a `RenderInputs` snapshot and the project-relative path of the document, and
 returns a `Part`, as the renderers in `block_renderers` do. `block_renderers` registers
-them through `_add_modules`. They read only the manifest and the configuration view.
+them through `_add_modules`. They read the manifest and the configuration view. The
+`acceptance-strategy` renderer also reads `extends:` from the project's `compass.yml` when
+the issue holds no stored block, so that block is drawn from the project and a stale one is
+only advisory.
 """
 # DEPENDENCY: compass_pkg.render_inputs, rendered_blocks, stable_ids; compass_pkg.routing and
 # compass_pkg.justifications are imported inside the renderers that use them, because routing

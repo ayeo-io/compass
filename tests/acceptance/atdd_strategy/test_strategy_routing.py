@@ -499,3 +499,26 @@ def test_trc_a23_a_changed_pin_never_blocks_the_record(tmp_path):
     assert status() == "pass"
     project.setting(None, extends="compass:default@8")
     assert status() == "advisory"
+
+
+@pytest.mark.parametrize("stage", ["verify", "done"])
+def test_trc_a23_a_stale_stored_line_still_blocks(tmp_path, stage):
+    """A stored block is the issue's own record, so a line that no longer
+    matches it fails at the `verify` stage and on a done issue (`TRC-A23`)."""
+    project = support.Project(tmp_path / "repo")
+    issue = project.issue("change")
+    assert issue.assess()[0] == 0
+    issue.approach_record()
+    body = issue.manifest()
+    assert body["acceptance_strategy"], body
+    if stage == "verify":
+        body["current_phase"] = "verify"
+    else:
+        body.update(status="done", land_timestamp="2026-10-29T12:00:00Z")
+    issue.write_manifest(body)
+    assert issue.run("issue", "render", "--issue", "change")[0] == 0
+    body = issue.manifest()
+    body["acceptance_strategy"]["why"] = "a reason the record does not show"
+    issue.write_manifest(body)
+    rows = [c for c in issue.check()[1]["checks"] if c["name"] == "rendered-blocks-current"]
+    assert rows[0]["status"] == "fail", rows

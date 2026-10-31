@@ -67,8 +67,11 @@ item's state into the verification report.
 
 `compass tdd-red` and `compass tdd-green` write `loop` on each record:
 `outer` with `--loop outer`, for a run of the acceptance suite through a
-client interface, and `inner` otherwise, for a unit test. A record with no
-field reads as inner. Where the four-layer acceptance strategy (`S17`)
+client interface, and `inner` with `--loop inner`, for a unit test. With no
+flag the loop is `outer` on a quick fix the four-layer acceptance strategy
+applies to, because its one declared test is its acceptance test, and
+`inner` everywhere else. `compass quick-fix finish` takes the same flag. A
+record with no field reads as inner. Where the four-layer acceptance strategy (`S17`)
 applies, the check `outer-loop-recorded` needs an outer-loop red and an
 outer-loop green recorded on the tree as it is now (ADR-080). `suite-passed`
 reads every green, whatever its loop.

@@ -132,9 +132,12 @@ class Adapter:
                  "--scenario", "Given a greeting, when it is called, then it says Hello",
                  "--scenario-id", "CONF-1", "--test", self.node)
 
+    # The fixture's one test is its scenario's acceptance test, so its red and green
+    # are the outer loop of the four-layer acceptance strategy (ADR-080). A quick fix
+    # records outer by default; the regular feature says so.
     def red(self):
         self.cli("tdd-red", "--issue", self.slug, "--scenario", "CONF-1",
-                 "--", *self.test_command)
+                 "--loop", "outer", "--", *self.test_command)
 
     def fix(self, kind):
         if kind == "quick-fix":
@@ -196,7 +199,7 @@ class Adapter:
 
     def green_feature(self):
         self.cli("tdd-green", "--issue", self.slug, "--scenario", "CONF-1",
-                 "--", *self.test_command)
+                 "--loop", "outer", "--", *self.test_command)
         self.cli("issue", "render", "--issue", self.slug)
 
     def start_spike(self):

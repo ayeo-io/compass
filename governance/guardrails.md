@@ -304,8 +304,10 @@ _(none yet - the shipped default guardrails apply as-is)_
   `acceptance-applicability-agrees` and labels its row the same way. The
   rules it applies are in `cli/compass_pkg/outer_loop.py`.
   - It reads the `loop` field that `compass tdd-red --loop outer|inner` and
-    `compass tdd-green --loop outer|inner` write; the default is inner, and a
-    record with no field reads as inner.
+    `compass tdd-green --loop outer|inner` write. The default is outer on a
+    quick fix the strategy applies to, whose one declared test is its
+    acceptance test, and inner otherwise. A record with no field reads as
+    inner.
   - It asks `acceptance_strategy.in_scope` whether the strategy applies, and
     declines with "not required: the strategy does not apply" when it does not.
   - On an in-scope issue it fails when no failed red record says loop outer,

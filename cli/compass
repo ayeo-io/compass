@@ -309,10 +309,11 @@ def build_parser():
                      help="sanction a non-unit red for a change with no natural "
                           "unit test: regression | e2e | typecheck | live (R8). "
                           "The guard must still genuinely fail first.")
-    prd.add_argument("--loop", choices=LOOPS, default="inner",
+    prd.add_argument("--loop", choices=LOOPS, default=None,
                      help="the loop this red belongs to: outer (the acceptance "
                           "suite, through a client) or inner (a unit test). "
-                          "Default inner")
+                          "Default outer on a quick fix the four-layer acceptance "
+                          "strategy applies to, inner otherwise")
     prd.add_argument("command", nargs=argparse.REMAINDER,
                      help="the test command (after --)")
     prd.set_defaults(func=cmd_tdd_red, output_kind="hand-off")
@@ -325,10 +326,11 @@ def build_parser():
                     help="carry forward a verified-by guard kind (regression | "
                          "e2e | typecheck | live) - the green re-runs the guard "
                          "that stood in for a unit red (R8)")
-    pg.add_argument("--loop", choices=LOOPS, default="inner",
+    pg.add_argument("--loop", choices=LOOPS, default=None,
                     help="the loop this green belongs to: outer (the acceptance "
                          "suite, through a client) or inner (a unit test). "
-                         "Default inner")
+                         "Default outer on a quick fix the four-layer acceptance "
+                         "strategy applies to, inner otherwise")
     pg.add_argument("command", nargs=argparse.REMAINDER,
                     help="the test command (after --)")
     pg.set_defaults(func=cmd_tdd_green, output_kind="hand-off")

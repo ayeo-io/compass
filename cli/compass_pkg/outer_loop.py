@@ -15,13 +15,13 @@ applies is `acceptance_strategy.in_scope`, the one scope rule (ADR-079); this
 module adds none. Compass reads records here, never project code.
 """
 # DEPENDENCY: standard library (os); compass_pkg.acceptance_strategy, binding,
-# check_results, core and red_first. It imports no command module, so the check
+# check_results, core, red_first and status_words. It imports no command module, so the check
 # registry can import it.
 from __future__ import annotations
 
 import os
 
-from compass_pkg import acceptance_strategy
+from compass_pkg import acceptance_strategy, status_words
 from compass_pkg.binding import claimed_paths, work_tree_id
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import find_upwards
@@ -63,6 +63,12 @@ def _tree(task, task_dir, greens):
     """`(fault, note)` about the tree the outer-loop greens ran on. `fault` is text
     when no outer-loop green is on the current tree. `note` is text when the tree
     could not be compared."""
+    # A landed issue's working tree moves on after the land: ship-commit itself
+    # commits the re-derived living spec. `evidence-matches-tree` compares the
+    # issue's own files with the land commit, so this check does not compare trees.
+    if status_words.is_completed(task):
+        return None, ("the issue has landed, so the tree was not compared; "
+                      "`evidence-matches-tree` compares the landed files")
     root = find_upwards(task_dir, ".compass") or task_dir
     now = work_tree_id(root, claimed_paths(task))
     bound = [(p, r) for p, r in greens if isinstance(r.get("tree_id"), str) and r["tree_id"]]

@@ -353,14 +353,30 @@ def _silent_red_reason(out, command, task_dir):
             "files, so no test ran")
 
 
-def _loop(args):
-    """The loop a red or green belongs to, from `--loop`. A caller that builds its
-    own arguments, such as `compass quick-fix finish`, gives none and records the
-    inner loop, the default (ADR-080). The parser refuses any other value."""
-    loop = getattr(args, "loop", None) or "inner"
+def _loop(args, task_dir):
+    """The loop a red or green belongs to, from `--loop`. With no `--loop` it is
+    `default_loop`. The parser refuses any other value; a caller that builds its own
+    arguments is checked here."""
+    loop = getattr(args, "loop", None) or default_loop(task_dir)
     if loop not in LOOPS:
         raise CompassError(f"--loop {loop!r} is not a loop; use one of: {', '.join(LOOPS)}")
     return loop
+
+
+def default_loop(task_dir):
+    """`outer` for a quick fix the four-layer acceptance strategy applies to, else
+    `inner` (ADR-080). A quick fix has one scenario, and its declared test is that
+    scenario's acceptance test, so its red and green are the outer loop. Whether the
+    strategy applies is `acceptance_strategy.in_scope`, the one scope rule (ADR-079)."""
+    from compass_pkg.acceptance_strategy import in_scope
+    from compass_pkg.stable_ids import APPROACH_QUICK_FIX
+    try:
+        task, _ = load_manifest(task_dir)
+    except (CompassError, OSError, ValueError):
+        return "inner"
+    if not isinstance(task, dict) or task.get("delivery_approach") != APPROACH_QUICK_FIX:
+        return "inner"
+    return "outer" if in_scope(task, task_dir)[0] else "inner"
 
 
 def cmd_tdd_red(args):
@@ -439,7 +455,7 @@ def cmd_tdd_red(args):
         # The argument list as given: two lists can join to the same text.
         "argv": list(command),
         "scenario": scenario,          # the scenario this red is evidence FOR
-        "loop": _loop(args),
+        "loop": _loop(args, task_dir),
         "exit_code": code,
         "passed": False,
         "timestamp": now_iso(),
@@ -724,7 +740,7 @@ def cmd_tdd_green(args):
         # The argument list as given: two lists can join to the same text.
         "argv": list(command),
         "scenario": scenario,          # the scenario this green is evidence FOR
-        "loop": _loop(args),
+        "loop": _loop(args, task_dir),
         "exit_code": 0,
         "passed": True,
         "attempts": attempts,

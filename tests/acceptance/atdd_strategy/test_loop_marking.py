@@ -10,6 +10,7 @@ checks; `support.py` builds the projects.
 from __future__ import annotations
 
 import json
+import sys
 
 import pytest
 
@@ -135,7 +136,7 @@ def test_trc_e6(tmp_path, reds):
         support.without_loop(issue, "red")
         assert "loop" not in _evidence(issue, "red")
     # The candidate and the client are written from ayeo-io/compass-delivery#326; this
-    # issue's green carries attempts 1 (requirements review Q1).
+    # issue's green carries `attempts` 1 (requirements review Q1).
     _record(issue, "tdd-green", "outer")
     assert _evidence(issue, "green")["attempts"] == 1
     code, document = issue.check()
@@ -162,3 +163,49 @@ def test_trc_a17(tmp_path, records):
     row = _row(document)
     assert row["status"] == "fail", row
     assert "no outer-loop green" in row["detail"], row
+
+
+# --- `TRC-E7` ------------------------------------------------------------------------------
+
+def _quick_fix(tmp_path):
+    """A quick fix in a project with the strategy on, its test committed and failing."""
+    project = support.Project(tmp_path / "repo")
+    root = project.root
+    (root / "data").mkdir()
+    (root / "data" / "greeting.txt").write_text("Hi\n", encoding="utf-8")
+    (root / "tests").mkdir()
+    (root / "tests" / "test_greeting.py").write_text(
+        "import pathlib\n\n\ndef test_greeting():\n"
+        "    p = pathlib.Path(__file__).resolve().parent.parent / 'data' / 'greeting.txt'\n"
+        "    assert p.read_text().strip() == 'Hello'\n", encoding="utf-8")
+    support.git(root, "add", "data/greeting.txt", "tests/test_greeting.py")
+    support.git(root, "commit", "-q", "-m", "greeting")
+    issue = support.Issue(project, "greet")
+    issue.must("quick-fix", "start", "greet", "--risk", "trivial - a text change",
+               "--familiarity", "brownfield-mapped - the file and its test exist",
+               "--size", "atomic - one line", "--intent", "The greeting says Hello.",
+               "--scenario", "Given the greeting, when it is read, then it says Hello.",
+               "--test", "tests/test_greeting.py::test_greeting")
+    return project, issue
+
+
+@pytest.mark.parametrize("given, recorded, result", [
+    (None, "outer", "pass"),
+    ("inner", "inner", "fail"),
+])
+def test_trc_e7(tmp_path, given, recorded, result):
+    """An in-scope quick fix records the outer loop by default."""
+    project, issue = _quick_fix(tmp_path)
+    assert issue.manifest()["delivery_approach"] == "quick-fix"
+    loop = ["--loop", given] if given else []
+    command = ["--", sys.executable, "-m", "pytest", "-q", "tests/test_greeting.py::test_greeting"]
+    issue.must("tdd-red", "--issue", "greet", "--scenario", "TRC-001", *loop, *command)
+    (project.root / "data" / "greeting.txt").write_text("Hello\n", encoding="utf-8")
+    code, out, err = issue.run("quick-fix", "finish", "--issue", "greet", "--no-commit",
+                               "-m", "Say Hello", "--release-note", "The greeting says Hello.",
+                               *loop, *command)
+    assert _evidence(issue, "red-TRC-001")["loop"] == recorded
+    assert _evidence(issue, "green-TRC-001")["loop"] == recorded
+    assert (code == 0) == (result == "pass"), out + err
+    code, document = issue.check()
+    assert _row(document)["status"] == result, _row(document)

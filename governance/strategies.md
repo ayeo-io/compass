@@ -156,7 +156,9 @@ commands write; it never reads project code.
   to it (ADR-006). Nor does it apply in a project whose `compass.yml` extends
   the shipped default at major 6 or 7: the strategy ships from major 8.
 - **The loop.** `compass tdd-red` and `compass tdd-green` record the loop
-  with `--loop outer|inner`, default inner. On an in-scope issue the check
+  with `--loop outer|inner`: default outer on an in-scope quick fix, and
+  inner otherwise. `compass quick-fix finish` takes the same flag. On an
+  in-scope issue the check
   `outer-loop-recorded` needs an outer-loop red and an outer-loop green on
   the tree as it is now (ADR-080).
 - **Only the setting turns it off.** An approach that ships cannot set the

@@ -130,6 +130,11 @@ def register(sub, issue_arg):
     fi.add_argument("--no-commit", action="store_true",
                     help="pass the gates and write the records, but leave the "
                          "commit to the user")
+    from compass_pkg.acceptance_strategy import LOOPS
+    fi.add_argument("--loop", choices=LOOPS, default=None,
+                    help="the loop the green belongs to: outer or inner. Default "
+                         "outer when the four-layer acceptance strategy applies, "
+                         "inner otherwise")
     from compass_pkg.release_line import add_argument as add_release_note
     add_release_note(fi)
     issue_arg(fi)
@@ -993,7 +998,7 @@ def cmd_quick_fix_finish(args):
                 continue
             _quiet_run(cmd_tdd_green, task=slug, scenario=sid,
                        verified_by=None, command=list(command),
-                       prerun=_shared_run())
+                       loop=getattr(args, "loop", None), prerun=_shared_run())
         except CompassError as exc:
             raise CompassError(
                 f"compass quick-fix finish: the green or acceptance for {sid} "

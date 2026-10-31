@@ -5176,3 +5176,9 @@ Compass now ships an atdd skill for four-layer acceptance tests, loaded at refin
 - `TRC-007` The new text passes the vocabulary scans and never says a bare S2
 - `TRC-008` The review questions have one heading per stage
 - `TRC-009` The skill states how stage 1 ends in a red that unlocks no code
+
+### bdd-extract-scenario-outline (completed 2026-10-31)
+
+compass bdd extract now writes a Scenario Outline with its Examples table, and takes a scenario's title from its heading when the fence has no Scenario line.
+
+- `TRC-001` Given a spec whose gherkin fence opens with Scenario Outline and holds an Examples table When compass bdd extract runs Then it writes the outline with its Examples table and exits 0

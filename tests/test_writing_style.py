@@ -3809,8 +3809,10 @@ _GROWING_REACH = {
     # 131 with the nine plain YAML files of tests/fixtures/execution-profiles/, which
     #    hold key-value lines and no prose;
     # 133 with the two files of tests/fixtures/atdd-strategy/: a copy of the pilot's
-    #    spec kept as .txt and the 8.0.4 extract output, which no scan reads as prose.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 133),
+    #    spec kept as .txt and the 8.0.4 extract output, which no scan reads as prose;
+    # 132 when that output became the pilot's extracted feature file, whose
+    #    scenario lines a scan reads as prose.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 132),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

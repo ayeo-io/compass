@@ -1,6 +1,0 @@
-compass bdd extract: 5 problem(s) found; nothing written.
-  .compass/work/atdd-hook-pilot/acceptance-criteria.md:44: TRC-P1 - the gherkin fence has no 'Scenario:' line.
-  .compass/work/atdd-hook-pilot/acceptance-criteria.md:56: TRC-P2 - the gherkin fence has no 'Scenario:' line.
-  .compass/work/atdd-hook-pilot/acceptance-criteria.md:66: TRC-P3 - the gherkin fence has no 'Scenario:' line.
-  .compass/work/atdd-hook-pilot/acceptance-criteria.md:76: TRC-P4 - the gherkin fence has no 'Scenario:' line.
-  .compass/work/atdd-hook-pilot/acceptance-criteria.md:86: TRC-P5 - the gherkin fence has no 'Scenario:' line.

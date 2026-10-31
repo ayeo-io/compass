@@ -57,7 +57,7 @@ compass issue blocked set  flag an in-progress or in-review issue as blocked, wi
 compass issue blocked remove  clear the blocked flag
 compass issue depends add  record an issue this one waits for, with --reason and --until; implement is blocked until it is met
 compass issue depends remove  stop waiting for an issue
-compass issue link set     link an issue to its GitHub issue, to write its labels and page there (opt in)
+compass issue link set     link an issue to its GitHub issue (--github), to write its labels and page there (opt in), or to its pull request (--pr), whose merge commit becomes land_commit
 compass issue github sync  write an issue's labels, and its page when switched on, to its linked GitHub issue now
 compass issue subtask      record, resume and package a multiagent run's subtasks
 compass acceptance start   open an honest record where there is no natural red

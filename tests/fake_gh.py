@@ -15,7 +15,8 @@ State lives in the directory named by GH_FAKE_DIR:
 - `state.json`: `repo_labels` (the labels the repository has), `issues`
   (the labels on each issue, keyed `owner/repo#number`), and for the issue
   page `comments` (each issue's comments, `[{"id", "body"}]`), `bodies` and
-  `titles` (keyed the same way) and `next_id`.
+  `titles` (keyed the same way) and `next_id`, and for `pr view` `prs` (the
+  JSON `gh pr view --json` prints for each pull request, keyed the same way).
 
 GH_FAKE_MODE makes every call fail: `unauth` as `gh` does when it is not
 logged in, `down` as it does when GitHub cannot be reached.
@@ -136,6 +137,14 @@ def main(argv):
             return 1
         state["repo_labels"].append(name)
         _save(state_path, state)
+        return 0
+    if argv[:2] == ["pr", "view"]:
+        found = state.get("prs", {}).get(f"{repo}#{argv[2]}")
+        if found is None:
+            sys.stderr.write("GraphQL: Could not resolve to a PullRequest with the number "
+                             f"of {argv[2]}. (repository.pullRequest)\n")
+            return 1
+        print(json.dumps(found))
         return 0
     if argv[:2] in (["issue", "view"], ["issue", "edit"]):
         key = f"{repo}#{argv[2]}"

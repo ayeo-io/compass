@@ -236,6 +236,13 @@ if command -v jq >/dev/null 2>&1; then
   SESSION_ID=$(printf '%s' "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)
   COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
   TRANSCRIPT=$(printf '%s' "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null || true)
+  # The folder a Bash call runs in, which can name a worktree of the session's
+  # repository (hooks/lib/pre-tool-project.sh, bash_follow_cwd). Read for Bash
+  # only, so an Edit or Write starts no extra process.
+  CALL_CWD=""
+  if [ "$TOOL" = "Bash" ]; then
+    CALL_CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || true)
+  fi
 else
   # A JSON string runs to the first quote that no backslash escapes, so a
   # command such as `bash -c "..."` is read in full, as jq reads it. The
@@ -270,6 +277,10 @@ else
   SESSION_ID=$(_json_string session_id)
   TOOL=$(_json_string tool_name)
   COMMAND=$(_json_string command)
+  CALL_CWD=""
+  if [ "$TOOL" = "Bash" ]; then
+    CALL_CWD=$(_json_string cwd)
+  fi
 fi
 
 # --- the rest of the hook, in parts ------------------------------------------

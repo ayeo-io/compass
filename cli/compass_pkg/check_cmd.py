@@ -640,6 +640,24 @@ def _assessment_keys_pass(run, task):
     return not errs
 
 
+def _landing_pass(run, task, task_dir):
+    """Report whether origin's default branch reaches a landed issue's
+    `land_commit`, and return the result, or None when there is nothing to
+    judge. A squash merge leaves the commit ship-commit made off the default
+    branch, so a finding is advice and never fails the run."""
+    from compass_pkg.pull_request_link import on_default_branch
+    try:
+        verdict = on_default_branch(task, task_dir)
+    except Exception as exc:                            # noqa: BLE001
+        # A check must not crash the run, and this one never blocks.
+        verdict = ADVISORY_FAILURE, f"check errored: {exc}"
+    if verdict is None:
+        return None
+    run.guardrail("", "landing commit")
+    run.result("land-commit-on-default-branch", *verdict)
+    return verdict[0]
+
+
 def _judge(passed, detail, declared, matches, readings):
     """The result of one check after what it declares: `(passed, detail)`.
 
@@ -963,6 +981,9 @@ def cmd_check(args):
     ran += 1
     if not _assessment_keys_pass(run, task):
         failures += 1
+    landing = _landing_pass(run, task, task_dir)
+    ran += landing is not None
+    advisory += landing is ADVISORY_FAILURE
     # follow-ups are cross-cutting - always run them
     ran += 1
     if "backfills-paid" in refused:

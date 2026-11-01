@@ -412,8 +412,13 @@ in the next summary.
 
 `/compass:approve <n>` and `/compass:reject <n> <reason>` search the current
 issue of each worktree for pending request n, and `--issue <slug>` reaches any
-issue in any worktree. With more than one match they refuse and list the
-`--issue` forms. The approver is read from the folder that holds the chosen
+issue in any worktree. With more than one matching request, the two commands
+refuse and list the `--issue` forms. When two worktrees hold the slug named
+after `--issue`, the copy in the worktree the person types in wins; typed in a
+worktree that holds no copy, the command is refused
+(`governance/decisions/2026-10-29-a-persons-approval-takes-the-issue-in-its-own-worktree.md`).
+An agent's delegated approval and `--on` still refuse a slug two worktrees
+hold. The approver is read from the folder that holds the chosen
 request, after the choice. The session-start hook lists each delegation with no
 end time (`delegations.session_start_lines`) on a new session, after `/clear`
 and after compaction, but not on a resumed session.

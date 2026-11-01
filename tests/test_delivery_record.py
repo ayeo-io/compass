@@ -100,7 +100,11 @@ def test_dr_a_a_deleted_file_stays_unless_pruned_and_no_change_makes_no_commit(p
     clone = _record_files(remote, tmp_path, "kept")
     # A plain sync adds and updates; it never deletes from the record.
     assert (clone / "docs" / "analysis" / "plan.md").exists()
-    assert _cli(project, "record", "sync", "--prune").returncode == 0
+    # A prune that would delete lists the files and pushes nothing until
+    # --apply confirms it (ayeo-io/compass-delivery#339).
+    refused = _cli(project, "record", "sync", "--prune")
+    assert refused.returncode == 2 and "docs/analysis/plan.md" in refused.stderr
+    assert _cli(project, "record", "sync", "--prune", "--apply").returncode == 0
     clone = _record_files(remote, tmp_path)
     assert not (clone / "docs" / "analysis" / "plan.md").exists()
     commits = _git(clone, "rev-list", "--count", "HEAD").stdout.strip()

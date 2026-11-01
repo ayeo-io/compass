@@ -603,6 +603,11 @@ def test_d2_repairs_change_only_retired_names():
     the ticket's deletion points and the limits that come from the person's
     operating system user as two list items of their own.
 
+    One more was re-baselined by `bash-follows-worktree-cwd`:
+    `docs/safety-contract.md` list_items 129 -> 133, the worktree paragraph
+    gaining the rules for a Bash call whose working folder is in a worktree
+    (four items) beside the two limits that remain.
+
     One more was re-baselined by `install-docs-show-the-one-line-form`:
     `docs/quickstart.md` (fences 34 -> 36) gained a code block for the shell
     install line and a second block for the two in-session commands. The
@@ -614,10 +619,14 @@ def test_d2_repairs_change_only_retired_names():
     pre-tool hook's parts in `hooks/lib/` and a row for the `hooks/py/lib_*.py`
     programs the shared shell libraries run.
 
+    One more was re-baselined by `land-commit-from-merged-pr`:
+    `governance/guardrails.md` (list_items 66 -> 67) gained the bullet on the
+    advisory row `land-commit-on-default-branch`.
+
     One more was re-baselined by `acceptance-strategy-core`:
     `governance/strategies.md` (list_items 97 -> 104) gained the four-layer
     acceptance strategy, one `###` heading and 7 list items, and
-    `governance/guardrails.md` (list_items 66 -> 72) gained the strategy's
+    `governance/guardrails.md` (list_items 67 -> 73) gained the strategy's
     advisory check, one list item and its 5 sub-items.
 
     The other 45 are untouched, and a NEW structural change to any of the 59

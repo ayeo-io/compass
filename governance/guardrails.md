@@ -176,6 +176,12 @@ _(none yet - the shipped default guardrails apply as-is)_
   With the capability `artifact-freshness` on, it also reports each tracked
   document as fresh or stale under the label `artifact-freshness`
   (`docs/artifact-freshness.md`). A project with none of these sees no change.
+- **`land-commit-on-default-branch`** is an advisory row `compass check` adds
+  for a landed issue with a `land_commit`, in a clone that records
+  `origin/HEAD`. It reports a `land_commit` that origin's default branch does
+  not reach, which a squash merge causes, and names `compass issue link set
+  --pr`, which moves `land_commit` to the merge commit. It is in no gate and no
+  configuration, and it never fails the run (`docs/github-labels.md`).
 - **`artifacts-approved`** is a blocking check in no gate, run by `compass
   check` and by `compass ship-commit` before the commit. It declines until
   every gate has passed. Then it judges a copy of the issue with the ship exit

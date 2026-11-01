@@ -143,6 +143,18 @@ Every command that can change the README also triggers the page, but the page ma
 
 Each write compares the labels Compass owns with the labels now on the GitHub issue and sends only the difference. A write that has nothing to change calls `gh issue view` once and edits nothing.
 
+## The pull request and the landing commit
+
+`compass issue link set --pr <n>` records the pull request that carries the issue, as `pull_request: {repo, number}` in the manifest. It needs no switch. `<n>` is `owner/repo#number`, the pull request's URL on github.com, or a bare number in the repository of the project's `origin`. The command reads the pull request with `gh pr view <number> --repo <repo> --json number,state,mergeCommit`:
+
+- When the pull request is merged and the issue has landed, it writes the merge commit to `land_commit` and prints the old and new ids.
+- When the pull request is not merged, or the issue has not landed, it records the link only and leaves `land_commit` as it is. `compass ship-commit` writes `land_commit` when the issue lands.
+- When `gh` cannot read the pull request, or the value names no pull request, it exits non-zero and writes nothing, the `--github` link included.
+
+Run it when the pull request opens, and again after the merge. `compass ship-commit` writes `land_commit` from the commit it made on the branch. A squash merge puts a different commit on the default branch, so without the second run the record names a commit the default branch does not hold. `--github` and `--pr` can be given together, and at least one is needed.
+
+`compass check` reports a landed issue's `land_commit` that origin's default branch does not reach, as the advisory check `land-commit-on-default-branch`. The default branch is `refs/remotes/origin/HEAD`, as `git clone` records it. The check never fails the run, because a record written before the merge, or a clone that has not fetched, is not wrong work. It adds no row for an issue in flight, an issue with no `land_commit`, or a clone with no `origin/HEAD`. The code is in `cli/compass_pkg/pull_request_link.py`.
+
 ## When GitHub does not match
 
 A label removed or added on GitHub is reported, not copied back into the manifest. `compass issue lint` prints a `github:` line under its result when the issue is linked and a switch is on:
@@ -172,7 +184,7 @@ A sync never fails the command that triggered it. Each `gh` call is abandoned af
 ## Limits
 
 - One GitHub issue per Compass issue.
-- Compass does not create GitHub issues, close them or read their state. It reads back only comment ids and whether the issue body is empty, and stores no text from GitHub.
+- Compass does not create GitHub issues, close them or read their state. It reads back only comment ids and whether the issue body is empty, and stores no text from GitHub. From a pull request it reads only its number, state and merge commit.
 - A person's edit to the Compass comment on GitHub is overwritten by the next change to the page. Compass does not read it.
 - A second comment that also opens with the marker is left as it is. Compass edits the oldest.
 - Compass writes the state when a command that changes the records runs. A state that changes by hand-editing a file, such as the `current_phase` key, is written at the next command or at `compass issue github sync`.
@@ -183,5 +195,6 @@ A sync never fails the command that triggered it. Each `gh` call is abandoned af
 | File | What it holds |
 |---|---|
 | `manifest.yml`, key `github` | The link: `repo` and `number`. |
+| `manifest.yml`, key `pull_request` | The pull request that carries the issue: `repo` and `number`. |
 | `compass.yml`, key `github_labels` | The three switches. |
 | `.compass/work/<slug>/github-sync.yml` | Two sections, `labels` and `page`. Each holds the time of its last write and its last error. `labels` holds the labels wanted. `page` holds the digest of the comment as posted, the comment id, and whether the body was set by Compass, kept as a person's, or not yet decided. It holds no text from GitHub. Issue state; not committed. |

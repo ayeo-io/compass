@@ -163,7 +163,7 @@
     },
     "land_commit": {
       "type": "string",
-      "description": "The commit ship-commit made when it marked the issue landed. evidence-matches-tree compares the newest green's tree_id with this commit's tree."
+      "description": "The commit ship-commit made when it marked the issue landed, or, after `compass issue link set --pr` reads a merged pull request, its merge commit on the default branch. evidence-matches-tree compares the newest green's tree_id with this commit's tree. compass check reports, as advice, a land_commit that origin's default branch does not reach."
     },
     "release_note": {
       "type": "string",
@@ -850,6 +850,16 @@
       "properties": {
         "repo": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/(?!-)(?!\\.{1,2}$)[A-Za-z0-9._-]{1,100}$", "description": "The repository, as owner/repo."},
         "number": {"type": "integer", "minimum": 1, "maximum": 999999999, "description": "The issue number in that repository."}
+      }
+    },
+    "pull_request": {
+      "type": "object",
+      "description": "The pull request that carries the issue. Set by `compass issue link set --pr`, which reads it with `gh pr view`. Once the pull request is merged and the issue has landed, the same command writes the merge commit to `land_commit`.",
+      "required": ["repo", "number"],
+      "additionalProperties": false,
+      "properties": {
+        "repo": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/(?!-)(?!\\.{1,2}$)[A-Za-z0-9._-]{1,100}$", "description": "The repository, as owner/repo."},
+        "number": {"type": "integer", "minimum": 1, "maximum": 999999999, "description": "The pull request number in that repository."}
       }
     },
     "raised_by": {

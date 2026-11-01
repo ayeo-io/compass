@@ -429,14 +429,16 @@ def _project_of(task_dir):
 
 def _find(listing, slug):
     """The folder of the issue `--issue` names, in any worktree, or a refusal
-    that names the folders searched or both holders."""
+    that names the folders searched or both holders. The person typed the
+    command, so the worktree they typed it in wins when it holds the issue."""
     from compass_pkg import worktree_lookup
     try:
-        return worktree_lookup.find_issue(listing, slug)
+        return worktree_lookup.find_issue(listing, slug, prefer_here=True)
     except worktree_lookup.HeldTwice as exc:
         raise Refused(f"Compass: the issue '{slug}', named after --issue, is held by more "
-                      f"than one worktree: {' and '.join(exc.folders)}. Compass cannot tell "
-                      f"which one is meant. Nothing was written.") from None
+                      f"than one worktree: {' and '.join(exc.folders)}, and not by this "
+                      f"one. Compass cannot tell which one is meant; type it in the "
+                      f"worktree whose record you mean. Nothing was written.") from None
     except worktree_lookup.NotFound as exc:
         note = f" {exc.note[0].upper()}{exc.note[1:]}." if exc.note else ""
         raise Refused(f"Compass: '{slug}', named after --issue, is in none of the work "

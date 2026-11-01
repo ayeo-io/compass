@@ -147,11 +147,16 @@ def test_TRC_049_compass_approve_issue_n_records_request_n_of_that_issue(tmp_pat
 
 def test_TRC_050_compass_approve_issue_n_refuses_an_issue_that_two_worktrees_hold(
         tmp_path):
+    # Typed in a third worktree that holds neither copy. Typed in a worktree
+    # that holds one, the person's own copy wins (compass-delivery#317,
+    # tests/test_worktree_lookup.py).
     top, work = _setup(tmp_path)
     copy_issue(top, top, WT)
     _request(top, WT)
     _request(work, WT)
-    result = _approve(top, f"1 --issue {WT}")
+    third = add_worktree(top, "third")
+    (third / ".compass").mkdir(exist_ok=True)
+    result = _approve(third, f"1 --issue {WT}")
     assert result.block, result
     assert str(_task(top, WT)) in result.message and str(_task(work, WT)) in result.message
     assert not _records(top, WT) and not _records(work, WT)

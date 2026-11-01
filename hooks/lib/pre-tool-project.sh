@@ -13,8 +13,9 @@
 #      from the session reads the wrong project either way: it can miss a red
 #      recorded in the edited tree, or borrow one recorded in the session's
 #      tree.
-#   2. CLAUDE_PROJECT_DIR, when the tool call names no file (a Bash call with
-#      no write target). The session is the best answer there.
+#   2. CLAUDE_PROJECT_DIR, when the tool call names no file (a Bash call).
+#      The session is the best answer there, unless the Bash call's `cwd`
+#      is in a worktree of the session's repository (bash_follow_cwd below).
 #   3. The ancestor walk from that starting point up to the nearest
 #      .compass/ directory, bounded by .git so the walk does not cross into
 #      another repository.
@@ -206,13 +207,11 @@ classify_foreign() {
 # missing-.compass/work/ branch below gives the useful message.
 PROJECT_RESOLVED=1
 
-# Bash keeps the session as its project: its target is extracted much later,
-# by a classifier that resolves candidates against PROJECT_DIR, and
-# re-running resolution inside that loop would break every write shape it
-# guards. So the worktree fix covers the tools that name a file directly -
-# Edit and Write - which is where a builder in a worktree actually works. A
-# Bash redirect inside a worktree still resolves from the session;
-# docs/safety-contract.md states that scope.
+# A Bash call names no file here: its targets are extracted much later, by a
+# classifier that resolves candidates against PROJECT_DIR, and re-running
+# resolution inside that loop would break every write shape it guards. So a
+# Bash call starts from the session's project, and bash_follow_cwd below may
+# move it to the tree of the folder the call runs in.
 if [ "${TOOL:-}" = "Bash" ]; then
   resolve_project ""
 else
@@ -225,6 +224,41 @@ fi
 # pointer, the most-recently-changed guess and the pointer-moved check are not
 # used, and the tree must be tied to the session's repository.
 classify_foreign
+
+# A Bash call whose working folder (the input's `cwd`) is in a worktree of the
+# session's repository is judged by that worktree, as an Edit there is
+# (ADR-078, ayeo-io/compass-delivery#337). A subagent started with worktree
+# isolation keeps the parent's CLAUDE_PROJECT_DIR, so without this every shell
+# write it made was judged by the main checkout's issue.
+#
+# The tree is the Compass root found by walking up from `cwd`, as for an Edit.
+# It is used only when it is foreign and tied to the session's repository; a
+# `cwd` that is missing, relative or not a folder, a tree with no Compass
+# root, the session's own project and an untied tree all keep the session's
+# project, as before. BASH_FROM_TREE=1 tells the target loop
+# (pre-tool-issue.sh) to judge the targets outside the tree, and every
+# target of a command that changes folder, against the session's project
+# first, so no write the hook checked before goes unchecked.
+BASH_FROM_TREE=0
+bash_follow_cwd() {
+  [ -n "${CLAUDE_PROJECT_DIR:-}" ] || return 0
+  case "${CALL_CWD:-}" in /*) ;; *) return 0 ;; esac
+  [ -d "$CALL_CWD" ] || return 0
+  normalise_path "$CALL_CWD"
+  find_compass_root "$NORMALISED"  # us-english-scan: allow - shell variable name, not prose
+  [ -n "$FOUND_ROOT" ] || return 0
+  PROJECT_DIR="$FOUND_ROOT"
+  classify_foreign
+  if [ "$FOREIGN" -eq 1 ] && tied_to_session_repo; then
+    BASH_FROM_TREE=1
+    return 0
+  fi
+  PROJECT_DIR="$CLAUDE_PROJECT_DIR"
+  FOREIGN=0 SESSION_ROOT="" TIED=""
+}
+if [ "${TOOL:-}" = "Bash" ]; then
+  bash_follow_cwd
+fi
 
 # --- record the session on the issue (usage.sessions) ------------------------
 # `compass ship-commit` reads the transcripts of every session that worked on

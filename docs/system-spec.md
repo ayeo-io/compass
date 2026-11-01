@@ -5163,6 +5163,44 @@ The directory tests now fail a new subprocess that gets the whole environment, a
 - `TRC-K2` Given a branch with one forbidden addition planted (an inline hook program, a nested quote in a hook command, a command that pre-approves bare Bash, a subprocess given the whole environment, a binary file, or a file added to bin/) When tests/test_directory_validator.py runs Then it reports exactly 1 failure naming the hook, the command, the file and line, or the file; and 0 failures with none planted
 - `TRC-K1` The plugin copy passes the directory validator
 
+### held-issue-prefers-this-worktree (completed 2026-10-29)
+
+A person's /compass:approve --issue and /compass:reject --issue now take the issue's copy in the worktree they type in, when another worktree also holds it, instead of refusing.
+
+- `TRC-001` The worktree the command runs in wins over the main checkout
+- `TRC-002` The main checkout wins when the command runs there
+- `TRC-003` Two holders and neither is here is still refused
+- `TRC-004` One holder elsewhere is found as before
+- `TRC-005` An agent's delegated approval and delegate --on still refuse two holders
+
+### bash-follows-worktree-cwd (completed 2026-10-30)
+
+A Bash command run from a worktree is now judged by that worktree's issue, not the main checkout's.
+
+- `TRC-001` The worktree's red allows the write
+- `TRC-002` The worktree's missing red refuses the write and names the worktree
+- `TRC-003` The session is recorded on the worktree's issue and no session table is read
+- `TRC-004` A worktree pointer that names no issue refuses
+- `TRC-005` An absolute target outside the worktree is judged by the session's issue
+- `TRC-006` A call whose cwd does not name a worktree of the session's repository keeps the session's verdict
+- `TRC-007` The session's own project keeps COMPASS_ISSUE and pointer-moved
+- `TRC-008` The missing-red refusal names the project
+- `TRC-009` The safety contract and the decision record state the shell rule
+
+### hooks-pilot-alias-run-id (completed 2026-10-30)
+
+The hooks acceptance tests give each parallel worker its own alias numbers, so two workers never reuse one name.
+
+- `TRC-001` Given two xdist workers of one run, When each aliases the same name, Then both aliases carry the run's shared id and differ by worker
+
+### record-prune-hint (completed 2026-10-30)
+
+compass record sync no longer recommends a prune that deletes records: the hint names the files and the new --redact-existing, which rewrites them in place, and a prune lists what it would delete and needs --apply.
+
+- `TRC-001` after a sync, the hint names the earlier files masked and a fix that deletes nothing, never the prune option
+- `TRC-002` record sync with --redact-existing rewrites earlier files that name a rival in place and deletes no record
+- `TRC-003` record sync with --prune lists, masked, the record files it would delete and pushes nothing until --apply is given
+
 ### land-commit-from-merged-pr (completed 2026-10-31)
 
 compass issue link set --pr records an issue's pull request and, once it is merged, sets land_commit to the merged commit. compass check shows an advisory row when the default branch does not reach a landed issue's land_commit.

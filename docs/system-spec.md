@@ -5192,3 +5192,11 @@ A Bash command run from a worktree is now judged by that worktree's issue, not t
 The hooks acceptance tests give each parallel worker its own alias numbers, so two workers never reuse one name.
 
 - `TRC-001` Given two xdist workers of one run, When each aliases the same name, Then both aliases carry the run's shared id and differ by worker
+
+### record-prune-hint (completed 2026-10-30)
+
+compass record sync no longer recommends a prune that deletes records: the hint names the files and the new --redact-existing, which rewrites them in place, and a prune lists what it would delete and needs --apply.
+
+- `TRC-001` after a sync, the hint names the earlier files masked and a fix that deletes nothing, never the prune option
+- `TRC-002` record sync with --redact-existing rewrites earlier files that name a rival in place and deletes no record
+- `TRC-003` record sync with --prune lists, masked, the record files it would delete and pushes nothing until --apply is given

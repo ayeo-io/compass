@@ -178,7 +178,7 @@ CHECK_GUIDANCE = {
     },
     "outer-loop-recorded": {
         "why": "A unit-test green meets guardrail `G1`, so on a change a client can observe only the outer loop shows the behavior through a client interface. A green from an older tree shows a tree that no longer exists.",
-        "do": "Record the acceptance suite's failure and its pass with `--loop outer`, on the tree as it is now.",
+        "do": "Record the acceptance suite's red and green with `--loop outer` on the current tree.",
         "fix": "Run `compass tdd-red --loop outer --scenario <id> -- <acceptance command>` before the code, and `compass tdd-green --loop outer --scenario <id> -- <acceptance command>` after the last change.",
     },
     "spike-conclusion-present": {

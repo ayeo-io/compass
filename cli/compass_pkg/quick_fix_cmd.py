@@ -132,9 +132,7 @@ def register(sub, issue_arg):
                          "commit to the user")
     from compass_pkg.acceptance_strategy import LOOPS
     fi.add_argument("--loop", choices=LOOPS, default=None,
-                    help="the loop the green belongs to: outer or inner. Default "
-                         "outer when the four-layer acceptance strategy applies, "
-                         "inner otherwise")
+                    help="outer: the acceptance suite; inner: a unit test (S17)")
     from compass_pkg.release_line import add_argument as add_release_note
     add_release_note(fi)
     issue_arg(fi)

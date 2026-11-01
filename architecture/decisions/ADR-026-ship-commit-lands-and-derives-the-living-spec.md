@@ -77,11 +77,6 @@ idempotent, and never a source of truth.
 - A staged multiagent run can integrate each wave without landing the issue.
 - An issue shipped with a gate not passed is not marked landed, and the spec
   is not re-derived, as before.
-- A project can set `living_spec: refresh` in `compass.yml`. Then a landing
-  neither derives nor commits the spec, and says so in one line; a person
-  re-derives it with `compass spec sync`. The Compass repository sets it,
-  because a spec committed on each branch conflicted with every other open
-  branch once one merged (`docs/configuration.md`).
 
 ## References
 

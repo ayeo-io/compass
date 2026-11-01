@@ -10,7 +10,8 @@ base's issues and adds the branch's own, ADR-034) and commits. A conflict in
 any other file is a person's to resolve: the merge is aborted and the files
 are named.
 """
-# DEPENDENCY: standard library (os, subprocess); compass_pkg.core, flow.
+# DEPENDENCY: standard library (os, subprocess); compass_pkg.core, flow,
+# project_settings.
 from __future__ import annotations
 
 import os
@@ -23,6 +24,23 @@ from compass_pkg.flow import LIVING_SPEC_FILES, derive_system_spec
 # The base branch `spec sync` merges by default. `ship-commit` reads it too,
 # to tell a merge of the base apart from a merge of the issue's own work.
 DEFAULT_BASE = "origin/main"
+
+
+def landing_skips_spec(project_root):
+    """The one-line note a landing prints instead of re-deriving the spec, or
+    None. `living_spec: refresh` keeps the spec out of every landing's branch:
+    a spec committed on each branch conflicts with every other open branch as
+    soon as one merges. A broken settings file keeps the default, so this
+    note never hides the error that the file's own readers report."""
+    from compass_pkg import project_settings
+    try:
+        timing = project_settings.settings(project_root).get("living_spec")
+    except CompassError:
+        timing = None
+    if timing != "refresh":
+        return None
+    return ("\n  living spec left as it is: compass.yml sets `living_spec: "
+            "refresh`, so re-derive it with `compass spec sync`.")
 
 
 def _git(root, *args, check=False):

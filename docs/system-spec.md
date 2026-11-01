@@ -5200,3 +5200,12 @@ compass record sync no longer recommends a prune that deletes records: the hint 
 - `TRC-001` after a sync, the hint names the earlier files masked and a fix that deletes nothing, never the prune option
 - `TRC-002` record sync with --redact-existing rewrites earlier files that name a rival in place and deletes no record
 - `TRC-003` record sync with --prune lists, masked, the record files it would delete and pushes nothing until --apply is given
+
+### land-commit-from-merged-pr (completed 2026-10-31)
+
+compass issue link set --pr records an issue's pull request and, once it is merged, sets land_commit to the merged commit. compass check shows an advisory row when the default branch does not reach a landed issue's land_commit.
+
+- `TRC-LC1` Given a landed issue whose pull request is merged, when compass issue link set --pr runs, then the manifest records the pull request and land_commit names its merge commit
+- `TRC-LC2` Given a pull request that is not merged, or an issue that has not landed, when compass issue link set --pr runs, then the pull request is recorded and land_commit does not change
+- `TRC-LC3` Given a landed issue, when compass check runs, then a land_commit the default branch does not reach is advice naming compass issue link set --pr, and one it reaches passes
+- `TRC-LC4` Given a --pr value that names no pull request, or one gh cannot read, when compass issue link set --pr runs, then it exits non-zero and writes nothing

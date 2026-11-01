@@ -30,6 +30,7 @@ approaches:
     gates: [verify.correctness, verify.governance, verify.traceability]
     artifacts: {delivery-approach: lightweight, verification-note: lightweight}
     subtask_ceiling: 1
+    acceptance_strategy: existing-dsl
     checkpoints:
       controlled: [assess]
       balanced: []
@@ -45,6 +46,7 @@ approaches:
     artifacts: {intent: lightweight, acceptance-criteria: thorough, requirements-review: lightweight,
       technical-design: thorough, distribution-map: lightweight, verification-report: thorough}
     subtask_ceiling: 2
+    acceptance_strategy: 'on'
     checkpoints:
       controlled: [assess, define, refine, plan]
       balanced: [define, plan]
@@ -58,6 +60,7 @@ approaches:
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security]
     artifacts: {bug-report: thorough, acceptance-criteria: lightweight, verification-report: thorough}
     subtask_ceiling: 1
+    acceptance_strategy: existing-dsl-isolation
     checkpoints:
       controlled: [assess, define]
       balanced: []
@@ -73,6 +76,7 @@ approaches:
     artifacts: {intent: thorough, acceptance-criteria: thorough, requirements-review: thorough, technical-design: thorough,
       distribution-map: thorough, verification-report: thorough}
     subtask_ceiling: null
+    acceptance_strategy: 'on'
     checkpoints:
       controlled: [assess, define, refine, plan]
       balanced: [assess, define, refine, plan]

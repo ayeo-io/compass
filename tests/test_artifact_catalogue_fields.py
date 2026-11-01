@@ -1578,7 +1578,8 @@ def test_acf_34():
     text = _template("delivery-approach.md")
     # The assessment section also ends with the repository readiness line, a block of
     # its own (issue `project-readiness-caps-autonomy`), under the assessment.
-    sections = {"## The assessment": ["assessment", "readiness"],
+    # The four-layer acceptance strategy's line follows it (issue `acceptance-strategy-core`).
+    sections = {"## The assessment": ["assessment", "readiness", "acceptance-strategy"],
                 "## Policy rules that fired": ["policy-rules"],
                 "### Per-stage weight": ["stage-weights"], "### Gate set": ["gate-set"]}
     for heading, kinds in sections.items():

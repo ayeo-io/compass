@@ -301,7 +301,9 @@ def _with_compass_yml(root: Path, env: dict) -> None:
 
 def _with_default_extends(root: Path, env: dict) -> None:
     _initialised(root, env)
-    (root / "compass.yml").write_text("schema: 1\nextends: compass:default@7\n",
+    # The newest shipped major: 8 since the default preset carries the four-layer
+    # acceptance strategy.
+    (root / "compass.yml").write_text("schema: 1\nextends: compass:default@8\n",
                                       encoding="utf-8")
 
 

@@ -235,9 +235,10 @@ def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(relea
         # concern line. Nothing else moves. The two section checks 7.0.0 adds
         # (ADR-064) raise the count by 2, the evidence type `approval-withdrawal`
         # (ADR-069) by 1, the design-size check (ADR-067) by 1, and the two
-        # artifact rules that replace the role rules (ADR-070) by 2 more.
+        # artifact rules that replace the role rules (ADR-070) by 2 more, and the
+        # four-layer acceptance strategy's advisory check (8.0.0 preset) by 1.
         gates, choices = _evaluate_lines(after)
-        drift = "this project's policy is missing 10 rule(s) or check(s)"
+        drift = "this project's policy is missing 11 rule(s) or check(s)"
         assert len([c for c in choices if drift in c]) == 1, slug
         assert (gates, [c for c in choices if drift not in c]) == _evaluate_lines(before), slug
         lint = _cli(CLI, root, "issue", "lint", "--issue", slug)

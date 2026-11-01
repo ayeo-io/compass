@@ -62,7 +62,10 @@ Logical surface: **guardrails**
 
 ### Strategies
 
-Strategies are directional biases that are on by default but are not blocking:
+Strategies are directional biases that are on by default and that a team can
+step off with a recorded reason. Most are not blocking; one that carries
+blocking checks, the four-layer acceptance strategy (`S17`), lets a recorded
+step-off make them advisory. The default strategies include:
 BDD (Given/When/Then scenarios as spec), TDD (red-green-refactor), simplest
 correct implementation, and persistence over conversation. They are encoded in
 `governance/strategies.md`. The TDD strategy enforcement is implemented in

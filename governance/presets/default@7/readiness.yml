@@ -1,0 +1,70 @@
+# The shipped default preset: the source of the shipped defaults.
+# The two files governance/routing-policy.yml and governance/guardrails.yml
+# are generated from these files and governance/legacy-views.yml.
+# Change a default here, then run python3 scripts/generate-legacy-views.py.
+# Also raise the version in legacy-views.yml, then run the script with --pin
+# and again with --pin-hashes, which update the digest and drift fixtures.
+# cli/compass_pkg/legacy_adapter.py wrote the first version of these files from
+# those two files. The preset is the source now; edit it here.
+#
+# The readiness signals: binary facts about a repository that show whether it is
+# fit for unattended agent work. The four with required_for_autonomous: true
+# form the readiness floor. A project below the floor cannot run
+# autonomy: autonomous. The score counts signals; weight only orders the fix list.
+schema: 1
+readiness:
+  agent-instructions-present:
+    statement: An agent instructions file (AGENTS.md or CLAUDE.md) is at the repository root.
+    impl: agent-instructions-present
+    weight: 2
+    required_for_autonomous: true
+  lint-declared-and-clean:
+    statement: A lint command is declared and exits 0 in a clean checkout of HEAD.
+    impl: project-command-succeeds
+    params: {key: lint_command}
+    weight: 2
+    required_for_autonomous: true
+  typecheck-declared-and-clean:
+    statement: A type-check command is declared and exits 0 in a clean checkout of HEAD.
+    impl: project-command-succeeds
+    params: {key: typecheck_command}
+    weight: 2
+  format-declared-and-clean:
+    statement: A format-check command is declared and exits 0 in a clean checkout of HEAD.
+    impl: project-command-succeeds
+    params: {key: format_check_command}
+    weight: 1
+  build-declared-and-succeeds:
+    statement: A build command is declared and exits 0 in a clean checkout of HEAD.
+    impl: project-command-succeeds
+    params: {key: build_command}
+    weight: 3
+    required_for_autonomous: true
+  tests-declared-and-under-two-minutes:
+    statement: A test command is declared and passes within two minutes in a clean checkout of HEAD.
+    impl: tests-under-limit
+    params: {command: test_command, limit_seconds: 120}
+    weight: 3
+    required_for_autonomous: true
+  no-flaky-tests-on-record:
+    statement: No scenario's recorded test results disagree or carry a re-run marker.
+    impl: no-flaky-records
+    weight: 2
+  structured-logging-declared:
+    statement: The project declares its logging convention in project.structured_logging.
+    impl: project-declaration
+    params: {key: structured_logging}
+    weight: 1
+  codeowners-present:
+    statement: A CODEOWNERS file names who reviews changes.
+    impl: codeowners-present
+    weight: 1
+  pre-commit-hooks-present:
+    statement: Pre-commit hooks are configured in the repository.
+    impl: pre-commit-hooks-present
+    weight: 1
+  secret-scan-declared:
+    statement: The project declares the secret scanner it runs in project.secret_scan.
+    impl: project-declaration
+    params: {key: secret_scan}
+    weight: 2

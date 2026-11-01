@@ -21,7 +21,7 @@ them from the first issue. You do not have to run this command before the
 first issue.
 
 `/compass:init` copies nothing. A new project's `compass.yml` extends the
-shipped default (`extends: compass:default@7`) and holds only what differs from
+shipped default (`extends: compass:default@8`) and holds only what differs from
 it, so "the shipped defaults and nothing project-specific yet" is a complete,
 valid configuration. Copying `governance/` into a project, which 5.x versions
 of this command did, is what `compass policy migrate` now converts.
@@ -78,7 +78,7 @@ it is exempt from assessment.
 
    ```yaml
    schema: 1
-   extends: compass:default@7
+   extends: compass:default@8
    owner: <the person who approves waivers>
    project:
      name: <the project's name>

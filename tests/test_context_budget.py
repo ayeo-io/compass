@@ -96,8 +96,12 @@ CONTRACT_TARGET = 2900
 # quick-fix finish rose by about 155 characters on 2026-10-14 for
 # --release-note (ADR-065): a landing refuses a quick fix with no release
 # line, so the flag must be learnable from --help, and 16 characters were left.
+# quick-fix start rose by 100 characters on 2026-10-30 for
+# --expected-acceptance (strategy `S17`): a docs or config quick fix must say it
+# is out of the four-layer acceptance strategy's scope, and the option and its
+# shortest help need about 80 characters.
 HELP_BUDGETS = {
-    ("quick-fix", "start"): 2800,
+    ("quick-fix", "start"): 2900,
     ("quick-fix", "finish"): 1650,
     ("tdd-red",): 1450,
     ("tdd-green",): 1250,

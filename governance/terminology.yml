@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre24
+version: 2.0.0-pre25
 
 terms:
 
@@ -370,10 +370,11 @@ terms:
     related: [strategy, quality-gate, evidence]
   strategy:
     means: >
-      A strong default you can step off with a recorded reason. Assessed by
-      a reviewer, never mechanically blocking. TDD and BDD are strategies;
-      the outcomes they serve are guardrails.
-    related: [guardrail]
+      A strong default you can step off with a recorded reason. Most are
+      assessed by a reviewer. A strategy can carry blocking checks that a
+      recorded step-off makes advisory; they sit outside every guardrail.
+      TDD and BDD are strategies; the outcomes they serve are guardrails.
+    related: [guardrail, four-layer-acceptance-strategy]
   quality-gate:
     means: >
       A check that must pass before an issue moves state. Which gates apply
@@ -751,6 +752,58 @@ terms:
       revision, with the runner versions it supports and a recorded approval.
       `compass profile show` reads it and never writes it.
     related: [execution-profile]
+
+  # --- The four-layer acceptance strategy, `S17` ------------------------------
+  four-layer-acceptance-strategy:
+    means: >
+      The strategy numbered `S17`. A change to behavior a real client can observe is
+      accepted through four test layers: an executable specification in
+      Given/When/Then, a domain-specific language that each line calls once,
+      a protocol driver for one client interface, and the system under test.
+      It applies unless the change's acceptance is of kind validation or
+      refactor, and a project can turn it off with a recorded reason.
+    related: [strategy, outer-loop, inner-loop, test-layer]
+  outer-loop:
+    means: >
+      The acceptance loop of the four-layer acceptance strategy: the
+      scenarios fail before the code is written and then pass through a
+      client interface against a named candidate. It wraps the inner loop.
+    related: [inner-loop, candidate, client-interface]
+  inner-loop:
+    means: >
+      The unit-level red, green, refactor loop of strategy `S2`, run inside
+      the outer loop while the code that makes a scenario pass is written.
+    related: [outer-loop]
+  candidate:
+    means: >
+      The build an outer-loop green ran against: a deployed build, named by
+      its build id, or a local build, named by the tree id of the code it was
+      built from. The record says which.
+    related: [outer-loop, client-interface]
+  client-interface:
+    means: >
+      The interface a real client uses to reach the system under test, such
+      as an API, a web interface or a command line. A protocol driver speaks
+      to exactly one.
+    related: [candidate, test-layer]
+  isolation-proof:
+    means: >
+      A record, written only by its command, that the issue's acceptance
+      tests passed when run in parallel and when each scenario's tests ran
+      twice, so no scenario depends on another or on the order they run in.
+    related: [layering-record, outer-loop]
+  layering-record:
+    means: >
+      A record, written only by its command, of the project's layering test:
+      the test that checks each test layer calls only the layer below it.
+      Compass reads the record and never the project's code.
+    related: [isolation-proof, test-layer]
+  test-layer:
+    means: >
+      One of the four layers of the four-layer acceptance strategy:
+      specification, domain-specific language, protocol driver or system
+      under test. The word `layer` alone names a configuration source.
+    related: [four-layer-acceptance-strategy, layer, layering-record]
 
 # =============================================================================
 # CODES - the id prefixes that appear in artifacts

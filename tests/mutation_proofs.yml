@@ -104,6 +104,11 @@
   fails: tests/test_word_ceilings_check.py::test_wcl_7_check_refuses_far_over
   restores: tests/test_word_ceilings_check.py::test_wcl_16_prd_measure_full_fixture
 
+- check: acceptance-applicability-agrees
+  broken: an issue assessed as out of scope that then records a red
+  fails: tests/acceptance/atdd_strategy/test_strategy_routing.py::test_trc_a5
+  restores: tests/acceptance/atdd_strategy/test_strategy_routing.py::test_trc_a3
+
 - check: spike-conclusion-present
   broken: a spike with no conclusion evidence
   fails: tests/test_spike_safety.py::test_spike_without_conclusion_fails

@@ -147,7 +147,12 @@ force; if it is still a spike, leave the marker in place.
    <dimension>="<why>"` with one `--justify` for each assessed dimension (a
    changed value on a re-run needs a new one; an unchanged value keeps its
    line). The CLI records them under the manifest's `justifications:` key
-   and refuses a new or changed value that has none. It applies
+   and refuses a new or changed value that has none. Add
+   `--expected-acceptance validation` or `--expected-acceptance refactor`
+   when the change has no behavior a client can observe (a config or docs
+   change, a refactor that keeps behavior); leave it out otherwise. The first
+   write stores whether the four-layer acceptance strategy (`S17`) applies,
+   and the delivery-approach record shows it. It applies
    the routing rules in force to the assessment: it composes the first approach,
    applies the floors, caps, immovable gates, and blocking artifact rules, and
    folds the resulting `delivery_approach`, `stages`, `gates` (status

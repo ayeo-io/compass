@@ -921,14 +921,14 @@ def test_pl_10_the_text_has_one_line_per_field_with_source_operation_and_waiver(
 def test_pl_10_the_cli_prints_the_preset_with_its_version_and_inactive_lists(tmp_path):
     code, out, _ = _run(_project(tmp_path, {"schema": 1}), "policy", "show")
     assert code == 0, out
-    assert "default@7.0.0" in out
+    assert "default@8.0.0" in out
     assert "(inactive: entry-exit-evaluation off)" in out
     assert out.splitlines()[0].startswith("compass policy show: project")
 
 
 def test_pl_10_a_project_with_no_compass_yml_shows_the_shipped_default(tmp_path):
     code, out, _ = _run(_project(tmp_path), "policy", "show")
-    assert code == 0 and "default@7.0.0" in out
+    assert code == 0 and "default@8.0.0" in out
 
 
 def _copy_governance(root):
@@ -1016,7 +1016,7 @@ def test_pl_11_the_document_has_the_pinned_envelope_scope_and_layers(tmp_path):
     assert document["scope"] == {"kind": "project", "issue": None, "resolved": "live"}
     parent, project = document["layers"]
     assert list(parent) == LAYER_KEYS and list(project) == LAYER_KEYS
-    assert (parent["name"], parent["kind"], parent["version"]) == ("default", "parent", "7.0.0")
+    assert (parent["name"], parent["kind"], parent["version"]) == ("default", "parent", "8.0.0")
     assert (project["name"], project["kind"], project["version"]) == ("project", "project", None)
     assert parent["digest"].startswith("sha256:") and project["digest"].startswith("sha256:")
 
@@ -1026,7 +1026,7 @@ def test_pl_11_each_field_has_the_pinned_keys_and_the_first_one_is_known(tmp_pat
     assert all(list(f) == FIELD_KEYS for f in document["fields"])
     assert document["fields"][0] == {
         "path": "capabilities.artifact-freshness", "value": False,
-        "source": "default@7.0.0", "op": "add", "waiver": None, "note": None}
+        "source": "default@8.0.0", "op": "add", "waiver": None, "note": None}
 
 
 def test_pl_11_every_resolved_field_of_the_preset_is_listed(tmp_path):
@@ -1168,7 +1168,7 @@ def test_pl_10_every_key_of_every_raw_preset_entry_is_listed_even_a_lock(tmp_pat
     listed = {f["path"] for f in document["fields"]}
     assert _raw_preset_paths() - listed == set()
     locked = next(f for f in document["fields"] if f["path"] == "stages.assess.locked")
-    assert (locked["value"], locked["source"], locked["op"]) == (True, "default@7.0.0", "add")
+    assert (locked["value"], locked["source"], locked["op"]) == (True, "default@8.0.0", "add")
 
 
 def test_pl_10_a_lock_on_a_stage_follows_the_stages_own_fields_and_names_its_layer():

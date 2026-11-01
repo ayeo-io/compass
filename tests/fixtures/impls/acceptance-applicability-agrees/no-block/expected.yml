@@ -1,0 +1,2 @@
+verdict: nothing-to-check
+input: an issue with no acceptance_strategy block, assessed before the strategy shipped

@@ -2,14 +2,15 @@
 # releases archive, the compatibility corpora and cli/vendor. A digest is
 # sha256 over the file's bytes. For contract-4-commands.yml the one stdout pin
 # of `compass init` is removed first, because the CLI message pass changes
-# it. Taken before the word pass. The test is
+# it. Taken before the word pass, except contract-4-commands.yml, recorded again
+# when the 8.0.0 preset moved its two live-major entries (jed72, 2026-10-30). The test is
 # tests/test_frozen_files_unchanged.py.
 files:
   governance/shipped-releases.tar.xz: sha256:ffd65957e458fdf1b5f3d8134e563c8a6659e463f99eeb004f2319288afd2319
   tests/fixtures/compat/contract-1-routing.jsonl.gz: sha256:fc75851a1e27fca04edd4bcb94cc1e59f4823000918cd952b93b45d2466aa794
   tests/fixtures/compat/contract-2-owed.yml: sha256:1b4d8ddb34f9086291c6e6bed0b8e3826b6a53f11df9282d6502210fe1d55fb5
   tests/fixtures/compat/contract-3-check-verdicts.json: sha256:09b587f9f348aea828fc427e98e58dbf17940e76acd1c7d814d0e46189381e6e
-  tests/fixtures/compat/contract-4-commands.yml: sha256:2a8514a9bbcec2f7ab9e861a9fbe91760aff59331d63251b2fd7915785c5794e
+  tests/fixtures/compat/contract-4-commands.yml: sha256:d5cd651e35c35d463830fb36861624d462a3d8b410cc0b77adda1356af4f1a8e
   tests/fixtures/compat/contract-5-hook.yml: sha256:0861de564372d23646929b25005eec41f1f8f43c8cfef564b8ff2cc4f4aceca7
   tests/fixtures/compat/v5.6.0-governance.tgz: sha256:db79327a29786d66faf84aa5c49f2579d006d7f556daf13b2740c8aa50b05691
   cli/vendor/LICENSE-PyYAML: sha256:8d3928f9dc4490fd635707cb88eb26bd764102a7282954307d3e5167a577e8a4

@@ -8,11 +8,16 @@
 - `gate-set`: the gates in the manifest's order, and beside an added gate the rules that
   added it;
 - `model-tiers`: a row per seat, in seat order, with the tier the manifest records, the
-  rule that set it and the floors for that seat that did not fire.
+  rule that set it and the floors for that seat that did not fire;
+- `acceptance-strategy`: one line saying whether strategy `S17` applies, why, and how it
+  is routed on the issue's approach.
 
 Each takes a `RenderInputs` snapshot and the project-relative path of the document, and
 returns a `Part`, as the renderers in `block_renderers` do. `block_renderers` registers
-them through `_add_modules`. They read only the manifest and the configuration view.
+them through `_add_modules`. They read the manifest and the configuration view. The
+`acceptance-strategy` renderer also reads `extends:` from the project's `compass.yml` when
+the issue holds no stored block, so that block is drawn from the project and a stale one is
+only advisory.
 """
 # DEPENDENCY: compass_pkg.render_inputs, rendered_blocks, stable_ids; compass_pkg.routing and
 # compass_pkg.justifications are imported inside the renderers that use them, because routing
@@ -20,7 +25,7 @@ them through `_add_modules`. They read only the manifest and the configuration v
 from __future__ import annotations
 
 from compass_pkg import rendered_blocks as rb
-from compass_pkg.render_inputs import OWN, Part, code as _code
+from compass_pkg.render_inputs import CROSS, OWN, Part, code as _code
 from compass_pkg.stable_ids import STAGE_IDS
 
 #: Shown for a dimension the manifest holds no justification for: an issue assessed
@@ -127,10 +132,22 @@ def model_tiers(inputs, doc_rel):
     return Part(OWN, lines)
 
 
+def acceptance_strategy_line(inputs, doc_rel):
+    """Whether the four-layer acceptance strategy applies, why, and its routing on the
+    issue's approach, from the manifest's `acceptance_strategy` block."""
+    from compass_pkg import acceptance_strategy
+    line = rb.field(acceptance_strategy.line(inputs.task, inputs.task_dir))
+    # With no stored block the line can name the project's `extends:` pin, which
+    # the issue's records do not hold, so a stale line is only advisory.
+    scope = OWN if acceptance_strategy.stored(inputs.task) is not None else CROSS
+    return Part(scope, [line])
+
+
 RENDERERS = {
     "assessment": assessment,
     "policy-rules": policy_rules,
     "stage-weights": stage_weights,
     "gate-set": gate_set,
     "model-tiers": model_tiers,
+    "acceptance-strategy": acceptance_strategy_line,
 }

@@ -391,7 +391,9 @@ entries:
   project: initialised
   argv: ["policy", "show"]
   exit: 0
-  stdout_contains: "default@7.0.0"
+  # The live default's version: a major preset bump moves it (decided by
+  # jed72, 2026-10-30). It moved from 7.0.0 when the 8.0.0 preset shipped.
+  stdout_contains: "default@8.0.0"
 # Added on purpose by policy-lint: a root compass.yml that Compass reads is
 # now linted layer by layer. 5.6.0 did not read the file, so it ran the legacy
 # lint and passed.
@@ -571,7 +573,9 @@ entries:
 # keeps refusing a move it cannot check.
 - id: policy-update-major-not-kept
   project: with-default-extends
-  argv: ["policy", "update", "--to", "8"]
+  # A major past the newest one shipped: a major preset bump moves it
+  # (decided by jed72, 2026-10-30). It moved from 8 when 8 became the live default.
+  argv: ["policy", "update", "--to", "9"]
   exit: 2
 # Added on purpose by policy-update: a compass.yml with no extends line has no
 # major to move, so the verb exits 2. 5.6.0 did not read the file and exited 2

@@ -118,6 +118,7 @@ Rules:
 | [ADR-076](ADR-076-execution-profile-manifests.md) | Execution profiles are committed in a top-level profiles folder, with two new terms | proposed | extends ADR-012 rule 4; with ADR-072 |
 | [ADR-077](ADR-077-delegations-cover-the-typing-session-until-revoked.md) | Delegations cover the typing session until revoked | accepted | amends ADR-069 decisions 1, 2, 3 and 5; with ADR-068 and ADR-038 |
 | [ADR-078](ADR-078-a-bash-call-is-judged-by-the-worktree-its-working-folder-is-in.md) | A Bash call is judged by the worktree its working folder is in | accepted | amends ADR-074 decisions 1 and 8; with ADR-005 and ADR-063 |
+| [ADR-079](ADR-079-the-s17-block-is-stored-once-and-replaced-only-by-a-re-assess.md) | The acceptance strategy block is stored once and replaced only by a re-assess | accepted | |
 
 ## Principle → ADR mapping
 

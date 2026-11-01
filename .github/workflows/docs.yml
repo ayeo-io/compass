@@ -4,14 +4,17 @@
 # push to main publishes. MkDocs is a build tool here, never something
 # Compass users install.
 #
-# `build` is a required check, so it reports on every pull request: a
-# workflow filtered out by paths never reports, and the merge would wait for
-# it. On a pull request that touches none of the site's files, the job runs
-# and skips its own steps, so it ends in success having built nothing.
+# `build` is a required check, so it reports on every pull request and in
+# every merge group: a workflow filtered out by paths never reports, and the
+# merge would wait for it. On a pull request or merge group that touches
+# none of the site's files, the job runs and skips its own steps, so it ends
+# in success having built nothing.
 name: Docs site
 
 on:
   pull_request:           # no paths filter: build reports on every pull request
+  merge_group:            # nor here: the merge queue waits for build too
+    types: [checks_requested]
   push:
     branches: [main]
     paths: ["docs/**", "mkdocs.yml", ".github/workflows/docs.yml"]
@@ -42,7 +45,7 @@ jobs:
         name: Did this change touch the site?
         # On a push or a manual run there is no base, and the site is built.
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: >-
           python3 scripts/ci-changed.py --base "$BASE_SHA" --head "$HEAD_SHA"

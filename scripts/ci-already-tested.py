@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Decide whether a tree was already tested green on its pull request.
+"""Decide whether a tree was already tested green by the whole suite.
 
-Usage: ci-already-tested.py --repo OWNER/NAME --commit M --output FILE
-                            [--branch main]
+Usage: ci-already-tested.py --repo OWNER/NAME --commit M --this-run RUN_ID
+                            --output FILE
        ci-already-tested.py --repo OWNER/NAME --pull-request N --head H
                             --this-run RUN_ID [--wait-minutes M]
                             [--poll-seconds S]
@@ -14,40 +14,40 @@ skips. A wrong skip puts an untested tree on main with a green check, so
 every condition below must hold, and any error or unknown answer appends
 `skip=false`:
 
-1. Exactly one pull request listed for M by the GitHub API has merge
-   commit M, a merge time, and base branch --branch.
-2. Its head sha is 40 hex characters and the head commit is in the local
-   history, fetched from refs/pull/<number>/head when missing (the number
-   checked as a whole number first).
-3. M's tree equals the head's tree.
-4. M's first parent is an ancestor of the head. A pull-request run tests
-   the head merged into the base as it stood then; when the base had not
-   moved past the head's own history, that merge has the head's tree, so
-   equal trees mean the tested tree.
-5. The head's `self-check` check runs from the GitHub Actions app are all
-   completed, and the latest (by start time, then id) has conclusion
-   success. A later failed run must win over an earlier success.
-6. The pull request's timeline shows no base change at or after the time
-   that run started. A pull-request run tests the head merged into the
-   base it had then, so a run from before a retarget says nothing about
-   the base the pull request merged into. A timeline that cannot be read
-   fails this condition.
+1. M is 40 hex characters and RUN_ID is a whole number.
+2. The runs of this run's workflow (the workflow of RUN_ID) with event
+   `merge_group` and head M, read from the Actions API on one full page,
+   hold at least one run other than RUN_ID with head M and event
+   `merge_group`. The merge queue tests the exact commit it then pushes to
+   main, so a merge-group run on M tested M's tree on M's history.
+3. The latest of those runs, by creation time then id, has exactly one
+   `self-check` job, and it is completed with conclusion success. A later
+   failed run must win over an earlier success.
+4. That run has at least one `shard` job, and every one succeeded. A
+   pull-request run passes `self-check` without the shards, so this proves
+   the run was the whole suite.
+
+A pull-request run no longer runs the whole suite, so a green pull-request
+run never lets a push skip. A merge made without the queue runs the suite
+on main.
 
 Exit 0 whenever it wrote the line, 1 when it could not write it.
 
-The earlier result (second form). On a title or body edit the suite jobs
-skip, and GitHub counts a skipped required check as passed, so the
-`self-check` job runs this instead of the aggregator. It reads the runs of
-this run's workflow for head H from the Actions API, not the `self-check`
-check runs: GitHub creates a job's check run only once the jobs it needs
-have finished, so a suite run still in progress has no `self-check` check
-run yet (ayeo-io/compass#578, run 38849230839). A run counts as the
+The earlier result (second form). On a title or body edit the jobs that
+test a pull request skip, and GitHub counts a skipped required check as
+passed, so the `self-check` job runs this instead of the aggregator. It
+reads the runs of this run's workflow for head H from the Actions API, not
+the `self-check` check runs: GitHub creates a job's check run only once the
+jobs it needs have finished, so a suite run still in progress has no
+`self-check` check run yet (ayeo-io/compass#578, run 38849230839). A run counts as the
 earlier result only when all of these hold:
 
 - it is not RUN_ID, which is this run;
 - its head is H and it lists pull request N;
-- its `checks` job ran. A title or body edit skips `checks`, so text-edit
-  runs never count, whatever their result;
+- its `checks` job ran. A title or body edit skips `checks`, and so does
+  a run on a draft, so those runs never count, whatever their result. A
+  "suite run" below is a run that ran `checks`: on a pull request, the
+  fast jobs;
 - it was not cancelled.
 
 While such a run is still running, or a run has not yet listed its
@@ -60,8 +60,9 @@ That `self-check` needed every required job, so its result carries theirs.
 Exit 1 otherwise, including on any error.
 
 Only these values read from the API or the event reach a command: the head
-sha, the pull-request number and run and workflow ids, each checked first
-and passed as one argument in an argument list, never through a shell.
+sha, the commit, the pull-request number and the run and workflow ids,
+each checked first and passed as one argument in an argument list, never
+through a shell.
 """
 from __future__ import annotations
 
@@ -103,22 +104,6 @@ def _gh(*args: str):
                       f"{r.stdout.strip()[:120]!r}") from exc
 
 
-def _git(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", *args], capture_output=True, text=True,
-                          timeout=300)
-
-
-def _tree(commit: str) -> str:
-    r = _git("rev-parse", "--verify", f"{commit}^{{tree}}")
-    if r.returncode != 0:
-        raise Unknown(f"git cannot read the tree of {commit}: {r.stderr.strip()}")
-    return r.stdout.strip()
-
-
-def _has_commit(sha: str) -> bool:
-    return _git("cat-file", "-e", f"{sha}^{{commit}}").returncode == 0
-
-
 def _whole_number(value):
     """The value as an int from 1 up, or None."""
     if isinstance(value, bool):
@@ -142,9 +127,8 @@ def _time(text) -> datetime:
     return when
 
 
-PUSH_LINES = ("Pull request", "Merged tree", "Head tree",
-              "First parent is an ancestor of the head",
-              "Latest self-check conclusion", "Base changes since that run started")
+PUSH_LINES = ("Merge group runs on the commit", "Latest merge group run",
+              "Its self-check job", "Its shard jobs")
 EDIT_LINES = ("Pull request", "Latest suite run",
               "Base changes since that run was created")
 
@@ -161,110 +145,9 @@ class Decision:
         self.reasons.append(reason)
 
 
-def _pull_request(args, d: Decision):
-    pulls = _gh("api", f"repos/{args.repo}/commits/{args.commit}/pulls")
-    if not isinstance(pulls, list):
-        raise Unknown("the pull requests answer is not a list")
-    matching = []
-    for pr in pulls:
-        if not isinstance(pr, dict):
-            raise Unknown("a pull request in the answer is not an object")
-        base = pr.get("base") if isinstance(pr.get("base"), dict) else {}
-        if (pr.get("merge_commit_sha") == args.commit and pr.get("merged_at")
-                and base.get("ref") == args.branch):
-            matching.append(pr)
-    listed = ", ".join(f"#{p.get('number')}" for p in pulls if isinstance(p, dict))
-    if len(matching) != 1:
-        d.lines["Pull request"] = (f"{len(matching)} merged into {args.branch} "
-                                   f"with merge commit {args.commit} "
-                                   f"(listed: {listed or 'none'})")
-        d.no("not exactly one pull request was merged into "
-             f"{args.branch} as {args.commit}")
-        return None
-    pr = matching[0]
-    head = (pr.get("head") or {}).get("sha") if isinstance(pr.get("head"), dict) else None
-    d.lines["Pull request"] = f"#{pr.get('number')}, head {head}"
-    return pr
-
-
-def _head_commit(pr: dict, d: Decision):
-    head = pr["head"].get("sha")
-    if not isinstance(head, str) or not SHA.match(head):
-        d.no(f"the head sha {head!r} is not 40 hex characters")
-        return None
-    if _has_commit(head):
-        return head
-    number = pr.get("number")
-    if isinstance(number, bool) or not isinstance(number, int) or number < 1:
-        d.no(f"the pull request number {number!r} is not a whole number, "
-             "so the missing head is not fetched")
-        return None
-    fetched = _git("fetch", "--no-tags", "origin", f"refs/pull/{number}/head")
-    if fetched.returncode != 0 or not _has_commit(head):
-        d.no(f"the head {head} is not in the local history and could not be "
-             f"fetched: {' '.join(fetched.stderr.split())[:200]}")
-        return None
-    return head
-
-
-def _workflow_run(run: dict, repo: str):
-    """The workflow run id in a check run's details URL, or None."""
-    url = run.get("details_url")
-    if not isinstance(url, str):
-        return None
-    m = re.match(rf"^https://github\.com/{re.escape(repo)}/actions/runs/(\d+)/", url)
-    return int(m.group(1)) if m else None
-
-
-def _latest_self_check(repo: str, head: str, d: Decision):
-    """Condition 5. The latest self-check run on the head when it
-    succeeded, else None with the reason recorded."""
-    answer = _gh("api", "-X", "GET", f"repos/{repo}/commits/{head}/check-runs",
-                 "-f", "check_name=self-check", "-f", "filter=all",
-                 "-f", "per_page=100")
-    if not isinstance(answer, dict) or not isinstance(answer.get("check_runs"), list):
-        raise Unknown("the check-runs answer has no check_runs list")
-    runs = answer["check_runs"]
-    if answer.get("total_count", len(runs)) != len(runs):
-        raise Unknown(f"the check-runs answer lists {len(runs)} of "
-                      f"{answer.get('total_count')} runs")
-    ours = []
-    for run in runs:
-        if not isinstance(run, dict):
-            raise Unknown("a check run in the answer is not an object")
-        app = run.get("app") if isinstance(run.get("app"), dict) else {}
-        if run.get("name") != "self-check" or app.get("slug") != "github-actions":
-            continue
-        ours.append(run)
-    label = "Latest self-check conclusion"
-    if not ours:
-        d.lines[label] = "no self-check run from GitHub Actions"
-        d.no("the head has no self-check run from GitHub Actions")
-        return None
-    running = [r for r in ours if r.get("status") != "completed"]
-    if running:
-        d.lines[label] = f"{len(running)} of {len(ours)} runs not completed"
-        d.no("a self-check run on the head is not completed")
-        return None
-    for run in ours:
-        if not isinstance(run.get("started_at"), str) or not isinstance(run.get("id"), int):
-            raise Unknown("a self-check run has no start time or id")
-    latest = max(ours, key=lambda r: (_time(r["started_at"]), r["id"]))
-    conclusion = latest.get("conclusion")
-    workflow_run = _workflow_run(latest, repo)
-    d.lines[label] = (
-        f"{conclusion} (run {latest['id']}"
-        + (f" in workflow run {workflow_run}" if workflow_run else "")
-        + f", started {latest['started_at']}, latest of {len(ours)})")
-    if conclusion != "success":
-        d.no(f"the latest self-check run on the head ended {conclusion}")
-        return None
-    return latest
-
-
 def _base_unchanged_since(repo: str, number: int, since: str, d: Decision,
-                          label="Base changes since that run started"):
-    """Condition 6: no base change at or after the time `since`."""
+                          label="Base changes since that run was created"):
+    """No base change at or after the time `since`."""
     pages = _gh("api", "--paginate", "--slurp", "-X", "GET",
                 f"repos/{repo}/issues/{number}/timeline", "-f", "per_page=100")
     if not isinstance(pages, list) or not all(isinstance(p, list) for p in pages):
@@ -279,51 +162,10 @@ def _base_unchanged_since(repo: str, number: int, since: str, d: Decision,
                 later.append(f"{event['event']} at {event['created_at']}")
     if later:
         d.lines[label] = ", ".join(later)
-        d.no("the base branch changed after the "
-             + ("self-check run started: " if label.endswith("started")
-                else "suite run was created: ")
+        d.no("the base branch changed after the suite run was created: "
              + ", ".join(later))
     else:
         d.lines[label] = "none"
-
-
-def decide(args) -> tuple[bool, Decision]:
-    """The first form: may this push to main skip the suite?"""
-    d = Decision()
-    try:
-        if not SHA.match(args.commit):
-            raise Unknown(f"--commit {args.commit!r} is not 40 hex characters")
-        pr = _pull_request(args, d)
-        if pr is None:
-            return False, d
-        head = _head_commit(pr, d)
-        if head is None:
-            return False, d
-        merged_tree, head_tree = _tree(args.commit), _tree(head)
-        d.lines["Merged tree"] = merged_tree
-        d.lines["Head tree"] = head_tree
-        if merged_tree != head_tree:
-            d.no("the merged tree differs from the head's tree")
-        anc = _git("merge-base", "--is-ancestor", f"{args.commit}^1", head)
-        if anc.returncode == 0:
-            d.lines["First parent is an ancestor of the head"] = "yes"
-        elif anc.returncode == 1:
-            d.lines["First parent is an ancestor of the head"] = "no"
-            d.no("the merge commit's first parent is not an ancestor of the head")
-        else:
-            raise Unknown(f"git merge-base failed: {anc.stderr.strip()}")
-        latest = _latest_self_check(args.repo, head, d)
-        if latest is not None:
-            number = _whole_number(pr.get("number"))
-            if number is None:
-                d.no(f"the pull request number {pr.get('number')!r} is not a "
-                     "whole number, so its timeline is not read")
-            else:
-                _base_unchanged_since(args.repo, number, latest["started_at"], d)
-    except Unknown as exc:
-        d.no(f"error: {exc}")
-        return False, d
-    return not d.reasons, d
 
 
 def _listed(answer, key: str, what: str) -> list:
@@ -354,10 +196,7 @@ def _lists_pull_request(run: dict, number: int) -> bool:
 _WORKFLOW_IDS: dict[int, int] = {}
 
 
-def _suite_runs(repo: str, number: int, head: str, this_run: int, d: Decision):
-    """The completed runs of this run's workflow that count as the earlier
-    result for pull request `number` at `head`, as (id, created_at,
-    self-check conclusion). The runs still running go to d.running."""
+def _workflow_id(repo: str, this_run: int) -> int:
     if this_run not in _WORKFLOW_IDS:
         this = _gh("api", f"repos/{repo}/actions/runs/{this_run}")
         workflow = (_whole_number(this.get("workflow_id"))
@@ -365,7 +204,81 @@ def _suite_runs(repo: str, number: int, head: str, this_run: int, d: Decision):
         if workflow is None:
             raise Unknown(f"workflow run {this_run} names no workflow id")
         _WORKFLOW_IDS[this_run] = workflow
-    workflow = _WORKFLOW_IDS[this_run]
+    return _WORKFLOW_IDS[this_run]
+
+
+def _jobs(repo: str, run_id: int) -> list:
+    return _listed(_gh("api", "-X", "GET",
+                       f"repos/{repo}/actions/runs/{run_id}/jobs",
+                       "-f", "filter=latest", "-f", "per_page=100"),
+                   "jobs", f"jobs of run {run_id}")
+
+
+def decide(args) -> tuple[bool, Decision]:
+    """The first form: may this push to main skip the suite?"""
+    d = Decision()
+    try:
+        if not SHA.match(args.commit):
+            raise Unknown(f"--commit {args.commit!r} is not 40 hex characters")
+        this_run = _whole_number(args.this_run)
+        if this_run is None:
+            raise Unknown(f"--this-run {args.this_run!r} is not a whole number")
+        workflow = _workflow_id(args.repo, this_run)
+        runs = _listed(_gh("api", "-X", "GET",
+                           f"repos/{args.repo}/actions/workflows/{workflow}/runs",
+                           "-f", f"head_sha={args.commit}", "-f", "event=merge_group",
+                           "-f", "per_page=100"), "workflow_runs", "workflow runs")
+        tested = []
+        for run in runs:
+            run_id = _whole_number(run.get("id"))
+            if run_id is None:
+                raise Unknown(f"a workflow run has the id {run.get('id')!r}")
+            if (run_id != this_run and run.get("head_sha") == args.commit
+                    and run.get("event") == "merge_group"):
+                if not isinstance(run.get("created_at"), str):
+                    raise Unknown(f"workflow run {run_id} has no creation time")
+                tested.append((run_id, run["created_at"]))
+        d.lines["Merge group runs on the commit"] = str(len(tested))
+        if not tested:
+            d.no(f"no merge group run of this workflow tested {args.commit}")
+            return False, d
+        run_id, created = max(tested, key=lambda r: (_time(r[1]), r[0]))
+        d.lines["Latest merge group run"] = f"workflow run {run_id}, created {created}"
+        jobs = _jobs(args.repo, run_id)
+        self_check = [j for j in jobs if j.get("name") == "self-check"]
+        if len(self_check) != 1:
+            d.lines["Its self-check job"] = f"{len(self_check)} jobs named self-check"
+            d.no(f"workflow run {run_id} has not exactly one self-check job")
+        else:
+            job = self_check[0]
+            state = (job.get("conclusion") if job.get("status") == "completed"
+                     else f"{job.get('status')}, not completed")
+            d.lines["Its self-check job"] = str(state)
+            if job.get("status") != "completed" or job.get("conclusion") != "success":
+                d.no(f"the self-check job of workflow run {run_id} is {state}")
+        shards = [j for j in jobs if j.get("name") == "shard"
+                  or str(j.get("name", "")).startswith("shard (")]
+        failed = [f"{j.get('name')} {j.get('conclusion') or j.get('status')}"
+                  for j in shards if j.get("conclusion") != "success"]
+        d.lines["Its shard jobs"] = (f"{len(shards)}, "
+                                     + (", ".join(failed) if failed
+                                        else "every one succeeded"))
+        if not shards:
+            d.no(f"workflow run {run_id} ran no shard job, so it was not the whole suite")
+        elif failed:
+            d.no(f"a shard job of workflow run {run_id} did not succeed: "
+                 + ", ".join(failed))
+    except Unknown as exc:
+        d.no(f"error: {exc}")
+        return False, d
+    return not d.reasons, d
+
+
+def _suite_runs(repo: str, number: int, head: str, this_run: int, d: Decision):
+    """The completed runs of this run's workflow that count as the earlier
+    result for pull request `number` at `head`, as (id, created_at,
+    self-check conclusion). The runs still running go to d.running."""
+    workflow = _workflow_id(repo, this_run)
     runs = _listed(_gh("api", "-X", "GET",
                        f"repos/{repo}/actions/workflows/{workflow}/runs",
                        "-f", f"head_sha={head}", "-f", "event=pull_request",
@@ -378,10 +291,7 @@ def _suite_runs(repo: str, number: int, head: str, this_run: int, d: Decision):
         if (run_id == this_run or run.get("head_sha") != head
                 or not _lists_pull_request(run, number)):
             continue
-        jobs = _listed(_gh("api", "-X", "GET",
-                           f"repos/{repo}/actions/runs/{run_id}/jobs",
-                           "-f", "filter=latest", "-f", "per_page=100"),
-                       "jobs", f"jobs of run {run_id}")
+        jobs = _jobs(repo, run_id)
         checks = [j for j in jobs if j.get("name") == "checks"]
         if checks and all(j.get("conclusion") == "skipped" for j in checks):
             continue  # a title or body edit: its result is not the suite's
@@ -457,7 +367,8 @@ def _push_skip(args) -> int:
     print(f"Merged commit: {args.commit}")
     _print_lines(d)
     if skip:
-        print("Decision: skip. This tree was tested green on its pull request.")
+        print("Decision: skip. The merge queue tested this commit green with the "
+              "whole suite.")
     else:
         print("Decision: run the suite, because " + "; ".join(d.reasons) + ".")
     try:
@@ -518,12 +429,12 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--poll-seconds", type=_not_negative, default=60.0)
     args = parser.parse_args(argv)
     push = (args.commit, args.output)
-    edit = (args.pull_request, args.head, args.this_run)
-    if all(push) and not any(edit):
+    edit = (args.pull_request, args.head)
+    if args.this_run and all(push) and not any(edit):
         return _push_skip(args)
-    if all(edit) and not any(push):
+    if args.this_run and all(edit) and not any(push):
         return _earlier(args)
-    parser.error("give either --commit and --output, "
+    parser.error("give either --commit, --this-run and --output, "
                  "or --pull-request, --head and --this-run")
     return 2
 

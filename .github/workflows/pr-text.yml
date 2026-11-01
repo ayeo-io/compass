@@ -2,11 +2,17 @@
 # (governance/decisions/2026-10-04-rival-names-never-committed.md). It runs
 # on `edited` as well, so an edited title is scanned without running the
 # suite. compass.yml scans the commit messages.
+#
+# `pr-text` is a required check, so it must report in the merge queue too.
+# A merge group has no title or body, so there the job passes without a
+# scan: the pull request's own runs scanned its text, on every edit.
 name: Pull request text
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
@@ -15,8 +21,8 @@ permissions:
 # never cancels the suite: a group name is shared by every workflow in the
 # repository.
 concurrency:
-  group: pr-text-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: pr-text-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   pr-text:
@@ -30,4 +36,8 @@ jobs:
       - name: No rival product name in the pull request title or body
         # The gate reads the title and body from the event file itself, so
         # no text from them is ever put into a shell command.
+        if: github.event_name == 'pull_request'
         run: python3 scripts/rival-name-gate.py --github-event "$GITHUB_EVENT_PATH"
+      - name: A merge group has no title or body to scan
+        if: github.event_name == 'merge_group'
+        run: echo "The pull request's own runs scanned its title and body."

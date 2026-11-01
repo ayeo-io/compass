@@ -597,11 +597,27 @@ costs.
 ## Continuous integration
 
 `.github/workflows/compass.yml` runs this repository's checks and tests on
-every pull request and on every push to main. Each decision a job takes is
-made by a script in `scripts/ci-*.py`, so it can be tested on a laptop; the
-tests in `tests/test_ci_workflow_shape.py`, `tests/test_ci_shards.py` and
+every pull request, in the merge queue and on every push to main. Each
+decision a job takes is made by a script in `scripts/ci-*.py`, so it can be
+tested on a laptop; the tests in `tests/test_ci_workflow_shape.py`,
+`tests/test_ci_shards.py`, `tests/test_ci_fast_tests.py` and
 `tests/test_ci_already_tested.py` read the workflows as data and run the
 scripts.
+
+The whole test suite runs once for each pull request, in the merge queue,
+on the exact commit that then lands on main
+(`governance/decisions/2026-11-01-the-full-suite-runs-in-the-merge-queue.md`).
+There are three kinds of run:
+
+| Kind of run | Jobs that run | Job minutes, about |
+|---|---|---|
+| A push to a pull request | `checks`, `count`, `fast-tests`, `self-check` here; `build` and `pr-text` in their own workflows | 5 to 10, more when the pull request changes slow test files |
+| A merge group (the `merge_group` event) | every job but `already-tested` and `fast-tests` | 100 to 160, most of it in the shards |
+| A push to main | nothing but `already-tested` when a merge group tested the same commit green; otherwise what a merge group runs | 1, or as a merge group |
+
+A draft pull request runs no test: `checks`, `count` and `fast-tests` skip,
+and `self-check` passes, saying so. A draft cannot merge or join the merge
+queue, and marking it ready for review (`ready_for_review`) runs them.
 
 ### The jobs
 
@@ -609,67 +625,111 @@ scripts.
 |---|---|
 | `already-tested` | Runs on a push to main only. Decides whether the push may skip every other job (below). |
 | `checks` | The rival-name scan of commit messages, `scripts/validate.sh`, the CLI syntax check and `compass ci`. |
-| `count` | Counts the tests outside the serial pass, with `pytest --collect-only -q -m "not serial" tests/`. |
+| `count` | Counts the tests outside the serial pass, with `pytest --collect-only -q -m "not serial" tests/`. On a pull request, this is the check that every test file still collects. |
+| `fast-tests` | Runs on a pull request only. Runs the tests in the test files the pull request changes and in a fixed set of house-rule test files, listed by `scripts/ci-fast-tests.py` (below). |
 | `shard` | A matrix of shard jobs. Each runs its share of the test files on parallel workers, prints every test's duration and ends at 45 minutes. |
 | `serial` | Runs the tests marked `serial` alone, and prints its 20 slowest tests. |
-| `self-check` | Passes only when every job it needs succeeded and the shard counts add up to the `count` total. It needs every job above, the four `bdd-adapter` jobs, `atdd-adapter-python` and `check-mutation`. On a title or body edit it reports the earlier suite result instead (below). |
+| `self-check` | In a merge group, and on a push to main that runs the suite, passes only when every suite job succeeded, `fast-tests` skipped and the shard counts add up to the `count` total. On a pull request, passes when `checks`, `count` and `fast-tests` succeeded and every suite job skipped. It needs every job above, the four `bdd-adapter` jobs, `atdd-adapter-python` and `check-mutation`. On a title or body edit it reports the earlier result instead (below). |
 | `bdd-adapter`, `bdd-adapter-behave`, `bdd-adapter-cucumber-js`, `bdd-adapter-godog` | Run each BDD reference adapter. |
 | `atdd-adapter-python` | Runs the Python reference example of four-layer acceptance tests (`examples/atdd-adapters/python/`) through its API driver and its CLI driver on two workers each, then its layering test. |
-| `harness-root` | Runs the real-root harness tests, only when the change touches the files they depend on. |
+| `harness-root` | Runs the real-root harness tests, only when the change touches the files they depend on. It is not a required check. |
 | `check-mutation` | Breaks each shipped check and confirms its register tests go red. |
 
-A new push to a pull request, or a change of its base branch, cancels the
-run it replaces. A push to main is never cancelled.
+The shards, `serial`, `check-mutation`, the adapter jobs and
+`harness-root` are the suite jobs: they run in a merge group and on a push
+to main only. A new push to a pull request, or a change of its base branch,
+cancels the run it replaces. A merge group and a push to main are never
+cancelled by this workflow; GitHub cancels a merge group's run itself when
+it rebuilds the group.
+
+### The fast tests
+
+On a pull request, `fast-tests` runs `scripts/ci-fast-tests.py --base
+<base sha> --head <head sha>`, which lists:
+
+- the house-rule test files: `tests/test_house_style.py`,
+  `tests/test_terminology.py`, `tests/test_rival_names_never_committed.py`,
+  `tests/test_us_english_guard.py`, `tests/test_contract_claude_md_drift.py`
+  and `tests/test_workflow_pins.py`. They took about 110 seconds of test
+  time in the run `tests/ci-durations.json` records.
+  `tests/test_writing_style.py` is left out: it took about 500 seconds, so
+  it runs in the merge queue only;
+- every test file under `tests/` that the pull request changes and that
+  still exists.
+
+The job runs those files on parallel workers, then their tests marked
+`serial` alone. The command fails, and so the job fails, when it cannot
+compute the change, because running fewer tests than asked is the one
+wrong answer. A test that a change to code it does not touch breaks is
+found in the merge queue, which then removes the pull request from the
+queue.
+
+To list the files for a branch locally:
+
+```bash
+python3 scripts/ci-fast-tests.py --base origin/main --head HEAD
+```
 
 ### Edits and base changes
 
 `compass.yml` runs on the pull request types `opened`, `synchronize`,
-`reopened` and `edited`. GitHub sends `edited` for a change of title, body
-or base branch. A run tests the head merged into the base, so a base change
-runs the suite again. A title or body edit does not:
+`reopened`, `edited` and `ready_for_review`. GitHub sends `edited` for a
+change of title, body or base branch. A run tests the head merged into the
+base, so a base change runs the fast jobs again. A title or body edit does
+not:
 
-- every suite job carries `github.event.action != 'edited' ||
-  github.event.changes.base != null`, so it skips on a text-only edit;
+- `checks`, `count` and `fast-tests` carry `github.event.action !=
+  'edited' || github.event.changes.base != null`, so they skip on a
+  text-only edit;
 - `self-check` still runs, because a skipped required check counts as
   passed and would hide an earlier failure. It skips its aggregator and
   runs `scripts/ci-already-tested.py --pull-request N --head H --this-run
   RUN_ID --wait-minutes 55`. That reads the pull request's earlier runs of
-  `compass.yml` on the head from the Actions API, and counts only suite
-  runs: a run is left out when it is this run, lists another pull request,
-  skipped its `checks` job (a text edit) or was cancelled. It passes only
-  when the latest counted run's `self-check` succeeded and the pull
-  request's timeline shows no base change since that run was created.
-  Because `self-check` needs every other required job, its result carries
-  theirs;
-- an edit made while the suite run is still running waits for it,
+  `compass.yml` on the head from the Actions API, and counts only runs
+  that ran `checks`: a run is left out when it is this run, lists another
+  pull request, skipped its `checks` job (a text edit or a draft) or was
+  cancelled. It passes only when the latest counted run's `self-check`
+  succeeded and the pull request's timeline shows no base change since
+  that run was created. Because `self-check` needs every other required
+  job, its result carries theirs;
+- an edit made while the earlier run is still running waits for it,
   checking every 60 seconds for up to 55 minutes, and then passes or fails
   with it. It does not read the `self-check` check runs, because GitHub
   creates a job's check run only once the jobs it needs have finished, so
   a running suite run has none yet. A wait that runs out fails the check;
 - a text-only edit gets a concurrency group of its own, so it never
-  cancels a suite run. A second edit cancels the first edit's run;
+  cancels a run of the fast jobs. A second edit cancels the first edit's
+  run;
 - GitHub lists no pull request on the runs of a pull request from a fork,
   so a text edit on one fails `self-check`. Push to the branch again to
-  re-run the suite.
+  re-run the fast jobs.
 
 ### The required checks
 
-The protected-main ruleset needs `self-check`, `check-mutation`,
-`build` and the four `bdd-adapter` jobs, and `pr-text` once it is added
-(below). A skipped required check counts as passed, so none of them can
-skip on a pull request:
+The protected-main ruleset needs `self-check`, `check-mutation`, `build`,
+`pr-text`, `atdd-adapter-python` and the four `bdd-adapter` jobs. Each must
+report on a pull request and in a merge group, or the merge waits for it.
+A skipped required check counts as passed, so a suite job that skips on a
+pull request passes there, and `self-check` carries the real result:
 
 - every job in `compass.yml` but `already-tested` runs on the condition
   `!cancelled() && needs.already-tested.outputs.skip != 'true'`, so it runs
-  whatever the results of the jobs it needs. The suite jobs add the
-  base-change clause above;
+  whatever the results of the jobs it needs. The fast jobs add the draft
+  and base-change clauses above; the suite jobs add `github.event_name !=
+  'pull_request'`;
 - `self-check` is the aggregator. `scripts/ci-self-check.py aggregate`
-  fails it when any job it needs failed, was cancelled or was skipped, or
-  has no result. Only the push-only `already-tested` is exempt;
-- `docs.yml`'s `build` runs on every pull request. When the change touches
-  none of `docs/`, `mkdocs.yml` and `.github/workflows/docs.yml`, it skips
-  its own steps and ends in success. `harness-root` uses the same change
-  test, `scripts/ci-changed.py`.
+  fails it when a job it needs (`--needed`) did not succeed, when a job
+  that this kind of run must not run (`--skipped`) did not skip, or when a
+  job has no result. Only the push-only `already-tested` is exempt. In a
+  merge group `--skipped` names `fast-tests`; on a pull request it names
+  every suite job, and the shard counts are not read;
+- `docs.yml`'s `build` runs on every pull request and in every merge
+  group. When the change touches none of `docs/`, `mkdocs.yml` and
+  `.github/workflows/docs.yml`, it skips its own steps and ends in success.
+  `harness-root` uses the same change test, `scripts/ci-changed.py`;
+- `pr-text.yml` runs in a merge group too. A merge group has no title or
+  body, so the job passes there without a scan; the pull request's own runs
+  scanned its text, on every edit.
 
 ### The count check
 
@@ -721,36 +781,65 @@ succeed, and writes nothing then.
 
 ### The push skip
 
-A push to main skips every job when its tree was already tested green on
-its pull request. `scripts/ci-already-tested.py` writes `skip=true` only
-when all of these hold, and runs the suite on anything else, including any
-error reading the GitHub API:
+A push to main skips every job when the merge queue already tested the
+pushed commit green with the whole suite. The merge queue tests the exact
+commit it then pushes to main, so that run tested this tree on this
+history. `scripts/ci-already-tested.py --commit M --this-run RUN_ID`
+writes `skip=true` only when all of these hold, and runs the suite on
+anything else, including any error reading the GitHub API:
 
-1. exactly one pull request was merged into main with the pushed commit as
-   its merge commit;
-2. the pull request's head commit is in the local history, fetched by its
-   pull-request ref when it is missing;
-3. the pushed commit's tree equals the head's tree;
-4. the pushed commit's first parent is an ancestor of the head, so the
-   pull-request run tested this tree;
-5. the latest `self-check` run on the head, from GitHub Actions, succeeded,
-   and none is still running;
-6. the pull request's timeline shows no base change (`base_ref_changed`,
-   or `automatic_base_change_succeeded` when GitHub retargets it after the
-   old base is merged) at or after the time that run started. A timeline
-   that cannot be read fails this condition.
+1. the pushed commit is 40 hex characters and the run id a whole number;
+2. this workflow has at least one `merge_group` run on the pushed commit;
+3. the latest of those runs has one `self-check` job, completed with
+   conclusion success. A later failed run wins over an earlier success;
+4. that run has `shard` jobs, and every one succeeded. A pull-request run
+   passes `self-check` without them, so this proves the run was the whole
+   suite.
 
-A branch that was not brought up to date with main before merging fails
-condition 4, so its push runs the suite.
+A pull-request run no longer runs the whole suite, so it never lets a push
+skip. A merge made without the queue, such as an administrator's, runs the
+suite on main.
+
+### The merge queue
+
+The `protected-main` ruleset (id 16658263) must have a `merge_queue` rule;
+until it has one, nothing runs the whole suite before a merge, and every
+push to main runs it after the merge. To add the rule, a maintainer reads
+the ruleset, appends the rule to its `rules` list and writes it back:
+
+```bash
+gh api repos/ayeo-io/compass/rulesets/16658263 \
+  --jq '{name, target, enforcement, conditions, bypass_actors,
+         rules: (.rules + [{type: "merge_queue", parameters: {
+           merge_method: "SQUASH", grouping_strategy: "ALLGREEN",
+           max_entries_to_build: 3, min_entries_to_merge: 1,
+           max_entries_to_merge: 5, min_entries_to_merge_wait_minutes: 5,
+           check_response_timeout_minutes: 60}}])}' \
+  | gh api -X PUT repos/ayeo-io/compass/rulesets/16658263 --input -
+```
+
+`check_response_timeout_minutes` is 60 because a shard may take 45
+minutes. Each entry the queue builds runs the whole suite, so
+`max_entries_to_build` sets how many suite runs can go at once.
+
+After the rule is on, merge a pull request with "Merge when ready", which
+adds it to the queue. The living spec is not committed on a branch
+(`living_spec: refresh` in `compass.yml`, see `docs/configuration.md`).
+Before a release, a maintainer re-derives it in one pull request:
+
+```bash
+git switch -c refresh-living-spec origin/main
+compass spec sync
+git push -u origin refresh-living-spec
+```
 
 ### The pull request text
 
 `.github/workflows/pr-text.yml` scans the pull request's title and body for
 rival product names. It runs on `edited` too, so an edited title is scanned
-without running the suite; on a text-only edit `compass.yml` runs only
-`self-check`. The
-ruleset must list `pr-text` as a required check: until it does, the check
-runs and shows a failure, but does not block a merge.
+without running the fast jobs; on a text-only edit `compass.yml` runs only
+`self-check`. The ruleset lists `pr-text` as a required check, so it also
+runs in a merge group, where it passes without a scan.
 
 ### The automatic review
 
@@ -768,8 +857,9 @@ or the CLI it is reviewed against.
 Every job in every workflow has `timeout-minutes`: about twice the job's
 p90 run time, rounded up to a multiple of 5 minutes, at least 5 and at most
 45. A job with no measurement starts from an estimate. `serial` has 20.
+`fast-tests` has 15, the most a push to a pull request should take.
 `self-check` has 60, the one job over 45, because on a title or body edit
-it waits up to 55 minutes for the suite run; its aggregate step has a
+it waits up to 55 minutes for the earlier run; its aggregate step has a
 5-minute limit of its own, as does each of its other steps.
 
 ### Measuring a run

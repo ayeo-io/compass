@@ -53,13 +53,24 @@ def _step_named(job: dict, words: str) -> dict:
 
 # --- the aggregator --------------------------------------------------------
 
-def _aggregate_argv(doc: dict, counts_dir: Path) -> tuple[list[str], str]:
+# The names of self-check's two aggregate steps: the whole suite's rule, in a
+# merge group and on a push, and the fast rule, on a pull request.
+FULL_STEP = "Every needed job succeeded and the shard counts add up"
+FAST_STEP = "The fast jobs succeeded and the suite jobs skipped"
+
+
+def _aggregate_steps(job: dict) -> list[dict]:
+    return [s for s in job["steps"] if "ci-self-check.py aggregate" in s.get("run", "")]
+
+
+def _aggregate_argv(doc: dict, counts_dir: Path, step_name: str = FULL_STEP
+                    ) -> tuple[list[str], str]:
     """The aggregator's command as the self-check job runs it, with the
     runner's temporary folder replaced by counts_dir's parent."""
     job = doc["jobs"]["self-check"]
-    steps = [s for s in job["steps"] if "ci-self-check.py aggregate" in s.get("run", "")]
-    assert len(steps) == 1, job["steps"]
-    step = steps[0]
+    steps = _aggregate_steps(job)
+    assert [s.get("name") for s in steps] == [FULL_STEP, FAST_STEP], job["steps"]
+    step = next(s for s in steps if s["name"] == step_name)
     assert step["env"]["NEEDS"] == "${{ toJSON(needs) }}", step["env"]
     text = step["run"].replace('"$RUNNER_TEMP/count"', str(counts_dir))
     argv = shlex.split(text)
@@ -71,12 +82,19 @@ def _aggregate_argv(doc: dict, counts_dir: Path) -> tuple[list[str], str]:
 # result carries theirs on a title or body edit, where they skip (CRT-21).
 OTHER_REQUIRED = ["check-mutation", "bdd-adapter", "bdd-adapter-behave",
                   "bdd-adapter-cucumber-js", "bdd-adapter-godog", "atdd-adapter-python"]
+# The jobs a pull request runs, and the ones only a merge group or a push to
+# main runs (ayeo-io/compass-delivery#362).
+FAST_JOBS = ["checks", "count", "fast-tests"]
+SUITE_ONLY = ["shard", "serial", *OTHER_REQUIRED]
+SELF_CHECK_NEEDS = {"already-tested", *FAST_JOBS, *SUITE_ONLY}
 
 
 def _needs(**results) -> dict:
+    """A needs record of a merge-group run: every suite job succeeded and
+    fast-tests skipped."""
     base = {"already-tested": "skipped", "checks": "success",
-            "count": "success", "shard": "success", "serial": "success",
-            **{jid: "success" for jid in OTHER_REQUIRED}}
+            "count": "success", "fast-tests": "skipped", "shard": "success",
+            "serial": "success", **{jid: "success" for jid in OTHER_REQUIRED}}
     base.update({k.replace("_", "-"): v for k, v in results.items()})
     record = {}
     for job, result in base.items():
@@ -89,7 +107,18 @@ def _needs(**results) -> dict:
     return record
 
 
-def _aggregate(tmp_path: Path, needs: dict, counts, *, shards: int = 4):
+def _fast_needs(**results) -> dict:
+    """A needs record of a pull-request run: the fast jobs succeeded and
+    every suite job skipped."""
+    record = _needs(**{"fast_tests": "success",
+                       **{j.replace("-", "_"): "skipped" for j in SUITE_ONLY}})
+    for job, result in results.items():
+        record[job.replace("_", "-")]["result"] = result
+    return record
+
+
+def _aggregate(tmp_path: Path, needs: dict, counts, *, shards: int = 4,
+               step_name: str = FULL_STEP):
     doc = _load("compass.yml")
     counts_dir = tmp_path / "count"
     counts_dir.mkdir(parents=True, exist_ok=True)
@@ -97,7 +126,7 @@ def _aggregate(tmp_path: Path, needs: dict, counts, *, shards: int = 4):
         if value is not None:
             (counts_dir / COUNT_FILE.format(index=index, count=shards)).write_text(
                 f"{value}\n")
-    argv, env_name = _aggregate_argv(doc, counts_dir)
+    argv, env_name = _aggregate_argv(doc, counts_dir, step_name)
     env = dict(os.environ, **{env_name: json.dumps(needs)})
     return subprocess.run(argv, cwd=ROOT, capture_output=True, text=True,
                           env=env, timeout=60)
@@ -119,6 +148,10 @@ AGGREGATOR_ROWS = [
     ("the matrix job's result missing", _needs(shard=None), GOOD_COUNTS, False, ["shard", "no result"]),
     ("already-tested failure, every other job success",
      _needs(already_tested="failure"), GOOD_COUNTS, True, []),
+    ("fast-tests ran in a merge group", _needs(fast_tests="success"), GOOD_COUNTS,
+     False, ["fast-tests", "not skipped"]),
+    ("fast-tests failed in a merge group", _needs(fast_tests="failure"), GOOD_COUNTS,
+     False, ["fast-tests", "failure"]),
 ]
 
 
@@ -131,15 +164,16 @@ def test_crt_5_aggregator_pass_rule(tmp_path):
     assert reporting == ["self-check"], reporting
     job = jobs["self-check"]
     needs = job["needs"]
-    assert set(needs) == {"already-tested", "checks", "count", "shard", "serial",
-                          *OTHER_REQUIRED}, needs
+    assert set(needs) == SELF_CHECK_NEEDS, needs
     assert "strategy" in jobs["shard"], "the shard job is not the matrix job"
 
-    # The jobs the rule checks are exactly the ones self-check needs,
-    # less the push-only job that is skipped on every pull request.
+    # The jobs the rule checks are exactly the ones self-check needs, less
+    # the push-only job that is skipped in a merge group, and fast-tests,
+    # which must skip there.
     argv, _ = _aggregate_argv(doc, tmp_path / "count")
     needed = argv[argv.index("--needed") + 1].split(",")
-    assert sorted(needed) == sorted(set(needs) - {"already-tested"}), needed
+    assert sorted(needed) == sorted(set(needs) - {"already-tested", "fast-tests"}), needed
+    assert argv[argv.index("--skipped") + 1] == "fast-tests"
     assert argv[argv.index("--exempt") + 1] == "already-tested"
 
     # It runs unless the run was cancelled, and skips on a tested push.
@@ -172,6 +206,54 @@ def test_crt_5_aggregator_pass_rule(tmp_path):
                    [2100, 2090, 2105, None])
     assert r.returncode != 0
     assert "shard: skipped" in r.stdout and "shard 3" in r.stdout, r.stdout
+
+
+def _without(record: dict, job: str) -> dict:
+    return {k: v for k, v in record.items() if k != job}
+
+
+FAST_ROWS = [
+    ("the fast jobs succeeded, the suite jobs skipped", _fast_needs(), True, []),
+    ("fast-tests failure", _fast_needs(fast_tests="failure"), False,
+     ["fast-tests", "failure"]),
+    ("fast-tests skipped", _fast_needs(fast_tests="skipped"), False,
+     ["fast-tests", "skipped"]),
+    ("fast-tests has no result", _without(_fast_needs(), "fast-tests"), False,
+     ["fast-tests", "no result"]),
+    ("the count job failure", _fast_needs(count="failure"), False, ["count", "failure"]),
+    ("the checks job cancelled", _fast_needs(checks="cancelled"), False,
+     ["checks", "cancelled"]),
+    ("a shard ran on a pull request", _fast_needs(shard="success"), False,
+     ["shard", "not skipped"]),
+    ("check-mutation failed on a pull request", _fast_needs(check_mutation="failure"),
+     False, ["check-mutation", "failure"]),
+]
+
+
+def test_mq_1_pull_request_aggregator_pass_rule(tmp_path):
+    """On a pull request self-check passes only when the fast jobs
+    succeeded and every suite job skipped; it reads no shard count."""
+    doc = _load("compass.yml")
+    argv, _ = _aggregate_argv(doc, tmp_path / "count", FAST_STEP)
+    assert argv[argv.index("--needed") + 1].split(",") == FAST_JOBS
+    assert sorted(argv[argv.index("--skipped") + 1].split(",")) == sorted(SUITE_ONLY)
+    assert argv[argv.index("--exempt") + 1] == "already-tested"
+    assert "--counts" not in argv, argv
+    named = (set(FAST_JOBS) | set(SUITE_ONLY) | {"already-tested"})
+    assert named == set(doc["jobs"]["self-check"]["needs"])
+
+    wrong = []
+    for i, (row, record, passes, words) in enumerate(FAST_ROWS):
+        r = _aggregate(tmp_path / f"row-{i}", record, [], step_name=FAST_STEP)
+        if (r.returncode == 0) != passes:
+            wrong.append(f"{row}: exit {r.returncode}\n{r.stdout}{r.stderr}")
+            continue
+        missing = [w for w in words if w not in r.stdout]
+        if missing:
+            wrong.append(f"{row}: output does not name {missing}\n{r.stdout}")
+        if "Shard counts: not read" not in r.stdout:
+            wrong.append(f"{row}: output does not say the counts were not read\n{r.stdout}")
+    assert not wrong, "\n\n".join(wrong)
 
 
 COUNT_ROWS = [
@@ -315,11 +397,12 @@ def test_crt_9_harness_root_path_gate(change_repo, tmp_path):
     assert job["steps"][0]["with"]["fetch-depth"] == 0
     _gated_steps(job)
     env = next(s for s in job["steps"] if s.get("id") == "changed")["env"]
-    pr = {"event": {"pull_request": {"base": {"sha": "b" * 40}, "head": {"sha": "h" * 40}},
-                    "before": None}, "sha": "m" * 40}
+    # It runs in a merge group and on a push only, like the other suite jobs.
+    group = {"event": {"merge_group": {"base_sha": "b" * 40, "head_sha": "m" * 40},
+                       "before": None}, "sha": "m" * 40}
     push = {"event": {"before": "p" * 40}, "sha": "a" * 40}
-    assert ci_expr.render(env["BASE_SHA"], github=pr) == "b" * 40
-    assert ci_expr.render(env["HEAD_SHA"], github=pr) == "h" * 40
+    assert ci_expr.render(env["BASE_SHA"], github=group) == "b" * 40
+    assert ci_expr.render(env["HEAD_SHA"], github=group) == "m" * 40
     assert ci_expr.render(env["BASE_SHA"], github=push) == "p" * 40
     assert ci_expr.render(env["HEAD_SHA"], github=push) == "a" * 40
 
@@ -348,6 +431,8 @@ def test_crt_13_docs_build_always_reports(change_repo, tmp_path):
     on = _on(doc)
     assert on["pull_request"] in (None, {}) or "paths" not in on["pull_request"], on
     assert "paths-ignore" not in (on["pull_request"] or {})
+    # The merge queue waits for build too, so it reports in a merge group.
+    assert on["merge_group"] == {"types": ["checks_requested"]}, on
     assert on["push"]["paths"] == ["docs/**", "mkdocs.yml", ".github/workflows/docs.yml"]
     group = doc["concurrency"]["group"]
     a = ci_expr.render(group, github={"ref": "refs/pull/12/merge"})
@@ -364,6 +449,9 @@ def test_crt_13_docs_build_always_reports(change_repo, tmp_path):
     env = next(s for s in build["steps"] if s.get("id") == "changed")["env"]
     push = {"event": {}, "sha": "a" * 40}
     assert ci_expr.render(env["BASE_SHA"], github=push) == ""
+    group = {"event": {"merge_group": {"base_sha": "b" * 40}}, "sha": "m" * 40}
+    assert ci_expr.render(env["BASE_SHA"], github=group) == "b" * 40
+    assert ci_expr.render(env["HEAD_SHA"], github=group) == "m" * 40
 
     # With run=false every step after the change test skips, so the job
     # ends in success having built nothing.
@@ -390,6 +478,8 @@ def test_crt_13_docs_build_always_reports(change_repo, tmp_path):
     deploy = doc["jobs"]["deploy"]
     needs = {"build": {"result": "success", "outputs": {}}}
     for event, ref, runs in [("pull_request", "refs/pull/12/merge", False),
+                             ("merge_group", "refs/heads/gh-readonly-queue/main/pr-12-"
+                              + "a" * 40, False),
                              ("push", "refs/heads/main", True),
                              ("push", "refs/heads/other", False)]:
         assert ci_expr.job_runs(deploy, github={"event_name": event, "ref": ref},
@@ -400,13 +490,14 @@ def test_crt_13_docs_build_always_reports(change_repo, tmp_path):
 # --- triggers, jobs and conditions ------------------------------------------
 
 def test_crt_1_triggers_and_concurrency():
-    """The compass.yml workflow runs on new commits and base changes, and
-    cancels a superseded pull-request run."""
+    """The compass.yml workflow runs on new commits, base changes, a draft
+    marked ready and merge groups, and cancels a superseded pull-request run."""
     doc = _load("compass.yml")
     on = _on(doc)
-    assert set(on) == {"pull_request", "push"}, on
+    assert set(on) == {"pull_request", "merge_group", "push"}, on
     assert on["pull_request"]["types"] == ["opened", "synchronize", "reopened",
-                                           "edited"], on
+                                           "edited", "ready_for_review"], on
+    assert on["merge_group"] == {"types": ["checks_requested"]}, on
     assert on["push"]["branches"] == ["main"], on
     for trigger, spec in on.items():
         for key in ("paths", "paths-ignore"):
@@ -419,11 +510,14 @@ def test_crt_1_triggers_and_concurrency():
         return {"event_name": event, "event": ev, "sha": sha}
 
     pr12, pr13, push = ctx("pull_request", 12), ctx("pull_request", 13), ctx("push")
-    groups = [ci_expr.render(group, github=g) for g in (pr12, pr13, push)]
-    assert len(set(groups)) == 3, groups
+    group1, group2 = ctx("merge_group", sha="mg1"), ctx("merge_group", sha="mg2")
+    contexts = (pr12, pr13, push, group1, group2)
+    groups = [ci_expr.render(group, github=g) for g in contexts]
+    assert len(set(groups)) == 5, groups
     assert groups[0].endswith("12") and groups[2].endswith("abc"), groups
+    assert groups[3].endswith("mg1"), groups
     assert [ci_expr.truthy(ci_expr.evaluate(cancel, github=g))
-            for g in (pr12, pr13, push)] == [True, True, False]
+            for g in contexts] == [True, True, False, False, False]
 
 
 def _shard_job(doc):
@@ -486,7 +580,8 @@ def test_crt_3_serial_job():
     doc = _load("compass.yml")
     serial = [jid for jid, job in doc["jobs"].items()
               if "-m serial" in _run_text(job).replace('"not serial"', "")]
-    assert serial == ["serial"], serial
+    # fast-tests runs the serial tests of its own few files on a pull request.
+    assert serial == ["fast-tests", "serial"], serial
     job = doc["jobs"]["serial"]
     assert "python3 -m pytest tests/ -m serial --durations=20" in _run_text(job)
     assert job["timeout-minutes"] == 20
@@ -544,7 +639,9 @@ def test_crt_4_old_self_check_steps_still_run(tmp_path):
     assert "ast.parse(open('cli/compass').read())" in by_name[want[3]]["run"]
     gate = by_name[want[4]]
     assert 'python3 cli/compass ci --since "origin/$BASE_REF"' in gate["run"]
+    assert 'python3 cli/compass ci --since "$GROUP_BASE"' in gate["run"]
     assert gate["env"]["BASE_REF"] == "${{ github.base_ref }}"
+    assert gate["env"]["GROUP_BASE"] == "${{ github.event.merge_group.base_sha }}"
 
     rival = by_name[want[0]]
     assert rival.get("shell") == "bash"
@@ -552,6 +649,14 @@ def test_crt_4_old_self_check_steps_still_run(tmp_path):
         "EVENT_NAME": "pull_request", "BASE_SHA": "base1", "HEAD_SHA": "head1",
         "BEFORE_SHA": "", "AFTER_SHA": "merge1"})
     assert "git log --format=%B base1..head1" in pr, pr
+    group = _rival_step_calls(rival, tmp_path / "group", {
+        "EVENT_NAME": "merge_group", "BASE_SHA": "gbase", "HEAD_SHA": "ghead",
+        "BEFORE_SHA": "", "AFTER_SHA": "ghead"})
+    assert "git log --format=%B gbase..ghead" in group, group
+    env = rival["env"]
+    mg = {"event": {"merge_group": {"base_sha": "gbase", "head_sha": "ghead"}}}
+    assert ci_expr.render(env["BASE_SHA"], github=mg) == "gbase"
+    assert ci_expr.render(env["HEAD_SHA"], github=mg) == "ghead"
     push = _rival_step_calls(rival, tmp_path / "push", {
         "EVENT_NAME": "push", "BASE_SHA": "", "HEAD_SHA": "",
         "BEFORE_SHA": "before1", "AFTER_SHA": "after1"})
@@ -564,26 +669,27 @@ def test_crt_4_old_self_check_steps_still_run(tmp_path):
         "EVENT_NAME": "push", "BASE_SHA": "", "HEAD_SHA": "",
         "BEFORE_SHA": "before1", "AFTER_SHA": "after1"}, before_exists=False)
     assert "git log -1 --format=%B after1" in gone, gone
-    for calls in (pr, push, first, gone):
+    for calls in (pr, group, push, first, gone):
         assert "python3 scripts/rival-name-gate.py --text -" in calls, calls
 
 
 def test_crt_7_already_tested_job_shape():
-    """The already-tested job runs on a push only, with four read
-    permissions, and publishes skip."""
+    """The already-tested job runs on a push only, reads this workflow's
+    runs and jobs, and publishes skip."""
     job = _load("compass.yml")["jobs"]["already-tested"]
     assert ci_expr.job_runs(job, github={"event_name": "push"})
     assert not ci_expr.job_runs(job, github={"event_name": "pull_request"})
-    assert job["permissions"] == READ_GRANT
+    assert not ci_expr.job_runs(job, github={"event_name": "merge_group"})
+    assert job["permissions"] == {"contents": "read", "actions": "read"}
     assert job["outputs"] == {"skip": "${{ steps.decide.outputs.skip }}"}
-    assert job["steps"][0]["with"]["fetch-depth"] == 0
     decide = next(s for s in job["steps"] if s.get("id") == "decide")
     assert shlex.split(decide["run"]) == [
         "python3", "scripts/ci-already-tested.py", "--repo", "$REPO",
-        "--commit", "$MERGED", "--output", "$GITHUB_OUTPUT"]
+        "--commit", "$MERGED", "--this-run", "$RUN_ID", "--output", "$GITHUB_OUTPUT"]
     assert decide["env"] == {"GH_TOKEN": "${{ github.token }}",
                              "REPO": "${{ github.repository }}",
-                             "MERGED": "${{ github.sha }}"}
+                             "MERGED": "${{ github.sha }}",
+                             "RUN_ID": "${{ github.run_id }}"}
 
 
 # The job-level grant of already-tested and self-check: both read the pull
@@ -596,16 +702,17 @@ READ_GRANT = {"contents": "read", "pull-requests": "read", "checks": "read",
 SELF_CHECK_GRANT = {**READ_GRANT, "actions": "read"}
 
 REQUIRED = ["self-check", "check-mutation", "bdd-adapter", "bdd-adapter-behave",
-            "bdd-adapter-cucumber-js", "bdd-adapter-godog"]
+            "bdd-adapter-cucumber-js", "bdd-adapter-godog", "atdd-adapter-python"]
 
 
 def test_crt_8_required_jobs():
-    """The required jobs keep their names, run on every pull request,
-    and skip together on a tested push."""
+    """The required jobs keep their names. A pull request runs the fast jobs,
+    a merge group and an untested push run the suite, and every job skips
+    together on a tested push."""
     jobs = _load("compass.yml")["jobs"]
     for jid in REQUIRED:
         assert jid in jobs and jobs[jid].get("name", jid) == jid, jid
-    for jid in REQUIRED + ["shard", "serial", "count", "checks"]:
+    for jid in REQUIRED + ["shard", "serial", "count", "checks", "fast-tests"]:
         texts = [str(jobs[jid].get("if", ""))] + [
             str(s.get("if", "")) for s in jobs[jid].get("steps", [])]
         assert not any("changed" in t or "paths" in t for t in texts), (jid, texts)
@@ -618,26 +725,39 @@ def test_crt_8_required_jobs():
 
     def record(at_result, at_outputs=None, **others_results):
         rec = {"already-tested": {"result": at_result, "outputs": at_outputs or {}}}
-        for jid in ("checks", "count", "shard", "serial"):
+        for jid in ("checks", "count", "fast-tests", "shard", "serial"):
             rec[jid] = {"result": others_results.get(jid, "success"), "outputs": {}}
         return rec
 
-    pr = {"event_name": "pull_request"}
-    push = {"event_name": "push"}
+    pr = {"event_name": "pull_request", "event": {"pull_request": {"draft": False}}}
+    draft = {"event_name": "pull_request", "event": {"pull_request": {"draft": True}}}
+    group = {"event_name": "merge_group", "event": {"merge_group": {}}}
+    push = {"event_name": "push", "event": {}}
+    on_pr = {"checks", "count", "fast-tests", "self-check"}
+    in_group = set(others) - {"fast-tests"}
+    wrong = []
     for jid in others:
-        assert ci_expr.job_runs(jobs[jid], github=pr, needs=record("skipped")), jid
-        assert not ci_expr.job_runs(jobs[jid], github=push,
-                                    needs=record("success", {"skip": "true"})), jid
-        assert ci_expr.job_runs(jobs[jid], github=push,
-                                needs=record("success", {"skip": "false"})), jid
-        assert ci_expr.job_runs(jobs[jid], github=push, needs=record("failure")), jid
-        assert not ci_expr.job_runs(jobs[jid], github=pr, needs=record("skipped"),
-                                    cancelled=True), jid
-    for other in ("checks", "count", "shard", "serial"):
+        rows = [(pr, record("skipped"), jid in on_pr),
+                (draft, record("skipped"), jid == "self-check"),
+                (group, record("skipped"), jid in in_group),
+                (push, record("success", {"skip": "true"}), False),
+                (push, record("success", {"skip": "false"}), jid in in_group),
+                (push, record("failure"), jid in in_group)]
+        for github, needs, runs in rows:
+            if ci_expr.job_runs(jobs[jid], github=github, needs=needs) is not runs:
+                wrong.append(f"{jid} on {github['event_name']} {github['event']} "
+                             f"with {needs['already-tested']}: expected runs={runs}")
+        for github in (pr, group):
+            if ci_expr.job_runs(jobs[jid], github=github, needs=record("skipped"),
+                                cancelled=True):
+                wrong.append(f"{jid} runs in a cancelled {github['event_name']} run")
+    assert not wrong, "\n".join(wrong)
+    for other in ("checks", "count", "fast-tests", "shard", "serial"):
         for result in ("failure", "cancelled", "skipped"):
-            assert ci_expr.job_runs(jobs["self-check"], github=pr,
-                                    needs=record("skipped", **{other: result})), (
-                other, result)
+            for github in (pr, group):
+                assert ci_expr.job_runs(jobs["self-check"], github=github,
+                                        needs=record("skipped", **{other: result})), (
+                    other, result, github)
 
 
 @pytest.mark.parametrize("text", [
@@ -672,14 +792,20 @@ def test_crt_8_evaluator_follows_github_rules():
 
 def test_crt_12_pr_text_workflow():
     """The pull-request text is scanned in its own workflow, on
-    edits too, and its group never cancels the suite."""
+    edits too, and its group never cancels the suite. In a merge group,
+    which has no text, the required check reports without a scan."""
     doc = _load("pr-text.yml")
     on = _on(doc)
-    assert set(on) == {"pull_request"}, on
+    assert set(on) == {"pull_request", "merge_group"}, on
     assert on["pull_request"]["types"] == ["opened", "synchronize", "reopened", "edited"]
-    assert ci_expr.truthy(ci_expr.evaluate(doc["concurrency"]["cancel-in-progress"]))
+    assert on["merge_group"] == {"types": ["checks_requested"]}, on
     pr12 = {"event_name": "pull_request", "ref": "refs/pull/12/merge", "sha": "abc",
             "event": {"pull_request": {"number": 12}}}
+    group = {"event_name": "merge_group", "sha": "mg1", "event": {"merge_group": {}}}
+    cancel = doc["concurrency"]["cancel-in-progress"]
+    assert ci_expr.truthy(ci_expr.evaluate(cancel, github=pr12))
+    assert not ci_expr.truthy(ci_expr.evaluate(cancel, github=group))
+    assert ci_expr.render(doc["concurrency"]["group"], github=group) == "pr-text-mg1"
     groups = {name: ci_expr.render(_load(name)["concurrency"]["group"], github=pr12)
               for name in ("pr-text.yml", "compass.yml", "docs.yml",
                            "claude-review.yml")}
@@ -689,8 +815,14 @@ def test_crt_12_pr_text_workflow():
 
     assert list(doc["jobs"]) == ["pr-text"]
     job = doc["jobs"]["pr-text"]
+    assert "if" not in job, "a skipped job would hide the scan's absence"
     assert ('python3 scripts/rival-name-gate.py --github-event "$GITHUB_EVENT_PATH"'
             in _run_text(job))
+    scan = _step_named(job, "No rival product name in the pull request title or body")
+    note = _step_named(job, "A merge group has no title or body to scan")
+    for github, scans in ((pr12, True), (group, False)):
+        assert ci_expr.step_runs(scan, github=github, steps={}) is scans
+        assert ci_expr.step_runs(note, github=github, steps={}) is not scans
     compass = (WORKFLOWS / "compass.yml").read_text(encoding="utf-8")
     assert "--github-event" not in compass
     for name in ("pr-text.yml", "compass.yml"):
@@ -759,7 +891,8 @@ def test_crt_15_token_stays_read_only():
         jobs = _load(name)["jobs"]
         granted = {jid: job["permissions"] for jid, job in jobs.items()
                    if "permissions" in job}
-        expected = ({"already-tested": READ_GRANT, "self-check": SELF_CHECK_GRANT}
+        expected = ({"already-tested": {"contents": "read", "actions": "read"},
+                     "self-check": SELF_CHECK_GRANT}
                     if name == "compass.yml" else {})
         assert granted == expected, (name, granted)
         for jid, job in jobs.items():
@@ -778,11 +911,14 @@ def test_crt_15_token_stays_read_only():
 
 # --- a base change (CRT-21) -------------------------------------------------
 
-SUITE_JOBS = ["checks", "count", "shard", "serial", "check-mutation", "harness-root",
-              "bdd-adapter", "bdd-adapter-behave", "bdd-adapter-cucumber-js",
-              "bdd-adapter-godog", "atdd-adapter-python"]
+SUITE_JOBS = ["checks", "count", "fast-tests", "shard", "serial", "check-mutation",
+              "harness-root", "bdd-adapter", "bdd-adapter-behave",
+              "bdd-adapter-cucumber-js", "bdd-adapter-godog", "atdd-adapter-python"]
+# The jobs a pull request runs. The others run only in a merge group or on a
+# push to main.
+PR_JOBS = ["checks", "count", "fast-tests"]
 
-# (action, changes, the suite runs). A missing `changes` is what GitHub
+# (action, changes, the fast jobs run). A missing `changes` is what GitHub
 # sends on every action but edited.
 EDIT_ROWS = [
     ("opened", None, True),
@@ -791,11 +927,12 @@ EDIT_ROWS = [
     ("edited", {"base": {"ref": {"from": "stack"}, "sha": {"from": "a" * 40}}}, True),
     ("edited", {"title": {"from": "old title"}}, False),
     ("edited", {"body": {"from": "old body"}}, False),
+    ("ready_for_review", None, True),
 ]
 
 
-def _pr_event(action, changes, number=12):
-    event = {"action": action, "pull_request": {"number": number}}
+def _pr_event(action, changes, number=12, draft=False):
+    event = {"action": action, "pull_request": {"number": number, "draft": draft}}
     if changes is not None:
         event["changes"] = changes
     return {"event_name": "pull_request", "event": event, "sha": "abc"}
@@ -806,42 +943,47 @@ def _earlier_result_steps(job):
 
 
 def test_crt_21_base_change_reruns_the_suite():
-    """A base change runs the suite again; a title or body edit runs only
-    self-check, which reports the earlier suite result, and never cancels a
-    suite run."""
+    """A base change runs the fast jobs again; a title or body edit runs only
+    self-check, which reports the earlier result, and never cancels a run.
+    A draft runs no test, and self-check says so."""
     doc = _load("compass.yml")
     jobs = doc["jobs"]
     assert set(SUITE_JOBS) | {"already-tested", "self-check"} == set(jobs), set(jobs)
     pr_needs = {"already-tested": {"result": "skipped", "outputs": {}}}
     wrong = []
-    for action, changes, suite in EDIT_ROWS:
-        github = _pr_event(action, changes)
-        for jid in SUITE_JOBS:
-            if ci_expr.job_runs(jobs[jid], github=github, needs=pr_needs) is not suite:
-                wrong.append(f"{jid} on {action} {changes}: expected runs={suite}")
+    for action, changes, fast in EDIT_ROWS:
+        for draft in (False, True):
+            github = _pr_event(action, changes, draft=draft)
+            for jid in SUITE_JOBS:
+                runs = fast and not draft and jid in PR_JOBS
+                if ci_expr.job_runs(jobs[jid], github=github, needs=pr_needs) is not runs:
+                    wrong.append(f"{jid} on {action} {changes} draft={draft}: "
+                                 f"expected runs={runs}")
     assert not wrong, "\n".join(wrong)
 
     self_check = jobs["self-check"]
-    assert set(self_check["needs"]) == {"already-tested", "checks", "count", "shard",
-                                        "serial", *OTHER_REQUIRED}, self_check["needs"]
-    aggregate = [s for s in self_check["steps"]
-                 if "ci-self-check.py aggregate" in s.get("run", "")]
+    assert set(self_check["needs"]) == SELF_CHECK_NEEDS, self_check["needs"]
+    by_name = {s.get("name"): s for s in self_check["steps"]}
+    full, fast_step = by_name[FULL_STEP], by_name[FAST_STEP]
+    draft_step = by_name["A draft runs no test"]
     downloads = [s for s in self_check["steps"]
                  if "download-artifact" in s.get("uses", "")]
     earlier = _earlier_result_steps(self_check)
-    assert len(aggregate) == 1 and len(downloads) == 1 and len(earlier) == 1, (
-        self_check["steps"])
-    for action, changes, suite in EDIT_ROWS:
-        github = _pr_event(action, changes)
-        skipped_needs = {jid: {"result": "success" if suite else "skipped",
-                               "outputs": {}} for jid in self_check["needs"]}
-        skipped_needs["already-tested"] = {"result": "skipped", "outputs": {}}
-        assert ci_expr.job_runs(self_check, github=github, needs=skipped_needs), action
-        for step in aggregate + downloads:
-            assert ci_expr.step_runs(step, github=github, steps={}) is suite, (
-                action, changes, step)
-        assert ci_expr.step_runs(earlier[0], github=github, steps={}) is (not suite), (
-            action, changes)
+    assert len(downloads) == 1 and len(earlier) == 1, self_check["steps"]
+    deciding = [full, downloads[0], fast_step, draft_step, earlier[0]]
+    for action, changes, fast in EDIT_ROWS:
+        for draft in (False, True):
+            github = _pr_event(action, changes, draft=draft)
+            assert ci_expr.job_runs(self_check, github=github, needs=pr_needs), action
+            expected = [False, False, fast and not draft, draft,
+                        not fast and not draft]
+            got = [ci_expr.step_runs(step, github=github, steps={}) for step in deciding]
+            assert got == expected, (action, changes, draft, got)
+    for event in ("merge_group", "push"):
+        github = {"event_name": event, "event": {}}
+        got = [ci_expr.step_runs(step, github=github, steps={}) for step in deciding]
+        assert got == [True, True, False, False, False], (event, got)
+    assert "--github-event" not in draft_step["run"] and "exit" not in draft_step["run"]
 
     # The earlier-result command, as the step runs it.
     step = earlier[0]

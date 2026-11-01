@@ -131,6 +131,12 @@ for delivery work; on a spike, follow the graduate-or-discard step in
    `compass tdd-green`, then run `compass ship-commit --issue <slug> -m
    <message>` with nothing staged. It moves `land_commit` to HEAD, and
    refuses while the newest green does not name HEAD's files.
+9. **Record the pull request.** When the pull request opens, run
+   `compass issue link set --pr <n>` to record it on the issue. Run it again
+   after the merge: a squash merge leaves the commit `ship-commit` made off
+   the default branch, and the command moves `land_commit` to the merge
+   commit `gh pr view` reports. `compass check` reports, as advice, a
+   `land_commit` that origin's default branch does not reach.
 
 ## Gate - ship refuses to close the issue unless
 

@@ -112,18 +112,36 @@ def link_of(task):
 
 def cmd_issue_link(args):
     verb = "compass issue link set"
-    target = parse_target(args.github)
-    if target is None:
-        raise CompassError(
-            f"{verb}: '{args.github}' is not a GitHub issue; use owner/repo#number "
-            "or https://github.com/owner/repo/issues/number. Nothing was written.")
+    pr_text = getattr(args, "pr", None)
+    if args.github is None and pr_text is None:
+        raise CompassError(f"{verb}: name a GitHub issue with --github, a pull request "
+                           "with --pr, or both. Nothing was written.")
+    target = None
+    if args.github is not None:
+        target = parse_target(args.github)
+        if target is None:
+            raise CompassError(
+                f"{verb}: '{args.github}' is not a GitHub issue; use owner/repo#number "
+                "or https://github.com/owner/repo/issues/number. Nothing was written.")
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     task, path = load_manifest(task_dir)
-    repo, number = target
-    task["github"] = {"repo": repo, "number": number}
+    pr = None
+    if pr_text is not None:
+        # Read before anything is written, so a pull request `gh` cannot read
+        # leaves the issue link unwritten too.
+        from compass_pkg import pull_request_link
+        pr = pull_request_link.read_pr(pr_text, _project_root(task_dir), verb)
+    lines, fields = [], {"issue": task.get("issue")}
+    if target is not None:
+        repo, number = target
+        task["github"] = {"repo": repo, "number": number}
+        lines.append(f"{task.get('issue')} -> {repo}#{number}.")
+        fields.update(repo=repo, number=number)
+    if pr is not None:
+        lines += pull_request_link.apply(task, task.get("issue"), *pr)
+        fields.update(pull_request=task["pull_request"], land_commit=task.get("land_commit"))
     save_manifest(task, path)
-    return say(args, f"{verb}: {task.get('issue')} -> {repo}#{number}.",
-               issue=task.get("issue"), repo=repo, number=number)
+    return say(args, f"{verb}: {lines[0]}", detail=lines[1:] or None, **fields)
 
 
 # --- the settings --------------------------------------------------------------
@@ -405,7 +423,12 @@ def register(pts, issue_arg):
     link_group = pts.add_parser("link", help="an issue's link to its GitHub issue")
     linker = link_group.add_subparsers(dest="link_cmd", required=True).add_parser(
         "set", help="link an issue to its GitHub issue")
-    linker.add_argument("--github", required=True, metavar="TARGET",
+    linker.add_argument("--github", metavar="TARGET",
                         help="owner/repo#number, or the issue's URL on github.com")
+    linker.add_argument("--pr", metavar="PR",
+                        help="the pull request that carries the issue: owner/repo#number, "
+                             "its URL, or a number in origin's repository. Once it is "
+                             "merged and the issue has landed, land_commit moves to its "
+                             "merge commit")
     issue_arg(linker)
     linker.set_defaults(func=cmd_issue_link, output_kind="hand-off")

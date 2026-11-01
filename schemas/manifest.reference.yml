@@ -14,6 +14,7 @@ depends_on:      # (optional) list of maps - the issues this one waits for; writ
     reason:      #   (required in entry) string - why this issue waits for it
     until:       #   (required in entry) [done, in-review, define, refine, plan, breakdown, implement, verify, ship] - done when not given
 github:          # (optional) map {repo, number} - the GitHub issue this issue is linked to (compass issue link set --github); labels are written there only when compass.yml sets github_labels
+pull_request:    # (optional) map {repo, number} - the pull request that carries the issue (compass issue link set --pr); once it is merged and the issue has landed, land_commit names its merge commit
 
 assessment:        # (required) map - the four-dimension JUDGMENT assessment (assess)
   risk:  # (required) [trivial, contained, cross-cutting, critical]

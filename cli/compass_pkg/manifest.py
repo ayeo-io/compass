@@ -270,18 +270,32 @@ def _refuse_stale_green(task, task_dir, slug, root, at_commit,
 
 def _derive_and_commit_living_spec(cwd, slug):
     """Re-derive docs/system-spec.md after `slug` has just landed, and
-    commit it alone if it changed.
+    commit it alone if it changed. With the setting `living_spec: refresh`
+    it does neither and returns a one-line note that says so.
 
     Runs the same derivation as `compass _derive-system-spec --internal`
     (ADR-008). A derivation failure is reported in the returned note and
     does not undo the land - the land's own commit has already succeeded.
     """
+    from compass_pkg import project_settings
     from compass_pkg.flow import derive_system_spec
 
     try:
         project_root = os.path.dirname(find_compass_dir())
     except CompassError:
         project_root = cwd
+
+    # `living_spec: refresh` keeps the spec out of every landing's branch. A
+    # spec committed on each branch conflicts with every other open branch as
+    # soon as one merges. A broken settings file keeps the default, so this
+    # note never hides the error that the file's own readers report.
+    try:
+        timing = project_settings.settings(project_root).get("living_spec")
+    except CompassError:
+        timing = None
+    if timing == "refresh":
+        return ("\n  living spec left as it is: compass.yml sets `living_spec: "
+                "refresh`, so re-derive it with `compass spec sync`.")
 
     try:
         derive_system_spec(project_root)

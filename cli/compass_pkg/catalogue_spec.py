@@ -301,6 +301,9 @@ AUTONOMY = ("controlled", "balanced", "autonomous")
 ADOPTION = ("advisory", "enforced")
 # `governance_drift`: any value other than `strict` reads as `advisory`.
 GOVERNANCE_DRIFT = ("advisory", "strict")
+# `living_spec`: when the living spec is re-derived. `land` (the default) re-derives
+# and commits it at every landing; `refresh` leaves it to `compass spec sync`.
+LIVING_SPEC = ("land", "refresh")
 # The approver lists a layer names (ADR-039); an unlock is the owner's.
 APPROVER_KINDS = ("issue-waiver", "project-waiver")
 
@@ -317,7 +320,8 @@ CAPABILITIES = ("entry-exit-evaluation", "artifact-freshness")
 LAYER_KEYS = ("schema", "extends", "owner", "approvers", "capabilities") + CATALOGUES
 SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement",
                  "record", "project", "prices", "models", "multiagent", "governance_drift",
-                 "preset_index", "github_labels", "language", "acceptance_strategy")
+                 "preset_index", "github_labels", "language", "acceptance_strategy",
+                 "living_spec")
 #: The three switches inside `github_labels`, all off by default.
 GITHUB_LABEL_SWITCHES = ("domain", "status", "page")
 RESERVED_KEYS = ("preset",)
@@ -582,6 +586,10 @@ TOP_DESCRIPTIONS = {
     "governance_drift": "Whether drift from the shipped governance fails: `strict` fails "
                         "`compass policy lint` and `advisory` only reports it. "
                         "The default is `advisory`.",
+    "living_spec": "When a landing re-derives the living spec, `docs/system-spec.md`: `land` "
+                   "re-derives it and commits it alone after each landing, and `refresh` "
+                   "leaves it as it is, for a person to re-derive with `compass spec sync`. "
+                   "The default is `land`.",
     "allow_project_commands": "Whether `compass check` may run commands that a project "
                               "guardrail declares, read from the project's own file only. "
                               "The default is `false`.",

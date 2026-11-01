@@ -43,6 +43,15 @@ autonomy: autonomous
 # framework's. Advisory reports drift; strict makes `compass ci` fail on it.
 governance_drift: advisory
 
+# When a landing re-derives the living spec, docs/system-spec.md. `refresh`:
+# `compass ship-commit` and `compass quick-fix finish` leave it as it is, and a
+# maintainer re-derives it in one pull request with `compass spec sync`. Here a
+# spec committed on each branch made every other open pull request conflict
+# and run CI again once one merged, and CI cannot re-derive it, because it is
+# built from the issue archive in docs/compass/, which is not tracked
+# (ayeo-io/compass-delivery#362). Adopters keep the default, `land`.
+living_spec: refresh
+
 # Adds to the built-in set of production code that hooks/pre-tool.sh guards.
 # This repository declares its shell scripts, because hooks/*.sh and
 # scripts/*.sh are the production code here: pre-tool.sh is the enforcement

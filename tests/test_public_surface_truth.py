@@ -631,7 +631,7 @@ def test_d2_repairs_change_only_retired_names():
 
     One more was re-baselined by `loop-marking`: `governance/strategies.md`
     (list_items 104 -> 105) gained the strategy's loop bullet, and
-    `governance/guardrails.md` (list_items 72 -> 77) gained the outer-loop
+    `governance/guardrails.md` (list_items 73 -> 78) gained the outer-loop
     check, one list item and its 4 sub-items.
 
     The other 45 are untouched, and a NEW structural change to any of the 59

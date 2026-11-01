@@ -102,6 +102,8 @@ checks:
       rather than passing, for an issue assessed before the strategy shipped and for a project that
       turned the strategy off.', kind: deterministic, impl: acceptance-applicability-agrees, severity: advisory,
     on_skipped: not-applicable}
+  outer-loop-recorded: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to, a red record and a green record say loop outer, and an outer-loop green was recorded on the tree as it is now. A record with no loop field reads as inner. Declines to check, rather than passing, for an issue the strategy does not apply to.', kind: deterministic, impl: outer-loop-recorded, severity: blocking,
+    on_skipped: not-applicable}
   spike-conclusion-present: {statement: A spike has a `spike-conclusion` evidence entry with a recorded
       decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue., kind: deterministic,
     impl: spike-conclusion-present, severity: blocking, on_skipped: fail, locked: true}

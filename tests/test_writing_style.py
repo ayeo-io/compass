@@ -3877,8 +3877,9 @@ _GROWING_REACH = {
     #    8.0.4 assessed and the recorded 8.0.4 output, plain JSON) and the four check-corpus
     #    case labels of acceptance-applicability-agrees;
     # 150 when the extracted feature file replaced the 8.0.4 refusal text: the
-    #    scan reads the refusal as prose and finds none in the feature file.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 150),
+    #    scan reads the refusal as prose and finds none in the feature file;
+    # 153 with the three check-corpus case labels of outer-loop-recorded.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 153),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

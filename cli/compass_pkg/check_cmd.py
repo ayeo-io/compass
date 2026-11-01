@@ -176,6 +176,11 @@ CHECK_GUIDANCE = {
         "do": "Re-assess the issue with the command the finding names.",
         "fix": "Run `compass approach evaluate --write --expected-acceptance none|validation|refactor --reason \"...\"`, choosing the kind the records show, then `compass issue render` so the delivery-approach record shows the new line.",
     },
+    "outer-loop-recorded": {
+        "why": "A unit-test green meets guardrail `G1`, so on a change a client can observe only the outer loop shows the behavior through a client interface. A green from an older tree shows a tree that no longer exists.",
+        "do": "Record the acceptance suite's red and green with `--loop outer` on the current tree.",
+        "fix": "Run `compass tdd-red --loop outer --scenario <id> -- <acceptance command>` before the code, and `compass tdd-green --loop outer --scenario <id> -- <acceptance command>` after the last change.",
+    },
     "spike-conclusion-present": {
         "why": "A Spike without a recorded conclusion is just untracked work - the conclusion is what makes the exploration accountable.",
         "do": 'Record the close-out: discard, graduate-to-delivery, or defer.',

@@ -308,6 +308,8 @@ def build_parser():
                      help="sanction a non-unit red for a change with no natural "
                           "unit test: regression | e2e | typecheck | live (R8). "
                           "The guard must still genuinely fail first.")
+    prd.add_argument("--loop", choices=("outer", "inner"), default=None,
+                     help="outer: the acceptance suite; inner: a unit test")
     prd.add_argument("command", nargs=argparse.REMAINDER,
                      help="the test command (after --)")
     prd.set_defaults(func=cmd_tdd_red, output_kind="hand-off")
@@ -320,6 +322,8 @@ def build_parser():
                     help="carry forward a verified-by guard kind (regression | "
                          "e2e | typecheck | live) - the green re-runs the guard "
                          "that stood in for a unit red (R8)")
+    pg.add_argument("--loop", choices=("outer", "inner"), default=None,
+                    help="outer: the acceptance suite; inner: a unit test")
     pg.add_argument("command", nargs=argparse.REMAINDER,
                     help="the test command (after --)")
     pg.set_defaults(func=cmd_tdd_green, output_kind="hand-off")

@@ -122,6 +122,9 @@ vocabulary:
   checks.acceptance-applicability-agrees:
     name: Acceptance strategy applicability agrees
     aliases: []
+  checks.outer-loop-recorded:
+    name: Outer-loop red and green recorded
+    aliases: []
   checks.spike-conclusion-present:
     name: Spike conclusion present
     aliases: []

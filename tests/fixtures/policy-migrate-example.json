@@ -143,6 +143,11 @@
     },
     {
       "catalogue": "checks",
+      "id": "outer-loop-recorded",
+      "operation": "add"
+    },
+    {
+      "catalogue": "checks",
       "id": "rendered-blocks-current",
       "operation": "add"
     },
@@ -199,6 +204,11 @@
     {
       "catalogue": "vocabulary",
       "id": "checks.nfr-rows-resolved",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "checks.outer-loop-recorded",
       "operation": "add"
     },
     {

@@ -767,3 +767,36 @@ def _(root):
     task, task_dir = _issue(root, {})
     _strategy_red(task_dir)
     return task, task_dir
+
+
+# The outer-loop check reads the loop of the red and green records of an issue in scope.
+def _loop_records(task, task_dir, loop):
+    marked = {"loop": loop} if loop else {}
+    _record(task_dir, "red.json", {"passed": False, "exit_code": 1,
+                                   "timestamp": "2026-10-29T10:00:00Z", **marked})
+    path = _record(task_dir, "green.json", {"passed": True, "exit_code": 0,
+                                            "timestamp": "2026-10-29T11:00:00Z", **marked})
+    task["evidence"] = [{"id": "EV-1", "type": "test-run", "path": path}]
+    return task, task_dir
+
+
+# A red and a green with no loop field read as inner, so the outer loop is missing.
+@case("outer-loop-recorded", "broken")
+def _(root):
+    task, task_dir = _issue(root, _strategy_block(True, "client-observable behavior"))
+    return _loop_records(task, task_dir, None)
+
+
+@case("outer-loop-recorded", "restored")
+def _(root):
+    task, task_dir = _issue(root, _strategy_block(True, "client-observable behavior"))
+    return _loop_records(task, task_dir, "outer")
+
+
+# A suspended routing takes the issue out of scope, so inner-loop records are enough.
+@case("outer-loop-recorded", "suspended")
+def _(root):
+    block = _strategy_block(False, "suspended on the regular approach by the project")
+    block["acceptance_strategy"]["routing"] = "suspended"
+    task, task_dir = _issue(root, block)
+    return _loop_records(task, task_dir, "inner")

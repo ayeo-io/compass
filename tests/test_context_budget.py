@@ -100,11 +100,16 @@ CONTRACT_TARGET = 2900
 # --expected-acceptance (strategy `S17`): a docs or config quick fix must say it
 # is out of the four-layer acceptance strategy's scope, and the option and its
 # shortest help need about 80 characters.
+# quick-fix finish, tdd-red and tdd-green rose by about 100 characters on
+# 2026-11-01 for --loop (ADR-080): a regular or full issue in scope of `S17`
+# fails outer-loop-recorded until it records the acceptance suite with
+# --loop outer, so the flag must be learnable from --help. The option and its
+# shortest help need about 100 characters, and none was left.
 HELP_BUDGETS = {
     ("quick-fix", "start"): 2900,
-    ("quick-fix", "finish"): 1650,
-    ("tdd-red",): 1450,
-    ("tdd-green",): 1250,
+    ("quick-fix", "finish"): 1760,
+    ("tdd-red",): 1570,
+    ("tdd-green",): 1360,
 }
 
 # The output options every verb takes.

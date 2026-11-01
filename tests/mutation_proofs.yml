@@ -109,6 +109,11 @@
   fails: tests/acceptance/atdd_strategy/test_strategy_routing.py::test_trc_a5
   restores: tests/acceptance/atdd_strategy/test_strategy_routing.py::test_trc_a3
 
+- check: outer-loop-recorded
+  broken: an in-scope issue whose only red and green records are inner
+  fails: tests/acceptance/atdd_strategy/test_loop_marking.py::test_trc_e3
+  restores: tests/acceptance/atdd_strategy/test_loop_marking.py::test_trc_e5
+
 - check: spike-conclusion-present
   broken: a spike with no conclusion evidence
   fails: tests/test_spike_safety.py::test_spike_without_conclusion_fails

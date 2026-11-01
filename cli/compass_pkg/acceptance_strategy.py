@@ -60,6 +60,11 @@ ROUTINGS = {
 #: change with client-observable behavior.
 EXPECTED = ("none",) + ACCEPTANCE_KINDS
 
+#: The loops a red or green record can belong to: the outer acceptance loop, driven
+#: through a client interface, and the inner unit loop. `compass tdd-red` and
+#: `compass tdd-green` take one with `--loop`, default inner (ADR-080).
+LOOPS = ("outer", "inner")
+
 NAME = "four-layer acceptance strategy (`S17`)"
 BEHAVIOR = "client-observable behavior"
 SPIKE_WHY = "a spike ships nothing"
@@ -253,16 +258,30 @@ def _evidence_names(task_dir):
         return []
 
 
-def has_red(task_dir):
-    """True when a red record holding a failed run is on record, signed or not."""
+def loop_of(record):
+    """`outer` or `inner`: the loop a red or green record belongs to. Only a record
+    that says `outer` is outer. A record with no `loop` field was written before the
+    field existed, and reads as inner, so it stays valid (ADR-006, ADR-080)."""
+    return "outer" if (record or {}).get("loop") == "outer" else "inner"
+
+
+def red_records(task_dir):
+    """`[(name, record)]` of each red record holding a failed run, signed or not,
+    bound or unbound, in name order."""
+    out = []
     for name in _evidence_names(task_dir):
         if name == "red.json" or (name.startswith("red-") and name.endswith(".json")):
             record = load_record(os.path.join(task_dir, "evidence", name))
             code = record.get("exit_code")
             if record.get("passed") is False and isinstance(code, int) \
                     and not isinstance(code, bool) and code != 0:
-                return True
-    return False
+                out.append((name, record))
+    return out
+
+
+def has_red(task_dir):
+    """True when a red record holding a failed run is on record, signed or not."""
+    return bool(red_records(task_dir))
 
 
 def acceptance_kind(task, task_dir):

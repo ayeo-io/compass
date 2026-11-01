@@ -5172,3 +5172,17 @@ A person's /compass:approve --issue and /compass:reject --issue now take the iss
 - `TRC-003` Two holders and neither is here is still refused
 - `TRC-004` One holder elsewhere is found as before
 - `TRC-005` An agent's delegated approval and delegate --on still refuse two holders
+
+### bash-follows-worktree-cwd (completed 2026-10-30)
+
+A Bash command run from a worktree is now judged by that worktree's issue, not the main checkout's.
+
+- `TRC-001` The worktree's red allows the write
+- `TRC-002` The worktree's missing red refuses the write and names the worktree
+- `TRC-003` The session is recorded on the worktree's issue and no session table is read
+- `TRC-004` A worktree pointer that names no issue refuses
+- `TRC-005` An absolute target outside the worktree is judged by the session's issue
+- `TRC-006` A call whose cwd does not name a worktree of the session's repository keeps the session's verdict
+- `TRC-007` The session's own project keeps COMPASS_ISSUE and pointer-moved
+- `TRC-008` The missing-red refusal names the project
+- `TRC-009` The safety contract and the decision record state the shell rule

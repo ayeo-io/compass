@@ -5162,3 +5162,13 @@ The directory tests now fail a new subprocess that gets the whole environment, a
 
 - `TRC-K2` Given a branch with one forbidden addition planted (an inline hook program, a nested quote in a hook command, a command that pre-approves bare Bash, a subprocess given the whole environment, a binary file, or a file added to bin/) When tests/test_directory_validator.py runs Then it reports exactly 1 failure naming the hook, the command, the file and line, or the file; and 0 failures with none planted
 - `TRC-K1` The plugin copy passes the directory validator
+
+### held-issue-prefers-this-worktree (completed 2026-10-29)
+
+A person's /compass:approve --issue and /compass:reject --issue now take the issue's copy in the worktree they type in, when another worktree also holds it, instead of refusing.
+
+- `TRC-001` The worktree the command runs in wins over the main checkout
+- `TRC-002` The main checkout wins when the command runs there
+- `TRC-003` Two holders and neither is here is still refused
+- `TRC-004` One holder elsewhere is found as before
+- `TRC-005` An agent's delegated approval and delegate --on still refuse two holders

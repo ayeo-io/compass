@@ -5186,3 +5186,9 @@ A Bash command run from a worktree is now judged by that worktree's issue, not t
 - `TRC-007` The session's own project keeps COMPASS_ISSUE and pointer-moved
 - `TRC-008` The missing-red refusal names the project
 - `TRC-009` The safety contract and the decision record state the shell rule
+
+### hooks-pilot-alias-run-id (completed 2026-10-30)
+
+The hooks acceptance tests give each parallel worker its own alias numbers, so two workers never reuse one name.
+
+- `TRC-001` Given two xdist workers of one run, When each aliases the same name, Then both aliases carry the run's shared id and differ by worker

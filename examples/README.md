@@ -140,10 +140,20 @@ grow and shrink while the manifest keeps the same shape. That constancy is the
 point: a person who has read one Compass issue can read any other. The
 *weight* changes; the *shape* does not.
 
-## BDD adapters
+## BDD adapters and acceptance test examples
 
 `bdd-adapters/` holds a worked project per BDD runner - `pytest-bdd`,
 `cucumber-js`, `behave` and `godog`. Each takes the same Compass spec through
 the same four steps (declare the runner, `compass bdd extract`, bind the steps,
 run) and only the binding differs. A CI job runs each one, because an
 example no job runs is an example nobody can trust.
+
+`atdd-adapters/` holds a reference example per language of the four-layer
+acceptance test model: executable specifications, a domain-specific language
+(DSL), protocol drivers and the system under test. `atdd-adapters/python/` is
+a small todo service with an HTTP API and a CLI. It gives the support code a
+project needs before its first specification: an alias helper, a driver
+factory that picks the API driver or the CLI driver at start-up, a DSL root,
+and a layering test that fails, naming the file, the line and the rule, when
+a layer breaks its shape. The CI job `atdd-adapter-python` runs it through
+both drivers and runs its layering test.

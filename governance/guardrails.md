@@ -176,6 +176,12 @@ _(none yet - the shipped default guardrails apply as-is)_
   With the capability `artifact-freshness` on, it also reports each tracked
   document as fresh or stale under the label `artifact-freshness`
   (`docs/artifact-freshness.md`). A project with none of these sees no change.
+- **`land-commit-on-default-branch`** is an advisory row `compass check` adds
+  for a landed issue with a `land_commit`, in a clone that records
+  `origin/HEAD`. It reports a `land_commit` that origin's default branch does
+  not reach, which a squash merge causes, and names `compass issue link set
+  --pr`, which moves `land_commit` to the merge commit. It is in no gate and no
+  configuration, and it never fails the run (`docs/github-labels.md`).
 - **`artifacts-approved`** is a blocking check in no gate, run by `compass
   check` and by `compass ship-commit` before the commit. It declines until
   every gate has passed. Then it judges a copy of the issue with the ship exit
@@ -262,6 +268,35 @@ _(none yet - the shipped default guardrails apply as-is)_
   - A spike runs it and reads `nothing to check`, because it registers no
     design. An issue stored on an earlier generation gains it at its next
     `compass approach evaluate --write`.
+- **`acceptance-applicability-agrees`** is the advisory check of the four-layer
+  acceptance strategy (`S17`, in `strategies.md`). It is unlocked, declares
+  `severity: advisory` and `on_skipped: not-applicable`, and sits in no gate,
+  no lock and not in the spike's checks. `compass check` runs it after the
+  design-size check, through `outside_gate.judged`, and labels its row "four-layer
+  acceptance strategy (`S17`)". The rules it applies are in
+  `cli/compass_pkg/acceptance_strategy.py`.
+  - It fails, as advice, when the project setting `acceptance_strategy`
+    changed since the issue was assessed, or when the applicability stored at
+    assess disagrees with the records: a red record puts an issue in scope,
+    and an acceptance of kind `validation` or `refactor` with no red takes it
+    out. The finding names the re-assess command.
+  - It declines, reporting `nothing to check`, when the stored block and the
+    setting both say off, and when the stored routing is `suspended`.
+  - An issue with no stored block was assessed before the strategy shipped.
+    `compass check` adds no row for it and prints, in `--verbose` and
+    `--json`, the notice "four-layer acceptance strategy (`S17`): does not
+    apply - this issue was assessed before the strategy shipped", so its rows
+    and exit code are those of the release it was assessed under.
+  - An issue in a project whose `compass.yml` extends the shipped default at
+    major 6 or 7 also holds no block; its notice names the `extends:` value.
+  - `compass check` refuses, with exit 2, a project whose
+    `acceptance_strategy` setting cannot be read, before any check runs. In
+    a project pinned at major 6 or 7 the strategy never reads the setting,
+    but `compass.yml` must still pass its schema check: `compass policy
+    lint`, `compass approach evaluate --write` and `compass check` on an
+    issue not yet assessed refuse a bad value. `compass check` on an assessed
+    issue reads the configuration stored with the issue and does not refuse
+    it.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart

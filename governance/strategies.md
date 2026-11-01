@@ -1,14 +1,20 @@
 # Strategies
 
 Strategies are the many soft things. They are **directional** (they say how the
-team tends to work, and what it prefers), **assessed** not checked (a reviewer
-judges whether a strategy was followed - there is no pass/fail artifact), and
-**accretive** (cheap to add, expected to evolve, fine to drop). A strategy
-*biases* a decision. It does not block one. A guardrail always beats a strategy.
+team tends to work, and what it prefers), mostly **assessed** rather than checked
+(a reviewer judges whether a strategy was followed), and **accretive** (cheap to
+add, expected to evolve, fine to drop). A strategy *biases* a decision, and a
+team can step off one with a recorded reason. A guardrail always beats a
+strategy.
 
-**No strategy fails `compass check`.** None is mechanically checkable; each is
-assessed by the `reviewer` agent at `verify` under the review dimension tagged
-beneath its heading, and a strategy not followed is a note and a conversation.
+**A strategy can carry blocking checks that a recorded step-off makes
+advisory.** Most strategies carry none: each is assessed by the `reviewer`
+agent at `verify` under the review dimension tagged beneath its heading, and a
+strategy not followed is a note and a conversation. A strategy that does carry
+checks keeps them outside every guardrail and every lock, so the guardrails
+keep their own checks. A project turns such a strategy off with its setting,
+and one issue steps off through an approved issue waiver that makes the checks
+advisory (strategy `S17` is the first).
 
 The evidence behind these rules - the incidents, measurements and worked
 examples - is in `governance/strategies-rationale.md`. It is read when a rule
@@ -111,6 +117,52 @@ it after.**
   the assessment matches (`RP-ADV-001`).
 - It adds no guardrail and no new gate, and does not block shipping when
   absent. It reuses the existing `verify.regression` gate.
+
+### Four-layer acceptance strategy: specification, DSL, driver, system (`S17`)
+
+*Ships in the default preset from version 8.0.0.*
+
+**A change to behavior a real client can observe is accepted through four
+layers: an executable specification in Given/When/Then, a domain-specific
+language (DSL) that each line calls once, a protocol driver for one client
+interface, and the system under test.** The scenarios fail before the code
+(the outer-loop red) and pass through a client interface against a named
+candidate (the outer-loop green). Compass reads the records the project's own
+commands write; it never reads project code.
+
+- **Applicability.** Assess records whether the strategy applies, and why,
+  in the delivery-approach record: `compass approach evaluate --write
+  --expected-acceptance none|validation|refactor`. `compass check` decides
+  from the records: the strategy applies unless the issue holds an acceptance
+  of kind `validation` or `refactor` and no red record. A record line that
+  disagrees with the records is advice from the check
+  `acceptance-applicability-agrees`, which names the re-assess command.
+- **Routing per delivery approach.** On for regular and full. Existing DSL
+  only on quick-fix (no layering record, no stage review). Existing DSL only
+  on hotfix, which still needs the isolation proof. Suspended on a spike, as
+  strategy `S2` is. The preset holds the routing as
+  `approaches.<id>.acceptance_strategy`.
+- **Project opt-out.** A project turns the strategy off with the setting
+  `acceptance_strategy`, written `acceptance_strategy: {state: "off", reason:
+  "<why>"}` in `compass.yml`, or `.compass/config.yml` without one. Assess records the opt-out and its reason,
+  the project keeps every check it has today, and `compass retro --acceptance`
+  reports it. The setting takes effect for an issue at its next assess.
+- **Issue waiver.** One issue steps off through an issue waiver of the
+  strategy's checks, with a reason, approved by the project's owner
+  (ADR-039). Its findings then report as advice, and the retrospective
+  reports the issue apart.
+- **Older issues and pinned projects.** An issue assessed before the
+  strategy shipped has no stored applicability, so the strategy never applies
+  to it (ADR-006). Nor does it apply in a project whose `compass.yml` extends
+  the shipped default at major 6 or 7: the strategy ships from major 8.
+- **Only the setting turns it off.** An approach that ships cannot set the
+  strategy to `suspended`; `compass policy lint` refuses it.
+- Its checks are unlocked and sit outside every gate, as
+  `nfr-rows-resolved` does (ADR-064). Guardrails `G1` and `G4` keep their
+  checks.
+
+*Pairs with `S1` and `S2`: the specification is the BDD scenario, and the
+outer loop wraps the inner red, green, refactor loop.*
 
 ---
 

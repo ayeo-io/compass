@@ -161,9 +161,23 @@
         "then": {"required": ["evidence"]}
       }
     },
+    "acceptance_strategy": {
+      "type": "object",
+      "description": "Optional. Whether the four-layer acceptance strategy (`S17`) applies to the issue, stored by the first `compass approach evaluate --write` when the configuration it commits declares the strategy; a reassessment replaces it and never adds it. Absent: the issue was assessed before the strategy shipped, and the strategy never applies to it.",
+      "additionalProperties": false,
+      "required": ["state", "routing", "expected_acceptance", "applies", "why"],
+      "properties": {
+        "state": {"enum": ["on", "off"], "description": "The project setting when the issue was assessed."},
+        "reason": {"type": "string", "description": "Why the project turned the strategy off; present with off."},
+        "routing": {"enum": ["on", "existing-dsl", "existing-dsl-isolation", "suspended"], "description": "The strategy's routing on the issue's approach."},
+        "expected_acceptance": {"enum": ["none", "validation", "refactor"], "description": "The acceptance kind assess expected: none for client-observable behavior."},
+        "applies": {"type": "boolean", "description": "Whether assess expected the strategy to apply."},
+        "why": {"type": "string", "description": "The reason the delivery-approach record shows beside the answer."}
+      }
+    },
     "land_commit": {
       "type": "string",
-      "description": "The commit ship-commit made when it marked the issue landed. evidence-matches-tree compares the newest green's tree_id with this commit's tree."
+      "description": "The commit ship-commit made when it marked the issue landed, or, after `compass issue link set --pr` reads a merged pull request, its merge commit on the default branch. evidence-matches-tree compares the newest green's tree_id with this commit's tree. compass check reports, as advice, a land_commit that origin's default branch does not reach."
     },
     "release_note": {
       "type": "string",
@@ -850,6 +864,16 @@
       "properties": {
         "repo": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/(?!-)(?!\\.{1,2}$)[A-Za-z0-9._-]{1,100}$", "description": "The repository, as owner/repo."},
         "number": {"type": "integer", "minimum": 1, "maximum": 999999999, "description": "The issue number in that repository."}
+      }
+    },
+    "pull_request": {
+      "type": "object",
+      "description": "The pull request that carries the issue. Set by `compass issue link set --pr`, which reads it with `gh pr view`. Once the pull request is merged and the issue has landed, the same command writes the merge commit to `land_commit`.",
+      "required": ["repo", "number"],
+      "additionalProperties": false,
+      "properties": {
+        "repo": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/(?!-)(?!\\.{1,2}$)[A-Za-z0-9._-]{1,100}$", "description": "The repository, as owner/repo."},
+        "number": {"type": "integer", "minimum": 1, "maximum": 999999999, "description": "The pull request number in that repository."}
       }
     },
     "raised_by": {

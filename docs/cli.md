@@ -21,6 +21,7 @@ compass analyze            where an issue's artifacts disagree with each other
 compass retro              is triage systematically over- or under-sizing the process?
 compass retro --lineage    how many issues were found in another, and how many before it landed
 compass retro --decisions  how many decisions agents took for the person were confirmed, changed or never confirmed
+compass retro --acceptance the four-layer acceptance strategy's closed in-scope issues, with an opted-out project and each stepped-off issue apart
 compass issue raised-by    record the issue this one was found in, and where
 compass spec sync          merge main, resolving only conflicts in the derived living spec
 compass issue friction     record friction the agent observed, with evidence and a fix
@@ -57,7 +58,7 @@ compass issue blocked set  flag an in-progress or in-review issue as blocked, wi
 compass issue blocked remove  clear the blocked flag
 compass issue depends add  record an issue this one waits for, with --reason and --until; implement is blocked until it is met
 compass issue depends remove  stop waiting for an issue
-compass issue link set     link an issue to its GitHub issue, to write its labels and page there (opt in)
+compass issue link set     link an issue to its GitHub issue (--github), to write its labels and page there (opt in), or to its pull request (--pr), whose merge commit becomes land_commit
 compass issue github sync  write an issue's labels, and its page when switched on, to its linked GitHub issue now
 compass issue subtask      record, resume and package a multiagent run's subtasks
 compass acceptance start   open an honest record where there is no natural red

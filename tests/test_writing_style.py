@@ -383,6 +383,11 @@ def _is_excluded(rel: str) -> bool:
 
 _FIXTURE_PREFIX = "tests/fixtures/writing-style/"
 
+#: The stored configuration of the issue compass 8.0.4 assessed, which the four-layer
+#: acceptance strategy's older-issue scenario reads.
+_OLDER_ISSUE_RESOLVED = ("tests/acceptance/atdd_strategy/fixtures/assessed-by-8.0.4/"
+                         ".compass/work/older/generations/1/resolved.yml")
+
 # Other frameworks' own records. An eval scenario lays a `seed_R1/`
 # or `seed_R3/` overlay over its seed for a session under that
 # framework, in the words that framework writes. Compass's writing rules must
@@ -1537,6 +1542,35 @@ _register(Rule(
         Exemption("governance/presets/default@6/vocabulary.yml", "verify",
                    "the display name of the verify stage, not the verb; the "
                    "folder is a frozen copy of the v6.1.0 default preset."),
+        # The kept default@7 folder is a byte-identical copy of the live default
+        # at the v8.0.4 tag, the last release of major 7: the same four lines,
+        # the same reasons, and the copy must not change.
+        Exemption("governance/presets/default@7/checks.yml", "compass bdd verify",
+                   "compass bdd verify is a CLI verb, not the plain verb; the "
+                   "folder is a frozen copy of the v8.0.4 default preset."),
+        Exemption("governance/presets/default@7/checks.yml", "attempts: <int>",
+                   "attempts: <int> names the evidence field, not the verb "
+                   "\"attempt\"; the folder is a frozen copy of the v8.0.4 "
+                   "default preset."),
+        Exemption("governance/presets/default@7/evidence-types.yml", "attempts: <int>",
+                   "attempts: <int> names the evidence field, not the verb "
+                   "\"attempt\"; the folder is a frozen copy of the v8.0.4 "
+                   "default preset."),
+        Exemption("governance/presets/default@7/vocabulary.yml", "verify",
+                   "the display name of the verify stage, not the verb; the "
+                   "folder is a frozen copy of the v8.0.4 default preset."),
+        # The stored configuration of an issue compass 8.0.4 assessed, kept as
+        # the fixture the four-layer acceptance strategy's older-issue scenario
+        # reads. It holds the 7.0.0 preset's text as 8.0.4 wrote it.
+        Exemption(_OLDER_ISSUE_RESOLVED, "compass bdd verify",
+                   "compass bdd verify is a CLI verb; the file is a stored "
+                   "configuration compass 8.0.4 wrote."),
+        Exemption(_OLDER_ISSUE_RESOLVED, "attempts: <int>",
+                   "attempts: <int> names the evidence field; the file is a "
+                   "stored configuration compass 8.0.4 wrote."),
+        Exemption(_OLDER_ISSUE_RESOLVED, "verify",
+                   "the display name of the verify stage; the file is a stored "
+                   "configuration compass 8.0.4 wrote."),
         Exemption(
             "tests/fixtures/receipt-fixture-project/governance/guardrails.yml",
             "checked_at: [verify]",
@@ -2581,7 +2615,8 @@ def _find_missing_reference(span: ProseSpan) -> list[Finding]:
             continue
         if _looks_like_issue_citation(path) or _looks_like_runtime_evidence(path):
             continue
-        if not (REPO_ROOT / path).exists() and not _exists_in_own_seed(span.path, path):
+        if (not (REPO_ROOT / path).exists() and not _exists_in_own_seed(span.path, path)
+                and not _exists_in_own_example(span.path, path)):
             findings.append(Finding(
                 span.path, span.line, f'named path "{path}" does not exist'))
     return findings
@@ -2594,6 +2629,34 @@ def _exists_in_own_seed(file_path: str, path: str) -> bool:
     if len(parts) < 3 or parts[:2] != ("evals", "scenarios"):
         return False
     return (REPO_ROOT / "evals" / "scenarios" / parts[2] / "seed" / path).exists()
+
+
+def _exists_in_own_example(file_path: str, path: str) -> bool:
+    """A reference example of four-layer acceptance tests is its own small
+    project, run from its own folder: a file in it names paths relative to
+    `examples/atdd-adapters/<language>/`, not to this repository."""
+    parts = Path(file_path).parts
+    if len(parts) < 4 or parts[:2] != ("examples", "atdd-adapters"):
+        return False
+    return (REPO_ROOT / "examples" / "atdd-adapters" / parts[2] / path).exists()
+
+
+def test_pbw_a8_an_example_path_resolves_only_in_its_own_example():
+    """The example rule narrows the check to the example's own folder: a path
+    that exists there is fine, one that does not is still reported, and the
+    same path named from outside the example is reported too."""
+    readme = "examples/atdd-adapters/python/README.md"
+    named = "tests/acceptance/test_layering.py"
+    assert _exists_in_own_example(readme, named)
+    assert not _exists_in_own_example(readme, "tests/acceptance/no_such_file.py")
+    assert not _exists_in_own_example("docs/five-minutes.md", named)
+    assert not _exists_in_own_example("examples/README.md", named)
+    missing = ProseSpan(readme, 1, "See `tests/acceptance/no_such_file.py`.", "markdown")
+    assert _find_missing_reference(missing)
+    present = ProseSpan(readme, 1, f"See `{named}`.", "markdown")
+    assert not _find_missing_reference(present)
+    elsewhere = ProseSpan("docs/five-minutes.md", 1, f"See `{named}`.", "markdown")
+    assert _find_missing_reference(elsewhere)
 
 
 def test_pbw_a8_a_scenario_path_resolves_only_in_its_own_seed():
@@ -3809,9 +3872,13 @@ _GROWING_REACH = {
     # 131 with the nine plain YAML files of tests/fixtures/execution-profiles/, which
     #    hold key-value lines and no prose;
     # 133 with the two files of tests/fixtures/atdd-strategy/: a copy of the pilot's
-    #    spec kept as .txt and the extracted feature file, which no scan reads as
-    #    prose.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 133),
+    #    spec kept as .txt and the 8.0.4 extract output, which no scan reads as prose;
+    # 149 with the 12 fixture files of tests/acceptance/atdd_strategy/ (the issue compass
+    #    8.0.4 assessed and the recorded 8.0.4 output, plain JSON) and the four check-corpus
+    #    case labels of acceptance-applicability-agrees;
+    # 150 when the extracted feature file replaced the 8.0.4 refusal text: the
+    #    scan reads the refusal as prose and finds none in the feature file.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 150),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

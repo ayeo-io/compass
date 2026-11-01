@@ -720,3 +720,50 @@ def _(root):
 @case("command-passes", "restored")
 def _(root):
     return _issue(root, {})
+
+
+# The four-layer acceptance strategy's advisory check compares the block assess
+# stored with what the red and acceptance records decide.
+def _strategy_block(applies, why):
+    return {"acceptance_strategy": {
+        "state": "on", "routing": "on",
+        "expected_acceptance": "none" if applies else "validation",
+        "applies": applies, "why": why}}
+
+
+def _strategy_red(task_dir):
+    _record(task_dir, "red.json", {"passed": False, "exit_code": 1,
+                                   "timestamp": "2026-10-29T10:00:00Z"})
+
+
+# Assess expected an acceptance of kind validation, and a red is on record.
+@case("acceptance-applicability-agrees", "broken")
+def _(root):
+    task, task_dir = _issue(root, _strategy_block(False, "acceptance of kind validation"))
+    _strategy_red(task_dir)
+    return task, task_dir
+
+
+@case("acceptance-applicability-agrees", "restored")
+def _(root):
+    task, task_dir = _issue(root, _strategy_block(True, "client-observable behavior"))
+    _strategy_red(task_dir)
+    return task, task_dir
+
+
+# A suspended routing takes the issue out of scope, so a red on record does not count.
+@case("acceptance-applicability-agrees", "suspended")
+def _(root):
+    block = _strategy_block(False, "suspended on the regular approach by the project")
+    block["acceptance_strategy"]["routing"] = "suspended"
+    task, task_dir = _issue(root, block)
+    _strategy_red(task_dir)
+    return task, task_dir
+
+
+# An issue assessed before the strategy shipped holds no block.
+@case("acceptance-applicability-agrees", "no-block")
+def _(root):
+    task, task_dir = _issue(root, {})
+    _strategy_red(task_dir)
+    return task, task_dir

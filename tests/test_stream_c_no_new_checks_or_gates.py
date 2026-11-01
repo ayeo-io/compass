@@ -103,6 +103,10 @@ BASELINE_CHECKS = {
     # word limit once plan exit is due. It sits in no guardrail for the same
     # reason as the two section checks.
     "design-within-word-ceiling",
+    # Added by acceptance-strategy-core (strategy `S17`). The advisory check that the
+    # stored applicability of the four-layer acceptance strategy agrees with the
+    # records. It sits in no guardrail, so `G1` and `G4` keep their checks.
+    "acceptance-applicability-agrees",
 }
 
 # The evidence types a branch may add to guardrails.yml, each named for the

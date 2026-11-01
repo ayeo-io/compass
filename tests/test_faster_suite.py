@@ -268,6 +268,7 @@ SERIAL_TESTS = {
     "tests/test_pre_tool_hook_comment_only_edit.py::test_file_that_exhausts_the_parser_is_refused_within_six_seconds[100000-nested-parentheses]",
     "tests/test_pre_tool_hook_comment_only_edit.py::test_file_that_exhausts_the_parser_is_refused_within_six_seconds[alias-bomb]",
     "tests/test_pre_tool_hook_comment_only_edit.py::test_file_that_exhausts_the_parser_is_refused_within_six_seconds[100000-opening-square-brackets]",
+    "tests/acceptance/atdd_strategy/test_reference_example.py::test_trc_j3_the_layering_test_passes_the_example_within_5_seconds",
 }
 
 

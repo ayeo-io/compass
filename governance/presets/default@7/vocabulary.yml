@@ -1,0 +1,181 @@
+# The shipped default preset: the source of the shipped defaults.
+# The two files governance/routing-policy.yml and governance/guardrails.yml
+# are generated from these files and governance/legacy-views.yml.
+# Change a default here, then run python3 scripts/generate-legacy-views.py.
+# Also raise the version in legacy-views.yml, then run the script with --pin
+# and again with --pin-hashes, which update the digest and drift fixtures.
+# cli/compass_pkg/legacy_adapter.py wrote the first version of these files from
+# those two files. The preset is the source now; edit it here.
+schema: 1
+vocabulary:
+  approaches.spike:
+    name: spike
+    aliases: []
+  approaches.quick-fix:
+    name: quick fix
+    aliases: []
+  approaches.regular:
+    name: regular
+    aliases: []
+  approaches.hotfix:
+    name: hotfix
+    aliases: []
+  approaches.full:
+    name: full
+    aliases: []
+  stages.assess:
+    name: assess
+    aliases: []
+  stages.define:
+    name: define
+    aliases: []
+  stages.refine:
+    name: refine
+    aliases: []
+  stages.plan:
+    name: plan
+    aliases: []
+  stages.breakdown:
+    name: breakdown
+    aliases: []
+  stages.implement:
+    name: implement
+    aliases: []
+  stages.verify:
+    name: verify
+    aliases: []
+  stages.ship:
+    name: ship
+    aliases: []
+  gates.G1:
+    name: Tested before it lands
+    aliases: []
+  gates.G2:
+    name: Acceptance defined before it is built
+    aliases: []
+  gates.G3:
+    name: Traceability holds
+    aliases: []
+  gates.G4:
+    name: Evidence, not assertion
+    aliases: []
+  gates.G5:
+    name: A human signs off on the irreversible
+    aliases: []
+  gates.S1:
+    name: Spike conclusion recorded
+    aliases: []
+  gates.S2:
+    name: No production change from a Spike
+    aliases: []
+  checks.borrowed-documents-answered:
+    name: Borrowed documents answered
+    aliases: []
+  checks.rendered-blocks-current:
+    name: Rendered blocks current
+    aliases: []
+  checks.landed-by-resolves:
+    name: Landed-by resolves
+    aliases: []
+  checks.scenarios-have-tests:
+    name: Scenarios have tests
+    aliases: []
+  checks.scenarios-are-executable:
+    name: Scenarios are executable
+    aliases: []
+  checks.declared-tests-resolve:
+    name: Declared tests resolve
+    aliases: []
+  checks.suite-passed:
+    name: Suite passed
+    aliases: []
+  checks.changed-code-traces-to-scenario:
+    name: Changed code traces to scenario
+    aliases: []
+  checks.scenario-has-id-and-intent:
+    name: Scenario has id and intent
+    aliases: []
+  checks.claim-traces-to-scenario:
+    name: Claim traces to scenario
+    aliases: []
+  checks.gate-evidence-present:
+    name: Gate evidence present
+    aliases: []
+  checks.human-approval-present:
+    name: Human approval present
+    aliases: []
+  checks.backfills-paid:
+    name: Follow-ups resolved
+    aliases: []
+  checks.artifacts-approved:
+    name: Documents approved
+    aliases: []
+  checks.nfr-rows-resolved:
+    name: Non-functional rows resolved
+    aliases: []
+  checks.contracts-declared:
+    name: Contracts declared
+    aliases: []
+  checks.design-within-word-ceiling:
+    name: Design within word ceiling
+    aliases: []
+  checks.spike-conclusion-present:
+    name: Spike conclusion present
+    aliases: []
+  checks.spike-no-production-changes:
+    name: Spike changes no production code
+    aliases: []
+  checks.dod-evidence-typed:
+    name: Definition of Done evidence is typed
+    aliases: []
+  checks.consistency-check-passes:
+    name: Consistency check passes
+    aliases: []
+  checks.no-trusted-rerun:
+    name: No trusted rerun
+    aliases: []
+  checks.evidence-identity-matches:
+    name: Evidence identity matches
+    aliases: []
+  checks.evidence-matches-tree:
+    name: Evidence matches tree
+    aliases: []
+  checks.command-passes:
+    name: Command passes
+    aliases: []
+  checks.multiagent-run-recorded:
+    name: Multiagent run recorded
+    aliases: []
+  readiness.agent-instructions-present:
+    name: Agent instructions present
+    aliases: []
+  readiness.lint-declared-and-clean:
+    name: Lint declared and clean
+    aliases: []
+  readiness.typecheck-declared-and-clean:
+    name: Type check declared and clean
+    aliases: []
+  readiness.format-declared-and-clean:
+    name: Format check declared and clean
+    aliases: []
+  readiness.build-declared-and-succeeds:
+    name: Build declared and succeeds
+    aliases: []
+  readiness.tests-declared-and-under-two-minutes:
+    name: Tests declared and under two minutes
+    aliases: []
+  readiness.no-flaky-tests-on-record:
+    name: No flaky tests on record
+    aliases: []
+  readiness.structured-logging-declared:
+    name: Structured logging declared
+    aliases: []
+  readiness.codeowners-present:
+    name: Code owners present
+    aliases: []
+  readiness.pre-commit-hooks-present:
+    name: Pre-commit hooks present
+    aliases: []
+  readiness.secret-scan-declared:
+    name: Secret scan declared
+    aliases: []

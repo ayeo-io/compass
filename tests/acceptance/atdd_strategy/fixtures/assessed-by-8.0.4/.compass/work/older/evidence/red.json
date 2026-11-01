@@ -1,0 +1,20 @@
+{
+  "command": "sh -c echo 'test_one FAILED'; exit 1",
+  "argv": [
+    "sh",
+    "-c",
+    "echo 'test_one FAILED'; exit 1"
+  ],
+  "scenario": null,
+  "exit_code": 1,
+  "passed": false,
+  "timestamp": "2026-10-29T15:59:32+00:00",
+  "log_excerpt": "test_one FAILED",
+  "_full_log": "test_one FAILED\n",
+  "red_kind": "exit-code",
+  "tree_id": "cc1bdfa1894337da8480f5a64a42dbde30c80912",
+  "changes_id": "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
+  "changes_scope": "changed-files-and-declared-tests",
+  "record_id": "a483a2b6687048ab",
+  "content_digest": "sha256:e8b23278b267125334b4f08ae90a60cecc3face2be8462369e2e50e44a4723a4"
+}

@@ -57,7 +57,8 @@ The state decides what Compass reads, and no state loses a setting silently:
 
 - **What counts as a settings key in the old file:** `mode`, `autonomy`,
   `allow_project_commands`, `enforcement`, `record`, `project`, `prices`,
-  `models`, `multiagent`, `preset_index`, `governance_drift`, `github_labels` and `language`. The three keys the
+  `models`, `multiagent`, `preset_index`, `governance_drift`, `github_labels`, `language`
+  and `acceptance_strategy`. The three keys the
   multiagent scripts read, `worktree_root`, `max_worktrees` and `test_command`,
   also count when they are outside `multiagent:` and `project:`, because the
   scripts find them at any depth in the old file.
@@ -93,6 +94,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `allow_project_commands` | Lets `compass check` and `compass readiness` run commands the project declares | `true`, `false` | `false` |
 | `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
 | `language` | The language the agent writes prose in (see `language` below) | a BCP 47 tag such as `en-US` | unset: no instruction |
+| `acceptance_strategy` | Whether the four-layer acceptance strategy (`S17`) is on for the project (see `acceptance_strategy` below) | `state`: `on` or `off`; `reason`: text, needed with `off` | unset: on |
 | `preset_index` | Reserved for published presets; no behavior yet | - | - |
 | `github_labels` | Whether Compass writes an issue's labels and page to its linked GitHub issue (see `docs/github-labels.md`) | `domain`, `status`, `page`: `true` or `false` each | all `false`; no GitHub call |
 
@@ -328,3 +330,40 @@ For a language not listed, see the
 - Norwegian is `nb` or `nn` (`nb` is Bokmål and `nn` is Nynorsk). Do not write
   an unquoted `no`: YAML reads it as false, and Compass refuses it. Hebrew is
   `he`, not `iw`.
+
+
+### `acceptance_strategy`
+
+Turns the four-layer acceptance strategy (`S17`, `governance/strategies.md`)
+off for the project, with the reason assess records:
+
+```yaml
+acceptance_strategy:
+  state: "off"
+  reason: "no deployable candidate yet"
+```
+
+Quote `"on"` and `"off"`: YAML reads them unquoted as true and false, which
+Compass also accepts. Unset means on. `off` needs a reason that is not blank.
+Any other value makes `compass approach evaluate` and `compass check` exit 2
+with a message that names the key, the file and the accepted values, and
+`compass policy lint` reports it in `compass.yml`. In a project pinned at
+`compass:default@6` or `@7` the strategy never reads the value, but
+`compass.yml` must still pass its schema check. `compass policy lint`,
+`compass approach evaluate --write` and `compass check` on an issue not yet
+assessed refuse a bad value there. `compass check` on an assessed issue reads
+the configuration stored with the issue, so it does not refuse it. The
+setting needs no
+owner's approval: the delivery-approach record and `compass retro
+--acceptance` show the choice. It takes effect for an issue at its next
+`compass approach evaluate --write`; until then `compass check` reports the
+changed setting as advice. The setting is read from `compass.yml`, or
+`.compass/config.yml` when `compass.yml` is absent or has no `schema:`.
+
+The strategy ships in the default preset from major 8. A project whose
+`compass.yml` extends `compass:default@6` or `compass:default@7` does not get
+it: assess stores no applicability and `compass check` adds no row for it. A
+project with no `compass.yml`, no `extends:` or a git parent runs on the live
+default and gets it. The setting is the one way to turn the strategy off:
+`compass policy lint` refuses `acceptance_strategy: suspended` on an approach
+that ships.

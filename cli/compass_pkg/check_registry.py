@@ -21,6 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
+from compass_pkg.acceptance_strategy import _check_applicability_agrees
 from compass_pkg.artifact_status import _check_artifacts_approved
 from compass_pkg.binding import _check_evidence_matches_tree
 from compass_pkg.borrowed_docs import _check_borrowed_documents_answered
@@ -135,6 +136,7 @@ _ENTRIES = (
     # A lower factor refuses more designs, so lowering it tightens the check.
     _entry("design-within-word-ceiling", _check_design_within_word_ceiling,
            params_spec={"factor": "number"}, tighter={"factor": "lower"}),
+    _entry("acceptance-applicability-agrees", _check_applicability_agrees),
 )
 
 REGISTRY: dict[str, CheckImpl] = {e.name: e for e in _ENTRIES}

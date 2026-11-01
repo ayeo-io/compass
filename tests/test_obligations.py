@@ -1063,6 +1063,9 @@ def test_ob_7_the_sample_has_every_check_that_declines(preset_config):
     # exist when the sample was recorded; each corpus holds every shape on which they stand
     # down.
     declining -= {"nfr-rows-resolved", "contracts-declared", "design-within-word-ceiling"}
+    # The four-layer acceptance strategy's check gives no row on an issue with no stored
+    # applicability, which every issue of the sample is; its corpus holds the case.
+    declining -= {"acceptance-applicability-agrees"}
     assert declining <= stood_down, declining - stood_down
 
 

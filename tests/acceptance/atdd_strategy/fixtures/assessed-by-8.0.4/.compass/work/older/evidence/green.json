@@ -1,0 +1,20 @@
+{
+  "command": "sh -c echo 'test_one PASSED'",
+  "argv": [
+    "sh",
+    "-c",
+    "echo 'test_one PASSED'"
+  ],
+  "scenario": null,
+  "exit_code": 0,
+  "passed": true,
+  "attempts": 1,
+  "timestamp": "2026-10-29T15:59:33+00:00",
+  "log_excerpt": "test_one PASSED",
+  "_full_log": "test_one PASSED\n",
+  "tree_id": "cc1bdfa1894337da8480f5a64a42dbde30c80912",
+  "changes_id": "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
+  "changes_scope": "changed-files-and-declared-tests",
+  "record_id": "0f8da7c0041b4f26",
+  "content_digest": "sha256:f4586e5da1aa177867ca4a3211034b8c3647a037ac816a53fb69022698ee74fd"
+}

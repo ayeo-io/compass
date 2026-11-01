@@ -119,6 +119,9 @@ vocabulary:
   checks.design-within-word-ceiling:
     name: Design within word ceiling
     aliases: []
+  checks.acceptance-applicability-agrees:
+    name: Acceptance strategy applicability agrees
+    aliases: []
   checks.spike-conclusion-present:
     name: Spike conclusion present
     aliases: []

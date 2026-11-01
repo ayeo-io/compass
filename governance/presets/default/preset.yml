@@ -8,7 +8,7 @@
 # those two files. The preset is the source now; edit it here.
 schema: 1
 id: default
-version: 7.0.0
+version: 8.0.0
 capabilities: {entry-exit-evaluation: false, artifact-freshness: false}
 locks:
   hard: [checks.human-approval-present, gates.G5]

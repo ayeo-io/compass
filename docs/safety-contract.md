@@ -508,9 +508,10 @@ sets it. `COMPASS_ISSUE` comes first, so two sessions in one project can work
 on two issues; `compass run` sets it for each unattended session. A value
 that names no issue is refused (`bad-session-issue-restart`), never passed over
 for the pointer. That order holds in the session's own project. In a worktree
-the order reverses for Edit and Write: the worktree's own pointer names the
-issue, and `COMPASS_ISSUE` applies only when that pointer is empty (see the
-worktree paragraph below).
+the order reverses for Edit and Write, and for a Bash call whose working
+folder is in the worktree: the worktree's own pointer names the issue, and
+`COMPASS_ISSUE` applies only when that pointer is empty (see the worktree
+paragraph below).
 
 Two interactive sessions share the pointer, so the pre-tool hook records the
 issue each Claude Code session last worked on, by its session id, in a
@@ -800,10 +801,10 @@ manifest.
   is never guessed. A session whose fresh entry in the session table behind
   the `pointer-moved` refusal names another issue is not recorded on the
   pointer's issue.
-- For an Edit or Write in a worktree of the session's repository, the
-  worktree's pointer comes first, `COMPASS_ISSUE` stands in only for an empty
-  pointer, and the session is recorded on that issue without reading the
-  session table.
+- For an Edit or Write in a worktree of the session's repository, and for a
+  Bash call whose working folder is in one, the worktree's pointer comes
+  first, `COMPASS_ISSUE` stands in only for an empty pointer, and the session
+  is recorded on that issue without reading the session table.
 - A session id that is not letters, digits, `-` and `_` is not recorded.
 - An id already in the manifest costs one `grep` and no python3 process. A new
   id starts one python3 process, which opens only that issue's manifest.
@@ -1267,13 +1268,48 @@ project is not affected. A session in a worktree does not read that
 worktree's session table, so `pointer-moved` applies in the session's own
 project only.
 
-A shell write is not followed that way: a shell write still resolves from the
-session's project, because its targets are found against that project. GitHub
-issue #104 tracks the gap. The results are:
+A Bash call whose working folder is in a worktree of the session's
+repository is judged by that worktree's issue, by the same rules. The hook
+reads the working folder from the `cwd` field of the call, walks up from it
+to the nearest `.compass/` folder, and uses that tree when it is not the
+session's own project and git ties it to the session's repository. A
+subagent started with worktree isolation keeps the parent session's
+`CLAUDE_PROJECT_DIR`, and this is how its shell writes reach its own
+worktree's issue. The rules for such a call:
 
-- a relative path is checked against the session's issue, not the worktree's
-- an absolute path into a worktree outside the project - the default place
-  for worktrees - is not checked at all
+- A relative path is read against the worktree.
+- A path that lands outside the worktree - an absolute path, or a relative
+  path that climbs out with `..` - and a path with a part the hook cannot
+  know (`~`, a variable it does not expand, a backtick or a brace) are
+  judged first, against the session's project and issue, as before. When
+  one of those needs a failing test, the session's issue judges the whole
+  command.
+- A command that can change its folder has every target judged first
+  against the session's project, as before the worktree rule, and a
+  relative path in it is read against the session's project. The hook
+  matches these in the command text: `cd` (also quoted, inside `bash -c`
+  or a subshell), `pushd`, `popd`, a `chdir` call in an inline script,
+  `env -C`, `sudo -D` or `--chdir`, `ruby -C`, `find -execdir`, and
+  `patch -d` or `--directory`. A `patch` or `git apply` in such a command
+  is judged by the session's issue; without one, by the worktree's.
+- The `no-red-on-record` refusal names the project whose issue judged the
+  write.
+
+Otherwise a shell write still resolves from the session's project: when the
+call has no `cwd`, when it is relative or not a folder, when no `.compass/`
+folder is found above it, and when the tree is the session's own or is not
+tied to the session's repository. A symbolic link is not followed here
+either: a link made inside the worktree that points into the main checkout
+makes a write through it look like a write in the worktree. Two limits
+remain:
+
+- a `cd` inside the command is not followed: a command that changes folder
+  is judged by the session's project, so a relative write after
+  `cd <worktree>` from the main checkout, or after `cd <scratch folder>`
+  from a worktree, is judged by the session's issue
+- an absolute path into a worktree is judged by the project of the call's
+  working folder; from the main checkout, a path into a worktree outside the
+  project - the default place for worktrees - is not checked at all
 
 See [Security](security.md) for the exact trust boundaries and hardening
 guidance.

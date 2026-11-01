@@ -160,6 +160,8 @@ if [ -f "$TASK_DIR/.red" ]; then
   compass_block red-marker-no-record "slug=$TASK_SLUG"
 fi
 
-# No .red marker → no failing test on record → block the code edit.
+# No .red marker → no failing test on record → block the code edit. The
+# refusal names the project whose issue judged the edit: in a worktree that
+# is not the session's own folder, and `compass tdd-red` must run there.
 compass_block no-red-on-record "slug=$TASK_SLUG" "target=$TARGET" "tool=${TOOL:-?}" \
-  "guard=${MATCHED_RULE:-the built-in production-code set}"
+  "guard=${MATCHED_RULE:-the built-in production-code set}" "project=$PROJECT_DIR"

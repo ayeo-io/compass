@@ -26,7 +26,10 @@ mode the evidence-not-assertion guardrail exists to prevent.
   strategies, was a departure recorded. There is no pass/fail artifact for a
   strategy; there is an honest opinion, and it must be **labeled as judgment**,
   not dressed up as evidence. A strategy not followed is a note and a
-  conversation, not an automatic gate failure.
+  conversation, not an automatic gate failure. The exception is a strategy
+  that carries blocking checks, such as the four-layer acceptance strategy
+  (`S17`): its checks sit outside every gate, and a recorded step-off makes
+  them advisory.
 
 Naming them differently is what stops a judgment call being presented as a
 hard gate, and stops a hard gate being waved through on an opinion. When you

@@ -1,0 +1,37 @@
+schema: 1
+resolver: 1.0.0
+cli: 8.0.4
+parents:
+- ref: compass:default@7
+  version: 7.0.0
+  digest: sha256:5c7b0308753a2890c606a25e803b7f521a04d0b2a59ef24fece2e89a611ffbbe
+  source: shipped
+project: null
+issue_overlay_digest: null
+implementations:
+  borrowed-documents-answered: 1.0.0
+  rendered-blocks-current: 1.0.0
+  landed-by-resolves: 1.0.0
+  scenarios-have-tests: 1.0.0
+  scenarios-are-executable: 1.0.0
+  declared-tests-resolve: 1.0.0
+  suite-passed: 1.0.0
+  changed-code-traces-to-scenario: 1.0.0
+  scenario-has-id-and-intent: 1.0.0
+  claim-traces-to-scenario: 1.0.0
+  gate-evidence-present: 1.0.0
+  human-approval-present: 1.2.0
+  backfills-paid: 1.0.0
+  artifacts-approved: 1.0.0
+  nfr-rows-resolved: 1.0.0
+  contracts-declared: 1.0.0
+  design-within-word-ceiling: 1.0.0
+  spike-conclusion-present: 1.0.0
+  spike-no-production-changes: 1.0.0
+  dod-evidence-typed: 2.0.0
+  consistency-check-passes: 1.0.0
+  no-trusted-rerun: 1.0.0
+  evidence-identity-matches: 1.0.0
+  evidence-matches-tree: 1.0.0
+  command-passes: 1.0.0
+  multiagent-run-recorded: 1.1.0

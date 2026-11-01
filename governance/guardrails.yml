@@ -20,11 +20,11 @@
 # those checks against an issue's `manifest.yml` and `evidence/`.
 #
 # Note the asymmetry, and that it is deliberate: GUARDRAILS get a .yml because
-# they are checkable. STRATEGIES do not - `strategies.md` stays prose-only,
-# because a strategy is *assessed* (the reviewer's judgment), not *checked*.
-# That asymmetry is the guardrail/strategy distinction made physical: if a
-# thing can be given a named, mechanical check, it can be a guardrail; if it
-# can only be judged, it is a strategy.
+# they are checkable and nobody steps off them. A STRATEGY is a strong default
+# you can step off with a recorded reason, so `strategies.md` holds it as prose.
+# A strategy can carry blocking checks that a recorded step-off makes advisory:
+# they sit outside every guardrail below, in no lock, so an approved waiver can
+# make them advisory (strategy `S17`). The guardrails keep their own checks.
 #
 # The five default guardrails below ship active. A project may ADD guardrails
 # under `project:` - each needs a named check, or it is a strategy, not a
@@ -32,7 +32,7 @@
 # schemas/guardrails.schema.json.
 # =============================================================================
 
-version: 1.33.2
+version: 1.34.0
 # -----------------------------------------------------------------------------
 # Named checks - the mechanical checks `compass check` knows how to run. Each
 # guardrail below references one or more of these by name. The check reads
@@ -91,6 +91,8 @@ checks:
     description: "When a changed file matches a trigger pattern, the technical design's Data and interfaces section declares a contract: a field table (Name, Type, Required, Meaning, Written by, Read by) or a contract table (Inputs, Outputs, Exit codes, Errors) with a data row, or an erDiagram. A path pattern matches the project-relative path, and a contents pattern also needs the file to hold its text. Declines to check, rather than passing, when no changed file matches, and for an issue with no generation, a closed issue, a design not registered with a path, and a catalogue that does not list the section at the depth the design is registered at."
   design-within-word-ceiling:
     description: "Once plan exit is due, the technical design holds no more words than its word_ceiling at the depth it is registered at, times the factor in params. Words are counted from the visible text, and unit files never lift the limit. Declines to check, rather than passing, for an issue with no generation, a closed issue, a design not registered with a path, a catalogue with no word_ceiling for the design at its depth, and an issue that has not passed the plan stage."
+  acceptance-applicability-agrees:
+    description: "The four-layer acceptance strategy (`S17`) applies to the issue as its delivery-approach record says: the applicability stored at assess agrees with what the red and acceptance records decide, and the project setting has not changed since assess. Advisory: a disagreement names the re-assess command and never fails the run. Declines to check, rather than passing, for an issue assessed before the strategy shipped and for a project that turned the strategy off."
   spike-conclusion-present:
     description: "A spike has a `spike-conclusion` evidence entry with a recorded decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue."
   spike-no-production-changes:

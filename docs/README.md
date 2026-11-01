@@ -123,7 +123,7 @@ same commit.
 | `cli/compass_pkg/run_cmd.py`, `cli/compass_pkg/host_launch.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/compliance.py`, `ci/headless-verify.yml` | `docs/headless-runner.md` |
 | `cli/compass_pkg/record.py` | `docs/delivery-record.md` |
 | `cli/compass_pkg/checkpoint_outcomes.py`, `cli/compass_pkg/session_record.py`, `cli/compass_pkg/session_usage.py`, `cli/compass_pkg/issue_usage.py`, `cli/compass_pkg/autonomy_cost.py` | `docs/autonomy-and-cost.md` |
-| `cli/compass_pkg/github_labels.py`, `cli/compass_pkg/github_page.py`, `cli/compass_pkg/github_sync_record.py`, `cli/compass_pkg/publish_check.py`, `cli/compass_pkg/github_links.py`, `tests/fake_gh.py` | `docs/github-labels.md` |
+| `cli/compass_pkg/github_labels.py`, `cli/compass_pkg/github_page.py`, `cli/compass_pkg/github_sync_record.py`, `cli/compass_pkg/publish_check.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `tests/fake_gh.py` | `docs/github-labels.md` |
 | `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |
 | `cli/compass_pkg/artifact_status.py`, `cli/compass_pkg/decisions_taken.py` | `architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md` |
 | `cli/compass_pkg/rendered_blocks.py`, `cli/compass_pkg/block_renderers.py`, `cli/compass_pkg/render_inputs.py`, `cli/compass_pkg/render_cmd.py`, `cli/compass_pkg/render_check.py`, `cli/compass_pkg/render_after.py`, `cli/compass_pkg/render_after_entry.py`, `cli/compass_pkg/render_check_entry.py`, `cli/compass_pkg/record_triggers.py`, `cli/compass_pkg/issue_page.py`, `cli/compass_pkg/issue_detail.py`, `cli/compass_pkg/project_index.py`, `cli/compass_pkg/project_scan.py`, `cli/compass_pkg/render_skip.py`, `cli/compass_pkg/migrate_blocks.py` | `docs/rendered-blocks.md` |
@@ -131,6 +131,7 @@ same commit.
 | `cli/compass_pkg/dependencies_block.py` | `docs/rendered-blocks.md` |
 | `cli/compass_pkg/verification_plan.py` | `docs/rendered-blocks.md` |
 | `cli/compass_pkg/section_checks.py`, `cli/compass_pkg/outside_gate.py` | `governance/guardrails.md` |
+| `cli/compass_pkg/acceptance_strategy.py` | `governance/guardrails.md` |
 | `cli/compass_pkg/migrate.py`, `cli/compass_pkg/migrate_kinds.py`, `cli/compass_pkg/migrate_copy_check.py` | `architecture/decisions/ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md`, `docs/upgrade-7-0-0.md` |
 | `cli/compass_pkg/parse_cache.py` | `architecture/decisions/ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md`, widened by `architecture/decisions/ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md` |
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |
@@ -140,6 +141,7 @@ same commit.
 | `cli/compass`, `cli/compass_pkg/verb_help.py`, `cli/compass_pkg/lineage.py` | `README.md` |
 | `scripts/release.sh`, `scripts/build-plugin-copy.py`, `scripts/plugin-files.txt`, `.claude-plugin/marketplace.json`, `Makefile`, `VERSION` | `docs/releasing.md` |
 | `.github/workflows/`, `scripts/ci-*.py` | `docs/releasing.md` |
+| `examples/atdd-adapters/python/`, `tests/acceptance/atdd_strategy/test_reference_example.py` | `examples/atdd-adapters/python/README.md` |
 | `scripts/render-document-set.py`, `architecture/document-set-7-0-0.svg`, `tests/test_document_set_diagram.py` | `docs/methodology.md` |
 | `scripts/install.sh`, `.claude-plugin/` | `docs/install-smoke-test.md` |
 | `hooks/hooks.json`, the adapter boundary | `docs/portability.md` |

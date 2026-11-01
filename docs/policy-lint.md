@@ -69,7 +69,7 @@ earlier one. Warnings never stop it and never fail it.
 |---|---|---|
 | `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), the eleven `L-PARENT-*` codes below for a git parent, and the four `S-PARENT-*` state codes |
 | `merge` | The merge grammar, layer by layer. It reports every fault of the first layer that does not apply | the merge's own `M-*` codes, such as `M-ADD-EXISTS`, `M-SET-UNKNOWN`, `M-REF-REMOVED` |
-| `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE`, `M-BOOKKEEPING-INPUT`, `M-DIRECTORY-DEPENDENCY`, `M-LIST-KIND-UNEVALUATED` (warning), `M-FIELD-SHAPE`, `M-READINESS-IMPL`, `M-READINESS-PARAM`, `M-WHEN-RETIRED`, `M-WHEN-DOCUMENTS` |
+| `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE`, `M-BOOKKEEPING-INPUT`, `M-DIRECTORY-DEPENDENCY`, `M-LIST-KIND-UNEVALUATED` (warning), `M-FIELD-SHAPE`, `M-READINESS-IMPL`, `M-READINESS-PARAM`, `M-WHEN-RETIRED`, `M-WHEN-DOCUMENTS`, `M-ACCEPTANCE-SUSPENDED` |
 | `locks` | What the locks above a layer refuse, and each refused unlock | `K-LOCK-REFUSED`, `K-UNLOCK-REFUSED`, `K-UNPROVABLE`, `E-EVALUATION` |
 | `classification` | Waivers, the classifier's verdict on each layer, and the vocabulary | `C-LOOSENING`, `C-INCOMPARABLE`, `V-VOCABULARY-CHANGE`, `W-UNNEEDED`, the waivers' own `W-*` codes, `E-EVALUATION` |
 
@@ -107,6 +107,7 @@ earlier one. Warnings never stop it and never fail it.
 | `M-LIST-KIND-UNEVALUATED` | warning | A stage's `entry` or `exit` list names a check of a kind this version does not evaluate (`judged` or `evidence`). The check fails in `compass check`, whatever the capability. The exit code does not change |
 | `M-READINESS-IMPL` | error | A readiness signal names an `impl` that the readiness registry does not hold. The message names the signal and the implementation |
 | `M-READINESS-PARAM` | error | A readiness signal sets a parameter its implementation does not take, a parameter of the wrong type, or a value outside the implementation's allowed choices |
+| `M-ACCEPTANCE-SUSPENDED` | error | An approach that ships sets `acceptance_strategy: suspended`. Only the spike, which ships nothing, suspends the four-layer acceptance strategy; a project turns it off with the settings key `acceptance_strategy: {state: off, reason: <why>}` (decided by jed72, 2026-10-30) |
 | `M-HIT-MISSING` | error | A rule set uses an effect and names no `hit:` policy for it. `EFFECT_POLICIES` in `catalogue_spec.py` lists the effects and the policies each allows |
 | `M-HIT-DISALLOWED` | error | A `hit:` policy the effect does not allow, or an unknown effect |
 | `M-ALIAS-COLLISION` | error | One name or alias belongs to two entries of a catalog |

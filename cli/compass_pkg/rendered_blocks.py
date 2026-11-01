@@ -35,13 +35,14 @@ from compass_pkg import atomic_io
 
 #: The block kinds. The first eight are the kinds of documents the templates carry; the rest belong to the
 #: issue page, the verification note, the project index, the document header and dependencies, the delivery
-#: approach's readiness line and model tiers, and the verification report's release line. Any other name in an opening
-#: marker is a malformed marker.
+#: approach's readiness line, model tiers and acceptance-strategy line, and the verification report's
+#: release line. Any other name in an opening marker is a malformed marker.
 KINDS = ("coverage", "gates", "dod", "dor", "artifacts", "evidence", "follow-ups",
          "decisions-taken", "header", "ask", "decision-required", "acceptance", "related",
          "decisions", "traceability", "deliberately-omitted", "verification-note", "index",
          "assessment", "policy-rules", "stage-weights", "gate-set", "plan-exit", "breakdown-exit",
-         "document-header", "dependencies", "readiness", "release-line", "model-tiers")
+         "document-header", "dependencies", "readiness", "release-line", "model-tiers",
+         "acceptance-strategy")
 
 #: The prefix of the temporary files the render writes, so a killed render's
 #: leftover can be told from a person's file.

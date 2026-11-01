@@ -115,6 +115,9 @@ def register(sub, issue_arg):
                     help="scenario id (default: TRC-001)")
     st.add_argument("--test", action="append", required=True,
                     help="test node id that exercises the scenario (repeatable, at least one)")
+    st.add_argument("--expected-acceptance", dest="expected_acceptance",
+                    choices=["none", "validation", "refactor"], default=None,
+                    metavar="KIND", help="none, validation or refactor")
     st.add_argument("--raised-by", metavar="SLUG",
                     help="the issue this was found in")
     st.add_argument("--found-at", metavar="WHERE",
@@ -180,12 +183,13 @@ def _empty_block(kind):
 
 def _delivery_approach_md(slug, intent_text, scenario_id, scenario_text, ledger, advice=()):
     """The quick fix's record as this command writes it. The header, the assessment and
-    the policy rules that fired are empty block pairs: `compass issue render` fills them
+    the policy rules that fired and the acceptance-strategy line are empty block pairs: `compass issue render` fills them
     from the manifest, so the record is never stale against it (ADR-051 decision 2). The
     advice, intent, scenario and de-scope ledger are prose this command writes once."""
     lines = [f"# Delivery approach - {slug}", "", *_empty_block("document-header"),
              "", "## Assessment", "", *_empty_block("assessment"),
-             "", "## Policy rules fired", "", *_empty_block("policy-rules")]
+             "", "## Policy rules fired", "", *_empty_block("policy-rules"),
+             "", "## Acceptance strategy", "", *_empty_block("acceptance-strategy")]
     if advice:
         # Advisory strategies: they never block, so the record is the only
         # place a session meets them.
@@ -355,7 +359,8 @@ def cmd_quick_fix_start(args):
 
     try:
         _quiet_run(cmd_route_evaluate, reading=None, task=slug, write=True,
-                   reason=None, kind=None)
+                   reason=None, kind=None,
+                   expected_acceptance=getattr(args, "expected_acceptance", None))
     except CompassError:
         # This call made the folder, so a refusal (a compass.yml the lint
         # rejects, for one) takes it away, and the slug stays free.

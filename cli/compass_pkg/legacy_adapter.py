@@ -45,7 +45,7 @@ from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, G
                                     STAGE_IDS, STAGE_SHIP, STAGE_VERIFY)
 
 PRESET_ID = "default"
-PRESET_VERSION = "7.0.0"
+PRESET_VERSION = "8.0.0"
 PRESET_FILES = ("dimensions", "stages", "approaches", "rules", "checks", "gates",
                 "artifacts", "readiness", "vocabulary")
 
@@ -103,8 +103,12 @@ DECLINING_CHECKS = (
     "borrowed-documents-answered", "evidence-matches-tree",
     "evidence-identity-matches", "dod-evidence-typed", "landed-by-resolves", "multiagent-run-recorded", "artifacts-approved",
     "nfr-rows-resolved", "contracts-declared", "design-within-word-ceiling",
+    "acceptance-applicability-agrees",
 )
 PASSING_CHECKS = ("declared-tests-resolve",)
+# The checks the preset declares `severity: advisory`. The legacy guardrails file
+# has no severity field, so the adapter holds the list, as it holds CHECK_PARAMS.
+ADVISORY_CHECKS = ("acceptance-applicability-agrees",)
 
 # The parameters of each shipped check that takes some (ADR-064). The legacy
 # guardrails file has no field for them, so the adapter holds the table the
@@ -378,7 +382,8 @@ def _checks(guardrails, notes):
     out = {}
     for name, body in (guardrails.get("checks") or {}).items():
         entry = {"statement": body["description"], "kind": "deterministic",
-                 "impl": name, "severity": "blocking"}
+                 "impl": name, "severity": "advisory" if name in ADVISORY_CHECKS
+                 else "blocking"}
         if "blocking_when" in body:
             entry["blocking_when"] = _when(body["blocking_when"], notes.guardrail_when)
         entry["on_skipped"] = ("not-applicable" if name in DECLINING_CHECKS
@@ -510,6 +515,7 @@ def _artifact_entry(name, shipped):
 # A display name a person would not guess from the id. The id keeps its
 # name; the display name says what the check asks today.
 DISPLAY_NAMES = {
+    "checks.acceptance-applicability-agrees": "Acceptance strategy applicability agrees",
     "checks.artifacts-approved": "Documents approved",
     "checks.backfills-paid": "Follow-ups resolved",
     "checks.dod-evidence-typed": "Definition of Done evidence is typed",

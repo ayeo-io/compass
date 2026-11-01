@@ -645,6 +645,9 @@ def cmd_calibration(args):
     if getattr(args, "lineage", False):
         from compass_pkg.lineage import cmd_retro_lineage
         return cmd_retro_lineage(args)
+    if getattr(args, "acceptance", False):
+        from compass_pkg.acceptance_strategy import cmd_retro_acceptance
+        return cmd_retro_acceptance(args)
 
     compass_dir = find_compass_dir()
     work = os.path.join(compass_dir, "work")

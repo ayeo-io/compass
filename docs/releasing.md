@@ -612,8 +612,9 @@ scripts.
 | `count` | Counts the tests outside the serial pass, with `pytest --collect-only -q -m "not serial" tests/`. |
 | `shard` | A matrix of shard jobs. Each runs its share of the test files on parallel workers, prints every test's duration and ends at 45 minutes. |
 | `serial` | Runs the tests marked `serial` alone, and prints its 20 slowest tests. |
-| `self-check` | Passes only when every job it needs succeeded and the shard counts add up to the `count` total. It needs every job above and the four `bdd-adapter` jobs and `check-mutation`. On a title or body edit it reports the earlier suite result instead (below). |
+| `self-check` | Passes only when every job it needs succeeded and the shard counts add up to the `count` total. It needs every job above, the four `bdd-adapter` jobs, `atdd-adapter-python` and `check-mutation`. On a title or body edit it reports the earlier suite result instead (below). |
 | `bdd-adapter`, `bdd-adapter-behave`, `bdd-adapter-cucumber-js`, `bdd-adapter-godog` | Run each BDD reference adapter. |
+| `atdd-adapter-python` | Runs the Python reference example of four-layer acceptance tests (`examples/atdd-adapters/python/`) through its API driver and its CLI driver on two workers each, then its layering test. |
 | `harness-root` | Runs the real-root harness tests, only when the change touches the files they depend on. |
 | `check-mutation` | Breaks each shipped check and confirms its register tests go red. |
 

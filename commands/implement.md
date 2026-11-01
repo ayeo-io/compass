@@ -21,6 +21,8 @@ work.
 - Read `acceptance-criteria.md` - scenarios become the acceptance suite, and
   each starts a TDD cycle. Read `technical-design.md` for the approach.
 - Load the `tdd-discipline` skill.
+- For a change to behavior a real client can observe, also load `atdd`:
+  this stage runs its stage 2, the protocol driver.
 - Invoke the `builder` agent - **one per worktree** on a pair or multiagent
   orchestration, each owning its scenario set from the distribution map. On solo
   work, one builder on the current branch.

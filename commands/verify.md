@@ -28,6 +28,8 @@ The rest of this command is for delivery work.
   are the default guardrails in review form. The routing policy's
   `immovable_gates` are always added.
 - Load the `evidence-gates` skill.
+- For a change to behavior a real client can observe, also load `atdd`:
+  this stage runs its stage 3, the isolation proof and the checklist.
 - Invoke the `verifier` agent (runs the suites) and the `reviewer` agent
   (applies the review dimensions).
 - Pass the computed model and effort to each agent, as `model` and

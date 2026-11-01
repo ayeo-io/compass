@@ -66,6 +66,8 @@ is for. The same split is written from the spec-author's side in
 ## Setup
 
 - Load `bdd-specification`; the `spec-author` agent owns this continuation.
+- For a change to behavior a real client can observe, also load `atdd`:
+  this stage runs its stage 1, the specification and the DSL.
 - Pass the computed model and effort when you invoke the `spec-author` agent:
   `compass approach show --model refine` prints the `model`, and
   `compass approach show --effort refine` prints the `effort`. On

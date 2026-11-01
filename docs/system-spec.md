@@ -5209,3 +5209,17 @@ compass issue link set --pr records an issue's pull request and, once it is merg
 - `TRC-LC2` Given a pull request that is not merged, or an issue that has not landed, when compass issue link set --pr runs, then the pull request is recorded and land_commit does not change
 - `TRC-LC3` Given a landed issue, when compass check runs, then a land_commit the default branch does not reach is advice naming compass issue link set --pr, and one it reaches passes
 - `TRC-LC4` Given a --pr value that names no pull request, or one gh cannot read, when compass issue link set --pr runs, then it exits non-zero and writes nothing
+
+### atdd-skill (completed 2026-10-29)
+
+Compass now ships an atdd skill for four-layer acceptance tests, loaded at refine, implement and verify for a change a real client can observe.
+
+- `TRC-001` The adapted skill names its source and every adaptation
+- `TRC-002` The model's three stages land on refine, implement and verify
+- `TRC-003` The skill states one line to one DSL call and who owns each layer
+- `TRC-004` The scenarios every role reads extract as before
+- `TRC-005` Three skills describe one chain
+- `TRC-006` The skill sends a quick fix that needs a new DSL method back to assess
+- `TRC-007` The new text passes the vocabulary scans and never says a bare S2
+- `TRC-008` The review questions have one heading per stage
+- `TRC-009` The skill states how stage 1 ends in a red that unlocks no code

@@ -24,6 +24,8 @@ In Compass the BDD spec is not documentation that precedes the tests - it *is*
 the tests, read at a different time. `acceptance-criteria.md` is written once at
 the define stage and run as the acceptance check at verify. It is also the one artifact
 five roles read (see `skills/intent-interview/role-translation.md`). Write it knowing all of that.
+For a change a real client can observe, the `atdd` skill runs one chain from
+it: scenario, DSL, driver, unit tests, each Given, When or Then line one DSL call.
 
 ## Example-first refinement chain
 
@@ -61,11 +63,12 @@ leaves out. Reproduce a reported bug on current code, not an old build.
 ## Failure modes the brief implies
 
 After the happy path and the edges, ask which
-input classes and failure modes the brief implies that no scenario yet covers. Each answer becomes a
-scenario, a light one if need be, or is recorded with
-`compass scenario descope "<mode>" --reason "<why>"`. The verifier lists every
-recorded mode in the verification report, so nothing named is dropped
-silently.
+input classes and failure modes the brief implies that no scenario yet covers.
+Refine settles each implied failure mode with the person or descopes it: it
+becomes a scenario, a light one if need be, or is recorded with
+`compass scenario descope "<mode>" --reason "<why>"`. Implement adds no
+scenario the specification does not state. The verifier lists every recorded
+mode in the verification report, so nothing named is dropped silently.
 
 - **Worked example, a rate limit.** "Limit search to 100 requests a minute"
   implies a client exactly at 100, a client over it, two clients sharing an

@@ -1,0 +1,106 @@
+# Spec - atdd-hook-pilot
+
+## Summary
+
+- **Goal:** the client-observable hook scenarios of `tests/test_directory_validator.py` and `tests/test_hook_failure_matrix.py` run as executable specifications over a DSL and protocol drivers, through both hook clients.
+- **Approach:** the `atdd` skill's three stages. Stage 1 (this define stage) writes the specifications, the DSL, the alias helper and the driver interface and factory, ending in an import red. Stage 2 (implement) writes the Claude Code, Codex and CLI drivers. Stage 3 (verify) moves the old tests, proves isolation and writes the note. Each stage stops for the owner's review.
+- **Why now / what changes:** splitting `hooks/pre-tool.sh` changed about 25 test files whose behavior did not change. No shipped file changes.
+
+## Intent links
+
+| Intent | Scenarios |
+|---|---|
+| INT-1 | TRC-P1 |
+| INT-2 | TRC-P2 |
+| INT-3 | TRC-P3, TRC-P4 |
+| INT-4 | TRC-P5 |
+
+## The hook scenarios moved
+
+`tests/acceptance/hooks/test_hook_refusals.py` holds 16 scenarios (40 cases for each client with their parameters), each with its Given/When/Then lines in its docstring:
+
+| Specification | From |
+|---|---|
+| an edit whose checks all pass is allowed | HFM-1 control |
+| a check that cannot run refuses and names itself | HFM-1 readers |
+| the red record refusal gives its cause | HFM-1 red cause |
+| with no python3 the refusal says so | HFM-2 |
+| a temporary file that cannot be made refuses | HFM-1 mktemp |
+| settings that do not parse refuse and name the fix | HFM-3 |
+| a shell write refusal names the file it found | HFM-3 Bash |
+| code globs of the wrong shape refuse | CGS-1 |
+| unreadable settings still refuse | HFM-1 unreadable config |
+| a missing approach record is reported as missing | HFM-4 |
+| a missing Python helper refuses in a project | HFM-1 missing helper |
+| a missing Python helper stays silent in a guest repository | HFM-1 guest |
+| a missing part refuses every call | TRC-A3 missing part |
+| an unreadable part refuses every call | TRC-A3 unreadable part |
+| an unreadable helper still refuses a code edit | TRC-A3 unreadable helper |
+
+Not moved, because no client observes them: TRC-A1, TRC-A2 and the standard-input check of TRC-A3 (they read the hook's source), HFM-5 (the safety contract's text), HFM-6 (retired words in the source), and TRC-B and TRC-C (command files and environment, checked in-process).
+
+## Scenarios
+
+### Scenario: the hook scenarios run as layered specifications
+
+<!-- traceability id: TRC-P1 · serves: INT-1 -->
+
+```gherkin
+Given the 16 hook scenarios in tests/acceptance/hooks/test_hook_refusals.py
+When the DSL and the specifications are searched
+Then the DSL holds 0 calls of assert, expect or should
+And every specification line is one DSL call
+And every scenario passes through the Claude Code driver
+```
+
+### Scenario: the same specifications run through both hook clients
+
+<!-- traceability id: TRC-P2 · serves: INT-2 -->
+
+```gherkin
+Given the specifications
+When they run with COMPASS_HOOK_CLIENT=claude-code and with COMPASS_HOOK_CLIENT=codex
+Then every scenario passes under both, with 0 changes to the specifications
+```
+
+### Scenario: a change to the hook's layout changes only the driver
+
+<!-- traceability id: TRC-P3 · serves: INT-3 -->
+
+```gherkin
+Given a planted change that moves one hook part to another folder
+When the acceptance suite is fixed for it
+Then only files under tests/acceptance/hooks/drivers/ change
+```
+
+### Scenario: the suite runs in parallel and twice
+
+<!-- traceability id: TRC-P4 · serves: INT-3 -->
+
+```gherkin
+Given the acceptance suite
+When it runs on 4 parallel workers, and one scenario runs twice in a row
+Then all 3 runs give the same result, with 0 failures
+```
+
+### Scenario: the note measures the result
+
+<!-- traceability id: TRC-P5 · serves: INT-4 -->
+
+```gherkin
+Given the moved tests and the old ones
+When a hook-layout refactor is counted against each
+Then the note gives the number of test files it touches before and after, and a recommendation for ayeo-io/compass-delivery#307
+```
+
+## Non-functional requirements
+
+| Concern | Scenario | Reason it does not apply |
+|---|---|---|
+| performance | | The pilot moves tests; the suite's runtime is measured in the note, not gated |
+| capacity | | No stored data |
+| compatibility | TRC-P2 | |
+| security | TRC-P1 | |
+| privacy | | No personal data |
+| operability | TRC-P4 | |
+| accessibility | | No user interface |

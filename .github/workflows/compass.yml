@@ -5,21 +5,34 @@
 # workflow in ci/github-actions.yml - a project copies that one; this is the
 # framework running its own checks on itself.
 #
-# The test suite runs as parallel shards plus one serial job, and the
-# `self-check` job at the end is the check the protected-main ruleset
-# needs: it passes only when every job it needs succeeded and the shards'
-# test counts add up to the whole suite's count. docs/releasing.md
-# ("Continuous integration") describes the jobs.
+# The whole test suite runs once for each pull request, in the merge queue
+# (the `merge_group` event), on the exact commit that then lands on main. It
+# runs as parallel shards plus one serial job. A push to a pull request runs
+# fast jobs only: `checks`, `count` and `fast-tests`, which runs the test
+# files the pull request changes and the house-rule tests. A draft runs
+# none of them. The `self-check` job at the end is the check the
+# protected-main ruleset needs. On a pull request it passes when the fast
+# jobs succeeded; in a merge group, only when every suite job succeeded and
+# the shards' test counts add up to the whole suite's count. A push to main
+# skips every job when a merge-group run tested the same commit green.
+# docs/releasing.md ("Continuous integration") describes the jobs; the
+# decision is governance/decisions/2026-11-01-the-full-suite-runs-in-the-merge-queue.md.
 
 name: Compass (self-check)
 
 on:
   pull_request:
     # `edited` because GitHub sends it when the base branch changes, and a
-    # run tests the head merged into the base, so the suite must run again
-    # then. On a title or body edit every suite job skips and self-check
-    # reports the earlier result instead (see the self-check job).
-    types: [opened, synchronize, reopened, edited]
+    # run tests the head merged into the base, so the fast jobs must run
+    # again then. On a title or body edit they skip and self-check reports
+    # the earlier result instead (see the self-check job).
+    # `ready_for_review` because a draft runs no test (see `fast-tests`), so
+    # marking it ready must run them.
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+  # The merge queue's run of the whole suite. The required checks must report
+  # here too, or the queue waits for them.
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
 
@@ -33,40 +46,45 @@ permissions:
   contents: read
 
 # One group per pull request, so a new push cancels the run it replaces. A
-# push to main gets a group per commit and is never cancelled. The prefix
-# keeps this group apart from other workflows' groups: a group name is shared
-# by every workflow in the repository. A title or body edit gets a group of
-# its own (the `-text` suffix), so it never cancels a suite run; a base
-# change shares the pushes' group and cancels the run it supersedes.
+# merge group and a push to main get a group per commit and are never
+# cancelled: GitHub cancels a merge group's run itself when the group is
+# rebuilt. The prefix keeps this group apart from other workflows' groups: a
+# group name is shared by every workflow in the repository. A title or body
+# edit gets a group of its own (the `-text` suffix), so it never cancels a
+# run of the fast jobs; a base change shares the pushes' group and cancels
+# the run it supersedes.
 concurrency:
   group: compass-${{ github.event.pull_request.number || github.sha }}${{ github.event.action == 'edited' && github.event.changes.base == null && '-text' || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Every job but already-tested needs it. Every suite job carries the
-# condition `!cancelled() && needs.already-tested.outputs.skip != 'true'
-# && (github.event.action != 'edited' || github.event.changes.base != null)`:
-# - on a pull request already-tested is skipped with no output, and every
-#   job runs. `!cancelled()` is a status function, so GitHub does not add
-#   the implicit success() that would skip a job whose need was skipped;
-# - on an `edited` event the suite runs only when the base changed;
-# - on a push already-tested marks as tested, every job skips together;
-# - on any other push, including one where already-tested failed, every job
-#   runs.
-# self-check drops the `edited` part and runs on every pull request event,
-# whatever the other jobs' results were, because a skipped required check
-# counts as passed.
+# Every job but already-tested needs it. Three kinds of run:
+# - a pull request runs `checks`, `count` and `fast-tests`. Each carries
+#   `!github.event.pull_request.draft`, so a draft runs none, and
+#   `(github.event.action != 'edited' || github.event.changes.base != null)`,
+#   so a title or body edit runs none; a base change runs them, because a
+#   run tests the head merged into the base;
+# - a merge group runs `checks`, `count` and every suite job: the shards,
+#   `serial`, `check-mutation`, the adapter jobs and `harness-root`. Each
+#   suite job carries `github.event_name != 'pull_request'`;
+# - a push to main runs what a merge group runs, unless already-tested says
+#   a merge group tested this commit green; then every job skips together.
+# Every job carries `!cancelled() && needs.already-tested.outputs.skip !=
+# 'true'`. `!cancelled()` is a status function, so GitHub does not add the
+# implicit success() that would skip a job whose need (already-tested,
+# skipped except on a push) was skipped. self-check drops the event and
+# edit parts and runs on every pull request event, whatever the other
+# jobs' results were, because a skipped required check counts as passed.
 jobs:
   already-tested:
-    # A push to main whose tree was already tested green on its pull request
-    # skips every other job. scripts/ci-already-tested.py holds the rule.
+    # A push to main whose commit the merge queue already tested green with
+    # the whole suite skips every other job. scripts/ci-already-tested.py
+    # holds the rule.
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
-      pull-requests: read
-      checks: read
-      issues: read            # the pull request's timeline
+      actions: read           # this workflow's merge-group runs and their jobs
     outputs:
       skip: ${{ steps.decide.outputs.skip }}
     steps:
@@ -75,22 +93,21 @@ jobs:
       # supply-chain stance - what the framework asks its consumers to do, the
       # framework's own CI does too.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0          # the trees and the ancestry come from local git
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
       - id: decide
-        name: Was this tree already tested green on its pull request?
+        name: Did the merge queue already test this commit green?
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           MERGED: ${{ github.sha }}
-        run: python3 scripts/ci-already-tested.py --repo "$REPO" --commit "$MERGED" --output "$GITHUB_OUTPUT"
+          RUN_ID: ${{ github.run_id }}
+        run: python3 scripts/ci-already-tested.py --repo "$REPO" --commit "$MERGED" --this-run "$RUN_ID" --output "$GITHUB_OUTPUT"
 
   checks:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -107,17 +124,18 @@ jobs:
         # test suite scans tracked files and paths; this step scans the
         # commit messages it cannot see. The title and body are scanned by
         # pr-text.yml, on every edit too.
+        # A merge group scans the commits it adds to main.
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.sha }}
         # `shell: bash` runs with pipefail, so a failed `git log` fails the
         # step instead of handing the gate empty input.
         shell: bash
         run: |
-          if [ "$EVENT_NAME" = "pull_request" ]; then
+          if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "merge_group" ]; then
             git log --format=%B "$BASE_SHA..$HEAD_SHA" | python3 scripts/rival-name-gate.py --text -
           elif [ -n "${BEFORE_SHA//0/}" ] && git cat-file -e "$BEFORE_SHA^{commit}" 2>/dev/null; then
             git log --format=%B "$BEFORE_SHA..$AFTER_SHA" | python3 scripts/rival-name-gate.py --text -
@@ -146,21 +164,26 @@ jobs:
         # YAML is valid and the CLI runs. It does not run the tests; the
         # shard and serial jobs do.
         # On a pull request, compare the decisions ledger with the base
-        # branch, so an edited entry fails here (ADR-027). On a push there
-        # is no base to compare with, and compass ci says it skipped the check.
+        # branch, so an edited entry fails here (ADR-027); in a merge group,
+        # with the commit the group is built on. On a push there is no base
+        # to compare with, and compass ci says it skipped the check.
         env:
           BASE_REF: ${{ github.base_ref }}
+          GROUP_BASE: ${{ github.event.merge_group.base_sha }}
         run: |
           if [ -n "$BASE_REF" ]; then
             python3 cli/compass ci --since "origin/$BASE_REF"
+          elif [ -n "$GROUP_BASE" ]; then
+            python3 cli/compass ci --since "$GROUP_BASE"
           else
             python3 cli/compass ci
           fi
 
   count:
-    # The number of tests the shards must add up to.
+    # The number of tests the shards must add up to. On a pull request it is
+    # the fast check that every test file in the suite still collects.
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -185,13 +208,54 @@ jobs:
           echo "The whole suite collects $total tests outside the serial pass."
           echo "total=$total" >> "$GITHUB_OUTPUT"
 
+  fast-tests:
+    # On a pull request: the test files the pull request changes and the
+    # house-rule tests, listed by scripts/ci-fast-tests.py, instead of the
+    # whole suite, which the merge queue runs once. A draft and a title or
+    # body edit run none.
+    needs: already-tested
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0          # the change list, and the guards that read history
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+      - name: Install the test runner
+        run: pip install -r .github/requirements/self-check.txt
+      - name: List the test files this pull request runs
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/ci-fast-tests.py --base "$BASE_SHA" --head "$HEAD_SHA" > "$RUNNER_TEMP/fast-files.txt"
+      - name: Run their tests on parallel workers
+        shell: bash
+        run: |
+          mapfile -t files < "$RUNNER_TEMP/fast-files.txt"
+          python3 -m pytest -p xdist.plugin -n auto -m "not serial" "${files[@]}"
+      - name: Run their tests marked serial alone
+        # pytest exits 5 when it collects no test: these files hold no
+        # serial test, which is not a failure.
+        shell: bash
+        run: |
+          mapfile -t files < "$RUNNER_TEMP/fast-files.txt"
+          status=0
+          python3 -m pytest -m serial "${files[@]}" || status=$?
+          if [ "$status" -eq 5 ]; then status=0; fi
+          exit "$status"
+
   shard:
     # The parallel pass, split by test file. The matrix below is the one
     # place the number of shards is set: each leg passes strategy.job-total
     # to the shard command and names its count file with it, so self-check
     # reads the same number.
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -256,7 +320,7 @@ jobs:
     # Tests marked serial assert wall-clock limits or change this checkout's
     # own files, so they run alone on a runner of their own.
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -274,24 +338,32 @@ jobs:
         run: python3 -m pytest tests/ -m serial --durations=20
 
   self-check:
-    # The required check. It passes only when every job it needs succeeded
-    # and the shards' counts add up to the count job's total. It needs the
-    # other required jobs too, so its result carries theirs.
+    # The required check. Its rule depends on the kind of run:
+    # - in a merge group, and on a push to main that was not already tested,
+    #   it passes only when every suite job succeeded, `fast-tests` skipped
+    #   and the shards' counts add up to the count job's total;
+    # - on a pull request, it passes when `checks`, `count` and `fast-tests`
+    #   succeeded and every suite job skipped;
+    # - on a draft, no test ran, and it passes saying so. A draft cannot
+    #   merge or join the merge queue, and marking it ready runs the tests.
+    # It needs the other required jobs too, so its result carries theirs.
     #
     # On a title or body edit every needed job skips, and GitHub counts a
     # skipped required check as passed and reads the latest check run of
     # each name. So self-check does not skip there, which would hide an
-    # earlier failure: it runs, and passes only when the latest suite run
-    # of this pull request on the head succeeded and the base has not
-    # changed since that run was created. Text-edit and cancelled runs do
-    # not count. While the suite run is still running, the step waits for
-    # it, up to 55 minutes, so an edit made during a push run reports that
-    # run's result instead of failing at once. The wait is why the job may
-    # run 60 minutes. scripts/ci-already-tested.py holds that rule.
+    # earlier failure: it runs, and passes only when the latest run of this
+    # pull request on the head that ran `checks` succeeded and the base has
+    # not changed since that run was created. Text-edit, draft and
+    # cancelled runs do not count. While that run is still running, the
+    # step waits for it, up to 55 minutes, so an edit made during a push
+    # run reports that run's result instead of failing at once. The wait is
+    # why the job may run 60 minutes. scripts/ci-already-tested.py holds
+    # that rule.
     needs:
       - already-tested
       - checks
       - count
+      - fast-tests
       - shard
       - serial
       - check-mutation
@@ -319,7 +391,7 @@ jobs:
         with:
           python-version: "3.11"
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        if: github.event.action != 'edited' || github.event.changes.base != null
+        if: github.event_name != 'pull_request'
         timeout-minutes: 5
         # A missing count must reach the rule below, not stop the job here.
         continue-on-error: true
@@ -328,7 +400,7 @@ jobs:
           path: ${{ runner.temp }}/count
           merge-multiple: true
       - name: Every needed job succeeded and the shard counts add up
-        if: github.event.action != 'edited' || github.event.changes.base != null
+        if: github.event_name != 'pull_request'
         timeout-minutes: 5
         env:
           NEEDS: ${{ toJSON(needs) }}
@@ -336,9 +408,25 @@ jobs:
           python3 scripts/ci-self-check.py aggregate
           --needs-env NEEDS
           --needed checks,count,shard,serial,check-mutation,bdd-adapter,bdd-adapter-behave,bdd-adapter-cucumber-js,bdd-adapter-godog,atdd-adapter-python
+          --skipped fast-tests
           --exempt already-tested --counts "$RUNNER_TEMP/count"
-      - name: A title or body edit reports the earlier suite result
-        if: github.event.action == 'edited' && github.event.changes.base == null
+      - name: The fast jobs succeeded and the suite jobs skipped
+        if: github.event_name == 'pull_request' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base != null)
+        timeout-minutes: 5
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: >-
+          python3 scripts/ci-self-check.py aggregate
+          --needs-env NEEDS
+          --needed checks,count,fast-tests
+          --skipped shard,serial,check-mutation,bdd-adapter,bdd-adapter-behave,bdd-adapter-cucumber-js,bdd-adapter-godog,atdd-adapter-python
+          --exempt already-tested
+      - name: A draft runs no test
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft
+        timeout-minutes: 5
+        run: echo "This pull request is a draft, so no test ran. Mark it ready for review to run the tests."
+      - name: A title or body edit reports the earlier result
+        if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.event.action == 'edited' && github.event.changes.base == null
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -363,7 +451,7 @@ jobs:
   # ---------------------------------------------------------------------------
   bdd-adapter:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -414,7 +502,7 @@ jobs:
   # examples/bdd-adapters/ has one of these, and tests/test_bdd_adapters_all.py asserts it.
   bdd-adapter-behave:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -439,7 +527,7 @@ jobs:
   # examples/bdd-adapters/ has one of these, and tests/test_bdd_adapters_all.py asserts it.
   bdd-adapter-cucumber-js:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -469,7 +557,7 @@ jobs:
   # examples/bdd-adapters/ has one of these, and tests/test_bdd_adapters_all.py asserts it.
   bdd-adapter-godog:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -500,7 +588,7 @@ jobs:
   # tests/acceptance/atdd_strategy/test_reference_example.py asserts this shape.
   atdd-adapter-python:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -530,10 +618,11 @@ jobs:
   # ownership or privilege, so this job runs tests/test_harness_root_real.py
   # as real root against a real dedicated user. Every other job skips it.
   # It is not a required check, so it may skip its steps when the change
-  # touches none of the files those tests depend on.
+  # touches none of the files those tests depend on. It runs in a merge
+  # group and on a push to main, like the other suite jobs.
   harness-root:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -549,8 +638,8 @@ jobs:
       - id: changed
         name: Did this change touch the real-root harness?
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.merge_group.base_sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
         run: >-
           python3 scripts/ci-changed.py --base "$BASE_SHA" --head "$HEAD_SHA"
           --output "$GITHUB_OUTPUT"
@@ -584,9 +673,9 @@ jobs:
   check-mutation:
     # Breaks each shipped check, in a copy of the checkout, to always pass and
     # then always fail, and fails when a test in tests/mutation_proofs.yml
-    # does not notice. It runs on every pull request rather than on a schedule.
+    # does not notice. It runs in every merge group rather than on a schedule.
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     # The runner took 221 s locally on 2026-10-15; this allows about three times that.
     timeout-minutes: 15

@@ -93,6 +93,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `multiagent` | Where multiagent worktrees go | `worktree_root`, `max_worktrees` | `../.compass-worktrees`, 6 |
 | `allow_project_commands` | Lets `compass check` and `compass readiness` run commands the project declares | `true`, `false` | `false` |
 | `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
+| `living_spec` | When a landing re-derives the living spec (see `living_spec` below) | `land`, `refresh` | `land` |
 | `language` | The language the agent writes prose in (see `language` below) | a BCP 47 tag such as `en-US` | unset: no instruction |
 | `acceptance_strategy` | Whether the four-layer acceptance strategy (`S17`) is on for the project (see `acceptance_strategy` below) | `state`: `on` or `off`; `reason`: text, needed with `off` | unset: on |
 | `preset_index` | Reserved for published presets; no behavior yet | - | - |
@@ -258,6 +259,23 @@ command calls GitHub.
 Any other value, such as `"yes"`, reads as off. The setting is read from the
 project's own file only. See `docs/github-labels.md` for the labels, the
 limits and the failure behavior.
+
+### `living_spec`
+
+When a landing re-derives the living spec, `docs/system-spec.md` and its
+archive:
+
+- `land`: `compass ship-commit` and `compass quick-fix finish` re-derive the
+  spec after each landing and commit it alone, in a commit after the land
+  commit (ADR-026).
+- `refresh`: a landing leaves the spec as it is and prints one line that
+  says so. A person re-derives it, for example in one pull request before a
+  release, with `compass spec sync`.
+
+Use `refresh` when many branches are open at once: each branch that commits
+its own copy of the spec conflicts with every other open branch once one
+merges. Any other value makes `compass policy lint` report the key. The
+Compass repository sets `refresh`.
 
 ### `language`
 

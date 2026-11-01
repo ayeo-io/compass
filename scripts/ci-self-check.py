@@ -17,21 +17,27 @@ Usage:
       no such line.
 
   ci-self-check.py aggregate --needs-env NAME --needed JOBS --exempt JOB
-                             --counts DIR [--shards N]
+                             [--skipped JOBS] [--counts DIR [--shards N]]
       Reads the needs record (`toJSON(needs)`) from environment variable
       NAME. Passes (exit 0) only when:
-        - every job in JOBS (comma-separated) has result "success";
+        - every job in --needed (comma-separated) has result "success";
+        - every job in --skipped (comma-separated) has result "skipped".
+          These are the jobs this kind of run must not run: the whole
+          suite on a pull request, and the fast tests in a merge group or
+          on a push;
         - every other job in the record, except JOB, has result "success";
-        - DIR holds one count file per shard, named shard-<i>-of-<n>, for
-          every i from 0 to n-1, with one n across all files (and equal to
-          N when --shards is given), each holding a whole number;
-        - their sum equals needs.count.outputs.total.
+        - with --counts: DIR holds one count file per shard, named
+          shard-<i>-of-<n>, for every i from 0 to n-1, with one n across
+          all files (and equal to N when --shards is given), each holding
+          a whole number, and their sum equals needs.count.outputs.total.
       Each shard names the shard count in its file, so the count is set in
       one place, the shard job's matrix. A shard that failed, was cancelled
       or was skipped publishes no file, so it fails the rule here as well
-      as through the matrix job's result.
-      Always prints each job and its result, the shard counts, their sum and
-      the total. Each failure is a line starting "FAIL:".
+      as through the matrix job's result. Without --counts, as on a pull
+      request, where no shard runs, the counts are not read.
+      Always prints each job and its result, and with --counts the shard
+      counts, their sum and the total. Each failure is a line starting
+      "FAIL:".
 """
 from __future__ import annotations
 
@@ -116,18 +122,29 @@ def aggregate(args) -> int:
         return 1
 
     needed = [j for j in args.needed.split(",") if j]
+    skipped = [j for j in args.skipped.split(",") if j]
+    both = sorted(set(needed) & set(skipped))
+    if both:
+        fails.append(f"--needed and --skipped both name {', '.join(both)}.")
     print("Needed jobs:")
-    for job in sorted(set(record) | set(needed)):
+    for job in sorted(set(record) | set(needed) | set(skipped)):
         entry = record.get(job)
         result = entry.get("result") if isinstance(entry, dict) else None
-        note = " (exempt)" if job == args.exempt else ""
+        note = (" (exempt)" if job == args.exempt
+                else " (must skip)" if job in skipped else "")
         print(f"  {job}: {result if result is not None else 'no result'}{note}")
         if job == args.exempt:
             continue
+        want = "skipped" if job in skipped else "success"
         if result is None:
             fails.append(f"the job {job} has no result in the needs record.")
-        elif result != "success":
-            fails.append(f"the job {job} has result {result}, not success.")
+        elif result != want:
+            fails.append(f"the job {job} has result {result}, not {want}.")
+
+    if args.counts is None:
+        print("Shard counts: not read, because no shard runs in this kind of run")
+        return _verdict(fails, "every needed job succeeded and every job "
+                               "this kind of run must not run was skipped.")
 
     values, shards = _shard_counts(Path(args.counts), args.shards, fails)
     shown = ", ".join("missing" if v is None else str(v) for _, v in sorted(values.items()))
@@ -149,12 +166,16 @@ def aggregate(args) -> int:
         fails.append(f"the shards collected {readable} tests, but the whole "
                      f"suite collects {int(str(total).strip())}.")
 
+    return _verdict(fails, "every needed job succeeded and the shard "
+                           "counts add up to the total.")
+
+
+def _verdict(fails: list[str], why: str) -> int:
     for line in fails:
         print(f"FAIL: {line}")
     if fails:
         return 1
-    print("self-check passes: every needed job succeeded and the shard "
-          "counts add up to the total.")
+    print(f"self-check passes: {why}")
     return 0
 
 
@@ -167,7 +188,8 @@ def main(argv: list[str]) -> int:
     a.add_argument("--needs-env", required=True)
     a.add_argument("--needed", required=True)
     a.add_argument("--exempt", default="")
-    a.add_argument("--counts", required=True)
+    a.add_argument("--skipped", default="")
+    a.add_argument("--counts")
     a.add_argument("--shards", type=int)
     args = parser.parse_args(argv)
     if args.command == "count":

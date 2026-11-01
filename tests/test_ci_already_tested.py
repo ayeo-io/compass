@@ -1,13 +1,16 @@
-"""The push-skip decision of the `already-tested` job.
+"""The decisions of `scripts/ci-already-tested.py`.
 
 On a push to main, `.github/workflows/compass.yml` skips every other job
-when `scripts/ci-already-tested.py` writes `skip=true`. A wrong skip lets an
-untested tree onto main with a green tick, so the decision takes five
-conditions and answers "run" on anything unknown.
+when the command writes `skip=true`. A wrong skip lets an untested tree
+onto main with a green tick, so the decision takes four conditions and
+answers "run" on anything unknown. Only a green merge-group run of the
+whole suite on the pushed commit lets a push skip
+(ayeo-io/compass-delivery#362). On a title or body edit, the command
+reports the earlier result instead.
 
-The tests run the command in a temporary git repository with no remote,
-with a `gh` stand-in on PATH that answers from a table and records any call
-the table does not hold, so the test fails on it.
+The tests run the command with a `gh` stand-in on PATH that answers from a
+table and records any call the table does not hold, so the test fails on
+it.
 """
 from __future__ import annotations
 
@@ -48,133 +51,6 @@ with open(os.path.join(base, "unexpected.jsonl"), "a") as log:
 sys.stderr.write("gh stand-in: no answer for " + " ".join(argv) + "\\n")
 sys.exit(97)
 '''
-
-
-def _git(cwd: Path, *args: str) -> str:
-    env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com",
-               GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com",
-               GIT_AUTHOR_DATE="2026-10-13T10:00:00Z",
-               GIT_COMMITTER_DATE="2026-10-13T10:00:00Z")
-    r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True,
-                       env=env, check=True)
-    return r.stdout.strip()
-
-
-def _tree_commit(repo: Path, files: dict, parent: str, message: str) -> str:
-    """A commit with exactly these files, made without touching the index
-    of the checked-out branch."""
-    env = dict(os.environ, GIT_INDEX_FILE=str(repo / ".git" / "tmp-index"))
-    subprocess.run(["git", "read-tree", "--empty"], cwd=repo, env=env, check=True)
-    for name, text in files.items():
-        blob = subprocess.run(["git", "hash-object", "-w", "--stdin"], cwd=repo,
-                              input=text, capture_output=True, text=True,
-                              check=True).stdout.strip()
-        subprocess.run(["git", "update-index", "--add", "--cacheinfo",
-                        f"100644,{blob},{name}"], cwd=repo, env=env, check=True)
-    tree = subprocess.run(["git", "write-tree"], cwd=repo, env=env,
-                          capture_output=True, text=True, check=True).stdout.strip()
-    return _git(repo, "commit-tree", tree, "-p", parent, "-m", message)
-
-
-@pytest.fixture(scope="module")
-def history(tmp_path_factory):
-    """main at A; a pull request head H on A; and the merge commits the rows
-    use:
-    - M, a squash of H onto A (same tree as H, first parent A);
-    - M_other_tree, a commit on A whose tree differs from H's;
-    - M_not_ancestor, H's tree on B, where B is a commit on A that H does
-      not contain, so M's first parent is not an ancestor of the head."""
-    repo = tmp_path_factory.mktemp("history")
-    _git(repo, "init", "-q", "-b", "main")
-    # The root commit has no parent, so it is made with plain git.
-    (repo / "a.txt").write_text("1\n")
-    _git(repo, "add", "a.txt")
-    _git(repo, "commit", "-q", "-m", "A")
-    a = _git(repo, "rev-parse", "HEAD")
-    h = _tree_commit(repo, {"a.txt": "1\n", "b.txt": "2\n"}, a, "H")
-    m = _tree_commit(repo, {"a.txt": "1\n", "b.txt": "2\n"}, a, "M squash of H")
-    m_other = _tree_commit(repo, {"a.txt": "1\n", "c.txt": "3\n"}, a, "M other tree")
-    b = _tree_commit(repo, {"a.txt": "1\n", "d.txt": "4\n"}, a, "B")
-    m_not_anc = _tree_commit(repo, {"a.txt": "1\n", "b.txt": "2\n"}, b, "M on B")
-    return {"repo": repo, "A": a, "H": h, "M": m, "M_other_tree": m_other,
-            "M_not_ancestor": m_not_anc}
-
-
-def _pull(merge, head, *, number=7, base="main", merged=True):
-    return {"number": number, "merge_commit_sha": merge,
-            "merged_at": "2026-10-13T10:05:00Z" if merged else None,
-            "base": {"ref": base}, "head": {"sha": head}}
-
-
-def _run(conclusion="success", status="completed", started="2026-10-13T10:00:00Z",
-         run_id=1, app="github-actions", workflow_run=444):
-    return {"id": run_id, "name": "self-check", "status": status,
-            "conclusion": conclusion, "started_at": started,
-            "app": {"slug": app},
-            "details_url": f"https://github.com/{REPO}/actions/runs/"
-                           f"{workflow_run}/job/{run_id}"}
-
-
-def _checks(*runs):
-    return {"total_count": len(runs), "check_runs": list(runs)}
-
-
-MISSING_HEAD = "1234567890abcdef1234567890abcdef12345678"
-
-# Each row: (name, merged commit key, pulls answer, head key or sha,
-#            check-runs answer, expected skip). An answer is a JSON value,
-#            or a (stdout, exit) pair for a raw answer.
-ROWS = [
-    ("tested green", "M", "pulls:ok", "H", _checks(_run()), True),
-    ("head tree differs", "M_other_tree", "pulls:ok", "H", _checks(_run()), False),
-    ("no pull request", "M", [], "H", _checks(_run()), False),
-    ("merge commit is not M", "M", "pulls:other-merge", "H", _checks(_run()), False),
-    ("two pull requests", "M", "pulls:two", "H", _checks(_run()), False),
-    ("merged into another branch", "M", "pulls:base-release", "H", _checks(_run()), False),
-    ("first parent not an ancestor", "M_not_ancestor", "pulls:ok", "H",
-     _checks(_run()), False),
-    ("latest failure", "M", "pulls:ok", "H", _checks(_run("failure")), False),
-    ("latest cancelled", "M", "pulls:ok", "H", _checks(_run("cancelled")), False),
-    ("latest skipped", "M", "pulls:ok", "H", _checks(_run("skipped")), False),
-    ("latest neutral", "M", "pulls:ok", "H", _checks(_run("neutral")), False),
-    ("one still in progress", "M", "pulls:ok", "H",
-     _checks(_run(), _run(None, status="in_progress", run_id=2,
-                          started="2026-10-13T10:09:00Z")), False),
-    ("earlier success, latest failure", "M", "pulls:ok", "H",
-     _checks(_run("success", started="2026-10-13T10:00:00Z", run_id=1),
-             _run("failure", started="2026-10-13T10:30:00Z", run_id=2)), False),
-    ("same start, the higher id failed", "M", "pulls:ok", "H",
-     _checks(_run("success", run_id=1), _run("failure", run_id=2)), False),
-    ("success only from another app", "M", "pulls:ok", "H",
-     _checks(_run(app="some-other-app")), False),
-    ("no self-check run", "M", "pulls:ok", "H", _checks(), False),
-    ("an API call exits non-zero", "M", ("", 1), "H", _checks(_run()), False),
-    ("an API answer is not JSON", "M", ("<html>rate limited</html>", 0), "H",
-     _checks(_run()), False),
-    ("check-runs call exits non-zero", "M", "pulls:ok", "H", ("", 1), False),
-    ("head missing and cannot be fetched", "M", "pulls:missing-head", MISSING_HEAD,
-     _checks(_run()), False),
-    ("head sha is not 40 hex characters", "M", "pulls:bad-head", "H",
-     _checks(_run()), False),
-    ("pull request number is not a whole number", "M", "pulls:bad-number",
-     MISSING_HEAD, _checks(_run()), False),
-    ("a pull request with no merged_at", "M", "pulls:not-merged", "H",
-     _checks(_run()), False),
-]
-
-
-def _pulls(kind, h):
-    merged, head = h["merged"], h["head"]
-    return {
-        "pulls:ok": [_pull(merged, head)],
-        "pulls:other-merge": [_pull(h["H"], head)],
-        "pulls:two": [_pull(merged, head, number=7), _pull(merged, head, number=8)],
-        "pulls:base-release": [_pull(merged, head, base="release")],
-        "pulls:missing-head": [_pull(merged, MISSING_HEAD)],
-        "pulls:bad-head": [_pull(merged, "$(touch planted)")],
-        "pulls:bad-number": [_pull(merged, MISSING_HEAD, number="7; touch planted")],
-        "pulls:not-merged": [_pull(merged, head, merged=False)],
-    }[kind]
 
 
 def _answer(value):
@@ -219,101 +95,6 @@ def _shim(tmp_path: Path, table: list) -> tuple[Path, dict]:
 def _unexpected(work: Path) -> str:
     path = work / "unexpected.jsonl"
     return path.read_text() if path.exists() else ""
-
-
-def _checks_argv(head):
-    return ["api", "-X", "GET", f"repos/{REPO}/commits/{head}/check-runs",
-            "-f", "check_name=self-check", "-f", "filter=all", "-f", "per_page=100"]
-
-
-def _decide(tmp_path: Path, history: dict, row, timeline=QUIET_TIMELINE):
-    name, merged_key, pulls, head_key, checks, _ = row
-    merged = history[merged_key]
-    head = history.get(head_key, head_key)
-    if isinstance(pulls, str):
-        pulls = _pulls(pulls, dict(history, merged=merged, head=head))
-    work, env = _shim(tmp_path, [
-        {"argv": ["api", f"repos/{REPO}/commits/{merged}/pulls"], **_answer(pulls)},
-        {"argv": _checks_argv(head), **_answer(checks)},
-        {"argv": _timeline_argv(), **_answer(timeline)},
-    ])
-    output = tmp_path / "github_output"
-    output.write_text("earlier=line\n")
-    r = subprocess.run([sys.executable, str(SCRIPT), "--repo", REPO,
-                        "--commit", merged, "--output", str(output)],
-                       cwd=history["repo"], capture_output=True, text=True,
-                       env=env, timeout=60)
-    return r, output.read_text(), _unexpected(work)
-
-
-@pytest.mark.parametrize("row", ROWS, ids=[r[0] for r in ROWS])
-def test_crt_7_push_skip_decision(tmp_path, history, row):
-    """Skip=true only for a tree tested green on its pull request."""
-    r, output, unexpected = _decide(tmp_path, history, row)
-    assert unexpected == "", f"gh was called with arguments no row expects:\n{unexpected}"
-    assert r.returncode == 0, r.stdout + r.stderr
-    expected = "skip=true" if row[-1] else "skip=false"
-    lines = output.splitlines()
-    assert lines[0] == "earlier=line", "the output file was overwritten, not appended"
-    assert lines[1:] == [expected], (lines, r.stdout, r.stderr)
-    for label in ("Pull request:", "Merged tree:", "Head tree:",
-                  "First parent is an ancestor of the head:",
-                  "Latest self-check conclusion:",
-                  "Base changes since that run started:", "Decision:"):
-        assert label in r.stdout, (label, r.stdout)
-    assert not (history["repo"] / "planted").exists()
-
-
-def test_crt_7_runs_no_shell():
-    """No text read from the API reaches a shell: every command runs as an
-    argument list."""
-    source = SCRIPT.read_text(encoding="utf-8")
-    for banned in ("shell=True", "os.system", "os.popen"):
-        assert banned not in source, banned
-
-
-# --- a base change (CRT-21) -------------------------------------------------
-
-GREEN_ROW = ROWS[0]
-assert GREEN_ROW[0] == "tested green"
-
-# Each row: (name, timeline answer, expected skip, words the output names).
-# The green self-check run in GREEN_ROW started at 10:00:00.
-TIMELINE_ROWS = [
-    ("no base change", QUIET_TIMELINE, True, []),
-    ("a base change before the run started",
-     _timeline(("base_ref_changed", "2026-10-13T09:59:00Z")), True, []),
-    ("a base change after the run started",
-     _timeline(("base_ref_changed", "2026-10-13T10:01:00Z")), False,
-     ["base_ref_changed", "2026-10-13T10:01:00Z"]),
-    ("an automatic base change after the run started",
-     _timeline(("automatic_base_change_succeeded", "2026-10-13T10:01:00Z")), False,
-     ["automatic_base_change_succeeded"]),
-    ("a base change with no time", [[{"event": "base_ref_changed"}]], False,
-     ["error"]),
-    ("the timeline call exits non-zero", ("", 1), False, ["error"]),
-    ("the timeline answer is not JSON", ("<html>rate limited</html>", 0), False,
-     ["error"]),
-    ("the timeline answer is not a list of pages", {"message": "Not Found"}, False,
-     ["error"]),
-]
-
-
-@pytest.mark.parametrize("row", TIMELINE_ROWS, ids=[r[0] for r in TIMELINE_ROWS])
-def test_crt_21_push_skip_reads_the_timeline(tmp_path, history, row):
-    """The push skip never trusts a green run that started before the pull
-    request's last base change, or a timeline it cannot read."""
-    name, timeline, skip, words = row
-    r, output, unexpected = _decide(tmp_path, history, GREEN_ROW, timeline=timeline)
-    assert unexpected == "", unexpected
-    assert r.returncode == 0, r.stdout + r.stderr
-    assert output.splitlines()[1:] == [f"skip={'true' if skip else 'false'}"], (
-        output, r.stdout)
-    assert "Base changes since that run started:" in r.stdout, r.stdout
-    decision = [line for line in r.stdout.splitlines() if line.startswith("Decision:")]
-    assert len(decision) == 1, r.stdout
-    for word in words:
-        assert word in r.stdout, (word, r.stdout)
 
 
 HEAD = "ab" * 20
@@ -628,3 +409,161 @@ def test_ser_3_which_runs_count(tmp_path, row):
     assert r.returncode == (0 if passes else 1), (r.returncode, r.stdout, r.stderr)
     for word in words:
         assert word in r.stdout, (word, r.stdout)
+
+
+# --- the push skip (CRT-7) ---------------------------------------------------
+
+MERGED = "cd" * 20
+
+
+def _mgrun(run_id=900, created="2026-11-01T10:00:00Z", head=MERGED,
+           event="merge_group", status="in_progress"):
+    """A merge-group run. Its status does not count: a job self-check does
+    not need, such as harness-root, may still be running when the queue
+    merges."""
+    return {"id": run_id, "status": status, "conclusion": None,
+            "created_at": created, "head_sha": head, "event": event,
+            "pull_requests": []}
+
+
+def _mgjobs(self_check="success", shards=("success",) * 4, self_check_status="completed",
+            extra=()):
+    jobs = [_job("already-tested", conclusion="skipped"), _job("checks"),
+            _job("fast-tests", conclusion="skipped")]
+    jobs += [_job(f"shard ({i})", conclusion=c) for i, c in enumerate(shards)]
+    if self_check is not None:
+        jobs.append(_job("self-check", status=self_check_status, conclusion=self_check))
+    jobs += list(extra)
+    return {"total_count": len(jobs), "jobs": jobs}
+
+
+def _mgruns_argv(commit=MERGED):
+    return ["api", "-X", "GET", f"repos/{REPO}/actions/workflows/{WORKFLOW}/runs",
+            "-f", f"head_sha={commit}", "-f", "event=merge_group", "-f", "per_page=100"]
+
+
+def _push(tmp_path: Path, runs, jobs=None, *, commit=MERGED, this_run=str(THIS_RUN)):
+    table = [
+        {"argv": ["api", f"repos/{REPO}/actions/runs/{this_run}"],
+         **_answer({"id": THIS_RUN, "workflow_id": WORKFLOW})},
+        {"argv": _mgruns_argv(commit), **_answers(runs)},
+    ]
+    for run_id, answer in (jobs or {}).items():
+        table.append({"argv": _jobs_argv(run_id), **_answers(answer)})
+    work, env = _shim(tmp_path, table)
+    output = tmp_path / "github_output"
+    output.write_text("earlier=line\n")
+    r = subprocess.run([sys.executable, str(SCRIPT), "--repo", REPO, "--commit", commit,
+                        "--this-run", this_run, "--output", str(output)],
+                       cwd=tmp_path, capture_output=True, text=True, env=env, timeout=60)
+    return r, output.read_text(), _unexpected(work)
+
+
+GREEN = {900: _mgjobs()}
+
+# Each row: (name, run list answer, jobs answers, expected skip, words).
+PUSH_ROWS = [
+    ("a green merge-group run on the commit", _wruns(_mgrun()), GREEN, True,
+     ["900", "every one succeeded"]),
+    ("a green merge-group run that has completed",
+     _wruns(_mgrun(status="completed")), GREEN, True, ["900"]),
+    ("no merge-group run", _wruns(), {}, False, ["no merge group run"]),
+    ("the run list holds a pull-request run only",
+     _wruns(_mgrun(event="pull_request")), {}, False, ["no merge group run"]),
+    ("the run list holds a run on another commit",
+     _wruns(_mgrun(head="ef" * 20)), {}, False, ["no merge group run"]),
+    ("the run list holds this run only", _wruns(_mgrun(run_id=THIS_RUN)), {}, False,
+     ["no merge group run"]),
+    ("self-check failed", _wruns(_mgrun()), {900: _mgjobs(self_check="failure")},
+     False, ["self-check", "failure"]),
+    ("self-check still running", _wruns(_mgrun()),
+     {900: _mgjobs(self_check=None, extra=[_job("self-check", status="in_progress")])},
+     False, ["not completed"]),
+    ("no self-check job", _wruns(_mgrun()), {900: _mgjobs(self_check=None)}, False,
+     ["not exactly one self-check job"]),
+    ("two self-check jobs", _wruns(_mgrun()),
+     {900: _mgjobs(extra=[_job("self-check")])}, False,
+     ["not exactly one self-check job"]),
+    ("self-check green with no shard job, as on a pull request", _wruns(_mgrun()),
+     {900: _mgjobs(shards=())}, False, ["no shard job"]),
+    ("a shard job failed", _wruns(_mgrun()),
+     {900: _mgjobs(shards=("success", "failure", "success", "success"))}, False,
+     ["shard (1) failure"]),
+    ("a shard job skipped", _wruns(_mgrun()),
+     {900: _mgjobs(shards=("success", "success", "skipped", "success"))}, False,
+     ["shard (2) skipped"]),
+    ("an earlier green run, then a later red run",
+     _wruns(_mgrun(899, created="2026-11-01T09:00:00Z"), _mgrun(900)),
+     {900: _mgjobs(self_check="failure")}, False, ["900", "failure"]),
+    ("the same creation time, the higher id red",
+     _wruns(_mgrun(899), _mgrun(900)), {900: _mgjobs(self_check="failure")}, False,
+     ["900"]),
+    ("an earlier red run, then a later green run",
+     _wruns(_mgrun(899, created="2026-11-01T09:00:00Z"), _mgrun(900)), GREEN, True,
+     ["900"]),
+    ("the run list call exits non-zero", ("", 1), {}, False, ["error"]),
+    ("the run list answer is not JSON", ("<html>rate limited</html>", 0), {}, False,
+     ["error"]),
+    ("the run list is short of its total",
+     {"total_count": 2, "workflow_runs": [_mgrun()]}, {}, False, ["error"]),
+    ("a run has no creation time",
+     _wruns(dict(_mgrun(), created_at=None)), {}, False, ["error"]),
+    ("the jobs call exits non-zero", _wruns(_mgrun()), {900: ("", 1)}, False, ["error"]),
+    ("the jobs list is short of its total", _wruns(_mgrun()),
+     {900: {"total_count": 99, "jobs": _mgjobs()["jobs"]}}, False, ["error"]),
+]
+
+
+@pytest.mark.parametrize("row", PUSH_ROWS, ids=[r[0] for r in PUSH_ROWS])
+def test_crt_7_push_skip_decision(tmp_path, row):
+    """Skip=true only for a commit the merge queue tested green with the
+    whole suite."""
+    name, runs, jobs, skip, words = row
+    r, output, unexpected = _push(tmp_path, runs, jobs)
+    assert unexpected == "", f"gh was called with arguments no row expects:\n{unexpected}"
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = output.splitlines()
+    assert lines[0] == "earlier=line", "the output file was overwritten, not appended"
+    assert lines[1:] == [f"skip={'true' if skip else 'false'}"], (lines, r.stdout)
+    for label in ("Merged commit:", "Merge group runs on the commit:",
+                  "Latest merge group run:", "Its self-check job:", "Its shard jobs:",
+                  "Decision:"):
+        assert label in r.stdout, (label, r.stdout)
+    for word in words:
+        assert word in r.stdout, (word, r.stdout)
+
+
+@pytest.mark.parametrize("commit,this_run", [("$(touch planted)", str(THIS_RUN)),
+                                             (MERGED, "1; touch planted"),
+                                             (MERGED, "0")])
+def test_crt_7_push_skip_refuses_bad_input(tmp_path, commit, this_run):
+    """A commit or run id that is not what it claims to be answers "run the
+    suite" before any call uses it."""
+    work, env = _shim(tmp_path, [])
+    output = tmp_path / "github_output"
+    output.write_text("")
+    r = subprocess.run([sys.executable, str(SCRIPT), "--repo", REPO, "--commit", commit,
+                        "--this-run", this_run, "--output", str(output)],
+                       cwd=tmp_path, capture_output=True, text=True, env=env, timeout=60)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert output.read_text() == "skip=false\n"
+    assert not (tmp_path / "planted").exists()
+    assert not (work / "calls.jsonl").exists(), "gh was called"
+
+
+def test_crt_7_push_skip_needs_the_run_id(tmp_path):
+    """Without --this-run the command cannot name its workflow, so it
+    refuses its arguments."""
+    r = subprocess.run([sys.executable, str(SCRIPT), "--repo", REPO, "--commit", MERGED,
+                        "--output", str(tmp_path / "out")],
+                       capture_output=True, text=True, timeout=60)
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "--this-run" in r.stderr
+
+
+def test_crt_7_runs_no_shell():
+    """No text read from the API reaches a shell: every command runs as an
+    argument list."""
+    source = SCRIPT.read_text(encoding="utf-8")
+    for banned in ("shell=True", "os.system", "os.popen"):
+        assert banned not in source, banned

@@ -45,7 +45,8 @@ _ENUMS = {
     ("dimensions", "tighter"): spec.TIGHTER,
     ("approaches", "acceptance_strategy"): tuple(acceptance_strategy.ROUTINGS),
 }
-_SETTINGS_ENUMS = {"autonomy": spec.AUTONOMY, "adoption": spec.ADOPTION}
+_SETTINGS_ENUMS = {"autonomy": spec.AUTONOMY, "adoption": spec.ADOPTION,
+                   "living_spec": spec.LIVING_SPEC}
 
 
 def check_layer(doc, layer):
@@ -507,6 +508,7 @@ def schema():
         "adoption": {"description": top["adoption"], "enum": list(spec.ADOPTION)},
         "governance_drift": {"description": top["governance_drift"],
                              "enum": list(spec.GOVERNANCE_DRIFT)},
+        "living_spec": {"description": top["living_spec"], "enum": list(spec.LIVING_SPEC)},
         "allow_project_commands": {"description": top["allow_project_commands"],
                                    "type": "boolean"},
         "enforcement": {"description": top["enforcement"], "type": "object"},

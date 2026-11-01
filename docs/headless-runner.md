@@ -36,7 +36,7 @@ A session that runs past the minute ceiling is ended, with every process it star
 
 ## What each session is told
 
-Each session gets `COMPASS_ISSUE` set to the run's issue, so the hooks and the CLI in it judge the run's issue, whatever issue `.compass/current-task` names for the person working beside it. The run never writes the pointer. For an Edit or Write in a worktree of the project, the worktree's own pointer names the issue and `COMPASS_ISSUE` applies only when that pointer is empty.
+Each session gets `COMPASS_ISSUE` set to the run's issue, so the hooks and the CLI in it judge the run's issue, whatever issue `.compass/current-task` names for the person working beside it. The run never writes the pointer. For an Edit or Write in a worktree of the project, and for a Bash call whose working folder is in one, the worktree's own pointer names the issue and `COMPASS_ISSUE` applies only when that pointer is empty.
 
 The prompt names the stage's command and the issue, says nobody will answer a question, and forbids landing, shipping, pushing and merging. The session loads the Compass plugin the running CLI belongs to, and `git push`, `gh pr merge` and `compass ship-commit` are denied to it. No session resumes another.
 

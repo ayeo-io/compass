@@ -127,7 +127,10 @@ def _delegated_places(slug):
     except worktree_lookup.HeldTwice as exc:
         raise CompassError(f"compass evidence approve: the issue '{slug}' is held by more "
                            f"than one worktree: {' and '.join(exc.folders)}. Compass cannot "
-                           f"tell which one is meant. Nothing was written.") from None
+                           f"tell which one is meant, and an agent's approval never chooses. Ask "
+                           f"the person: `compass evidence request`, then they type "
+                           f"/compass:approve in the worktree whose record they mean. "
+                           f"Nothing was written.") from None
     except worktree_lookup.NotFound as exc:
         note = f" {exc.note[0].upper()}{exc.note[1:]}." if exc.note else ""
         raise CompassError(f"compass evidence approve: the issue '{slug}' is in none of the "

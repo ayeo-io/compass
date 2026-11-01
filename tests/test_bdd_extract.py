@@ -406,3 +406,115 @@ def test_illustrative_gherkin_without_a_trc_comment_is_ignored(make_task, run_cl
     assert text.count("Scenario:") == 1, text
     assert "only an example in prose" not in text, text
     assert "the real one" in text
+
+
+# ---------------------------------------------------------------------------
+# An outline, and a fence whose heading gives the title, extract. This is
+# scenario `TRC-001` of ayeo-io/compass-delivery#336.
+# ---------------------------------------------------------------------------
+
+OUTLINE_STEPS = (
+    "  Given a project whose setting is <value>\n"
+    "  When compass check runs\n"
+    "  Then it exits <code>\n"
+    "\n"
+    "  Examples:\n"
+    "    | value | code |\n"
+    "    | on    | 0    |\n"
+    "    | maybe | 2    |"
+)
+
+
+def _outline_block(keyword: str, trc_id: str = "TRC-A1") -> str:
+    return (
+        f"### Scenario: a setting is read\n"
+        f"<!-- traceability id: {trc_id} · serves: INT-1 -->\n\n"
+        f"```gherkin\n"
+        f"{keyword}: a setting is read\n"
+        f"{OUTLINE_STEPS}\n"
+        f"```\n"
+    )
+
+
+@pytest.mark.parametrize("keyword", ["Scenario Outline", "Scenario Template"])
+def test_trc_001_an_outline_extracts_with_its_examples(make_task, run_cli, keyword):
+    task_dir = make_task("outline", {"assessment": {}, "scenarios": []})
+    write_spec(task_dir, _outline_block(keyword))
+
+    result = run_cli("bdd", "extract", "--issue", "outline")
+    assert result.returncode == 0, result
+    text = (task_dir / "acceptance-criteria.feature").read_text(encoding="utf-8")
+    assert (
+        "  @TRC-A1\n"
+        f"  {keyword}: a setting is read\n"
+        "    Given a project whose setting is <value>\n"
+        "    When compass check runs\n"
+        "    Then it exits <code>\n"
+        "\n"
+        "    Examples:\n"
+        "      | value | code |\n"
+        "      | on    | 0    |\n"
+        "      | maybe | 2    |\n"
+    ) in text, text
+
+
+def test_trc_001_an_outline_with_no_examples_is_refused(make_task, run_cli):
+    task_dir = make_task("bare", {"assessment": {}, "scenarios": []})
+    write_spec(task_dir, (
+        "### Scenario: a setting is read\n"
+        "<!-- traceability id: TRC-A1 · serves: INT-1 -->\n\n"
+        "```gherkin\n"
+        "Scenario Outline: a setting is read\n"
+        "  Given a project whose setting is <value>\n"
+        "  Then it exits <code>\n"
+        "```\n"
+    ))
+
+    result = run_cli("bdd", "extract", "--issue", "bare")
+    assert result.returncode != 0, result
+    assert "TRC-A1" in result.combined and "Examples" in result.combined, result
+    assert not (task_dir / "acceptance-criteria.feature").exists()
+
+
+def test_trc_001_an_examples_table_under_a_plain_scenario_is_refused(make_task, run_cli):
+    task_dir = make_task("plain", {"assessment": {}, "scenarios": []})
+    write_spec(task_dir, _outline_block("Scenario"))
+
+    result = run_cli("bdd", "extract", "--issue", "plain")
+    assert result.returncode != 0, result
+    assert "TRC-A1" in result.combined and "Scenario Outline" in result.combined, result
+    assert not (task_dir / "acceptance-criteria.feature").exists()
+
+
+@pytest.mark.parametrize("heading", ["Scenario", "Scenario Outline"])
+def test_trc_001_a_fence_takes_its_title_from_the_heading(make_task, run_cli, heading):
+    task_dir = make_task("heading", {"assessment": {}, "scenarios": []})
+    steps = (OUTLINE_STEPS if heading == "Scenario Outline"
+             else "  Given a state\n  When it fires\n  Then it holds")
+    write_spec(task_dir, (
+        f"### {heading}: the heading names it\n"
+        "<!-- traceability id: TRC-A1 · serves: INT-1 -->\n\n"
+        "```gherkin\n"
+        f"{steps}\n"
+        "```\n"
+    ))
+
+    result = run_cli("bdd", "extract", "--issue", "heading")
+    assert result.returncode == 0, result
+    text = (task_dir / "acceptance-criteria.feature").read_text(encoding="utf-8")
+    assert f"  @TRC-A1\n  {heading}: the heading names it\n    Given " in text, text
+
+
+def test_trc_001_a_fence_with_no_title_anywhere_is_refused(make_task, run_cli):
+    task_dir = make_task("untitled", {"assessment": {}, "scenarios": []})
+    write_spec(task_dir, (
+        "<!-- traceability id: TRC-A1 · serves: INT-1 -->\n\n"
+        "```gherkin\n"
+        "Given a state\nWhen it fires\nThen it holds\n"
+        "```\n"
+    ))
+
+    result = run_cli("bdd", "extract", "--issue", "untitled")
+    assert result.returncode != 0, result
+    assert "TRC-A1" in result.combined and "### Scenario:" in result.combined, result
+    assert not (task_dir / "acceptance-criteria.feature").exists()

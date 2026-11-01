@@ -68,25 +68,50 @@ from compass_pkg.tdd import _read_config, _run_test, settings_hint
 _TRC_COMMENT_RE = re.compile(
     r"<!--\s*traceability id:\s*(?P<trc>[A-Z][A-Z0-9]*-[A-Za-z0-9_]+)\b.*?-->",
     re.S)
-_SCENARIO_HEADING_RE = re.compile(r"^###\s+Scenario:\s*(?P<title>.+?)\s*$")
+# Gherkin names an outline `Scenario Outline:` or `Scenario Template:`; both
+# take an Examples table. The keyword is kept as written in the output.
+_KEYWORD = r"(?P<keyword>Scenario(?: Outline| Template)?)"
+OUTLINE_KEYWORDS = ("Scenario Outline", "Scenario Template")
+_SCENARIO_HEADING_RE = re.compile(r"^###\s+" + _KEYWORD + r":\s*(?P<title>.+?)\s*$")
 _FENCE_OPEN_RE = re.compile(r"^\s*```+\s*gherkin\s*$", re.I)
 _FENCE_CLOSE_RE = re.compile(r"^\s*```+\s*$")
 _GHERKIN_STEP_RE = re.compile(
     r"^\s*(Given|When|Then|And|But|\*)\s+\S", re.I)
-_GHERKIN_SCENARIO_RE = re.compile(r"^\s*Scenario:\s*(?P<title>.+?)\s*$")
+_GHERKIN_SCENARIO_RE = re.compile(r"^\s*" + _KEYWORD + r":\s*(?P<title>.+?)\s*$")
+_EXAMPLES_RE = re.compile(r"^\s*(Examples|Scenarios):")
+_TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
 
 
 class ParsedScenario(object):
-    """One extracted scenario, with enough context to report a good error."""
+    """One extracted scenario, with enough context to report a good error.
 
-    __slots__ = ("trc_id", "heading_title", "fence_title", "steps", "line_no")
+    The fence's own scenario line names the scenario. A fence without one takes
+    the title and keyword of its `### Scenario:` heading, so a spec need not
+    write the title twice."""
 
-    def __init__(self, trc_id, heading_title, fence_title, steps, line_no):
+    __slots__ = ("trc_id", "heading_title", "heading_keyword", "fence_title",
+                 "fence_keyword", "steps", "examples", "line_no")
+
+    def __init__(self, trc_id, heading_title, fence_title, steps, line_no,
+                 heading_keyword=None, fence_keyword=None, examples=()):
         self.trc_id = trc_id
         self.heading_title = heading_title
+        self.heading_keyword = heading_keyword
         self.fence_title = fence_title
+        self.fence_keyword = fence_keyword
         self.steps = steps
+        self.examples = list(examples)
         self.line_no = line_no
+
+    @property
+    def title(self):
+        return self.fence_title or self.heading_title
+
+    @property
+    def keyword(self):
+        if self.fence_title is not None:
+            return self.fence_keyword
+        return self.heading_keyword
 
 
 def scan_spec_markdown(text):
@@ -99,6 +124,7 @@ def scan_spec_markdown(text):
     lines = text.splitlines()
     out = []
     pending_heading = None       # most recent "### Scenario:" title
+    pending_keyword = None       # and its keyword
     pending_trc = None           # most recent traceability id
     pending_line = 0
 
@@ -109,6 +135,7 @@ def scan_spec_markdown(text):
         m = _SCENARIO_HEADING_RE.match(line)
         if m:
             pending_heading = m.group("title")
+            pending_keyword = m.group("keyword")
             pending_line = i + 1
             i += 1
             continue
@@ -131,24 +158,34 @@ def scan_spec_markdown(text):
                 # the note on the anchor above.
                 pending_heading = None
                 continue
-            fence_title = None
+            fence_title = fence_keyword = None
             steps = []
+            examples = []                # the Examples line and its table rows
             for b in body:
                 sm = _GHERKIN_SCENARIO_RE.match(b)
-                if sm and fence_title is None:
+                if sm and fence_title is None and not steps:
                     fence_title = sm.group("title")
+                    fence_keyword = sm.group("keyword")
                     continue
-                if b.strip():
+                if not b.strip():
+                    continue
+                if examples or _EXAMPLES_RE.match(b):
+                    examples.append(b.strip())
+                else:
                     steps.append(b.strip())
             out.append(ParsedScenario(
                 trc_id=pending_trc,
                 heading_title=pending_heading,
+                heading_keyword=pending_keyword,
                 fence_title=fence_title,
+                fence_keyword=fence_keyword,
                 steps=steps,
+                examples=examples,
                 line_no=pending_line or i,
             ))
             pending_trc = None
             pending_heading = None
+            pending_keyword = None
             continue
 
         i += 1
@@ -174,12 +211,30 @@ def validate_scenarios(scenarios, spec_path):
     seen = {}
     for s in scenarios:
         where = "%s:%d" % (spec_path, s.line_no)
-        if s.fence_title is None:
+        if s.title is None:
             problems.append(
-                "%s: %s - the gherkin fence has no 'Scenario:' line."
+                "%s: %s - the gherkin fence has no 'Scenario:' line, and no "
+                "'### Scenario:' heading above it gives a title."
                 % (where, s.trc_id))
             continue
-        if s.heading_title is not None and s.heading_title != s.fence_title:
+        if s.keyword in OUTLINE_KEYWORDS and not s.examples:
+            problems.append(
+                "%s: %s - a %s needs an Examples table after its steps."
+                % (where, s.trc_id, s.keyword))
+        elif s.examples and s.keyword not in OUTLINE_KEYWORDS:
+            problems.append(
+                "%s: %s - an Examples table belongs to a Scenario Outline; "
+                "this scenario opens with '%s:'." % (where, s.trc_id, s.keyword))
+        else:
+            bad = [e for e in s.examples
+                   if not (_EXAMPLES_RE.match(e) or _TABLE_ROW_RE.match(e))]
+            if bad:
+                problems.append(
+                    "%s: %s - an Examples block holds only an 'Examples:' line "
+                    "and table rows.\n  offending line: %s"
+                    % (where, s.trc_id, bad[0]))
+        if (s.heading_title is not None and s.fence_title is not None
+                and s.heading_title != s.fence_title):
             problems.append(
                 "%s: %s - the title drifts between the heading and the fence.\n"
                 "  heading: %s\n  fence  : %s"
@@ -219,9 +274,14 @@ def render_feature(slug, scenarios, spec_rel_path):
     ]
     for s in scenarios:
         lines.append("  @%s" % s.trc_id)
-        lines.append("  Scenario: %s" % s.fence_title)
+        lines.append("  %s: %s" % (s.keyword, s.title))
         for step in s.steps:
             lines.append("    %s" % step)
+        if s.examples:
+            lines.append("")
+            for row in s.examples:
+                indent = "    " if _EXAMPLES_RE.match(row) else "      "
+                lines.append(indent + row)
         lines.append("")
     return "\n".join(lines).rstrip("\n") + "\n"
 

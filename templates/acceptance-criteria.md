@@ -87,6 +87,10 @@ Scenario: {{scenario title}}
   And {{any further observable outcome}}
 ```
 
+<!-- For one behavior over several values, open the fence with
+     `Scenario Outline:` and end it with an `Examples:` table. A fence with
+     no scenario line takes its title from the heading above it. -->
+
 ### Scenario: {{SCENARIO TITLE - a realistic edge}}
 <!-- traceability id: TRC-A2 · serves: INT-1 -->
 

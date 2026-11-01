@@ -3875,8 +3875,10 @@ _GROWING_REACH = {
     #    spec kept as .txt and the 8.0.4 extract output, which no scan reads as prose;
     # 149 with the 12 fixture files of tests/acceptance/atdd_strategy/ (the issue compass
     #    8.0.4 assessed and the recorded 8.0.4 output, plain JSON) and the four check-corpus
-    #    case labels of acceptance-applicability-agrees.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 149),
+    #    case labels of acceptance-applicability-agrees;
+    # 150 when the extracted feature file replaced the 8.0.4 refusal text: the
+    #    scan reads the refusal as prose and finds none in the feature file.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 150),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

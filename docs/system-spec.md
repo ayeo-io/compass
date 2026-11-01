@@ -5262,3 +5262,9 @@ Compass now ships the four-layer acceptance strategy (S17): assess records wheth
 - `TRC-A22` The compatibility corpus moves with a major preset bump
 - `TRC-A23` A project pinned to an earlier major does not get the strategy
 - `TRC-A24` A shipping approach cannot suspend the strategy
+
+### bdd-extract-scenario-outline (completed 2026-10-31)
+
+compass bdd extract now writes a Scenario Outline with its Examples table, and takes a scenario's title from its heading when the fence has no Scenario line.
+
+- `TRC-001` Given a spec whose gherkin fence opens with Scenario Outline and holds an Examples table When compass bdd extract runs Then it writes the outline with its Examples table and exits 0

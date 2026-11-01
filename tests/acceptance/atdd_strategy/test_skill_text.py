@@ -5,7 +5,7 @@
 | `TRC-001` | the header names the source and lists each adaptation, one per line |
 | `TRC-002` | each stage lands on refine, implement or `verify`; no stage or gate moves |
 | `TRC-003` | one line, one DSL call; who owns each layer |
-| `TRC-004` | the pilot's spec extracts as compass 8.0.4 extracted it |
+| `TRC-004` | the pilot's spec extracts to the feature file kept beside it |
 | `TRC-005` | three skills describe one chain |
 | `TRC-006` | a quick fix that needs a new DSL method goes back to assess |
 | `TRC-007` | the text passes the vocabulary scans, and a planted breach fails them |
@@ -160,9 +160,11 @@ def test_trc_003_one_line_one_dsl_call_and_who_owns_each_layer():
 
 # --- Scenario `TRC-004` ---
 
-def test_trc_004_the_pilot_spec_extracts_as_8_0_4_did(tmp_path):
-    """The expected output was produced by compass 8.0.4 in this layout. It
-    is a refusal: the pilot's gherkin fences have no `Scenario:` line."""
+def test_trc_004_the_pilot_spec_extracts_to_its_feature(tmp_path):
+    """compass 8.0.4 refused the pilot's spec, because its gherkin fences have
+    no `Scenario:` line. Each fence now takes its title from its `### Scenario:`
+    heading (ayeo-io/compass-delivery#336), so the spec extracts to the
+    feature file kept beside it."""
     issue = tmp_path / ".compass" / "work" / "atdd-hook-pilot"
     issue.mkdir(parents=True)
     (issue / "manifest.yml").write_text(
@@ -175,11 +177,9 @@ def test_trc_004_the_pilot_spec_extracts_as_8_0_4_did(tmp_path):
         [sys.executable, str(ROOT / "cli" / "compass"), "bdd", "extract",
          "--issue", "atdd-hook-pilot", "--out", "out.feature"],
         cwd=tmp_path, capture_output=True, env=env, timeout=60)
-    expected = (FIXTURES / "atdd-hook-pilot-extract-8.0.4.stderr").read_bytes()
-    assert result.returncode == 1
-    assert result.stdout == b""
-    assert result.stderr == expected
-    assert not (tmp_path / "out.feature").exists()
+    expected = (FIXTURES / "atdd-hook-pilot-extract.feature").read_bytes()
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "out.feature").read_bytes() == expected
 
 
 # --- Scenario `TRC-005` ---

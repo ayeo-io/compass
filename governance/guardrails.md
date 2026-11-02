@@ -307,7 +307,11 @@ _(none yet - the shipped default guardrails apply as-is)_
     `compass tdd-green --loop outer|inner` write. The default is outer on a
     quick fix the strategy applies to, whose one declared test is its
     acceptance test, and inner otherwise. A record with no field reads as
-    inner.
+    inner. The red that ends stage 1 at refine counts as an outer-loop red;
+    `acceptance_strategy.stage_one` decides which red that is (ADR-081). An
+    outer-loop record is written to `red-<id>.outer.json` or
+    `green-<id>.outer.json`, so an inner-loop record bound to the same
+    scenario does not replace it (ADR-082).
   - It asks `acceptance_strategy.in_scope` whether the strategy applies, and
     declines with "not required: the strategy does not apply" when it does not.
   - On an in-scope issue it fails when no failed red record says loop outer,

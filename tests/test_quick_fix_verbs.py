@@ -673,7 +673,7 @@ def test_scf4_a_green_from_before_argv_is_reused(repo):
     _ready_to_finish(repo, slug)
     assert _finish(repo, slug, "--no-commit").returncode == 0
     record = (repo / ".compass" / "work" / slug / "evidence"
-              / "green-TRC-001.json")
+              / "green-TRC-001.outer.json")
     data = json.loads(record.read_text())
     data.pop("argv", None)
     # Stamped as the writer before `argv` stamped it, so the record is a
@@ -684,7 +684,7 @@ def test_scf4_a_green_from_before_argv_is_reused(repo):
     record.write_text(json.dumps(data))
     manifest = _manifest(repo, slug)
     for entry in manifest["evidence"]:
-        if entry.get("path") == "evidence/green-TRC-001.json":
+        if entry.get("path") == "evidence/green-TRC-001.outer.json":
             entry["content_digest"] = data["content_digest"]
     _save_manifest(repo, slug, manifest)
 
@@ -721,7 +721,7 @@ def test_gdh1_finish_refuses_an_edited_green(repo):
     _ready_to_finish(repo, slug)
     assert _finish(repo, slug, "--no-commit").returncode == 0
     record = (repo / ".compass" / "work" / slug / "evidence"
-              / "green-TRC-001.json")
+              / "green-TRC-001.outer.json")
     data = json.loads(record.read_text())
     data["log_excerpt"] = "edited after it was written"
     record.write_text(json.dumps(data))

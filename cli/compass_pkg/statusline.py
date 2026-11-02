@@ -56,11 +56,13 @@ def _evidence_state(task_dir: str, scenarios: list) -> str | None:
         return None
     evidence = os.path.join(task_dir, "evidence")
     for scn in ids:
-        # Named as `compass tdd-red` and `tdd-green` name them.
+        # Named as `compass tdd-red` and `tdd-green` name them, either loop.
         name = scn.replace("/", "_")
-        if os.path.isfile(os.path.join(evidence, f"green-{name}.json")):
+        if any(os.path.isfile(os.path.join(evidence, f"green-{name}{s}.json"))
+               for s in ("", ".outer")):
             continue
-        red = os.path.isfile(os.path.join(evidence, f"red-{name}.json"))
+        red = any(os.path.isfile(os.path.join(evidence, f"red-{name}{s}.json"))
+                  for s in ("", ".outer"))
         return f"{scn} {'red' if red else 'none'}"
     return f"{ids[-1]} green"
 

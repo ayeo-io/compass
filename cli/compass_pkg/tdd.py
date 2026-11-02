@@ -41,7 +41,8 @@ from compass_pkg import pytest_report
 from compass_pkg.acceptance_strategy import LOOPS
 from compass_pkg.binding import declared_test_paths, ids_for
 from compass_pkg.red_first import (
-    ACCEPTANCE_KINDS as _ACCEPTANCE_KINDS, content_digest as _content_digest, has_red)
+    ACCEPTANCE_KINDS as _ACCEPTANCE_KINDS, content_digest as _content_digest, has_red,
+    record_paths, record_stem)
 
 
 
@@ -106,8 +107,9 @@ def _output_fail_token(out):
     return None
 
 
-def _run_test(cmd, env=None):
-    """Run a test command and return (exit_code, combined_output, warnings).
+def _run_test(cmd, env=None, with_stderr=False):
+    """Run a test command and return (exit_code, combined_output, warnings), and
+    stderr on its own last when `with_stderr` is set.
 
     Hardens against pipeline exit-code masking (R2): pipefail is injected into
     bash/zsh `-c` wrappers; a pager/filter final stage raises a warning.
@@ -131,6 +133,8 @@ def _run_test(cmd, env=None):
     proc = subprocess.run(run_cmd, capture_output=True, text=True,
                           env={**os.environ, **env} if env else None)
     out = (proc.stdout or "") + (proc.stderr or "")
+    if with_stderr:
+        return proc.returncode, out, warnings, proc.stderr or ""
     return proc.returncode, out, warnings
 
 
@@ -379,9 +383,44 @@ def default_loop(task_dir):
     return "outer" if in_scope(task, task_dir)[0] else "inner"
 
 
+def _red_scenarios(args, task_dir, loop):
+    """The scenarios one red run is bound to: `[]`, one, or several (plan decision
+    Q14). Several, from a repeated `--scenario` or from `--every-scenario`, need the
+    outer loop, which runs the whole suite once."""
+    given = getattr(args, "scenario", None)
+    given = [given] if isinstance(given, str) else list(given or [])
+    if getattr(args, "every_scenario", False):
+        if given:
+            raise CompassError("compass tdd-red: give --scenario or --every-scenario, not both.")
+        task, _ = load_manifest(task_dir)
+        given = [s["id"] for s in task.get("scenarios") or [] if isinstance(s, dict)
+                 and s.get("id") and s.get("verifiable") != "narrative"]
+        if not given:
+            raise CompassError("compass tdd-red: --every-scenario found no scenario in this "
+                               "issue's manifest.yml. Add one with `compass scenario add`.")
+    if len(given) > 1 or getattr(args, "every_scenario", False):
+        if loop != "outer":
+            raise CompassError("compass tdd-red: one run binds several scenarios only for "
+                               "the acceptance suite; add --loop outer.")
+    return [_resolve_scenario(task_dir, s) for s in dict.fromkeys(given)]
+
+
+def _unbound_scenarios(task_dir, scenarios, broken):
+    """The scenarios of a run with no declared test that failed or errored in it,
+    each with its declared tests."""
+    task, _ = load_manifest(task_dir)
+    tests = {s.get("id"): [t for t in s.get("tests") or [] if isinstance(t, str)]
+             for s in task.get("scenarios") or [] if isinstance(s, dict)}
+    return [(s, tests.get(s) or []) for s in scenarios
+            if not any(pytest_report.covers(broken, t) for t in tests.get(s) or [])]
+
+
 def cmd_tdd_red(args):
     task_dir = resolve_issue_dir(args.task)
-    scenario = _resolve_scenario(task_dir, getattr(args, "scenario", None))
+    loop = _loop(args, task_dir)
+    scenarios = _red_scenarios(args, task_dir, loop)
+    several = len(scenarios) > 1 or bool(getattr(args, "every_scenario", False))
+    scenario = scenarios[0] if scenarios else None
     verified_by = getattr(args, "verified_by", None)
     if verified_by and verified_by not in _VERIFIED_BY_KINDS:
         raise CompassError(
@@ -401,18 +440,24 @@ def cmd_tdd_red(args):
     # started; see pytest_report.
     env, report, ours, before = pytest_report.with_report(command)
     tree_ids = ids_for(task_dir)   # the tree the test runs on, named before it runs
-    code, out, warnings = _run_test(command, env)
+    code, out, warnings, stderr = _run_test(command, env, with_stderr=True)
     for w in warnings:
         sys.stderr.write(f"compass tdd-red: warning - {w}\n")
     excerpt = "\n".join(out.splitlines()[-25:])
-    red_kind, heading, rejection = None, None, None
+    red_kind, heading, rejection, missing, broken = None, None, None, [], None
     ran_pytest = pytest_report.written(report, before)
-    if code != 0 and (ran_pytest or _is_pytest_command(command)):
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(
-            os.path.abspath(task_dir))))
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(task_dir))))
+    if code == 4 and loop == "outer" and not ran_pytest and _is_pytest_command(command):
+        heading = pytest_report.DID_NOT_RUN
+        rejection = pytest_report.exit_4_reason(stderr, project_root)
+    elif code != 0 and (ran_pytest or _is_pytest_command(command)):
         red_kind, heading, rejection = pytest_report.judge(
             report if ran_pytest else None, code, project_root,
-            _NO_TEST_RAN_EXITS)
+            _NO_TEST_RAN_EXITS, loop=loop)
+        if ran_pytest:
+            missing = pytest_report.missing_modules(report)
+            broken = pytest_report.failed_tests(report)
     elif code != 0:
         # A runner Compass does not recognise, and no pytest report: the
         # exit code is all there is to go on, and the record says so.
@@ -450,12 +495,25 @@ def cmd_tdd_red(args):
             "  command: %s\n--- output (tail) ---\n%s"
             % (rejection, " ".join(command), excerpt)
         )
+    unbound = _unbound_scenarios(task_dir, scenarios, broken) \
+        if several and broken is not None else []
+    if unbound:
+        raise CompassError(
+            "compass tdd-red: no red is recorded - pytest's report shows no failed or "
+            "errored test for: " + "; ".join(
+                f"{s} (declares {', '.join(t) or 'no test'})" for s, t in unbound)
+            + ". Each scenario of the run needs a declared test that failed.")
+    from compass_pkg.acceptance_strategy import stage_one
+    try:
+        before_implement = stage_one(load_manifest(task_dir)[0], loop)
+    except (CompassError, OSError, ValueError):
+        before_implement = False    # no manifest: the red is implement's, as before
     payload = {
         "command": " ".join(command),
         # The argument list as given: two lists can join to the same text.
         "argv": list(command),
         "scenario": scenario,          # the scenario this red is evidence FOR
-        "loop": _loop(args, task_dir),
+        "loop": loop,
         "exit_code": code,
         "passed": False,
         "timestamp": now_iso(),
@@ -466,33 +524,46 @@ def cmd_tdd_red(args):
         payload["verified_by"] = verified_by   # a sanctioned non-unit red
     if red_kind:
         payload["red_kind"] = red_kind         # "import": the module is not written yet
+    if red_kind == "import" and missing:
+        payload["missing_modules"] = missing
+    if before_implement:
+        payload["before_implement"] = True     # stage 1: no marker, no document moved
+    if several:
+        payload.update(run_id=uuid.uuid4().hex[:16], scenarios_in_run=list(scenarios))
     _bind_to_tree(payload, tree_ids)
-    # The binding decides the path here too, so one scenario's red cannot
-    # overwrite another's.
-    red_name = "red"
-    if scenario:
-        red_name = "red-" + scenario.replace("/", "_")
-    ev_path = _write_evidence(task_dir, red_name, payload)
-    open(os.path.join(task_dir, ".red"), "w").close()  # the hook reads this
+    # The binding and the loop decide the path, so one scenario's red cannot
+    # overwrite another's, nor an inner red the outer one (ADR-082). One run
+    # bound to several scenarios writes one record per scenario (plan Q14).
+    ev_paths = [_write_evidence(task_dir, record_stem("red", one, loop),
+                                dict(payload, scenario=one)) for one in scenarios or [None]]
+    ev_path = ev_paths[0]
     payload.pop("_full_log", None)
-    # A red is the first record of the implement stage: it moves the documents
-    # of the stages before it (ADR-050).
-    from compass_pkg import artifact_status
-    moved = artifact_status.moved_line(artifact_status.record_stage(
-        task_dir, artifact_status.STAGE_IMPLEMENT, artifact_status.BY_TDD_RED))
-    bound = f" (bound to {scenario})" if scenario else " (unbound - consider --scenario)"
+    marker = os.path.join(task_dir, ".red")
+    moved = []
+    if before_implement:
+        unlocked = ["stage 1  : a red before implement writes no .red marker and moves "
+                    "no document, so code edits stay refused (ADR-081)."]
+    else:
+        open(marker, "w").close()  # the hook reads this
+        unlocked = [f"marker   : {marker}",
+                    "           the pre-tool hook will now allow code edits."]
+        # A red is the first record of the implement stage: it moves the documents
+        # of the stages before it (ADR-050).
+        from compass_pkg import artifact_status
+        moved = artifact_status.moved_line(artifact_status.record_stage(
+            task_dir, artifact_status.STAGE_IMPLEMENT, artifact_status.BY_TDD_RED))
+    bound = (f" (bound to {', '.join(scenarios)})" if scenarios
+             else " (unbound - consider --scenario)")
     judged = ([("judged by exit code only: Compass does not recognize this "
                 "runner, and it wrote no pytest report")]
               if red_kind == "exit-code" else [])
     return say(args,
                f"compass tdd-red: failing test recorded (exit {code}){bound}.",
-               detail=judged + [f"evidence : {ev_path}"]
-                      + [x for x in [_scenario_line(task_dir, scenario)] if x]
-                      + [f"marker   : {os.path.join(task_dir, '.red')}",
-                         "           the pre-tool hook will now allow code edits."]
-                      + moved,
+               detail=judged + [f"evidence : {p}" for p in ev_paths]
+                      + [x for x in [_scenario_line(task_dir, s) for s in scenarios] if x]
+                      + unlocked + moved,
                scenario=scenario, exit_code=code, evidence=ev_path,
-               marker=os.path.join(task_dir, ".red"))
+               marker=None if before_implement else marker)
 
 
 def _source_tree_hash(project_root):
@@ -602,12 +673,14 @@ def _save_tdd_state(task_dir, scenario, tree_hash, attempts, command=None):
         json.dump(existing, fh, indent=2)
 
 
-def _red_record_for(task_dir, scenario):
+def _red_record_for(task_dir, scenario, loop=None):
     """The red record a green bound to `scenario` needs, or None if unbound.
 
-    Same binding, same file: only `evidence/red-X.json` answers
-    `--scenario X` - not an unbound `red.json`, and not a red recorded for
-    a different scenario.
+    Same binding, same file: only `evidence/red-X.json`, or the outer-loop
+    `red-X.outer.json` (ADR-082), answers `--scenario X` - not an unbound
+    `red.json`, and not a red recorded for a different scenario. The file of
+    the green's own loop comes first; the path returned when neither exists
+    is that one.
 
     The looser rule, "any red on this issue", lets a red recorded for one
     scenario clear a green for another. That is the same class of error as a
@@ -616,13 +689,15 @@ def _red_record_for(task_dir, scenario):
     """
     if not scenario:
         return None
-    name = "red-" + scenario.replace("/", "_") + ".json"
-    return os.path.join(task_dir, "evidence", name)
+    paths = record_paths(task_dir, "red", scenario)
+    paths = paths[::-1] if loop == "outer" else paths
+    return next((p for p in paths if os.path.isfile(p)), paths[0])
 
 
 def cmd_tdd_green(args):
     task_dir = resolve_issue_dir(args.task)
     scenario = _resolve_scenario(task_dir, getattr(args, "scenario", None))
+    loop = _loop(args, task_dir)
     verified_by = getattr(args, "verified_by", None)
     if verified_by and verified_by not in _VERIFIED_BY_KINDS:
         raise CompassError(
@@ -637,7 +712,7 @@ def cmd_tdd_green(args):
     # refusing at the moment of writing means a bad record never exists. A
     # check would find it afterwards, when it is already on disk and already
     # cited by a gate.
-    red_path = _red_record_for(task_dir, scenario)
+    red_path = _red_record_for(task_dir, scenario, loop)
     if red_path and not os.path.isfile(red_path) and _acceptance_state(task_dir):
         # Telling a session that already declared an acceptance to declare
         # one sends it in a circle; name the step it has left instead.
@@ -740,7 +815,7 @@ def cmd_tdd_green(args):
         # The argument list as given: two lists can join to the same text.
         "argv": list(command),
         "scenario": scenario,          # the scenario this green is evidence FOR
-        "loop": _loop(args, task_dir),
+        "loop": loop,
         "exit_code": 0,
         "passed": True,
         "attempts": attempts,
@@ -764,10 +839,8 @@ def cmd_tdd_green(args):
     #
     # A bound write touches only its own record and an unbound write only
     # the unbound one, so a scenario run cannot replace the record a
-    # full-suite citation names.
-    name = "green"
-    if scenario:
-        name = "green-" + scenario.replace("/", "_")
+    # full-suite citation names. An outer-loop green has its own file (ADR-082).
+    name = record_stem("green", scenario, loop)
     ev_path = _write_evidence(task_dir, name, payload)
     rel_path = f"evidence/{name}.json"
     # Upsert a test-run entry in the issue's evidence registry - the registry
@@ -849,9 +922,12 @@ def _upsert_test_run_evidence(task_dir, scenario, rel_path,
     if not isinstance(reg, list):
         return
     existing = None
+    # One entry per binding and loop: an outer-loop green (ADR-082) has its own.
+    outer = rel_path.endswith(".outer.json")
     for e in reg:
         if (isinstance(e, dict) and e.get("type") == "test-run"
-                and e.get("scenario") == scenario):
+                and e.get("scenario") == scenario
+                and str(e.get("path") or "").endswith(".outer.json") == outer):
             existing = e
             break
     if existing:
@@ -860,7 +936,7 @@ def _upsert_test_run_evidence(task_dir, scenario, rel_path,
             existing["record_id"] = record_id
             existing["content_digest"] = content_digest
     else:
-        base = f"EV-T-{scenario}" if scenario else "EV-T"
+        base = (f"EV-T-{scenario}" if scenario else "EV-T") + ("-outer" if outer else "")
         used = {e.get("id") for e in reg if isinstance(e, dict)}
         ev_id, n = base, 1
         while ev_id in used:

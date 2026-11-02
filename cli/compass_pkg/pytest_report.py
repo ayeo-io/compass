@@ -11,6 +11,13 @@ One collection error is the most ordinary first red there is: a test that
 imports a module of the project not written yet. That is an import red. A
 missing module outside the project, or any other collection error, says the
 test could not run, not that the behaviour is missing, so it is refused.
+
+The outer loop, the acceptance suite, has one more first red. Its
+driver-factory fixture imports the driver, which stage 1 has not written, so
+pytest reports a setup error that names the missing module. For the outer loop
+that is an import red too, under the same rule; for the inner loop it stays
+refused. A `conftest.py` that imports the driver at module level makes pytest
+exit 4 with no report, and the refusal names the fix (ADR-081).
 """
 # DEPENDENCY: standard library only, plus compass_pkg itself.
 from __future__ import annotations
@@ -122,32 +129,102 @@ def in_project(module, project_root):
     return False
 
 
+def _missing(text):
+    found = [m.group(1) for p in _MISSING for m in p.finditer(strip_ansi(text))]
+    return found[-1] if found else None
+
+
 def _read(report_path):
-    """(failed, collection errors as [(where, missing module or None)]), or None."""
+    """(failed, collection errors, setup errors, ids of tests that failed or
+    errored), or None. Each error is (where, missing module or None); a setup
+    error is listed only when it names a missing module."""
     if not report_path:
         return None
     try:
         root = ET.parse(report_path).getroot()
     except (OSError, ET.ParseError):
         return None
-    failed, collection = 0, []
+    failed, collection, setup, broken = 0, [], [], set()
     for case in root.iter("testcase"):
+        name = case.get("name") or "?"
         for outcome in case:
+            message = outcome.get("message") or ""
+            if outcome.tag in ("failure", "error"):
+                broken.add(".".join(p for p in (case.get("classname"), name) if p))
             if outcome.tag == "failure":
                 failed += 1
-            elif outcome.tag == "error" and \
-                    (outcome.get("message") or "") == "collection failure":
-                text = strip_ansi(outcome.text)
-                found = [m.group(1) for p in _MISSING for m in p.finditer(text)]
-                collection.append((case.get("name") or "?",
-                                   found[-1] if found else None))
-    return failed, collection
+            elif outcome.tag == "error" and message == "collection failure":
+                collection.append((name, _missing(outcome.text)))
+            elif outcome.tag == "error" and message.startswith("failed on setup") \
+                    and _missing(outcome.text):
+                setup.append((name, _missing(outcome.text)))
+    return failed, collection, setup, broken
 
 
-def judge(report_path, code, project_root, no_run_reasons):
+def failed_tests(report_path):
+    """The dotted ids, `classname.name`, of the tests the report shows failed or
+    errored, a collection error included; None when there is no report."""
+    read = _read(report_path)
+    return None if read is None else read[3]
+
+
+def covers(broken, test):
+    """Did a test declared as `path::name` fail or error, by the ids
+    `failed_tests` gives? A collection error of its file counts. The match is
+    on a suffix, so a run whose root is below the project root still counts."""
+    path, _, name = test.partition("::")
+    module = path[:-3] if path.endswith(".py") else path
+    module = module.replace("\\", "/").strip("/").replace("/", ".")
+    wanted = ".".join(p for p in [module] + name.split("::") if p)
+
+    def ends(case, tail):
+        return case == tail or case.endswith("." + tail)
+    for case in broken:
+        case = re.sub(r"\[.*\]$", "", case)
+        if ends(case, wanted) or ends(case, module) \
+                or (not name and ("." + module + ".") in ("." + case)):
+            return True
+    return False
+
+
+def missing_modules(report_path):
+    """The missing modules a report's collection and setup errors name."""
+    read = _read(report_path)
+    if read is None:
+        return []
+    return sorted({m for _w, m in read[1] + read[2] if m})
+
+
+def exit_4_reason(stderr, project_root):
+    """Why an outer-loop exit 4 is not a red, quoting pytest's first error line.
+
+    The text only words the refusal; exit 4 is never a red. When the first
+    line says `conftest.py` failed to load and the error is a missing module of
+    the project, the driver is imported at module level, and the reason names
+    the fix.
+    """
+    lines = [x.strip() for x in strip_ansi(stderr or "").splitlines() if x.strip()]
+    if not lines:
+        return ("pytest exited 4, a setup error, not a red. pytest printed nothing "
+                "on stderr, so there is no error line to quote")
+    missing = _missing(stderr)
+    if lines[0].startswith("ImportError while loading conftest") and missing \
+            and in_project(missing, project_root):
+        return ("conftest.py imports the module '%s', which is not written yet, at "
+                "module level, so pytest stops before any test runs (exit 4) and "
+                "writes no report. That is a setup error, not a red. To record the "
+                "stage 1 red, import the driver inside the driver-factory fixture: "
+                "pytest then reports a setup error that names the module" % missing)
+    return ("pytest exited 4, a setup error, not a red. pytest's first error line: "
+            "\"%s\"" % lines[0])
+
+
+def judge(report_path, code, project_root, no_run_reasons, loop="inner"):
     """(red kind, None, None) for a red, or (None, heading, why) for a refusal.
 
     `no_run_reasons` maps the exit codes that mean no test ran to a reason.
+    For the outer loop, a setup error for a missing module is read as a
+    collection error is.
     """
     read = _read(report_path)
     if read is None:
@@ -155,7 +232,18 @@ def judge(report_path, code, project_root, no_run_reasons):
             "pytest exited %d and wrote no JUnit XML report. Compass adds "
             "--junitxml to see which tests failed, so a command that turns "
             "off pytest's junitxml plugin cannot record a red" % code)
-    failed, collection = read
+    failed, collection, setup, _broken = read
+    if loop == "outer" and setup:
+        outside = sorted({m for _w, m in setup if not in_project(m, project_root)})
+        if outside:
+            named = ", ".join("'%s'" % m for m in outside)
+            return None, NO_TEST_FAILED, (
+                "a fixture could not set up: %s %s not a module of this project. "
+                "A setup error for a missing package says it is not installed, "
+                "not that the behavior is missing"
+                % (named, "is" if len(outside) == 1 else "are"))
+        if not collection:
+            return "import", None, None
     if collection:
         outside = [(where, missing) for where, missing in collection
                    if not (missing and in_project(missing, project_root))]

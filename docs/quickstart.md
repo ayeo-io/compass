@@ -255,8 +255,10 @@ at a time, and runs the cycle through the CLI:
 
    **Where the record lands.** The binding decides the filename. Recorded
    `--scenario TRC-x`, the run writes `evidence/green-TRC-x.json`; with no
-   binding it writes `evidence/green.json`. Only that one file is written, so
-   recording one scenario never overwrites a record another gate is citing.
+   binding it writes `evidence/green.json`. With `--loop outer` the file name
+   ends in `.outer.json` instead of `.json`. Only that one file is written, so
+   recording one scenario never overwrites a record another gate is citing,
+   and an inner-loop record never replaces an outer-loop one.
 3. **Refactor** under a green suite - the marker is already cleared, which is
    the detectable hand-off to Verify.
 

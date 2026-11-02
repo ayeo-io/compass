@@ -34,7 +34,7 @@ import os
 from compass_pkg import project_settings
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import CompassError, load_yaml, manifest_path
-from compass_pkg.red_first import ACCEPTANCE_KINDS, load_record
+from compass_pkg.red_first import ACCEPTANCE_KINDS, is_record_name, load_record
 
 #: The settings key and the manifest key.
 KEY = "acceptance_strategy"
@@ -265,12 +265,29 @@ def loop_of(record):
     return "outer" if (record or {}).get("loop") == "outer" else "inner"
 
 
+def stage_one(task, loop):
+    """True when a red ends stage 1 and is written before implement (ADR-081): the
+    outer loop, on an approach whose `stages` run refine, with no technical design,
+    distribution map or subtask registered. Quick fix and hotfix collapse refine,
+    so their outer-loop red is the first record of implement, as before."""
+    from compass_pkg import next_cmd
+    from compass_pkg.stable_ids import STAGE_REFINE
+    stages = (task or {}).get("stages")
+    weight = stages.get(STAGE_REFINE) if isinstance(stages, dict) else None
+    if loop != "outer" or not isinstance(weight, str) \
+            or weight.strip().lower() in next_cmd._SKIPPED_WEIGHTS:
+        return False
+    return not (next_cmd._registered(task, "technical-design")
+                or next_cmd._registered(task, "distribution-map")
+                or next_cmd._entries(task, "subtasks"))
+
+
 def red_records(task_dir):
     """`[(name, record)]` of each red record holding a failed run, signed or not,
     bound or unbound, in name order."""
     out = []
     for name in _evidence_names(task_dir):
-        if name == "red.json" or (name.startswith("red-") and name.endswith(".json")):
+        if is_record_name("red", name):
             record = load_record(os.path.join(task_dir, "evidence", name))
             code = record.get("exit_code")
             if record.get("passed") is False and isinstance(code, int) \

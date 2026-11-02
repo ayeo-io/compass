@@ -37,7 +37,9 @@ def _record(issue, command, loop=None):
     return issue.must(*argv, "--", *(FAIL if command == "tdd-red" else PASS))
 
 
-def _evidence(issue, name):
+def _evidence(issue, name, loop=None):
+    """`evidence/<name>.json`; an outer-loop record has `.outer` before `.json` (ADR-082)."""
+    name += ".outer" if loop == "outer" else ""
     return json.loads((issue.dir / "evidence" / f"{name}.json").read_text(encoding="utf-8"))
 
 
@@ -59,7 +61,8 @@ def test_trc_e1(tmp_path, command, given, recorded):
     """Red and green records say which loop they belong to."""
     _, issue = _in_scope(tmp_path)
     _record(issue, command, given)
-    assert _evidence(issue, "red" if command == "tdd-red" else "green")["loop"] == recorded
+    kind = "red" if command == "tdd-red" else "green"
+    assert _evidence(issue, kind, recorded)["loop"] == recorded
 
 
 # --- `TRC-E2` ------------------------------------------------------------------------------
@@ -69,8 +72,8 @@ def test_trc_e2(tmp_path):
     _, issue = _in_scope(tmp_path)
     _record(issue, "tdd-red", "outer")
     _record(issue, "tdd-green", "outer")
-    support.without_loop(issue, "green")
-    assert "loop" not in _evidence(issue, "green")
+    support.without_loop(issue, "green.outer")
+    assert "loop" not in _evidence(issue, "green.outer")
     code, document = issue.check()
     row = _row(document)
     assert row["status"] == "fail", row
@@ -114,13 +117,13 @@ def test_trc_e5(tmp_path):
     _record(issue, "tdd-green", "outer")
     code, document = issue.check()
     assert _row(document)["status"] == "pass", _row(document)
-    older = _evidence(issue, "green")["tree_id"]
+    older = _evidence(issue, "green", "outer")["tree_id"]
     (project.root / "README.md").write_text("changed after the green\n", encoding="utf-8")
     code, document = issue.check()
     assert code == 1
     row = _row(document)
     assert row["status"] == "fail", row
-    assert "evidence/green.json" in row["detail"], row
+    assert "evidence/green.outer.json" in row["detail"], row
     assert f"recorded on tree {older[:12]}" in row["detail"], row
     assert "a different tree from the current one" in row["detail"], row
 
@@ -138,7 +141,7 @@ def test_trc_e6(tmp_path, reds):
     # The candidate and the client are written from ayeo-io/compass-delivery#326; this
     # issue's green carries `attempts` 1 (requirements review Q1).
     _record(issue, "tdd-green", "outer")
-    assert _evidence(issue, "green")["attempts"] == 1
+    assert _evidence(issue, "green", "outer")["attempts"] == 1
     code, document = issue.check()
     assert code == 1
     row = _row(document)
@@ -204,8 +207,8 @@ def test_trc_e7(tmp_path, given, recorded, result):
     code, out, err = issue.run("quick-fix", "finish", "--issue", "greet", "--no-commit",
                                "-m", "Say Hello", "--release-note", "The greeting says Hello.",
                                *loop, *command)
-    assert _evidence(issue, "red-TRC-001")["loop"] == recorded
-    assert _evidence(issue, "green-TRC-001")["loop"] == recorded
+    assert _evidence(issue, "red-TRC-001", recorded)["loop"] == recorded
+    assert _evidence(issue, "green-TRC-001", recorded)["loop"] == recorded
     assert (code == 0) == (result == "pass"), out + err
     code, document = issue.check()
     assert _row(document)["status"] == result, _row(document)

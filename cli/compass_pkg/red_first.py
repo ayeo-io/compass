@@ -65,6 +65,29 @@ def _load(path):
 #: The public name for other modules; `_load` stays for this module's own use.
 load_record = _load
 
+#: An outer-loop record's file name ends in this before `.json` (ADR-082), so an
+#: inner-loop record with the same binding does not replace it.
+OUTER = ".outer"
+
+
+def record_stem(kind, scenario=None, loop=None):
+    """The file name, without `.json`, of a `red` or `green` record: the binding
+    and the loop decide it. `red-A.outer` is an outer-loop red bound to A."""
+    stem = kind + ("-" + scenario.replace("/", "_") if scenario else "")
+    return stem + (OUTER if loop == "outer" else "")
+
+
+def record_paths(task_dir, kind, scenario=None):
+    """The inner-loop and outer-loop files of one binding, in that order."""
+    return [os.path.join(task_dir, "evidence", record_stem(kind, scenario, loop) + ".json")
+            for loop in ("inner", "outer")]
+
+
+def is_record_name(kind, name):
+    """Is `name` a `kind` record file, of either loop, bound or not?"""
+    return name in (kind + ".json", kind + OUTER + ".json") \
+        or (name.startswith(kind + "-") and name.endswith(".json"))
+
 
 def _is_failed_run(record):
     """True only for what `compass tdd-red` writes: `passed` false and an
@@ -146,8 +169,9 @@ def red_verdict(task_dir, compass_dir=None):
                        edited after it was written
 
     `compass tdd-red` writes `evidence/red.json` unbound and
-    `evidence/red-<scenario>.json` bound. A red record is not registered in
-    `evidence:`, so this reads the directory.
+    `evidence/red-<scenario>.json` bound, with `.outer` before `.json` for the
+    outer loop (`record_stem`). A red record is not registered in `evidence:`,
+    so this reads the directory.
     """
     evidence = os.path.join(task_dir, "evidence")
     if os.path.islink(evidence):
@@ -156,8 +180,7 @@ def red_verdict(task_dir, compass_dir=None):
         names = sorted(os.listdir(evidence))
     except OSError:
         return "no-record"
-    names = [n for n in names
-             if n == "red.json" or (n.startswith("red-") and n.endswith(".json"))]
+    names = [n for n in names if is_record_name("red", n)]
     if not names:
         return "no-record"
     cutoff = signed_since(task_dir, compass_dir)

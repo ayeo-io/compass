@@ -74,12 +74,25 @@ applies to, because its one declared test is its acceptance test, and
 record with no field reads as inner. Where the four-layer acceptance strategy (`S17`)
 applies, the check `outer-loop-recorded` needs an outer-loop red and an
 outer-loop green recorded on the tree as it is now (ADR-080). `suite-passed`
-reads every green, whatever its loop.
+reads every green, whatever its loop. An outer-loop record has its own file,
+`red-<id>.outer.json` or `green-<id>.outer.json` (`red.outer.json` unbound),
+and its own registry entry, so later inner-loop work keeps it (ADR-082).
+
+For the outer loop, a pytest setup error that names a missing module of the
+project is an import red, as a collection error is, and the record lists
+`missing_modules`. A missing module outside the project is refused. Exit 4 is
+never a red: the refusal quotes pytest's first error line, and names the fix
+when `conftest.py` imports the driver at module level. With `--loop outer`,
+`--scenario` can repeat and `--every-scenario` binds one run to every
+scenario: one record per scenario, sharing a `run_id`. A red that ends stage 1
+(outer loop, an approach that runs refine, no technical design, distribution
+map or subtask registered) writes `before_implement: true`, no `.red` marker
+and moves no document (ADR-081).
 
 ## Records that also move a document
 
 `compass tdd-red` and `compass acceptance record` are the first records of the
-implement stage. Each one moves the documents of earlier stages that are still
+implement stage, except a stage 1 red, which moves nothing. Each one moves the documents of earlier stages that are still
 `draft` and have a path: to `approved` (with `approved_by` naming the command),
 or to `awaiting-approval` when the document has a human check. A person
 approves that document by typing `/compass:approve` for a `compass evidence

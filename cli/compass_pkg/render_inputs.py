@@ -126,8 +126,10 @@ def _records(task_dir):
     out, unbound = {}, []
     for path in sorted(glob.glob(os.path.join(task_dir, "evidence", "*.json"))):
         name = os.path.basename(path)
+        # An outer-loop record ends `.outer.json` (ADR-082); the inner one sorts first.
         kind = next((k for k in ("red", "green", "acceptance")
-                     if name == f"{k}.json" or name.startswith(f"{k}-")), None)
+                     if name in (f"{k}.json", f"{k}.outer.json") or name.startswith(f"{k}-")),
+                    None)
         if kind is None or name == "acceptance-baseline.json":
             continue
         try:
@@ -135,8 +137,9 @@ def _records(task_dir):
                 data = json.load(fh)
         except (OSError, ValueError):
             data = {}
+        stem = name[:-len(".outer.json")] if name.endswith(".outer.json") else name[:-5]
         scenario = (data.get("scenario") if isinstance(data, dict) else None) \
-            or name[len(kind) + 1:-5]
+            or stem[len(kind) + 1:]
         if scenario:
             out.setdefault((kind, str(scenario)), name)
         else:

@@ -58,10 +58,12 @@ def _dicts(value):
 
 def _records(task_dir):
     """[(kind, scenario, timestamp, command, path)] for every red, green and
-    acceptance record, bound to a scenario (`red-A.json`) or not (`red.json`)."""
+    acceptance record, bound to a scenario (`red-A.json`) or not (`red.json`),
+    of either loop (`red-A.outer.json`, ADR-082)."""
     out = []
     for path in sorted(glob.glob(os.path.join(task_dir, "evidence", "*.json"))):
         name = os.path.basename(path)[:-5]
+        name = name[:-len(".outer")] if name.endswith(".outer") else name
         kind = next((k for k in _KINDS if name == k or name.startswith(k + "-")), None)
         if kind is None:
             continue

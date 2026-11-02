@@ -174,7 +174,9 @@ def _review_written(task_dir: str | None) -> bool:
 
 def _testing_started(task: dict, task_dir: str | None) -> bool:
     """True once any test result is on record: a test-run in the manifest, or
-    a red that `compass tdd-red` wrote, which the manifest does not list."""
+    a red that `compass tdd-red` wrote, which the manifest does not list. A red
+    that ends stage 1 (`before_implement`) is written at refine, so it does not
+    count (ADR-081)."""
     if any(e.get("type") == "test-run" for e in _entries(task, "evidence")):
         return True
     if not task_dir:
@@ -185,7 +187,9 @@ def _testing_started(task: dict, task_dir: str | None) -> bool:
         names = os.listdir(os.path.join(task_dir, "evidence"))
     except OSError:
         return False
-    return any(n.startswith("red") and n.endswith(".json") for n in names)
+    from compass_pkg.red_first import load_record
+    return any(n.startswith("red") and n.endswith(".json") and not load_record(
+        os.path.join(task_dir, "evidence", n)).get("before_implement") for n in names)
 
 
 def _every_scenario_tested(task: dict) -> bool:

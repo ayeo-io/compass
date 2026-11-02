@@ -1,4 +1,4 @@
-"""Record the compass 8.0.4 output that `TRC-A3`, `TRC-A9` and `TRC-X2` compare with.
+"""Record the compass 8.0.4 output that `TRC-A3`, `TRC-A9`, `TRC-C4` and `TRC-X2` compare with.
 
 CI has no compass 8.0.4, so its output is recorded once, here, from a copy of
 the tree at commit a74e968 (the 8.0.4 release):
@@ -41,6 +41,18 @@ def _guardrails(old_root):
         encoding="utf-8")
 
 
+def inner_setup_error(scratch, old_cli):
+    """The refusal compass 8.0.4 gives for a setup error raised by a fixture that
+    imports a module not written yet (scenario `TRC-C4`). 8.0.4 has no `--loop`."""
+    project = support.Project(scratch / "setup-error", cli=old_cli)
+    issue = support.stage_one_issue(project)
+    code, _out, err = issue.run("tdd-red", "--issue", issue.slug, "--scenario", "TRC-1",
+                                "--", *support.PYTEST)
+    out = support.FIXTURES / "compass-8.0.4" / "inner-setup-error.json"
+    out.write_text(json.dumps({"exit": code, "message": support.refusal(err)}, indent=2)
+                   + "\n", encoding="utf-8")
+
+
 def main(old_cli):
     old_cli = Path(old_cli).resolve()
     _guardrails(old_cli.parent.parent)
@@ -57,6 +69,7 @@ def main(old_cli):
         support.build_older_issue_project(support.OLDER_PROJECT, old_cli)
         project = support.older_issue_project(scratch / "older", cli=old_cli)
         _write("older-issue", *support.Issue(project, "older").check())
+        inner_setup_error(scratch, old_cli)
 
 
 if __name__ == "__main__":

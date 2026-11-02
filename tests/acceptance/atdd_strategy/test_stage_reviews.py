@@ -139,6 +139,14 @@ def test_trc_d2(tmp_path):
     """The refine checkpoint reviews stage 1."""
     project = _project(tmp_path)
     issue = _issue(project)
+    # The end of refine is its requirements review. The outer-loop red is a
+    # stage 1 red, which by design does not mark a stage done (ADR-081).
+    folder = f"docs/compass/{support.CREATED}-{SLUG}"
+    (project.root / folder).mkdir(parents=True, exist_ok=True)
+    (project.root / folder / "requirements-review.md").write_text(
+        "# Requirements review\n", encoding="utf-8")
+    issue.must("issue", "artifact", "set", "requirements-review", "--status", "draft",
+               "--path", f"{folder}/requirements-review.md", "--issue", SLUG)
     issue.must("tdd-red", "--issue", SLUG, "--loop", "outer", "--", *FAIL)
     code, out, err = _request(issue, "refine")
     assert code == 0, out + err

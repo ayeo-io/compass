@@ -161,8 +161,9 @@ def _done(task, stage, task_dir):
         return bool(gates) and all(g.get("status") == "pass" for g in gates)
     scenarios = [s for s in task.get("scenarios") or [] if isinstance(s, dict)]
     return bool(scenarios) and all(
-        os.path.isfile(os.path.join(task_dir, "evidence",
-                                    f"green-{s.get('id')}.json"))
+        any(os.path.isfile(os.path.join(task_dir, "evidence",
+                                        f"green-{s.get('id')}{loop}.json"))
+            for loop in ("", ".outer"))   # either loop's green (ADR-082)
         for s in scenarios)
 
 

@@ -87,7 +87,7 @@ Each stage ends with a review: the checkpoint of the Compass stage it runs in. T
 
 Write the scenarios, then DSL methods that read like them, then the driver interface. The DSL calls driver methods that do not exist yet, so the suite fails. That failure is the expected starting point. Every scenario first creates its own account, workspace or tenant, and each scenario gets a new DSL instance.
 
-The failure must be one a runner reports. In Python, the driver factory imports the driver inside a pytest fixture, so a missing driver is a setup error in the JUnit report, and that is the stage 1 red. A module-level import in `conftest.py` stops pytest before it writes a report (exit 4), and that run is refused as a red. A red recorded at refine does not unlock production code: production code waits for implement.
+The failure must be one a runner reports. In Python, the driver factory imports the driver inside a pytest fixture, so a missing driver is a setup error in the JUnit report, and that is the stage 1 red. A module-level import in `conftest.py` stops pytest before it writes a report (exit 4), and that run is refused as a red. Record the red with `compass tdd-red --loop outer --every-scenario -- <suite command>`. A red recorded at refine does not unlock production code: production code waits for implement.
 
 The refine checkpoint reviews stage 1.
 

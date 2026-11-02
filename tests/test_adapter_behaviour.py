@@ -59,8 +59,8 @@ def test_quick_fix_and_local_handoff(tmp_path, first, second):
     assert result["delivery_approach"] == "quick-fix"
     assert all(gate["status"] == "pass" for gate in result["gates"])
     assert resumed.cli("check", "--issue", resumed.slug).returncode == 0
-    red = json.loads((resumed.issue_dir / "evidence/red-CONF-1.json").read_text())
-    green = json.loads((resumed.issue_dir / "evidence/green-CONF-1.json").read_text())
+    red = json.loads((resumed.issue_dir / "evidence/red-CONF-1.outer.json").read_text())
+    green = json.loads((resumed.issue_dir / "evidence/green-CONF-1.outer.json").read_text())
     assert red["exit_code"] != 0 and red["passed"] is False
     assert green["exit_code"] == 0 and green["passed"] is True
     assert red["record_id"] != green["record_id"]
@@ -154,7 +154,7 @@ def test_semantic_changes_and_tampered_evidence_fail(tmp_path):
     with pytest.raises(AssertionError, match="evidence"):
         compare(original, changed_subject)
 
-    evidence = adapter.issue_dir / "evidence/green-CONF-1.json"
+    evidence = adapter.issue_dir / "evidence/green-CONF-1.outer.json"
     record = json.loads(evidence.read_text())
     record["exit_code"] = 23
     evidence.write_text(json.dumps(record))

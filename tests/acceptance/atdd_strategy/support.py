@@ -265,3 +265,76 @@ def without_loop(issue, name):
         if entry.get("path") == f"evidence/{name}.json":
             entry["record_id"], entry["content_digest"] = record_id, digest
     issue.write_manifest(body)
+
+
+# --- the stage 1 suites (scenario group C) -------------------------------------------------
+
+#: The acceptance test each stage 1 issue declares for its scenario.
+SPEC = "tests/acceptance/test_orders.py"
+SPEC_TEST = SPEC + "::test_place_order"
+#: The suite run, as a project runs it. `-p no:cacheprovider` keeps pytest's cache out of
+#: the tree the records name.
+PYTEST = (sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/acceptance")
+
+#: `conftest.py` bodies. The driver module `shop.driver` is not written yet.
+CONFTEST = {
+    "fixture import": ("import pytest\n\n\n@pytest.fixture\ndef driver():\n"
+                       "    from shop.driver import Driver\n    return Driver()\n"),
+    "module import": ("import pytest\nfrom shop.driver import Driver\n\n\n"
+                      "@pytest.fixture\ndef driver():\n    return Driver()\n"),
+    "third-party import": ("import pytest\n\n\n@pytest.fixture\ndef driver():\n"
+                           "    from orders_vendor_sdk import Client\n    return Client()\n"),
+    "syntax error": "import pytest\n\n\ndef shop(:\n    pass\n",
+    "silent exit 4": "import os\n\n\ndef pytest_configure(config):\n    os._exit(4)\n",
+    "no fixture": "",
+}
+SPEC_BODY = {
+    "uses the fixture": "def test_place_order(driver):\n    assert driver.place_order('book')\n",
+    "imports the driver": ("from shop.driver import Driver\n\n\n"
+                           "def test_place_order():\n    assert Driver().place_order('book')\n"),
+}
+
+
+def stage_one_suite(root, conftest="fixture import", spec="uses the fixture"):
+    """Write the package `shop`, with a production module and no driver, and an
+    acceptance suite whose `conftest.py` and specification are as named."""
+    root = Path(root)
+    (root / "shop").mkdir(exist_ok=True)
+    (root / "shop" / "__init__.py").write_text("", encoding="utf-8")
+    (root / "shop" / "orders.py").write_text("ORDERS = []\n", encoding="utf-8")
+    suite = root / "tests" / "acceptance"
+    suite.mkdir(parents=True, exist_ok=True)
+    (suite / "conftest.py").write_text(CONFTEST[conftest], encoding="utf-8")
+    (suite / "test_orders.py").write_text(SPEC_BODY[spec], encoding="utf-8")
+
+
+def run_pytest(root, *extra):
+    """Run the suite as `compass tdd-red` would, with a JUnit report, and return
+    `(exit code, report text or None, stderr)`."""
+    report = Path(root) / ".pytest-report.xml"
+    r = subprocess.run([*PYTEST, *extra, f"--junitxml={report}"], cwd=root,
+                       env=env(root), capture_output=True, text=True, timeout=120)
+    text = report.read_text(encoding="utf-8") if report.exists() else None
+    if report.exists():
+        report.unlink()
+    return r.returncode, text, r.stderr
+
+
+def stage_one_issue(project, slug="orders", approach="regular", conftest="fixture import",
+                    spec="uses the fixture", scenarios=("TRC-1",)):
+    """An issue at refine, with the suite written and each scenario declaring the
+    acceptance test."""
+    stage_one_suite(project.root, conftest, spec)
+    issue = project.issue(slug, approach=approach)
+    code, out, err = issue.assess()
+    assert code == 0, out + err
+    for scenario in scenarios:
+        issue.must("scenario", "add", scenario, "--issue", slug, "--intent", "INT-1",
+                   "--title", "Place an order", "--test", SPEC_TEST)
+    return issue
+
+
+def refusal(stderr):
+    """The message of a `compass tdd-red` refusal, without the command line and the
+    output tail, which name temporary paths."""
+    return stderr.split("\n  command:", 1)[0].strip()

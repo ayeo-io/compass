@@ -69,7 +69,8 @@ def test_dcj_35_finish_writes_one_screen_verification_note(repo):
     text = "\n".join(found[0][1])
     assert "TRC-001" in text
     assert "tests/test_greeting.py::test_greeting_says_hello" in text
-    assert "red-TRC-001.json" in text and "green-TRC-001.json" in text
+    # An in-scope quick fix records the outer loop, in its own files (ADR-082).
+    assert "red-TRC-001.outer.json" in text and "green-TRC-001.outer.json" in text
     for gate in ("verify.correctness", "verify.governance", "verify.traceability"):
         assert gate in text and "pass" in next(x for x in text.splitlines() if gate in x)
     for path in ("data/greeting.txt", "src/alpha.py", "src/beta.py"):

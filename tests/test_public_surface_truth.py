@@ -634,6 +634,12 @@ def test_d2_repairs_change_only_retired_names():
     `governance/guardrails.md` (list_items 73 -> 78) gained the outer-loop
     check, one list item and its 4 sub-items.
 
+    Two files already counted above were re-baselined again by
+    `stage-review-checkpoints` (ADR-083):
+    `docs/quickstart.md` (one heading, list_items 19 -> 22) gained the stage 2
+    and 3 reviews of `compass next`, and `governance/routing-policy.md`
+    (list_items 71 -> 73) gained two checkpoint bullets.
+
     The other 45 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

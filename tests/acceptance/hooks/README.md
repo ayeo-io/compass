@@ -14,7 +14,7 @@ Each scenario runs once through Claude Code's hook interface and once through th
 ## What the pilot found
 
 1. **The Codex adapter cannot refuse without `python3`.** Its hook command runs `python3`, so with no `python3` it exits 127 where the Claude Code hook refuses as `python-missing`. ayeo-io/compass-delivery#308 ("Refuse a Codex tool call when python3 is missing", in the private delivery record) tracks it.
-2. **Compass has no review form for the second and third stages of the `atdd` skill** (stage 2 writes the drivers, stage 3 tidies up and proves isolation). `compass evidence request --checkpoint` takes assess, define, refine and plan only.
+2. **Compass had no review form for the second and third stages of the `atdd` skill** (stage 2 writes the drivers, stage 3 tidies up and proves isolation). ayeo-io/compass-delivery#327 (the item that adds review checkpoints for stages 2 and 3, in the private delivery record) made them the `implement` and `verify` checkpoints, listed where the four-layer acceptance strategy applies.
 3. **Compass does not accept the red that ends the skill's first stage.** An import red (a driver that does not exist yet) is a setup error to `compass tdd-red`, not a failing test.
 
 ## What a change to the hook's layout touches

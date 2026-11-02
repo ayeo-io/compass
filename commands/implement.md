@@ -120,3 +120,23 @@ is green; every changed production file is recorded in `manifest.yml`'s
 `changed_files:` traced to a scenario. On a spike: the question was explored
 and the findings are captured - there is no test gate, because nothing
 ships. Log progress to `devlog.md`. Next: `/compass:verify`.
+
+## The stage 2 review
+
+On an issue the four-layer acceptance strategy (`S17`) applies to, the end of
+`implement` is the end of stage 2 of the `atdd` skill. Wait for approval only
+if `implement` is in the manifest's `checkpoints:`, which lists it only where
+the strategy applies.
+
+- If it is listed, ask with
+  `compass evidence request --checkpoint implement` and wait. The request
+  lists the stage 2 review questions. The person types `/compass:approve` or
+  `/compass:reject` in Claude Code, or runs
+  `compass evidence approve --checkpoint implement --approver <name> --role <role>`
+  at a terminal.
+- A rejection sends the issue back to `implement`: `compass next` names it,
+  with the reason.
+- If `implement` is not listed and `compass next` names the stage 2 review,
+  show the hand-off, say you are going on without waiting and name the
+  autonomy setting. Record it with
+  `compass issue checkpoint add implement --outcome skipped --by builder`.

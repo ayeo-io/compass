@@ -77,6 +77,9 @@ FORMS = ("g5",) + DEFAULT_FORMS
 #: The words of the old positional form, which `parse_flags` refuses.
 KEYWORDS = ("until", "on", "for", "labels", "max")
 FLAGS = ("--agent", "--until", "--on", "--for", "--max")
+#: The end of a refused delegated approval: only a person's typed answer counts then.
+ASK_PERSON = ("Ask the person with `compass evidence request` and stop: the person must "
+              "type /compass:approve. Nothing was written.")
 FLAG_FORM = ("/compass:delegate [--agent <name>] [--until <time>] [--on <issues>] "
              "[--for <forms>] [--max <n>]")
 #: The form word that covers each subject form of an approval.
@@ -548,10 +551,8 @@ def authorise(task_dir, form, value, agent, session_id="", compass_dir=None):
         if why:
             reasons.append(why)
     if not reasons:
-        raise CompassError(f"{VERB}: no delegation in force names {agent}. Ask the person "
-                           f"with `compass evidence request` and stop. Nothing was written.")
-    raise CompassError(f"{VERB}: {'; '.join(reasons)}. Ask the person with `compass "
-                       f"evidence request` and stop. Nothing was written.")
+        raise CompassError(f"{VERB}: no delegation in force names {agent}. {ASK_PERSON}")
+    raise CompassError(f"{VERB}: {'; '.join(reasons)}. {ASK_PERSON}")
 
 
 def record_use(task_dir, delegation, agent, done, subject, compass_dir=None):

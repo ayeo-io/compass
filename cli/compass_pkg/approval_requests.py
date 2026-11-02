@@ -10,6 +10,9 @@ writes one request file:
 A request holds facts the CLI derives - the issue, its generation and labels,
 the subject, a document's digest - and the agent's description of the scope.
 It also holds a single-use `nonce`, which the record that answers it copies.
+A request for the `refine`, `implement` or `verify` checkpoint of an issue the
+four-layer acceptance strategy applies to also holds `review`: the stage it
+ends and the atdd skill's questions for it (`checkpoint_outcomes.review`).
 When a request is answered, replaced or found stale it moves to `closed/<n>.yml`
 with its `outcome`. A new request for a subject that already has a pending one
 replaces it. Numbers are unique within the issue.
@@ -144,6 +147,9 @@ def same_subject(a, b):
 def digest(request):
     """The digest of what the person is shown of a request."""
     shown = {k: request.get(k) for k in SHOWN_FIELDS}
+    # Covered only when present, so a request written before the field keeps its digest.
+    if request.get("review"):
+        shown["review"] = request["review"]
     return hashlib.sha256(json.dumps(shown, sort_keys=True, default=str)
                           .encode("utf-8")).hexdigest()
 
@@ -209,10 +215,21 @@ def shown_text(request, issue_form=False):
         lines.append(f"  document digest {str(request['document_digest'])[:12]}")
     if request.get("scope"):
         lines.append(f"  the agent's description: \"{request['scope']}\"")
+    lines += [f"  {line}" for line in review_lines(request)]
     flag = f" --issue {request.get('issue')}" if issue_form else ""
     lines.append(f"  Type /compass:approve {request['number']}{flag} or /compass:reject "
                  f"{request['number']} <reason>{flag}.")
     return "\n".join(lines)
+
+
+def review_lines(request):
+    """The stage review a checkpoint request holds, as lines: a heading, then
+    one line per question. Empty when it holds no review."""
+    review = request.get("review") or {}
+    if not review.get("questions"):
+        return []
+    return ([f"the {review.get('stage')} review - answer each question with what you "
+             f"checked:"] + [f"  - {q}" for q in review["questions"]])
 
 
 def mark_shown(task_dir, request):
@@ -272,6 +289,11 @@ def write(task_dir, form, value, scope):
                                    if form == "artifact" else None),
                "requested_at": _now(),
                "nonce": secrets.token_hex(16)}
+    if form == "checkpoint":
+        from compass_pkg import checkpoint_outcomes
+        review = checkpoint_outcomes.review(task, task_dir, value)
+        if review:
+            request["review"] = review
     for old in pending(task_dir):
         if same_subject(old, request):
             close(task_dir, old, REPLACED, replaced_by=request["number"])
@@ -331,10 +353,13 @@ def cmd_evidence_request(args):
                        f"issue      : {request['issue']}, generation {_generation(request)}"],
                request=request["number"], form=form, value=value, scope=scope or None,
                issue=request["issue"], generation=request["generation"], next=tell,
-               command=command)
+               command=command,
+               **({"review": request["review"]} if request.get("review") else {}))
     if resolve_mode(args) not in ("json", "quiet"):
         # Printed apart from the hand-off, which shortens long lines: the
-        # command must reach the person whole.
+        # command must reach the person whole, and so must each question.
+        for line in review_lines(request):
+            print("  " + line)
         print(textwrap.fill(tell, 96, initial_indent="  ", subsequent_indent="  "))
         if command:
             print("    " + command)

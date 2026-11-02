@@ -33,10 +33,10 @@ orchestration:       # (optional until approach evaluate) string - solo | pair |
 subtask_ceiling: # (optional) integer or null - how many parallel subtasks the delivery approach permits
 policy_rules_fired: # (optional) list of maps {id, kind, rationale, changed[]}
 stages:          # (optional until approach evaluate) map of stage -> weight string
-checkpoints:     # (optional until approach evaluate) list of the stage hand-offs that wait for a person: assess, define, refine, plan
+checkpoints:     # (optional until approach evaluate) list of the stage hand-offs that wait for a person: assess, define, refine, plan, implement, verify (the last two only where the four-layer acceptance strategy applies)
 models:          # (optional until approach evaluate) map of seat -> {tier, by, not_fired[]} - the model tier of each seat whose stage runs; tier is fast | standard | strong
 checkpoint_outcomes: # (optional) list of maps - one outcome per checkpoint stage hand-off; the first assessment writes []; an issue without the key is not judged:
-  - stage:       #   (required in entry) [assess, define, refine, plan] - here define
+  - stage:       #   (required in entry) [assess, define, refine, plan, implement, verify] - here define
     outcome:     #   (required in entry) [waited, skipped] - waited: a person answered it with compass evidence approve --checkpoint
     by:          #   (required in entry) string - the approver of the record it cites, such as jed72
     at:          #   (required in entry) string - ISO 8601, the record's timestamp

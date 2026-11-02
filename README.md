@@ -155,6 +155,9 @@ from work that ships code
   lint, measured by `compass readiness`. Below the floor, assess refuses.
 - **Decisions an agent takes for you are listed.** On `balanced` and
   `controlled`, the next checkpoint waits for you to confirm or change them.
+- **Each acceptance test stage ends with a review.** On `controlled`, an issue
+  the four-layer acceptance strategy applies to also waits at `implement` and
+  `verify`, and the request lists the `atdd` skill's review questions.
 
 ## Resumable and auditable
 

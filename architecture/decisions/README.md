@@ -120,6 +120,7 @@ Rules:
 | [ADR-078](ADR-078-a-bash-call-is-judged-by-the-worktree-its-working-folder-is-in.md) | A Bash call is judged by the worktree its working folder is in | accepted | amends ADR-074 decisions 1 and 8; with ADR-005 and ADR-063 |
 | [ADR-079](ADR-079-the-s17-block-is-stored-once-and-replaced-only-by-a-re-assess.md) | The acceptance strategy block is stored once and replaced only by a re-assess | accepted | |
 | [ADR-080](ADR-080-red-and-green-records-name-their-loop-and-an-absent-loop-reads-as-inner.md) | Red and green records name their loop, and an absent loop reads as inner | accepted | with ADR-079 and ADR-064 |
+| [ADR-083](ADR-083-the-stage-2-and-3-reviews-are-checkpoints-listed-only-where-the-strategy-applies.md) | The stage 2 and 3 reviews are checkpoints, listed only where the strategy applies | accepted | extends ADR-063; with ADR-079 |
 
 ## Principle → ADR mapping
 

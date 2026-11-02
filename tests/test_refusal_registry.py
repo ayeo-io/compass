@@ -82,9 +82,10 @@ FIXTURES = {
     "delegation-protected": dict(target=".compass/delegations/DL-1.yml", tool="Write"),
     "delegation-caller-mismatch": dict(named="compass:architect", caller="compass:builder"),
     "transcript-protected": dict(target="/Users/x/.claude/projects/-p/s.jsonl", tool="Read"),
-    # The longest form: a 40-character slug and all four checkpoint stages
+    # The longest form: a 40-character slug and all six checkpoint stages
     # with no outcome, so the 60-word cap is checked where it is tightest.
-    "checkpoint-no-outcome": {"slug": "a" * 40, "stages": "assess, define, refine and plan",
+    "checkpoint-no-outcome": {"slug": "a" * 40,
+                              "stages": "assess, define, refine, plan, implement and verify",
                               "stage": "assess", "is": "are", "it": "them"},
     # A 40-character slug, named twice, so the 60-word cap is checked where it is tightest.
     "release-line-missing": dict(slug="a" * 40),

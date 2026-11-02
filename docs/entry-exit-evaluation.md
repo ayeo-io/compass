@@ -391,7 +391,8 @@ nothing, when it has no ticket, no `--issue`, or an issue that two worktrees
 hold; or when no delegation in force names the agent or covers its session, or
 the one that does has ended, was revoked, reached its `max`, was not written by
 a typed command, or does not cover the issue, its generation, the form or the
-labels of a 7.0.0 file. A delegation file in a linked worktree's own folder
+labels of a 7.0.0 file. The refusal tells the agent to ask with `compass
+evidence request` and stop, and says the person must type `/compass:approve`. A delegation file in a linked worktree's own folder
 gives no approval, and the refusal names it. The
 pre-tool hook also refuses the call when `--as` is not exactly the agent
 Claude Code reports.
@@ -440,6 +441,12 @@ compass evidence request (--check ID | --guardrail G5 | --artifact KIND | --deci
   pending request for the same subject closes as `replaced`. A request is not
   evidence, and no check reads it. The code is
   `cli/compass_pkg/approval_requests.py`.
+- **A stage review.** A request for the `refine`, `implement` or `verify`
+  checkpoint of an issue the four-layer acceptance strategy (`S17`) applies
+  to also holds `review`: the stage of the `atdd` skill it ends and that
+  stage's questions from `skills/atdd/references/stage-reviews.md`. The
+  command prints the questions, the person sees them with the request, and
+  the request's digest covers them (ADR-083).
 - **When it refuses.** It runs every refusal `compass evidence approve` gives
   for the subject, with the same words, except those that depend on who
   answers. It exits 2 and writes nothing.

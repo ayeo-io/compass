@@ -153,8 +153,9 @@ routing_strategies:
 ## Checkpoints (soft - they set when a session waits)
 
 A checkpoint is a stage hand-off where a session stops and waits for a
-person: assess step 7 (confirm the approach), and the define, refine and plan
-hand-offs. `compass.yml` (or `.compass/config.yml` in a project without one) sets `autonomy: controlled | balanced |
+person: assess step 7 (confirm the approach), the define, refine and plan
+hand-offs, and the `implement` and `verify` hand-offs, which end stages 2 and 3 of
+the four-layer acceptance strategy (`S17`). `compass.yml` (or `.compass/config.yml` in a project without one) sets `autonomy: controlled | balanced |
 autonomous` (balanced when left out). The `autonomy_checkpoints:` table maps
 each value and approach to the checkpoints that wait, and the evaluator writes
 the answer into the manifest as `checkpoints:`.
@@ -162,12 +163,26 @@ the answer into the manifest as `checkpoints:`.
 | Approach | controlled | balanced | autonomous |
 |---|---|---|---|
 | quick fix | assess | none | none |
-| regular | assess, define, refine, plan | define, plan | none |
-| full | assess, define, refine, plan | assess, define, refine, plan | none |
+| regular | assess, define, refine, plan, `implement`, `verify` | define, plan | none |
+| full | assess, define, refine, plan, `implement`, `verify` | assess, define, refine, plan | none |
 | hotfix | assess, define | none | none |
 | spike | assess | none | none |
 
 - A stage the approach collapses or skips has no hand-off, so it never waits.
+- `implement` and `verify` are listed only where the strategy applies to the
+  issue, as `compass approach evaluate --write` stores it. An issue the
+  strategy does not apply to lists the other four. Each ends a stage of the
+  `atdd` skill: the request for the `refine`, `implement` or `verify` checkpoint of
+  an in-scope issue lists the review questions of stage 1, 2 or 3 from
+  `skills/atdd/references/stage-reviews.md`.
+- At an `implement` or `verify` hand-off with no outcome, `compass next` stops and
+  names `compass evidence request --checkpoint <stage>` when the checkpoint is
+  listed. When it is not listed and the strategy applies, `compass next` goes on
+  and names `compass issue checkpoint add <stage> --outcome skipped --by
+  <agent>`. A person who rejects the review with `/compass:reject` sends the
+  issue back: `compass next` names that stage, with the reason, until an
+  outcome newer than the rejection is recorded. `compass check` does not fail
+  on a listed review with no outcome; `compass ship-commit` refuses it.
 - A hand-off that does not wait still writes its document, shows its
   summary, names the setting and records its outcome with `compass issue
   checkpoint add <stage> --outcome skipped --by <agent>`. A person's answer to
@@ -179,7 +194,7 @@ the answer into the manifest as `checkpoints:`.
   Only an issue whose first assessment wrote `checkpoint_outcomes` is judged;
   an issue assessed before outcomes were recorded is never refused, and the
   two commands refuse it.
-- The table can name only the four checkpoint stages. `compass policy lint`
+- The table can name only the six checkpoint stages. `compass policy lint`
   and the evaluator refuse anything else, so the setting cannot reach a gate,
   evidence, the pre-tool hook, `compass check`, guardrail 5 or the sign-off
   the domain labels bring.

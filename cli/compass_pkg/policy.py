@@ -84,7 +84,7 @@ CHECKPOINT_ROUTES = (APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_FULL, APPROA
 def checkpoint_table_errors(p):
     """Problems with the policy's `autonomy_checkpoints:` table. Checked by
     `compass policy lint` and by the evaluator, so a bad table is refused
-    whether or not `jsonschema` is installed. Only the four checkpoint
+    whether or not `jsonschema` is installed. Only the six checkpoint
     stages can be named: an entry naming a gate or another stage would let
     the setting reach something it must never change."""
     table = p.get("autonomy_checkpoints")

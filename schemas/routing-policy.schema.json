@@ -422,7 +422,7 @@
     },
     "autonomy_checkpoints": {
       "type": "object",
-      "description": "Autonomy value -> approach -> the checkpoint stages that wait for a person. Only assess, define, refine and plan can be named.",
+      "description": "Autonomy value -> approach -> the checkpoint stages that wait for a person. Only assess, define, refine, plan, `implement` and `verify` can be named.",
       "additionalProperties": false,
       "properties": {
         "controlled": {
@@ -434,7 +434,9 @@
                 "assess",
                 "define",
                 "refine",
-                "plan"
+                "plan",
+                "implement",
+                "verify"
               ]
             },
             "uniqueItems": true
@@ -449,7 +451,9 @@
                 "assess",
                 "define",
                 "refine",
-                "plan"
+                "plan",
+                "implement",
+                "verify"
               ]
             },
             "uniqueItems": true
@@ -464,7 +468,9 @@
                 "assess",
                 "define",
                 "refine",
-                "plan"
+                "plan",
+                "implement",
+                "verify"
               ]
             },
             "uniqueItems": true

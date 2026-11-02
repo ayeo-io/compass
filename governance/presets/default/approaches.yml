@@ -48,7 +48,7 @@ approaches:
     subtask_ceiling: 2
     acceptance_strategy: 'on'
     checkpoints:
-      controlled: [assess, define, refine, plan]
+      controlled: [assess, define, refine, plan, implement, verify]
       balanced: [define, plan]
       autonomous: []
   hotfix:
@@ -78,6 +78,6 @@ approaches:
     subtask_ceiling: null
     acceptance_strategy: 'on'
     checkpoints:
-      controlled: [assess, define, refine, plan]
+      controlled: [assess, define, refine, plan, implement, verify]
       balanced: [assess, define, refine, plan]
       autonomous: []

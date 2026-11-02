@@ -386,6 +386,13 @@ def cmd_next(args):
         _emit(args, task, task_dir, "all phases complete\n", None, True)
         return 0
 
+    # The stage 2 and 3 reviews of strategy `S17`: a rejected one sends the
+    # issue back to its stage, and a listed one with no outcome waits.
+    from compass_pkg import checkpoint_outcomes
+    done = _stages_on_record(task, task_dir)
+    back, review_wait, review_note = checkpoint_outcomes.next_review(task, task_dir, done)
+    next_phase = back or next_phase
+
     # Find the first pending gate for the "next gate" display
     pending_gate = _first_pending_gate(gates)
 
@@ -401,6 +408,8 @@ def cmd_next(args):
         parts.append("entry not met: " + ", ".join(unmet))
     if collapsed:
         parts.append(f"{', '.join(collapsed)} collapsed in this approach")
+    if review_note:
+        parts.append(review_note)
     # The issues this one waits for (ADR-062). Faults in `depends_on` are not
     # named here: the line stays one line, and `compass issue lint` names them.
     blocked = _dependency_block(task, task_dir, next_phase)
@@ -410,7 +419,8 @@ def cmd_next(args):
     # A decision an agent took for the person: the issue waits at a checkpoint
     # for its confirmation, or lists the decisions and goes on (autonomous).
     from compass_pkg import decisions_taken
-    wait, more = decisions_taken.next_lines(task, _stages_on_record(task, task_dir))
+    wait, more = decisions_taken.next_lines(task, done)
+    wait = wait or review_wait
     if wait and blocked:
         wait += " | blocked: " + blocked
     line = (wait if wait else " | ".join(parts)) + "\n"

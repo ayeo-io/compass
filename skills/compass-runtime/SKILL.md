@@ -83,7 +83,8 @@ and a reader knows where their evidence went without guessing.
   Load `receiving-code-review` when answering their comments.
 - **A change to behavior a real client can observe** - also load `atdd`:
   stage 1 at refine, stage 2 at implement and stage 3 at verify. Each ends at
-  that stage's checkpoint. No stage or gate moves. Not for a refactor.
+  that stage's checkpoint, whose request lists the stage's review questions.
+  No stage or gate moves. Not for a refactor.
 - **An unexpected test failure while implementing** - load `systematic-debugging`,
   and after three failed fixes re-assess rather than try a fourth.
 - **Role-facing work** - load `intent-interview` and read its

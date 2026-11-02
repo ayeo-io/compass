@@ -210,8 +210,7 @@ def _delegated(args):
     if not os.path.isdir(store):
         # No delegation was ever made: refuse without creating the folder.
         raise CompassError(f"compass evidence approve: no delegation in force names "
-                           f"{agent}. Ask the person with `compass evidence request` and "
-                           f"stop. Nothing was written."
+                           f"{agent}. {delegations.ASK_PERSON}"
                            + _stray_files(task_dir, store_compass))
     try:
         # The delegation lock, taken inside the issue lock in the order the prompt

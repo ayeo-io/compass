@@ -146,6 +146,31 @@ every owed follow-up settled - are carried into ship with
 fails, the issue does not advance - fix it or send it back. Log to
 `devlog.md`. Next: `/compass:ship`.
 
+## The stage 3 review
+
+On an issue the four-layer acceptance strategy (`S17`) applies to, the end of
+`verify` is the end of stage 3 of the `atdd` skill. Wait for approval only if
+`verify` is in the manifest's `checkpoints:`, which lists it only where the
+strategy applies. The three commands of this hand-off:
+
+```
+compass evidence request --checkpoint verify
+compass evidence approve --checkpoint verify --approver <name> --role <role>
+compass issue checkpoint add verify --outcome skipped --by verifier
+```
+
+- If it is listed, ask with the first command and wait. The request lists the
+  stage 3 review questions. The person types `/compass:approve` or
+  `/compass:reject` in Claude Code, or runs the second command at a terminal.
+- A rejection sends the issue back to `verify`: `compass next` names it, with
+  the reason.
+- If `verify` is not listed and `compass next` names the stage 3 review, show
+  the hand-off, say you are going on without waiting and name the autonomy
+  setting. Record it with the third command.
+
+`compass check` does not fail on a listed review with no outcome;
+`compass ship-commit` refuses to land the issue until it has one.
+
 ## Answering the reviewer
 
 Load `receiving-code-review`. Check every suggestion against the code

@@ -320,6 +320,7 @@ def test_si_7_the_rebuilt_values_equal_todays_values():
         "feature": "regular", "initiative": "full", "quick-fix": "quick fix"}
     assert core.STAGE_DISPLAY == {s: s for s in (
         "assess", "define", "refine", "plan", "breakdown", "implement", "verify", "ship")}
-    assert core.CHECKPOINT_STAGES == ("assess", "define", "refine", "plan")
+    assert core.CHECKPOINT_STAGES == ("assess", "define", "refine", "plan", "implement",
+                                      "verify")
     lines = (PACKAGE / "core.py").read_text(encoding="utf-8").splitlines()
     assert len(lines) <= 1200, f"core.py is {len(lines)} lines; the cap is 1,200"

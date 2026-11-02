@@ -531,6 +531,21 @@ What happens next depends on the project's `autonomy` setting:
 - On `autonomous`, `compass next` lists the decisions below its usual line and
   does not wait. They stay open.
 
+## The stage 2 and 3 reviews
+
+On an issue the four-layer acceptance strategy applies to, `implement` and `verify`
+each end with a review from the `atdd` skill. When the records show one of
+those stages done and its review has no outcome, `compass next` says so:
+
+- On `controlled`, where the checkpoint is listed, its first line reads
+  `Waiting at the implement checkpoint: the stage 2 review has no outcome`,
+  with the `compass evidence request --checkpoint implement` command that asks
+  you for it.
+- Elsewhere it shows its usual line and adds the `compass issue checkpoint add`
+  command that records the review as skipped.
+- When you reject a review with `/compass:reject <n> <reason>`, `compass next`
+  names that stage again, with your reason, until a new outcome is recorded.
+
 `compass retro --decisions` reports, across all issues, how many of these
 decisions were confirmed as taken, how many were changed, and how many were
 never confirmed on a finished issue.

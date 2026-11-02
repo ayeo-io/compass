@@ -616,7 +616,10 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # trigger path is now `tighter`, where version 10 read it as `incomparable`. The
 # version is now 11 (ADR-073). The digest also reads `classify_lists`, which holds
 # the code that decides whether a list can be read, so an edit there is pinned too.
-VERDICT_SOURCE_PIN = "9bef8436e918b7c2"
+# Re-pinned for `route_checkpoints`' `strategy_applies` (ADR-083). The classifier
+# never passes it, and the default leaves out only `implement` and `verify`, which no
+# checkpoint table named before, so no verdict moves and the version stays 11.
+VERDICT_SOURCE_PIN = "389b27b4b47053ad"
 
 
 def _verdict_source_digest():

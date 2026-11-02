@@ -1,6 +1,7 @@
 """Checkpoint outcomes: a record of each stage hand-off, and the landing refusal.
 
-A stage hand-off that can wait for a person (assess, define, refine or plan)
+A stage hand-off that can wait for a person (assess, define, refine, plan,
+`implement` or `verify`)
 now leaves a record in the manifest's `checkpoint_outcomes`:
 
 - `compass evidence approve --checkpoint <stage>` records a person's answer as
@@ -315,7 +316,7 @@ def test_arc_4_skip_refusals(tmp_path):
     cases = [
         (("plan", "spec-author", "skipped"), "plan is a listed checkpoint, so it waits for a person"),
         (("define", "spec-author", "skipped"), "define already holds a waited outcome"),
-        (("implement", "builder", "skipped"), "'implement' is not a checkpoint stage"),
+        (("breakdown", "builder", "skipped"), "'breakdown' is not a checkpoint stage"),
         (("refine", "jed72", "skipped"), "--by must name an agent"),
         (("refine", "spec-author", "waited"), "only a person's approval records waited"),
     ]
@@ -401,7 +402,7 @@ def test_arc_2_approve_checkpoint_refusals(tmp_path):
         ("agent", dict(stage="define", approver="agent"), "an agent cannot approve"),
         ("not listed", dict(stage="define", approver="sam"),
          "sam is not an approver of this project"),
-        ("not a checkpoint", dict(stage="implement"), "'implement' is not a checkpoint stage"),
+        ("not a checkpoint", dict(stage="breakdown"), "'breakdown' is not a checkpoint stage"),
         # The message says "approach", because "route" is a verb only (ADR-044).
         ("quick fix refine", dict(stage="refine", slug=slug),
          "the approach runs no refine hand-off"),
@@ -682,6 +683,8 @@ def _quick_fix_refused(tmp_path):
 HAND_OFFS = (("commands/define.md", "define", "spec-author"),
              ("commands/refine.md", "refine", "spec-author"),
              ("commands/plan.md", "plan", "planner"),
+             ("commands/implement.md", "implement", "builder"),
+             ("commands/verify.md", "verify", "verifier"),
              ("approaches/assess-procedure.md", "assess", "router"))
 
 

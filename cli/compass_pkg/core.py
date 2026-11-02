@@ -42,7 +42,7 @@ from compass_pkg import project_settings  # noqa: E402  (defines CompassError)
 from compass_pkg.project_settings import CompassError  # noqa: E402,F401
 from compass_pkg.stable_ids import (  # noqa: E402
     APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, STAGE_ASSESS, STAGE_DEFINE, STAGE_IDS,
-    STAGE_PLAN, STAGE_REFINE)
+    STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_VERIFY)
 from compass_pkg import manifest_store, word_map  # noqa: E402
 
 
@@ -183,10 +183,10 @@ def load_mode():
     return mode if mode == "advisory" else "enforced"
 
 
-# The stage hand-offs that can wait for a person, and the `autonomy:`
-# values that choose among them. Here, not in policy.py, because core reads
-# the setting and policy.py already imports core.
-CHECKPOINT_STAGES = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN)
+# The stage hand-offs that can wait for a person, and the `autonomy:` values that
+# choose among them; `implement` and `verify` end stages 2 and 3 of `S17`.
+# Here, not in policy.py, because core reads the setting and policy imports core.
+CHECKPOINT_STAGES = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN, STAGE_IMPLEMENT, STAGE_VERIFY)
 AUTONOMY_VALUES = ("controlled", "balanced", "autonomous")
 
 

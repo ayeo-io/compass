@@ -37,7 +37,7 @@
   },
   "feature/gates-pass": {
     "exit": 0,
-    "stdout": "Ship\n"
+    "stdout": "Ship | the stage 2 review passes without waiting; record it: compass issue checkpoint add implement --outcome skipped --by builder\n"
   },
   "initiative/fresh": {
     "exit": 0,
@@ -57,7 +57,7 @@
   },
   "initiative/gates-pass": {
     "exit": 0,
-    "stdout": "Ship\n"
+    "stdout": "Ship | the stage 2 review passes without waiting; record it: compass issue checkpoint add implement --outcome skipped --by builder\n"
   },
   "spike/fresh": {
     "exit": 0,

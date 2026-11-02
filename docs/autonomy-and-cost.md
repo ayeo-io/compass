@@ -6,7 +6,14 @@ Four things are stored: the checkpoint outcomes, the `checkpoint-approval` recor
 
 ## Checkpoint outcomes
 
-A checkpoint stage is one of `assess`, `define`, `refine` and `plan`. A listed checkpoint is a checkpoint stage in the manifest's `checkpoints:` list. It waits for a person.
+A checkpoint stage is one of `assess`, `define`, `refine`, `plan`, `implement` and `verify`. A listed checkpoint is a checkpoint stage in the manifest's `checkpoints:` list. It waits for a person.
+
+`implement` and `verify` end stages 2 and 3 of the four-layer acceptance strategy (`S17`), and are listed only where the strategy applies to the issue ([ADR-083](../architecture/decisions/ADR-083-the-stage-2-and-3-reviews-are-checkpoints-listed-only-where-the-strategy-applies.md)). For an in-scope issue:
+
+- A request for the `refine`, `implement` or `verify` checkpoint holds `review`: the stage it ends and the questions of that stage from `skills/atdd/references/stage-reviews.md` (`checkpoint_outcomes.review`).
+- `compass next` reads the `implement` and `verify` hand-offs (`checkpoint_outcomes.next_review`). When the records show one done with no outcome, it waits at a listed checkpoint and names `compass evidence request --checkpoint <stage>`. At a checkpoint that is not listed it goes on and names `compass issue checkpoint add <stage> --outcome skipped --by builder` (or `verifier`).
+- A request for either that a person rejects sends the issue back: while the rejection is newer than the stage's outcome, `compass next` names the stage and the reason.
+- `compass check` does not fail on a listed review with no outcome. The landing refusal below refuses it.
 
 The manifest's optional `checkpoint_outcomes` list holds one entry for each checkpoint stage that has an outcome:
 

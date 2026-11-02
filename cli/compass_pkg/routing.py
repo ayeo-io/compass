@@ -35,7 +35,7 @@ from compass_pkg.governance import governance_drift
 from compass_pkg import retired, word_map
 from compass_pkg.stable_ids import (APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE,
                                     ARTIFACT_DEPTHS, DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH, MODE_LIGHTWEIGHT,
-                                    MODE_THOROUGH)
+                                    MODE_THOROUGH, STAGE_IMPLEMENT, STAGE_VERIFY)
 from compass_pkg.render import fired_rule_line
 from compass_pkg.manifest import annotate_gate_accepts_text
 from compass_pkg.readiness_floor import FLOOR_REFUSED, _readiness_floor
@@ -203,13 +203,22 @@ def prepare_policy(policy):
     return PreparedPolicy(view, renamed, vocab, checkpoint_table_errors(view))
 
 
-def route_checkpoints(prepared, stages, approach, autonomy):
+#: The checkpoints that end stages 2 and 3 of the four-layer acceptance strategy.
+STRATEGY_CHECKPOINTS = (STAGE_IMPLEMENT, STAGE_VERIFY)
+
+
+def route_checkpoints(prepared, stages, approach, autonomy, strategy_applies=False):
     """The hand-offs that wait for a person under `autonomy`, for an approach
     whose stages are `stages`. Only this depends on the autonomy, so a caller
-    that needs every autonomy value routes once and asks for the rest here."""
+    that needs every autonomy value routes once and asks for the rest here.
+    `implement` and `verify` end the stage 2 and 3 reviews of strategy `S17`, so
+    they are listed only with `strategy_applies`: an issue the strategy applies
+    to. An evaluation with no issue, and every obligation, leaves them out
+    (ADR-083)."""
     from compass_pkg.policy import CHECKPOINT_STAGES
     runs = [s for s in CHECKPOINT_STAGES
-            if stages.get(s) not in (None, "collapsed", "skipped")]
+            if stages.get(s) not in (None, "collapsed", "skipped")
+            and (strategy_applies or s not in STRATEGY_CHECKPOINTS)]
     table = prepared.view.get("autonomy_checkpoints")
     row = {canonical_shape(k): v
            for k, v in ((table or {}).get(autonomy) or {}).items()}
@@ -652,24 +661,25 @@ def read_size(dimension, value):
     return new
 
 
-def _acceptance_block(task, task_dir, plan, result, args, evaluated_before):
-    """Store or replace the manifest's `acceptance_strategy` block, as
-    `cmd_route_evaluate` explains where it calls this."""
+def _acceptance_block(task, task_dir, plan, result, args, evaluated_before, resolved=None):
+    """The manifest's `acceptance_strategy` block a write stores, or None to
+    leave the manifest as it is, as `cmd_route_evaluate` explains where it
+    stores it. With no `plan` (no --write) it previews from `resolved`."""
     from compass_pkg import acceptance_strategy
     from compass_pkg.layers import find_project_root
     held = acceptance_strategy.stored(task)
     if evaluated_before and held is None:
-        return
+        return None
     # A project pinned to a shipped major before the strategy keeps today's
     # process: no block, so no check row (decided by jed72, 2026-10-30).
     if acceptance_strategy.pinned_below(find_project_root(task_dir)):
-        return
-    resolved = plan.resolution.resolved if plan is not None else None
+        return None
+    resolved = plan.resolution.resolved if plan is not None else resolved
     if not acceptance_strategy.declared(resolved):
-        return
+        return None
     expected = getattr(args, "expected_acceptance", None) or (
         held or {}).get("expected_acceptance") or "none"
-    task["acceptance_strategy"] = acceptance_strategy.block(
+    return acceptance_strategy.block(
         find_project_root(task_dir), resolved, result["delivery_approach"], expected)
 
 
@@ -784,9 +794,22 @@ def cmd_route_evaluate(args):
     for dim in retired.DIMENSIONS:      # a 6.x manifest's role, which a 7.0.0 policy drops
         if dim in readings and dim not in (policy.get("assessment_vocabulary") or {}):
             sys.stderr.write(retired.notice(f"assessment.{dim}") + "\n")
+    prepared = prepare_policy(policy)
     result = evaluate_route(documents_present.with_presence(readings, task_dir, policy),
-                            policy, autonomy,
+                            prepared, autonomy,
                             issue=view.evaluator_issue() if view is not None else None)
+    # The block the write stores, and the stage 2 and 3 reviews listed only
+    # where the strategy applies to the issue (ADR-083).
+    strategy = None
+    if task is not None:
+        strategy = _acceptance_block(
+            task, task_dir, plan, result, args,
+            bool(task.get("delivery_approach")) or bool(task.get("evaluated_assessment")),
+            resolved=None if args.write or view is None else view.resolved)
+        if (strategy or acceptance_strategy.stored(task) or {}).get("applies"):
+            result["checkpoints"] = route_checkpoints(
+                prepared, result["stages"], result["delivery_approach"], autonomy,
+                strategy_applies=True)
     if result.get("renamed_routes"):
         sys.stderr.write(
             "compass: governance/routing-policy.yml uses old approach names ("
@@ -1021,7 +1044,8 @@ def cmd_route_evaluate(args):
         # first assessment adds it when the configuration it commits declares
         # the strategy, and a reassessment replaces it but never adds it, so an
         # issue assessed before the strategy shipped never gains it (ADR-006).
-        _acceptance_block(task, task_dir, plan, result, args, evaluated_before)
+        if strategy is not None:
+            task["acceptance_strategy"] = strategy
         # seed the gate list (status pending) without clobbering existing state
         existing = {g.get("id"): g for g in task.get("gates", []) if isinstance(g, dict)}
         task["gates"] = [

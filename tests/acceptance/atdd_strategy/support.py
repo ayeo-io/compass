@@ -36,7 +36,7 @@ ASSESSMENTS = {
 #: own findings; every other row is compared with compass 8.0.4.
 STRATEGY_CHECKS = ("acceptance-applicability-agrees", "outer-loop-recorded",
                    "outer-loop-attempts-recorded", "isolation-proven",
-                   "layering-test-passed")
+                   "layering-test-passed", "acceptance-support-present")
 
 
 def env(root):

@@ -111,6 +111,10 @@ BASELINE_CHECKS = {
     # four-layer acceptance strategy has an outer-loop red and an outer-loop green on the
     # current tree. It sits in no guardrail, so `G1` and `G4` keep their checks.
     "outer-loop-recorded",
+    # Added by support-code-readiness. The advisory check that the project names its
+    # acceptance support code and each named path exists; it states the claim limit.
+    # It sits in no guardrail, so `G1` and `G4` keep their checks.
+    "acceptance-support-present",
 }
 
 # The evidence types a branch may add to guardrails.yml, each named for the

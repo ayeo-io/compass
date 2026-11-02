@@ -315,7 +315,10 @@ def test_trc_d9(tmp_path):
     assert "verify" not in {o["stage"] for o in issue.manifest()["checkpoint_outcomes"]}
     code, document = issue.check()
     assert code == 0, support.findings(document)
-    assert not support.findings(document), support.findings(document)
+    # Advice never stops an issue: this project names no acceptance support
+    # code, so `acceptance-support-present` adds its claim limit as advice.
+    blocking = [f for f in support.findings(document) if f[1] != "advisory"]
+    assert not blocking, blocking
     support.git(project.root, "add", "archive.py")
     code, out, err = issue.run("ship-commit", "-m", "Archive a workspace", "--issue", SLUG)
     assert code == 2, out + err

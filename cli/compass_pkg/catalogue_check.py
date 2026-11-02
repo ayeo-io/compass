@@ -513,7 +513,12 @@ def schema():
                                    "type": "boolean"},
         "enforcement": {"description": top["enforcement"], "type": "object"},
         "record": {"description": top["record"], "type": "object"},
-        "project": {"description": top["project"], "type": "object"},
+        "project": {"description": top["project"], "type": "object", "properties": {
+            "acceptance_support": {
+                "description": top["project.acceptance_support"], "type": "object",
+                "properties": {k: {"description": top[f"project.acceptance_support.{k}"],
+                                   "type": "string"} for k in spec.ACCEPTANCE_SUPPORT},
+                "additionalProperties": False}}},
         "prices": {"description": top["prices"], "type": "object"},
         "models": {"description": top["models"], "type": "object",
                    "properties": {t: {"description": top[f"models.{t}"], "type": ["string", "object"],

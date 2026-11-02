@@ -322,6 +322,8 @@ SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement"
                  "record", "project", "prices", "models", "multiagent", "governance_drift",
                  "preset_index", "github_labels", "language", "acceptance_strategy",
                  "living_spec")
+#: The pieces of acceptance support code a project names under `project.acceptance_support`.
+ACCEPTANCE_SUPPORT = ("alias_helper", "driver_factory", "dsl_root", "layering_test")
 #: The three switches inside `github_labels`, all off by default.
 GITHUB_LABEL_SWITCHES = ("domain", "status", "page")
 RESERVED_KEYS = ("preset",)
@@ -600,8 +602,23 @@ TOP_DESCRIPTIONS = {
     "project": "The project's name, its commands (`test_command`, `test_micro_command`, "
                "`bdd_run_command`, `lint_command`, `format_check_command`, `build_command` and "
                "`typecheck_command`) and two declarations (`secret_scan` and "
-               "`structured_logging`). Declare the check form of a formatter, and note that "
+               "`structured_logging`), and the paths of its acceptance support code "
+               "(`acceptance_support`). Declare the check form of a formatter, and note that "
                "`compass readiness` runs every command in a clean checkout of HEAD.",
+    "project.acceptance_support": "The paths of the support code of the four-layer acceptance "
+                                  "strategy (`S17`), each relative to the project root. "
+                                  "`compass readiness` reports a piece with no path, or a path "
+                                  "that does not exist, as missing; it opens no file and blocks "
+                                  "nothing.",
+    "project.acceptance_support.alias_helper": "The path of the alias helper, which makes each "
+                                               "identifier a scenario uses unique to the run.",
+    "project.acceptance_support.driver_factory": "The path of the driver factory, which picks "
+                                                 "the protocol driver at start-up.",
+    "project.acceptance_support.dsl_root": "The path of the root of the domain-specific "
+                                           "language the specifications call.",
+    "project.acceptance_support.layering_test": "The path of the layering test, which checks "
+                                                "that each test layer calls only the layer "
+                                                "below it.",
     "prices": "Dollars per million tokens for each model name, used to price the usage of a "
               "quick fix. Without it no cost is recorded.",
     "models": "The model and effort of each tier `strong`, `standard` and `fast`, which "

@@ -800,3 +800,44 @@ def _(root):
     block["acceptance_strategy"]["routing"] = "suspended"
     task, task_dir = _issue(root, block)
     return _loop_records(task, task_dir, "inner")
+
+
+# The support-code check tests only that each path the project names exists.
+_SUPPORT_PATHS = {"alias_helper": "tests/acceptance/alias.py",
+                  "driver_factory": "conftest.py",
+                  "dsl_root": "tests/acceptance/dsl.py",
+                  "layering_test": "tests/acceptance/test_layering.py"}
+
+
+def _support_project(root, present):
+    """Name every piece in `compass.yml` and write the files of those in `present`."""
+    _write(root / "compass.yml", yaml.safe_dump(
+        {"schema": 1, "project": {"acceptance_support": _SUPPORT_PATHS}}, sort_keys=False))
+    for key in present:
+        _write(root / _SUPPORT_PATHS[key], "# support code\n")
+
+
+# An in-scope issue with a green, in a project that names every piece but has built no
+# alias helper. With no green the check has nothing to judge.
+@case("acceptance-support-present", "broken")
+def _(root):
+    _support_project(root, ("driver_factory", "dsl_root", "layering_test"))
+    task, task_dir = _issue(root, _strategy_block(True, "client-observable behavior"))
+    return _loop_records(task, task_dir, "outer")
+
+
+@case("acceptance-support-present", "restored")
+def _(root):
+    _support_project(root, tuple(_SUPPORT_PATHS))
+    task, task_dir = _issue(root, _strategy_block(True, "client-observable behavior"))
+    return _loop_records(task, task_dir, "outer")
+
+
+# A suspended routing takes the issue out of scope, so missing support code is not judged.
+@case("acceptance-support-present", "suspended")
+def _(root):
+    block = _strategy_block(False, "suspended on the regular approach by the project")
+    block["acceptance_strategy"]["routing"] = "suspended"
+    task, task_dir = _issue(root, block)
+    _strategy_red(task_dir)
+    return task, task_dir

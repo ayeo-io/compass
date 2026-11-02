@@ -30,7 +30,7 @@ change shape in the catalogue itself:
 """
 # DEPENDENCY: PyYAML (bundled); compass_pkg.core, compass_pkg.routing,
 # compass_pkg.catalogue_spec, compass_pkg.stable_ids, compass_pkg.artifact_kinds,
-# compass_pkg.retired.
+# compass_pkg.retired, compass_pkg.outside_gate.
 from __future__ import annotations
 
 import copy
@@ -38,7 +38,7 @@ import os
 
 import yaml
 
-from compass_pkg import artifact_kinds, core, retired, stable_ids, word_map
+from compass_pkg import artifact_kinds, core, outside_gate, retired, stable_ids, word_map
 from compass_pkg.catalogue_spec import CAPABILITIES
 from compass_pkg.routing import canonical_routes
 from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, GATE_SPIKE_CONCLUDE, STAGE_ASSESS,
@@ -103,12 +103,13 @@ DECLINING_CHECKS = (
     "borrowed-documents-answered", "evidence-matches-tree",
     "evidence-identity-matches", "dod-evidence-typed", "landed-by-resolves", "multiagent-run-recorded", "artifacts-approved",
     "nfr-rows-resolved", "contracts-declared", "design-within-word-ceiling",
-    "acceptance-applicability-agrees", "outer-loop-recorded",
+    "acceptance-applicability-agrees", "outer-loop-recorded", "acceptance-support-present",
 )
 PASSING_CHECKS = ("declared-tests-resolve",)
 # The checks the preset declares `severity: advisory`. The legacy guardrails file
-# has no severity field, so the adapter holds the list, as it holds CHECK_PARAMS.
-ADVISORY_CHECKS = ("acceptance-applicability-agrees",)
+# has no severity field, so `outside_gate` holds the list, which `compass check`
+# also reads when it judges an issue by that file.
+ADVISORY_CHECKS = outside_gate.ADVISORY_CHECKS
 
 # The parameters of each shipped check that takes some (ADR-064). The legacy
 # guardrails file has no field for them, so the adapter holds the table the
@@ -517,6 +518,7 @@ def _artifact_entry(name, shipped):
 DISPLAY_NAMES = {
     "checks.acceptance-applicability-agrees": "Acceptance strategy applicability agrees",
     "checks.outer-loop-recorded": "Outer-loop red and green recorded",
+    "checks.acceptance-support-present": "Acceptance support code present",
     "checks.artifacts-approved": "Documents approved",
     "checks.backfills-paid": "Follow-ups resolved",
     "checks.dod-evidence-typed": "Definition of Done evidence is typed",

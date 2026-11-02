@@ -41,11 +41,11 @@ KEY = "acceptance_strategy"
 STATES = ("on", "off")
 
 #: The advisory check this module implements, and every check of the strategy.
-#: The other four are added by later items; a configuration that does not
+#: Later items add the checks this CLI does not ship yet; a configuration that does not
 #: declare one does not run it.
 CHECK = "acceptance-applicability-agrees"
 CHECKS = (CHECK, "outer-loop-recorded", "outer-loop-attempts-recorded",
-          "isolation-proven", "layering-test-passed")
+          "isolation-proven", "layering-test-passed", "acceptance-support-present")
 
 #: The routing of each approach, as the preset's `approaches.<id>.acceptance_strategy`
 #: names it, and the words the delivery-approach record shows for it.

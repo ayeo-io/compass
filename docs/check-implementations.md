@@ -96,6 +96,14 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `restored` | pass | a block that says the strategy applies, and a red record on the issue |
 | `suspended` | nothing-to-check | a block whose routing is suspended on an approach that ships, and a red record on the issue |
 
+### `acceptance-support-present` (version 1.0.0)
+
+| Case | Verdict | What the input exercises |
+|---|---|---|
+| `broken` | fail | an in-scope issue with a green, in a project that names every piece of support code but has no alias helper |
+| `restored` | pass | an in-scope issue with a green, in a project that names every piece of support code, each one present |
+| `suspended` | nothing-to-check | a block whose routing is suspended on an approach that ships, in a project with no support code |
+
 ### `artifacts-approved` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |

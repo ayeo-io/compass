@@ -321,6 +321,29 @@ _(none yet - the shipped default guardrails apply as-is)_
     cannot name it, or no outer-loop green names its tree, the tree is not
     compared and the detail says so.
   - It judges the issue, not each scenario. `suite-passed` does not change.
+- **`acceptance-support-present`** is the support-code check of the
+  four-layer acceptance strategy (`S17`). It is unlocked, declares `severity:
+  advisory` and `on_skipped: not-applicable`, and sits in no gate, no lock and
+  not in the spike's checks. `compass check` runs it after
+  `outer-loop-recorded` and labels its row the same way. The rules it applies
+  are in `cli/compass_pkg/support_code.py`.
+  - It asks `acceptance_strategy.in_scope` whether the strategy applies, and
+    declines with "not required: the strategy does not apply" when it does not.
+  - It declines with "not yet judged" until a green is on record: the claim
+    limit limits what a passing run lets the issue claim.
+  - On an in-scope issue it tests that each piece of support code named under
+    `project.acceptance_support` (`alias_helper`, `driver_factory`,
+    `dsl_root`, `layering_test`) exists inside the project root. It opens no
+    file. `compass readiness` reports the same pieces (`docs/readiness.md`).
+  - A missing piece fails it as advice. The finding names each missing piece
+    and states the claim limit. The claim limit is: while a piece is missing,
+    the issue can claim that its scenarios pass, and not that its acceptance
+    tests are isolated from each other (alias helper), run through a driver
+    chosen at start-up (driver factory), keep driver detail out of the
+    specifications (DSL root) or keep the layer rules (layering test). The
+    first issue the strategy applies to builds the missing pieces as its own
+    work.
+  - The advice never makes `compass check` exit 1.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart

@@ -16,7 +16,12 @@ The order of one run:
 5. run the allowed commands (`readiness_run.run_commands`);
 6. decide every signal (`readiness_signals`), write the record
    (`readiness_record`) and print one line per signal, the score and the
-   floor.
+   floor;
+7. print the support code of the four-layer acceptance strategy
+   (`support_code`): whether each path the project names exists. It is read
+   before step 1, so a setting that cannot be read is refused first. It is
+   not a signal, so it changes neither the score nor the floor, and the
+   record does not hold it.
 
 `--fix-list` reads a fresh record instead and writes nothing.
 
@@ -27,7 +32,8 @@ string. `docs/readiness.md` owns this behaviour.
 # DEPENDENCY: standard library (os, time); compass_pkg.core,
 # compass_pkg.project_commands, compass_pkg.project_settings,
 # compass_pkg.readiness_catalogue, readiness_record, readiness_registry,
-# readiness_run, readiness_signals and compass_pkg.terminal.
+# readiness_run, readiness_signals, compass_pkg.support_code and
+# compass_pkg.terminal.
 from __future__ import annotations
 
 import os
@@ -35,7 +41,7 @@ import time
 
 from compass_pkg import (project_commands, project_settings, readiness_catalogue,
                          readiness_record, readiness_registry, readiness_run,
-                         readiness_signals)
+                         readiness_signals, support_code)
 from compass_pkg.core import CompassError, find_compass_dir
 from compass_pkg.terminal import Report
 
@@ -189,6 +195,8 @@ def cmd_readiness(args):
     root = os.path.dirname(find_compass_dir())
     if args.fix_list:
         return _fix_list(args, root)
+    # Read first, so a setting that cannot be read is refused before any command runs.
+    support = support_code.report(root)
     notes = []
     record = measure(root, notes)
     width = max([len(s["id"]) for s in record["signals"]] + [10])
@@ -197,9 +205,10 @@ def cmd_readiness(args):
     rep = Report(args, title="compass readiness")
     rep.summary(readiness_record.line(readiness_record.summary(root)))
     rep.body("\n".join([*lines, *(f"  {note}" for note in notes), "",
-                        f"  {score_line}", f"  wrote {readiness_record.RECORD}"]))
+                        f"  {score_line}", "", *support_code.lines(support), "",
+                        f"  wrote {readiness_record.RECORD}"]))
     rep.data(**record, score=score, of=len(record["signals"]), floor_met=not below,
-             below_floor=below, path=readiness_record.RECORD)
+             below_floor=below, path=readiness_record.RECORD, support_code=support)
     return rep.emit()
 
 

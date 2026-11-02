@@ -22,13 +22,18 @@ from compass_pkg.core import load_yaml, reading_matches
 #: The checks that sit in no gate, in the order `compass check` reports them.
 CHECKS = ("artifacts-approved", "nfr-rows-resolved", "contracts-declared",
           "design-within-word-ceiling", "acceptance-applicability-agrees",
-          "outer-loop-recorded")
+          "outer-loop-recorded", "acceptance-support-present")
 
 #: Those a spike runs too. `artifacts-approved` judges what ships, and a spike ships
 #: nothing; the section checks and the design-size check report that a spike
 #: registers no spec or design. The four-layer acceptance strategy is suspended on
 #: a spike, as strategy `S2` is, so none of its checks is here.
 SPIKE_CHECKS = ("nfr-rows-resolved", "contracts-declared", "design-within-word-ceiling")
+
+#: The checks here the default preset declares `severity: advisory`. The legacy
+#: `governance/guardrails.yml` has no severity field, so `judged` gives them this
+#: severity when an issue is judged by that file, and the legacy adapter writes it.
+ADVISORY_CHECKS = ("acceptance-applicability-agrees", "acceptance-support-present")
 
 #: The label each check's row is reported under, where a gate row names its guardrail.
 LABELS = {
@@ -38,6 +43,7 @@ LABELS = {
     "design-within-word-ceiling": "design size",
     "acceptance-applicability-agrees": "four-layer acceptance strategy (`S17`)",
     "outer-loop-recorded": "four-layer acceptance strategy (`S17`)",
+    "acceptance-support-present": "four-layer acceptance strategy (`S17`)",
 }
 
 
@@ -66,9 +72,14 @@ def judged(check_id, fn, task, task_dir, judge):
     if check_id not in (guardrails.get("impl") or {}) and check_id not in (
             guardrails.get("checks") or {}):
         return None
+    declared = (guardrails.get("checks") or {}).get(check_id) or {}
+    if view is None and check_id in ADVISORY_CHECKS:
+        # The legacy file holds no severity, so an advisory check takes the one
+        # the preset declares; otherwise its advice would fail the run.
+        declared = dict(declared, severity="advisory")
     try:
         passed, detail = fn(task, task_dir)
     except Exception as exc:                            # noqa: BLE001 - a check must not crash the run
         passed, detail = False, f"check errored: {exc}"
-    return judge(passed, detail, (guardrails.get("checks") or {}).get(check_id) or {},
-                 matches, readings)
+    return judge(passed, detail, declared, matches, readings)
+

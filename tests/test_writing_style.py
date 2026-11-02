@@ -3879,8 +3879,9 @@ _GROWING_REACH = {
     # 150 when the extracted feature file replaced the 8.0.4 refusal text: the
     #    scan reads the refusal as prose and finds none in the feature file;
     # 153 with the three check-corpus case labels of outer-loop-recorded;
-    # 154 with the recorded 8.0.4 output of an inner-loop setup error, plain JSON.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 154),
+    # 157 with the 8.0.4 inner-loop setup error and the three check-corpus
+    # case labels of acceptance-support-present.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 157),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

@@ -125,7 +125,7 @@ Do not clean up after each scenario. Aliased data cannot collide, so it can stay
 
 ## Support code to have first
 
-Stage 1 needs the following. If any of it is missing, build it first or ask the person how to proceed.
+Stage 1 needs the following. If any of it is missing, build it first or ask the person how to proceed. `compass readiness` names the missing pieces when the project lists their paths under `project.acceptance_support` in `compass.yml`.
 
 - The alias helper described in [Isolation](#isolation), plus helpers for defaults, for example `alias`, `optional` and `optionalList`.
 - The driver interface and a factory that picks a driver at start-up, importing the driver where the runner can report a missing one.

@@ -71,5 +71,15 @@ Two items of the model's checklist are not rules here: DSL and driver method nam
 3. Write your specifications and DSL first. Add your driver names to `DRIVERS`: until the modules exist, each scenario is an error at setup.
 4. Write each driver against the interface in `tests/acceptance/drivers/__init__.py`. Put every check in the driver.
 5. Set `DSL_FILE`, `SPEC_FILES` and `IDENTIFIER_PATTERNS` in `test_layering.py` for your suite, and run it in CI with the specifications.
+6. Name each piece of support code in your `compass.yml`, so `compass readiness` can report the pieces that are missing:
+
+   ```yaml
+   project:
+     acceptance_support:
+       alias_helper: tests/acceptance/alias.py
+       driver_factory: conftest.py
+       dsl_root: tests/acceptance/dsl.py
+       layering_test: tests/acceptance/test_layering.py
+   ```
 
 Compass does not read this example's code. Its own tests, in `tests/acceptance/atdd_strategy/test_reference_example.py` of the Compass repository, run it and plant each breach. The CI job `atdd-adapter-python` runs it on every pull request.

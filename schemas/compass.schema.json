@@ -1415,7 +1415,32 @@
       "type": "object"
     },
     "project": {
-      "description": "The project's name, its commands (`test_command`, `test_micro_command`, `bdd_run_command`, `lint_command`, `format_check_command`, `build_command` and `typecheck_command`) and two declarations (`secret_scan` and `structured_logging`). Declare the check form of a formatter, and note that `compass readiness` runs every command in a clean checkout of HEAD.",
+      "description": "The project's name, its commands (`test_command`, `test_micro_command`, `bdd_run_command`, `lint_command`, `format_check_command`, `build_command` and `typecheck_command`) and two declarations (`secret_scan` and `structured_logging`), and the paths of its acceptance support code (`acceptance_support`). Declare the check form of a formatter, and note that `compass readiness` runs every command in a clean checkout of HEAD.",
+      "properties": {
+        "acceptance_support": {
+          "additionalProperties": false,
+          "description": "The paths of the support code of the four-layer acceptance strategy (`S17`), each relative to the project root. `compass readiness` reports a piece with no path, or a path that does not exist, as missing; it opens no file and blocks nothing.",
+          "properties": {
+            "alias_helper": {
+              "description": "The path of the alias helper, which makes each identifier a scenario uses unique to the run.",
+              "type": "string"
+            },
+            "driver_factory": {
+              "description": "The path of the driver factory, which picks the protocol driver at start-up.",
+              "type": "string"
+            },
+            "dsl_root": {
+              "description": "The path of the root of the domain-specific language the specifications call.",
+              "type": "string"
+            },
+            "layering_test": {
+              "description": "The path of the layering test, which checks that each test layer calls only the layer below it.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      },
       "type": "object"
     },
     "readiness": {

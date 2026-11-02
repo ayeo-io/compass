@@ -104,6 +104,16 @@ checks:
     on_skipped: not-applicable}
   outer-loop-recorded: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to, a red record and a green record say loop outer, and an outer-loop green was recorded on the tree as it is now. A record with no loop field reads as inner. Declines to check, rather than passing, for an issue the strategy does not apply to.', kind: deterministic, impl: outer-loop-recorded, severity: blocking,
     on_skipped: not-applicable}
+  acceptance-support-present: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies
+      to, the project names each piece of its acceptance support code under `project.acceptance_support`
+      (alias helper, driver factory, DSL root, layering test) and each named path exists inside the project
+      root; no file is read. The first issue the strategy applies to builds the missing pieces as its own
+      work. Claim limit: while a piece is missing, the issue can claim that its scenarios pass, and not
+      that its acceptance tests are isolated from each other (alias helper), run through a driver chosen
+      at start-up (driver factory), keep driver detail out of the specifications (DSL root) or keep the
+      layer rules (layering test). Advisory: a missing piece never fails the run. Declines to check, rather
+      than passing, for an issue the strategy does not apply to and for one with no green on record.', kind: deterministic, impl: acceptance-support-present,
+    severity: advisory, on_skipped: not-applicable}
   spike-conclusion-present: {statement: A spike has a `spike-conclusion` evidence entry with a recorded
       decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue., kind: deterministic,
     impl: spike-conclusion-present, severity: blocking, on_skipped: fail, locked: true}

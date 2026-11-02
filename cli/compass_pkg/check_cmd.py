@@ -181,6 +181,11 @@ CHECK_GUIDANCE = {
         "do": "Record the acceptance suite's red and green with `--loop outer` on the current tree.",
         "fix": "Run `compass tdd-red --loop outer --scenario <id> -- <acceptance command>` before the code, and `compass tdd-green --loop outer --scenario <id> -- <acceptance command>` after the last change.",
     },
+    "acceptance-support-present": {
+        "why": "The first issue the four-layer acceptance strategy applies to builds the support code. Until each piece exists, the issue's acceptance tests cannot show what that piece gives, so the issue claims less.",
+        "do": "Build the missing pieces in this issue, or claim no more than the claim limit allows.",
+        "fix": "Name each piece's path under `project.acceptance_support` in compass.yml (`alias_helper`, `driver_factory`, `dsl_root`, `layering_test`) and build the pieces the finding names as missing; `examples/atdd-adapters/python/` shows each one.",
+    },
     "spike-conclusion-present": {
         "why": "A Spike without a recorded conclusion is just untracked work - the conclusion is what makes the exploration accountable.",
         "do": 'Record the close-out: discard, graduate-to-delivery, or defer.',

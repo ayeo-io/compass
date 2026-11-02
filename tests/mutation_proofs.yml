@@ -114,6 +114,11 @@
   fails: tests/acceptance/atdd_strategy/test_loop_marking.py::test_trc_e3
   restores: tests/acceptance/atdd_strategy/test_loop_marking.py::test_trc_e5
 
+- check: acceptance-support-present
+  broken: an in-scope issue in a project with no alias helper
+  fails: tests/acceptance/atdd_strategy/test_readiness.py::test_trc_i2
+  restores: tests/acceptance/atdd_strategy/test_readiness.py::test_trc_i2_all_four_pieces_pass_the_check
+
 - check: spike-conclusion-present
   broken: a spike with no conclusion evidence
   fails: tests/test_spike_safety.py::test_spike_without_conclusion_fails

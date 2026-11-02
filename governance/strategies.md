@@ -161,6 +161,13 @@ commands write; it never reads project code.
   in-scope issue the check
   `outer-loop-recorded` needs an outer-loop red and an outer-loop green on
   the tree as it is now (ADR-080).
+- **Support code.** The project names the paths of its alias helper,
+  driver factory, DSL root and layering test under
+  `project.acceptance_support`. `compass readiness` reports each missing
+  piece and blocks nothing. The first in-scope issue builds the missing
+  pieces as its own work. Until then the advisory check
+  `acceptance-support-present` states the claim limit: the issue can claim
+  that its scenarios pass, but not what a missing piece gives.
 - **Only the setting turns it off.** An approach that ships cannot set the
   strategy to `suspended`; `compass policy lint` refuses it.
 - Its checks are unlocked and sit outside every gate, as

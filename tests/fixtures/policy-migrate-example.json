@@ -108,6 +108,11 @@
     },
     {
       "catalogue": "checks",
+      "id": "acceptance-support-present",
+      "operation": "add"
+    },
+    {
+      "catalogue": "checks",
       "id": "artifacts-approved",
       "operation": "add"
     },
@@ -179,6 +184,11 @@
     {
       "catalogue": "vocabulary",
       "id": "checks.acceptance-applicability-agrees",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "checks.acceptance-support-present",
       "operation": "add"
     },
     {

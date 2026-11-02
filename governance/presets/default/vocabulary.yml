@@ -125,6 +125,9 @@ vocabulary:
   checks.outer-loop-recorded:
     name: Outer-loop red and green recorded
     aliases: []
+  checks.acceptance-support-present:
+    name: Acceptance support code present
+    aliases: []
   checks.spike-conclusion-present:
     name: Spike conclusion present
     aliases: []

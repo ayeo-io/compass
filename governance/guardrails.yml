@@ -32,7 +32,7 @@
 # schemas/guardrails.schema.json.
 # =============================================================================
 
-version: 1.35.0
+version: 1.36.0
 # -----------------------------------------------------------------------------
 # Named checks - the mechanical checks `compass check` knows how to run. Each
 # guardrail below references one or more of these by name. The check reads
@@ -95,6 +95,8 @@ checks:
     description: "The four-layer acceptance strategy (`S17`) applies to the issue as its delivery-approach record says: the applicability stored at assess agrees with what the red and acceptance records decide, and the project setting has not changed since assess. Advisory: a disagreement names the re-assess command and never fails the run. Declines to check, rather than passing, for an issue assessed before the strategy shipped and for a project that turned the strategy off."
   outer-loop-recorded:
     description: "On an issue the four-layer acceptance strategy (`S17`) applies to, a red record and a green record say loop outer, and an outer-loop green was recorded on the tree as it is now. A record with no loop field reads as inner. Declines to check, rather than passing, for an issue the strategy does not apply to."
+  acceptance-support-present:
+    description: "On an issue the four-layer acceptance strategy (`S17`) applies to, the project names each piece of its acceptance support code under `project.acceptance_support` (alias helper, driver factory, DSL root, layering test) and each named path exists inside the project root; no file is read. The first issue the strategy applies to builds the missing pieces as its own work. Claim limit: while a piece is missing, the issue can claim that its scenarios pass, and not that its acceptance tests are isolated from each other (alias helper), run through a driver chosen at start-up (driver factory), keep driver detail out of the specifications (DSL root) or keep the layer rules (layering test). Advisory: a missing piece never fails the run. Declines to check, rather than passing, for an issue the strategy does not apply to and for one with no green on record."
   spike-conclusion-present:
     description: "A spike has a `spike-conclusion` evidence entry with a recorded decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue."
   spike-no-production-changes:

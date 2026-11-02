@@ -640,6 +640,11 @@ def test_d2_repairs_change_only_retired_names():
     and 3 reviews of `compass next`, and `governance/routing-policy.md`
     (list_items 71 -> 73) gained two checkpoint bullets.
 
+    One more was re-baselined by `support-code-readiness`:
+    `governance/strategies.md` (list_items 105 -> 106) gained the support-code
+    bullet, and `governance/guardrails.md` (list_items 78 -> 84) gained the
+    support-code check, one list item and its 5 sub-items.
+
     The other 45 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

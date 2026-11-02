@@ -16,9 +16,10 @@ compass readiness [--json] [--fix-list]
 ```
 
 - **No option:** measure, write the record, and print one line per signal
-  (present or absent, with the reason), then the score and the floor.
+  (present or absent, with the reason), then the score and the floor, then
+  the support-code block (see [The support code](#the-support-code)).
 - **`--json`:** the same run. The output is the record with `score`, `of`,
-  `floor_met`, `below_floor` and `path` added.
+  `floor_met`, `below_floor`, `path` and `support_code` added.
 - **`--fix-list`:** read a fresh record and print a checklist, one
   `- [ ] <signal>: <change> (<file>)` item per absent signal. The signals on
   the floor come first, then the higher weight, then the catalog order. It
@@ -28,6 +29,49 @@ compass readiness [--json] [--fix-list]
 The command exits 0 for any measured result, a project below the floor
 included. It exits 2 only for an error, such as a project key that is not a
 string; then it writes no record.
+
+## The support code
+
+The four-layer acceptance strategy (`S17`) needs four pieces of support code
+in the project: the alias helper, the driver factory, the DSL root and the
+layering test. The first issue the strategy applies to builds the pieces that
+are missing, as part of its own work. `compass readiness` reports which
+pieces are missing and blocks nothing.
+
+Compass never reads project code, so the project names each piece's path,
+relative to the project root, in `compass.yml`:
+
+```yaml
+project:
+  acceptance_support:
+    alias_helper: tests/acceptance/alias.py
+    driver_factory: conftest.py
+    dsl_root: tests/acceptance/dsl.py
+    layering_test: tests/acceptance/test_layering.py
+```
+
+The paths above are those of the Python reference example,
+`examples/atdd-adapters/python/`.
+
+- A piece is `present` when its path exists inside the project root. No file
+  is opened.
+- A piece is `missing` when it has no setting, when its path does not exist,
+  or when its path is outside the project root. The line says which.
+- The block is not a readiness signal. It changes neither the score nor the
+  floor, and the readiness record does not hold it.
+- `--json` gives it as `support_code`: `pieces`, one `{key, name, path,
+  result, reason}` per piece, and `missing`, the names of the missing pieces.
+  It is `null`, and the text output says the block is not reported, when the
+  project turned the strategy off or extends the shipped default at a major
+  before the strategy.
+- A value that is not a mapping, or a piece that is not a path, is refused
+  with exit 2 before any command runs.
+
+On an issue the strategy applies to that has a green on record, `compass
+check` reports the same pieces as advice through the check
+`acceptance-support-present`, with the claim
+limit: what the issue can claim while a piece is missing.
+`governance/guardrails.md` describes the check.
 
 ## The signals
 
@@ -249,3 +293,4 @@ behavior.
 | `cli/compass_pkg/readiness_record.py` | the record: read, write, freshness, summary and line |
 | `cli/compass_pkg/readiness_registry.py` | the implementations and their versions |
 | `cli/compass_pkg/readiness_catalogue.py` | the catalog in force and the floor |
+| `cli/compass_pkg/support_code.py` | the support-code block and the check `acceptance-support-present` |

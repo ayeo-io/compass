@@ -120,7 +120,19 @@ class Adapter:
                 "from feature import clean_names\n\ndef test_feature():\n"
                 "    assert clean_names([' Alice ', ' bob ']) == ['ALICE', 'BOB']\n"
                 "    assert clean_names([]) == []\n")
-        self.git("add", ".gitignore", self.source, self.node.split("::")[0])
+        # The four-layer acceptance strategy applies to both fixtures. Their
+        # project names its acceptance support code, as an adopter does, so
+        # `compass check` gives no support-code advice to the issue.
+        support = {"alias_helper": "tests/support/alias.py",
+                   "driver_factory": "tests/support/drivers.py",
+                   "dsl_root": "tests/support/dsl.py",
+                   "layering_test": "tests/support/test_layering.py"}
+        (tests / "support").mkdir()
+        for path in support.values():
+            (self.project / path).write_text("# acceptance support code\n")
+        (self.project / ".compass/config.yml").write_text(
+            yaml.safe_dump({"project": {"acceptance_support": support}}))
+        self.git("add", ".gitignore", self.source, self.node.split("::")[0], *support.values())
         self.git("commit", "-q", "-m", "Seed the reference behaviour")
 
     def start_quick_fix(self):

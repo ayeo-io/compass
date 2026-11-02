@@ -357,6 +357,11 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "acceptance-support-present",
+      "operation": "add"
+    },
+    {
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "artifacts-approved",
       "operation": "add"
     },
@@ -428,6 +433,11 @@ reassess), and the `compass.yml` it would write.
     {
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.acceptance-applicability-agrees",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "checks.acceptance-support-present",
       "operation": "add"
     },
     {

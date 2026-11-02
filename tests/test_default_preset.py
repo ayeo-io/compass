@@ -876,6 +876,7 @@ EXPECTED_ON_SKIPPED = {
     "design-within-word-ceiling": "not-applicable",
     "acceptance-applicability-agrees": "not-applicable",
     "outer-loop-recorded": "not-applicable",
+    "acceptance-support-present": "not-applicable",
     "declared-tests-resolve": "pass",
 }
 

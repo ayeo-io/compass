@@ -522,7 +522,11 @@ def ready_to_ship(root, slug=SLUG, skip=(), path="src/new.py"):
     write_manifest(root, body, slug)
     (root / path).parent.mkdir(parents=True, exist_ok=True)
     (root / path).write_text("y = 1\n")
-    done = run(root, "tdd-green", "--issue", slug, "--", sys.executable, "-c", "pass")
+    # A quick fix in scope of the four-layer acceptance strategy records the outer
+    # loop by default, and its green names a candidate and a client (ADR-085).
+    named = ("--loop", "outer", "--candidate", "local", "--client", "cli") \
+        if manifest(root, slug).get("delivery_approach") == "quick-fix" else ()
+    done = run(root, "tdd-green", "--issue", slug, *named, "--", sys.executable, "-c", "pass")
     assert done.returncode == 0, done
     git(root, "add", path)
 
@@ -888,7 +892,8 @@ def test_irl_14_quick_fix_finish_release_line(tmp_path):
     root = repo(tmp_path)
     slug = quick_fix(root, "fix-greeting", "greeting")
     done = run(root, "quick-fix", "finish", "--issue", slug, "-m", "Fix the greeting",
-               "--release-note", "Greetings now say hello.", *greet_command("greeting"))
+               "--release-note", "Greetings now say hello.", "--candidate", "local",
+               "--client", "cli", *greet_command("greeting"))
     assert done.returncode == 0, done
     landed = manifest(root, slug)
     assert landed.get("land_timestamp") and landed["release_note"] == "Greetings now say hello."
@@ -899,6 +904,7 @@ def test_irl_14_quick_fix_finish_release_line(tmp_path):
     before = manifest_file(root, slug).read_bytes()
     marker = root / "ran.txt"
     done = run(root, "quick-fix", "finish", "--issue", slug, "-m", "Fix the farewell",
+               "--candidate", "local", "--client", "cli",
                *greet_command("farewell", marker=str(marker)))
     assert done.returncode != 0, done
     assert "--release-note" in done.stderr and MISSING in done.stderr, done.stderr
@@ -1251,7 +1257,8 @@ def test_irl_30_documented_quick_fix_flow_lands(tmp_path):
         finish = _documented("commands/quick-fix.md", "compass quick-fix finish")
         argv = _argv(finish, {"<commit message>": "Fix the greeting",
                               "<test command>": " ".join(test),
-                              "<line>": "Greetings now say hello."})
+                              "<line>": "Greetings now say hello.",
+                              "<build>": "local", "<client>": "cli"})
         if not given:
             # With --no-commit the line is the person's to give now or at the commit.
             at = argv.index("--release-note")

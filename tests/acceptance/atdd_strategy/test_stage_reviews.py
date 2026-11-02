@@ -299,7 +299,8 @@ def _tested_issue(project):
                "A person archives a workspace", "--intent", "INT-1", "--test", test)
     issue.must("tdd-red", "--issue", SLUG, "--loop", "outer", "--scenario", "S-1", *run)
     (root / "archive.py").write_text("def archive():\n    return 'archived'\n", encoding="utf-8")
-    issue.must("tdd-green", "--issue", SLUG, "--loop", "outer", "--scenario", "S-1", *run)
+    issue.must("tdd-green", "--issue", SLUG, "--loop", "outer", "--scenario", "S-1",
+               *support.NAMED, *run)
     issue.must("issue", "render", "--issue", SLUG)
     return issue
 

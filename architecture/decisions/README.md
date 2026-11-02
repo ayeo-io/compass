@@ -124,6 +124,7 @@ Rules:
 | [ADR-082](ADR-082-an-outer-loop-record-has-its-own-file.md) | An outer-loop record has its own file | accepted | with ADR-080 and ADR-081 |
 | [ADR-083](ADR-083-the-stage-2-and-3-reviews-are-checkpoints-listed-only-where-the-strategy-applies.md) | The stage 2 and 3 reviews are checkpoints, listed only where the strategy applies | accepted | extends ADR-063; with ADR-079 |
 | [ADR-084](ADR-084-each-loop-keeps-its-own-run-count.md) | Each loop keeps its own run count | accepted | with ADR-080 and ADR-082 |
+| [ADR-085](ADR-085-an-outer-loop-green-names-its-candidate-and-client.md) | An outer-loop green names its candidate and client | accepted | with ADR-080 and ADR-084 |
 
 ## Principle → ADR mapping
 

@@ -669,7 +669,8 @@ def _quick_fix_refused(tmp_path):
     body = manifest(root, slug)
     assert body["checkpoints"] == ["assess"] and body["checkpoint_outcomes"] == []
     head = git(root, "rev-parse", "HEAD")
-    done = run(root, "quick-fix", "finish", "--issue", slug, "-m", "Fix it", *GREET_CMD)
+    done = run(root, "quick-fix", "finish", "--issue", slug, "-m", "Fix it",
+               "--candidate", "local", "--client", "cli", *GREET_CMD)
     assert done.returncode == 2, done
     assert "assess is listed in checkpoints with no outcome recorded" in done.stderr, done
     assert git(root, "rev-parse", "HEAD") == head

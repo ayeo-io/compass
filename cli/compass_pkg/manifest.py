@@ -12,7 +12,6 @@
 import argparse
 import datetime
 import hashlib
-import json
 import os
 import re
 import shlex
@@ -1141,19 +1140,10 @@ def cmd_evidence_add(args):
             f"{task_dir}). Evidence is a record on disk - register it after the "
             f"file exists, or fix the path.")
     if args.type == "test-run":
-        try:
-            with open(abs_path, encoding="utf-8") as fh:
-                json.load(fh)
-        except (ValueError, OSError):
-            raise CompassError(
-                f"compass evidence add: '{args.path}' is not a run record. "
-                f"`test-run` means the JSON that `compass tdd-green` writes "
-                f"(command, exit_code, passed), because the tested-before-ship "
-                f"checks read "
-                f"those fields.\n"
-                f"  For a raw log, use --type command-output.\n"
-                f"  For a real run, record it with `compass tdd-green -- <cmd>` "
-                f"and it registers itself.")
+        from compass_pkg.outer_loop import test_run_refusal
+        refusal = test_run_refusal(task, task_dir, args.path, abs_path)
+        if refusal:
+            raise CompassError(refusal)
 
     entry = {"id": args.evidence_id, "type": args.type, "path": args.path}
     if getattr(args, "scenario", None):

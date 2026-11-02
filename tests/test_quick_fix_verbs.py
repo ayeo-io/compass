@@ -126,11 +126,17 @@ GREET_CMD = ["--", "python3", "-m", "pytest", "-q",
 #: and a landing refuses it without (ADR-065).
 RELEASE_NOTE = ("--release-note", "Greetings now say hello.")
 
+#: The candidate and client an outer-loop green names where the four-layer
+#: acceptance strategy applies (ADR-085). An in-scope quick fix records the outer
+#: loop; finish takes the two and does not write them on the inner loop.
+NAMED = ("--candidate", "local", "--client", "cli")
+
 
 def _finish(root, slug, *extra, command=GREET_CMD):
     note = () if "--release-note" in extra else RELEASE_NOTE
+    named = () if "--candidate" in extra else NAMED
     return _run(root, "quick-fix", "finish", "--issue", slug, "-m",
-                "Say hello properly", *note, *extra, *command)
+                "Say hello properly", *note, *named, *extra, *command)
 
 
 def _base_greeting(root):
@@ -317,11 +323,11 @@ def test_qfo4_finish_leaves_bytecode_caches_out_and_the_land_checks_clean(repo):
     # A different size from the broken line, so Python does not reuse the
     # bytecode it cached for that line within the same second.
     (repo / "calc.py").write_text("def add(a, b):\n    total = a + b\n    return total\n")
-    green = _run(repo, "tdd-green", "--issue", slug, "--scenario", "TRC-001", *cmd)
+    green = _run(repo, "tdd-green", "--issue", slug, "--scenario", "TRC-001", *NAMED, *cmd)
     assert green.returncode == 0, green.stderr
     assert list(repo.rglob("*.pyc")), "the test run should leave a cache"
 
-    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add",
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add", *NAMED,
                   *RELEASE_NOTE, *cmd)
     assert finish.returncode == 0, finish.stderr
 
@@ -355,10 +361,10 @@ def test_qfo4_finish_lands_clean_when_every_changed_file_was_tracked(repo):
     assert red.returncode == 0, red.stderr
     (repo / "calc.py").write_text(
         "def add(a, b):\n    total = a + b\n    return total\n")
-    green = _run(repo, "tdd-green", "--issue", slug, "--scenario", "TRC-001", *cmd)
+    green = _run(repo, "tdd-green", "--issue", slug, "--scenario", "TRC-001", *NAMED, *cmd)
     assert green.returncode == 0, green.stderr
 
-    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add",
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add", *NAMED,
                   *RELEASE_NOTE, *cmd)
     assert finish.returncode == 0, finish.stdout + finish.stderr
     check = _run(repo, "check", "--issue", slug)
@@ -965,7 +971,7 @@ def test_qfg2_finish_from_a_subdirectory_traces_stages_and_lands(repo):
     head_before = _git(repo, "rev-parse", "HEAD")
 
     finish = _run_from(repo / "tests", "quick-fix", "finish",
-                       "--issue", slug, "-m", "Say hello properly", *RELEASE_NOTE, "--",
+                       "--issue", slug, "-m", "Say hello properly", *RELEASE_NOTE, *NAMED, "--",
                        "python3", "-m", "pytest", "-q",
                        "test_greeting.py::test_greeting_says_hello")
     assert finish.returncode == 0, finish.stdout + finish.stderr

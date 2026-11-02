@@ -161,7 +161,8 @@ class Adapter:
 
     def finish_quick_fix(self):
         self.cli("quick-fix", "finish", "--issue", self.slug, "--no-commit",
-                 "-m", "Correct the reference greeting", "--", *self.test_command)
+                 "-m", "Correct the reference greeting", "--candidate", "local",
+                 "--client", "cli", "--", *self.test_command)
 
     def manifest(self):
         return yaml.safe_load((self.issue_dir / "manifest.yml").read_text())
@@ -211,7 +212,8 @@ class Adapter:
 
     def green_feature(self):
         self.cli("tdd-green", "--issue", self.slug, "--scenario", "CONF-1",
-                 "--loop", "outer", "--", *self.test_command)
+                 "--loop", "outer", "--candidate", "local", "--client", "cli",
+                 "--", *self.test_command)
         self.cli("issue", "render", "--issue", self.slug)
 
     def start_spike(self):

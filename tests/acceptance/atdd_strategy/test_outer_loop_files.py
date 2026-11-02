@@ -41,6 +41,8 @@ def _run(issue, verb, loop, command, scenario="TRC-1"):
     argv = [verb, "--issue", issue.slug, "--loop", loop]
     if scenario:
         argv += ["--scenario", scenario]
+    if verb == "tdd-green" and loop == "outer":
+        argv += support.NAMED
     return issue.must(*argv, "--", *command)
 
 

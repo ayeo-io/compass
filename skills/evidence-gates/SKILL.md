@@ -78,6 +78,23 @@ reads every green, whatever its loop. An outer-loop record has its own file,
 `red-<id>.outer.json` or `green-<id>.outer.json` (`red.outer.json` unbound),
 and its own registry entry, so later inner-loop work keeps it (ADR-082).
 
+An outer-loop green names what the suite ran against and through (ADR-085):
+`--candidate <build id>|local` writes `candidate` and `candidate_kind`
+(`deployed`, or `local` with the record's own `tree_id` as the candidate),
+and `--client api|web|cli` writes `client`. Any other client is refused. Where
+the four-layer acceptance strategy applies, `compass tdd-green` and `compass
+quick-fix finish` refuse an outer-loop green that names no candidate or no
+client before the command runs, `compass evidence add` refuses to register
+one, and `outer-loop-recorded` fails one registered another way. A unit-test
+green names neither: `compass tdd-green --loop inner` refuses the flags, and
+`compass quick-fix finish`, which chooses its own loop, does not write them
+on the inner loop. Like the red,
+`compass tdd-green --loop outer` takes `--scenario` more than once, or
+`--every-scenario`: one run writes one green per scenario, sharing a
+`run_id`, and every scenario needs its red first. `compass quick-fix finish`
+reuses a green already on record only when it is of the same loop and names
+the same candidate and client.
+
 Each loop keeps its own `attempts` count per scenario, so an outer-loop green
 counts outer-loop runs only (ADR-084). An outer-loop run that fails counts as
 a run and writes no record, so a pass on the same tree with the same

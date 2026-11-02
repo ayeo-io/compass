@@ -118,7 +118,7 @@ same commit.
 | `governance/strategies.md` | `governance/strategies-rationale.md` |
 | `governance/terminology.yml` | `docs/glossary.md` |
 | `commands/`, `agents/`, `schemas/` | `skills/compass-runtime/SKILL.md` |
-| `cli/compass_pkg/tdd.py`, `cli/compass_pkg/green_attempts.py`, `cli/compass_pkg/evidence_identity.py` | `skills/evidence-gates/SKILL.md` |
+| `cli/compass_pkg/tdd.py`, `cli/compass_pkg/tdd_green.py`, `cli/compass_pkg/green_attempts.py`, `cli/compass_pkg/evidence_identity.py` | `skills/evidence-gates/SKILL.md` |
 | `cli/compass_pkg/subtasks.py`, `cli/compass_pkg/loop_ceilings.py`, `cli/compass_pkg/multiagent_check.py`, `scripts/multiagent.sh`, `scripts/integrate.sh` | `docs/multiagent-protocol.md` |
 | `cli/compass_pkg/run_cmd.py`, `cli/compass_pkg/host_launch.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/compliance.py`, `ci/headless-verify.yml` | `docs/headless-runner.md` |
 | `cli/compass_pkg/record.py` | `docs/delivery-record.md` |
@@ -131,7 +131,7 @@ same commit.
 | `cli/compass_pkg/dependencies_block.py` | `docs/rendered-blocks.md` |
 | `cli/compass_pkg/verification_plan.py` | `docs/rendered-blocks.md` |
 | `cli/compass_pkg/section_checks.py`, `cli/compass_pkg/outside_gate.py` | `governance/guardrails.md` |
-| `cli/compass_pkg/acceptance_strategy.py`, `cli/compass_pkg/outer_loop.py` | `governance/guardrails.md` |
+| `cli/compass_pkg/acceptance_strategy.py`, `cli/compass_pkg/outer_loop.py`, `cli/compass_pkg/candidate_client.py` | `governance/guardrails.md` |
 | `cli/compass_pkg/support_code.py` | `docs/readiness.md` (the support-code block), `governance/guardrails.md` (the check and the claim limit) |
 | `cli/compass_pkg/migrate.py`, `cli/compass_pkg/migrate_kinds.py`, `cli/compass_pkg/migrate_copy_check.py` | `architecture/decisions/ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md`, `docs/upgrade-7-0-0.md` |
 | `cli/compass_pkg/parse_cache.py` | `architecture/decisions/ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md`, widened by `architecture/decisions/ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md` |

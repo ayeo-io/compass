@@ -648,6 +648,10 @@ def test_d2_repairs_change_only_retired_names():
     (list_items 84 -> 88) gained the `attempts` check, one list item and its 3
     sub-items.
 
+    One more was re-baselined by `candidate-and-client`: `governance/guardrails.md`
+    (list_items 88 -> 89) gained the outer-loop check's sub-item on where a
+    green with no candidate or client is refused.
+
     The other 45 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

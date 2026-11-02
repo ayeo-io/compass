@@ -318,8 +318,13 @@ def build_parser():
 
     pg = sub.add_parser("tdd-green", help="run a test, assert it PASSES, record the green")
     issue_arg(pg)
-    pg.add_argument("--scenario", help="scenario id this green is evidence FOR "
-                    "(e.g. TRC-A1)")
+    pg.add_argument("--scenario", action="append",
+                    help="scenario id this green is evidence FOR (e.g. TRC-A1); "
+                    "repeat it with --loop outer")
+    pg.add_argument("--every-scenario", dest="every_scenario", action="store_true",
+                    help="--loop outer: every scenario")
+    pg.add_argument("--candidate", metavar="ID|local", help="--loop outer: the build")
+    pg.add_argument("--client", metavar="api|web|cli", help="--loop outer: the interface")
     pg.add_argument("--verified-by", dest="verified_by",
                     help="carry forward a verified-by guard kind (regression | "
                          "e2e | typecheck | live) - the green re-runs the guard "

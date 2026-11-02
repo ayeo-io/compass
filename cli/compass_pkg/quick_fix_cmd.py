@@ -41,7 +41,7 @@ import textwrap
 
 from compass_pkg.binding import ids_for
 from compass_pkg.check_cmd import cmd_check
-from compass_pkg import project_settings, retired
+from compass_pkg import candidate_client, project_settings, retired
 from compass_pkg.stable_ids import (
     APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY,
     STAGE_BREAKDOWN, STAGE_PLAN, STAGE_REFINE)
@@ -60,9 +60,9 @@ from compass_pkg.routing import cmd_route_evaluate, evaluate_route, read_size
 from compass_pkg.start_state import (  # noqa: F401
     _GENERATED_DIRS, _STATE_PATHS, _git_changed_paths, _is_generated,
     _is_issue_state, _record_path, _tracked_paths, changed_since_start)
-from compass_pkg.tdd import (_acceptance_state, _neutralise_coverage,
-                              _red_record_for, _run_test, cmd_acceptance_record,
-                              cmd_tdd_green)
+from compass_pkg.tdd import (_acceptance_state, _neutralise_coverage, _run_test,
+                              cmd_acceptance_record, default_loop)
+from compass_pkg.tdd_green import _red_record_for, cmd_tdd_green, strategy_applies
 from compass_pkg.terminal import say
 
 #: The three gates a quick fix ever clears (route_shapes.quick-fix.gates in
@@ -133,6 +133,8 @@ def register(sub, issue_arg):
     from compass_pkg.acceptance_strategy import LOOPS
     fi.add_argument("--loop", choices=LOOPS, default=None,
                     help="outer: the acceptance suite; inner: a unit test")
+    fi.add_argument("--candidate", metavar="ID|local", help="outer loop: the build")
+    fi.add_argument("--client", metavar="api|web|cli", help="outer loop: the interface")
     from compass_pkg.release_line import add_argument as add_release_note
     add_release_note(fi)
     issue_arg(fi)
@@ -488,13 +490,18 @@ def _at_project_root(root):
         os.chdir(prior)
 
 
-def _reusable_green(task_dir, scenario, command, tree_ids):
+def _reusable_green(task_dir, scenario, command, tree_ids, loop="inner", named=None):
     """The newest bound green already on record for `scenario`, reused
     rather than re-run, when it covers exactly what is being asked now
-    (QFG-1): the same command, on the same tree, with the same files traced.
-    A second `finish` with nothing new to assert must not record a rerun of
-    an unchanged tree - `compass check`'s no-trusted-rerun guardrail refuses
-    that, and the taught recovery ("run it again") cannot clear it.
+    (QFG-1): the same loop, command, candidate and client, on the same tree,
+    with the same files traced. A second `finish` with nothing new to assert
+    must not record a rerun of an unchanged tree - `compass check`'s
+    no-trusted-rerun guardrail refuses that, and the taught recovery ("run it
+    again") cannot clear it.
+
+    Only a green of the loop this finish records counts. An inner-loop green
+    on the same tree is not an outer-loop green: reusing it left an in-scope
+    quick fix with no outer-loop green, and every later finish reused it again.
     """
     if not command:
         return False
@@ -502,22 +509,26 @@ def _reusable_green(task_dir, scenario, command, tree_ids):
         task, _ = load_manifest(task_dir)
     except CompassError:
         return False
-    record_path = None
-    for e in (task.get("evidence") or []):
-        if (isinstance(e, dict) and e.get("type") == "test-run"
+    from compass_pkg.acceptance_strategy import loop_of
+    record = None
+    for e in reversed(task.get("evidence") or []):
+        if not (isinstance(e, dict) and e.get("type") == "test-run"
                 and e.get("scenario") == scenario and e.get("path")):
-            record_path = e["path"]  # upserted per scenario - last one wins
-    if not record_path:
+            continue
+        full_path = os.path.realpath(os.path.join(task_dir, e["path"]))
+        if not full_path.startswith(os.path.realpath(task_dir) + os.sep):
+            continue  # a record path outside the issue is not this issue's
+        try:
+            with open(full_path, "r", encoding="utf-8") as fh:
+                held = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        if isinstance(held, dict) and loop_of(held) == loop:
+            record = held     # one entry per binding and loop - the newest wins
+            break
+    if record is None:
         return False
-    full_path = os.path.realpath(os.path.join(task_dir, record_path))
-    if not full_path.startswith(os.path.realpath(task_dir) + os.sep):
-        return False  # a record path outside the issue is not this issue's
-    try:
-        with open(full_path, "r", encoding="utf-8") as fh:
-            record = json.load(fh)
-    except (OSError, ValueError):
-        return False
-    if not isinstance(record, dict):
+    if any(record.get(k) != v for k, v in (named or {}).items()):
         return False
     # `tdd-green` stores the command after neutralising a coverage floor for
     # a recognised pytest micro-run (`tdd._neutralise_coverage`); compare
@@ -872,6 +883,17 @@ def cmd_quick_fix_finish(args):
             f"compass quick-fix finish: '{slug}' has no scenario recorded "
             f"- quick-fix start writes one before this can run.")
     scenario_ids = [s.get("id") for s in scenarios]
+    # An outer-loop green on an in-scope issue names its candidate and client
+    # (ADR-085); refuse a finish without them before anything is traced or run.
+    # The finish chooses its loop, so a session cannot always tell which one it
+    # records: on the inner loop the two flags are taken and not written.
+    loop = getattr(args, "loop", None) or default_loop(task_dir)
+    named_flags = ((getattr(args, "candidate", None), getattr(args, "client", None))
+                   if loop == "outer" else (None, None))
+    candidate_client.named("quick-fix finish", "outer", None, getattr(args, "client", None),
+                           False, {})     # an unknown client is refused on either loop
+    candidate_client.named("quick-fix finish", loop, *named_flags,
+                           loop == "outer" and strategy_applies(task_dir), ids_for(task_dir))
 
     # The project root - the directory holding .compass/ - not necessarily
     # where the agent ran `finish` from (QFG-2). Tracing, `compass check` and
@@ -971,8 +993,9 @@ def cmd_quick_fix_finish(args):
                           result=_run_test(argv))
         return shared
 
+    named = candidate_client.named("quick-fix finish", loop, *named_flags, False, tree_ids_now)
     for sid in scenario_ids:
-        if _reusable_green(task_dir, sid, command, tree_ids_now):
+        if _reusable_green(task_dir, sid, command, tree_ids_now, loop, named):
             continue
         try:
             # Work with no natural red - a refactor, config, docs - declares
@@ -995,8 +1018,9 @@ def cmd_quick_fix_finish(args):
                            command=list(command))
                 continue
             _quiet_run(cmd_tdd_green, task=slug, scenario=sid,
-                       verified_by=None, command=list(command),
-                       loop=getattr(args, "loop", None), prerun=_shared_run())
+                       verified_by=None, command=list(command), loop=loop,
+                       candidate=named_flags[0], client=named_flags[1],
+                       prerun=_shared_run())
         except CompassError as exc:
             raise CompassError(
                 f"compass quick-fix finish: the green or acceptance for {sid} "

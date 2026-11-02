@@ -41,7 +41,7 @@ def test_rb_1_a_new_green_and_ship_commit_rebind_the_landing(repo):
     before = _land_commit(repo)
     _review_fix(repo)
     green = _run(repo, "tdd-green", "--issue", "fix-greeting", "--scenario",
-                 "TRC-001", *GREET_CMD)
+                 "TRC-001", "--candidate", "local", "--client", "cli", *GREET_CMD)
     assert green.returncode == 0, green.stdout + green.stderr
     ship = _run(repo, "ship-commit", "--issue", "fix-greeting", "-m", "Rebind after the review fix")
     assert ship.returncode == 0, ship.stdout + ship.stderr

@@ -136,12 +136,14 @@ not an exemption from red.
 ## 3. Finish
 
 ```
-compass quick-fix finish -m "<commit message>" --release-note "<line>" --no-commit -- <test command>
+compass quick-fix finish -m "<commit message>" --release-note "<line>" --candidate <build> --client <client> --no-commit -- <test command>
 ```
 
 It traces the changed files, records the green through `compass tdd-green`
 with your test command, or the declared acceptance, runs `compass check`, records its output through
 `compass evidence`, passes the three gates and writes the devlog line.
+
+`<build>`: a build id or `local`. `<client>`: `api|web|cli`.
 
 Leave out `--no-commit` only when the user asked for a commit: it
 commits through `compass ship-commit`. With `--no-commit`, say the change
@@ -151,8 +153,7 @@ It lists the files it commits. It refuses a file that was already changed
 or untracked when `start` ran, or that sits in a directory with no tracked
 file then, unless you trace it with `compass changed-file add`.
 
-If it refuses, it names the failed condition. Fix that
-and run the same command again.
+If it refuses, fix what it names and rerun.
 
 ## Stop and re-assess when
 

@@ -34,6 +34,8 @@ def _record(issue, command, loop=None):
     argv = [command, "--issue", issue.slug]
     if loop is not None:
         argv += ["--loop", loop]
+    if command == "tdd-green" and loop == "outer":
+        argv += support.NAMED
     return issue.must(*argv, "--", *(FAIL if command == "tdd-red" else PASS))
 
 
@@ -206,7 +208,7 @@ def test_trc_e7(tmp_path, given, recorded, result):
     (project.root / "data" / "greeting.txt").write_text("Hello\n", encoding="utf-8")
     code, out, err = issue.run("quick-fix", "finish", "--issue", "greet", "--no-commit",
                                "-m", "Say Hello", "--release-note", "The greeting says Hello.",
-                               *loop, *command)
+                               *loop, *(() if given else support.NAMED), *command)
     assert _evidence(issue, "red-TRC-001", recorded)["loop"] == recorded
     assert _evidence(issue, "green-TRC-001", recorded)["loop"] == recorded
     assert (code == 0) == (result == "pass"), out + err

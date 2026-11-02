@@ -102,7 +102,7 @@ checks:
       rather than passing, for an issue assessed before the strategy shipped and for a project that
       turned the strategy off.', kind: deterministic, impl: acceptance-applicability-agrees, severity: advisory,
     on_skipped: not-applicable}
-  outer-loop-recorded: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to, a red record and a green record say loop outer, and an outer-loop green was recorded on the tree as it is now. A record with no loop field reads as inner. Declines to check, rather than passing, for an issue the strategy does not apply to.', kind: deterministic, impl: outer-loop-recorded, severity: blocking,
+  outer-loop-recorded: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to, a red record and a green record say loop outer, an outer-loop green was recorded on the tree as it is now, and every registered outer-loop green names its candidate and its client (api, web or cli). A record with no loop field reads as inner. Declines to check, rather than passing, for an issue the strategy does not apply to.', kind: deterministic, impl: outer-loop-recorded, severity: blocking,
     on_skipped: not-applicable}
   acceptance-support-present: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies
       to, the project names each piece of its acceptance support code under `project.acceptance_support`

@@ -396,7 +396,8 @@ def quick_fix_usage(tmp_path, cli_dir=CLI_DIR, hook_sessions=False):
     assert done.returncode == 0, done
     (root / "data" / "greeting.txt").write_text("Hello, %s!")
     done = at(root, "2026-10-13T10:30:00Z", "quick-fix", "finish", "--issue", slug,
-              "-m", "Fix it", *co.GREET_CMD, cli_dir=cli_dir, CLAUDE_CODE_SESSION_ID=S1)
+              "-m", "Fix it", "--candidate", "local", "--client", "cli", *co.GREET_CMD,
+              cli_dir=cli_dir, CLAUDE_CODE_SESSION_ID=S1)
     assert done.returncode == 0, done
     landed = yaml.safe_load((folder / "manifest.yml").read_text())
     committed = yaml.safe_load(co.git(root, "show", f"{landed['land_commit']}:"

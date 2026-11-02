@@ -315,11 +315,18 @@ _(none yet - the shipped default guardrails apply as-is)_
   - It asks `acceptance_strategy.in_scope` whether the strategy applies, and
     declines with "not required: the strategy does not apply" when it does not.
   - On an in-scope issue it fails when no failed red record says loop outer,
-    when no registered green says loop outer, or when no outer-loop green
-    was recorded on the tree as it is now. One finding names the issue and
+    when no registered green says loop outer, when no outer-loop green
+    was recorded on the tree as it is now, or when a registered outer-loop
+    green names no `candidate` or no `client`, or a client other than api,
+    web and cli (ADR-085). One finding names the issue and
     each fault. The tree is the one `evidence-matches-tree` reads; when git
     cannot name it, or no outer-loop green names its tree, the tree is not
     compared and the detail says so.
+  - `compass tdd-green` and `compass quick-fix finish` refuse an in-scope
+    outer-loop green with no candidate or no client before it runs, and
+    `compass evidence add` refuses to register one, so the check finds only
+    a record registered another way. `cli/compass_pkg/candidate_client.py`
+    holds the rules.
   - It judges the issue, not each scenario. `suite-passed` does not change.
 - **`acceptance-support-present`** is the support-code check of the
   four-layer acceptance strategy (`S17`). It is unlocked, declares `severity:

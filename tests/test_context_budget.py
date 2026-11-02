@@ -105,11 +105,15 @@ CONTRACT_TARGET = 2900
 # fails outer-loop-recorded until it records the acceptance suite with
 # --loop outer, so the flag must be learnable from --help. The option and its
 # shortest help need about 100 characters, and none was left.
+# tdd-green rose by about 280 characters and quick-fix finish by about 160 on
+# 2026-11-02 for --candidate and --client (ADR-085), and tdd-green also for
+# --every-scenario: an in-scope outer-loop green without them is refused, so
+# they must be learnable from --help.
 HELP_BUDGETS = {
     ("quick-fix", "start"): 2900,
-    ("quick-fix", "finish"): 1760,
+    ("quick-fix", "finish"): 1920,
     ("tdd-red",): 1570,
-    ("tdd-green",): 1360,
+    ("tdd-green",): 1640,
 }
 
 # The output options every verb takes.
@@ -122,9 +126,10 @@ OPTIONS = {
                              "--role", "--intent", "--scenario",
                              "--scenario-id", "--test", "--labels"} | COMMON,
     ("quick-fix", "finish"): {"-m", "--message", "--no-commit", "--issue",
-                              "--release-note"} | COMMON,
+                              "--release-note", "--candidate", "--client"} | COMMON,
     ("tdd-red",): {"--scenario", "--issue", "--verified-by"} | COMMON,
-    ("tdd-green",): {"--scenario", "--issue", "--verified-by"} | COMMON,
+    ("tdd-green",): {"--scenario", "--issue", "--verified-by", "--every-scenario",
+                     "--candidate", "--client"} | COMMON,
 }
 
 

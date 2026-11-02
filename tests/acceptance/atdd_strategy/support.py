@@ -32,6 +32,10 @@ ASSESSMENTS = {
     "spike": {"risk": "contained", "size": "small", "goal": "exploration"},
 }
 
+#: The candidate and client an outer-loop green names (ADR-085), for tests about
+#: something else.
+NAMED = ("--candidate", "build-417", "--client", "api")
+
 #: The ids of the strategy's checks. Rows with these names are the strategy's
 #: own findings; every other row is compared with compass 8.0.4.
 STRATEGY_CHECKS = ("acceptance-applicability-agrees", "outer-loop-recorded",

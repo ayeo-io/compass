@@ -46,7 +46,7 @@ def _manifest(root, slug, **fields):
 
 def _green(repo):
     r = _run(repo, "tdd-green", "--issue", "fix-greeting", "--scenario",
-             "TRC-001", *GREET_CMD)
+             "TRC-001", "--candidate", "local", "--client", "cli", *GREET_CMD)
     assert r.returncode == 0, r.stdout + r.stderr
 
 

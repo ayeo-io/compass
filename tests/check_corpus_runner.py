@@ -770,12 +770,16 @@ def _(root):
 
 
 # The outer-loop check reads the loop of the red and green records of an issue in scope.
+# An outer-loop green also names its candidate and client (ADR-085).
 def _loop_records(task, task_dir, loop):
     marked = {"loop": loop} if loop else {}
+    named = {"candidate": "build-417", "candidate_kind": "deployed",
+             "client": "api"} if loop == "outer" else {}
     _record(task_dir, "red.json", {"passed": False, "exit_code": 1,
                                    "timestamp": "2026-10-29T10:00:00Z", **marked})
     path = _record(task_dir, "green.json", {"passed": True, "exit_code": 0,
-                                            "timestamp": "2026-10-29T11:00:00Z", **marked})
+                                            "timestamp": "2026-10-29T11:00:00Z", **marked,
+                                            **named})
     task["evidence"] = [{"id": "EV-1", "type": "test-run", "path": path}]
     return task, task_dir
 

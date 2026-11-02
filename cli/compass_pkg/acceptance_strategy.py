@@ -22,8 +22,8 @@ delivery-approach record shows, the advisory check
 
 Compass reads records here, never project code.
 """
-# DEPENDENCY: standard library (json, os); compass_pkg.check_results, core,
-# project_settings and red_first, and inside functions compass_pkg.layers, parents,
+# DEPENDENCY: standard library (json, os); compass_pkg.candidate_client, check_results,
+# core, project_settings and red_first, and inside functions compass_pkg.layers, parents,
 # effective and status_words. It imports no command
 # module and no check module at load time, so a check module can import it.
 from __future__ import annotations
@@ -31,7 +31,7 @@ from __future__ import annotations
 import json
 import os
 
-from compass_pkg import project_settings
+from compass_pkg import candidate_client, project_settings
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import CompassError, load_yaml, manifest_path
 from compass_pkg.red_first import ACCEPTANCE_KINDS, is_record_name, load_record
@@ -418,7 +418,8 @@ def step_off(task, task_dir):
 def report(work):
     """The retrospective over every closed issue under `work` that was assessed
     with the strategy."""
-    out = {"measured": [], "out_of_scope": [], "off": [], "stepped_off": []}
+    out = {"measured": [], "out_of_scope": [], "off": [], "stepped_off": [],
+           "clients": {}, "candidates": {"deployed": [], "local": [], "none": []}}
     names = sorted(os.listdir(work)) if os.path.isdir(work) else []
     for slug in names:
         task_dir = os.path.join(work, slug)
@@ -443,12 +444,18 @@ def report(work):
             out["stepped_off"].append({"issue": slug, "reason": reason})
             continue
         out["measured"].append(slug)
+        # The clients and the candidate kind its outer-loop greens name (ADR-085).
+        clients, kind = candidate_client.summary(task, task_dir)
+        out["clients"][slug] = clients
+        out["candidates"][kind].append(slug)
     return out
 
 
 def cmd_retro_acceptance(args):
     """`compass retro --acceptance`: the strategy's measures, with an opted-out
-    project and each issue that stepped off reported apart. Exit 0."""
+    project and each issue that stepped off reported apart. For each counted
+    issue it names the clients its outer-loop greens drove, and it counts the
+    issues with a deployed candidate apart from those with a local one. Exit 0."""
     from compass_pkg.core import find_compass_dir
     compass_dir = find_compass_dir()
     root = os.path.dirname(compass_dir)
@@ -464,6 +471,16 @@ def cmd_retro_acceptance(args):
                      f"{reason}")
     lines.append(f"  closed in-scope issues counted in the measures: {len(out['measured'])}"
                  + (f" ({', '.join(out['measured'])})" if out["measured"] else ""))
+    for slug, clients in out["clients"].items():
+        lines.append(f"    clients of {slug}: {', '.join(clients) or 'none named'}")
+    if out["measured"]:
+        kinds = out["candidates"]
+        lines.append(f"  in-scope issues with a deployed candidate: {len(kinds['deployed'])} "
+                     f"of {len(out['measured'])}")
+        if kinds["local"]:
+            lines.append(f"    with a local candidate only: {', '.join(kinds['local'])}")
+        if kinds["none"]:
+            lines.append(f"    with no candidate named: {', '.join(kinds['none'])}")
     if out["off"]:
         lines.append(f"  not counted, assessed while the strategy was off: "
                      f"{', '.join(out['off'])}")

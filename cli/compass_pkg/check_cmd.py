@@ -178,8 +178,8 @@ CHECK_GUIDANCE = {
     },
     "outer-loop-recorded": {
         "why": "A unit-test green meets guardrail `G1`, so on a change a client can observe only the outer loop shows the behavior through a client interface. A green from an older tree shows a tree that no longer exists.",
-        "do": "Record the acceptance suite's red and green with `--loop outer` on the current tree.",
-        "fix": "Run `compass tdd-red --loop outer --scenario <id> -- <acceptance command>` before the code, and `compass tdd-green --loop outer --scenario <id> -- <acceptance command>` after the last change.",
+        "do": "Record the acceptance suite with `--loop outer`, naming the candidate and the client.",
+        "fix": "Run `compass tdd-red --loop outer --scenario <id> -- <acceptance command>` before the code, and `compass tdd-green --loop outer --scenario <id> --candidate <build id>|local --client api|web|cli -- <acceptance command>` after the last change.",
     },
     "acceptance-support-present": {
         "why": "The first issue the four-layer acceptance strategy applies to builds the support code. Until each piece exists, the issue's acceptance tests cannot show what that piece gives, so the issue claims less.",

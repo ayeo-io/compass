@@ -65,8 +65,7 @@ current verbs are whatever `compass --help` lists.
 `evidence/green-<id>.json`; a run with no `--scenario` writes
 `evidence/red.json` and `evidence/green.json` instead. With `--loop outer` the
 name ends `.outer.json`, so an inner-loop record does not replace it (ADR-082).
-Nothing else is touched, so recording one scenario cannot overwrite the record
-another gate is citing - and a reader knows where their evidence went.
+Nothing else is touched, so one scenario's record cannot overwrite another's.
 
 ## Which agent and which skill, per stage
 

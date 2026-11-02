@@ -78,6 +78,17 @@ reads every green, whatever its loop. An outer-loop record has its own file,
 `red-<id>.outer.json` or `green-<id>.outer.json` (`red.outer.json` unbound),
 and its own registry entry, so later inner-loop work keeps it (ADR-082).
 
+Each loop keeps its own `attempts` count per scenario, so an outer-loop green
+counts outer-loop runs only (ADR-084). An outer-loop run that fails counts as
+a run and writes no record, so a pass on the same tree with the same
+command after it has `attempts` 2 and `rerun_without_change: true`, which
+`no-trusted-rerun` fails unless the test is quarantined. An outer-loop green
+bound to a scenario writes `test`, the scenario's first declared test, which
+`no-trusted-rerun` looks up in `governance/quarantine.yml`. Where the
+four-layer acceptance strategy applies, `outer-loop-attempts-recorded` fails
+an outer-loop green with no `attempts` or with one that is not a whole number
+of 1 or more.
+
 For the outer loop, a pytest setup error that names a missing module of the
 project is an import red, as a collection error is, and the record lists
 `missing_modules`. A missing module outside the project is refused. Exit 4 is

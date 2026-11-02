@@ -22,7 +22,7 @@ from compass_pkg.core import load_yaml, reading_matches
 #: The checks that sit in no gate, in the order `compass check` reports them.
 CHECKS = ("artifacts-approved", "nfr-rows-resolved", "contracts-declared",
           "design-within-word-ceiling", "acceptance-applicability-agrees",
-          "outer-loop-recorded", "acceptance-support-present")
+          "outer-loop-recorded", "acceptance-support-present", "outer-loop-attempts-recorded")
 
 #: Those a spike runs too. `artifacts-approved` judges what ships, and a spike ships
 #: nothing; the section checks and the design-size check report that a spike
@@ -44,6 +44,7 @@ LABELS = {
     "acceptance-applicability-agrees": "four-layer acceptance strategy (`S17`)",
     "outer-loop-recorded": "four-layer acceptance strategy (`S17`)",
     "acceptance-support-present": "four-layer acceptance strategy (`S17`)",
+    "outer-loop-attempts-recorded": "four-layer acceptance strategy (`S17`)",
 }
 
 

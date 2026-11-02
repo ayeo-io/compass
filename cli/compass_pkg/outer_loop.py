@@ -1,6 +1,6 @@
 # compass_pkg.outer_loop - the outer-loop check of the four-layer acceptance strategy
-"""The check `outer-loop-recorded` of strategy `S17`, the four-layer acceptance
-strategy (ADR-080).
+"""The checks `outer-loop-recorded` (ADR-080) and `outer-loop-attempts-recorded`
+(ADR-084) of strategy `S17`, the four-layer acceptance strategy.
 
 An issue the strategy applies to must show the outer loop: a red and a green of
 the acceptance suite, driven through a client interface, with the green on the
@@ -13,12 +13,18 @@ The check judges the issue, not each scenario: a test-run record holds one exit
 code for one command and does not list the tests that ran. Whether the strategy
 applies is `acceptance_strategy.in_scope`, the one scope rule (ADR-079); this
 module adds none. Compass reads records here, never project code.
+
+The `attempts` check needs `attempts` on every registered outer-loop green of an
+in-scope issue. `no-trusted-rerun` is locked and passes a record with no
+`attempts`, for records written before the field; the `attempts` check closes
+that gap where the strategy applies, and leaves `no-trusted-rerun` as it is.
 """
-# DEPENDENCY: standard library (os); compass_pkg.acceptance_strategy, binding,
+# DEPENDENCY: standard library (json, os); compass_pkg.acceptance_strategy, binding,
 # check_results, core, red_first and status_words. It imports no command module, so the check
 # registry can import it.
 from __future__ import annotations
 
+import json
 import os
 
 from compass_pkg import acceptance_strategy, status_words
@@ -111,3 +117,41 @@ def _check_outer_loop_recorded(task, task_dir):
     detail = (f"issue {slug} has an outer-loop red ({outer_reds[0][0]}) and an "
               f"outer-loop green ({outer_greens[-1][0]})")
     return True, detail + (f"; {note}" if note else " on the current tree")
+
+
+# --- the `attempts` check --------------------------------------------------------------------
+
+ATTEMPTS_CHECK = "outer-loop-attempts-recorded"
+
+
+def _attempts_fault(path, record):
+    """Why an outer-loop green's `attempts` does not hold, or None."""
+    if "attempts" not in record:
+        return (f"{path} has no attempts; attempts is required on an in-scope outer-loop "
+                f"record, so `no-trusted-rerun` can tell a first pass from a rerun")
+    value = record["attempts"]
+    # A bool is an int in Python, and 1.0 is not a count of runs.
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        return (f"{path} has attempts {json.dumps(value)}; attempts must be a whole "
+                f"number of 1 or more")
+    return None
+
+
+def _check_outer_loop_attempts_recorded(task, task_dir):
+    """The `attempts` check (strategy `S5` on the outer loop, ADR-084): on an in-scope
+    issue, every registered outer-loop green has `attempts`, a whole number of 1 or
+    more. `no-trusted-rerun` passes a record with no `attempts`, so an outer-loop
+    green written without one would hide a rerun."""
+    applies, why = acceptance_strategy.in_scope(task, task_dir)
+    if not applies:
+        return NOTHING_TO_CHECK, f"not required: the strategy does not apply - {why}"
+    outer = [(p, r) for p, r in green_records(task, task_dir)
+             if acceptance_strategy.loop_of(r) == "outer"]
+    if not outer:
+        return NOTHING_TO_CHECK, ("no outer-loop green is registered; "
+                                  "`outer-loop-recorded` reports that")
+    faults = [f for f in (_attempts_fault(p, r) for p, r in outer) if f]
+    if faults:
+        return False, "; ".join(faults)
+    return True, "every outer-loop green records its attempts: " + ", ".join(
+        f"{p} ({r['attempts']})" for p, r in outer)

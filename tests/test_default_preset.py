@@ -877,6 +877,7 @@ EXPECTED_ON_SKIPPED = {
     "acceptance-applicability-agrees": "not-applicable",
     "outer-loop-recorded": "not-applicable",
     "acceptance-support-present": "not-applicable",
+    "outer-loop-attempts-recorded": "not-applicable",
     "declared-tests-resolve": "pass",
 }
 

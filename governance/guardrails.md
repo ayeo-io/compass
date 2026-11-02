@@ -344,6 +344,20 @@ _(none yet - the shipped default guardrails apply as-is)_
     first issue the strategy applies to builds the missing pieces as its own
     work.
   - The advice never makes `compass check` exit 1.
+- **`outer-loop-attempts-recorded`** is the `attempts` check of the four-layer
+  acceptance strategy (`S17`, ADR-084). It is unlocked, declares `severity:
+  blocking` and `on_skipped: not-applicable`, and sits in no gate, no lock and
+  not in the spike's checks. `compass check` runs it after
+  `outer-loop-recorded` and labels its row the same way. The rules it applies
+  are in `cli/compass_pkg/outer_loop.py`.
+  - On an in-scope issue it fails each registered outer-loop green with no
+    `attempts`, or with a value that is not a whole number of 1 or more. The
+    finding names the record and the value.
+  - It declines with "not required: the strategy does not apply" when
+    `acceptance_strategy.in_scope` says so, and when no outer-loop green is
+    registered, which `outer-loop-recorded` reports.
+  - An inner-loop green needs no `attempts`. `no-trusted-rerun` is locked and
+    does not change: it still passes a record with no `attempts`.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart

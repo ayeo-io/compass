@@ -114,6 +114,8 @@ checks:
       layer rules (layering test). Advisory: a missing piece never fails the run. Declines to check, rather
       than passing, for an issue the strategy does not apply to and for one with no green on record.', kind: deterministic, impl: acceptance-support-present,
     severity: advisory, on_skipped: not-applicable}
+  outer-loop-attempts-recorded: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to, every registered outer-loop green records `attempts`, a whole number of 1 or more, so `no-trusted-rerun` can tell a rerun from a first pass. An inner-loop green needs none. Declines to check, rather than passing, for an issue the strategy does not apply to and for an issue with no outer-loop green.', kind: deterministic, impl: outer-loop-attempts-recorded,
+    severity: blocking, on_skipped: not-applicable}
   spike-conclusion-present: {statement: A spike has a `spike-conclusion` evidence entry with a recorded
       decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue., kind: deterministic,
     impl: spike-conclusion-present, severity: blocking, on_skipped: fail, locked: true}

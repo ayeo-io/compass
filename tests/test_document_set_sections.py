@@ -2210,7 +2210,7 @@ def test_dss_30_checks_declared_and_documented(tmp_path):
     # ADR-067 runs after them through the same helper.
     assert outside_gate.CHECKS == ("artifacts-approved",) + U5_CHECKS + (
         "design-within-word-ceiling", "acceptance-applicability-agrees",
-        "outer-loop-recorded", "acceptance-support-present")
+        "outer-loop-recorded", "acceptance-support-present", "outer-loop-attempts-recorded")
     source = (ROOT / "cli/compass_pkg/check_cmd.py").read_text(encoding="utf-8")
     assert source.count("outside_gate.judged(") == 1
     assert source.count("def _outside_gate_pass(") == 1

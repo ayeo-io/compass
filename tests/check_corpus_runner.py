@@ -841,3 +841,37 @@ def _(root):
     task, task_dir = _issue(root, block)
     _strategy_red(task_dir)
     return task, task_dir
+
+
+# The `attempts` check reads `attempts` on each registered outer-loop green of an issue in scope.
+def _outer_green(task, task_dir, **attempts):
+    _record(task_dir, "red.outer.json", {"passed": False, "exit_code": 1, "loop": "outer",
+                                         "timestamp": "2026-10-29T10:00:00Z"})
+    path = _record(task_dir, "green.outer.json", {"passed": True, "exit_code": 0,
+                                                  "loop": "outer", **attempts,
+                                                  "timestamp": "2026-10-29T11:00:00Z"})
+    task["evidence"] = [{"id": "EV-1", "type": "test-run", "path": path}]
+    return task, task_dir
+
+
+# An outer-loop green with no `attempts` field, as a record from before the field.
+@case("outer-loop-attempts-recorded", "broken")
+def _(root):
+    task, task_dir = _issue(root, _strategy_block(True, "client-observable behavior"))
+    return _outer_green(task, task_dir)
+
+
+@case("outer-loop-attempts-recorded", "restored")
+def _(root):
+    task, task_dir = _issue(root, _strategy_block(True, "client-observable behavior"))
+    return _outer_green(task, task_dir, attempts=1)
+
+
+# An acceptance of kind validation and no red takes the issue out of scope.
+@case("outer-loop-attempts-recorded", "validation")
+def _(root):
+    task, task_dir = _issue(root, _strategy_block(False, "acceptance of kind validation"))
+    path = _record(task_dir, "green.outer.json", {"passed": True, "exit_code": 0,
+                                                  "loop": "outer", "kind": "validation"})
+    task["evidence"] = [{"id": "EV-1", "type": "test-run", "path": path}]
+    return task, task_dir

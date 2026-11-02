@@ -1066,7 +1066,7 @@ def test_ob_7_the_sample_has_every_check_that_declines(preset_config):
     # The four-layer acceptance strategy's checks give no row on an issue with no stored
     # applicability, which every issue of the sample is; its corpus holds the case.
     declining -= {"acceptance-applicability-agrees", "outer-loop-recorded",
-                  "acceptance-support-present"}
+                  "acceptance-support-present", "outer-loop-attempts-recorded"}
     assert declining <= stood_down, declining - stood_down
 
 

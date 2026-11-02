@@ -115,6 +115,10 @@ BASELINE_CHECKS = {
     # acceptance support code and each named path exists; it states the claim limit.
     # It sits in no guardrail, so `G1` and `G4` keep their checks.
     "acceptance-support-present",
+    # Added by `attempts-required` (ADR-084). The blocking check that each outer-loop
+    # green of an in-scope issue records `attempts`. It sits in no guardrail, so `G4`
+    # and its locked no-trusted-rerun keep their rules.
+    "outer-loop-attempts-recorded",
 }
 
 # The evidence types a branch may add to guardrails.yml, each named for the

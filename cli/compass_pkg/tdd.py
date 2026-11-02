@@ -37,7 +37,7 @@ from compass_pkg.terminal import say
 from compass_pkg import project_settings
 from compass_pkg.core import CompassError, find_upwards, load_manifest, manifest_path, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.manifest_store import load_file as load_manifest_file
-from compass_pkg import pytest_report
+from compass_pkg import green_attempts, pytest_report
 from compass_pkg.acceptance_strategy import LOOPS
 from compass_pkg.binding import declared_test_paths, ids_for
 from compass_pkg.red_first import (
@@ -627,50 +627,19 @@ def _bind_to_tree(payload, tree_ids):
     payload.update(tree_ids)
 
 
-def _tdd_state_path(task_dir):
-    """Path to the CLI-internal sidecar that tracks the source-tree hash and
-    `attempts` counter between tdd-green invocations. Not part of manifest.yml schema.
-    """
-    return os.path.join(task_dir, "evidence", ".tdd-state.json")
-
-
-def _load_tdd_state(task_dir, scenario):
-    """Load the per-scenario TDD state from the sidecar file.
-
-    Returns a dict with keys: `tree_hash` (str), `attempts` (int),
-    `scenario` (str|None). Returns a fresh empty state if absent or unreadable.
-    """
-    path = _tdd_state_path(task_dir)
-    if not os.path.isfile(path):
-        return {}
-    try:
-        with open(path, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
-        if not isinstance(data, dict):
-            return {}
-        # State is keyed by scenario id (or "" for unbound runs)
-        key = scenario or ""
-        return data.get(key) or {}
-    except (OSError, json.JSONDecodeError):
-        return {}
-
-
-def _save_tdd_state(task_dir, scenario, tree_hash, attempts, command=None):
-    """Persist the per-scenario TDD state in the sidecar file."""
-    path = _tdd_state_path(task_dir)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    existing = {}
-    if os.path.isfile(path):
-        try:
-            with open(path, "r", encoding="utf-8") as fh:
-                existing = json.load(fh) or {}
-        except (OSError, json.JSONDecodeError):
-            existing = {}
-    key = scenario or ""
-    existing[key] = {"tree_hash": tree_hash, "attempts": attempts,
-                     "command": command}
-    with open(path, "w", encoding="utf-8") as fh:
-        json.dump(existing, fh, indent=2)
+def _attempt_tree(task_dir, tree_ids):
+    """The tree a green's run is compared on. Its identity is the git tree id -
+    every tracked file, whatever its type - with the source-file hash of the
+    project root beside it, which also sees untracked source files; outside git the
+    hash alone decides. The files the record covers are part of what it asserts:
+    after a file is traced to the issue, the same command covers more files, a
+    new assertion and not a retry of a flaky test."""
+    out = _source_tree_hash(find_upwards(task_dir, ".compass") or task_dir)
+    if tree_ids.get("tree_id"):
+        out = "%s+%s" % (tree_ids["tree_id"], out)
+    if tree_ids.get("changes_id"):
+        out = "%s+%s" % (out, tree_ids["changes_id"])
+    return out
 
 
 def _red_record_for(task_dir, scenario, loop=None):
@@ -746,16 +715,23 @@ def cmd_tdd_green(args):
     for w in warnings:
         sys.stderr.write(f"compass tdd-green: warning - {w}\n")
     excerpt = "\n".join(out.splitlines()[-25:])
+    # Output-token cross-check. A zero exit whose output carries
+    # a known-runner fail-token is a suspected masked failure - refuse rather
+    # than record a clean green on a contradictory signal.
+    fail_token = _output_fail_token(out) if code == 0 else None
+    # `attempts` and rerun_without_change: the tree the run left, with the command,
+    # against the last run of this binding and loop. A failed outer-loop run
+    # counts too (green_attempts, ADR-084).
+    current_command = " ".join(command)
+    if (code != 0 or fail_token) and loop == "outer":
+        green_attempts.failed(task_dir, scenario, loop, _attempt_tree(task_dir, tree_ids),
+                              current_command)
     if code != 0:
         raise CompassError(
             f"compass tdd-green: the test command FAILED (exit {code}) - not "
             f"green yet. The .red marker is left in place.\n"
             f"--- output (tail) ---\n" + excerpt
         )
-    # Output-token cross-check. A zero exit whose output carries
-    # a known-runner fail-token is a suspected masked failure - refuse rather
-    # than record a clean green on a contradictory signal.
-    fail_token = _output_fail_token(out)
     if fail_token:
         raise CompassError(
             f"compass tdd-green: the command exited 0 but its output shows a "
@@ -763,52 +739,8 @@ def cmd_tdd_green(args):
             f"Refusing to record a green on a contradictory signal. The .red "
             f"marker is left in place.\n--- output (tail) ---\n" + excerpt
         )
-
-    # --- `attempts` + rerun_without_change detection --------------------------
-    # Find the project root: walk up from the task_dir to the directory that
-    # contains .compass/ - that is the project root the hash covers.
-    project_root = find_upwards(task_dir, ".compass") or task_dir
-    # The tree's identity is its git tree id - every tracked file, whatever
-    # its type - with the source-file hash beside it, which also sees
-    # untracked source files. The hash alone read only a few extensions, so
-    # an edit to a shell script looked like no change at all. Outside git
-    # there is no tree id, and the hash alone decides.
-    current_hash = _source_tree_hash(project_root)
-    if tree_ids.get("tree_id"):
-        current_hash = "%s+%s" % (tree_ids["tree_id"], current_hash)
-    # The files the record covers are part of what it asserts. After a file
-    # is traced to the issue, the same command over the same tree covers
-    # more files: a new assertion, not a retry of a flaky test.
-    if tree_ids.get("changes_id"):
-        current_hash = "%s+%s" % (current_hash, tree_ids["changes_id"])
-    prior_state = _load_tdd_state(task_dir, scenario)
-    prior_hash = prior_state.get("tree_hash")
-    prior_attempts = prior_state.get("attempts") or 0
-
-    # The command matters as much as the tree. Running the SAME assertion again
-    # with nothing changed is hiding a flaky test by re-running it, which this
-    # flag exists to catch; running a DIFFERENT one - the narrow suite, then
-    # the full suite, which is what the verify stage asks for - is a new
-    # assertion, not a retry.
-    current_command = " ".join(command)
-    prior_command = prior_state.get("command")
-
-    if prior_hash is None:
-        # First invocation for this scenario - clean first pass
-        attempts = 1
-        rerun_without_change = False
-    elif prior_hash == current_hash and prior_command == current_command:
-        # Same tree, same command: nothing changed and nothing new was asked
-        attempts = prior_attempts + 1
-        rerun_without_change = True
-    else:
-        # Either the tree changed (real work) or the command did (a different
-        # assertion). Both are legitimate progress.
-        attempts = prior_attempts + 1
-        rerun_without_change = False
-
-    # Persist the updated state for the next invocation
-    _save_tdd_state(task_dir, scenario, current_hash, attempts, current_command)
+    attempts, rerun_without_change = green_attempts.count(
+        task_dir, scenario, loop, _attempt_tree(task_dir, tree_ids), current_command)
 
     payload = {
         "command": " ".join(command),
@@ -831,6 +763,10 @@ def cmd_tdd_green(args):
     # red→green path).
     if attempts > 1:
         payload["rerun_without_change"] = rerun_without_change
+    # An outer-loop green names its test, so a quarantine entry can match it.
+    test = green_attempts.declared_test(task_dir, scenario) if loop == "outer" else None
+    if test:
+        payload["test"] = test
     _bind_to_tree(payload, tree_ids)
     if verified_by:
         payload["verified_by"] = verified_by   # carry the guard kind forward

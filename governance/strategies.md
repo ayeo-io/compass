@@ -160,7 +160,9 @@ commands write; it never reads project code.
   inner otherwise. `compass quick-fix finish` takes the same flag. On an
   in-scope issue the check
   `outer-loop-recorded` needs an outer-loop red and an outer-loop green on
-  the tree as it is now (ADR-080).
+  the tree as it is now (ADR-080), and `outer-loop-attempts-recorded` needs
+  `attempts` on each outer-loop green, counted for the outer loop alone
+  (ADR-084).
 - **Support code.** The project names the paths of its alias helper,
   driver factory, DSL root and layering test under
   `project.acceptance_support`. `compass readiness` reports each missing

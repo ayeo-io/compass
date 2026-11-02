@@ -22,7 +22,8 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 from compass_pkg.acceptance_strategy import _check_applicability_agrees
-from compass_pkg.outer_loop import _check_outer_loop_recorded
+from compass_pkg.outer_loop import (
+    _check_outer_loop_attempts_recorded, _check_outer_loop_recorded)
 from compass_pkg.support_code import _check_acceptance_support_present
 from compass_pkg.artifact_status import _check_artifacts_approved
 from compass_pkg.binding import _check_evidence_matches_tree
@@ -141,6 +142,7 @@ _ENTRIES = (
     _entry("acceptance-applicability-agrees", _check_applicability_agrees),
     _entry("outer-loop-recorded", _check_outer_loop_recorded),
     _entry("acceptance-support-present", _check_acceptance_support_present),
+    _entry("outer-loop-attempts-recorded", _check_outer_loop_attempts_recorded),
 )
 
 REGISTRY: dict[str, CheckImpl] = {e.name: e for e in _ENTRIES}

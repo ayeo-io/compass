@@ -186,6 +186,11 @@ CHECK_GUIDANCE = {
         "do": "Build the missing pieces in this issue, or claim no more than the claim limit allows.",
         "fix": "Name each piece's path under `project.acceptance_support` in compass.yml (`alias_helper`, `driver_factory`, `dsl_root`, `layering_test`) and build the pieces the finding names as missing; `examples/atdd-adapters/python/` shows each one.",
     },
+    "outer-loop-attempts-recorded": {
+        "why": "Strategy `S5` treats a rerun-to-green as a failure, and `no-trusted-rerun` can tell a rerun from a first pass only from `attempts`. It passes a record with no field, so an outer-loop green with none would hide a rerun.",
+        "do": "Record the outer-loop green again with `compass tdd-green`, which writes `attempts`.",
+        "fix": "Run `compass tdd-green --loop outer --scenario <id> -- <acceptance command>` on the current tree; do not edit `attempts` in the record by hand.",
+    },
     "spike-conclusion-present": {
         "why": "A Spike without a recorded conclusion is just untracked work - the conclusion is what makes the exploration accountable.",
         "do": 'Record the close-out: discard, graduate-to-delivery, or defer.',

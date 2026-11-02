@@ -986,6 +986,12 @@ def _word_table_exempt(text: str, match: re.Match) -> bool:
     start, end = match.span()
     if start > 0 and text[start - 1] in "`/:":
         return True
+    # A word inside a backticked hyphenated id (`outer-loop-attempts-recorded`)
+    # is part of the identifier: walk back over the id to its opening backtick.
+    if start > 0 and text[start - 1] == "-":
+        head = re.search(r"[\w.-]*$", text[:start])
+        if head.start() > 0 and text[head.start() - 1] == "`":
+            return True
     if text[end:end + 1] == ".":
         return True
     if re.match(r"\s+stage\b", text[end:end + 8], re.IGNORECASE):
@@ -1067,11 +1073,6 @@ _register(Rule(
             "\"locally modified\" is the name of one of the four parent states, "
             "and `S-PARENT-MODIFIED` its finding code - identifiers "
             "(section 4), not the verb the word table retires"),
-        Exemption(
-            "docs/policy-lint.md", "| `S-PARENT-MODIFIED` | error",
-            "`S-PARENT-MODIFIED` is the finding code of the \"locally "
-            "modified\" parent state - an identifier (section 4), not the "
-            "verb the word table retires"),
         Exemption(
             "tests/test_parent_states.py", "| locally modified | the cached",
             "\"locally modified\" is the name of one of the four parent states "
@@ -1184,12 +1185,6 @@ _register(Rule(
             "(PRINCIPLE), and the audit's own per-file entry for this file "
             "lists it under \"Pinned\", to keep as it stands."),
         Exemption(
-            "skills/evidence-gates/architecture-checks.md", "RP-REQUIRE-003",
-            "a real routing-policy rule id (governance/routing-policy.yml, "
-            "`RP-REQUIRE-003`) - the match lands mid-identifier on the "
-            "\"REQUIRE\" substring, not the standalone verb the word table "
-            "means to catch."),
-        Exemption(
             "tests/analyze/test_analyze_core.py", "RP-REQUIRE-001",
             "the same rule-id false match as RP-REQUIRE-003 above, for the "
             "auth floor this test's fixture triggers."),
@@ -1197,10 +1192,6 @@ _register(Rule(
             "tests/test_spine_records_the_truth.py", "RP-REQUIRE-003 adds",
             "the same rule-id false match as RP-REQUIRE-003 above, for the "
             "fitness-check floor this test's fixture triggers."),
-        Exemption(
-            "skills/evidence-gates/architecture-checks.md", "RP-REQUIRE-004",
-            "the same rule-id false match as RP-REQUIRE-003 above, for the "
-            "sibling rule."),
         Exemption(
             "templates/rollback-plan.md", "RP-REQUIRE-006",
             "the same rule-id false match as RP-REQUIRE-003 above, for the "
@@ -1275,18 +1266,6 @@ _register(Rule(
         Exemption("approaches/hotfix.md",
                    "Thorough Verify gate. Review dimensions",
                    "names the Verify gate, not the verb."),
-        Exemption("docs/routing-deep-dive.md", "`RP-REQUIRE-001` to `RP-REQUIRE-006` each add",
-                   "names the rule ids RP-REQUIRE-001 to RP-REQUIRE-006, not the verb."),
-        Exemption("docs/routing-deep-dive.md", "the gates `verify.analyze` (`RP-REQUIRE-001` and",
-                   "names a rule id, not the verb."),
-        Exemption("docs/routing-deep-dive.md", "`RP-REQUIRE-002`) and `verify.architecture`",
-                   "names a rule id, not the verb."),
-        Exemption("docs/routing-deep-dive.md", "`RP-REQUIRE-004`), the `threat-model`",
-                   "names a rule id, not the verb."),
-        Exemption("docs/routing-deep-dive.md", "(`RP-REQUIRE-005`) and the `rollback-plan`",
-                   "names a rule id, not the verb."),
-        Exemption("docs/routing-deep-dive.md", "(`RP-REQUIRE-006`).",
-                   "names a rule id, not the verb."),
         Exemption("approaches/hotfix.md", "never Verify itself",
                    "names the Verify stage, not the verb."),
         Exemption("approaches/hotfix.md",
@@ -1598,19 +1577,8 @@ _register(Rule(
         # word table replaces with "need". The match is the second half of
         # the hyphenated identifier, so the backtick before its first half
         # does not sit immediately before the match.
-        Exemption("architecture/decisions/"
-                   "ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
-                   "They become `RP-REQUIRE-*`",
-                   "RP-REQUIRE is an id prefix, not the verb."),
-        Exemption("architecture/decisions/"
-                   "ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
-                   "define `RP-FLOOR` and `RP-REQUIRE` honestly",
-                   "RP-REQUIRE is an id prefix, not the verb."),
         Exemption("architecture/decisions/README.md",
                    "RP-REQUIRE-001/002, verify.analyze",
-                   "RP-REQUIRE is an id prefix, not the verb."),
-        Exemption("architecture/system-context.md",
-                   "added by `RP-REQUIRE-003` and `RP-REQUIRE-004`",
                    "RP-REQUIRE is an id prefix, not the verb."),
         Exemption("tests/test_verify_fitness_route_promotion.py",
                    "When cross-cutting fires RP-REQUIRE-003, it appears in "
@@ -1639,11 +1607,6 @@ _register(Rule(
                    "the derived text of the same terminology.yml line - "
                    "RP-REQUIRE is an id prefix, not the verb the word table "
                    "retires."),
-        Exemption("tests/test_artifact_registry.py",
-                   "`RP-REQUIRE-003` already adds",
-                   "RP-REQUIRE-003 is a policy rule id, not the verb the "
-                   "word table retires; found while fixing batch 7, not by "
-                   "the audit."),
         Exemption("tests/test_allow_marker_needs_a_reason.py",
                    "(allow-marker-supplies-its-own-reason)",
                    "the issue's own slug, an identifier (section 4), not "
@@ -1705,29 +1668,7 @@ _register(Rule(
             "the same `--verified-by` flag name as the exemption above."),
         Exemption(
             "tests/test_tdd_evidence.py",
-            "`--verified-by` - instead of about the evidence layout.",
-            "names the real `--verified-by` CLI flag (cli/compass_pkg/"
-            "tdd.py), an identifier, not the verb the word table retires."),
-        Exemption(
-            "tests/test_tdd_evidence.py",
-            "First-class `--verified-by` red (`R8`, `TRC-R8-2`..`R8-6`; "
-            "`R8-1` hook part in test_pre_tool_hook)",
-            "the same `--verified-by` flag name as the exemption above."),
-        Exemption(
-            "tests/test_tdd_evidence.py",
-            "The green carries the `--verified-by` kind forward and binds the",
-            "the same `--verified-by` flag name as the exemption above."),
-        Exemption(
-            "tests/test_tdd_evidence.py",
             "No smuggling - a passing command with no --verified-by records no red",
-            "the same `--verified-by` flag name as the exemption above."),
-        Exemption(
-            "tests/test_tdd_evidence.py",
-            "An unrecognised `--verified-by` kind is refused with the allowed set",
-            "the same `--verified-by` flag name as the exemption above."),
-        Exemption(
-            "tests/test_tdd_evidence.py",
-            "A `--verified-by` red still needs the guard to genuinely fail",
             "the same `--verified-by` flag name as the exemption above."),
         Exemption(
             "tests/test_printed_output_vocabulary.py",
@@ -3881,7 +3822,8 @@ _GROWING_REACH = {
     # 153 with the three check-corpus case labels of outer-loop-recorded;
     # 157 with the 8.0.4 inner-loop setup error and the three check-corpus
     # case labels of acceptance-support-present.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 157),
+    # 160 with the three check-corpus case labels of `outer-loop-attempts-recorded`.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 160),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

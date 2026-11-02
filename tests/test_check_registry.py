@@ -68,8 +68,9 @@ def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
     proofs = {e["check"] for e in yaml.safe_load(PROOFS.read_text(encoding="utf-8"))}
     # 26 with design-within-word-ceiling (ADR-067), 27 with the four-layer acceptance
     # strategy's acceptance-applicability-agrees, 28 with its outer-loop-recorded (ADR-080),
-    # 29 with its acceptance-support-present.
-    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 29
+    # 29 with its acceptance-support-present, 30 with its `outer-loop-attempts-recorded`
+    # (ADR-084).
+    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 30
     for name, entry in check_registry.REGISTRY.items():
         # dod-evidence-typed moved to 2.0.0: its verdict on a ticked page with no record changed.
         # human-approval-present moved to 1.1.0: it counts only an approval given for

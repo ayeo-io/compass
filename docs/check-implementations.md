@@ -259,8 +259,8 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 
 | Case | Verdict | What the input exercises |
 |---|---|---|
-| `broken` | fail | an in-scope issue whose outer-loop green has no `attempts` field |
-| `restored` | pass | an in-scope issue whose outer-loop green has `attempts` 1 |
+| `broken` | fail | an in-scope issue whose outer-loop green has no attempts field |
+| `restored` | pass | an in-scope issue whose outer-loop green has attempts 1 |
 | `validation` | nothing-to-check | an issue whose acceptance is of kind validation, with no red, so the strategy does not apply |
 
 ### `outer-loop-recorded` (version 1.0.0)

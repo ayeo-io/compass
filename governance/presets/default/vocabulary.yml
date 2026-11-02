@@ -127,6 +127,7 @@ vocabulary:
     aliases: []
   checks.acceptance-support-present:
     name: Acceptance support code present
+    aliases: []
   checks.outer-loop-attempts-recorded:
     name: Outer-loop run count recorded
     aliases: []

@@ -77,10 +77,12 @@ def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
         # guardrail `G5`, and its corpus verdicts held, so the major stayed (ADR-066).
         # It moved to 1.2.0 when a withdrawn sign-off stopped counting (ADR-069).
         # multiagent-run-recorded moved to 1.1.0 when it accepted a single-unit
-        # record (ADR-071).
+        # record (ADR-071). suite-passed moved to 1.1.0 when a newer issue needed a red
+        # for each scenario (ADR-088).
         assert entry.version == {"dod-evidence-typed": "2.0.0",
                                  "human-approval-present": "1.2.0",
-                                 "multiagent-run-recorded": "1.1.0"}.get(name, "1.0.0"), name
+                                 "multiagent-run-recorded": "1.1.0",
+                                 "suite-passed": "1.1.0"}.get(name, "1.0.0"), name
         assert isinstance(entry.params_spec, dict), name
         assert set(entry.tighter) <= set(entry.params_spec), name
         for param in entry.params_spec:
@@ -94,7 +96,7 @@ def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
 
 
 def test_cr_2_the_registry_answers_the_installed_version_and_major():
-    assert check_registry.installed_version("suite-passed") == "1.0.0"
+    assert check_registry.installed_version("suite-passed") == "1.1.0"
     assert check_registry.installed_major("suite-passed") == 1
     assert check_registry.installed_version("no-such-check") is None
     assert check_registry.installed_major("no-such-check") is None

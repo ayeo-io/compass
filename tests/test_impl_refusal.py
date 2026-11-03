@@ -95,7 +95,7 @@ def test_ir_2_the_refusal_names_both_versions_and_the_fix(committed):
     _, checks, _ = check_json(root)
     detail = checks["suite-passed"]["detail"]
     assert "suite-passed" in detail
-    assert "0.9.0" in detail and "1.0.0" in detail
+    assert "0.9.0" in detail and "1.1.0" in detail
     assert f"compass issue migrate --config --issue {SLUG}" in detail
     code, out, err = _run(root, "check", "--issue", SLUG)
     assert "suite-passed" in out and "migrate --config" in out, out

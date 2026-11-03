@@ -255,7 +255,7 @@ def _check_scenarios_are_executable(task, task_dir):
 
 
 from compass_pkg.test_ids import _test_id_resolves, _test_is_skipped
-from compass_pkg.red_first import missing_first_failure
+from compass_pkg.red_first import missing_first_failure, scenario_notice
 
 
 
@@ -303,7 +303,7 @@ def _check_suite_passed(task, task_dir):
     # exactly that reading. Per-scenario coverage needs the runner's own
     # result output parsed.
     return True, (f"{len(green)} test-run(s) on record, all green. This does "
-                  f"not record which scenarios the run exercised")
+                  f"not record which scenarios the run exercised" + scenario_notice(task, task_dir))
 
 
 def _git_out(args, cwd):

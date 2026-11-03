@@ -657,6 +657,10 @@ def test_d2_repairs_change_only_retired_names():
     `governance/guardrails.md` (list_items 89 -> 98) gained the isolation check
     and the layering check, two list items and their 7 sub-items.
 
+    One more was re-baselined by ayeo-io/compass-delivery#347:
+    `governance/guardrails.md` (list_items 98 -> 99) gained the `G1` bullet on
+    the red for each scenario.
+
     The other 45 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

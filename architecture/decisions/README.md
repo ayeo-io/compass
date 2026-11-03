@@ -127,6 +127,7 @@ Rules:
 | [ADR-085](ADR-085-an-outer-loop-green-names-its-candidate-and-client.md) | An outer-loop green names its candidate and client | accepted | with ADR-080 and ADR-084 |
 | [ADR-086](ADR-086-isolation-and-layering-records-are-written-only-by-their-commands.md) | Isolation and layering records are written only by their commands | accepted | with ADR-064, ADR-082 and ADR-085 |
 | [ADR-087](ADR-087-a-runner-that-is-not-pytest-writes-its-junit-report-where-compass-names-it.md) | A runner that is not pytest writes its JUnit report where Compass names it | accepted | with ADR-081 and ADR-086 |
+| [ADR-088](ADR-088-each-scenario-needs-a-red-before-its-first-green.md) | Each scenario needs a red before its first green | proposed | with ADR-038, ADR-081 and ADR-082 |
 
 ## Principle → ADR mapping
 

@@ -98,4 +98,4 @@ implementations:
     version: 1.0.0
   suite-passed:
     verdict_digest: e395bdee510411c77a8231034c59c54485c800d6bc047e12e1b28f1bfd97d531
-    version: 1.0.0
+    version: 1.1.0

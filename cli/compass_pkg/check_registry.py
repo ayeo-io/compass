@@ -96,7 +96,9 @@ _ENTRIES = (
     _entry("scenarios-have-tests", _check_scenarios_have_tests),
     _entry("scenarios-are-executable", _check_scenarios_are_executable),
     _entry("declared-tests-resolve", _check_declared_tests_resolve),
-    _entry("suite-passed", _check_suite_passed),
+    # 1.1.0: needs a red for each scenario on an issue created from 2026-11-03; older
+    # issues keep the rule they had, so the corpus verdicts hold (ADR-088).
+    _entry("suite-passed", _check_suite_passed, version="1.1.0"),
     _entry("changed-code-traces-to-scenario", _check_changed_code_traces),
     _entry("scenario-has-id-and-intent", _check_scenario_has_id_and_intent),
     _entry("claim-traces-to-scenario", _check_claim_traces),

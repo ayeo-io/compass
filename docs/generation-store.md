@@ -159,7 +159,7 @@ the schema of its files in `versions.yml`.
   "guardrail": "G1",
   "name": "suite-passed",
   "status": "refused",
-  "detail": "refused: suite-passed 0.9.0 is recorded, 1.0.0 is installed, a different major, so it did not run. Run `compass issue migrate --config --issue feature` to store a new generation pinned to the installed versions; it invalidates the results recorded under the old ones, so each check runs again."
+  "detail": "refused: suite-passed 0.9.0 is recorded, 1.1.0 is installed, a different major, so it did not run. Run `compass issue migrate --config --issue feature` to store a new generation pinned to the installed versions; it invalidates the results recorded under the old ones, so each check runs again."
 }
 ```
 

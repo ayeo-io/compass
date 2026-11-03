@@ -38,6 +38,15 @@ run is on record.**
   and does not establish.
 - Checked at Verify and again at ship time. `verification-report.md` carries
   the recorded run.
+- `suite-passed` also needs a failure observed first: a red or an
+  acceptance record on an issue that declares scenarios. On an issue
+  created on or after 2026-11-03, each scenario that is not narrative needs
+  a red bound to it, of either loop, dated no later than its first green,
+  unless an acceptance declared before the issue's first green closes it.
+  The check names each scenario with no red, and each whose red is after
+  its first green. An older issue keeps the earlier rule, and the pass
+  detail gives a notice that names what it lacks under the new one
+  (ADR-088). `cli/compass_pkg/red_first.py` holds the rules.
 
 ### Acceptance defined before it is built (`G2`)
 

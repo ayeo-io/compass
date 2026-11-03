@@ -41,7 +41,7 @@ def test_ir_8_migrate_config_pins_the_installed_versions_and_keeps_the_configura
     assert after.replace("generation: 2", "generation: 1") == before
     first, second = (task_dir / "generations" / "1", task_dir / "generations" / "2")
     versions = _load(second / "versions.yml")
-    assert versions["implementations"]["suite-passed"] == "1.0.0"
+    assert versions["implementations"]["suite-passed"] == "1.1.0"
     assert versions["cli"] != "5.0.0"
     old = _load(first / "resolved.yml")
     new = _load(second / "resolved.yml")

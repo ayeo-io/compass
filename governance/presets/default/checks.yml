@@ -45,8 +45,10 @@ checks:
       - and the registry entry names whichever was written. When the issue declares scenarios and was
       created on or after 2026-09-24, or has an evidence record dated on or after it, a red record (evidence/red.json
       or evidence/red-<scenario>.json, recording a failed run) or an acceptance record from `compass acceptance
-      record` must also be on the issue. A green alone shows the suite passes, not that a test failed
-      first.
+      record` must also be on the issue. On an issue created on or after 2026-11-03, or whose evidence
+      is all dated on or after it, each scenario that is not narrative also needs a red bound to it, of
+      either loop, dated no later than its first green, unless an acceptance declared before the issue''s
+      first green closes it. A green alone shows the suite passes, not that a test failed first.
 
       ', kind: deterministic, impl: suite-passed, severity: blocking, on_skipped: fail, locked: true}
   changed-code-traces-to-scenario: {statement: Every changed production file maps to >=1 scenario id.,

@@ -323,6 +323,8 @@ EXPECTED_SUBCOMMANDS = {
     "board",                      # render|refresh - the delivery board page (ADR-046)
     "readiness",                  # measures the repository and writes the readiness record
     "release",                    # notes - the release lines since a git reference (ADR-065)
+    "isolation",                  # record - the isolation proof (#328, ADR-086)
+    "layering",                   # record - the layering record (#328, ADR-086)
 }
 
 

@@ -146,6 +146,11 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # against the readiness signals and writes
                                   # .compass/readiness.yml. A verb: it has one
                                   # action and two output forms.
+    "isolation", "layering",      # isolation-and-layering (#328, ADR-086):
+                                  # `compass isolation record` and `compass
+                                  # layering record`, the only writers of the
+                                  # strategy's two records. GROUPS, so a later
+                                  # record verb has a home.
 }
 
 

@@ -1,6 +1,6 @@
 # compass_pkg.layering - the layering record of the four-layer acceptance strategy
-"""`compass layering record` and the check `layering-test-passed` of strategy
-`S17`, the four-layer acceptance strategy (ADR-086).
+"""`compass layering record` and the check `layering-test-passed` of the
+four-layer acceptance strategy (`S17`, ADR-086).
 
 The project owns its layer rules: its layering test checks that each test layer
 calls only the layer below it, in whatever language the project uses. Compass

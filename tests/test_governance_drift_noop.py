@@ -261,6 +261,10 @@ EXPECTED_SUBCOMMANDS = {
     "board",  # compass-board (ADR-046): render|refresh - the delivery board page
     "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
     "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
+    # isolation-and-layering (#328, ADR-086): `isolation record` and `layering
+    # record`, the two strategy records only their commands write. GROUPS, so a
+    # later record verb has a home.
+    "isolation", "layering",
 }
 
 

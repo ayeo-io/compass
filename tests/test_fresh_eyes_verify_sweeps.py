@@ -369,6 +369,8 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         "profile",  # execution-profile-manifests (ADR-076): `profile lint|add|show`
         "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
         "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
+        # isolation-and-layering (#328, ADR-086): `isolation record`, `layering record`
+        "isolation", "layering",
     }
     line = next(l for l in result.stdout.splitlines() if l.strip().startswith("{"))
     verbs = set(line.strip().strip("{}").split(","))

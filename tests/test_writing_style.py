@@ -3823,7 +3823,9 @@ _GROWING_REACH = {
     # 157 with the 8.0.4 inner-loop setup error and the three check-corpus
     # case labels of acceptance-support-present.
     # 160 with the three check-corpus case labels of `outer-loop-attempts-recorded`.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 160),
+    # 166 with the six check-corpus case labels of `isolation-proven` and
+    # `layering-test-passed`, three each.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 166),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

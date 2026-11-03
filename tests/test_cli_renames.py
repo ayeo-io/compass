@@ -460,6 +460,8 @@ EXCEPTIONS = {
     "issue subtask package": "packages a subtask's brief; a verb of the subtask group",
     "acceptance start": "opens an acceptance record for a change with no natural red",
     "acceptance record": "closes an acceptance record",
+    "isolation record": "runs the suite and writes the isolation proof; record is the verb ADR-086 names for the only writer of the type (#328)",
+    "layering record": "runs the layering test and writes the layering record; record is the verb ADR-086 names for the only writer of the type (#328)",
     "adr new": "creates the next numbered decision record",
     "follow-up resolve": "marks an owed follow-up settled",
     "gate pass": "marks a gate passed with typed evidence",

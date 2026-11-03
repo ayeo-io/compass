@@ -192,7 +192,10 @@ def test_trc_b2():
                 "checkpoint-approval",
                 # 7.0.0 adds a person's withdrawal of a delegated guardrail 5
                 # sign-off (ADR-069).
-                "approval-withdrawal"}
+                "approval-withdrawal",
+                # The four-layer acceptance strategy adds its two records, each written
+                # only by its command (ADR-086, #328).
+                "isolation-proof", "layering"}
     assert set(types) == expected, (
         "the evidence type list changed. Adding a type is a decision (7.0.0 added "
         "artifact-approval, ADR-050); declare it in `expected` above:\n  added: %s\n  removed: %s"

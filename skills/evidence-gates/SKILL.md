@@ -115,17 +115,8 @@ when `conftest.py` imports the driver at module level. With `--loop outer`,
 scenario: one record per scenario, sharing a `run_id`. A red that ends stage 1
 (outer loop, an approach that runs refine, no technical design, distribution
 map or subtask registered) writes `before_implement: true`, no `.red` marker
-and moves no document (ADR-081).
-
-Isolation and layering are proven by two records only their commands write
-(ADR-086); `compass evidence add` refuses both types. `compass isolation
-record --candidate <id>|local --client api|web|cli --parallel "<cmd>"
---repeat "<cmd> {tests}"` runs the suite in parallel once, then each
-scenario's declared tests twice, and writes `evidence/isolation-proof.json`.
-`compass layering record [--test-path P] [-- <cmd>]` runs the project's
-layering test, or `project.layering_command`, and writes
-`evidence/layering.json`. Both exit 0 when a run fails: `isolation-proven`
-and `layering-test-passed` judge the record.
+and moves no document (ADR-081). Only `compass isolation record` and `compass
+layering record` write the isolation and layering records (ADR-086).
 
 ## Records that also move a document
 

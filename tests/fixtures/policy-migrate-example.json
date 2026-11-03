@@ -172,6 +172,11 @@
       "operation": "add"
     },
     {
+      "catalogue": "checks",
+      "id": "suite-passed",
+      "operation": "set"
+    },
+    {
       "catalogue": "gates",
       "id": "G4",
       "operation": "set"

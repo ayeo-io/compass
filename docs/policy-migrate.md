@@ -421,6 +421,11 @@ reassess), and the `compass.yml` it would write.
       "operation": "add"
     },
     {
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "suite-passed",
+      "operation": "set"
+    },
+    {
       "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "G4",
       "operation": "set"

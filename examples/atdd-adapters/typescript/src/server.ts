@@ -15,7 +15,7 @@ import { TodoError, TodoService } from "./service.ts";
 
 type Action = "createAccount" | "add" | "complete" | "archive" | "todos";
 
-const ROUTES: [string, RegExp, Action][] = [
+const ENDPOINTS: [string, RegExp, Action][] = [
   ["POST", /^\/accounts$/, "createAccount"],
   ["POST", /^\/accounts\/(?<email>[^/]+)\/todos$/, "add"],
   ["POST", /^\/accounts\/(?<email>[^/]+)\/todos\/(?<name>[^/]+)\/complete$/, "complete"],
@@ -40,11 +40,11 @@ function answer(response: ServerResponse, status: number, payload: object): void
 
 async function serve(service: TodoService, request: IncomingMessage, response: ServerResponse): Promise<void> {
   const url = new URL(request.url ?? "/", "http://localhost");
-  const route = ROUTES.find(([method, pattern]) => method === request.method && pattern.test(url.pathname));
-  if (!route) {
+  const endpoint = ENDPOINTS.find(([method, pattern]) => method === request.method && pattern.test(url.pathname));
+  if (!endpoint) {
     return answer(response, 404, { error: `nothing answers ${request.method} ${url.pathname}` });
   }
-  const [, pattern, action] = route;
+  const [, pattern, action] = endpoint;
   const groups = pattern.exec(url.pathname)?.groups ?? {};
   const email = decodeURIComponent(groups.email ?? "");
   const name = decodeURIComponent(groups.name ?? "");

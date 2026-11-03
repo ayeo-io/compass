@@ -235,7 +235,7 @@ function phaseOfMethod(method: string): Phase {
 
 // --- reading the banned list -------------------------------------------------------
 
-/** The lower-case words of a name or a term: `routeTodo` gives ['route', 'todo']. */
+/** The lower-case words of a name or a term: `confirmOpen` gives ['confirm', 'open']. */
 function words(text: string): string[] {
   return (text.replace(/([a-z0-9])([A-Z])/g, "$1 $2").match(/[A-Za-z0-9]+/g) ?? []).map((w) => w.toLowerCase());
 }

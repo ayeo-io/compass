@@ -287,7 +287,8 @@ def _with_terminology(folder: Path) -> None:
     shutil.copyfile(TERMINOLOGY, folder / "governance" / "terminology.yml")
 
 
-def test_trc_j5_a_banned_term_in_a_dsl_method_name_fails_the_layering_test(tmp_path):
+def test_trc_j5(tmp_path):
+    """A banned term in a DSL method name fails the layering test."""
     folder = _copy(tmp_path)
     _with_terminology(folder)
     banned = [entry["term"] for entry in yaml.safe_load(TERMINOLOGY.read_text(

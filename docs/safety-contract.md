@@ -582,9 +582,12 @@ proves. It does not prove:
 - that the run exercised every declared scenario; or
 - that a trusted runner made the record.
 
-Each record does name the tree it ran on, with two git tree ids: `tree_id`,
-the tracked files on disk plus the issue's own new files, and `changes_id`,
-the issue's changed files and the test files its scenarios declare.
+Each record does name the tree it ran on. `tree_id` is the git tree id of
+the tracked files on disk plus the issue's own new files. `file_sha256` holds
+the SHA-256 of each of the issue's changed files and of each test file its
+scenarios declare, and `test_files` names the test files among them. A record
+written before ADR-089 holds `changes_id`, a git tree id of the same files,
+instead of `file_sha256`; it is still read.
 `compass check` judges the issue's newest record:
 
 - in flight, once every gate has passed, it fails if the tree has changed
@@ -597,10 +600,18 @@ runner produced the record, and an older record is not judged. A record
 written outside a git repository, or before records carried a tree id, is
 not judged either.
 
+The CLI also writes `evidence/SHA256SUMS` in the issue folder, in the format
+`sha256sum` reads. It holds the SHA-256 of each record file the CLI wrote and
+of each file a record names in `file_sha256`, from the newest record that
+names it. Run `sha256sum -c .compass/work/<slug>/evidence/SHA256SUMS` from the
+project root to check them without Compass. It shows the files are the bytes
+the CLI recorded; like the record, it does not prove a trusted runner wrote
+them, because anyone who can write the record can write this file.
+
 Tracing a file into the issue between two runs of the same command
-changes `changes_id`, because the traced file joins `changed_files`; it
+changes `file_sha256`, because the traced file joins `changed_files`; it
 changes `tree_id` too only when the file was untracked. Tracing an
-already-tracked file changes only `changes_id`. So a green recorded after
+already-tracked file changes only `file_sha256`. So a green recorded after
 that trace is a new assertion, not a rerun of the one before it: the same
 command on the same code is not flagged as a rerun, and the traced file
 shows in `changed_files`.

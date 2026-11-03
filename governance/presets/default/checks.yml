@@ -160,15 +160,17 @@ checks:
 
       ', kind: deterministic, impl: evidence-identity-matches, severity: blocking, on_skipped: not-applicable,
     locked: true}
-  evidence-matches-tree: {statement: 'The newest test record still names the tree that ships. Every red,
-      green and acceptance record carries tree_id, the git tree id of the tracked files on disk plus the
-      issue''s untracked changed files, less .compass/ and docs/compass/, and changes_id, a tree of the
-      changed files and the test files the scenarios declare. For an issue in flight the check compares
-      tree_id with the tree now, and fails only once every gate has passed; before that a stale record
-      is a note. For a landed issue it compares changes_id with the same files in land_commit, the commit
-      ship-commit made. A record with no tree_id, or a landed issue with no land_commit, is not judged;
-      a land_commit that is not a commit id fails. It shows which tree a record claims, not that a trusted
-      runner made the claim.
+  evidence-matches-tree: {statement: 'The newest test record still names the tree that ships. Every
+      red, green and acceptance record carries tree_id, the git tree id of the tracked files on disk
+      plus the issue''s untracked changed files, less .compass/ and docs/compass/, and file_sha256,
+      the SHA-256 of each changed file and each test file the scenarios declare. For an issue in
+      flight the check compares tree_id with the tree now, and fails only once every gate has
+      passed; before that a stale record is a note. For a landed issue it compares file_sha256 with
+      the same files in land_commit, the commit ship-commit made, and names each file that differs;
+      a record written before file_sha256 is compared by its changes_id, a tree of the same files. A
+      record with no tree_id, or a landed issue with no land_commit, is not judged; a land_commit
+      that is not a commit id fails. It shows which tree a record claims, not that a trusted runner
+      made the claim.
 
       ', kind: deterministic, impl: evidence-matches-tree, severity: blocking, on_skipped: not-applicable,
     locked: true}

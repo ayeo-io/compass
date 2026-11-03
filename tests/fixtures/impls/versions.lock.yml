@@ -47,7 +47,7 @@ implementations:
     version: 1.0.0
   evidence-matches-tree:
     verdict_digest: 47a194d3c9acc6cb71c710aa4d061ba711aa813ef7207314e9f4ec0363bafd8d
-    version: 1.0.0
+    version: 1.1.0
   gate-evidence-present:
     verdict_digest: b53aa32d1beaf81e57c6d644ca7cb886b57c6433811a7592d75105009abbe720
     version: 1.0.0

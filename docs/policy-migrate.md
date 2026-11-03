@@ -386,6 +386,11 @@ reassess), and the `compass.yml` it would write.
       "operation": "set"
     },
     {
+      "catalogue": "checks",
+      "id": "evidence-matches-tree",
+      "operation": "set"
+    },
+    {
       "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "isolation-proven",
       "operation": "add"

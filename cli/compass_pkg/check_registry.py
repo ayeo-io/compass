@@ -126,7 +126,10 @@ _ENTRIES = (
                     "timeout_seconds": "none"},
            executes_project_code=True),
     _entry("evidence-identity-matches", _check_evidence_identity_matches),
-    _entry("evidence-matches-tree", _check_evidence_matches_tree),
+    # 1.1.0: a landed issue is judged by the SHA-256 of each file a record holds;
+    # a record written before that keeps its changes_id reading, so the corpus
+    # verdicts hold (ADR-089).
+    _entry("evidence-matches-tree", _check_evidence_matches_tree, version="1.1.0"),
     _entry("rendered-blocks-current", _check_rendered_blocks_current),
     _entry("borrowed-documents-answered", _check_borrowed_documents_answered),
     # 1.1.0: accepts a single-unit record, which only a map registered with

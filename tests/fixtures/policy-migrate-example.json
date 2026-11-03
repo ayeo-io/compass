@@ -138,6 +138,11 @@
     },
     {
       "catalogue": "checks",
+      "id": "evidence-matches-tree",
+      "operation": "set"
+    },
+    {
+      "catalogue": "checks",
       "id": "isolation-proven",
       "operation": "add"
     },

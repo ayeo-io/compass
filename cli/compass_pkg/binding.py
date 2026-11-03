@@ -15,26 +15,33 @@
 # edit makes the record stale. It is built from a copy of the real index, so
 # git re-hashes only the files that changed.
 #
-# `changes_id` is a tree of the issue's own files: its `changed_files` and the
-# test files its scenarios declare, which a record marks with
-# `changes_scope`. A landed issue is judged by it: the commit that landed the
-# issue also carries its artifacts, and HEAD moves on afterwards, but the
-# issue's own files in that commit must be the files that were tested. A
-# declared test counts even when `changed_files` does not list it, because
-# the green stood on it. Re-running the suite on any checkout where
-# they are the same clears a mismatch.
+# `file_sha256` maps each of the issue's own files - its `changed_files` and
+# the test files its scenarios declare, which a record marks with
+# `changes_scope` - to the SHA-256 of its bytes, as `sha256sum` prints it
+# (ADR-089). `test_files` lists the declared tests among them. A landed issue
+# is judged by them: the commit that landed the issue also carries its
+# artifacts, and HEAD moves on afterwards, but the issue's own files in that
+# commit must be the files that were tested. A declared test counts even when
+# `changed_files` does not list it, because the green stood on it.
+# Re-running the suite on any checkout where they are the same clears a
+# mismatch.
+#
+# A record written before ADR-089 carries `changes_id` instead: a tree of the
+# same files that no commit reaches. It is still read, by building the same
+# tree from the landed commit and comparing the two ids.
 #
 # WHAT IT DOES NOT PROVE. The ids are written by the process that ran the test
 # and are covered by the record's digest. They show which tree a record
 # claims; they do not prove a trusted runner made the claim.
 #
-# DEPENDENCY: standard library (os, re, shutil, subprocess, tempfile) and
+# DEPENDENCY: standard library (hashlib, os, re, shutil, subprocess, tempfile) and
 # compass_pkg.core, check_results and red_first. tdd.py imports from here, so
 # this module must not import tdd.py.
 # =============================================================================
 """Which tree a test record ran on, and whether that is still the tree."""
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import shutil
@@ -135,26 +142,102 @@ def work_tree_id(project_root, claimed=()):
     return _in_temp_index(top, steps, seed)
 
 
-def changes_id(project_root, claimed=()):
-    """`changes_id`: a tree of the claimed files alone, as they are on disk."""
+def _counted(top, project_root, claimed):
+    """`(project-relative path, path from the repository top)` for each
+    claimed file a record covers: a regular file inside the repository that
+    git tracks, or would add because it is not ignored. A file git already
+    tracks counts even when it matches `.gitignore` (it was added with `-f`),
+    as the commit side counts it."""
+    pairs = []
+    for rel in claimed:
+        found = _relative(top, project_root, [rel])
+        if found:
+            pairs.append((rel, found[0]))
+    if not pairs:
+        return []
+    tops = [t for _, t in pairs]
+    listed = _git(["ls-files", "-z", "--", *tops], top)
+    tracked = (set(listed.stdout.split("\0")) if _ok(listed) else set())
+    ignored = _git(["check-ignore", "-z", "--no-index", "--", *tops], top)
+    skipped = set(ignored.stdout.split("\0")) if ignored is not None else set()
+    return [(rel, t) for rel, t in pairs if t in tracked or t not in skipped]
+
+
+def file_sha256(project_root, claimed=()):
+    """`file_sha256`: the SHA-256 of each claimed file as it is on disk, in
+    the lowercase hexadecimal `sha256sum` prints, keyed by its path relative
+    to the project root (ADR-089). None outside a git repository."""
     top = _toplevel(project_root)
     if top is None:
         return None
-    rels = _relative(top, project_root, claimed)
-    # A file git already tracks is counted even when it matches
-    # `.gitignore` (it was added with `-f`), as the commit side counts it.
-    # An untracked ignored file stays out: git will not commit it.
-    listed = _git(["ls-files", "-z", "--", *rels], top) if rels else None
-    tracked = (set(listed.stdout.split("\0"))
-               if listed is not None and _ok(listed) else set())
-    steps = [(["read-tree", "--empty"], True)]
-    steps += [((["add", "-f", "--", rel] if rel in tracked
-                else ["add", "--", rel]), False) for rel in rels]
-    return _in_temp_index(top, steps)
+    out = {}
+    for rel, path in _counted(top, project_root, claimed):
+        try:
+            with open(os.path.join(top, path), "rb") as fh:
+                out[rel] = hashlib.sha256(fh.read()).hexdigest()
+        except OSError:
+            continue
+    return out
+
+
+def file_sha256_at(project_root, commit, claimed):
+    """The SHA-256 of each claimed file as `commit` (a commit or a tree)
+    holds it, or None for a path it does not hold as a regular file."""
+    top = _toplevel(project_root)
+    if top is None:
+        return None
+    root = os.path.realpath(project_root)
+    out = {}
+    for rel in claimed:
+        path = os.path.relpath(os.path.join(root, rel), top)
+        out[rel] = None
+        entry = _git(["ls-tree", "-z", commit, "--", path], top)
+        line = entry.stdout.split("\0", 1)[0] if _ok(entry) else ""
+        if not line:
+            continue
+        mode, kind, blob = line.partition("\t")[0].split()
+        # A symlink is left out, as the record's own digests leave it out.
+        if kind != "blob" or mode == "120000":
+            continue
+        try:
+            raw = subprocess.run(["git", "cat-file", "blob", blob], cwd=top,
+                                 capture_output=True, timeout=60)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if raw.returncode != 0:
+            return None
+        out[rel] = hashlib.sha256(raw.stdout).hexdigest()
+    return out
+
+
+def files_that_differ(project_root, record, task, commit):
+    """The issue's files whose SHA-256 in `commit` is not the one `record`
+    holds, in path order, or None when git cannot read them. A path the
+    record or the commit lacks differs."""
+    held = record.get("file_sha256") or {}
+    paths = list(dict.fromkeys(list(held) + changes_paths(task, record)))
+    landed = file_sha256_at(project_root, commit, paths)
+    if landed is None:
+        return None
+    return sorted(p for p in paths if landed.get(p) != held.get(p))
+
+
+def files_key(digests):
+    """One string for a `file_sha256` map, to compare two runs by."""
+    text = "\n".join("%s  %s" % (digests[p], p) for p in sorted(digests))
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def has_file_digests(record):
+    """Does the record carry the digests ADR-089 added? The fields pick the
+    format: a record without them was written with `changes_id`."""
+    return isinstance(record.get("file_sha256"), dict)
 
 
 def _changes_id_at(project_root, commit, claimed):
-    """The same tree, built from the claimed files as `commit` holds them."""
+    """The tree a record written before ADR-089 named in `changes_id`, built
+    from the claimed files as `commit` holds them. Only those records are read
+    with it; no record is written with it now."""
     top = _toplevel(project_root)
     if top is None:
         return None
@@ -183,8 +266,9 @@ def claimed_paths(task):
             if isinstance(e, dict) and isinstance(e.get("path"), str)]
 
 
-#: The `changes_scope` of a record whose `changes_id` covers the declared
-#: tests too. A record without it was built from `changed_files` alone.
+#: The `changes_scope` of a record whose `file_sha256` (or, before ADR-089,
+#: `changes_id`) covers the declared tests too. A record without it was built
+#: from `changed_files` alone.
 CHANGES_SCOPE = "changed-files-and-declared-tests"
 
 
@@ -209,7 +293,7 @@ def declared_test_paths(task):
 
 
 def changes_paths(task, record=None):
-    """The files `changes_id` covers: `changed_files` and the declared tests,
+    """The files a record's digests cover: `changed_files` and the declared tests,
     or, for a record built without `changes_scope`, `changed_files` alone."""
     claimed = claimed_paths(task)
     if record is not None and record.get("changes_scope") != CHANGES_SCOPE:
@@ -224,8 +308,8 @@ def changes_paths(task, record=None):
 
 
 def ids_for(task_dir):
-    """The two ids a record written for this issue now should carry, as a
-    dict with only the ids git could name."""
+    """The ids a record written for this issue now should carry: `tree_id`,
+    `file_sha256` and `test_files`, with only what git could name."""
     root = find_upwards(task_dir, ".compass")
     if not root:
         return {}
@@ -234,11 +318,16 @@ def ids_for(task_dir):
     except (CompassError, OSError, ValueError):
         task = {}
     task = task if isinstance(task, dict) else {}
-    ids = {"tree_id": work_tree_id(root, claimed_paths(task)),
-           "changes_id": changes_id(root, changes_paths(task))}
-    ids = {k: v for k, v in ids.items() if v}
-    if "changes_id" in ids:
-        ids["changes_scope"] = CHANGES_SCOPE
+    ids = {}
+    tree = work_tree_id(root, claimed_paths(task))
+    if tree:
+        ids["tree_id"] = tree
+    digests = file_sha256(root, changes_paths(task))
+    if digests is not None:
+        tests = set(declared_test_paths(task))
+        ids.update(file_sha256=digests,
+                   test_files=sorted(p for p in digests if p in tests),
+                   changes_scope=CHANGES_SCOPE)
     return ids
 
 
@@ -277,6 +366,18 @@ def _check_landed(task, root, path, record):
         return NOTHING_TO_CHECK, ("land_commit %s is not in this clone - a "
                                   "squash merge or a shallow clone - so the "
                                   "landed files cannot be compared" % land[:12])
+    if has_file_digests(record):
+        differ = files_that_differ(root, record, task, land)
+        if differ is None:
+            return False, ("the files this issue changed could not be read from "
+                           "land_commit %s" % land[:12])
+        if differ:
+            return False, ("%s tested this issue's files, but in the commit that "
+                           "landed them (%s) these files are not the tested files "
+                           "- their SHA-256 differs: %s"
+                           % (path, land[:12], ", ".join(differ)))
+        return True, ("%s tested the files the landing commit %s holds"
+                      % (path, land[:12]))
     if not record.get("changes_id"):
         return NOTHING_TO_CHECK, ("%s carries no changes_id, so the issue's "
                                   "own files cannot be compared" % path)

@@ -544,11 +544,14 @@ def _reusable_green(task_dir, scenario, command, tree_ids, loop="inner", named=N
         # text. Rerunning it would be flagged as a rerun, so it is reused
         # when the text matches, as it was before.
         return False
-    old_tree, old_changes = record.get("tree_id"), record.get("changes_id")
-    new_tree, new_changes = tree_ids.get("tree_id"), tree_ids.get("changes_id")
-    if not (old_tree and old_changes and new_tree and new_changes):
+    old_tree, old_files = record.get("tree_id"), record.get("file_sha256")
+    new_tree, new_files = tree_ids.get("tree_id"), tree_ids.get("file_sha256")
+    # A green written before ADR-089 holds `changes_id`, not file digests, so
+    # it cannot show it covers the same files: it is run again.
+    if not (old_tree and new_tree and isinstance(old_files, dict)
+            and isinstance(new_files, dict)):
         return False
-    return old_tree == new_tree and old_changes == new_changes
+    return old_tree == new_tree and old_files == new_files
 
 
 START_STATE = "start-state.json"

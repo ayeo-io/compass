@@ -22,7 +22,7 @@ import sys
 import uuid
 
 from compass_pkg import candidate_client, green_attempts
-from compass_pkg.binding import ids_for
+from compass_pkg.binding import files_key, ids_for
 from compass_pkg.core import CompassError, find_upwards, load_manifest, now_iso, resolve_issue_dir
 from compass_pkg.red_first import carried_first, has_red, load_record, record_paths, record_stem
 from compass_pkg.tdd import (
@@ -42,8 +42,8 @@ def _attempt_tree(task_dir, tree_ids):
     out = _source_tree_hash(find_upwards(task_dir, ".compass") or task_dir)
     if tree_ids.get("tree_id"):
         out = "%s+%s" % (tree_ids["tree_id"], out)
-    if tree_ids.get("changes_id"):
-        out = "%s+%s" % (out, tree_ids["changes_id"])
+    if tree_ids.get("file_sha256") is not None:
+        out = "%s+%s" % (out, files_key(tree_ids["file_sha256"]))
     return out
 
 

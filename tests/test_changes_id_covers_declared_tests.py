@@ -1,7 +1,8 @@
 """A landed issue's binding covers the test files its scenarios declare.
 
-`changes_id` names the tree of the files an issue changed, and a landed issue
-is judged by comparing it with the same files in the commit that landed it.
+A record's `file_sha256` holds the SHA-256 of the files an issue changed (and
+before ADR-089, `changes_id` named their tree), and a landed issue is judged
+by comparing them with the same files in the commit that landed it.
 The set is the files in `changed_files` plus the test files the issue's
 scenarios declare. A test a scenario relies on is part of what was tested,
 whether or not `changed_files` lists it, so a later change to it shows.
@@ -66,18 +67,21 @@ def test_cuf_2_the_tested_files_landing_pass_whatever_head_does_next(repo):
 
 
 def test_cuf_3_a_record_built_before_the_scope_is_judged_as_built(repo):
-    from compass_pkg.binding import changes_id
+    from compass_pkg.binding import _changes_id_at
     _setup(repo)
     _green(repo)
-    path = repo / ".compass" / "work" / SLUG / "evidence" / "green.json"
-    record = json.loads(path.read_text())
-    record.pop("changes_scope", None)
-    record["changes_id"] = changes_id(str(repo), ["src/new.py"])
-    path.write_text(json.dumps(record))
     # The declared test changes before the land; the old record never
     # covered it, so it is judged on the listed source file alone and passes.
     (repo / "tests" / "test_new.py").write_text("def test_it():\n    assert 1\n")
     land = _land(repo)
+    path = repo / ".compass" / "work" / SLUG / "evidence" / "green.json"
+    record = json.loads(path.read_text())
+    for key in ("changes_scope", "file_sha256", "test_files"):
+        record.pop(key, None)
+    # A record written before ADR-089: the source file is unchanged since
+    # the green, so its tree in the land commit is the tree the green named.
+    record["changes_id"] = _changes_id_at(str(repo), land, ["src/new.py"])
+    path.write_text(json.dumps(record))
     _write_manifest(repo, gates="pass", status="landed",
                     extra={**SCENARIOS, "land_commit": land})
     ok, why = _check(repo)

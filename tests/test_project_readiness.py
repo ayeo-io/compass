@@ -31,10 +31,12 @@ SHIPPED_SIGNALS = (
     "structured-logging-declared", "codeowners-present", "pre-commit-hooks-present",
     "secret-scan-declared")
 #: The keys of a red record before the readiness change, so a new project key
-#: cannot add one. `loop` was added later by `loop-marking` (ADR-080).
-BASELINE_RED_KEYS = ("_full_log", "argv", "changes_id", "changes_scope", "command",
-                     "content_digest", "exit_code", "log_excerpt", "loop", "passed",
-                     "record_id", "red_kind", "scenario", "timestamp", "tree_id")
+#: cannot add one. `loop` was added later by `loop-marking` (ADR-080), and
+#: `file_sha256` and `test_files` replaced `changes_id` (ADR-089).
+BASELINE_RED_KEYS = ("_full_log", "argv", "changes_scope", "command",
+                     "content_digest", "exit_code", "file_sha256", "log_excerpt", "loop",
+                     "passed", "record_id", "red_kind", "scenario", "test_files",
+                     "timestamp", "tree_id")
 REQUIRED_SIGNALS = ("agent-instructions-present", "build-declared-and-succeeds",
                     "tests-declared-and-under-two-minutes", "lint-declared-and-clean")
 

@@ -180,6 +180,9 @@ def _write_evidence(task_dir, name, payload):
     log_path = os.path.join(ev_dir, name + ".log")
     with open(log_path, "w", encoding="utf-8") as fh:
         fh.write(payload.get("_full_log", ""))
+    # The digest of the bytes just written, for `sha256sum -c` (ADR-089).
+    from compass_pkg import evidence_sums
+    evidence_sums.record_written(task_dir, path)
     return path
 
 

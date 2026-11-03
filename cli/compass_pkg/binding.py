@@ -34,7 +34,7 @@
 # and are covered by the record's digest. They show which tree a record
 # claims; they do not prove a trusted runner made the claim.
 #
-# DEPENDENCY: standard library (hashlib, os, re, shutil, subprocess, tempfile) and
+# DEPENDENCY: standard library (hashlib, os, re, shutil, stat, subprocess, tempfile) and
 # compass_pkg.core, check_results and red_first. tdd.py imports from here, so
 # this module must not import tdd.py.
 # =============================================================================
@@ -45,6 +45,7 @@ import hashlib
 import os
 import re
 import shutil
+import stat
 import subprocess
 import tempfile
 
@@ -163,26 +164,56 @@ def _counted(top, project_root, claimed):
     return [(rel, t) for rel, t in pairs if t in tracked or t not in skipped]
 
 
-def file_sha256(project_root, claimed=()):
-    """`file_sha256`: the SHA-256 of each claimed file as it is on disk, in
-    the lowercase hexadecimal `sha256sum` prints, keyed by its path relative
-    to the project root (ADR-089). None outside a git repository."""
+def _file_mode_trusted(top):
+    """Does git read the executable bit from the disk here? `core.fileMode`
+    false says it does not, as on most Windows checkouts."""
+    found = _git(["config", "--type=bool", "core.fileMode"], top)
+    return not (_ok(found) and found.stdout.strip() == "false")
+
+
+def file_digests(project_root, claimed=()):
+    """`(file_sha256, file_modes)` for the claimed files as they are on disk,
+    keyed by the path relative to the project root (ADR-089), or None outside
+    a git repository.
+
+    `file_sha256` holds the SHA-256 of each file's bytes, in the lowercase
+    hexadecimal `sha256sum` prints. `file_modes` holds the mode git would
+    record, `100755` or `100644`, so a change to the executable bit alone
+    shows, as it did in the tree ids before ADR-089. Where `core.fileMode` is
+    false, git keeps a tracked file's mode from its index entry, so this does
+    too."""
     top = _toplevel(project_root)
     if top is None:
         return None
-    out = {}
-    for rel, path in _counted(top, project_root, claimed):
+    counted = _counted(top, project_root, claimed)
+    index_modes = {}
+    if counted and not _file_mode_trusted(top):
+        staged = _git(["ls-files", "-s", "-z", "--", *[t for _, t in counted]], top)
+        for line in (staged.stdout.split("\0") if _ok(staged) else []):
+            meta, _, name = line.partition("\t")
+            if meta:
+                index_modes[name] = meta.split()[0]
+    digests, modes = {}, {}
+    for rel, path in counted:
+        full = os.path.join(top, path)
         try:
-            with open(os.path.join(top, path), "rb") as fh:
-                out[rel] = hashlib.sha256(fh.read()).hexdigest()
+            with open(full, "rb") as fh:
+                digests[rel] = hashlib.sha256(fh.read()).hexdigest()
+            executable = os.stat(full).st_mode & stat.S_IXUSR
         except OSError:
+            digests.pop(rel, None)
             continue
-    return out
+        modes[rel] = index_modes.get(path) or ("100755" if executable else "100644")
+    return digests, modes
 
 
-def file_sha256_at(project_root, commit, claimed):
-    """The SHA-256 of each claimed file as `commit` (a commit or a tree)
-    holds it, or None for a path it does not hold as a regular file."""
+def file_digests_at(project_root, commit, claimed):
+    """`{path: (sha256, mode)}` for each claimed file as `commit` (a commit or
+    a tree) holds it, or None for a path it does not hold as a regular file.
+    The bytes are read through git's checkout conversion (`cat-file
+    --filters`): line endings set by `.gitattributes` or `core.autocrlf`, and
+    smudge filters, give the bytes a checkout writes, which are the bytes the
+    record hashed on disk. Returns None when git cannot read a file."""
     top = _toplevel(project_root)
     if top is None:
         return None
@@ -195,36 +226,55 @@ def file_sha256_at(project_root, commit, claimed):
         line = entry.stdout.split("\0", 1)[0] if _ok(entry) else ""
         if not line:
             continue
-        mode, kind, blob = line.partition("\t")[0].split()
+        meta, _, name = line.partition("\t")
+        mode, kind, _ = meta.split()
         # A symlink is left out, as the record's own digests leave it out.
         if kind != "blob" or mode == "120000":
             continue
         try:
-            raw = subprocess.run(["git", "cat-file", "blob", blob], cwd=top,
-                                 capture_output=True, timeout=60)
+            raw = subprocess.run(["git", "cat-file", "--filters", "%s:%s" % (commit, name)],
+                                 cwd=top, capture_output=True, timeout=60)
         except (OSError, subprocess.SubprocessError):
             return None
         if raw.returncode != 0:
             return None
-        out[rel] = hashlib.sha256(raw.stdout).hexdigest()
+        out[rel] = (hashlib.sha256(raw.stdout).hexdigest(), mode)
     return out
 
 
 def files_that_differ(project_root, record, task, commit):
-    """The issue's files whose SHA-256 in `commit` is not the one `record`
-    holds, in path order, or None when git cannot read them. A path the
-    record or the commit lacks differs."""
+    """The issue's files that `commit` holds differently from `record`, as
+    `(path, what)` in path order, where `what` is `content` or `mode`, or
+    None when git cannot read them. A path the record or the commit lacks
+    differs in content. The mode is compared only when the record holds
+    `file_modes`."""
     held = record.get("file_sha256") or {}
+    modes = record.get("file_modes")
     paths = list(dict.fromkeys(list(held) + changes_paths(task, record)))
-    landed = file_sha256_at(project_root, commit, paths)
+    landed = file_digests_at(project_root, commit, paths)
     if landed is None:
         return None
-    return sorted(p for p in paths if landed.get(p) != held.get(p))
+    out = []
+    for path in sorted(paths):
+        now = landed.get(path)
+        if (now[0] if now else None) != held.get(path):
+            out.append((path, "content"))
+        elif now and isinstance(modes, dict) and modes.get(path) != now[1]:
+            out.append((path, "mode"))
+    return out
 
 
-def files_key(digests):
-    """One string for a `file_sha256` map, to compare two runs by."""
-    text = "\n".join("%s  %s" % (digests[p], p) for p in sorted(digests))
+def describe(differ):
+    """`a.py, b.py (mode)` for the failure messages."""
+    return ", ".join(p if what == "content" else "%s (mode)" % p for p, what in differ)
+
+
+def files_key(digests, modes=None):
+    """One string for a `file_sha256` map and its `file_modes`, to compare
+    two runs by."""
+    modes = modes or {}
+    text = "\n".join("%s %s  %s" % (digests[p], modes.get(p, ""), p)
+                     for p in sorted(digests))
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
@@ -309,7 +359,8 @@ def changes_paths(task, record=None):
 
 def ids_for(task_dir):
     """The ids a record written for this issue now should carry: `tree_id`,
-    `file_sha256` and `test_files`, with only what git could name."""
+    `file_sha256`, `file_modes` and `test_files`, with only what git could
+    name."""
     root = find_upwards(task_dir, ".compass")
     if not root:
         return {}
@@ -322,10 +373,11 @@ def ids_for(task_dir):
     tree = work_tree_id(root, claimed_paths(task))
     if tree:
         ids["tree_id"] = tree
-    digests = file_sha256(root, changes_paths(task))
-    if digests is not None:
+    found = file_digests(root, changes_paths(task))
+    if found is not None:
+        digests, modes = found
         tests = set(declared_test_paths(task))
-        ids.update(file_sha256=digests,
+        ids.update(file_sha256=digests, file_modes=modes,
                    test_files=sorted(p for p in digests if p in tests),
                    changes_scope=CHANGES_SCOPE)
     return ids
@@ -374,8 +426,8 @@ def _check_landed(task, root, path, record):
         if differ:
             return False, ("%s tested this issue's files, but in the commit that "
                            "landed them (%s) these files are not the tested files "
-                           "- their SHA-256 differs: %s"
-                           % (path, land[:12], ", ".join(differ)))
+                           "- their SHA-256 or their mode differs: %s"
+                           % (path, land[:12], describe(differ)))
         return True, ("%s tested the files the landing commit %s holds"
                       % (path, land[:12]))
     if not record.get("changes_id"):

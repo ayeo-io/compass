@@ -551,7 +551,8 @@ def _reusable_green(task_dir, scenario, command, tree_ids, loop="inner", named=N
     if not (old_tree and new_tree and isinstance(old_files, dict)
             and isinstance(new_files, dict)):
         return False
-    return old_tree == new_tree and old_files == new_files
+    return (old_tree == new_tree and old_files == new_files
+            and record.get("file_modes") == tree_ids.get("file_modes"))
 
 
 START_STATE = "start-state.json"

@@ -43,7 +43,7 @@ def _attempt_tree(task_dir, tree_ids):
     if tree_ids.get("tree_id"):
         out = "%s+%s" % (tree_ids["tree_id"], out)
     if tree_ids.get("file_sha256") is not None:
-        out = "%s+%s" % (out, files_key(tree_ids["file_sha256"]))
+        out = "%s+%s" % (out, files_key(tree_ids["file_sha256"], tree_ids.get("file_modes")))
     return out
 
 

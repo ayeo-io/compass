@@ -37,7 +37,7 @@ from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
 from compass_pkg.tip_scope import tip_own_paths
-from compass_pkg.binding import (changes_paths, declared_test_paths, files_that_differ,
+from compass_pkg.binding import (changes_paths, declared_test_paths, describe, files_that_differ,
                                  has_file_digests, _changes_id_at, _newest_bound_record)
 # The resolver `declared-tests-resolve` uses, so the verb accepts what the check accepts.
 from compass_pkg.test_ids import _test_id_resolves, _test_is_skipped
@@ -228,7 +228,7 @@ def _stale_paths(task, task_dir, root, at_commit, judge_landed=False):
     record_path, record = newest
     if has_file_digests(record):
         changed = files_that_differ(root, record, task, at_commit)
-        return (record_path, changed) if changed else None
+        return (record_path, [describe([one]) for one in changed]) if changed else None
     then = record.get("changes_id")
     if not then:
         return None

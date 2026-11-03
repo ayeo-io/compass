@@ -882,11 +882,18 @@ def _(root):
 
 
 # The isolation and layering checks read the record their command wrote (ADR-086).
+# Each is stamped and registered with its identity, as its command writes it; a
+# record without one is a written note and fails (ADR-086).
 def _strategy_record(task, task_dir, kind, body):
+    from compass_pkg.red_first import content_digest
     name = "isolation-proof.json" if kind == "isolation-proof" else "layering.json"
+    body = dict(body, record_id="corpus-" + kind)
+    body["content_digest"] = content_digest(body)
     path = _record(task_dir, name, body)
     task["scenarios"] = [_scenario(tests=["tests/acceptance/test_orders.py::test_place"])]
-    task["evidence"] = [{"id": "EV-1", "type": kind, "path": path}]
+    task["evidence"] = [{"id": "EV-1", "type": kind, "path": path,
+                         "record_id": body["record_id"],
+                         "content_digest": body["content_digest"]}]
     return task, task_dir
 
 

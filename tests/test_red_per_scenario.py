@@ -33,6 +33,7 @@ AFTER = str(RED_PER_SCENARIO_FROM)
 BEFORE = "2026-10-01"
 SLUG = "sample"
 
+T0 = AFTER + "T08:00:00+00:00"
 T1 = AFTER + "T09:00:00+00:00"
 T2 = AFTER + "T10:00:00+00:00"
 T3 = AFTER + "T11:00:00+00:00"
@@ -226,10 +227,12 @@ def test_rps_4_an_unbound_acceptance_declared_in_time_closes_every_scenario(tmp_
     assert "closed by an acceptance: S-1, S-2" in why
 
 
-def test_rps_4_an_acceptance_declared_after_the_first_green_closes_nothing(tmp_path):
+def test_rps_4_an_acceptance_declared_after_its_scenarios_first_green_closes_nothing(
+        tmp_path):
+    """An unbound green covers every scenario, so it is S-2's first green too."""
     task, task_dir = _issue(tmp_path)
-    _red(task_dir, "red-S-1", T1, "S-1")
-    _green(task, task_dir, "green-S-1", T1, "S-1")
+    _red(task_dir, "red-S-1", T0, "S-1")
+    _green(task, task_dir, "green", T1)
     _green(task, task_dir, "acceptance-S-2", T3, "S-2", kind="validation", declared_at=T2)
     ok, why = _check(task, task_dir)
     assert ok is False, why
@@ -325,3 +328,130 @@ def test_rps_8_the_check_statement_states_the_per_scenario_rule():
     text = " ".join(doc["checks"]["suite-passed"]["statement"].split())
     assert "each scenario" in text
     assert AFTER in text
+
+
+# --- RPS-9: a scenario's first green is the earlier of its bound and unbound greens --
+
+def test_rps_9_an_unbound_green_before_the_red_is_the_scenarios_first_green(tmp_path):
+    """S-2's code landed under the unbound green at T1, before its red at T2."""
+    task, task_dir = _issue(tmp_path)
+    _red(task_dir, "red-S-1", T0, "S-1")
+    _green(task, task_dir, "green", T1)
+    _red(task_dir, "red-S-2", T2, "S-2")
+    _green(task, task_dir, "green-S-2", T3, "S-2")
+    ok, why = _check(task, task_dir)
+    assert ok is False, why
+    assert "red after its first green: S-2" in why
+
+
+# --- RPS-10: a green run again keeps the time of its first run ------------------------
+
+def test_rps_10_the_first_time_of_a_green_run_again_is_its_first_green(tmp_path):
+    task, task_dir = _issue(tmp_path)
+    _red(task_dir, "red-S-1", T0, "S-1")
+    _red(task_dir, "red-S-2", T2, "S-2")
+    _green(task, task_dir, "green", T3, first_timestamp=T1)
+    ok, why = _check(task, task_dir)
+    assert ok is False, why
+    assert "red after its first green: S-2" in why
+    assert T1 in why
+
+
+def test_rps_10_tdd_green_carries_the_first_time_forward_and_signs_it(tmp_path):
+    """`compass tdd-green` replaces the record of its binding and loop. The new
+    record keeps the earliest time, and its digest covers that field."""
+    from compass_pkg.red_first import content_digest
+    task_dir = tmp_path / ".compass" / "work" / SLUG
+    (task_dir / "evidence").mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(
+        f"schema_version: '2.0'\nissue: {SLUG}\ncreated: '{AFTER}'\n"
+        "status: active\nscenarios:\n- id: S-1\n  intent: INT-1\n  tests: [t]\n"
+        "evidence: []\n", encoding="utf-8")
+    (task_dir / "evidence" / "green.json").write_text(json.dumps(
+        dict(GREEN, timestamp=T0, loop="inner")))
+    result = subprocess.run(
+        [sys.executable, str(CLI), "tdd-green", "--issue", SLUG, "--",
+         sys.executable, "-c", "pass"], cwd=tmp_path, capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    record = json.loads((task_dir / "evidence" / "green.json").read_text())
+    assert record["first_timestamp"] == T0
+    assert record["timestamp"] > T0
+    assert record["content_digest"] == content_digest(record)
+
+
+# --- RPS-11: a bound acceptance is judged against its own scenario's first green -----
+
+def test_rps_11_an_acceptance_after_another_scenarios_green_closes_its_scenario(tmp_path):
+    """The failure message tells the user to do exactly this."""
+    task, task_dir = _issue(tmp_path)
+    _red(task_dir, "red-S-1", T0, "S-1")
+    _green(task, task_dir, "green-S-1", T1, "S-1")
+    _green(task, task_dir, "acceptance-S-2", T3, "S-2", kind="validation", declared_at=T2)
+    ok, why = _check(task, task_dir)
+    assert ok is True, why
+    assert "closed by an acceptance: S-2" in why
+
+
+# --- RPS-12: only records the CLI writes say when an older issue was worked ----------
+
+def test_rps_12_a_stray_dated_file_does_not_keep_an_issue_on_the_old_rule(tmp_path):
+    task, task_dir = _issue(tmp_path, created=BEFORE)
+    (task_dir / "evidence" / "note.json").write_text(json.dumps({"timestamp": OLD}))
+    _red(task_dir, "red-S-1", T1, "S-1")
+    _green(task, task_dir, "green", T2)
+    ok, why = _check(task, task_dir)
+    assert ok is False, why
+    assert "no red: S-2" in why
+
+
+def test_rps_12_a_missing_created_with_no_record_before_the_cutoff_gets_the_rule(tmp_path):
+    task, task_dir = _issue(tmp_path, created=None)
+    del task["created"]
+    (task_dir / "evidence" / "note.json").write_text(json.dumps({"timestamp": OLD}))
+    _red(task_dir, "red-S-1", T1, "S-1")
+    _green(task, task_dir, "green", T2)
+    ok, why = _check(task, task_dir)
+    assert ok is False, why
+    assert "no red: S-2" in why
+
+
+def test_rps_12_an_edited_record_does_not_keep_an_issue_on_the_old_rule(tmp_path):
+    """A stamped record edited after it was written is not the CLI's record."""
+    task, task_dir = _issue(tmp_path, created=BEFORE)
+    _red(task_dir, "red-old", OLD, None, content_digest="sha256:edited")
+    _red(task_dir, "red-S-1", T1, "S-1")
+    _green(task, task_dir, "green", T2)
+    ok, why = _check(task, task_dir)
+    assert ok is False, why
+    assert "no red: S-2" in why
+
+
+# --- RPS-13: an acceptance with no declared time is not in time ----------------------
+
+def test_rps_13_an_acceptance_with_no_declared_time_closes_nothing(tmp_path):
+    task, task_dir = _issue(tmp_path)
+    _red(task_dir, "red-S-1", T0, "S-1")
+    _green(task, task_dir, "green", T2)
+    _green(task, task_dir, "acceptance", T1, kind="validation")
+    ok, why = _check(task, task_dir)
+    assert ok is False, why
+    assert "no red: S-2" in why
+
+
+def test_rps_13_an_older_issue_keeps_its_acceptance_with_no_declared_time(tmp_path):
+    task, task_dir = _issue(tmp_path, created=BEFORE)
+    _green(task, task_dir, "green", OLD)
+    _green(task, task_dir, "acceptance", OLD, kind="validation")
+    ok, why = _check(task, task_dir)
+    assert ok is True, why
+
+
+# --- RPS-14: the pass detail reads as sentences --------------------------------------
+
+def test_rps_14_the_pass_detail_ends_each_sentence(tmp_path):
+    task, task_dir = _issue(tmp_path, scenarios=("S-1",))
+    _red(task_dir, "red-S-1", T1, "S-1")
+    _green(task, task_dir, "green", T2)
+    ok, why = _check(task, task_dir)
+    assert ok is True, why
+    assert "the run exercised. A red for each scenario" in why

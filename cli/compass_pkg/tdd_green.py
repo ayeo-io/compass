@@ -24,7 +24,7 @@ import uuid
 from compass_pkg import candidate_client, green_attempts
 from compass_pkg.binding import ids_for
 from compass_pkg.core import CompassError, find_upwards, load_manifest, now_iso, resolve_issue_dir
-from compass_pkg.red_first import has_red, record_paths, record_stem
+from compass_pkg.red_first import carried_first, has_red, load_record, record_paths, record_stem
 from compass_pkg.tdd import (
     _VERIFIED_BY_KINDS, _acceptance_state, _bind_to_tree, _loop, _micro_command,
     _neutralise_coverage, _output_fail_token, _red_scenarios, _run_test, _scenario_line,
@@ -227,6 +227,12 @@ def _record_green(task_dir, scenario, loop, command, out, excerpt, tree_ids, ext
     if test:
         payload["test"] = test
     payload.update(extra)
+    # This record replaces the last one of its binding and loop. It keeps the
+    # time of the first run, which `suite-passed` compares a scenario's red
+    # with, so a later run cannot move the first green past the red (ADR-088).
+    name = record_stem("green", scenario, loop)
+    payload["first_timestamp"] = carried_first(
+        load_record(os.path.join(task_dir, "evidence", name + ".json")), payload["timestamp"])
     _bind_to_tree(payload, tree_ids)
     if verified_by:
         payload["verified_by"] = verified_by   # carry the guard kind forward
@@ -236,7 +242,6 @@ def _record_green(task_dir, scenario, loop, command, out, excerpt, tree_ids, ext
     # A bound write touches only its own record and an unbound write only
     # the unbound one, so a scenario run cannot replace the record a
     # full-suite citation names. An outer-loop green has its own file (ADR-082).
-    name = record_stem("green", scenario, loop)
     ev_path = _write_evidence(task_dir, name, payload)
     # Upsert a test-run entry in the issue's evidence registry - the registry
     # is what `compass check` reads, so the green has to land there.

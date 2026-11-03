@@ -363,7 +363,8 @@ class Adapter:
                 else:
                     if entry["type"] in ("test-run", "isolation-proof", "layering"):
                         record = {key: value for key, value in record.items() if key not in (
-                            "record_id", "content_digest", "timestamp", "_full_log", "log_excerpt")}
+                            "record_id", "content_digest", "timestamp", "first_timestamp", "_full_log",
+                            "log_excerpt")}
                     meaning["record"] = record
                     if entry["type"] == "test-run":
                         meaning["passed"] = record["passed"]

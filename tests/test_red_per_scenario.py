@@ -10,8 +10,8 @@ loop counts. A scenario closed by an acceptance declared in time, and a
 before the cutoff keeps the rule it had, and the pass detail gives a notice
 that names what it lacks under the new rule.
 
-Scenario ids: RPS-1 to RPS-8, from ayeo-io/compass-delivery#347 [Require a red
-for each scenario before its green].
+Scenario ids: RPS-1 to RPS-8, from ayeo-io/compass-delivery#347, the issue that
+asks for a red for each scenario before its green.
 """
 from __future__ import annotations
 

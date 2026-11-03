@@ -42,7 +42,7 @@ Since the earlier rule, a red is bound to its scenario by its file name (`red-<i
 
 ## References
 
-- ayeo-io/compass-delivery#347 [Require a red for each scenario before its green].
+- ayeo-io/compass-delivery#347, the issue that asks for a red for each scenario before its green.
 - ADR-038 (implementation versions), ADR-081 (one run bound to several scenarios), ADR-082 (the outer-loop file).
 - `cli/compass_pkg/red_first.py` (`scenario_reds`, `scenario_notice`), `cli/compass_pkg/checks.py` (`_check_suite_passed`).
 - `tests/test_red_per_scenario.py`.

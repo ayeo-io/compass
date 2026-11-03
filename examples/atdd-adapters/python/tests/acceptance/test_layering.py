@@ -304,8 +304,8 @@ def _words(text):
 
 
 def _banned_terms():
-    """[(term, its words)] for each term of the `banned` list. An entry such as
-    'reading / readings' holds several terms, split on the slash."""
+    """[(term, its words)] for each term of the `banned` list. An entry that
+    names several terms with a slash between them gives each one."""
     entries = yaml.safe_load(TERMINOLOGY_FILE.read_text(encoding="utf-8")).get("banned") or []
     terms = []
     for entry in entries:

@@ -616,8 +616,9 @@ jobs:
 
   # The TypeScript reference example, at the Node version its package.json
   # names, with the packages its lock file pins. It runs the example itself,
-  # then the Compass tests that need Node (TRC-C5, TRC-J6, TRC-X3). The
-  # other jobs skip those tests, as a machine without Node does, so
+  # then the Compass tests that need Node: the TypeScript stage 1 red,
+  # the TypeScript example and the end-to-end TypeScript issue. The other
+  # jobs skip those tests, as a machine without Node does, so
   # COMPASS_REQUIRE_TYPESCRIPT turns a skip into a failure here.
   atdd-adapter-typescript:
     needs: already-tested

@@ -81,7 +81,8 @@ def _aggregate_argv(doc: dict, counts_dir: Path, step_name: str = FULL_STEP
 # The required jobs self-check needs besides the suite's own, so that its
 # result carries theirs on a title or body edit, where they skip (CRT-21).
 OTHER_REQUIRED = ["check-mutation", "bdd-adapter", "bdd-adapter-behave",
-                  "bdd-adapter-cucumber-js", "bdd-adapter-godog", "atdd-adapter-python"]
+                  "bdd-adapter-cucumber-js", "bdd-adapter-godog", "atdd-adapter-python",
+                  "atdd-adapter-typescript"]
 # The jobs a pull request runs, and the ones only a merge group or a push to
 # main runs (ayeo-io/compass-delivery#362).
 FAST_JOBS = ["checks", "count", "fast-tests"]
@@ -913,7 +914,8 @@ def test_crt_15_token_stays_read_only():
 
 SUITE_JOBS = ["checks", "count", "fast-tests", "shard", "serial", "check-mutation",
               "harness-root", "bdd-adapter", "bdd-adapter-behave",
-              "bdd-adapter-cucumber-js", "bdd-adapter-godog", "atdd-adapter-python"]
+              "bdd-adapter-cucumber-js", "bdd-adapter-godog", "atdd-adapter-python",
+              "atdd-adapter-typescript"]
 # The jobs a pull request runs. The others run only in a merge group or on a
 # push to main.
 PR_JOBS = ["checks", "count", "fast-tests"]

@@ -51,7 +51,8 @@ project:
 ```
 
 The paths above are those of the Python reference example,
-`examples/atdd-adapters/python/`.
+`examples/atdd-adapters/python/`. The TypeScript reference example,
+`examples/atdd-adapters/typescript/`, names its own in its README.
 
 - A piece is `present` when its path exists inside the project root. No file
   is opened.

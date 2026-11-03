@@ -161,7 +161,7 @@ If you have a feature description but no scenarios, follow `skills/atdd/referenc
 
 ## Reference example
 
-A Python example with an API driver, a CLI driver and a layering test is in `examples/atdd-adapters/python/` of the Compass repository: <https://github.com/ayeo-io/compass/tree/main/examples/atdd-adapters/python>. The installed plugin does not include `examples/`, so open it on GitHub.
+A Python example and a TypeScript example, each with an API driver, a CLI driver and a layering test, are in `examples/atdd-adapters/python/` and `examples/atdd-adapters/typescript/` of the Compass repository: <https://github.com/ayeo-io/compass/tree/main/examples/atdd-adapters>. The installed plugin does not include `examples/`, so open them on GitHub.
 
 ---
 

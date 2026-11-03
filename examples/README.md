@@ -156,4 +156,9 @@ project needs before its first specification: an alias helper, a driver
 factory that picks the API driver or the CLI driver at start-up, a DSL root,
 and a layering test that fails, naming the file, the line and the rule, when
 a layer breaks its shape. The CI job `atdd-adapter-python` runs it through
-both drivers and runs its layering test.
+both drivers and runs its layering test. `atdd-adapters/typescript/` is the
+same service and the same layers in TypeScript, run by `node:test`, with its
+packages pinned by a lock file. Its runner adapter writes the JUnit report
+`compass tdd-red` reads the stage 1 red from. The CI job
+`atdd-adapter-typescript` runs it through both drivers and runs its layering
+test.

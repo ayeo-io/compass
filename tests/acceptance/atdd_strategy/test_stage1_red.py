@@ -20,7 +20,7 @@ from xml.etree import ElementTree
 
 import pytest
 
-from tests.acceptance.atdd_strategy import support
+from tests.acceptance.atdd_strategy import support, typescript
 
 HOOK = support.ROOT / "hooks" / "pre-tool.sh"
 
@@ -216,6 +216,83 @@ def test_trc_c8(tmp_path):
     assert _records(issue) == {}
     message = support.refusal(err)
     assert "'orders_vendor_sdk' is not a module of this project" in message, message
+
+
+# --- `TRC-C5` ------------------------------------------------------------------------------
+
+TS_OPEN = "tests/acceptance/todos.spec.ts::a new todo is open"
+TS_ACCOUNTS = "tests/acceptance/accounts.spec.ts::one account does not see another account's todos"
+TS_DRIVER = "tests/acceptance/drivers/api.ts"
+
+
+def _typescript_at_refine(tmp_path, tests):
+    """The TypeScript reference example with no API driver yet, and an issue at
+    refine whose scenarios declare `tests`, `{scenario: test}`."""
+    typescript.need()
+    project = support.Project(tmp_path / "repo")
+    typescript.copy(project.root)
+    (project.root / TS_DRIVER).unlink()
+    issue = project.issue("todos")
+    code, out, err = issue.assess()
+    assert code == 0, out + err
+    for scenario, test in tests.items():
+        issue.must("scenario", "add", scenario, "--issue", issue.slug, "--intent", "INT-1",
+                   "--title", "Keep todos", "--test", test)
+    return project, issue
+
+
+def test_trc_c5(tmp_path):
+    """A project in a second language records its stage 1 red."""
+    _, issue = _typescript_at_refine(tmp_path, {"TRC-1": TS_OPEN})
+    # The runner prints nothing: what Compass records can come only from the
+    # runner's own JUnit report.
+    quiet = " ".join(typescript.RUN) + " --driver api >/dev/null 2>&1"
+    code, out, err = issue.run(
+        "tdd-red", "--issue", issue.slug, "--loop", "outer", "--scenario", "TRC-1",
+        "--", "sh", "-c", quiet)
+    assert code == 0, out + err
+    assert "judged by exit code only" not in out + err, out + err
+    record = _records(issue)["red-TRC-1.outer.json"]
+    assert (record["loop"], record["scenario"]) == ("outer", "TRC-1"), record
+    assert record["log_excerpt"] == "", record
+    assert record["red_kind"] == "import", record
+    assert record["missing_modules"] == [TS_DRIVER], record
+    assert record["before_implement"] is True, record
+
+
+def test_trc_c5_one_run_binds_each_scenario_to_its_typescript_test(tmp_path):
+    _, issue = _typescript_at_refine(tmp_path, {"TRC-1": TS_OPEN, "TRC-2": TS_ACCOUNTS})
+    code, out, err = issue.run("tdd-red", "--issue", issue.slug, "--loop", "outer",
+                               "--every-scenario", "--", *typescript.RUN, "--driver", "api")
+    assert code == 0, out + err
+    records = _records(issue)
+    assert sorted(records) == ["red-TRC-1.outer.json", "red-TRC-2.outer.json"], records
+    assert {r["missing_modules"][0] for r in records.values()} == {TS_DRIVER}
+
+
+def test_trc_c5_a_scenario_whose_typescript_test_did_not_fail_is_refused(tmp_path):
+    missing = "tests/acceptance/todos.spec.ts::a todo nobody wrote"
+    _, issue = _typescript_at_refine(tmp_path, {"TRC-1": TS_OPEN, "TRC-2": missing})
+    code, out, err = issue.run("tdd-red", "--issue", issue.slug, "--loop", "outer",
+                               "--every-scenario", "--", *typescript.RUN, "--driver", "api")
+    assert code == 2, out + err
+    assert "TRC-2" in err and missing in err, err
+    assert _records(issue) == {}
+
+
+def test_trc_c5_a_missing_package_is_not_a_red(tmp_path):
+    project, issue = _typescript_at_refine(tmp_path, {"TRC-1": TS_OPEN})
+    factory = project.root / "tests" / "acceptance" / "driverFactory.ts"
+    text = factory.read_text(encoding="utf-8")
+    dynamic = "await import(`./drivers/${setting(\"ACCEPTANCE_DRIVER\")}.ts`)"
+    assert text.count(dynamic) == 1
+    factory.write_text(text.replace(dynamic, 'await import("orders-vendor-sdk")'),
+                       encoding="utf-8")
+    code, out, err = issue.run("tdd-red", "--issue", issue.slug, "--loop", "outer",
+                               "--scenario", "TRC-1", "--", *typescript.RUN, "--driver", "api")
+    assert code == 2, out + err
+    assert _records(issue) == {}
+    assert "'orders-vendor-sdk' is not a module of this project" in support.refusal(err), err
 
 
 # --- one run, several scenarios (plan decision Q14) ---------------------------------------

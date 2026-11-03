@@ -457,7 +457,7 @@ def cmd_tdd_red(args):
             report if ran_pytest else None, code, project_root,
             _NO_TEST_RAN_EXITS, loop=loop)
         if ran_pytest:
-            missing = pytest_report.missing_modules(report)
+            missing = pytest_report.missing_modules(report, project_root)
             broken = pytest_report.failed_tests(report)
     elif code != 0:
         # A runner Compass does not recognise, and no pytest report: the

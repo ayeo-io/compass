@@ -144,6 +144,7 @@ same commit.
 | `.github/workflows/`, `scripts/ci-*.py` | `docs/releasing.md` |
 | `examples/atdd-adapters/python/`, `tests/acceptance/atdd_strategy/test_reference_example.py` | `examples/atdd-adapters/python/README.md` |
 | `examples/atdd-adapters/typescript/`, `tests/acceptance/atdd_strategy/typescript.py` | `examples/atdd-adapters/typescript/README.md` |
+| `cli/compass_pkg/pytest_report.py` | `architecture/decisions/ADR-087-a-runner-that-is-not-pytest-writes-its-junit-report-where-compass-names-it.md` |
 | `scripts/render-document-set.py`, `architecture/document-set-7-0-0.svg`, `tests/test_document_set_diagram.py` | `docs/methodology.md` |
 | `scripts/install.sh`, `.claude-plugin/` | `docs/install-smoke-test.md` |
 | `hooks/hooks.json`, the adapter boundary | `docs/portability.md` |

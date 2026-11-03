@@ -115,8 +115,8 @@ when `conftest.py` imports the driver at module level. With `--loop outer`,
 scenario: one record per scenario, sharing a `run_id`. A red that ends stage 1
 (outer loop, an approach that runs refine, no technical design, distribution
 map or subtask registered) writes `before_implement: true`, no `.red` marker
-and moves no document (ADR-081). Only `compass isolation record` and `compass
-layering record` write the isolation and layering records (ADR-086).
+and moves no document (ADR-081). A runner that is not pytest is read from the JUnit report its adapter writes to `COMPASS_JUNIT_REPORT` (ADR-087).
+Only `compass isolation record` and `compass layering record` write the isolation and layering records (ADR-086).
 
 ## Records that also move a document
 

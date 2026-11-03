@@ -60,13 +60,14 @@ _OUTSIDE_THE_TREE = (".compass", "docs/compass")
 _COMMIT_ID = re.compile(r"^[0-9a-f]{40}([0-9a-f]{24})?$")
 
 
-def _git(args, cwd, env=None):
+def _git(args, cwd, env=None, text=True):
     # Claimed paths are file names, never pathspec magic: `:x.py` means a
-    # file called `:x.py`.
+    # file called `:x.py`. `text=False` gives the output as bytes, for a file
+    # that is hashed.
     env = dict(env or os.environ, GIT_LITERAL_PATHSPECS="1")
     try:
         return subprocess.run(["git", *args], cwd=cwd, capture_output=True,
-                              text=True, timeout=60, env=env)
+                              text=text, timeout=60, env=env)
     except (OSError, subprocess.SubprocessError):
         return None
 
@@ -231,12 +232,8 @@ def file_digests_at(project_root, commit, claimed):
         # A symlink is left out, as the record's own digests leave it out.
         if kind != "blob" or mode == "120000":
             continue
-        try:
-            raw = subprocess.run(["git", "cat-file", "--filters", "%s:%s" % (commit, name)],
-                                 cwd=top, capture_output=True, timeout=60)
-        except (OSError, subprocess.SubprocessError):
-            return None
-        if raw.returncode != 0:
+        raw = _git(["cat-file", "--filters", "%s:%s" % (commit, name)], top, text=False)
+        if not _ok(raw):
             return None
         out[rel] = (hashlib.sha256(raw.stdout).hexdigest(), mode)
     return out

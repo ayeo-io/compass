@@ -10,10 +10,11 @@ two types: `compass evidence add` refuses both. `isolation-proven` and
 (ADR-086).
 
 The specification is `acceptance-criteria.md` of the Compass issue
-`atdd-strategy`: the scenarios of isolation and layering (`TRC-F1` to `TRC-F14`,
-`TRC-H5`, `TRC-A4`, `TRC-A7`, `TRC-A8`, `TRC-A10`, `TRC-A16`, `TRC-A18`, `TRC-A20`
-and `TRC-X1`)
-(ayeo-io/compass-delivery#328). Each test names the scenario it checks;
+`atdd-strategy`. This file holds its scenarios of isolation and layering
+(`TRC-F1` to `TRC-F14`), the candidate scenario (`TRC-H5`), the routing
+scenarios (`TRC-A4`, `TRC-A7`, `TRC-A8`, `TRC-A10`, `TRC-A16`, `TRC-A18`
+and `TRC-A20`) and the end-to-end scenario (`TRC-X1`), for
+ayeo-io/compass-delivery#328. Each test names the scenario it checks;
 `support.py` builds the projects.
 """
 from __future__ import annotations

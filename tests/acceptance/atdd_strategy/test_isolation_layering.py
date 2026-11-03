@@ -1,5 +1,5 @@
 """Scenario group F of the four-layer acceptance strategy: the isolation proof
-and the layering record, and the checks that require them at verify.
+and the layering record, and the checks that need them at the verify stage.
 
 `compass isolation record` runs the project's suite in parallel once, then
 runs each scenario's declared tests twice, and writes an `isolation-proof`
@@ -10,8 +10,9 @@ two types: `compass evidence add` refuses both. `isolation-proven` and
 (ADR-086).
 
 The specification is `acceptance-criteria.md` of the Compass issue
-`atdd-strategy`, scenarios `TRC-F1` to `TRC-F14`, `TRC-H5`, `TRC-A4`, `TRC-A7`,
-`TRC-A8`, `TRC-A10`, `TRC-A16`, `TRC-A18`, `TRC-A20` and `TRC-X1`
+`atdd-strategy`: the scenarios of isolation and layering (`TRC-F1` to `TRC-F14`,
+`TRC-H5`, `TRC-A4`, `TRC-A7`, `TRC-A8`, `TRC-A10`, `TRC-A16`, `TRC-A18`, `TRC-A20`
+and `TRC-X1`)
 (ayeo-io/compass-delivery#328). Each test names the scenario it checks;
 `support.py` builds the projects.
 """
@@ -207,7 +208,7 @@ def test_trc_f2(tmp_path):
 
 
 def test_trc_f7(tmp_path):
-    """Verify without a layering record fails."""
+    """The verify stage without a layering record fails."""
     issue = _issue(_project(tmp_path))
     _must_isolation(issue)
     code, document = issue.check()
@@ -459,6 +460,25 @@ def test_trc_f8(tmp_path, kind, fault, reason):
     assert rel in row["detail"] and reason in row["detail"], row
 
 
+def test_trc_f8_a_layering_test_that_only_skips(tmp_path):
+    """A layering test whose every test is skipped exits 0, and no test ran."""
+    project = _project(tmp_path)
+    (project.root / "tests" / "acceptance" / "test_skipped.py").write_text(
+        "import pytest\n\n\n@pytest.mark.skip(reason='not written yet')\n"
+        "def test_layers():\n    pass\n", encoding="utf-8")
+    _commit(project, "a layering test that skips")
+    issue = _issue(project)
+    _must_isolation(issue)
+    _must_layering(issue, "--", sys.executable, "-m", "pytest", "-q", "-p",
+                   "no:cacheprovider", "tests/acceptance/test_skipped.py")
+    record = _record(issue, LAYERS)
+    assert (record["exit_code"], record["tests_ran"], record["passed"]) == (0, 0, False), record
+    code, document = issue.check()
+    assert code == 1
+    row = _row(document, LAYERING)
+    assert row["status"] == "fail" and "no test ran" in row["detail"], row
+
+
 # --- `TRC-F9`: an older tree ---------------------------------------------------------------
 
 @pytest.mark.parametrize("kind", ["isolation-proof", "layering"])
@@ -514,6 +534,66 @@ def test_trc_f10_evidence_add_refuses_the_types(tmp_path, kind, command):
     assert code == 2, out + err
     assert command in err, err
     assert all(e["id"] != "EV-HAND" for e in issue.manifest()["evidence"])
+
+
+def _hand_written(issue, kind, how):
+    """Register a record of `kind` that its command did not write: a file written by
+    hand and added to the manifest, or the command's own record edited afterwards."""
+    if how == "edited after it was written":
+        rel = PROOF if kind == "isolation-proof" else LAYERS
+        record = _record(issue, rel)
+        if kind == "isolation-proof":
+            record["parallel"]["exit_code"] = 0
+        else:
+            record["exit_code"] = 0
+        (issue.dir / rel).write_text(json.dumps(record, indent=2), encoding="utf-8")
+        return rel
+    green = _record(issue, "evidence/green-TRC-1.outer.json")
+    note = ({"type": kind, "parallel": {"exit_code": 0}, "candidate": green["candidate"],
+             "client": "api", "repeat": [{"scenario": "TRC-1", "tests": [support.SPEC_TEST],
+                                          "runs": [0, 0]}]}
+            if kind == "isolation-proof" else
+            {"type": kind, "command": "sh -c 'exit 0'", "exit_code": 0, "tests_ran": 1})
+    (issue.dir / "evidence" / "my-note.json").write_text(json.dumps(note), encoding="utf-8")
+    body = issue.manifest()
+    body["evidence"] = [e for e in body["evidence"] if e.get("type") != kind]
+    body["evidence"].append({"id": "EV-NOTE", "type": kind, "path": "evidence/my-note.json"})
+    issue.write_manifest(body)
+    return "evidence/my-note.json"
+
+
+@pytest.mark.parametrize("kind, command", [("isolation-proof", "compass isolation record"),
+                                           ("layering", "compass layering record")])
+@pytest.mark.parametrize("how", ["written by hand and added to the manifest",
+                                 "edited after it was written"])
+def test_trc_f10_a_record_its_command_did_not_write(tmp_path, kind, command, how):
+    """A record registered by editing the manifest, or edited after its command wrote
+    it, does not count: its identity must match the registry entry."""
+    issue = _issue(_project(tmp_path))
+    if kind == "isolation-proof":
+        _must_layering(issue)
+        _must_isolation(issue, parallel="sh -c 'exit 1'")
+    else:
+        _must_isolation(issue)
+        _must_layering(issue, "--", "sh", "-c", "exit 1")
+    rel = _hand_written(issue, kind, how)
+    code, document = issue.check()
+    assert code == 1
+    row = _row(document, ISOLATION if kind == "isolation-proof" else LAYERING)
+    assert row["status"] == "fail", row
+    assert f"{rel} was not written by `{command}`" in row["detail"], row
+
+
+def test_trc_f10_a_record_that_names_no_tree(tmp_path):
+    """Where git can name the tree, a record with no tree id does not count."""
+    issue = _issue(_project(tmp_path))
+    _must_isolation(issue)
+    _must_layering(issue)
+    _rewrite(issue, LAYERS, lambda record: record.pop("tree_id"))
+    code, document = issue.check()
+    assert code == 1
+    row = _row(document, LAYERING)
+    assert row["status"] == "fail" and f"{LAYERS} names no tree" in row["detail"], row
 
 
 # --- `TRC-F13`: no parser -------------------------------------------------------------------

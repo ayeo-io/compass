@@ -17,7 +17,7 @@ An issue the strategy does not apply to still lists a record it holds, with
 its result, and the result judges nothing (TRC-A4).
 """
 # DEPENDENCY: standard library (json, os); compass_pkg.acceptance_strategy,
-# binding, check_results, core and status_words. It imports no command module,
+# binding, check_results, core, red_first and status_words. It imports no command module,
 # so the check registry can import it.
 from __future__ import annotations
 
@@ -29,11 +29,14 @@ from compass_pkg.binding import claimed_paths, work_tree_id
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import (CompassError, find_upwards, load_manifest, manifest_path,
                               save_manifest)
+from compass_pkg.red_first import content_digest
 
 #: The routings that need each record (ADR-086): the
 #: isolation proof on `on` and on the hotfix's `existing-dsl-isolation`, the
 #: layering record on `on` only.
 NEEDED_ON = {"isolation-proof": ("on", "existing-dsl-isolation"), "layering": ("on",)}
+#: The one command that writes each record.
+WRITERS = {"isolation-proof": "compass isolation record", "layering": "compass layering record"}
 
 
 class Unreadable(Exception):
@@ -41,8 +44,8 @@ class Unreadable(Exception):
 
 
 def registered(task, task_dir, ev_type):
-    """`(path, full path)` of the newest registered record of `ev_type` inside the
-    issue folder, or None. A path outside the issue folder is not read."""
+    """`(path, full path, entry)` of the newest registered record of `ev_type` inside
+    the issue folder, or None. A path outside the issue folder is not read."""
     root = os.path.realpath(task_dir)
     found = None
     for entry in (task or {}).get("evidence") or []:
@@ -51,7 +54,7 @@ def registered(task, task_dir, ev_type):
         path = str(entry.get("path") or "")
         full = os.path.realpath(os.path.join(task_dir, path))
         if path and os.path.commonpath([root, full]) == root:
-            found = (path, full)
+            found = (path, full, entry)
     return found
 
 
@@ -73,18 +76,35 @@ def whole(value):
     return isinstance(value, int) and not isinstance(value, bool)
 
 
+def written_by_command(entry, record):
+    """True when the record is the one its command wrote and registered: the registry
+    entry's `record_id` is the file's, and the file's `content_digest` is a fresh
+    digest of what it holds. A file written by hand and added to the manifest has no
+    such stamp, and one edited after it was written has a digest that no longer
+    matches, so neither is a record (guardrail `G4`)."""
+    record_id = record.get("record_id")
+    return (isinstance(record_id, str) and bool(record_id)
+            and entry.get("record_id") == record_id
+            and record.get("content_digest") == content_digest(record))
+
+
 def outcome(task, task_dir, ev_type, faults):
     """`(path, record, faults)` of the issue's record of `ev_type`: `path` None when
     none is registered; `faults` the reasons it does not hold, from `faults(path,
-    record)` once it reads. A record that cannot be read has one fault."""
+    record)` once it reads. A record that cannot be read, or that its command did not
+    write, has one fault and `record` None."""
     found = registered(task, task_dir, ev_type)
     if found is None:
         return None, None, []
-    path, full = found
+    path, full, entry = found
     try:
         record = read(full)
     except Unreadable as exc:
         return path, None, [f"{path} could not be read: it is not valid JSON ({exc})"]
+    if not written_by_command(entry, record):
+        return path, None, [f"{path} was not written by `{WRITERS[ev_type]}`, or was "
+                            f"changed after it was written, so it is a claim and not a "
+                            f"record; run `{WRITERS[ev_type]}` again"]
     return path, record, faults(path, record)
 
 
@@ -107,8 +127,8 @@ def declined(task, task_dir, ev_type, faults):
         if routing in NEEDED_ON[ev_type]:
             return None
         words = acceptance_strategy.ROUTINGS.get(routing, routing)
-        reason = (f"not required: the issue's approach routes the strategy as "
-                  f"{words}, which needs no {ev_type} record")
+        reason = (f"not required: the routing of the issue's approach is {words}, "
+                  f"which needs no {ev_type} record")
     path, _record, found = outcome(task, task_dir, ev_type, faults)
     if path is not None:
         reason += f"; {result_text(path, found)}"
@@ -124,8 +144,11 @@ def tree_fault(task, task_dir, path, record):
     root = find_upwards(task_dir, ".compass") or task_dir
     now = work_tree_id(root, claimed_paths(task))
     made_on = record.get("tree_id")
-    if now is None or not (isinstance(made_on, str) and made_on):
+    if now is None:
         return None
+    if not (isinstance(made_on, str) and made_on):
+        return (f"{path} names no tree, and git can name the tree now, so it cannot "
+                f"show it was made on the current one; record it again")
     if made_on == now:
         return None
     return (f"{path} was made on tree {made_on[:12]}, a different tree from the current "

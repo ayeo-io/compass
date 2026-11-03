@@ -163,15 +163,17 @@ def _read(report_path):
 
 def tests_ran(report_path):
     """How many tests the report says ran, or None when there is no report or it
-    cannot be read. `compass layering record` reads it, so its own module holds
-    no parser (ADR-086)."""
+    cannot be read. A skipped test did not run, so a run whose every test is
+    skipped ran none. `compass layering record` reads it, so its own module
+    holds no parser (ADR-086)."""
     if not report_path:
         return None
     try:
         root = ET.parse(report_path).getroot()
     except (OSError, ET.ParseError):
         return None
-    return sum(1 for _ in root.iter("testcase"))
+    return sum(1 for case in root.iter("testcase")
+               if not any(child.tag == "skipped" for child in case))
 
 
 def failed_tests(report_path):

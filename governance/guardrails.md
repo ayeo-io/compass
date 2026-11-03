@@ -374,7 +374,10 @@ _(none yet - the shipped default guardrails apply as-is)_
   - It reads the `isolation-proof` record that `compass isolation record`
     writes: one parallel run of the suite, then each scenario's declared
     tests run twice. `compass evidence add` refuses the type, so a written
-    note cannot stand in for it.
+    note cannot stand in for it. A record whose `record_id` is not its
+    registry entry's, or whose `content_digest` no longer matches what it
+    holds, was not written by the command and fails, as does one that names
+    no tree where git can name one.
   - On an in-scope issue on the routing `on` or `existing-dsl-isolation` (the
     hotfix) it fails when no record is registered, when the record cannot be
     read or lacks a result, when the parallel run failed, when a scenario did
@@ -392,7 +395,9 @@ _(none yet - the shipped default guardrails apply as-is)_
   `cli/compass_pkg/layering.py`.
   - It reads the `layering` record that `compass layering record` writes from
     one run of the project's own layering test. Compass never reads the test.
-    `compass evidence add` refuses the type.
+    `compass evidence add` refuses the type, and a record its command did not
+    write fails as it does for `isolation-proven`. A skipped test does not
+    count as a test that ran.
   - On an in-scope issue on the routing `on` it fails when no record is
     registered, when the record cannot be read, when the test failed, when the
     record shows that 0 tests ran, and when it was made on another tree. A

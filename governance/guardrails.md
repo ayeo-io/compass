@@ -85,8 +85,9 @@ Done and the section of every other exit list (`<Stage> exit list`), not only
 the Definition of Done.
 
 The check `evidence-matches-tree` judges a landed issue by the newest test
-record's `file_sha256`: the SHA-256 of each changed file and each declared
-test as the record saw it, compared with the same files in `land_commit`. A
+record's `file_sha256` and `file_modes`: the SHA-256 and the mode of each
+changed file and each declared test as the record saw it, compared with the
+same files in `land_commit` as a checkout writes them. A
 record written before that field is judged by its `changes_id`, as before.
 The CLI writes the same digests, and the digest of each record file, to
 `evidence/SHA256SUMS`, so a reader can check them with `sha256sum -c` and no

@@ -583,11 +583,13 @@ proves. It does not prove:
 - that a trusted runner made the record.
 
 Each record does name the tree it ran on. `tree_id` is the git tree id of
-the tracked files on disk plus the issue's own new files. `file_sha256` holds
-the SHA-256 of each of the issue's changed files and of each test file its
-scenarios declare, and `test_files` names the test files among them. A record
-written before ADR-089 holds `changes_id`, a git tree id of the same files,
-instead of `file_sha256`; it is still read.
+the tracked files on disk plus the issue's own new files. `file_sha256`
+holds the SHA-256 of each of the issue's changed files and of each test file
+its scenarios declare, `file_modes` holds the mode git would record for
+each, and `test_files` names the test files among them. The commit side is
+read as a checkout writes it, so line-ending conversion does not count as a
+change. A record written before ADR-089 holds `changes_id`, a git tree id of
+the same files, instead of `file_sha256`; it is still read.
 `compass check` judges the issue's newest record:
 
 - in flight, once every gate has passed, it fails if the tree has changed
@@ -601,12 +603,13 @@ written outside a git repository, or before records carried a tree id, is
 not judged either.
 
 The CLI also writes `evidence/SHA256SUMS` in the issue folder, in the format
-`sha256sum` reads. It holds the SHA-256 of each record file the CLI wrote and
-of each file a record names in `file_sha256`, from the newest record that
-names it. Run `sha256sum -c .compass/work/<slug>/evidence/SHA256SUMS` from the
-project root to check them without Compass. It shows the files are the bytes
-the CLI recorded; like the record, it does not prove a trusted runner wrote
-them, because anyone who can write the record can write this file.
+`sha256sum` reads. It holds the SHA-256 of each record file the CLI wrote
+and of each file in the `file_sha256` of the record written last. Run
+`sha256sum -c .compass/work/<slug>/evidence/SHA256SUMS` from the project
+root to check them without Compass. It shows the files are the bytes the CLI
+recorded, not their modes; like the record, it does not prove a trusted
+runner wrote them, because anyone who can write the record can write this
+file.
 
 Tracing a file into the issue between two runs of the same command
 changes `file_sha256`, because the traced file joins `changed_files`; it

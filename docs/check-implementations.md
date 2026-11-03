@@ -88,8 +88,8 @@ pin major 1. `tests/test_red_per_scenario.py` holds the cases.
 
 ## The SHA-256 of each file
 
-`evidence-matches-tree` 1.1.0 judges a landed issue by the SHA-256 of each file a record holds in
-`file_sha256`, and a record written before that by its `changes_id` (ADR-089). No corpus case holds a
+`evidence-matches-tree` 1.1.0 judges a landed issue by the SHA-256 and the mode of each file a record holds in
+`file_sha256` and `file_modes`, read from the commit as a checkout writes it, and a record written before that by its `changes_id` (ADR-089). No corpus case holds a
 record with `file_sha256`, for the same reason. `tests/test_evidence_sha256sums.py` holds the cases.
 
 ## The cases

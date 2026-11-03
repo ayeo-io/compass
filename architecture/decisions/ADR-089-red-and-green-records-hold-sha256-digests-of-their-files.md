@@ -1,7 +1,7 @@
 ---
 id: ADR-089
 title: Red and green records hold SHA-256 digests of their files
-status: proposed
+status: accepted
 date: 2026-11-03
 supersedes: ''
 superseded_by: ''

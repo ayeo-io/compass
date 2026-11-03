@@ -128,7 +128,7 @@ Rules:
 | [ADR-086](ADR-086-isolation-and-layering-records-are-written-only-by-their-commands.md) | Isolation and layering records are written only by their commands | accepted | with ADR-064, ADR-082 and ADR-085 |
 | [ADR-087](ADR-087-a-runner-that-is-not-pytest-writes-its-junit-report-where-compass-names-it.md) | A runner that is not pytest writes its JUnit report where Compass names it | accepted | with ADR-081 and ADR-086 |
 | [ADR-088](ADR-088-each-scenario-needs-a-red-before-its-first-green.md) | Each scenario needs a red before its first green | accepted | with ADR-038, ADR-081 and ADR-082 |
-| [ADR-089](ADR-089-red-and-green-records-hold-sha256-digests-of-their-files.md) | Red and green records hold SHA-256 digests of their files | proposed | with ADR-038, ADR-086 and ADR-088 |
+| [ADR-089](ADR-089-red-and-green-records-hold-sha256-digests-of-their-files.md) | Red and green records hold SHA-256 digests of their files | accepted | with ADR-038, ADR-086 and ADR-088 |
 
 ## Principle → ADR mapping
 

@@ -1,7 +1,7 @@
 ---
 id: ADR-087
 title: A runner that is not pytest writes its JUnit report where Compass names it
-status: proposed
+status: accepted
 date: 2026-11-03
 supersedes: ''
 superseded_by: ''

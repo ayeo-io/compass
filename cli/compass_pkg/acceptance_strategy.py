@@ -66,6 +66,11 @@ EXPECTED = ("none",) + ACCEPTANCE_KINDS
 LOOPS = ("outer", "inner")
 
 NAME = "four-layer acceptance strategy (`S17`)"
+#: The evidence types only the strategy's commands write (ADR-086).
+STRATEGY_TYPES = ("isolation-proof", "layering")
+#: How the retrospective names an issue the strategy applies to, beside the
+#: acceptance kinds that take an issue out of scope.
+IN_SCOPE = "in scope"
 BEHAVIOR = "client-observable behavior"
 SPIKE_WHY = "a spike ships nothing"
 OLDER = "this issue was assessed before the strategy shipped"
@@ -415,11 +420,36 @@ def step_off(task, task_dir):
     return None
 
 
+def waiver_lines(task, view):
+    """A notice for each issue waiver of one of the strategy's checks in the issue's
+    `config:`: the check, the reason and whether it is approved. An approved waiver
+    is one the issue's generation (`view`) holds, which passed the lint that
+    committed it (ADR-039); any other leaves the check as it was."""
+    held = (((task or {}).get("config") or {}).get("checks") or {})
+    committed = ((getattr(view, "provenance", None) or {}).get("waivers") or {}) \
+        if view is not None else {}
+    approved = {str(r.get("entry")) for r in committed.values()
+                if isinstance(r, dict) and r.get("scope") == "issue"}
+    lines = []
+    for check in CHECKS:
+        waiver = (held.get(check) or {}).get("waiver") if isinstance(held.get(check), dict) \
+            else None
+        if not isinstance(waiver, dict):
+            continue
+        state = ("approved" if f"checks.{check}" in approved else
+                 f"not approved, so {check} keeps its severity; run `compass policy lint "
+                 f"--issue {(task or {}).get('issue')}` to see why")
+        lines.append(f"waiver of {check}: {waiver.get('reason') or 'no reason recorded'}"
+                     f" - {state}")
+    return lines
+
+
 def report(work):
     """The retrospective over every closed issue under `work` that was assessed
     with the strategy."""
     out = {"measured": [], "out_of_scope": [], "off": [], "stepped_off": [],
-           "clients": {}, "candidates": {"deployed": [], "local": [], "none": []}}
+           "clients": {}, "candidates": {"deployed": [], "local": [], "none": []},
+           "kinds": {kind: 0 for kind in ACCEPTANCE_KINDS + (IN_SCOPE,)}, "ran_strategy": []}
     names = sorted(os.listdir(work)) if os.path.isdir(work) else []
     for slug in names:
         task_dir = os.path.join(work, slug)
@@ -438,7 +468,15 @@ def report(work):
         applies, _ = in_scope(task, task_dir)
         if not applies:
             out["out_of_scope"].append(slug)
+            kind = acceptance_kind(task, task_dir)
+            if kind:
+                out["kinds"][kind] += 1
+            # An issue out of scope that holds a record of the strategy ran it anyway.
+            if any(isinstance(e, dict) and e.get("type") in STRATEGY_TYPES
+                   for e in task.get("evidence") or []):
+                out["ran_strategy"].append(slug)
             continue
+        out["kinds"][IN_SCOPE] += 1
         reason = step_off(task, task_dir)
         if reason:
             out["stepped_off"].append({"issue": slug, "reason": reason})
@@ -486,6 +524,10 @@ def cmd_retro_acceptance(args):
                      f"{', '.join(out['off'])}")
     if out["out_of_scope"]:
         lines.append(f"  not counted, out of scope: {', '.join(out['out_of_scope'])}")
+    counts = [f"{n} {kind}" for kind, n in out["kinds"].items()]
+    lines.append(f"  closed issues per acceptance kind: {', '.join(counts[:-1])} and {counts[-1]}")
+    lines.append(f"  out-of-scope issues that ran the strategy: {len(out['ran_strategy'])}"
+                 + (f" ({', '.join(out['ran_strategy'])})" if out["ran_strategy"] else ""))
     for item in out["stepped_off"]:
         lines.append(f"  not counted, stepped off through an approved waiver: "
                      f"{item['issue']} - {item['reason']}")

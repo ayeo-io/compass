@@ -365,6 +365,46 @@ _(none yet - the shipped default guardrails apply as-is)_
     registered, which `outer-loop-recorded` reports.
   - An inner-loop green needs no `attempts`. `no-trusted-rerun` is locked and
     does not change: it still passes a record with no `attempts`.
+- **`isolation-proven`** is the isolation check of the four-layer acceptance
+  strategy (`S17`, ADR-086). It is unlocked, declares `severity: blocking`
+  and `on_skipped: not-applicable`, and sits in no gate, no lock and not in
+  the spike's checks. `compass check` runs it after
+  `outer-loop-attempts-recorded` and labels its row the same way. The rules
+  it applies are in `cli/compass_pkg/isolation.py`.
+  - It reads the `isolation-proof` record that `compass isolation record`
+    writes: one parallel run of the suite, then each scenario's declared
+    tests run twice. `compass evidence add` refuses the type, so a written
+    note cannot stand in for it.
+  - On an in-scope issue on the routing `on` or `existing-dsl-isolation` (the
+    hotfix) it fails when no record is registered, when the record cannot be
+    read or lacks a result, when the parallel run failed, when a scenario did
+    not pass both runs, when a declared test is in no repeat entry, when the
+    record was made on another tree, and when its candidate is not the
+    newest outer-loop green's. The finding names the record and each fault.
+  - It declines with "not required" when the strategy does not apply and on
+    the routing `existing-dsl` (the quick fix). The row lists a record the
+    issue holds, with its result, and the result judges nothing.
+- **`layering-test-passed`** is the layering check of the four-layer
+  acceptance strategy (`S17`, ADR-086). It is unlocked, declares `severity:
+  blocking` and `on_skipped: not-applicable`, and sits in no gate, no lock and
+  not in the spike's checks. `compass check` runs it after `isolation-proven`
+  and labels its row the same way. The rules it applies are in
+  `cli/compass_pkg/layering.py`.
+  - It reads the `layering` record that `compass layering record` writes from
+    one run of the project's own layering test. Compass never reads the test.
+    `compass evidence add` refuses the type.
+  - On an in-scope issue on the routing `on` it fails when no record is
+    registered, when the record cannot be read, when the test failed, when the
+    record shows that 0 tests ran, and when it was made on another tree. A
+    record with no test count (`tests_ran: null`) is not judged on it, so a
+    layering test that is a shell script passes when it exits 0.
+  - It declines with "not required" when the strategy does not apply and on
+    the routings `existing-dsl` and `existing-dsl-isolation` (the quick fix and
+    the hotfix), and lists a record the issue holds, with its result.
+  - A project waiver, or an issue waiver approved by the project's owner, can
+    make it or `isolation-proven` advisory. `compass check` names each issue
+    waiver of one of the strategy's checks, with its reason and whether it is
+    approved.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart

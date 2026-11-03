@@ -652,6 +652,11 @@ def test_d2_repairs_change_only_retired_names():
     (list_items 88 -> 89) gained the outer-loop check's sub-item on where a
     green with no candidate or client is refused.
 
+    One more was re-baselined by `isolation-and-layering`: `governance/strategies.md`
+    (list_items 106 -> 107) gained the isolation and layering bullet, and
+    `governance/guardrails.md` (list_items 89 -> 98) gained the isolation check
+    and the layering check, two list items and their 7 sub-items.
+
     The other 45 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

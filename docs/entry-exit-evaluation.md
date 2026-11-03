@@ -263,6 +263,9 @@ records a person's answer to one. ADR-063 owns the decision.
   a hand-off is therefore never the sign-off on an irreversible change.
   `compass evidence add --type checkpoint-approval` is refused, so the type is
   written only by this command.
+  `compass evidence add` refuses the types `isolation-proof` and `layering`
+  in the same way: only `compass isolation record` and `compass layering
+  record` write them (ADR-086).
 
 #### Signing off guardrail `G5`: `--guardrail`
 

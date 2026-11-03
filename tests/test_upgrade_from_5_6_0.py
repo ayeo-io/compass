@@ -237,10 +237,11 @@ def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(relea
         # (ADR-069) by 1, the design-size check (ADR-067) by 1, and the two
         # artifact rules that replace the role rules (ADR-070) by 2 more, and the
         # four-layer acceptance strategy's advisory check (8.0.0 preset) by 1, and its
-        # outer-loop check (ADR-080) by 1, its support-code check by 1, and its
-        # `attempts` check (ADR-084) by 1.
+        # outer-loop check (ADR-080) by 1, its support-code check by 1, its
+        # `attempts` check (ADR-084) by 1, and its isolation and layering checks and
+        # their evidence types `isolation-proof` and `layering` (ADR-086) by 4.
         gates, choices = _evaluate_lines(after)
-        drift = "this project's policy is missing 14 rule(s) or check(s)"
+        drift = "this project's policy is missing 18 rule(s) or check(s)"
         assert len([c for c in choices if drift in c]) == 1, slug
         assert (gates, [c for c in choices if drift not in c]) == _evaluate_lines(before), slug
         lint = _cli(CLI, root, "issue", "lint", "--issue", slug)

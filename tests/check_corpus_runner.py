@@ -879,3 +879,65 @@ def _(root):
                                                   "loop": "outer", "kind": "validation"})
     task["evidence"] = [{"id": "EV-1", "type": "test-run", "path": path}]
     return task, task_dir
+
+
+# The isolation and layering checks read the record their command wrote (ADR-086).
+def _strategy_record(task, task_dir, kind, body):
+    name = "isolation-proof.json" if kind == "isolation-proof" else "layering.json"
+    path = _record(task_dir, name, body)
+    task["scenarios"] = [_scenario(tests=["tests/acceptance/test_orders.py::test_place"])]
+    task["evidence"] = [{"id": "EV-1", "type": kind, "path": path}]
+    return task, task_dir
+
+
+def _proof(parallel=0):
+    return {"type": "isolation-proof", "candidate": "build-417", "candidate_kind": "deployed",
+            "client": "api", "parallel": {"command": "run -n 2", "exit_code": parallel},
+            "repeat": [{"scenario": "S-1", "tests": ["tests/acceptance/test_orders.py::test_place"],
+                        "runs": [0, 0], "same": True}]}
+
+
+def _routed(routing):
+    block = _strategy_block(True, "client-observable behavior")
+    block["acceptance_strategy"]["routing"] = routing
+    return block
+
+
+@case("isolation-proven", "broken")
+def _(root):
+    task, task_dir = _issue(root, _strategy_block(True, "client-observable behavior"))
+    return _strategy_record(task, task_dir, "isolation-proof", _proof(parallel=1))
+
+
+@case("isolation-proven", "restored")
+def _(root):
+    task, task_dir = _issue(root, _strategy_block(True, "client-observable behavior"))
+    return _strategy_record(task, task_dir, "isolation-proof", _proof())
+
+
+# The quick fix's routing reuses the existing DSL and needs no isolation proof.
+@case("isolation-proven", "quick-fix")
+def _(root):
+    task, task_dir = _issue(root, _routed("existing-dsl"))
+    return _strategy_record(task, task_dir, "isolation-proof", _proof(parallel=1))
+
+
+@case("layering-test-passed", "broken")
+def _(root):
+    task, task_dir = _issue(root, _strategy_block(True, "client-observable behavior"))
+    return _strategy_record(task, task_dir, "layering", {
+        "type": "layering", "command": "run layering", "exit_code": 1, "tests_ran": 3})
+
+
+@case("layering-test-passed", "restored")
+def _(root):
+    task, task_dir = _issue(root, _strategy_block(True, "client-observable behavior"))
+    return _strategy_record(task, task_dir, "layering", {
+        "type": "layering", "command": "run layering", "exit_code": 0, "tests_ran": 3})
+
+
+# The hotfix's routing needs the isolation proof and no layering record.
+@case("layering-test-passed", "hotfix")
+def _(root):
+    task, task_dir = _issue(root, _routed("existing-dsl-isolation"))
+    return task, task_dir

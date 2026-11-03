@@ -65,10 +65,11 @@ ARTIFACT_APPROVAL = approval_records.ARTIFACT_APPROVAL
 #: (the check of guardrail `G5`), a human check or a waiver, meets it.
 CHECKPOINT_APPROVAL = "checkpoint-approval"
 
-#: The approval types `compass evidence add` refuses, and why. Each is a
-#: person's act, written only by the writers here. A `human-approval` record
-#: added by hand held only an id, a type and a path, which no approval reader
-#: counts (GitHub issue #571).
+#: The types `compass evidence add` refuses, and why. Each has its own writer:
+#: an approval is a person's act, written only by the writers here, and a record
+#: of the four-layer acceptance strategy only by its command. A `human-approval`
+#: record added by hand held only an id, a type and a path, which no approval
+#: reader counts (GitHub issue #571).
 EVIDENCE_ADD_REFUSALS = {
     CHECKPOINT_APPROVAL: (
         "compass evidence add: a checkpoint-approval record is a person's answer; run "
@@ -79,6 +80,17 @@ EVIDENCE_ADD_REFUSALS = {
         "compass evidence request; an agent the person delegated to runs compass "
         "evidence approve --delegated --as <agent>; at a terminal the person runs "
         "compass evidence approve. Nothing was written."),
+    # The records of the four-layer acceptance strategy (ADR-086): each is the run of
+    # the project's own commands, so a file added by hand is a claim, not a record.
+    "isolation-proof": (
+        "compass evidence add: an isolation-proof record is written only by compass "
+        "isolation record, which runs the project's own suite in parallel and each "
+        "scenario's tests twice. A written note does not prove isolation. Nothing was "
+        "written."),
+    "layering": (
+        "compass evidence add: a layering record is written only by compass layering "
+        "record, which runs the project's own layering test. A written note does not "
+        "prove the layer rules hold. Nothing was written."),
 }
 
 #: The five subject forms, as `Answer.form` names them.

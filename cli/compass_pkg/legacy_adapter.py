@@ -104,6 +104,7 @@ DECLINING_CHECKS = (
     "evidence-identity-matches", "dod-evidence-typed", "landed-by-resolves", "multiagent-run-recorded", "artifacts-approved",
     "nfr-rows-resolved", "contracts-declared", "design-within-word-ceiling",
     "acceptance-applicability-agrees", "outer-loop-recorded", "acceptance-support-present", "outer-loop-attempts-recorded",
+    "isolation-proven", "layering-test-passed",
 )
 PASSING_CHECKS = ("declared-tests-resolve",)
 # The checks the preset declares `severity: advisory`. The legacy guardrails file
@@ -520,6 +521,8 @@ DISPLAY_NAMES = {
     "checks.outer-loop-recorded": "Outer-loop red and green recorded",
     "checks.acceptance-support-present": "Acceptance support code present",
     "checks.outer-loop-attempts-recorded": "Outer-loop run count recorded",
+    "checks.isolation-proven": "Isolation proven",
+    "checks.layering-test-passed": "Layering test passed",
     "checks.artifacts-approved": "Documents approved",
     "checks.backfills-paid": "Follow-ups resolved",
     "checks.dod-evidence-typed": "Definition of Done evidence is typed",

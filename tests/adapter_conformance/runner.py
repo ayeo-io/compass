@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import hashlib
 import os
+import shlex
 import platform
 import re
 from datetime import date, datetime, timezone
@@ -214,6 +215,13 @@ class Adapter:
         self.cli("tdd-green", "--issue", self.slug, "--scenario", "CONF-1",
                  "--loop", "outer", "--candidate", "local", "--client", "cli",
                  "--", *self.test_command)
+        # The regular approach also needs the isolation proof and the layering
+        # record of the four-layer acceptance strategy (ADR-086).
+        pytest = " ".join(shlex.quote(word) for word in self.test_command[:-1])
+        self.cli("isolation", "record", "--issue", self.slug, "--candidate", "local",
+                 "--client", "cli", "--parallel", f"{pytest} {shlex.quote(self.node)}",
+                 "--repeat", pytest + " {tests}")
+        self.cli("layering", "record", "--issue", self.slug, "--", *self.test_command)
         self.cli("issue", "render", "--issue", self.slug)
 
     def start_spike(self):
@@ -353,7 +361,7 @@ class Adapter:
                 except json.JSONDecodeError:
                     meaning["contents"] = contents
                 else:
-                    if entry["type"] == "test-run":
+                    if entry["type"] in ("test-run", "isolation-proof", "layering"):
                         record = {key: value for key, value in record.items() if key not in (
                             "record_id", "content_digest", "timestamp", "_full_log", "log_excerpt")}
                     meaning["record"] = record

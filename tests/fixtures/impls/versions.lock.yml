@@ -54,8 +54,14 @@ implementations:
   human-approval-present:
     verdict_digest: 7a180471d638a2e8f78ffed9af7c7cd3d7610a13c5c6d328701e1b7bf493295c
     version: 1.2.0
+  isolation-proven:
+    verdict_digest: 2d0fb3ab4201d8d53c58b96a2b0b80f68d5841a0fb2efc3c5b2e09c55d941fd6
+    version: 1.0.0
   landed-by-resolves:
     verdict_digest: af8f3456b7e7a6f5a0edae951ecf4656fce567367fded6fc0e4bd2cf7e53b80e
+    version: 1.0.0
+  layering-test-passed:
+    verdict_digest: ff42a18ab71e9098b28123e08d4e1f25f333f443e06b7c29f5340158770dca18
     version: 1.0.0
   multiagent-run-recorded:
     verdict_digest: 31e31868b5a0bb6885734f2817617272e4e7bf1356cd55fd6ea8da3c492c7201

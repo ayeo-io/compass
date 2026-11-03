@@ -191,6 +191,16 @@ CHECK_GUIDANCE = {
         "do": "Record the outer-loop green again with `compass tdd-green`, which writes `attempts`.",
         "fix": "Run `compass tdd-green --loop outer --scenario <id> -- <acceptance command>` on the current tree; do not edit `attempts` in the record by hand.",
     },
+    "isolation-proven": {
+        "why": "Strategy `S17` proves isolation by a record of the project's own runs, never by a note: a suite that fails in parallel, or a scenario that fails its second run, shares data between scenarios.",
+        "do": "Record the isolation proof on the outer-loop green's candidate and the current tree.",
+        "fix": "Run `compass isolation record --candidate <build id>|local --client api|web|cli --parallel \"<command>\" --repeat \"<command> {tests}\"`, then fix each scenario the record shows failing.",
+    },
+    "layering-test-passed": {
+        "why": "Strategy `S17` keeps each test layer calling only the layer below it, and the project's own layering test is what checks that; Compass reads only the record of its run.",
+        "do": "Record a passing run of the project's layering test on the current tree.",
+        "fix": "Run `compass layering record [--test-path <path>] -- <layering test command>`, or set `project.layering_command`, and fix each breach the test names.",
+    },
     "spike-conclusion-present": {
         "why": "A Spike without a recorded conclusion is just untracked work - the conclusion is what makes the exploration accountable.",
         "do": 'Record the close-out: discard, graduate-to-delivery, or defer.',
@@ -468,7 +478,9 @@ def _generation_lines(run):
     if view.pending_config(run.task):
         lines.append("pending: config: is not committed yet; "
                      "run `compass approach evaluate --write`")
-    return lines
+    # A step-off from the four-layer acceptance strategy names its waiver (TRC-A20).
+    from compass_pkg.acceptance_strategy import waiver_lines
+    return lines + waiver_lines(run.task, view)
 
 
 def _emit_check(run, args):

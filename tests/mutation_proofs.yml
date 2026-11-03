@@ -124,6 +124,16 @@
   fails: tests/acceptance/atdd_strategy/test_readiness.py::test_trc_i2
   restores: tests/acceptance/atdd_strategy/test_readiness.py::test_trc_i2_all_four_pieces_pass_the_check
 
+- check: isolation-proven
+  broken: an in-scope issue at verify with no `isolation-proof` record
+  fails: tests/acceptance/atdd_strategy/test_isolation_layering.py::test_trc_f2
+  restores: tests/acceptance/atdd_strategy/test_isolation_layering.py::test_trc_f7
+
+- check: layering-test-passed
+  broken: an in-scope issue at verify with no `layering` record
+  fails: tests/acceptance/atdd_strategy/test_isolation_layering.py::test_trc_f7
+  restores: tests/acceptance/atdd_strategy/test_isolation_layering.py::test_trc_f5
+
 - check: spike-conclusion-present
   broken: a spike with no conclusion evidence
   fails: tests/test_spike_safety.py::test_spike_without_conclusion_fails

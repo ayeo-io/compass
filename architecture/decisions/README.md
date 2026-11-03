@@ -125,6 +125,7 @@ Rules:
 | [ADR-083](ADR-083-the-stage-2-and-3-reviews-are-checkpoints-listed-only-where-the-strategy-applies.md) | The stage 2 and 3 reviews are checkpoints, listed only where the strategy applies | accepted | extends ADR-063; with ADR-079 |
 | [ADR-084](ADR-084-each-loop-keeps-its-own-run-count.md) | Each loop keeps its own run count | accepted | with ADR-080 and ADR-082 |
 | [ADR-085](ADR-085-an-outer-loop-green-names-its-candidate-and-client.md) | An outer-loop green names its candidate and client | accepted | with ADR-080 and ADR-084 |
+| [ADR-086](ADR-086-isolation-and-layering-records-are-written-only-by-their-commands.md) | Isolation and layering records are written only by their commands | accepted | with ADR-064, ADR-082 and ADR-085 |
 
 ## Principle → ADR mapping
 

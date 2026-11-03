@@ -166,6 +166,14 @@ commands write; it never reads project code.
   or `local` for the working tree, and its client, api, web or cli; one
   without them is refused (ADR-085). `compass retro --acceptance` lists the
   clients per issue and counts deployed and local candidates apart.
+- **Isolation and layering.** Records the project's own commands write
+  prove both; a written note does not (ADR-086). `compass isolation record`
+  runs the suite in parallel once and each scenario's declared tests twice,
+  and the check `isolation-proven` needs every run to pass on the outer-loop
+  green's candidate and the tree as it is now. `compass layering record` runs
+  the project's own layering test, and `layering-test-passed` needs it to
+  pass. Regular and full need both; a hotfix needs the isolation proof; a
+  quick fix needs neither.
 - **Support code.** The project names the paths of its alias helper,
   driver factory, DSL root and layering test under
   `project.acceptance_support`. `compass readiness` reports each missing

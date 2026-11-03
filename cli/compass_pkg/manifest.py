@@ -1110,7 +1110,7 @@ def cmd_changed_file_add(args):
 
 def cmd_evidence_add(args):
     from compass_pkg.approvals import EVIDENCE_ADD_REFUSALS
-    if args.type in EVIDENCE_ADD_REFUSALS:     # a person's act: an approval writer writes it
+    if args.type in EVIDENCE_ADD_REFUSALS:     # each has its own writer, never a file added by hand
         raise CompassError(EVIDENCE_ADD_REFUSALS[args.type])
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)

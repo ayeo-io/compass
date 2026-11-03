@@ -119,6 +119,11 @@ BASELINE_CHECKS = {
     # green of an in-scope issue records `attempts`. It sits in no guardrail, so `G4`
     # and its locked no-trusted-rerun keep their rules.
     "outer-loop-attempts-recorded",
+    # Added by `isolation-and-layering` (ADR-086). The blocking checks that an in-scope
+    # issue holds a passing isolation proof and layering record, written only by their
+    # commands. They sit in no guardrail, so `G1` and `G4` keep their checks.
+    "isolation-proven",
+    "layering-test-passed",
 }
 
 # The evidence types a branch may add to guardrails.yml, each named for the
@@ -139,6 +144,12 @@ BASELINE_EVIDENCE_TYPES = {
     # only by `/compass:reject <record id>`. No gate accepts it; it only stops
     # the withdrawn record counting for `human-approval-present` in flight.
     "approval-withdrawal",
+    # Added by isolation-and-layering (ADR-086). The records of the four-layer
+    # acceptance strategy, each written only by its command (`compass isolation
+    # record`, `compass layering record`); `compass evidence add` refuses both.
+    # No gate accepts them; only isolation-proven and layering-test-passed read them.
+    "isolation-proof",
+    "layering",
 }
 
 # The legitimate set of gate names in gate_evidence_requirements after landing.

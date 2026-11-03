@@ -387,6 +387,16 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "isolation-proven",
+      "operation": "add"
+    },
+    {
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "layering-test-passed",
+      "operation": "add"
+    },
+    {
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "multiagent-run-recorded",
       "operation": "set"
     },
@@ -463,6 +473,16 @@ reassess), and the `compass.yml` it would write.
     {
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.design-within-word-ceiling",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "checks.isolation-proven",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "checks.layering-test-passed",
       "operation": "add"
     },
     {

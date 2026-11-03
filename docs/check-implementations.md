@@ -222,12 +222,28 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: an issue needing sign-off with no approval on record |
 | `restored` | pass | the same input put right |
 
+### `isolation-proven` (version 1.0.0)
+
+| Case | Verdict | What the input exercises |
+|---|---|---|
+| `broken` | fail | an in-scope issue whose isolation proof shows the `parallel` run failed with `exit_code` 1 |
+| `quick-fix` | nothing-to-check | an in-scope issue on the `existing-dsl` routing of a quick fix, which needs no isolation proof |
+| `restored` | pass | an in-scope issue whose isolation proof shows the `parallel` run and both `runs` of each `repeat` entry passed |
+
 ### `landed-by-resolves` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |
 |---|---|---|
 | `broken` | fail | the input the mutation proof breaks: a landed_by pointer at an issue that does not exist |
 | `restored` | pass | the same input put right |
+
+### `layering-test-passed` (version 1.0.0)
+
+| Case | Verdict | What the input exercises |
+|---|---|---|
+| `broken` | fail | an in-scope issue whose layering record has `exit_code` 1 |
+| `hotfix` | nothing-to-check | an in-scope issue on the `existing-dsl-isolation` routing of a hotfix, with no layering record |
+| `restored` | pass | an in-scope issue whose layering record has `exit_code` 0 and `tests_ran` 3 |
 
 ### `multiagent-run-recorded` (version 1.1.0)
 

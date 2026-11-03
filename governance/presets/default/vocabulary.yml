@@ -131,6 +131,12 @@ vocabulary:
   checks.outer-loop-attempts-recorded:
     name: Outer-loop run count recorded
     aliases: []
+  checks.isolation-proven:
+    name: Isolation proven
+    aliases: []
+  checks.layering-test-passed:
+    name: Layering test passed
+    aliases: []
   checks.spike-conclusion-present:
     name: Spike conclusion present
     aliases: []

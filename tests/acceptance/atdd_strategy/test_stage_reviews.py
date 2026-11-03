@@ -301,6 +301,12 @@ def _tested_issue(project):
     (root / "archive.py").write_text("def archive():\n    return 'archived'\n", encoding="utf-8")
     issue.must("tdd-green", "--issue", SLUG, "--loop", "outer", "--scenario", "S-1",
                *support.NAMED, *run)
+    # The isolation proof and the layering record (ADR-086), which the regular
+    # approach needs at verify.
+    suite = " ".join(run[1:-1])
+    issue.must("isolation", "record", "--issue", SLUG, *support.NAMED, "--parallel",
+               f"{suite} tests", "--repeat", f"{suite} {{tests}}")
+    issue.must("layering", "record", "--issue", SLUG, "--", "sh", "-c", "exit 0")
     issue.must("issue", "render", "--issue", SLUG)
     return issue
 

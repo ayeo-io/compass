@@ -25,6 +25,8 @@ from compass_pkg.acceptance_strategy import _check_applicability_agrees
 from compass_pkg.outer_loop import (
     _check_outer_loop_attempts_recorded, _check_outer_loop_recorded)
 from compass_pkg.support_code import _check_acceptance_support_present
+from compass_pkg.isolation import _check_isolation_proven
+from compass_pkg.layering import _check_layering_test_passed
 from compass_pkg.artifact_status import _check_artifacts_approved
 from compass_pkg.binding import _check_evidence_matches_tree
 from compass_pkg.borrowed_docs import _check_borrowed_documents_answered
@@ -143,6 +145,8 @@ _ENTRIES = (
     _entry("outer-loop-recorded", _check_outer_loop_recorded),
     _entry("acceptance-support-present", _check_acceptance_support_present),
     _entry("outer-loop-attempts-recorded", _check_outer_loop_attempts_recorded),
+    _entry("isolation-proven", _check_isolation_proven),
+    _entry("layering-test-passed", _check_layering_test_passed),
 )
 
 REGISTRY: dict[str, CheckImpl] = {e.name: e for e in _ENTRIES}

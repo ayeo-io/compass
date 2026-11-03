@@ -1013,6 +1013,7 @@ _TAIL_EXEMPT = {
     "follow-up resolve": "needs an owed follow-up planted first",
     "bdd verify": "needs a project BDD runner wired",
     "acceptance record": "needs an acceptance already started",
+    "isolation record": "needs scenarios that declare tests, and runs the suite 1 + 2N times",
     "analyze": "a report, measured above",
     "retro": "a report, measured above",
     "flow": "a report, measured above",
@@ -1076,6 +1077,7 @@ _TAIL_ARGV = {
                          "--", "true"],
     "tdd-red": ["tdd-red", "--scenario", "TRC-1", "--", "sh", "-c", "echo '1 failed'; exit 1"],
     "tdd-green": ["tdd-green", "--scenario", "TRC-1", "--", "true"],
+    "layering record": ["layering", "record", "--", "true"],
     "follow-up add": ["follow-up", "add", "FU-9", "--summary", "settle this at ship"],
     "issue render": ["issue", "render"],
 }

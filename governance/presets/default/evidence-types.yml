@@ -32,6 +32,13 @@ evidence_types:
       then skips that record while the issue is in flight. It reverses nothing already done.'}
   checkpoint-approval: {description: 'A person''s answer to one checkpoint hand-off, written only by `compass
       evidence approve --checkpoint`. It never meets guardrail `G5` or a human check.'}
+  isolation-proof: {description: 'A record, written only by `compass isolation record`, of the project''s
+      acceptance suite run in parallel once and each scenario''s declared tests run twice: the exit codes,
+      the candidate and the client. `compass evidence add` refuses the type, so a written note cannot
+      stand in for one.'}
+  layering: {description: 'A record, written only by `compass layering record`, of one run of the project''s
+      own layering test: the command, the test path, the exit code, the number of tests that ran, the
+      tree id and the time. `compass evidence add` refuses the type.'}
   security-review: {description: A recorded security review or scan result - for security-sensitive changes.}
   migration-plan: {description: 'A recorded plan for a data, schema, or infrastructure migration.'}
   rollback-plan: {description: 'A record showing the rollback was REHEARSED - what was run, when, and

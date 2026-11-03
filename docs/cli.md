@@ -21,7 +21,7 @@ compass analyze            where an issue's artifacts disagree with each other
 compass retro              is triage systematically over- or under-sizing the process?
 compass retro --lineage    how many issues were found in another, and how many before it landed
 compass retro --decisions  how many decisions agents took for the person were confirmed, changed or never confirmed
-compass retro --acceptance the four-layer acceptance strategy's closed in-scope issues, their clients and candidates, with an opted-out project and each stepped-off issue apart
+compass retro --acceptance the four-layer acceptance strategy's closed in-scope issues, their clients and candidates, the closed issues per acceptance kind and the out-of-scope ones that ran it, with an opted-out project and each stepped-off issue apart
 compass issue raised-by    record the issue this one was found in, and where
 compass spec sync          merge main, resolving only conflicts in the derived living spec
 compass issue friction     record friction the agent observed, with evidence and a fix
@@ -31,6 +31,8 @@ compass issue checkpoint add  record a hand-off the autonomy setting passed (--o
 compass ci                 the full mechanical gate suite, for continuous integration
 compass tdd-red            run a test, assert it FAILS, record the red
 compass tdd-green          run a test, assert it PASSES, record the green
+compass isolation record   run the suite in parallel and each scenario's tests twice, and record the exit codes
+compass layering record    run the project's layering test and record the run
 compass policy lint        structurally validate the governance YAML
 compass policy show        every resolved configuration field, with its source layer
 compass preset init        scaffold a team preset repository

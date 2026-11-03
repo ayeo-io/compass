@@ -601,6 +601,8 @@
               "consistency-check",
               "command-output",
               "human-approval",
+              "isolation-proof",
+              "layering",
               "manual-review",
               "migration-plan",
               "rollback-plan",

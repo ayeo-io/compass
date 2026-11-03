@@ -32,7 +32,7 @@
 # schemas/guardrails.schema.json.
 # =============================================================================
 
-version: 1.38.0
+version: 1.39.0
 # -----------------------------------------------------------------------------
 # Named checks - the mechanical checks `compass check` knows how to run. Each
 # guardrail below references one or more of these by name. The check reads
@@ -99,6 +99,10 @@ checks:
     description: "On an issue the four-layer acceptance strategy (`S17`) applies to, the project names each piece of its acceptance support code under `project.acceptance_support` (alias helper, driver factory, DSL root, layering test) and each named path exists inside the project root; no file is read. The first issue the strategy applies to builds the missing pieces as its own work. Claim limit: while a piece is missing, the issue can claim that its scenarios pass, and not that its acceptance tests are isolated from each other (alias helper), run through a driver chosen at start-up (driver factory), keep driver detail out of the specifications (DSL root) or keep the layer rules (layering test). Advisory: a missing piece never fails the run. Declines to check, rather than passing, for an issue the strategy does not apply to and for one with no green on record."
   outer-loop-attempts-recorded:
     description: "On an issue the four-layer acceptance strategy (`S17`) applies to, every registered outer-loop green records `attempts`, a whole number of 1 or more, so `no-trusted-rerun` can tell a rerun from a first pass. An inner-loop green needs none. Declines to check, rather than passing, for an issue the strategy does not apply to and for an issue with no outer-loop green."
+  isolation-proven:
+    description: "On an issue the four-layer acceptance strategy (`S17`) applies to, on the routing `on` or `existing-dsl-isolation` (the hotfix), an `isolation-proof` record written by `compass isolation record` shows the parallel run passed, every test the issue declares ran twice with both runs passing, the record was made on the tree as it is now, and its candidate is the outer-loop green's. A written note does not count. Declines to check, rather than passing, for an issue the strategy does not apply to and on the routing `existing-dsl` (the quick fix)."
+  layering-test-passed:
+    description: "On an issue the four-layer acceptance strategy (`S17`) applies to, on the routing `on`, a `layering` record written by `compass layering record` shows the project's own layering test passed on the tree as it is now, and does not show that 0 tests ran. A written note does not count. Declines to check, rather than passing, for an issue the strategy does not apply to and on the routings `existing-dsl` and `existing-dsl-isolation` (the quick fix and the hotfix)."
   spike-conclusion-present:
     description: "A spike has a `spike-conclusion` evidence entry with a recorded decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue."
   spike-no-production-changes:
@@ -207,6 +211,10 @@ evidence_types:
     description: "A person's withdrawal of a guardrail `G5` sign-off made under a delegation, written only by `/compass:reject <record id>`. Names the record in `withdraws`; `human-approval-present` then skips that record while the issue is in flight. It reverses nothing already done."
   checkpoint-approval:
     description: "A person's answer to one checkpoint hand-off, written only by `compass evidence approve --checkpoint`. It never meets guardrail `G5` or a human check."
+  isolation-proof:
+    description: "A record, written only by `compass isolation record`, of the project's acceptance suite run in parallel once and each scenario's declared tests run twice: the exit codes, the candidate and the client. `compass evidence add` refuses the type, so a written note cannot stand in for one."
+  layering:
+    description: "A record, written only by `compass layering record`, of one run of the project's own layering test: the command, the test path, the exit code, the number of tests that ran, the tree id and the time. `compass evidence add` refuses the type."
   security-review:
     description: "A recorded security review or scan result - for security-sensitive changes."
   migration-plan:

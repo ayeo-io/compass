@@ -1,0 +1,2 @@
+verdict: nothing-to-check
+input: an in-scope issue on the `existing-dsl-isolation` routing of a hotfix, with no layering record

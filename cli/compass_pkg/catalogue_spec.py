@@ -600,8 +600,9 @@ TOP_DESCRIPTIONS = {
     "record": "Where the delivery record is kept, with `remote`, `paths` and `names_key`. "
               "Without it no record is kept.",
     "project": "The project's name, its commands (`test_command`, `test_micro_command`, "
-               "`bdd_run_command`, `lint_command`, `format_check_command`, `build_command` and "
-               "`typecheck_command`) and two declarations (`secret_scan` and "
+               "`bdd_run_command`, `lint_command`, `format_check_command`, `build_command`, "
+               "`typecheck_command` and `layering_command`, which `compass layering record` "
+               "runs when given no command) and two declarations (`secret_scan` and "
                "`structured_logging`), and the paths of its acceptance support code "
                "(`acceptance_support`). Declare the check form of a formatter, and note that "
                "`compass readiness` runs every command in a clean checkout of HEAD.",

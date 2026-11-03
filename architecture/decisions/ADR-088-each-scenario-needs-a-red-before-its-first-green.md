@@ -1,7 +1,7 @@
 ---
 id: ADR-088
 title: Each scenario needs a red before its first green
-status: proposed
+status: accepted
 date: 2026-11-03
 supersedes: ''
 superseded_by: ''

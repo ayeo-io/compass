@@ -295,6 +295,69 @@ def test_trc_c5_a_missing_package_is_not_a_red(tmp_path):
     assert "'orders-vendor-sdk' is not a module of this project" in support.refusal(err), err
 
 
+@pytest.mark.parametrize("fault, plant", [
+    ("imports a package that is not installed", lambda t: 'import "orders-vendor-sdk";\n' + t),
+    ("has a syntax error", lambda t: t + "\nconst x: number = ;\n"),
+])
+def test_trc_c5_a_spec_file_that_does_not_load_is_not_a_red(tmp_path, fault, plant):
+    """A specification file that node cannot load is a file that could not be
+    collected, as in pytest: its scenario never ran, so there is no red."""
+    project, issue = _typescript_at_refine(tmp_path, {"TRC-1": TS_OPEN})
+    spec = project.root / "tests" / "acceptance" / "todos.spec.ts"
+    spec.write_text(plant(spec.read_text(encoding="utf-8")), encoding="utf-8")
+    code, out, err = issue.run("tdd-red", "--issue", issue.slug, "--loop", "outer",
+                               "--scenario", "TRC-1", "--", *typescript.RUN, "--driver", "api")
+    assert code == 2, out + err
+    assert _records(issue) == {}
+    assert "could not be collected: tests/acceptance/todos.spec.ts" in support.refusal(err), err
+
+
+def test_trc_c5_a_scenario_cancelled_by_its_suite_is_not_a_red(tmp_path):
+    """A `before` hook of a describe block that fails cancels its tests, with no
+    error of their own: no test failed."""
+    project, issue = _typescript_at_refine(tmp_path, {"TRC-1": TS_OPEN})
+    folder = project.root / "tests" / "acceptance"
+    (folder / "accounts.spec.ts").unlink()
+    (folder / "todos.spec.ts").write_text(
+        'import { before, describe, test } from "node:test";\n\n'
+        'describe("todos", () => {\n'
+        '  before(() => {\n    throw new Error("the system did not start");\n  });\n'
+        '  test("a new todo is open", () => {});\n});\n', encoding="utf-8")
+    code, out, err = issue.run("tdd-red", "--issue", issue.slug, "--loop", "outer",
+                               "--scenario", "TRC-1", "--", *typescript.RUN, "--driver", "api")
+    assert code == 2, out + err
+    assert _records(issue) == {}
+    assert "NO TEST FAILED" in err, err
+
+
+def test_trc_c5_a_scenario_naming_another_file_is_refused(tmp_path):
+    """A TypeScript test binds by its file and its name: the same name in
+    another file does not count."""
+    elsewhere = "tests/acceptance/accounts.spec.ts::a new todo is open"
+    _, issue = _typescript_at_refine(tmp_path, {"TRC-1": TS_OPEN, "TRC-2": elsewhere})
+    code, out, err = issue.run("tdd-red", "--issue", issue.slug, "--loop", "outer",
+                               "--every-scenario", "--", *typescript.RUN, "--driver", "api")
+    assert code == 2, out + err
+    assert "TRC-2" in err and elsewhere in err, err
+    assert _records(issue) == {}
+
+
+def test_covers_matches_a_typescript_test_by_its_file_and_its_name():
+    from compass_pkg.pytest_report import covers
+    broken = {"tests/acceptance/todos.spec.ts.a new todo is open"}
+    assert covers(broken, TS_OPEN)
+    assert not covers(broken, "no/such/file.ts::a new todo is open")
+    assert not covers(broken, "tests/acceptance/accounts.spec.ts::a new todo is open")
+
+
+def test_covers_keeps_the_file_of_a_test_that_is_not_typescript():
+    """Only JavaScript and TypeScript paths read node's ids; any other path keeps
+    the pytest rule."""
+    from compass_pkg.pytest_report import covers
+    assert not covers({"tests.test_y.test_a"}, "tests/test_x::test_a")
+    assert covers({"tests.test_x.test_a"}, "tests/test_x::test_a")
+
+
 # --- one run, several scenarios (plan decision Q14) ---------------------------------------
 
 def test_one_run_binds_the_red_to_every_scenario(tmp_path):

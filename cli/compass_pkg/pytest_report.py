@@ -24,7 +24,9 @@ A runner that is not pytest is read the same way, from its own JUnit report
 project's runner adapter writes the report there. node:test's JUnit report is
 the one read beside pytest's: a scenario whose `beforeEach` hook failed
 (`failure type="hookFailed"`) is a setup error, and a missing file the hook
-imports is the missing module, named by its path in the project.
+imports is the missing module, named by its path in the project. A test file
+that did not load is a collection error, and a test its describe block
+cancelled did not fail.
 """
 # DEPENDENCY: standard library only, plus compass_pkg itself.
 from __future__ import annotations
@@ -52,6 +54,15 @@ _MISSING = (re.compile(r"^E\s+ModuleNotFoundError: No module named '([^']+)'", r
                        r"'([^']+)' imported from"))
 #: node:test's JUnit `failure` type for a scenario whose hook failed: its setup.
 _HOOK_FAILED = "hookFailed"
+#: node:test's type for a test its describe block cancelled, when the block's own
+#: `before` hook failed: the test did not run, so it did not fail.
+_CANCELLED = "cancelledByParent"
+#: node:test reports a test file that could not load (a syntax error, a missing
+#: package imported at the top) as one failed test named after the file, whose
+#: error holds only the exit code of the file's process.
+_FILE_DID_NOT_LOAD = re.compile(r"\bexitCode: \d+")
+#: A test path that node:test runs: its report names it by file and test name.
+_NODE_TEST_FILE = re.compile(r"\.[cm]?[jt]sx?$")
 # Folders that hold other people's packages, so a name found there is not a
 # module of this project.
 _NOT_THE_PROJECT = frozenset({"node_modules", "site-packages", "venv", "env",
@@ -195,19 +206,27 @@ def _read(report_path):
             message = outcome.get("message") or ""
             if outcome.tag in ("failure", "error"):
                 broken.add(".".join(p for p in (case.get("classname"), name) if p))
-            if outcome.tag == "failure" and outcome.get("type") != _HOOK_FAILED:
-                failed += 1
+            if outcome.tag == "failure":
+                kind = outcome.get("type")
+                if kind == _HOOK_FAILED:
+                    # node:test: the scenario's hook, its setup, failed. It is not
+                    # a failed test, as pytest's setup error is not.
+                    if _missing(outcome.text):
+                        setup.append((name, _missing(outcome.text)))
+                elif kind == _CANCELLED:
+                    pass
+                elif _NODE_TEST_FILE.search(name) \
+                        and _FILE_DID_NOT_LOAD.search(outcome.text or ""):
+                    # node:test: the file did not load, so none of its tests
+                    # ran; pytest calls that a collection error.
+                    collection.append((name, None))
+                else:
+                    failed += 1
             elif outcome.tag == "error" and message == "collection failure":
                 collection.append((name, _missing(outcome.text)))
             elif outcome.tag == "error" and message.startswith("failed on setup") \
                     and _missing(outcome.text):
                 setup.append((name, _missing(outcome.text)))
-            elif outcome.tag == "failure" and outcome.get("type") == _HOOK_FAILED:
-                # node:test: the scenario's hook, its setup, failed. It is not a
-                # failed test, as pytest's setup error is not.
-                if _missing(outcome.text):
-                    setup.append((name, _missing(outcome.text)))
-                continue
     return failed, collection, setup, broken
 
 
@@ -238,11 +257,13 @@ def covers(broken, test):
     `failed_tests` gives? A collection error of its file counts. The match is
     on a suffix, so a run whose root is below the project root still counts.
 
-    A test in a file that is not Python is matched by its name alone: node's
-    JUnit report names each test but not its file (ADR-087)."""
+    A test in a JavaScript or TypeScript file is matched by its file and its
+    name: the runner adapter writes the file as the testcase's classname, so
+    its id is `<file>.<name>` (ADR-087)."""
     path, _, name = test.partition("::")
-    if name and not path.endswith(".py"):
-        return any(c == name or c.endswith("." + name) for c in broken)
+    if name and _NODE_TEST_FILE.search(path):
+        wanted = path.replace("\\", "/").removeprefix("./") + "." + name
+        return any(c == wanted or c.endswith("/" + wanted) for c in broken)
     module = path[:-3] if path.endswith(".py") else path
     module = module.replace("\\", "/").strip("/").replace("/", ".")
     wanted = ".".join(p for p in [module] + name.split("::") if p)

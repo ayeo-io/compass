@@ -13,7 +13,8 @@
  * - Each TEST is a file, or `<file>::<test name>` for one scenario. With no
  *   TEST it runs every `*.spec.ts` file of this folder.
  * - `--workers N` runs up to N files at once, each in its own process.
- * - The JUnit report goes to `--junit PATH`, or else to the path in
+ * - The JUnit report, written by `junitReporter.ts` so that each test names
+ *   its file, goes to `--junit PATH`, or else to the path in
  *   COMPASS_JUNIT_REPORT, where `compass tdd-red` and the other record
  *   commands ask a runner that is not pytest to write it. The terminal shows
  *   node's spec report either way.
@@ -81,7 +82,7 @@ const args = [
   `--test-concurrency=${values.workers}`,
   "--test-reporter=spec",
   "--test-reporter-destination=stdout",
-  ...(report ? ["--test-reporter=junit", `--test-reporter-destination=${report}`] : []),
+  ...(report ? ["--test-reporter=./tests/acceptance/junitReporter.ts", `--test-reporter-destination=${report}`] : []),
   ...names.map((pattern) => `--test-name-pattern=${pattern}`),
   ...files,
 ];

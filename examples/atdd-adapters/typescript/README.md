@@ -17,6 +17,7 @@ The support code the first specification needs:
 | `tests/acceptance/drivers/index.ts` | the driver interface, and `DRIVERS`, the names the factory knows |
 | `tests/acceptance/driverFactory.ts` | the driver factory: one DSL per specification file, and a new driver for each scenario |
 | `tests/acceptance/run.ts` | the runner adapter: chooses the driver, makes the run id and the store, starts `node --test`, and writes the JUnit report |
+| `tests/acceptance/junitReporter.ts` | the JUnit reporter `run.ts` gives node: it names each test's file as the testcase's classname |
 | `tests/acceptance/system.ts` | the API server, started on first use and stopped when the worker's scenarios end |
 | `tests/acceptance/layering.test.ts` | the layering test |
 
@@ -44,10 +45,11 @@ The `beforeEach` hook in `tests/acceptance/driverFactory.ts` imports the chosen 
 
 ## The JUnit report
 
-`tests/acceptance/run.ts` writes node's JUnit report to `--junit PATH`, or to the path in the environment variable `COMPASS_JUNIT_REPORT`. `compass tdd-red` and `compass layering record` set that variable on every command they run. Compass reads the report, not the terminal output:
+`tests/acceptance/run.ts` writes the JUnit report to `--junit PATH`, or to the path in the environment variable `COMPASS_JUNIT_REPORT`. `compass tdd-red` and `compass layering record` set that variable on every command they run. Compass reads the report, not the terminal output:
 
 - `compass tdd-red --loop outer` records the stage 1 red from the report: a scenario whose hook failed because a module of this project is missing is an import red, with the missing file in `missing_modules`. A missing package, one that is not a file of this project, is refused.
-- A scenario's declared test is `<file>::<test name>`, for example `tests/acceptance/todos.spec.ts::a new todo is open`. node's JUnit report names each test but not its file, so Compass matches a TypeScript test by its name: keep each scenario's name unique in the suite.
+- A scenario's declared test is `<file>::<test name>`, for example `tests/acceptance/todos.spec.ts::a new todo is open`. Compass matches it by the file and the name. node's own JUnit reporter names no file, so `run.ts` uses `tests/acceptance/junitReporter.ts`, which writes the file as each testcase's classname.
+- A specification file that does not load, and a test its describe block cancelled, are not a red: no scenario of theirs ran.
 - `compass layering record -- npm run layering` takes the number of tests that ran from the report.
 
 ## Isolation

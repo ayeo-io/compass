@@ -16,6 +16,7 @@ scenario says, and runs the example's own pytest there.
 | `TRC-F2` | a driver name the factory does not know is refused at start-up |
 | `TRC-F3` | the suite passes on two workers and one scenario twice, against one store |
 | `TRC-F4` | a CI job runs the example through both drivers and its layering test |
+| `TRC-J5` | a DSL method named after a banned term fails the layering test, naming the method and the term |
 
 Spec: atdd-python-example/acceptance-criteria.md.
 """
@@ -46,6 +47,8 @@ JOB = "atdd-adapter-python"
 RULE_NO_CHECK = "the DSL makes no check"
 RULE_ALIAS = "every identifier goes through an alias"
 RULE_ONE_CALL = "one DSL call per Given, When or Then line"
+RULE_BANNED = "a DSL method name uses no banned term"
+TERMINOLOGY = ROOT / "governance" / "terminology.yml"
 
 
 def _copy(tmp_path: Path) -> Path:
@@ -267,6 +270,54 @@ def test_trc_j2_the_layering_test_fails_each_planted_breach(tmp_path, breach):
     # Exactly the rule the breach breaks fails, and no other.
     assert f"FAILED {LAYERING}::{layering_test}" in run.stdout, _output(run)
     assert re.search(r"\b1 failed\b", run.stdout), _output(run)
+
+
+# --- a banned term in a DSL method name (`TRC-J5`) ------------------------------------
+
+def _with_terminology(folder: Path) -> None:
+    """Give the copy the banned list a governed project has: Compass's own
+    `governance/terminology.yml`, at the copy's root."""
+    (folder / "governance").mkdir()
+    shutil.copyfile(TERMINOLOGY, folder / "governance" / "terminology.yml")
+
+
+def test_trc_j5_a_banned_term_in_a_dsl_method_name_fails_the_layering_test(tmp_path):
+    folder = _copy(tmp_path)
+    _with_terminology(folder)
+    banned = [entry["term"] for entry in yaml.safe_load(TERMINOLOGY.read_text(
+        encoding="utf-8"))["banned"]]
+    assert "route" in banned, banned
+    path = folder / DSL
+    text = path.read_text(encoding="utf-8")
+    anchor = "\n\nclass Dsl:"
+    method = ("\n    def routeTodo(self, name):\n"
+              "        self._driver.complete(self._scenario.account, name)\n")
+    assert text.count(anchor) == 1
+    text = text.replace(anchor, method + anchor)
+    path.write_text(text, encoding="utf-8")
+    line = text.splitlines().index("    def routeTodo(self, name):") + 1
+    run = _pytest(folder, LAYERING)
+    assert run.returncode == 1, _output(run)
+    assert (f"{DSL}:{line}: {RULE_BANNED}: the method Todo.routeTodo uses the banned "
+            f"term 'route'") in run.stdout, _output(run)
+    assert f"FAILED {LAYERING}::test_no_dsl_method_name_uses_a_banned_term" in run.stdout, \
+        _output(run)
+    assert re.search(r"\b1 failed\b", run.stdout), _output(run)
+
+
+def test_trc_j5_the_example_as_shipped_uses_no_banned_term(tmp_path):
+    folder = _copy(tmp_path)
+    _with_terminology(folder)
+    run = _pytest(folder, LAYERING)
+    assert run.returncode == 0, _output(run)
+    assert _passed(run) == 4, _output(run)
+
+
+def test_trc_j5_without_a_banned_list_the_rule_skips_and_says_why(tmp_path):
+    folder = _copy(tmp_path)
+    run = _pytest(folder, "-rs", LAYERING)
+    assert run.returncode == 0, _output(run)
+    assert "no governance/terminology.yml" in run.stdout, _output(run)
 
 
 # --- the layering test passes within 5 seconds (`TRC-J3`) -----------------------------

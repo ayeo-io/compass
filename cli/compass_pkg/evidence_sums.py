@@ -12,11 +12,10 @@
 #
 # It holds one line for each record file the CLI's evidence writer wrote,
 # with the digest of the bytes written, and one line for each of the issue's
-# files a record names in `file_sha256`, from the newest record that names
-# it (by `timestamp`; in a tie, the record just written). A test corrected
-# between its red and its green is listed with its green-time digest, so a
-# normal red, code, green issue passes; the red record keeps the red-time
-# digest.
+# files in the `file_sha256` of the record written last. A test corrected
+# between its red and its green is listed with its green-time digest, and a
+# file deleted or renamed since the red is not listed, so a normal red, code,
+# green issue passes; the red record keeps the red-time digests.
 #
 # Compass does not read this file to judge anything. `content_digest` stays
 # the identity check (ADR-086); this file is for a reader without Compass.
@@ -32,7 +31,7 @@ import os
 
 from compass_pkg.atomic_io import atomic_write_text
 from compass_pkg.core import find_upwards
-from compass_pkg.red_first import content_digest, load_record
+from compass_pkg.red_first import load_record
 
 NAME = "SHA256SUMS"
 
@@ -105,22 +104,19 @@ def record_written(task_dir, record_path):
         records[written] = _sha256(os.path.join(root, written))
     except OSError:
         return None
-    newest = {}
-    for rel in sorted(records):
-        record = load_record(os.path.join(root, rel))
-        digests = record.get("file_sha256")
-        if not isinstance(digests, dict) or record.get("content_digest") != content_digest(record):
-            continue
-        # Records carry the time to the second, so in a tie the record just
-        # written is the newest; then the file name decides, so the order is
-        # the same on every run.
-        when = (str(record.get("timestamp") or ""), rel == written, rel)
-        for path, digest in digests.items():
-            if isinstance(path, str) and isinstance(digest, str) and len(digest) == 64 \
-                    and (path not in newest or when >= newest[path][0]):
-                newest[path] = (when, digest)
+    # The file lines are the files as the record written last saw them. A
+    # record that holds no `file_sha256` (outside git, or an older format)
+    # keeps the lines already there. Taking every path from the record
+    # written last, not the newest record per path, drops a file the issue
+    # deleted or renamed since an earlier record, and does not hang on
+    # timestamps, which carry only the second.
+    files = {p: d for p, d in held.items() if not p.startswith(prefix)}
+    digests = load_record(os.path.join(root, written)).get("file_sha256")
+    if isinstance(digests, dict):
+        files = {p: d for p, d in digests.items()
+                 if isinstance(p, str) and isinstance(d, str) and len(d) == 64}
     lines = [_line(d, p) for p, d in sorted(records.items())]
-    lines += [_line(newest[p][1], p) for p in sorted(newest) if p not in records]
+    lines += [_line(d, p) for p, d in sorted(files.items()) if p not in records]
     try:
         atomic_write_text(sums, "".join(lines), newline="")
     except OSError:

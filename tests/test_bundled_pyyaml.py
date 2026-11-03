@@ -275,7 +275,9 @@ def _find_yaml_reader_violations(file_texts: dict) -> list:
     (which imports `compass_pkg` first, explicitly), or a heredoc invoked
     through `compass_python` whose OWN body opens `import compass_pkg`
     before its own `import yaml`. Vendored third-party source is exempt - it
-    is not subject to Compass's own resolution rule.
+    is not subject to Compass's own resolution rule - and so is a reference
+    example under `examples/atdd-adapters/`, a stand-alone project with its
+    own pinned PyYAML.
 
     Checked per heredoc, not per file: a `.sh` file with two heredocs (both
     hooks in this repository have exactly that shape) routes each one
@@ -288,6 +290,12 @@ def _find_yaml_reader_violations(file_texts: dict) -> list:
         if rel in ("cli/compass",) or rel.startswith("cli/compass_pkg/"):
             continue
         if rel.startswith("cli/vendor/"):
+            continue
+        if rel.startswith("examples/atdd-adapters/"):
+            # A reference example of four-layer acceptance tests is a project
+            # of its own: a user copies it, runs it from its own folder and
+            # installs the PyYAML its requirements.txt pins. It never runs the
+            # Compass CLI, so cli/vendor/yaml is not on its path to route to.
             continue
         if rel.startswith("hooks/py/") and rel.endswith(".py"):
             # A hook's program file, run through `compass_python` as its
@@ -371,12 +379,17 @@ def test_yaml_reader_detection_flags_a_bypass_and_clears_the_shared_mechanism():
         "cli/compass": "import compass_pkg\nimport yaml\n",
         "cli/vendor/yaml/__init__.py": "import io, re\nfrom .error import *\n",
         "scripts/mixed.sh": mixed_two_heredoc_file,
+        # A reference example of four-layer acceptance tests is a project of
+        # its own, with its own pinned PyYAML; any other example is not exempt.
+        "examples/atdd-adapters/python/tests/acceptance/test_layering.py": bypassing_python,
+        "examples/bdd-adapters/behave/steps.py": bypassing_python,
     })
 
     assert violations == [
         "scripts/lib/bypassing.sh:3",
         "scripts/rogue_reader.py:1",
         "scripts/mixed.sh:9",
+        "examples/bdd-adapters/behave/steps.py:1",
     ]
 
 

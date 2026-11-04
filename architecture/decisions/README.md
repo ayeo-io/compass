@@ -129,6 +129,7 @@ Rules:
 | [ADR-087](ADR-087-a-runner-that-is-not-pytest-writes-its-junit-report-where-compass-names-it.md) | A runner that is not pytest writes its JUnit report where Compass names it | accepted | with ADR-081 and ADR-086 |
 | [ADR-088](ADR-088-each-scenario-needs-a-red-before-its-first-green.md) | Each scenario needs a red before its first green | accepted | with ADR-038, ADR-081 and ADR-082 |
 | [ADR-089](ADR-089-red-and-green-records-hold-sha256-digests-of-their-files.md) | Red and green records hold SHA-256 digests of their files | accepted | with ADR-038, ADR-086 and ADR-088 |
+| [ADR-090](ADR-090-compass-runs-in-one-session-with-no-stage-agents.md) | Compass runs in one session with no stage agents | accepted | with ADR-030, ADR-071, ADR-076 and ADR-078 |
 
 ## Principle → ADR mapping
 

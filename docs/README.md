@@ -22,7 +22,6 @@ the table does not exist, and when a doc in this folder is not listed.
 - [artifact-catalog.md](artifact-catalog.md) - the artifact catalog: the fields of a kind, the skeleton, the word limits, the documents that repeat, the documents per work unit and the table of shipped kinds.
 - `artifact-catalogue.md` - the old name of the artifact catalog page, kept until 9.0.0 so a link to it opens the new page.
 - [multiagent-protocol.md](multiagent-protocol.md) - how a multiagent issue is run, step by step.
-- [headless-runner.md](headless-runner.md) - `compass run`: one stage of one issue with nobody in the session.
 - [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.
 - [autonomy-and-cost.md](autonomy-and-cost.md) - checkpoint outcomes, the landing refusal, the session record and usage at ship, and the autonomy ratio, bands and cost per change that `compass retro --impact` and `compass issue diagnose` derive from them: shapes, commands, definitions, the read limit and the floors.
 - [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
@@ -61,7 +60,6 @@ the table does not exist, and when a doc in this folder is not listed.
 - [policy-update.md](policy-update.md) - `compass policy update`: the major bump, the waiver re-check, the terminal re-approval, the exit codes and the JSON shape.
 - [security.md](security.md) - what Compass adds to a repository, and how to review it.
 - [readiness.md](readiness.md) - `compass readiness`: the readiness signals, the project commands it runs in a temporary worktree within one time budget, the readiness record and when it is fresh.
-- [execution-profiles.md](execution-profiles.md) - `compass profile lint|add|show`: the profile file, its digest, the store and the component registry, the resolver and every reason code.
 - [portability.md](portability.md) - the adapter boundary, for running Compass outside Claude Code.
 
 ## Background
@@ -120,9 +118,9 @@ same commit.
 | `commands/`, `agents/`, `schemas/` | `skills/compass-runtime/SKILL.md` |
 | `cli/compass_pkg/tdd.py`, `cli/compass_pkg/tdd_green.py`, `cli/compass_pkg/green_attempts.py`, `cli/compass_pkg/evidence_identity.py`, `cli/compass_pkg/evidence_sums.py` | `skills/evidence-gates/SKILL.md` |
 | `cli/compass_pkg/subtasks.py`, `cli/compass_pkg/loop_ceilings.py`, `cli/compass_pkg/multiagent_check.py`, `scripts/multiagent.sh`, `scripts/integrate.sh` | `docs/multiagent-protocol.md` |
-| `cli/compass_pkg/run_cmd.py`, `cli/compass_pkg/host_launch.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/compliance.py`, `ci/headless-verify.yml` | `docs/headless-runner.md` |
-| `cli/compass_pkg/record.py` | `docs/delivery-record.md` |
-| `cli/compass_pkg/checkpoint_outcomes.py`, `cli/compass_pkg/session_record.py`, `cli/compass_pkg/session_usage.py`, `cli/compass_pkg/issue_usage.py`, `cli/compass_pkg/autonomy_cost.py` | `docs/autonomy-and-cost.md` |
+| `cli/compass_pkg/host_launch.py` | `evals/README.md` |
+| `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py` | `docs/delivery-record.md` |
+| `cli/compass_pkg/compliance.py`, `cli/compass_pkg/checkpoint_outcomes.py`, `cli/compass_pkg/session_record.py`, `cli/compass_pkg/session_usage.py`, `cli/compass_pkg/issue_usage.py`, `cli/compass_pkg/autonomy_cost.py` | `docs/autonomy-and-cost.md` |
 | `cli/compass_pkg/github_labels.py`, `cli/compass_pkg/github_page.py`, `cli/compass_pkg/github_sync_record.py`, `cli/compass_pkg/publish_check.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `tests/fake_gh.py` | `docs/github-labels.md` |
 | `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |
 | `cli/compass_pkg/artifact_status.py`, `cli/compass_pkg/decisions_taken.py` | `architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md` |
@@ -150,7 +148,6 @@ same commit.
 | `hooks/hooks.json`, the adapter boundary | `docs/portability.md` |
 | `cli/compass_pkg/project_commands.py`, `cli/compass_pkg/trust.py` | `docs/security.md` |
 | `cli/compass_pkg/readiness_cmd.py`, `cli/compass_pkg/readiness_signals.py`, `cli/compass_pkg/readiness_run.py`, `cli/compass_pkg/readiness_record.py`, `cli/compass_pkg/readiness_registry.py`, `cli/compass_pkg/readiness_catalogue.py`, `schemas/readiness-record.schema.json` | `docs/readiness.md` |
-| `cli/compass_pkg/execution_profile.py`, `cli/compass_pkg/execution_profile_store.py`, `cli/compass_pkg/execution_profile_cmd.py`, `schemas/execution-profile.schema.json` | `docs/execution-profiles.md` |
 | `evals/` | `evals/README.md` |
 | `ci/` | `ci/README.md` |
 | `architecture/` | `architecture/decisions/README.md` |

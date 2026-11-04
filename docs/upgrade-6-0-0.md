@@ -10,7 +10,7 @@ This page lists every word, key and command that 6.0.0 renames, what reads the o
 | Stage mode and artifact depth | `light` | `lightweight` |
 | Stage mode and artifact depth | `full-plus-backfill` | `thorough-with-follow-up` |
 | Size | `standard` | `medium` |
-| Run stage (`compass run --stage`) | `build` | `implement` |
+| Run stage (the stage flag of the headless runner, which 9.0.0 removed) | `build` | `implement` |
 | Friction record key and flag | `phase`, `--phase` | `stage`, `--stage` |
 | Stored issue status | `queued`, `parked` | `backlog` (a hold) |
 | Stored issue status | `landed` | `done` with close reason `completed` |

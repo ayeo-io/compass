@@ -240,9 +240,6 @@ full account is in [docs/security.md](docs/security.md).
   `compass record sync`, which `compass ship-commit` also runs. It happens
   only when `compass.yml` names a `record:` remote, and it redacts
   credentials.
-- **Starts** host sessions (`claude -p`) with `compass run`, which sends their
-  prompts through Claude Code as any session does. Compass denies those
-  sessions `git push` and `gh pr merge` by command prefix.
 - **Runs** commands on your machine: the test command you give `compass
   tdd-red`, `compass tdd-green` and `compass quick-fix finish`, and, when
   `allow_project_commands` is true, your project's own guardrails declared

@@ -858,7 +858,8 @@ def _timeout_problems(paths) -> list[str]:
 def test_crt_14_every_job_has_a_timeout(tmp_path):
     """Every job in every workflow ends at its own timeout."""
     files = sorted(WORKFLOWS.glob("*.yml"))
-    assert len(files) >= 5, files
+    # 4 since 9.0.0 removed compass-run-demo.yml with `compass run` (ADR-090).
+    assert len(files) >= 4, files
     assert _timeout_problems(files) == []
     assert _load("compass.yml")["jobs"]["serial"]["timeout-minutes"] == 20
 

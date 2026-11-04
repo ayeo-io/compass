@@ -34,6 +34,6 @@ def test_dl_1_the_readme_says_what_compass_runs_sends_and_fetches():
     section = readme.split("## What Compass runs, sends and fetches", 1)[1]
     section = section.split("\n## ", 1)[0]
     for named in ("compass intent ingest", "compass record sync",
-                  "compass run", "command-passes", "evals/harness.py",
+                  "command-passes", "evals/harness.py",
                   "transcript"):
         assert named in section, named

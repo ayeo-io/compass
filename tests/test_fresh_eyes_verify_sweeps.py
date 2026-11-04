@@ -346,7 +346,8 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
     # word_ceiling. 101 since ADR-076 added execution-profile and component-registry.
     # 109 since the four-layer acceptance strategy's eight terms joined
     # (governance/decisions/2026-10-29-a-strategy-can-carry-checks-a-step-off-makes-advisory.md).
-    assert len(terminology["terms"]) == 109, (
+    # 107 since 9.0.0 removed execution profiles with their two terms (ADR-090).
+    assert len(terminology["terms"]) == 107, (
         "governance/terminology.yml gained or lost a term without this count "
         "moving. A vocabulary change is a decision (ADR-012); make it one."
     )
@@ -363,10 +364,8 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         "init", "quick-fix",
         "decision",  # decisions-ledger (ADR-027): the settled-decisions ledger
         "lesson",  # project-lessons (ADR-029): lessons for later sessions
-        "run",  # headless-runner (ADR-030): a stage run with nobody in the session
         "record",  # delivery-record (ADR-031): the record kept off the laptop
         "board",  # compass-board (ADR-046): the delivery board page
-        "profile",  # execution-profile-manifests (ADR-076): `profile lint|add|show`
         "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
         "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
         # isolation-and-layering (#328, ADR-086): `isolation record`, `layering record`

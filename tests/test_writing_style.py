@@ -2536,6 +2536,23 @@ def _looks_like_runtime_evidence(path: str) -> bool:
 # replacement.
 _LEGACY_SETTINGS_PATHS = frozenset({".compass/config.yml"})
 
+# The files 9.0.0 deleted with the stage agents, the multiagent breakdown,
+# model tiers, execution profiles and the headless runner (ADR-090). A decision
+# record is history: it names the file as it was when the decision was taken,
+# and it is never edited to follow a deletion. Only these exact paths are
+# excused, and only in the two folders that hold decision records; any other
+# file that names one is still reported.
+_REMOVED_IN_9_0_0 = frozenset({
+    "cli/compass_pkg/run_cmd.py", "docs/headless-runner.md", "ci/headless-verify.yml",
+    "scripts/run-demo.sh", ".github/workflows/compass-run-demo.yml",
+    "tests/test_run_cmd.py", "tests/test_headless_runner.py",
+    "tests/test_headless_runner_doc.py", "tests/test_run_demo.py",
+    "cli/compass_pkg/execution_profile.py", "cli/compass_pkg/execution_profile_cmd.py",
+    "cli/compass_pkg/execution_profile_store.py", "schemas/execution-profile.schema.json",
+    "docs/execution-profiles.md", "tests/test_execution_profiles.py",
+})
+_DECISION_RECORD_FOLDERS = ("architecture/decisions/", "governance/decisions/")
+
 
 def test_pbw_a8_only_the_exact_runtime_record_path_may_be_missing():
     assert not _find_missing_reference(
@@ -2553,6 +2570,8 @@ def _find_missing_reference(span: ProseSpan) -> list[Finding]:
             continue
         path = match.group(1)
         if path in _LEGACY_SETTINGS_PATHS or path in _RUNTIME_STATE_PATHS:
+            continue
+        if path in _REMOVED_IN_9_0_0 and span.path.startswith(_DECISION_RECORD_FOLDERS):
             continue
         if _looks_like_issue_citation(path) or _looks_like_runtime_evidence(path):
             continue
@@ -2620,6 +2639,18 @@ def test_pbw_a8_a_scenario_path_resolves_only_in_its_own_seed():
     assert _find_missing_reference(missing)
     present = ProseSpan(scenario_file, 1, f"See `{named}`.", "markdown")
     assert not _find_missing_reference(present)
+
+
+def test_pbw_a8_a_path_9_0_0_removed_is_excused_only_in_a_decision_record():
+    """A decision record may name a file 9.0.0 deleted. Another file may not,
+    and a decision record may not name any other missing path."""
+    line = "The runner is `cli/compass_pkg/run_cmd.py`."
+    for record in ("architecture/decisions/ADR-030-x.md", "governance/decisions/2026-x.md"):
+        assert not _find_missing_reference(ProseSpan(record, 1, line, "markdown"))
+        assert _find_missing_reference(
+            ProseSpan(record, 1, "See `cli/compass_pkg/no_such_module.py`.", "markdown"))
+    for other in ("docs/x.md", "architecture/ownership.md", "README.md"):
+        assert _find_missing_reference(ProseSpan(other, 1, line, "markdown")), other
 
 
 def test_pbw_a8_only_the_legacy_settings_path_may_be_missing():
@@ -3825,7 +3856,9 @@ _GROWING_REACH = {
     # 160 with the three check-corpus case labels of `outer-loop-attempts-recorded`.
     # 166 with the six check-corpus case labels of `isolation-proven` and
     # `layering-test-passed`, three each.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 166),
+    # 157 when 9.0.0 removed execution profiles and the nine files of
+    # tests/fixtures/execution-profiles/ (ADR-090).
+    "PBW-C4": (lambda path: path.startswith("tests/"), 157),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

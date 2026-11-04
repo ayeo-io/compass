@@ -191,7 +191,8 @@ def parse_with_aliases(build_parser, raw, parse):
         return parse(build_parser(), argv)
     except SystemExit as exc:
         if exc.code == 2:
-            line = hint_for(argv)
+            from compass_pkg.removed_parts import line_for
+            line = hint_for(argv) or line_for(argv)
             if line:
                 sys.stderr.write(line + "\n")
         raise

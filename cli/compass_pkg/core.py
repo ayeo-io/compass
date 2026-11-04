@@ -258,9 +258,8 @@ def resolve_issue_dir(slug=None):
 
     Priority: explicit slug > COMPASS_ISSUE > .compass/current-task pointer >
     most recently changed dir under .compass/work/ (with a warning -
-    ambiguous). COMPASS_ISSUE names one session's issue: `compass run` sets
-    it, so an unattended session never works on the person's issue. A bad
-    value is refused, not passed over for the pointer.
+    ambiguous). COMPASS_ISSUE names one session's issue, so two sessions in
+    one project can work on two issues. A bad value is refused, not passed over for the pointer.
     """
     compass_dir = find_compass_dir()
     work = os.path.join(compass_dir, "work")

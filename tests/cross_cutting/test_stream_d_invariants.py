@@ -82,7 +82,6 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
     "terminology",                # the CLI-voice slice: the glossary verb
     "review-rule", "spec",        # `review-rule list` and `spec sync`
     "preset",                     # `preset init` and `preset test`
-    "profile",                    # `profile lint`, `add` and `show` - execution profiles
     "analyze", "next",            # cross-issue-architectural-integrity
     "ship-commit",                # framework-field-feedback `R5`
     "gate", "scenario", "changed-file", "evidence",  # framework-field-feedback `R6`/`R9`
@@ -133,7 +132,6 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # the delivery board as one page. A GROUP, so
                                   # a later board verb has a home.
     "lesson",                     # project-lessons (ADR-029)
-    "run",                        # headless-runner (ADR-030)
     "record",                     # delivery-record (ADR-031)
     "release",                    # intent-and-release-line (ADR-065): `compass
                                   # release notes --since <ref>`, read-only. A

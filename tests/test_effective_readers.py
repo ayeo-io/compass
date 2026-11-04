@@ -554,7 +554,7 @@ def test_ef_7_the_ceiling_in_force_is_the_one_the_generation_stored(tmp_path, mo
 
 def test_ef_7_the_callers_pass_the_issue(tmp_path):
     import re
-    for name in ("subtasks", "run_cmd", "multiagent_check"):
+    for name in ("subtasks", "multiagent_check"):
         text = (ROOT / "cli" / "compass_pkg" / f"{name}.py").read_text(encoding="utf-8")
         calls = re.findall(r"\bloop_ceilings\(([^)]*)\)", text)
         calls = [c for c in calls if c.strip() and "def " not in c]
@@ -677,7 +677,7 @@ EXPECTED_READS = {
     # judged reads guardrails.yml only after view_or_legacy returns None (ADR-050); it
     # runs every check outside a gate (ADR-064).
     ("outside_gate", "judged"): 1, ("check_cmd", "cmd_check"): 2, ("checks", "_check_gate_evidence"): 1,
-    ("github_labels", "declared_labels"): 1, ("execution_profile", "ceilings"): 1,
+    ("github_labels", "declared_labels"): 1,
     ("checks", "_check_command_passes"): 1, ("flow", "_routing_labels"): 1,
     ("lessons", "_guardrail_ids"): 1, ("loop_ceilings", "loop_ceilings"): 1,
     ("manifest", "_load_gate_requirements"): 1, ("quick_fix_cmd", "_quick_fix_blockers"): 1,

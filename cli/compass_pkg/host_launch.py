@@ -2,10 +2,9 @@
 # =============================================================================
 # compass - start one `claude -p` session
 # =============================================================================
-# The one place Compass starts a model session (ADR-030). `compass run`
-# calls it once per cycle, and the eval harness (`evals/harness.py`) calls it
-# for every session it drives, so the two cannot drift into two launchers
-# with different arguments or different handling of a hung session.
+# The one place Compass starts a model session (ADR-030). The eval harness
+# (`evals/harness.py`) calls it for every session it drives. 9.0.0 removed
+# `compass run`, its other caller (ADR-090).
 #
 # It starts the process and returns what came back. It reads no credential
 # and adds none: the caller's environment is passed on as it is.

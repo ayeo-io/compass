@@ -482,7 +482,7 @@ def test_vr_c16_a_landed_by_pointer_holds_between_completed_issues(
 
 
 # --- the readers of the configuration: generation, effective, policy,
-# --- issue_config_cmd, run_cmd ----------------------------------------------
+# --- issue_config_cmd ----------------------------------------------
 
 # A closed issue keeps the configuration it closed under; a hold and work in
 # flight can still change it.

@@ -505,7 +505,7 @@ resume by reading the files rather than reconstructing chat history.
 The hooks and the CLI judge work against the current issue:
 `.compass/current-task`, or `COMPASS_ISSUE` when a session's environment
 sets it. `COMPASS_ISSUE` comes first, so two sessions in one project can work
-on two issues; `compass run` sets it for each unattended session. A value
+on two issues. A value
 that names no issue is refused (`bad-session-issue-restart`), never passed over
 for the pointer. That order holds in the session's own project. In a worktree
 the order reverses for Edit and Write, and for a Bash call whose working

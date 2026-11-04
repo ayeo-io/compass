@@ -1,8 +1,7 @@
 """An interactive quick fix records the tokens spent in each stage.
 
-Only `compass run` sessions recorded cost; an interactive session recorded
-none, so the token premium of the quick-fix path could be sized but not
-located (#375, the token-cost requirement added on 3 October). `quick-fix finish` now reads the
+An interactive session recorded no cost, so the token premium of the
+quick-fix path could be sized but not located (#375, the token-cost requirement added on 3 October). `quick-fix finish` now reads the
 session's own Claude Code transcript and records tokens per stage.
 
 The transcripts here are written by the test in Claude Code's shape, with

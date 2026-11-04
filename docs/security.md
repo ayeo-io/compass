@@ -86,16 +86,13 @@ only in the cases below, and each one starts only when you ask for it.
   only when `compass.yml` (or `.compass/config.yml` in a project without one)
   names a `record:` remote; it redacts
   credentials, and rival product names when `record.names_key` is set.
-- **Starts** host sessions (`claude -p`) with `compass run`, which sends their
-  prompts through Claude Code as any session does. Those sessions may not push
-  or merge.
 - **Runs** commands on your machine: the test command you give `compass
   tdd-red`, `compass tdd-green` and `compass quick-fix finish`, your
   project's own guardrails declared with `check: command-passes`, git in your
   repository, and the CLI itself from the plugin's hooks.
 - **Reads** the current Claude Code session's own transcript when a quick fix
   finishes, keeping only token counts, model names and times
-  (`docs/headless-runner.md`).
+  (`docs/autonomy-and-cost.md`).
 - **Clones and installs** other frameworks only in the evaluation harness,
   `evals/harness.py`, which maintainers run by hand to compare conditions.
 

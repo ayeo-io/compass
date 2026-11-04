@@ -170,10 +170,16 @@ else
           | xargs -0 grep -ohE '(scripts|hooks)/[a-z-]+\.sh' 2>/dev/null \
           | sort -u || true)"
 fi
+# The scripts 9.0.0 removed (ADR-090). Decision records, archived issues and
+# the release history name them as they were, and are never rewritten to
+# follow a deletion, so a reference to one of these is not a broken one.
+REMOVED_SCRIPTS="scripts/run-demo.sh"
 for ref in $REFS; do
   if [ -f "$ref" ]; then
     if [ -x "$ref" ]; then ok "exec $ref  <- referenced, exists, executable"
     else fail "referenced $ref exists but is not executable (chmod +x it)"; fi
+  elif has "$ref" "$REMOVED_SCRIPTS"; then
+    ok "gone $ref  <- removed in 9.0.0 (ADR-090), named by a record of earlier work"
   else
     fail "referenced $ref does not exist"
   fi

@@ -997,7 +997,6 @@ _TAIL_EXEMPT = {
     "issue subtask set": "needs a recorded subtask the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
     "record sync": "needs a record repository to push to; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
     "record restore": "needs a record repository to read; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
-    "run": "starts claude sessions, so it needs a stub executable the fixture does not have; test_headless_runner.py runs it against one, without measuring its output against this contract",
     "issue use": "writes the pointer and the session record of an existing issue; test_current_task_lease.py runs it, without measuring its output against this contract",
     "spec sync": "merges a base branch and commits; test_living_spec_refresh.py runs it in a temporary repository, without measuring its output against this contract",
     "issue decision add": "writes one manifest key and needs an issue with a requirements review or full flags; test_decisions_taken.py runs it, without measuring its output against this contract",

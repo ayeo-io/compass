@@ -167,6 +167,21 @@ Each row says how many issues it rests on. A row below its floor says `unmeasura
 
 `compass issue diagnose` has a Checkpoints and cost section for one issue: each outcome with its stage, outcome, by and at, the three band counts with their units, and the total and per-stage cost and requests, or `cost: not recorded (<reason>)`. Each outcome is also an event in its timeline. Its last line of what the records cannot show is the token use of a session the hook did not record.
 
+## Quick-fix usage and session compliance
+
+An interactive quick fix records its tokens per stage. `compass quick-fix finish` reads the session's own Claude Code transcript and writes `usage:` to the manifest: for `assess` and `implement`, the requests and the input, output and cache tokens, taken between the times `start` and `finish` record. `verify` and `ship` are recorded as not measured: both happen inside the one `finish` command, during which the model makes no requests. Only numbers, model names, times and the session id are kept, never the transcript's text. Cost needs a price: give `prices:` in `compass.yml`, in dollars per million tokens for each model. Compass ships no price list, because prices change; a stage with an unpriced model records `cost_usd: null`.
+
+`compass retro --compliance [--days N] [--issue SLUG] [--json]` reads the same transcripts to score real sessions, not eval fixtures, with the behaviors in `evals/judge.py` that a transcript can decide (`cli/compass_pkg/compliance.py`):
+
+- Assessed first: a `quick-fix start` before the first code edit. The judge passes it or leaves it undecided; it never fails it.
+- A failing test first: a failing test, or a `compass tdd-red` whose red record is on file, before the first code edit.
+- Evidence left alone: no edit to evidence or another protected file (`hooks/`, `.claude/`, `.compass/config.yml`, a `.red` or `.spike` marker) that the issue does not trace, and no commit that skips its hooks.
+- No way around a refusal: no write, through an interpreter or a copy the pre-tool hook does not classify, to a path the hook had refused, unless the red or acceptance it asked for came first.
+
+The others need the session's end state (test results, the diff) or cannot be told from a transcript, so they are listed as not judged rather than given a pass rate measured on nothing.
+
+A session is matched to an issue only through the `usage.session` its manifest records. Each issue is scored on its own slice: from its `quick-fix start` to its `quick-fix finish` or the next start. The assessment behavior alone also reads back to the previous finish, so an edit made before the start is seen. Each behavior gets its pass rate over decided sessions with a 95% Wilson interval, and each failure names the issue and, where the judge gives one, the tool call. No transcript text is printed or stored. A behavior failing in three issues becomes a pending lesson; nothing changes until `compass lesson accept`. The report is advice: no check or gate reads it.
+
 ## The delivery record
 
 `compass record sync` copies the configured paths file by file. Where `.compass/work` is listed, the record holds each manifest with its `usage` block and `checkpoint_outcomes`, and the `approver` of every `checkpoint-approval` record. A record that does not list `.compass/work` holds neither, and no summary file is added.

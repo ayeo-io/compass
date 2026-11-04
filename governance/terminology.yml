@@ -735,24 +735,6 @@ terms:
       when the measurement ends.
     related: [readiness-record]
 
-  # --- Execution profiles (ADR-076) ------------------------------------------
-  execution-profile:
-    means: >
-      One fixed, versioned way of working, kept as a file in the `profiles`
-      folder of the project. It names a model tier and an effort, the exact
-      revision of every skill, prompt fragment and piece of tool guidance, and
-      the limits of an unattended run. It decides how eligible work is done,
-      never whether it is allowed. Content that does not change gives the same
-      digest, and a change gives a new version.
-    related: [component-registry]
-  component-registry:
-    means: >
-      The file `component-registry.yml` in the `profiles` folder. It lists the
-      skills, prompt fragments and tool guidance that exist, each at an exact
-      revision, with the runner versions it supports and a recorded approval.
-      `compass profile show` reads it and never writes it.
-    related: [execution-profile]
-
   # --- The four-layer acceptance strategy, `S17` ------------------------------
   four-layer-acceptance-strategy:
     means: >

@@ -128,6 +128,10 @@ configuration.
 
 ## What a session sees, and what it is told
 
+The harness starts each session through `cli/compass_pkg/host_launch.py`,
+the one place Compass starts a `claude -p` session (ADR-030). It passes the
+caller's environment on as it is and adds no credential.
+
 - "Assessed before first edit" counts an edit the hook blocked as the
   first code edit: the question is whether the session assessed before it
   tried to change code. A successful `compass quick-fix start` with real

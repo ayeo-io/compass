@@ -927,7 +927,7 @@ import ast  # noqa: E402
 PACKAGE = ROOT / "cli" / "compass_pkg"
 READERS = ("checks", "check_cmd", "routing", "receipt", "manifest", "calibration", "flow",
            "quick_fix_cmd", "loop_ceilings", "lessons", "review_rules", "approach_diagram",
-           "subtasks", "run_cmd", "multiagent_check")
+           "subtasks", "multiagent_check")
 RESOLVER_MODULES = {"merge", "obligations", "classify", "waivers", "policy_lint",
                     "generation"}
 

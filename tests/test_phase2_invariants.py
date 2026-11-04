@@ -135,7 +135,6 @@ EXPECTED_SUBCOMMANDS = {
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
     "review-rule", "spec", "preset",  # `review-rule list`, `spec sync`, `preset init|test`
-    "profile",                    # `profile lint|add|show` - execution profiles
     # `init` creates `.compass/config.yml` and `.compass/work/`, and is safe
     # to run twice. It exists because no other command owns initialisation,
     # and the five entry points call it directly.
@@ -152,7 +151,6 @@ EXPECTED_SUBCOMMANDS = {
     # decisions-ledger (ADR-027): a group, record|list|show|check.
     "decision",
     "lesson",  # project-lessons (ADR-029)
-    "run",  # headless-runner (ADR-030)
     "record",  # delivery-record (ADR-031)
     "board",  # compass-board (ADR-046): render|refresh - the delivery board page
     "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository

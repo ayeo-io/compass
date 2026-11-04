@@ -712,57 +712,9 @@ def test_vr_e14_the_rewrite_reads_arguments_only_from_the_command_line():
     assert aliases.rewrite(["issue", "dashboard", "render"]) == (["issue", "dashboard", "render"], None)
 
 
-# --- VR-E7, VR-E8, VR-E14 (the run half): the run stage implement -------------
-# The headless-runner tests own the stub `claude` and the project it runs in.
-
-sys.path.insert(0, str(ROOT / "tests"))
-from test_headless_runner import project as headless_project  # noqa: E402,F401
-from test_headless_runner import (_calls as _stub_calls,  # noqa: E402
-                                  _last_run as _stub_last_run,
-                                  _run as _stub_run)
-
-
-def test_vr_e7_run_stage_implement_runs_the_implement_stage(headless_project):
-    result = _stub_run(headless_project, "--max-cycles", "1", plan=("touch",),
-                       stage="implement")
-    assert result.returncode == 4, result.stdout + result.stderr   # one cycle, no stage done
-    assert not _notices(result.stderr), result.stderr
-    assert "usage:" not in result.stderr
-    message = _stub_calls(headless_project)[0]
-    assert "/compass:implement" in message[message.index("-p") + 1]
-    assert _stub_last_run(headless_project)["stage"] == "implement"
-    assert "build" not in result.stdout
-    # The run is a writer too: the manifest it saved holds no old word.
-    from compass_pkg import word_map
-    saved = yaml.safe_load((headless_project / ".compass" / "work" / "multi"
-                            / "manifest.yml").read_text(encoding="utf-8"))
-    assert word_map.old_words(saved) == [], word_map.old_words(saved)
-
-
-def test_vr_e7_the_stage_help_lists_implement_and_not_build(tmp_path):
-    rc, out, err = _run(["run", "--help"], _project(tmp_path / "p"))
-    assert rc == 0, err
-    words = out.lower().replace("|", " ").replace(",", " ").split()
-    assert "implement" in words and "verify" in words, out
-    assert "build" not in words, out
-
-
-def test_vr_e8_run_stage_build_is_refused_and_runs_no_stage(headless_project):
-    result = _stub_run(headless_project, "--max-cycles", "1", plan=("touch",),
-                       stage="build")
-    assert result.returncode == 2, result.stdout + result.stderr
-    assert not _notices(result.stderr), result.stderr
-    assert "is now '" not in result.stderr, result.stderr
-    assert _stub_calls(headless_project) == []
-
-
-def test_vr_e8_the_equals_form_is_refused_too(headless_project):
-    import subprocess as sp
-    done = sp.run([sys.executable, str(CLI), "run", "multi", "--stage=build"],
-                  cwd=str(headless_project), capture_output=True, text=True)
-    assert done.returncode == 2, done.stderr
-    assert not _notices(done.stderr), done.stderr
-    assert "cannot run unattended" in done.stderr, done.stderr
+# --- VR-E14 (the run half): a planted value row ---------------------------------
+# 9.0.0 removed `compass run` (ADR-090), so the value row is proved on a
+# planted table only.
 
 
 def test_vr_e14_a_planted_value_row_is_rewritten_in_both_forms():

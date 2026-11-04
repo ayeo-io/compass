@@ -312,12 +312,10 @@ EXPECTED_SUBCOMMANDS = {
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
     "review-rule", "spec", "preset",  # `review-rule list`, `spec sync`, `preset init|test`
-    "profile",                    # `profile lint|add|show` - execution profiles
     "init",                       # creates .compass/ - safe to run twice
     "acceptance",                 # the acceptance verb group
     "quick-fix",                  # start|finish - the quick-fix verb group
     "lesson",                     # add|list|remove|propose|accept - project lessons (ADR-029)
-    "run",                        # one stage of one issue unattended (ADR-030)
     "record",                     # sync|restore - the delivery record (ADR-031)
     "decision",                   # record|list|show|check - the ledger (ADR-027)
     "board",                      # render|refresh - the delivery board page (ADR-046)

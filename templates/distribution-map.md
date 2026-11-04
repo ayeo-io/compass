@@ -1,13 +1,11 @@
 <!--
 TEMPLATE: distribution-map.md
-Role in the pipeline: the record of what could run in parallel and why.
-The plan stage produces it; `scripts/multiagent.sh` reads it to create
-worktrees. It is owed only when the issue records two or more subtasks.
-With one subtask, or none yet, `compass check` reads it as "not needed" and
-no file is asked for.
+Role in the pipeline: the record of how the work splits into units and why.
+The plan stage produces it, and the session builds the units in the order
+it gives. Compass starts no worktree and no agent for it (ADR-090).
 
 Independence has two tests, both must hold: disjoint code AND disjoint
-scenario groups (see the worktree-multiagent skill).
+scenario groups.
 
 Fill every {{PLACEHOLDER}}.
 -->
@@ -21,13 +19,8 @@ Fill every {{PLACEHOLDER}}.
 
 ## Work units
 
-<!-- The line below is the one the CLI reads when this map is registered
-     with `compass issue artifact set distribution-map`. Write the number of
-     independent work units, or their list, such as [U1, U2]. On a
-     multiagent breakdown a map without it is refused. With one unit,
-     registering the map records the breakdown as one subtask that this
-     session runs itself: no worktree, no builder and no waiver. Registering
-     verification-report in `/compass:verify` completes that record. -->
+<!-- Write the number of independent work units, or their list, such as
+     [U1, U2]. -->
 
 units: {{N}}
 
@@ -63,26 +56,22 @@ units: {{N}}
 
 <!-- Optional Wave column. Add it only when the subtasks cannot all start at
      once - a dependent unit whose foundation must land first, or a count
-     over the worktree cap - by giving the table a "Wave" column, with a
-     positive whole number on every row. `scripts/multiagent.sh` finds the
-     column by its header, so it can sit anywhere in the table:
+     over the cap - by giving the table a "Wave" column, with a
+     positive whole number on every row:
 
      | Subtask | Owns work unit(s) | Owns scenario ids | Branch name | Wave |
      |---|---|---|---|---|
      | subtask-1 | U1 | `TRC-A1` | compass/<issue-slug>/subtask-1 | 1 |
      | subtask-2 | U2 | `TRC-B1` | compass/<issue-slug>/subtask-2 | 2 |
 
-     `scripts/multiagent.sh` then provisions one wave at a time: `--wave N`
-     creates that wave's worktrees only, and the cap is measured against
-     that wave's row count rather than the map's total. With no Wave column,
+     The session then builds one wave after another. With no Wave column,
      as above, every subtask is one wave. -->
 
 ## Proposed worktree orchestration
 
 - Proposed orchestration: {{solo \| pair (2–3) \| multiagent (4+)}}
 - Proposed subtask count: {{N}}
-- Worktree root: {{`multiagent.worktree_root` in compass.yml (or .compass/config.yml without one), default ../.compass-worktrees}}
-- One worktree + one `builder` per subtask; {{plus one `orchestrator` (multiagent) \| lead builder integrates (pair)}}.
+- The session builds each subtask in turn, in its own tree; no worktree or agent is started.
 
 ## The cap that applies
 
@@ -110,4 +99,4 @@ units: {{N}}
 <!-- compass:render breakdown-exit -->
 <!-- /compass:render -->
 
-Next stage: **break down the work** (`/compass:breakdown`) - runs `scripts/multiagent.sh` with this map.
+Next stage: **break down the work** (`/compass:breakdown`) - orders the units for this session to build.

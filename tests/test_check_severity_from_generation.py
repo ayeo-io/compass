@@ -210,8 +210,7 @@ def test_cs_7_no_shipped_check_that_can_return_nothing_to_check_declares_fail():
                  if body.get("on_skipped") == "not-applicable"}
     assert {"scenarios-are-executable", "claim-traces-to-scenario", "command-passes",
             "borrowed-documents-answered", "evidence-matches-tree",
-            "evidence-identity-matches", "dod-evidence-typed", "landed-by-resolves",
-            "multiagent-run-recorded"} <= declining
+            "evidence-identity-matches", "dod-evidence-typed", "landed-by-resolves"} <= declining
 
 
 # --- CS-8: the JSON shape --------------------------------------------------------------------

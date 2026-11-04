@@ -552,15 +552,6 @@ def test_ef_7_the_ceiling_in_force_is_the_one_the_generation_stored(tmp_path, mo
     assert {limit for limit, _ in loop_ceilings.loop_ceilings(task).values()} == {1}
 
 
-def test_ef_7_the_callers_pass_the_issue(tmp_path):
-    import re
-    for name in ("subtasks", "multiagent_check"):
-        text = (ROOT / "cli" / "compass_pkg" / f"{name}.py").read_text(encoding="utf-8")
-        calls = re.findall(r"\bloop_ceilings\(([^)]*)\)", text)
-        calls = [c for c in calls if c.strip() and "def " not in c]
-        assert calls and all("task_dir" in c for c in calls), (name, calls)
-
-
 # --- EF-8: readers with no issue ------------------------------------------------------------------
 
 LAYERED = {

@@ -1123,6 +1123,24 @@ def test_acf_25(tmp_path):
     assert row["status"] == "pass", row
 
 
+def test_acf_25_a_two_unit_map_is_owed_with_no_subtask_record(tmp_path):
+    # 9.0.0 writes no `subtasks:` (ADR-090), so the map's own `units:` line counts:
+    # a draft map that declares two units is owed, and artifacts-approved names it.
+    root, task_dir = _registry_project(tmp_path)
+    _with_subtasks(task_dir, None)
+    _pass_every_gate(task_dir)
+    _approve_others(root, task_dir)
+    path = _doc(root, "distribution-map.md", "# a map\n\nunits: [U1, U2]\n")
+    assert _set(root, "distribution-map", "--status", "draft", "--path", path)[0] == 0
+    row = _check_row(root)
+    assert row["status"] == "fail" and "distribution-map reads draft" in row["detail"], row
+    # One unit is not owed, as one recorded subtask was not.
+    _doc(root, "distribution-map.md", "# a map\n\nunits: 1\n")
+    row = _check_row(root)
+    assert "distribution-map reads draft" not in row["detail"], row
+    assert "distribution-map: not needed: one unit" in row["detail"], row
+
+
 def _shown_everywhere(root, task_dir, tmp_path, text):
     """The issue page, the board panel and the receipt each carry `text` for the map."""
     code, out, err = _cli(root, "issue", "render", "--issue", SLUG)
@@ -1338,12 +1356,12 @@ def test_acf_17(tmp_path):
     code, out, err = _cli(qf, "issue", "artifact-path", "delivery-approach", "--issue", "fix-it")
     assert code == 0 and out.strip().endswith(f"{qf_home.name}/delivery-approach.md"), out + err
     # No writer's instructions name the old home.
-    for folder in ("commands", "agents", "skills", "approaches"):
+    for folder in ("commands", "skills", "approaches"):
         for text_file in sorted((ROOT / folder).rglob("*.md")):
             text = text_file.read_text(encoding="utf-8")
             for pattern in OLD_HOME_TEXTS:
                 assert not re.search(pattern, text), (str(text_file), pattern)
-    for name in ("approaches/assess-procedure.md", "agents/router.md", "approaches/rubric.md"):
+    for name in ("approaches/assess-procedure.md", "approaches/rubric.md"):
         assert "artifact-path delivery-approach" in (ROOT / name).read_text(encoding="utf-8"), name
 
 
@@ -1828,7 +1846,7 @@ def test_acf_39(tmp_path):
     assert "1 of 1 met" in shown and "met by EV-PLAN" in shown, shown
 
 
-ASSESS_TEXTS = ("approaches/assess-procedure.md", "agents/router.md", "commands/assess.md",
+ASSESS_TEXTS = ("approaches/assess-procedure.md", "commands/assess.md",
                 "skills/adaptive-routing/SKILL.md")
 
 

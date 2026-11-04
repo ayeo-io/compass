@@ -1,19 +1,4 @@
 {
-  "agents/orchestrator.md": {
-    "fences": 0,
-    "heading_levels": [
-      2,
-      2,
-      2,
-      2,
-      2,
-      2,
-      2,
-      2
-    ],
-    "list_items": 21,
-    "table_rows": 0
-  },
   "agents/planner.md": {
     "fences": 0,
     "heading_levels": [
@@ -795,10 +780,11 @@
       2,
       2,
       2,
+      2,
       2
     ],
-    "list_items": 73,
-    "table_rows": 20
+    "list_items": 62,
+    "table_rows": 12
   },
   "governance/strategies.md": {
     "fences": 0,
@@ -900,23 +886,6 @@
     "list_items": 17,
     "table_rows": 0
   },
-  "skills/worktree-multiagent/SKILL.md": {
-    "fences": 0,
-    "heading_levels": [
-      1,
-      2,
-      2,
-      2,
-      2,
-      2,
-      2,
-      2,
-      2,
-      2
-    ],
-    "list_items": 32,
-    "table_rows": 5
-  },
   "templates/acceptance-criteria.md": {
     "fences": 8,
     "heading_levels": [
@@ -947,7 +916,7 @@
       2,
       2
     ],
-    "list_items": 7,
+    "list_items": 6,
     "table_rows": 17
   },
   "templates/launch-readiness.md": {

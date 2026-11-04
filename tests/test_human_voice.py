@@ -203,7 +203,7 @@ def test_trc_a1_the_reference_lives_under_an_existing_skill_and_opens_with_the_p
         "the principle must appear as a single line, verbatim: " + PRINCIPLE
     )
 
-    assert "skills/worktree-multiagent/SKILL.md" in text
+    assert "skills/compass-runtime/SKILL.md" in text
     assert "Never stash across a worktree hop" in text, (
         "the reference must name that section as the calibration sample "
         "of the register it is asking for"

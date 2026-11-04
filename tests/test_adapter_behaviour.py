@@ -189,7 +189,9 @@ def test_hook_decisions_agree(tmp_path):
     assert observations[0] == observations[1]
 
 
-def test_approval_scope_and_cap_observations(tmp_path):
+def test_approval_scope_observations(tmp_path):
+    # The cap observation ran the multiagent script, which 9.0.0 removed
+    # (ADR-090); the approval observation stays.
     observations = []
     for name in ("claude-code", "codex"):
         approval = Adapter(name, tmp_path / name / "approval")
@@ -199,18 +201,7 @@ def test_approval_scope_and_cap_observations(tmp_path):
                     for subject in (None, "check", "guardrail")]
         assert [result["status"] for result in subjects] == ["fail", "fail", "pass"]
         assert all(result["synthetic"] for result in subjects)
-
-        provision = Adapter(name, tmp_path / name / "cap")
-        provision.seed("feature")
-        provision.start_feature()
-        ceiling = provision.manifest()["subtask_ceiling"]
-        allowed = provision.cap_observation(ceiling)
-        assert allowed["actual"] == "allow" and allowed["conforming"] is True
-        excess = provision.cap_observation(ceiling + 1)
-        assert excess["expected"] == "block"
-        assert excess["actual"] == "block", excess
-        assert excess["conforming"] is True
-        observations.append({"approval": subjects, "cap": [allowed, excess]})
+        observations.append({"approval": subjects})
     assert observations[0] == observations[1]
 
 

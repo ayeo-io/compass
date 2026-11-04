@@ -167,8 +167,6 @@ def _rebuild(preset, sidecar, types):
             "immovable_gates": rules_of("immovable_gates"),
             "artifact_rules": rules_of("artifact_rules"),
         },
-        "model_rules": {"default_tiers": rules_of("model_tiers"),
-                        "floors": rules_of("model_floors")},
         "assessment_vocabulary": vocabulary,
         "autonomy_checkpoints": {
             level: {a: approaches[a]["checkpoints"][level] for a in row
@@ -858,7 +856,7 @@ def test_dp_6_the_guardrails_keep_their_names_and_the_spike_ones_apply_off_ships
 # Read from the modules that return `NOTHING_TO_CHECK` for the check: checks.py
 # (scenarios-are-executable, claim-traces-to-scenario, command-passes),
 # borrowed_docs.py, binding.py (evidence-matches-tree), render_check.py,
-# landed_by.py, multiagent_check.py, artifact_status.py and evidence_identity.py. The check
+# landed_by.py, artifact_status.py and evidence_identity.py. The check
 # declared-tests-resolve passes with a note instead, so it is `pass`.
 EXPECTED_ON_SKIPPED = {
     "scenarios-are-executable": "not-applicable",
@@ -869,7 +867,6 @@ EXPECTED_ON_SKIPPED = {
     "evidence-identity-matches": "not-applicable",
     "dod-evidence-typed": "not-applicable",
     "landed-by-resolves": "not-applicable",
-    "multiagent-run-recorded": "not-applicable",
     "artifacts-approved": "not-applicable",
     "nfr-rows-resolved": "not-applicable",
     "contracts-declared": "not-applicable",

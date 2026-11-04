@@ -131,7 +131,7 @@ After one of these commands succeeds on a linked issue, with a switch on:
 - `compass issue link set`
 - `compass ship-commit`
 - `compass quick-fix finish`
-- the commands that change the records that decide the state: `compass scenario add` and `descope`, `compass tdd-red`, `compass tdd-green`, `compass evidence add`, `compass acceptance record`, `compass gate pass`, `compass issue artifact set`, `compass issue subtask add` and `replan`
+- the commands that change the records that decide the state: `compass scenario add` and `descope`, `compass tdd-red`, `compass tdd-green`, `compass evidence add`, `compass acceptance record`, `compass gate pass`, `compass issue artifact set`
 
 The commands are listed in `LABEL_TRIGGERS` of `cli/compass_pkg/record_triggers.py`. The step that renders an issue's documents after a command (`docs/rendered-blocks.md`) reads the same list and adds commands of its own, so a command that syncs the labels always renders too.
 

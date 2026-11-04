@@ -1317,7 +1317,7 @@
     },
     "models": {
       "additionalProperties": false,
-      "description": "The model and effort of each tier `strong`, `standard` and `fast`, which `compass approach show --model <seat>` and `--effort <seat>` print for a stage command to pass to its agent. A tier is a model name, or `{model, effort}`; the shipped mapping is `strong` inherit (the session's model) at high, `standard` sonnet at medium and `fast` haiku at low.",
+      "description": "Removed in 9.0.0 (ADR-090) and not read: the model and effort of each tier `strong`, `standard` and `fast`, which a stage command passed to its agent. The key stays valid so a project that holds it keeps working, and `compass policy lint` names it.",
       "properties": {
         "fast": {
           "additionalProperties": false,

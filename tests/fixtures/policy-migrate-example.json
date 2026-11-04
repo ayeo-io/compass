@@ -83,16 +83,6 @@
     },
     {
       "catalogue": "rules",
-      "id": "model_floors",
-      "operation": "add"
-    },
-    {
-      "catalogue": "rules",
-      "id": "model_tiers",
-      "operation": "add"
-    },
-    {
-      "catalogue": "rules",
       "id": "role_defaults",
       "operation": "remove"
     },
@@ -154,7 +144,7 @@
     {
       "catalogue": "checks",
       "id": "multiagent-run-recorded",
-      "operation": "set"
+      "operation": "remove"
     },
     {
       "catalogue": "checks",
@@ -245,6 +235,11 @@
       "catalogue": "vocabulary",
       "id": "checks.layering-test-passed",
       "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "checks.multiagent-run-recorded",
+      "operation": "remove"
     },
     {
       "catalogue": "vocabulary",

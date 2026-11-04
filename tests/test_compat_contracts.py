@@ -115,6 +115,26 @@ def test_contract_3_check_gives_the_recorded_verdicts_on_the_archive_sample():
     assert differences == [], "\n".join(differences)
 
 
+def test_contract_3_allows_the_removal_of_the_multiagent_check_and_no_other_shape():
+    """9.0.0 removes `multiagent-run-recorded` (ADR-090): a pass or nothing to check may
+    become nothing to check or no row. A recorded fail that moves is still a difference."""
+    from compat_baseline import allow_7_0_0_moves, archive_differences
+
+    def differs(old, new):
+        base = {"check_exit": 0, "verdicts": {"suite-passed": "pass"}}
+        then = dict(base, verdicts=dict(base["verdicts"], **({} if old is None else
+                                                            {"multiagent-run-recorded": old})))
+        now = dict(base, verdicts=dict(base["verdicts"], **({} if new is None else
+                                                           {"multiagent-run-recorded": new})))
+        return archive_differences(*allow_7_0_0_moves({"x": then}, {"x": now}))
+
+    for old in ("pass", "nothing-to-check"):
+        for new in (None, "nothing-to-check"):
+            assert differs(old, new) == [], (old, new)
+    assert differs("fail", None)
+    assert differs("pass", "fail")
+
+
 def test_contract_3_allows_only_the_three_moves_of_7_0_0():
     """The allow-list is exact: a fourth move, or one of the three in another shape, fails."""
     from compat_baseline import allow_7_0_0_moves, archive_differences

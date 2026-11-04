@@ -49,7 +49,6 @@ Each command that changes the issue's records brings the labels up to date:
 | You run | The GitHub issue then carries |
 |---|---|
 | `compass approach evaluate --write` | The assessment's declared labels and the status label for the state. |
-| `compass issue subtask add subtask-1 --brief ...` | `status:in-progress` in place of `status:ready`. |
 | `compass tdd-red --scenario <scenario id> -- <test command>`, or `compass evidence add EV-1 --type test-run --path evidence/green-<scenario id>.json` | `status:in-progress`, once a test is on record. |
 | `compass gate pass verify.correctness --evidence EV-1` | `status:in-review`, once a gate has left `pending`. |
 | `compass issue status set backlog` | `status:backlog`. |

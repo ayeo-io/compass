@@ -18,7 +18,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DATE = date.today().isoformat()
 LOCAL_CASES = {"route", "quick-fix", "feature-records", "local-handoff", "policy-and-evidence",
-               "hook-payloads", "approval-scope", "subtask-cap", "git-isolation"}
+               "hook-payloads", "approval-scope", "git-isolation"}
 
 
 def compare(expected, actual, path="observation"):
@@ -278,37 +278,6 @@ class Adapter:
         approval = next(row for row in checked["checks"] if row["name"] == "human-approval-present")
         return {"check": approval["name"], "status": approval["status"],
                 "synthetic": True, "whole_issue_passed": result.returncode == 0}
-
-    def cap_observation(self, requested):
-        manifest = self.manifest()
-        ceiling = manifest["subtask_ceiling"]
-        docs = self.project / "docs/compass" / f"{FIXTURE_DATE}-{self.slug}"
-        approach = docs / "delivery-approach.md"
-        approach.write_text("# Local fixture approach\n\n" + yaml.safe_dump({
-            key: manifest[key] for key in ("assessment", "delivery_approach", "stages", "subtask_ceiling")}))
-        distribution = docs / "distribution-map.md"
-        text = (f"# Local fixture distribution\n\nunits: {requested}\n\n"
-                "| Subtask id | Task | Acceptance criteria | Branch name |\n|---|---|---|---|\n")
-        for index in range(1, requested + 1):
-            text += f"| subtask-{index} | Local fixture | CONF-1 | compass/{self.slug}/subtask-{index} |\n"
-        distribution.write_text(text)
-        for kind, path in (("delivery-approach", approach), ("distribution-map", distribution)):
-            self.cli("issue", "artifact", "set", kind, "--issue", self.slug,
-                     "--status", "draft", "--path", str(path.relative_to(self.project)))
-        result = self.command(["bash", str(ROOT / "scripts/multiagent.sh"), self.slug, "--dry-run"],
-                              check=False)
-        # multiagent.sh prints "approach cap N", because "route" is a verb only (ADR-044).
-        reported = re.search(r"(?:approach cap |cap is )(\d+)", result.stdout + result.stderr)
-        reported_cap = int(reported[1]) if reported else None
-        if result.returncode == 0 and "WOULD create worktree" in result.stdout:
-            actual = "allow"
-        elif result.returncode and "subtasks but the cap is" in result.stderr and reported_cap == ceiling:
-            actual = "block"
-        else:
-            actual = "error"
-        expected = "allow" if requested <= ceiling else "block"
-        return {"ceiling": ceiling, "requested": requested, "reported_cap": reported_cap,
-                "expected": expected, "actual": actual, "conforming": actual == expected}
 
     def capture(self, case_id, observation, expected):
         if case_id not in LOCAL_CASES:

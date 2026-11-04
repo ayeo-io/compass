@@ -993,8 +993,6 @@ _TAIL_EXEMPT = {
     "issue link set": "needs a GitHub issue target and writes one manifest key; test_github_label_sync.py runs it, without measuring its output against this contract",
     "issue github sync": "needs a linked issue and a gh command on PATH; test_github_label_sync.py and test_github_issue_page.py run it against a fake gh, without measuring its output against this contract",
     "issue blocked remove": "needs an issue that is blocked, which the fixture does not build; test_workflow_states.py runs it, without measuring its output against this contract",
-    "issue subtask add": "needs a git repository and a brief file the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
-    "issue subtask set": "needs a recorded subtask the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
     "record sync": "needs a record repository to push to; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
     "record restore": "needs a record repository to read; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
     "issue use": "writes the pointer and the session record of an existing issue; test_current_task_lease.py runs it, without measuring its output against this contract",
@@ -1004,8 +1002,6 @@ _TAIL_EXEMPT = {
     "issue checkpoint add": "needs an issue whose first assessment recorded checkpoint outcomes and a stage the route runs; test_checkpoint_outcomes.py runs it and checks its one line, without measuring it against this contract",
     "issue friction": "needs evidence inside an existing issue folder and writes one manifest key; test_agent_friction.py runs it, without measuring its output against this contract",
     "issue raised-by": "writes one key to an existing issue's manifest and prints one line, or two with the chain hint; test_lineage.py runs it, without measuring its output against this contract",
-    "issue subtask replan": "writes the manifest of an existing multiagent issue; test_loop_ceilings.py runs it, without measuring its output against this contract",
-    "issue subtask package": "needs a git history to diff, which the fixture does not have; test_subtask_record.py runs it, without measuring its output against this contract",
     "plan lint": "needs a design with placeholders to say anything",
     "next": "advisory pointer; its own suite covers it",
     "rework-scan": "its own suite covers it",
@@ -1052,7 +1048,6 @@ _TAIL_ARGV = {
     "issue depends add": ["issue", "depends", "add", "later", "--reason", "needs later"],
     "issue depends remove": ["issue", "depends", "remove", "later"],
     "issue status set": ["issue", "status", "set", "backlog"],
-    "issue subtask next": ["issue", "subtask", "next"],
     # The artifact set is computed by the evaluator, so the fixture runs
     # `approach evaluate --write` first and this names a document the
     # assessment actually earned.

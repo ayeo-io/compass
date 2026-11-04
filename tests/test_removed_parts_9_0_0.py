@@ -34,7 +34,11 @@ def _run(args, cwd):
 
 REMOVED_CALLS = [
     ["run", "demo", "--stage", "implement", "--stop-file", "stop"],
+    ["issue", "subtask", "add", "subtask-1", "--brief", "b.md"],
     ["profile", "show", "default"],
+    ["approach", "show", "--model", "implement"],
+    ["approach", "show", "--effort", "verify"],
+    ["retro", "--models"],
 ]
 
 
@@ -55,6 +59,61 @@ def test_a_kept_verb_that_fails_to_parse_gets_no_removal_line(tmp_path):
 def test_the_removal_line_matches_tokens_not_prefixes():
     from compass_pkg import removed_parts
     assert removed_parts.line_for(["running"]) is None
-    assert removed_parts.line_for(["profiles"]) is None
+    assert removed_parts.line_for(["issue", "subtasks"]) is None
+    assert removed_parts.line_for(["approach", "show", "--models"]) is None
     assert "compass run" in removed_parts.line_for(["run", "x"])
-    assert "compass profile" in removed_parts.line_for(["profile", "show", "x"])
+    assert "--model" in removed_parts.line_for(["approach", "show", "--issue", "s",
+                                                 "--model", "implement"])
+
+
+# --- a removed compass.yml key -----------------------------------------------------
+
+def _lint_project(layer):
+    from compass_pkg import policy_lint
+    from compass_pkg.layers import Layer
+    sys.path.insert(0, str(ROOT / "tests"))
+    import classifier_fixtures
+    parent = Layer("default", "parent", {"schema": 1, **classifier_fixtures.base()}, "d")
+    project = Layer("project", "project", {"schema": 1, **layer}, "d")
+    return policy_lint.lint_chain(parent, project)
+
+
+@pytest.mark.parametrize("key,value", [
+    ("models", {"strong": "inherit", "standard": "sonnet"}),
+    ("multiagent", {"worktree_root": "../wt", "max_worktrees": 4}),
+])
+def test_a_removed_setting_is_read_and_lint_names_it(key, value):
+    report = _lint_project({key: value})
+    found = [f for f in report.findings if f.code == "L-SETTING-REMOVED"]
+    assert len(found) == 1, [(f.code, f.path) for f in report.findings]
+    assert found[0].level == "warning" and found[0].path == key
+    assert "removed in 9.0.0" in found[0].message and "ADR-090" in found[0].message
+    assert not [f for f in report.findings if f.level == "error"], report.findings
+
+
+def test_a_project_with_no_removed_setting_gets_no_removal_finding():
+    report = _lint_project({"owner": "someone"})
+    assert not [f for f in report.findings if f.code == "L-SETTING-REMOVED"]
+
+
+# --- a stored generation that lists the removed check --------------------------------
+
+def test_the_removed_check_is_in_the_removed_table_with_no_replacement():
+    from compass_pkg.check_registry import REGISTRY, REMOVED
+    removed = REMOVED["multiagent-run-recorded"]
+    assert "multiagent-run-recorded" not in REGISTRY
+    assert removed.removed_in == "9.0.0" and removed.replaced_by is None
+    assert removed.detail.startswith("nothing to check")
+    assert "9.0.0" in removed.detail and "runs in its place" not in removed.detail
+
+
+def test_a_guardrail_that_lists_the_removed_check_gains_no_replacement():
+    from compass_pkg.check_cmd import _with_replacements
+    names = ["gate-evidence-present", "multiagent-run-recorded"]
+    assert _with_replacements(names, {}) == names
+
+
+def test_lint_accepts_an_old_copy_that_names_the_removed_check():
+    from compass_pkg.policy_lint import _removed_check_note
+    note = _removed_check_note("checks.multiagent-run-recorded", "unknown check")
+    assert "removed in 9.0.0" in note and "None" not in note

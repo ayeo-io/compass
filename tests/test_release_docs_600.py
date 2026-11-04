@@ -328,7 +328,6 @@ def s9_findings(text, known_types):
 S9_FILES = (
     "agents/architect.md", "agents/verifier.md", "agents/router.md",
     "commands/verify.md", "approaches/assess-procedure.md",
-    "skills/worktree-multiagent/SKILL.md",
 )
 
 
@@ -347,7 +346,6 @@ def test_trc_s9_plugin_instructions_use_real_types_verbs_and_fields():
         text = _read(rel)
         assert "`subtask_ceiling`" in text, rel
         assert "Breakdown records the" in text, rel
-    assert "`set` for the report" in _read("skills/worktree-multiagent/SKILL.md")
 
     runtime = _read("skills/compass-runtime/SKILL.md")
     assert "The aliases were removed at 7.0.0" in " ".join(runtime.split())
@@ -573,7 +571,6 @@ S8_OLD_TEXT = (
 
 S8_NEW_TEXT = (
     ("docs/configuration.md", "`tdd-red` and `tdd-green` need the command after `--`"),
-    ("docs/configuration.md", "`scripts/integrate.sh` falls back to `npm test` or `make test`"),
     ("docs/policy-migrate.md", "an issue with no stored generation is judged by it at once"),
     ("docs/generation-store.md", "It refuses a closed issue"),
     ("docs/releasing.md", "A closed issue keeps the configuration it closed under"),
@@ -684,8 +681,9 @@ def test_trc_s7_quickstart_five_minutes_and_portability_match_the_code(tmp_path)
     real = sorted(p.name for p in (ROOT / "skills").iterdir()
                   if p.is_dir() and "\ndescription: Renamed to " not in
                   (p / "SKILL.md").read_text(encoding="utf-8"))
-    # 14 since `atdd` joined (issue atdd-skill).
-    assert len(real) == 14
+    # 14 since `atdd` joined (issue atdd-skill). 13 since 9.0.0 removed
+    # `worktree-multiagent` (ADR-090).
+    assert len(real) == 13
     assert skills_listed(_read("docs/portability.md")) == real
 
 

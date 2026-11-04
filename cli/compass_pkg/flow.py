@@ -763,8 +763,8 @@ def derive_system_spec(project_root: str) -> None:
     """Derive docs/system-spec.md from all landed manifest.yml files.
 
     This is the sole implementation of the living-system-spec derivation
-    (ADR-008).  It is invoked by ``compass _derive-system-spec --internal``
-    from ``scripts/integrate.sh`` after combined regression passes.
+    (ADR-008).  `ship-commit` calls it, and a maintainer can run it as
+    ``compass _derive-system-spec --internal``.
 
     It is idempotent: running it twice on unchanged inputs produces a
     byte-identical ``docs/system-spec.md``.
@@ -997,7 +997,7 @@ def cmd_derive_system_spec(args):
 
     This subcommand is intentionally excluded from ``compass --help`` (a
     leading underscore marks a private verb).  It is only for in-framework
-    callers (now ``scripts/integrate.sh``).
+    callers and a maintainer.
 
     The ``--internal`` flag is mandatory - without it the command errors out
     (a second guard against running it by accident).
@@ -1005,7 +1005,7 @@ def cmd_derive_system_spec(args):
     if not getattr(args, "internal", False):
         raise CompassError(
             "compass _derive-system-spec: the --internal flag is required. "
-            "This is a private entry point for scripts/integrate.sh - "
+            "This is a private entry point for in-framework callers - "
             "it is not part of the public CLI surface."
         )
 

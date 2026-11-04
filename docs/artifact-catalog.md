@@ -10,7 +10,7 @@ The catalogue is the `artifacts:` map in `governance/presets/default/artifacts.y
 |---|---|---|
 | `file` | yes | The document's filename, with no directory. `<n>` marks a kind that repeats, such as `review-<n>.md`. `<unit>` marks a kind written once per work unit, and only such a kind may hold one folder, such as `low-level-design/<unit>.md` |
 | `stage` | yes | The stage that owns the document: a stage id of the stages catalogue |
-| `owner` | yes | The role that writes it: an agent id in `agents/`, or a value of the `role` dimension |
+| `owner` | yes | The role that writes it: a role name such as `planner`, or a value of the `role` dimension |
 | `audience` | yes | One line saying who reads the document and what they decide from it |
 | `stands_for` | yes | The name the industry uses for this kind of document, such as `prd` or `hld` |
 | `sections` | yes | The headings per depth: a map from `lightweight` or `thorough` to an ordered list of heading texts |
@@ -107,9 +107,9 @@ The not-an-artifact list is `NOT_AN_ARTIFACT` in `cli/compass_pkg/stable_ids.py`
 
 ## Documents owed only under a condition
 
-An entry can carry `required_when: {subtasks: {min: 2}}`. The shipped `distribution-map` does. One function, `artifact_owed.owed()`, decides whether the issue owes such a document, and `compass check`, the issue page, the board panel and the receipt all ask it. The subtask count is the length of the manifest's `subtasks:` list, and an absent list counts as zero.
+An entry can carry `required_when: {subtasks: {min: 2}}`. The shipped `distribution-map` does. One function, `artifact_owed.owed()`, decides whether the issue owes such a document, and `compass check`, the issue page, the board panel and the receipt all ask it. The count is the length of the manifest's `subtasks:` list when the manifest has that key, as a record written before 9.0.0 does. 9.0.0 records no subtasks (ADR-090), so with no such key the count is the units the registered distribution map declares on its `units:` line, `units: 2` or `units: [U1, U2]`: a map that declares two or more units is owed. No map, or a map with no `units:` line, counts as zero.
 
-While the condition is false, `artifacts-approved` does not judge the document, and the readers show `not needed: one subtask` or `not needed: no subtasks recorded` where it has no file. A document that a person recorded as `omitted` keeps its reason and never reads "not needed". A document written anyway shows its own status. `compass next` is unchanged: a written or omitted map still marks breakdown done.
+While the condition is false, `artifacts-approved` does not judge the document, and the readers show `not needed: one subtask`, `not needed: one unit` or `not needed: no subtasks recorded`. A document that a person recorded as `omitted` keeps its reason and never reads "not needed". A document written anyway shows its own status. `compass next` is unchanged: a written or omitted map still marks breakdown done.
 
 ## The delivery-approach record on every approach
 
@@ -125,7 +125,7 @@ The manifest's `justifications` key holds one line for each assessed dimension o
 
 ## The distribution map's units line
 
-On a multiagent breakdown, `compass issue artifact set distribution-map` reads the map's `units:` line: `units: 1`, or a list such as `units: [U1, U2]`. It refuses, before saving anything, a map with no such line or with a count below one, and a map saying `units: 1` whose subtask table names two or more subtasks. A map saying `units: 1` records the breakdown as one subtask the session runs itself, marked `orchestration: single-unit`. Registering `verification-report` names that report on the record and marks it `done`. A map with two or more units removes such a record and records nothing else. A solo or skipped breakdown reads nothing. `docs/multiagent-protocol.md` says how `multiagent-run-recorded` judges the record (ADR-071).
+A map can carry a `units:` line, `units: 1` or a list such as `units: [U1, U2]`. Before 9.0.0 registering a map on a multiagent breakdown read it, refused a map without it, and with `units: 1` recorded the breakdown as one subtask. 9.0.0 runs each issue in one session (ADR-090), so registering a map reads no `units:` line and records no subtask. `compass issue migrate` still keeps a map that says `units: 1`, as it did.
 
 ## The rendered blocks of the record
 

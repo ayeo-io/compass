@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 # =============================================================================
-# compass - the loop ceilings of a multiagent run
+# compass - the loop ceilings a configuration declares
 # =============================================================================
-# The `loop_ceilings` rules in governance/routing-policy.yml bound a
-# multiagent run: tries per subtask, review rounds, replans, and the same
-# error reported in a row. `compass issue subtask` (subtasks.py) refuses
-# work past them, and `multiagent-run-recorded` (multiagent_check.py) refuses
-# to land a subtask past them without a stop reason. Both read the limits
-# and the cutoff date here, so neither module imports the other. Three more
-# bounded the unattended `compass run`, which 9.0.0 removed (ADR-090): the
-# sessions it may start, the minutes it may take and the money it may spend.
-# They stay readable in a configuration and nothing applies them.
+# The `loop_ceilings` rules in governance/routing-policy.yml bounded a
+# multiagent run (tries per subtask, review rounds, replans and the same error
+# reported in a row) and the unattended `compass run` (sessions, minutes and
+# money). 9.0.0 removed both (ADR-090), so nothing applies the limits. They
+# stay a readable part of a configuration, which the classifier compares,
+# until the configuration layers are replaced.
 #
 # DEPENDENCY: standard library (datetime, os), compass_pkg.core and compass_pkg.effective.
 # =============================================================================

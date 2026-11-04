@@ -57,8 +57,8 @@ capabilities:
     codex: {status: partial, path: adapters/codex/INSTRUCTIONS.md, note: "Shared personas can be passed to available Codex delegation tools. Without delegation the adapter records solo delivery; Claude model metadata is not used."}
   - capability: Isolated parallel workspaces
     obligation: 7
-    claude-code: {status: full, path: skills/worktree-multiagent/SKILL.md}
-    codex: {status: partial, path: skills/worktree-multiagent/SKILL.md, note: "The shared worktree procedure remains available. Native Codex parallel delivery is not yet demonstrated; record a solo plan when isolation is unavailable."}
+    claude-code: {status: none, reason: "Removed in 9.0.0: each issue runs in one session, with no worktree per subtask (ADR-090)."}
+    codex: {status: none, reason: "Removed in 9.0.0 with the Claude Code worktree procedure (ADR-090)."}
   - capability: CI integration
     obligation: 3
     claude-code: {status: full, path: .github/workflows/compass.yml}

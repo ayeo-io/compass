@@ -39,7 +39,6 @@ from compass_pkg.check_results import ADVISORY_FAILURE
 from compass_pkg.checks import NOTHING_TO_CHECK, _check_backfills_paid, _check_changed_code_traces, _check_claim_traces, _check_coherence_check_passes, _check_evidence_identity_matches, _check_command_passes, _check_declared_tests_resolve, _check_dod_evidence_typed, _check_gate_evidence, _check_human_approval, _check_no_trusted_rerun, _check_scenario_has_id_and_intent, _check_scenarios_are_executable, _check_scenarios_have_tests, _check_spike_conclusion_present, _check_spike_no_production_changes, _check_suite_passed
 from compass_pkg.borrowed_docs import _check_borrowed_documents_answered
 from compass_pkg.binding import _check_evidence_matches_tree
-from compass_pkg.multiagent_check import _check_multiagent_run_recorded
 from compass_pkg.core import FRAMEWORK_ROOT, exit_for_mode, find_governance, load_mode, load_manifest, load_yaml, mode_banner, reading_matches, resolve_issue_dir
 
 
@@ -90,11 +89,6 @@ CHECK_GUIDANCE = {
         "why": "A green proves a command passed on the tree it ran on. Once that tree changes, the record says nothing about the code that is about to ship - or, for a landed issue, about the commit that landed it.",
         "fix": "Re-run the suite through `compass tdd-green -- <test command>` on the tree you intend to ship, so the newest record names it. For a landed issue, the files the commit landed are not the files that were tested. If a review fix changed them after landing, commit the fix, re-run the suite through `compass tdd-green`, then run `compass ship-commit --issue <slug> -m <message>` with nothing staged: it moves `land_commit` to HEAD once the newest green names HEAD's files.",
         "do": "Re-run the suite with `compass tdd-green` on the tree you ship.",
-    },
-    "multiagent-run-recorded": {
-        "why": "A multiagent run splits into subtasks that `compass issue subtask` records. Without this check, an issue could clear every gate and land with a subtask never marked done, or one still failing its last review round, and nothing would say so.",
-        "fix": "Record each subtask's progress with `compass issue subtask set`: `--status done` once it is merged, and `--round pass` once its last review passes. The check reports an empty `subtasks:` list, and names any subtask not done or without a passing last round.",
-        "do": 'Record each named subtask done, with a passing round, via `compass issue subtask set`.',
     },
     "no-trusted-rerun": {
         "why": "A green recorded from a run nobody observed is an assertion wearing evidence's clothes. The tested-before-ship guardrail wants the run, not a note about it.",
@@ -732,7 +726,8 @@ def _with_replacements(names, impls):
     names = list(names)
     for name in list(names):
         removed = REMOVED.get(impls.get(name, name)) or REMOVED.get(name)
-        if removed is not None and removed.replaced_by not in names:
+        if removed is not None and removed.replaced_by is not None \
+                and removed.replaced_by not in names:
             names.append(removed.replaced_by)
     return names
 

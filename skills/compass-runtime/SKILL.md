@@ -76,9 +76,7 @@ Nothing else is touched, so one scenario's record cannot overwrite another's.
 - **Plan** - load `plan-authoring` (which optional design sections earn a
   place) and `governance-check` (how to check the design against the
   governance in force). The `planner` agent owns it.
-- **Implementing in parallel** - load `worktree-multiagent`. The `orchestrator`
-  agent coordinates; `builder` agents work, one per worktree, each loading
-  `tdd-discipline`.
+- **Implementing** - load `tdd-discipline`; build the map's units in turn.
 - **Test & review** - the `verifier` and `reviewer` agents run; load `evidence-gates`.
   Load `receiving-code-review` when answering their comments.
 - **A change to behavior a real client can observe** - also load `atdd`:
@@ -100,13 +98,15 @@ An agent has Bash when it runs a `compass` verb, and Skill when it loads a
 skill. `product-owner` and `product-marketer` have no shell; their caller runs
 their verbs. No agent edits `manifest.yml` by hand (`tests/test_agent_tools.py`).
 
-## Worktrees and multiagent
+## Never stash across a worktree hop
 
-Only the `orchestrator` agent creates worktrees (`scripts/multiagent.sh`) and
-integrates them (`scripts/integrate.sh`). A `builder` works *inside* its
-assigned worktree and never touches a sibling's. The approach's distribution
-map says how many subtasks exist; policy can cap the count. On solo work there
-is no worktree - work on the current branch.
+Compass starts no worktree (ADR-090), but a person or a delegated agent can
+work in one; the hook judges an edit there by that worktree's own pointer
+(ADR-078). Never stash in one worktree and pop in another, and never stash
+inside a temporary worktree: a stash lives in the shared repository, but the
+state it captures belongs to one checkout, so removing a temporary worktree
+destroys the stashed work along with the worktree. A CI fix nearly lost work
+this way. To move work between worktrees, commit it: the branch is durable.
 
 ## Where state lives
 

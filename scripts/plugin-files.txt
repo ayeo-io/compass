@@ -30,9 +30,7 @@ governance/
 governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md
 hooks/
 schemas/
-scripts/integrate.sh
 scripts/lib/
-scripts/multiagent.sh
 scripts/statusline-setup.py
 scripts/voice-tells.py
 skills/

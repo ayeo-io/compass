@@ -161,9 +161,6 @@ vocabulary:
   checks.command-passes:
     name: Command passes
     aliases: []
-  checks.multiagent-run-recorded:
-    name: Multiagent run recorded
-    aliases: []
   readiness.agent-instructions-present:
     name: Agent instructions present
     aliases: []

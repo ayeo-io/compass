@@ -176,7 +176,3 @@
   restores: tests/test_fitness_functions.py::TestCommandPassesSuccess::test_command_passes_succeeds_in_check_output
   record: .compass/work/project-commands-are-a-trust-boundary/evidence/mutation-proofs.md
 
-- check: multiagent-run-recorded
-  broken: a subtask left not done
-  fails: tests/test_multiagent_run_recorded.py::test_row_5_a_subtask_not_done_fails_and_names_it
-  restores: tests/test_multiagent_run_recorded.py::test_row_2_a_subtasks_key_created_2026_09_25_with_a_complete_record_passes

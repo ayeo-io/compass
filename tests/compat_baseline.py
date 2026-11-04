@@ -332,6 +332,10 @@ SECTION_CHECKS = ("nfr-rows-resolved", "contracts-declared")
 OUTSIDE_GATE_7_0_0 = SECTION_CHECKS + ("design-within-word-ceiling",)
 
 
+#: The check 9.0.0 removed with the multiagent breakdown (ADR-090).
+REMOVED_9_0_0 = "multiagent-run-recorded"
+
+
 def allow_7_0_0_moves(recorded, now):
     """`(recorded, now)` with the three verdict moves 7.0.0 makes taken out of both, each only
     in the exact shape it was meant to have. Every other difference stays, including the exit
@@ -350,7 +354,11 @@ def allow_7_0_0_moves(recorded, now):
     7.0.0 also adds the two section checks (ADR-064) and the design-size check (ADR-067),
     which sit in no gate. Each may appear only where the recorded verdicts have no row for
     it, and only as `nothing-to-check`: any other verdict means the check judged an archived
-    issue, and stays a difference."""
+    issue, and stays a difference.
+
+    9.0.0 removes `multiagent-run-recorded` (ADR-090). A recorded `pass` or `nothing-to-check`
+    may become `nothing-to-check` (a stored generation still lists it) or no row; a recorded
+    `fail` that moves stays a difference."""
     old_all, new_all = {}, {}
     for slug in set(recorded) | set(now):
         old = dict(recorded.get(slug) or {})
@@ -361,6 +369,9 @@ def allow_7_0_0_moves(recorded, now):
             old_v.pop("dashboard-current"), new_v.pop("dashboard-current", None)
         if "rendered-blocks-current" not in old_v and new_v.get("rendered-blocks-current") == "pass":
             new_v.pop("rendered-blocks-current")
+        if old_v.get(REMOVED_9_0_0) in ("pass", "nothing-to-check") \
+                and new_v.get(REMOVED_9_0_0) in (None, "nothing-to-check"):
+            old_v.pop(REMOVED_9_0_0), new_v.pop(REMOVED_9_0_0, None)
         if old_v.get("dod-evidence-typed") == "pass" \
                 and new_v.get("dod-evidence-typed") in ("pass", "nothing-to-check"):
             old_v.pop("dod-evidence-typed"), new_v.pop("dod-evidence-typed")

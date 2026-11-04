@@ -325,8 +325,7 @@ def test_vr_e4_group_help_lists_new_verbs_and_no_alias(tmp_path):
     assert {"status", "migrate", "render", "artifact", "template"} <= issue
     assert "dashboard" not in issue
     assert not issue & {"set-status", "migrate-config", "refresh-spec"}
-    assert {"set", "add"} <= _choices(["issue", "subtask"], p)
-    assert "update" not in _choices(["issue", "subtask"], p)
+    assert "subtask" not in issue   # removed in 9.0.0 (ADR-090)
     assert "show" in _choices(["policy"], p)
     assert not _choices(["policy"], p) & {"effective", "review-rules"}
     assert _choices(["review-rule"], p) == {"list"}
@@ -455,9 +454,6 @@ EXCEPTIONS = {
     "issue raised-by": "records the issue this one was found in; the maintainer named it an exception",
     "issue receipt": "renders a landed issue's receipt; the maintainer named it an exception",
     "issue artifact-path": "prints where a document is; two hooks read its exit code, so its name stays",
-    "issue subtask next": "prints the next subtask to dispatch; a verb of the subtask group",
-    "issue subtask replan": "re-plans the subtasks; a verb of the subtask group",
-    "issue subtask package": "packages a subtask's brief; a verb of the subtask group",
     "acceptance start": "opens an acceptance record for a change with no natural red",
     "acceptance record": "closes an acceptance record",
     "isolation record": "runs the suite and writes the isolation proof; record is the verb ADR-086 names for the only writer of the type (#328)",

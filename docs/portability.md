@@ -40,7 +40,7 @@ skills/          adaptive-routing, atdd, bdd-specification, behavior-mapping,
                  compass-runtime, evidence-gates, flow-management,
                  governance-check, intent-interview, plan-authoring,
                  receiving-code-review, systematic-debugging,
-                 tdd-discipline, worktree-multiagent
+                 tdd-discipline
 hooks/           pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,
                  prompt-approval.sh, approval-summary.sh
 bin/compass      the shim that puts the kit on PATH
@@ -164,13 +164,10 @@ A different session or runtime can resume by reading this state.
 
 ### 7. Give safe delivery orchestration
 
-The adapter must support solo delivery. Pair and multiagent approaches need
-isolated workspaces plus a single integration owner.
-
-The reference adapter uses Git worktrees. A runtime can use another mechanism,
-but each subtask must be able to run a failing test cycle without affecting
-the others. If equivalent isolation is unavailable, cap the orchestration and state
-the limitation.
+The adapter must support solo delivery. From 9.0.0 that is all it needs:
+each issue runs in one session, and the session builds the units of a
+distribution map one after another (ADR-090). No adapter needs isolated
+workspaces or an integration owner.
 
 ## Conformance mapping
 

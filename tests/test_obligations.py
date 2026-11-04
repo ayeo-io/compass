@@ -1177,7 +1177,7 @@ EVALUATOR_KEYS = {
     "renamed_routes", "candidate_route", "candidate_via", "delivery_approach",
     "policy_rules_fired", "stages", "gates", "artifacts", "subtask_ceiling",
     "required_artifacts", "required_skills", "blocked_phases", "max_worktrees",
-    "applicable_strategies", "checkpoints", "models"}
+    "applicable_strategies", "checkpoints"}
 
 
 def test_ob_8_the_evaluator_called_as_before_returns_the_same_keys():

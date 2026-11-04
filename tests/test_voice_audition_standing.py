@@ -3,7 +3,8 @@
 The voice audition is a standing strategy: a permanent review dimension for
 any change that writes prose, judged against a calibration sample (the
 worked-example rewrite and the "Never stash across a worktree hop" section of
-`skills/worktree-multiagent/SKILL.md`). This file checks that the strategy
+`skills/compass-runtime/SKILL.md`, where it moved when 9.0.0 removed the
+worktree-multiagent skill). This file checks that the strategy
 says so, and that the reviewer's clarity dimension points at it without
 repeating it.
 
@@ -48,7 +49,7 @@ REVIEWER = REPO_ROOT / "agents" / "reviewer.md"
 EVIDENCE_GATES = REPO_ROOT / "skills" / "evidence-gates" / "SKILL.md"
 
 WORKED_EXAMPLE_PATH = "skills/compass-runtime/writing-voice-worked-example.md"
-STASH_SECTION_PATH = "skills/worktree-multiagent/SKILL.md"
+STASH_SECTION_PATH = "skills/compass-runtime/SKILL.md"
 STASH_SECTION_HEADING = "Never stash across a worktree hop"
 
 def _evidence_gates_text():
@@ -130,7 +131,7 @@ def test_trc_a1_strategy_states_permanence_and_names_the_calibration_sample():
         "calibration sample"
     )
     assert STASH_SECTION_PATH in flat, (
-        "the strategy must name skills/worktree-multiagent/SKILL.md as the other "
+        "the strategy must name skills/compass-runtime/SKILL.md as the other "
         "half of the calibration sample"
     )
     assert STASH_SECTION_HEADING in flat, (

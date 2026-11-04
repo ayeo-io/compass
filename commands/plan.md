@@ -25,13 +25,6 @@ engineering plan stage.)
   self-review the author owes the reviewer before the design is handed over.
 - Load the `governance-check` skill.
 - Invoke the `planner` agent - it owns this stage.
-- Pass the computed model and effort when you invoke the `planner` agent:
-  `compass approach show --model plan` prints the `model`, and
-  `compass approach show --effort plan` prints the `effort`. On
-  `inherit`, pass the model family your session runs on (`opus`,
-  `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot
-  tell. Exit 1 means the issue sets nothing for that value: leave it out,
-  so the agent's frontmatter applies.
 - If an `intent.md` exists, this stage runs the **intent-fidelity gate**: the
   spec must be checked against `intent.md` before the design completes. Invoke
   `product-owner` to run it.
@@ -56,17 +49,10 @@ engineering plan stage.)
    - On the regular approach: a short list of 2-3 units is enough.
    - On the full approach: write the full `distribution-map.md` from its
      template.
-   - On a breakdown of `multiagent` (the regular and full approaches), the
-     map carries a line of its own in "Work units": `units: N`, or a list
-     such as `units: [U1, U2]`. Registering a multiagent map without it is
-     refused. When the change is one unit of work, write the map with
-     `units: 1` and register it: that records the breakdown as one subtask
-     this session runs itself, so breakdown needs no worktree, no builder,
-     no hand-made subtask record and no waiver.
+   - This session builds the units one after another (ADR-090); the map
+     records the order and which scenarios each unit owns.
 
-   Subtask count comes from the map; orchestration thresholds from
-   the multiagent settings in `compass.yml` (or `.compass/config.yml` in a
-   project without one); a policy cap can bound the count.
+   The unit count comes from the map; a policy cap can bound the count.
 4. **Write `technical-design.md`** from `${CLAUDE_PLUGIN_ROOT}/templates/technical-design.md`,
    and `distribution-map.md` from its template when applicable.
 

@@ -414,23 +414,6 @@ def _(root):
     return _landed_by(root, True)
 
 
-def _multiagent(root, subtasks):
-    return _issue(root, {"status": "landed", "created": "2026-01-01",
-                         "stages": {"breakdown": "multiagent"},
-                         "subtasks": subtasks})
-
-
-@case("multiagent-run-recorded", "broken")
-def _(root):
-    return _multiagent(root, [])
-
-
-@case("multiagent-run-recorded", "restored")
-def _(root):
-    return _multiagent(root, [{"id": "subtask-1", "status": "done",
-                               "review_rounds": [{"verdict": "pass"}]}])
-
-
 # --- checks that read one section of the spec or the design (ADR-064) ---------------
 #
 # Each corpus holds the archive shapes the checks must decline to judge: no `generation`

@@ -20,7 +20,7 @@ different thing and raises.
 # _stage_key_renames),
 # compass_pkg.loop_ceilings (the ceiling names) and compass_pkg.routing
 # (evaluate_route, RoutingConflict, prepare_policy, route_checkpoints), and
-# compass_pkg.stable_ids (the approach ids), and compass_pkg.model_tiers (model_rules).
+# compass_pkg.stable_ids (the approach ids).
 # Only compass_pkg.classify, compass_pkg.effective and compass_pkg.replay import this module.
 from __future__ import annotations
 
@@ -32,7 +32,6 @@ from compass_pkg.stable_ids import APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUIC
 from compass_pkg.core import (CompassError, _stage_key_renames, canonical_shape,
                               reading_matches)
 from compass_pkg.loop_ceilings import CEILINGS
-from compass_pkg import model_tiers
 from compass_pkg.routing import (RoutingConflict, evaluate_route, prepare_policy,
                                  route_checkpoints)
 
@@ -215,7 +214,6 @@ def policy_adapter(config):
     table = _checkpoints(config.get("approaches") or {})
     if table:
         policy["autonomy_checkpoints"] = table
-    policy.update(model_tiers.policy_block(config.get("rules") or {}))
     ranks = _ranks(config.get("stages") or {})
     if ranks is not None:
         policy["stage_mode_ranks"] = ranks
@@ -370,12 +368,14 @@ def _active(check, assessment, orders, capabilities):
 
 
 def _active_ids(ids, checks, assessment, orders, capabilities):
+    from compass_pkg.check_registry import REMOVED  # a removed check owes nothing (ADR-090)
     out = []
     for check_id in ids:
         if check_id not in checks:
             raise CompassError(f"a list names the check '{check_id}', which the "
                                f"configuration does not define")
-        if _active(checks[check_id], assessment, orders, capabilities):
+        if not REMOVED.keys() & {check_id, (checks[check_id] or {}).get("impl")} \
+                and _active(checks[check_id], assessment, orders, capabilities):
             out.append(check_id)
     return tuple(sorted(out))
 

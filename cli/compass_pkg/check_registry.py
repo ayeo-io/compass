@@ -41,7 +41,6 @@ from compass_pkg.checks import (
     _check_spike_no_production_changes, _check_suite_passed)
 from compass_pkg.design_size import _check_design_within_word_ceiling
 from compass_pkg.landed_by import _check_landed_by_resolves
-from compass_pkg.multiagent_check import _check_multiagent_run_recorded
 from compass_pkg.readiness_registry import READINESS  # noqa: F401  (re-exported)
 from compass_pkg.render_check_entry import _check_rendered_blocks_current
 from compass_pkg.section_checks import _check_contracts_declared, _check_nfr_rows_resolved
@@ -132,9 +131,6 @@ _ENTRIES = (
     _entry("evidence-matches-tree", _check_evidence_matches_tree, version="1.1.0"),
     _entry("rendered-blocks-current", _check_rendered_blocks_current),
     _entry("borrowed-documents-answered", _check_borrowed_documents_answered),
-    # 1.1.0: accepts a single-unit record, which only a map registered with
-    # `units: 1` writes; no stored record has one, so the corpus verdicts hold (ADR-071).
-    _entry("multiagent-run-recorded", _check_multiagent_run_recorded, version="1.1.0"),
     _entry("artifacts-approved", _check_artifacts_approved),
     _entry("nfr-rows-resolved", _check_nfr_rows_resolved),
     # The trigger patterns are declared data a project layer can extend (ADR-033).
@@ -164,10 +160,14 @@ class RemovedCheck:
     assessed against), so `compass check` reports it as nothing to check, names
     the release and the check that replaced it, and runs the replacement."""
     removed_in: str
-    replaced_by: str
+    #: None when nothing replaces the check.
+    replaced_by: Optional[str]
 
     @property
     def detail(self) -> str:
+        if self.replaced_by is None:
+            return ("nothing to check - this check was removed in %s, with no "
+                    "replacement" % self.removed_in)
         return ("nothing to check - this check was removed in %s; %s runs in its place"
                 % (self.removed_in, self.replaced_by))
 
@@ -175,6 +175,8 @@ class RemovedCheck:
 #: The framework-owned table of removed check ids. It is not configurable.
 REMOVED: dict[str, RemovedCheck] = {
     "dashboard-current": RemovedCheck("7.0.0", "rendered-blocks-current"),
+    # 9.0.0 runs each issue in one session, so no run splits into subtasks (ADR-090).
+    "multiagent-run-recorded": RemovedCheck("9.0.0", None),
 }
 
 # `READINESS` (imported above) holds the readiness signal implementations

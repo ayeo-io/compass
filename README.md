@@ -204,7 +204,7 @@ agents/       distinct contexts - router, spec-author, planner, builder,
               orchestrator, verifier, reviewer, product-owner,
               product-marketer, architect
 skills/       loadable procedures - adaptive-routing, bdd-specification,
-              tdd-discipline, worktree-multiagent, intent-interview and the rest
+              tdd-discipline, intent-interview and the rest
 hooks/        pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,
               prompt-approval.sh, approval-summary.sh - mechanical enforcement
 cli/compass   the kit: routing, checks and the manifest

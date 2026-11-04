@@ -67,7 +67,7 @@ earlier one. Warnings never stop it and never fail it.
 
 | Group | What it checks | Codes |
 |---|---|---|
-| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), the eleven `L-PARENT-*` codes below for a git parent, and the four `S-PARENT-*` state codes |
+| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), `L-SETTING-REMOVED` (warning), the eleven `L-PARENT-*` codes below for a git parent, and the four `S-PARENT-*` state codes |
 | `merge` | The merge grammar, layer by layer. It reports every fault of the first layer that does not apply | the merge's own `M-*` codes, such as `M-ADD-EXISTS`, `M-SET-UNKNOWN`, `M-REF-REMOVED` |
 | `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE`, `M-BOOKKEEPING-INPUT`, `M-DIRECTORY-DEPENDENCY`, `M-LIST-KIND-UNEVALUATED` (warning), `M-FIELD-SHAPE`, `M-READINESS-IMPL`, `M-READINESS-PARAM`, `M-WHEN-RETIRED`, `M-WHEN-DOCUMENTS`, `M-ACCEPTANCE-SUSPENDED` |
 | `locks` | What the locks above a layer refuse, and each refused unlock | `K-LOCK-REFUSED`, `K-UNLOCK-REFUSED`, `K-UNPROVABLE`, `E-EVALUATION` |
@@ -85,6 +85,7 @@ earlier one. Warnings never stop it and never fail it.
 | `L-IMPL-UNKNOWN` | error | A check names an `impl` that the check registry does not hold |
 | `L-IMPL-TEMPLATED` | error | An `impl` that is a template, not a name |
 | `L-IGNORED-FILE` | warning | A `compass.yml` below the project root, which is not read |
+| `L-SETTING-REMOVED` | warning | A `compass.yml` key 9.0.0 no longer reads, `models` or `multiagent` (ADR-090). The key stays valid, so the project keeps working; delete it |
 | `L-PARENT-FORM` | error | An `extends:` that is neither `compass:default@<major>` nor `github:<owner>/<repo>@<ref>#<sha>`, or a sha that is not 7 to 40 lowercase hexadecimal characters, or a short sha that names no cached commit of the same repository, or a sha that names a tree or a file. Git is not run for a bad spelling |
 | `L-PARENT-NO-SHA` | error | A remote ref with no sha. A git parent is pinned by commit. Git is not run |
 | `L-PARENT-NOT-CACHED` | error | The pinned commit is not in `.compass/cache/parents/` and this run may not fetch it: `compass check`, a reader of a stored generation, `--offline` or `COMPASS_OFFLINE` |

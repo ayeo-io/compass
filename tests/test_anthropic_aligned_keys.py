@@ -159,13 +159,15 @@ def test_an_archived_gate_id_still_resolves():
 # --- `TRC-B7` - the config block adopters hand-edit -------------------------
 
 def test_the_config_names_multiagent_work_by_its_new_name():
-    """`TRC-B7`: shipped template and this repository's own config."""
+    """`TRC-B7`: shipped template and this repository's own config. 9.0.0 removed
+    the multiagent setting (ADR-090), so this repository's config holds neither
+    the old block nor the new one."""
     for rel in ("compass.yml", "templates/config.yml"):
         path = ROOT / rel
         if not path.exists():
             continue
         cfg = _yaml(path)
-        assert "multiagent" in cfg, f"{rel} has no multiagent block"
+        assert "multiagent" not in cfg, f"{rel} still has a multiagent block"
         assert "swarm" not in cfg, f"{rel} still has a swarm block"
 
 
@@ -184,11 +186,8 @@ def test_a_config_still_using_the_swarm_block_is_read(tmp_path):
         "swarm:\n  worktree_root: ../old-root\n  max_worktrees: 3\n")
     assert project_settings.scalar(str(tmp_path), "worktree_root") == "../old-root"
     assert project_settings.scalar(str(tmp_path), "max_worktrees") == "3"
-    for rel in ("scripts/multiagent.sh", "scripts/integrate.sh"):
-        body = (ROOT / rel).read_text(encoding="utf-8")
-        assert "compass_setting" in body, (
-            f"{rel} no longer reads its settings through compass_setting, so "
-            f"an adopter's swarm: block may no longer be read")
+    # The two scripts that read these through compass_setting were removed in
+    # 9.0.0 (ADR-090); the reader still reads the old block.
 
 
 # --- `TRC-F2` - a rename that drops data fails loudly -----------------------

@@ -314,7 +314,7 @@ def test_vr_c16_the_living_spec_keeps_only_completed_issues(tmp_path):
 
 
 # --- the readers of the checks: checks, compliance, the ci sweep, diagnose,
-# --- multiagent_check, binding, landed_by ------------------------------------
+# --- binding, landed_by ------------------------------------
 
 DONE_WORDS = [("landed", {}), ("done", {"close_reason": "completed"}),
               ("done", {"close_reason": "not-planned"}), ("abandoned", {})]
@@ -426,15 +426,6 @@ def test_vr_c16_the_diagnosis_lists_a_failed_gate_of_a_completed_issue_only(tmp_
         out = diagnose._deviations(str(tmp_path), _with(status, extra, gates=gates),
                                    {}, shown, [])
         assert any("verify.correctness is fail" in line for line in out) is listed, status
-
-
-@pytest.mark.parametrize("status,extra,ready", [
-    ("landed", {}, True), ("done", {"close_reason": "completed"}, True),
-    ("done", {"close_reason": "not-planned"}, False), ("active", {}, False)])
-def test_vr_c16_a_completed_issue_is_ready_whatever_its_gates_say(status, extra, ready):
-    from compass_pkg import multiagent_check
-    m = _with(status, extra, gates=[{"id": "g", "status": "pending"}])
-    assert multiagent_check._ready(m) is ready
 
 
 @pytest.mark.parametrize("status,extra", [("landed", {}),

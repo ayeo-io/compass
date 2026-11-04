@@ -1,10 +1,12 @@
 # Captured from the code before checkpoint outcomes and usage existed, under a
 # fixed clock. The project's own folder reads <ROOT>, commit hashes read <sha>
 # and the board page's Generated line is masked.
+# Each count of checks with nothing to check is one lower than captured: 9.0.0
+# removed multiagent-run-recorded, which had nothing to check here (ADR-090).
 check-old-landed.txt: |
   exit 1
   --- stdout
-  FAIL - 3 of 11 check(s) failed, 13 had nothing to check on 'old-landed' (regular)
+  FAIL - 3 of 11 check(s) failed, 12 had nothing to check on 'old-landed' (regular)
   [mode: enforced]
 
   FAIL suite-passed: test-run evidence EV-1 path does not resolve: evidence/green.json
@@ -22,7 +24,7 @@ lint-old-landed.txt: |
 check-old-flight.txt: |
   exit 1
   --- stdout
-  FAIL - 4 of 12 check(s) failed, 12 had nothing to check on 'old-flight' (regular)
+  FAIL - 4 of 12 check(s) failed, 11 had nothing to check on 'old-flight' (regular)
   [mode: enforced]
 
   FAIL declared-tests-resolve: declared test(s) do not resolve to a test on disk: OLD-FLIGHT-1: tests/test_old_flight.py::test_it
@@ -41,7 +43,7 @@ lint-old-flight.txt: |
 check-old-nokey.txt: |
   exit 1
   --- stdout
-  FAIL - 4 of 12 check(s) failed, 12 had nothing to check on 'old-nokey' (regular)
+  FAIL - 4 of 12 check(s) failed, 11 had nothing to check on 'old-nokey' (regular)
   [mode: enforced]
 
   FAIL declared-tests-resolve: declared test(s) do not resolve to a test on disk: OLD-NOKEY-1: tests/test_old_nokey.py::test_it
@@ -69,7 +71,7 @@ ci.txt: |
   [issue] old-flight
   compass issue lint: PASS - .compass/work/old-flight/manifest.yml is structurally valid.
 
-  FAIL - 4 of 12 check(s) failed, 12 had nothing to check on 'old-flight' (regular)
+  FAIL - 4 of 12 check(s) failed, 11 had nothing to check on 'old-flight' (regular)
   [mode: enforced]
 
   FAIL declared-tests-resolve: declared test(s) do not resolve to a test on disk: OLD-FLIGHT-1: tests/test_old_flight.py::test_it
@@ -83,7 +85,7 @@ ci.txt: |
   [issue] old-landed
   compass issue lint: PASS - .compass/work/old-landed/manifest.yml is structurally valid.
 
-  FAIL - 3 of 11 check(s) failed, 13 had nothing to check on 'old-landed' (regular)
+  FAIL - 3 of 11 check(s) failed, 12 had nothing to check on 'old-landed' (regular)
   [mode: enforced]
 
   FAIL suite-passed: test-run evidence EV-1 path does not resolve: evidence/green.json
@@ -96,7 +98,7 @@ ci.txt: |
   [issue] old-nokey
   compass issue lint: PASS - .compass/work/old-nokey/manifest.yml is structurally valid.
 
-  FAIL - 4 of 12 check(s) failed, 12 had nothing to check on 'old-nokey' (regular)
+  FAIL - 4 of 12 check(s) failed, 11 had nothing to check on 'old-nokey' (regular)
   [mode: enforced]
 
   FAIL declared-tests-resolve: declared test(s) do not resolve to a test on disk: OLD-NOKEY-1: tests/test_old_nokey.py::test_it

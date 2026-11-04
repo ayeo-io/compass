@@ -173,7 +173,9 @@ fi
 # The scripts 9.0.0 removed (ADR-090). Decision records, archived issues and
 # the release history name them as they were, and are never rewritten to
 # follow a deletion, so a reference to one of these is not a broken one.
-REMOVED_SCRIPTS="scripts/run-demo.sh"
+REMOVED_SCRIPTS="scripts/integrate.sh
+scripts/multiagent.sh
+scripts/run-demo.sh"
 for ref in $REFS; do
   if [ -f "$ref" ]; then
     if [ -x "$ref" ]; then ok "exec $ref  <- referenced, exists, executable"
@@ -186,7 +188,7 @@ for ref in $REFS; do
 done
 # Also assert the canonical set is present regardless of references.
 for f in hooks/pre-tool.sh hooks/post-tool.sh hooks/stop.sh \
-         scripts/install.sh scripts/multiagent.sh scripts/integrate.sh scripts/validate.sh; do
+         scripts/install.sh scripts/validate.sh; do
   [ -f "$f" ] || fail "expected file missing: $f"
 done
 say ""

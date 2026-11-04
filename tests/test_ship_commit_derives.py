@@ -2,9 +2,8 @@
 
 ADR-026: `ship-commit` is the one step that marks an issue landed and
 re-derives `docs/system-spec.md`, whether the issue was built solo or
-through the multiagent protocol. `integrate.sh` only merges a wave and runs
-the combined regression - `tests/derive/test_integrate_sh_status.py` and
-`tests/test_zero_install_cli.py` pin that half.
+through the multiagent protocol. `integrate.sh`, which only merged a wave and
+ran the combined regression, was removed in 9.0.0 (ADR-090).
 """
 from __future__ import annotations
 
@@ -284,8 +283,8 @@ def _commit_issue_at_head(repo: Path, slug: str, *, gates_pass: bool = True,
                           changed_files=None, file_name: str = "feature.txt",
                           scenarios=None) -> Path:
     """Commit an issue's manifest and declared file straight to HEAD, so
-    nothing is staged afterwards - the shape a multiagent wave leaves
-    behind: `integrate.sh` has already merged every subtask branch."""
+    nothing is staged afterwards - the shape a multiagent wave left behind
+    before 9.0.0, once every subtask branch was merged."""
     task_dir = repo / ".compass" / "work" / slug
     task_dir.mkdir(parents=True)
     if changed_files is None:

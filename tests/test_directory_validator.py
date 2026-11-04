@@ -542,7 +542,6 @@ INHERITS_ENVIRONMENT = {
     ("cli/compass_pkg/start_state.py", "_record_path"): (1, _GIT),
     ("cli/compass_pkg/start_state.py", "_tracked_paths"): (1, _GIT),
     ("cli/compass_pkg/migrate_copy_check.py", "_judge.git"): (1, _GIT),
-    ("cli/compass_pkg/subtasks.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/tdd.py", "_run_test"): (1, _PROJECT),
     ("cli/compass_pkg/tip_scope.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/worktree_lookup.py", "run_git"): (1, _GIT + "; it leaves out only GIT_ variables"),

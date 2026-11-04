@@ -635,9 +635,9 @@ def stub_map(task_dir, data, project, plan=None):
     count = len(subtasks) if isinstance(subtasks, list) else _map_rows(source)
     if count >= 2:
         return None
-    # A map that declares one work unit is the record `multiagent-run-recorded` reads
-    # from the registry, not a stub, so the rename would fail that check.
-    from compass_pkg.multiagent_check import declared_units
+    # A map that declares one work unit was the record `multiagent-run-recorded` read
+    # from the registry before 9.0.0 (ADR-071), not a stub, so it is kept as it is.
+    from compass_pkg.artifact_owed import declared_units
     if declared_units(source) == 1:
         return None
     stub = {"entry": entry.get("id"), "from": rel, "to": rel + ".v6.bak"}

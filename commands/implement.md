@@ -23,22 +23,9 @@ work.
 - Load the `tdd-discipline` skill.
 - For a change to behavior a real client can observe, also load `atdd`:
   this stage runs its stage 2, the protocol driver.
-- Invoke the `builder` agent - **one per worktree** on a pair or multiagent
-  orchestration, each owning its scenario set from the distribution map. On solo
-  work, one builder on the current branch.
-- Pass the computed model and effort when you invoke the `builder` agent:
-  `compass approach show --model implement` prints the `model`, and
-  `compass approach show --effort implement` prints the `effort`. On
-  `inherit`, pass the model family your session runs on (`opus`,
-  `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot
-  tell. Exit 1 means the issue sets nothing for that value: leave it out,
-  so the agent's frontmatter applies.
-  On a multiagent, the orchestrator records each dispatch's tier with
-  `compass issue subtask add`, and a second try is dispatched one tier up.
-- On a multiagent, the `orchestrator` already monitors the subtasks: it detects
-  when two subtasks start to change the same code and acts *before* their
-  changes conflict. Cross-subtask changes go through the orchestrator, never builder
-  to builder.
+- Build in this session, on the current branch. When `distribution-map.md`
+  names more than one unit, build them one after another in the order
+  breakdown set, each through its own red and green.
 - **Capture the regression baseline first (a shipped strategy).**
   - **When it applies:** `delivery-approach.md` assesses risk as
     cross-cutting or critical, or `compass approach evaluate` surfaced

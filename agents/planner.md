@@ -81,7 +81,7 @@ the feature code.
 4. **Build the distribution map.** Identify independent work units -
    units that touch disjoint code *and* satisfy disjoint scenarios can run in
    parallel. Determine independence from the scenario file and the plan,
-   not by guesswork. Load the `worktree-multiagent` skill for the decomposition craft.
+   not by guesswork. Load the `plan-authoring` skill for the decomposition craft.
 5. **Decide orchestration.** Solo, pair, or multiagent. The assessment's size
    and risk values set the default; your distribution map sets the subtask
    count; the multiagent settings in `compass.yml` (or `.compass/config.yml` in a project without one) and the routing guardrail caps bound

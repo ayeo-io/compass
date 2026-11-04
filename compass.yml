@@ -76,8 +76,7 @@ project:
   name: "Compass (framework)"
 
   # The command Compass runs to run the test suite. Passed to `compass
-  # tdd-red` and `compass tdd-green` as the test command, and used by
-  # scripts/integrate.sh for combined regression.
+  # tdd-red` and `compass tdd-green` as the test command.
   test_command: "pytest -q"   # e.g. "npm test", "pytest -q", "go test ./..."
 
   # The commands `compass readiness` runs, each in a clean checkout of HEAD
@@ -115,11 +114,6 @@ project:
   #   bdd_run_command   How to run the acceptance suite once the .feature is
   #                     extracted and the steps are bound.
   # bdd_run_command: pytest tests/
-
-multiagent:
-  # The worktree root, relative to the project. How many subtasks may run at
-  # once is a routing rule, not a setting.
-  worktree_root: "../.compass-worktrees"
 
 # The one catalogue override this repository holds: the readiness floor times
 # `project.test_micro_command` instead of the full suite. It changes which

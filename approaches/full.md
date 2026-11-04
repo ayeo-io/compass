@@ -23,10 +23,10 @@ launch's worth of work.
 | Define | **Thorough BDD discovery.** Greenfield: scenario discovery from `intent.md`. Brownfield: `behavior-mapping` of current behavior *then* the new scenarios. Scenarios are grouped by independence - this grouping seeds the distribution map. |
 | Refine | **Thorough pass.** Self-QA, governance QA, and an explicit ambiguity ledger. Non-engineering roles review here. |
 | Plan | **Thorough `technical-design.md` + `distribution-map.md`.** Architecture, every design decision recorded as an ADR-style note, governance check, and the mapping of scenario groups → independent work subtasks. |
-| Breakdown | **Multiagent.** `scripts/multiagent.sh` creates one git worktree per subtask; one `builder` agent per worktree; one `orchestrator` agent that writes no feature code. |
-| Implement | Thorough TDD inside each worktree, in parallel. The orchestrator watches for subtasks converging on shared surface and intervenes before they collide. |
-| Verify | **All gates, all dimensions.** Per-subtask verification, then combined verification after integration. |
-| Ship | `scripts/integrate.sh`: orchestrated merge of all worktrees, full regression across the combined result, living-docs update, every owed follow-up resolved. |
+| Breakdown | **Ordered units.** The session orders the units of the distribution map; it starts no worktree and no agent (ADR-090). |
+| Implement | Thorough TDD, one unit after another, in this session. |
+| Verify | **All gates, all dimensions.** Verification of each unit, then of the whole result. |
+| Ship | **Combined regression.** A full regression across the whole result, living-docs update, every owed follow-up resolved. |
 
 ## Gate set
 

@@ -192,15 +192,38 @@ def without_strategy(document):
     return [r for r in rows(document) if r[0] not in STRATEGY_CHECKS]
 
 
+def _removed_in_9():
+    """The checks 9.0.0 removed on purpose (ADR-090). A comparison with 8.0.4
+    leaves them out on both sides, so it still sees every other difference."""
+    if str(ROOT / "cli") not in sys.path:
+        sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg.check_registry import REMOVED
+    return {name for name, removed in REMOVED.items() if removed.removed_in == "9.0.0"}
+
+
+def _without_removed(value, removed):
+    if isinstance(value, dict):
+        return {k: _without_removed(v, removed) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_without_removed(v, removed) for v in value
+                if not (isinstance(v, str) and v in removed)
+                and not (isinstance(v, list) and v and isinstance(v[0], str) and v[0] in removed)]
+    return value
+
+
 def recorded(name):
-    """The compass 8.0.4 output recorded for fixture `name`."""
-    return json.loads((FIXTURES / "compass-8.0.4" / f"{name}.json").read_text(encoding="utf-8"))
+    """The compass 8.0.4 output recorded for fixture `name`, less the checks
+    9.0.0 removed."""
+    data = json.loads((FIXTURES / "compass-8.0.4" / f"{name}.json").read_text(encoding="utf-8"))
+    return _without_removed(data, _removed_in_9())
 
 
 def summary(code, document):
     """What a comparison with compass 8.0.4 reads: the exit code and the rows
-    that are not the strategy's."""
-    return {"exit": code, "rows": [list(r) for r in without_strategy(document)]}
+    that are not the strategy's, less the checks 9.0.0 removed."""
+    removed = _removed_in_9()
+    return {"exit": code, "rows": [list(r) for r in without_strategy(document)
+                                   if r[0] not in removed]}
 
 
 # --- the projects the comparisons run on -------------------------------------------------

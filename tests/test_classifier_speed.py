@@ -619,7 +619,11 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # Re-pinned for `route_checkpoints`' `strategy_applies` (ADR-083). The classifier
 # never passes it, and the default leaves out only `implement` and `verify`, which no
 # checkpoint table named before, so no verdict moves and the version stays 11.
-VERDICT_SOURCE_PIN = "389b27b4b47053ad"
+# Re-pinned for issue #352 (ADR-090): the policy adapter no longer reads the
+# model-tier rule sets, which no comparison read, and a check a release removed
+# owes nothing, so dropping `multiagent-run-recorded` from a list is `equivalent`
+# where version 11 read it as `loosening`. The version is now 12.
+VERDICT_SOURCE_PIN = "4f9a605c1c45c1be"
 
 
 def _verdict_source_digest():

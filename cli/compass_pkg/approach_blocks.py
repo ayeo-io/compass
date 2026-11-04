@@ -26,7 +26,9 @@ from __future__ import annotations
 
 from compass_pkg import rendered_blocks as rb
 from compass_pkg.render_inputs import CROSS, OWN, Part, code as _code
-from compass_pkg.stable_ids import STAGE_IDS
+from compass_pkg.stable_ids import (STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS,
+                                    STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_SHIP,
+                                    STAGE_VERIFY)
 
 #: Shown for a dimension the manifest holds no justification for: an issue assessed
 #: before the manifest kept them.
@@ -109,8 +111,14 @@ def gate_set(inputs, doc_rel):
     return Part(OWN, lines)
 
 
+#: The seats an issue assessed before 9.0.0 records in `models:`, in stage order.
+#: 9.0.0 writes no `models:` (ADR-090); the block still renders a stored one, so a
+#: document that holds it stays current.
+SEATS = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN, STAGE_BREAKDOWN,
+         STAGE_IMPLEMENT, STAGE_VERIFY, "review", STAGE_SHIP)
+
+
 def model_tiers(inputs, doc_rel):
-    from compass_pkg.model_tiers import SEATS
     models = inputs.task.get("models")
     if not isinstance(models, dict) or not models:
         return Part(OWN, ["No model tiers recorded: the agents run on their frontmatter "

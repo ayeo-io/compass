@@ -1,6 +1,7 @@
 """A route that breaks work down across agents earns the distribution map.
 
-`scripts/multiagent.sh` reads a distribution map. The feature route
+The breakdown stage reads a distribution map; from 9.0.0 the session builds
+its units in turn (ADR-090). The feature route
 computed `breakdown: multiagent` but did not earn a map, so
 `compass issue artifact distribution-map` refused to register one, and the
 map only worked as an unregistered file beside the manifest.

@@ -642,12 +642,6 @@ _register(Rule(
             "the real slug of a past, archived issue - the same protected "
             "citation as the cross-task-architectural-integrity exemption "
             "above."),
-        Exemption(
-            "tests/test_swarm_script_parser.py",
-            "Spec: swarm-script-strips-markdown/acceptance-criteria.md",
-            "the real slug of a past, archived issue - the same protected "
-            "citation as the cross-task-architectural-integrity exemption "
-            "above."),
         # The word is now also a defined issue type, so the derived glossary
         # names it as a term: its heading and the Related list of the
         # issue-type entry. The retired sense is the issue meaning only.
@@ -893,17 +887,6 @@ _register(Rule(
             "tests/test_status_vocabulary.py", "tasks: {slug: issue-dict}",
             "names the real parameter `tasks` this helper takes (section 4), "
             "not a v1-vocabulary use of the word."),
-        Exemption(
-            "tests/test_swarm_cap.py", "note quoting `blast_radius: critical`",
-            "quotes the literal fixture string `_PROSE` verbatim, a "
-            "regression fixture for an old-format audit note (section 4), "
-            "not a v1-vocabulary use of the word."),
-        Exemption(
-            "tests/test_swarm_script_parser.py",
-            "Match the \"stream-1: WOULD create worktree",
-            "quotes the literal regex pattern on the next line verbatim - "
-            "an identifier (section 4), not a v1-vocabulary use of the "
-            "word."),
         Exemption(
             "tests/test_tdd_red_integrity.py", "not a red (TRC-G1)",
             "the scenario id TRC-G1 contains G1 as a substring by "
@@ -2538,10 +2521,11 @@ _LEGACY_SETTINGS_PATHS = frozenset({".compass/config.yml"})
 
 # The files 9.0.0 deleted with the stage agents, the multiagent breakdown,
 # model tiers, execution profiles and the headless runner (ADR-090). A decision
-# record is history: it names the file as it was when the decision was taken,
-# and it is never edited to follow a deletion. Only these exact paths are
-# excused, and only in the two folders that hold decision records; any other
-# file that names one is still reported.
+# record, and an archived issue's record, is history: it names the file as it
+# was when the work was done, and it is never edited to follow a deletion. So is
+# the ledger of re-baselines in `test_public_surface_truth.py`. Only these exact
+# paths are excused, and only in those places; any other file that names one is
+# still reported.
 _REMOVED_IN_9_0_0 = frozenset({
     "cli/compass_pkg/run_cmd.py", "docs/headless-runner.md", "ci/headless-verify.yml",
     "scripts/run-demo.sh", ".github/workflows/compass-run-demo.yml",
@@ -2550,8 +2534,25 @@ _REMOVED_IN_9_0_0 = frozenset({
     "cli/compass_pkg/execution_profile.py", "cli/compass_pkg/execution_profile_cmd.py",
     "cli/compass_pkg/execution_profile_store.py", "schemas/execution-profile.schema.json",
     "docs/execution-profiles.md", "tests/test_execution_profiles.py",
+    "cli/compass_pkg/model_tiers.py", "tests/test_model_tiers.py",
+    "cli/compass_pkg/subtasks.py", "cli/compass_pkg/multiagent_check.py",
+    "scripts/multiagent.sh", "scripts/integrate.sh", "scripts/lib/issue-docs.sh",
+    "docs/multiagent-protocol.md", "skills/worktree-multiagent/SKILL.md",
+    "agents/orchestrator.md", "tests/test_orchestrator_loop_prose.py",
+    "tests/test_subtask_record.py", "tests/test_multiagent_run_recorded.py",
+    "tests/test_one_unit_breakdown.py", "tests/test_check_compares_record_with_map.py",
+    "tests/test_swarm_cap.py", "tests/test_swarm_script_parser.py",
+    "tests/test_swarm_seeding.py", "tests/test_map_cells_checked.py",
+    "tests/test_map_counts_agree.py", "tests/test_integrate_keeps_records.py",
+    "tests/test_integrate_refuses_committed_ignored_records.py",
+    "tests/derive/test_integrate_sh_status.py", "tests/test_multiagent_docs_and_waves.py",
+    "tests/test_multiagent_protocol_doc.py",
+    "tests/test_multiagent_scripts_match_the_protocol.py",
+    "tests/test_subtask_cost_covers_every_try.py",
 })
-_DECISION_RECORD_FOLDERS = ("architecture/decisions/", "governance/decisions/")
+_DECISION_RECORD_FOLDERS = ("architecture/decisions/", "governance/decisions/",
+                            "docs/compass/", "examples/",
+                            "tests/test_public_surface_truth.py")
 
 
 def test_pbw_a8_only_the_exact_runtime_record_path_may_be_missing():
@@ -2649,7 +2650,8 @@ def test_pbw_a8_a_path_9_0_0_removed_is_excused_only_in_a_decision_record():
         assert not _find_missing_reference(ProseSpan(record, 1, line, "markdown"))
         assert _find_missing_reference(
             ProseSpan(record, 1, "See `cli/compass_pkg/no_such_module.py`.", "markdown"))
-    for other in ("docs/x.md", "architecture/ownership.md", "README.md"):
+    for other in ("docs/x.md", "architecture/ownership.md", "README.md",
+                  "examples.md", "docs/compass.md"):
         assert _find_missing_reference(ProseSpan(other, 1, line, "markdown")), other
 
 
@@ -3077,16 +3079,6 @@ _register(Rule(
             "the regex does not match a leading '.'; the real path is "
             ".claude/settings.json (or ~/.claude/settings.json), the "
             "install destination, not a path this repository tracks."),
-        Exemption(
-            "scripts/integrate.sh", "lib/compass-python.sh",
-            "a shellcheck `source=` directive, resolved relative to the "
-            "sourcing file's own directory (scripts/), not to the "
-            "repository root; the real file is scripts/lib/compass-python.sh."),
-        Exemption(
-            "scripts/multiagent.sh", "lib/compass-python.sh",
-            "a shellcheck `source=` directive, resolved relative to the "
-            "sourcing file's own directory (scripts/), not to the "
-            "repository root; the real file is scripts/lib/compass-python.sh."),
         Exemption(
             "cli/compass_pkg/migrate.py", "commands/technical-design.md",
             "the path's non-existence is the point of the sentence - it "
@@ -3858,7 +3850,9 @@ _GROWING_REACH = {
     # `layering-test-passed`, three each.
     # 157 when 9.0.0 removed execution profiles and the nine files of
     # tests/fixtures/execution-profiles/ (ADR-090).
-    "PBW-C4": (lambda path: path.startswith("tests/"), 157),
+    # 155 when 9.0.0 removed `multiagent-run-recorded` and its two check-corpus
+    # case labels (ADR-090).
+    "PBW-C4": (lambda path: path.startswith("tests/"), 155),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

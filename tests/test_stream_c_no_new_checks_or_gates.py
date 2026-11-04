@@ -28,6 +28,10 @@ REMOVED_CHECKS = {
     # documents-carry-judgement: replaced by `rendered-blocks-current`, which checks
     # every block Compass writes in an issue's documents and not only the README.
     "dashboard-current",
+    # ayeo-io/compass-delivery#352: 9.0.0 runs each issue in one session, so no
+    # run splits into subtasks to record (ADR-090). A stored generation that
+    # lists it reports it as nothing to check.
+    "multiagent-run-recorded",
 }
 
 BASELINE_CHECKS = {
@@ -83,12 +87,6 @@ BASELINE_CHECKS = {
     # and no-ops entirely for a project that has set no project.bdd_runner,
     # which is nearly all of them.
     "scenarios-are-executable",
-    # Added by dispatch-protocol. A multiagent issue's manifest must show the
-    # run that built it completed - every subtask done, with a last review
-    # round that passed. Joins the evidence-not-assertion guardrail (`G4`)
-    # rather than becoming a sixth guardrail: ADR-002 caps guardrails at
-    # five and grows the framework through new checks instead.
-    "multiagent-run-recorded",
     # Added by artifact-status-written-by-stages (ADR-050). A document that
     # reads draft or awaiting-approval, or is omitted with no reason, has not
     # been accepted, so ship refuses it. It sits in no guardrail: a check in

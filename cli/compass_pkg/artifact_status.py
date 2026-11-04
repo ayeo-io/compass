@@ -49,7 +49,6 @@ SUPERSEDED, OMITTED = "superseded", "omitted"
 
 #: The `approved_by` value of each command that moves a status.
 BY_ARTIFACT_SET = "compass issue artifact set"
-BY_SUBTASK_ADD = "compass issue subtask add"
 BY_TDD_RED = "compass tdd-red"
 BY_ACCEPTANCE = "compass acceptance record"
 BY_GATE_PASS = "compass gate pass"
@@ -364,7 +363,7 @@ def _check_artifacts_approved(task, task_dir):
     held = {}
     for entry in task.get("artifacts") or []:
         if isinstance(entry, dict):
-            verdict = artifact_owed.owed(task, view, str(entry.get("kind")), entry)
+            verdict = artifact_owed.owed(task, view, str(entry.get("kind")), entry, task_dir)
             if not verdict.owed:
                 held[entry.get("kind")] = verdict.text
     notes = "".join("; %s: %s" % (kind, text) for kind, text in held.items())

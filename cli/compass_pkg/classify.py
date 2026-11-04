@@ -84,7 +84,11 @@ JSON_SCHEMA_VERSION = 1
 # trigger lists of `contracts-declared`) is compared as a set of exact entries,
 # so adding an entry is `tighter`, which version 10 read as `incomparable`
 # (ADR-073).
-CLASSIFIER_VERSION = 11
+#
+# Version 12: a check a release removed (`check_registry.REMOVED`) owes nothing,
+# so a list that drops one, such as `multiagent-run-recorded` at 9.0.0, compares
+# as `equivalent`, which version 11 read as `loosening` (ADR-090).
+CLASSIFIER_VERSION = 12
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")

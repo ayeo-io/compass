@@ -622,11 +622,10 @@ TOP_DESCRIPTIONS = {
                                                 "below it.",
     "prices": "Dollars per million tokens for each model name, used to price the usage of a "
               "quick fix. Without it no cost is recorded.",
-    "models": "The model and effort of each tier `strong`, `standard` and `fast`, which "
-              "`compass approach show --model <seat>` and `--effort <seat>` print for a stage "
-              "command to pass to its agent. A tier is a model name, or `{model, effort}`; the "
-              "shipped mapping is `strong` inherit (the session's model) at high, `standard` "
-              "sonnet at medium and `fast` haiku at low.",
+    "models": "Removed in 9.0.0 (ADR-090) and not read: the model and effort of each tier "
+              "`strong`, `standard` and `fast`, which a stage command passed to its agent. "
+              "The key stays valid so a project that holds it keeps working, and `compass "
+              "policy lint` names it.",
     "models.strong": "The strong tier, for judgment seats: a model name, or `{model, effort}`. "
                      "The default is `inherit`, the session's model, at effort `high`.",
     "models.standard": "The standard tier, for the builder: a model name, or `{model, effort}`. "

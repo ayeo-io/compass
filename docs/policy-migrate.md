@@ -332,16 +332,6 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "model_floors",
-      "operation": "add"
-    },
-    {
-      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "model_tiers",
-      "operation": "add"
-    },
-    {
-      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "role_defaults",
       "operation": "remove"
     },
@@ -403,7 +393,7 @@ reassess), and the `compass.yml` it would write.
     {
       "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "multiagent-run-recorded",
-      "operation": "set"
+      "operation": "remove"
     },
     {
       "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
@@ -494,6 +484,11 @@ reassess), and the `compass.yml` it would write.
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.layering-test-passed",
       "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "checks.multiagent-run-recorded",
+      "operation": "remove"
     },
     {
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->

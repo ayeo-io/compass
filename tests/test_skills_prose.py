@@ -4,7 +4,7 @@ These tests check:
 
   * `skills/` is enforced - it has left both terminology pending lists;
   * `agents/` is scanned and never pending;
-  * the worktree-multiagent skill carries the "never stash across a
+  * the compass-runtime skill carries the "never stash across a
     worktree hop" rule;
   * the role-perspective ban catches the concept, but not a hyphenated
     agent identifier such as `product-owner`, which keeps its spelling
@@ -53,12 +53,13 @@ def test_agents_surface_is_enforced_never_pending():
 
 
 def test_worktree_swarm_carries_the_stash_rule():
-    """The worktree-multiagent skill carries the "never stash across a
-    worktree hop" rule (TRC-3)."""
-    text = (REPO_ROOT / "skills" / "worktree-multiagent" / "SKILL.md").read_text(
+    """The compass-runtime skill carries the "never stash across a worktree
+    hop" rule (TRC-3). It moved there from the worktree-multiagent skill when
+    9.0.0 removed that skill (ADR-090)."""
+    text = (REPO_ROOT / "skills" / "compass-runtime" / "SKILL.md").read_text(
         encoding="utf-8").lower()
     assert "never stash across a worktree hop" in text, (
-        "the worktree-multiagent skill does not state the stash rule")
+        "the compass-runtime skill does not state the stash rule")
     assert "destroys the stashed work" in text, (
         "the stash rule is stated without its reason - a rule with no why "
         "gets deleted by the first person it inconveniences")

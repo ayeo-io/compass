@@ -3,9 +3,9 @@
 The technical design template's Work units table gains a Low-level design
 column that links each unit's low-level design, and `template show` prints
 the `low-level-design` kind. The distribution map's subtask table, its
-catalogue entry and the scripts that read the table do not change. The map
-itself may gain other lines: issue `one-unit-breakdown` (ADR-071) added its
-`units:` line, and `multiagent_check.py` reads that line as well as the table.
+catalogue entry do not change. The scripts that read the table were removed in
+9.0.0 (ADR-090), so the test no longer compares them. The map itself may gain
+other lines: issue `one-unit-breakdown` (ADR-071) added its `units:` line.
 """
 from __future__ import annotations
 
@@ -26,24 +26,6 @@ PRESET = ROOT / "governance" / "presets" / "default"
 LLD_HEADINGS = ["Signatures", "Contracts", "File-level plan", "Tests this unit writes"]
 WORK_UNIT_COLUMNS = ["Unit", "Scenario group(s) it satisfies", "Code surface it touches",
                      "Independent of", "Low-level design"]
-
-#: The scripts that read the distribution map's subtask table.
-MAP_READERS = ("scripts/multiagent.sh", "scripts/integrate.sh")
-
-
-# The two scripts' variable names and messages say "approach" where they said
-# "route", because "route" is a verb only (ADR-044, issue
-# `retired-words-in-prose-and-output`). The map is read the same way, so the
-# comparison undoes that rename only.
-_RENAMED = ((b"APPROACH_DOC", b"ROUTE"), (b"approach cap", b"route cap"),
-            (b"If the approach is solo", b"If the route is solo"))
-
-
-def _unrenamed(data):
-    for new, old in _RENAMED:
-        data = data.replace(new, old)
-    return data
-
 
 def _origin_main(rel):
     """The bytes of `rel` on origin/main, or a skip when that ref is absent."""
@@ -107,9 +89,6 @@ def test_wcl_15_distribution_map_unchanged():
     now = _artifacts((PRESET / "artifacts.yml").read_text(encoding="utf-8"))
     before = _artifacts(_origin_main("governance/presets/default/artifacts.yml"))
     assert now["distribution-map"] == before["distribution-map"]
-    for reader in MAP_READERS:
-        assert _unrenamed((ROOT / reader).read_bytes()) == _unrenamed(
-            _origin_main(reader)), reader
     # Unit is still the first column of the design's Work units table, which the
     # distribution map is read from.
     text = (ROOT / "templates" / "technical-design.md").read_text(encoding="utf-8")

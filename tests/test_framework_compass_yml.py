@@ -97,7 +97,7 @@ def test_idr_5_the_settings_the_old_file_held_are_read_from_compass_yml():
     assert settings["governance_drift"] == "advisory"
     assert settings["project"]["test_command"] == "pytest -q"
     assert settings["project"]["name"] == "Compass (framework)"
-    assert settings["multiagent"]["worktree_root"] == "../.compass-worktrees"
+    assert "multiagent" not in settings   # removed in 9.0.0 (ADR-090)
     assert settings["record"]["names_key"] == ".compass/private/rival-codes.yml"
     assert ".compass/work" in settings["record"]["paths"]
 

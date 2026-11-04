@@ -39,8 +39,9 @@ STAGE_SHIP = "ship"
 STAGE_IDS = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN, STAGE_BREAKDOWN,
              STAGE_IMPLEMENT, STAGE_VERIFY, STAGE_SHIP)
 
-# The model tiers, weakest first (`compass_pkg.model_tiers`). `standard` is also a
-# retired approach name; as a tier it names the model of the builder's seat.
+# The model tiers, weakest first. 9.0.0 removed model tiers (ADR-090); the names
+# stay because the `models` setting a project file can still hold is checked
+# against them. `standard` is also a retired approach name.
 TIER_FAST = "fast"
 TIER_STANDARD = "standard"
 TIER_STRONG = "strong"

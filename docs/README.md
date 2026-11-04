@@ -21,7 +21,6 @@ the table does not exist, and when a doc in this folder is not listed.
 - [refusal-codes.md](refusal-codes.md) - every reason the pre-tool hook can refuse with, generated.
 - [artifact-catalog.md](artifact-catalog.md) - the artifact catalog: the fields of a kind, the skeleton, the word limits, the documents that repeat, the documents per work unit and the table of shipped kinds.
 - `artifact-catalogue.md` - the old name of the artifact catalog page, kept until 9.0.0 so a link to it opens the new page.
-- [multiagent-protocol.md](multiagent-protocol.md) - how a multiagent issue is run, step by step.
 - [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.
 - [autonomy-and-cost.md](autonomy-and-cost.md) - checkpoint outcomes, the landing refusal, the session record and usage at ship, and the autonomy ratio, bands and cost per change that `compass retro --impact` and `compass issue diagnose` derive from them: shapes, commands, definitions, the read limit and the floors.
 - [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
@@ -111,13 +110,13 @@ same commit.
 | `cli/compass_pkg/waivers.py` | `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md` |
 | `cli/compass_pkg/layers.py`, `cli/compass_pkg/merge.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/locks.py` | `governance/guardrails.md` |
-| `cli/compass_pkg/routing.py`, `cli/compass_pkg/readiness_floor.py`, `cli/compass_pkg/model_tiers.py`, `cli/compass_pkg/g5_label_prompt.py`, `cli/compass_pkg/approach_diagram.py`, `governance/routing-policy.yml`, `approaches/`, `docs/approach-diagram.html` | `governance/routing-policy.md` |
+| `cli/compass_pkg/routing.py`, `cli/compass_pkg/readiness_floor.py`, `cli/compass_pkg/g5_label_prompt.py`, `cli/compass_pkg/approach_diagram.py`, `governance/routing-policy.yml`, `approaches/`, `docs/approach-diagram.html` | `governance/routing-policy.md` |
 | `cli/compass_pkg/checks.py`, `cli/compass_pkg/check_cmd.py`, `cli/compass_pkg/check_registry.py`, `cli/compass_pkg/red_first.py`, `governance/guardrails.yml` | `governance/guardrails.md` |
 | `governance/strategies.md` | `governance/strategies-rationale.md` |
 | `governance/terminology.yml` | `docs/glossary.md` |
 | `commands/`, `agents/`, `schemas/` | `skills/compass-runtime/SKILL.md` |
 | `cli/compass_pkg/tdd.py`, `cli/compass_pkg/tdd_green.py`, `cli/compass_pkg/green_attempts.py`, `cli/compass_pkg/evidence_identity.py`, `cli/compass_pkg/evidence_sums.py` | `skills/evidence-gates/SKILL.md` |
-| `cli/compass_pkg/subtasks.py`, `cli/compass_pkg/loop_ceilings.py`, `cli/compass_pkg/multiagent_check.py`, `scripts/multiagent.sh`, `scripts/integrate.sh` | `docs/multiagent-protocol.md` |
+| `cli/compass_pkg/loop_ceilings.py` | `governance/routing-policy.md` |
 | `cli/compass_pkg/host_launch.py` | `evals/README.md` |
 | `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py` | `docs/delivery-record.md` |
 | `cli/compass_pkg/compliance.py`, `cli/compass_pkg/checkpoint_outcomes.py`, `cli/compass_pkg/session_record.py`, `cli/compass_pkg/session_usage.py`, `cli/compass_pkg/issue_usage.py`, `cli/compass_pkg/autonomy_cost.py` | `docs/autonomy-and-cost.md` |

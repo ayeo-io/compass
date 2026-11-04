@@ -69,20 +69,19 @@ def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
     # 26 with design-within-word-ceiling (ADR-067), 27 with the four-layer acceptance
     # strategy's acceptance-applicability-agrees, 28 with its outer-loop-recorded (ADR-080),
     # 29 with its acceptance-support-present, 30 with its `outer-loop-attempts-recorded`
-    # (ADR-084), 32 with its isolation-proven and layering-test-passed (ADR-086).
-    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 32
+    # (ADR-084), 32 with its isolation-proven and layering-test-passed (ADR-086),
+    # 31 when 9.0.0 removed multiagent-run-recorded (ADR-090).
+    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 31
     for name, entry in check_registry.REGISTRY.items():
         # dod-evidence-typed moved to 2.0.0: its verdict on a ticked page with no record changed.
         # human-approval-present moved to 1.1.0: it counts only an approval given for
         # guardrail `G5`, and its corpus verdicts held, so the major stayed (ADR-066).
         # It moved to 1.2.0 when a withdrawn sign-off stopped counting (ADR-069).
-        # multiagent-run-recorded moved to 1.1.0 when it accepted a single-unit
-        # record (ADR-071). suite-passed moved to 1.1.0 when a newer issue needed a red
+        # suite-passed moved to 1.1.0 when a newer issue needed a red
         # for each scenario (ADR-088). evidence-matches-tree moved to 1.1.0 when a
         # landed issue was judged by the SHA-256 of each file (ADR-089).
         assert entry.version == {"dod-evidence-typed": "2.0.0",
                                  "human-approval-present": "1.2.0",
-                                 "multiagent-run-recorded": "1.1.0",
                                  "suite-passed": "1.1.0",
                                  "evidence-matches-tree": "1.1.0"}.get(name, "1.0.0"), name
         assert isinstance(entry.params_spec, dict), name

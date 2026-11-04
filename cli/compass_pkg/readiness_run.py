@@ -3,9 +3,8 @@
 temporary worktree of HEAD (ADR-061).
 
 - The temporary worktree is a detached `git worktree add` of HEAD in the
-  system temp folder, named `compass-readiness-<process id>-<random>`. It is
-  outside `multiagent.worktree_root` and not counted against
-  `max_worktrees`. It holds no ignored or uncommitted file, and whatever a
+  system temp folder, named `compass-readiness-<process id>-<random>`. It holds
+  no ignored or uncommitted file, and whatever a
   command writes there is removed with it, so the working tree never changes.
 - It is removed in a `finally` block with `git worktree remove --force`, then
   `git worktree prune`.

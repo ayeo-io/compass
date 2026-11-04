@@ -29,7 +29,7 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from compass_pkg import catalogue_check, documents_present, layers, locks
+from compass_pkg import catalogue_check, documents_present, layers, locks, removed_parts
 from compass_pkg import merge, parent_states, parents, waivers
 from compass_pkg import catalogue_spec as spec
 from compass_pkg import acceptance_strategy, retired, word_map
@@ -45,7 +45,7 @@ GROUPS = ("layer", "merge", "resolved", "locks", "classification")
 # `W-*` codes pass through under their own names (`docs/policy-lint.md`).
 FINDING_CODES = (
     "L-LOAD", "L-KEY-NOT-TEXT", "L-SCHEMA", "L-SETTINGS-KEY", "L-UNLOCK-PLACEMENT", "L-IMPL-UNKNOWN",
-    "L-IMPL-TEMPLATED", "L-IGNORED-FILE", "L-PARENT-FORM", "L-PARENT-NO-SHA",
+    "L-IMPL-TEMPLATED", "L-IGNORED-FILE", "L-SETTING-REMOVED", "L-PARENT-FORM", "L-PARENT-NO-SHA",
     "L-PARENT-NOT-CACHED", "L-PARENT-FETCH", "L-PARENT-CONTENT", "L-PARENT-SHA-MISMATCH",
     "L-PARENT-SYMLINK", "L-PARENT-CACHE", "L-PARENT-CHAIN", "L-PARENT-SHA-AMBIGUOUS",
     "L-PARENT-CYCLE",
@@ -307,7 +307,8 @@ def _impl_findings(layer):
 
 
 def _layer_group(state):
-    out = []
+    out = [_finding("layer", "L-SETTING-REMOVED", layer, key, note, "warning")
+           for layer, key, note in removed_parts.setting_findings(state["chain"])]
     for layer in state["chain"]:
         for text in catalogue_check.check_layer(layer.doc, layer.kind):
             path, _, message = text.partition(": ")
@@ -353,8 +354,10 @@ def _removed_check_note(path, message):
     removed = REMOVED.get(parts[1]) if len(parts) >= 2 and parts[0] == "checks" else None
     if removed is None:
         return message
-    return ("%s - %s is an unknown check: it was removed in %s, and %s replaces it"
-            % (message, parts[1], removed.removed_in, removed.replaced_by))
+    instead = ("with no replacement" if removed.replaced_by is None
+               else "and %s replaces it" % removed.replaced_by)
+    return ("%s - %s is an unknown check: it was removed in %s, %s"
+            % (message, parts[1], removed.removed_in, instead))
 
 
 def _layer_of(state, path):
@@ -536,18 +539,12 @@ def _effect_targets(state):
 
 #: The perspectives that can own a document besides the shipped agents (ADR-070).
 PERSPECTIVES = ("engineer", "product-owner", "product-marketer", "designer", "qa")
-
-
 def _agents_and_roles(config):
-    """The ids an artifact's `owner` may name: the agents the framework ships,
-    the fixed perspectives, and the values of a `role` dimension a project
-    still declares."""
-    owners = set(PERSPECTIVES) | set(
+    """The ids an artifact's `owner` may name: the former agent names, which the
+    shipped catalogue uses as roles, the fixed perspectives and the values of a
+    `role` dimension a project still declares."""
+    return set(PERSPECTIVES) | set(removed_parts.AGENT_NAMES) | set(
         ((config.get("dimensions") or {}).get("role") or {}).get("values") or [])
-    folder = os.path.join(FRAMEWORK_ROOT, "agents")
-    if os.path.isdir(folder):
-        owners |= {name[:-3] for name in os.listdir(folder) if name.endswith(".md")}
-    return owners
 
 
 def _template_text(kind):
@@ -1025,7 +1022,8 @@ def resolve_effective(parent, project, issue=None, *, meta=None, slug=None,
              if layer is not None]
     versions = {p.layer.name: p.version or None for p in git_parents}
     state = {"chain": chain, "today": datetime.date.today()}
-    problems = _layer_group(state) or _merge_group(state)
+    # A warning, such as a removed setting (ADR-090), does not stop resolution.
+    problems = [f for f in _layer_group(state) if f.level == "error"] or _merge_group(state)
     if problems:
         first = problems[0]
         raise CompassError(

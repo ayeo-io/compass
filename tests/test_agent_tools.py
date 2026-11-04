@@ -29,7 +29,6 @@ SHELL = {
     "verifier": "verify runs the scenarios and the full suite",
     "reviewer": "it runs compass review-rule list and reads subtask packages",
     "router": "assess runs approach evaluate",
-    "orchestrator": "breakdown runs the worktree scripts",
 }
 # A perspective agent reviews and writes documents; the calling session runs
 # any compass verb its entry point names.
@@ -42,9 +41,7 @@ NO_SHELL = ("product-owner", "product-marketer")
 SKILL = {
     "builder": "it loads tdd-discipline before it writes a line, and "
                "evidence-gates for traceability.md",
-    "orchestrator": "it loads worktree-multiagent before it does anything",
-    "planner": "it loads plan-authoring and governance-check, and "
-               "worktree-multiagent for the decomposition",
+    "planner": "it loads plan-authoring and governance-check",
     "spec-author": "it loads bdd-specification, behavior-mapping on "
                    "brownfield ground, and evidence-gates for traceability",
     "reviewer": "it loads evidence-gates before it reviews",
@@ -195,10 +192,3 @@ def test_the_builder_reads_before_it_edits_and_edits_with_the_file_tools():
     assert "one plain command per Bash call" in flat
     assert text.index("## Editing files") < text.index(
         "## How you behave per delivery approach")
-
-
-def test_the_orchestrator_description_says_what_it_is_not_for():
-    """20 of 26 orchestrator runs planned or fixed one whole issue (`TRC-001`)."""
-    fm, _ = _frontmatter("orchestrator")
-    assert "Not for planning or building one issue" in fm["description"]
-    assert "planner or builder" in fm["description"]

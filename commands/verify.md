@@ -32,21 +32,6 @@ The rest of this command is for delivery work.
   this stage runs its stage 3, the isolation proof and the checklist.
 - Invoke the `verifier` agent (runs the suites) and the `reviewer` agent
   (applies the review dimensions).
-- Pass the computed model and effort to each agent, as `model` and
-  `effort`. These print them, the first two for the `verifier` and the last
-  two for the `reviewer`:
-
-  ```
-  compass approach show --model verify
-  compass approach show --effort verify
-  compass approach show --model review
-  compass approach show --effort review
-  ```
-
-  On `inherit`, pass the model family your session runs on (`opus`,
-  `sonnet`, `haiku` or `fable`), or leave `model` out when you cannot tell.
-  Exit 1 means the issue sets nothing for that value: leave it out, so the
-  agent's frontmatter applies.
 - If `positioning.md` is present, the `claims` dimension applies -
   `product-marketer` reviews here too.
 - If this issue is itself a sweep, rename, or cleanup touching many files,
@@ -94,8 +79,7 @@ The rest of this command is for delivery work.
    (`compass policy show`; an unmigrated 5.x project runs on its own copied
    `governance/` until `compass policy migrate`): the guardrails (hard, evidence-backed -
    `compass check` is the mechanical part) and the applicable strategies
-   (assessed as judgment, reported separately). On a multiagent, check each subtask first, then again on the
-   combined result.
+   (assessed as judgment, reported separately).
 5. **Update the gates in `manifest.yml`.** As each gate is cleared, the
    `verifier` registers the evidence, then passes the gate with it:
    `compass evidence add <EV-id> --type <type> --path <file>`, then

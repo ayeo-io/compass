@@ -21,8 +21,9 @@ Findings covered (numbered as the batch 5-9 review numbers them):
       to the wrong noun.
   11. `cli/compass_pkg/manifest.py` led a sentence with a bare code, `G1`,
       with no plain word in front of it.
-  12. `scripts/multiagent.sh` shipped the reviewing agent's own first-person
-      uncertainty in a comment with no owner.
+  12. The multiagent script shipped the reviewing agent's own first-person
+      uncertainty in a comment with no owner. 9.0.0 removed the script
+      (ADR-090), and its test with it.
   14. `cli/compass_pkg/calibration.py` used three names for one thing across
       three lines; two matched the CLI's printed output, one did not.
 """
@@ -72,11 +73,6 @@ def test_release_sh_does_not_claim_a_live_unanchored_exclude():
     text = _read("scripts/release.sh")
     assert "unanchored .compass/work exclude strips them" not in text
     assert "The noise check below still checks." not in text
-
-
-def test_multiagent_sh_comment_has_no_first_person_uncertainty():
-    text = _read("scripts/multiagent.sh")
-    assert "I have not checked whether that is" not in text
 
 
 def test_terminal_py_subparser_comment_attaches_to_the_right_noun():

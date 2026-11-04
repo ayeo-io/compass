@@ -302,8 +302,13 @@ def test_gls_8_only_owned_labels_are_removed(repo, gh):
 def test_gls_9_record_changing_commands_sync(repo, gh):
     ready_project(repo, gh)
     assert status_labels(gh.labels()) == {"status:ready"}
-    added =run(repo, gh, "issue", "subtask", "add", "subtask-1", "--brief", "README.md",
-                "--model", "m", "--budget", "0", "--issue", SLUG)
+    # 9.0.0 removed `compass issue subtask add` (ADR-090), so a recorded test
+    # run is the record-changing command here.
+    evidence = repo / ".compass" / "work" / SLUG / "evidence"
+    evidence.mkdir(exist_ok=True)
+    (evidence / "green.json").write_text('{"command": "true", "exit_code": 0}')
+    added = run(repo, gh, "evidence", "add", "EV-W", "--type", "test-run",
+                "--path", "evidence/green.json", "--issue", SLUG)
     assert added.returncode == 0, added.stdout + added.stderr
     assert status_labels(gh.labels()) == {"status:in-progress"}
     import importlib
@@ -510,8 +515,6 @@ def test_gls_16_walkthrough_commands_run(repo, gh):
         assert status_labels(gh.labels()) == expect, args
 
     step("approach", "evaluate", "--write", expect={"status:ready"})
-    step("issue", "subtask", "add", "subtask-1", "--brief", "README.md", "--model", "m",
-         "--budget", "0", expect={"status:in-progress"})
     evidence = repo / ".compass" / "work" / SLUG / "evidence"
     evidence.mkdir(exist_ok=True)
     (evidence / "green.json").write_text('{"command": "true", "exit_code": 0}')
@@ -553,8 +556,9 @@ def test_gls_9_every_command_that_writes_a_state_input_is_a_trigger():
         names = set(github_labels.TRIGGERS)
     finally:
         sys.path.remove(str(ROOT / "cli"))
+    # `cmd_subtask_replan` left with `compass issue subtask` in 9.0.0 (ADR-090).
     owed = {"cmd_tdd_red", "cmd_tdd_green", "cmd_evidence_add", "cmd_acceptance_record",
-            "cmd_scenario_descope", "cmd_subtask_replan"}
+            "cmd_scenario_descope"}
     assert owed <= names, sorted(owed - names)
     assert "cmd_quick_fix_start" not in names
 

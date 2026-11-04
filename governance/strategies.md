@@ -240,7 +240,7 @@ against the calibration sample before it ships.**
 
 - The sample is `skills/compass-runtime/writing-voice-worked-example.md`,
   paired with the "Never stash across a worktree hop" section of
-  `skills/worktree-multiagent/SKILL.md`.
+  `skills/compass-runtime/SKILL.md`.
 - The audition does not lapse. It applies to any future slice that writes
   prose.
 - The test: read it aloud - would you say this sentence to a colleague at your

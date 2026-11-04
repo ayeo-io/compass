@@ -2,8 +2,8 @@
 
 A project's settings: what each one does, its values, its default and which
 file holds it. The Python reader is `cli/compass_pkg/project_settings.py`
-(ADR-043). The pre-tool hook and the two multiagent scripts call it too, so
-every reader of a setting follows the same file.
+(ADR-043). The pre-tool hook calls it too, so every reader of a setting
+follows the same file.
 
 ## Where the settings live
 
@@ -58,10 +58,10 @@ The state decides what Compass reads, and no state loses a setting silently:
 - **What counts as a settings key in the old file:** `mode`, `autonomy`,
   `allow_project_commands`, `enforcement`, `record`, `project`, `prices`,
   `models`, `multiagent`, `preset_index`, `governance_drift`, `github_labels`, `language`
-  and `acceptance_strategy`. The three keys the
-  multiagent scripts read, `worktree_root`, `max_worktrees` and `test_command`,
-  also count when they are outside `multiagent:` and `project:`, because the
-  scripts find them at any depth in the old file.
+  and `acceptance_strategy`. The three keys the multiagent scripts read
+  before 9.0.0, `worktree_root`, `max_worktrees` and `test_command`, also
+  count when they are outside `multiagent:` and `project:`, because the
+  scripts found them at any depth in the old file.
 - **How the refusal shows.** The pre-tool hook exits 2 with `settings-conflict`
   for an edit to a path its built-in rules neither guard nor exempt. Each CLI
   command that reads settings stops with the same text, and `compass check`
@@ -89,8 +89,8 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `enforcement` | Extra paths the pre-tool hook guards | `code_globs`: a list of patterns | none |
 | `record` | Where the delivery record is kept | `remote`, `paths`, `names_key` | no record |
 | `prices` | Dollars per million tokens, to price a quick fix's usage | a mapping from model name | no cost recorded |
-| `models` | The model and effort of each model tier (see `models` below) | `strong`, `standard`, `fast`: a model name, or `{model, effort}` | `strong` inherit at high, `standard` sonnet at medium, `fast` haiku at low |
-| `multiagent` | Where multiagent worktrees go | `worktree_root`, `max_worktrees` | `../.compass-worktrees`, 6 |
+| `models` | Removed in 9.0.0 and not read (see `models` below) | - | - |
+| `multiagent` | Removed in 9.0.0 and not read (see `multiagent` below) | - | - |
 | `allow_project_commands` | Lets `compass check` and `compass readiness` run commands the project declares | `true`, `false` | `false` |
 | `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
 | `living_spec` | When a landing re-derives the living spec (see `living_spec` below) | `land`, `refresh` | `land` |
@@ -141,8 +141,7 @@ changed how often a session stops would give no sign.
 - `name`: shown in artifact headers and the devlog.
 - `test_command`: the command `compass tdd-red` and `compass tdd-green` run
   when none is given. Left empty, `tdd-red` and `tdd-green` need the command
-  after `--`, and refuse without it. `scripts/integrate.sh` falls back to
-  `npm test` or `make test` for the combined regression run.
+  after `--`, and refuse without it.
 - `test_micro_command`: used before `test_command` for those two commands.
 - `bdd_run_command`: the command the `compass bdd` run step uses when none is given.
 - `lint_command`, `format_check_command`, `build_command` and `typecheck_command`:
@@ -178,51 +177,17 @@ initialized the project.
 
 ### `models`
 
-The routing policy gives each seat of an issue a model tier
-(`governance/routing-policy.md`, "Model tiers"). This setting maps each tier
-to the model, and optionally the effort, a stage command passes when it
-invokes an agent. The shipped mapping is:
-
-```yaml
-models:
-  strong:   {model: inherit, effort: high}   # the session's model
-  standard: {model: sonnet,  effort: medium}
-  fast:     {model: haiku,   effort: low}
-```
-
-- A key you leave out keeps its default, so `models: {standard: opus}`
-  changes only the standard tier.
-- A bare string, such as `standard: opus`, changes the builder's model, and
-  leaves the tier with no effort. A floor can still raise the seat's effort.
-- An effort is `low`, `medium`, `high`, `xhigh` or `max`; another value is
-  refused. Which levels a model accepts depends on the model.
-- `compass approach show --effort <seat>` prints the higher of the tier's
-  effort and a floor's effort, or exits 1 when neither sets one.
-- Claude Code applies an effort in this order: the
-  `CLAUDE_CODE_EFFORT_LEVEL` environment variable, then the effort an Agent
-  call passes, then the agent's frontmatter `effort`, then the session's
-  effort. So `CLAUDE_CODE_EFFORT_LEVEL` overrides what Compass computes.
-  Passing `effort` per call needs Claude Code v2.1.292 or later; an older
-  version uses the frontmatter effort.
-- `inherit` means the model the session runs on. A caller passes its own
-  session's model family for it.
-- A key that is not one of the three tiers is refused, and the message names
-  the tiers.
-- `compass approach show --model <seat>` reads this setting each time it runs, so a
-  change applies to every open issue. `prices` is keyed by the model name, so
-  costing keeps working when a name changes.
+9.0.0 removed model tiers and effort per dispatch (ADR-090). The key stays
+valid, so a project that holds it keeps working, and nothing reads it.
+`compass policy lint` names it with `L-SETTING-REMOVED`. Delete it from
+`compass.yml`.
 
 ### `multiagent`
 
-`scripts/multiagent.sh` reads `worktree_root` and `max_worktrees`, and
-`scripts/integrate.sh` reads `worktree_root` and `test_command` (under
-`project`). In `compass.yml` they read `multiagent.worktree_root`,
-`multiagent.max_worktrees` and `project.test_command` only, so a key of the
-same name elsewhere is ignored. In `.compass/config.yml` they find a key by
-its name at any depth, so a key under `multiagent:`, under an older heading or
-at the top level all work. A missing key gives the default. A file the scripts
-cannot read stops them with exit 1 and a message naming the file, because a
-default would give a silent worktree cap or skip the combined regression run.
+9.0.0 removed the multiagent scripts that read `worktree_root` and
+`max_worktrees` (ADR-090). The key stays valid, so a project that holds it
+keeps working, and nothing reads it. `compass policy lint` names it with
+`L-SETTING-REMOVED`. Delete it from `compass.yml`.
 
 ### `record`
 

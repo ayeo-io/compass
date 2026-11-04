@@ -249,16 +249,12 @@ def _stage_run(root, swap, report_after_gates=False):
     assert register(root, "technical-design")[0] == 0              # plan
     assert register(root, "distribution-map")[0] == 0              # breakdown
 
-    def subtask():
-        return run(root, "issue", "subtask", "add", "subtask-1", "--brief", "brief.md",
-                   "--model", "m", "--budget", "1", "--issue", SLUG)
-
-    def red():
-        return run(root, "tdd-red", "--issue", SLUG, "--", "sh", "-c", "echo FAILED; exit 1")
-
-    for step in ((red, subtask) if swap else (subtask, red)):
-        code, out, err = step()
-        assert code == 0, out + err
+    # `swap` ran `compass issue subtask add` after the red rather than before
+    # it. 9.0.0 removed that command (ADR-090), so both runs record the red only
+    # and the second run checks the result does not change between runs.
+    code, out, err = run(root, "tdd-red", "--issue", SLUG, "--", "sh", "-c",
+                         "echo FAILED; exit 1")
+    assert code == 0, out + err
     if not report_after_gates:
         assert register(root, "verification-report")[0] == 0       # `verify` stage
     _ready(root)

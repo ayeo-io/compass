@@ -29,7 +29,6 @@ import yaml
 
 import re as _re
 import fnmatch
-from compass_pkg import model_tiers
 from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, COMPASS_SCHEMA_VERSION, CompassError, canonical_shape, display_shape, display_stage, find_governance, load_manifest, load_yaml, reading_matches, resolve_issue_dir, shape_stages
 from compass_pkg.governance import governance_drift
 from compass_pkg import retired, word_map
@@ -601,7 +600,6 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
         "max_worktrees": max_worktrees,
         "applicable_strategies": applicable_strategies,
         "checkpoints": checkpoints,
-        "models": model_tiers.evaluate(policy.get("model_rules"), matches, phases),
     }
     if issue:
         result["issue_overrides"] = {"applied": applied, "ignored": ignored}
@@ -1031,10 +1029,8 @@ def cmd_route_evaluate(args):
         task["policy_rules_fired"] = result["policy_rules_fired"]
         task["stages"] = result["stages"]
         task["checkpoints"] = result["checkpoints"]
-        if result["models"]:        # set in place, so the key keeps its position
-            task["models"] = result["models"]
-        else:                        # no tier rules: agents use their frontmatter
-            task.pop("models", None)
+        # 9.0.0 computes no model tiers (ADR-090). A `models:` key an older
+        # assessment wrote is left as it is and nothing reads it.
         # An issue's first assessment makes it one whose hand-offs are recorded
         # (checkpoint_outcomes.py). A reassessment never adds the key, so an
         # issue assessed before outcomes existed is never judged by them.

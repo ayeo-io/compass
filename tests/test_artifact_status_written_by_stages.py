@@ -27,20 +27,6 @@ from artifact_status_support import (DOCS, add_evidence, HUMAN_DESIGN, ROOT, SLU
 BY_SET = "compass issue artifact set"
 
 
-def _brief(root):
-    path = root / "brief.md"
-    path.write_text("# brief\n")
-    git(root, "add", "-A")
-    git(root, "commit", "-q", "-m", "brief")
-    return path
-
-
-def _subtask_add(root):
-    _brief(root)
-    return run(root, "issue", "subtask", "add", "subtask-1", "--brief", "brief.md",
-               "--model", "m", "--budget", "1", "--issue", SLUG)
-
-
 def _red(root):
     return run(root, "tdd-red", "--issue", SLUG, "--", "sh", "-c", "echo FAILED; exit 1")
 
@@ -69,16 +55,8 @@ def test_asw_1_stage_exit_approves_document_without_human_check(tmp_path):
         assert found[kind]["approved_at"], kind
     assert found["technical-design"]["status"] == "draft"
     assert "approved_by" not in found["technical-design"]
-    first = statuses(root)
-
-    other = project(tmp_path / "b")
-    _staged(other)
-    code, out, err = _subtask_add(other)
-    assert code == 0, out + err
-    assert register(other, "technical-design")[0] == 0
-    second = statuses(other)
-    for kind in ("delivery-approach", "acceptance-criteria", "technical-design"):
-        assert second[kind] == first[kind], kind
+    # A second project ran `compass issue subtask add` first and had to read
+    # the same; 9.0.0 removed that command (ADR-090).
 
 
 # --- ASW-2 ---------------------------------------------------------------------

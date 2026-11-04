@@ -42,13 +42,8 @@ for delivery work; on a spike, follow the graduate-or-discard step in
      what changed and why, for someone who was not in the conversation; no
      `Co-Authored-By:` trailer for any agent and no "Generated with"
      footer. The same applies to a pull-request body.
-   - **Pair or multiagent:** the `orchestrator` (or lead builder on a pair)
-     runs `scripts/integrate.sh` - an orchestrated merge of all worktrees.
-     The orchestrator is the only agent allowed to resolve cross-subtask
-     conflicts.
-2. **Combined regression.** Run regression across the *combined* result. On
-   a multiagent this is required - per-subtask green does not imply
-   integrated green. Record the run and link the record.
+2. **Combined regression.** Run regression across the whole result, every
+   unit together. Record the run and link the record.
 3. **Update living docs.** Update READMEs, architecture notes, and any docs
    the change touched, so they match the code. If the change is launch-visible
    (`positioning.md` is present), draft the release notes here

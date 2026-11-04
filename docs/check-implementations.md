@@ -257,13 +257,6 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `hotfix` | nothing-to-check | an in-scope issue on the `existing-dsl-isolation` routing of a hotfix, with no layering record |
 | `restored` | pass | an in-scope issue whose layering record has `exit_code` 0 and `tests_ran` 3 |
 
-### `multiagent-run-recorded` (version 1.1.0)
-
-| Case | Verdict | What the input exercises |
-|---|---|---|
-| `broken` | fail | the input the mutation proof breaks: a subtask left not done |
-| `restored` | pass | the same input put right |
-
 ### `nfr-rows-resolved` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |

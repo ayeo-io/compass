@@ -428,7 +428,6 @@ SETTINGS_FILES_HELPER = ROOT / "scripts" / "lib" / "settings-files.sh"
 
 SHELL_READERS = [p for p in (
     hook_sources()
-    + [ROOT / "scripts" / "integrate.sh", ROOT / "scripts" / "multiagent.sh"]
     + sorted((ROOT / "scripts" / "lib").glob("*.sh")))
     if p != SETTINGS_FILES_HELPER]
 
@@ -487,17 +486,12 @@ def test_sh6_the_hook_and_the_scripts_name_no_settings_file():
 
 
 def _honoured(framework, base):
-    """What a copy of the hook and the scripts do with `compass.yml` alone:
-    the hook blocks the glob, `multiagent.sh` takes the root and cap, and
-    `integrate.sh` takes the test command. A name that is True is honoured."""
+    """What a copy of the hook does with `compass.yml` alone: the hook blocks
+    the glob. A name that is True is honoured. The two multiagent scripts were
+    checked here too until 9.0.0 removed them (ADR-090)."""
     project = make_project(base, compass_yml=GLOBS)
     hook = hook_edit(framework, base, project, "packaging/a.cfg")[0] == 2
-    repo = make_repo(base, compass=SETTINGS % ("new", 3, "new"))
-    out = run_script(framework, repo, "multiagent.sh", "--dry-run")
-    multi = "wt-new" in out.stdout and "config max 3" in out.stdout
-    out = run_script(framework, repo, "integrate.sh")
-    integ = "test command:  run-new" in out.stdout
-    return {"hook": hook, "multiagent": multi, "integrate": integ}
+    return {"hook": hook}
 
 
 def _planted(tmp_framework, name, old, new):
@@ -517,8 +511,7 @@ def copy():
 
 def test_sh6_the_real_hook_and_scripts_honour_compass_yml(copy):
     framework, base = copy
-    assert _honoured(framework, base) == {
-        "hook": True, "multiagent": True, "integrate": True}
+    assert _honoured(framework, base) == {"hook": True}
 
 
 # The old file named by a spelling the scan cannot see (the name is assembled
@@ -527,26 +520,6 @@ def test_sh6_the_real_hook_and_scripts_honour_compass_yml(copy):
 _HIDDEN = ('OLD="$PROJECT_DIR/.$(printf comp)ass/$(printf con)fig.$(printf y)ml"\n'
            '_read() { grep -E "^[[:space:]]*$1:" "$OLD" 2>/dev/null | head -n1 '
            '| sed -E "s/^[^:]*:[[:space:]]*//"; }\n')
-
-
-def test_sh6_a_script_left_on_the_old_file_fails_the_behaviour_check(copy):
-    framework, base = copy
-    _planted(framework, "scripts/multiagent.sh",
-             'WORKTREE_ROOT_REL="$(compass_setting "$PROJECT_DIR" worktree_root'
-             " '../.compass-worktrees')\"",
-             _HIDDEN + 'WORKTREE_ROOT_REL="$(_read worktree_root)"; '
-             'WORKTREE_ROOT_REL="${WORKTREE_ROOT_REL:-../.compass-worktrees}"')
-    assert not _shell_names_old_file(
-        (framework / "scripts" / "multiagent.sh").read_text())
-    assert _honoured(framework, base)["multiagent"] is False
-
-
-def test_sh6_the_other_script_left_on_the_old_file_fails_too(copy):
-    framework, base = copy
-    _planted(framework, "scripts/integrate.sh",
-             'TEST_CMD="$(compass_setting "$PROJECT_DIR" test_command \'\')"',
-             _HIDDEN + 'TEST_CMD="$(_read test_command)"')
-    assert _honoured(framework, base)["integrate"] is False
 
 
 def test_sh6_a_hook_left_on_the_old_file_fails_the_behaviour_check(copy):

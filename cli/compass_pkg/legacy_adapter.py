@@ -94,7 +94,8 @@ HARD_GUARDRAILS = (GATE_G5,)
 # What a check reports when it cannot run, read from each module that
 # returns `NOTHING_TO_CHECK` for it: checks.py (scenarios-are-executable,
 # claim-traces-to-scenario, command-passes), borrowed_docs.py, binding.py
-# (evidence-matches-tree), checks.py (dod-evidence-typed), landed_by.py, multiagent_check.py,
+# (evidence-matches-tree), checks.py (dod-evidence-typed), landed_by.py, multiagent_check.py
+# (removed in 9.0.0, still named so an old guardrails copy reads as before),
 # evidence_identity.py, artifact_status.py, section_checks.py and design_size.py.
 # The check declared-tests-resolve returns a pass with a note. Every other check
 # fails. `tests/test_obligations.py` replays these verdicts against the archive sample.
@@ -339,12 +340,8 @@ def _rules(policy, notes):
     out["advisory"] = _rule_set("advisory", converted(strategies.get("advisory_strategies")))
     if "role_defaults" in strategies:
         out["role_defaults"] = _rule_set("advisory", converted(strategies.get("role_defaults")))
-    # The model tiers (`compass_pkg.model_tiers`). A policy without the block
-    # makes no rule set, and its issues compute no tier.
-    models = policy.get("model_rules")
-    if isinstance(models, dict):
-        out["model_tiers"] = _rule_set("model-tiers", converted(models.get("default_tiers")))
-        out["model_floors"] = _rule_set("model-floors", converted(models.get("floors")))
+    # A copy written before 9.0.0 can hold `model_rules`. 9.0.0 removed model
+    # tiers (ADR-090), so the block makes no rule set and is not read.
     out["biases"] = _rule_set("biases", [
         (f"RP-BIAS-{i:03d}", None, {}, {"rationale": str(text)})
         for i, text in enumerate(strategies.get("biases") or [], start=1)])

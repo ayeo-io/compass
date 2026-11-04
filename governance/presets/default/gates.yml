@@ -54,8 +54,7 @@ gates:
     stage: verify
     applies_to: {ships: true}
     checks: [gate-evidence-present, dod-evidence-typed, consistency-check-passes, no-trusted-rerun, command-passes,
-      evidence-identity-matches, evidence-matches-tree, rendered-blocks-current, borrowed-documents-answered,
-      multiagent-run-recorded]
+      evidence-identity-matches, evidence-matches-tree, rendered-blocks-current, borrowed-documents-answered]
     locked: true
   G5:
     kind: guardrail

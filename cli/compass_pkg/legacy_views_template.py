@@ -103,15 +103,11 @@ routing_guardrails:
   caps:
 <<caps>>
 
-  # loop_ceilings - how far a multiagent run may go before it stops with a
-  # reason. `compass issue subtask` refuses another try or replan past
-  # one, and `compass check` refuses to land a subtask past one unless a
-  # stop reason with evidence is recorded. For each ceiling the LOWEST limit
-  # among the matching rules applies, so a rule can only lower a limit. A
-  # ceiling reached is a stop, not a success.
-  # The limits are a starting point. Of the 49 subtasks recorded before
-  # these rules, 16 went past three tries or two review rounds; the next
-  # runs are the measurement that should tune them.
+  # loop_ceilings - how far a multiagent run or an unattended run went
+  # before it stopped with a reason. 9.0.0 removed both runs (ADR-090), so
+  # nothing applies these limits; they stay readable until the configuration
+  # layers are replaced. For each ceiling the LOWEST limit among the matching
+  # rules applies, so a rule can only lower a limit.
   loop_ceilings:
 <<loop_ceilings>>
 
@@ -133,20 +129,6 @@ routing_guardrails:
   # role; the evaluator still reads that block where a copy has it.
   artifact_rules:
 <<artifact_rules>>
-
-# -----------------------------------------------------------------------------
-# MODEL RULES - which model tier each seat runs on. A seat is a stage, or the
-# reviewer in the verify stage (`review`). The tiers are fast < standard <
-# strong; `models:` in compass.yml maps each to a model name. `default_tiers`
-# gives each seat its tier; a `floors` rule whose `when` matches raises it, and
-# never lowers it. The evaluator writes the result to the manifest's `models:`
-# key, and `compass approach show --model <seat>` prints the name to pass.
-# -----------------------------------------------------------------------------
-model_rules:
-  default_tiers:
-<<model_default_tiers>>
-  floors:
-<<model_floors>>
 
 # -----------------------------------------------------------------------------
 # Assessment vocabulary - the legal values the assessment may take. The evaluator
@@ -311,8 +293,8 @@ ENTRY_COMMENTS = {
         '# what stops the artifact set being "whatever this shape always writes".',
     ],
     ('RP-LOOP-006', 'id'): [
-        '# `compass run` (ADR-030): the sessions one unattended run may start,',
-        '# and the minutes it may take. A flag can lower either, never raise it.',
+        '# `compass run` (ADR-030), removed in 9.0.0: the sessions one unattended',
+        '# run could start, and the minutes it could take.',
     ],
     ('assessment_vocabulary', 'labels_common'): [
         '# `labels` is an open list of domain tags - common ones, not exhaustive:',
@@ -383,7 +365,7 @@ INLINE_COMMENTS = {
 
 # Entries of a mapping that follow a blank line. A list that separates every
 # entry from the last names its section in GAPPED_SECTIONS instead.
-BLANK_BEFORE = {"evidence-matches-tree", "command-passes", "multiagent-run-recorded"}
+BLANK_BEFORE = {"evidence-matches-tree", "command-passes"}
 GAPPED_SECTIONS = {"floors", "defaults", "spike_guardrails"}
 
 # Prose written as a folded block (`>`) and not on one quoted line, by
@@ -392,7 +374,6 @@ FOLDED = {
     ("checks", "suite-passed"), ("checks", "claim-traces-to-scenario"),
     ("checks", "dod-evidence-typed"), ("checks", "no-trusted-rerun"),
     ("checks", "evidence-identity-matches"), ("checks", "evidence-matches-tree"),
-    ("checks", "multiagent-run-recorded"),
     ("evidence_types", "test-run"), ("evidence_types", "rollback-plan"),
     ("defaults", GATE_G1), ("defaults", GATE_G2), ("defaults", GATE_G3), ("defaults", GATE_G4),
     ("defaults", GATE_G5), ("spike_guardrails", GATE_S1), ("spike_guardrails", GATE_S2),

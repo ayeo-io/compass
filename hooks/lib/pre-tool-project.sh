@@ -7,9 +7,9 @@
 # --- resolve the project this hook is enforcing -----------------------------
 # The resolution order, and why each step exists:
 #   1. The edited file's own path, when the tool call names one. It is the
-#      only input that names the tree being changed - Compass creates git
-#      worktrees at breakdown, so on a multiagent approach the session
-#      directory and the edited file can be in different trees, and resolving
+#      only input that names the tree being changed - a person or a delegated
+#      agent can work in a git worktree, so the session directory and the
+#      edited file can be in different trees, and resolving
 #      from the session reads the wrong project either way: it can miss a red
 #      recorded in the edited tree, or borrow one recorded in the session's
 #      tree.
@@ -117,8 +117,8 @@ find_compass_root() {
     # project's .compass/ (a monorepo sibling, a stray one in $HOME) and
     # allow the edit if that issue has a red on record.
     #
-    # -e, not -d: in a git worktree .git is a file, and Compass creates
-    # worktrees itself for multiagent orchestrations.
+    # -e, not -d: in a git worktree .git is a file, and a project can be
+    # worked on from one.
     [ -e "$search/.git" ] && break
     [ "$search" = "/" ] && break
     # A relative path ends at "." and the parent of "." is ".", so stop

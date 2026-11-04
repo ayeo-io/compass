@@ -265,11 +265,9 @@ def _refuse_stale_green(task, task_dir, slug, root, at_commit,
 # --- living system spec derivation (ADR-026) --------------------------------
 # `ship-commit` is the one step that lands an issue and re-derives the living
 # spec: only once an issue is actually marked landed, in a commit of its own,
-# so the land commit itself stays bisectable and revertable on its own. A
-# staged multiagent run integrates each wave through `integrate.sh` without
-# landing the issue (ADR-025); `ship-commit` alone marks it landed, so
-# deriving here - and only here - keeps a staged run from re-deriving the
-# spec once per wave, ahead of verify.
+# so the land commit itself stays bisectable and revertable on its own.
+# `ship-commit` alone marks an issue landed, so the spec is derived here and
+# nowhere else.
 
 
 def _derive_and_commit_living_spec(cwd, slug):

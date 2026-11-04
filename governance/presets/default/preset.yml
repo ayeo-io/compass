@@ -17,6 +17,5 @@ locks:
     checks.declared-tests-resolve, checks.suite-passed, checks.changed-code-traces-to-scenario, checks.scenario-has-id-and-intent,
     checks.claim-traces-to-scenario, checks.gate-evidence-present, checks.spike-conclusion-present, checks.spike-no-production-changes,
     checks.dod-evidence-typed, checks.consistency-check-passes, checks.no-trusted-rerun, checks.evidence-identity-matches,
-    checks.evidence-matches-tree, checks.command-passes, checks.multiagent-run-recorded, gates.G1, gates.G2,
-    gates.G3, gates.G4, gates.S1, gates.S2, gates.verify.correctness, gates.verify.governance, gates.verify.traceability,
-    gates.spike.conclude]
+    checks.evidence-matches-tree, checks.command-passes, gates.G1, gates.G2, gates.G3, gates.G4, gates.S1,
+    gates.S2, gates.verify.correctness, gates.verify.governance, gates.verify.traceability, gates.spike.conclude]

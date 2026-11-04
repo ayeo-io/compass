@@ -384,7 +384,7 @@ def test_d2_repairs_change_only_retired_names():
     Two were re-baselined by `orchestrator-loop-hardening`, which adopted the
     multiagent loop's rules: `agents/orchestrator.md` gained a
     "Briefing a reviewer" section and two numbered steps, and
-    `skills/worktree-multiagent/SKILL.md` gained the brief-file, budget,
+    the `worktree-multiagent` skill gained the brief-file, budget,
     batching and no-subagent rules as list items.
 
     One was re-baselined by `dispatch-protocol`: `templates/distribution-map.md`
@@ -487,7 +487,7 @@ def test_d2_repairs_change_only_retired_names():
     `templates/distribution-map.md` (list_items 10 -> 7) and
     `templates/requirements-review.md` (17 -> 14) lost the boxes of their
     `## Gate` checklists, which are now a `breakdown-exit` block and the
-    existing `dor` block. `skills/worktree-multiagent/SKILL.md` (list_items
+    existing `dor` block. The `worktree-multiagent` skill (list_items
     29 -> 32, one more `##` heading) gained the section that holds the
     wording of the removed distribution-map boxes.
     Two more were re-baselined by `project-readiness-caps-autonomy`:
@@ -661,7 +661,15 @@ def test_d2_repairs_change_only_retired_names():
     `governance/guardrails.md` (list_items 98 -> 99) gained the `G1` bullet on
     the red for each scenario.
 
-    The other 45 are untouched, and a NEW structural change to any of the 59
+    ayeo-io/compass-delivery#352 removed two and re-baselined two (ADR-090):
+    `agents/orchestrator.md` and `skills/worktree-multiagent/SKILL.md` were
+    deleted with the multiagent breakdown, so their entries left the fixture;
+    `governance/routing-policy.md` (list_items 73 -> 62, table_rows 20 -> 12,
+    one more `##` heading) lost the model-tier section's table and bullets and
+    gained a short loop-ceilings section; and `templates/distribution-map.md`
+    (list_items 7 -> 6) lost the worktree-root line.
+
+    The other 45 are untouched, and a NEW structural change to any of the 57
     still fails.
     """
     import json

@@ -191,7 +191,7 @@ def test_trc_f7_skill_count_unchanged_on_net():
         "behav" + "iour-mapping",
         "compass-runtime", "evidence-gates", "flow-management",
         "governance-check", "plan-authoring",
-        "tdd-discipline", "worktree-multiagent",
+        "tdd-discipline",
         "receiving-code-review",  # a second pass over someone else's diff
         "systematic-debugging",   # notices three failed fixes in a row
         # Turns a brief that already exists into intent.md by asking rather

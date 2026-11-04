@@ -218,7 +218,7 @@ def test_trc_g3_compass_licence_not_altered_to_describe_third_party_code():
 # Any spelling of a YAML import: `import yaml`, `import sys, yaml`,
 # `import yaml as y`, `from yaml import safe_load`. A bare `grep "import
 # yaml"` misses the comma form, which is how a YAML reader goes unnoticed -
-# `scripts/integrate.sh` writes `import yaml, datetime, sys`.
+# the integrate script, removed in 9.0.0, wrote `import yaml, datetime, sys`.
 _IMPORT_YAML_RE = re.compile(
     r"^[ \t]*(?:import[ \t]+[ \t\w,]*\byaml\b(?:[ \t]+as[ \t]+\w+)?[ \t]*(?:#.*)?$"
     r"|from[ \t]+yaml\b[ \t]+import\b)",

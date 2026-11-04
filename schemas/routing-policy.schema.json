@@ -480,7 +480,7 @@
     },
     "model_rules": {
       "type": "object",
-      "description": "Which model tier and effort each seat runs on: default_tiers gives each seat its tier, and a matching floors rule raises its tier, its effort or both.",
+      "description": "Optional, and not read from 9.0.0 (ADR-090): which model tier and effort each seat ran on in an older copy of this file. default_tiers gave each seat its tier, and a matching floors rule raised its tier, its effort or both.",
       "properties": {
         "default_tiers": {
           "type": "array",

@@ -525,7 +525,7 @@ def _project_root(task_dir):
 
 
 #: The subtask keys that hold a path to a document. `compass issue subtask`
-#: writes each one measured from the project root.
+#: wrote each one measured from the project root, before 9.0.0 removed it.
 _SUBTASK_PATH_KEYS = ("brief", "report", "review_brief", "package")
 
 
@@ -538,10 +538,10 @@ def _reference_slots(data):
 
       * `"project"` - the subtask fields (`brief`, `earlier_briefs`,
         `report`, `review_brief`, `package`) and the stop evidence of a
-        subtask and of a run. `compass issue subtask` writes the subtask
-        fields, and `compass run` writes a run's stop evidence, both from the
-        project root. `multiagent-run-recorded` joins a subtask's stop
-        evidence to the project root.
+        subtask and of a run. Before 9.0.0, `compass issue subtask` wrote the
+        subtask fields and `compass run` wrote a run's stop evidence, both
+        from the project root, and `multiagent-run-recorded` joined a
+        subtask's stop evidence to the project root.
       * `"issue"` - an `evidence:` entry's `path`, and a gate's evidence when
         it holds a path (an inline `{type, path}`, or a list item that is
         one or names a `.md` file). Gates join these to the issue directory.

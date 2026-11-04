@@ -63,7 +63,10 @@ def test_wcl_23_declared_and_documented(tmp_path):
     for name, catalogue in (("gates.yml", "gates"), ("stages.yml", "stages"),
                             ("checks.yml", "checks")):
         before = _origin_main("governance/presets/default/" + name)
-        assert _locked(_yaml(PRESET / name), catalogue) == _locked(before, catalogue), name
+        # A check 9.0.0 removed on purpose (ADR-090) is no longer in the file.
+        gone = {c for c, r in check_registry.REMOVED.items() if r.removed_in == "9.0.0"}
+        then = {k: v for k, v in _locked(before, catalogue).items() if k not in gone}
+        assert _locked(_yaml(PRESET / name), catalogue) == then, name
 
     # It runs outside every gate, on a spike too, with a versioned implementation and corpus.
     assert CHECK in outside_gate.CHECKS and CHECK in outside_gate.SPIKE_CHECKS

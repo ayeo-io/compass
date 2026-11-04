@@ -86,4 +86,4 @@ The owner accepted each default on 4 November 2026:
 - ayeo-io/compass-delivery#352 [Remove the stage agents, multiagent breakdown and dispatch settings] and its parent, #345 [Reposition Compass 9.0.0 as an ATDD framework with a proof trail].
 - The 9.0.0 repositioning proposal of 31 October 2026, which #345 links: rows B, F and G, and question 6.
 - ADR-030 (the headless runner), ADR-071 (the one-unit breakdown), ADR-076 (execution profiles) and ADR-078 (a worktree's own pointer).
-- `cli/compass_pkg/check_registry.py` (`REMOVED`).
+- `cli/compass_pkg/check_registry.py` (`REMOVED`), `cli/compass_pkg/removed_parts.py`, `docs/judged-checks.md` ("An agent review"), `tests/test_agent_review_advisory.py`, `tests/test_removed_parts_9_0_0.py`.

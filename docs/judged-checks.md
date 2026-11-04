@@ -171,6 +171,38 @@ example above; `at` and `definition_digest` vary and are shown as `...`.
 
 `scope` and `generation` are absent when the record has none.
 
+## An agent review
+
+Before 9.0.0 a reviewer agent reviewed every change at verify. 9.0.0 runs each
+issue in one session (ADR-090), so no agent review is required. A project that
+wants one turns it on as advisory evidence by putting this block in its own
+`compass.yml`:
+
+```yaml
+checks:
+  agent-review:
+    statement: An agent that did not write the change reviewed it against the acceptance criteria.
+    kind: judged
+    reviewers: [agent]
+    inputs: [acceptance-criteria]
+    severity: advisory
+    on_skipped: not-applicable
+stages:
+  ship:
+    set:
+      entry: {add: [agent-review]}
+```
+
+The reviewing agent records its verdict with `compass evidence review
+agent-review --verdict pass|fail --reason TEXT --reviewer agent`, which writes a
+`manual-review` record. Then:
+
+- With no record, a `fail` or a changed input, the check shows as ADVISORY and
+  `compass check` does not fail on it.
+- A record by a person is set aside, because the check lists only `agent`.
+- The check sits at the `ship` entry and not in the Definition of Done, so
+  `dod-evidence-typed` does not read it.
+
 ## A project with no judged check
 
 Nothing changes. No record is read, the manifest is not touched and the output

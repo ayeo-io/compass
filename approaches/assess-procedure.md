@@ -50,8 +50,8 @@ what `/compass:init` offers separately.
   worktree root), or `.compass/config.yml` in a 5.x project that has no
   `compass.yml`. The same `compass.yml` holds the project's changes to the
   routing rules.
-- For a non-trivial or ambiguous issue, invoke the `router` agent to read
-  the three scored dimensions.
+- For a non-trivial or ambiguous issue, read the three scored dimensions
+  with care in this session; Compass starts no agent for it (ADR-090).
 - If a `intent.md`, `ui-contract.md`, or `positioning.md` already exists for
   this issue, read it - intent is the *outcome wanted*, not just the literal
   request.

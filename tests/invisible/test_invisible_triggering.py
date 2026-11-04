@@ -147,38 +147,4 @@ class TestCLAUDEMdNoReframe:
             )
 
 
-class TestAgentDescriptionsTrigger:
-    """Agent descriptions mention the intent-trigger (`TRC-C1` / `TRC-C3`)."""
-
-    def test_spec_author_has_trigger_sentence(self):
-        """spec-author.md must mention intent-driven assess triggering."""
-        content = AGENTS["spec-author"].read_text(encoding="utf-8")
-        assert AGENT_TRIGGER_SENTENCE in content, (
-            f"agents/spec-author.md is missing the intent-trigger sentence "
-            f"(must contain: {AGENT_TRIGGER_SENTENCE!r}). "
-            "Add one supporting sentence per plan.md §DD-6."
-        )
-
-    def test_planner_has_trigger_sentence(self):
-        """planner.md must mention intent-driven assess triggering."""
-        content = AGENTS["planner"].read_text(encoding="utf-8")
-        assert AGENT_TRIGGER_SENTENCE in content, (
-            f"agents/planner.md is missing the intent-trigger sentence "
-            f"(must contain: {AGENT_TRIGGER_SENTENCE!r})."
-        )
-
-    def test_builder_has_trigger_sentence(self):
-        """builder.md must mention intent-driven assess triggering."""
-        content = AGENTS["builder"].read_text(encoding="utf-8")
-        assert AGENT_TRIGGER_SENTENCE in content, (
-            f"agents/builder.md is missing the intent-trigger sentence "
-            f"(must contain: {AGENT_TRIGGER_SENTENCE!r})."
-        )
-
-    def test_orchestrator_has_trigger_sentence(self):
-        """orchestrator.md must mention intent-driven assess triggering."""
-        content = AGENTS["orchestrator"].read_text(encoding="utf-8")
-        assert AGENT_TRIGGER_SENTENCE in content, (
-            f"agents/orchestrator.md is missing the intent-trigger sentence "
-            f"(must contain: {AGENT_TRIGGER_SENTENCE!r})."
-        )
+# TestAgentDescriptionsTrigger read the agent files, which 9.0.0 removed (ADR-090).

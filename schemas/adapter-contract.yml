@@ -53,8 +53,8 @@ capabilities:
     codex: {status: full, path: adapters/codex/skills/compass/SKILL.md}
   - capability: Distinct agent contexts
     obligation: 7
-    claude-code: {status: full, path: agents/}
-    codex: {status: partial, path: adapters/codex/INSTRUCTIONS.md, note: "Shared personas can be passed to available Codex delegation tools. Without delegation the adapter records solo delivery; Claude model metadata is not used."}
+    claude-code: {status: none, reason: "Removed in 9.0.0: each issue runs in one session, with no stage agents (ADR-090)."}
+    codex: {status: none, reason: "Removed in 9.0.0 with the shared agent files (ADR-090)."}
   - capability: Isolated parallel workspaces
     obligation: 7
     claude-code: {status: none, reason: "Removed in 9.0.0: each issue runs in one session, with no worktree per subtask (ADR-090)."}

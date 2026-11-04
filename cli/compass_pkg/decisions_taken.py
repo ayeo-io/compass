@@ -42,8 +42,10 @@ from compass_pkg.terminal import say
 
 OPEN, CONFIRMED, REOPENED = "open", "confirmed", "reopened"
 LEDGER_REASON = "the resolution changed in the ledger"
-#: Agents that always count, whether or not the plugin's `agents/` folder is found.
+#: Agents that always count.
 BASE_AGENTS = ("builder", "spec-author", "planner")
+#: The agent names 9.0.0 removed (ADR-090), which a ledger written before it uses.
+from compass_pkg.removed_parts import AGENT_NAMES as REMOVED_AGENTS  # noqa: E402
 SCOPE = "requirement decisions"
 
 _ID = r"[A-Z][A-Z0-9]*-?\d+"
@@ -55,13 +57,8 @@ _LABEL = re.compile(
 
 def agent_names():
     """The names a ledger's "Decided by" can use: the three that always count
-    and every stem in the plugin's `agents/` folder."""
-    names = set(BASE_AGENTS)
-    folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "agents")
-    try:
-        names.update(os.path.splitext(n)[0] for n in os.listdir(folder) if n.endswith(".md"))
-    except OSError:
-        pass
+    and the agent names 9.0.0 removed, which an older ledger still uses."""
+    names = set(BASE_AGENTS) | set(REMOVED_AGENTS)
     return sorted(names, key=lambda n: (-len(n), n))
 
 

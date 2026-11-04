@@ -18,7 +18,7 @@ scope_bloat_phrases:
   - "(carried to ship)"
   - "USER TO APPLY"
 
-# Advisory patterns assessed by the reviewer agent at Verify - judgement,
+# Advisory patterns assessed by the review at the `verify` stage - judgement,
 # never a gate. A match is a prompt to the reviewer to investigate a
 # potential sign of a design problem; it does not fail any check. Projects
 # extend by editing their

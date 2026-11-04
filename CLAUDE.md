@@ -117,10 +117,8 @@ These repeat three rules of `compass-contract.md` for this repository. A test
 
 ## Where to look
 
-- `skills/compass-runtime/SKILL.md` - which agent owns which stage, which skill
-  to load with it, the stage-to-command map, the shape of an issue directory.
-- The `worktree-multiagent` skill, loaded by the orchestrator - who may create
-  a worktree, who works inside one, how the subtask count is bounded.
+- `skills/compass-runtime/SKILL.md` - which skill to load with each stage, the
+  stage-to-command map, the shape of an issue directory.
 - `docs/compass/<created>-<slug>/` - the issue's documents, registered in
   the manifest. `.compass/work/<slug>/` - the manifest, the evidence and the
   markers.

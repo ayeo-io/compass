@@ -36,7 +36,7 @@ small variant of an existing pattern, a config change with a known shape.
 ## Gate set
 
 One review point, at Verify, clearing three gates: `correctness`,
-`governance`, `traceability`. (Per `router.md`; a routing rule can add more -
+`governance`, `traceability`. (Per the routing policy; a routing rule can add more -
 for example a label can add `security` - but never removes these three.)
 
 ## Multiagent orchestration

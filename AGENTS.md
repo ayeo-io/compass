@@ -122,12 +122,10 @@ artifacts that plug into the same pipeline. The acceptance-criteria file is
 the one file all five roles read - do not reduce it to an engineering-only
 artifact.
 
-**5. Support solo / pair / multiagent orchestrations.** On larger delivery
-approaches, the plan stage produces a distribution map and the breakdown
-stage parallelizes across isolated workspaces (git worktrees in the
-reference implementation), one agent per subtask, with a coordinating
-orchestrator that owns integration at ship time. A runtime without
-worktrees must give equivalent isolation or cap itself at solo/pair.
+**5. Support solo delivery.** On larger delivery approaches, the plan stage
+produces a distribution map, and the session builds its units one after
+another in one session. Compass 9.0.0 starts no agent and no worktree per
+subtask (ADR-090), so a runtime needs no isolated workspaces.
 
 **6. Shell out for CI and the feedback loop too.** Two cross-issue kit
 commands complete the contract, and a portable runtime must call them
@@ -148,7 +146,7 @@ them.
 | Assess | A routine that produces the assessment, then *calls the kit* (`compass approach evaluate`) to compose the delivery approach |
 | The kit-layer CLI | A shell-out, not a reimplementation - the adapter runs `compass approach evaluate`, `compass check`, `compass tdd-red/green`, and `compass analyze` (cross-artifact consistency check) for the deterministic parts |
 | CI and the feedback loop | A shell-out to `compass ci` (honor the exit code), `compass retro` (the retrospective signal), `compass rework-scan` (cross-issue rework signal), and `compass flow` (cross-issue view; `--digest` writes a dated digest combining rework-scan and the retrospective signal) |
-| Subagents (`router`, `spec-author`, `planner`, `orchestrator`, `builder`, `verifier`, `reviewer`, `product-owner`, `product-marketer`, `architect`) | Distinct agent contexts or personas. The 10th - `architect` - applies the architect perspective (not an entry-point role): reads the project's `architecture/` artifacts (system-context, relations, ownership, decision records) at the assess stage and annotates the technical design via `architecture-notes.md`. Consulted by `spec-author` and `planner`; never writes feature code |
+| Role perspectives (product owner, product marketer, architect) | Taken by the session itself; 9.0.0 ships no subagents (ADR-090). The architect perspective reads the project's `architecture/` artifacts and annotates the design via `architecture-notes.md`; it never writes feature code |
 | Skills | Loadable procedural-knowledge modules |
 | Guardrail enforcement | `compass check` for the mechanical checks; hooks if available for red-before-green, procedural checks otherwise |
 | Role entry points | Distinct session-start modes |

@@ -669,7 +669,11 @@ def test_d2_repairs_change_only_retired_names():
     gained a short loop-ceilings section; and `templates/distribution-map.md`
     (list_items 7 -> 6) lost the worktree-root line.
 
-    The other 45 are untouched, and a NEW structural change to any of the 57
+    The same issue then removed the four other agent files the fixture held,
+    `agents/planner.md`, `agents/product-marketer.md`, `agents/product-owner.md`
+    and `agents/spec-author.md`, with the rest of `agents/` (ADR-090).
+
+    The other 45 are untouched, and a NEW structural change to any of the 53
     still fails.
     """
     import json

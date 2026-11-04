@@ -30,10 +30,12 @@ The rest of this command is for delivery work.
 - Load the `evidence-gates` skill.
 - For a change to behavior a real client can observe, also load `atdd`:
   this stage runs its stage 3, the isolation proof and the checklist.
-- Invoke the `verifier` agent (runs the suites) and the `reviewer` agent
-  (applies the review dimensions).
-- If `positioning.md` is present, the `claims` dimension applies -
-  `product-marketer` reviews here too.
+- Run the suites and apply the review dimensions in this session; Compass
+  starts no verifier or reviewer agent (ADR-090). A project that lists the
+  advisory `agent-review` check can also have an agent review the change and
+  record its verdict (`docs/judged-checks.md`).
+- If `positioning.md` is present, the `claims` dimension applies - review it
+  from the marketer's perspective too.
 - If this issue is itself a sweep, rename, or cleanup touching many files,
   check it the way `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S9` describes
   (an unmigrated 5.x project runs on its own copied `governance/` until
@@ -63,9 +65,9 @@ The rest of this command is for delivery work.
    `evidence/` - every scenario has a test, the suite passed
    (a green record on file), every changed file traces to a scenario, every
    `pass` gate has resolving evidence, and so on. It exits non-zero on any
-   failure. The `reviewer` agent still does the *judgment* dimensions
-   (clarity, security depth, governance-as-assessed) - `compass check` is
-   the mechanical part, not the whole gate.
+   failure. You still judge the *judgment* dimensions (clarity, security
+   depth, governance-as-assessed) - `compass check` is the mechanical part,
+   not the whole gate.
 
    Then run `compass analyze` on an issue that registers an intent, as every
    regular issue does: it reports a scenario whose intent id `intent.md` does
@@ -80,8 +82,8 @@ The rest of this command is for delivery work.
    `governance/` until `compass policy migrate`): the guardrails (hard, evidence-backed -
    `compass check` is the mechanical part) and the applicable strategies
    (assessed as judgment, reported separately).
-5. **Update the gates in `manifest.yml`.** As each gate is cleared, the
-   `verifier` registers the evidence, then passes the gate with it:
+5. **Update the gates in `manifest.yml`.** As each gate is cleared, register
+   the evidence, then pass the gate with it:
    `compass evidence add <EV-id> --type <type> --path <file>`, then
    `compass gate pass <gate> --evidence <EV-id>`. A gate takes evidence ids from
    the issue's registry, not file paths, and the CLI checks the type at write
@@ -91,6 +93,9 @@ The rest of this command is for delivery work.
 6. **Write `verification-report.md`** from the output of
    `compass issue template show verification-report`, which renders the checklist from the
    issue's exit lists: each dimension, each gate, the evidence, pass/fail.
+   Read the manifest's `failure_modes_descoped` and copy each mode and its
+   reason into the report's "Failure modes de-scoped at define" section, or
+   write "None": a mode named at define must not disappear before ship.
 
    **Where it goes.** `docs/compass/<created>-<issue-slug>/verification-report.md`, where the
    date is the manifest's `created:` field - not today's. Then register it:
@@ -99,6 +104,41 @@ The rest of this command is for delivery work.
    rather than claimed. Registering the report approves it (`approved_by` names `compass issue artifact set`) only when every `verify` gate has passed; registered earlier, it reads `draft` until the last `verify` gate passes. If you had to create `docs/compass/`, **say so in one
    line** - if a directory appears and nobody says so, someone can delete it
    by hand or commit it by mistake.
+
+## How the review is done
+
+This session does the review that a separate reviewer agent did before 9.0.0
+(ADR-090).
+
+- **Clarity.** Judge the tells named in `skills/compass-runtime/writing-voice.md`:
+  does the prose communicate a decision, or narrate the pipeline? Run
+  `scripts/voice-tells.py` over the issue's artifacts for the tells a fixed
+  string can find. Cold-reader writing is a strategy
+  (`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S8` names the calibration
+  sample; an unmigrated 5.x project reads its own copied `governance/`), so a
+  finding is a note and a conversation,
+  never an automatic gate failure.
+  Flag a short code with no plain words in front of it: the fix is to
+  put the meaning first and the code in brackets, never to delete the code.
+- **Patterns.** On the regular or full approach, check the design's named
+  patterns against the code (`S16`). It is advice: never fail a gate on it.
+- **Comments.** Open every comment with a plain-word label - **issue**,
+  **suggestion**, **nitpick**, **question**, **praise** (`S12`) - and label
+  honestly.
+- **Settled decisions.** Before you recommend a rename or a reversal, read
+  `governance/decisions/` if the project has one. A point that collides with an
+  entry is "settled by <path>", not a defect.
+- **Review rules.** If the project has `governance/review-rules.yml`, run
+  `compass review-rule list --changed-files <paths>` and apply the rules it
+  prints. Report a breach under the RR- id it breaks, and do not flag what a
+  rule's `allowed` list permits.
+- **Dangling references.** Flag any reference a reader cannot resolve
+  ("Option 2", "Finding 3", "per the review"), and any issue or pull-request
+  link with no statement of what it is.
+- **Attribution.** Flag a commit or pull-request body that carries an agent
+  co-author trailer or a generated-with line.
+- **No green by edit.** Never edit production code or scenarios to make a run
+  go green; a run that fails is a finding.
 
 ## Voice
 

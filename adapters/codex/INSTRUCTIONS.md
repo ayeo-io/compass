@@ -16,11 +16,10 @@ an existing assessed issue from its manifest, approach and artifacts. Read
 for the recorded next action. Use the shared flow, retrospective, rework,
 follow-up and ADR commands as that stage map describes.
 
-For distinct agent contexts, use Codex's available delegation tool with the
-shared agent file and an explicit brief. Keep model choices from the current
-session; Claude-specific frontmatter does not configure Codex. Builders work
-only in assigned isolated workspaces. If delegation or isolation is unavailable,
-record a solo plan within the computed ceiling before implementing.
+Run every command in this session: Compass ships no agent files from 9.0.0
+(ADR-090), and the session builds the units of a distribution map one after
+another. Keep the architect advisory and all roles on one acceptance
+specification.
 
 Project installation adds instructions, the entry skill and local hooks. A
 plugin installation gives the same skill and hook adapter. Choose one

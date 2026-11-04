@@ -1,6 +1,6 @@
 ---
 name: compass-runtime
-description: Which command runs each stage, which agent owns it, where issue state lives. Load when an issue begins.
+description: Which command runs each stage, which skill it loads, where issue state lives. Load when an issue begins.
 ---
 
 # Compass - the stage map
@@ -11,7 +11,7 @@ so the two cannot disagree.
 
 What this file carries is the mapping a session needs once it is already
 following the contract - which command runs which stage, what each writes,
-which agent owns it, and where the result lands on disk.
+which skill it loads, and where the result lands on disk.
 
 If anything here conflicts with `docs/methodology.md`, the methodology doc
 wins. First Compass session? `docs/five-minutes.md` has the mental model and a
@@ -26,7 +26,7 @@ what it explicitly does not.
 | Define acceptance criteria | `/compass:define` | `acceptance-criteria.md` |
 | Requirements review | `/compass:refine` | `requirements-review.md` (ends with the Definition of Ready) |
 | Plan | `/compass:plan` | `technical-design.md` (+ `distribution-map.md` on parallel work) |
-| Break down the work | `/compass:breakdown` | worktrees + subtask assignments |
+| Break down the work | `/compass:breakdown` | the order of the map's units |
 | Implement | `/compass:implement` | code + the red and green records (named by binding) |
 | Test & review | `/compass:verify` | `verification-report.md` (ends with the Definition of Done, a block `compass issue render` writes from the manifest's records) |
 | Ship | `/compass:ship` | the integration commit + settled follow-ups |
@@ -67,18 +67,19 @@ current verbs are whatever `compass --help` lists.
 name ends `.outer.json`, so an inner-loop record does not replace it (ADR-082).
 Nothing else is touched, so one scenario's record cannot overwrite another's.
 
-## Which agent and which skill, per stage
+## Which skill, per stage
 
-- **Assess** - load the `adaptive-routing` skill; consider the `router` agent.
+This session runs every stage; Compass starts no stage agent (ADR-090).
+
+- **Assess** - load the `adaptive-routing` skill.
 - **Define and refine** - load `bdd-specification`; on brownfield work whose
-  behavior is not yet written down, also load `behavior-mapping`. The
-  `spec-author` agent owns both stages.
+  behavior is not yet written down, also load `behavior-mapping`.
 - **Plan** - load `plan-authoring` (which optional design sections earn a
   place) and `governance-check` (how to check the design against the
-  governance in force). The `planner` agent owns it.
+  governance in force).
 - **Implementing** - load `tdd-discipline`; build the map's units in turn.
-- **Test & review** - the `verifier` and `reviewer` agents run; load `evidence-gates`.
-  Load `receiving-code-review` when answering their comments.
+- **Test & review** - load `evidence-gates`, and `receiving-code-review`
+  when answering a review's comments.
 - **A change to behavior a real client can observe** - also load `atdd`:
   stage 1 at refine, stage 2 at implement and stage 3 at verify. Each ends at
   that stage's checkpoint, whose request lists the stage's review questions.
@@ -87,16 +88,11 @@ Nothing else is touched, so one scenario's record cannot overwrite another's.
   and after three failed fixes re-assess rather than try a fourth.
 - **Role-facing work** - load `intent-interview` and read its
   `role-translation.md`, which is how one set of acceptance criteria is read
-  through five role perspectives. The `product-owner`, `product-marketer` and
-  `architect` agents apply specific ones.
+  through five role perspectives.
 - `evidence-gates` carries `traceability.md`, read whenever an artifact is
   written.
 
-The full set is in `agents/`. The files in `agents/` are the authority.
-
-An agent has Bash when it runs a `compass` verb, and Skill when it loads a
-skill. `product-owner` and `product-marketer` have no shell; their caller runs
-their verbs. No agent edits `manifest.yml` by hand (`tests/test_agent_tools.py`).
+No session edits `manifest.yml` by hand: a `compass` verb writes it.
 
 ## Never stash across a worktree hop
 
@@ -134,7 +130,7 @@ docs/compass/
     ├── acceptance-criteria.md   The shared artifact every role reads
     ├── requirements-review.md   (ends with the Definition of Ready gate)
     ├── technical-design.md      The design
-    ├── distribution-map.md      Multiagent orchestration (full-approach scale work)
+    ├── distribution-map.md      The units of the work, in the order the session builds them
     ├── positioning.md           Marketer messaging (if written)
     ├── launch-readiness.md      Marketer claims gate (if `positioning.md` exists)
     └── verification-report.md   (ends with the Definition of Done gate)

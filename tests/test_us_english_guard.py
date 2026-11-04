@@ -340,7 +340,7 @@ NINE_GROUPS = [
     ("the house files", ["CLAUDE.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md"]),
     ("the review workflow", [".github/workflows/claude-review.yml"]),
     ("skills", ["skills"]),
-    ("commands and agents", ["commands", "agents"]),
+    ("commands", ["commands"]),
     ("approaches and templates", ["approaches", "templates"]),
     ("the contract", ["compass-contract.md"]),
     ("hooks, schemas and adapters", ["hooks", "schemas", "adapters"]),

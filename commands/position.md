@@ -37,7 +37,8 @@ what `/compass:init` offers separately.
   criterion. `compass policy show` prints the rules in force. An unmigrated 5.x project runs
   on its own copied `governance/` until `compass policy migrate`.
 - Read `acceptance-criteria.md` if it exists - claims point at scenarios.
-- Invoke the `product-marketer` agent.
+- Take the product marketer's perspective in this session; Compass starts no
+  agent for it (ADR-090).
 
 ## Procedure
 

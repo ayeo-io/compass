@@ -4,7 +4,7 @@
 # =============================================================================
 # A consistency check for the Compass repository ITSELF - not for a project using
 # Compass. It checks the directory structure is intact and that the adapter
-# layer's internal references resolve: commands referencing skills, agents, and
+# layer's internal references resolve: commands referencing skills and
 # templates that actually exist; no dangling pointers.
 #
 # Run it locally before committing, and in CI on every push.
@@ -21,7 +21,8 @@
 # WHAT IT CHECKS
 #   1. The directories and top-level files the repo needs are present.
 #   2. Every expected artifact template exists in templates/.
-#   3. Every agent referenced anywhere in commands/ exists in agents/.
+#   3. No command in commands/ names an agent: 9.0.0 ships none (ADR-090), so
+#      any agent a command names would not exist.
 #   4. Every skill referenced anywhere in commands/ exists in skills/.
 #   5. Every template referenced in commands/ exists in templates/.
 #   6. Every script and hook referenced in the repo exists and is executable.
@@ -66,7 +67,7 @@ say ""
 # --- 1. required structure --------------------------------------------------
 say "1. Directory structure and top-level files"
 for d in docs governance approaches templates commands \
-         agents skills hooks scripts .compass; do
+         skills hooks scripts .compass; do
   if [ -d "$d" ]; then ok "dir  $d/"; else fail "missing directory: $d/"; fi
 done
 for f in CLAUDE.md AGENTS.md README.md docs/methodology.md \
@@ -89,7 +90,6 @@ say ""
 
 # --- helpers for reference checks -------------------------------------------
 # Collect the names that actually exist.
-EXISTING_AGENTS="$(cd agents 2>/dev/null && ls *.md 2>/dev/null | sed 's/\.md$//' || true)"
 EXISTING_SKILLS="$(cd skills 2>/dev/null && ls -d */ 2>/dev/null | sed 's:/$::' || true)"
 EXISTING_TEMPLATES="$(cd templates 2>/dev/null && ls *.md 2>/dev/null | sed 's/\.md$//' || true)"
 
@@ -99,18 +99,17 @@ has() { # needle  haystack(newline-separated)
   grep -qxF "$1" <<<"$2"
 }
 
-# --- 3. agents referenced by commands exist ---------------------------------
+# --- 3. no command names an agent --------------------------------------------
 say "3. Agent references in commands/"
-# Match the patterns the command files actually use, e.g. "the `builder` agent",
-# "`orchestrator` agent", "invoke the `router` agent".
+# 9.0.0 ships no agents (ADR-090), so any agent a command names would not
+# exist. Match the patterns the command files used, e.g. "the `builder` agent".
 REFS="$(grep -rohE '`[a-z][a-z-]+`[[:space:]]+agent' commands/ 2>/dev/null \
         | sed -E 's/`([a-z-]+)`.*/\1/' | sort -u || true)"
 if [ -z "$REFS" ]; then
-  say "  (no agent references found in commands/ - nothing to check)"
+  ok "no command names an agent"
 else
   for a in $REFS; do
-    if has "$a" "$EXISTING_AGENTS"; then ok "agent  $a  <- referenced, exists"
-    else fail "command references agent '$a' but agents/$a.md does not exist"; fi
+    fail "command names the agent '$a', but 9.0.0 ships no agents"
   done
 fi
 say ""

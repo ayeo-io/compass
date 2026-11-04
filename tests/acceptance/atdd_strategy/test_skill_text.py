@@ -96,7 +96,7 @@ def test_trc_001_the_header_names_the_source_and_each_adaptation():
 
 def test_trc_002_the_map_loads_atdd_at_refine_implement_and_verify():
     runtime = _section(_text(SKILLS / "compass-runtime" / "SKILL.md"),
-                       "Which agent and which skill")
+                       "Which skill, per stage")
     bullets = [_flat(b) for b in re.split(r"\n(?=- )", runtime)]
     [atdd] = [b for b in bullets if "`atdd`" in b]
     for stage in ("stage 1 at refine", "stage 2 at implement",

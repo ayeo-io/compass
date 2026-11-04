@@ -149,9 +149,9 @@ def test_trc_a4_template_scenario_machinery_intact():
 
 
 def test_trc_a5_spec_author_and_skill_name_summary():
-    """Both the agent that runs define and the skill it loads tell the author
-    to write the Summary, and both name all three fields."""
-    for rel in (SPEC_AUTHOR, BDD_SKILL):
+    """The skill define loads tells the author to write the Summary, and names
+    all three fields. The agent that ran define was removed in 9.0.0 (ADR-090)."""
+    for rel in (BDD_SKILL,):
         text = _read(rel)
         low = text.lower()
 
@@ -411,11 +411,7 @@ def test_trc_d3_handoff_prompt_defined_once():
             f"{path.name} defines a Hand-off section - the prompt belongs in "
             "commands/, and the agent should refer to it instead"
         )
-
-    # The two agents that own these phases point at the prompt without restating it.
-    for rel in (SPEC_AUTHOR, "agents/planner.md"):
-        flat = _flat(_read(rel))
-        assert "hand-off" in flat, f"{rel} never refers to the phase hand-off prompt"
+    # The two agents that pointed at the prompt were removed in 9.0.0 (ADR-090).
 
 
 # ---------------------------------------------------------------------------

@@ -38,13 +38,13 @@ components. Relations are ordered by the calling component.
 | `hooks/stop.sh` | `governance/signals.yml` | file read | reads scope-bloat and rework signal patterns at session end | medium |
 | `hooks/stop.sh` | `.compass/work/<issue>/devlog.md` | file read | scans the session's devlog for rework signals before the session closes | medium |
 | `hooks/stop.sh` | `.compass/current-task` | file read | resolves the active issue for devlog location | medium |
-| `architect` (agent) | `architecture/` | file read | reads `system-context.md`, `relations.md`, `ownership.md`, `invariants.yml` (if present), and all `decisions/ADR-*.md` to build its consultation context | medium |
-| `architect` (agent) | `.compass/work/<issue>/acceptance-criteria.md` | file read | reads scenarios the issue must satisfy | medium |
-| `architect` (agent) | `.compass/work/<issue>/technical-design.md` | file read | reads the technical approach to annotate | medium |
-| `architect` (agent) | `.compass/work/<issue>/architecture-loaded.yml` | file read | reads the assess stage's load record if present | medium |
-| `architect` (agent) | `.compass/work/<issue>/architecture-notes.md` | file write | writes its output (annotations, boundary risks, candidate ADR titles) | medium |
-| `agents/spec-author.md` | `architecture/decisions/ADR-*.md` | via `architecture-loaded.yml` | reads ADR summaries (id, title, status) to avoid re-litigating closed decisions | low |
-| `agents/planner.md` | `.compass/work/<issue>/architecture-notes.md` | file read | planner reads architect output to compose `technical-design.md §2` design decisions | medium |
+| architect perspective | `architecture/` | file read | reads `system-context.md`, `relations.md`, `ownership.md`, `invariants.yml` (if present), and all `decisions/ADR-*.md` to build its consultation context | medium |
+| architect perspective | `.compass/work/<issue>/acceptance-criteria.md` | file read | reads scenarios the issue must satisfy | medium |
+| architect perspective | `.compass/work/<issue>/technical-design.md` | file read | reads the technical approach to annotate | medium |
+| architect perspective | `.compass/work/<issue>/architecture-loaded.yml` | file read | reads the assess stage's load record if present | medium |
+| architect perspective | `.compass/work/<issue>/architecture-notes.md` | file write | writes its output (annotations, boundary risks, candidate ADR titles) | medium |
+| `commands/define.md` | `architecture/decisions/ADR-*.md` | via `architecture-loaded.yml` | reads ADR summaries (id, title, status) to avoid re-litigating closed decisions | low |
+| `commands/plan.md` | `.compass/work/<issue>/architecture-notes.md` | file read | the plan stage reads architect output to compose `technical-design.md §2` design decisions | medium |
 | `cli/compass` (`release notes`) | `.compass/work/` and git | file read, `git` read | `compass release notes --since <ref>` reads completed issue manifests with `load_yaml`, the living spec committed at HEAD and at the ref, and commit reachability; it writes nothing (ADR-065) | low |
 | `templates/<kind>.md` | `cli/compass_pkg/template_lists.py`, `cli/compass_pkg/policy_lint.py` | file read | `compass issue template show` reads the file to print it; `compass policy lint` reads it to check an artifact kind's sections | low |
 | `templates/architecture/` | n/a | reference only | the subfolder is not listed by `compass issue template show` and no CLI path reads it; an adopter copies it by hand to bootstrap their own `architecture/` tree | n/a |
@@ -58,7 +58,7 @@ or cross boundary rules encoded in the ADRs.
   the role reads exactly `architecture/` at the project root. Reading any
   sibling or adjacent directory that might contain draft or provisional content
   would introduce undeclared dependencies. The role reads `architecture/` only.
-  (Cited source: `TRC-D2` and the `architect` agent's hard boundaries.)
+  (Cited source: `TRC-D2` and the architect perspective's hard boundaries.)
 
 - **Any mechanism must not write into `manifest.yml.assessment`** - the assessment is the
   human's judgement field; mechanism-produced state lives in `architecture-loaded.yml`

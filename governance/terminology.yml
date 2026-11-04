@@ -154,8 +154,8 @@ terms:
   plan:
     means: >
       The engineering design stage: the command /compass:plan, the machine
-      key `plan` in a manifest's stages block, the `plan-authoring` skill, the
-      `planner` agent, and the CLI verb `compass plan lint`. Its output is
+      key `plan` in a manifest's stages block, the `plan-authoring` skill and
+      the CLI verb `compass plan lint`. Its output is
       technical-design.md. The delivery approach is a separate thing: it is
       computed at the assess stage and recorded in delivery-approach.md.
     related: [technical-design, delivery-approach, design]
@@ -1134,8 +1134,6 @@ scan:
     # exempt while their referents keep v1 names.
     - CLAUDE.md
     - AGENTS.md
-    - agents/            # the ten agent definitions, same shape as the
-                         # root instruction files
     # docs/system-spec.md stays exempt below - it is derived at ship time
     # and hand-editing it is forbidden.
     - approaches/

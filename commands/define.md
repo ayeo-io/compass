@@ -32,16 +32,29 @@ contract, QA for coverage. Write it so all five roles can.
 - Check `assessment.labels` in `manifest.yml`. On the regular or full
   approach, when the labels include `public-api`, a service named in
   `architecture/relations.md` (if the file exists) or a `lens_trigger_tag` in
-  `architecture/invariants.yml` (if the file exists), invoke the `architect`
-  agent first, the same condition as `/compass:consult architect`. It writes
-  `architecture-notes.md` to the issue directory. A subagent cannot run a
-  slash command, so this step is yours and not the `spec-author`'s.
-- Invoke the `spec-author` agent - it owns this stage.
+  `architecture/invariants.yml` (if the file exists), take the architect's
+  perspective first, the same condition as `/compass:consult architect`, and
+  write `architecture-notes.md` to the issue directory.
+  - Write it from `${CLAUDE_PLUGIN_ROOT}/templates/architecture-notes.md` to
+    `docs/compass/<created>-<slug>/architecture-notes.md`, and register it with
+    `compass issue artifact set architecture-notes --status draft --path <that path>`.
+  - `acceptance-criteria.md` does not exist yet at define: work from `intent.md`,
+    the labels in `manifest.yml` and `architecture/`, and say in the notes that
+    the criteria did not exist yet.
+  - With no `architecture/` folder, make the first line of the notes exactly
+    `WARNING: No architecture/ artifacts found - running on heuristics only`,
+    and go on.
+  - The notes hold annotations, boundary risks and candidate ADR titles, never
+    Given/When/Then, and they never block a stage.
+  - Then read the notes before you finalize the scenarios, and turn their
+    boundary risks and invariant flags into observable Given/When/Then
+    assertions, or record that no architectural risk applies.
+- Run this stage in this session; Compass starts no agent for it (ADR-090).
 - Read any upstream role artifacts for this issue: `intent.md` (the outcome to
   hit), `ui-contract.md` (designer scenarios that flow in here),
   `positioning.md` (claims that will need backing scenarios).
-- When the issue registers an intent, as a regular issue does, the router
-  drafted it at assess. Read `intent.md` and correct it before you write any
+- When the issue registers an intent, as a regular issue does, assess
+  drafted it. Read `intent.md` and correct it before you write any
   scenario: the problem, the outcomes and their `INT-n` ids, the success
   signals and the non-goals. Each scenario names the `INT-n` id it serves, and
   you present the intent with the scenarios at the define checkpoint where the

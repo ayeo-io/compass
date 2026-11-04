@@ -24,15 +24,20 @@ engineering plan stage.)
   work unit is, what makes one independent of another, and the
   self-review the author owes the reviewer before the design is handed over.
 - Load the `governance-check` skill.
-- Invoke the `planner` agent - it owns this stage.
+- Run this stage in this session; Compass starts no agent for it (ADR-090).
 - If an `intent.md` exists, this stage runs the **intent-fidelity gate**: the
-  spec must be checked against `intent.md` before the design completes. Invoke
-  `product-owner` to run it.
+  spec must be checked against `intent.md` before the design completes. Run it
+  from the product owner's perspective.
 
 ## Procedure
 
 1. **Technical approach.** State the design. Record each design decision as
-   an ADR-style note - what was chosen, what was rejected, why.
+   an ADR-style note - what was chosen, what was rejected, why. Read
+   `architecture-notes.md` in the issue's documents if it exists: each design
+   decision then cites an existing ADR (`architecture/decisions/ADR-N-*`),
+   names a candidate ADR to write during implementation, or justifies its
+   divergence from the notes. When the notes are absent, say in the plan that
+   no architect notes were available for this issue.
 2. **Governance check.** Run `governance-check` against the governance in
    force - the guardrails (hard, blocking) and the applicable engineering
    strategies (soft, assessed). `compass policy show` prints the rules the CLI

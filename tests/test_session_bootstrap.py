@@ -205,26 +205,6 @@ def test_sb_b3_the_runtime_neutral_document_is_untouched():
         "The portable document must not depend on the adapter's files.")
 
 
-def test_sb_b4_the_contract_does_not_carry_a_stale_agent_roster():
-    """The contract names every shipped agent or none: a roster kept by
-    hand goes out of date.
-
-    A roster maintained in prose drifts again. Either the contract names every
-    shipped agent, or it names none and points at where they are listed.
-    """
-    shipped = {p.stem for p in (ROOT / "agents").glob("*.md")}
-    assert shipped, "no agents ship, so this check would pass over nothing"
-
-    text = CONTRACT.read_text(encoding="utf-8")
-    named = {name for name in shipped if re.search(rf"\b{re.escape(name)}\b", text)}
-
-    if named:
-        missing = sorted(shipped - named)
-        assert not missing, (
-            "the contract names some agents but not all, which is the drift "
-            f"this issue exists to remove: {', '.join(missing)}")
-
-
 # ---------------------------------------------------------------------------
 # SB-C1 / SB-C2 - paths
 # ---------------------------------------------------------------------------
@@ -291,7 +271,7 @@ def _pin_scan_files():
 
 def test_sb_c2_the_pin_scan_reads_skills_and_templates():
     names = {str(p.relative_to(ROOT)) for p in _pin_scan_files()}
-    assert {"commands/plan.md", "agents/router.md", "skills/adaptive-routing/SKILL.md",
+    assert {"commands/plan.md", "skills/adaptive-routing/SKILL.md",
             "skills/adaptive-routing/composition.md", "templates/delivery-approach.md"} <= names
 
 

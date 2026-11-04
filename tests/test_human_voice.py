@@ -503,12 +503,13 @@ def test_trc_c3_the_template_worked_example_records_a_decision_in_prose():
 # ---------------------------------------------------------------------------
 
 def test_trc_d1_the_clarity_dimension_names_the_tells_as_judgement():
-    reviewer = (REPO_ROOT / "agents" / "reviewer.md").read_text(encoding="utf-8")
+    # `commands/verify.md` carries the review the reviewer agent did until 9.0.0 (ADR-090).
+    reviewer = (REPO_ROOT / "commands" / "verify.md").read_text(encoding="utf-8")
     gates = _evidence_gates_text()
     reference_path = "skills/compass-runtime/writing-voice.md"
 
     for name, text in (
-        ("agents/reviewer.md", reviewer),
+        ("commands/verify.md", reviewer),
         ("skills/evidence-gates/SKILL.md", gates),
     ):
         assert reference_path in text, (

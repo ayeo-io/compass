@@ -1412,11 +1412,6 @@ _register(Rule(
             "names the Verify stage in the per-stage weight table, not the "
             "verb."),
         Exemption(
-            "schemas/signals.schema.json",
-            "reviewer agent at verify - judgment",
-            "the JSON mirror of the already-exempted governance/signals.yml "
-            "line above - names the Verify stage, not the verb."),
-        Exemption(
             "templates/devlog.md",
             "Implement | Verify}}",
             "names the Verify stage in a placeholder list of stage names, "
@@ -1435,12 +1430,6 @@ _register(Rule(
             "names the Verify stage, not the verb."),
         Exemption("governance/guardrails.md",
                    "Checked at Verify and again at ship time",
-                   "names the Verify stage, not the verb."),
-        Exemption("governance/guardrails.md",
-                   "`verifier` and `reviewer` agents** at Verify",
-                   "names the Verify stage, not the verb."),
-        Exemption("governance/signals.yml",
-                   "reviewer agent at Verify - judgement",
                    "names the Verify stage, not the verb."),
         Exemption("governance/guardrails.yml", "compass bdd verify",
                    "compass bdd verify is a CLI verb, not the plain verb."),
@@ -2539,6 +2528,10 @@ _REMOVED_IN_9_0_0 = frozenset({
     "scripts/multiagent.sh", "scripts/integrate.sh", "scripts/lib/issue-docs.sh",
     "docs/multiagent-protocol.md", "skills/worktree-multiagent/SKILL.md",
     "agents/orchestrator.md", "tests/test_orchestrator_loop_prose.py",
+    "agents/architect.md", "agents/builder.md", "agents/planner.md",
+    "agents/product-marketer.md", "agents/product-owner.md", "agents/reviewer.md",
+    "agents/router.md", "agents/spec-author.md", "agents/verifier.md",
+    "tests/test_agent_tools.py",
     "tests/test_subtask_record.py", "tests/test_multiagent_run_recorded.py",
     "tests/test_one_unit_breakdown.py", "tests/test_check_compares_record_with_map.py",
     "tests/test_swarm_cap.py", "tests/test_swarm_script_parser.py",
@@ -2551,7 +2544,7 @@ _REMOVED_IN_9_0_0 = frozenset({
     "tests/test_subtask_cost_covers_every_try.py",
 })
 _DECISION_RECORD_FOLDERS = ("architecture/decisions/", "governance/decisions/",
-                            "docs/compass/", "examples/",
+                            "docs/compass/", "examples/", "docs/system-spec",
                             "tests/test_public_surface_truth.py")
 
 
@@ -2840,7 +2833,7 @@ _register(Rule(
             "the comment quotes a fixture path a test builds, not a real "
             "path - see the PBW-A6 exemption above for the same line."),
         Exemption(
-            "agents/architect.md", "architecture/invariants.yml",
+            "commands/consult.md", "architecture/invariants.yml",
             "a real, conditional artifact a consuming project supplies - "
             "`cli/compass_pkg/core.py`'s `_INVARIANTS_FILE` reads it \"if "
             "present\", and `tests/test_frame_loads_architecture.py` "
@@ -2848,20 +2841,14 @@ _register(Rule(
             "architecture/ does not ship one, which is correct, not a "
             "broken reference."),
         Exemption(
-            "agents/spec-author.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md."),
-        Exemption(
-            "commands/consult.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md."),
-        Exemption(
             "commands/define.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md."),
+            "the same conditional artifact reference as commands/consult.md."),
         Exemption(
             "templates/architecture/ownership.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md."),
+            "the same conditional artifact reference as commands/consult.md."),
         Exemption(
             "templates/architecture/relations.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md."),
+            "the same conditional artifact reference as commands/consult.md."),
         Exemption(
             "templates/manifest.yml", "tests/api/test_ledger_export.py",
             "the template's own worked example of a scenarios: entry, not a "
@@ -2918,11 +2905,11 @@ _register(Rule(
             "test_reset_password_steps.py, which is tracked."),
         Exemption(
             "tests/test_architect_lens.py", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md; "
+            "the same conditional artifact reference as commands/consult.md; "
             "found while fixing batch 7, not by the audit."),
         Exemption(
             "tests/test_frame_loads_architecture.py", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md; "
+            "the same conditional artifact reference as commands/consult.md; "
             "found while fixing batch 7, not by the audit."),
         # writing-style-sweep-drops-the-leading-dot-on-a-dotdir-citation was
         # fixed at the source: `_REFERENCE_RE` above now allows a leading dot

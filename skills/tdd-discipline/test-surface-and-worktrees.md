@@ -23,13 +23,13 @@ the rules in force (`compass policy show`; an unmigrated 5.x project runs on
 its own copied `governance/` until `compass policy migrate`). It can need *more* for higher risk, and must
 never need less.
 
-## Working inside a worktree (multiagent orchestrations)
+## Working through several units
 
-On a multiagent you run the full cycle - including a red, failing suite - inside
-your own git worktree. That isolation is the point: your red does not
-destabilize a sibling. Keep every change inside your subtask. If a test you need
-to write reaches into another subtask's surface, that is a signal for the
-orchestrator, not a reason to reach across.
+Compass 9.0.0 builds the units of a distribution map one after another in one
+session, with no worktree per unit (ADR-090). Run each unit's full cycle -
+including its red, failing test - before you start the next, so one unit's red
+never hides another's. If a test for one unit reaches into another unit's
+surface, the units are not independent: say so, and fold or reorder them.
 
 ## Listen to your tests
 

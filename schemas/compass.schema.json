@@ -310,7 +310,7 @@
               ]
             },
             "owner": {
-              "description": "The role that writes the document: an agent id or a value of the `role` dimension, for example `planner`. A layer's own top-level `owner` is a different thing: the person who approves that layer's waivers.",
+              "description": "The role that writes the document: a role name or a value of the `role` dimension, for example `planner`. A layer's own top-level `owner` is a different thing: the person who approves that layer's waivers.",
               "type": "string"
             },
             "remove": {
@@ -398,7 +398,7 @@
                   "type": "string"
                 },
                 "owner": {
-                  "description": "The role that writes the document: an agent id or a value of the `role` dimension, for example `planner`. A layer's own top-level `owner` is a different thing: the person who approves that layer's waivers.",
+                  "description": "The role that writes the document: a role name or a value of the `role` dimension, for example `planner`. A layer's own top-level `owner` is a different thing: the person who approves that layer's waivers.",
                   "type": "string"
                 },
                 "required_when": {
@@ -1395,7 +1395,7 @@
       "type": "object"
     },
     "multiagent": {
-      "description": "Where multiagent worktrees go and how many are allowed. Holds `worktree_root` (default `../.compass-worktrees`) and `max_worktrees` (default 6).",
+      "description": "Removed in 9.0.0 (ADR-090) and not read: where the multiagent scripts put worktrees (`worktree_root`) and how many they allowed (`max_worktrees`). The key stays valid so a project that holds it keeps working, and `compass policy lint` names it.",
       "type": "object"
     },
     "owner": {

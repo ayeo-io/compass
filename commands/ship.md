@@ -60,7 +60,7 @@ for delivery work; on a spike, follow the graduate-or-discard step in
      `compass check` fails at ship while any is owed.
    - **Marketer claims gate** (when `positioning.md` is present):
      every claim in `manifest.yml`'s `claims:` traces to a passing scenario id.
-     Invoke `product-marketer` to confirm; `compass check`'s
+     Confirm it from the marketer's perspective; `compass check`'s
      `claim-traces-to-scenario` check is the mechanical check behind it. This gate
      blocks shipping per the routing policy's artifact rule RP-ART-001.
    - Any other de-scoped artifact the ledger marked as owed.

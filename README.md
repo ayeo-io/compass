@@ -190,7 +190,7 @@ Compass runs on Claude Code today, but its core is split on purpose:
 
 - **Methodology:** plain-language guidance, governance and templates.
 - **Kit:** the runtime-neutral Python CLI, schemas and policy engine.
-- **Adapter:** the commands, agents, skills and hooks for Claude Code.
+- **Adapter:** the commands, skills and hooks for Claude Code.
 
 The slash commands are the pipeline; they call the CLI, which does the work
 ([docs/cli.md](docs/cli.md)). A future runtime adapter calls the same kit
@@ -200,9 +200,6 @@ rather than reimplementing the rules ([docs/portability.md](docs/portability.md)
 
 ```
 commands/     the stage interface, under the /compass: namespace
-agents/       distinct contexts - router, spec-author, planner, builder,
-              orchestrator, verifier, reviewer, product-owner,
-              product-marketer, architect
 skills/       loadable procedures - adaptive-routing, bdd-specification,
               tdd-discipline, intent-interview and the rest
 hooks/        pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,

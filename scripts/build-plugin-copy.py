@@ -2,8 +2,7 @@
 """Build, check and commit the plugin copy of one commit.
 
 An installed Compass needs only the files `scripts/plugin-files.txt` lists:
-the CLI, the hooks, the commands, the skills, the agents and the governance
-they read. The plugin directory holds a plugin of more than 512 files, or with
+the CLI, the hooks, the commands, the skills and the governance they read. The plugin directory holds a plugin of more than 512 files, or with
 a non-image file over 256 KiB, for a reviewer, and the whole repository is
 1,700 files. So each release publishes this copy to the `plugin` branch, and
 the marketplace entry fetches the plugin from there.

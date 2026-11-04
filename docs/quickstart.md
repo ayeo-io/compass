@@ -53,7 +53,7 @@ pip install jsonschema                # optional - turns on full JSON Schema lin
 bash scripts/install.sh --global      # or: bash scripts/install.sh  (project-local)
 ```
 
-`install.sh` symlinks `commands/`, `agents/`, and `skills/` into your Claude
+`install.sh` symlinks `commands/` and `skills/` into your Claude
 Code config as a `compass` subdirectory (so nothing collides with your own
 files) and registers its hooks - `pre-tool.sh`, `post-tool.sh`, `stop.sh`,
 `session-start.sh`, `prompt-approval.sh` and `approval-summary.sh` - in
@@ -80,7 +80,7 @@ Either way, what you have installed is three layers:
   `approaches/` and `templates/`, read in place and never copied;
 - the **kit** - `cli/compass`, `governance/*.yml`, `schemas/` and the
   `manifest.yml` manifest, which is the deterministic mechanism;
-- the **Claude Code adapter** - `commands/`, `agents/`, `skills/`, `hooks/`,
+- the **Claude Code adapter** - `commands/`, `skills/`, `hooks/`,
   whose commands call the kit underneath.
 
 `docs/methodology.md` §11 and `docs/portability.md` describe the layers in
@@ -193,7 +193,7 @@ runs.
 /compass:define
 ```
 
-The `spec-author` agent reads `delivery-approach.md`, sees "small feature set," and writes
+The session reads `delivery-approach.md`, sees "small feature set," and writes
 `acceptance-criteria.md` - Given/When/Then scenarios for the rate limiter: the happy
 path (a client under the limit is served), the realistic edge cases (a client at
 exactly the limit; the limit window resetting), the failure modes that
@@ -224,7 +224,7 @@ ready while a question is open.
 /compass:plan
 ```
 
-The `planner` agent writes a real `technical-design.md`: the technical approach, each
+The session writes a real `technical-design.md`: the technical approach, each
 design decision recorded ADR-style (token bucket vs. sliding window - what was
 chosen, what was rejected, why), and a governance check run against all of
 `governance/` - guardrails, strategies, and the routing policy. The work here
@@ -238,7 +238,7 @@ guardrail cleared with evidence - and you record its result and link it.
 /compass:implement
 ```
 
-This is where the hook matters. The `builder` agent works one scenario
+This is where the hook matters. The session works one scenario
 at a time, and runs the cycle through the CLI:
 
 1. **Red.** Write the failing test for the scenario. Then run
@@ -316,7 +316,7 @@ You are a product owner. You do not start at the assess stage - you start
 /compass:intent "Let finance pull their month-end numbers without filing a data request"
 ```
 
-The `product-owner` agent adopts the product owner's vocabulary - outcomes and
+The session adopts the product owner's vocabulary - outcomes and
 users, not files and functions - and writes `intent.md`: the **problem**
 (finance cannot self-serve; every month-end is a data request and a wait), the
 **outcome** (finance gets their numbers directly), the **success signals**
@@ -341,14 +341,14 @@ request gets a different approach depending on the intent document behind it.
 Assess reads `intent.md` as part of the goal dimension - the goal is
 the *actual outcome wanted*, not the literal request. The `intent.md`
 on disk makes the approach name a check of the spec against it before Plan
-(the **intent-fidelity gate**), which the `product-owner` agent runs. The approach is the one the three scored dimensions give;
+(the **intent-fidelity gate**), which the session runs from the product owner's perspective. The approach is the one the three scored dimensions give;
 the document adds the check, not extra weight.
 
 ### Define the acceptance criteria, then refine them
 
 `/compass:define` writes `acceptance-criteria.md` against the intent document -
 every success signal in it must have a scenario that delivers it. At
-`/compass:refine`, the `product-owner` agent reviews: it takes each success
+`/compass:refine`, the session reviews from the product owner's perspective: it takes each success
 signal in turn and finds the scenario behind it, flagging **drift** (a scenario that
 solves the literal request but misses the outcome), **gaps** (a signal with no
 scenario), and **scope creep** (scenarios beyond the intent document with no
@@ -362,7 +362,7 @@ recorded decision).
 
 Per the routing policy's artifact rule RP-ART-002, when `intent.md` is present the
 spec **must be checked against `intent.md` before Plan completes**. The
-`product-owner` agent runs that check. If the spec drifts from the intent
+session runs that check from the product owner's perspective. If the spec drifts from the intent
 document - well-formed scenarios that nonetheless miss the outcome - the
 spec goes back to define. Well-formed and faithful are different tests, and
 this gate is where an agent checks the difference; no CLI check refuses Plan
@@ -387,7 +387,7 @@ written - not after a finished engineering process.
 /compass:position "The finance self-serve export"
 ```
 
-The `product-marketer` agent adopts the marketer's vocabulary - claims, voice,
+The session adopts the marketer's vocabulary - claims, voice,
 audience - reads the voice & positioning strategies in
 `governance/strategies.md` (the ones the marketer curates), reads
 `acceptance-criteria.md` if it exists yet, and writes two artifacts:
@@ -412,10 +412,10 @@ artifact rule adds it on every delivery approach while `positioning.md` is prese
 On an issue already assessed, re-assess after writing `positioning.md`.
 
 So the marketer's gate applies until the last stage. At `/compass:ship`, the
-`product-marketer` agent checks each row of `launch-readiness.md`. Every row must be green: a
+session checks each row of `launch-readiness.md`. Every row must be green: a
 claim, a backing scenario, that scenario passing at Verify. A red row - a
 claim whose scenario is missing, failing, or skipped - and the
-`product-marketer` agent does not pass the claims gate, so ship does not close
+claims gate does not pass, so ship does not close
 the issue. The marketer's moves at that point are to soften the claim, cut
 it, or file the missing scenario. Compass checks that each recorded claim
 names a scenario that exists; whether that scenario backs the claim is the

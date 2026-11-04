@@ -34,7 +34,6 @@ GOAL_AS_SCORED = re.compile(
 DESCRIBING_FILES = (
     "AGENTS.md",
     "README.md",
-    "agents/router.md",
     "approaches/README.md",
     "approaches/assess-procedure.md",
     "approaches/composition-reference.md",

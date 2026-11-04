@@ -228,16 +228,16 @@ Planning identifies independent work units before choosing an orchestration:
 | Orchestration | Use |
 |---|---|
 | Solo | One subtask on the current branch. |
-| Pair | Two or three isolated subtasks with a clear integration owner. |
-| Multiagent | Four or more isolated subtasks plus an orchestrator responsible for integration. |
+| Pair | Two or three units, built one after another in the same session. |
+| Multiagent | Four or more units, built one after another in the same session. |
 
-Parallelism is useful only when subtasks have separable scenarios and code
-surfaces. The delivery approach can cap parallelism for critical work even
+Splitting the work is useful only when units have separable scenarios and code
+surfaces. The delivery approach can cap the count for critical work even
 when the issue is large.
 
-The reference adapter uses Git worktrees so each subtask can run failing tests
-without destabilising the other subtasks. A different runtime must give each
-subtask its own workspace or reduce the orchestration.
+From 9.0.0 Compass starts no worktree and no agent per unit (ADR-090): the
+session builds each unit through its own red and green before the next, so no
+runtime needs isolated workspaces.
 
 ## 10. Reassessment and the retrospective signal
 

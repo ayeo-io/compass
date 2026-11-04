@@ -78,9 +78,9 @@ Logical surface: **strategies**
 Compass has five roles - engineer, product owner, designer, marketer, QA -
 each with its own entry point into the pipeline. Each role has entry-point slash commands
 (`/compass:intent`, `/compass:position`, `/compass:design`,
-`/compass:consult`) and dedicated agent files in `agents/`. The architect
-role (`agents/architect.md`) is an advisory role over the role pipeline,
-not a sixth full role.
+`/compass:consult`), each run in the issue's own session (ADR-090). The
+architect role is an advisory role over the role pipeline, not a sixth full
+role.
 
 Logical surface: **role pipeline**
 

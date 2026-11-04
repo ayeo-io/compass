@@ -193,7 +193,7 @@ def test_trc_045():
     assert len(_stub_body_lines(stub + "A second line.\nA third line.\nA fourth line.\n")) > 3
 
     # Commands, agents, approaches and the default preset name the new skill.
-    named = ["commands/define.md", "agents/spec-author.md", "approaches/full.md",
+    named = ["commands/define.md", "approaches/full.md",
              "approaches/quick-fix.md", "approaches/regular.md", "approaches/rubric.md",
              "governance/presets/default/rules.yml"]
     for rel in named:

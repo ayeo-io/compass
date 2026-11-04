@@ -33,8 +33,8 @@ scenario exists and passes?*
 - Every line of launch copy in `positioning.md` must point at a backing
   scenario. `launch-readiness.md` is the ledger: claim → scenario → status.
 - Works *parallel* to the spec and gates shipping - `verify.claims` is a
-  blocking gate, added when `positioning.md` is present; no claim ships on a missing, red, or skipped scenario. Applied by the
-  `product-marketer` agent.
+  blocking gate, added when `positioning.md` is present; no claim ships on a missing, red, or skipped scenario. Applied from the
+  product marketer's perspective.
 
 ### Engineer - the **tests** perspective
 Reads each scenario asking: *how does this become a test, and what TDD cycle

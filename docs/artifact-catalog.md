@@ -158,7 +158,7 @@ The table below is generated from the catalogue by `compass _derive-glossary`, w
 | `acceptance-criteria` | `acceptance-criteria.md` | `define` | spec-author | requirements | Every role reads it to agree the behavior that will be built, and the builder turns each scenario into a test. |
 | `technical-design` | `technical-design.md` | `plan` | planner | hld | A reviewer reads it to challenge the design before code is written. |
 | `low-level-design` | `low-level-design/<unit>.md` | `plan` | planner | lld | The builder of one work unit reads it for the signatures, contracts, files and tests that unit owns. |
-| `distribution-map` | `distribution-map.md` | `breakdown` | planner | work-breakdown | The orchestrator reads it to decide how many worktrees to start and which scenarios each one owns. |
+| `distribution-map` | `distribution-map.md` | `breakdown` | planner | work-breakdown | The session reads it to decide the order in which to build the units and which scenarios each one owns. |
 | `verification-report` | `verification-report.md` | `verify` | verifier | test-report | The person who ships reads it to decide whether the evidence supports landing the change. |
 | `intent` | `intent.md` | `assess` | product-owner | prd | The product owner and the spec author read it to agree which problem is solved and which outcome counts as success. |
 | `requirements-review` | `requirements-review.md` | `refine` | spec-author | requirements-review | The planner and the person who asked read it to confirm every open question is settled before design starts. |

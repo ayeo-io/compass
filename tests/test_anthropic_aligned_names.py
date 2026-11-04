@@ -86,17 +86,7 @@ def _live_files():
 
 # --- `TRC-C5` / `TRC-C3` - the agents -----------------------------------------
 
-def test_the_routing_agent_is_named_router():
-    """`TRC-C5`: the agent that runs routing-policy.yml is called router."""
-    assert (AGENTS / "router.md").is_file()
-    assert not (AGENTS / "navigator.md").exists()
-
-
-def test_the_role_agents_are_named_after_their_role():
-    """`TRC-C3`: no agent filename ends in -lens; each names a governance role. <!-- vocabulary-scan: allow - names the retired filename suffix the check refuses -->"""
-    names = {p.stem for p in AGENTS.glob("*.md")}
-    assert {"product-owner", "product-marketer", "architect"} <= names
-    assert not [n for n in names if n.endswith("-lens")]
+# The router and role-agent name tests read agents/, which 9.0.0 removed (ADR-090).
 
 
 def test_no_agent_file_keeps_a_retired_name():
@@ -130,7 +120,9 @@ def test_the_retired_command_name_no_longer_resolves():
 def test_the_renamed_skills_exist_under_their_new_names():
     """`TRC-C6`."""
     for old, new in RENAMED_SKILLS.items():
-        assert (SKILLS / new / "SKILL.md").is_file(), f"{new} missing"
+        # worktree-multiagent itself was removed in 9.0.0 (ADR-090).
+        if new != "worktree-multiagent":
+            assert (SKILLS / new / "SKILL.md").is_file(), f"{new} missing"
         assert not (SKILLS / old).exists(), f"{old} still present"
 
 

@@ -24,10 +24,11 @@ STRATEGIES = ROOT / "governance" / "strategies.md"
 # author guessing at the rest.
 LABELS = ("issue", "suggestion", "nitpick", "question", "praise")
 
-# Where a session needs the pointer: the agent that writes review comments,
-# and the skill for the person answering them.
+# Where a session needs the pointer: the command whose review writes the
+# comments (the reviewer agent until 9.0.0, ADR-090), and the skill for the
+# person answering them.
 POINTER_SURFACES = (
-    ("agents/reviewer.md", ROOT / "agents" / "reviewer.md"),
+    ("commands/verify.md", ROOT / "commands" / "verify.md"),
     ("skills/receiving-code-review/SKILL.md",
      ROOT / "skills" / "receiving-code-review" / "SKILL.md"),
 )

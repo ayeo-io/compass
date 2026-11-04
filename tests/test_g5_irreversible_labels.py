@@ -121,7 +121,7 @@ def old_framework(tmp_path_factory):
     """A copy of the framework whose `G5` trigger still has the critical-risk
     arm, as every release before this change shipped it."""
     dest = tmp_path_factory.mktemp("old-framework")
-    for name in ("cli", "governance", "agents", "templates", "approaches", "schemas"):
+    for name in ("cli", "governance", "templates", "approaches", "schemas"):
         shutil.copytree(ROOT / name, dest / name,
                         ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copy(ROOT / "VERSION", dest / "VERSION")

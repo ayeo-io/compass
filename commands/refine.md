@@ -65,7 +65,7 @@ is for. The same split is written from the spec-author's side in
 
 ## Setup
 
-- Load `bdd-specification`; the `spec-author` agent owns this continuation.
+- Load `bdd-specification` and run this continuation in this session.
 - For a change to behavior a real client can observe, also load `atdd`:
   this stage runs its stage 1, the specification and the DSL.
 - Run `compass policy show` for the rules in force, and read the reasons in

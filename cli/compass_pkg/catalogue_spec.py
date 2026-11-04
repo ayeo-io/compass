@@ -509,7 +509,7 @@ FIELD_DESCRIPTIONS = {
                        "an artifact is never an input to another.",
         "stage": "The id of the stage that owns the artifact, for example `plan` for the "
                  "technical design.",
-        "owner": "The role that writes the document: an agent id or a value of the `role` "
+        "owner": "The role that writes the document: a role name or a value of the `role` "
                  "dimension, for example `planner`. A layer's own top-level `owner` is a "
                  "different thing: the person who approves that layer's waivers.",
         "audience": "One line saying who reads the document and what the reader decides from "
@@ -632,8 +632,10 @@ TOP_DESCRIPTIONS = {
                        "The default is `sonnet` at effort `medium`.",
     "models.fast": "The fast tier, for mechanical seats: a model name, or `{model, effort}`. The "
                    "default is `haiku` at effort `low`.",
-    "multiagent": "Where multiagent worktrees go and how many are allowed. Holds `worktree_root`"
-                  " (default `../.compass-worktrees`) and `max_worktrees` (default 6).",
+    "multiagent": "Removed in 9.0.0 (ADR-090) and not read: where the multiagent scripts put "
+                  "worktrees (`worktree_root`) and how many they allowed (`max_worktrees`). The "
+                  "key stays valid so a project that holds it keeps working, and `compass "
+                  "policy lint` names it.",
     "preset_index": "Reserved for published presets. It has no behavior yet.",
     "github_labels": "Whether Compass writes an issue's labels and page to its linked GitHub "
                      "issue, through the switches `domain`, `status` and `page`. All three are "

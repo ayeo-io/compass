@@ -115,8 +115,8 @@ In `skills/tdd-discipline/no-natural-red.md`.
 ## How much test, and working in a worktree
 
 In `skills/tdd-discipline/test-surface-and-worktrees.md` - how test surface
-scales with risk, what your tests are telling you, and the worktree rules for
-multiagent orchestrations.
+scales with risk, what your tests are telling you, and how to work through
+several units in one session.
 
 ## Anti-patterns
 

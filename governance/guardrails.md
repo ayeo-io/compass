@@ -436,8 +436,8 @@ _(none yet - the shipped default guardrails apply as-is)_
   and does not fail the run. `docs/generation-store.md` has the details.
 - **The pre-tool hook** enforces red-before-green in service of `G1`. It is
   approach-aware and does not block on a spike.
-- **The `verifier` and `reviewer` agents** at Verify, for the parts that remain
-  judgement. `verification-report.md` records each with its evidence.
+- **The review at the `verify` stage**, run in the issue's own session (ADR-090), for the
+  parts that remain judgement. `verification-report.md` records each with its evidence.
 - **`compass approach evaluate`** at Assess applies the routing rules
   deterministically - see `routing-policy.md` and `routing-policy.yml`.
 

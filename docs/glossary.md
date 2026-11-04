@@ -568,7 +568,7 @@ The `#<sha>` suffix on a git `extends:`, which names the parent commit a project
 
 ### plan
 
-The engineering design stage: the command /compass:plan, the machine key `plan` in a manifest's stages block, the `plan-authoring` skill, the `planner` agent, and the CLI verb `compass plan lint`. Its output is technical-design.md. The delivery approach is a separate thing: it is computed at the assess stage and recorded in delivery-approach.md.
+The engineering design stage: the command /compass:plan, the machine key `plan` in a manifest's stages block, the `plan-authoring` skill and the CLI verb `compass plan lint`. Its output is technical-design.md. The delivery approach is a separate thing: it is computed at the assess stage and recorded in delivery-approach.md.
 
 **Related:** `technical-design`, `delivery-approach`, `design`
 
@@ -888,7 +888,7 @@ Anyone joining the issue reads it to see how much process the work gets and why.
 
 ### `distribution-map`
 
-The orchestrator reads it to decide how many worktrees to start and which scenarios each one owns.
+The session reads it to decide the order in which to build the units and which scenarios each one owns.
 
 **Traditional name:** work-breakdown
 

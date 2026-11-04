@@ -175,8 +175,8 @@ GROUPS = [
         "live": True,
     },
     {
-        "name": "commands and agents",
-        "paths": ["commands", "agents"],
+        "name": "commands",
+        "paths": ["commands"],
         "kind": "text",
         "live": True,
     },

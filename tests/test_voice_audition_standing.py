@@ -45,7 +45,8 @@ def _range_is_readable(*revs) -> bool:
 
 
 STRATEGIES = REPO_ROOT / "governance" / "strategies.md"
-REVIEWER = REPO_ROOT / "agents" / "reviewer.md"
+# `commands/verify.md` carries the review the reviewer agent did until 9.0.0 (ADR-090).
+REVIEWER = REPO_ROOT / "commands" / "verify.md"
 EVIDENCE_GATES = REPO_ROOT / "skills" / "evidence-gates" / "SKILL.md"
 
 WORKED_EXAMPLE_PATH = "skills/compass-runtime/writing-voice-worked-example.md"
@@ -192,7 +193,7 @@ def test_trc_b1_reviewer_and_evidence_gates_point_at_the_strategy_not_repeat_it(
     assert match, "TRC-A1 must land before this scenario can"
     s_number = match.group(1)
 
-    for name, text in (("agents/reviewer.md", reviewer),
+    for name, text in (("commands/verify.md", reviewer),
                         ("skills/evidence-gates/SKILL.md", gates)):
         assert "governance/strategies.md" in text, (
             f"{name} must point the clarity dimension at governance/strategies.md"
@@ -246,7 +247,7 @@ def test_trc_f1_no_new_gate_guardrail_cli_verb_or_vocabulary():
 
     reviewer = REVIEWER.read_text(encoding="utf-8")
     gates = _evidence_gates_text()
-    for name, text in (("agents/reviewer.md", reviewer),
+    for name, text in (("commands/verify.md", reviewer),
                         ("skills/evidence-gates/SKILL.md", gates)):
         assert "never an automatic gate failure" in text.lower(), (
             f"{name} must keep the clarity dimension assessed, never a gate"

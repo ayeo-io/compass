@@ -27,15 +27,12 @@ Compass, but it will drift from Compass policy.
 ### The Claude Code adapter layer
 
 The shipped adapter is Claude Code: `commands/` are the stage interface,
-`agents/` the distinct contexts, `skills/` the loadable procedures, `hooks/`
+`skills/` the loadable procedures, `hooks/`
 the pre-action enforcement, and `.claude-plugin/` the install wiring. A port
 rebuilds that layer and reuses everything under it.
 
 ```
 commands/        the stage interface (the /compass: namespace)
-agents/          router, spec-author, planner, orchestrator, builder,
-                 verifier, reviewer, product-owner, product-marketer,
-                 architect
 skills/          adaptive-routing, atdd, bdd-specification, behavior-mapping,
                  compass-runtime, evidence-gates, flow-management,
                  governance-check, intent-interview, plan-authoring,

@@ -144,7 +144,7 @@ trials that found identical quality scores whether the loop ran or not, at
 roughly 25 minutes of overhead per run. Compass has not repeated that
 measurement and takes the published result at face value. Compass already has
 two review points that earn their cost: **the requirements review**, which
-QAs the spec against governance, and the **reviewer** agent at verify. A
+QAs the spec against governance, and the **review** at verify. A
 third pass between them would double the time without measurably
 improving the spec.
 

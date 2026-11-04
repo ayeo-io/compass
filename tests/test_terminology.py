@@ -629,7 +629,7 @@ TERM_SURFACE_EXEMPT = {
     # exempt. governance/strategies.md is different: it is prose a contributor
     # reads, and it is where this project states the rule about bare codes -
     # so the prefix made the one file the rule could not reach the one file
-    # stating it. The identical bare code in agents/reviewer.md was caught in
+    # stating it. The identical bare code in the reviewer agent's file was caught in
     # under a minute while the copy in strategies.md was not.
     #
     # The .md files under governance/ are scanned. A deliberate illustration of

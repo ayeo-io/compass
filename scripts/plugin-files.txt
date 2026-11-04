@@ -12,7 +12,6 @@ THIRD-PARTY-NOTICES.md
 VERSION
 compass-contract.md
 adapters/
-agents/
 approaches/
 assets/
 bin/

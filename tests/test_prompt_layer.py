@@ -110,12 +110,13 @@ def test_trc_f3_the_merge_removes_resident_cost():
     # A skill kept only as a redirect to its renamed successor ("Renamed to
     # ...") is not a skill of its own, so the count leaves it out. `atdd`
     # joined later (issue atdd-skill): the four-layer acceptance tests.
+    # `worktree-multiagent` left in 9.0.0 (ADR-090).
     real = sorted(p.parent.name for p in skills
                   if "\ndescription: Renamed to " not in
                   p.read_text(encoding="utf-8"))
-    assert len(real) == 14, (
-        f"expected 14 skills - 15, less the two merges and quick-fix, plus "
-        f"atdd - found {len(real)}: " + ", ".join(real))
+    assert len(real) == 13, (
+        f"expected 13 skills - 15, less the two merges and quick-fix, plus "
+        f"atdd, less worktree-multiagent - found {len(real)}: " + ", ".join(real))
 
 
 def test_trc_f3_nothing_names_a_skill_that_does_not_exist():
@@ -304,6 +305,7 @@ NOT_ON_THE_LIGHT_PATH = {
     "gate": "verify passes each gate by hand with its evidence id; compass quick-fix finish passes the three gates itself",
     "policy": "verify reads the rules in force with compass policy show for its governance dimension; a quick fix's governance check is the one compass quick-fix finish runs",
     "analyze": "verify runs it on an issue that registers an intent; a quick fix registers none",
+    "review-rule": "the review at verify applies a project's review rules; compass quick-fix finish runs the governance check without them",
 }
 
 #: The five stage commands the quick-fix command inlines.

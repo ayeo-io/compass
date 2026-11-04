@@ -62,7 +62,7 @@ def test_wa_1_the_strategy_advises_and_cites_adr_003():
 
 
 def test_wa_1_the_planning_texts_point_to_it():
-    for rel in ("agents/architect.md", "skills/plan-authoring/SKILL.md",
+    for rel in ("skills/plan-authoring/SKILL.md",
                 "templates/technical-design.md"):
         text = (ROOT / rel).read_text(encoding="utf-8")
         assert "S15" in text, rel

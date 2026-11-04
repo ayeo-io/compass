@@ -349,14 +349,14 @@ observation. Pointer at the point of use in `CLAUDE.md` and
 The label goes first, so a reader can tell a blocking comment from a
 non-blocking one without reading to the end of the thread. It is not a
 substitute for the comment: **issue** still has to say what breaks. The
-`reviewer` agent applies it; the author answering the review assesses it.
+reviewer applies it; the author answering the review assesses it.
 
 *Why a strategy and not a guardrail:* nothing mechanical can judge whether a
 comment was labelled correctly. A blocking defect filed as a nitpick passes any
 check that looks for a word at the front, and it fails worse than no label.
 
 *Cross-reference: `S7` - both are about the reader's cost. Pointer at the point
-of use in `agents/reviewer.md` and `skills/receiving-code-review/SKILL.md`.*
+of use in `skills/receiving-code-review/SKILL.md`.*
 
 ### A title is a summary, not a headline (`S13`)
 
@@ -518,7 +518,7 @@ message must *say*; how you format the subject line is yours.
 
 - **`compass approach evaluate`** applies the routing strategies
   (`routing-policy.md`) to compute a default delivery approach.
-- **The `reviewer` agent** assesses, at `verify`, whether the work followed the
+- **The review at `verify`** assesses whether the work followed the
   applicable strategies, and reports that as judgement, distinct from the
   evidence-backed guardrail checks.
 - **`/compass:consult`** is where strategy-versus-strategy tensions get resolved.

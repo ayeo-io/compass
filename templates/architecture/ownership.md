@@ -2,7 +2,7 @@
 
 <!-- HOW ASSESS USES THIS FILE
      Assess reads this file and includes it in architecture-loaded.yml as a
-     narrative artifact.  The `architect` agent uses ownership data to
+     narrative artifact.  The architect perspective uses ownership data to
      flag when a proposed change crosses team boundaries - a common source of
      undetected coupling and rework.
 
@@ -34,7 +34,7 @@
 ## Cross-team dependencies
 
 <!-- Enumerate dependencies where the caller is owned by a different team
-     than the callee.  These are highest-priority for the `architect` agent. -->
+     than the callee.  These are highest-priority for the architect perspective. -->
 
 | Caller (team) | Callee (team) | Contract | Review required |
 |---|---|---|---|

@@ -26,7 +26,7 @@ choices in it.
 | Define | A small **feature set** of scenarios - happy path, the realistic edges, the failure modes that matter. Brownfield-unmapped: map current behavior into scenarios first. |
 | Refine | **Lightweight pass.** Resolve ambiguities, QA the spec against itself and against governance. Writes `requirements-review.md`. |
 | Plan | **Real `technical-design.md`.** Technical approach, the one or two design decisions stated, governance check run. If the work splits into 2–3 independent units, a short distribution map. |
-| Breakdown | **Solo or pair.** Solo on the current branch by default; pair (2–3 worktrees) if the distribution map shows clean independence and the multiagent settings in `compass.yml` (or `.compass/config.yml` in a project without one) are met. |
+| Breakdown | **Solo.** On the current branch; when the distribution map shows 2–3 independent units, the session builds them one after another (ADR-090). |
 | Implement | Thorough TDD per scenario. Test surface scaled to `contained`/`cross-cutting` risk. |
 | Verify | **Two review points** - one mid-implementation checkpoint, one at the end - clearing six gates. |
 | Ship | Integrate (merge pair worktrees if used), run regression, update living docs, one devlog entry. |
@@ -39,15 +39,14 @@ added if `positioning.md` is present.
 
 ## Multiagent orchestration
 
-Solo by default. Pair (2–3 worktrees, one `builder` agent each, no dedicated
-orchestrator - the lead builder integrates) when the distribution map shows
-genuinely independent units and the size justifies the setup cost.
+Solo by default. From 9.0.0 the session builds the units of the distribution
+map one after another, with no worktree and no agent (ADR-090).
 
 ## De-scope ledger - what the regular approach collapses or skips, and why it is safe
 
 | Item | Action | Standing justification |
 |---|---|---|
-| Dedicated orchestrator agent | skipped | At ≤3 subtasks the integration is small enough for the lead builder; a separate orchestrator is overhead. |
+| Dedicated orchestrator | skipped | One session builds every unit (ADR-090), so there is nothing to integrate. |
 | Full distribution map | reduced to a short list | Independence among 2–3 units is verifiable by reading; the full mapping process is for multiagent-scale work. |
 
 If the requirements review finds the spec is bigger or more ambiguous
@@ -59,8 +58,8 @@ re-assess - do not push the regular approach through a problem shaped for the fu
 - Skip the requirements review entirely. The regular approach's spec is a feature set, not a single
   certified-unambiguous scenario - there is always something to QA. The requirements review
   may be *lightweight*, never *absent*.
-- Run as a multiagent orchestration. Four or more subtasks is full-approach territory; it needs the
-  orchestrator and the full distribution map. If the work needs one, the
+- Split into four or more units. That is full-approach territory and needs the
+  full distribution map. If the work needs one, the
   assessment was wrong - re-assess to the full approach.
 - Drop the regression dimension. The regular approach touches enough surface that
   "nothing that passed before now fails" must be checked.

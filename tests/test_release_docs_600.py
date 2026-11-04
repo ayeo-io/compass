@@ -172,8 +172,6 @@ def test_the_verb_check_fails_on_a_verb_the_cli_lacks():
 PLUGIN_ROOT = "${CLAUDE_PLUGIN_ROOT}/"
 
 S1_FILES = (
-    "agents/router.md", "agents/reviewer.md", "agents/verifier.md",
-    "agents/planner.md", "agents/product-owner.md", "agents/product-marketer.md",
     "commands/consult.md", "commands/design.md", "commands/intent.md",
     "commands/position.md", "commands/refine.md", "commands/plan.md",
     "commands/verify.md", "commands/flow.md",
@@ -326,8 +324,7 @@ def s9_findings(text, known_types):
 
 
 S9_FILES = (
-    "agents/architect.md", "agents/verifier.md", "agents/router.md",
-    "commands/verify.md", "approaches/assess-procedure.md",
+    "commands/consult.md", "commands/verify.md", "approaches/assess-procedure.md",
 )
 
 
@@ -338,11 +335,11 @@ def test_trc_s9_plugin_instructions_use_real_types_verbs_and_fields():
     report = {rel: found for rel, found in report.items() if found}
     assert not report, report
 
-    verify = _read("commands/verify.md") + _read("agents/verifier.md")
+    verify = _read("commands/verify.md")
     assert "compass evidence add <EV-id> --type <type> --path <file>" in verify
     assert "compass gate pass <gate> --evidence <EV-id>" in verify
 
-    for rel in ("agents/router.md", "approaches/assess-procedure.md"):
+    for rel in ("approaches/assess-procedure.md",):
         text = _read(rel)
         assert "`subtask_ceiling`" in text, rel
         assert "Breakdown records the" in text, rel
@@ -355,7 +352,7 @@ def test_trc_s9_plugin_instructions_use_real_types_verbs_and_fields():
 
 
 def architect_registration_runs(text, tmp_path):
-    """Run the `compass evidence add` command that agents/architect.md documents
+    """Run the `compass evidence add` command that commands/consult.md documents
     in a scratch issue whose notes sit where step 4 writes them; return the exit
     code."""
     import shlex
@@ -369,14 +366,15 @@ def architect_registration_runs(text, tmp_path):
 
 
 def test_trc_s9_the_architect_registration_command_runs(tmp_path):
-    assert architect_registration_runs(_read("agents/architect.md"), tmp_path) == 0
+    # The architect agent's file held the command until 9.0.0 (ADR-090).
+    assert architect_registration_runs(_read("commands/consult.md"), tmp_path) == 0
 
 
 def test_trc_s9_the_architect_run_reports_a_path_the_cli_cannot_resolve(tmp_path):
-    wrong = _read("agents/architect.md").replace(
+    wrong = _read("commands/consult.md").replace(
         "--path architecture-notes.md",
         "--path docs/compass/<created>-<slug>/architecture-notes.md")
-    assert wrong != _read("agents/architect.md")
+    assert wrong != _read("commands/consult.md")
     assert architect_registration_runs(wrong, tmp_path) != 0
 
 

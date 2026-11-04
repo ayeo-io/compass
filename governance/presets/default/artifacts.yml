@@ -113,8 +113,8 @@ artifacts:
     file: distribution-map.md
     stage: breakdown
     owner: planner
-    audience: The orchestrator reads it to decide how many worktrees to start and which scenarios each
-      one owns.
+    audience: The session reads it to decide the order in which to build the units and which scenarios
+      each one owns.
     stands_for: work-breakdown
     sections:
       lightweight:

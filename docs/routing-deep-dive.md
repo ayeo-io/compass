@@ -145,8 +145,8 @@ The policy-rules section reads, in full:
 
 That line is itself the record - silence is not allowed; "nothing fired" is
 written down. The delivery approach is regular, unmodified. The de-scope
-ledger is short: the dedicated orchestrator agent is skipped (≤3 subtasks,
-the lead builder integrates) and the full distribution map is reduced to a
+ledger is short: the dedicated orchestrator is skipped (one session builds
+every unit, ADR-090) and the full distribution map is reduced to a
 short list. Both carry their standing justifications.
 
 This is the boring case, and the boring case matters: most work is on the regular
@@ -262,10 +262,9 @@ is the textbook **full** case, and it composes there with no help from
 the routing policy rules. Full BDD discovery from the intent document;
 scenarios grouped by independence - email delivery, in-app delivery, webhook
 delivery, preferences, the delivery log are plausibly disjoint surfaces; a
-full `technical-design.md` plus a real `distribution-map.md`; a multiagent
-orchestration across git worktrees, one `builder` per subtask, an
-`orchestrator` that writes no feature code; all gates, all dimensions, plus
-a per-worktree mid-delivery-approach checkpoint.
+full `technical-design.md` plus a real `distribution-map.md`, whose units the
+session builds one after another (ADR-090); all gates, all dimensions, plus
+a mid-delivery-approach checkpoint.
 
 ### Constrain
 
@@ -523,7 +522,7 @@ assessment - see `docs/methodology.md` §10.
 The triggers are concrete:
 
 - **Implementation reveals under-read size.** A "small" change is turning into a
-  multi-module refactor. The `builder` agent stops and flags it; the assess
+  multi-module refactor. The session stops and flags it; the assess
   stage re-scores. This is why the adaptive-routing skill says, when size is
   genuinely unclear, estimate *up* - collapsing a stage that turned out easy
   is cheap; discovering mid-implementation that the approach was too light

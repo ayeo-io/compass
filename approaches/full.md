@@ -37,17 +37,15 @@ checkpoint gate per worktree.
 
 ## Multiagent orchestration
 
-Multiagent: 4+ subtasks, capped by the `caps` in
-`governance/routing-policy.yml` (recorded in `delivery-approach.md` by the CLI). Note the
-standing cap - **`critical` risk caps worktrees at 1** even on
-the full approach, because coordination risk on a critical change outweighs the
-parallelism. The full approach can therefore be heavy *and* solo; that is
-intentional, not a contradiction.
+From 9.0.0 the breakdown mode keeps the name multiagent, but the session builds
+the units of the distribution map one after another, with no worktree or agent
+per unit (ADR-090). The `caps` in `governance/routing-policy.yml` still record a
+subtask ceiling in `delivery-approach.md`; nothing binds on it until #351
+replaces the stages.
 
-Roles: `orchestrator` coordinates and integrates; `builder` agents implement,
-one per worktree; `verifier` and `reviewer` run at the gates; `product-owner`
-and `product-marketer` apply role checks at the requirements review and at
-Ship time.
+Roles: one session builds, checks and reviews (ADR-090); the product owner
+and the product marketer perspectives apply role checks at the requirements
+review and at Ship time.
 
 ## De-scope ledger - what the full approach collapses or skips
 
@@ -60,10 +58,10 @@ those are recorded as *cap-driven*, not as de-scopes.
 
 - Run without a `distribution-map.md`, even if it ends up solo (capped). The
   map is the record of *what could have been parallel and why it wasn't*.
-- Let a `builder` agent touch a sibling worktree. Cross-subtask changes go
-  through the orchestrator. This is what makes the isolation real.
+- Build two units at once. The session builds one unit after another, so a
+  change to shared code is made once, in order.
 - Skip the combined-regression step at ship time. Per-subtask green does not imply
-  integrated green - the whole point of the orchestrator's ship role is to
+  integrated green - the whole point of the ship stage's regression run is to
   prove the combination.
 - Be reassessed to a lighter approach without a written reason. If the full approach
   turns out to be heavier than the work needs, use

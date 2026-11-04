@@ -34,7 +34,7 @@ evidence block is an automatic fail.
      past two screens and stops being read. The reader who wants the raw run
      can open the file, and a file can be re-run where a paste cannot.
 
-     On multiagent orchestration, list each subtask's record, then the combined one. -->
+     When the work has more than one unit, list each unit's record, then the combined one. -->
 <!-- absorbed: "the raw run can open the file - which is more than a paste gives them," -->
 <!-- absorbed: "because a paste cannot be re-run." -->
 
@@ -56,7 +56,7 @@ evidence block is an automatic fail.
      security (scaled or full), clarity, claims. Each gets pass/fail AND
      evidence.
 
-     "Assessed by" records WHO reached the judgment: the `reviewer` agent, a
+     "Assessed by" records WHO reached the judgment: an agent review, a
      named person, or "author" where the person who did the work also graded
      it. Be accurate rather than flattering. An author-assessed dimension is
      weaker evidence than an independently assessed one - the author cannot

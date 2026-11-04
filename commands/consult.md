@@ -41,12 +41,12 @@ what `/compass:init` offers separately.
   A consult exists to settle a conflict between two strategies; it cannot
   change a guardrail.
 
-## Agent roster
+## Perspective roster
 
-The following agents are part of the standard consult roster and can be
-convened by name:
+This session takes each perspective in turn; Compass starts no agent for a
+consult (ADR-090). These perspectives can be convened by name:
 
-| Agent | Invocation | Auto-trigger condition |
+| Perspective | Invocation | Auto-trigger condition |
 |---|---|---|
 | `product-owner` | `/compass:consult product-owner` | When a product owner takes part (`intent.md` exists) |
 | `product-marketer` | `/compass:consult product-marketer` | When a marketer takes part (`positioning.md` exists) |
@@ -54,22 +54,22 @@ convened by name:
 | `planner` | `/compass:consult planner` | On request |
 | `reviewer` | `/compass:consult reviewer` | On request |
 
-**Registration contract:** a role's agent is invoked only if its agent file
-exists in `agents/`. If the file does not exist, `/compass:consult`
-skips that perspective and records the absence in `devlog.md` rather than
-failing. This stops a consult calling an agent that the current issue is
-still writing.
-
-**Named invocation:** pass the agent name as a positional argument:
+**Named invocation:** pass the perspective's name as a positional argument:
 ```
 /compass:consult architect
 ```
-This convenes only the `architect` agent, regardless of auto-trigger
-conditions. It writes `architecture-notes.md` to the issue directory.
+This takes only the architect's perspective, regardless of auto-trigger
+conditions, and writes `architecture-notes.md` to the issue directory. Then
+register the notes as typed evidence, so they persist beyond the chat:
+```
+compass evidence add EV-ARCH-NOTES --type artifact \
+  --path architecture-notes.md
+```
+The path is read from `.compass/work/<task>/`, where the notes were written.
 
-**Auto-convene (no args):** when invoked with no positional agent name,
-`/compass:consult` auto-convenes every agent whose trigger condition is
-met for the current issue.
+**Auto-convene (no args):** when invoked with no positional name,
+`/compass:consult` takes every perspective whose trigger condition is met
+for the current issue.
 
 ## Procedure
 

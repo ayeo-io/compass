@@ -15,10 +15,9 @@ framework root and follow it. For product, design, marketing and QA use
 `intent`, `design`, `position` and `consult qa`. Never invent a command path.
 Without an argument, read the current issue and run the kit's `next` command.
 
-Use the shared `agents/` files when a command calls for a distinct agent
-context. An agent file's Claude-specific tool and model metadata is not a
-Codex configuration; use available Codex tools and the session's model.
-Keep the architect advisory and all roles on one acceptance specification.
+Run every command in this session: Compass ships no agent files from 9.0.0
+(ADR-090). Keep the architect advisory and all roles on one acceptance
+specification.
 
 Treat `${CLAUDE_PLUGIN_ROOT}` in shared markdown as the framework root printed
 by `runtime.py context`. Treat `/compass:<stage>` as this skill with that stage

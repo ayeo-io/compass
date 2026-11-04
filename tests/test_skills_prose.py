@@ -38,20 +38,6 @@ def test_skills_surface_is_enforced():
         "in the same diff that cleans the surface")
 
 
-def test_agents_surface_is_enforced_never_pending():
-    """agents/ is scanned and enforced - present in surfaces, absent
-    from both pending lists (TRC-2)."""
-    from test_terminology import PENDING_BASELINE
-    scan = _scan_cfg()
-    assert "agents/" in scan["surfaces"], (
-        "agents/ is not a scanned surface - ten agent definitions teach "
-        "every session unscanned")
-    assert "agents/" not in scan["pending_surfaces"], (
-        "agents/ must arrive clean, never pending")
-    assert "agents/" not in PENDING_BASELINE, (
-        "agents/ must never enter the pending baseline")
-
-
 def test_worktree_swarm_carries_the_stash_rule():
     """The compass-runtime skill carries the "never stash across a worktree
     hop" rule (TRC-3). It moved there from the worktree-multiagent skill when

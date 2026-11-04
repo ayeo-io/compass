@@ -89,7 +89,8 @@ def test_the_schema_accepts_the_key_and_refuses_a_bad_entry():
 
 def test_verify_lists_each_descoped_mode():
     """FM-C."""
-    verifier = (ROOT / "agents" / "verifier.md").read_text(encoding="utf-8")
+    # `commands/verify.md` carries the step the verifier agent had until 9.0.0 (ADR-090).
+    verifier = (ROOT / "commands" / "verify.md").read_text(encoding="utf-8")
     assert "failure_modes_descoped" in verifier
     report = (ROOT / "templates" / "verification-report.md").read_text(encoding="utf-8")
     assert "Failure modes de-scoped at define" in report

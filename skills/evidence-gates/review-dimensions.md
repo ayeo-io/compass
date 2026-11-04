@@ -38,8 +38,8 @@ the "Owning docs" table of its `docs/README.md`), a change to an area changes it
 owning doc in the same commit, or says why the doc still holds.
 
 **regression** - Does the evidence show nothing that passed before now fails?
-On a multiagent, this is per-subtask at the checkpoint gates and *combined* at ship time -
-per-subtask green does not imply integrated green.
+When the work has more than one unit, check each unit and then the *combined*
+result at ship time - each unit green does not imply the combination is green.
 
 **security** - Full on the full approach and hotfix, scaled to risk on
 the regular approach, off on quick fix unless a label added it. OWASP floor;

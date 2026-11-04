@@ -25,7 +25,7 @@ exclusively, and what it must not do.
 | `hooks/pre-tool.sh`, with its parts in `hooks/lib/` and its programs in `hooks/py/pre_tool_*.py` | `.red` marker gate enforcement | The decision of whether to block a tool call |
 | `hooks/stop.sh` | Session-end signal scanning, rework prompt | Detection of scope-bloat and rework signals |
 | `commands/*.md` | Phase slash-command definitions | The user-facing pipeline protocol |
-| `agents/*.md` | Role agent definitions | Agent instructions and hard boundary statements |
+| `skills/*/SKILL.md` | Loadable procedures | The instructions a session loads for a stage (9.0.0 ships no agent files, ADR-090) |
 | `governance/` | Routing policy, guardrails, strategies, signals | The machine-readable governance files that the CLI runs |
 | `architecture/` (this tree) | Compass's own architectural record | The ADRs and narrative files that describe the framework itself |
 | `templates/` | Worked examples for adopters | The template shapes adopters copy. The CLI reads `templates/<kind>.md` in two places: `compass issue template show` (`cli/compass_pkg/template_lists.py`) and `compass policy lint` (`cli/compass_pkg/policy_lint.py`). A template change can break either command |
@@ -67,11 +67,11 @@ exclusively, and what it must not do.
 - The approach-awareness of strategy enforcement (the spike approach suspends TDD;
   other delivery approaches do not).
 
-### Role Pipeline (agents/*.md + commands/consult.md)
+### Role Pipeline (commands/consult.md and the role entry points)
 
 **Must own:**
 - Each role's entry-point command and the artifact it produces.
-- The `architect` agent's annotation protocol (`architecture-notes.md`
+- The architect perspective's annotation protocol (`architecture-notes.md`
   with five headed sections, no Given/When/Then).
 - The role-first / planner-second order of operations.
 
@@ -146,7 +146,7 @@ explicitly note why the consultation is not needed:
 
 | Caller component | Callee component | Risk |
 |---|---|---|
-| Any agent (`agents/*.md`) | `acceptance-criteria.md` | Agents must not write scenarios; annotation only |
+| Any role perspective | `acceptance-criteria.md` | A role perspective must not write scenarios; annotation only |
 | `compass approach evaluate` | `governance/routing-policy.yml` | Schema changes need a routing-policy ADR |
 | `compass check` | `governance/guardrails.yml` | Adding a check needs a guardrail-count check |
 | `hooks/pre-tool.sh` | `.compass/work/<issue>/.red` | Any change to the marker protocol needs updating both sides |

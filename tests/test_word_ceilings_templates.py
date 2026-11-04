@@ -88,7 +88,12 @@ def test_wcl_15_distribution_map_unchanged():
             == _subtask_table_header(_origin_main(rel).decode("utf-8")))
     now = _artifacts((PRESET / "artifacts.yml").read_text(encoding="utf-8"))
     before = _artifacts(_origin_main("governance/presets/default/artifacts.yml"))
-    assert now["distribution-map"] == before["distribution-map"]
+    # ADR-090 removed the orchestrator and its worktrees, so the entry's audience
+    # now names the session. Every other field must stay as it was.
+    now_map = {k: v for k, v in now["distribution-map"].items() if k != "audience"}
+    before_map = {k: v for k, v in before["distribution-map"].items() if k != "audience"}
+    assert now_map == before_map
+    assert "worktree" not in now["distribution-map"]["audience"]
     # Unit is still the first column of the design's Work units table, which the
     # distribution map is read from.
     text = (ROOT / "templates" / "technical-design.md").read_text(encoding="utf-8")

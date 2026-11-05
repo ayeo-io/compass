@@ -131,6 +131,7 @@ Rules:
 | [ADR-089](ADR-089-red-and-green-records-hold-sha256-digests-of-their-files.md) | Red and green records hold SHA-256 digests of their files | accepted | with ADR-038, ADR-086 and ADR-088 |
 | [ADR-090](ADR-090-compass-runs-in-one-session-with-no-stage-agents.md) | Compass runs in one session with no stage agents | accepted | with ADR-030, ADR-071, ADR-076 and ADR-078 |
 | [ADR-091](ADR-091-compass-needs-only-the-acceptance-criteria.md) | Compass needs only the acceptance criteria | accepted | with ADR-026, ADR-050, ADR-051, ADR-064, ADR-067 and ADR-090 |
+| [ADR-092](ADR-092-compass-runs-one-path-of-four-stages.md) | Compass runs one path of four stages and assess selects the evidence | proposed | with ADR-062, ADR-063, ADR-079, ADR-083, ADR-088, ADR-090 and ADR-091 |
 
 ## Principle → ADR mapping
 

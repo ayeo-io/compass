@@ -314,12 +314,34 @@ def test_a_gate_adder_reports_its_kind_as_requirement(tmp_path):
     )
 
 
-def test_the_rename_does_not_change_any_computed_approach(tmp_path):
+PROBE = {"risk": "cross-cutting", "familiarity": "brownfield-mapped", "size": "large",
+         "goal": "delivery", "role": "engineer", "labels": ["auth"]}
+
+
+def test_the_rename_does_not_change_any_computed_approach():
     """The ids are data the evaluator copies; renaming must compute the same.
 
     One test asserts two of these ids by value, so check the computed
     output rather than assume the rename changes nothing.
+
+    `compass approach evaluate` now prints the path for a delivery assessment
+    (ADR-092), so the approach is computed by the 8.x evaluator in process, on
+    the governance the command read. The twin below runs the command.
     """
+    from compat_baseline import shipped_policy
+    from compass_pkg.routing import evaluate_route
+
+    out = evaluate_route(dict(PROBE), shipped_policy())
+    assert out["delivery_approach"] == "full", f"the computed approach changed:\n{out}"
+    assert "verify.architecture" in out["gates"], (
+        f"the fitness gate is no longer added on a cross-cutting change - the "
+        f"rename changed behaviour:\n{out}"
+    )
+
+
+def test_the_rename_does_not_change_what_the_command_prints(tmp_path):
+    """Twin of the test above through the command: the probe issue is on the
+    path and still owes the fitness gate."""
     manifest = tmp_path / ".compass" / "work" / "probe"
     manifest.mkdir(parents=True)
     (tmp_path / ".compass" / "config.yml").write_text("version: 1.0.0\n")
@@ -338,11 +360,12 @@ def test_the_rename_does_not_change_any_computed_approach(tmp_path):
     )
     assert r.returncode == 0, r.stdout + r.stderr
     out = r.stdout
-    assert "full" in out, f"the computed approach changed:\n{out}"
+    assert re.search(r"FINAL APPROACH\s*:\s*delivery$", out, re.M), out
     assert "verify.architecture" in out, (
         f"the fitness gate is no longer added on a cross-cutting change - the "
         f"rename changed behaviour:\n{out}"
     )
+    assert "RP-REQUIRE-003" in out and "RP-REQUIRE-004" in out, out
 
 
 def test_the_archive_is_untouched():

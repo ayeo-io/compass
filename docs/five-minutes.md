@@ -48,10 +48,10 @@ Judgment goes into the assessment. Everything after it is deterministic: the
 same assessment and configuration produce the same
 approach, every time.
 
-For a contained typo, Compass will normally choose a quick-fix-shaped approach.
-It writes the manifest to `.compass/work/<issue>/` and the issue's documents to
-`docs/compass/<date>-<issue>/`, and the manifest records the judgment it was
-computed from. The part of `manifest.yml` that matters here:
+For a contained typo, Compass asks for the evidence every change owes and no
+more. It writes the manifest to `.compass/work/<issue>/` and the issue's
+documents to `docs/compass/<date>-<issue>/`, and the manifest records the
+judgment it was computed from. The part of `manifest.yml` that matters here:
 
 ```yaml
 schema_version: "3.0"
@@ -63,25 +63,18 @@ assessment:
 ```
 
 Those three dimensions and the switches are the only judgment in the routing. Everything after
-them - the stages, the gates, the orchestration - is computed. Run
+them - the evidence the change owes and the gates - is computed. Run
 `compass approach evaluate --verbose` against that assessment and it prints:
 
 ```text
   policy          : this project's effective configuration (compass.yml over the shipped default)
   assessment      : {"risk": "contained", "familiarity": "brownfield-mapped", "size": "atomic", "goal": "delivery"}
-  first approach  : quick fix  <- RP-SHAPE-003 (Small on every axis.)
-  FINAL APPROACH  : quick fix
-  policy rules fired: none
-  parallel subtasks: up to 1 (a ceiling - breakdown sets the orchestration once the distribution map exists)
-  per-stage weight:
-    assess     : thorough
-    define     : lightweight
-    refine     : collapsed
-    plan       : collapsed
-    breakdown  : skipped
-    implement  : thorough
-    verify     : lightweight
-    ship       : lightweight
+  evidence row    : RP-EVID-LIGHT
+  FINAL APPROACH  : delivery
+  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability
+  policy rules fired:
+    A small change with low risk owes the evidence every change owes (RP-EVID-LIGHT, evidence)
+        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability
   gate set        : verify.correctness, verify.governance, verify.traceability
 ```
 

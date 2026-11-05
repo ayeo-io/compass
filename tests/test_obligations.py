@@ -1211,7 +1211,18 @@ def test_ob_8_an_empty_issue_input_is_no_issue_input():
         == evaluate_route(_assessment(), shipped_policy())
 
 
-def test_ob_8_the_command_answers_as_before(tmp_path):
+def test_ob_8_the_command_answers_as_before():
+    """The 8.x evaluator, called as `approach evaluate --assessment` called it
+    with no issue, gives the same approach and no issue key. The command now
+    prints the path for a delivery assessment (ADR-092); its twin follows."""
+    from compat_baseline import shipped_policy
+    answer = evaluate_route({"risk": "trivial", "familiarity": "greenfield",
+                             "size": "small"}, shipped_policy())
+    assert answer["delivery_approach"] == "quick-fix"
+    assert "issue_overrides" not in answer
+
+
+def test_ob_8_the_command_answers_on_the_path(tmp_path):
     import json
     import subprocess
     out = subprocess.run(
@@ -1221,7 +1232,8 @@ def test_ob_8_the_command_answers_as_before(tmp_path):
         cwd=tmp_path, capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
     answer = json.loads(out.stdout)
-    assert answer["delivery_approach"] == "quick-fix"
+    assert answer["delivery_approach"] == "delivery"
+    assert answer["evidence_required"]
     assert "issue_overrides" not in answer
 
 

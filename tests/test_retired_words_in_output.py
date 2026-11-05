@@ -12,7 +12,7 @@ import re
 
 def test_rwp_7_a_forced_stage_names_thorough(run_cli):
     """RP-FLOOR-002 on unmapped ground. On the four-stage path (ADR-092) there are no
-    stage modes, so the floor names the skill it requires and no forced stage."""
+    stage modes, so the floor names the skill it needs and no forced stage."""
     r = run_cli("approach", "evaluate", "--verbose",
                 "--assessment", "risk=cross-cutting",
                 "--assessment", "familiarity=brownfield-unmapped",

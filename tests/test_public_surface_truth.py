@@ -709,7 +709,10 @@ def test_d2_repairs_change_only_retired_names():
     added three table rows to `docs/quickstart.md` (21 -> 24, the `next:`
     rows of a path issue) and "The path writer" to
     `governance/routing-policy.md` (one more `##` heading, list_items
-    62 -> 67, table_rows 25 -> 34).
+    62 -> 67, table_rows 25 -> 34). Turning the path writer on added four
+    bullets to `governance/routing-policy.md` (list_items 67 -> 71): what
+    the command shows without `--write`, the evidence row `--verbose` names,
+    and the two `compass next` lines on `layering` and on the files to stage.
 
     The other 45 are untouched, and a NEW structural change to any of the 53
     still fails.

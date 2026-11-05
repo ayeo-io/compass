@@ -134,6 +134,30 @@ def test_trc_f4_an_unreadable_framework_policy_should_not_break_the_lint(tmp_pat
 # critical risk.
 # ---------------------------------------------------------------------------
 
+def _readings(fx):
+    """A fixture's assessment as `approach evaluate --assessment` reads it."""
+    from compass_pkg import routing
+    from compass_pkg.core import ASSESSMENT_KEY_MAP
+    out = {}
+    for key, value in (fx.get("assessment") or fx.get("readings") or {}).items():
+        if value in (None, ""):
+            continue
+        key = ASSESSMENT_KEY_MAP.get(key, key)
+        out[key] = list(value) if isinstance(value, list) else routing.read_size(key, value)
+    return out
+
+
+def _cli_args(fx):
+    args = []
+    for key, value in (fx.get("assessment") or fx.get("readings") or {}).items():
+        if isinstance(value, list):
+            value = ",".join(str(v) for v in value)
+        if value in (None, ""):
+            continue
+        args += ["--assessment", f"{key}={value}"]
+    return args
+
+
 def test_trc_f5_drift_detection_should_not_change_any_computed_route():
     """Every routing fixture must evaluate identically after this change.
 
@@ -142,42 +166,42 @@ def test_trc_f5_drift_detection_should_not_change_any_computed_route():
     re-runs the whole fixture corpus and compares the computed delivery
     approach, gates, topology and fired guardrails against what the fixture
     declares.
+
+    The command now prints the path for a delivery assessment (ADR-092), so
+    the approach is computed by the 8.x evaluator, `routing.evaluate_route`,
+    in process, on the policy the command reads in this checkout:
+    `governance/routing-policy.yml`. The twin below runs the command.
     """
+    import compat_baseline as cb
+    from compass_pkg import routing
+
+    policy = cb.shipped_policy()
     fixtures = sorted(FIXTURES.glob("*.yml"))
     assert fixtures, "no routing fixtures found - this guard would be empty"
     total_checks = 0
 
     for path in fixtures:
         fx = yaml.safe_load(path.read_text())
-        readings = fx.get("assessment") or fx.get("readings") or {}
-        args = []
-        for key, value in readings.items():
-            if isinstance(value, list):
-                value = ",".join(str(v) for v in value)
-            if value in (None, ""):
-                continue
-            args += ["--assessment", f"{key}={value}"]
-        result = subprocess.run(
-            [sys.executable, str(CLI), "approach", "evaluate", *args, "--json"],
-            cwd=str(ROOT), capture_output=True, text=True, timeout=60,
-        )
         expect = fx.get("expected") or {}
 
         # Some fixtures are NEGATIVE: the evaluator must refuse rather than
         # silently promote (e.g. exploration intent that would touch auth).
         # Those must keep refusing, with the same message.
         if expect.get("conflict"):
-            assert result.returncode != 0, (
-                f"{path.name}: the evaluator stopped refusing a routing "
-                f"conflict - it now returns a route where it must not")
-            needle = expect.get("conflict_message_contains", "")
-            assert needle in (result.stdout + result.stderr), (
-                f"{path.name}: the conflict message changed; expected to find "
-                f"{needle!r}")
+            try:
+                routing.evaluate_route(_readings(fx), policy)
+            except routing.RoutingConflict as exc:
+                needle = expect.get("conflict_message_contains", "")
+                assert needle in str(exc), (
+                    f"{path.name}: the conflict message changed; expected to find "
+                    f"{needle!r}")
+            else:
+                raise AssertionError(
+                    f"{path.name}: the evaluator stopped refusing a routing "
+                    f"conflict - it now returns a route where it must not")
             continue
 
-        assert result.returncode == 0, f"{path.name}: {result.stderr}"
-        got = json.loads(result.stdout)
+        got = routing.evaluate_route(_readings(fx), policy)
 
         checked = 0
         if "route" in expect:
@@ -220,6 +244,43 @@ def test_trc_f5_drift_detection_should_not_change_any_computed_route():
     assert total_checks >= len(fixtures), (
         f"only {total_checks} expectations compared across {len(fixtures)} "
         f"fixtures - this guard is weaker than it looks")
+
+
+def test_trc_f5_drift_detection_should_not_change_what_the_command_prints():
+    """Twin of the test above through `compass approach evaluate`, run in this
+    checkout as before: a conflict is still refused with the same message, a
+    spike prints the 8.x evaluator's approach and gates, and a delivery
+    assessment prints `delivery` and the gates its evidence derives."""
+    import compat_baseline as cb
+    from compass_pkg import evidence_required as er
+    from compass_pkg import routing
+
+    policy = cb.shipped_policy()
+    for path in sorted(FIXTURES.glob("*.yml")):
+        fx = yaml.safe_load(path.read_text())
+        expect = fx.get("expected") or {}
+        result = subprocess.run(
+            [sys.executable, str(CLI), "approach", "evaluate", *_cli_args(fx), "--json"],
+            cwd=str(ROOT), capture_output=True, text=True, timeout=60,
+        )
+        if expect.get("conflict"):
+            assert result.returncode != 0, (
+                f"{path.name}: the command stopped refusing a routing conflict")
+            needle = expect.get("conflict_message_contains", "")
+            assert needle in (result.stdout + result.stderr), (
+                f"{path.name}: the conflict message changed; expected to find "
+                f"{needle!r}")
+            continue
+        assert result.returncode == 0, f"{path.name}: {result.stderr}"
+        got = json.loads(result.stdout)
+        old = routing.evaluate_route(_readings(fx), policy)
+        if old["delivery_approach"] == "spike":
+            assert got["delivery_approach"] == "spike", path.name
+            assert got["gates"] == old["gates"], path.name
+        else:
+            assert got["delivery_approach"] == "delivery", path.name
+            owed = er.evaluate(_readings(fx), routing.prepare_policy(policy).view)
+            assert got["gates"] == owed["gates"], path.name
 
 
 # ---------------------------------------------------------------------------

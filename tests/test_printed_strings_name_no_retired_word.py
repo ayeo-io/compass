@@ -118,7 +118,37 @@ def test_approach_evaluate_default_view_names_ship_not_land(project, run_cli):
 
 def test_approach_evaluate_verbose_names_ship_not_land(project, run_cli):
     """The two `--verbose` print sites: the policy-rule detail line and the
-    BLOCKED phase summary line."""
+    BLOCKED phase summary line.
+
+    On the path a delivery assessment lists no rule that blocks a stage, since
+    the path has no stage to block (ADR-092), so the detail line prints only
+    for a spike, which keeps the 8.x evaluator's result. A spike has no `auth`
+    label: exploration on a `G5` surface is refused. The twin below checks the
+    delivery screen."""
+    _copy_blocks_the_ship_stage(project)
+    r = run_cli(
+        "approach", "evaluate", "--verbose",
+        "--assessment", "risk=contained",
+        "--assessment", "familiarity=brownfield-mapped",
+        "--assessment", "size=small",
+        "--assessment", "goal=exploration",
+        "--assessment", "artifacts=positioning",
+    )
+    assert r.returncode == 0, r
+    out = r.stdout
+    assert "FINAL APPROACH  : spike" in out, out
+    assert _word("land").search(out) is None, (
+        f"compass approach evaluate --verbose prints the retired stage "
+        f"name 'land':\n{out}")
+    assert "stage 'ship' blocked until" in out, (
+        f"the policy-rule detail line did not name the ship stage:\n{out}")
+    assert "BLOCKED phase   : ship until" in out, (
+        f"the BLOCKED phase summary line did not name the ship stage:\n{out}")
+
+
+def test_approach_evaluate_verbose_on_the_path_names_ship_not_land(project, run_cli):
+    """Twin of the test above for a delivery assessment, which is on the path:
+    the BLOCKED phase summary line still names the ship stage."""
     _copy_blocks_the_ship_stage(project)
     r = run_cli(
         "approach", "evaluate", "--verbose",
@@ -131,11 +161,10 @@ def test_approach_evaluate_verbose_names_ship_not_land(project, run_cli):
     )
     assert r.returncode == 0, r
     out = r.stdout
+    assert "FINAL APPROACH  : delivery" in out, out
     assert _word("land").search(out) is None, (
         f"compass approach evaluate --verbose prints the retired stage "
         f"name 'land':\n{out}")
-    assert "stage 'ship' blocked until" in out, (
-        f"the policy-rule detail line did not name the ship stage:\n{out}")
     assert "BLOCKED phase   : ship until" in out, (
         f"the BLOCKED phase summary line did not name the ship stage:\n{out}")
 

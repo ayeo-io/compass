@@ -76,9 +76,11 @@ def test_db_1_an_in_progress_row_shows_stage_gates_and_evidence(repo):
     _ready_to_finish(repo, "fix-greeting")
     _green(repo)
     data = board(str(repo / ".compass" / "work"), today=TODAY)
-    row = _row(data["in_progress"], "fix-greeting")
-    assert row["delivery_approach"] == "quick-fix"
-    assert row["stage"]
+    # A quick fix is on the four-stage path, whose one approach is `delivery`
+    # (ADR-092). Its red and its green end Build, so it is at Ship, in review.
+    row = _row(data["in_review"], "fix-greeting")
+    assert row["delivery_approach"] == "delivery"
+    assert row["stage"] == "ship"
     assert row["gates"] == "0/3", row
     assert row["evidence"] == "fresh", row
 

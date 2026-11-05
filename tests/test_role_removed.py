@@ -71,19 +71,10 @@ def _blocks(result):
     return {b["phase"]: b["until"] for b in result["blocked_phases"]}
 
 
-#: The path writer's switch (ADR-092), passed on to the CLI when a test sets it
-#: with the `path_writer` fixture. Step 9b of #351 turns the writer on for good
-#: and deletes it.
-PATH_SWITCH = "COMPASS_PATH_WRITER"
-
-
 def _env(home):
-    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
-           "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1", "COLUMNS": "200",
-           "PYTHONDONTWRITEBYTECODE": "1", "COMPASS_RENDER_AFTER": "0"}
-    if os.environ.get(PATH_SWITCH):
-        env[PATH_SWITCH] = os.environ[PATH_SWITCH]
-    return env
+    return {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
+            "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1", "COLUMNS": "200",
+            "PYTHONDONTWRITEBYTECODE": "1", "COMPASS_RENDER_AFTER": "0"}
 
 
 def _run(root, *argv):
@@ -259,7 +250,7 @@ def _without_rule(config, rule_id):
 
 # --- group C: upgrading from 6.x -------------------------------------------------
 
-def test_trc_c1_a_manifest_that_records_a_role_evaluates_on_the_new_default(tmp_path, path_writer):
+def test_trc_c1_a_manifest_that_records_a_role_evaluates_on_the_new_default(tmp_path):
     root, _ = _project(tmp_path, assessment=_assess(role="product-owner"))
     code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write",
                           *ALL_REASONS)
@@ -289,7 +280,7 @@ def test_trc_c2_a_stored_6x_configuration_keeps_its_role_rules():
     assert "plan" in owed.blocked_stages
 
 
-def test_trc_c3_a_role_justification_is_accepted_and_not_recorded(tmp_path, path_writer):
+def test_trc_c3_a_role_justification_is_accepted_and_not_recorded(tmp_path):
     root, _ = _project(tmp_path)
     code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write",
                           *ALL_REASONS, "--justify", "role=an engineer")
@@ -299,7 +290,7 @@ def test_trc_c3_a_role_justification_is_accepted_and_not_recorded(tmp_path, path
     assert "role" not in data["justifications"]
 
 
-def test_trc_c4_a_quick_fix_given_a_role_is_accepted_and_records_none(tmp_path, path_writer):
+def test_trc_c4_a_quick_fix_given_a_role_is_accepted_and_records_none(tmp_path):
     root = tmp_path / "proj"
     (root / ".compass" / "work").mkdir(parents=True)
     (root / "compass.yml").write_text(
@@ -496,8 +487,7 @@ def _path_view(root, slug="t"):
     return result, err
 
 
-def test_trc_c2_copied_6x_governance_keeps_its_role_rules_through_the_cli(tmp_path,
-                                                                          path_writer):
+def test_trc_c2_copied_6x_governance_keeps_its_role_rules_through_the_cli(tmp_path):
     """A project still on copied 6.x governance routes a product owner's issue with
     RP-ROLE-002, as before, and the CLI evaluates the issue on the path."""
     root, _ = _project(tmp_path, assessment=_assess(role="product-owner"),
@@ -525,8 +515,7 @@ def _six_generation_project(tmp_path):
     return root
 
 
-def test_trc_c2_a_stored_6x_generation_keeps_its_role_rules_through_the_cli(tmp_path,
-                                                                           path_writer):
+def test_trc_c2_a_stored_6x_generation_keeps_its_role_rules_through_the_cli(tmp_path):
     """Through `compass approach evaluate`: an issue whose stored generation was
     committed by 6.0.1 keeps its role rules until it is re-assessed, and the
     re-assessment commits a generation on the 7.0.0 default without them."""
@@ -569,7 +558,7 @@ def test_trc_c2_a_stored_6x_generation_keeps_its_role_rules_through_the_cli(tmp_
     assert "role_rules" not in stored[2]["rules"] and "role" not in stored[2]["dimensions"]
 
 
-def test_trc_c1_a_recorded_role_is_named_as_ignored_on_evaluation(tmp_path, path_writer):
+def test_trc_c1_a_recorded_role_is_named_as_ignored_on_evaluation(tmp_path):
     """Re-assessing a 6.x issue says on standard error that its recorded role
     is no longer read, so the change in routing is not silent."""
     root, _ = _project(tmp_path, assessment=_assess(role="product-owner"))

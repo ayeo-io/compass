@@ -33,12 +33,7 @@ import re
 import subprocess
 import sys
 
-import pytest
 import yaml
-
-#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
-#: turns the path writer on for good and deletes this mark.
-pytestmark = pytest.mark.usefixtures("path_writer")
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"

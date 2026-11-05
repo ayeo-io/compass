@@ -11,9 +11,15 @@ from __future__ import annotations
 import html
 
 from compass_pkg.core import display_stage
-from compass_pkg.stable_ids import STAGE_IDS
+from compass_pkg.stable_ids import (STAGE_BUILD, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT,
+                                    STAGE_SPECIFY)
 
 LANES = ("backlog", *STAGE_IDS, "done")
+#: The lane a path issue's stage takes (ADR-092). The lanes are the legacy stages,
+#: so a path issue at specify or build would have no lane and its card would not
+#: be drawn. Each takes the legacy stage where its work began: specify the define
+#: lane, build the implement lane. Assess and ship are lanes already.
+PATH_LANES = {STAGE_SPECIFY: STAGE_DEFINE, STAGE_BUILD: STAGE_IMPLEMENT}
 DONE_LANE_NAME = "done, last 7 days"
 
 _SECTIONS = ("backlog", "ready", "in_progress", "stale", "in_review",
@@ -22,6 +28,10 @@ _SECTIONS = ("backlog", "ready", "in_progress", "stale", "in_review",
 
 def _e(value):
     return html.escape(str(value), quote=True)
+
+
+def _lane(r):
+    return PATH_LANES.get(r.get("lane"), r.get("lane"))
 
 
 def _lane_name(lane):
@@ -381,7 +391,7 @@ def _unplaceable(data):
     found = [(r, r["unplaceable"]) for r in _rows(data) if r.get("unplaceable")]
     # An open issue with no lane would otherwise vanish; a done one is counted.
     found += [(r, "the board gave it no lane") for r in _rows(data)
-              if not r.get("unplaceable") and r.get("lane") not in LANES
+              if not r.get("unplaceable") and _lane(r) not in LANES
               and r.get("state") != "done"]
     for key in ("other", "unreadable"):
         for r in data.get(key) or []:
@@ -406,8 +416,8 @@ def _unplaceable_note(found):
 def render_page(data, generated, trees):
     by_lane = {lane: [] for lane in LANES}
     for r in _rows(data):
-        if r.get("lane") in by_lane and not r.get("unplaceable"):
-            by_lane[r["lane"]].append(r)
+        if _lane(r) in by_lane and not r.get("unplaceable"):
+            by_lane[_lane(r)].append(r)
     out = ['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
            '<meta http-equiv="Content-Security-Policy" '
            'content="default-src \'none\'; style-src \'unsafe-inline\'">',

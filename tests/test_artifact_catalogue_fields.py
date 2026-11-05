@@ -17,10 +17,6 @@ from pathlib import Path
 import pytest
 import yaml
 
-#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
-#: turns the path writer on for good and deletes this mark.
-pytestmark = pytest.mark.usefixtures("path_writer")
-
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
@@ -101,9 +97,7 @@ def _lint_team(doc):
 def _env(home):
     return {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
             "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1", "COLUMNS": "200",
-            "PYTHONDONTWRITEBYTECODE": "1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
-            # The path writer's switch reaches the CLI; step 9b of #351 deletes it.
-            **{k: v for k, v in os.environ.items() if k == "COMPASS_PATH_WRITER"}}
+            "PYTHONDONTWRITEBYTECODE": "1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
 
 
 def _cli(cwd, *argv):

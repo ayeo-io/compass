@@ -81,7 +81,7 @@ def _seeded(tmp_path, **readings):
 # The four-stage path (ADR-092): each re-assessment here is written by the path
 # writer, so the approach name is `delivery` before and after.
 
-def test_scn_a1_content_change_is_logged(tmp_path, path_writer):
+def test_scn_a1_content_change_is_logged(tmp_path):
     """Same delivery-approach name, materially different delivery approach."""
     root = _seeded(tmp_path)
     before = _task(root)
@@ -105,7 +105,7 @@ def test_scn_a1_content_change_is_logged(tmp_path, path_writer):
     assert "architecture" in after["evidence_required"]
 
 
-def test_scn_a2_no_material_change_is_not_logged(tmp_path, path_writer):
+def test_scn_a2_no_material_change_is_not_logged(tmp_path):
     root = _seeded(tmp_path)
     r = _run(root, "approach", "evaluate", "--issue", "t", "--write",
              "--reason", "no change expected")
@@ -119,7 +119,7 @@ def test_scn_a2_no_material_change_is_not_logged(tmp_path, path_writer):
         f"a --reason that was kept must not be reported as dropped:\n{r.stdout}{r.stderr}")
 
 
-def test_scn_a3_entry_records_what_changed(tmp_path, path_writer):
+def test_scn_a3_entry_records_what_changed(tmp_path):
     root = _seeded(tmp_path)
     t = _task(root)
     t["assessment"]["risk"] = "cross-cutting"
@@ -132,7 +132,7 @@ def test_scn_a3_entry_records_what_changed(tmp_path, path_writer):
     assert entry["changed"]["gates"]["from"] != entry["changed"]["gates"]["to"], entry
 
 
-def test_scn_a4_entry_carries_a_kind(tmp_path, path_writer):
+def test_scn_a4_entry_carries_a_kind(tmp_path):
     root = _seeded(tmp_path)
     t = _task(root)
     t["assessment"]["risk"] = "cross-cutting"

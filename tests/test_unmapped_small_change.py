@@ -157,7 +157,7 @@ def repo(tmp_path):
     return root
 
 
-def test_ua_2_quick_fix_start_takes_it_and_records_the_advice(repo, path_writer):
+def test_ua_2_quick_fix_start_takes_it_and_records_the_advice(repo):
     r = subprocess.run(
         [sys.executable, str(CLI), "quick-fix", "start", "tidy-config",
          "--risk", "contained - one function",

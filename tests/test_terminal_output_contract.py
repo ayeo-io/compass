@@ -202,7 +202,7 @@ def test_trc_c3_json_is_machine_only():
     assert "eight gates" in doc["items"]
 
 
-def test_trc_c3_existing_json_verb_keeps_its_keys(tmp_path, path_writer):
+def test_trc_c3_existing_json_verb_keeps_its_keys(tmp_path):
     """`approach evaluate --json` already ships - the compatibility half of
     `TRC-C3`.
 

@@ -65,8 +65,10 @@ def test_the_decision_view_is_three_lines(repo):
     assert view.returncode == 0, view.stderr
     lines = view.stdout.strip().splitlines()
     assert len(lines) == 3, lines
-    assert lines[0].startswith("Approach: quick fix"), lines
-    assert lines[1].startswith("Gates: ") and "verify.correctness" in lines[1], lines
+    # The four-stage path (ADR-092): the one approach and the assessment, then the
+    # evidence the change owes, in place of the 8.x approach name and gate list.
+    assert lines[0].startswith("Approach: delivery (risk trivial"), lines
+    assert lines[1].startswith("Evidence: ") and "correctness" in lines[1], lines
     assert lines[2].startswith("Writes: ") and ".compass/work/greeting/" in lines[2], lines
 
 

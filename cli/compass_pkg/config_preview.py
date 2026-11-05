@@ -116,10 +116,9 @@ def _committed(approach, manifest):
     a spike `spike` (ADR-092 decision 2): the path writer's for `after`, the
     manifest's own for `before`. The classifier still names the approach of
     the configuration's routing."""
-    from compass_pkg import path_writer
     from compass_pkg.path_stages import is_path_issue
     from compass_pkg.stable_ids import APPROACH_DELIVERY, APPROACH_SPIKE
-    on_path = is_path_issue(manifest) if manifest is not None else path_writer.enabled()
+    on_path = is_path_issue(manifest) if manifest is not None else True
     if approach is None or approach == APPROACH_SPIKE or not on_path:
         return approach
     return APPROACH_DELIVERY

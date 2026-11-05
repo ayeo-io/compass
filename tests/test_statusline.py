@@ -6,9 +6,8 @@ costs no tokens. The line must use the same stage resolver as `compass
 next`, so the two cannot disagree, and it must never break the session:
 outside a Compass project, or on any error, it prints nothing and exits 0.
 
-Each issue here is started on the four-stage path (ADR-092): the `path_writer`
-fixture is on for the whole module, so the line shows the path approach and
-the path stages.
+Each issue here is started on the four-stage path (ADR-092), so the line shows
+the path approach and the path stages.
 """
 from __future__ import annotations
 
@@ -28,9 +27,6 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 SHIM = ROOT / "bin" / "compass-statusline"
 GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
-
-# Step 9b of #351 turns the path writer on for good and deletes this line.
-pytestmark = pytest.mark.usefixtures("path_writer")
 
 #: The stage words a line can show: the four path stages and "done" (ADR-092).
 STAGE_WORDS = ("Assess", "Specify", "Build", "Ship", "done")

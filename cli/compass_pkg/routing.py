@@ -79,10 +79,6 @@ GATE_ADDED = "gate '{gate}' added to the approach's gate set"
 #: still hold `RP-REQUIRE-001` and `RP-REQUIRE-002`, which add it.
 REMOVED_GATES = {GATE_VERIFY_ANALYZE: "9.0.0"}
 
-#: The four-stage path writer (ADR-092), dark-launched: `approach evaluate --write`
-#: writes the evidence a delivery assessment owes only while this is true, or while
-#: `COMPASS_PATH_WRITER=1` is set (`path_writer.enabled`). Step 9b of #351 deletes it.
-PATH_WRITER = False
 _GATE_ADDED_RE = re.compile("^" + re.escape(GATE_ADDED).replace(r"\{gate\}", "(.+?)") + "$")
 
 
@@ -827,17 +823,22 @@ def cmd_route_evaluate(args):
             result["checkpoints"] = route_checkpoints(
                 prepared, result["stages"], result["delivery_approach"], autonomy,
                 strategy_applies=True)
-    # On the four-stage path a delivery assessment owes evidence, not an approach
-    # (ADR-092). A spike keeps the keys above (`path_writer.evaluate` gives None).
+    # A delivery assessment owes evidence, not an approach (ADR-092). A spike
+    # keeps the keys above (`path_writer.evaluate` gives None). A preview that
+    # reads the governance files has no resolved configuration, so it reads the
+    # one a write would commit: otherwise it would show no `S17` evidence that
+    # the write then stores.
     from compass_pkg import path_writer
-    path = None
-    if task is not None and path_writer.enabled():
-        resolved = plan.resolution.resolved if plan is not None else (
-            view.resolved if view is not None else None)
-        path = path_writer.evaluate(readings, prepared.view, autonomy, result,
-                                    path_writer.strategy_inputs(
-                                        task, task_dir, resolved,
-                                        getattr(args, "expected_acceptance", None)))
+    if plan is not None:
+        resolved = plan.resolution.resolved
+    elif view is not None:
+        resolved = view.resolved
+    else:
+        resolved = path_writer.live_resolved(task, task_dir)
+    path = path_writer.evaluate(readings, prepared.view, autonomy, result,
+                                path_writer.strategy_inputs(
+                                    task, task_dir, resolved,
+                                    getattr(args, "expected_acceptance", None)))
     if result.get("renamed_routes"):
         sys.stderr.write(
             "compass: governance/routing-policy.yml uses old approach names ("
@@ -936,8 +937,13 @@ def cmd_route_evaluate(args):
         elif not drift.comparable:
             print(f"  policy drift    : not compared ({drift.reason})")
         print(f"  assessment      : {json.dumps(readings)}")
-        print(f"  first approach  : {display_shape(result['candidate_route'])}  "
-              f"<- {result['candidate_via']}")
+        if path:
+            # The path has no candidate approach to raise: the evidence row that
+            # matched the assessment decides what is owed (ADR-092).
+            print(f"  evidence row    : {path_writer.row_of(path)}")
+        else:
+            print(f"  first approach  : {display_shape(result['candidate_route'])}  "
+                  f"<- {result['candidate_via']}")
         print(f"  FINAL APPROACH  : {display_shape(shown['delivery_approach'])}")
         if path:
             print(f"  evidence owed   : {', '.join(path['evidence_required'])}")
@@ -1062,10 +1068,12 @@ def cmd_route_evaluate(args):
         task["evaluated_assessment"] = dict(task.get("assessment") or {})
         if recorded_reasons:
             task["justifications"] = recorded_reasons
-        task["delivery_approach"] = result["delivery_approach"]
-        task["policy_rules_fired"] = result["policy_rules_fired"]
-        task["stages"] = result["stages"]
-        task["checkpoints"] = result["checkpoints"]
+        task["delivery_approach"] = shown["delivery_approach"]
+        task["policy_rules_fired"] = shown["policy_rules_fired"]
+        if path is None:
+            # A spike is not on the four-stage path: it keeps its stage weights.
+            task["stages"] = result["stages"]
+        task["checkpoints"] = shown["checkpoints"]
         # 9.0.0 computes no model tiers (ADR-090). A `models:` key an older
         # assessment wrote is left as it is and nothing reads it.
         # An issue's first assessment makes it one whose hand-offs are recorded
@@ -1077,19 +1085,21 @@ def cmd_route_evaluate(args):
         # first assessment adds it when the configuration it commits declares
         # the strategy, and a reassessment replaces it but never adds it, so an
         # issue assessed before the strategy shipped never gains it (ADR-006).
-        if strategy is not None:
-            task["acceptance_strategy"] = strategy
+        block = strategy if path is None else path["acceptance_strategy"]
+        if block is not None:
+            task["acceptance_strategy"] = block
         # seed the gate list (status pending) without clobbering existing state
         existing = {g.get("id"): g for g in task.get("gates", []) if isinstance(g, dict)}
         task["gates"] = [
             existing.get(gid, {"id": gid, "status": "pending", "evidence": []})
-            for gid in result["gates"]
+            for gid in shown["gates"]
         ]
         # 9.0.0 registers no document (ADR-091). An `artifacts:` list an older release
         # wrote stays as it is: nothing reads it but the path of an older spec.
         # make sure the evidence registry exists at the top level
         task.setdefault("evidence", [])
-        task["subtask_ceiling"] = result["subtask_ceiling"]
+        if path is None:
+            task["subtask_ceiling"] = result["subtask_ceiling"]
         # The repository's readiness when this issue was assessed. It is not a
         # generation outcome key, so a new measurement rewrites it here and
         # never forces a new generation (ADR-060).
@@ -1101,7 +1111,8 @@ def cmd_route_evaluate(args):
         if path is not None:
             path_writer.write(task, path)
         else:
-            # A manifest with the legacy keys must not also read as a path issue.
+            # A re-assess that turns a delivery issue into a spike takes it off
+            # the path, so no reader takes the spike for a path issue.
             task.pop("evidence_required", None)
         # The manifest is replaced inside the commit, after the generation's
         # files are whole (ADR-036). A configuration that does not resolve

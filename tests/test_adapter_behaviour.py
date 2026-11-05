@@ -15,11 +15,13 @@ pytestmark = pytest.mark.raw_justify
 
 def test_adapter_entries_compose_the_same_policy(tmp_path):
     cases = [
-        ("trivial", "atomic", "delivery", "", "quick-fix"),
-        ("contained", "medium", "delivery", "", "regular"),
+        ("trivial", "atomic", "delivery", "", "delivery"),
+        ("contained", "medium", "delivery", "", "delivery"),
         ("contained", "medium", "exploration", "", "spike"),
         ("contained", "medium", "delivery", "positioning", None),
     ]
+    # A delivery assessment is on the four-stage path, whose one approach is
+    # `delivery`; an exploration is still a spike (ADR-092).
     # The last column was a role before 7.0.0 and a document reading after it.
     # The shipped default declares no artifact rule since 9.0.0 (ADR-091
     # decision 3), so the reading adds no claims gate. #354, which removes the
@@ -54,17 +56,17 @@ def test_quick_fix_and_local_handoff(tmp_path, first, second):
     assert manifest_path.read_bytes() == before
     assert {path.name: path.read_bytes()
             for path in (resumed.issue_dir / "evidence").iterdir() if path.is_file()} == evidence_before
-    # The legacy implement stage shows as Build, the path stage it maps to (ADR-092).
+    # The quick fix is on the four-stage path (ADR-092): after its red it is at Build.
     from compass_pkg import next_cmd
     from compass_pkg.core import normalize_spine
     assert next_cmd._current_phase_from_task(
         next_cmd._typed(normalize_spine(resumed.manifest())), str(resumed.issue_dir)) \
-        == "implement"
+        == "build"
     assert "build" in resumed.cli("next", "--issue", started.slug).stdout.lower()
     resumed.fix("quick-fix")
     resumed.finish_quick_fix()
     result = resumed.manifest()
-    assert result["delivery_approach"] == "quick-fix"
+    assert result["delivery_approach"] == "delivery"
     assert all(gate["status"] == "pass" for gate in result["gates"])
     assert resumed.cli("check", "--issue", resumed.slug).returncode == 0
     red = json.loads((resumed.issue_dir / "evidence/red-CONF-1.outer.json").read_text())
@@ -108,7 +110,7 @@ def test_regular_feature_records_agree(tmp_path):
         adapter.green_feature()
         observation = adapter.observe()
         manifest = observation["manifest"]
-        assert manifest["delivery_approach"] == "regular"
+        assert manifest["delivery_approach"] == "delivery"
         assert {gate["id"] for gate in manifest["gates"]} == {
             "verify.correctness", "verify.governance", "verify.traceability",
             "verify.regression", "verify.clarity", "verify.security"}
@@ -217,7 +219,9 @@ def test_local_captures_cannot_claim_native_acceptance(tmp_path):
                               size="atomic", goal="delivery", role="engineer")
     observed = {"evidence_class": "local", "delivery_approach": result["delivery_approach"],
                 "gates": result["gates"]}
-    expected = {"evidence_class": "local", "delivery_approach": "quick-fix",
+    # An assessment is evaluated on the four-stage path, whose one approach is
+    # `delivery` (ADR-092).
+    expected = {"evidence_class": "local", "delivery_approach": "delivery",
                 "gates": ["verify.correctness", "verify.governance", "verify.traceability"]}
     capture = adapter.capture("route", observed, expected)
     assert capture["format_version"] == 1 and capture["evidence_class"] == "local"

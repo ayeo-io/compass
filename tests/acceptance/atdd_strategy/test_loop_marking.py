@@ -16,10 +16,6 @@ import pytest
 
 from tests.acceptance.atdd_strategy import support
 
-#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
-#: turns the path writer on for good and deletes this mark.
-pytestmark = pytest.mark.usefixtures("path_writer")
-
 CHECK = "outer-loop-recorded"
 FAIL = "sh", "-c", "echo 'test_one FAILED'; exit 1"
 PASS = "sh", "-c", "echo 'test_one PASSED'"

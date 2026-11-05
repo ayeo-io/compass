@@ -158,15 +158,16 @@ requests from every API consumer), familiarity `brownfield-mapped`. It tags `lab
 Then the CLI computes the rest. `/compass:assess` runs
 `compass approach evaluate --write`, which applies the project's resolved
 configuration (the shipped default, an optional git parent, `compass.yml`
-and the issue's own `config:`) deterministically - composing the candidate delivery approach, applying the
-floors and caps, assembling the gate set - and writes `delivery_approach`,
-`stages`, and `gates` into `manifest.yml`. For this issue it computes
-**the regular approach, whose gates include the security review, with the
-architecture review added because risk is cross-cutting**; no routing
-policy rule forces a heavier delivery approach.
-`compass approach show` prints the approach from the manifest.
+and the issue's own `config:`) deterministically - matching the assessment to
+an evidence row and adding what the floors and labels add - and writes
+`delivery_approach: delivery`, `evidence_required` (the evidence the change
+owes) and the `gates` derived from it into `manifest.yml`. For this issue it
+computes **the standard evidence row, which owes the regression, security and
+clarity reviews and the Definition of Done, with the architecture review added
+because risk is cross-cutting**.
+`compass approach show` prints the approach and the evidence from the manifest.
 The same assessment and resolved configuration give this
-exact delivery approach on any machine with the same Compass version - it is
+exact evidence on any machine with the same Compass version - it is
 no longer something an agent decides without a written record
 ([safety contract](safety-contract.md#1-routing-is-deterministic-after-assessment)).
 `/compass:assess` also writes a `.compass/current-task` pointer so the CLI
@@ -177,7 +178,7 @@ and the session waits for you at assess only if the project's `autonomy`
 setting lists assess, which `compass approach show` reports. Under the default,
 `balanced`, a regular approach goes on and logs that it did not wait; it waits
 at define and plan. You read the assessment values, you read the de-scope ledger
-- the regular approach collapses nothing major, so the ledger is short - and you confirm,
+- the standard row collapses nothing major, so the ledger is short - and you confirm,
 or you override an assessment value and the override is logged to
 `devlog.md` with your name and reason.
 
@@ -443,7 +444,7 @@ Compass can show the current issue in Claude Code's status line, for
 example:
 
 ```text
-compass · fix-login-redirect · quick fix · Build · gates 1/3 · TRC-002 red
+compass · fix-login-redirect · delivery · Build · gates 1/3 · TRC-002 red
 ```
 
 The last field says the second traced criterion has a failing test on
@@ -502,7 +503,7 @@ matches (`cli/compass_pkg/next_step.py`):
 | a scenario with no test | `compass scenario tests set <id> --test <path::name>` |
 | a path issue's spec fails `nfr-rows-resolved` | fill the Non-functional requirements rows of the spec named |
 | `scenario-approval` owed, no outcome | `compass evidence request --checkpoint specify`, then stop for `/compass:approve` |
-| `S17` applies, no outer-loop red | `compass tdd-red --loop outer --scenario <id> -- <acceptance test command>` |
+| `S17` applies, no outer-loop red | `compass tdd-red --loop outer --scenario <id> -- <acceptance test command>`; where `layering` is owed, write the layering test and `git add` it first |
 | a scenario with no red | `compass tdd-red --scenario <id> -- <test command>` |
 | `S17` applies, no outer-loop green | `compass tdd-green --loop outer --scenario <id> --candidate <build id>\|local --client api\|web\|cli -- <acceptance test command>` |
 | a red with no green | `compass tdd-green --scenario <id> -- <test command>` |
@@ -513,11 +514,12 @@ matches (`cli/compass_pkg/next_step.py`):
 | `human-approval` owed | `compass evidence request --check human-approval-present` |
 | a listed checkpoint with no outcome | `compass evidence request --checkpoint <stage>`, then stop for `/compass:approve` |
 | a path issue with only the three immovable gates pending | `compass quick-fix finish -m "<commit message>" --no-commit -- <test command>` |
-| every gate passes | `compass check`, then `compass ship-commit -m "<message>"` |
+| every gate passes | `compass check`, then `git add -- <the traced files>`, then `compass ship-commit -m "<message>"` |
 
 What a path issue owes comes from its `evidence_required` list. The
-requirement rows come before the red because the spec is part of the tree the
-outer-loop green, the isolation proof and the layering record are bound to;
+requirement rows and the layering test come before the red because the spec
+and the staged test files are part of the tree the outer-loop green, the
+isolation proof and the layering record are bound to;
 `compass quick-fix start` fills them with a reason only for a change that owes
 no Definition of Done. An issue
 assessed before the path owes the `S17` records its `acceptance_strategy` block
@@ -534,9 +536,10 @@ output with the same line, `next: <command>`: `compass scenario add`,
 output do not change, and an issue assessed before the path prints no such
 line. `compass quick-fix finish` on a path issue refuses with exit 1, before it
 writes anything, while the issue owes anything but the three immovable gates
-and the green it records, and prints one `next:` line for each owed item. The
-path writer that makes path issues is not on yet (`governance/routing-policy.md`,
-"The path writer").
+and the green it records, and prints one `next:` line for each owed item. With
+`--no-commit` it leaves the change unstaged, so its last line names the traced
+files to stage before `compass ship-commit`. Every new assessment is a path
+issue (`governance/routing-policy.md`, "The path writer").
 
 ## See the approach in your terminal
 

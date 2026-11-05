@@ -368,12 +368,12 @@ def architect_registration_runs(text, tmp_path):
     return _cli(tmp_path, *argv[1:], "--issue", slug).returncode
 
 
-def test_trc_s9_the_architect_registration_command_runs(tmp_path, path_writer):
+def test_trc_s9_the_architect_registration_command_runs(tmp_path):
     # The architect agent's file held the command until 9.0.0 (ADR-090).
     assert architect_registration_runs(_read("commands/consult.md"), tmp_path) == 0
 
 
-def test_trc_s9_the_architect_run_reports_a_path_the_cli_cannot_resolve(tmp_path, path_writer):
+def test_trc_s9_the_architect_run_reports_a_path_the_cli_cannot_resolve(tmp_path):
     wrong = _read("commands/consult.md").replace(
         "--path architecture-notes.md",
         "--path docs/compass/<created>-<slug>/architecture-notes.md")
@@ -546,8 +546,7 @@ def _cli(tmp_path, *argv):
 
 
 def _scratch_issue(tmp_path, slug="scratch-issue"):
-    """A quick fix started in `tmp_path`. Its callers take the `path_writer` fixture,
-    so it is started on the four-stage path (ADR-092)."""
+    """A quick fix started in `tmp_path`, on the four-stage path (ADR-092)."""
     import subprocess
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     assert _cli(tmp_path, "init").returncode == 0
@@ -597,7 +596,7 @@ def test_trc_s8_the_scan_reports_the_old_text():
     assert not s8_findings("ci/README.md", "Change to `adoption: enforced` when ready")
 
 
-def test_trc_s8_configuration_upgrade_migrate_and_ci_pages_match_the_code(tmp_path, path_writer):
+def test_trc_s8_configuration_upgrade_migrate_and_ci_pages_match_the_code(tmp_path):
     report = {rel: s8_findings(rel, _read(rel)) for rel in sorted({r for r, *_ in S8_OLD_TEXT})}
     report = {rel: found for rel, found in report.items() if found}
     assert not report, report
@@ -792,10 +791,20 @@ def test_trc_s3_routing_deep_dive_matches_the_evaluator():
     section = section[:section.index('"Add a CSV export" - product owner')]
     assert f"{words[gates]} gates" in section, (gates, section)
 
-    # Case 3 names every rule the CLI says fires, and not a floor that does not.
-    out = _evaluate_verbose(risk="critical", familiarity="brownfield-mapped", size="small",
-                            goal="delivery", role="engineer", labels="payments,migrations")
-    fired = re.findall(r"\((RP-[A-Z]+-\d+),", out)
+    # Case 3 names every rule the approach evaluator says fires, and not a floor that
+    # does not. The deep dive still walks the 8.x approaches, and a new assessment is
+    # on the four-stage path (ADR-092), so the case is judged by the approach
+    # evaluator on the configuration this repository resolves to, as the CLI judged
+    # it before the path.
+    from compass_pkg import effective, routing
+    view = effective.view_or_legacy(None, start=str(ROOT))
+    policy = (view.evaluator_policy() if view is not None
+              else yaml.safe_load(_read("governance/routing-policy.yml")))
+    fired = [f["id"] for f in routing.evaluate_route(
+        {"risk": "critical", "familiarity": "brownfield-mapped", "size": "small",
+         "goal": "delivery", "urgency": "none", "labels": ["payments", "migrations"]},
+        routing.prepare_policy(policy))["policy_rules_fired"]
+        if f["id"].startswith("RP-")]
     case = _case_3(_read("docs/routing-deep-dive.md"))
     assert "RP-FLOOR-001" in fired and "RP-FLOOR-003" not in fired
     for rule in fired:

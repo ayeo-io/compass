@@ -8,13 +8,12 @@ session got the full feature process, stopped to ask, and wrote nothing.
 
 The four-stage path (ADR-092) has no approaches, so the old evaluator is
 tested on the 8.0.4 governance copy (`compat_baseline.policy_8_0_4`), and the
-same change on the path owes the light evidence row. The quick fix's refusal
-of heavier work is tested with the path writer off, beside a path twin that
-does not refuse.
+same change on the path owes the light evidence row. On the path the quick fix
+no longer refuses heavier work: it starts the change and names the evidence it
+owes.
 """
 from __future__ import annotations
 
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -76,31 +75,7 @@ def _start_heavier(root, slug):
         cwd=root, capture_output=True, text=True)
 
 
-def test_a_heavier_result_names_the_dimension_that_blocked_the_quick_fix(repo, monkeypatch):
-    # The writer off: the 8.x quick fix refuses work heavier than itself.
-    monkeypatch.delenv("COMPASS_PATH_WRITER", raising=False)
-    r = subprocess.run(
-        [sys.executable, str(CLI), "quick-fix", "start", "tidy-config",
-         "--risk", "cross-cutting - every command reads the configuration",
-         "--familiarity", "brownfield-unmapped - its behaviour is not pinned by tests",
-         "--size", "small - one function and its tests",
-         "--intent", "parse_config is easier to read",
-         "--scenario", "Given the settings file, when it is parsed, then nothing changes",
-         "--test", "tests/test_config.py"],
-        cwd=repo, capture_output=True, text=True)
-    out = r.stdout + r.stderr
-    assert r.returncode == 1, out
-    assert "blocked: risk is cross-cutting; the quick fix needs " \
-        "trivial or contained" in out, out
-    assert '/compass:assess --reassess --reason "..."' in out, out
-    # A fired rule is named by its reason, with the id in brackets.
-    assert re.search(r"\w.* \(RP-FLOOR-002, \w+\)", out), out
-    # The terminal cuts a line at 100 characters; nothing may be lost.
-    assert "\u2026" not in out and not any(len(line) > 100 for line in out.splitlines()), out
-
-
-def test_a_long_slug_and_a_wrapped_rule_reach_the_reader_whole(repo, monkeypatch):
-    monkeypatch.delenv("COMPASS_PATH_WRITER", raising=False)
+def test_a_long_slug_and_a_wrapped_rule_reach_the_reader_whole(repo):
     r = subprocess.run(
         [sys.executable, str(CLI), "quick-fix", "start",
          "refactor-the-configuration-parser-into-helpers",
@@ -112,16 +87,31 @@ def test_a_long_slug_and_a_wrapped_rule_reach_the_reader_whole(repo, monkeypatch
          "--test", "tests/test_config.py"],
         cwd=repo, capture_output=True, text=True)
     out = r.stdout + r.stderr
-    assert "…" not in out and not any(len(line) > 100 for line in out.splitlines()), out
+    assert r.returncode == 0, out
+    # The terminal cuts a line at 100 characters; nothing may be lost. Two lines are
+    # printed whole whatever their length, so a reader can copy them: the `next:`
+    # command (ADR-092 decision 8) and the path of the acceptance criteria, which
+    # holds the long slug.
+    lines = [ln for ln in out.splitlines()
+             if not ln.startswith("next: ") and not ln.strip().startswith("record : ")]
+    assert "…" not in out and not any(len(line) > 100 for line in lines), out
+    assert out.splitlines()[-1].startswith("next: "), out
     assert "refactor-the-configuration-parser-into-helpers" in out, out
-    assert "(RP-REQUIRE-003, requirement)" in out, out
     assert "is None" not in out and "labels_any" not in out, out
+    # On the path start prints no fired rule; the wrapped rule reaches the reader
+    # through `approach evaluate`, cut nowhere.
+    shown = subprocess.run(
+        [sys.executable, str(CLI), "approach", "evaluate", "--issue",
+         "refactor-the-configuration-parser-into-helpers", "--verbose"],
+        cwd=repo, capture_output=True, text=True)
+    assert "(RP-REQUIRE-003, evidence)" in shown.stdout, shown.stdout + shown.stderr
+    assert "…" not in shown.stdout, shown.stdout
 
 
-def test_on_the_path_heavier_work_is_started_and_owes_more_evidence(repo, path_writer):
-    """The path twin of the two refusals above. ADR-092 decision: the quick fix no
-    longer refuses heavier work, so there is no blocked dimension to name. The
-    dimension shows as the evidence it adds, each with the rule that fired."""
+def test_on_the_path_heavier_work_is_started_and_owes_more_evidence(repo):
+    """ADR-092 decision: the quick fix no longer refuses heavier work, so there is
+    no blocked dimension to name. The dimension shows as the evidence it adds, each
+    with the rule that fired."""
     import yaml
     slug = "refactor-the-configuration-parser-into-helpers"
     r = _start_heavier(repo, slug)

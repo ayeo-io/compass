@@ -3,10 +3,8 @@ personal data or migrations must reach the domain floor and the human
 sign-off guardrail. Before this option, quick-fix start recorded an empty
 label list, so neither could fire for a change assessed this way.
 
-On the four-stage path (ADR-092, the `path_writer` fixture) a quick fix no
-longer refuses heavier work: a label makes the change owe more evidence
-instead. The refusal is tested with the writer off until step 9b of #351
-turns it on for good.
+On the four-stage path (ADR-092) a quick fix no longer refuses heavier work: a
+label makes the change owe more evidence instead.
 """
 from __future__ import annotations
 
@@ -55,19 +53,8 @@ LIGHT = ["scenarios", "red-before-green", "suite-green", "correctness", "governa
          "traceability", "outer-loop"]
 
 
-def test_a_labelled_change_records_its_labels_and_is_not_a_quick_fix(repo, monkeypatch):
-    # The writer off: the 8.x quick fix refuses work heavier than itself.
-    monkeypatch.delenv("COMPASS_PATH_WRITER", raising=False)
-    r = _start(repo, "login-error", "--labels", "auth")
-    assert r.returncode == 1, r.stdout + r.stderr
-    m = _manifest(repo, "login-error")
-    assert m["assessment"]["labels"] == ["auth"]
-    assert m["delivery_approach"] != "quick-fix"
-
-
-def test_on_the_path_a_labelled_change_owes_the_domain_evidence(repo, path_writer):
-    """The path twin of the refusal above. ADR-092 decision: the quick fix no longer
-    refuses heavier work. A `G5` label reaches the domain floor as owed evidence:
+def test_on_the_path_a_labelled_change_owes_the_domain_evidence(repo):
+    """ADR-092 decision: the quick fix no longer refuses heavier work. A `G5` label reaches the domain floor as owed evidence:
     the architecture review, the scenario sign-off and the human sign-off."""
     r = _start(repo, "login-error", "--labels", "auth")
     assert r.returncode == 0, r.stdout + r.stderr
@@ -82,7 +69,7 @@ def test_on_the_path_a_labelled_change_owes_the_domain_evidence(repo, path_write
     assert {"RP-REQUIRE-004", "RP-EVID-SIGNOFF", "G5"} <= set(fired), fired
 
 
-def test_the_human_sign_off_applies_to_a_labelled_change(repo, path_writer):
+def test_the_human_sign_off_applies_to_a_labelled_change(repo):
     _start(repo, "login-error", "--labels", "auth,payments")
     r = subprocess.run([sys.executable, str(CLI), "check", "--verbose",
                         "--issue", "login-error"],
@@ -93,7 +80,7 @@ def test_the_human_sign_off_applies_to_a_labelled_change(repo, path_writer):
     assert not any("not applicable" in line for line in g5), g5
 
 
-def test_without_labels_nothing_changes(repo, path_writer):
+def test_without_labels_nothing_changes(repo):
     r = _start(repo, "login-error")
     m = _manifest(repo, "login-error")
     assert m["assessment"]["labels"] == []

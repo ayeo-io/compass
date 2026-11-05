@@ -1,7 +1,7 @@
 # compass_pkg.path_writer - what `approach evaluate --write` writes on the four-stage path
 """The keys a delivery issue's manifest holds on the four-stage path (ADR-092).
 
-`routing.cmd_route_evaluate` calls this module when the path writer is on. It
+`routing.cmd_route_evaluate` calls this module for every assessment. It
 turns the result of `evidence_required.evaluate` into the manifest keys: the
 `evidence_required` list, the `gates` derived from it (pending), the
 `acceptance_strategy` block in the shape ADR-079 set, the `checkpoints` list
@@ -11,10 +11,6 @@ and `policy_rules_fired`. A path manifest holds no `stages:`,
 A spike is not on the path: `evaluate` returns None for it, and the caller
 writes the spike keys as it did before, with no `evidence_required` key, so no
 reader takes the spike for a path issue (`path_stages.is_path_issue`).
-
-The writer is dark-launched. It runs only when `routing.PATH_WRITER` is true or
-the environment sets `COMPASS_PATH_WRITER=1`, which a CLI run in a subprocess
-can read. Step 9b of #351 turns it on for good and deletes the switch.
 
 `criteria_text` is the `acceptance-criteria.md` that `compass quick-fix start`
 writes for a path issue in place of the devlog. The owning doc is
@@ -32,8 +28,6 @@ import re
 from compass_pkg.stable_ids import (APPROACH_SPIKE, GATE_G5, STAGE_ASSESS, STAGE_BUILD,
                                     STAGE_SHIP, STAGE_SPECIFY)
 
-#: The variable that turns the writer on for a CLI in a subprocess.
-ENV = "COMPASS_PATH_WRITER"
 #: The keys only an issue assessed before the path holds.
 LEGACY_ONLY = ("stages", "subtask_ceiling", "max_worktrees", "orchestration")
 
@@ -55,12 +49,6 @@ RATIONALE = {
 }
 
 
-def enabled():
-    """True when the path writer is on."""
-    from compass_pkg import routing
-    return bool(routing.PATH_WRITER) or os.environ.get(ENV) == "1"
-
-
 def checkpoints_for(evidence, autonomy, applies):
     """The stage hand-offs that wait for a person (ADR-092 open question 7).
 
@@ -74,17 +62,34 @@ def checkpoints_for(evidence, autonomy, applies):
     return [STAGE_SPECIFY] if "scenario-approval" in evidence else []
 
 
+def live_resolved(task, task_dir):
+    """The configuration `approach evaluate --write` would commit now, for a run
+    that reads the governance files: a preview of an issue with no generation, or
+    an assessment given on the command line, in a project with no `compass.yml`.
+    A write commits the live configuration, which declares the `S17` strategy, so
+    a preview that read only the governance files would owe less than the write
+    stores."""
+    from compass_pkg import effective
+    from compass_pkg.layers import find_project_root
+    slug = os.path.basename(os.path.normpath(task_dir)) if task_dir else None
+    return effective.resolve_live(find_project_root(task_dir or os.getcwd()),
+                                  task, slug, task_dir).resolved
+
+
 def strategy_inputs(task, task_dir, resolved, expected):
     """`(state, reason, expected)` of the `S17` strategy for this write, or None
     when the write stores no block. As for an 8.x issue (`routing._acceptance_block`),
     no block is stored for a project pinned before the strategy, for a
     configuration that does not declare it, or on a re-assess of an issue assessed
-    before it shipped (ADR-006). Then the strategy owes nothing on the issue."""
+    before it shipped (ADR-006). Then the strategy owes nothing on the issue.
+    With no manifest (an assessment given on the command line) it is what a new
+    issue in the working directory's project would get."""
     from compass_pkg import acceptance_strategy
     from compass_pkg.layers import find_project_root
+    task = task or {}
     held = acceptance_strategy.stored(task)
     before = bool(task.get("delivery_approach")) or bool(task.get("evaluated_assessment"))
-    project = find_project_root(task_dir)
+    project = find_project_root(task_dir or os.getcwd())
     if ((before and held is None) or acceptance_strategy.pinned_below(project)
             or not acceptance_strategy.declared(resolved)):
         return None
@@ -110,10 +115,27 @@ def _block(out, state, reason, expected):
     return block
 
 
-def _fired(out, legacy_fired):
-    """`policy_rules_fired`: one mapping per rule that fired, in order."""
+#: The effects of a rule of the configuration that hold on the path: a required
+#: skill, an added gate (read back by `routing.gates_added_by`) and a required
+#: document. A floor's other effects raise an approach, force a stage mode or cap
+#: the subtasks, and the path has none of those to change.
+_PATH_EFFECT = re.compile(r"^(skill|gate|artifact) '")
+
+
+def row_of(path):
+    """The id of the evidence row that fired for `path`, as `--verbose` names it."""
     from compass_pkg import evidence_required as er
-    kept = {f.get("id"): f for f in legacy_fired or [] if isinstance(f, dict)}
+    rows = {rule for rule, *_ in er.ROWS}
+    return next((f["id"] for f in path["policy_rules_fired"] if f["id"] in rows), None)
+
+
+def _fired(out, legacy_fired):
+    """`policy_rules_fired`: one mapping per rule that fired, in order. A rule of
+    the configuration keeps its entry, with only the effects the path has."""
+    from compass_pkg import evidence_required as er
+    kept = {f.get("id"): dict(f, changed=[c for c in f.get("changed") or []
+                                         if _PATH_EFFECT.match(str(c))])
+            for f in legacy_fired or [] if isinstance(f, dict)}
     added = dict(((rule, (token,)) for rule, _, token in er.ADDITIONS))
     added.update((rule, tokens) for rule, _, tokens, _ in er.ROWS)
     fired = []

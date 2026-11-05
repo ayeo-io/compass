@@ -18,10 +18,6 @@ from pathlib import Path
 
 import pytest
 
-#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
-#: turns the path writer on for good and deletes this mark.
-pytestmark = pytest.mark.usefixtures("path_writer")
-
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))

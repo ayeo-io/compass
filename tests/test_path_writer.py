@@ -1,11 +1,11 @@
 """The path writer: `compass approach evaluate --write` on the four-stage path (ADR-092).
 
-The writer is dark-launched behind `routing.PATH_WRITER` (and the variable
-`COMPASS_PATH_WRITER=1` for a CLI in a subprocess). The `path_writer` fixture of
-`tests/conftest.py` turns it on for one test. With it on, a delivery assessment
-writes `evidence_required` and the keys derived from it, and no `stages:`,
-`subtask_ceiling:`, `max_worktrees:` or `orchestration:` key. A spike writes the
-spike keys as before. With it off, the manifest is exactly the one 8.x wrote.
+A delivery assessment writes `evidence_required` and the keys derived from it,
+and no `stages:`, `subtask_ceiling:`, `max_worktrees:` or `orchestration:` key.
+A spike writes the spike keys as before. An old issue is one whose manifest
+holds the keys 8.x wrote, built here from the 8.0.4 evaluator
+(`test_next_stage.assessed_before_the_path`), because no assessment writes
+them now.
 
 Issue: ayeo-io/compass-delivery#351 [Replace the approaches and eight stages
 with one four-stage path].
@@ -100,7 +100,7 @@ def _expected(assessment):
 
 # --- the four delivery rows and the spike ----------------------------------------------
 
-def test_a_small_change_writes_the_light_evidence(tmp_path, path_writer):
+def test_a_small_change_writes_the_light_evidence(tmp_path):
     root = _project(tmp_path, size="small")
     manifest = _evaluate(root)
     _assert_path_keys(manifest)
@@ -114,7 +114,7 @@ def test_a_small_change_writes_the_light_evidence(tmp_path, path_writer):
     assert [r["id"] for r in manifest["policy_rules_fired"]] == ["RP-EVID-LIGHT"]
 
 
-def test_a_medium_change_writes_the_standard_evidence(tmp_path, path_writer):
+def test_a_medium_change_writes_the_standard_evidence(tmp_path):
     root = _project(tmp_path)
     manifest = _evaluate(root)
     _assert_path_keys(manifest)
@@ -128,7 +128,7 @@ def test_a_medium_change_writes_the_standard_evidence(tmp_path, path_writer):
     assert fired[0]["kind"] == "evidence" and fired[0]["rationale"]
 
 
-def test_a_live_defect_writes_the_hotfix_evidence_and_reproduce_first(tmp_path, path_writer):
+def test_a_live_defect_writes_the_hotfix_evidence_and_reproduce_first(tmp_path):
     root = _project(tmp_path, size="small", urgency="live-defect")
     manifest = _evaluate(root)
     _assert_path_keys(manifest)
@@ -142,7 +142,7 @@ def test_a_live_defect_writes_the_hotfix_evidence_and_reproduce_first(tmp_path, 
         "RP-EVID-DEFECT", "RP-EVID-REPRODUCE"]
 
 
-def test_a_g5_label_owes_the_architecture_review_and_two_sign_offs(tmp_path, path_writer):
+def test_a_g5_label_owes_the_architecture_review_and_two_sign_offs(tmp_path):
     root = _project(tmp_path, size="small", labels=["payments"])
     manifest = _evaluate(root)
     _assert_path_keys(manifest)
@@ -158,7 +158,7 @@ def test_a_g5_label_owes_the_architecture_review_and_two_sign_offs(tmp_path, pat
     assert {"RP-REQUIRE-004", "RP-EVID-SIGNOFF", "G5"} <= set(ids)
 
 
-def test_an_exploration_writes_the_spike_keys_and_no_evidence(tmp_path, path_writer):
+def test_an_exploration_writes_the_spike_keys_and_no_evidence(tmp_path):
     root = _project(tmp_path, goal="exploration", size="small")
     manifest = _evaluate(root)
     assert manifest["delivery_approach"] == "spike"
@@ -183,46 +183,26 @@ def test_the_checkpoints_follow_the_autonomy_and_the_evidence(autonomy, evidence
     assert path_writer.checkpoints_for(evidence, autonomy, applies) == listed
 
 
-# --- the switch off --------------------------------------------------------------------
+# --- an old issue ----------------------------------------------------------------------
 
-def test_with_the_switch_off_the_manifest_is_exactly_the_8x_one(tmp_path, monkeypatch):
-    monkeypatch.delenv("COMPASS_PATH_WRITER", raising=False)
+def _old_issue(root, slug="demo"):
+    """Turn the issue `slug` into one 8.x assessed: the keys the 8.0.4 evaluator
+    gives replace the path keys, and the generation the issue holds stays."""
+    from test_next_stage import assessed_before_the_path
+    path = root / ".compass" / "work" / slug / "manifest.yml"
+    manifest = yaml.safe_load(path.read_text())
+    manifest.pop("evidence_required", None)
+    manifest.update(assessed_before_the_path(manifest["assessment"]))
+    path.write_text(yaml.safe_dump(manifest, sort_keys=False))
+    return manifest
+
+
+def test_a_reassess_moves_an_old_issue_onto_the_path(tmp_path):
     root = _project(tmp_path)
-    manifest = _evaluate(root)
-    manifest.pop("readiness")
-    assessment = _assessment()
-    assert manifest == {
-        "schema_version": "3.0", "issue": "demo", "created": "2026-11-05",
-        "assessment": assessment,
-        "justifications": {k: f"the {k} was judged" for k in assessment if k != "labels"},
-        "evaluated_assessment": assessment,
-        "delivery_approach": "regular",
-        "policy_rules_fired": [],
-        "stages": {"assess": "thorough", "define": "thorough", "refine": "lightweight",
-                   "plan": "thorough", "breakdown": "multiagent", "implement": "thorough",
-                   "verify": "thorough", "ship": "thorough"},
-        "checkpoints": ["define", "plan"],
-        "checkpoint_outcomes": [],
-        "acceptance_strategy": {"state": "on", "routing": "on", "expected_acceptance": "none",
-                                "applies": True, "why": "client-observable behavior"},
-        "gates": [{"id": g, "status": "pending", "evidence": []} for g in (
-            THREE + ["verify.regression", "verify.clarity", "verify.security"])],
-        "evidence": [],
-        "subtask_ceiling": 2,
-        "generation": 1,
-    }
-
-
-# --- a re-assess moves an old issue onto the path ------------------------------------
-
-def test_a_reassess_moves_an_old_issue_onto_the_path(tmp_path, monkeypatch):
-    monkeypatch.delenv("COMPASS_PATH_WRITER", raising=False)
-    root = _project(tmp_path)
-    old = _evaluate(root)
+    _evaluate(root)
+    old = _old_issue(root)
     assert old["delivery_approach"] == "regular" and "stages" in old
 
-    env_on = {"COMPASS_PATH_WRITER": "1"}
-    monkeypatch.setenv(*next(iter(env_on.items())))
     moved = _evaluate(root, "--reason", "move the issue onto the four-stage path")
     _assert_path_keys(moved)
     assert moved["evidence_required"] == STANDARD
@@ -235,7 +215,7 @@ def test_a_reassess_moves_an_old_issue_onto_the_path(tmp_path, monkeypatch):
 
 # --- what the person reads -------------------------------------------------------------
 
-def test_approach_show_prints_the_evidence_line_on_a_path_issue(tmp_path, path_writer):
+def test_approach_show_prints_the_evidence_line_on_a_path_issue(tmp_path):
     root = _project(tmp_path, size="small")
     _evaluate(root)
     shown = _run(root, "approach", "show", "--issue", "demo")
@@ -246,15 +226,15 @@ def test_approach_show_prints_the_evidence_line_on_a_path_issue(tmp_path, path_w
     assert lines[2].startswith("Writes: .compass/work/demo/")
 
 
-def test_approach_show_keeps_the_gate_line_on_an_old_issue(tmp_path, monkeypatch):
-    monkeypatch.delenv("COMPASS_PATH_WRITER", raising=False)
+def test_approach_show_keeps_the_gate_line_on_an_old_issue(tmp_path):
     root = _project(tmp_path, size="small")
     _evaluate(root)
+    _old_issue(root)
     shown = _run(root, "approach", "show", "--issue", "demo")
     assert shown.stdout.splitlines()[1] == "Gates: " + ", ".join(THREE)
 
 
-def test_check_gives_a_verdict_on_a_fresh_path_issue(tmp_path, path_writer):
+def test_check_gives_a_verdict_on_a_fresh_path_issue(tmp_path):
     root = _project(tmp_path)
     _evaluate(root)
     checked = _run(root, "check", "--issue", "demo")
@@ -263,18 +243,20 @@ def test_check_gives_a_verdict_on_a_fresh_path_issue(tmp_path, path_writer):
     assert checked.stdout.strip()
 
 
-def test_evaluate_json_names_the_evidence_on_the_path(tmp_path, path_writer):
+def test_evaluate_json_names_the_evidence_on_the_path(tmp_path):
     import json
     root = _project(tmp_path, size="small")
     out = _run(root, "approach", "evaluate", "--issue", "demo", "--json")
     assert out.returncode == 0, out.stderr
     doc = json.loads(out.stdout)
     assert doc["delivery_approach"] == "delivery"
-    # A preview reads the governance files of a project with no `compass.yml`,
-    # which declare no `S17` strategy, so it owes no outer loop yet.
-    assert doc["evidence_required"] == EVERY_ISSUE
     for key in LEGACY_ONLY:
         assert key not in doc, key
+    # The preview owes what the write stores. A project with no `compass.yml`
+    # reads the governance files, which declare no `S17` strategy, but the write
+    # commits the live configuration, which does: so the outer loop is owed.
+    assert doc["evidence_required"] == LIGHT
+    assert _evaluate(root)["evidence_required"] == doc["evidence_required"]
 
 
 # --- `next:` after each verb that writes a record ------------------------------------
@@ -316,7 +298,7 @@ def _verb_lines(root):
     return [_last_line(added), _last_line(red), _last_line(green)]
 
 
-def test_each_verb_that_writes_a_record_ends_with_the_next_command(tmp_path, path_writer):
+def test_each_verb_that_writes_a_record_ends_with_the_next_command(tmp_path):
     root = _greeting_project(tmp_path)
     _evaluate(root)
     added, red, green = _verb_lines(root)
@@ -328,15 +310,15 @@ def test_each_verb_that_writes_a_record_ends_with_the_next_command(tmp_path, pat
     assert green == added
 
 
-def test_no_next_line_on_an_old_issue(tmp_path, monkeypatch):
-    monkeypatch.delenv("COMPASS_PATH_WRITER", raising=False)
+def test_no_next_line_on_an_old_issue(tmp_path):
     root = _greeting_project(tmp_path)
     _evaluate(root)
+    _old_issue(root)
     for line in _verb_lines(root):
         assert not line.startswith("next: "), line
 
 
-def test_json_output_has_no_next_line(tmp_path, path_writer):
+def test_json_output_has_no_next_line(tmp_path):
     import json
     root = _greeting_project(tmp_path)
     _evaluate(root)
@@ -345,3 +327,24 @@ def test_json_output_has_no_next_line(tmp_path, path_writer):
                  "--intent", "INT-1", "--test", TEST_ID, "--json")
     assert added.returncode == 0, added.stderr
     assert "next" not in json.loads(added.stdout)
+
+
+# --- the switch is gone ----------------------------------------------------------------
+
+#: Records of past issues and decisions describe what was true then.
+HISTORY = ("docs/compass/", "architecture/decisions/", "governance/decisions/",
+           "docs/system-spec")
+#: The dark-launch switch's names, assembled so this file does not match itself.
+SWITCH_NAMES = ("PATH" + "_WRITER", "COMPASS_" + "PATH" + "_WRITER")
+
+
+def test_no_tracked_file_names_the_removed_switch():
+    """The path writer is the only writer (ADR-092). Its dark-launch switch, the
+    module constant and the environment variable, is deleted, so nothing may still
+    set it, read it or pass it on."""
+    found = subprocess.run(
+        ["git", "grep", "-l", "-I", "-w", *[a for n in SWITCH_NAMES for a in ("-e", n)]],
+        cwd=ROOT, capture_output=True, text=True)
+    assert found.returncode in (0, 1), found.stderr
+    hits = [rel for rel in found.stdout.split() if not rel.startswith(HISTORY)]
+    assert not hits, "these still name the removed switch: " + ", ".join(hits)

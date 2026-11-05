@@ -17,10 +17,6 @@ import yaml
 from tests.acceptance.atdd_strategy import support
 from tests.acceptance.atdd_strategy.support import ROOT
 
-#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
-#: turns the path writer on for good and deletes this mark.
-pytestmark = pytest.mark.usefixtures("path_writer")
-
 CHECK = "acceptance-applicability-agrees"
 STRATEGY = "four-layer acceptance strategy"
 OFF_REASON = "no deployable candidate yet"

@@ -1,6 +1,6 @@
 """`compass quick-fix start` and `finish` on the four-stage path (ADR-092).
 
-With the path writer on (the `path_writer` fixture), `start` serves every size:
+`start` serves every size:
 it writes the path manifest and `acceptance-criteria.md` with the one scenario
 and the intent, and no devlog. It takes the hotfix setting as `--urgency`.
 `finish` works on any delivery issue on the path. It passes the three immovable
@@ -65,7 +65,7 @@ def _next_lines(result):
 
 # --- start ---------------------------------------------------------------------------
 
-def test_start_records_a_medium_change_on_the_path(repo, path_writer):
+def test_start_records_a_medium_change_on_the_path(repo):
     result = _start(repo, SLUG, "medium - several files and a design choice")
     assert result.returncode == 0, result.stdout + result.stderr
 
@@ -100,7 +100,7 @@ def test_start_records_a_medium_change_on_the_path(repo, path_writer):
     assert '"performance" has neither a scenario nor a reason' in checked.stdout
 
 
-def test_start_resolves_the_requirement_rows_of_a_small_change(repo, path_writer):
+def test_start_resolves_the_requirement_rows_of_a_small_change(repo):
     result = _start(repo)
     assert result.returncode == 0, result.stdout + result.stderr
     assert "definition-of-done" not in _manifest(repo, SLUG)["evidence_required"]
@@ -111,7 +111,7 @@ def test_start_resolves_the_requirement_rows_of_a_small_change(repo, path_writer
         "next: compass tdd-red --loop outer --scenario TRC-001 -- <acceptance test command>")
 
 
-def test_start_takes_the_hotfix_setting_as_urgency(repo, path_writer):
+def test_start_takes_the_hotfix_setting_as_urgency(repo):
     result = _start(repo, SLUG, "small - one file",
                     "--urgency", "live-defect - the greeting is wrong in production")
     assert result.returncode == 0, result.stdout + result.stderr
@@ -121,23 +121,16 @@ def test_start_takes_the_hotfix_setting_as_urgency(repo, path_writer):
     assert "reproduce-first" in manifest["evidence_required"]
 
 
-def test_start_refuses_an_urgency_with_no_reason(repo, path_writer):
+def test_start_refuses_an_urgency_with_no_reason(repo):
     result = _start(repo, SLUG, "small - one file", "--urgency", "live-defect")
     assert result.returncode != 0
     assert "--urgency needs a reason" in result.stdout + result.stderr
     assert not (repo / ".compass" / "work" / SLUG).exists()
 
 
-def test_with_the_switch_off_start_still_refuses_heavier_work(repo, monkeypatch):
-    monkeypatch.delenv("COMPASS_PATH_WRITER", raising=False)
-    result = _start(repo, SLUG, "medium - several files and a design choice")
-    assert result.returncode == 1
-    assert _manifest(repo, SLUG)["delivery_approach"] == "regular"
-
-
 # --- finish --------------------------------------------------------------------------
 
-def test_finish_refuses_while_a_medium_change_owes_evidence(repo, path_writer):
+def test_finish_refuses_while_a_medium_change_owes_evidence(repo):
     _base_greeting(repo)
     assert _start(repo, SLUG, "medium - several files and a design choice").returncode == 0
     _red(repo, SLUG, "--loop", "outer")
@@ -163,7 +156,7 @@ def test_finish_refuses_while_a_medium_change_owes_evidence(repo, path_writer):
     assert _git(repo, "rev-parse", "HEAD") == head
 
 
-def test_finish_json_names_the_owed_commands(repo, path_writer):
+def test_finish_json_names_the_owed_commands(repo):
     _base_greeting(repo)
     assert _start(repo, SLUG, "medium - several files and a design choice").returncode == 0
     _red(repo, SLUG, "--loop", "outer")
@@ -174,7 +167,7 @@ def test_finish_json_names_the_owed_commands(repo, path_writer):
     assert "compass gate pass verify.clarity --evidence <EV-id>" in doc["owed"]
 
 
-def test_finish_refuses_until_the_outer_loop_red_then_ships(repo, path_writer):
+def test_finish_refuses_until_the_outer_loop_red_then_ships(repo):
     _base_greeting(repo)
     assert _start(repo).returncode == 0
     _red(repo, SLUG, "--loop", "inner")
@@ -202,14 +195,19 @@ def test_finish_refuses_until_the_outer_loop_red_then_ships(repo, path_writer):
     assert not _next_lines(shipped)
 
 
-def test_finish_no_commit_ends_with_the_next_command(repo, path_writer):
+def test_finish_no_commit_ends_with_the_next_command(repo):
     _base_greeting(repo)
     assert _start(repo).returncode == 0
     _red(repo)
     _write_greeting(repo, "Hello, %s!")
     finish = _finish(repo, SLUG, "--no-commit")
     assert finish.returncode == 0, finish.stdout + finish.stderr
-    assert finish.stdout.splitlines()[-1].startswith("next: ")
+    last = finish.stdout.splitlines()[-1]
+    # Nothing is staged, and `compass ship-commit` lands what is staged, so the
+    # line names the traced files to stage first.
+    assert last.startswith("next: compass check, then git add -- "), last
+    assert "data/greeting.txt" in last, last
+    assert last.endswith(', then compass ship-commit -m "<message>"'), last
 
 
 # --- the whole path, by the `next:` lines alone --------------------------------------
@@ -241,6 +239,14 @@ def _step(root, command, done):
                       spec.read_text(), flags=re.M)
         spec.write_text(text)
         return _run(root, "next", "--issue", SLUG)
+    if command.startswith("write the layering test at <layering test path> and git add it, "
+                          "then "):
+        # The line names the test to write and stage before the outer-loop red,
+        # so the records bound to the tree after it do not go stale.
+        (root / LAYERING_TEST).write_text("def test_layers_are_separate():\n"
+                                          "    assert True\n")
+        _git(root, "add", LAYERING_TEST)
+        command = command.split(", then ", 1)[1]
     if command.startswith("compass tdd-red "):
         loop = ["--loop", "outer"] if "--loop outer" in command else []
         return _run(root, "tdd-red", "--issue", SLUG, *loop, "--scenario", "TRC-001",
@@ -290,11 +296,8 @@ def _step(root, command, done):
     raise AssertionError(f"no step is known for the next: line {command!r}")
 
 
-def test_a_medium_change_reaches_the_commit_by_the_next_lines_alone(repo, path_writer):
+def test_a_medium_change_reaches_the_commit_by_the_next_lines_alone(repo):
     _base_greeting(repo)
-    (repo / LAYERING_TEST).write_text("def test_layers_are_separate():\n    assert True\n")
-    _git(repo, "add", LAYERING_TEST)
-    _git(repo, "commit", "-q", "-m", "layering test")
     head = _git(repo, "rev-parse", "HEAD")
 
     result = _start(repo, SLUG, "medium - several files and a design choice")
@@ -317,7 +320,10 @@ def test_a_medium_change_reaches_the_commit_by_the_next_lines_alone(repo, path_w
     # The order the `next:` lines gave, one kind of step each.
     kinds = [c.split(" -- ")[0].split(" --")[0] for c in walked]
     assert kinds[0].startswith("fill the Non-functional requirements rows")
-    assert [k for k in kinds if k.startswith("compass")][:5] == [
-        "compass tdd-red", "compass tdd-green", "compass isolation record",
+    assert kinds[1] == ("write the layering test at <layering test path> and git add it, "
+                        "then compass tdd-red")
+    assert [k for k in kinds if k.startswith("compass")][:4] == [
+        "compass tdd-green", "compass isolation record",
         "compass layering record", "compass evidence add <EV-id>"]
+    assert (repo / LAYERING_TEST).is_file()
     assert walked[-1].startswith("compass quick-fix finish")

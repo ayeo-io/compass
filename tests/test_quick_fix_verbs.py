@@ -11,10 +11,9 @@ Scenario ids: QFO-1 to QFO-5, in the acceptance criteria of the issue
 quick-fix-overhead/acceptance-criteria.md. QFG-1 and QFG-2 are in the
 acceptance criteria of quick-fix-finish-gaps/acceptance-criteria.md.
 
-Every test here runs on the four-stage path (ADR-092): the `path_writer`
-fixture is on for the whole module. A quick fix there is the light evidence
-row, and `start` writes the acceptance criteria and no devlog. The refusal of
-heavier work is tested once with the writer off, beside its path twin.
+Every test here runs on the four-stage path (ADR-092). A quick fix there is
+the light evidence row, and `start` writes the acceptance criteria and no
+devlog.
 """
 from __future__ import annotations
 
@@ -28,9 +27,6 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
-
-# Step 9b of #351 turns the path writer on for good and deletes this line.
-pytestmark = pytest.mark.usefixtures("path_writer")
 
 #: What a trivial, atomic change owes on the path: the light row (ADR-092).
 LIGHT = ["scenarios", "red-before-green", "suite-green", "correctness", "governance",
@@ -220,34 +216,8 @@ def test_qfo1_start_records_the_whole_assessment_in_one_call(repo):
 
 # --- QFO-2 -------------------------------------------------------------
 
-def test_qfo2_start_stops_when_the_approach_is_not_a_quick_fix(repo, monkeypatch):
-    # The writer off: the 8.x quick fix refuses work heavier than itself.
-    from compass_pkg import routing
-    monkeypatch.setattr(routing, "PATH_WRITER", False)
-    monkeypatch.delenv("COMPASS_PATH_WRITER", raising=False)
-    result = _start(repo, "bigger-change",
-                    size="standard - several files and a design choice")
-    assert result.returncode == 1
-
-    manifest = _manifest(repo, "bigger-change")
-    assert manifest["delivery_approach"] == "regular"
-    assert not (manifest.get("scenarios") or [])
-
-    doc_dir = repo / "docs" / "compass"
-    assert not (doc_dir.is_dir()
-               and any(doc_dir.glob("*/delivery-approach.md")))
-
-    heard = result.stdout + result.stderr
-    assert "/compass:assess" in heard
-    # The pointer stays where it was: nothing was started.
-    assert not (repo / ".compass" / "current-task").is_file() or (
-        (repo / ".compass" / "current-task").read_text().strip()
-        != "bigger-change")
-
-
 def test_qfo2_on_the_path_start_takes_heavier_work_and_names_what_it_owes(repo):
-    """The path twin of the refusal above. ADR-092 decision: the quick fix no longer
-    refuses heavier work. Start records it, with its scenario, and the evidence
+    """ADR-092 decision: the quick fix no longer refuses heavier work. Start records it, with its scenario, and the evidence
     the bigger change owes; the next step is the first thing it owes."""
     result = _start(repo, "bigger-change",
                     size="standard - several files and a design choice")

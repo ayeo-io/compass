@@ -21,10 +21,6 @@ from pathlib import Path
 import pytest
 import yaml
 
-#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
-#: turns the path writer on for good and deletes this mark.
-pytestmark = pytest.mark.usefixtures("path_writer")
-
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
@@ -79,10 +75,14 @@ def _start(root, slug, risk, size):
 
 
 def test_au_1_balanced_is_the_default(project):
-    assert _evaluate(project, QUICK_FIX)["checkpoints"] == []
-    assert _evaluate(project, FEATURE)["checkpoints"] == ["define", "plan"]
-    assert _evaluate(project, INITIATIVE)["checkpoints"] == [
-        "assess", "define", "refine", "plan"]
+    # An assessment given on the command line is evaluated on the four-stage path
+    # too: balanced lists no checkpoint for a change that owes no
+    # `scenario-approval`, at any size (ADR-092 open question 7).
+    for readings in (QUICK_FIX, FEATURE, INITIATIVE):
+        assert _evaluate(project, readings)["checkpoints"] == [], readings
+    _set_autonomy(project, "controlled")
+    assert _evaluate(project, FEATURE)["checkpoints"] == ["assess", "specify", "build", "ship"]
+    _set_autonomy(project, "balanced")
     _start(project, "bigger", "contained", "standard")
     manifest = yaml.safe_load(
         (project / ".compass" / "work" / "bigger" / "manifest.yml").read_text())

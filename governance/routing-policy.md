@@ -474,13 +474,10 @@ checks this on all 1,200 assessments of the contract 1 grid under each of the
 ## The path writer
 
 `compass approach evaluate --write` writes the four-stage path manifest
-(ADR-092) only while the path writer is on. It is dark-launched: the module
-constant `routing.PATH_WRITER` is false, and the environment variable
-`COMPASS_PATH_WRITER=1` turns it on for one run. Step 9b of #351 turns it on for
-good and removes both. While it is off, every command writes what 8.x wrote.
-`cli/compass_pkg/path_writer.py` holds the writer.
+(ADR-092). It is the only writer: no assessment writes the 8.x approach and
+stage keys now. `cli/compass_pkg/path_writer.py` holds the writer.
 
-With the writer on, a delivery assessment writes these keys:
+A delivery assessment writes these keys:
 
 | Key | Value |
 |---|---|
@@ -490,7 +487,7 @@ With the writer on, a delivery assessment writes these keys:
 | `acceptance_strategy` | the ADR-079 block, with the routing of the evidence row |
 | `checkpoints` | the stage ids that wait for a person, a flat list as before |
 | `checkpoint_outcomes` | `[]`, on the issue's first assessment |
-| `policy_rules_fired` | one entry for each evidence rule, and the configuration's floors as the evaluator wrote them |
+| `policy_rules_fired` | one entry for each evidence rule, and the configuration's floors with only the effects the path has: a required skill, an added gate or a required document |
 
 It writes no `stages:`, `subtask_ceiling:`, `max_worktrees:` or
 `orchestration:` key, and removes them from a manifest that had them.
@@ -510,6 +507,16 @@ It writes no `stages:`, `subtask_ceiling:`, `max_worktrees:` or
   `reassessments` (`from_route: regular`, `to_route: delivery`).
 - `compass approach show` prints the evidence line (`Evidence: ...`) in place
   of the gate line on a path issue.
+- **Without `--write`** the command shows what the write would store. A
+  project with no `compass.yml` reads the governance files, which do not
+  declare `S17`, but a write commits the live configuration, which does. So
+  the preview reads the live configuration for the strategy, and owes the
+  same `S17` tokens the write stores. An assessment given on the command line
+  (`--assessment`) is evaluated on the path too, as a new issue in the
+  project would be.
+- `--verbose` names the evidence row that matched (`evidence row :
+  RP-EVID-STANDARD`) in place of the 8.x candidate approach. A guardrail code
+  in a fired rule's line is in backticks, such as `` (`G5`, guardrail) ``.
 
 On a path issue, `compass quick-fix start` serves every size and writes
 `acceptance-criteria.md` with the intent and the one scenario in place of the
@@ -521,6 +528,17 @@ with exit 1, before it writes anything, while the issue owes anything but the
 three immovable gates and the green it records itself, and prints one `next:`
 line for each owed item. Each verb that writes a record of a path issue prints
 `next: <command>` from `next_step.next_command` as its last line in text mode.
+
+Two `next:` lines carry a step before the command:
+
+- Where `layering` is owed, the line that names the outer-loop red says to
+  write the layering test and `git add` it first. The outer-loop green, the
+  isolation proof and the layering record are bound to the tree, which holds
+  the tracked and staged files, so a test file added to it after the green
+  makes all three stale.
+- When every gate passes, the line names the traced files to stage
+  (`git add -- <files>`) before `compass ship-commit`, which lands what is
+  staged. `compass quick-fix finish --no-commit` leaves the change unstaged.
 
 ## What a configuration owes an assessment
 

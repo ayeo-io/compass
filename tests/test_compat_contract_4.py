@@ -104,7 +104,7 @@ def test_contract_4_next_reads_the_approach_from_the_manifest():
     assert cc.differences(entry, cc.Outcome(0, "Define [gate: verify.correctness]", "")) == []
     assert cc.differences(entry, cc.Outcome(2, "", "delivery-approach.md is missing"))
     assert cc.differences(entry, cc.Outcome(1, "", ""))
-    assert cc.EXIT_CHANGED_IN_9_0_0 == {"next-regular-without-approach-record": 0}
+    assert cc.EXIT_CHANGED_IN_9_0_0["next-regular-without-approach-record"] == 0
 
 
 def test_contract_4_next_shows_the_path_stage():
@@ -117,4 +117,42 @@ def test_contract_4_next_shows_the_path_stage():
     assert cc.differences(entry, cc.Outcome(0, line, "")) == []
     assert cc.differences(entry, cc.Outcome(0, "Implement [gate: verify.correctness]", ""))
     assert cc.differences(entry, cc.Outcome(1, line, ""))
-    assert cc.PHRASE_CHANGED_IN_9_0_0 == {"next-quick-fix": ("Implement", "Build")}
+    assert cc.PHRASE_CHANGED_IN_9_0_0["next-quick-fix"] == ("Implement", "Build")
+
+
+def test_contract_4_the_intended_9_0_0_changes_are_the_listed_ones():
+    """Each entry 9.0.0 changes on purpose is named here, so a new one is a decision
+    made in this file and not a drift the tables absorb."""
+    assert cc.EXIT_CHANGED_IN_9_0_0 == {"next-regular-without-approach-record": 0,
+                                        "quick-fix-start-heavier": 0,
+                                        "quick-fix-start-auth-label": 0}
+    assert set(cc.PHRASE_CHANGED_IN_9_0_0) == {
+        "next-quick-fix", "approach-evaluate-quick-fix", "approach-evaluate-no-compass-folder",
+        "approach-evaluate-copied-governance", "approach-evaluate-controlled-autonomy",
+        "approach-summary-regular", "quick-fix-start-valid", "quick-fix-start-advisory",
+        "quick-fix-start-heavier", "quick-fix-start-auth-label"}
+    for entry_id, (recorded, _) in cc.PHRASE_CHANGED_IN_9_0_0.items():
+        entry = next(e for e in ENTRIES if e["id"] == entry_id)
+        assert entry["stdout_contains"] == recorded, entry_id
+
+
+def test_contract_4_quick_fix_start_takes_heavier_work_on_the_path():
+    """On the four-stage path (ADR-092) `quick-fix start` starts work heavier than a
+    quick fix. The entry's recorded refusal (exit 1, "computes to regular") is compared
+    as exit 0 with "recorded as delivery": the old refusal, or the old phrase alone,
+    still differs."""
+    entry = next(e for e in ENTRIES if e["id"] == "quick-fix-start-heavier")
+    assert (entry["exit"], entry["stdout_contains"]) == (1, "computes to regular")
+    now = "compass quick-fix start: 'bigger' recorded as delivery."
+    assert cc.differences(entry, cc.Outcome(0, now, "")) == []
+    assert cc.differences(entry, cc.Outcome(1, now, ""))
+    assert cc.differences(entry, cc.Outcome(0, "the change computes to regular", ""))
+
+
+def test_contract_4_approach_evaluate_names_the_one_approach():
+    """An assessment given on the command line is evaluated on the path, so it names
+    `delivery` with the gate count 8.x gave. The old approach name still differs."""
+    entry = next(e for e in ENTRIES if e["id"] == "approach-evaluate-copied-governance")
+    assert cc.differences(entry, cc.Outcome(0, "delivery - 6 gate(s), 13 kinds", "")) == []
+    assert cc.differences(entry, cc.Outcome(0, "regular - 6 gate(s)", ""))
+    assert cc.differences(entry, cc.Outcome(0, "delivery - 3 gate(s)", ""))

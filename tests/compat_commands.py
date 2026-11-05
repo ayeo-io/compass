@@ -511,15 +511,35 @@ PHRASE_REMOVED_IN_9_0_0 = {
 
 #: Entries whose exit 9.0.0 changed on purpose, with the exit it gives now. `compass next`
 #: reads the approach from the manifest, since 9.0.0 writes no delivery-approach.md
-#: (ADR-091), so an assessed issue with no such file is answered, not refused.
-EXIT_CHANGED_IN_9_0_0 = {"next-regular-without-approach-record": 0}
+#: (ADR-091), so an assessed issue with no such file is answered, not refused. A new
+#: assessment is on the four-stage path (ADR-092), which has no approaches, so
+#: `quick-fix start` no longer refuses work heavier than a quick fix: it starts the
+#: change and records the evidence it owes.
+EXIT_CHANGED_IN_9_0_0 = {"next-regular-without-approach-record": 0,
+                         "quick-fix-start-heavier": 0,
+                         "quick-fix-start-auth-label": 0}
 
 
 #: Entries whose phrase 9.0.0 changed on purpose, each with `(recorded, now)`. The exit
 #: is still compared, and stdout must hold the new phrase. `compass next` shows the stage
 #: of an issue assessed on the legacy stages as the path stage it maps to, so implement
-#: shows as Build (ADR-092).
-PHRASE_CHANGED_IN_9_0_0 = {"next-quick-fix": ("Implement", "Build")}
+#: shows as Build (ADR-092). A new assessment, and an assessment given on the command
+#: line, is on the four-stage path: it names the one approach `delivery` where 8.x named
+#: quick fix, regular or full, keeps the gate count, and lists no stage of the legacy
+#: path to wait at (ADR-092 open question 7).
+PHRASE_CHANGED_IN_9_0_0 = {
+    "next-quick-fix": ("Implement", "Build"),
+    "approach-evaluate-quick-fix": ("quick fix - 3 gate(s)", "delivery - 3 gate(s)"),
+    "approach-evaluate-no-compass-folder": ("quick fix - 3 gate(s)", "delivery - 3 gate(s)"),
+    "approach-evaluate-copied-governance": ("regular - 6 gate(s)", "delivery - 6 gate(s)"),
+    "approach-evaluate-controlled-autonomy": ("regular - 6 gate(s)", "delivery - 6 gate(s)"),
+    "approach-summary-regular": ("waits for you at: define, plan",
+                                 "does not stop to wait for you"),
+    "quick-fix-start-valid": ("recorded as quick fix", "recorded as delivery"),
+    "quick-fix-start-advisory": ("recorded as quick fix", "recorded as delivery"),
+    "quick-fix-start-heavier": ("computes to regular", "recorded as delivery"),
+    "quick-fix-start-auth-label": ("computes to full", "recorded as delivery"),
+}
 
 
 def differences(entry: dict, outcome: Outcome) -> list[str]:

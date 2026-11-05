@@ -388,27 +388,6 @@ def _no_session_issue(monkeypatch):
     monkeypatch.delenv("COMPASS_ISSUE", raising=False)
 
 
-@pytest.fixture
-def path_writer(monkeypatch):
-    """Turn on the dark-launched path writer of ADR-092 for one test.
-
-    It sets `routing.PATH_WRITER` for the CLI run in this process and
-    `COMPASS_PATH_WRITER=1` for a CLI run in a subprocess, which inherits the
-    environment. Step 9b of #351 turns the writer on for good and deletes the
-    switch, the variable and this fixture."""
-    from compass_pkg import routing
-    monkeypatch.setattr(routing, "PATH_WRITER", True)
-    monkeypatch.setenv("COMPASS_PATH_WRITER", "1")
-
-
-@pytest.fixture(autouse=True)
-def _no_path_writer(monkeypatch):
-    """A shell that turned the path writer on must not turn it on for the suite.
-    A test that wants it asks for the `path_writer` fixture. Step 9b of #351
-    deletes this fixture with the switch."""
-    monkeypatch.delenv("COMPASS_PATH_WRITER", raising=False)
-
-
 @pytest.fixture(autouse=True)
 def _no_host_claude_session(monkeypatch):
     """A test run inside a Claude Code session inherits its session id, and

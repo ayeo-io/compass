@@ -710,3 +710,17 @@ def test_trc_b17_an_open_row_with_no_lane_is_listed_not_dropped():
     assert len(note) == 1
     listed = [i.find_all("span", "slug")[0].text() for i in note[0].find_all("li")]
     assert listed == ["lost"]
+
+
+def test_a_path_issue_takes_the_lane_its_path_stage_maps_onto():
+    """The lanes are the legacy stages. A path issue (ADR-092) at specify or build
+    takes the define or the implement lane, so its card is drawn and it is not
+    listed as having no lane. Assess and ship are lanes of their own."""
+    root = page_root(row("speccing", lane="specify", stage="specify"),
+                     row("building", lane="build", stage="build"),
+                     row("shipping", lane="ship", stage="ship"))
+    found = lanes(root)
+    assert heading_count(found["define"]) == 1
+    assert heading_count(found["implement"]) == 1
+    assert heading_count(found["ship"]) == 1
+    assert root.find_all("section", "unplaceable") == []

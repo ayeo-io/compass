@@ -22,10 +22,6 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import configure_fixtures as fx  # noqa: E402
 
-#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
-#: turns the path writer on for good and deletes this mark.
-pytestmark = pytest.mark.usefixtures("path_writer")
-
 MODE = ("--mode", "refine=full")
 STEPS = ("resolved", "provenance", "versions", "records", "marker", "manifest", "proposal")
 

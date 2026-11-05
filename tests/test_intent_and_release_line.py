@@ -35,10 +35,6 @@ import yaml  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import project_readiness_support as readiness_support  # noqa: E402
 
-#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
-#: turns the path writer on for good and deletes this mark.
-pytestmark = pytest.mark.usefixtures("path_writer")
-
 SLUG = "feature"
 CREATED = "2026-10-10"
 DOCS = f"docs/compass/{CREATED}-{SLUG}"
@@ -96,9 +92,7 @@ def env(root, **extra):
         "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "user.useConfigOnly",
         "GIT_CONFIG_VALUE_0": "true",
         "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
-        "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com",
-        # The path writer's switch reaches the CLI; step 9b of #351 deletes it.
-        **{k: v for k, v in os.environ.items() if k == "COMPASS_PATH_WRITER"}}
+        "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"}
     values.update(extra)
     return values
 

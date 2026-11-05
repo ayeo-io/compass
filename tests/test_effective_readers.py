@@ -23,10 +23,6 @@ sys.path.insert(0, str(ROOT / "tests"))
 from test_generation_store import (SLUG, _committed_project, _manifest, _project,  # noqa: E402
                                    _run, _write_manifest)
 
-#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
-#: turns the path writer on for good and deletes this mark.
-pytestmark = pytest.mark.usefixtures("path_writer")
-
 SHIPPED = ROOT / "governance"
 
 
@@ -497,16 +493,11 @@ def test_ef_6_the_result_matches_the_one_the_governance_files_give(tmp_path):
     # The stored generation also carries the delivery-approach record every approach owes
     # (the catalogue flag `every_approach`); the governance files do not declare the flag.
     stored["artifacts"] = [a for a in stored["artifacts"] if a["kind"] != "delivery-approach"]
-    # On the four-stage path the `S17` evidence is owed only where the configuration
-    # declares the strategy (ADR-092). The stored generation declares it; the
-    # governance files of a project with no `compass.yml` do not, so the preview of
-    # the other issue owes no `S17` token and stores no block. Everything else agrees.
-    s17 = ("outer-loop", "isolation", "layering")
-    assert stored.pop("acceptance_strategy")["applies"] is True
-    assert "acceptance_strategy" not in live
-    assert [t for t in stored["evidence_required"] if t not in s17] == live["evidence_required"]
-    assert set(stored["evidence_required"]) - set(live["evidence_required"]) == set(s17)
-    stored["evidence_required"] = live["evidence_required"]
+    # On the four-stage path the preview owes what a write would store (ADR-092):
+    # the governance files of a project with no `compass.yml` do not declare `S17`,
+    # but the configuration a write commits does, so both owe the `S17` evidence.
+    assert stored["acceptance_strategy"]["applies"] is True
+    assert {"outer-loop", "isolation", "layering"} <= set(live["evidence_required"])
     assert stored == live
 
 

@@ -65,14 +65,7 @@ def release(tmp_path_factory):
 
 
 def _cli(cli, cwd, *args):
-    # `ENV` is read when the module loads, so the path writer's switch, which the
-    # `path_writer` fixture sets for one test, is added here.
-    env = dict(ENV)
-    if os.environ.get("COMPASS_PATH_WRITER"):
-        env["COMPASS_PATH_WRITER"] = os.environ["COMPASS_PATH_WRITER"]
-    else:
-        env.pop("COMPASS_PATH_WRITER", None)
-    return subprocess.run([sys.executable, str(cli), *args], cwd=cwd, env=env,
+    return subprocess.run([sys.executable, str(cli), *args], cwd=cwd, env=ENV,
                           capture_output=True, text=True)
 
 
@@ -241,7 +234,7 @@ def _legacy_view(root, slug):
 
 
 def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(
-        release, tmp_path, path_writer):
+        release, tmp_path):
     old_cli = release / "cli" / "compass"
     root = tmp_path / "proj"
     root.mkdir()

@@ -13,7 +13,6 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -21,10 +20,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from artifact_status_support import (DOCS, HUMAN_DESIGN, SLUG, approve, edit,  # noqa: E402
                                      manifest, manifest_file, project, register, run,
                                      write_manifest)
-
-#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
-#: turns the path writer on for good and deletes this mark.
-pytestmark = pytest.mark.usefixtures("path_writer")
 
 REVIEW = f"{DOCS}/requirements-review.md"
 

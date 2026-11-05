@@ -647,7 +647,7 @@ def test_vr_d15_a_project_that_says_lightweight_is_looser_than_a_parent_that_say
 # --- VR-D14: an issue layer in the old words ------------------------------------
 
 def test_vr_d14_an_issue_layer_in_the_old_words_evaluates_as_the_new_words_do(
-        tmp_path, path_writer):
+        tmp_path):
     results = {}
     for name, word in (("old", "full"), ("new", "thorough")):
         root, task_dir = _project(tmp_path, name)

@@ -31,9 +31,7 @@ def env(home):
     return {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
             "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1",
             "COLUMNS": "100", "PYTHONDONTWRITEBYTECODE": "1",
-            "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
-            # The path writer's switch reaches the CLI; step 9b of #351 deletes it.
-            **{k: v for k, v in os.environ.items() if k == "COMPASS_PATH_WRITER"}}
+            "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
 
 
 def run(cwd, *argv):

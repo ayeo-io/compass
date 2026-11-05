@@ -11,7 +11,7 @@ Two kinds of issue are tested:
   (`compat_baseline.policy_8_0_4`), because a new assessment no longer writes
   one. The resolver gives the legacy stage, which every reader acts on, and the
   three show it as the path stage it maps to.
-- An issue on the path, assessed with the `path_writer` fixture. Its stages are
+- An issue on the path, assessed as a new issue is. Its stages are
   Assess, Specify, Build and Ship, each done when its records are on disk.
 
 Each test then adds the records a stage leaves, as the commands write them:
@@ -401,7 +401,7 @@ PATH_CASES = {
 
 
 @pytest.mark.parametrize("case", list(PATH_CASES))
-def test_on_the_path_next_reports_the_stage_the_records_show(tmp_path, path_writer, case):
+def test_on_the_path_next_reports_the_stage_the_records_show(tmp_path, case):
     """NS-A to NS-F on the path: each set of records gives the path stage reached."""
     kwargs, expected = PATH_CASES[case]
     _path_issue(tmp_path, **kwargs)
@@ -409,7 +409,7 @@ def test_on_the_path_next_reports_the_stage_the_records_show(tmp_path, path_writ
     assert _next(tmp_path) == expected, case
 
 
-def test_on_the_path_current_phase_overrides_the_records(tmp_path, path_writer):
+def test_on_the_path_current_phase_overrides_the_records(tmp_path):
     """NS-G on the path."""
     _path_issue(tmp_path, reds=SCENARIOS, green=SCENARIOS, current_phase="specify")
     assert _resolved(tmp_path) == "Specify"
@@ -418,7 +418,7 @@ def test_on_the_path_current_phase_overrides_the_records(tmp_path, path_writer):
 
 @pytest.mark.parametrize("case", [c for c, (_, stage) in PATH_CASES.items()
                                   if stage != "done"])
-def test_on_the_path_status_line_and_rail_name_the_same_stage(tmp_path, path_writer, case):
+def test_on_the_path_status_line_and_rail_name_the_same_stage(tmp_path, case):
     """NS-H on the path."""
     kwargs, expected = PATH_CASES[case]
     _path_issue(tmp_path, **kwargs)
@@ -427,14 +427,14 @@ def test_on_the_path_status_line_and_rail_name_the_same_stage(tmp_path, path_wri
     assert _rail_current(tmp_path) == expected, case
 
 
-def test_on_the_path_a_landed_issue_reads_done_on_the_status_line(tmp_path, path_writer):
+def test_on_the_path_a_landed_issue_reads_done_on_the_status_line(tmp_path):
     _path_issue(tmp_path, reds=SCENARIOS, green=SCENARIOS, gates_pass=True, landed=True)
     assert " · done · " in _statusline(tmp_path)
     assert _rail_current(tmp_path) is None
 
 
 @pytest.mark.parametrize("case", list(MALFORMED))
-def test_on_the_path_a_malformed_manifest_still_names_a_stage(tmp_path, path_writer, case):
+def test_on_the_path_a_malformed_manifest_still_names_a_stage(tmp_path, case):
     """NS-I on the path."""
     _path_issue(tmp_path, raw=MALFORMED[case])
     r = subprocess.run([sys.executable, str(CLI), "next"], cwd=tmp_path,

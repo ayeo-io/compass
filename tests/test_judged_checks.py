@@ -30,10 +30,6 @@ from test_entry_exit_evaluation import (CAPABILITY, _by_check, _config_project, 
 from test_generation_store import (SLUG, _evaluate_write, _manifest, _project,  # noqa: E402
                                    _run, _write_manifest)
 
-#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
-#: turns the path writer on for good and deletes this mark.
-pytestmark = pytest.mark.usefixtures("path_writer")
-
 CHECK = "design-review"
 STATEMENT = "The design holds against every scenario."
 INPUTS = ["technical-design", "acceptance-criteria"]

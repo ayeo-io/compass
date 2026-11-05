@@ -419,11 +419,11 @@ def _human_approval(task, task_dir):
 
 
 def _checkpoint_waiting(task, done):
-    """The first listed checkpoint whose stage is done and has no outcome."""
+    """The first listed checkpoint whose hand-off is due and has no outcome."""
     from compass_pkg import checkpoint_outcomes
     missing = checkpoint_outcomes.missing(task)
     for stage in missing:
-        if done is None or stage in done:
+        if done is None or checkpoint_outcomes.reached(task, stage, done):
             return stage
     return None
 

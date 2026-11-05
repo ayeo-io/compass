@@ -619,6 +619,10 @@ those stages done and its review has no outcome, `compass next` says so:
 - When you reject a review with `/compass:reject <n> <reason>`, `compass next`
   names that stage again, with your reason, until a new outcome is recorded.
 
+On a path issue the reviews end `build` and `ship`. Ship is done only once the
+issue is closed, so its review is due once every gate has passed, and the
+`next:` command then names `compass evidence request --checkpoint ship`.
+
 `compass retro --decisions` reports, across all issues, how many of these
 decisions were confirmed as taken, how many were changed, and how many were
 never confirmed on a finished issue.

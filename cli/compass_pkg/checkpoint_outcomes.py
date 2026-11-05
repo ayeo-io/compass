@@ -107,6 +107,19 @@ def stage_runs(task, stage) -> bool:
     return bool(weight) and weight not in _NOT_RUN
 
 
+def reached(task, stage, done) -> bool:
+    """True when the hand-off at the end of `stage` is due, given the stages `done`
+    on the records. A path issue's ship stage is done only once the issue is
+    closed, after its hand-off, so its checkpoint is due once every gate has
+    passed: where an old issue's `verify` checkpoint waited (ADR-092)."""
+    if stage in done:
+        return True
+    if not (stage == STAGE_SHIP and is_path_issue(task)):
+        return False
+    from compass_pkg import gate_status
+    return gate_status.all_gates_passed(task)
+
+
 def set_outcome(task, entry):
     """Make `entry` the stage's one outcome, in the place of any earlier one."""
     kept = [e for e in task.get(KEY) or []
@@ -279,7 +292,7 @@ def _next_review(task, task_dir, done):
         return None, None, None
     have = outcomes(task)
     own = stage_reviews(task)
-    if not any(s in done for s in own):
+    if not any(reached(task, s, done) for s in own):
         return None, None, None
     reviews = _reviews()
     path = is_path_issue(task)
@@ -292,7 +305,7 @@ def _next_review(task, task_dir, done):
             return stage, None, (f"sent back: the {label[stage]} review was rejected - "
                                  f"{reason}")
     for stage, agent in own.items():
-        if stage not in done or stage in have or not stage_runs(task, stage):
+        if not reached(task, stage, done) or stage in have or not stage_runs(task, stage):
             continue
         if stage in listed(task):
             return None, (f"Waiting at the {stage} checkpoint: the {label[stage]} review has "

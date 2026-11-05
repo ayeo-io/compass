@@ -272,6 +272,11 @@ def _convert_rule(rule, notes):
     `when` and `rationale` is an effect, so none is lost; what the new
     spelling cannot say goes to the notes."""
     rule_id = rule["id"]
+    # The new spelling keys a rule by its id. A malformed id, such as a list,
+    # is read as its text, as the 8.x evaluator reads it: the router must not
+    # crash on it, and `compass policy lint` reports it (`TRC-D1`).
+    if not isinstance(rule_id, str):
+        rule_id = str(rule_id)
     when = _when(rule["when"], notes.policy_when) if "when" in rule else None
     then = {}
     for key, value in rule.items():

@@ -165,7 +165,11 @@ def emitter_for(args):
                    evidence_out=getattr(args, "evidence_out", None))
 
 
-_ID_TAIL = re.compile(r"\s*\(([A-Z][A-Z0-9-]*[0-9][^)]*)\)\s*$")
+# The id a rule line ends with, such as "(RP-SHAPE-004, shape)". The path's
+# evidence rows have no digit ("(RP-EVID-STANDARD, evidence)") and a gate or
+# guardrail code is in backticks ("(`G5`, guardrail)"), so an id is a capital
+# followed by a digit or a hyphenated part, with optional backticks.
+_ID_TAIL = re.compile(r"\s*\((`?[A-Z][A-Z0-9-]*(?:[0-9]|-[A-Z0-9]+)`?[^)]*)\)\s*$")
 
 
 def _path_line(prefix, path):

@@ -542,6 +542,11 @@ def test_pl_c15_evaluator_puts_meaning_before_the_code():
 
     The receipt was the second such screen until 9.0.0 removed it (ADR-091);
     `compass approach evaluate` remains.
+
+    The first screen shows three fired rules. On the path the evidence rows
+    come before the floors (ADR-092), so the assessment has no `auth` label:
+    with one, `RP-FLOOR-002` is the fifth rule and is not on the screen. Every
+    rule line on the screen is checked, as well as the floor's.
     """
     import subprocess
     import sys as _sys
@@ -550,11 +555,15 @@ def test_pl_c15_evaluator_puts_meaning_before_the_code():
          "--assessment", "risk=contained",
          "--assessment", "familiarity=brownfield-unmapped",
          "--assessment", "size=standard", "--assessment", "goal=delivery",
-         "--assessment", "role=engineer", "--assessment", "labels=auth"],
+         "--assessment", "role=engineer"],
         cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=60).stdout
 
     for screen, out, marker in (("evaluator", ev, "written down"),):
         rule_lines = [l for l in out.splitlines() if marker in l]
+        assert rule_lines, f"no fired-rule line found on the {screen} screen"
+        choices = out.split("Key choices:", 1)[-1].split("\n\n", 1)[0]
+        rule_lines += [l for l in choices.splitlines()
+                       if l.strip().startswith("- ") and marker not in l]
         assert rule_lines, f"no fired-rule line found on the {screen} screen"
         for line in rule_lines:
             body = line.strip().lstrip("- ")

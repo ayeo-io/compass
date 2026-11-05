@@ -500,19 +500,26 @@ matches (`cli/compass_pkg/next_step.py`):
 |---|---|
 | no scenario | `compass scenario add TRC-001 --intent <intent id> --test <path::name>` |
 | a scenario with no test | `compass scenario tests set <id> --test <path::name>` |
+| a path issue's spec fails `nfr-rows-resolved` | fill the Non-functional requirements rows of the spec named |
 | `scenario-approval` owed, no outcome | `compass evidence request --checkpoint specify`, then stop for `/compass:approve` |
 | `S17` applies, no outer-loop red | `compass tdd-red --loop outer --scenario <id> -- <acceptance test command>` |
 | a scenario with no red | `compass tdd-red --scenario <id> -- <test command>` |
+| `S17` applies, no outer-loop green | `compass tdd-green --loop outer --scenario <id> --candidate <build id>\|local --client api\|web\|cli -- <acceptance test command>` |
 | a red with no green | `compass tdd-green --scenario <id> -- <test command>` |
-| `isolation` owed | `compass isolation record --parallel "..." --repeat "..."` |
-| `layering` owed | `compass layering record -- <layering test command>` |
+| `isolation` owed | `compass isolation record --candidate <the green's> --client <the green's> --parallel "..." --repeat "... {tests}"` |
+| `layering` owed | `compass layering record --test-path <path> -- <layering test command>` |
 | a Definition of Done item open | `compass evidence add <EV-id> --type <type> --path <path> --meets <item>` |
-| a gate not passed | `compass gate pass <gate> --evidence <EV-id>` |
+| a gate not passed (on a path issue, not one of the three immovable gates) | `compass gate pass <gate> --evidence <EV-id>` |
 | `human-approval` owed | `compass evidence request --check human-approval-present` |
 | a listed checkpoint with no outcome | `compass evidence request --checkpoint <stage>`, then stop for `/compass:approve` |
+| a path issue with only the three immovable gates pending | `compass quick-fix finish -m "<commit message>" --no-commit -- <test command>` |
 | every gate passes | `compass check`, then `compass ship-commit -m "<message>"` |
 
-What a path issue owes comes from its `evidence_required` list. An issue
+What a path issue owes comes from its `evidence_required` list. The
+requirement rows come before the red because the spec is part of the tree the
+outer-loop green, the isolation proof and the layering record are bound to;
+`compass quick-fix start` fills them with a reason only for a change that owes
+no Definition of Done. An issue
 assessed before the path owes the `S17` records its `acceptance_strategy` block
 names, and the Definition of Done when its verify stage is `thorough`. A spike
 first names `compass evidence add EV-SPIKE --type spike-conclusion`, then

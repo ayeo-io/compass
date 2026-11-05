@@ -432,7 +432,11 @@ def cmd_quick_fix_start(args):
         doc_abs = os.path.join(project_root, *doc_path_rel.split("/"))
         os.makedirs(os.path.dirname(doc_abs), exist_ok=True)
         with open(doc_abs, "w", encoding="utf-8") as fh:
-            fh.write(criteria_text(slug, args.intent, args.scenario_id, args.scenario))
+            # A change that owes the Definition of Done resolves its requirement
+            # rows itself; `nfr-rows-resolved` names each one until it does.
+            fh.write(criteria_text(
+                slug, args.intent, args.scenario_id, args.scenario,
+                resolve_rows="definition-of-done" not in task["evidence_required"]))
     else:
         devlog_abs = os.path.join(task_dir, "devlog.md")
         doc_path_rel = os.path.relpath(devlog_abs, project_root).replace(os.sep, "/")

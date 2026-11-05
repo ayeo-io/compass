@@ -189,18 +189,23 @@ def evidence_line(task):
 
 _STEPS = re.compile(r"^\s*given\s+(?P<given>.+?),\s*when\s+(?P<when>.+?),\s*then\s+(?P<then>.+?)"
                     r"\.?\s*$", re.IGNORECASE | re.DOTALL)
-#: The reason each concern row of the Non-functional requirements table holds. It
-#: says what is true: start was given one scenario and no requirement. A person
-#: replaces it with the scenario ids that cover the concern, where one applies.
+#: The reason each concern row of the Non-functional requirements table holds on a
+#: change that owes no Definition of Done (the light row). It says what is true:
+#: start was given one scenario and no requirement. A person replaces it with the
+#: scenario ids that cover the concern, where one applies.
 NFR_REASON = "quick-fix start was given one scenario and no requirement for this concern"
 
 
-def criteria_text(slug, intent, scenario_id, scenario):
+def criteria_text(slug, intent, scenario_id, scenario, resolve_rows=True):
     """`acceptance-criteria.md` for an issue `compass quick-fix start` opens on
     the path: the sections of `templates/acceptance-criteria.md` that hold what
     start was given, the intent as INT-1 and the one scenario, with no
     placeholder left. 9.0.0 writes no devlog (ADR-092 decision 12), so this file
-    holds what the manifest has no key for."""
+    holds what the manifest has no key for.
+
+    With `resolve_rows` the concern rows hold `NFR_REASON`. Without it, for a
+    change that owes the Definition of Done, they are left empty, so
+    `nfr-rows-resolved` names each concern until someone resolves it."""
     from compass_pkg.section_checks import CONCERNS, NFR_HEADING
     steps = _STEPS.match(scenario or "")
     if steps:
@@ -218,5 +223,6 @@ def criteria_text(slug, intent, scenario_id, scenario):
              f"<!-- traceability id: {scenario_id} · serves: INT-1 -->", ""]
     lines += gherkin + ["", f"## {NFR_HEADING}", "",
                         "| Concern | Scenario | Reason it does not apply |", "|---|---|---|"]
-    lines += [f"| {concern} | | {NFR_REASON} |" for concern in CONCERNS]
+    cells = f" {NFR_REASON} " if resolve_rows else " "
+    lines += [f"| {concern} | |{cells}|" for concern in CONCERNS]
     return "\n".join(lines) + "\n"

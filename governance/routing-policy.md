@@ -513,7 +513,9 @@ It writes no `stages:`, `subtask_ceiling:`, `max_worktrees:` or
 
 On a path issue, `compass quick-fix start` serves every size and writes
 `acceptance-criteria.md` with the intent and the one scenario in place of the
-devlog. It takes the hotfix setting as `--urgency "live-defect - <reason>"`.
+devlog. Its Non-functional requirements rows hold a reason only when the change
+owes no `definition-of-done`; otherwise they are empty, `nfr-rows-resolved`
+names each one, and the next step is to resolve them. It takes the hotfix setting as `--urgency "live-defect - <reason>"`.
 `compass quick-fix finish` serves any delivery issue on the path. It refuses
 with exit 1, before it writes anything, while the issue owes anything but the
 three immovable gates and the green it records itself, and prints one `next:`

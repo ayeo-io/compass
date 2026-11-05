@@ -45,7 +45,7 @@ def _env(**extra):
 
 
 def _path_issue(root: Path, *, evidence=LIGHT, scenarios=(), gates_pass=False, reds=(),
-                outer_reds=(), greens=(), files=(), raw=None) -> Path:
+                outer_reds=(), greens=(), outer_greens=(), files=(), raw=None) -> Path:
     """A project at `root` whose one issue is a path issue with these records,
     each written where the command that makes it writes it."""
     task = root / ".compass" / "work" / SLUG
@@ -74,6 +74,14 @@ def _path_issue(root: Path, *, evidence=LIGHT, scenarios=(), gates_pass=False, r
         (task / "evidence" / f"green-{sid}.json").write_text(json.dumps(record))
         manifest["evidence"].append({"id": f"EV-T-{sid}", "type": "test-run",
                                      "path": f"evidence/green-{sid}.json", "scenario": sid})
+    for sid in outer_greens:
+        record = {"passed": True, "exit_code": 0, "scenario": sid, "loop": "outer",
+                  "candidate": "build-7", "client": "cli",
+                  "timestamp": "2026-11-05T11:00:00Z"}
+        (task / "evidence" / f"green-{sid}.outer.json").write_text(json.dumps(record))
+        manifest["evidence"].append({"id": f"EV-T-{sid}-outer", "type": "test-run",
+                                     "path": f"evidence/green-{sid}.outer.json",
+                                     "scenario": sid})
     for name in files:
         (task / "evidence" / name).write_text("{}")
     manifest.update(raw or {})
@@ -111,18 +119,34 @@ ROWS = {
     "a red with no green": (
         dict(scenarios=[SCENARIO], reds=["TRC-001"]),
         "compass tdd-green --scenario TRC-001 -- <test command>"),
+    # Where `S17` applies the green is the outer loop's, which names the candidate
+    # the isolation proof is then made on.
+    "S17 applies, no outer-loop green": (
+        dict(evidence=LIGHT + ["outer-loop"], scenarios=[SCENARIO],
+             outer_reds=["TRC-001"], greens=["TRC-001"]),
+        "compass tdd-green --loop outer --scenario TRC-001 --candidate <build id>|local "
+        "--client api|web|cli -- <acceptance test command>"),
     "isolation owed": (
         dict(evidence=LIGHT + ["outer-loop", "isolation"], scenarios=[SCENARIO],
-             outer_reds=["TRC-001"], greens=["TRC-001"]),
-        "compass isolation record --parallel \"<acceptance suite command>\" "
-        "--repeat \"<scenario test command>\""),
+             outer_reds=["TRC-001"], outer_greens=["TRC-001"]),
+        "compass isolation record --candidate build-7 --client cli "
+        "--parallel \"<acceptance suite command>\" "
+        "--repeat \"<scenario test command> {tests}\""),
     "layering owed": (
         dict(evidence=LIGHT + ["outer-loop", "isolation", "layering"], scenarios=[SCENARIO],
-             outer_reds=["TRC-001"], greens=["TRC-001"], files=["isolation-proof.json"]),
-        "compass layering record -- <layering test command>"),
+             outer_reds=["TRC-001"], outer_greens=["TRC-001"],
+             files=["isolation-proof.json"]),
+        "compass layering record --test-path <layering test path> "
+        "-- <layering test command>"),
     "a review gate pending": (
+        dict(scenarios=[SCENARIO], reds=["TRC-001"], greens=["TRC-001"],
+             raw={"gates": [{"id": g, "status": "pending", "evidence": []}
+                            for g in THREE_GATES + ["verify.regression"]]}),
+        "compass gate pass verify.regression --evidence <EV-id>"),
+    # `compass quick-fix finish` passes the three immovable gates itself.
+    "only the three immovable gates pending": (
         dict(scenarios=[SCENARIO], reds=["TRC-001"], greens=["TRC-001"]),
-        "compass gate pass verify.correctness --evidence <EV-id>"),
+        next_step.FINISH),
     "human approval owed": (
         dict(evidence=LIGHT + ["human-approval"], scenarios=[SCENARIO], reds=["TRC-001"],
              greens=["TRC-001"], gates_pass=True),
@@ -154,8 +178,7 @@ def test_a_closed_issue_has_no_next_command(tmp_path):
 
 def test_a_narrative_scenario_needs_no_test_and_no_red(tmp_path):
     task = _path_issue(tmp_path, scenarios=[dict(SCENARIO, tests=[], verifiable="narrative")])
-    assert next_step.next_command(_load(task), str(task)) == (
-        "compass gate pass verify.correctness --evidence <EV-id>")
+    assert next_step.next_command(_load(task), str(task)) == next_step.FINISH
 
 
 # --- stage completion on the path --------------------------------------------------------

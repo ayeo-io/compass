@@ -13,16 +13,19 @@ bottom, and the first that matches gives the command:
 | a spike with no conclusion | `compass evidence add EV-SPIKE --type spike-conclusion ...` |
 | assessed, no scenario | `compass scenario add TRC-001 ...` |
 | a scenario with no test | `compass scenario tests set <id> --test <path::name>` |
+| `nfr-rows-resolved` fails (a path issue) | `fill the Non-functional requirements rows of <spec>: ...` |
 | `scenario-approval` owed, no outcome | `compass evidence request --checkpoint specify` |
 | `S17` applies, no outer-loop red | `compass tdd-red --loop outer --scenario <id> -- ...` |
 | a scenario with no red | `compass tdd-red --scenario <id> -- <test command>` |
+| `S17` applies, no outer-loop green | `compass tdd-green --loop outer --scenario <id> --candidate ... --client ... -- ...` |
 | a red with no green | `compass tdd-green --scenario <id> -- <test command>` |
-| `isolation` owed | `compass isolation record --parallel ... --repeat ...` |
-| `layering` owed | `compass layering record -- <layering test command>` |
+| `isolation` owed | `compass isolation record --candidate ... --client ... --parallel ... --repeat ...` |
+| `layering` owed | `compass layering record --test-path <path> -- <layering test command>` |
 | a Definition of Done item open | `compass evidence add <EV-id> ... --meets <item>` |
-| a review gate pending | `compass gate pass <gate> --evidence <EV-id>` |
+| a review gate pending | `compass gate pass <gate> --evidence <EV-id>` (on a path issue, not one of the three immovable gates) |
 | `human-approval` owed | `compass evidence request --check human-approval-present` |
 | a listed checkpoint with no outcome | `compass evidence request --checkpoint <stage>` |
+| a path issue, only the three immovable gates pending | `compass quick-fix finish -m "<commit message>" --no-commit -- <test command>` |
 | every gate passes | `compass check, then compass ship-commit -m "<message>"` |
 
 What is owed comes from `evidence_required` on a path issue. An issue assessed
@@ -47,10 +50,15 @@ from __future__ import annotations
 import os
 
 from compass_pkg import next_line, path_stages, red_first, status_words
-from compass_pkg.stable_ids import (APPROACH_SPIKE, MODE_THOROUGH, REMOVED_GATE_IDS,
+from compass_pkg.stable_ids import (APPROACH_SPIKE, GATE_VERIFY_CORRECTNESS,
+                                    GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY,
+                                    MODE_THOROUGH, REMOVED_GATE_IDS,
                                     STAGE_SPECIFY, STAGE_VERIFY)
 
 GO = '/compass:go "<what you want>"'
+#: The gates `compass quick-fix finish` passes itself (`quick_fix_cmd.THREE_GATES`).
+IMMOVABLE_GATES = (GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY)
+FINISH = 'compass quick-fix finish -m "<commit message>" --no-commit -- <test command>'
 FIRST_SCENARIO = "TRC-001"
 SPIKE_GATE = "spike.conclude"
 #: The routings of `S17` that owe each strategy record on an old issue, as the
@@ -58,6 +66,10 @@ SPIKE_GATE = "spike.conclude"
 _LEGACY_ROUTINGS = {"outer-loop": ("existing-dsl", "existing-dsl-isolation", "on"),
                     "isolation": ("existing-dsl-isolation", "on"),
                     "layering": ("on",)}
+#: The interfaces an outer-loop run can drive (`candidate_client.CLIENTS`).
+_CLIENTS = ("api", "web", "cli")
+_LAYERING_COMMAND = ("compass layering record --test-path <layering test path> "
+                     "-- <layering test command>")
 #: The record file each strategy command writes.
 _ISOLATION_RECORD = "isolation-proof.json"
 _LAYERING_RECORD = "layering.json"
@@ -91,7 +103,10 @@ def _first_match(task, task_dir, done):
             command = row(task, task_dir)
             if command:
                 return command
-    gate = _pending_gate(task)
+    # On the path `compass quick-fix finish` passes the three immovable gates
+    # itself, so they come last, once nothing else is owed.
+    on_path = path_stages.is_path_issue(task) and task.get("delivery_approach") != APPROACH_SPIKE
+    gate = _pending_gate(task, skip=IMMOVABLE_GATES if on_path else ())
     if gate:
         return f"compass gate pass {gate} --evidence <EV-id>"
     if _owed(task, task_dir, "human-approval") and not _human_approval(task, task_dir):
@@ -99,6 +114,8 @@ def _first_match(task, task_dir, done):
     stage = _checkpoint_waiting(task, done)
     if stage:
         return f"compass evidence request --checkpoint {stage}, then stop for /compass:approve"
+    if on_path and _pending_gate(task):
+        return FINISH
     return 'compass check, then compass ship-commit -m "<message>"'
 
 
@@ -143,10 +160,12 @@ def owed_commands(task, task_dir, cleared_gates=()):
         out.append(f"compass tdd-red --loop outer --scenario {ids[0]} "
                    "-- <acceptance test command>")
     if _owed(task, task_dir, "isolation") and not _record(task_dir, _ISOLATION_RECORD):
-        out.append('compass isolation record --parallel "<acceptance suite command>" '
-                   '--repeat "<scenario test command>"')
+        out.append(_isolation_command(task, task_dir))
     if _owed(task, task_dir, "layering") and not _record(task_dir, _LAYERING_RECORD):
-        out.append("compass layering record -- <layering test command>")
+        out.append(_LAYERING_COMMAND)
+    requirements = _open_requirements(task, task_dir)
+    if requirements:
+        out.append(requirements)
     if _owed(task, task_dir, "definition-of-done"):
         from compass_pkg import effective, item_records
         view = effective.view_or_legacy(task_dir)
@@ -172,6 +191,12 @@ def _specify(task, task_dir):
     untested = [s["id"] for s in scenarios if not _tests_of(s)]
     if untested:
         return f"compass scenario tests set {untested[0]} --test <path::name>"
+    # The requirement rows are part of the spec, and the spec is in the tree the
+    # outer-loop green, the isolation proof and the layering record are bound to.
+    # Resolved after them, they would make all three stale.
+    requirements = _open_requirements(task, task_dir)
+    if requirements:
+        return requirements
     if _owed(task, task_dir, "scenario-approval") and not specify_handed_off(task):
         return ("compass evidence request --checkpoint specify, "
                 "then stop for /compass:approve")
@@ -188,14 +213,41 @@ def _build(task, task_dir):
         return f"compass tdd-red --scenario {reds['no_red'][0]} -- <test command>"
     greened = greens(task)
     no_green = [i for i in ids if i not in greened]
+    # Where `S17` applies the green is the outer loop's: it names the candidate
+    # and client that the isolation proof is then made on (ADR-085).
+    if ids and _owed(task, task_dir, "outer-loop") and task_dir:
+        outer = {r.get("scenario") for r in _outer_greens(task, task_dir)}
+        no_outer = [i for i in ids if i not in outer]
+        if no_outer:
+            return (f"compass tdd-green --loop outer --scenario {no_outer[0]} "
+                    f"--candidate <build id>|local --client {'|'.join(_CLIENTS)} "
+                    "-- <acceptance test command>")
     if no_green:
         return f"compass tdd-green --scenario {no_green[0]} -- <test command>"
     if _owed(task, task_dir, "isolation") and not _record(task_dir, _ISOLATION_RECORD):
-        return ('compass isolation record --parallel "<acceptance suite command>" '
-                '--repeat "<scenario test command>"')
+        return _isolation_command(task, task_dir)
     if _owed(task, task_dir, "layering") and not _record(task_dir, _LAYERING_RECORD):
-        return "compass layering record -- <layering test command>"
+        return _LAYERING_COMMAND
     return None
+
+
+def _outer_greens(task, task_dir):
+    from compass_pkg import candidate_client
+    return [r for _, r in candidate_client.green_records(task, task_dir)
+            if r.get("loop") == "outer"]
+
+
+def _isolation_command(task, task_dir):
+    """The isolation proof's command, on the candidate and client of the newest
+    outer-loop green, which `isolation-proven` compares the proof with."""
+    greens_ = [r for r in (_outer_greens(task, task_dir) if task_dir else [])
+               if isinstance(r.get("candidate"), str) and r["candidate"]]
+    newest = max(greens_, key=lambda r: str(r.get("timestamp") or "")) if greens_ else {}
+    candidate = newest.get("candidate") or "<build id>|local"
+    client = newest.get("client") or "|".join(_CLIENTS)
+    return (f"compass isolation record --candidate {candidate} --client {client} "
+            '--parallel "<acceptance suite command>" '
+            '--repeat "<scenario test command> {tests}"')
 
 
 def _ship(task, task_dir):
@@ -287,11 +339,12 @@ def _record(task_dir, name):
     return bool(task_dir) and os.path.isfile(os.path.join(task_dir, "evidence", name))
 
 
-def _pending_gate(task):
+def _pending_gate(task, skip=()):
     for gate in task.get("gates") or []:
         if not isinstance(gate, dict):
             return None
-        if gate.get("status") != "pass" and gate.get("id") not in REMOVED_GATE_IDS:
+        if (gate.get("status") != "pass" and gate.get("id") not in REMOVED_GATE_IDS
+                and gate.get("id") not in skip):
             return gate.get("id")
     return None
 
@@ -327,6 +380,20 @@ def _strategy_in_scope(task, task_dir, stored_needed):
     if not task_dir:
         return False
     return acceptance_strategy.in_scope(task, task_dir)[0]
+
+
+def _open_requirements(task, task_dir):
+    """On a path issue whose spec fails `nfr-rows-resolved`, the step that
+    resolves its Non-functional requirements rows; else None. An old issue
+    keeps the rows `compass check` already names for it."""
+    if not path_stages.is_path_issue(task) or not task_dir:
+        return None
+    from compass_pkg import section_checks
+    if section_checks._check_nfr_rows_resolved(task, task_dir)[0]:
+        return None
+    entry = section_checks.spec_entry(task, task_dir) or {}
+    return (f"fill the {section_checks.NFR_HEADING} rows of {entry.get('path', 'the spec')}: "
+            "the scenario ids that cover each concern, or the reason it does not apply")
 
 
 def _open_dod_item(task, task_dir):

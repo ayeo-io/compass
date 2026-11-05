@@ -50,12 +50,17 @@ def test_route_evaluate_write_logs_reframe(run_cli, make_task, project):
                 "--reason", "discovered the change touches auth")
     assert r.returncode == 0, r
     task = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert task["delivery_approach"] == "full"
+    # A re-assess moves an issue assessed before the path onto it (ADR-092),
+    # so the entry records the old approach and the path's one value.
+    assert task["delivery_approach"] == "delivery"
     assert task["reassessments"], "expected a reframes entry"
     rf = task["reassessments"][-1]
     assert rf["from_route"] == "quick-fix"
-    assert rf["to_route"] == "full"
+    assert rf["to_route"] == "delivery"
     assert "auth" in rf["reason"]
+    # The `auth` label is the one the re-assessment found: it adds the
+    # human approval of `G5` to the evidence the issue owes.
+    assert "human-approval" in task["evidence_required"]
 
 
 def test_route_evaluate_does_not_log_reframe_when_route_unchanged(run_cli,
@@ -72,13 +77,17 @@ def test_route_evaluate_does_not_log_reframe_when_route_unchanged(run_cli,
             "size": "small",
             "intent": "delivery",
         },
-        "delivery_approach": "express",
     }
     task_dir = make_task("no-rf", body)
+    # The first write puts the issue on the path (ADR-092). A re-assess of an
+    # issue assessed before the path logs its move onto it, so the issue
+    # whose approach stays the same is one already on the path.
+    first = run_cli("approach", "evaluate", "--issue", "no-rf", "--write")
+    assert first.returncode == 0, first
     r = run_cli("approach", "evaluate", "--issue", "no-rf", "--write")
     assert r.returncode == 0, r
     task = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert task["delivery_approach"] == "quick-fix"
+    assert task["delivery_approach"] == "delivery"
     assert not task.get("reassessments"), f"expected no reframes, got: {task.get('reframes')}"
 
 

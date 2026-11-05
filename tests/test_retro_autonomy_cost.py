@@ -534,6 +534,8 @@ def landed_fixture_issue(tmp_path, autonomy):
     the project and the issue's folder."""
     root = co.project(tmp_path, compass_yml=dict(co.BALANCED, autonomy=autonomy))
     folder = root / ".compass" / "work" / co.SLUG
+    import test_issue_usage
+    test_issue_usage.assessed_before_the_path(folder, autonomy)
     listed = co.manifest(root)["checkpoints"]
     assert listed == (["define", "plan"] if autonomy == "balanced" else [])
     stages = co.manifest(root)["stages"]

@@ -46,8 +46,11 @@ def test_wsm_4_an_approved_waiver_records_the_lower_mode(tmp_path):
     code, out, err = cf.reassess(root, *JUSTIFY)
     assert code == 0, out + err
     manifest = cf.manifest_of(task_dir)
-    assert manifest["delivery_approach"] == "full"
-    assert manifest["stages"]["breakdown"] == "skipped"
+    # ADR-092 decision D1: the four-stage path has no stage modes, so the
+    # manifest records no mode for breakdown. The reassess still accepts the
+    # approved waiver, and the stored generation keeps it (below).
+    assert manifest["delivery_approach"] == "delivery"
+    assert "stages" not in manifest
     gates = {g["id"] for g in manifest["gates"]}
     # Seven: 9.0.0 removes the gate `verify.analyze` (ADR-091).
     assert len(gates) == 7

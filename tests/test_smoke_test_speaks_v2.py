@@ -121,7 +121,14 @@ def test_trc_s6_smoke_steps_pass_on_a_healthy_install(tmp_path):
     assert (tmp_path / ".compass" / "current-task").is_file()
     assert (tmp_path / ".compass" / "work" / "scratch-issue" / "manifest.yml").is_file()
     # 9.0.0 writes no delivery-approach.md (ADR-091): the manifest holds the approach.
-    assert not (tmp_path / "docs" / "compass").exists()
+    # On the four-stage path (ADR-092) `quick-fix start` writes the one issue
+    # document, the acceptance criteria, where the page says it goes.
+    import yaml
+    created = yaml.safe_load((tmp_path / ".compass" / "work" / "scratch-issue"
+                              / "manifest.yml").read_text(encoding="utf-8"))["created"]
+    docs = tmp_path / "docs" / "compass" / f"{created}-scratch-issue"
+    assert sorted(p.name for p in docs.iterdir()) == ["acceptance-criteria.md"]
+    assert [p.name for p in (tmp_path / "docs" / "compass").iterdir()] == [docs.name]
 
     check = run("check", "--issue", "scratch-issue")
     assert check.returncode != 0 and "Traceback" not in check.stdout + check.stderr

@@ -77,12 +77,17 @@ def test_ip_3_a_pick_the_floors_hold_at_the_approach_is_accepted(tmp_path):
     pick loosens nothing at its point. Over the grid it reached the spike points
     and was refused."""
     root, task_dir = _issue(tmp_path, {"risk": "critical"})
-    assert fx.manifest_of(task_dir)["delivery_approach"] == "full"
+    # On the four-stage path (ADR-092) the approach is `delivery`, and what
+    # critical risk owes is in the evidence list: the pick must keep all of it.
+    owed = fx.manifest_of(task_dir)["evidence_required"]
+    assert fx.manifest_of(task_dir)["delivery_approach"] == "delivery"
+    assert {"architecture", "scenario-approval"} <= set(owed), owed
     code, doc = _preview(root, "--route", "quick-fix")
     assert code == 0 and doc["verdict"] == "accepted", doc["reasons"]
     code, out, err = fx.reassess(root)
     assert code == 0, out + err
-    assert fx.manifest_of(task_dir)["delivery_approach"] == "full"
+    assert fx.manifest_of(task_dir)["delivery_approach"] == "delivery"
+    assert fx.manifest_of(task_dir)["evidence_required"] == owed
 
 
 def test_ip_3_a_pick_with_a_tighter_ceiling_is_accepted_and_committed(tmp_path):
@@ -92,7 +97,10 @@ def test_ip_3_a_pick_with_a_tighter_ceiling_is_accepted_and_committed(tmp_path):
     code, out, err = fx.reassess(root)
     assert code == 0, out + err
     body = fx.manifest_of(task_dir)
-    assert body["generation"] == 2 and body["subtask_ceiling"] == 1
+    # ADR-092 decision D11: a path manifest writes no `subtask_ceiling`. The
+    # issue's layer, committed at generation 2, keeps the ceiling it picked.
+    assert body["generation"] == 2 and "subtask_ceiling" not in body
+    assert body["config"]["ceilings"] == {"subtask_ceiling": 1}, body["config"]
 
 
 def test_ip_3_quick_fix_to_regular_is_incomparable_on_the_subtask_ceiling(tmp_path):

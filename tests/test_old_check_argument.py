@@ -21,6 +21,21 @@ OLD_CHECK = "dor-behav" + "iour-is-gwt"
 NEW_CHECK = "dor-behavior-is-gwt"
 
 
+def _project(tmp_path):
+    """The approval project, with its issue's manifest as 8.x stored it. The old
+    id names a Definition of Ready check, and only an issue assessed before the
+    four-stage path owes one (ADR-092 decision D6, no Definition of Ready)."""
+    from test_next_stage import assessed_before_the_path
+    root = ap.project(tmp_path)
+    body = ap.manifest_of(root)
+    body.pop("evidence_required", None)
+    old = assessed_before_the_path(body["assessment"])
+    old.pop("evidence")
+    body.update(old)
+    ap.save_manifest(root, body)
+    return root
+
+
 def _approve(root, check):
     return ap.run(root, "evidence", "approve", "--check", check, "--issue", ap.SLUG,
                   "--approver", ap.OWNER, "--role", "owner", "--scope", "the plan",
@@ -28,13 +43,13 @@ def _approve(root, check):
 
 
 def test_the_new_check_id_is_approved(tmp_path):
-    root = ap.project(tmp_path)
+    root = _project(tmp_path)
     code, out, err = _approve(root, NEW_CHECK)
     assert code == 0, out + err
 
 
 def test_the_old_check_id_is_approved_as_the_new_one(tmp_path):
-    root = ap.project(tmp_path)
+    root = _project(tmp_path)
     code, out, err = _approve(root, OLD_CHECK)
     assert code == 0, out + err
     assert f"check {OLD_CHECK} is now {NEW_CHECK}" in err, err
@@ -43,14 +58,14 @@ def test_the_old_check_id_is_approved_as_the_new_one(tmp_path):
 
 
 def test_the_old_check_id_is_asked_for_as_the_new_one(tmp_path):
-    root = ap.project(tmp_path)
+    root = _project(tmp_path)
     code, out, err = ap.run(root, "evidence", "request", "--check", OLD_CHECK,
                             "--issue", ap.SLUG, "--scope", "the plan")
     assert "no such check" not in out + err, out + err
 
 
 def test_the_old_check_id_is_reviewed_as_the_new_one(tmp_path):
-    root = ap.project(tmp_path)
+    root = _project(tmp_path)
     code, out, err = ap.run(root, "evidence", "review", OLD_CHECK, "--issue", ap.SLUG,
                             "--verdict", "pass", "--reason", "Read it.", "--reviewer", "agent")
     assert "no such check" not in out + err, out + err

@@ -351,6 +351,27 @@ def config_state(home):
             for p in sorted(Path(home).rglob("*")) if p.is_file()}
 
 
+def assessed_before_the_path(folder, autonomy="balanced"):
+    """Rewrite the issue's manifest in `folder` with the keys 8.x stored for its
+    assessment on `autonomy`. A new assessment writes the four-stage path
+    (ADR-092), which has no `stages:` map; the usage block of an issue assessed
+    before it keeps one window for each stage that ran, which is what these
+    tests measure."""
+    from compass_pkg import routing
+    from compat_baseline import policy_8_0_4
+    from test_next_stage import assessed_before_the_path as keys_8_x
+    body = yaml.safe_load((Path(folder) / "manifest.yml").read_text())
+    body.pop("evidence_required", None)
+    old = keys_8_x(body["assessment"])
+    old.pop("evidence")
+    # The 8.x evaluator listed the checkpoints of the issue's own autonomy.
+    readings = {"urgency": "none", "labels": [], **old["evaluated_assessment"]}
+    readings.pop("role", None)
+    old["checkpoints"] = routing.evaluate_route(readings, policy_8_0_4(), autonomy)["checkpoints"]
+    body.update(old)
+    (Path(folder) / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False))
+
+
 def quick_fix_usage(tmp_path, cli_dir=CLI_DIR, hook_sessions=False):
     """Start and finish a quick fix in the first fixture session under a fixed clock, and
     return its `usage` block and the copy its landing commit holds."""
@@ -382,6 +403,7 @@ def quick_fix_usage(tmp_path, cli_dir=CLI_DIR, hook_sessions=False):
               cli_dir=cli_dir, CLAUDE_CODE_SESSION_ID=S1)
     assert done.returncode == 0, done
     folder = root / ".compass" / "work" / slug
+    assessed_before_the_path(folder)
     # A quick fix owes a release line before it lands (ADR-065). It is put in the
     # manifest rather than given as a flag, so a CLI from before the flag runs this too.
     body = yaml.safe_load((folder / "manifest.yml").read_text())
@@ -427,6 +449,7 @@ def regular_project(tmp_path, sessions=(S1, S2), compass_yml=None, transcripts="
     """A regular issue ready to land at 12:00, whose define ends at 09:30, plan
     at 10:00 and implement at 11:00 (its green), with the fixture transcripts."""
     root = co.project(tmp_path, compass_yml=compass_yml or AUTONOMOUS)
+    assessed_before_the_path(root / ".compass" / "work" / co.SLUG)
     co.register(root, "acceptance-criteria", "approved")
     for kind in co.REGULAR_DOCUMENTS:
         co.register(root, kind, "approved")

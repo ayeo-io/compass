@@ -89,7 +89,10 @@ def test_route_evaluate_writes_a_v2_spine(tmp_path):
     out = yaml.safe_load((root / ".compass" / "work" / "t" / "manifest.yml").read_text())
     assert str(out.get("schema_version")) == "3.0"
     assert out.get("delivery_approach"), "no delivery_approach recorded"
-    assert out.get("stages"), "no stages recorded"
+    # ADR-092 decision D1: the path has no stage modes, so a new assessment
+    # records the evidence it owes in place of a `stages:` map.
+    assert out.get("evidence_required"), "no evidence_required recorded"
+    assert "stages" not in out, "a path manifest recorded a stages map"
     assert "policy_rules_fired" in out
     leaked = (V1_TOP_KEYS & set(out)) | (V1_ASSESSMENT_KEYS & set(out.get("assessment", {})))
     assert not leaked, f"v1 keys leaked into a written manifest: {sorted(leaked)}"

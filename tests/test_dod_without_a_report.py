@@ -18,9 +18,17 @@ ITEMS = ["dod-every-scenario-passes", "dod-suite-green", "dod-coverage-floor",
          "dod-follow-ups-settled"]
 
 
-def _issue(tmp_path, created, *, gates_pass):
-    root = base.project(tmp_path)
+def _issue(tmp_path, created, *, gates_pass, before_the_path=False, assessment=None):
+    """The issue, created on `created`. With `before_the_path`, its manifest holds
+    the keys 8.x stored for its assessment in place of the path keys (ADR-092)."""
+    root = base.project(tmp_path, assessment=assessment)
     body = manifest(root)
+    if before_the_path:
+        from test_next_stage import assessed_before_the_path
+        body.pop("evidence_required", None)
+        old = assessed_before_the_path(body["assessment"])
+        old.pop("evidence")
+        body.update(old)
     body["created"] = created
     (root / "evidence.txt").write_text("x\n")
     body["evidence"] = [{"id": "EV-1", "type": "test-run", "path": "../../../evidence.txt"}]
@@ -51,7 +59,7 @@ def test_a_new_issue_with_a_gate_still_to_pass_has_nothing_due(tmp_path):
 
 
 def test_an_older_issue_with_no_report_keeps_its_verdict(tmp_path):
-    row = _row(_issue(tmp_path, "2026-10-10", gates_pass=True))
+    row = _row(_issue(tmp_path, "2026-10-10", gates_pass=True, before_the_path=True))
     assert row["status"] == "nothing-to-check", row
     assert "verification report" in row["detail"], row
 
@@ -60,10 +68,20 @@ def test_a_new_issue_whose_verify_stage_is_not_thorough_has_no_definition_of_don
     # The approaches that wrote a verification report before 9.0.0 hold the Definition of
     # Done: those whose verify stage is thorough (regular, hotfix, full). A quick fix's is
     # lightweight.
-    root = _issue(tmp_path, "2026-11-05", gates_pass=True)
+    root = _issue(tmp_path, "2026-11-05", gates_pass=True, before_the_path=True)
     body = manifest(root)
     body["stages"]["verify"] = "lightweight"
     write_manifest(root, body)
     row = _row(root)
     assert row["status"] == "nothing-to-check", row
     assert "verify" in row["detail"], row
+
+
+def test_a_path_issue_that_owes_no_definition_of_done_has_none(tmp_path):
+    # On the four-stage path the evidence list says what is owed (ADR-092): a
+    # small, contained change owes no `definition-of-done`.
+    root = _issue(tmp_path, "2026-11-05", gates_pass=True, assessment={"size": "small"})
+    assert "definition-of-done" not in manifest(root)["evidence_required"]
+    row = _row(root)
+    assert row["status"] == "nothing-to-check", row
+    assert "does not list definition-of-done" in row["detail"], row

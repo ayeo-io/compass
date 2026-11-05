@@ -31,6 +31,19 @@ def _at_refine(tmp_path, **suite):
     return project, support.stage_one_issue(project, **suite)
 
 
+def _assessed_before_the_path(issue):
+    """Rewrite the issue's manifest with the keys 8.x stored for its assessment. A
+    stage 1 red at refine exists only on such an issue: on the four-stage path
+    (ADR-092) the outer-loop red is the first record of build."""
+    from tests.test_next_stage import assessed_before_the_path
+    body = issue.manifest()
+    body.pop("evidence_required", None)
+    old = assessed_before_the_path(body["assessment"])
+    old.pop("evidence")
+    body.update(old)
+    issue.write_manifest(body)
+
+
 def _red(issue, *flags):
     """`compass tdd-red --loop outer` on the suite, with `flags` before the command."""
     return issue.run("tdd-red", "--issue", issue.slug, "--loop", "outer", *flags,
@@ -144,6 +157,7 @@ def _statuses(issue):
 def test_trc_c6(tmp_path):
     """The stage 1 red at refine moves no document and unlocks no code."""
     project, issue = _at_refine(tmp_path)
+    _assessed_before_the_path(issue)
     _draft_documents(project, issue)
     (project.root / ".compass" / "current-task").write_text(issue.slug + "\n",
                                                             encoding="utf-8")
@@ -171,6 +185,7 @@ def test_trc_c6_the_issue_still_reads_as_not_started(tmp_path):
             next_cmd._typed(normalize_spine(issue.manifest())), str(issue.dir))
 
     _, issue = _at_refine(tmp_path)
+    _assessed_before_the_path(issue)
     issue.approach_record()
     before, was = issue.must("next", "--issue", issue.slug), stage()
     code, out, err = _red(issue, "--scenario", "TRC-1")
@@ -266,7 +281,9 @@ def test_trc_c5(tmp_path):
     assert record["log_excerpt"] == "", record
     assert record["red_kind"] == "import", record
     assert record["missing_modules"] == [TS_DRIVER], record
-    assert record["before_implement"] is True, record
+    # On the four-stage path the outer-loop red is the first record of build,
+    # not a red before implement (ADR-092).
+    assert "before_implement" not in record, record
 
 
 def test_trc_c5_one_run_binds_each_scenario_to_its_typescript_test(tmp_path):

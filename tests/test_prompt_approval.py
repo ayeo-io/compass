@@ -135,15 +135,17 @@ def test_a2_subject_forms_match_terminal(tmp_path):
                       "check", CHECK, scope="the review")
 
     # A checkpoint, and the decisions taken for the person.
-    from test_checkpoint_outcomes import _define_done, edit
+    # A path issue's checkpoints are stages of the four-stage path (ADR-092);
+    # critical risk lists `specify` on balanced autonomy.
+    from test_checkpoint_outcomes import CRITICAL, edit, specify_done
     from test_checkpoint_outcomes import project as checkpoint_project
-    croot = checkpoint_project(tmp_path / "c")
-    _define_done(croot)
+    croot = checkpoint_project(tmp_path / "c", assessment=CRITICAL)
+    specify_done(croot)
     edit(croot, decisions_taken=[{"id": "DEC-1", "question": "q", "resolution": "r",
-                                  "by": "spec-author", "stage": "define", "status": "open"}])
+                                  "by": "spec-author", "stage": "specify", "status": "open"}])
     ctwin = tmp_path / "d" / "repo"
     shutil.copytree(croot, ctwin)
-    _same_as_terminal(croot, ctwin, ["--checkpoint", "define"], plugin, "checkpoint", "define")
+    _same_as_terminal(croot, ctwin, ["--checkpoint", "specify"], plugin, "checkpoint", "specify")
     _same_as_terminal(croot, ctwin, ["--decisions"], plugin, "decisions", None)
 
 

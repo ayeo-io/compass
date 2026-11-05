@@ -82,6 +82,21 @@ def _config_project(tmp_path, capability=True, manifest=None, **manifest_changes
     return root, task_dir
 
 
+def _assessed_before_the_path(task_dir):
+    """Rewrite the issue's manifest with the keys 8.x stored for its assessment, in
+    place of the path keys `approach evaluate --write` now writes (ADR-092). Only
+    such an issue owes a Definition of Ready (decision D6) and is judged by its
+    verification report."""
+    from test_next_stage import assessed_before_the_path
+    body = _manifest(task_dir)
+    body.pop("evidence_required", None)
+    old = assessed_before_the_path(body["assessment"])
+    old.pop("evidence")
+    body.update(old)
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
+                                           encoding="utf-8")
+
+
 def _view(root, monkeypatch, mutate=None):
     """The live view of the project at `root`, with its resolved configuration
     changed by `mutate` (a function of the dict)."""
@@ -157,8 +172,10 @@ def test_ee_1_check_runs_a_project_deterministic_check_with_the_capability_off(t
     assert _evaluate_write(root)[0] == 0
     _write_manifest(task_dir, current_phase="plan")
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")
+    # A path issue reads the plan entry list at specify, the path stage that
+    # shows plan (ADR-092).
     rows = {r["name"]: r for r in json.loads(out)["checks"]
-            if r["guardrail"] == "stage:plan:entry"}
+            if r["guardrail"] == "stage:specify:entry"}
     assert list(rows) == ["list-scenarios-have-tests"]
     assert rows["list-scenarios-have-tests"]["status"] == "fail" and code != 0
 
@@ -579,7 +596,8 @@ def test_ee_7_an_advisory_list_failure_is_shown_counted_and_recorded_as_advisory
     _write_manifest(task_dir, current_phase="plan")
     data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
     row = [r for r in data["checks"] if r["name"] == "list-scenarios-have-tests"][0]
-    assert row["status"] == "advisory" and row["guardrail"] == "stage:plan:entry"
+    # The plan entry list is read at specify on a path issue (ADR-092).
+    assert row["status"] == "advisory" and row["guardrail"] == "stage:specify:entry"
     assert data["advisory"] >= 1
     results = yaml.safe_load((task_dir / "generations" / "1" / "results.yml")
                              .read_text(encoding="utf-8"))
@@ -765,9 +783,12 @@ def test_ee_7_an_evidence_check_a_project_adds_fails_with_the_capability_off(tmp
 # --- EE-8: compass check reports the rows and counts them ----------------------------------------
 
 def _committed(tmp_path, **changes):
+    """An issue at plan, committed at generation 1 and assessed before the path:
+    the tests that use it read the Definition of Ready, the plan entry list."""
     root, task_dir = _config_project(tmp_path, **changes)
     code, out, err = _evaluate_write(root)
     assert code == 0, out + err
+    _assessed_before_the_path(task_dir)
     _write_manifest(task_dir, current_phase="plan")
     return root, task_dir
 
@@ -796,6 +817,8 @@ def test_ee_8_a_failed_list_check_adds_one_to_the_failed_count(tmp_path):
     (tmp_path / "off").mkdir()
     capability_off, off_dir = _config_project(tmp_path / "off", capability=False)
     assert _evaluate_write(capability_off)[0] == 0
+    _assessed_before_the_path(off_dir)
+    _write_manifest(off_dir, current_phase="plan")
     off = json.loads(_run(capability_off, "check", "--issue", SLUG, "--json")[1])
     assert ticked["ran"] == off["ran"] + 7
 
@@ -877,6 +900,22 @@ def _project_check_config():
 def test_ee_10_check_runs_a_deterministic_check_a_project_adds(tmp_path):
     root, task_dir = _project(tmp_path, compass_yml=_project_check_config())
     assert _evaluate_write(root)[0] == 0
+    _write_manifest(task_dir, current_phase="plan")
+    _write_review(task_dir)
+    code, out, err = _run(root, "check", "--issue", SLUG, "--json")
+    checks = json.loads(out)["checks"]
+    # A path issue reads the plan entry list at specify and owes no
+    # Definition of Ready (ADR-092 decision D6), so no `dor-*` check is listed.
+    rows = {r["name"]: r for r in checks if r["guardrail"] == "stage:specify:entry"}
+    assert rows["list-scenarios-have-tests"]["status"] == "fail"
+    assert not [r for r in checks if r["guardrail"].startswith("stage:")
+                and r["name"].startswith("dor-")], checks
+
+
+def test_ee_10_an_issue_assessed_before_the_path_runs_it_beside_the_ready_list(tmp_path):
+    root, task_dir = _project(tmp_path, compass_yml=_project_check_config())
+    assert _evaluate_write(root)[0] == 0
+    _assessed_before_the_path(task_dir)
     _write_manifest(task_dir, current_phase="plan")
     _write_review(task_dir)
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")

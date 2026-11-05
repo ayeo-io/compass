@@ -112,6 +112,10 @@ def views_project(tmp_path, cli_dir=CLI_DIR, compass_yml=co.BALANCED):
            for word in ("--justify", f"{name}=Fixture: the {name} was judged.")]
     done = co.run(root, "approach", "evaluate", "--issue", co.SLUG, "--write", *why, cli=cli)
     assert done.returncode == 0, done
+    # The captures are of an issue in flight before the four-stage path
+    # (ADR-092), so its manifest holds the keys 8.x stored.
+    import test_issue_usage
+    test_issue_usage.assessed_before_the_path(task_dir, compass_yml.get("autonomy", "balanced"))
     (task_dir / "delivery-approach.md").write_text("# Delivery approach\n")
     (root / co.DOCS).mkdir(parents=True, exist_ok=True)
     return root

@@ -35,9 +35,20 @@ SPEC = {"risk": "critical", "familiarity": "brownfield-mapped", "size": "large",
         "goal": "delivery", "role": "engineer", "labels": []}
 
 
-def _issue(tmp_path, layer=None, **project):
+def _issue(tmp_path, layer=None, gates_passed=False, **project):
+    """The issue, with a verification report. With `gates_passed`, every gate has
+    passed on typed evidence: a path issue's Definition of Done is the build
+    exit list, judged once every gate has passed (ADR-092), report or not."""
     root = sup.project(tmp_path, compass_yml=layer or LAYER, **project)
     write_doc(root, "verification-report", "# VR\n\n" + block("dod"))
+    if gates_passed:
+        body = manifest(root)
+        _file(root, "gate.txt", "passed\n")
+        body["evidence"] = (body.get("evidence") or []) + [
+            {"id": "EV-GATE", "type": "command-output", "path": "evidence/gate.txt"}]
+        for gate in body["gates"]:
+            gate.update(status="pass", evidence=["EV-GATE"])
+        sup.base.write_manifest(root, body)
     return root
 
 
@@ -109,7 +120,7 @@ def _row(report, name, guardrail=None):
 
 def test_dcj_24_records_meet_every_item(tmp_path):
     # Before 9.0.0 a `dod` block also showed each item's record (ADR-091 removed the render).
-    root = _issue(tmp_path)
+    root = _issue(tmp_path, gates_passed=True)
     _record_all(root)
     _, report = _report(root)
     assert _row(report, "dod-evidence-typed")["status"] == "pass", _row(report, "dod-evidence-typed")
@@ -118,7 +129,7 @@ def test_dcj_24_records_meet_every_item(tmp_path):
 # --- DCJ-25 -----------------------------------------------------------------
 
 def test_dcj_25_item_without_record_open_and_fails(tmp_path):
-    root = _issue(tmp_path)
+    root = _issue(tmp_path, gates_passed=True)
     _record_all(root, skip=("dod-coverage-floor",))
     _, report = _report(root)
     row = _row(report, "dod-evidence-typed")
@@ -140,13 +151,15 @@ def _ticked_page(root):
 
 
 def test_dcj_26_page_ticks_count_for_nothing(tmp_path):
-    root = _issue(tmp_path, layer=ON)
+    root = _issue(tmp_path, layer=ON, gates_passed=True)
     _ticked_page(root)
     sup.base.edit(root, current_phase="ship")
     _, report = _report(root)
     row = _row(report, "dod-evidence-typed")
     assert row["status"] == "fail" and all(i in row["detail"] for i in ITEMS), row
-    listed = [c for c in report["checks"] if c["guardrail"] == "stage:verify:exit"]
+    # A path issue's rows carry the path stage: the Definition of Done is the
+    # build exit list (ADR-092).
+    listed = [c for c in report["checks"] if c["guardrail"] == "stage:build:exit"]
     assert [c["name"] for c in listed] == ITEMS
     assert all(c["status"] == "fail" and "not recorded" in c["detail"] for c in listed), listed
     # Neither reads the checklist section reader, and only migrate reads page tags.
@@ -222,7 +235,7 @@ def test_dcj_28_person_ticks_item_from_declared_approvers(tmp_path):
 # --- DCJ-29 -----------------------------------------------------------------
 
 def test_dcj_29_resolved_follow_up_counts_as_met(tmp_path):
-    root = _issue(tmp_path)
+    root = _issue(tmp_path, gates_passed=True)
     _record_all(root)
     for fu in ("FU-3", "FU-4"):
         _ok(run(root, "follow-up", "resolve", "--issue", SLUG, fu))
@@ -250,7 +263,7 @@ def test_dcj_30_nothing_to_check_before_report_written(tmp_path):
 # --- DCJ-31 -----------------------------------------------------------------
 
 def test_dcj_31_cross_issue_follow_up_still_blocks(tmp_path):
-    root = _issue(tmp_path)
+    root = _issue(tmp_path, gates_passed=True)
     body = manifest(root)
     body["evidence"] = [{"id": f"EV-M{n}", "type": "manual-review", "path": "evidence/x.txt",
                          "meets": [item]} for n, item in enumerate(ITEMS)]
@@ -272,7 +285,15 @@ def test_dcj_31_cross_issue_follow_up_still_blocks(tmp_path):
 # --- DCJ-32 -----------------------------------------------------------------
 
 def test_dcj_32_the_stage_lists_read_records(tmp_path):
+    # Only an issue assessed before the four-stage path owes a Definition of
+    # Ready (ADR-092 decision D6), so its manifest is the one 8.x wrote.
+    from test_next_stage import assessed_before_the_path
     root = sup.project(tmp_path, compass_yml=ON, assessment=SPEC)
+    body = manifest(root)
+    body.pop("evidence_required")
+    old = assessed_before_the_path(body["assessment"])
+    old.pop("evidence")
+    sup.base.write_manifest(root, dict(body, **old))
     assert manifest(root)["delivery_approach"] == "full"
     write_doc(root, "requirements-review", "# RR\n\n" + block("dor"))
     sup.base.edit(root, current_phase="plan")
@@ -303,7 +324,8 @@ def test_dcj_33_the_check_lists_the_configured_items(tmp_path):
                             "approved_by": "jed72", "approved_on": "2026-10-09"}}}}
     for capability in (True, False):
         folder = tmp_path / ("on" if capability else "off")
-        root = _issue(folder, layer={**layer, "capabilities": {"entry-exit-evaluation": capability}})
+        root = _issue(folder, layer={**layer, "capabilities": {"entry-exit-evaluation": capability}},
+                      gates_passed=True)
         _, report = _report(root)
         detail = _row(report, "dod-evidence-typed")["detail"]
         listed = [i for i in ITEMS + ["dod-perf-budget"] if f"{i} is open" in detail]

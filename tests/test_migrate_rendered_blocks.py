@@ -56,11 +56,25 @@ def _write_manifest(root, body, slug=SLUG):
     manifest_file(root, slug).write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
 
 
+def _assessed_before_the_path(body):
+    """`body` with the keys 8.x stored for its assessment in place of the path keys
+    (ADR-092). An archived issue holds these, and only such an issue is judged by
+    its verification report."""
+    from test_next_stage import assessed_before_the_path
+    body.pop("evidence_required", None)
+    old = assessed_before_the_path(body["assessment"])
+    old.pop("evidence")
+    return dict(body, **old)
+
+
 def _done_issue(tmp_path, marks, *, assessment=None, heading="### Definition of Done",
-                evidence=True, status="done", approve=True):
-    """The `feature` issue, closed as completed, with a report holding `marks`."""
+                evidence=True, status="done", approve=True, before_the_path=False):
+    """The `feature` issue, closed as completed, with a report holding `marks`. With
+    `before_the_path`, its manifest is the one 8.x wrote."""
     root = sup.project(tmp_path, assessment=assessment)
     body = manifest(root)
+    if before_the_path:
+        body = _assessed_before_the_path(body)
     body["status"] = status
     if status == "done":
         body["close_reason"] = "completed"
@@ -436,18 +450,20 @@ def test_dcj_82_closed_issue_with_no_definition_of_done_section_has_nothing_to_c
     """The shape of four archived issues: a verification report with no Definition of Done
     heading and no dod block. A closed issue reads nothing to check; an issue in flight is still
     judged, so deleting the section does not clear the check."""
-    closed = _done_issue(tmp_path / "closed", [], heading=None, evidence=False)
+    # Archived issues were assessed before the four-stage path (ADR-092); a path
+    # issue writes no verification report, so its records alone are judged.
+    old = dict(evidence=False, before_the_path=True)
+    closed = _done_issue(tmp_path / "closed", [], heading=None, **old)
     row = _dod_row(closed)
     assert row["status"] == "nothing-to-check", row
     assert "no Definition of Done" in row["detail"], row
-    flight = _done_issue(tmp_path / "flight", [], heading=None, evidence=False,
-                         status="in-progress")
+    flight = _done_issue(tmp_path / "flight", [], heading=None, status="in-progress", **old)
     assert _dod_row(flight)["status"] == "fail", _dod_row(flight)
     # A closed issue that does have the heading is judged: its items are open.
-    listed = _done_issue(tmp_path / "listed", [], evidence=False)
+    listed = _done_issue(tmp_path / "listed", [], **old)
     assert _dod_row(listed)["status"] == "fail", _dod_row(listed)
     # A closed issue whose report holds a dod block but no heading is judged too.
-    block = _done_issue(tmp_path / "block", [], heading=None, evidence=False)
+    block = _done_issue(tmp_path / "block", [], heading=None, **old)
     path = doc_path(block, "verification-report")
     path.write_text(path.read_text("utf-8") + PAIR, encoding="utf-8")
     assert _dod_row(block)["status"] == "fail", _dod_row(block)

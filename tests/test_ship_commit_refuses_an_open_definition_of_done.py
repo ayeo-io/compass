@@ -21,13 +21,21 @@ import artifact_status_support as sup  # noqa: E402
 NOTE = "Ship the feature."
 
 
-def _ready(tmp_path, verify="thorough"):
-    """A regular issue created after 2026-11-04 whose live gates have all passed,
-    with no Definition of Done item recorded, and one staged change."""
-    root = sup.project(tmp_path)
+def _ready(tmp_path, verify=None, assessment=None):
+    """An issue created after 2026-11-04 whose live gates have all passed, with no
+    Definition of Done item recorded, and one staged change. It is on the
+    four-stage path (ADR-092), unless `verify` names its verify stage: then its
+    manifest holds the keys 8.x stored, with that verify stage."""
+    root = sup.project(tmp_path, assessment=assessment)
     body = sup.manifest(root)
     body["created"] = "2026-11-05"
-    body["stages"] = dict(body.get("stages") or {}, verify=verify)
+    if verify is not None:
+        from test_next_stage import assessed_before_the_path
+        body.pop("evidence_required", None)
+        old = assessed_before_the_path(body["assessment"])
+        old.pop("evidence")
+        body.update(old)
+        body["stages"] = dict(body["stages"], verify=verify)
     for gate in body.get("gates") or []:
         gate["status"] = "pass"
     body["checkpoints"] = []
@@ -61,7 +69,19 @@ def test_an_open_definition_of_done_stops_a_landing_at_head(tmp_path):
 
 
 def test_an_approach_that_owes_no_definition_of_done_lands(tmp_path):
+    # An issue assessed before the path owes no Definition of Done when its
+    # verify stage is not thorough.
     root = _ready(tmp_path, verify="lightweight")
+    code, out, err = sup.run(root, "ship-commit", "--issue", sup.SLUG, "-m", "land it",
+                             "--release-note", NOTE)
+    assert code == 0, out + err
+    assert sup.git(root, "log", "-1", "--format=%s") == "land it"
+
+
+def test_a_path_issue_that_owes_no_definition_of_done_lands(tmp_path):
+    # On the path, a small, contained change owes no `definition-of-done`.
+    root = _ready(tmp_path, assessment={"size": "small"})
+    assert "definition-of-done" not in sup.manifest(root)["evidence_required"]
     code, out, err = sup.run(root, "ship-commit", "--issue", sup.SLUG, "-m", "land it",
                              "--release-note", NOTE)
     assert code == 0, out + err

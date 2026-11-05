@@ -53,7 +53,9 @@ def test_an_inner_red_after_the_stage_1_red_keeps_both_records(tmp_path):
                "--", *support.PYTEST)
     _run(issue, "tdd-red", "inner", FAIL)
     assert _names(issue) == ["red-TRC-1.json", "red-TRC-1.outer.json"]
-    assert _record(issue, "red-TRC-1.outer.json")["before_implement"] is True
+    # On the four-stage path the outer-loop red is the first record of build,
+    # not a red before implement (ADR-092).
+    assert "before_implement" not in _record(issue, "red-TRC-1.outer.json")
     assert _record(issue, "red-TRC-1.json")["loop"] == "inner"
     assert (issue.dir / ".red").exists()
     row = _row(issue)

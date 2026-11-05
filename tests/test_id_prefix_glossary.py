@@ -300,7 +300,9 @@ def test_a_gate_adder_reports_its_kind_as_requirement(tmp_path):
     # Asserts the id and the kind share a line, in either order.
     gate_adder = [ln for ln in r.stdout.splitlines() if "RP-REQUIRE-003" in ln]
     assert gate_adder, f"RP-REQUIRE-003 did not fire:\n{r.stdout}"
-    assert all("requirement" in ln for ln in gate_adder), (
+    # On the four-stage path (ADR-092) the rule adds evidence the issue owes,
+    # the architecture review, so its kind is `evidence`, never `floor`.
+    assert all("evidence" in ln and "floor" not in ln for ln in gate_adder), (
         f"a rule that only attaches a gate still reports itself as a floor:\n"
         + "\n".join(gate_adder)
     )

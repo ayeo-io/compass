@@ -368,12 +368,12 @@ def architect_registration_runs(text, tmp_path):
     return _cli(tmp_path, *argv[1:], "--issue", slug).returncode
 
 
-def test_trc_s9_the_architect_registration_command_runs(tmp_path):
+def test_trc_s9_the_architect_registration_command_runs(tmp_path, path_writer):
     # The architect agent's file held the command until 9.0.0 (ADR-090).
     assert architect_registration_runs(_read("commands/consult.md"), tmp_path) == 0
 
 
-def test_trc_s9_the_architect_run_reports_a_path_the_cli_cannot_resolve(tmp_path):
+def test_trc_s9_the_architect_run_reports_a_path_the_cli_cannot_resolve(tmp_path, path_writer):
     wrong = _read("commands/consult.md").replace(
         "--path architecture-notes.md",
         "--path docs/compass/<created>-<slug>/architecture-notes.md")
@@ -546,6 +546,8 @@ def _cli(tmp_path, *argv):
 
 
 def _scratch_issue(tmp_path, slug="scratch-issue"):
+    """A quick fix started in `tmp_path`. Its callers take the `path_writer` fixture,
+    so it is started on the four-stage path (ADR-092)."""
     import subprocess
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     assert _cli(tmp_path, "init").returncode == 0
@@ -554,6 +556,8 @@ def _scratch_issue(tmp_path, slug="scratch-issue"):
                  "--intent", "scratch", "--scenario", "Given a When b Then c",
                  "--test", "tests/test_x.py::test_a")
     assert start.returncode == 0, start.stdout + start.stderr
+    manifest = tmp_path / ".compass" / "work" / slug / "manifest.yml"
+    assert "evidence_required:" in manifest.read_text(encoding="utf-8")
     return slug
 
 
@@ -593,7 +597,7 @@ def test_trc_s8_the_scan_reports_the_old_text():
     assert not s8_findings("ci/README.md", "Change to `adoption: enforced` when ready")
 
 
-def test_trc_s8_configuration_upgrade_migrate_and_ci_pages_match_the_code(tmp_path):
+def test_trc_s8_configuration_upgrade_migrate_and_ci_pages_match_the_code(tmp_path, path_writer):
     report = {rel: s8_findings(rel, _read(rel)) for rel in sorted({r for r, *_ in S8_OLD_TEXT})}
     report = {rel: found for rel, found in report.items() if found}
     assert not report, report

@@ -202,13 +202,16 @@ def test_trc_c3_json_is_machine_only():
     assert "eight gates" in doc["items"]
 
 
-def test_trc_c3_existing_json_verb_keeps_its_keys(tmp_path):
+def test_trc_c3_existing_json_verb_keeps_its_keys(tmp_path, path_writer):
     """`approach evaluate --json` already ships - the compatibility half of
     `TRC-C3`.
 
     ADR-006 makes backward compatibility non-negotiable within a major version,
     so this verb's existing keys are public surface. New keys may appear; none
-    of these may be renamed or removed.
+    of these may be renamed or removed. The one exception is the 9.0.0 major:
+    on the four-stage path (ADR-092) an issue's evaluation has no stage modes
+    and no `subtask_ceiling`, so those two keys go, and the evidence owed is
+    added in their place.
     """
     import yaml
     proj = tmp_path / "p"
@@ -239,11 +242,15 @@ def test_trc_c3_existing_json_verb_keeps_its_keys(tmp_path):
     # never existed - a compatibility assertion against invented names checks
     # nothing and would have failed for the wrong reason.
     for key in ("candidate_route", "candidate_via", "delivery_approach",
-                "gates", "stages", "policy_rules_fired", "subtask_ceiling"):
+                "gates", "policy_rules_fired", "evidence_required"):
         assert key in doc, (
             "`approach evaluate --json` lost the key %r, which shipped before "
             "this change and is public surface (ADR-006). Keys present: %s"
             % (key, sorted(doc)))
+    # ADR-092 decisions: no stage modes and no `subtask_ceiling`. These two keys,
+    # and only these, go at the 9.0.0 major.
+    for key in ("stages", "subtask_ceiling"):
+        assert key not in doc, (key, sorted(doc))
 
 
 def test_trc_c5_verbose_adds_detail_without_relaxing_the_default():

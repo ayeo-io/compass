@@ -16,8 +16,11 @@ happens on the first save, and the test checks what that leaves behind:
 
 The second case is a 5.6.0 project whose `governance/` files and
 `.compass/config.yml` are copies from the release, so they hold the old
-words. This branch's CLI reads and evaluates them to the same delivery
-approach under its new name.
+words. This branch reads and evaluates them to the same delivery approach
+under its new name. On the four-stage path (ADR-092) the CLI shows an
+issue's evidence owed, not its approach, so the approach is read from the
+8.x evaluator (`routing.evaluate_route`) over the project's configuration,
+and the CLI's path view is checked beside it.
 
 Scenario id: UP-2.
 """
@@ -62,7 +65,14 @@ def release(tmp_path_factory):
 
 
 def _cli(cli, cwd, *args):
-    return subprocess.run([sys.executable, str(cli), *args], cwd=cwd, env=ENV,
+    # `ENV` is read when the module loads, so the path writer's switch, which the
+    # `path_writer` fixture sets for one test, is added here.
+    env = dict(ENV)
+    if os.environ.get("COMPASS_PATH_WRITER"):
+        env["COMPASS_PATH_WRITER"] = os.environ["COMPASS_PATH_WRITER"]
+    else:
+        env.pop("COMPASS_PATH_WRITER", None)
+    return subprocess.run([sys.executable, str(cli), *args], cwd=cwd, env=env,
                           capture_output=True, text=True)
 
 
@@ -188,17 +198,50 @@ def test_up_2_an_issue_started_in_5_6_0_finishes_under_this_branch(release, tmp_
     assert "this CLI handles '2.0'" in refused.stdout + refused.stderr
 
 
-def _evaluate_lines(r):
-    """The gate count and the key choices of `approach evaluate`, which do not
-    change with the approach's display name."""
-    lines = [ln for ln in r.stdout.splitlines() if ln.strip()]
+def _evaluate_lines(text):
+    """The gate count and the key choices of `approach evaluate`'s output `text`,
+    which do not change with the approach's display name."""
+    lines = [ln for ln in text.splitlines() if ln.strip()]
     head = re.search(r"(\d+) gate\(s\), (.*)$", lines[0])
-    assert head, r.stdout
+    assert head, text
     choices = [ln for ln in lines[1:] if ln.lstrip().startswith("- ")]
     return head.groups(), choices
 
 
-def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(release, tmp_path):
+def _legacy_view(root, slug):
+    """The default view `approach evaluate --issue` printed before the path, rebuilt
+    from the 8.x evaluator over the project's configuration and rendered by the
+    same `Emitter`. It leaves out the policy drift concern, which the path view
+    still prints."""
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import effective, routing
+    from compass_pkg.core import display_shape, load_yaml, normalize_spine
+    from compass_pkg.render import fired_rule_line
+    from compass_pkg.terminal import Emitter
+    resolution = effective.resolve_live(str(root))
+    policy = effective.EffectiveView("live", None, None, resolution.resolved,
+                                     resolution.versions).evaluator_policy()
+    task = normalize_spine(load_yaml(str(_manifest_path(root, slug))))
+    result = routing.evaluate_route(task["assessment"], policy)
+    ceiling = result["subtask_ceiling"]
+    emitter = Emitter(mode="summary")
+    emitter.hand_off(
+        outcome="%s - %d gate(s), %s" % (
+            display_shape(result["delivery_approach"]), len(result["gates"]),
+            "unbounded parallel subtasks" if ceiling is None
+            else "up to %d parallel subtask(s)" % ceiling),
+        items=[fired_rule_line(f) for f in result["policy_rules_fired"]]
+        or ["no policy rule fired - the shape is the assessment's default"],
+        concerns=["%s is blocked until %s" % (b["phase"], b["until"])
+                  for b in result["blocked_phases"]]
+        + (["documents required: " + ", ".join(result["required_artifacts"])]
+           if result["required_artifacts"] else []),
+        next_step="nothing recorded - re-run with --write to fold this into the manifest")
+    return emitter.rendered()
+
+
+def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(
+        release, tmp_path, path_writer):
     old_cli = release / "cli" / "compass"
     root = tmp_path / "proj"
     root.mkdir()
@@ -228,7 +271,12 @@ def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(relea
         assert before.returncode == 0, before.stdout + before.stderr
         assert after.returncode == 0, after.stdout + after.stderr
         assert before.stdout.startswith(old_name), before.stdout
-        assert after.stdout.startswith(new_name), after.stdout
+        legacy = _legacy_view(root, slug)
+        assert legacy.startswith(new_name), legacy
+        # ADR-092 decision: no approaches. The CLI's view of the issue is the
+        # path's: the one delivery approach and the evidence owed.
+        assert re.match(r"delivery - \d+ gate\(s\), \d+ kinds of evidence owed\n",
+                        after.stdout), after.stdout
         # 7.0.0 ships a check (`artifacts-approved`) and two evidence types
         # (`artifact-approval`, ADR-050, and `checkpoint-approval`, ADR-063)
         # that the 5.6.0 governance copy lacks, so the drift report adds one
@@ -244,13 +292,14 @@ def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(relea
         # and the design-size check (ADR-091), which lowers it by 4. Its default
         # declares no artifact rule (ADR-091 decision 3), so `RP-ART-001` and
         # `RP-ART-002` go from the drift report, which lowers it by 2 more.
-        gates, choices = _evaluate_lines(after)
         drift = "this project's policy is missing 12 rule(s) or check(s)"
-        assert len([c for c in choices if drift in c]) == 1, (slug, choices)
+        _, path_choices = _evaluate_lines(after.stdout)
+        assert len([c for c in path_choices if drift in c]) == 1, (slug, path_choices)
+        gates, choices = _evaluate_lines(legacy)
         # 9.0.0 drops the removed gate `verify.analyze` (ADR-091), which the copied
         # 5.6.0 rules `RP-REQUIRE-001` and `RP-REQUIRE-002` add; a rule that only adds it
         # no longer fires. That is one gate and one choice line for the `auth` issue.
-        (count, rest), old_choices = _evaluate_lines(before)
+        (count, rest), old_choices = _evaluate_lines(before.stdout)
         count = str(int(count) - (1 if slug == "add-farewell" else 0))
         old_choices = [c for c in old_choices
                        if "RP-REQUIRE-001" not in c and "RP-REQUIRE-002" not in c]

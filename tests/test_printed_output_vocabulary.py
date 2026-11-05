@@ -122,11 +122,17 @@ def test_trc_b2_the_scan_can_fail():
 # `TRC-B3` - the machine contract is untouched
 # ---------------------------------------------------------------------------
 
-def test_trc_b3_spine_keys_are_the_current_ones(tmp_path):
-    """The manifest is written with the current stage keys, and old ones still read.
+#: The eight stage keys of a manifest written before the four-stage path.
+LEGACY_STAGE_KEYS = {"assess", "define", "refine", "plan", "breakdown", "implement",
+                     "verify", "ship"}
 
-    A manifest written today uses the current stage keys, and one written
-    before still loads (ADR-006).
+
+def test_trc_b3_spine_keys_are_the_current_ones(tmp_path, path_writer):
+    """The manifest is written with the current keys, and old ones still read.
+
+    A manifest written today is on the four-stage path (ADR-092): it records
+    the evidence owed and no stage map, and its stages are the path's. One
+    written before still loads (ADR-006), to the eight stage keys of 8.x.
     """
     root = tmp_path / "proj"
     (root / ".compass" / "work" / "demo").mkdir(parents=True)
@@ -143,27 +149,31 @@ def test_trc_b3_spine_keys_are_the_current_ones(tmp_path):
         [sys.executable, str(CLI), "approach", "evaluate", "--verbose", "--issue", "demo",
          "--write"], cwd=str(root), capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, f"{r.stdout}{r.stderr}"
+    # What the write prints holds no retired machine name either.
+    assert not _strict_hits(r.stdout), _strict_hits(r.stdout)
 
     manifest = yaml.safe_load(
         (root / ".compass" / "work" / "demo" / "manifest.yml").read_text())
-    assert set(manifest["stages"]) == {
-        "assess", "define", "refine", "plan", "breakdown", "implement",
-        "verify", "ship"}, (
-        f"a manifest written today does not carry the current stage keys: "
-        f"{sorted(manifest['stages'])}")
+    # ADR-092 decision: no stage modes, so a manifest written today has no stage
+    # map. Its stages are the four path stages, fixed in code.
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import path_stages
+    from compass_pkg.stable_ids import PATH_STAGE_IDS
+    assert "stages" not in manifest, sorted(manifest["stages"])
+    assert manifest["evidence_required"], manifest
+    assert path_stages.stages_of(manifest) == PATH_STAGE_IDS
 
     # A manifest written before the rename still loads (ADR-006).
-    sys.path.insert(0, str(ROOT / "cli"))
     from compass_pkg.core import normalize_spine
     old_spine = {"stages": {"frame": "full", "specify": "full", "clarify": "light",
                             "plan": "full", "distribute": "solo-or-pair",
                             "build": "full", "verify": "full", "land": "full"}}
-    assert set(normalize_spine(old_spine)["stages"]) == set(manifest["stages"]), (
-        "a manifest written before the rename does not normalise to the same "
-        "stage set as one written after it")
-    # The stored approach value is already v2 - `canonical_shape` converts it
-    # on write.
-    assert manifest["delivery_approach"] == "full", (
+    assert set(normalize_spine(old_spine)["stages"]) == LEGACY_STAGE_KEYS, (
+        "a manifest written before the rename does not normalise to the 8.x "
+        "stage set")
+    # The stored approach value is the current one. ADR-092 decision: no
+    # approaches, so the critical, `auth` change that was `full` is `delivery`.
+    assert manifest["delivery_approach"] == "delivery", (
         f"the stored approach value changed; only the printed word should: "
         f"{manifest['delivery_approach']!r}")
 

@@ -9,9 +9,12 @@ holds that output, captured before the rail existed, for each route below.
 The next-never-leaves-assess issue re-captured two states per route, because
 `compass next` now derives the stage from the records: "fresh" moved from Assess to Define, and
 "gates-pass" from all phases complete to Ship. The four-stage path (ADR-092)
-re-captured every open state: each issue here is assessed on the legacy
+re-captured every open state: each golden issue is assessed on the legacy
 stages, so its stage shows as the path stage it maps to, and the line gains a
-`next:` part.
+`next:` part. A new assessment writes the path keys, so each golden issue's
+manifest is built as 8.x wrote it, from the 8.0.4 evaluator
+(`test_next_stage.assessed_before_the_path`). The tests at the end run an issue
+assessed on the path itself, with the `path_writer` fixture.
 
 Regenerate the golden file only for a deliberate change to `compass next`'s
 plain output: `python3 tests/test_progress_rail.py --regen`.
@@ -75,13 +78,9 @@ def _project(root: Path, route: str, state: str, *, approach_record=True) -> Pat
     task = root / ".compass" / "work" / slug
     task.mkdir(parents=True)
     (root / ".compass" / "current-task").write_text(slug + "\n")
-    (task / "manifest.yml").write_text(yaml.safe_dump({
-        "schema_version": "2.0", "issue": slug, "created": "2026-10-01",
-        "status": "active", "assessment": ROUTES[route]}, sort_keys=False))
-    r = subprocess.run([sys.executable, str(CLI), "approach", "evaluate", "--issue", slug,
-                        "--write"], cwd=root, capture_output=True, text=True, env=_env())
-    assert r.returncode == 0, r.stdout + r.stderr
-    m = yaml.safe_load((task / "manifest.yml").read_text())
+    from test_next_stage import assessed_before_the_path
+    m = {"schema_version": "3.0", "issue": slug, "created": "2026-10-01",
+         "assessment": ROUTES[route], **assessed_before_the_path(ROUTES[route])}
     for key, value in STATES[state].items():
         if value == "all-pass":
             for g in m["gates"]:
@@ -389,6 +388,102 @@ def test_the_status_line_fits_its_line_with_the_shared_renderer():
     line = render.fit(["compass", "a-long-issue-slug", "feature", "Implement",
                        "gates 1/6"], 30, " · ")
     assert len(line) <= 30 and line.startswith("compass · a-long"), line
+
+# --- an issue on the four-stage path (ADR-092) ------------------------------------------
+
+PATH_SLUG = "path-building"
+
+
+def _path_project(tmp: Path, slug=PATH_SLUG) -> Path:
+    """A project whose one issue is assessed on the path and has its scenario and
+    declared test, so Specify is done and Build is current."""
+    import yaml
+    root = tmp / slug
+    task = root / ".compass" / "work" / slug
+    task.mkdir(parents=True)
+    (root / ".compass" / "current-task").write_text(slug + "\n")
+    assessment = {k: v for k, v in ROUTES["feature"].items() if k != "role"}
+    (task / "manifest.yml").write_text(yaml.safe_dump({
+        "schema_version": "3.0", "issue": slug, "created": "2026-11-05",
+        "assessment": assessment,
+        "justifications": {k: f"the {k} was judged" for k in assessment}}, sort_keys=False))
+    r = subprocess.run([sys.executable, str(CLI), "approach", "evaluate", "--issue", slug,
+                        "--write"], cwd=root, capture_output=True, text=True, env=_env())
+    assert r.returncode == 0, r.stdout + r.stderr
+    m = yaml.safe_load((task / "manifest.yml").read_text())
+    assert m["evidence_required"] and "stages" not in m, m
+    m["scenarios"] = [{"id": "TRC-001", "title": "TRC-001", "intent": "INT-1",
+                       "tests": ["tests/t.py"]}]
+    (task / "manifest.yml").write_text(yaml.safe_dump(m, sort_keys=False))
+    return root
+
+
+def test_on_the_path_a_terminal_shows_the_four_stages(tmp_path, path_writer):
+    """RL-A on the path: the header names the one delivery approach, and the rail
+    has the four path stages with one current marker."""
+    root = _path_project(tmp_path)
+    code, out = _tty(root)
+    assert code == 0, out
+    plain = ANSI.sub("", out)
+    assert plain.split("\n")[0] == f"delivery · {PATH_SLUG}", plain
+    rail = " ".join(_rail_lines(out))
+    assert rail.count("●") == 1, rail
+    assert "Assess ✓" in rail and "Specify ✓" in rail and "Build ●" in rail, rail
+    assert "Ship ○" in rail, rail
+
+
+def test_on_the_path_no_stage_is_skipped(tmp_path, path_writer):
+    """RL-C on the path. ADR-092 decision: no stage modes, so no path stage is
+    skipped by policy and the rail shows no skipped marker."""
+    root = _path_project(tmp_path)
+    rail = " ".join(_rail_lines(_tty(root, COMPASS_COLOR="never")[1]))
+    for stage in ("Assess", "Specify", "Build", "Ship"):
+        assert stage in rail, (stage, rail)
+    assert "[-]" not in rail and "[>]" in rail and "[x]" in rail, rail
+
+
+def test_on_the_path_claudecode_and_a_pipe_get_the_one_line(tmp_path, path_writer):
+    """RL-B and RL-D on the path: what the model sees is the one plain line, with
+    the stage and its `next:` command, and no rail."""
+    root = _path_project(tmp_path)
+    piped = _piped(root)
+    assert piped["exit"] == 0, piped
+    lines = piped["stdout"].splitlines()
+    assert len(lines) == 1 and lines[0].startswith("Build ") and " | next: " in lines[0], lines
+    assert "●" not in piped["stdout"]
+    code, out = _tty(root, CLAUDECODE="1")
+    assert (code, _neutral(out, root)) == (piped["exit"], piped["stdout"])
+
+
+def test_on_the_path_the_line_names_the_next_command_not_a_stage_command(tmp_path,
+                                                                         path_writer):
+    """RL-G on the path. ADR-092 removes the stage commands, so the rail adds no
+    `Next: /compass:<stage>` line; the plain line's `next:` part is the command."""
+    plain = ANSI.sub("", _tty(_path_project(tmp_path))[1])
+    assert "Next: /compass:" not in plain, plain
+    assert "next: compass " in plain, plain
+
+
+def test_on_the_path_a_narrow_terminal_wraps_the_rail(tmp_path, path_writer):
+    """RL-F on the path."""
+    code, out = _tty(_path_project(tmp_path), columns=30)
+    rail = _rail_lines(out)
+    assert len(rail) > 1, rail
+    for line in ANSI.sub("", out).split("\n"):
+        assert len(line) <= 30, line
+    assert " ".join(rail).count("●") == 1, rail
+
+
+def test_on_the_path_a_manifest_value_cannot_write_escape_codes(tmp_path, path_writer):
+    root = _path_project(tmp_path)
+    manifest = root / ".compass" / "work" / PATH_SLUG / "manifest.yml"
+    manifest.write_text(manifest.read_text().replace(
+        f"issue: {PATH_SLUG}", 'issue: "\\e]0;pwned\\a\\e[2Jevil"'))
+    code, out = _tty(root, COMPASS_COLOR="never")
+    assert code == 0, out
+    assert "\x1b" not in out and "\x07" not in out, repr(out)
+    assert out.split("\n")[0] == "delivery - ]0;pwned[2Jevil", repr(out)
+
 
 if __name__ == "__main__" and sys.argv[1:] == ["--regen"]:
     import tempfile

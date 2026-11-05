@@ -3,6 +3,10 @@
 Scenario ids PRC-1 to PRC-46 (issue project-readiness-caps-autonomy). Each test
 name starts with its scenario id. The file has one section per work unit; a
 later unit writes only under its own heading.
+
+Every issue here is assessed on the four-stage path (ADR-092): the
+`path_writer` fixture is on for the whole module, and `_run_compass` passes its
+switch to the CLI, which `support.environment` would otherwise leave out.
 """
 from __future__ import annotations
 
@@ -23,6 +27,19 @@ sys.path.insert(0, str(ROOT / "tests"))
 import project_readiness_support as support  # noqa: E402
 
 PRESET = ROOT / "governance" / "presets" / "default"
+
+# Step 9b of #351 turns the path writer on for good and deletes this line and
+# the pass-through in `_run_compass`.
+pytestmark = pytest.mark.usefixtures("path_writer")
+PATH_SWITCH = "COMPASS_PATH_WRITER"
+
+
+def _run_compass(project, *argv, env=None):
+    """`support.run_compass`, with the path writer's switch passed on when it is set.
+    The support module builds a clean environment, which leaves it out."""
+    if os.environ.get(PATH_SWITCH):
+        env = {PATH_SWITCH: os.environ[PATH_SWITCH], **(env or {})}
+    return support.run_compass(project, *argv, env=env)
 
 SHIPPED_SIGNALS = (
     "agent-instructions-present", "lint-declared-and-clean", "typecheck-declared-and-clean",
@@ -65,7 +82,7 @@ def test_prc_3(tmp_path):
     assert others == [False] * 7
 
     project = support.make_project(tmp_path / "fixture")
-    code, out, err = support.run_compass(project, "policy", "lint")
+    code, out, err = _run_compass(project, "policy", "lint")
     assert code == 0, out + err
 
     # The catalogue is read through the layer chain wherever a compass.yml
@@ -91,13 +108,13 @@ def test_prc_3(tmp_path):
 
 
 def _diff_result(project, parent="default@8", child="project"):
-    code, out, err = support.run_compass(project, "policy", "diff", parent, child, "--json")
+    code, out, err = _run_compass(project, "policy", "diff", parent, child, "--json")
     assert code == 0, out + err
     return json.loads(out)["classification"]["result"]
 
 
 def _lint(project):
-    code, out, err = support.run_compass(project, "policy", "lint")
+    code, out, err = _run_compass(project, "policy", "lint")
     return code, out + err
 
 
@@ -206,7 +223,7 @@ def test_prc_7(tmp_path):
                                      "test_micro_command": "sh scripts/micro.sh",
                                      "lint_command": "sh scripts/lint.sh"}}
     project = support.make_project(tmp_path / "both", both, files=files)
-    code, out, err = support.run_compass(project, "tdd-red", "--issue", "fixture-issue",
+    code, out, err = _run_compass(project, "tdd-red", "--issue", "fixture-issue",
                                          "--scenario", "SCN-1")
     assert code == 0, out + err
     assert (project / "ran-micro.sh").exists()
@@ -219,7 +236,7 @@ def test_prc_7(tmp_path):
     only_full = {"schema": 1, "project": {"test_command": "sh scripts/full.sh",
                                           "lint_command": "sh scripts/lint.sh"}}
     project = support.make_project(tmp_path / "full", only_full, files=files)
-    code, out, err = support.run_compass(project, "tdd-red", "--issue", "fixture-issue",
+    code, out, err = _run_compass(project, "tdd-red", "--issue", "fixture-issue",
                                          "--scenario", "SCN-1")
     assert code == 0, out + err
     assert (project / "ran-full.sh").exists() and not (project / "ran-lint.sh").exists()
@@ -262,7 +279,7 @@ def test_prc_25(tmp_path):
         tmp_path / "balanced", {"schema": 1, "autonomy": "balanced"},
         files={".compass/work/fixture-issue/manifest.yml":
                yaml.safe_dump(manifest, sort_keys=False)})
-    code, out, err = support.run_compass(project, "check", "--issue", "fixture-issue", "--json")
+    code, out, err = _run_compass(project, "check", "--issue", "fixture-issue", "--json")
     assert json.loads(out)["ran"] > 0, out + err
     report = out + err
     assert "readiness" not in report.lower()
@@ -1319,7 +1336,7 @@ def _floor_record(project, absent=(), measured_at=None):
 
 
 def _evaluate_write(project, env=None, slug=FLOOR_SLUG):
-    return support.run_compass(project, "approach", "evaluate", "--write", "--issue", slug,
+    return _run_compass(project, "approach", "evaluate", "--write", "--issue", slug,
                                env=env)
 
 
@@ -1363,10 +1380,10 @@ def test_prc_20(tmp_path):
     assert "never refused" in err, err
     # Without --write nothing is refused: the default view says what --write
     # would do, and --json carries the summary.
-    code, out, err = support.run_compass(project, "approach", "evaluate", "--issue", FLOOR_SLUG)
+    code, out, err = _run_compass(project, "approach", "evaluate", "--issue", FLOOR_SLUG)
     assert code == 0, out + err
     assert "evaluate --write would be refused" in out, out
-    code, out, err = support.run_compass(project, "approach", "evaluate", "--json", "--issue",
+    code, out, err = _run_compass(project, "approach", "evaluate", "--json", "--issue",
                                          FLOOR_SLUG)
     assert code == 0, out + err
     readiness = json.loads(out)["readiness"]
@@ -1379,7 +1396,7 @@ def test_prc_21(tmp_path):
     project = _floor_project(tmp_path / "p")
     _floor_record(project, absent=("codeowners-present", "secret-scan-declared",
                                     "pre-commit-hooks-present"))
-    code, out, err = support.run_compass(project, "approach", "evaluate", "--json", "--issue",
+    code, out, err = _run_compass(project, "approach", "evaluate", "--json", "--issue",
                                          FLOOR_SLUG)
     assert code == 0, out + err
     expected = json.loads(out)
@@ -1389,7 +1406,10 @@ def test_prc_21(tmp_path):
     assert manifest["delivery_approach"] == expected["delivery_approach"]
     assert [g["id"] for g in manifest["gates"]] == expected["gates"]
     assert manifest["checkpoints"] == expected["checkpoints"]
-    assert manifest["stages"] == expected["stages"]
+    # ADR-092 decision: no stage modes. The write and the preview agree on the
+    # evidence owed instead, and neither has a stage map.
+    assert manifest["evidence_required"] == expected["evidence_required"]
+    assert "stages" not in manifest and "stages" not in expected, expected
     assert _generations(project) == ["1"]
 
 
@@ -1803,7 +1823,7 @@ def test_prc_29(tmp_path):
     assert _floor_manifest(project)["readiness"] == {
         "status": "measured", "score": 9, "signals": 11, "floor_met": True,
         "absent": list(absent), "measured_at": record["measured_at"]}
-    code, out, err = support.run_compass(project, "issue", "lint", "--issue", FLOOR_SLUG)
+    code, out, err = _run_compass(project, "issue", "lint", "--issue", FLOOR_SLUG)
     assert code == 0, out + err
     # No generation file holds the summary. The generation may store the
     # catalogue named `readiness`; it never stores a measurement.
@@ -1851,7 +1871,13 @@ def test_prc_30_manifest(tmp_path):
     _not_measured_manifests(tmp_path)
 
 
-def test_prc_30(tmp_path):
+def test_prc_30(tmp_path, monkeypatch):
+    # The writer off: the board puts a path issue at specify in no lane, because
+    # its lanes are the legacy stages (`board_page.LANES`, owned by #354), so the
+    # card that carries the readiness line is not drawn. Step 9b needs that fixed.
+    from compass_pkg import routing
+    monkeypatch.setattr(routing, "PATH_WRITER", False)
+    monkeypatch.delenv(PATH_SWITCH, raising=False)
     stale = _not_measured_manifests(tmp_path)
     _register_approach(stale, FLOOR_SLUG)
     # The board says the record was stale, not only that it is missing. Before 9.0.0 the
@@ -1905,7 +1931,7 @@ def _snapshot_tree(*folders):
 
 def _board_page(project):
     page = Path(str(project) + "-board.html")
-    code, out, err = support.run_compass(project, "board", "render", "--no-open",
+    code, out, err = _run_compass(project, "board", "render", "--no-open",
                                          "--out", str(page))
     assert code == 0, out + err
     return page.read_text(encoding="utf-8")
@@ -2014,7 +2040,7 @@ def test_prc_33(tmp_path):
     project = _bare_repository(tmp_path / "p", files)
     (project / "compass.yml").write_text("schema: 1\n", encoding="utf-8")
     assert not (project / ".compass").exists()
-    code, out, err = support.run_compass(project, "init", "--readiness")
+    code, out, err = _run_compass(project, "init", "--readiness")
     assert code == 0, out + err
     assert (project / ".compass" / "readiness.yml").is_file()
     lines = out.splitlines()
@@ -2045,7 +2071,7 @@ def test_prc_33(tmp_path):
         encoding="utf-8")
     support.git(other, "add", "-A")
     support.git(other, "commit", "-q", "-m", "commands")
-    code, out, err = support.run_compass(other, "init",
+    code, out, err = _run_compass(other, "init",
                                          env={"READINESS_MARKERS": str(marks_folder)})
     assert code == 0, out + err
     assert not (other / ".compass" / "readiness.yml").exists()
@@ -2063,13 +2089,13 @@ def test_prc_33(tmp_path):
 def test_prc_34(tmp_path):
     project = _bare_repository(tmp_path / "p", {"AGENTS.md": "# Agents\n"})
     (project / "compass.yml").write_text("schema: 1\n", encoding="utf-8")
-    code, out, err = support.run_compass(project, "init")
+    code, out, err = _run_compass(project, "init")
     assert code == 0, out + err
     compass_dir = project / ".compass"
     mode = compass_dir.stat().st_mode
     compass_dir.chmod(0o555)
     try:
-        code, out, err = support.run_compass(project, "init", "--readiness")
+        code, out, err = _run_compass(project, "init", "--readiness")
     finally:
         compass_dir.chmod(mode)
     assert code == 0, out + err
@@ -2096,7 +2122,7 @@ def test_prc_35(tmp_path):
         manifest = dict(FLOOR_MANIFEST, issue=slug, created=created, readiness=summary)
         (task_dir / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False),
                                                encoding="utf-8")
-    code, out, err = support.run_compass(project, "retro")
+    code, out, err = _run_compass(project, "retro")
     assert code == 0, out + err
     lines = out.splitlines()
     assert "Repository readiness at assessment:" in lines, out
@@ -2209,7 +2235,7 @@ def test_prc_38(tmp_path):
     _floor_issue(project)
     _written_record(project, _expected_signals(project))
     before = _manifest_before(project)
-    code, out, err = support.run_compass(project, "approach", "evaluate", "--json",
+    code, out, err = _run_compass(project, "approach", "evaluate", "--json",
                                          "--issue", FLOOR_SLUG)
     assert code == 0, out + err
     readiness = json.loads(out)["readiness"]

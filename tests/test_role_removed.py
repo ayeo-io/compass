@@ -71,10 +71,19 @@ def _blocks(result):
     return {b["phase"]: b["until"] for b in result["blocked_phases"]}
 
 
+#: The path writer's switch (ADR-092), passed on to the CLI when a test sets it
+#: with the `path_writer` fixture. Step 9b of #351 turns the writer on for good
+#: and deletes it.
+PATH_SWITCH = "COMPASS_PATH_WRITER"
+
+
 def _env(home):
-    return {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
-            "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1", "COLUMNS": "200",
-            "PYTHONDONTWRITEBYTECODE": "1", "COMPASS_RENDER_AFTER": "0"}
+    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
+           "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1", "COLUMNS": "200",
+           "PYTHONDONTWRITEBYTECODE": "1", "COMPASS_RENDER_AFTER": "0"}
+    if os.environ.get(PATH_SWITCH):
+        env[PATH_SWITCH] = os.environ[PATH_SWITCH]
+    return env
 
 
 def _run(root, *argv):
@@ -250,7 +259,7 @@ def _without_rule(config, rule_id):
 
 # --- group C: upgrading from 6.x -------------------------------------------------
 
-def test_trc_c1_a_manifest_that_records_a_role_evaluates_on_the_new_default(tmp_path):
+def test_trc_c1_a_manifest_that_records_a_role_evaluates_on_the_new_default(tmp_path, path_writer):
     root, _ = _project(tmp_path, assessment=_assess(role="product-owner"))
     code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write",
                           *ALL_REASONS)
@@ -280,7 +289,7 @@ def test_trc_c2_a_stored_6x_configuration_keeps_its_role_rules():
     assert "plan" in owed.blocked_stages
 
 
-def test_trc_c3_a_role_justification_is_accepted_and_not_recorded(tmp_path):
+def test_trc_c3_a_role_justification_is_accepted_and_not_recorded(tmp_path, path_writer):
     root, _ = _project(tmp_path)
     code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write",
                           *ALL_REASONS, "--justify", "role=an engineer")
@@ -290,7 +299,7 @@ def test_trc_c3_a_role_justification_is_accepted_and_not_recorded(tmp_path):
     assert "role" not in data["justifications"]
 
 
-def test_trc_c4_a_quick_fix_given_a_role_is_accepted_and_records_none(tmp_path):
+def test_trc_c4_a_quick_fix_given_a_role_is_accepted_and_records_none(tmp_path, path_writer):
     root = tmp_path / "proj"
     (root / ".compass" / "work").mkdir(parents=True)
     (root / "compass.yml").write_text(
@@ -461,15 +470,41 @@ def test_trc_c8_a_check_that_reads_documents_is_refused(tmp_path):
     assert "M-WHEN-DOCUMENTS" in out + err
 
 
-def test_trc_c2_copied_6x_governance_keeps_its_role_rules_through_the_cli(tmp_path):
-    """Through `compass approach evaluate`: a project still on copied 6.x
-    governance routes a product owner's issue with RP-ROLE-002, as before."""
+def _old_evaluator(root, slug="t"):
+    """What the 8.x evaluator gives for the issue over the configuration the CLI
+    reads for it: its stored generation, else the project's chain now (which
+    holds copied governance). On the four-stage path (ADR-092) the CLI shows the
+    evidence owed, so the approach and its role rules are read here."""
+    from compass_pkg import effective
+    from compass_pkg.core import load_yaml, normalize_spine
+    task_dir = Path(root) / ".compass" / "work" / slug
+    task = normalize_spine(load_yaml(str(task_dir / "manifest.yml")))
+    view = effective.view_or_legacy(str(task_dir))
+    if view is None:
+        resolution = effective.resolve_live(str(root))
+        view = effective.EffectiveView("live", None, None, resolution.resolved,
+                                       resolution.versions)
+    return evaluate_route(task["assessment"], view.evaluator_policy())
+
+
+def _path_view(root, slug="t"):
+    """`compass approach evaluate --json` for the issue, on the path."""
+    code, out, err = _run(root, "approach", "evaluate", "--issue", slug, "--json")
+    assert code == 0, out + err
+    result = json.loads(out)
+    assert result["delivery_approach"] == "delivery" and result["evidence_required"], result
+    return result, err
+
+
+def test_trc_c2_copied_6x_governance_keeps_its_role_rules_through_the_cli(tmp_path,
+                                                                          path_writer):
+    """A project still on copied 6.x governance routes a product owner's issue with
+    RP-ROLE-002, as before, and the CLI evaluates the issue on the path."""
     root, _ = _project(tmp_path, assessment=_assess(role="product-owner"),
                        compass_yml=False)
     _copied_governance(root)
-    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--json")
-    assert code == 0, out + err
-    result = json.loads(out)
+    _path_view(root)
+    result = _old_evaluator(root)
     assert "RP-ROLE-002" in [f["id"] for f in result["policy_rules_fired"]]
     assert [b["phase"] for b in result["blocked_phases"]] == ["plan"]
 
@@ -490,7 +525,8 @@ def _six_generation_project(tmp_path):
     return root
 
 
-def test_trc_c2_a_stored_6x_generation_keeps_its_role_rules_through_the_cli(tmp_path):
+def test_trc_c2_a_stored_6x_generation_keeps_its_role_rules_through_the_cli(tmp_path,
+                                                                           path_writer):
     """Through `compass approach evaluate`: an issue whose stored generation was
     committed by 6.0.1 keeps its role rules until it is re-assessed, and the
     re-assessment commits a generation on the 7.0.0 default without them."""
@@ -500,9 +536,8 @@ def test_trc_c2_a_stored_6x_generation_keeps_its_role_rules_through_the_cli(tmp_
     assert versions["cli"] == "6.0.1"
     assert _load(task_dir / "manifest.yml")["generation"] == 1
 
-    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--json")
-    assert code == 0, out + err
-    result = json.loads(out)
+    _, err = _path_view(root)
+    result = _old_evaluator(root)
     assert _fired(result) == ["RP-ROLE-002"]
     assert [b["phase"] for b in result["blocked_phases"]] == ["plan"]
     # The generation in force declares `role`, so the recorded role is read.
@@ -513,9 +548,8 @@ def test_trc_c2_a_stored_6x_generation_keeps_its_role_rules_through_the_cli(tmp_
     data["assessment"]["role"] = "product-marketer"
     (task_dir / "manifest.yml").write_text(yaml.safe_dump(data, sort_keys=False),
                                            encoding="utf-8")
-    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--json")
-    assert code == 0, out + err
-    result = json.loads(out)
+    _path_view(root)
+    result = _old_evaluator(root)
     assert _fired(result) == ["RP-ROLE-001"]
     assert "verify.claims" in result["gates"]
     assert _load(task_dir / "manifest.yml")["generation"] == 1
@@ -526,6 +560,7 @@ def test_trc_c2_a_stored_6x_generation_keeps_its_role_rules_through_the_cli(tmp_
     assert NOT_READ in err and "assessment.role" in err, err
     data = _load(task_dir / "manifest.yml")
     assert data["generation"] == 2
+    assert data["evidence_required"] and "stages" not in data, data
     assert not [f for f in data.get("policy_rules_fired") or []
                 if f["id"].startswith("RP-ROLE")]
     assert "verify.claims" not in [g["id"] for g in data["gates"]]
@@ -534,7 +569,7 @@ def test_trc_c2_a_stored_6x_generation_keeps_its_role_rules_through_the_cli(tmp_
     assert "role_rules" not in stored[2]["rules"] and "role" not in stored[2]["dimensions"]
 
 
-def test_trc_c1_a_recorded_role_is_named_as_ignored_on_evaluation(tmp_path):
+def test_trc_c1_a_recorded_role_is_named_as_ignored_on_evaluation(tmp_path, path_writer):
     """Re-assessing a 6.x issue says on standard error that its recorded role
     is no longer read, so the change in routing is not silent."""
     root, _ = _project(tmp_path, assessment=_assess(role="product-owner"))

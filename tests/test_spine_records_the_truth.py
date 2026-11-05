@@ -78,16 +78,20 @@ def _seeded(tmp_path, **readings):
     return root
 
 
-def test_scn_a1_content_change_is_logged(tmp_path):
+# The four-stage path (ADR-092): each re-assessment here is written by the path
+# writer, so the approach name is `delivery` before and after.
+
+def test_scn_a1_content_change_is_logged(tmp_path, path_writer):
     """Same delivery-approach name, materially different delivery approach."""
     root = _seeded(tmp_path)
     before = _task(root)
-    assert before["delivery_approach"] == "regular", before["delivery_approach"]
+    assert before["delivery_approach"] == "delivery", before["delivery_approach"]
+    assert "architecture" not in before["evidence_required"]
 
-    # cross-cutting keeps the delivery-approach name `standard` and takes the
-    # gate set from 6 to 7 (RP-REQUIRE-003 adds verify.fitness). `critical`
-    # would also change the approach name, so it would not test a
-    # content-only change.
+    # cross-cutting keeps the approach name `delivery` and takes the gate set
+    # from 6 to 7 (RP-REQUIRE-003 adds the `architecture` evidence and its gate
+    # `verify.architecture`). On the path every delivery issue has the one name,
+    # so any re-assessment that moves the evidence is a content-only change.
     before["assessment"]["risk"] = "cross-cutting"
     (root / ".compass" / "work" / "t" / "manifest.yml").write_text(
         yaml.safe_dump(before, sort_keys=False))
@@ -96,9 +100,12 @@ def test_scn_a1_content_change_is_logged(tmp_path):
     after = _task(root)
     assert after["reassessments"], (
         f"a re-frame that changed the gate set was not logged:\n{r.stdout}")
+    entry = after["reassessments"][-1]
+    assert (entry["from_route"], entry["to_route"]) == ("delivery", "delivery"), entry
+    assert "architecture" in after["evidence_required"]
 
 
-def test_scn_a2_no_material_change_is_not_logged(tmp_path):
+def test_scn_a2_no_material_change_is_not_logged(tmp_path, path_writer):
     root = _seeded(tmp_path)
     r = _run(root, "approach", "evaluate", "--issue", "t", "--write",
              "--reason", "no change expected")
@@ -112,7 +119,7 @@ def test_scn_a2_no_material_change_is_not_logged(tmp_path):
         f"a --reason that was kept must not be reported as dropped:\n{r.stdout}{r.stderr}")
 
 
-def test_scn_a3_entry_records_what_changed(tmp_path):
+def test_scn_a3_entry_records_what_changed(tmp_path, path_writer):
     root = _seeded(tmp_path)
     t = _task(root)
     t["assessment"]["risk"] = "cross-cutting"
@@ -125,7 +132,7 @@ def test_scn_a3_entry_records_what_changed(tmp_path):
     assert entry["changed"]["gates"]["from"] != entry["changed"]["gates"]["to"], entry
 
 
-def test_scn_a4_entry_carries_a_kind(tmp_path):
+def test_scn_a4_entry_carries_a_kind(tmp_path, path_writer):
     root = _seeded(tmp_path)
     t = _task(root)
     t["assessment"]["risk"] = "cross-cutting"

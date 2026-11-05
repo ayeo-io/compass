@@ -229,12 +229,19 @@ def has_red(task_dir):
     return red_verdict(task_dir) == "ok"
 
 
+def _listed(task, key):
+    """The manifest's `key` value when it is a list, else an empty list."""
+    value = task.get(key)
+    return value if isinstance(value, list) else []
+
+
 def _test_runs(task, task_dir):
     """`(scenario, entry, record)` for each `test-run` entry of the registry whose
     path is inside the issue directory. `scenario` is the entry's binding, or the
     record's when the entry names none, or None when unbound."""
     root = os.path.realpath(task_dir)
-    for entry in task.get("evidence") or []:
+    # A hand-edited manifest can hold a non-list; it has no entries to read.
+    for entry in _listed(task, "evidence"):
         if not isinstance(entry, dict) or entry.get("type") != "test-run":
             continue
         full = os.path.realpath(os.path.join(task_dir, entry.get("path") or ""))
@@ -465,7 +472,7 @@ def scenario_reds(task, task_dir):
     """
     out = {"met": [], "accepted": [], "narrative": [], "no_red": [], "late": []}
     needing = []
-    for item in task.get("scenarios") or []:
+    for item in _listed(task, "scenarios"):
         sid = item.get("id") if isinstance(item, dict) else None
         if isinstance(sid, str) and sid:
             (out["narrative"] if item.get("verifiable") == "narrative" else needing).append(sid)

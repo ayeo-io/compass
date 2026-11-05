@@ -397,10 +397,16 @@ def _lint_errors_quarantine(gov_dir):
 def delivery_approach_errors(task):
     """An unknown `delivery_approach`, reported by the built-in lint so the
     check does not depend on the optional `jsonschema` package. An old route
-    name is accepted: it is read as its current one (ADR-006)."""
+    name is accepted: it is read as its current one (ADR-006). A manifest on the
+    four-stage path records `delivery` (ADR-092), which is no approach of the
+    policy, so it is accepted there only."""
     from compass_pkg.core import SHAPE_VALUE_MAP
+    from compass_pkg.path_stages import is_path_issue
+    from compass_pkg.stable_ids import APPROACH_DELIVERY
     value = task.get("delivery_approach")
     if value is None or value in ROUTE_NAMES or value in SHAPE_VALUE_MAP:
+        return []
+    if value == APPROACH_DELIVERY and is_path_issue(task):
         return []
     return [f"`delivery_approach: {value}` is not a delivery approach; the "
             f"approaches are {', '.join(ROUTE_NAMES)}"]

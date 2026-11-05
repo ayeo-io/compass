@@ -15,6 +15,7 @@ the acceptance criteria].
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -194,7 +195,7 @@ def _issue_with_the_5_6_0_governance(tmp_path, labels=("auth",)):
     return root, task_dir
 
 
-def test_approach_evaluate_writes_no_verify_analyze_from_copied_governance(tmp_path):
+def test_approach_evaluate_writes_no_verify_analyze_from_copied_governance(tmp_path, path_writer):
     root, task_dir = _issue_with_the_5_6_0_governance(tmp_path)
     proc = _run(["approach", "evaluate", "--issue", "demo", "--write", "--verbose",
                  *[f"--justify={d}=test" for d in ("risk", "familiarity", "size", "goal")]],
@@ -207,6 +208,8 @@ def test_approach_evaluate_writes_no_verify_analyze_from_copied_governance(tmp_p
     fired = [f["id"] for f in body["policy_rules_fired"]]
     assert "verify.analyze" not in gates and "verify.architecture" in gates, gates
     assert "RP-REQUIRE-002" not in fired and "RP-REQUIRE-004" in fired, fired
+    # On the four-stage path (ADR-092) the architecture review is owed evidence.
+    assert "architecture" in body["evidence_required"], body["evidence_required"]
 
 
 # A manifest written before 9.0.0 can still list `verify.analyze` as pending. It is not
@@ -614,13 +617,20 @@ def test_a_document_status_verb_names_its_removal_with_adr_091(tmp_path, argv, n
     assert f"'{name}' was removed in 9.0.0 (ADR-091)" in proc.stderr, proc.stderr
 
 
-def _assessed(tmp_path, approach="regular"):
+def _assessed(tmp_path, monkeypatch, approach="regular"):
+    """An issue assessed on the four-stage path (ADR-092). The support module runs
+    the CLI in a clean environment, so the `path_writer` fixture's switch is
+    added to it here; step 9b of #351 deletes the switch."""
     sys.path.insert(0, str(ROOT / "tests"))
     from acceptance.atdd_strategy import support
+    clean = support.env
+    monkeypatch.setattr(support, "env", lambda root: {
+        **clean(root), "COMPASS_PATH_WRITER": os.environ["COMPASS_PATH_WRITER"]})
     project = support.Project(tmp_path / "repo")
     issue = project.issue("orders", approach=approach)
     code, out, err = issue.assess()
     assert code == 0, out + err
+    assert issue.manifest()["evidence_required"], issue.manifest()
     return issue
 
 
@@ -634,13 +644,13 @@ OLD_REGISTRY = [
 ]
 
 
-def test_approach_evaluate_writes_no_document_registry(tmp_path):
-    issue = _assessed(tmp_path)
+def test_approach_evaluate_writes_no_document_registry(tmp_path, path_writer, monkeypatch):
+    issue = _assessed(tmp_path, monkeypatch)
     assert "artifacts" not in issue.manifest(), issue.manifest().get("artifacts")
 
 
-def test_a_reassessment_keeps_an_older_registry_as_it_is(tmp_path):
-    issue = _assessed(tmp_path)
+def test_a_reassessment_keeps_an_older_registry_as_it_is(tmp_path, path_writer, monkeypatch):
+    issue = _assessed(tmp_path, monkeypatch)
     body = issue.manifest()
     body["artifacts"] = [dict(entry) for entry in OLD_REGISTRY]
     issue.write_manifest(body)
@@ -651,8 +661,8 @@ def test_a_reassessment_keeps_an_older_registry_as_it_is(tmp_path):
     assert issue.manifest()["artifacts"] == OLD_REGISTRY
 
 
-def test_a_stage_record_moves_no_document_on(tmp_path):
-    issue = _assessed(tmp_path)
+def test_a_stage_record_moves_no_document_on(tmp_path, path_writer, monkeypatch):
+    issue = _assessed(tmp_path, monkeypatch)
     body = issue.manifest()
     body["artifacts"] = [dict(entry) for entry in OLD_REGISTRY]
     issue.write_manifest(body)
@@ -729,7 +739,7 @@ def _positioned_issue(tmp_path):
     return root, task_dir
 
 
-def test_a_document_on_disk_brings_no_gate(tmp_path):
+def test_a_document_on_disk_brings_no_gate(tmp_path, path_writer):
     import json
     root, _ = _positioned_issue(tmp_path)
     proc = _run(["approach", "evaluate", "--issue", "t", "--json"], root)

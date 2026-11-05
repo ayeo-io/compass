@@ -646,7 +646,8 @@ def test_vr_d15_a_project_that_says_lightweight_is_looser_than_a_parent_that_say
 
 # --- VR-D14: an issue layer in the old words ------------------------------------
 
-def test_vr_d14_an_issue_layer_in_the_old_words_evaluates_as_the_new_words_do(tmp_path):
+def test_vr_d14_an_issue_layer_in_the_old_words_evaluates_as_the_new_words_do(
+        tmp_path, path_writer):
     results = {}
     for name, word in (("old", "full"), ("new", "thorough")):
         root, task_dir = _project(tmp_path, name)
@@ -660,7 +661,9 @@ def test_vr_d14_an_issue_layer_in_the_old_words_evaluates_as_the_new_words_do(tm
         assert code == 0, (name, out, err)
         results[name] = json.loads(out)
     assert results["old"] == results["new"]
-    assert results["old"]["stages"]["refine"] == "thorough"
+    # ADR-092 decision: no stage modes. On the path the evaluation has no stage
+    # map to carry the mode; the issue layer still records it, in the new word.
+    assert "stages" not in results["old"] and results["old"]["evidence_required"]
     assert results["old"]["issue_overrides"]["applied"] == {"refine": "thorough"}
 
 

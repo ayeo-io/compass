@@ -10,6 +10,11 @@ same code, in two calls.
 Scenario ids: QFO-1 to QFO-5, in the acceptance criteria of the issue
 quick-fix-overhead/acceptance-criteria.md. QFG-1 and QFG-2 are in the
 acceptance criteria of quick-fix-finish-gaps/acceptance-criteria.md.
+
+Every test here runs on the four-stage path (ADR-092): the `path_writer`
+fixture is on for the whole module. A quick fix there is the light evidence
+row, and `start` writes the acceptance criteria and no devlog. The refusal of
+heavier work is tested once with the writer off, beside its path twin.
 """
 from __future__ import annotations
 
@@ -23,6 +28,13 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
+
+# Step 9b of #351 turns the path writer on for good and deletes this line.
+pytestmark = pytest.mark.usefixtures("path_writer")
+
+#: What a trivial, atomic change owes on the path: the light row (ADR-092).
+LIGHT = ["scenarios", "red-before-green", "suite-green", "correctness", "governance",
+         "traceability", "outer-loop"]
 
 
 def _git(root, *args):
@@ -173,11 +185,14 @@ def test_qfo1_start_records_the_whole_assessment_in_one_call(repo):
     assert result.returncode == 0, result.stderr
 
     manifest = _manifest(repo, "greet-fix")
-    assert manifest["delivery_approach"] == "quick-fix"
+    # ADR-092 decisions: no approaches and no stage modes. The 8.x quick fix, with
+    # its collapsed refine, is the light evidence row and has no `stages:` map.
+    assert manifest["delivery_approach"] == "delivery"
+    assert manifest["evidence_required"] == LIGHT
     assert manifest["assessment"]["risk"] == "trivial"
     assert manifest["assessment"]["familiarity"] == "brownfield-mapped"
     assert manifest["assessment"]["size"] == "atomic"
-    assert manifest["stages"]["refine"] == "collapsed"
+    assert "stages" not in manifest
 
     scenarios = manifest.get("scenarios") or []
     assert len(scenarios) == 1
@@ -186,13 +201,18 @@ def test_qfo1_start_records_the_whole_assessment_in_one_call(repo):
     assert scenarios[0]["tests"] == [
         "tests/test_greeting.py::test_greeting_says_hello"]
 
-    # 9.0.0 writes no delivery-approach.md and registers no document (ADR-091): the
-    # manifest holds the approach, and the devlog holds the intent and the scenario.
-    assert not (repo / "docs" / "compass").exists()
+    # 9.0.0 writes no delivery-approach.md and registers no document (ADR-091). On
+    # the path the acceptance criteria hold the intent and the scenario, and start
+    # writes no devlog (ADR-092 decision 12).
     assert "artifacts" not in manifest
-    devlog = (repo / ".compass" / "work" / "greet-fix" / "devlog.md").read_text()
-    assert devlog.startswith("# Devlog - greet-fix\n")
-    assert "INT-1: " in devlog and "TRC-001: " in devlog
+    assert not (repo / ".compass" / "work" / "greet-fix" / "devlog.md").exists()
+    written = sorted(p.relative_to(repo).as_posix()
+                     for p in (repo / "docs" / "compass").rglob("*") if p.is_file())
+    assert len(written) == 1 and written[0].endswith("-greet-fix/acceptance-criteria.md"), \
+        written
+    criteria = (repo / written[0]).read_text()
+    assert "INT-1 | quick-fix start | " in criteria
+    assert "traceability id: TRC-001" in criteria and "serves: INT-1" in criteria
 
     current_task = (repo / ".compass" / "current-task").read_text().strip()
     assert current_task == "greet-fix"
@@ -200,7 +220,11 @@ def test_qfo1_start_records_the_whole_assessment_in_one_call(repo):
 
 # --- QFO-2 -------------------------------------------------------------
 
-def test_qfo2_start_stops_when_the_approach_is_not_a_quick_fix(repo):
+def test_qfo2_start_stops_when_the_approach_is_not_a_quick_fix(repo, monkeypatch):
+    # The writer off: the 8.x quick fix refuses work heavier than itself.
+    from compass_pkg import routing
+    monkeypatch.setattr(routing, "PATH_WRITER", False)
+    monkeypatch.delenv("COMPASS_PATH_WRITER", raising=False)
     result = _start(repo, "bigger-change",
                     size="standard - several files and a design choice")
     assert result.returncode == 1
@@ -221,6 +245,25 @@ def test_qfo2_start_stops_when_the_approach_is_not_a_quick_fix(repo):
         != "bigger-change")
 
 
+def test_qfo2_on_the_path_start_takes_heavier_work_and_names_what_it_owes(repo):
+    """The path twin of the refusal above. ADR-092 decision: the quick fix no longer
+    refuses heavier work. Start records it, with its scenario, and the evidence
+    the bigger change owes; the next step is the first thing it owes."""
+    result = _start(repo, "bigger-change",
+                    size="standard - several files and a design choice")
+    assert result.returncode == 0, result.stdout + result.stderr
+
+    manifest = _manifest(repo, "bigger-change")
+    assert manifest["delivery_approach"] == "delivery"
+    assert "stages" not in manifest
+    for token in ("regression", "security", "clarity", "definition-of-done"):
+        assert token in manifest["evidence_required"], token
+    assert [s["id"] for s in manifest["scenarios"]] == ["TRC-001"]
+    assert all(g["status"] == "pending" for g in manifest["gates"])
+    assert result.stdout.splitlines()[-1].startswith("next: "), result.stdout
+    assert (repo / ".compass" / "current-task").read_text().strip() == "bigger-change"
+
+
 def test_qfo3_start_refuses_a_slug_that_is_not_one_segment(repo):
     result = _start(repo, "../../escaped")
     assert result.returncode != 0
@@ -234,7 +277,8 @@ def test_qfo1_start_prints_the_rest_of_the_path(repo):
     # quick-fix command. The hand-off is where it learns how to finish.
     result = _start(repo, "greet-path")
     assert result.returncode == 0, result.stderr
-    assert "compass tdd-red --scenario TRC-001" in result.stdout
+    # On the path the light row owes the outer loop first (ADR-092, `S17`).
+    assert "next: compass tdd-red --loop outer --scenario TRC-001" in result.stdout
     assert "compass quick-fix finish" in result.stdout
     assert "--no-commit" in result.stdout
 
@@ -243,8 +287,14 @@ def test_qfo1_start_says_when_it_creates_a_directory(repo):
     result = _start(repo, "greet-new")
     assert result.returncode == 0, result.stderr
     assert ".compass/" in result.stdout
-    # No document is written, so no documents folder is created (ADR-091).
-    assert "docs/compass/" not in result.stdout
+    # On the path start writes one document, the acceptance criteria (ADR-092
+    # decision 12), and its record line names the folder it made for it.
+    record = [ln for ln in result.stdout.splitlines() if ln.strip().startswith("record :")]
+    assert len(record) == 1, result.stdout
+    path = record[0].split("record :", 1)[1].strip()
+    assert path.startswith("docs/compass/") and path.endswith(
+        "-greet-new/acceptance-criteria.md"), path
+    assert (repo / path).is_file()
 
 
 # --- QFO-3 -------------------------------------------------------------
@@ -286,17 +336,24 @@ def test_qfo4_finish_traces_checks_passes_the_three_gates_and_lands(repo):
 
     changed = {cf["path"] for cf in manifest["changed_files"]}
     assert "data/greeting.txt" in changed
-    # No document is written, so none is a changed file (ADR-091).
-    assert not any(p.startswith("docs/compass/") for p in changed), changed
+    # 9.0.0 writes no other document (ADR-091). On the path the acceptance
+    # criteria start wrote are the issue's one document, and they land with it.
+    docs = [p for p in changed if p.startswith("docs/compass/")]
+    assert len(docs) == 1 and docs[0].endswith("-greet-ship/acceptance-criteria.md"), \
+        changed
 
     check_evidence = next(e for e in manifest["evidence"]
                           if e["type"] == "command-output")
     assert (repo / ".compass" / "work" / slug
            / check_evidence["path"]).is_file()
 
-    devlog = (repo / ".compass" / "work" / slug / "devlog.md").read_text()
-    assert "Say hello properly" in devlog
-    assert any(e["id"] in devlog for e in manifest["evidence"])
+    # The path writes no devlog (ADR-092 decision 12). The commit holds the
+    # message, and finish names the evidence the gates passed on.
+    assert not (repo / ".compass" / "work" / slug / "devlog.md").exists()
+    assert "Say hello properly" in _git(repo, "log", "-1", "--format=%B")
+    named = [ln for ln in finish.stdout.splitlines() if ln.strip().startswith("evidence :")]
+    assert named, finish.stdout
+    assert any(e["id"] in named[0] for e in manifest["evidence"]), named
 
 
 def test_qfo4_finish_leaves_bytecode_caches_out_and_the_land_checks_clean(repo):

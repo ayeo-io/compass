@@ -21,10 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
-FIXTURES = ROOT / "tests" / "fixtures" / "artifact-catalogue-fields"
-MEASURE = ROOT / "scripts" / "measure-artifact-catalogue.py"
 #: The catalogue as it was before this issue changed it: twelve kinds.
-CATALOGUE_BEFORE = FIXTURES / "artifacts-before.yml"
 #: The undeclared kind names the 6.x migrate lists on the archive copy.
 AD_HOC_KINDS = ROOT / "tests" / "fixtures" / "ad-hoc-kinds.txt"
 
@@ -32,74 +29,6 @@ AD_HOC_KINDS = ROOT / "tests" / "fixtures" / "ad-hoc-kinds.txt"
 def _write(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
-
-
-def _issue(root, slug, created, approach, subtasks=None, registered=(), beside=(),
-           documents=()):
-    """One issue in a scratch archive: its manifest, the files beside it and
-    the files in its documents folder."""
-    manifest = {"schema_version": "3.0", "issue": slug, "created": created,
-                "delivery_approach": approach}
-    if subtasks is not None:
-        manifest["subtasks"] = [{"id": f"subtask-{i}"} for i in range(1, subtasks + 1)]
-    if registered:
-        manifest["artifacts"] = [{"id": f"ART-{k.upper()}", "kind": k, "status": "draft",
-                                  "path": f"docs/compass/{created}-{slug}/{k}.md"}
-                                 for k in registered]
-    work = root / ".compass" / "work" / slug
-    _write(work / "manifest.yml", yaml.safe_dump(manifest))
-    for name in beside:
-        _write(work / name, f"# {name}\n")
-    for name in documents:
-        _write(root / "docs" / "compass" / f"{created}-{slug}" / name, f"# {name}\n")
-
-
-def _measure(root, *extra):
-    run = subprocess.run(
-        [sys.executable, str(MEASURE), "--root", str(root),
-         "--catalogue", str(CATALOGUE_BEFORE), "--json", *extra],
-        capture_output=True, text=True, timeout=300)
-    assert run.returncode == 0, run.stderr
-    return json.loads(run.stdout)
-
-
-def test_acf_52(tmp_path):
-    # A small archive with a known answer for every figure.
-    scratch = tmp_path / "scratch"
-    _issue(scratch, "alpha", "2026-10-01", "regular", subtasks=0, beside=["design.md"],
-           documents=["delivery-approach.md", "distribution-map.md", "review-1.md"])
-    _issue(scratch, "beta", "2026-10-02", "regular", subtasks=2,
-           registered=["bug-report"], documents=["distribution-map.md", "review-claims.md"])
-    _issue(scratch, "gamma", "2026-10-03", "quick-fix", beside=["security-review.md"])
-    found = _measure(scratch)
-    assert found == {
-        "kinds_declared": 12,
-        "undeclared_kinds": 5,           # design, review-1, review-claims,
-        "regular_issues": 2,             # security-review and bug-report
-        "regular_with_record": 1,
-        "regular_with_stub_map": 1,
-        "review_filenames": 3,
-    }
-    # The measure only reads: nothing under the scratch archive changed.
-    assert not list(scratch.rglob("*.v6.bak"))
-
-    # The maintainer's archive copy, read only with the switch on, from a
-    # throwaway copy so the run cannot touch the real folders.
-    if os.environ.get("COMPASS_FULL_ARCHIVE") != "1":
-        return
-    copy = tmp_path / "archive-copy"
-    shutil.copytree(ROOT / ".compass" / "work", copy / ".compass" / "work")
-    shutil.copytree(ROOT / "docs" / "compass", copy / "docs" / "compass")
-    names = [n for n in AD_HOC_KINDS.read_text(encoding="utf-8").splitlines() if n]
-    listed = tmp_path / "kinds.txt"
-    full = _measure(copy, "--list-kinds", str(listed))
-    assert listed.read_text(encoding="utf-8").splitlines() == sorted(names)
-    assert (full["kinds_declared"], full["undeclared_kinds"]) == (12, len(names))
-    # 1 and 34 are the figures recorded on 2026-10-12. The copy holds one more
-    # regular issue than the 40 the spec counted that day; it adds to neither.
-    assert (full["regular_with_record"], full["regular_with_stub_map"],
-            full["regular_issues"]) == (1, 34, 41)
-    assert full["review_filenames"] > 25
 
 
 # --- group A and F: the catalogue fields, their lint and the classifier ------------
@@ -131,6 +60,38 @@ SHIPPED_KINDS = {
     "spike-conclusion": ("verify", "builder", "spike-report"),
 }
 SIX_FIELDS = ("stage", "owner", "audience", "stands_for", "sections", "depends_on")
+
+#: The live default declares no document kind since 9.0.0 (ADR-091), and a project
+#: layer can no longer change the catalogue. The 7.0.0 preset is frozen with the
+#: catalogue these scenarios checked; a stored generation is filled from it, and a git
+#: parent can still declare one. So the catalogue is read from that preset, and a
+#: change to it is a parent's.
+FROZEN = ROOT / "governance" / "presets" / "default@7"
+
+
+def _frozen_doc():
+    """The frozen 7.0.0 preset as one layer document."""
+    from compass_pkg import catalogue_spec, merge
+    parts = []
+    for name in catalogue_spec.CATALOGUES:
+        part = yaml.safe_load((FROZEN / f"{name}.yml").read_text(encoding="utf-8"))
+        parts.append({k: v for k, v in part.items() if k != "schema"})
+    return {"schema": 1, **merge.combine(parts)}
+
+
+def _frozen_base():
+    from compass_pkg import merge
+    return merge.apply({}, _frozen_doc(), "parent", "default@7", {})
+
+
+def _lint_team(doc):
+    """`policy lint` findings, as `_words` gives them, for a git parent `doc` over the
+    frozen 7.0.0 preset."""
+    from compass_pkg import policy_lint
+    from compass_pkg.layers import Layer
+    report = policy_lint.lint_chain(Layer("default@7", "parent", _frozen_doc(), "d"), None,
+                                    extra_parents=(Layer("team", "parent", doc, "d"),))
+    return [f"{f.level} {f.path} {f.message}" for f in report.findings]
 
 
 def _env(home):
@@ -198,7 +159,8 @@ def test_acf_1(tmp_path):
 
     root = _scratch(tmp_path)
     shown = _show(root)
-    catalogue = _catalogue_of(root)
+    assert _catalogue_of(root) == {}
+    catalogue = _frozen_doc()["artifacts"]
     stages = {p.split(".")[1] for p in shown if p.startswith("stages.")}
     assert set(SHIPPED_KINDS) <= set(catalogue)
     for kind, entry in catalogue.items():
@@ -211,10 +173,9 @@ def test_acf_1(tmp_path):
         assert entry["sections"], kind
         assert set(entry["sections"]) <= {"lightweight", "thorough"}, kind
     # Each kind has sections for every depth an approach registers it at.
-    for path, owed in shown.items():
-        if path.startswith("approaches.") and path.endswith(".artifacts"):
-            for kind, depth in owed.items():
-                assert depth in catalogue[kind]["sections"], (path, kind, depth)
+    for name, approach in _frozen_doc()["approaches"].items():
+        for kind, depth in (approach.get("artifacts") or {}).items():
+            assert depth in catalogue[kind]["sections"], (name, kind, depth)
     assert _lint(root)[0] == 0
 
     # A stored generation holds entries from before the fields existed. Reading
@@ -234,79 +195,23 @@ def test_acf_1(tmp_path):
 def test_acf_2(tmp_path):
     entry = _charter()
     del entry["audience"]
+    words = _lint_team({"schema": 1, "artifacts": {"test-charter": entry}})
+    lines = [line for line in words if "test-charter" in line and "audience" in line]
+    assert lines and all(line.startswith("error ") for line in lines), words
+    entry["audience"] = _charter()["audience"]
+    words = _lint_team({"schema": 1, "artifacts": {"test-charter": entry}})
+    assert not [line for line in words if line.startswith("error ")], words
+    assert not [line for line in words if "audience" in line]
+    # A project file that declares a kind is left out and named (ADR-091).
     root = _scratch(tmp_path, {"schema": 1, "artifacts": {"test-charter": entry}})
     code, report, text = _lint(root)
-    assert code != 0, text
-    lines = [line for line in _words(report) if "test-charter" in line and "audience" in line]
-    assert lines and all(line.startswith("error ") for line in lines), _words(report)
-    entry["audience"] = _charter()["audience"]
-    (root / "compass.yml").write_text(
-        yaml.safe_dump({"schema": 1, "artifacts": {"test-charter": entry}}), encoding="utf-8")
-    code, report, text = _lint(root)
     assert code == 0, text
-    assert not [line for line in _words(report) if "audience" in line]
-
-
-def test_acf_3(tmp_path):
-    layer = {"schema": 1, "artifacts": {
-        "bad-stage": _charter(file="bad-stage.md", stage="deploy"),
-        "bad-depth": _charter(file="bad-depth.md", sections={"medium": ["One"]}),
-        "bad-list": _charter(file="bad-list.md", sections={"thorough": "One"}),
-        "empty-audience": _charter(file="empty-audience.md", audience=""),
-        "empty-sections": _charter(file="empty-sections.md", sections={"thorough": []}),
-        "bad-file": _charter(file="../outside.md"),
-    }}
-    root = _scratch(tmp_path, layer)
-    code, report, text = _lint(root)
-    assert code != 0, text
-    lines = _words(report)
-    for kind, field, value in (("bad-stage", "stage", "deploy"),
-                               ("bad-depth", "sections", "medium"),
-                               ("bad-list", "sections", "thorough"),
-                               ("empty-audience", "audience", ""),
-                               ("empty-sections", "sections", "thorough"),
-                               ("bad-file", "file", "../outside.md")):
-        found = [line for line in lines if f"artifacts.{kind}.{field}" in line]
-        assert found, (kind, field, lines)
-        assert all(line.startswith("error ") for line in found), found
-        assert value in found[0], (value, found)
-    # All six are reported in one run, and the shipped note is not one of them.
-    assert not [line for line in lines if "verification-note" in line], lines
-    # A good kind beside them draws nothing.
-    assert not [line for line in lines if "artifacts.test-charter" in line]
-    # The note prints its one block marker, no header block and no heading.
-    code, out, err = _cli(_scratch(tmp_path / "plain"), "issue", "template", "show",
-                          "verification-note", "--depth", "lightweight")
-    assert code == 0, err
-    assert "**Audience:**" not in out and "<!-- compass:render verification-note -->" in out
-    assert "\n## " not in out and not out.startswith("## ")
-
-
-def test_acf_4(tmp_path):
-    from test_artifact_freshness import CRITERIA, GUARDRAIL, _check, _entry, _scene, _write
-    root, task_dir = _scene(tmp_path, capability=False, phase="implement")
-    # With the capability off the digests are recorded and no reader refuses.
-    assert _entry(task_dir, "technical-design")["upstream"]
-    _write(task_dir, "acceptance-criteria", CRITERIA + "changed\n")
-    assert _check(root)[1] == {}
-    # The graph is still data in the catalogue, beside the new fields.
-    catalogue = _catalogue_of(root)["technical-design"]
-    assert catalogue["depends_on"] == ["acceptance-criteria"]
-    for field in SIX_FIELDS:
-        assert field in catalogue, field
-    # With the capability on, the stale document names the changed dependency.
-    doc = yaml.safe_load((root / "compass.yml").read_text(encoding="utf-8"))
-    doc["capabilities"] = {GUARDRAIL: True}
-    (root / "compass.yml").write_text(yaml.safe_dump(doc), encoding="utf-8")
-    from test_generation_store import _evaluate_write
-    assert _evaluate_write(root)[0] == 0
-    row = _check(root)[1]["technical-design"]
-    assert row["status"] == "fail", row
-    assert "acceptance-criteria changed" in row["detail"]
+    assert [f["path"] for f in report["findings"] if f["code"] == "L-SETTING-REMOVED"] \
+        == ["artifacts"], text
 
 
 def test_acf_12(tmp_path):
-    catalogue = _catalogue_of(_scratch(tmp_path))
+    catalogue = _frozen_doc()["artifacts"]
     for kind, stage, owner in (("review", "verify", "reviewer"),
                                ("bug-report", "assess", "spec-author"),
                                ("architecture-notes", "define", "architect"),
@@ -322,59 +227,24 @@ def test_acf_12(tmp_path):
 
 
 def test_acf_23(tmp_path):
-    root = _scratch(tmp_path)
-    assert _catalogue_of(root)["distribution-map"]["required_when"] == {"subtasks": {"min": 2}}
-    assert _lint(root)[0] == 0
-    refused = _scratch(tmp_path / "other", {"schema": 1, "artifacts": {
+    assert _frozen_doc()["artifacts"]["distribution-map"]["required_when"] == {
+        "subtasks": {"min": 2}}
+    assert not [w for w in _lint_team({"schema": 1}) if w.startswith("error ")]
+    words = _lint_team({"schema": 1, "artifacts": {
         "distribution-map": {"set": {"required_when": {"phase": {"min": 2}}}}}})
-    code, report, text = _lint(refused)
-    assert code != 0, text
-    assert [line for line in _words(report)
-            if "required_when" in line and "phase" in line], _words(report)
-
-
-def test_acf_31(tmp_path):
-    from test_generation_store import SLUG, _evaluate_write, _manifest, _project
-
-    layer = {"schema": 1, "artifacts": {"test-charter": _charter()}}
-    root, task_dir = _project(tmp_path, compass_yml=layer)
-    assert _catalogue_of(root)["test-charter"] == _charter()
-    assert _evaluate_write(root)[0] == 0
-    created = _manifest(task_dir)["created"]
-    rel = f"docs/compass/{created}-{SLUG}/test-charter.md"
-    (root / rel).parent.mkdir(parents=True, exist_ok=True)
-    (root / rel).write_text("# Test charter\n", encoding="utf-8")
-    code, out, err = _cli(root, "issue", "artifact", "set", "test-charter", "--status",
-                          "draft", "--path", rel, "--issue", SLUG)
-    assert code == 0, out + err
-    entry = next(a for a in _manifest(task_dir)["artifacts"] if a["kind"] == "test-charter")
-    assert (entry["status"], entry["path"]) == ("draft", rel)
-    code, out, err = _cli(root, "issue", "lint", "--issue", SLUG)
-    assert code == 0 and "test-charter" not in out + err, out + err
-    # A kind the catalogue does not declare is still refused.
-    code, out, err = _cli(root, "issue", "artifact", "set", "charter", "--status", "draft",
-                          "--issue", SLUG)
-    assert code == 2, out + err
-
-    # A preset layer that adds the same kind gives the same catalogue entry.
-    from compass_pkg import merge, policy_lint
-    parent, _ = policy_lint.load_parent()
-    base, provenance = merge.apply({}, parent.doc, parent.kind, parent.name, {})
-    import copy
-    added, _ = merge.apply(copy.deepcopy(base), layer, "parent", "fixture-preset", provenance)
-    assert added["artifacts"]["test-charter"] == _charter()
+    assert [line for line in words
+            if line.startswith("error ") and "required_when" in line and "phase" in line], words
 
 
 def test_acf_32(tmp_path):
-    from compass_pkg import merge, policy_lint
+    from compass_pkg import merge
     import copy
 
-    parent, _ = policy_lint.load_parent()
-    base, provenance = merge.apply({}, parent.doc, parent.kind, parent.name, {})
+    base, provenance = _frozen_base()
 
     def merged(entry):
         return merge.apply(copy.deepcopy(base), {"schema": 1, "artifacts": {"test-charter": entry}},
-                           "project", "project", dict(provenance))
+                           "parent", "team", dict(provenance))
 
     def refusal(entry):
         with pytest.raises(merge.MergeError) as raised:
@@ -400,25 +270,25 @@ def test_acf_32(tmp_path):
     # An id the parent holds is refused as before.
     existing = {"schema": 1, "artifacts": {"technical-design": _charter()}}
     with pytest.raises(merge.MergeError) as raised:
-        merge.apply(copy.deepcopy(base), existing, "project", "project", dict(provenance))
+        merge.apply(copy.deepcopy(base), existing, "parent", "team", dict(provenance))
     assert [e for e in raised.value.errors if e[0] == "M-ADD-EXISTS"]
 
-    # The same refusal reaches the command line, naming the field.
+    # A project file is left out by the merge since 9.0.0 (ADR-091), so the command
+    # line reads it.
     root = _scratch(tmp_path, {"schema": 1, "artifacts": {"test-charter": no_sections}})
     code, out, err = _cli(root, "policy", "show")
-    assert code != 0 and "M-ADD-PARTIAL" in out + err and "sections" in out + err, out + err
+    assert code == 0 and "M-ADD-PARTIAL" not in out + err, out + err
 
 
 def test_acf_33(tmp_path):
     import copy
 
-    from compass_pkg import classify, merge, policy_lint
+    from compass_pkg import classify, merge
 
-    parent, _ = policy_lint.load_parent()
-    base, provenance = merge.apply({}, parent.doc, parent.kind, parent.name, {})
+    base, provenance = _frozen_base()
 
     def verdict(layer):
-        child, _ = merge.apply(copy.deepcopy(base), layer, "project", "project",
+        child, _ = merge.apply(copy.deepcopy(base), layer, "parent", "team",
                                dict(provenance))
         return classify.classify(base, child).result
 
@@ -436,22 +306,20 @@ def test_acf_33(tmp_path):
     assert {verdict({"schema": 1, "artifacts": adds}), verdict(owed), verdict(removed),
             verdict(changed)} <= {"equivalent", "tightening", "loosening", "incomparable"}
 
-    # `policy diff` names the added kind on a line of its own.
+    # A project file's kind is left out by the merge since 9.0.0 (ADR-091), so
+    # `policy diff` names no added kind.
     root = _scratch(tmp_path, {"schema": 1, "artifacts": adds})
-    code, out, err = _cli(root, "policy", "diff", "default@6", "project")
+    code, out, err = _cli(root, "policy", "diff", "default@8", "project")
     assert code == 0, out + err
-    lines = out.splitlines()
-    assert lines.count("adds artifact kind test-charter") == 1, lines
-    assert not [l for l in lines if l.startswith("classification:") and "test-charter" in l]
+    assert "adds artifact kind" not in out, out
 
 
 # --- group B: the skeleton, the templates and the generated documents --------------
 
-PRESET = ROOT / "governance" / "presets" / "default" / "artifacts.yml"
+PRESET = FROZEN / "artifacts.yml"
 TEMPLATES = ROOT / "templates"
 OPTIONAL = "<!-- compass:optional -->"
 #: Templates that are not catalogue kinds (ACF-61).
-NOT_KINDS = ("devlog", "incident", "pull-request-body")
 
 
 def _preset():
@@ -517,73 +385,28 @@ def _heading_problems(templates, catalogue):
     return problems
 
 
-def _headings_of(output):
-    return [line[3:].strip() for line in output.splitlines() if line.startswith("## ")]
+#: The kinds of the frozen catalogue whose template still ships: the acceptance
+#: criteria and the five role templates. 9.0.0 deleted the other fourteen (ADR-091).
+KEPT_TEMPLATE_KINDS = {"acceptance-criteria", "positioning", "launch-readiness", "ui-contract",
+                 "architecture-notes", "product-owner-review"}
 
 
-def _issue_dir(root, slug="a-slug", created="2026-10-12", registered=()):
-    """A bare issue with the given `(kind, depth)` entries in its registry."""
-    manifest = {"schema_version": "3.0", "issue": slug, "created": created,
-                "delivery_approach": "regular",
-                "artifacts": [{"id": f"ART-{k.upper()}", "kind": k, "status": "draft",
-                               "depth": d} for k, d in registered]}
-    _write(root / ".compass" / "work" / slug / "manifest.yml", yaml.safe_dump(manifest))
-    return slug
-
-
-def _template_show(root, *argv):
-    return _cli(root, "issue", "template", "show", *argv)
-
-
-def test_acf_6(tmp_path):
-    root = _scratch(tmp_path)
-    entry = _preset()["technical-design"]
-    text = (TEMPLATES / "technical-design.md").read_text(encoding="utf-8")
-    code, light, err = _template_show(root, "technical-design", "--depth", "lightweight")
-    assert code == 0, err
-    head = light.split("\n## ", 1)[0]
-    # The header block holds the reader, the stage and the owner; the home and the
-    # traditional name are the glossary's, not the document's.
-    block = head.split("<!-- compass:render document-header -->\n", 1)[1].split(
-        "<!-- /compass:render -->", 1)[0]
-    assert entry["audience"] in block
-    assert "> **Stage:** plan · **Owner:** planner" in block
-    assert "> **Issue:** {{ISSUE_SLUG}}" in block
-    assert "**Home:**" not in light and "**Traditional name:**" not in light
-    assert [_canon(h) for h in _headings_of(light)] == [
-        _canon(h) for h in entry["sections"]["lightweight"]]
-    assert "(optional)" not in light
-    # The template's prose sits under its heading.
-    assert "## Approach" in light and "{{APPROACH}}" in light.split("## Approach", 1)[1]
-    assert "{{APPROACH}}" in text
-    code, thorough, err = _template_show(root, "technical-design", "--depth", "thorough")
-    assert code == 0, err
-    labelled = [h for h in _headings_of(thorough) if h.endswith("(optional)")]
-    assert [_canon(h) for h in _headings_of(thorough) if not h.endswith("(optional)")] == [
-        _canon(h) for h in entry["sections"]["thorough"]]
-    assert len(labelled) == 6, labelled
-    # --json keeps its shape and gains the depth.
-    code, out, err = _template_show(root, "technical-design", "--depth", "lightweight", "--json")
-    assert code == 0, err
-    body = json.loads(out)
-    assert body["depth"] == "lightweight" and body["kind"] == "technical-design"
-    assert body["text"] == light
-    # With --issue the header block names the issue.
-    slug = _issue_dir(root, registered=[("technical-design", "lightweight")])
-    code, issue, err = _template_show(root, "technical-design", "--issue", slug)
-    assert code == 0, err
-    assert f"> **Issue:** {slug} · **Approach:** {{{{APPROACH}}}}" in issue
-    # No --depth: the depth the issue registers the kind at, else thorough.
-    assert [_canon(h) for h in _headings_of(issue)] == [
-        _canon(h) for h in entry["sections"]["lightweight"]]
-    code, none, err = _template_show(_scratch(tmp_path / "plain"), "technical-design")
-    assert code == 0, err
-    assert none == thorough
+def _shipped_catalogue():
+    """The frozen entries of the kinds that still ship a template. The coverage
+    block went with rendered blocks (ADR-091), so the acceptance criteria hold no
+    Coverage ledger heading."""
+    import copy
+    kept = {k: copy.deepcopy(v) for k, v in _preset().items() if k in KEPT_TEMPLATE_KINDS}
+    sections = kept["acceptance-criteria"]["sections"]
+    for depth, listed in sections.items():
+        sections[depth] = [h for h in listed if h != "Coverage ledger"]
+    return kept
 
 
 def test_acf_7():
+    assert {k for k in _preset() if (TEMPLATES / f"{k}.md").is_file()} == KEPT_TEMPLATE_KINDS
     stale = []
-    for kind in _preset():
+    for kind in KEPT_TEMPLATE_KINDS:
         text = (TEMPLATES / f"{kind}.md").read_text(encoding="utf-8")
         for line in text.splitlines():
             if line.startswith("Produced by:") or line.startswith("Lives at:"):
@@ -592,165 +415,30 @@ def test_acf_7():
 
 
 def test_acf_8(tmp_path):
-    catalogue = _preset()
+    catalogue = _shipped_catalogue()
     assert _heading_problems(TEMPLATES, catalogue) == []
     copy = tmp_path / "templates"
     shutil.copytree(TEMPLATES, copy)
-    report = copy / "verification-report.md"
-    original = report.read_text(encoding="utf-8")
-    report.write_text(original.replace("## Gate\n", "## Gate\n\n## An extra heading\n", 1),
-                      encoding="utf-8")
-    found = _heading_problems(copy, catalogue)
-    assert any("verification-report thorough" in p and "An extra heading" in p
-               for p in found), found
-    report.write_text(original.replace("## Test suite evidence\n", "", 1), encoding="utf-8")
-    found = _heading_problems(copy, catalogue)
-    assert any("verification-report thorough" in p and "Test suite evidence" in p
-               for p in found), found
-    lines = original.split("\n")
-    a = lines.index("## Scenario acceptance results")
-    b = lines.index("## Test suite evidence")
-    lines[a], lines[b] = lines[b], lines[a]
-    report.write_text("\n".join(lines), encoding="utf-8")
-    found = _heading_problems(copy, catalogue)
-    assert any("verification-report thorough" in p and "out of order" in p
-               for p in found), found
-
-
-def test_acf_60(tmp_path):
-    from compass_pkg import artifact_kinds  # noqa: F401 - fails until artifact_kinds exists
-
-    catalogue = _preset()
-    text = (TEMPLATES / "technical-design.md").read_text(encoding="utf-8")
-    heads = _template_headings(text)
-    optional = [h for h, marked in heads if marked]
-    assert optional == ["Summary", "Interaction - sequence diagram",
-                        "Structure - what talks to what", "Design patterns invoked",
-                        "The shape of the change", "Cross-cutting concerns"]
-    assert [h for h, marked in heads if not marked] == catalogue["technical-design"][
-        "sections"]["thorough"]
-    assert [h for h, marked in _template_headings(
-        (TEMPLATES / "requirements-review.md").read_text(encoding="utf-8")) if marked] == [
-        "Worked example"]
-    assert [_canon(h) for h, marked in _template_headings(
-        (TEMPLATES / "acceptance-criteria.md").read_text(encoding="utf-8")) if marked] == [
-        "Scenario group B - <>"]
-    # Every lightweight list is an ordered subset of the thorough list.
-    assert _heading_problems(TEMPLATES, catalogue) == []
-    root = _scratch(tmp_path)
-    code, thorough, err = _template_show(root, "technical-design", "--depth", "thorough")
-    assert code == 0, err
-    assert _headings_of(thorough) == [h + " (optional)" if marked else h
-                                      for h, marked in heads]
-    code, light, err = _template_show(root, "technical-design", "--depth", "lightweight")
-    assert code == 0, err
-    assert not [h for h in optional if h in _headings_of(light)]
-    # A marked heading that is also listed fails the test.
-    copy = tmp_path / "templates"
-    shutil.copytree(TEMPLATES, copy)
-    path = copy / "technical-design.md"
-    path.write_text(text.replace("## Approach\n", "## Approach\n" + OPTIONAL + "\n", 1),
+    spec = copy / "acceptance-criteria.md"
+    original = spec.read_text(encoding="utf-8")
+    spec.write_text(original.replace("## Non-functional requirements\n",
+                                     "## An extra heading\n\n## Non-functional requirements\n", 1),
                     encoding="utf-8")
     found = _heading_problems(copy, catalogue)
-    assert any("technical-design" in p and "Approach" in p and "optional and listed" in p
+    assert any("acceptance-criteria thorough" in p and "An extra heading" in p
                for p in found), found
-
-
-def test_acf_9(tmp_path):
-    root = _scratch(tmp_path)
-    code, out, err = _template_show(root, "charter", "--depth", "thorough")
-    assert code == 2, out + err
-    assert "charter" in err
-    for name in ("intent", "technical-design", "review", "devlog", "incident",
-                 "pull-request-body"):
-        assert name in err, name
-    code, out, err = _template_show(root, "intent", "--depth", "medium")
-    assert code == 2, out + err
-    assert "medium" in err and "thorough" in err
-
-
-def _skeleton_problems(kind, depth, output, catalogue, template_text):
-    """Why `output` is not the skeleton of `kind` at `depth`, from the catalogue
-    file and the template file alone."""
-    problems = []
-    entry = catalogue[kind]
-    sections = entry["sections"][depth]
-    head = output.split("\n## ", 1)[0]
-    opening = "<!-- compass:render document-header -->\n"
-    if kind == "verification-note":
-        # Its one block is the note; it carries no header block.
-        if opening in head:
-            problems.append(f"{kind} {depth}: holds a header block")
-    elif opening not in head:
-        problems.append(f"{kind} {depth}: no header block")
-    else:
-        block = head.split(opening, 1)[1].split("<!-- /compass:render -->", 1)[0]
-        for field in ("audience", "stage", "owner"):
-            if " ".join(str(entry[field]).split()) not in block:
-                problems.append(f"{kind} {depth}: header lacks {field}")
-    for dropped in ("**Home:**", "**Traditional name:**", "**Depth:**"):
-        if dropped in output:
-            problems.append(f"{kind} {depth}: prints {dropped}")
-    plain = [_canon(h) for h in _headings_of(output) if not h.endswith("(optional)")]
-    if plain != [_canon(h) for h in sections]:
-        problems.append(f"{kind} {depth}: headings {plain!r} are not {sections!r}")
-    labelled = [_canon(h[:-len(" (optional)")]) for h in _headings_of(output)
-                if h.endswith("(optional)")]
-    marked = [_canon(h) for h, optional in _template_headings(template_text) if optional]
-    if labelled != (marked if depth == "thorough" else []):
-        problems.append(f"{kind} {depth}: optional headings {labelled!r}")
-    return problems
-
-
-def test_acf_10(tmp_path):
-    root = _scratch(tmp_path)
-    catalogue = _preset()
-    assert len(catalogue) == 19
-    outputs = {}
-    for kind, entry in sorted(catalogue.items()):
-        template_text = (TEMPLATES / f"{kind}.md").read_text(encoding="utf-8")
-        for depth in sorted(entry["sections"]):
-            code, out, err = _template_show(root, kind, "--depth", depth)
-            assert code == 0, (kind, depth, err)
-            outputs[kind, depth] = out
-            assert _skeleton_problems(kind, depth, out, catalogue, template_text) == [], (
-                kind, depth)
-    # The check reports a skeleton builder that drops the last lightweight
-    # heading, and one that prints the thorough headings for lightweight.
-    text = (TEMPLATES / "technical-design.md").read_text(encoding="utf-8")
-    dropped = outputs["technical-design", "lightweight"].rsplit("\n## Gate", 1)[0] + "\n"
-    found = _skeleton_problems("technical-design", "lightweight", dropped, catalogue, text)
-    assert found and "technical-design lightweight" in found[0], found
-    found = _skeleton_problems("technical-design", "lightweight",
-                               outputs["technical-design", "thorough"], catalogue, text)
-    assert found and "technical-design lightweight" in found[0], found
-
-
-def test_acf_11(tmp_path):
-    root = _scratch(tmp_path, {"schema": 1, "artifacts": {"test-charter": _charter()}})
-    assert not (TEMPLATES / "test-charter.md").exists()
-    code, out, err = _template_show(root, "test-charter", "--depth", "thorough")
-    assert code == 0, err
-    assert _charter()["audience"] in out
-    assert _headings_of(out) == ["Mission", "Areas"]
-    # No prose sits under the headings: the next line after one is a heading
-    # or the end.
-    body = out.split("## Mission", 1)[1]
-    assert body.replace("## Areas", "").strip() == ""
-
-
-def test_acf_61(tmp_path):
-    root = _scratch(tmp_path)
-    for name in NOT_KINDS:
-        code, out, err = _template_show(root, name)
-        assert code == 0, err
-        assert out == (TEMPLATES / f"{name}.md").read_text(encoding="utf-8"), name
-        assert "**Audience:**" not in out
-    code, out, err = _template_show(root, "devlog", "--depth", "thorough")
-    assert code == 2, out + err
-    assert "devlog" in err and "not a catalog kind" in err and "no sections" in err
-    # The heading test does not read them.
-    assert not [p for p in _heading_problems(TEMPLATES, _preset()) if "devlog" in p]
+    spec.write_text(original.replace("## Failure-mode scenarios\n", "", 1), encoding="utf-8")
+    found = _heading_problems(copy, catalogue)
+    assert any("acceptance-criteria thorough" in p and "Failure-mode scenarios" in p
+               for p in found), found
+    lines = original.split("\n")
+    a = lines.index("## Failure-mode scenarios")
+    b = lines.index("## Non-functional requirements")
+    lines[a], lines[b] = lines[b], lines[a]
+    spec.write_text("\n".join(lines), encoding="utf-8")
+    found = _heading_problems(copy, catalogue)
+    assert any("acceptance-criteria thorough" in p and "out of order" in p
+               for p in found), found
 
 
 def _derive(root, tmp_path, name):
@@ -761,54 +449,6 @@ def _derive(root, tmp_path, name):
     assert code == 0, text + err
     return (out / "glossary.md").read_text(encoding="utf-8"), (
         out / "artifact-catalog.md").read_text(encoding="utf-8")
-
-
-def _mini_root(tmp_path):
-    """A copy of the files the generator reads and the two it writes."""
-    mini = tmp_path / "mini"
-    for rel in ("governance/terminology.yml", "governance/presets/default/artifacts.yml",
-                "docs/glossary.md", "docs/artifact-catalog.md"):
-        _write(mini / rel, (ROOT / rel).read_text(encoding="utf-8"))
-    (mini / ".compass").mkdir()
-    return mini
-
-
-def test_acf_5(tmp_path):
-    mini = _mini_root(tmp_path)
-    glossary, doc = _derive(mini, tmp_path, "fresh")
-    # The committed files equal a fresh generation.
-    assert glossary == (ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
-    assert doc == (ROOT / "docs" / "artifact-catalog.md").read_text(encoding="utf-8")
-    for kind, entry in _preset().items():
-        for text in (glossary, doc):
-            assert kind in text, kind
-            assert " ".join(entry["audience"].split()) in " ".join(text.split()), kind
-            assert entry["stands_for"] in text, kind
-    owning = (ROOT / "docs" / "README.md").read_text(encoding="utf-8").split(
-        "## Owning docs", 1)[1]
-    row = [r for r in owning.splitlines() if r.startswith("|") and "`docs/artifact-catalog.md`" in r.split("|")[-2]]
-    assert row and "artifact_kinds.py" in row[0] and "template_lists.py" in row[0]
-    assert not [r for r in owning.splitlines()
-                if "template_lists.py" in r and "entry-exit-evaluation.md" in r]
-    # A kind added to the catalogue without regenerating makes the committed
-    # files stale.
-    path = mini / "governance" / "presets" / "default" / "artifacts.yml"
-    path.write_text(path.read_text(encoding="utf-8") + (
-        "  test-charter:\n    file: test-charter.md\n    stage: plan\n    owner: planner\n"
-        "    audience: A tester reads it to plan the session.\n    stands_for: test-charter\n"
-        "    sections:\n      thorough:\n      - Mission\n    depends_on: []\n"),
-        encoding="utf-8")
-    added_glossary, added_doc = _derive(mini, tmp_path, "added")
-    assert "test-charter" in added_glossary and "test-charter" in added_doc
-    assert added_glossary != glossary and added_doc != doc
-    # A hand edit of a generated entry no longer equals a fresh generation.
-    audience = " ".join(_preset()["intent"]["audience"].split())
-    for fresh in (glossary, doc):
-        edited = fresh.replace(audience, "Edited by hand.")
-        assert edited != fresh
-    # The glossary meaning-only test passes on what was generated.
-    from test_glossary_meaning_only import meaning_only_problems
-    assert meaning_only_problems(glossary) == [] and meaning_only_problems(doc) == []
 
 
 # --- group C: the registry, rounds, the home of a document and issue lint ----------
@@ -833,10 +473,6 @@ def _manifest_of(task_dir):
     return yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
 
 
-def _entries(task_dir, kind):
-    return [a for a in _manifest_of(task_dir).get("artifacts") or [] if a.get("kind") == kind]
-
-
 def _doc(root, name, text="# a document\n"):
     _write(root / HOME / name, text)
     return f"{HOME}/{name}"
@@ -846,131 +482,12 @@ def _set(root, kind, *argv):
     return _cli(root, "issue", "artifact", "set", kind, "--issue", SLUG, *argv)
 
 
-def test_acf_13(tmp_path):
-    root, task_dir = _registry_project(tmp_path)
-    one, two = _doc(root, "review-1.md"), _doc(root, "review-2.md")
-    assert _set(root, "review", "--status", "draft", "--path", one)[0] == 0
-    assert _set(root, "review", "--status", "draft", "--path", two)[0] == 0
-    found = _entries(task_dir, "review")
-    assert [(e["round"], e["path"]) for e in found] == [(1, one), (2, two)]
-    assert len({e["id"] for e in found}) == 2
-    code, out, err = _cli(root, "issue", "artifact-path", "review", "--issue", SLUG)
-    assert code == 0 and out.strip().endswith("review-2.md"), out + err
-    code, out, err = _cli(root, "issue", "artifact-path", "review", "--round", "1",
-                          "--issue", SLUG)
-    assert code == 0 and out.strip().endswith("review-1.md"), out + err
-    code, out, err = _cli(root, "issue", "artifact-path", "review", "--round", "9",
-                          "--issue", SLUG)
-    assert code != 0 and out == "", out + err
-    code, out, err = _template_show(root, "review", "--depth", "thorough")
-    assert code == 0, err
-    assert _headings_of(out) == ["Scope", "Verdict", "Blocking", "Not blocking", "Security",
-                                 "Probes"]
-    # Registering round 2 again updates it and adds no third entry.
-    assert _set(root, "review", "--status", "approved", "--path", two)[0] == 0
-    found = _entries(task_dir, "review")
-    assert len(found) == 2 and found[1]["status"] == "approved" and found[0]["status"] == "draft"
-    # A round can be named without its path, and updates that round's entry.
-    assert _set(root, "review", "--round", "1", "--status", "approved")[0] == 0
-    assert _entries(task_dir, "review")[0]["status"] == "approved"
-    # A reassessment keeps every round of a voluntary kind as it was: nothing earned
-    # the review, so nothing can unearn it.
-    from test_generation_store import _evaluate_write
-    before_rounds = _entries(task_dir, "review")
-    body = _manifest_of(task_dir)
-    body["assessment"]["size"] = "large"
-    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
-    assert _evaluate_write(root, "--reason", "bigger than assessed")[0] == 0
-    assert _manifest_of(task_dir)["delivery_approach"] == "full"
-    assert _entries(task_dir, "review") == before_rounds
-    # A path that is not review-<n>.md is refused, naming the pattern.
-    before = (task_dir / "manifest.yml").read_bytes()
-    code, out, err = _set(root, "review", "--status", "draft", "--path", _doc(root, "review-final.md"))
-    assert code == 2 and "review-<n>.md" in err, out + err
-    assert (task_dir / "manifest.yml").read_bytes() == before
-    # A round named with a path of another round is refused.
-    code, out, err = _set(root, "review", "--round", "1", "--status", "draft", "--path", two)
-    assert code == 2 and "round" in err, out + err
-    assert (task_dir / "manifest.yml").read_bytes() == before
-
-
 def _pass_every_gate(task_dir):
     body = _manifest_of(task_dir)
     for gate in body.get("gates") or []:
         gate["status"] = "pass"
     (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
                                            encoding="utf-8")
-
-
-def test_acf_58(tmp_path):
-    root, task_dir = _registry_project(tmp_path)
-    for n in (1, 2, 3):
-        path = _doc(root, f"review-{n}.md")
-        assert _set(root, "review", "--status", "draft", "--path", path)[0] == 0
-    for n in (1, 2):
-        assert _set(root, "review", "--round", str(n), "--status", "approved")[0] == 0
-    ids = {n: e["id"] for n, e in enumerate(_entries(task_dir, "review"), 1)}
-    assert len(set(ids.values())) == 3
-    _pass_every_gate(task_dir)
-
-    # compass check: round 3 is the one not approved, named by its entry id.
-    code, out, err = _cli(root, "check", "--issue", SLUG, "--json")
-    rows = {r["name"]: r for r in json.loads(out)["checks"]}
-    detail = rows["artifacts-approved"]["detail"]
-    assert ids[3] in detail and "round 3" in detail, detail
-    assert ids[1] not in detail and ids[2] not in detail, detail
-
-    # The issue page lists each round with its own entry id and path.
-    code, out, err = _cli(root, "issue", "render", "--issue", SLUG)
-    assert code == 0, out + err
-    page = (root / HOME / "README.md").read_text(encoding="utf-8")
-    for n in (1, 2, 3):
-        lines = [line for line in page.splitlines() if ids[n] in line]
-        assert len(lines) == 1 and f"review-{n}.md" in lines[0], (n, lines)
-
-    # The board lists each round too.
-    board = tmp_path / "board.html"
-    code, out, err = _cli(root, "flow", "--html", str(board))
-    assert code == 0, out + err
-    html = board.read_text(encoding="utf-8")
-    for n in (1, 2, 3):
-        assert ids[n] in html and f"review-{n}.md" in html, n
-
-    # The receipt lists each round, draft or not.
-    code, out, err = _cli(root, "issue", "receipt", "--issue", SLUG)
-    assert code == 0, out + err
-    for n in (1, 2, 3):
-        lines = [line for line in out.splitlines() if ids[n] in line]
-        assert len(lines) == 1 and f"review-{n}.md" in lines[0], (n, lines, out)
-
-    # A reader that asks for the review with no round gets round 3.
-    code, out, err = _cli(root, "issue", "artifact-path", "review", "--issue", SLUG)
-    assert code == 0 and out.strip().endswith("review-3.md"), out + err
-    from compass_pkg import core
-    state, path, why = core.resolve_artifact(str(task_dir), "review")
-    assert state == core.FOUND and path.endswith("review-3.md"), (state, path, why)
-    state, path, why = core.resolve_artifact(str(task_dir), "review", round=1)
-    assert state == core.FOUND and path.endswith("review-1.md"), (state, path, why)
-
-
-def test_acf_14(tmp_path):
-    root, task_dir = _registry_project(tmp_path)
-    for kind, name in (("bug-report", "bug-report.md"), ("review", "review-1.md"),
-                       ("architecture-notes", "architecture-notes.md"),
-                       ("product-owner-review", "product-owner-review.md"),
-                       ("spike-conclusion", "spike-conclusion.md"),
-                       ("positioning", "positioning.md"),
-                       ("technical-design", "technical-design.md")):
-        before = (task_dir / "manifest.yml").read_bytes()
-        code, out, err = _set(root, kind, "--status", "draft", "--path",
-                              f".compass/work/{SLUG}/{name}")
-        assert code == 2, (kind, out + err)
-        shown = "review-<n>.md" if kind == "review" else name
-        assert kind in err and f"{HOME}/{shown}" in err, (kind, err)
-        assert (task_dir / "manifest.yml").read_bytes() == before, kind
-    # The home itself is accepted.
-    assert _set(root, "bug-report", "--status", "draft",
-                "--path", _doc(root, "bug-report.md"))[0] == 0
 
 
 def test_acf_15(tmp_path):
@@ -987,81 +504,6 @@ def test_acf_15(tmp_path):
     for name in ("review-1.md", "technical-design.md", "review-brief.md", "README.md",
                  "distribution-map.md.v6.bak"):
         assert name not in out + err, name
-
-
-def test_acf_30(tmp_path):
-    root, task_dir = _registry_project(tmp_path, goal="exploration")
-    assert _manifest_of(task_dir)["delivery_approach"] == "spike"
-    path = _doc(root, "spike-conclusion.md")
-    assert _set(root, "spike-conclusion", "--status", "draft", "--path", path)[0] == 0
-
-    def verdict():
-        code, out, err = _cli(root, "check", "--issue", SLUG, "--json")
-        rows = {r["name"]: r for r in json.loads(out)["checks"]}
-        return rows["spike-conclusion-present"]
-
-    row = verdict()
-    assert row["status"] == "fail" and "no `spike-conclusion` evidence" in row["detail"], row
-    body = _manifest_of(task_dir)
-    body["evidence"] = [{"id": "EV-1", "type": "spike-conclusion", "decision": "discard",
-                         "path": path}]
-    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
-    row = verdict()
-    assert row["status"] == "pass" and "discard" in row["detail"], row
-    body["evidence"][0]["decision"] = "graduate-to-delivery"
-    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
-    row = verdict()
-    assert row["status"] == "fail" and "next_task" in row["detail"], row
-    # The definition in the shipped checks catalogue is unchanged and locked.
-    checks = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "checks.yml")
-                            .read_text(encoding="utf-8"))["checks"]
-    one = checks["spike-conclusion-present"]
-    assert (one["kind"], one["impl"], one["severity"], one["on_skipped"], one["locked"]) == (
-        "deterministic", "spike-conclusion-present", "blocking", "fail", True)
-    assert " ".join(one["statement"].split()) == (
-        "A spike has a `spike-conclusion` evidence entry with a recorded decision "
-        "(discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue.")
-
-
-def test_acf_62(tmp_path):
-    root, task_dir = _registry_project(tmp_path, goal="exploration")
-    path = _doc(root, "spike-conclusion.md")
-    code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
-                          "--decision", "discard")
-    assert code == 0, out + err
-    held = _entries(task_dir, "spike-conclusion")
-    assert len(held) == 1 and held[0]["path"] == path
-    records = [e for e in _manifest_of(task_dir)["evidence"] if e.get("type") == "spike-conclusion"]
-    assert len(records) == 1 and records[0]["decision"] == "discard", records
-    assert path in str(records[0]["path"]).replace("\\", "/").replace("../", ""), records
-    code, out, err = _cli(root, "check", "--issue", SLUG, "--json")
-    rows = {r["name"]: r for r in json.loads(out)["checks"]}
-    assert rows["spike-conclusion-present"]["status"] == "pass", rows["spike-conclusion-present"]
-    # A graduation without the next issue, and a decision that is not allowed, write nothing.
-    before = (task_dir / "manifest.yml").read_bytes()
-    code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
-                          "--decision", "graduate-to-delivery")
-    assert code == 2 and "--next-issue" in err, out + err
-    code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
-                          "--decision", "keep")
-    assert code == 2, out + err
-    for word in ("discard", "graduate-to-delivery", "defer"):
-        assert word in err
-    code, out, err = _set(root, "bug-report", "--status", "draft",
-                          "--path", _doc(root, "bug-report.md"), "--decision", "discard")
-    assert code == 2 and "--decision" in err, out + err
-    assert (task_dir / "manifest.yml").read_bytes() == before
-    # Running it again with another decision updates the one record.
-    code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
-                          "--decision", "defer")
-    assert code == 0, out + err
-    records = [e for e in _manifest_of(task_dir)["evidence"] if e.get("type") == "spike-conclusion"]
-    assert len(records) == 1 and records[0]["decision"] == "defer", records
-    code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
-                          "--decision", "graduate-to-delivery", "--next-issue", "next-issue")
-    assert code == 0, out + err
-    records = [e for e in _manifest_of(task_dir)["evidence"] if e.get("type") == "spike-conclusion"]
-    assert len(records) == 1 and records[0]["next_task"] == "next-issue", records
 
 
 # --- group E: conditional artifacts ------------------------------------------------
@@ -1091,58 +533,8 @@ def _check_row(root, name="artifacts-approved"):
     return {r["name"]: r for r in json.loads(out)["checks"]}[name]
 
 
-def test_acf_24(tmp_path):
-    root, task_dir = _registry_project(tmp_path)
-    _with_subtasks(task_dir, 1)
-    # Gates still open: the line that says nothing is judged yet names the map as not needed.
-    row = _check_row(root)
-    assert row["status"] == "nothing-to-check", row
-    assert "distribution-map" in row["detail"] and "not needed: one subtask" in row["detail"], row
-    # Every gate passed: the verdict does not fail on the map, and says it is not needed.
-    _pass_every_gate(task_dir)
-    row = _check_row(root)
-    assert row["status"] == "fail" and "distribution-map reads draft" not in row["detail"], row
-    assert "distribution-map: not needed: one subtask" in row["detail"], row
-    _approve_others(root, task_dir)
-    row = _check_row(root)
-    assert row["status"] == "pass", row
-    assert "distribution-map: not needed: one subtask" in row["detail"], row
-
-
-def test_acf_25(tmp_path):
-    root, task_dir = _registry_project(tmp_path)
-    _with_subtasks(task_dir, 2)
-    _pass_every_gate(task_dir)
-    _approve_others(root, task_dir)
-    row = _check_row(root)
-    assert row["status"] == "fail" and "distribution-map reads draft" in row["detail"], row
-    assert "not needed" not in row["detail"], row
-    path = _doc(root, "distribution-map.md", "# a map\n\nunits: 2\n")
-    assert _set(root, "distribution-map", "--status", "approved", "--path", path)[0] == 0
-    row = _check_row(root)
-    assert row["status"] == "pass", row
-
-
-def test_acf_25_a_two_unit_map_is_owed_with_no_subtask_record(tmp_path):
-    # 9.0.0 writes no `subtasks:` (ADR-090), so the map's own `units:` line counts:
-    # a draft map that declares two units is owed, and artifacts-approved names it.
-    root, task_dir = _registry_project(tmp_path)
-    _with_subtasks(task_dir, None)
-    _pass_every_gate(task_dir)
-    _approve_others(root, task_dir)
-    path = _doc(root, "distribution-map.md", "# a map\n\nunits: [U1, U2]\n")
-    assert _set(root, "distribution-map", "--status", "draft", "--path", path)[0] == 0
-    row = _check_row(root)
-    assert row["status"] == "fail" and "distribution-map reads draft" in row["detail"], row
-    # One unit is not owed, as one recorded subtask was not.
-    _doc(root, "distribution-map.md", "# a map\n\nunits: 1\n")
-    row = _check_row(root)
-    assert "distribution-map reads draft" not in row["detail"], row
-    assert "distribution-map: not needed: one unit" in row["detail"], row
-
-
 def _shown_everywhere(root, task_dir, tmp_path, text):
-    """The issue page, the board panel and the receipt each carry `text` for the map."""
+    """The issue page and the board panel each carry `text` for the map."""
     code, out, err = _cli(root, "issue", "render", "--issue", SLUG)
     assert code == 0, out + err
     page = (root / HOME / "README.md").read_text(encoding="utf-8")
@@ -1154,96 +546,7 @@ def _shown_everywhere(root, task_dir, tmp_path, text):
     html = board.read_text(encoding="utf-8")
     panel = [line for line in html.splitlines() if "distribution-map" in line]
     assert len(panel) == 1 and text in panel[0], panel
-    code, out, err = _cli(root, "issue", "receipt", "--issue", SLUG)
-    assert code == 0, out + err
-    receipt = [line for line in out.splitlines() if "distribution-map" in line]
-    assert len(receipt) == 1 and text in receipt[0], receipt
-    return page, html, out
-
-
-def test_acf_26(tmp_path):
-    root, task_dir = _registry_project(tmp_path)
-    _with_subtasks(task_dir, 1)
-    page, html, receipt = _shown_everywhere(root, task_dir, tmp_path, "not needed: one subtask")
-    for text in (page, html, receipt):
-        assert "missing" not in text.lower() or "distribution-map" not in text.lower().split(
-            "missing")[0][-60:], text
-    assert "omitted" not in [ln for ln in page.splitlines() if "distribution-map" in ln][0]
-    # The six drafts that remain are counted (the record, intent, criteria, requirements
-    # review, design and report); the map is not one of them.
-    assert "6 more still draft" in receipt, receipt
-    # `compass next` does not name the map as outstanding work.
-    code, out, err = _cli(root, "next", "--issue", SLUG)
-    assert "distribution-map" not in out + err, out + err
-    # The one function: the page and the board take the text from `artifact_owed`.
-    from compass_pkg import artifact_owed, effective
-    task = _manifest_of(task_dir)
-    view = effective.view_or_legacy(str(task_dir))
-    verdict = artifact_owed.owed(task, view, "distribution-map")
-    assert (verdict.owed, verdict.text) == (False, "not needed: one subtask")
-    _with_subtasks(task_dir, 2)
-    verdict = artifact_owed.owed(_manifest_of(task_dir), view, "distribution-map")
-    assert (verdict.owed, verdict.text) == (True, None)
-    assert artifact_owed.subtask_count({}) == 0 and artifact_owed.subtask_count(
-        {"subtasks": [{}, {}, {}]}) == 3
-    assert tuple(artifact_owed.CONDITIONS) == tuple(
-        __import__("compass_pkg.catalogue_spec", fromlist=["x"]).REQUIRED_WHEN_CONDITIONS)
-
-
-def test_acf_27(tmp_path):
-    root, task_dir = _registry_project(tmp_path)
-    _with_subtasks(task_dir, 2)
-    code, out, err = _set(root, "distribution-map", "--status", "omitted",
-                          "--reason", "pair worked from the design")
-    assert code == 0, out + err
-    _pass_every_gate(task_dir)
-    _approve_others(root, task_dir)
-    row = _check_row(root)
-    assert row["status"] == "pass", row
-    assert "not needed" not in row["detail"], row
-    code, out, err = _cli(root, "issue", "render", "--issue", SLUG)
-    assert code == 0, out + err
-    page = (root / HOME / "README.md").read_text(encoding="utf-8")
-    line = [ln for ln in page.splitlines() if "distribution-map" in ln]
-    assert len(line) == 1 and "omitted" not in line[0] or "pair worked from the design" in line[0]
-    assert "pair worked from the design" in line[0] and "not needed" not in page, line
-    # One subtask, the same omission: the person's record still shows, with its reason.
-    _with_subtasks(task_dir, 1)
-    row = _check_row(root)
-    assert "not needed" not in row["detail"], row
-    code, out, err = _cli(root, "issue", "render", "--issue", SLUG)
-    page = (root / HOME / "README.md").read_text(encoding="utf-8")
-    line = [ln for ln in page.splitlines() if "distribution-map" in ln]
-    assert "pair worked from the design" in line[0] and "not needed" not in page, line
-
-
-def test_acf_28(tmp_path):
-    root, task_dir = _registry_project(tmp_path)
-    assert "subtasks" not in _manifest_of(task_dir)
-    row = _check_row(root)
-    assert "distribution-map" in row["detail"], row
-    assert "not needed: no subtasks recorded" in row["detail"], row
-    _pass_every_gate(task_dir)
-    _approve_others(root, task_dir)
-    row = _check_row(root)
-    assert row["status"] == "pass" and "not needed: no subtasks recorded" in row["detail"], row
-    # Breakdown records two subtasks: the map is owed.
-    _with_subtasks(task_dir, 2)
-    row = _check_row(root)
-    assert row["status"] == "fail" and "distribution-map reads draft" in row["detail"], row
-    # A full issue capped at one worktree, with one subtask, does not owe it either.
-    other = tmp_path / "full"
-    other.mkdir()
-    root2, task_dir2 = _registry_project(other, goal="delivery")
-    body = _manifest_of(task_dir2)
-    body["delivery_approach"] = "full"
-    (task_dir2 / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
-                                            encoding="utf-8")
-    _with_subtasks(task_dir2, 1)
-    _pass_every_gate(task_dir2)
-    row = _check_row(root2)
-    assert "distribution-map reads draft" not in row["detail"], row
-    assert "not needed: one subtask" in row["detail"], row
+    return page, html
 
 
 # --- group D: the delivery-approach record on every approach -----------------------
@@ -1274,95 +577,7 @@ def _evaluate(root, *extra):
     return _cli(root, "approach", "evaluate", "--issue", SLUG, "--write", *extra)
 
 
-FIVE_APPROACHES = {
-    "quick-fix": ({"risk": "trivial", "size": "atomic"}, "lightweight"),
-    "regular": ({}, "thorough"),
-    "hotfix": ({"urgency": "live-defect", "size": "small"}, "lightweight"),
-    "full": ({"risk": "critical", "size": "large"}, "thorough"),
-    "spike": ({"goal": "exploration"}, "lightweight"),
-}
-
-
-def test_acf_16(tmp_path):
-    for approach, (assessment, depth) in FIVE_APPROACHES.items():
-        root, task_dir = _fixture(tmp_path, approach, **assessment)
-        body = _manifest_of(task_dir)
-        code, out, err = _evaluate(root, *_justify_all(body["assessment"]))
-        assert code == 0, (approach, out + err)
-        body = _manifest_of(task_dir)
-        assert body["delivery_approach"] == approach
-        found = [a for a in body["artifacts"] if a["kind"] == "delivery-approach"]
-        assert len(found) == 1, (approach, body["artifacts"])
-        assert found[0]["status"] == "draft" and found[0]["depth"] == depth, (approach, found)
-        assert "path" not in found[0], (approach, found)
-        code, out, err = _cli(root, "issue", "artifact-path", "delivery-approach",
-                              "--issue", SLUG)
-        assert code == 0 and out.strip() == f"{HOME}/delivery-approach.md", (approach, out + err)
-    # The depth follows the issue's configuration: a layer that lightens regular's
-    # assess stage registers the record at lightweight. The shipped lint refuses such a
-    # loosening without a waiver, so the layer is merged here and evaluated directly.
-    import copy
-
-    from compass_pkg import effective, merge, policy_lint, routing
-    parent, _ = policy_lint.load_parent()
-    base, provenance = merge.apply({}, parent.doc, parent.kind, parent.name, {})
-    layer = {"schema": 1, "approaches": {"regular": {"set": {"stages": {
-        "set": {"assess": "lightweight"}}}}}}
-    child, _ = merge.apply(copy.deepcopy(base), layer, "project", "project", dict(provenance))
-    for config, depth in ((base, "thorough"), (child, "lightweight")):
-        view = effective.EffectiveView("live", SLUG, None, config, {})
-        result = routing.evaluate_route(
-            {"risk": "contained", "familiarity": "brownfield-mapped", "size": "medium",
-             "goal": "delivery", "role": "engineer", "labels": []}, view.evaluator_policy())
-        assert result["delivery_approach"] == "regular"
-        found = [a for a in result["artifacts"] if a["kind"] == "delivery-approach"]
-        assert [a["depth"] for a in found] == [depth], found
-
-
 #: Words that send a writer to the old home, beside the manifest.
-OLD_HOME_TEXTS = (r"\.compass/work/<[^>]*>/delivery-approach\.md",
-                  r"into the issue directory",
-                  r"alongside\s+`delivery-approach\.md`")
-
-
-def test_acf_17(tmp_path):
-    import re
-    root, task_dir = _fixture(tmp_path, "regular")
-    code, out, err = _evaluate(root, *_justify_all(_manifest_of(task_dir)["assessment"]))
-    assert code == 0, out + err
-    code, out, err = _cli(root, "issue", "artifact-path", "delivery-approach", "--issue", SLUG)
-    assert code == 0, out + err
-    path = out.strip()
-    assert path == f"{HOME}/delivery-approach.md", path
-    _write(root / path, "# Delivery approach - feature\n")
-    code, out, err = _set(root, "delivery-approach", "--status", "draft", "--path", path)
-    assert code == 0, out + err
-    entry = _entries(task_dir, "delivery-approach")
-    assert len(entry) == 1 and entry[0]["path"] == path, entry
-    assert (root / path).is_file() and not (task_dir / "delivery-approach.md").exists()
-    # A quick fix writes and registers the record at the same home.
-    qf = _scratch(tmp_path / "qf-holder") if False else tmp_path / "qf"
-    (qf / ".compass").mkdir(parents=True)
-    code, out, err = _cli(qf, "quick-fix", "start", "fix-it",
-                          "--risk", "trivial - one line", "--familiarity",
-                          "brownfield-mapped - mapped", "--size", "atomic - one file",
-                          "--intent", "A quick fix records its approach in the documents folder.",
-                          "--scenario", "A quick fix records its approach in one place",
-                          "--test", "tests/test_x.py::test_x")
-    assert code == 0, out + err
-    qf_home = next((qf / "docs" / "compass").glob("*-fix-it"))
-    assert (qf_home / "delivery-approach.md").is_file()
-    assert not (qf / ".compass" / "work" / "fix-it" / "delivery-approach.md").exists()
-    code, out, err = _cli(qf, "issue", "artifact-path", "delivery-approach", "--issue", "fix-it")
-    assert code == 0 and out.strip().endswith(f"{qf_home.name}/delivery-approach.md"), out + err
-    # No writer's instructions name the old home.
-    for folder in ("commands", "skills", "approaches"):
-        for text_file in sorted((ROOT / folder).rglob("*.md")):
-            text = text_file.read_text(encoding="utf-8")
-            for pattern in OLD_HOME_TEXTS:
-                assert not re.search(pattern, text), (str(text_file), pattern)
-    for name in ("approaches/assess-procedure.md", "approaches/rubric.md"):
-        assert "artifact-path delivery-approach" in (ROOT / name).read_text(encoding="utf-8"), name
 
 
 def _hook_issue(tmp_path, name, *, register, documents, beside):
@@ -1377,25 +592,6 @@ def _hook_issue(tmp_path, name, *, register, documents, beside):
         _write(project / ".compass" / "work" / HSLUG / "delivery-approach.md",
                "# Delivery approach\n")
     return project
-
-
-def test_acf_18(tmp_path):
-    from test_hook_artifact_paths import DOCS_REL, _pre_tool
-    project = _hook_issue(tmp_path, "found", register=True, documents=True, beside=False)
-    ran = _pre_tool(project)
-    assert ran.returncode == 0 and "no-delivery-approach" not in ran.stderr, ran.stderr
-    (project / DOCS_REL / "delivery-approach.md").unlink()
-    ran = _pre_tool(project)
-    assert ran.returncode != 0 and "delivery-approach" in ran.stderr, ran.stderr
-    assert "a-moved-issue" in ran.stderr, ran.stderr
-
-
-def test_acf_19(tmp_path):
-    from test_hook_artifact_paths import DOCS_REL, _stop
-    project = _hook_issue(tmp_path, "found", register=True, documents=True, beside=False)
-    assert "MISSING" not in _stop(project).stderr
-    (project / DOCS_REL / "delivery-approach.md").unlink()
-    assert "delivery-approach record is MISSING" in _stop(project).stderr
 
 
 def test_acf_20(tmp_path):
@@ -1475,141 +671,10 @@ def test_acf_21(tmp_path):
     assert set(_manifest_of(task_dir2)["justifications"]) == {"risk", "familiarity", "size"}
 
 
-def test_acf_22(tmp_path):
-    qf = tmp_path / "qf"
-    (qf / ".compass").mkdir(parents=True)
-    base = ["quick-fix", "start", "fix-it", "--risk", "trivial - risk reason",
-            "--familiarity", "brownfield-mapped - familiarity reason",
-            "--size", "atomic - size reason",
-            "--intent", "A quick fix records each reason it was given.",
-            "--scenario", "A quick fix shows every reason in its record",
-            "--test", "tests/test_x.py::test_x"]
-    # A goal or role with no reason is refused before anything is written.
-    for flag, word in (("--goal", "goal"), ("--role", "role")):
-        value = "delivery" if word == "goal" else "engineer"
-        code, out, err = _cli(qf, *base, flag, value)
-        assert code == 2 and word in err, out + err
-        assert not (qf / ".compass" / "work" / "fix-it").exists()
-        assert not (qf / "docs").exists()
-    code, out, err = _cli(qf, *base, "--goal", "delivery - goal reason",
-                          "--role", "engineer - role reason")
-    assert code == 0, out + err
-    body = yaml.safe_load((qf / ".compass" / "work" / "fix-it" / "manifest.yml").read_text())
-    # A role is accepted and ignored: it is not an assessment dimension from 7.0.0 (ADR-070).
-    assert body["justifications"] == {
-        "risk": "risk reason", "familiarity": "familiarity reason", "size": "size reason",
-        "goal": "goal reason"}, body["justifications"]
-    assert set(body["assessment"]) == {"risk", "familiarity", "size", "goal", "labels"}
-    record = (next((qf / "docs" / "compass").glob("*-fix-it")) / "delivery-approach.md").read_text()
-    for dim, reason in body["justifications"].items():
-        assert any(dim.capitalize() in line and reason in line
-                   for line in record.splitlines()), (dim, record)
-    assert "(no reason given)" not in record
-    for folder in ("cli", "hooks"):
-        for source in (ROOT / folder).rglob("*"):
-            if source.is_file() and "__pycache__" not in str(source) and "vendor" not in str(
-                    source.relative_to(ROOT)):
-                try:
-                    text = source.read_text(encoding="utf-8")
-                except UnicodeDecodeError:
-                    continue
-                assert "(no reason given)" not in text, str(source)
-    # An omitted goal and role record no value and no justification (read as "not assessed").
-    other = tmp_path / "plain"
-    (other / ".compass").mkdir(parents=True)
-    code, out, err = _cli(other, *[a if a != "fix-it" else "plain-fix" for a in base])
-    assert code == 0, out + err
-    plain = yaml.safe_load((other / ".compass" / "work" / "plain-fix" / "manifest.yml").read_text())
-    assert "goal" not in plain["assessment"] and "role" not in plain["assessment"]
-    assert set(plain["justifications"]) == {"risk", "familiarity", "size"}
-    plain_record = (next((other / "docs" / "compass").glob("*-plain-fix"))
-                    / "delivery-approach.md").read_text()
-    assert "(no reason given)" not in plain_record and "| Goal |" not in plain_record
-    # The readers print "not assessed" for the absent values.
-    code, out, err = _cli(other, "issue", "receipt", "--issue", "plain-fix")
-    assert code == 0, out + err
-    goal_line = [ln for ln in out.splitlines() if ln.strip().startswith("goal")]
-    assert len(goal_line) == 1 and "not assessed" in goal_line[0], out
-    assert "engineer" not in goal_line[0] and "delivery" not in goal_line[0], goal_line
-    html = other / "board.html"
-    code, out, err = _cli(other, "flow", "--html", str(html))
-    assert code == 0, out + err
-    assert "not assessed" in html.read_text(encoding="utf-8")
-    code, out, err = _cli(other, "flow", "--json")
-    assert code == 0, out + err
-    rows = [r for lane in json.loads(out)["sections"].values() for r in lane
-            if r.get("slug") == "plain-fix"]
-    assert rows and rows[0]["assessment"]["goal"] == "not assessed", rows
-    code, out, err = _cli(other, "retro")
-    assert code == 0 and "None" not in out, out + err
-
-
-def test_acf_29(tmp_path):
-    root = _scratch(tmp_path)
-    shown = _show(root)
-    assert shown["approaches.spike.artifacts"] == {
-        "delivery-approach": "lightweight", "spike-conclusion": "thorough"}
-    assert shown["approaches.spike.locked"] is True
-    root, task_dir = _fixture(tmp_path, "spike", goal="exploration")
-    code, out, err = _evaluate(root, *_justify_all(_manifest_of(task_dir)["assessment"]))
-    assert code == 0, out + err
-    body = _manifest_of(task_dir)
-    assert body["delivery_approach"] == "spike"
-    got = {a["kind"]: a for a in body["artifacts"]}
-    assert set(got) == {"delivery-approach", "spike-conclusion"}
-    assert (got["delivery-approach"]["depth"], got["spike-conclusion"]["depth"]) == (
-        "lightweight", "thorough")
-    assert all("path" not in a for a in got.values())
-    for kind in got:
-        code, out, err = _cli(root, "issue", "artifact-path", kind, "--issue", SLUG)
-        assert code == 0 and out.strip() == f"{HOME}/{kind}.md", (kind, out + err)
-
-
 # --- group G: the delivery-approach record's rendered blocks (FU-1) ---------------
 
 def _template(name):
     return (ROOT / "templates" / name).read_text(encoding="utf-8")
-
-
-def _section(text, heading):
-    """The lines under `heading` (a line start), up to the next heading of the same or
-    a higher level."""
-    lines = text.splitlines()
-    start = next(i for i, line in enumerate(lines) if line.startswith(heading))
-    level = len(heading) - len(heading.lstrip("#"))
-    out = []
-    for line in lines[start + 1:]:
-        stripped = line.lstrip("#")
-        if line.startswith("#") and stripped.startswith(" ") and len(line) - len(stripped) <= level:
-            break
-        out.append(line)
-    return "\n".join(out)
-
-
-def _without_comments(text):
-    import re
-    return re.sub(r"<!--(?!\s*/?compass:render).*?-->", "", text, flags=re.S)
-
-
-def test_acf_34():
-    from compass_pkg import block_renderers, rendered_blocks
-    text = _template("delivery-approach.md")
-    # The assessment section also ends with the repository readiness line, a block of
-    # its own (issue `project-readiness-caps-autonomy`), under the assessment.
-    # The four-layer acceptance strategy's line follows it (issue `acceptance-strategy-core`).
-    sections = {"## The assessment": ["assessment", "readiness", "acceptance-strategy"],
-                "## Policy rules that fired": ["policy-rules"],
-                "### Per-stage weight": ["stage-weights"], "### Gate set": ["gate-set"]}
-    for heading, kinds in sections.items():
-        body = _section(text, heading)
-        found = [b.kind for b in rendered_blocks.parse(body).blocks]
-        assert found == kinds, (heading, found)
-        outside = _without_comments(rendered_blocks.masked_text(body))
-        assert not [ln for ln in outside.splitlines() if ln.lstrip().startswith("|")], heading
-        assert "{{" not in outside, heading
-        for kind in kinds:
-            assert kind in rendered_blocks.KINDS
-            assert kind in block_renderers.RENDERERS
 
 
 def _approach_issue(tmp_path, name, *, reasons=None, **assessment):
@@ -1651,133 +716,10 @@ def _rewrite_manifest(task_dir, **changes):
                                            encoding="utf-8")
 
 
-def test_acf_35(tmp_path):
-    reasons = {"risk": "The migrate moves folders Git cannot restore.",
-               "familiarity": "The catalogue is documented.",
-               "size": "It touches fourteen modules.",
-               "goal": "The outcome wanted is a delivered change.",
-               "role": "An engineer asked for it."}
-    root, task_dir, record = _approach_issue(
-        tmp_path, "full", reasons=reasons, risk="critical", size="large",
-        labels=["cli", "migrations"])
-    _render(root)
-    block = _block(record.read_text(encoding="utf-8"), "assessment")
-    values = _manifest_of(task_dir)["assessment"]
-    assert (values["risk"], values["familiarity"], values["size"]) == (
-        "critical", "brownfield-mapped", "large")
-    rows = [line for line in block.splitlines() if line.startswith("|")]
-    for dim, value in (("risk", "critical"), ("familiarity", "brownfield-mapped"),
-                       ("size", "large"), ("goal", "delivery")):
-        hit = [r for r in rows if dim.capitalize() in r and value in r and reasons[dim] in r]
-        assert len(hit) == 1, (dim, block)
-    assert not [r for r in rows if "Role" in r], block      # role is not read (ADR-070)
-    assert "Labels: cli, migrations" in block, block
-    code, out, err = _cli(root, "issue", "receipt", "--issue", SLUG)
-    assert code == 0, out + err
-    for dim in ("risk", "familiarity", "size"):
-        assert reasons[dim] in out, (dim, out)
-    # An archived issue with no justifications key: the receipt reads the record's table.
-    old = tmp_path / "old"
-    old.mkdir()
-    root2, task_dir2 = _fixture(tmp_path, "archived")
-    _rewrite_manifest(task_dir2, assessment=dict(_manifest_of(task_dir2)["assessment"]))
-    body = _manifest_of(task_dir2)
-    body.pop("justifications", None)
-    (task_dir2 / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
-                                            encoding="utf-8")
-    _write(root2 / HOME / "delivery-approach.md",
-           "# Delivery approach - feature\n\n| Dimension | Value | One-line justification |\n"
-           "|---|---|---|\n| **Risk** | contained | Hand-written risk reason. |\n"
-           "| **Familiarity** | brownfield-mapped | Hand-written familiarity reason. |\n"
-           "| **Size** | medium | Hand-written size reason. |\n")
-    _set(root2, "delivery-approach", "--status", "draft", "--path",
-         f"{HOME}/delivery-approach.md")
-    code, out, err = _cli(root2, "issue", "receipt", "--issue", SLUG)
-    assert code == 0 and "Hand-written risk reason." in out, out + err
-
-
-def test_acf_36(tmp_path):
-    root, task_dir, record = _approach_issue(tmp_path, "rules")
-    fired = [
-        {"id": "RP-FLOOR-001", "kind": "floor", "rationale": "Migrations are never light.",
-         "changed": ["approach raised to full"]},
-        {"id": "RP-REQUIRE-006", "kind": "requirement",
-         "rationale": "A public API needs a design.", "changed": ["artifact 'technical-design' required"]},
-        {"id": "RP-CAP-001", "kind": "cap", "rationale": "Critical work runs one worktree.",
-         "changed": ["max_worktrees 1"]},
-    ]
-    _rewrite_manifest(task_dir, policy_rules_fired=fired)
-    _render(root)
-    block = _block(record.read_text(encoding="utf-8"), "policy-rules")
-    rows = [line for line in block.splitlines() if line.startswith("|")]
-    for rule in fired:
-        hit = [r for r in rows if rule["id"] in r and rule["kind"] in r
-               and rule["changed"][0] in r and rule["rationale"] in r]
-        assert len(hit) == 1, (rule["id"], block)
-    generation = _manifest_of(task_dir)["generation"]
-    assert "Policy:" in block and f"Generation: {generation}" in block, block
-    # No rule fired.
-    _rewrite_manifest(task_dir, policy_rules_fired=[])
-    _render(root)
-    block = _block(record.read_text(encoding="utf-8"), "policy-rules")
-    assert "No policy rule fired." in block and "RP-" not in block, block
-    assert "Generation: %s" % generation in block, block
-
-
-def test_acf_37(tmp_path):
-    root, task_dir, record = _approach_issue(tmp_path, "gates", risk="critical", size="large")
-    gate_ids = ["plan.exit", "implement.tests", "verify.correctness", "verify.governance",
-                "verify.traceability", "verify.security", "verify.docs", "ship.merge",
-                "ship.follow-ups"]
-    gates = [{"id": g, "status": "pending", "evidence": []} for g in gate_ids]
-    fired = [{"id": "RP-REQUIRE-006", "kind": "floor", "rationale": "A rule.",
-              "changed": [f"gate '{gate_ids[5]}' added to the approach's gate set"]},
-             {"id": "RP-ROLE-002", "kind": "role_rule", "rationale": "Another rule.",
-              "changed": [f"gate '{gate_ids[6]}' added to the approach's gate set"]}]
-    stages = {"assess": "thorough", "define": "thorough", "refine": "lightweight",
-              "plan": "thorough", "breakdown": "skipped", "implement": "thorough",
-              "verify": "thorough", "ship": "lightweight"}
-    _rewrite_manifest(task_dir, gates=gates, policy_rules_fired=fired, stages=stages)
-    _render(root)
-    text = record.read_text(encoding="utf-8")
-    weights = _block(text, "stage-weights")
-    rows = [line for line in weights.splitlines() if line.startswith("|")][2:]
-    assert [r.split("|")[1].strip() for r in rows] == list(stages), weights
-    assert [r.split("|")[2].strip() for r in rows] == list(stages.values()), weights
-    block = _block(text, "gate-set")
-    listed = [line for line in block.splitlines() if line.startswith("- ")]
-    assert [line[2:].split(" ")[0].strip("`") for line in listed] == gate_ids, block
-    assert "RP-REQUIRE-006" in listed[5] and "RP-ROLE-002" in listed[6], block
-    assert not any("RP-" in listed[i] for i in (0, 1, 2, 3, 4, 7, 8)), block
-
-
 def _check_rows(root):
     code, out, err = _cli(root, "check", "--issue", SLUG, "--json")
     assert out.strip().startswith("{"), out + err
     return {c["name"]: c for c in json.loads(out)["checks"]}
-
-
-def test_acf_38(tmp_path):
-    from compass_pkg import rendered_blocks
-    root, task_dir, record = _approach_issue(tmp_path, "stale")
-    _rewrite_manifest(task_dir, current_phase="verify")
-    _render(root)
-    assert _check_rows(root)["rendered-blocks-current"]["status"] == "pass"
-    values = _manifest_of(task_dir)["assessment"]
-    assert values["risk"] == "contained"
-    _rewrite_manifest(task_dir, assessment=dict(values, risk="critical"))
-    row = _check_rows(root)["rendered-blocks-current"]
-    path = f"{HOME}/delivery-approach.md"
-    assert row["status"] == "fail", row
-    assert path in row["detail"] and "assessment" in row["detail"], row["detail"]
-    before = record.read_text(encoding="utf-8")
-    _render(root)
-    assert _check_rows(root)["rendered-blocks-current"]["status"] == "pass"
-    after = record.read_text(encoding="utf-8")
-    assert "critical" in _block(after, "assessment")
-    assert rendered_blocks.masked_text(after) == rendered_blocks.masked_text(before)
-    _render(root)
-    assert record.read_text(encoding="utf-8") == after
 
 
 GATE_TEMPLATES = ("distribution-map.md", "requirements-review.md", "technical-design.md",
@@ -1788,62 +730,6 @@ PLAN_LAYER = {"schema": 1,
                                       "kind": "human", "severity": "blocking",
                                       "on_skipped": "not-applicable"}},
               "stages": {"plan": {"set": {"exit": {"add": [PLAN_CHECK]}}}}}
-
-
-def test_acf_39(tmp_path):
-    import re
-    from compass_pkg import rendered_blocks
-    box = re.compile(r"^\s*- \[[ xX]\]", re.M)
-    kinds = {}
-    for name in GATE_TEMPLATES:
-        text = _template(name)
-        assert not box.search(text), name
-        kinds[name] = [b.kind for b in rendered_blocks.parse(text).blocks]
-    review = _template("requirements-review.md")
-    parsed = rendered_blocks.parse(review)
-    last = parsed.blocks[-1]
-    assert last.kind == "dor"
-    tail = "".join(parsed.lines[last.end + 1:]).strip().splitlines()
-    assert all(not ln.startswith("#") for ln in tail) and len(tail) <= 1, tail
-    assert {"gates", "dod"} <= set(kinds["verification-report.md"])
-    assert "plan-exit" in kinds["technical-design.md"]
-    assert "breakdown-exit" in kinds["distribution-map.md"]
-    assert "plan-exit" not in kinds["distribution-map.md"]
-    # The shipped default lists no exit check for plan or breakdown.
-    root, task_dir = _fixture(tmp_path, "shipped")
-    documents = {}
-    for kind in ("technical-design", "distribution-map"):
-        path = _doc(root, f"{kind}.md", _template(f"{kind}.md"))
-        documents[kind] = root / path
-        code, out, err = _set(root, kind, "--status", "draft", "--path", path)
-        assert code == 0, out + err
-    _render(root)
-    assert _block(documents["technical-design"].read_text(encoding="utf-8"), "plan-exit").strip() \
-        == "No exit checks are configured for the plan stage."
-    assert _block(documents["distribution-map"].read_text(encoding="utf-8"),
-                  "breakdown-exit").strip() == "No exit checks are configured for the breakdown stage."
-    # A layer that adds an exit check to plan: the block lists it, with its state.
-    root2, task_dir2 = _fixture(tmp_path, "layered", layer=PLAN_LAYER)
-    path = _doc(root2, "technical-design.md", _template("technical-design.md"))
-    code, out, err = _set(root2, "technical-design", "--status", "draft", "--path", path)
-    assert code == 0, out + err
-    _render(root2)
-    design = root2 / path
-    shown = _block(design.read_text(encoding="utf-8"), "plan-exit")
-    assert PLAN_CHECK in shown and "open" in shown and "0 of 1 met" in shown, shown
-    # A box typed by hand beside the block changes no item's state.
-    design.write_text(design.read_text(encoding="utf-8") + f"\n- [x] {PLAN_CHECK}\n",
-                      encoding="utf-8")
-    _render(root2)
-    assert _block(design.read_text(encoding="utf-8"), "plan-exit") == shown
-    # Evidence recorded for an exit check meets the item: `--meets` accepts a stage exit check.
-    _write(task_dir2 / "evidence.txt", "reviewed\n")
-    code, out, err = _cli(root2, "evidence", "add", "EV-PLAN", "--issue", SLUG, "--type",
-                          "command-output", "--path", "evidence.txt", "--meets", PLAN_CHECK)
-    assert code == 0, out + err
-    _render(root2)
-    shown = _block(design.read_text(encoding="utf-8"), "plan-exit")
-    assert "1 of 1 met" in shown and "met by EV-PLAN" in shown, shown
 
 
 ASSESS_TEXTS = ("approaches/assess-procedure.md", "commands/assess.md",
@@ -2380,14 +1266,8 @@ def test_acf_59(tmp_path):
     assert states["rewrite"][3].endswith("a-moved-issue/delivery-approach.md") \
         and states["rewrite"][3] != "delivery-approach.md"
     assert states["pointer"][1:3] == (False, True)
-    # The stop test can fail: moving the file before registering it leaves the hook blocking.
-    from test_hook_artifact_paths import _pre_tool
-    project = _hook_issue(tmp_path, "swapped", register=False, documents=False, beside=True)
-    home = project / DOCS_REL
-    home.mkdir(parents=True, exist_ok=True)
-    os.replace(project / ".compass/work/a-moved-issue/delivery-approach.md", home / "delivery-approach.md")
-    ran = _pre_tool(project)
-    assert ran.returncode != 0 and "no-delivery-approach" in ran.stderr, ran.stderr
+    # Before 9.0.0 the hook refused an issue whose record moved before it was
+    # registered. The hook reads the manifest now (ADR-091), so nothing is refused.
 
 
 def test_acf_51(tmp_path):
@@ -2546,22 +1426,6 @@ def _issue_on_an_older_generation(tmp_path, root):
     return task.name
 
 
-def test_acf_53(tmp_path):
-    root = _planted_sample(tmp_path)
-    _write(root / "docs" / "compass" / f"{STAMP}-planted-rounds" / "notes-on-cache.md", "# notes\n")
-    older = _issue_on_an_older_generation(tmp_path, root)
-    # The walk sees a file that matches no kind, so it can fail.
-    found = _unregistered(root)
-    assert any("notes-on-cache.md" in line for line in found), found
-    assert any(line.startswith(older + ":") and "review.md" in line for line in found), found
-    (root / "docs" / "compass" / f"{STAMP}-planted-rounds" / "notes-on-cache.md").unlink()
-    out = _migrated(root)
-    assert _totals(out)["unmapped files"] == [0], out
-    # A file the migrate named for a shipped kind is not reported on an issue whose
-    # stored generation predates the kind (the maintainer's archive holds 37 such issues).
-    assert _unregistered(root) == []
-
-
 def _with_a_record(root):
     """The issues, of any approach, that hold delivery-approach.md in either folder."""
     return {slug for slug, (data, work, docs) in _issues_of(root).items()
@@ -2609,10 +1473,12 @@ def _maps_on_small_regular_issues(root):
     or more subtasks is left out. A map registered with no depth is a person's map the
     migrate adopted. The stub rule keys on lightweight depth and this map has none,
     so it is kept."""
-    from compass_pkg import artifact_owed, migrate_kinds
+    from compass_pkg import migrate_kinds
     found = []
     for slug, (data, work, docs) in _issues_of(root).items():
-        if data.get("delivery_approach") != "regular" or artifact_owed.subtask_count(data) >= 2:
+        listed = data.get("subtasks")
+        if data.get("delivery_approach") != "regular" or (
+                isinstance(listed, list) and len(listed) >= 2):
             continue
         if not isinstance(data.get("subtasks"), list) and \
                 migrate_kinds._map_rows(str(docs / "distribution-map.md")) >= 2:
@@ -2620,8 +1486,9 @@ def _maps_on_small_regular_issues(root):
         entries = [e for e in data.get("artifacts") or [] if isinstance(e, dict)
                    and e.get("kind") == "distribution-map" and e.get("depth") in LIGHTWEIGHT
                    and e.get("status") not in ("superseded", "omitted")]
-        owed = [e for e in entries if artifact_owed.owed(data, None, "distribution-map", e).owed]
-        if entries and ((docs / "distribution-map.md").is_file() or owed):
+        # The shipped catalogue owed a map only from two subtasks, and these issues have
+        # fewer, so only a map on disk counts (9.0.0 removed the owed rule, ADR-091).
+        if entries and (docs / "distribution-map.md").is_file():
             found.append(slug)
     return found
 
@@ -2693,78 +1560,6 @@ def test_acf_56(tmp_path):
     assert _md(docs) == ["delivery-approach.md"] + ["review-%d.md" % n for n in range(1, 6)]
 
 
-def _after(root):
-    run = subprocess.run([sys.executable, str(MEASURE), "--root", str(root), "--after", "--json"],
-                         capture_output=True, text=True, timeout=600)
-    assert run.returncode == 0, run.stdout + run.stderr
-    return json.loads(run.stdout)
-
-
-def _unopenable_in(root):
-    """The archive citation test's check, resolved against `root` in place of this
-    checkout: each citation on a tracked surface that does not open there."""
-    import test_archive_citations_resolve as cites
-    roots = cites._search_roots()
-    original = cites._search_roots
-    cites._search_roots = lambda: [Path(root)] + roots[1:]
-    try:
-        return cites._unopenable()
-    finally:
-        cites._search_roots = original
-
-
-def test_acf_57(tmp_path):
-    # The after mode on the planted sample: it reports the planted faults before the
-    # migrate and none after.
-    root = _planted_sample(tmp_path)
-    before = _after(root)
-    assert before["regular_without_record"] >= 3 and before["regular_small_with_map"] == 1, before
-    assert before["review_not_numbered"] >= 3, before
-    _migrated(root)
-    after = _after(root)
-    assert (after["unregistered_files"], after["regular_without_record"],
-            after["regular_small_with_map"], after["review_not_numbered"],
-            after["review_round_clashes"]) == (0, 0, 0, 0, 0), after
-    assert after["regular_issues"] == after["regular_with_record"] >= 3, after
-
-    # The maintainer's archive: a copy in a temporary folder, read only with the switch on.
-    if os.environ.get("COMPASS_FULL_ARCHIVE") != "1":
-        return
-    held = _digests(ROOT)
-    copy = tmp_path / "archive-copy"
-    shutil.copytree(ROOT / ".compass" / "work", copy / ".compass" / "work")
-    shutil.copytree(ROOT / "docs" / "compass", copy / "docs" / "compass")
-    _migrated(copy)
-    full = _after(copy)
-    print(json.dumps(full, indent=2, sort_keys=True))
-    print("regular issues that never had a record: %d; maps adopted with no depth: %d"
-          % (full["regular_never_had_record"], full["regular_small_adopted_map"]))
-    assert (full["unregistered_files"], full["regular_without_record"],
-            full["regular_small_with_map"], full["review_not_numbered"],
-            full["review_round_clashes"]) == (0, 0, 0, 0, 0), full
-    assert _unopenable_in(copy) == {}
-    assert _digests(ROOT) == held
-
-
-def test_acf_67(tmp_path):
-    # The after measure counts a missing record only on an issue that held one before
-    # the migrate, and a small map only when the migrate registered it at lightweight
-    # depth. It prints both exclusions, so neither is silent (architect ruling on the
-    # archive measures).
-    root = _planted_sample(tmp_path)
-    _m_issue(root, "planted-none")
-    _plant_adopted_map(root)
-    _migrated(root)
-    after = _after(root)
-    assert (after["regular_without_record"], after["regular_never_had_record"]) == (0, 1), after
-    assert (after["regular_small_with_map"], after["regular_small_adopted_map"]) == (0, 1), after
-    assert after["issues"]["regular_never_had_record"] == ["planted-none"], after
-    assert after["issues"]["regular_small_adopted_map"] == ["planted-adopted"], after
-    run = subprocess.run([sys.executable, str(MEASURE), "--root", str(root), "--after"],
-                         capture_output=True, text=True, timeout=600)
-    assert "never had a record: 1" in run.stdout and "no depth: 1" in run.stdout, run.stdout
-
-
 #: Ids that live only in one issue's documents: design decisions (DD-), architect
 #: and builder decisions (AD-, BD-) and requirements-review questions (Q<n>). The
 #: issue documents are not tracked, so a reader of the repository cannot look
@@ -2798,34 +1593,3 @@ def test_acf_68(tmp_path):
     (planted / "planted.py").write_text('"""Kept as written (DD-3)."""\n', encoding="utf-8")
     assert _issue_local_citations(tmp_path) == {"cli/compass_pkg/planted.py": 1}
 
-
-def test_acf_69(tmp_path, monkeypatch):
-    """ACF-69: `render --all` parses each issue's manifest at most once outside the
-    parse cache. The configuration view the render reads to say whether a document
-    is owed takes the manifest the render already holds."""
-    import argparse
-    from collections import Counter
-
-    import archive
-    from compass_pkg import core, render_cmd
-
-    project = tmp_path / "proj"
-    shutil.copytree(archive.sample_root(), project)
-    monkeypatch.chdir(project)
-    monkeypatch.setenv("HOME", str(tmp_path / "home"))
-    monkeypatch.delenv("COMPASS_ISSUE", raising=False)
-    parsed = Counter()
-    real = core.load_yaml
-
-    def counting(path):
-        if os.path.basename(path) == "manifest.yml":
-            parsed[os.path.realpath(path)] += 1
-        return real(path)
-
-    monkeypatch.setattr(core, "load_yaml", counting)
-    args = argparse.Namespace(all=True, task=None, dry_run=False, json=True)
-    render_cmd.cmd_issue_render(args)
-    issues = [p for p in (project / ".compass" / "work").iterdir() if p.is_dir()]
-    assert len(issues) >= 5, issues
-    twice = {path: n for path, n in parsed.items() if n > 1}
-    assert twice == {}, twice

@@ -935,7 +935,9 @@ def test_lk_7_the_text_wraps_inside_the_width():
     assert all(name in " ".join(lines) for name in many)
 
 
-# --- LK-8: check, the receipt and the summary report conformance -----------------
+# --- LK-8: check and the summary report conformance ------------------------------
+#
+# The receipt also reported it; 9.0.0 removed the receipt (ADR-091).
 
 import json as _json
 import subprocess
@@ -982,15 +984,10 @@ def project(tmp_path):
     return root
 
 
-COMMANDS = {"check": ("check",), "receipt": ("issue", "receipt"),
-            "summary": ("approach", "show")}
+COMMANDS = {"check": ("check",), "summary": ("approach", "show")}
 
 
 def _outputs(root):
-    # The issue page names the project file's owner, so a page rendered before the file
-    # was written is stale against it. Render first, so the outputs compare the
-    # conformance report and nothing else.
-    _run(root, "issue", "render")
     got = {}
     for name, args in COMMANDS.items():
         done = _run(root, *args)
@@ -999,14 +996,14 @@ def _outputs(root):
 
 
 def _without_conformance(text):
-    """The lines that are not the report, with the blank line the receipt puts
-    after it folded into the one before."""
+    """The lines that are not the report, with a blank line after it folded into
+    the one before."""
     kept = [line for line in text.splitlines()
             if not any(mark in line for mark in MARKERS)]
     return [line for i, line in enumerate(kept) if line or not (i and not kept[i - 1])]
 
 
-def test_lk_8_with_no_project_file_the_three_commands_print_no_conformance(project):
+def test_lk_8_with_no_project_file_both_commands_print_no_conformance(project):
     for name, (code, out) in _outputs(project).items():
         assert not any(mark in out for mark in MARKERS), name
 
@@ -1023,7 +1020,7 @@ def test_lk_8_a_project_file_that_unlocks_nothing_changes_nothing(project, conte
     assert _outputs(project) == before
 
 
-def test_lk_8_an_unlock_prints_the_line_on_every_run_of_the_three_commands(project):
+def test_lk_8_an_unlock_prints_the_line_on_every_run_of_both_commands(project):
     before = _outputs(project)
     (project / "compass.yml").write_text(UNLOCK_FILE)
     for _ in range(2):
@@ -1034,14 +1031,6 @@ def test_lk_8_an_unlock_prints_the_line_on_every_run_of_the_three_commands(proje
             assert ("Conformance: non-conformant - this project unlocks framework "
                     "entries: checks.suite-passed") in out, name
             assert _without_conformance(out) == before[name][1].splitlines(), name
-
-
-def test_lk_8_the_receipt_line_stays_inside_the_receipts_width_and_before_the_verdict(project):
-    (project / "compass.yml").write_text(UNLOCK_FILE)
-    lines = _run(project, "issue", "receipt").stdout.splitlines()
-    assert max(len(line) for line in lines) <= 100
-    assert lines[-1].startswith("Verdict:")
-    assert any(line.startswith("Conformance:") for line in lines[:-2])
 
 
 def test_lk_8_the_summary_prints_its_three_lines_and_then_the_conformance_line(project):
@@ -1115,13 +1104,12 @@ IMPORTS_LOCKS = re.compile(
     r"|import compass_pkg\.locks)", re.M)
 
 
-def test_lk_9_only_check_lint_the_receipt_and_the_summary_import_the_module():
+def test_lk_9_only_check_lint_and_the_summary_import_the_module():
     hits = [name for name, text in _python_sources()
             if name != "cli/compass_pkg/locks.py" and IMPORTS_LOCKS.search(text)]
     # effective.py stores the conformance status in each generation it commits.
     assert hits == ["cli/compass_pkg/check_cmd.py", "cli/compass_pkg/effective.py",
-                    "cli/compass_pkg/policy_lint.py", "cli/compass_pkg/receipt.py",
-                    "cli/compass_pkg/routing.py"], hits
+                    "cli/compass_pkg/policy_lint.py", "cli/compass_pkg/routing.py"], hits
 
 
 def test_lk_9_no_command_exposes_the_module_and_the_aggregate_does_not_name_it():

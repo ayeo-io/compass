@@ -123,7 +123,7 @@ def not_withdrawn(approved, registry):
 def provenance(record):
     """How a record was made, in words, from its `via` key (ADR-068
     decision 7). No verdict reads it: the detail of `human-approval-present`
-    and the receipt show it. A record with no `via` still counts."""
+    shows it. A record with no `via` still counts."""
     via = record.get("via")
     if via == "prompt":
         return "via a typed prompt"

@@ -120,25 +120,16 @@ Confirm that Compass created:
 ```text
 .compass/current-task
 .compass/work/<issue-slug>/manifest.yml
-docs/compass/<date>-<issue-slug>/delivery-approach.md
 ```
 
 The exact slug can vary. The manifest, evidence and markers are in
-`.compass/work/<issue-slug>/`. The issue's documents are in
-`docs/compass/<date>-<issue-slug>/`, where `<date>` is the manifest's
-`created:` date. `delivery-approach.md` is there too, and
-`compass issue artifact-path delivery-approach` prints its path.
+`.compass/work/<issue-slug>/`. The manifest holds the delivery approach. The
+one issue document, the acceptance criteria, goes in
+`docs/compass/<date>-<issue-slug>/acceptance-criteria.md`, where `<date>` is
+the manifest's `created:` date.
 
-Render the issue page:
-
-```bash
-compass issue render --issue <issue-slug>
-```
-
-Open the generated `README.md` in `docs/compass/<created>-<issue-slug>/`. It must show
-the status and approach, the ask, whether a decision is required, the
-acceptance scenarios, and each scenario's traceability. `compass next`
-names the next action.
+Run `compass approach show --issue <issue-slug>`. It must show the approach,
+the gates and where the issue's files go. `compass next` names the next action.
 
 If `/compass:assess` is unknown, the adapter is not loaded. Restart Claude
 Code, then check the plugin installation or the source installation.

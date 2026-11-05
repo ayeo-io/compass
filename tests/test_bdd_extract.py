@@ -171,8 +171,8 @@ def test_trc_a4_feature_names_source_task(demo_task, run_cli):
     features = re.findall(r"^Feature: (.+)$", text, re.M)
     assert features == ["demo"], features
 
-    # a provenance header naming the source, matching the house convention in
-    # docs/system-spec.md ("DERIVED FILE - do not hand-edit")
+    # a provenance header naming the source, in the house convention for a
+    # derived file ("DERIVED FILE - do not hand-edit")
     head = text.split("Feature:")[0]
     assert "acceptance-criteria.md" in head, head
     assert re.search(r"do not hand-edit", head, re.I), head
@@ -307,11 +307,11 @@ def test_trc_f4_extract_mutates_nothing_else(demo_task, run_cli):
 # The full subcommand set, frozen deliberately: a new verb must edit this
 # list, so adding one is a visible decision rather than a silent one.
 EXPECTED_SUBCOMMANDS = {
-    "approach", "bdd", "check", "analyze", "retro", "ci", "tdd-red",
-    "tdd-green", "policy", "plan", "intent", "issue", "adr", "rework-scan", "flow",
+    "approach", "bdd", "check", "retro", "ci", "tdd-red",
+    "tdd-green", "policy", "intent", "issue", "adr", "rework-scan", "flow",  # 9.0.0 removed `plan`
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
-    "review-rule", "spec", "preset",  # `review-rule list`, `spec sync`, `preset init|test`
+    "review-rule", "preset",  # `review-rule list`, `preset init|test`; 9.0.0 removed `spec`
     "init",                       # creates .compass/ - safe to run twice
     "acceptance",                 # the acceptance verb group
     "quick-fix",                  # start|finish - the quick-fix verb group

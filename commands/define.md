@@ -12,7 +12,7 @@ contract, QA for coverage. Write it so all five roles can.
 
 ## Setup
 
-- Read `delivery-approach.md`. Its weight for this stage tells you how deep
+- Run `compass approach show`. Its weight for this stage tells you how deep
   to go:
   - one scenario (quick fix);
   - a small feature set (regular);
@@ -23,7 +23,7 @@ contract, QA for coverage. Write it so all five roles can.
 
   Honor it.
 - Load the `bdd-specification` skill.
-- If `delivery-approach.md` assesses familiarity as `brownfield-unmapped`,
+- If the assessment gives familiarity as `brownfield-unmapped`,
   also load `behavior-mapping` - reverse-engineer the *current*
   behavior into scenarios **before** writing the scenarios for the change. A
   policy floor forces this unless the change is atomic or small, with trivial
@@ -36,11 +36,11 @@ contract, QA for coverage. Write it so all five roles can.
   perspective first, the same condition as `/compass:consult architect`, and
   write `architecture-notes.md` to the issue directory.
   - Write it from `${CLAUDE_PLUGIN_ROOT}/templates/architecture-notes.md` to
-    `docs/compass/<created>-<slug>/architecture-notes.md`, and register it with
-    `compass issue artifact set architecture-notes --status draft --path <that path>`.
-  - `acceptance-criteria.md` does not exist yet at define: work from `intent.md`,
-    the labels in `manifest.yml` and `architecture/`, and say in the notes that
-    the criteria did not exist yet.
+    `docs/compass/<created>-<slug>/architecture-notes.md`. Compass does not
+    register or check it.
+  - `acceptance-criteria.md` does not exist yet at define: work from the
+    issue description, the labels in `manifest.yml` and `architecture/`, and
+    say in the notes that the criteria did not exist yet.
   - With no `architecture/` folder, make the first line of the notes exactly
     `WARNING: No architecture/ artifacts found - running on heuristics only`,
     and go on.
@@ -50,15 +50,14 @@ contract, QA for coverage. Write it so all five roles can.
     boundary risks and invariant flags into observable Given/When/Then
     assertions, or record that no architectural risk applies.
 - Run this stage in this session; Compass starts no agent for it (ADR-090).
-- Read any upstream role artifacts for this issue: `intent.md` (the outcome to
-  hit), `ui-contract.md` (designer scenarios that flow in here),
-  `positioning.md` (claims that will need backing scenarios).
-- When the issue registers an intent, as a regular issue does, assess
-  drafted it. Read `intent.md` and correct it before you write any
-  scenario: the problem, the outcomes and their `INT-n` ids, the success
-  signals and the non-goals. Each scenario names the `INT-n` id it serves, and
-  you present the intent with the scenarios at the define checkpoint where the
-  issue has one.
+- Read any upstream role artifacts for this issue: `ui-contract.md`
+  (designer scenarios that flow in here) and `positioning.md` (claims that
+  will need backing scenarios).
+- Write the intent first, into the Summary and the Intent links of
+  `acceptance-criteria.md`: the problem, the outcomes and their `INT-n` ids,
+  the success signals and the non-goals. Each scenario names the `INT-n` id it
+  serves, and you present the intent with the scenarios at the define
+  checkpoint where the issue has one.
 
 ## Procedure
 
@@ -74,8 +73,8 @@ contract, QA for coverage. Write it so all five roles can.
    Then ask yourself which input classes and failure modes the brief
    implies that no scenario yet covers. Each answer becomes a scenario, a
    short one if needed, or is recorded with
-   `compass scenario descope "<mode>" --reason "<why>"`, which the verifier
-   lists in the verification report. Nothing named is dropped silently.
+   `compass scenario descope "<mode>" --reason "<why>"`, which
+   `/compass:verify` lists. Nothing named is dropped silently.
    - **Worked example, a rate limit.** The brief says "limit search to 100
      requests a minute". The happy path is one client under the limit. It
      implies: a client exactly at 100, a client over it, two clients sharing
@@ -89,19 +88,20 @@ contract, QA for coverage. Write it so all five roles can.
      de-scoped with the reason "non-UTF-8 files are out of scope for this
      release; a follow-up issue adds encoding detection".
 3. **Group by independence.** On larger work, group scenarios by which touch
-   separate parts of the code - the plan stage starts the distribution map
-   from this grouping.
+   separate parts of the code - the plan stage starts its work units from
+   this grouping.
 4. **Maintain traceability** - load `evidence-gates` and read its
    `traceability.md`; each scenario traces to
-   an intent (`intent.md`, the request, the defect).
+   an intent: a row of the Intent links, which names the request or the
+   defect.
 5. **Write `acceptance-criteria.md`** from `${CLAUDE_PLUGIN_ROOT}/templates/acceptance-criteria.md` -
    the prose spec every role reads.
 
    **Where it goes.** `docs/compass/<created>-<issue-slug>/acceptance-criteria.md`, where the
-   date is the manifest's `created:` field - not today's. Then register it:
-   `compass issue artifact set acceptance-criteria --status draft --path <that path>`. The CLI
-   refuses a path outside the project, so the record is checked
-   rather than claimed. If you had to create `docs/compass/`, **say so in one
+   date is the manifest's `created:` field - not today's. Compass reads it at
+   that path, so there is nothing to register. It is the one document Compass
+   needs and checks; a team can keep its own notes beside it, and Compass does
+   not read them. If you had to create `docs/compass/`, **say so in one
    line** - if a directory appears and nobody says so, someone can delete it
    by hand or commit it by mistake.
 6. **Record each scenario with `compass scenario add`** - the manifest's
@@ -119,8 +119,8 @@ contract, QA for coverage. Write it so all five roles can.
 
 On a hotfix, this stage is **reproduce-first**: the spec is a failing
 regression test that reproduces the defect - simultaneously the BDD scenario
-and the TDD red. Write that test now, against the reproduction steps of
-`bug-report.md`, which the hotfix owes; the proper scenario is promoted into
+and the TDD red. Write that test now, against the reproduction steps in
+the defect report; the proper scenario is promoted into
 `acceptance-criteria.md` as the follow-up owed at ship time.
 
 ## Spike note
@@ -199,5 +199,5 @@ On delivery work:
 
 On a spike: the question
 and timebox are recorded. Log to `devlog.md`. Next: `/compass:refine` (or
-straight to `/compass:plan` if `delivery-approach.md` collapsed the
+straight to `/compass:plan` if the delivery approach collapsed the
 requirements review - and it is skipped entirely on a spike).

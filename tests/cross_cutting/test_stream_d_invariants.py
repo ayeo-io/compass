@@ -1,4 +1,4 @@
-"""Cross-cutting invariants for compass analyze + living-spec + compass next.
+"""Cross-cutting invariants for the CLI surface and compass next.
 
 These tests are structural assertions that protect Compass's USPs across the
 three capabilities introduced in the 1.0 line: legibility budget,
@@ -37,9 +37,8 @@ def test_trc_d1_mental_model_bullets_unchanged():
 
     The pre-issue count is the five-point model - by design (the heading
     promises "five points"). The three candidates introduce zero net-new
-    top-level concepts; the new CLI verbs (`compass analyze`, `compass next`)
-    and the derived artifact (docs/system-spec.md) are products of existing
-    concepts.
+    top-level concepts; the new CLI verb (`compass next`) is a product of
+    existing concepts.
     """
     five_minutes = (ROOT / "docs" / "five-minutes.md").read_text(encoding="utf-8")
     # Find the section by heading
@@ -61,7 +60,7 @@ def test_trc_d1_mental_model_bullets_unchanged():
 
 # ---------------------------------------------------------------------------
 # Public CLI surface guard, an architecture check (`TRC-D2`). Originally
-# froze the surface at two new verbs, `compass analyze` and `compass next`.
+# froze the surface at two new verbs, one of them `compass next`.
 # It is now the framework's living public-surface check: the public
 # subcommand set must equal the known list below, so no verb is added (or a
 # private one exposed) without a deliberate update here.
@@ -80,9 +79,12 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
     "policy", "issue", "adr",
     "rework-scan", "flow", "follow-up",
     "terminology",                # the CLI-voice slice: the glossary verb
-    "review-rule", "spec",        # `review-rule list` and `spec sync`
+    "review-rule",                # `review-rule list`; 9.0.0 removed `spec sync`
+                                  # (ADR-091)
     "preset",                     # `preset init` and `preset test`
-    "analyze", "next",            # cross-issue-architectural-integrity
+    "next",                       # cross-issue-architectural-integrity; 9.0.0
+                                  # removed its partner `analyze` and the
+                                  # placeholder scan `plan lint` (ADR-091)
     "ship-commit",                # framework-field-feedback `R5`
     "gate", "scenario", "changed-file", "evidence",  # framework-field-feedback `R6`/`R9`
     "intent",                     # ingest-an-existing-brief: `compass intent
@@ -91,17 +93,6 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # with one does not retype it. New top-level
                                   # group - `/compass:intent` was a slash
                                   # command and the CLI had no verb for it.
-    "plan",                       # readable-specs-and-flow shipped this as
-                                  # `compass design lint`, the advisory
-                                  # placeholder scan over technical-design.md.
-                                  # The vocabulary rename moved it to `plan` on
-                                  # 2026-08-25, because `design` now names the
-                                  # DESIGNER's stage and one word cannot mean
-                                  # two stages in one release.
-                                  # The retired spelling `design` still runs -
-                                  # ADR-006 forbids breaking it mid-major - but
-                                  # it is hidden from `--help`, so it is not an
-                                  # advertised verb and is absent from this set.
     "acceptance",                 # honest-acceptance-for-config-and-refactor:
                                   # `compass acceptance start|record`, the
                                   # honest signal for a change with no natural
@@ -154,8 +145,8 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
 
 def test_trc_d2_only_two_new_public_cli_verbs():
     """The public CLI surface equals the known set (no unexpected additions or
-    removals), and `_derive-system-spec` stays hidden from `compass --help`
-    (private entry point per `DD-4`). Deliberate additions update
+    removals), and no private entry point appears in `compass --help`
+    (`DD-4`). Deliberate additions update
     EXPECTED_PUBLIC_SUBCOMMANDS."""
     out = subprocess.run(
         [sys.executable, str(CLI), "--help"],
@@ -170,9 +161,9 @@ def test_trc_d2_only_two_new_public_cli_verbs():
         f"removed {EXPECTED_PUBLIC_SUBCOMMANDS - actual}. If deliberate, update "
         f"EXPECTED_PUBLIC_SUBCOMMANDS in this test."
     )
-    # Private entry point must not appear in --help
-    assert "_derive-system-spec" not in actual, (
-        "_derive-system-spec is a private entry point and must not appear in compass --help"
+    # A private entry point must not appear in --help
+    assert not [verb for verb in actual if verb.startswith("_")], (
+        "a private entry point must not appear in compass --help"
     )
 
 
@@ -340,20 +331,11 @@ def test_trc_d7_tdd_remains_a_strategy_spike_suspends():
 # shipped defaults (`BR-004` / `NFR-ONR-001`).
 # ---------------------------------------------------------------------------
 def test_trc_d8_bare_repo_zero_setup(tmp_path):
-    """`compass analyze` and `compass next` both produce a clean
-    no-op behaviour when invoked from a bare repo without /compass:init (`TRC-D8`)."""
+    """`compass next` produces a clean no-op behaviour when invoked from a
+    bare repo without /compass:init (`TRC-D8`). Exit code may be non-zero
+    because no issue is assessed, but the error must be informative, not a
+    traceback."""
     # Bare repo - just a directory, no .compass/ at all
-    out_analyze = subprocess.run(
-        [sys.executable, str(CLI), "analyze"],
-        cwd=str(tmp_path), capture_output=True, text=True,
-    )
-    # On a bare repo, `compass analyze` should not crash with a parse error;
-    # it should report cleanly that there are no artifacts. Exit code may be
-    # non-zero because no issue is assessed - but the error must be
-    # informative, not a traceback.
-    assert "Traceback" not in out_analyze.stderr, (
-        f"analyze on bare repo crashed: {out_analyze.stderr}"
-    )
     out_next = subprocess.run(
         [sys.executable, str(CLI), "next"],
         cwd=str(tmp_path), capture_output=True, text=True,

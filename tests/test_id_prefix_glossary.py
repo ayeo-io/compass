@@ -9,8 +9,7 @@ not one of the five hard rules. `FLOOR` covers only entries that raise a
 minimum; an entry that only attaches a gate is not a floor, so a glossary
 could not define `FLOOR` honestly while the two shared a name.
 
-See ADR-016 (id codes are part of the frozen vocabulary). Spec:
-docs/system-spec.md.
+See ADR-016 (id codes are part of the frozen vocabulary).
 """
 
 # These tests read the detail `compass approach evaluate --verbose` prints:
@@ -48,12 +47,9 @@ PREFIX_RE = re.compile(r"\b([A-Z]{2,4})-(?:[A-Z]{2,}-)?\d")
 # authorship of somebody else's numbering.
 NOT_COMPASS_IDS = {"ISO", "SHA", "RFC", "UTF"}
 
-# docs/system-spec.md is DERIVED from the issue archive, so it inherits every
-# per-issue scenario and intent id ever written - GL-, SR-, SS- and so on.
-# Those are an issue's local numbering, not framework vocabulary, and the
-# archive that produced them is exempt for the same reason.
-DERIVED_FROM_ARCHIVE = {"docs/system-spec.md", "docs/system-spec-archive.md",
-                        "docs/glossary.md"}
+# docs/glossary.md is derived from the vocabulary, which names per-issue ids
+# only as examples, so it is exempt.
+DERIVED_FROM_ARCHIVE = {"docs/glossary.md"}
 
 
 def _vocab() -> dict:
@@ -380,17 +376,13 @@ def test_the_archive_is_untouched():
 
 def test_follow_up_surfaces_match_the_schema():
     """The manifest has said follow_ups/outstanding/resolved since the rename."""
-    template = (ROOT / "templates" / "verification-report.md").read_text(
-        encoding="utf-8")
-    assert "BF-" not in template, (
-        "templates/verification-report.md still uses the retired follow-up id "
-        "prefix. It reads `(follow-up: BF-<id>)` - v2 tag word, v1 id, same "
-        "line."
-    )
-    assert "FU-" in template, (
-        "templates/verification-report.md does not use the live follow-up id "
-        "prefix"
-    )
+    # The verification report template went in 9.0.0 (ADR-091); the ship
+    # command now teaches the tag syntax.
+    text = (ROOT / "commands" / "ship.md").read_text(encoding="utf-8")
+    assert "BF-" not in text, (
+        "commands/ship.md uses the retired follow-up id prefix")
+    assert "(follow-up: FU-" in text, (
+        "commands/ship.md does not use the live follow-up id prefix")
 
 
 def test_the_parser_still_reads_the_retired_tag():

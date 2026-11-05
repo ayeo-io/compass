@@ -60,6 +60,14 @@ def test_trc_057():
             if name in ("policy-effective-shipped", "policy-update-major-not-kept"):
                 assert entry["exit"] == now[name]["exit"], name
                 continue
+            # The three policy-diff entries compare the live major, default@8 since
+            # 9.0.0 (decided by jed72, 2026-11-05): only the major in argv moves.
+            if name in ("policy-diff-identical", "policy-diff-identical-exit-code",
+                        "policy-diff-differs-exit-code"):
+                moved = dict(entry, argv=[a.replace("default@7", "default@8")
+                                          for a in entry["argv"]])
+                assert now[name] == moved, name
+                continue
             assert now[name] == entry, name
     assert now_text.count("stdout_contains: \"initialized Compass\"") == 1
     assert list((ROOT / CORPUS).rglob("README*")) == []

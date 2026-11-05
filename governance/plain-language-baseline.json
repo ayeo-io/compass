@@ -1697,16 +1697,6 @@
     },
     {
       "file": "governance/routing-policy.yml",
-      "line": 123,
-      "code": "RP-REQUIRE-001"
-    },
-    {
-      "file": "governance/routing-policy.yml",
-      "line": 128,
-      "code": "RP-REQUIRE-002"
-    },
-    {
-      "file": "governance/routing-policy.yml",
       "line": 133,
       "code": "RP-REQUIRE-003"
     },
@@ -1959,31 +1949,6 @@
       "file": "templates/architecture/relations.md",
       "line": 8,
       "code": "TRC-B2"
-    },
-    {
-      "file": "templates/technical-design.md",
-      "line": 210,
-      "code": "TRC-A1"
-    },
-    {
-      "file": "templates/technical-design.md",
-      "line": 210,
-      "code": "TRC-A2"
-    },
-    {
-      "file": "templates/distribution-map.md",
-      "line": 55,
-      "code": "TRC-A1"
-    },
-    {
-      "file": "templates/distribution-map.md",
-      "line": 55,
-      "code": "TRC-A2"
-    },
-    {
-      "file": "templates/distribution-map.md",
-      "line": 56,
-      "code": "TRC-B1"
     }
   ],
   "locations_truncated_at": 400,

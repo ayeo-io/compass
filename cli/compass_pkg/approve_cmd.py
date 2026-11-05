@@ -1,8 +1,8 @@
 # compass_pkg.approve_cmd - `compass evidence approve`
-"""Record a person's approval: of a human check, of a document or of a set of
+"""Record a person's approval: of a human check, a checkpoint or a set of
 decisions taken for the person.
 
-The verb takes exactly one of five forms:
+The verb takes exactly one of four forms:
 
 - `--check <id>` reads the check from the issue's effective view and registers
   a `human-approval` entry in the manifest's evidence, with `check: <id>`.
@@ -14,11 +14,9 @@ The verb takes exactly one of five forms:
   (`approval_records.gives_g5`). Guardrail `G5` is the only guardrail with a
   sign-off, and the form records an approval only, so it refuses any other
   value and `--decision rejected`.
-- `--artifact <kind>` approves a document that reads `awaiting-approval`. It
-  registers one `artifact-approval` record for each human check on the
-  document, which `approval_records` counts for that check, and sets the
-  entry's `approved_by` and `approved_at`. It never writes a `human-approval`
-  record, so it cannot clear the sign-off of guardrail `G5`.
+- `--artifact <kind>`, which approved a document, was removed in 9.0.0 with
+  the document statuses (ADR-091). An `artifact-approval` record an older
+  release wrote still counts for its check.
 - `--decisions` confirms the decisions an agent took for the person, through
   `decisions_taken.approve_set`.
 - `--checkpoint <stage>` records a person's answer to a checkpoint hand-off:
@@ -67,18 +65,18 @@ def _terminal_attached():
 
 
 def _checks_for(args):
-    """Refuse a call that has not one of the five forms (argparse also does)."""
-    forms = [bool(args.check), bool(getattr(args, "guardrail", None)), bool(args.artifact),
+    """Refuse a call that has not one of the four forms (argparse also does)."""
+    forms = [bool(args.check), bool(getattr(args, "guardrail", None)),
              bool(args.decisions), bool(getattr(args, "checkpoint", None))]
     if sum(forms) != 1:
         raise CompassError("compass evidence approve: give exactly one of --check, "
-                           "--guardrail, --artifact, --decisions or --checkpoint.")
+                           "--guardrail, --decisions or --checkpoint.")
 
 
 def answer_of(args, provenance):
     """The `approvals.Answer` an argparse namespace of this verb gives."""
     _checks_for(args)
-    for form in ("check", "guardrail", "artifact", "checkpoint"):
+    for form in ("check", "guardrail", "checkpoint"):
         value = getattr(args, form, None)
         if value:
             return approvals.Answer(form, value, args.decision, args.approver, args.role,
@@ -251,8 +249,6 @@ def register(evidence_subs):
     form.add_argument("--guardrail", metavar=approval_records.G5,
                       help="sign off guardrail `G5`, the only guardrail with a sign-off; "
                            "needs --scope and records an approval only")
-    form.add_argument("--artifact", metavar="KIND",
-                      help="approve this document, which reads awaiting-approval")
     form.add_argument("--decisions", action="store_true",
                       help="confirm the decisions taken for the person")
     form.add_argument("--checkpoint", metavar="STAGE",

@@ -414,14 +414,14 @@ entries:
 # that there is no difference and exit 0.
 - id: policy-diff-identical
   project: initialised
-  argv: ["policy", "diff", "default@7", "project"]
+  argv: ["policy", "diff", "default@8", "project"]
   exit: 0
   stdout_contains: "no difference"
 # Added on purpose by policy-diff: `--exit-code` exits 1 only when something
 # differs, so identical configurations still exit 0.
 - id: policy-diff-identical-exit-code
   project: initialised
-  argv: ["policy", "diff", "--exit-code", "default@7", "project"]
+  argv: ["policy", "diff", "--exit-code", "default@8", "project"]
   exit: 0
 # Added on purpose by policy-diff: a reference that is neither a keyword nor a
 # file exits 2. 5.6.0 also exited 2, for the unknown verb, so this guards that
@@ -436,7 +436,7 @@ entries:
 # flag, unlike `policy lint`, which judges and exits 1 on FAIL.
 - id: policy-diff-differs-exit-code
   project: with-looser-compass-yml
-  argv: ["policy", "diff", "--exit-code", "default@7", "project"]
+  argv: ["policy", "diff", "--exit-code", "default@8", "project"]
   exit: 1
   stdout_contains: "loosening"
 # Added on purpose by impl-refusal: `issue migrate-config` is a new verb. 5.6.0

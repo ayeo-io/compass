@@ -30,10 +30,10 @@ what `/compass:init` offers separately.
 
 - Load `intent-interview` and read its `role-translation.md` - a consult reads one question
   through several roles, and keeps each role's concern separate.
-- Read the relevant issue artifacts so the discussion uses what is on
-  disk: `delivery-approach.md`, `intent.md`,
-  `acceptance-criteria.md`, `technical-design.md`, `positioning.md`,
-  `ui-contract.md` - whichever bear on the question.
+- Read what bears on the question so the discussion uses what is on
+  record: `compass approach show`, `acceptance-criteria.md`, the plan in
+  `devlog.md`, and any role note the team keeps (`positioning.md`,
+  `ui-contract.md`).
 - Run `compass policy show` for the rules in force, and read the reasons in
   `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md` and `strategies.md` - a
   consult cannot decide to set a guardrail aside. An unmigrated 5.x project
@@ -48,7 +48,7 @@ consult (ADR-090). These perspectives can be convened by name:
 
 | Perspective | Invocation | Auto-trigger condition |
 |---|---|---|
-| `product-owner` | `/compass:consult product-owner` | When a product owner takes part (`intent.md` exists) |
+| `product-owner` | `/compass:consult product-owner` | When a product owner takes part (the issue came through `/compass:intent`) |
 | `product-marketer` | `/compass:consult product-marketer` | When a marketer takes part (`positioning.md` exists) |
 | `architect` | `/compass:consult architect` | When the manifest's `assessment.labels` contains `public-api`, a service name from `architecture/relations.md`, or a `lens_trigger_tag` from `architecture/invariants.yml` |
 | `planner` | `/compass:consult planner` | On request |
@@ -109,7 +109,7 @@ Examples of outcomes that need a re-assessment:
 - The consult decides to extend a planned migration to cover an adjacent
   service that was not in the original scope.
 - A boundary call moves a module from one service to another, adding files
-  that were not in `technical-design.md`.
+  that were not in the plan.
 - A scope cut removes a deliverable that was in `acceptance-criteria.md`.
 
 In all these cases, file the re-assessment immediately after the consult

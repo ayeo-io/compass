@@ -23,7 +23,6 @@ assembles it from per-dimension contributions:
 | risk is `cross-cutting`/`critical` | risk is `trivial` |
 | familiarity is `brownfield-unmapped`, unless the change is atomic or small with trivial or contained risk and no domain label | familiarity is `greenfield` or `brownfield-mapped` |
 | size is `large`/`product` | size is `atomic`/`small` |
-| `intent.md` or `positioning.md` is present (more artifacts, more gates) | neither document is present |
 
 Concretely, `compass approach evaluate` decides, per stage:
 
@@ -31,17 +30,17 @@ Concretely, `compass approach evaluate` decides, per stage:
 - **Refine** - thorough pass, lightweight pass, or collapsed (only collapsible when the
   spec is a single unambiguous scenario *and* no routing rule needs it).
 - **Plan** - "edit this file" one-liner, a real technical plan, or a plan plus
-  a distribution map.
+  its work units.
 - **Breakdown** - skipped (solo), pair, or multiagent. Subtask count comes from the
-  distribution map; orchestration thresholds come from `compass.yml` (or `.compass/config.yml` in a project without one).
+  plan's work units; orchestration thresholds come from `compass.yml` (or `.compass/config.yml` in a project without one).
 - **Implement** - test surface target, scaled to risk.
 - **Verify** - which review dimensions apply (see below), how many gates.
 - **Ship** - trivial integration vs. coordinated multi-worktree merge; which
   follow-ups are owed.
 
 Most compositions land near one of the five reference shapes
-(quick fix, regular, full, hotfix, spike). Assess names the
-nearest reference shape in `delivery-approach.md` for shared vocabulary, then lists any
+(quick fix, regular, full, hotfix, spike). `compass approach show` names the
+nearest reference shape for shared vocabulary, then lists any
 stage-level deviations from it. A delivery approach that is "Regular, but Verify also runs
 the security dimension because risk is cross-cutting" is a normal output.
 
@@ -73,9 +72,7 @@ above - is now bounded by the **routing rules** in `governance/routing-policy.md
 1. **floors** raise the delivery approach or force stages back to thorough weight.
 2. **caps** limit scale-up (e.g. the worktree ceiling on critical risk).
 3. **immovable_gates** are added whatever the delivery approach.
-4. **blocking artifact_rules** add required artifacts and stage blocks, from the
-   documents present.
 
 Every routing rule that fires is recorded. Assess never applies a
-constraint silently - if quick fix became the full approach, `delivery-approach.md` says which floor
+constraint silently - if quick fix became the full approach, the manifest's `policy_rules_fired:` says which floor
 did it and quotes the floor's rationale.

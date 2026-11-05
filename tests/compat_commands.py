@@ -270,9 +270,11 @@ def _with_stale_document(root: Path, env: dict) -> None:
     (work / "acceptance-criteria.md").write_text("# Criteria\n", encoding="utf-8")
     (work / "technical-design.md").write_text("# Design\n", encoding="utf-8")
     (work / "delivery-approach.md").write_text("# Delivery approach\n", encoding="utf-8")
+    # 9.0.0 removed `compass issue artifact set` (ADR-091), so the entries are written
+    # as that verb wrote them.
+    import document_registry
     for kind in ("acceptance-criteria", "technical-design"):
-        _must(root, env, "issue", "artifact", "set", kind, "--status", "draft",
-              "--issue", REGULAR_SLUG)
+        document_registry.register(work, kind, f".compass/work/{REGULAR_SLUG}/{kind}.md")
     manifest = yaml.safe_load((work / "manifest.yml").read_text(encoding="utf-8"))
     manifest["current_phase"] = "implement"
     (work / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False),
@@ -480,10 +482,58 @@ def load(path: Path = CORPUS) -> list[dict]:
     return yaml.safe_load(Path(path).read_text(encoding="utf-8"))["entries"]
 
 
+#: The entries whose command 9.0.0 removed, each with the line its parse error must
+#: give. The corpus is frozen, so the entries stay as 5.6.0 recorded them. A removed
+#: command now exits 2 and names its removal; that is what such an entry is compared
+#: with. Any other exit or message still differs, and every other entry is compared
+#: as recorded.
+REMOVED_IN_9_0_0 = {
+    **{entry_id: "'compass issue receipt' was removed in 9.0.0 (ADR-091)"
+       for entry_id in ("issue-receipt-quick-fix", "issue-receipt-unknown",
+                        "receipt-stale-document")},
+    **{entry_id: "'compass spec sync' was removed in 9.0.0 (ADR-091)"
+       for entry_id in ("issue-refresh-spec-outside-git", "issue-refresh-spec-no-base")},
+    "artifact-records-digests": "'compass issue artifact set' was removed in 9.0.0 (ADR-091)",
+    **{entry_id: "'compass issue template show' was removed in 9.0.0 (ADR-091)"
+       for entry_id in ("issue-template-requirements-review",
+                        "issue-template-verification-report-json",
+                        "issue-template-unknown-kind")},
+}
+
+
+#: Entries whose phrase came from artifact freshness, which 9.0.0 removed (ADR-091).
+#: The exit code is still compared; the phrase must now be absent.
+PHRASE_REMOVED_IN_9_0_0 = {
+    "check-stale-document": "artifact freshness",
+    "next-stale-document": "artifact freshness",
+}
+
+
+#: Entries whose exit 9.0.0 changed on purpose, with the exit it gives now. `compass next`
+#: reads the approach from the manifest, since 9.0.0 writes no delivery-approach.md
+#: (ADR-091), so an assessed issue with no such file is answered, not refused.
+EXIT_CHANGED_IN_9_0_0 = {"next-regular-without-approach-record": 0}
+
+
 def differences(entry: dict, outcome: Outcome) -> list[str]:
     """What the run did that the recorded entry says it should not."""
     found = []
-    if outcome.exit != entry["exit"]:
+    if entry["id"] in PHRASE_REMOVED_IN_9_0_0:
+        if outcome.exit != entry["exit"]:
+            found.append(f"exit {outcome.exit}, recorded {entry['exit']}")
+        phrase = entry.get("stdout_contains")
+        if phrase and phrase in outcome.stdout:
+            found.append(f"stdout still holds {phrase!r}, which 9.0.0 removed with "
+                         f"{PHRASE_REMOVED_IN_9_0_0[entry['id']]}")
+        return found
+    if entry["id"] in REMOVED_IN_9_0_0:
+        if outcome.exit != 2:
+            found.append(f"exit {outcome.exit}, a removed command exits 2")
+        if REMOVED_IN_9_0_0[entry["id"]] not in outcome.stderr:
+            found.append(f"stderr lacks {REMOVED_IN_9_0_0[entry['id']]!r}")
+        return found
+    expected = EXIT_CHANGED_IN_9_0_0.get(entry["id"], entry["exit"])
+    if outcome.exit != expected:
         found.append(f"exit {outcome.exit}, recorded {entry['exit']}")
     phrase = entry.get("stdout_contains")
     if phrase and phrase not in outcome.stdout:

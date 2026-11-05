@@ -63,7 +63,7 @@ def env_for(root, **extra):
     (Path(root) / ".home").mkdir(parents=True, exist_ok=True)
     env = {"PATH": f"{_bin(root)}:{Path(sys.executable).parent}:/usr/bin:/bin",
            "HOME": str(Path(root) / ".home"), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
-           "NO_COLOR": "1", "COLUMNS": "100", "COMPASS_RENDER_AFTER": "0",
+           "NO_COLOR": "1", "COLUMNS": "100",
            "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
     env.update(extra)
     return env
@@ -198,8 +198,9 @@ def _result(done, root):
 
 def dbi5_outputs(root, cli_dir=CLI_DIR):
     """Every output the comparison reads, by capture file name, in the order
-    the commands run. The commands that write (the board page and the issue
-    pages) run after the ones that only read."""
+    the commands run. The command that writes (the board page) runs after the ones that
+    only read. 9.0.0 renders no issue page or project index (ADR-091), so their
+    captures are gone."""
     root = Path(root)
     out = {}
     run = lambda *a: compass(root, *a, cli_dir=cli_dir, clock=FIXED_AT)  # noqa: E731
@@ -213,13 +214,6 @@ def dbi5_outputs(root, cli_dir=CLI_DIR):
     out["board-render.txt"] = _result(run("board", "render", "--no-open", "--out", str(page)),
                                       root)
     out["board-page.html"] = _masked(page.read_text(encoding="utf-8"), root)
-    for slug in slugs:
-        out[f"render-{slug}.txt"] = _result(run("issue", "render", "--issue", slug), root)
-        for doc in sorted((root / "docs" / "compass").glob(f"*-{slug}/README.md")):
-            out[f"page-{slug}.md.txt"] = _masked(doc.read_text(encoding="utf-8"), root)
-    index = root / "docs" / "compass" / "README.md"
-    if index.exists():
-        out["index.md.txt"] = _masked(index.read_text(encoding="utf-8"), root)
     return out
 
 
@@ -241,8 +235,8 @@ def _capture(cli_dir, out_file):
     root = build_dbi5_project(Path(tempfile.mkdtemp(prefix="dbi5-")) / "project")
     outputs = {name: _Block(text) for name, text in dbi5_outputs(root, cli_dir).items()}
     assert_no_gh_call(root)
-    header = ("# What compass next, issue lint, flow, flow --json, board render and issue\n"
-              "# render printed on the project that build_dbi5_project in\n"
+    header = ("# What compass next, issue lint, flow, flow --json and board render printed\n"
+              "# on the project that build_dbi5_project in\n"
               "# tests/test_issue_dependencies.py writes, captured from the code before\n"
               "# depends_on existed, under a fixed clock. The project's own folder reads\n"
               "# <ROOT> and the board page's Generated line is masked.\n")
@@ -540,31 +534,6 @@ def _page(project, slug):
     return pages[0].read_text(encoding="utf-8")
 
 
-def test_dbi_21_remove_rerenders_the_removed_dependency(tmp_path):
-    project = Project(tmp_path)
-    project.issue("b", "define")
-    project.issue("a", "define", depends=[dep("b")])
-    for slug in ("a", "b"):
-        done = compass(project.root, "issue", "render", "--issue", slug)
-        assert done.returncode == 0, done
-    assert "depended on by: [a]" in _page(project, "b")
-    assert "depends on: [b]" in _page(project, "a")
-    done = compass(project.root, "issue", "depends", "remove", "b", "--issue", "a",
-                   COMPASS_RENDER_AFTER="1")
-    assert done.returncode == 0, done
-    assert "renders failed" not in done.stderr, done
-    # Read without rendering again: the remove itself must have refreshed both pages.
-    assert "depended on by" not in _page(project, "b")
-    assert "depends on: [b]" not in _page(project, "a")
-    # A removed dependency with no manifest has no page, and no render fails for it.
-    project.issue("a", "define", depends=[dep("gone")])
-    done = compass(project.root, "issue", "depends", "remove", "gone", "--issue", "a",
-                   COMPASS_RENDER_AFTER="1")
-    assert done.returncode == 0, done
-    assert "renders failed" not in done.stderr, done
-    assert_no_gh_call(project.root)
-
-
 def test_dbi_3_depends_add_input_checks(tmp_path):
     from compass_pkg import lifecycle
     project = Project(tmp_path)
@@ -808,8 +777,7 @@ def test_dbi_13_derived_block_never_written(tmp_path):
     assert "blocked: waits for b to reach done" in next_line(project, "a")
     assert flow_rows(project)["a"]["blocked"] == "waits for b to reach done"
     page = project.root / "board.html"
-    for args in (("board", "render", "--no-open", "--out", str(page)),
-                 ("issue", "render", "--issue", "a")):
+    for args in (("board", "render", "--no-open", "--out", str(page)),):
         done = compass(project.root, *args)
         assert done.returncode == 0, done
     hook(project, code_file(project))

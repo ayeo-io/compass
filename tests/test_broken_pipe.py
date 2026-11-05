@@ -20,8 +20,10 @@ CLI = ROOT / "cli" / "compass"
 def test_policy_show_exits_quietly_when_the_reader_closes_the_pipe():
     proc = subprocess.Popen(
         [sys.executable, str(CLI), "policy", "show"],
-        cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0,
     )
+    # Unbuffered, so the read takes only the first line out of the pipe. A
+    # buffered read takes up to 8,192 bytes, and the rest can then fit.
     first_line = proc.stdout.readline()   # read one line, as `head` would
     proc.stdout.close()                   # then close the pipe
     stderr = proc.stderr.read().decode()
@@ -29,12 +31,13 @@ def test_policy_show_exits_quietly_when_the_reader_closes_the_pipe():
     proc.stderr.close()
 
     assert first_line, "policy show printed nothing"
-    # A pipe buffer holds 65,536 bytes. Output below that size is written
-    # without error even after the close, so the test would pass without
-    # exercising the handler.
+    # A pipe buffer holds 65,536 bytes. Output that fits in it after the
+    # first line is written without error even after the close, so the test
+    # would pass without exercising the handler.
     full = subprocess.run([sys.executable, str(CLI), "policy", "show"],
                           cwd=ROOT, capture_output=True, timeout=60)
-    assert len(full.stdout) > 65536, "policy show output shrank below the pipe buffer"
+    assert len(full.stdout) - len(first_line) > 65536, (
+        "policy show output shrank below the pipe buffer")
     assert "Traceback" not in stderr, stderr
     assert "BrokenPipeError" not in stderr, stderr
     assert code == 141

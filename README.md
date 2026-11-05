@@ -243,9 +243,7 @@ full account is in [docs/security.md](docs/security.md).
   with `check: command-passes` and the readiness commands in `compass.yml`;
   also git in your repository, and the CLI itself from the plugin's hooks.
 - **Writes** to the linked GitHub issue with `gh`, only when `github_labels`
-  is on in `compass.yml`: label names and, with `page` on, the issue's README
-  as a comment and the ask from `intent.md` into an empty issue body
-  ([docs/security.md](docs/security.md)).
+  is on in `compass.yml`: label names ([docs/security.md](docs/security.md)).
 - **Reads** the current Claude Code session's own transcript when a quick fix
   finishes, keeping only token counts, model names and times.
 - **Clones and installs** other frameworks only in the evaluation harness,

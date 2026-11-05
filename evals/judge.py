@@ -255,8 +255,8 @@ def _first_index(calls: List[Dict[str, Any]], predicate) -> Optional[int]:
 
 
 # Compass's own records are every path under `.compass/` and
-# `docs/compass/`, and `docs/system-spec.md`, which `compass ship-commit`
-# derives when an issue lands. `evals/harness.py` keeps the one definition
+# `docs/compass/`, and the living spec, which `compass ship-commit`
+# derived when an issue landed before 9.0.0. `evals/harness.py` keeps the one definition
 # of this - imported here rather than copied, so the two can never differ
 # the way two independently maintained lists eventually would (EJG-5).
 _is_compass_own_record = _harness._is_compass_own_record

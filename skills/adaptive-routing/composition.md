@@ -12,8 +12,8 @@ Go stage by stage, not approach by approach:
 - **Define** - scenario count and discovery depth; behavior mapping if brownfield.
 - **Refine** - thorough / lightweight / collapsed. Collapsed is permitted *only* when the
   spec is a single unambiguous scenario *and* no routing guardrail needs the requirements review.
-- **Plan** - one-liner / real `technical-design.md` / plan + distribution map.
-- **Breakdown** - solo / pair / multiagent, subtask count from the distribution map.
+- **Plan** - one-liner / a real design / a design with its work units.
+- **Breakdown** - solo / pair / multiagent, subtask count from the plan's work units.
 - **Implement** - test-surface target, scaled to risk.
 - **Verify** - which review dimensions, how many gates (see "Review
   dimensions by delivery approach" in `approaches/composition-reference.md`).
@@ -28,7 +28,7 @@ candidate - `default_shapes` says which reference shape an assessment leans towa
 and the tie-breaking `biases` settle the close calls ("when size is
 unclear, estimate up"; "prefer the lightest approach that still clears the routing
 guardrails"). A routing strategy is a starting point, not a verdict: depart from
-one when the issue warrants, and record the departure in `delivery-approach.md`.
+one when the issue warrants, and record the departure in `devlog.md`.
 
 ## Composing a spike
 
@@ -60,10 +60,10 @@ After composing - the candidate already biased by the routing strategies - run
 it through the **routing guardrails** (explained in
 `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`; an unmigrated 5.x project
 runs on its own copied `governance/`) in this
-order: **floors** raise it, **caps** limit it, **immovable_gates** are added,
-blocking **artifact_rules** add artifacts and stage blocks, from the documents present. Record every routing
-guardrail that fires *and quote its rationale* in `delivery-approach.md`. Never apply a
-constraint silently - a reader of `delivery-approach.md` must see which bounds were active.
+order: **floors** raise it, **caps** limit it, **immovable_gates** are added.
+The evaluator records every routing guardrail that fires *with its rationale*
+in the manifest's `policy_rules_fired:`. Never apply a constraint silently - a
+reader of `compass approach show --verbose` must see which bounds were active.
 
 The split is the whole point: routing strategies *bias* what the assess stage
 chooses, routing guardrails *bound* what it is allowed to do. A human can override an

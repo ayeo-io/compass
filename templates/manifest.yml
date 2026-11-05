@@ -3,9 +3,8 @@
 # Produced by: the assess stage (creates it), then every later stage fills its part.
 #              Lives at: .compass/work/<issue-slug>/manifest.yml
 # =============================================================================
-# manifest.yml is the structured counterpart to the prose artifacts
-# (delivery-approach.md, acceptance-criteria.md, technical-design.md, …). The prose is
-# for humans; this is for the CLI. `compass approach evaluate` reads
+# manifest.yml is the structured counterpart to `acceptance-criteria.md`, the one
+# prose document Compass needs. The prose is for humans; this is for the CLI. `compass approach evaluate` reads
 # `assessment` and writes `delivery_approach`/`stages`/`gates`;
 # `compass check` reads the rest and checks the guardrails.
 #
@@ -90,7 +89,7 @@ gates: []
 scenarios: []
 #  - id: TRC-001
 #    title: "Finance exports the month-end ledger"
-#    intent: INT-1            # traces to intent.md / the issue description
+#    intent: INT-1            # traces to an Intent links row of the spec
 #    tests:
 #      - "tests/api/test_ledger_export.py::test_excludes_drafts"
 
@@ -117,7 +116,7 @@ claims: []
 # zero.
 # repairs: the-issue-this-fixes
 
-# --- follow_ups (work deferred - e.g. a hotfix's, or a de-scoped artifact) --
+# --- follow_ups (work deferred - e.g. a hotfix's, or de-scoped work) ---------
 # `compass check` fails while any follow-up is outstanding. Shipping refuses to
 # close the issue.
 follow_ups: []
@@ -141,8 +140,8 @@ reassessments: []
 
 # --- failure modes de-scoped at define ----------------------------------------
 # A failure mode or input class the brief implies that no scenario covers, with
-# the reason, written by `compass scenario descope`. The verifier lists each in
-# the verification report. Optional; no gate reads it.
+# the reason, written by `compass scenario descope`. `/compass:verify` lists
+# each in its hand-off. Optional; no gate reads it.
 failure_modes_descoped: []
 
 # --- friction (the framework's self-calibration signal) ---------------------

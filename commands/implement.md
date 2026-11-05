@@ -16,18 +16,19 @@ work.
 
 ## Setup
 
-- Read `delivery-approach.md` for the test-surface target (scaled to risk)
+- Run `compass approach show` for the test-surface target (scaled to risk)
   and the orchestration.
 - Read `acceptance-criteria.md` - scenarios become the acceptance suite, and
-  each starts a TDD cycle. Read `technical-design.md` for the approach.
+  each starts a TDD cycle. Read the plan's design in `devlog.md` for the
+  approach.
 - Load the `tdd-discipline` skill.
 - For a change to behavior a real client can observe, also load `atdd`:
   this stage runs its stage 2, the protocol driver.
-- Build in this session, on the current branch. When `distribution-map.md`
-  names more than one unit, build them one after another in the order
+- Build in this session, on the current branch. When the plan
+  names more than one work unit, build them one after another in the order
   breakdown set, each through its own red and green.
 - **Capture the regression baseline first (a shipped strategy).**
-  - **When it applies:** `delivery-approach.md` assesses risk as
+  - **When it applies:** the assessment gives risk as
     cross-cutting or critical, or `compass approach evaluate` surfaced
     `regression-baseline` under the advisory strategies.
   - **What to run:** the designated existing suite

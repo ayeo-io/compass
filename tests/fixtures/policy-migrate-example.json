@@ -29,22 +29,22 @@
     {
       "catalogue": "approaches",
       "id": "full",
-      "operation": "set"
+      "operation": "replace"
     },
     {
       "catalogue": "approaches",
       "id": "hotfix",
-      "operation": "set"
+      "operation": "replace"
     },
     {
       "catalogue": "approaches",
       "id": "quick-fix",
-      "operation": "set"
+      "operation": "replace"
     },
     {
       "catalogue": "approaches",
       "id": "regular",
-      "operation": "set"
+      "operation": "replace"
     },
     {
       "catalogue": "approaches",
@@ -55,11 +55,6 @@
       "catalogue": "rules",
       "id": "advisory",
       "operation": "set"
-    },
-    {
-      "catalogue": "rules",
-      "id": "artifact_rules",
-      "operation": "add"
     },
     {
       "catalogue": "rules",
@@ -103,23 +98,18 @@
     },
     {
       "catalogue": "checks",
-      "id": "artifacts-approved",
-      "operation": "add"
+      "id": "borrowed-documents-answered",
+      "operation": "remove"
     },
     {
       "catalogue": "checks",
-      "id": "contracts-declared",
-      "operation": "add"
+      "id": "consistency-check-passes",
+      "operation": "remove"
     },
     {
       "catalogue": "checks",
       "id": "dashboard-current",
       "operation": "remove"
-    },
-    {
-      "catalogue": "checks",
-      "id": "design-within-word-ceiling",
-      "operation": "add"
     },
     {
       "catalogue": "checks",
@@ -163,11 +153,6 @@
     },
     {
       "catalogue": "checks",
-      "id": "rendered-blocks-current",
-      "operation": "add"
-    },
-    {
-      "catalogue": "checks",
       "id": "suite-passed",
       "operation": "set"
     },
@@ -182,19 +167,64 @@
       "operation": "set"
     },
     {
-      "catalogue": "artifacts",
-      "id": "bug-report",
-      "operation": "add"
+      "catalogue": "gates",
+      "id": "verify.analyze",
+      "operation": "remove"
     },
     {
       "catalogue": "artifacts",
-      "id": "spike-conclusion",
-      "operation": "add"
+      "id": "acceptance-criteria",
+      "operation": "remove"
     },
     {
       "catalogue": "artifacts",
-      "id": "verification-note",
-      "operation": "add"
+      "id": "delivery-approach",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",
+      "id": "distribution-map",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",
+      "id": "intent",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",
+      "id": "launch-readiness",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",
+      "id": "requirements-review",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",
+      "id": "rollback-plan",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",
+      "id": "technical-design",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",
+      "id": "threat-model",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",
+      "id": "ui-contract",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",
+      "id": "verification-report",
+      "operation": "remove"
     },
     {
       "catalogue": "vocabulary",
@@ -208,23 +238,18 @@
     },
     {
       "catalogue": "vocabulary",
-      "id": "checks.artifacts-approved",
-      "operation": "add"
+      "id": "checks.borrowed-documents-answered",
+      "operation": "remove"
     },
     {
       "catalogue": "vocabulary",
-      "id": "checks.contracts-declared",
-      "operation": "add"
+      "id": "checks.consistency-check-passes",
+      "operation": "remove"
     },
     {
       "catalogue": "vocabulary",
       "id": "checks.dashboard-current",
       "operation": "remove"
-    },
-    {
-      "catalogue": "vocabulary",
-      "id": "checks.design-within-word-ceiling",
-      "operation": "add"
     },
     {
       "catalogue": "vocabulary",
@@ -254,11 +279,6 @@
     {
       "catalogue": "vocabulary",
       "id": "checks.outer-loop-recorded",
-      "operation": "add"
-    },
-    {
-      "catalogue": "vocabulary",
-      "id": "checks.rendered-blocks-current",
       "operation": "add"
     }
   ],
@@ -304,7 +324,7 @@
   },
   "behaviour": {
     "result": "incomparable",
-    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, role engineer, labels none, documents none: approaches.checkpoints (autonomous) is [\"assess\", \"define\"] in the parent and [] in the child",
+    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, role engineer, labels none: approaches.artifacts is [\"delivery-approach\"] in the parent and [] in the child",
     "points": 0,
     "changed": 0
   },

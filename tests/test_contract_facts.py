@@ -57,33 +57,6 @@ def _where_to_look_line() -> str:
     return _collapsed(hits[0])
 
 
-def test_cf_1_the_cli_resolves_a_registered_document_under_docs_compass(tmp_path):
-    """A document registered at the docs home resolves there, not beside the
-    manifest. This is the behaviour the contract sentence describes."""
-    slug, created = "sample", "2026-01-02"
-    task = tmp_path / ".compass" / "work" / slug
-    task.mkdir(parents=True)
-    (task / "manifest.yml").write_text(
-        f"schema_version: '2.0'\nissue: {slug}\ncreated: '{created}'\n"
-        "status: active\nassessment: {risk: trivial, familiarity: "
-        "brownfield-mapped, size: atomic, goal: delivery, role: engineer, "
-        "labels: []}\n", encoding="utf-8")
-    run = lambda *a: subprocess.run(  # noqa: E731
-        [sys.executable, str(CLI), *a, "--issue", slug],
-        cwd=tmp_path, capture_output=True, text=True)
-    assert run("approach", "evaluate", "--write").returncode == 0
-    rel = docs_dir_for(created, slug) + "/delivery-approach.md"
-    # `approach evaluate --write` renders the issue page into this folder, so it may exist.
-    (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
-    (tmp_path / rel).write_text("# approach\n", encoding="utf-8")
-    reg = run("issue", "artifact", "set", "delivery-approach",
-              "--status", "draft", "--path", rel)
-    assert reg.returncode == 0, reg.stderr
-    where = run("issue", "artifact-path", "delivery-approach")
-    assert where.returncode == 0, where.stderr
-    assert Path(where.stdout.strip()) == (tmp_path / rel).resolve()
-
-
 def test_cf_1_the_contract_names_the_docs_home_for_documents():
     para = _on_disk_paragraph()
     assert DOCS_HOME in para, (

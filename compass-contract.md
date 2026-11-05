@@ -34,8 +34,8 @@ evidence request`, ask the person to type `/compass:approve` or
 failing test, `compass tdd-green -- <cmd>` a passing one, and `compass check`
 runs the guardrails.
 
-**If it is not on disk, it did not happen.** Documents go to
-`docs/compass/<created>-<slug>/`, registered in the manifest. The manifest,
+**If it is not on disk, it did not happen.** The acceptance criteria go to
+`docs/compass/<created>-<slug>/`. The manifest,
 evidence and markers live in `.compass/work/<slug>/`. Another session
 resumes from those files.
 

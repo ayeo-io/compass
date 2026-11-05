@@ -161,17 +161,10 @@ class Issue:
         self.write_manifest(body)
 
     def approach_record(self):
-        """The delivery-approach record written from the shipped template,
-        registered and rendered, as the assess stage writes it."""
-        rel = f"docs/compass/{CREATED}-{self.slug}/delivery-approach.md"
-        path = self.project.root / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        template = (ROOT / "templates" / "delivery-approach.md").read_text(encoding="utf-8")
-        path.write_text(template.replace("{{ISSUE_SLUG}}", self.slug), encoding="utf-8")
-        self.must("issue", "artifact", "set", "delivery-approach", "--status", "draft",
-                  "--path", rel, "--issue", self.slug)
-        self.must("issue", "render", "--issue", self.slug)
-        return path.read_text(encoding="utf-8")
+        """The acceptance-strategy line the issue's records give. Before 9.0.0 a render
+        wrote it into the delivery-approach record; 9.0.0 renders nothing (ADR-091), and
+        `compass approach evaluate --write` prints the same line."""
+        return strategy_line(self.manifest(), self.dir)
 
 
 def rows(document):
@@ -365,3 +358,11 @@ def refusal(stderr):
     """The message of a `compass tdd-red` refusal, without the command line and the
     output tail, which name temporary paths."""
     return stderr.split("\n  command:", 1)[0].strip()
+
+
+def strategy_line(manifest, task_dir):
+    """`acceptance_strategy.line`, the one function every reader of the line calls."""
+    sys.path.insert(0, str(ROOT / "cli"))
+    import compass_pkg  # noqa: F401  (the bundled PyYAML first)
+    from compass_pkg import acceptance_strategy
+    return acceptance_strategy.line(manifest, str(task_dir))

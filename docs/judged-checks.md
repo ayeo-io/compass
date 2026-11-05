@@ -105,7 +105,7 @@ review for the same reason an input does.
 A judged check follows the rules of every check in a list. It is `pending`
 until its list is due, it gives its `on_skipped` verdict when its stage is
 skipped or collapsed, and an advisory one reports a failure with the
-`advisory` status, which does not fail the run. `compass issue receipt` reads the records and shows the real verdict.
+`advisory` status, which does not fail the run.
 
 Reviewer identity is not authenticated. This is the same limit as
 `human-approval`: a name in a field is a claim, not a proof.
@@ -206,7 +206,7 @@ agent-review --verdict pass|fail --reason TEXT --reviewer agent`, which writes a
 ## A project with no judged check
 
 Nothing changes. No record is read, the manifest is not touched and the output
-of `compass check`, `compass next` and the receipt is the same. The shipped
+of `compass check` and `compass next` is the same. The shipped
 default names no judged check in any list.
 
 ## Limits

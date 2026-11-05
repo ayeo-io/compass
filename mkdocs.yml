@@ -1,8 +1,7 @@
 # The documentation site, published at https://docs.ayeo.io/compass/ by
 # .github/workflows/docs.yml. Pages are the same files as in docs/, so they
 # stay under the repository's tests and pull-request rule; only the pages
-# in `nav` are published (`exclude_docs`), never issue records or the
-# living spec.
+# in `nav` are published (`exclude_docs`), never issue records.
 site_name: Compass
 site_description: Adaptive spec-driven development for Claude Code
 site_url: https://docs.ayeo.io/compass/

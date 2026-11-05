@@ -7,7 +7,7 @@ Lives at:    .compass/work/<issue-slug>/devlog.md
 Role in the pipeline: the append-only running log. Persistence over
 conversation - if it isn't on disk, it didn't happen. A later session, or
 a different agent, reconstructs the issue's history from this file plus
-delivery-approach.md.
+the manifest (`compass approach show`).
 
 APPEND-ONLY. Never edit or delete a past entry. Newest entries go at the
 bottom. One entry per stage transition or notable event. Keep each entry
@@ -24,7 +24,7 @@ short - what happened, evidence pointer, what's next.
 ## {{YYYY-MM-DD HH:MM}} - Assess
 
 - **Event:** assess ran; the delivery approach was computed.
-- **Approach:** {{reference shape - quick fix/regular/full/hotfix/spike}} - see `delivery-approach.md` revision {{N}}.
+- **Approach:** {{reference shape - quick fix/regular/full/hotfix/spike}} - see `compass approach show`.
 - **Assessment:** risk {{…}}, familiarity {{…}}, size {{…}}, goal {{…}}.
 - **Policy rules fired:** {{list - or "none"}}.
 - **Owed follow-ups:** {{list - or "none" (a spike owes none)}}.
@@ -58,6 +58,6 @@ short - what happened, evidence pointer, what's next.
 
 - **Event:** issue closed.
 - **What shipped:** {{summary}}.
-- **How checked:** {{pointer to verification-report.md gate decision}}.
+- **How checked:** {{the gates and their evidence ids, from `compass check`}}.
 - **Follow-ups settled:** {{list - for a hotfix, the root-cause line goes here}}.
 - **Follow-ups filed:** {{issue ids - or "none"}}.

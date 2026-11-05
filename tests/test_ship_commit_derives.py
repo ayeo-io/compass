@@ -1,14 +1,12 @@
-"""`ship-commit` lands an issue and derives the living spec (`DPR-7`).
+"""`ship-commit` lands an issue (`DPR-7`).
 
-ADR-026: `ship-commit` is the one step that marks an issue landed and
-re-derives `docs/system-spec.md`, whether the issue was built solo or
-through the multiagent protocol. `integrate.sh`, which only merged a wave and
-ran the combined regression, was removed in 9.0.0 (ADR-090).
+`ship-commit` is the one step that marks an issue landed. Before 9.0.0 it
+also re-derived the living spec (ADR-026); 9.0.0
+derives none (ADR-091). `integrate.sh`, which only merged a wave and ran the
+combined regression, was removed in 9.0.0 (ADR-090).
 """
 from __future__ import annotations
 
-import contextlib
-import os
 import re
 import subprocess
 import sys
@@ -20,20 +18,6 @@ import yaml
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", *args], cwd=str(cwd),
                           capture_output=True, text=True)
-
-
-@contextlib.contextmanager
-def _chdir(path: Path):
-    """`_derive_and_commit_living_spec` resolves the project root from
-    `os.getcwd()`, not from the `cwd` argument it is handed - true of every
-    caller that goes through `ship-commit`'s own subprocess, but not of a
-    direct, in-process call, which needs this instead."""
-    before = os.getcwd()
-    os.chdir(str(path))
-    try:
-        yield
-    finally:
-        os.chdir(before)
 
 
 def _init_repo(d: Path) -> None:
@@ -116,18 +100,18 @@ def _run_ship_commit(cli_path: Path, repo: Path, *args: str) -> subprocess.Compl
 
 
 # ---------------------------------------------------------------------------
-# ship-commit lands and derives (DPR-7)
+# ship-commit lands (DPR-7)
 # ---------------------------------------------------------------------------
 
 
-def test_ship_commit_lands_and_derives_the_spec(cli_path, tmp_path):
+def test_ship_commit_lands_the_issue_in_one_commit(cli_path, tmp_path):
     """After a successful commit with every gate passed, ship-commit marks
-    the issue landed, derives docs/system-spec.md, and commits the derived
-    file on its own, in a commit named after the issue that landed."""
+    the issue landed and records its land commit. It makes no second
+    commit: no landing derives a living spec (ADR-091)."""
     repo = tmp_path / "repo"
     repo.mkdir()
     _init_repo(repo)
-    slug = "ship-commit-derives"
+    slug = "ship-commit-lands"
     task_dir = _open_issue(repo, slug)
     h0 = _head(repo)
 
@@ -136,47 +120,8 @@ def test_ship_commit_lands_and_derives_the_spec(cli_path, tmp_path):
 
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
     assert _completed(manifest), manifest
-    assert "land_commit" in manifest, manifest
-
-    spec_path = repo / "docs" / "system-spec.md"
-    assert spec_path.is_file(), "docs/system-spec.md was not derived"
-    spec = spec_path.read_text(encoding="utf-8")
-    assert slug in spec, spec
-    assert "DPR-7" in spec, spec
-
-    subjects = _log_subjects(repo, since=h0)
-    assert subjects == [f"Re-derive the living spec after {slug} landed",
-                         "land it"], subjects
-    # The spec commit itself leaves docs/system-spec.md clean. (The land
-    # commit's own manifest.yml gets its status/land_commit written to disk
-    # only after that commit exists, since the commit id is not known
-    # beforehand - ADR-026's alternatives - so it is not part of this check.)
-    assert _git(repo, "status", "--porcelain", "--",
-                "docs/system-spec.md").stdout.strip() == "", (
-        "the spec commit must leave docs/system-spec.md clean")
-
-
-def test_ship_commit_derives_for_a_solo_issue(cli_path, tmp_path):
-    """Under ADR-008 alone, only integrate.sh derived - so a solo issue,
-    which never runs it, left the spec out of date. ship-commit must derive
-    for a solo issue exactly as it does for a multiagent one."""
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _init_repo(repo)
-    slug = "solo-issue"
-    task_dir = _open_issue(repo, slug, topology="solo")
-    manifest_before = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert manifest_before["topology"] == "solo"
-
-    r = _run_ship_commit(cli_path, repo, "-m", "land solo", "--issue", slug)
-    assert r.returncode == 0, r.stdout + r.stderr
-
-    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert _completed(manifest), manifest
-
-    spec_path = repo / "docs" / "system-spec.md"
-    assert spec_path.is_file(), "docs/system-spec.md was not derived for a solo issue"
-    assert slug in spec_path.read_text(encoding="utf-8")
+    assert manifest["land_commit"] == _head(repo), manifest
+    assert _log_subjects(repo, since=h0) == ["land it"]
 
 
 def test_rwp_5_ship_commit_says_the_issue_is_marked_done(cli_path, tmp_path):
@@ -196,87 +141,6 @@ def test_rwp_5_ship_commit_says_the_issue_is_marked_done(cli_path, tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
     assert re.search(r"NOT marked done: \d+ gate\(s\) have not passed", r.stdout), r.stdout
     assert "marked landed" not in r.stdout, r.stdout
-
-
-def test_ship_commit_does_not_derive_when_a_gate_has_not_passed(cli_path, tmp_path):
-    """The commit still stands, but a gate that has not passed keeps the
-    issue off 'landed' - and an issue not marked landed is not derived."""
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _init_repo(repo)
-    slug = "gate-pending"
-    task_dir = _open_issue(repo, slug, gates_pass=False)
-    h0 = _head(repo)
-
-    r = _run_ship_commit(cli_path, repo, "-m", "attempt land", "--issue", slug)
-    assert r.returncode == 0, r.stdout + r.stderr  # the commit itself still lands
-
-    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert manifest.get("status") != "done", manifest
-
-    assert not (repo / "docs" / "system-spec.md").exists(), (
-        "docs/system-spec.md must not be derived for an issue that was "
-        "not marked done")
-    subjects = _log_subjects(repo, since=h0)
-    assert not any(s.startswith("Re-derive the living spec") for s in subjects), subjects
-
-
-def test_derive_and_commit_living_spec_excludes_a_stray_staged_file(tmp_path):
-    """`_derive_and_commit_living_spec`'s own commit is
-    `git commit -m <message> -- <spec path>`, not a plain `git commit` - a
-    plain `git commit` commits everything staged, not only the spec. A file
-    staged before the land derives the spec, outside the issue's own scope,
-    must land in neither the land commit nor the spec commit.
-
-    `cmd_land_commit`'s own scope check already keeps a stray staged file out
-    of the land commit itself (`tests/test_hotfix_181_land_scope.py`); this
-    proves the same for the spec commit that follows it, calling the helper
-    directly so the stray file can be staged in the one window that matters -
-    after the land commit has already been made, and before the spec is
-    committed."""
-    from compass_pkg.manifest import _derive_and_commit_living_spec
-
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _init_repo(repo)
-    slug = "spec-commit-scope"
-    task_dir = repo / ".compass" / "work" / slug
-    task_dir.mkdir(parents=True)
-    body = _task(slug)
-    body["status"] = "done"
-    body["close_reason"] = "completed"
-    body["land_timestamp"] = "2026-09-25T00:00:00"
-    (task_dir / "manifest.yml").write_text(
-        yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
-    (repo / "feature.txt").write_text("issue work\n", encoding="utf-8")
-    _git(repo, "add", "--", "feature.txt",
-         f".compass/work/{slug}/manifest.yml")
-    _git(repo, "commit", "-q", "-m", "land it")
-    land_commit = _head(repo)
-
-    # Staged before the spec is derived, and outside this issue's scope -
-    # for instance a concurrent edit staged by someone else in the same tree.
-    (repo / "unrelated.txt").write_text("not part of this issue\n",
-                                        encoding="utf-8")
-    _git(repo, "add", "--", "unrelated.txt")
-
-    with _chdir(repo):
-        note = _derive_and_commit_living_spec(str(repo), slug)
-    assert "committed" in note, note
-
-    spec_commit = _head(repo)
-    assert spec_commit != land_commit, "no spec commit was made"
-    land_files = _git(repo, "show", "--name-only", "--pretty=format:",
-                      land_commit).stdout.split()
-    assert "unrelated.txt" not in land_files, land_files
-    spec_files = _git(repo, "show", "--name-only", "--pretty=format:",
-                      spec_commit).stdout.split()
-    assert spec_files == ["docs/system-spec-archive.md", "docs/system-spec.md"], spec_files
-
-    # The stray file is untouched by either commit - still staged, waiting
-    # for whoever staged it.
-    assert "unrelated.txt" in _git(repo, "diff", "--cached",
-                                   "--name-only").stdout
 
 
 def _commit_issue_at_head(repo: Path, slug: str, *, gates_pass: bool = True,
@@ -302,8 +166,7 @@ def _commit_issue_at_head(repo: Path, slug: str, *, gates_pass: bool = True,
 def test_ship_commit_lands_work_already_committed_at_head(cli_path, tmp_path):
     """DPR-7's last line: when every file the issue changed is already
     committed and nothing is staged, ship-commit lands the issue at HEAD -
-    no new commit, HEAD itself recorded as land_commit - and still derives
-    the living spec."""
+    no new commit, HEAD itself recorded as land_commit."""
     repo = tmp_path / "repo"
     repo.mkdir()
     _init_repo(repo)
@@ -316,20 +179,13 @@ def test_ship_commit_lands_work_already_committed_at_head(cli_path, tmp_path):
     r = _run_ship_commit(cli_path, repo, "-m", "land it", "--issue", slug)
     assert r.returncode == 0, r.stdout + r.stderr
 
-    # The land itself adds no commit - only the spec derivation that follows
-    # a normal land does, exactly as it would for a fresh commit.
-    subjects = _log_subjects(repo, since=head)
-    assert "land it" not in subjects, subjects
-    assert subjects == [f"Re-derive the living spec after {slug} landed"], subjects
+    # The land adds no commit.
+    assert _head(repo) == head
 
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
     assert _completed(manifest), manifest
     assert manifest["land_commit"] == head, manifest
     assert "land_timestamp" in manifest, manifest
-
-    spec_path = repo / "docs" / "system-spec.md"
-    assert spec_path.is_file(), "docs/system-spec.md was not derived"
-    assert slug in spec_path.read_text(encoding="utf-8")
 
 
 def test_ship_commit_refuses_when_a_gate_has_not_passed_and_nothing_is_staged(cli_path, tmp_path):
@@ -388,30 +244,3 @@ def test_ship_commit_still_refuses_nothing_staged_with_no_issue(run_cli, tmp_pat
     assert "nothing staged" in combined, r
     assert "no issue" in combined or "--issue" in combined, r
     assert _head(repo) == h0, r
-
-
-def test_ship_commit_skips_the_spec_commit_when_derivation_is_unchanged(cli_path, tmp_path):
-    """A second land whose scenarios add nothing new derives an unchanged
-    file - and an unchanged file gets no commit."""
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _init_repo(repo)
-
-    slug_a = "first-issue"
-    _open_issue(repo, slug_a, file_name="feature-a.txt")
-    r1 = _run_ship_commit(cli_path, repo, "-m", "land first", "--issue", slug_a)
-    assert r1.returncode == 0, r1.stdout + r1.stderr
-    spec_after_a = (repo / "docs" / "system-spec.md").read_text(encoding="utf-8")
-
-    slug_b = "second-issue"
-    _open_issue(repo, slug_b, file_name="feature-b.txt", scenarios=[],
-                changed_files=[{"path": "feature-b.txt", "scenarios": []}])
-    h_before = _head(repo)
-
-    r2 = _run_ship_commit(cli_path, repo, "-m", "land second", "--issue", slug_b)
-    assert r2.returncode == 0, r2.stdout + r2.stderr
-
-    subjects = _log_subjects(repo, since=h_before)
-    assert subjects == ["land second"], (
-        "an unchanged derivation must not add a spec commit: " + repr(subjects))
-    assert (repo / "docs" / "system-spec.md").read_text(encoding="utf-8") == spec_after_a

@@ -110,9 +110,6 @@ def test_up_1_the_issue_gets_the_same_verdict_after_the_upgrade(release, tmp_pat
     old_cli = release / "cli" / "compass"
     root = _project(tmp_path, old_cli)
     before_code, before = _verdict(old_cli, root)
-    # The first command that changes a record after the upgrade writes the issue page; this
-    # fixture upgrades without one, so render it as that command would.
-    _cli(CLI, root, "issue", "render", "--issue", "fix-greeting")
     after_code, after = _verdict(CLI, root)
     assert before, "5.0.0's check printed no per-check results"
     assert after_code == before_code, (before_code, after_code)

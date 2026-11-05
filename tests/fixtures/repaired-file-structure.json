@@ -53,7 +53,7 @@
       2,
       2
     ],
-    "list_items": 8,
+    "list_items": 7,
     "table_rows": 15
   },
   "approaches/rubric.md": {
@@ -69,8 +69,8 @@
       2,
       2
     ],
-    "list_items": 5,
-    "table_rows": 22
+    "list_items": 3,
+    "table_rows": 18
   },
   "approaches/spike.md": {
     "fences": 0,
@@ -711,7 +711,7 @@
       2,
       2
     ],
-    "list_items": 99,
+    "list_items": 91,
     "table_rows": 0
   },
   "governance/routing-policy.md": {
@@ -849,25 +849,10 @@
       3,
       2,
       3,
-      2,
       2
     ],
     "list_items": 2,
     "table_rows": 13
-  },
-  "templates/distribution-map.md": {
-    "fences": 0,
-    "heading_levels": [
-      1,
-      2,
-      2,
-      2,
-      2,
-      2,
-      2
-    ],
-    "list_items": 6,
-    "table_rows": 17
   },
   "templates/launch-readiness.md": {
     "fences": 0,
@@ -898,22 +883,6 @@
     ],
     "list_items": 9,
     "table_rows": 5
-  },
-  "templates/requirements-review.md": {
-    "fences": 0,
-    "heading_levels": [
-      1,
-      2,
-      2,
-      2,
-      3,
-      3,
-      2,
-      2,
-      3
-    ],
-    "list_items": 14,
-    "table_rows": 0
   },
   "templates/ui-contract.md": {
     "fences": 4,

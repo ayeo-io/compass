@@ -3,7 +3,7 @@
 (ADR-060).
 
 `compass readiness` writes the record. Every reader - `approach evaluate
---write`, the session-start hook, init, retro, the receipt, the board and the
+--write`, the session-start hook, init, retro, the board and the
 delivery approach - reads it through this module, so no two readers can
 disagree about whether it is fresh or what line to show.
 

@@ -31,7 +31,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import (checkpoint_outcomes, decision_scope, documents_present, issue_usage,
+from compass_pkg import (checkpoint_outcomes, gate_status, issue_usage,
                          release_line, ship_commit_reason, status_words)
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
@@ -57,61 +57,6 @@ def _git(args, cwd):
     return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
 
 
-def _refuse_stale_artifacts(task, task_dir):
-    """With the capability `artifact-freshness` on, refuse to land while a
-    document is stale. Nothing happens with the capability off, or for an
-    issue whose configuration cannot be read, as before."""
-    from compass_pkg import effective, freshness
-    try:
-        view = effective.view_or_legacy(task_dir)
-    except Exception:  # noqa: BLE001 - no configuration, no capability
-        return
-    if not freshness.enabled(view):
-        return
-    try:
-        text = freshness.refusal(freshness.evaluate(view, task, task_dir))
-    except Exception as exc:  # noqa: BLE001 - a record that cannot be read must not land
-        raise CompassError("compass ship-commit: refusing to land - artifact freshness "
-                           "cannot be evaluated: %s" % exc)
-    if text:
-        raise CompassError(text)
-
-
-def _refuse_unapproved_artifacts(task, task_dir):
-    """Refuse to land while a registered document is not approved: run the
-    blocking check `artifacts-approved` the way `compass check` runs it, and
-    raise on a failure. A waiver that made it advisory prints one line and the
-    land goes on. Nothing happens for an issue whose configuration does not
-    declare the check."""
-    from compass_pkg import artifact_status
-    from compass_pkg.check_cmd import ADVISORY_FAILURE, _judge
-
-    verdict = artifact_status.judged(task, task_dir, _judge)
-    if verdict is None:
-        return
-    passed, detail = verdict
-    if passed is ADVISORY_FAILURE:
-        print("compass ship-commit: %s did not pass and is advisory, so the land goes on - %s"
-              % (artifact_status.CHECK_ID, detail))
-    elif not passed:
-        raise CompassError(
-            "compass ship-commit: refusing to land - the check %s failed: %s"
-            % (artifact_status.CHECK_ID, detail))
-
-
-def _apply_ship_exit(task, task_dir):
-    """Approve the documents the ship stage owns, in the save that marks the
-    issue done."""
-    from compass_pkg import artifact_status, effective
-    try:
-        view = effective.view_or_legacy(task_dir)
-    except Exception:  # noqa: BLE001 - no configuration, no human checks
-        view = None
-    artifact_status.stage_exit(task, view, artifact_status.STAGE_SHIP,
-                               artifact_status.BY_SHIP_COMMIT, include_own=True, earlier=False,
-                               task_dir=task_dir)
-
-
 # Files Compass writes itself that live outside any issue's directory. They
 # belong in the commit that ships the issue they describe, but no author
 # declares them as `changed_files` - the framework wrote them.
@@ -121,42 +66,16 @@ def _apply_ship_exit(task, task_dir):
 # same tree, which is precisely the collision this scope check exists to stop.
 FRAMEWORK_OWNED_PATHS = frozenset({
     ".compass/current-task",
-    # The project index, which every landing re-renders (ADR-051). Not under an issue's folder.
+    # The project index, which every landing re-rendered before 9.0.0 (ADR-051, ADR-091). A
+    # checkout made then can still hold it. Not under an issue's folder.
     "docs/compass/README.md",
 })
 
 
-def _render_landing(task, task_dir, cwd):
-    """Render the issue's documents, its page and the project index as the issue will read
-    once this landing marks it done, and stage the files a project tracks (ADR-051).
-
-    The landing commit then holds the done state, and the after-command render that
-    follows it changes no byte. Nothing is done unless every gate has passed, because only
-    then does the landing mark the issue done. A failure here never stops the landing: the
-    documents are then rendered after it, as before."""
-    gates = [g for g in (task.get("gates") or []) if isinstance(g, dict)]
-    if not gates or any(g.get("status") != "pass" for g in gates):
-        return []
-    try:
-        from compass_pkg import artifact_status, effective, render_cmd
-        try:
-            view = effective.view_or_legacy(task_dir)
-        except Exception:                               # noqa: BLE001
-            view = None
-        projected = artifact_status.ship_projection(task, view)
-        status_words.close(projected, status_words.COMPLETED)
-        projected["land_timestamp"] = now_iso()
-        written = render_cmd.render_projected(task_dir, projected)
-        project = os.path.dirname(find_compass_dir())
-        staged = []
-        for item in written:
-            if _git(["check-ignore", "-q", "--", item.path], cwd).returncode == 0:
-                continue
-            if _git(["--literal-pathspecs", "add", "--", item.path], cwd).returncode == 0:
-                staged.append(os.path.relpath(item.path, project))
-        return staged
-    except Exception:                                   # noqa: BLE001 - the landing goes on
-        return []
+def _unmet_gates(task):
+    """The ids of the issue's gates that have not passed. A gate a release removed
+    owes nothing, so it never keeps an issue from landing (`gate_status`)."""
+    return gate_status.unmet_gates(task)
 
 
 def _land_scope(task, slug):
@@ -219,8 +138,9 @@ def _stale_paths(task, task_dir, root, at_commit, judge_landed=False):
     """
     if status_words.is_completed(task) and not judge_landed:
         return None
-    gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
-    if not gates or not all(g.get("status") == "pass" for g in gates):
+    # The same "every gate passed" as the landing's own gate test, so a removed gate
+    # left pending cannot let an issue land with this comparison never made.
+    if not gate_status.all_gates_passed(task):
         return None
     newest = _newest_bound_record(task, task_dir)
     if newest is None:
@@ -262,66 +182,33 @@ def _refuse_stale_green(task, task_dir, slug, root, at_commit,
     )
 
 
-# --- living system spec derivation (ADR-026) --------------------------------
-# `ship-commit` is the one step that lands an issue and re-derives the living
-# spec: only once an issue is actually marked landed, in a commit of its own,
-# so the land commit itself stays bisectable and revertable on its own.
-# `ship-commit` alone marks an issue landed, so the spec is derived here and
-# nowhere else.
+def _refuse_open_definition_of_done(task, task_dir, slug):
+    """Refuse `ship-commit` while `dod-evidence-typed` fails, as `compass check`
+    judges it. 9.0.0 removed `artifacts-approved`, the check a landing ran before
+    (ADR-091); this is the one check a landing runs now, not the whole of `compass
+    check`. A waiver that made it advisory prints one line and the land goes on.
+    Nothing happens for an issue whose configuration does not declare the check."""
+    from compass_pkg import outside_gate, refusals
+    from compass_pkg.check_cmd import ADVISORY_FAILURE, _judge
+    from compass_pkg.checks import _check_dod_evidence_typed
+
+    verdict = outside_gate.judged(DOD_CHECK, _check_dod_evidence_typed, task, task_dir, _judge)
+    if verdict is None:
+        return
+    passed, detail = verdict
+    if passed is ADVISORY_FAILURE:
+        print("compass ship-commit: %s did not pass and is advisory, so the land goes on - %s"
+              % (DOD_CHECK, detail))
+    elif not passed:
+        raise CompassError(refusals.render("definition-of-done-open", slug=slug, detail=detail))
 
 
-def _derive_and_commit_living_spec(cwd, slug):
-    """Re-derive docs/system-spec.md after `slug` has just landed, and
-    commit it alone if it changed. With the setting `living_spec: refresh`
-    it does neither and returns a one-line note that says so.
-
-    Runs the same derivation as `compass _derive-system-spec --internal`
-    (ADR-008). A derivation failure is reported in the returned note and
-    does not undo the land - the land's own commit has already succeeded.
-    """
-    from compass_pkg.flow import derive_system_spec
-    from compass_pkg.spec_refresh import landing_skips_spec
-
-    try:
-        project_root = os.path.dirname(find_compass_dir())
-    except CompassError:
-        project_root = cwd
-
-    skipped = landing_skips_spec(project_root)
-    if skipped:
-        return skipped
-
-    try:
-        derive_system_spec(project_root)
-    except Exception as exc:
-        return f"\n  living spec NOT re-derived: {exc}"
-
-    from compass_pkg.flow import LIVING_SPEC_FILES
-    rel_specs = [os.path.relpath(os.path.join(project_root, *rel.split("/")), cwd)
-                 for rel in LIVING_SPEC_FILES]
-    changed = _git(["status", "--porcelain", "--", *rel_specs], cwd).stdout.strip()
-    if not changed:
-        return "\n  living spec re-derived (no change)."
-
-    # `-- rel_specs` scopes the commit to the spec and its archive alone. A
-    # plain `git commit` commits everything staged - so anything else staged
-    # at this moment (a hook's own side effect, or a leftover from elsewhere
-    # in the same tree) would otherwise land in this commit too.
-    _git(["--literal-pathspecs", "add", "--", *rel_specs], cwd)
-    commit = _git(
-        ["commit", "-m", f"Re-derive the living spec after {slug} landed",
-         "--", *rel_specs], cwd
-    )
-    if commit.returncode != 0:
-        log = ((commit.stdout or "") + (commit.stderr or ""))[-800:]
-        return f"\n  living spec derived but its commit failed:\n{log}"
-    return "\n  living spec re-derived and committed."
+DOD_CHECK = "dod-evidence-typed"
 
 
 #: The refusals a landing runs, in order, before it stages, renders, commits or syncs anything.
 #: Each takes the manifest and issue folder and returns its text or None; append, never branch.
-LANDING_REFUSALS = [checkpoint_outcomes.landing_refusal, release_line.landing_refusal,
-                    documents_present.landing_refusal, decision_scope.landing_refusal]
+LANDING_REFUSALS = [checkpoint_outcomes.landing_refusal, release_line.landing_refusal]
 
 
 def run_landing_refusals(task, task_dir):
@@ -389,8 +276,7 @@ def cmd_land_commit(args):
                 f"'{args.task}' could not be resolved ({exc})."
             )
         head_slug = os.path.basename(str(head_task_dir).rstrip("/"))
-        unmet = [g.get("id", "?") for g in (head_task.get("gates") or [])
-                 if isinstance(g, dict) and g.get("status") != "pass"]
+        unmet = _unmet_gates(head_task)
         if unmet:
             raise CompassError(
                 f"compass ship-commit: nothing staged to land, and "
@@ -429,8 +315,7 @@ def cmd_land_commit(args):
         # files must be the ones its newest green tested.
         _refuse_stale_green(head_task, head_task_dir, head_slug, cwd,
                             at_commit="HEAD", judge_landed=True)
-        _refuse_stale_artifacts(head_task, head_task_dir)
-        _refuse_unapproved_artifacts(head_task, head_task_dir)
+        _refuse_open_definition_of_done(head_task, head_task_dir, head_slug)
 
         # What the issue's own commits at the tip added must be the issue's:
         # a commit a git hook widened, refused once, must not land when
@@ -461,16 +346,14 @@ def cmd_land_commit(args):
 
         head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
         release_line.store(head_task_dir, note, "compass ship-commit", head_task)
-        _apply_ship_exit(head_task, head_task_dir)
         status_words.close(head_task, status_words.COMPLETED)
         head_task["land_timestamp"] = now_iso()
         head_task["land_commit"] = head_id
         issue_usage.save_landed(head_task, head_task_dir, head_task_path)
-        landed_note = _derive_and_commit_living_spec(cwd, head_slug)
         print(
             f"compass ship-commit: every file '{head_slug}' changed is "
             f"already committed - landed at HEAD {head_id[:8]}, no new "
-            "commit made." + landed_note
+            "commit made."
         )
         _print_waiting(head_task_dir)
         return 0
@@ -495,10 +378,8 @@ def cmd_land_commit(args):
         docs_prefix = _docs_prefix(_scope_task, slug)
     except (CompassError, OSError, KeyError):
         pass
-
     if slug is not None:
-        _refuse_unapproved_artifacts(_scope_task, _scope_dir)  # before the render stages anything
-        _render_landing(_scope_task, _scope_dir, cwd)
+        _refuse_open_definition_of_done(_scope_task, _scope_dir, slug)  # before anything is staged
 
     def _judge_index():
         """Judge what is staged at this moment, which is what the next
@@ -515,8 +396,6 @@ def cmd_land_commit(args):
                 "nothing was committed.\n" + (tree.stderr or "").strip())
         _refuse_stale_green(_scope_task, _scope_dir, slug, cwd,
                             at_commit=tree.stdout.strip())
-        _refuse_stale_artifacts(_scope_task, _scope_dir)
-        _refuse_unapproved_artifacts(_scope_task, _scope_dir)
         # A pre-commit step can stage files too: check the scope again on
         # what is staged now.
         now = [n for n in _git(["diff", "--cached", "--name-only", "-z"],
@@ -641,8 +520,8 @@ def cmd_land_commit(args):
     # AND only if its gates actually cleared.
     #
     # The tested-before-ship guardrail (`G1`) is checked at the verify stage
-    # and at ship. `compass retro`, the living-spec
-    # derivation and every cross-issue report read the status, so an issue
+    # and at ship. `compass retro` and every cross-issue report read the
+    # status, so an issue
     # whose gates failed must not be recorded as landed.
     landed_note = ""
     if getattr(args, "task", None):
@@ -652,8 +531,7 @@ def cmd_land_commit(args):
             if os.path.isfile(task_path):
                 task = load_manifest(task_dir)[0]  # its landing save merges
                 if isinstance(task, dict):
-                    unmet = [g.get("id", "?") for g in (task.get("gates") or [])
-                             if isinstance(g, dict) and g.get("status") != "pass"]
+                    unmet = _unmet_gates(task)
                     if unmet:
                         landed_note = (
                             "\n  NOT marked done: %d gate(s) have not "
@@ -700,7 +578,6 @@ def cmd_land_commit(args):
                             "finish`.")
                         return 2
                     else:
-                        _apply_ship_exit(task, task_dir)
                         status_words.close(task, status_words.COMPLETED)
                         task["land_timestamp"] = now_iso()
                         # The commit this issue landed in. A green is checked
@@ -708,11 +585,6 @@ def cmd_land_commit(args):
                         task["land_commit"] = head_after
                         issue_usage.save_landed(task, task_dir, task_path)
                         landed_note = "\n  issue marked done."
-                        # ADR-026: ship-commit is the one step that derives
-                        # the living spec, and only for an issue it has just
-                        # marked done.
-                        landed_note += _derive_and_commit_living_spec(
-                            cwd, os.path.basename(str(task_dir).rstrip("/")))
         except CompassError:
             pass  # status update is best-effort; the commit already succeeded
 
@@ -861,42 +733,13 @@ def cmd_gate_pass(args):
     for eid in ev_ids:
         _add_meets(registry[eid], meets)
     save_manifest(task, task_path)
-    # A pass of a `verify` gate is a record of the `verify` stage: it moves the
-    # documents of earlier stages on the first pass, and the `verify` stage's own
-    # once every `verify` gate has passed (ADR-050).
-    from compass_pkg import artifact_status
-    moved = (artifact_status.record_stage(
-        task_dir, artifact_status.STAGE_VERIFY, artifact_status.BY_GATE_PASS,
-        include_own=True) if _gate_stage(task_dir, args.gate_id) == artifact_status.STAGE_VERIFY
-        else [])
+    # 9.0.0 gives no document a status (ADR-091), so a pass moves none on. `moved`
+    # stays in the JSON, always empty, so a reader of the old shape still parses it.
     return say(args, f"compass gate pass: {args.gate_id} -> pass "
                     f"(evidence: {', '.join(ev_ids)}).",
-               detail=artifact_status.moved_line(moved) or None,
-               gate=args.gate_id, status="pass", evidence=list(ev_ids), moved=moved)
+               gate=args.gate_id, status="pass", evidence=list(ev_ids), moved=[])
 
 
-def _gate_stage(task_dir, gate_id):
-    """The stage the catalogue gives a gate, or None when it names none."""
-    from compass_pkg import effective
-    try:
-        view = effective.view_or_legacy(task_dir)
-    except Exception:                                   # noqa: BLE001
-        view = None
-    gates = (view.config.get("gates") if view is not None else None)
-    if not isinstance(gates, dict):
-        from compass_pkg.core import FRAMEWORK_ROOT
-        try:
-            doc = load_yaml(os.path.join(FRAMEWORK_ROOT, "governance", "presets", "default",
-                                         "gates.yml"))
-        except CompassError:
-            return None
-        gates = doc.get("gates") if isinstance(doc, dict) else None
-    gate = (gates or {}).get(gate_id)
-    return gate.get("stage") if isinstance(gate, dict) else None
-
-
-# A file path with a directory and an extension, the shape the writing-style check treats
-# as a reference to a file in the repository.
 _TITLE_PATH = re.compile(r"(?:[\w.][\w-]*/)+[\w.-]+\.(?:md|py|yml|yaml|json|sh|feature)\b")
 
 
@@ -924,42 +767,44 @@ def _eval_ids(project_root):
 
 
 def slug_problem(project_root, slug):
-    """Why an issue slug would break the living spec, or None. The spec
-    lists every landed issue by slug and ships in the eval plugin copy,
-    which must name no eval scenario or behaviour. A hyphen joins a slug's
+    """Why an issue slug would break public copy, or None. The release notes
+    and the board print every landed issue by slug, and an older living spec
+    in the eval plugin copy listed them, so a slug must name no eval scenario
+    or behaviour (ADR-091). A hyphen joins a slug's
     words, so it counts as a boundary here, unlike in a title (#382)."""
     for ident in sorted(_eval_ids(project_root)):
         if re.search(rf"(?<![A-Za-z0-9_]){re.escape(ident)}(?![A-Za-z0-9_])",
                      slug or ""):
-            return (f"it names the eval scenario or behavior {ident}; the living "
-                    f"spec lists every landed issue by slug and ships in the eval "
-                    f"plugin copy, which must name none. Pick a slug that "
-                    f"describes the change instead.")
+            return (f"it names the eval scenario or behavior {ident}; the release "
+                    f"notes and the board print every landed issue by slug, and "
+                    f"public copy must name none. Pick a slug that describes the "
+                    f"change instead.")
     return None
 
 
 def title_problem(project_root, title):
-    """Why a scenario title would break a check on docs/system-spec.md, or
-    None. ship-commit copies titles into that file after the suite has run,
-    so a title is checked here, when it is recorded (#283)."""
+    """Why a scenario title would break a check on public copy, or None.
+    Before 9.0.0 ship-commit copied titles into the living spec after the
+    suite had run; the release line and the board still print them, so a
+    title is checked here, when it is recorded (#283, ADR-091)."""
     for m in _TITLE_PATH.finditer(title or ""):
         if not os.path.exists(os.path.join(project_root, m.group(0))):
-            return (f"it names the path {m.group(0)}, which does not exist; the living "
-                    f"spec's check refuses a named file that is missing. Describe it "
-                    f"instead.")
+            return (f"it names the path {m.group(0)}, which does not exist; a title reaches the "
+                    f"release line and the board, which must name no missing file. "
+                    f"Describe it instead.")
     for ident in sorted(_eval_ids(project_root)):
         if re.search(rf"(?<![\w-]){re.escape(ident)}(?![\w-])", title or ""):
-            return (f"it names the eval scenario or behavior {ident}; the living spec "
-                    f"ships in the eval plugin copy, which must name none. Describe the "
-                    f"run instead.")
+            return (f"it names the eval scenario or behavior {ident}; a title reaches "
+                    f"the release line and the board, and public copy must name none. "
+                    f"Describe the run instead.")
     from compass_pkg import public_copy
     if public_copy.first_match(title, public_copy.USER_TIMING_PATTERNS):
-        return ("it attaches a duration to a user's experience, which the living "
-                "spec, as public copy, must not claim unmeasured. State the bound "
+        return ("it attaches a duration to a user's experience, which a title, as "
+                "public copy, must not claim unmeasured. State the bound "
                 "the test sets instead.")
     if public_copy.first_match(title, public_copy.OUTSIDE_USER_PATTERNS):
-        return ("it claims an outside user's experience, which the living spec, "
-                "as public copy, must not claim. Describe the behavior instead.")
+        return ("it claims an outside user's experience, which a title, as public "
+                "copy, must not claim. Describe the behavior instead.")
     return None
 
 
@@ -1125,6 +970,8 @@ def cmd_evidence_add(args):
             f"compass evidence add: '{args.type}' is not a known evidence type "
             f"({sorted(known)})."
         )
+    from compass_pkg import spike_record
+    decision, next_issue = spike_record.decision_arguments(args, args.type)
     meets = _validated_meets(args, task_dir, "compass evidence add", [args.type])
     reg = task.setdefault("evidence", [])
     if any(isinstance(e, dict) and e.get("id") == args.evidence_id for e in reg):
@@ -1152,6 +999,10 @@ def cmd_evidence_add(args):
     if getattr(args, "scenario", None):
         entry["scenario"] = args.scenario
     _add_meets(entry, meets)
+    if decision:
+        entry["decision"] = decision
+        if next_issue:
+            entry["next_task"] = next_issue
     reg.append(entry)
     save_manifest(task, task_path)
     return say(args, f"compass evidence add: {args.evidence_id} "

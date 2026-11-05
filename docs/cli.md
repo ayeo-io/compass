@@ -17,13 +17,11 @@ compass approach render    every delivery approach as one HTML table
 compass bdd extract        acceptance criteria -> a runnable .feature
 compass bdd verify         record which scenarios the runner actually ran
 compass check              run the guardrail checks against the manifest and evidence
-compass analyze            where an issue's artifacts disagree with each other
 compass retro              is triage systematically over- or under-sizing the process?
 compass retro --lineage    how many issues were found in another, and how many before it landed
 compass retro --decisions  how many decisions agents took for the person were confirmed, changed or never confirmed
 compass retro --acceptance the four-layer acceptance strategy's closed in-scope issues, their clients and candidates, the closed issues per acceptance kind and the out-of-scope ones that ran it, with an opted-out project and each stepped-off issue apart
 compass issue raised-by    record the issue this one was found in, and where
-compass spec sync          merge main, resolving only conflicts in the derived living spec
 compass issue friction     record friction the agent observed, with evidence and a fix
 compass issue decision add record a decision an agent took for the person (--from-ledger reads the requirements review)
 compass issue decision set reopen such a decision; it stays unconfirmed and the checkpoint keeps waiting
@@ -42,26 +40,20 @@ compass policy diff        compare two configurations: what one accepts that the
 compass policy migrate     turn copied governance and the old settings file into a compass.yml
 compass policy migrate --words  rewrite compass.yml and policy-test fixtures in the 6.0.0 words
 compass policy update      move the project to another shipped default major, re-approving waivers
-compass plan lint          scan a technical design for placeholder phrases
 compass intent ingest      read a brief that already exists, by path or https URL
 compass issue lint         structurally validate an issue manifest
-compass issue receipt      one screen: assessment, approach, gates, evidence
 compass issue diagnose     explain one run from its own records: stages, timeline, deviations
 compass issue use          make an issue the current one, for this session
 compass issue configure    propose, preview, discard or recover a change to one issue's own configuration
 compass issue migrate      bring older issue directories up to the current schema, and settle the artifact status of done issues; --config pins an issue's configuration to the installed check versions
-compass issue render       rewrite the rendered blocks of an issue's documents and the project index from its records; --all for every issue
-compass issue artifact set set a document's status in the review pack
-compass issue artifact-path  where one of an issue's documents is
-compass issue template show  the skeleton of a document kind from the catalog, at a depth; --depth lightweight | thorough
 compass issue status set   backlog, or done with --close-reason completed | not-planned | duplicate
 compass issue status remove  end a backlog hold; the state then follows the records
 compass issue blocked set  flag an in-progress or in-review issue as blocked, with a reason
 compass issue blocked remove  clear the blocked flag
 compass issue depends add  record an issue this one waits for, with --reason and --until; implement is blocked until it is met
 compass issue depends remove  stop waiting for an issue
-compass issue link set     link an issue to its GitHub issue (--github), to write its labels and page there (opt in), or to its pull request (--pr), whose merge commit becomes land_commit
-compass issue github sync  write an issue's labels, and its page when switched on, to its linked GitHub issue now
+compass issue link set     link an issue to its GitHub issue (--github), to write its labels there (opt in), or to its pull request (--pr), whose merge commit becomes land_commit
+compass issue github sync  write an issue's labels to its linked GitHub issue now
 compass acceptance start   open an honest record where there is no natural red
 compass acceptance record  close it with what was observed
 compass adr new            create the next numbered decision record
@@ -80,9 +72,9 @@ compass scenario add       add a scenario to the manifest
 compass scenario descope   record a failure mode no scenario covers, and why
 compass scenario tests set replace the tests a scenario declares
 compass changed-file add   trace a changed file to the scenario that asked for it
-compass evidence add       append a typed evidence record
+compass evidence add       append a typed evidence record; with --type spike-conclusion, --decision and --next-issue record how a spike closes
 compass evidence request   ask a person for an approval; the request names the form, the approver and the scope
-compass evidence approve   record a person's approval of a human check, the sign-off on an irreversible change (--guardrail), a document (--artifact), the decisions agents took (--decisions) or a checkpoint hand-off (--checkpoint)
+compass evidence approve   record a person's approval of a human check, the sign-off on an irreversible change (--guardrail), the decisions agents took (--decisions) or a checkpoint hand-off (--checkpoint)
 compass evidence review    record a judgment against a judged check
 compass terminology        what a term means here, from the frozen vocabulary
 compass quick-fix start    assess, evaluate and record a quick fix in one call

@@ -23,15 +23,12 @@ the table does not exist, and when a doc in this folder is not listed.
 - `artifact-catalogue.md` - the old name of the artifact catalog page, kept until 9.0.0 so a link to it opens the new page.
 - [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.
 - [autonomy-and-cost.md](autonomy-and-cost.md) - checkpoint outcomes, the landing refusal, the session record and usage at ship, and the autonomy ratio, bands and cost per change that `compass retro --impact` and `compass issue diagnose` derive from them: shapes, commands, definitions, the read limit and the floors.
-- [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
 - [release-line.md](release-line.md) - the release line each shipping issue records: the `release_note` key, the three commands that write it, the texts they refuse, when a landing refuses an issue with none, and where the line is shown.
 - [release-notes.md](release-notes.md) - `compass release notes --since <ref>`: which completed issues it lists against a git reference, the order, the two closing count lines, and what it never writes.
 - [board.md](board.md) - `compass board render` and `compass board refresh`: the delivery board as one page, where its file goes and what the commands refuse, what the lanes and cards show, how `--worktrees` reads other trees and what it writes to git's object store, and the release-note items.
 - [github-labels.md](github-labels.md) - the opt-in sync of an issue's domain labels, workflow state and page to its linked GitHub issue: the setting, the labels Compass owns, the page comment and the checks it passes before it is posted, when it writes, drift and the failure behaviour.
 - [github-labels-walkthrough.md](github-labels-walkthrough.md) - switch the labels on in `compass.yml`, link an issue and watch the labels change as work moves.
 - [writing-specs-and-plans.md](writing-specs-and-plans.md) - a worked example of a spec and a plan.
-- [system-spec.md](system-spec.md) - the current behaviour, derived from completed issues: one heading per issue, one line per scenario, no size cap.
-- [system-spec-archive.md](system-spec-archive.md) - scenarios that name a replacement in `superseded_by`, derived.
 
 ## Running and maintaining Compass
 
@@ -50,7 +47,6 @@ the table does not exist, and when a doc in this folder is not listed.
 - [generation-store.md](generation-store.md) - the stored generation of an issue's configuration: its files, the commit order, the states and what reads it.
 - [entry-exit-evaluation.md](entry-exit-evaluation.md) - the capability that evaluates each stage's entry and exit lists: when a list is due, how each kind of check is judged, what `on_skipped` does and where results show.
 - [judged-checks.md](judged-checks.md) - a check of kind `judged`, its review record and `compass evidence review`: what a judged check needs to pass, the four failure causes, how a changed input re-owes the review and the JSON shape.
-- [artifact-freshness.md](artifact-freshness.md) - the capability that records the digest of a document when it is written, and refuses a stale one at land and at the entry of a stage that consumes it: what is recorded, when a document is stale, where it shows and the limits.
 - [issue-dependencies.md](issue-dependencies.md) - `depends_on` and `compass issue depends add|remove`: the entry shape, the nine `until` values, when the block counts at implement, what the hook reads and what it costs, the fail-safe cases, the worktree rule and what each reader shows.
 - [issue-configure.md](issue-configure.md) - `compass issue configure`: propose, preview, discard and recover a change to one issue's configuration, and how a reassess commits it.
 - [policy-migrate.md](policy-migrate.md) - `compass policy migrate`: how copied governance and the old settings file become a `compass.yml` overlay over the release the copy came from, what it keeps, when it refuses, its exit codes and its JSON shape; and `--words`, which rewrites a project's configuration in the 6.0.0 words.
@@ -88,7 +84,7 @@ same commit.
 | `cli/compass_pkg/catalogue_spec.py`, `cli/compass_pkg/catalogue_check.py`, `schemas/compass.schema.json` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/legacy_adapter.py`, `cli/compass_pkg/legacy_views.py`, `cli/compass_pkg/legacy_views_template.py`, `scripts/generate-legacy-views.py`, `governance/presets/default/`, `tests/fixtures/preset-digests.yml` | `governance/routing-policy.md` |
 | `cli/compass_pkg/vocabulary.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
-| `cli/compass_pkg/stable_ids.py`, `tests/test_stable_ids.py` | `architecture/decisions/ADR-040-stable-ids-live-in-one-module.md` |
+| `cli/compass_pkg/stable_ids.py`, `cli/compass_pkg/gate_status.py`, `tests/test_stable_ids.py` | `architecture/decisions/ADR-040-stable-ids-live-in-one-module.md` |
 | `cli/compass_pkg/atomic_io.py` | `architecture/decisions/ADR-036-an-issue-runs-against-a-stored-generation.md` |
 | `cli/compass_pkg/board_cmd.py`, `cli/compass_pkg/board_page.py`, `cli/compass_pkg/board_file.py`, `cli/compass_pkg/board_trees.py` | `docs/board.md` |
 | `cli/compass_pkg/obligations.py` | `architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md` |
@@ -99,9 +95,8 @@ same commit.
 | `cli/compass_pkg/issue_depends.py` | `docs/issue-dependencies.md` |
 | `cli/compass_pkg/issue_config_cmd.py`, `cli/compass_pkg/config_preview.py` | `docs/issue-configure.md` |
 | `cli/compass_pkg/stage_lists.py`, `cli/compass_pkg/item_records.py`, `cli/compass_pkg/follow_up_cmd.py`, `cli/compass_pkg/doc_sections.py`, `cli/compass_pkg/approval_records.py`, `cli/compass_pkg/approvals.py`, `cli/compass_pkg/approval_requests.py`, `cli/compass_pkg/prompt_approval.py`, `cli/compass_pkg/delegations.py`, `cli/compass_pkg/delegation_tickets.py`, `cli/compass_pkg/worktree_lookup.py`, `cli/compass_pkg/approve_cmd.py`, `tests/test_human_checks.py`, `tests/fixtures/evidence-approve-example.json` | `docs/entry-exit-evaluation.md` |
-| `cli/compass_pkg/artifact_kinds.py`, `cli/compass_pkg/artifact_cmd.py`, `cli/compass_pkg/artifact_owed.py`, `cli/compass_pkg/justifications.py`, `cli/compass_pkg/template_lists.py`, `templates/*.md`, `scripts/measure-artifact-catalogue.py`, `cli/compass_pkg/decision_scope.py` | `docs/artifact-catalog.md` |
+| `cli/compass_pkg/artifact_kinds.py`, `cli/compass_pkg/justifications.py`, `templates/*.md` | `docs/artifact-catalog.md` |
 | `cli/compass_pkg/review_records.py`, `cli/compass_pkg/review_cmd.py`, `tests/fixtures/evidence-review-example.json` | `docs/judged-checks.md` |
-| `cli/compass_pkg/freshness.py` | `docs/artifact-freshness.md` |
 | `cli/compass_pkg/replay.py` | `docs/policy-diff.md` |
 | `cli/compass_pkg/policy_migrate.py`, `cli/compass_pkg/policy_migrate_undo.py`, `cli/compass_pkg/config_words.py`, `cli/compass_pkg/shipped_releases.py`, `scripts/generate-shipped-releases.py`, `governance/shipped-releases.yml`, `governance/shipped-releases.tar.xz` | `docs/policy-migrate.md` |
 | `cli/compass_pkg/parents.py`, `cli/compass_pkg/parent_states.py`, `cli/compass_pkg/chain_class.py` | `docs/git-parents.md` |
@@ -120,22 +115,19 @@ same commit.
 | `cli/compass_pkg/host_launch.py` | `evals/README.md` |
 | `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py` | `docs/delivery-record.md` |
 | `cli/compass_pkg/compliance.py`, `cli/compass_pkg/checkpoint_outcomes.py`, `cli/compass_pkg/session_record.py`, `cli/compass_pkg/session_usage.py`, `cli/compass_pkg/issue_usage.py`, `cli/compass_pkg/autonomy_cost.py` | `docs/autonomy-and-cost.md` |
-| `cli/compass_pkg/github_labels.py`, `cli/compass_pkg/github_page.py`, `cli/compass_pkg/github_sync_record.py`, `cli/compass_pkg/publish_check.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `tests/fake_gh.py` | `docs/github-labels.md` |
+| `cli/compass_pkg/github_labels.py`, `cli/compass_pkg/github_sync_record.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `tests/fake_gh.py` | `docs/github-labels.md` |
 | `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |
-| `cli/compass_pkg/artifact_status.py`, `cli/compass_pkg/decisions_taken.py` | `architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md` |
-| `cli/compass_pkg/rendered_blocks.py`, `cli/compass_pkg/block_renderers.py`, `cli/compass_pkg/render_inputs.py`, `cli/compass_pkg/render_cmd.py`, `cli/compass_pkg/render_check.py`, `cli/compass_pkg/render_after.py`, `cli/compass_pkg/render_after_entry.py`, `cli/compass_pkg/render_check_entry.py`, `cli/compass_pkg/record_triggers.py`, `cli/compass_pkg/issue_page.py`, `cli/compass_pkg/issue_detail.py`, `cli/compass_pkg/project_index.py`, `cli/compass_pkg/project_scan.py`, `cli/compass_pkg/render_skip.py`, `cli/compass_pkg/migrate_blocks.py` | `docs/rendered-blocks.md` |
-| `cli/compass_pkg/header_block.py` | `docs/rendered-blocks.md` |
-| `cli/compass_pkg/dependencies_block.py` | `docs/rendered-blocks.md` |
-| `cli/compass_pkg/verification_plan.py` | `docs/rendered-blocks.md` |
-| `cli/compass_pkg/section_checks.py`, `cli/compass_pkg/outside_gate.py` | `governance/guardrails.md` |
+| `cli/compass_pkg/decisions_taken.py` | `architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md` |
+| `cli/compass_pkg/rendered_blocks.py`, `cli/compass_pkg/issue_detail.py`, `cli/compass_pkg/project_scan.py`, `cli/compass_pkg/migrate_blocks.py`, `cli/compass_pkg/doc_paths.py` | `docs/rendered-blocks.md` |
+| `cli/compass_pkg/record_triggers.py`, `cli/compass_pkg/command_guard.py` | `docs/generation-store.md` |
+| `cli/compass_pkg/section_checks.py`, `cli/compass_pkg/outside_gate.py`, `cli/compass_pkg/spec_location.py` | `governance/guardrails.md` |
 | `cli/compass_pkg/acceptance_strategy.py`, `cli/compass_pkg/outer_loop.py`, `cli/compass_pkg/candidate_client.py`, `cli/compass_pkg/isolation.py`, `cli/compass_pkg/layering.py`, `cli/compass_pkg/strategy_records.py` | `governance/guardrails.md` |
 | `cli/compass_pkg/support_code.py` | `docs/readiness.md` (the support-code block), `governance/guardrails.md` (the check and the claim limit) |
 | `cli/compass_pkg/migrate.py`, `cli/compass_pkg/migrate_kinds.py`, `cli/compass_pkg/migrate_copy_check.py` | `architecture/decisions/ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md`, `docs/upgrade-7-0-0.md` |
 | `cli/compass_pkg/parse_cache.py` | `architecture/decisions/ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md`, widened by `architecture/decisions/ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md` |
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |
-| `cli/compass_pkg/flow.py`, `cli/compass_pkg/spec_refresh.py`, `docs/system-spec.md`, `docs/system-spec-archive.md` | `architecture/decisions/ADR-026-ship-commit-lands-and-derives-the-living-spec.md` |
+| `cli/compass_pkg/flow.py` | `docs/board.md` |
 | `cli/compass_pkg/next_cmd.py`, `cli/compass_pkg/render.py`, `cli/compass_pkg/statusline.py`, `bin/compass-statusline` | `docs/quickstart.md` |
-| `cli/compass_pkg/receipt.py`, `cli/compass_pkg/receipt_provenance.py` | `docs/receipt.md` |
 | `cli/compass`, `cli/compass_pkg/verb_help.py`, `cli/compass_pkg/lineage.py` | `README.md` |
 | `scripts/release.sh`, `scripts/build-plugin-copy.py`, `scripts/plugin-files.txt`, `.claude-plugin/marketplace.json`, `Makefile`, `VERSION` | `docs/releasing.md` |
 | `.github/workflows/`, `scripts/ci-*.py` | `docs/releasing.md` |

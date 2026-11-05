@@ -14,6 +14,8 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+import yaml
 from tests.path_folder import link_programs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -36,7 +38,7 @@ HOOK_PARTS = tuple(name for name in INSTALL_PARTS if name.startswith("pre-tool-"
 #: and the words its refusal names it by.
 CHECKS = {
     "code globs": ("fnmatch.fnmatch(path, g)", "enforcement.code_globs reader"),
-    "delivery approach": ("resolve_artifact(sys.argv[1]", "delivery-approach reader"),
+    "delivery approach": ("decided = isinstance(task, dict)", "delivery-approach reader"),
     "acceptance criteria": ('weight = stages.get("define"', "acceptance-criteria reader"),
     "red record": ("verdict_line(sys.argv[1]", "red-record reader"),
 }
@@ -48,6 +50,7 @@ MANIFEST = """schema_version: '2.0'
 issue: {issue}
 created: '2026-09-24'
 status: active
+delivery_approach: standard
 stages: {{assess: full, define: full, implement: full}}
 scenarios:
 - id: M-1
@@ -112,7 +115,6 @@ class HookDriverBase:
         (compass / "config.yml").write_text(
             f"version: 1.0.0\nmode: enforced\nenforcement:\n  code_globs: [{globs}]\n")
         (task / "manifest.yml").write_text(MANIFEST.format(issue=issue))
-        (task / "delivery-approach.md").write_text("# Approach\n")
         (task / "evidence" / "red.json").write_text(json.dumps(_red_record()))
         (task / ".red").write_text("")
 
@@ -134,7 +136,14 @@ class HookDriverBase:
         (self.project / ".compass" / "config.yml").chmod(0)
 
     def hasIssueWithNoApproachRecord(self, issue):
-        (self.project / ".compass" / "work" / issue / "delivery-approach.md").unlink()
+        # 9.0.0 reads the approach from the manifest (ADR-091), so the record is missing
+        # when the manifest names none.
+        folder = self.project / ".compass" / "work" / issue
+        (folder / "delivery-approach.md").unlink(missing_ok=True)
+        manifest = folder / "manifest.yml"
+        body = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+        body.pop("delivery_approach", None)
+        manifest.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
 
     # --- the machine --------------------------------------------------------------------
 

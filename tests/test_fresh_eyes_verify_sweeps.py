@@ -14,7 +14,7 @@ pointer from the verify stage guidance (`commands/verify.md`,
 `skills/evidence-gates/SKILL.md`) that names where it lives without
 repeating it.
 
-Criteria: docs/system-spec.md
+Criteria: the issue's acceptance criteria
 """
 
 # These tests assert the current file names; files written under older
@@ -357,10 +357,10 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         cwd=REPO_ROOT, capture_output=True, text=True, check=True,
     )
     known_verbs = {
-        "approach", "bdd", "check", "analyze", "retro", "ci", "tdd-red",
-        "tdd-green", "policy", "plan", "intent", "issue", "acceptance", "adr",
+        "approach", "bdd", "check", "retro", "ci", "tdd-red",
+        "tdd-green", "policy", "intent", "issue", "acceptance", "adr",
         "rework-scan", "flow", "next", "follow-up", "ship-commit", "gate",
-        "scenario", "changed-file", "evidence", "review-rule", "spec", "preset", "terminology",
+        "scenario", "changed-file", "evidence", "review-rule", "preset", "terminology",
         "init", "quick-fix",
         "decision",  # decisions-ledger (ADR-027): the settled-decisions ledger
         "lesson",  # project-lessons (ADR-029): lessons for later sessions

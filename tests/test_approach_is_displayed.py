@@ -9,7 +9,7 @@ whitespace-free string literal in `cli/compass_pkg/` as a machine
 identifier, and `'route'` is exactly that shape (ADR-015 records the
 widening).
 
-Scenario ids: see docs/system-spec.md (group E).
+Scenario ids: see the issue's acceptance criteria (group E).
 """
 
 # These tests read the per-check detail, which the command prints only

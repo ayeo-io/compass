@@ -25,7 +25,7 @@ never need less.
 
 ## Working through several units
 
-Compass 9.0.0 builds the units of a distribution map one after another in one
+Compass 9.0.0 builds the plan's work units one after another in one
 session, with no worktree per unit (ADR-090). Run each unit's full cycle -
 including its red, failing test - before you start the next, so one unit's red
 never hides another's. If a test for one unit reaches into another unit's

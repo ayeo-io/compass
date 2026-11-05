@@ -53,8 +53,8 @@ gates:
       '
     stage: verify
     applies_to: {ships: true}
-    checks: [gate-evidence-present, dod-evidence-typed, consistency-check-passes, no-trusted-rerun, command-passes,
-      evidence-identity-matches, evidence-matches-tree, rendered-blocks-current, borrowed-documents-answered]
+    checks: [gate-evidence-present, dod-evidence-typed, no-trusted-rerun, command-passes, evidence-identity-matches,
+      evidence-matches-tree]
     locked: true
   G5:
     kind: guardrail
@@ -129,10 +129,6 @@ gates:
     stage: verify
     accepts: [spike-conclusion]
     locked: true
-  verify.analyze:
-    kind: review
-    stage: verify
-    accepts: [consistency-check]
   verify.architecture:
     kind: review
     stage: verify

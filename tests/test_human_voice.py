@@ -13,7 +13,7 @@ asserts what the prose surfaces carry (TRC-A1..A4, B1..B3, C1..C3, D1, F3);
 `tests/test_voice_tells.py` asserts how the standalone check behaves
 (TRC-D2, D3, F1, F2), by running it as a subprocess over fixtures.
 
-Criteria: docs/system-spec.md
+Criteria: the issue's acceptance criteria
 Design:   human-voice/technical-design.md (DD-4 names
           what each function asserts). `TRC-A2` and `TRC-C2` check quotes through
           `scripts/verify-archive-quotes.py` against the committed hash
@@ -462,39 +462,6 @@ def test_trc_c2_the_rewritten_original_is_unmodified_and_cited():
     module = _load_quote_verification_module()
     _assert_quotes_verified(
         module.WORKED_EXAMPLE_SPAN_IDS, "TRC-C2 (worked-example original)"
-    )
-
-
-def test_trc_c3_the_template_worked_example_records_a_decision_in_prose():
-    template = REPO_ROOT / "templates" / "requirements-review.md"
-    text = template.read_text(encoding="utf-8")
-    assert "## Worked example" in text, (
-        "templates/requirements-review.md must gain a worked-example section"
-    )
-    section = text.split("## Worked example", 1)[1]
-    # Stop at the next heading so the rest of the template cannot smuggle in
-    # a false pass for this section's own checks.
-    section = re.split(r"(?m)^## ", section, maxsplit=1)[0]
-
-    assert "Status:" not in section, (
-        "the worked example must show a decision in prose, not a "
-        "label-and-value row of the 'Status: RESOLVED' kind"
-    )
-    for tell in FINDABLE_TELLS:
-        assert tell.lower() not in section.lower(), (
-            f"the worked example must not carry a findable tell: {tell!r}"
-        )
-
-    # Every assertion above is negative, so an entirely empty section would
-    # still pass them. `TRC-C3`'s actual Then names four things the paragraph
-    # must carry.
-    assert "was unclear" in section, (
-        "the worked example must state what was unclear"
-    )
-    assert "jed72" in section, "the worked example must state whose call it was"
-    assert "fifty lines" in section, "the worked example must state the call itself"
-    assert "standard terminal" in section, (
-        "the worked example must state what the call rests on"
     )
 
 

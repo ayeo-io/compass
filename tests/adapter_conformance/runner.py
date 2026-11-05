@@ -51,7 +51,7 @@ class Adapter:
                     if not key.startswith("GIT_")}
         self.env.update(CLAUDE_PLUGIN_ROOT=str(ROOT), GIT_CONFIG_NOSYSTEM="1",
                         GIT_CONFIG_GLOBAL=os.devnull, PYTEST_DISABLE_PLUGIN_AUTOLOAD="1",
-                        COMPASS_RENDER_AFTER="1", COMPASS_OFFLINE="1")
+                        COMPASS_OFFLINE="1")
         for key in ("COMPASS_ISSUE", "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_DATA",
                     "CLAUDE_CODE_SESSION_ID"):
             self.env.pop(key, None)
@@ -200,16 +200,9 @@ class Adapter:
         for concern in ("performance", "capacity", "compatibility", "security", "privacy",
                         "operability", "accessibility"):
             spec += f"| {concern} | | Pure local fixture; no service or host guarantee is claimed. |\n"
-        contents = {
-            "acceptance-criteria": spec,
-            "technical-design": "# Reference design\n\nUse a pure names function and two observable behaviours.\n",
-            "distribution-map": "# Reference distribution\n\nunits: 2\n\nLocal fixture state only; no native agents are dispatched.\n",
-        }
-        for kind, text in contents.items():
-            path = docs / f"{kind}.md"
-            path.write_text(text)
-            self.cli("issue", "artifact", "set", kind, "--issue", self.slug,
-                     "--status", "draft", "--path", str(path.relative_to(self.project)))
+        # The acceptance criteria are the one document Compass reads, at their
+        # fixed path; nothing registers them (ADR-091).
+        (docs / "acceptance-criteria.md").write_text(spec)
 
     def green_feature(self):
         self.cli("tdd-green", "--issue", self.slug, "--scenario", "CONF-1",
@@ -222,17 +215,10 @@ class Adapter:
                  "--client", "cli", "--parallel", f"{pytest} {shlex.quote(self.node)}",
                  "--repeat", pytest + " {tests}")
         self.cli("layering", "record", "--issue", self.slug, "--", *self.test_command)
-        self.cli("issue", "render", "--issue", self.slug)
 
     def start_spike(self):
         self._start_assessed("exploration")
         (self.issue_dir / ".spike").touch()
-        docs = self.project / "docs/compass" / f"{FIXTURE_DATE}-{self.slug}"
-        docs.mkdir(parents=True, exist_ok=True)
-        path = docs / "delivery-approach.md"
-        path.write_text("# Local spike\n\nExplore the isolated fixture. No production change ships.\n")
-        self.cli("issue", "artifact", "set", "delivery-approach", "--issue", self.slug,
-                 "--status", "draft", "--path", str(path.relative_to(self.project)))
 
     def payload_decision(self, action):
         payload = {"cwd": str(self.project), "session_id": "local-" + self.name,
@@ -316,7 +302,7 @@ class Adapter:
         projected["gates"] = manifest["gates"]
         projected["artifacts"] = [{key: value for key, value in artifact.items()
                                    if key != "approved_at"}
-                                  for artifact in manifest["artifacts"]]
+                                  for artifact in manifest.get("artifacts", [])]
         evidence = []
         for entry in manifest["evidence"]:
             meaning = {key: value for key, value in entry.items()

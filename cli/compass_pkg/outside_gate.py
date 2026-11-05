@@ -19,7 +19,9 @@ import os
 
 from compass_pkg.core import load_yaml, reading_matches
 
-#: The checks that sit in no gate, in the order `compass check` reports them.
+#: The checks that sit in no gate, in the order `compass check` reports them. 9.0.0
+#: removes `artifacts-approved`, `contracts-declared` and `design-within-word-ceiling`
+#: (ADR-091); a stored configuration that declares one reports it as nothing to check.
 CHECKS = ("artifacts-approved", "nfr-rows-resolved", "contracts-declared",
           "design-within-word-ceiling", "acceptance-applicability-agrees",
           "outer-loop-recorded", "acceptance-support-present", "outer-loop-attempts-recorded",

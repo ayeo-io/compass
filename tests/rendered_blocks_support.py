@@ -54,10 +54,6 @@ def run(root, *argv, extra_env=None, timeout=300):
     return done.returncode, done.stdout, done.stderr
 
 
-def render(root, *extra):
-    return run(root, "issue", "render", "--issue", SLUG, *extra)
-
-
 def block(kind, body="stale"):
     """A block as a document holds it, LF line endings."""
     return f"{OPEN.format(kind=kind)}\n{body}\n{CLOSE}\n"
@@ -149,26 +145,6 @@ def rich_issue(tmp_path, compass_yml=None):
     manifest_file(root).write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
     add_records(root, **{"red-TRC-1": "TRC-1", "green-TRC-1": "TRC-1", "red-TRC-2": "TRC-2"})
     return root
-
-
-def inproc(root, monkeypatch, *, all_issues=False, dry_run=False, issue=SLUG):
-    """Run `compass issue render` in this process from `root`; `(code, out, err)`.
-    A refusal is a `CompassError`, which the entry point turns into exit 2."""
-    from compass_pkg import render_cmd
-    from compass_pkg.core import CompassError
-
-    monkeypatch.chdir(root)
-    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(root))
-    args = argparse.Namespace(task=issue, all=all_issues, dry_run=dry_run, json=False,
-                              _mode="plain")
-    out, err = io.StringIO(), io.StringIO()
-    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-        try:
-            code = render_cmd.cmd_issue_render(args) or 0
-        except CompassError as exc:
-            err.write(f"compass: {exc}\n")
-            code = 2
-    return code, out.getvalue(), err.getvalue()
 
 
 def tracked_digest(*folders):

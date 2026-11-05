@@ -40,10 +40,6 @@ version: 1.40.0
 # it checks the recorded state is coherent and backed by evidence.
 # -----------------------------------------------------------------------------
 checks:
-  borrowed-documents-answered:
-    description: "The threat model and the rollback plan, where they exist, are answered rather than merely written - every threat names a scenario or an accepted risk, and the rollback records a rehearsal that happened. Declines to check, rather than passing, when the issue earned neither document."
-  rendered-blocks-current:
-    description: "Every rendered block in the issue's documents and its issue page matches a fresh render from the records. A block drawn from the issue's own records fails the check at `verify` and `ship` and is advisory before; a block drawn from other issues or the project is always advisory."
   landed-by-resolves:
     description: "An issue whose work was delivered through a different issue points at it with `landed_by:`, and the pointer resolves: the named issue exists, has landed, carries a record of its own, and names this one back in `delivered:`. When it holds, four checks about this issue carrying its OWN record stand down - the claim moves rather than being waived. Declines to check when there is no pointer."
   scenarios-have-tests:
@@ -88,14 +84,8 @@ checks:
     description: "An approval record exists for an irreversible change."
   backfills-paid:
     description: "The issue manifest's follow-ups list is empty or every item is resolved."
-  artifacts-approved:
-    description: "Every document the issue registered is accepted when it ships: no artifact reads draft or awaiting-approval, and an omitted artifact records a reason. Judges the state `compass ship-commit` would leave, so a document owned by the ship stage does not fail. Declines to check, rather than passing, until every gate has passed, and for an issue that has closed or does not ship."
   nfr-rows-resolved:
-    description: "Every concern row of the spec's Non-functional requirements table (performance, capacity, compatibility, security, privacy, operability, accessibility, and any row added) names scenario ids the manifest holds or a reason the concern does not apply. At thorough depth each cited scenario states a number in its Then. Declines to check, rather than passing, for an issue with no generation, a closed issue, a spec not registered with a path, and a catalogue that does not list the section at the depth the spec is registered at."
-  contracts-declared:
-    description: "When a changed file matches a trigger pattern, the technical design's Data and interfaces section declares a contract: a field table (Name, Type, Required, Meaning, Written by, Read by) or a contract table (Inputs, Outputs, Exit codes, Errors) with a data row, or an erDiagram. A path pattern matches the project-relative path, and a contents pattern also needs the file to hold its text. Declines to check, rather than passing, when no changed file matches, and for an issue with no generation, a closed issue, a design not registered with a path, and a catalogue that does not list the section at the depth the design is registered at."
-  design-within-word-ceiling:
-    description: "Once plan exit is due, the technical design holds no more words than its word_ceiling at the depth it is registered at, times the factor in params. Words are counted from the visible text, and unit files never lift the limit. Declines to check, rather than passing, for an issue with no generation, a closed issue, a design not registered with a path, a catalogue with no word_ceiling for the design at its depth, and an issue that has not passed the plan stage."
+    description: "Every concern row of the spec's Non-functional requirements table (performance, capacity, compatibility, security, privacy, operability, accessibility, and any row added) names scenario ids the manifest holds or a reason the concern does not apply. At thorough depth each cited scenario states a number in its Then. The spec is read at the path the manifest registered, else at docs/compass/<created>-<slug>/acceptance-criteria.md, where its depth is the define stage's mode. Declines to check, rather than passing, for an issue with no generation, a closed issue, an issue created before 2026-11-04 with no spec at either path, an issue whose spec is not written yet, and a registered spec whose catalogue does not list the section at its depth."
   acceptance-applicability-agrees:
     description: "The four-layer acceptance strategy (`S17`) applies to the issue as its delivery-approach record says: the applicability stored at assess agrees with what the red and acceptance records decide, and the project setting has not changed since assess. Advisory: a disagreement names the re-assess command and never fails the run. Declines to check, rather than passing, for an issue assessed before the strategy shipped and for a project that turned the strategy off."
   outer-loop-recorded:
@@ -121,10 +111,9 @@ checks:
       with no record fails. A tick on a page counts for nothing.
       Cross-issue: when another issue has a follow-up with target_task
       pointing at this issue, that follow-up must be resolved before this
-      issue ships. Declines to check, rather than passing, when no
-      verification report is written yet.
-  consistency-check-passes:
-    description: "compass analyze reports zero consistency findings. Gate-clearing runs write type consistency-check evidence; advisory runs write command-output and do not clear verify.analyze."
+      issue ships. On an issue created from 2026-11-04 it is judged once
+      every gate has passed; on an older issue it declines to check, rather
+      than passing, when no verification report is written yet.
   no-trusted-rerun:
     description: >
       Every test-run evidence entry is checked for rerun integrity. A record
@@ -221,7 +210,7 @@ evidence_types:
   spike-conclusion:
     description: "A recorded close-out of a spike: what was learned, a decision (discard | graduate-to-delivery | defer), and any link to the next issue."
   consistency-check:
-    description: "Output of compass analyze - a structured consistency findings list. Gate-clearing: zero findings. Only this type clears verify.analyze; advisory command-output entries do not."
+    description: "Output of compass analyze, which 9.0.0 removed (ADR-091). Nothing writes it now; it stays valid so an older manifest that holds one still reads."
   artifact:
     description: "A written record without a more specific type - a review note, a verification report. The weakest, by design: honest for judgement-shaped gates, never enough for a mechanical one."
 
@@ -238,7 +227,6 @@ gate_evidence_requirements:
   verify.claims: [claim-review, command-output, artifact]
   verify.clarity: [manual-review, artifact]       # inherently judgment - and now visibly so
   spike.conclude: [spike-conclusion]              # SPECIFIC: a generic artifact will not do
-  verify.analyze: [consistency-check]              # SPECIFIC: advisory command-output does NOT clear this gate
   verify.architecture: [test-run, command-output]    # architecture checks: command-output from command-passes, or a test-run
 
 # -----------------------------------------------------------------------------
@@ -294,9 +282,8 @@ defaults:
       Definition of Done is met by a record in the manifest (typed evidence,
       a person's approval or a filed follow-up) - a tick on a page or a
       narrative note never clears it.
-    checks: [gate-evidence-present, dod-evidence-typed, consistency-check-passes, no-trusted-rerun,
-             command-passes, evidence-identity-matches, evidence-matches-tree,
-             rendered-blocks-current, borrowed-documents-answered]
+    checks: [gate-evidence-present, dod-evidence-typed, no-trusted-rerun, command-passes,
+             evidence-identity-matches, evidence-matches-tree]
     checked_at: [verify, ship]
 
   - id: G5
@@ -364,6 +351,6 @@ project: []
 # -----------------------------------------------------------------------------
 # Cross-cutting: the conflict rule (a guardrail beats a strategy) and the
 # Definition of Ready / Definition of Done checklists are governance too, but
-# they live where they are used - see governance/README.md, the foot of
-# templates/requirements-review.md (DoR) and templates/verification-report.md (DoD).
+# they live where they are used - see governance/README.md and the `plan` entry
+# and `verify` exit lists of the shipped preset.
 # -----------------------------------------------------------------------------

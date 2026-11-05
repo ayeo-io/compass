@@ -506,8 +506,8 @@ _PROJECT = "runs the person's own test or project command, which needs their env
 #: each holds and the reason. 8.0.4 passed the directory with each of them. A new call needs an allow-list, as the tests
 #: above give `gh` and the Codex hooks, or an entry here that a reviewer accepts.
 INHERITS_ENVIRONMENT = {
-    ("cli/compass_pkg/analyze.py", "_git_out"): (1, _GIT),
-    ("cli/compass_pkg/analyze.py", "_landed_before"): (1, _GIT),
+    ("cli/compass_pkg/ci_cmd.py", "_git_out"): (1, _GIT),
+    ("cli/compass_pkg/ci_cmd.py", "_landed_before"): (1, _GIT),
     ("cli/compass_pkg/binding.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/board_trees.py", "_git"): (1, _GIT + "; it leaves out only GIT_ variables"),
     ("cli/compass_pkg/checks.py", "_git_out"): (1, _GIT),
@@ -515,7 +515,6 @@ INHERITS_ENVIRONMENT = {
     ("cli/compass_pkg/decisions.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/decisions.py", "history_problems"): (1, _GIT),
     ("cli/compass_pkg/effective.py", "_git_blob"): (1, _GIT),
-    ("cli/compass_pkg/flow.py", "_completed_on_this_branch.git"): (1, _GIT),
     ("cli/compass_pkg/github_links.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/pull_request_link.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/landed_by.py", "_git_commit_subject"): (1, _GIT),
@@ -524,12 +523,10 @@ INHERITS_ENVIRONMENT = {
     ("cli/compass_pkg/manifest.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/manifest.py", "cmd_land_commit"):
         (1, "runs the project's own pre-commit hooks, which need the person's environment"),
-    ("cli/compass_pkg/publish_check.py", "_ignored"): (1, _GIT),
     ("cli/compass_pkg/quick_fix_cmd.py", "_untracked_paths"): (1, _GIT),
     ("cli/compass_pkg/quick_fix_cmd.py", "_write_start_state"): (3, _GIT),
     ("cli/compass_pkg/quick_fix_cmd.py", "_untraced_since_start"): (1, _GIT),
     ("cli/compass_pkg/quick_fix_cmd.py", "_commit_files"): (1, _GIT),
-    ("cli/compass_pkg/quick_fix_cmd.py", "_write_verification_note"): (1, _GIT),
     ("cli/compass_pkg/readiness_record.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/readiness_run.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/readiness_run.py", "_run_one"): (1, _PROJECT),
@@ -537,7 +534,6 @@ INHERITS_ENVIRONMENT = {
     ("cli/compass_pkg/release_notes.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/replay.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/ship_commit_reason.py", "_pre_commit_hook_can_run"): (1, _GIT),
-    ("cli/compass_pkg/spec_refresh.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/start_state.py", "_git_changed_paths"): (1, _GIT),
     ("cli/compass_pkg/start_state.py", "_record_path"): (1, _GIT),
     ("cli/compass_pkg/start_state.py", "_tracked_paths"): (1, _GIT),

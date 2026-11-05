@@ -87,7 +87,6 @@ operations. At minimum:
 | Check an issue | `compass check` |
 | Record red and green tests | `compass tdd-red`, `compass tdd-green` |
 | Check governance and issue schemas | `compass policy lint`, `compass issue lint` |
-| Check cross-artifact consistency | `compass analyze` |
 | Run the CI lane | `compass ci` |
 | Surface retrospective signals | `compass retro`, `compass rework-scan`, `compass flow` |
 
@@ -139,7 +138,7 @@ The runtime needs distinct entry paths for product, design, engineering,
 marketing and QA. All five contribute to the same acceptance specification and
 produce their normal Compass artifacts.
 
-The adapter must preserve the gates the documents bring, such as intent fidelity and
+The adapter must preserve the role checks, such as intent fidelity and
 claim traceability. Otherwise the role has no effect on delivery.
 
 ### 6. Persist state on disk
@@ -148,10 +147,10 @@ Nothing essential may live only in conversation. The adapter must maintain:
 
 ```text
 .compass/current-task
-.compass/work/<issue>/README.md
 .compass/work/<issue>/manifest.yml
-.compass/work/<issue>/delivery-approach.md
+.compass/work/<issue>/devlog.md
 .compass/work/<issue>/evidence/
+docs/compass/<created>-<issue>/acceptance-criteria.md
 ```
 
 It adds the approach-selected product, requirements, design, delivery, quality and
@@ -176,7 +175,6 @@ complete and lose the view across open issues:
 
 | Kit call | What a port loses without it |
 |---|---|
-| `compass analyze` | nothing reports where an issue's own artifacts disagree |
 | `compass flow` | no view of blockers or owed follow-ups across issues |
 | `compass next` | the session guesses which stage comes next |
 | `compass retro` | no signal that assessment is systematically mis-sizing work |

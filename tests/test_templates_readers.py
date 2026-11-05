@@ -5,7 +5,6 @@ import re
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 READERS = {
     "cli/compass_pkg/policy_lint.py",
-    "cli/compass_pkg/template_lists.py",
 }
 # Code that joins the folder name "templates" onto a path.
 JOINS_TEMPLATES = re.compile(r"""["']templates["']""")
@@ -49,7 +48,3 @@ def test_docs_name_both_reading_paths():
         assert "not consumed" not in text
         assert "never read" not in text
 
-
-def test_docs_say_template_show_skips_the_architecture_folder():
-    assert "architecture/" in _doc("relations.md")
-    assert "not listed" in _doc("relations.md")

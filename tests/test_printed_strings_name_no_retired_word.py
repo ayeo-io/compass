@@ -22,7 +22,6 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # must not say "triage".
 _SOURCE_FILES = [
     "cli/compass",
-    "cli/compass_pkg/analyze.py",
     "cli/compass_pkg/calibration.py",
     "cli/compass_pkg/check_cmd.py",
     "cli/compass_pkg/checks.py",
@@ -72,10 +71,32 @@ def _word(name):
     return re.compile(rf"(?<![\w-]){re.escape(name)}(?![\w-])", re.I)
 
 
-def test_approach_evaluate_default_view_names_ship_not_land(run_cli):
-    """`RP-ART-001` blocks a stage until a claim traces to a scenario. A 6.x
-    copy of the policy keys that stage as the retired `land` - the default
+# The shipped default declares no artifact rule since 9.0.0 (ADR-091), so the
+# project's copy of the 6.x policy carries the one that blocks the stage. A 6.x
+# copy keys that stage as the retired `land`.
+_BLOCKING_RULE = """  artifact_rules:
+    - id: RP-ART-001
+      when: { artifacts_any: [positioning] }
+      block_phase: land
+      until: "every claim in positioning.md traces to a passing scenario"
+      rationale: "A launch claim with no backing scenario must not ship."
+"""
+
+
+def _copy_blocks_the_ship_stage(project):
+    policy = project / "governance" / "routing-policy.yml"
+    text = policy.read_text(encoding="utf-8")
+    assert "artifact_rules:" not in text and "\nassessment_vocabulary:" in text
+    policy.write_text(text.replace("\nassessment_vocabulary:",
+                                   "\n" + _BLOCKING_RULE + "assessment_vocabulary:", 1),
+                      encoding="utf-8")
+
+
+def test_approach_evaluate_default_view_names_ship_not_land(project, run_cli):
+    """An artifact rule blocks a stage until a claim traces to a scenario. A
+    6.x copy of the policy keys that stage as the retired `land` - the default
     view must not print it raw."""
+    _copy_blocks_the_ship_stage(project)
     r = run_cli(
         "approach", "evaluate",
         "--assessment", "risk=contained",
@@ -95,9 +116,10 @@ def test_approach_evaluate_default_view_names_ship_not_land(run_cli):
         f"display name:\n{out}")
 
 
-def test_approach_evaluate_verbose_names_ship_not_land(run_cli):
+def test_approach_evaluate_verbose_names_ship_not_land(project, run_cli):
     """The two `--verbose` print sites: the policy-rule detail line and the
     BLOCKED phase summary line."""
+    _copy_blocks_the_ship_stage(project)
     r = run_cli(
         "approach", "evaluate", "--verbose",
         "--assessment", "risk=contained",

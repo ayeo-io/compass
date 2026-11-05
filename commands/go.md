@@ -64,7 +64,7 @@ Do not stop to ask whether to go ahead.
 - **Anything heavier:** `quick-fix start` has already recorded the
   assessment and computed the approach. Run `/compass:assess` steps 4 to 6,
   from `${CLAUDE_PLUGIN_ROOT}/approaches/assess-procedure.md`
-  (write `delivery-approach.md`, the pointer and any spike marker), then
+  (the pointer and any spike marker), then
   follow that approach's stages. Do not wait at its step 7: the summary you
   showed is the confirmation, and the person can still override a dimension
   at any point.

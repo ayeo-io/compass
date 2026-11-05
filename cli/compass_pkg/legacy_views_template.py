@@ -91,7 +91,7 @@ routing_guardrails:
   # and/or forces specific stages/skills back to thorough weight.
   # Approach weight order for force_minimum_route: spike < quick-fix < regular
   # < hotfix < full. The evaluator raises the candidate to the max.
-  # NOTE: six of the entries below carry RP-REQUIRE ids because they attach a
+  # NOTE: four of the entries below carry RP-REQUIRE ids because they attach a
   # gate and raise no minimum - they are not floors. The block name lags its
   # contents: moving them into their own section changes a
   # structure the evaluator iterates and the schema checks, which is filed
@@ -117,18 +117,10 @@ routing_guardrails:
   # future custom or tuned approach still cannot drop them. NOTE what is NOT
   # here: verify.regression is approach-scoped (quick fix, being atomic+trivial,
   # does not run it - that is quick fix's whole point), and verify.claims is
-  # document-scoped (added by RP-ART-001 when the issue has positioning.md).
+  # added by no shipped rule since 9.0.0 (ADR-091).
   # Immovable means immovable *everywhere* - keep the set to what genuinely is.
   immovable_gates:
 <<immovable_gates>>
-
-  # artifact_rules - a document on disk that ENFORCES a gate or a stage block.
-  # `artifacts_any` matches the documents the CLI finds for the issue, which it
-  # reads at every evaluation and never writes into the assessment (ADR-070).
-  # A 6.x copy of this file holds `role_rules` instead, keyed on a declared
-  # role; the evaluator still reads that block where a copy has it.
-  artifact_rules:
-<<artifact_rules>>
 
 # -----------------------------------------------------------------------------
 # Assessment vocabulary - the legal values the assessment may take. The evaluator
@@ -268,8 +260,8 @@ project: <<project>>
 # -----------------------------------------------------------------------------
 # Cross-cutting: the conflict rule (a guardrail beats a strategy) and the
 # Definition of Ready / Definition of Done checklists are governance too, but
-# they live where they are used - see governance/README.md, the foot of
-# templates/requirements-review.md (DoR) and templates/verification-report.md (DoD).
+# they live where they are used - see governance/README.md and the `plan` entry
+# and `verify` exit lists of the shipped preset.
 # -----------------------------------------------------------------------------
 """
 
@@ -298,22 +290,6 @@ ENTRY_COMMENTS = {
     ],
     ('assessment_vocabulary', 'labels_common'): [
         '# `labels` is an open list of domain tags - common ones, not exhaustive:',
-    ],
-    (APPROACH_SPIKE, 'artifacts'): [
-        '# A spike owes its delivery-approach record and a conclusion document:',
-        '# discard, graduate, or defer. The conclusion is also typed evidence,',
-        '# which `spike-conclusion-present` reads.',
-    ],
-    (APPROACH_QUICK_FIX, 'artifacts'): [
-        "# No document beyond `delivery-approach.md`: the manifest's `scenarios:`",
-        '# block and a test-run record already hold what a lightweight',
-        '# acceptance-criteria.md and verification-report.md would repeat - a',
-        '# stated criterion before the code (`G2`) and a recorded green after it',
-        '# (`G1`). So "a quick fix writes delivery-approach.md and nothing else" is',
-        '# a decision of the approach that a check can read, not a convention.',
-    ],
-    (APPROACH_REGULAR, 'artifacts'): [
-        '# A multiagent breakdown reads a distribution map, so this approach earns one.',
     ],
     (APPROACH_HOTFIX, 'stages'): [
         '# The `ship:` value on the `stages` line below is a stage-weight enum the evaluator',

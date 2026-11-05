@@ -5,7 +5,7 @@ prints, not with a phrase written in advance: the primary record for what
 the CLI prints is the CLI. A fenced block is not scanned for vocabulary, so
 only a comparison with the CLI catches a wrong banner there.
 
-Scenario ids: see docs/system-spec.md (`TRC-1`, `TRC-2`).
+Scenario ids: see the issue's acceptance criteria (`TRC-1`, `TRC-2`).
 """
 from __future__ import annotations
 

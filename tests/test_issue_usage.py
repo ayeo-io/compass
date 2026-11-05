@@ -436,6 +436,7 @@ def regular_project(tmp_path, sessions=(S1, S2), compass_yml=None, transcripts="
         {"stage": "plan", "outcome": "skipped", "by": "planner", "at": "2026-10-13T10:00:00Z"}]
     for gate in body["gates"]:
         gate["status"] = "pass"
+    co.meet_definition_of_done(body, root)
     body["changed_files"] = [{"path": "src/new.py", "scenarios": ["S-1"]}]
     body["release_note"] = co.RELEASE_NOTE
     if sessions:

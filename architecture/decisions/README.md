@@ -130,6 +130,7 @@ Rules:
 | [ADR-088](ADR-088-each-scenario-needs-a-red-before-its-first-green.md) | Each scenario needs a red before its first green | accepted | with ADR-038, ADR-081 and ADR-082 |
 | [ADR-089](ADR-089-red-and-green-records-hold-sha256-digests-of-their-files.md) | Red and green records hold SHA-256 digests of their files | accepted | with ADR-038, ADR-086 and ADR-088 |
 | [ADR-090](ADR-090-compass-runs-in-one-session-with-no-stage-agents.md) | Compass runs in one session with no stage agents | accepted | with ADR-030, ADR-071, ADR-076 and ADR-078 |
+| [ADR-091](ADR-091-compass-needs-only-the-acceptance-criteria.md) | Compass needs only the acceptance criteria | accepted | with ADR-026, ADR-050, ADR-051, ADR-064, ADR-067 and ADR-090 |
 
 ## Principle → ADR mapping
 

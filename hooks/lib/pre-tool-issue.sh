@@ -479,20 +479,12 @@ fi
 
 TASK_SLUG="$(basename "$TASK_DIR")"
 
-# The delivery-approach record must exist - code work without a computed
-# approach is process laundering.
-#
-# ASKED, NOT GUESSED. The record may sit beside the manifest or under
-# `docs/compass/<created>-<slug>/`, and which one is a property of the issue's
-# artifact registry rather than of the filename. Testing for a file beside the
-# manifest was right until documents could move; after that it reads "the
-# record is missing" for every migrated issue and blocks EVERY code edit in the
-# project. So the resolver answers, and it is the same resolver `compass check`
-# uses - a second implementation in bash is how the two halves stop agreeing.
-#
-# Both filename generations still resolve: the resolver falls back to the
-# retired name for an archive that predates the artifact rename, and to the
-# flat filename for an issue that has not migrated.
+# The delivery approach must be decided - code work without a computed
+# approach is process laundering. The manifest's `delivery_approach` key is the
+# record: 9.0.0 writes no delivery-approach.md (ADR-091), and an issue assessed
+# before then holds the key too. The probe reads it in Python, the same reader
+# `compass next` uses - a second implementation in bash is how the two halves
+# stop agreeing.
 #
 # The answer is printed and the status only says whether the reader ran, so a
 # crash cannot read as "no record" - that would send the user to re-assess

@@ -531,7 +531,7 @@ def cmd_tdd_red(args):
     if red_kind == "import" and missing:
         payload["missing_modules"] = missing
     if before_implement:
-        payload["before_implement"] = True     # stage 1: no marker, no document moved
+        payload["before_implement"] = True     # stage 1: no marker
     if several:
         payload.update(run_id=uuid.uuid4().hex[:16], scenarios_in_run=list(scenarios))
     _bind_to_tree(payload, tree_ids)
@@ -543,19 +543,13 @@ def cmd_tdd_red(args):
     ev_path = ev_paths[0]
     payload.pop("_full_log", None)
     marker = os.path.join(task_dir, ".red")
-    moved = []
     if before_implement:
-        unlocked = ["stage 1  : a red before implement writes no .red marker and moves "
-                    "no document, so code edits stay refused (ADR-081)."]
+        unlocked = ["stage 1  : a red before implement writes no .red marker, so code "
+                    "edits stay refused (ADR-081)."]
     else:
         open(marker, "w").close()  # the hook reads this
         unlocked = [f"marker   : {marker}",
                     "           the pre-tool hook will now allow code edits."]
-        # A red is the first record of the implement stage: it moves the documents
-        # of the stages before it (ADR-050).
-        from compass_pkg import artifact_status
-        moved = artifact_status.moved_line(artifact_status.record_stage(
-            task_dir, artifact_status.STAGE_IMPLEMENT, artifact_status.BY_TDD_RED))
     bound = (f" (bound to {', '.join(scenarios)})" if scenarios
              else " (unbound - consider --scenario)")
     judged = ([("judged by exit code only: Compass does not recognize this "
@@ -565,7 +559,7 @@ def cmd_tdd_red(args):
                f"compass tdd-red: failing test recorded (exit {code}){bound}.",
                detail=judged + [f"evidence : {p}" for p in ev_paths]
                       + [x for x in [_scenario_line(task_dir, s) for s in scenarios] if x]
-                      + unlocked + moved,
+                      + unlocked,
                scenario=scenario, exit_code=code, evidence=ev_path,
                marker=None if before_implement else marker)
 
@@ -593,8 +587,8 @@ def _source_tree_hash(project_root):
     _EXCLUDED_DIRS = {".git", "__pycache__", ".venv", "node_modules",
                       "evidence", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
     # `docs/compass/` is the tree id's own exclusion too (`binding._OUTSIDE_THE_TREE`): the
-    # CLI renders issue pages and blocks there after a command, and that is not a change
-    # to the code the test runs on. Without it a second identical green is not a rerun.
+    # issue's documents live there, and an edit to one is not a change to the code the test
+    # runs on. Without it a second identical green is not a rerun.
     _EXCLUDED_AT_ROOT = {".compass", os.path.join("docs", "compass")}
     _INCLUDED_EXTS = {".py", ".md", ".yml", ".yaml", ".json", ".toml"}
 
@@ -636,9 +630,9 @@ def _scenario_line(task_dir, scenario):
     `scenario`, so a reader opens it with one click (#291), or None."""
     if not scenario:
         return None
-    from compass_pkg.core import artifact_path
+    from compass_pkg.spec_location import spec_path
     from compass_pkg.terminal import relative_to_project
-    path = artifact_path(task_dir, "acceptance-criteria.md")
+    path = spec_path(task_dir)
     try:
         # Rows inside a rendered block are the block's, not the scenario's
         # definition. The removed lines stay as empty lines, so the line number
@@ -919,10 +913,6 @@ def cmd_acceptance_record(args):
     marker = _acceptance_marker(task_dir)
     if os.path.exists(marker):
         os.remove(marker)
-    # An acceptance record is a record of the implement stage, as a red is.
-    from compass_pkg import artifact_status
-    moved = artifact_status.moved_line(artifact_status.record_stage(
-        task_dir, artifact_status.STAGE_IMPLEMENT, artifact_status.BY_ACCEPTANCE))
 
     print(f"compass acceptance record: {kind} acceptance recorded (exit {code}).")
     for w in warnings:
@@ -934,6 +924,4 @@ def cmd_acceptance_record(args):
     print(f"  evidence : {relative_to_project(ev_path)}")
     print("  registry : manifest.yml `evidence:` updated with the test-run entry")
     print("  marker   : .acceptance cleared")
-    for line in moved:
-        print("  " + line)
     return 0

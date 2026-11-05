@@ -16,7 +16,7 @@ the same split as the rest of `governance/`:
   the delivery-approach shapes it reaches for, the way it breaks ties. A
   routing strategy is the starting point; assess (or a human) can depart from
   it for a given issue, and that departure is just recorded in
-  `delivery-approach.md`.
+  `devlog.md`.
 
 This is the answer to the obvious objection to any adaptive framework - *"if
 the process can flex, what stops it flexing to nothing?"* The routing
@@ -33,13 +33,14 @@ with no `compass.yml` gets the page from `governance/routing-policy.yml`, as
 before.
 
 Assess applies this policy after scoring the three dimensions
-and composing a candidate delivery approach, before writing `delivery-approach.md`. Every routing
-rule that fires is recorded in `delivery-approach.md` with its rationale - so any
-`delivery-approach.md` shows not just the delivery approach, but which bounds were active and why.
+and composing a candidate delivery approach, before writing the approach to the
+manifest. Every routing rule that fires is recorded in the manifest's
+`policy_rules_fired:` with its rationale - so `compass approach show --verbose`
+shows not just the delivery approach, but which bounds were active and why.
 
 **This document explains; `routing-policy.yml` enforces.** The companion
 `governance/routing-policy.yml` is the machine-readable, authoritative policy -
-it has the live floors, caps, immovable gates, artifact rules, and default shapes,
+it has the live floors, caps, immovable gates and default shapes,
 each with a stable id, and `compass approach evaluate` runs it deterministically.
 The YAML excerpts below are *illustrative*; where this prose and that file
 could be read to differ, the `.yml` wins. The crucial boundary: the
@@ -73,14 +74,24 @@ Delivery approaches adapt *which* review dimensions apply. Immovable gates
 are the floor under that adaptation: no assessment value, and no delivery
 approach, can drop one.
 
-### blocking `artifact_rules` - a document on disk enforces a gate
+A gate a release removed owes nothing. 9.0.0 removed the gate
+`verify.analyze` with the command that wrote its evidence (ADR-091).
+`routing.REMOVED_GATES` lists it. A frozen preset (`default@6`, `default@7`),
+a stored generation or copied governance can still hold the rules
+`RP-REQUIRE-001` and `RP-REQUIRE-002`, which add it. The evaluator leaves a
+removed gate out of every gate set it writes or prints. A rule whose only
+effect was to add one does not fire. A manifest written before 9.0.0 that
+lists the gate is not rewritten. `ship-commit`, `compass issue status set`,
+and `compass next` read it as owing nothing,
+so a pending `verify.analyze` does not keep the issue from landing.
 
-When a document in the issue's directory makes a gate non-negotiable, that is
-a routing rule. The `artifacts_any` condition matches the documents the CLI
-finds for the issue. The CLI reads them at every evaluation and never writes
-them into the assessment. A document written after assess takes effect at the
-next evaluation, so re-assess the issue after writing one: until then a
-landing refuses with `artifact-rule-not-applied`. A stored 6.x
+### blocking `artifact_rules` - read, and not fired since 9.0.0
+
+A rule of this set reads the condition `artifacts_any`, the documents of the
+issue. Since 9.0.0 no command reads which documents an issue has (ADR-091), so
+a rule that names a document does not fire, and a document on disk adds no
+gate and blocks no stage. A frozen preset or a stored generation can still
+hold such a rule; it is read and does not fire. A stored 6.x
 generation keeps its `role_rules` until the issue is re-assessed, and a
 project's copied 6.x governance keeps them until `compass policy migrate` runs.
 
@@ -96,13 +107,12 @@ The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
 - **caps** - `RP-CAP-001` critical risk caps worktrees at 1.
 - **immovable_gates** - `RP-GATE-001..003`: `verify.correctness`,
   `verify.governance`, `verify.traceability`. Deliberately not here:
-  `verify.regression` is scoped by the delivery approach and
-  `verify.claims` by the document present (`positioning.md`), so neither is
+  `verify.regression` is scoped by the delivery approach, so it is not
   immovable.
-- **artifact_rules** - `RP-ART-001` a `positioning.md` adds `verify.claims`,
-  asks for `launch-readiness.md` and blocks shipping until claims trace to
-  scenarios; `RP-ART-002` an `intent.md` gates Plan on the spec being checked
-  against it.
+- **artifact_rules** - none from 9.0.0. `RP-ART-001` (a `positioning.md` added
+  `verify.claims`) and `RP-ART-002` (an `intent.md` gated Plan) went with the
+  documents (ADR-091): no command reads which documents an issue has on disk.
+  The frozen presets `default@6` and `default@7` still declare them.
 
 The `verify.governance` immovable gate is what makes `G5` (a human signs off
 on the irreversible) hold: a change labelled with an irreversible surface is
@@ -119,7 +129,7 @@ four labels when risk is critical and none is set
 
 These are the assess stage's defaults: the delivery-approach shapes it
 reaches for, and how it breaks ties. Assess starts here and tunes; a
-departure is normal and is recorded in `delivery-approach.md`, not punished.
+departure is normal and is recorded in `devlog.md`, not punished.
 
 ```yaml
 routing_strategies:
@@ -266,8 +276,8 @@ keys, with or without `jsonschema` installed.
 Routing-rule keys: `force_minimum_route`, `require_phase`,
 `require_skill`, `never_skip`, `max_worktrees`, `forbid_route`,
 `block_phase` + `until`, `require_artifact`, `add_gate`, `gate`. Every rule
-carries a stable `id` (e.g. `RP-FLOOR-001`) so `delivery-approach.md` can
-name exactly which one fired.
+carries a stable `id` (e.g. `RP-FLOOR-001`) so the manifest's
+`policy_rules_fired:` can name exactly which one fired.
 
 Routing-strategy keys: `lean_toward`, `suggest_artifact`, free-text `biases`.
 
@@ -305,8 +315,8 @@ the two files are views generated from it.
 Each artifact in `artifacts.yml` names the stage that owns it with `stage:`
 (`architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md`).
 A stage command that writes a later record approves the artifacts of earlier
-stages. An artifact with no `stage` is owned by ship. `checks.yml` holds the
-blocking check `artifacts-approved`, which sits in no gate, and
+stages. An artifact with no `stage` is owned by ship. The check
+`artifacts-approved` that judged them was removed in 9.0.0 (ADR-091).
 `evidence-types.yml` holds the type `artifact-approval`, which no gate accepts.
 `compass approach evaluate --write` merges the registry by kind and round, so every
 round of a kind that repeats survives a reassessment. It never marks a voluntary entry
@@ -357,10 +367,10 @@ to turn the strategy off (decided by jed72, 2026-10-30).
   checks and the guardrail statements from the preset.
 
 The preset also holds checks of kind `human`: the seven Definition of Ready
-items and the seven Definition of Done items. Each statement is the text of
-the template item (`templates/requirements-review.md` and
-`templates/verification-report.md`), and `tests/test_ready_and_done_data.py`
-fails when either differs. The `plan` stage's `entry` list holds the first
+items and the seven Definition of Done items. The preset is the only place
+their text lives: 9.0.0 writes no requirements review or verification report
+to hold them (ADR-091), and `tests/test_ready_and_done_data.py` fails when a
+statement names a removed document. The `plan` stage's `entry` list holds the first
 seven and the `verify` stage's `exit` list holds the second seven. Each check
 needs the capability `entry-exit-evaluation`, which is off in `default@6`,
 so `compass check` does not run them and the two views do not name them (a
@@ -373,15 +383,10 @@ of them when the capability is on. `ships` is a key that evaluation derives
 from the approach, not a dimension. `docs/entry-exit-evaluation.md` states
 how the lists run once the capability is on.
 
-The regular approach owes `intent` at depth `lightweight`: the four headings
-Problem, Desired outcome, Success signals and Non-goals of
-`artifacts.yml`'s `intent.sections.lightweight`. Full keeps the thorough
-intent; quick fix, hotfix and spike owe none. A document an artifact rule asks for
-(`require_artifact`) is owed at `thorough` even when the approach owes it at
-`lightweight`: RP-ART-001 owes `launch-readiness` that way. RP-ART-002 asks for
-no document, because `intent.md` is already there, so the intent's depth follows
-the approach; only a 6.x product-owner role rule in a stored generation kept it
-thorough. Quick fix, regular, hotfix and
+Before 9.0.0 an approach owed documents, such as the intent and the
+requirements review on the regular approach (ADR-065, ADR-072). 9.0.0 owes
+none but the acceptance criteria (ADR-091); a stored generation keeps its own
+set. Quick fix, regular, hotfix and
 full set the approach field `release_line: true`: an issue whose stored
 generation sets it owes a release line, and every landing refuses it while its
 manifest's `release_note` holds none (`docs/release-line.md`). The spike, which
@@ -389,15 +394,6 @@ is locked, has no such field. The field is compared `false` below `true`, so a
 project that sets it `false` on an approach that has it loosens the approach
 and needs a waiver (ADR-039). The decision is
 `architecture/decisions/ADR-065-regular-issues-owe-an-intent-and-shipping-issues-record-a-release-line.md`.
-
-The regular approach also owes `requirements-review` at depth `lightweight`: the
-three headings Self-QA of the spec, Ambiguity ledger and Gate of
-`artifacts.yml`'s `requirements-review.sections.lightweight`. Full keeps the
-thorough review. The hotfix approach owes `bug-report` at `thorough` and keeps
-`acceptance-criteria` at `lightweight`. Each is an added obligation, so a stored
-generation keeps its own set until a reassessment commits a new one. The
-decision is
-`architecture/decisions/ADR-072-a-project-scoped-design-decision-needs-a-record-and-regular-and-hotfix-owe-a-review-and-a-bug-report.md`.
 
 `governance/legacy-views.yml` holds what the two files contain that the
 catalogues have no field for. Only the generator of the views reads it, and it
@@ -564,8 +560,9 @@ The grid:
   assessment chose, `false` below `true`, with no field read as `false`, so
   setting it `false` is `looser`. That rule raised `CLASSIFIER_VERSION` to 6
   (ADR-065).
-  A check parameter that is a list can declare the direction `superset`, and
-  only `trigger_paths` and `trigger_contents` of `contracts-declared` do. The
+  A check parameter that is a list can declare the direction `superset`. Only
+  `trigger_paths` and `trigger_contents` of `contracts-declared` did, and 9.0.0
+  removed that check (ADR-091), so no shipped check declares it now. The
   classifier compares each side as a set of exact entries. A `trigger_contents`
   entry is the pair of path glob and text, compared whole, and the classifier
   does not judge how broad a glob is. Neither reordering a list nor repeating
@@ -576,9 +573,9 @@ The grid:
   check fewer changes. A project list that lacks a shipped entry and adds
   another is `incomparable`. A list that is missing, is not a list, or holds a
   malformed entry is `incomparable` and raises no error. The registry refuses
-  `superset` on a parameter that is not a list. `CLASSIFIER_VERSION` is 12
-  since the list rule (ADR-073) and the rule that a check a release removed
-  owes nothing (ADR-090).
+  `superset` on a parameter that is not a list. `CLASSIFIER_VERSION` is 13
+  since the list rule (ADR-073), the rule that a check a release removed
+  owes nothing (ADR-090) and the same rule for a review gate (ADR-091).
 - `stages.order` and `gates.stage` are the footprint of a lock, not facts the
   classifier reads. Reordering an unlocked stage or moving a gate to another
   stage reads `equivalent` here, and the locks increment compares both.

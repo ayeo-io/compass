@@ -166,8 +166,7 @@ def test_ing_b4_a_declined_section_says_so_and_the_document_stands(tmp_path):
 def test_ing_b4b_an_unanswered_section_may_not_hide_behind_tbd(tmp_path):
     """`TBD` and "asked, declined" are different states.
 
-    `TBD` reads as "someone will get to this", and `compass plan lint` scans
-    for it as an unfinished placeholder. A section that was asked about and
+    `TBD` reads as "someone will get to this": an unfinished placeholder. A section that was asked about and
     deliberately left open is finished - and only one of the two is true.
     """
     from compass_pkg.ingest import validate_intent_origins

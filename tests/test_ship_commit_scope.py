@@ -13,7 +13,7 @@ The allowance is a named list, never a prefix: anything under `.compass/`
 would re-admit a sibling issue's artifacts into this issue's commit, which
 is exactly what the check exists to stop.
 
-Scenario ids: see docs/system-spec.md (group D).
+Scenario ids: see the issue's acceptance criteria (group D).
 """
 
 # These tests assert the current file names; files written under older

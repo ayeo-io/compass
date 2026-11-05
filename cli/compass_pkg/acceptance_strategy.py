@@ -272,17 +272,20 @@ def loop_of(record):
 
 def stage_one(task, loop):
     """True when a red ends stage 1 and is written before implement (ADR-081): the
-    outer loop, on an approach whose `stages` run refine, with no technical design,
-    distribution map or subtask registered. Quick fix and hotfix collapse refine,
-    so their outer-loop red is the first record of implement, as before."""
+    outer loop, on an approach whose `stages` run refine, before plan is handed off
+    and with no technical design, distribution map or subtask registered. 9.0.0
+    registers no document (ADR-091), so plan's hand-off is what ends stage 1; an
+    issue made before then keeps the registered documents. Quick fix and hotfix
+    collapse refine, so their outer-loop red is the first record of implement."""
     from compass_pkg import next_cmd
-    from compass_pkg.stable_ids import STAGE_REFINE
+    from compass_pkg.stable_ids import STAGE_PLAN, STAGE_REFINE
     stages = (task or {}).get("stages")
     weight = stages.get(STAGE_REFINE) if isinstance(stages, dict) else None
     if loop != "outer" or not isinstance(weight, str) \
             or weight.strip().lower() in next_cmd._SKIPPED_WEIGHTS:
         return False
-    return not (next_cmd._registered(task, "technical-design")
+    return not (next_cmd._handed_off(task, STAGE_PLAN)
+                or next_cmd._registered(task, "technical-design")
                 or next_cmd._registered(task, "distribution-map")
                 or next_cmd._entries(task, "subtasks"))
 

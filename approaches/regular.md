@@ -22,11 +22,11 @@ choices in it.
 
 | Stage | Weight on the regular approach |
 |---|---|
-| Assess | Thorough. `delivery-approach.md` written. |
+| Assess | Thorough. The approach recorded in the manifest. |
 | Define | A small **feature set** of scenarios - happy path, the realistic edges, the failure modes that matter. Brownfield-unmapped: map current behavior into scenarios first. |
-| Refine | **Lightweight pass.** Resolve ambiguities, QA the spec against itself and against governance. Writes `requirements-review.md`. |
-| Plan | **Real `technical-design.md`.** Technical approach, the one or two design decisions stated, governance check run. If the work splits into 2–3 independent units, a short distribution map. |
-| Breakdown | **Solo.** On the current branch; when the distribution map shows 2–3 independent units, the session builds them one after another (ADR-090). |
+| Refine | **Lightweight pass.** Resolve ambiguities, QA the spec against itself and against governance. Records each decision taken. |
+| Plan | **A real design.** Technical approach, the one or two design decisions stated, governance check run. If the work splits into 2–3 independent units, a short list of them. |
+| Breakdown | **Solo.** On the current branch; when the plan lists 2–3 independent units, the session builds them one after another (ADR-090). |
 | Implement | Thorough TDD per scenario. Test surface scaled to `contained`/`cross-cutting` risk. |
 | Verify | **Two review points** - one mid-implementation checkpoint, one at the end - clearing six gates. |
 | Ship | Integrate (merge pair worktrees if used), run regression, update living docs, one devlog entry. |
@@ -35,19 +35,19 @@ choices in it.
 
 Six gates: `correctness`, `governance`, `traceability`,
 `regression`, `clarity`, and `security` *scaled to risk*. `claims` is
-added if `positioning.md` is present.
+added when the manifest lists claims.
 
 ## Multiagent orchestration
 
-Solo by default. From 9.0.0 the session builds the units of the distribution
-map one after another, with no worktree and no agent (ADR-090).
+Solo by default. From 9.0.0 the session builds the plan's work units one
+after another, with no worktree and no agent (ADR-090).
 
 ## De-scope ledger - what the regular approach collapses or skips, and why it is safe
 
 | Item | Action | Standing justification |
 |---|---|---|
 | Dedicated orchestrator | skipped | One session builds every unit (ADR-090), so there is nothing to integrate. |
-| Full distribution map | reduced to a short list | Independence among 2–3 units is verifiable by reading; the full mapping process is for multiagent-scale work. |
+| Full list of work units | reduced to a short list | Independence among 2–3 units is verifiable by reading; the full mapping process is for multiagent-scale work. |
 
 If the requirements review finds the spec is bigger or more ambiguous
 than the regular approach assumed,
@@ -59,7 +59,7 @@ re-assess - do not push the regular approach through a problem shaped for the fu
   certified-unambiguous scenario - there is always something to QA. The requirements review
   may be *lightweight*, never *absent*.
 - Split into four or more units. That is full-approach territory and needs the
-  full distribution map. If the work needs one, the
+  full list of work units. If the work needs one, the
   assessment was wrong - re-assess to the full approach.
 - Drop the regression dimension. The regular approach touches enough surface that
   "nothing that passed before now fails" must be checked.

@@ -38,7 +38,7 @@ import os
 
 import yaml
 
-from compass_pkg import artifact_kinds, core, outside_gate, retired, stable_ids, word_map
+from compass_pkg import artifact_kinds, core, outside_gate, removed_parts, retired, stable_ids, word_map
 from compass_pkg.catalogue_spec import CAPABILITIES
 from compass_pkg.routing import canonical_routes
 from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, GATE_SPIKE_CONCLUDE, STAGE_ASSESS,
@@ -93,10 +93,10 @@ HARD_GUARDRAILS = (GATE_G5,)
 
 # What a check reports when it cannot run, read from each module that
 # returns `NOTHING_TO_CHECK` for it: checks.py (scenarios-are-executable,
-# claim-traces-to-scenario, command-passes), borrowed_docs.py, binding.py
-# (evidence-matches-tree), checks.py (dod-evidence-typed), landed_by.py, multiagent_check.py
-# (removed in 9.0.0, still named so an old guardrails copy reads as before),
-# evidence_identity.py, artifact_status.py, section_checks.py and design_size.py.
+# claim-traces-to-scenario, command-passes), binding.py (evidence-matches-tree), checks.py
+# (dod-evidence-typed), landed_by.py, evidence_identity.py and section_checks.py, and
+# multiagent_check.py, borrowed_docs.py, artifact_status.py and design_size.py (removed in
+# 9.0.0, still named so an old guardrails copy reads as before).
 # The check declared-tests-resolve returns a pass with a note. Every other check
 # fails. `tests/test_obligations.py` replays these verdicts against the archive sample.
 DECLINING_CHECKS = (
@@ -215,11 +215,11 @@ def _approaches(policy):
             # `shape_stages` also reads the retired `phases:` block.
             "stages": core.shape_stages(shape),
             "gates": list(shape.get("gates") or []),
-            "artifacts": {_artifact_id(k): v
-                          for k, v in (shape.get("artifacts") or {}).items()},
             # A shape with no ceiling allows one subtask, as the evaluator reads it.
             "subtask_ceiling": shape.get("subtask_ceiling", 1),
         })
+        if shape.get("artifacts"):     # a 9.0.0 view has no `artifacts:` map (ADR-091)
+            entry["artifacts"] = {_artifact_id(k): v for k, v in shape["artifacts"].items()}
         # An autonomy level or approach the table leaves out waits at every
         # hand-off, so it is left out here too rather than given an empty list.
         checkpoints = {level: [_stage(s) for s in row[name]]
@@ -331,8 +331,9 @@ def _rules(policy, notes):
         "immovable-gates", converted(guard.get("immovable_gates")), locked=True)
     # A 7.0.0 policy holds `artifact_rules`; a 6.x copy holds `role_rules` and
     # `role_defaults`, which convert as they always did (ADR-070). A block the
-    # policy does not hold makes no rule set.
-    if "artifact_rules" in guard or "role_rules" not in guard:
+    # policy does not hold makes no rule set. A 9.0.0 view holds neither block
+    # (ADR-091).
+    if "artifact_rules" in guard:
         out["artifact_rules"] = _rule_set("artifact-rules",
                                           converted(guard.get("artifact_rules")))
     if "role_rules" in guard:
@@ -477,7 +478,7 @@ def _artifacts(approaches, rules):
             names.append(value)
 
     for approach in approaches.values():
-        for artifact in approach["artifacts"]:
+        for artifact in approach.get("artifacts") or {}:
             note(artifact)
     for rule_set in rules.values():
         for rule in rule_set["rules"].values():
@@ -672,7 +673,9 @@ def preset_files(policy, guardrails):
     files = {
         "preset.yml": _HEADER + _dump({
             "schema": 1, "id": PRESET_ID, "version": PRESET_VERSION,
-            "capabilities": {name: False for name in CAPABILITIES},
+            # A capability 9.0.0 removed stays valid and is not shipped (ADR-091).
+            "capabilities": {name: False for name in CAPABILITIES
+                             if name not in removed_parts.CAPABILITIES},
             "locks": lock_summary(document)}),
         "evidence-types.yml": _HEADER + _dump(adapt_evidence_types(guardrails)),
     }

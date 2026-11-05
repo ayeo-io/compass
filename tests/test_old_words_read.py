@@ -888,12 +888,6 @@ def test_vr_d23_the_reader_accepts_majors_1_to_3_and_refuses_4(tmp_path, version
     assert "Update Compass" in str(caught.value)
 
 
-def test_vr_d23_a_stamped_manifest_is_not_reported_as_legacy_by_the_receipt():
-    from compass_pkg import receipt
-    text = receipt._receipt_render({"issue": "t", "schema_version": "3.0"}, "t", {})
-    assert "(legacy)" not in text.splitlines()[1]
-
-
 # --- VR-D7 and VR-D8: the run stage and the friction key, from the shipped rows ---
 
 def test_the_shipped_run_stage_and_friction_rows_are_the_ones_the_tests_inject():

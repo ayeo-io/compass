@@ -26,7 +26,6 @@ RANKS = {"skipped": 0, "collapsed": 1, "lightweight": 2, "thorough": 3,
          "thorough-with-follow-up": 4}
 SPECIAL = {"multiagent", "reproduce-first", "expedited", "explore", "conclude",
            "graduate-or-discard"}
-NEW_DEPTHS = {"thorough", "lightweight"}
 
 
 def _preset(name):
@@ -74,8 +73,9 @@ def test_vr_a1_the_default_preset_holds_only_the_new_depth_words():
     assert not words & OLD_WORDS, sorted(words & OLD_WORDS)
     assert {"thorough", "lightweight", "thorough-with-follow-up"} <= words, (
         "each renamed word is in use, so this check has something to find")
-    depth_words = {depth for _, depth in depths}
-    assert depth_words == NEW_DEPTHS, depth_words
+    # 9.0.0 declares no approach `artifacts:` map (ADR-091), so no document depth is
+    # left to read in the live default.
+    assert depths == [], depths
 
 
 # --- VR-A2 ---------------------------------------------------------------------
@@ -95,8 +95,8 @@ def test_vr_a2_the_evaluator_writes_the_new_words_and_keeps_the_approach(
     stages = set(manifest["stages"].values())
     assert stages <= set(RANKS) | SPECIAL, stages
     assert "thorough" in stages and not stages & OLD_WORDS, stages
-    depths = {a["depth"] for a in manifest["artifacts"] if "depth" in a}
-    assert depths and depths <= NEW_DEPTHS, depths
+    # 9.0.0 registers no document (ADR-091), so the manifest holds no depth to check.
+    assert "artifacts" not in manifest, manifest.get("artifacts")
 
 
 def test_vr_a2_a_policy_copy_in_the_old_words_still_writes_the_new_ones(
@@ -121,7 +121,7 @@ def test_vr_a2_a_policy_copy_in_the_old_words_still_writes_the_new_ones(
     assert result.returncode == 0, result
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
     assert not set(manifest["stages"].values()) & OLD_WORDS, manifest["stages"]
-    assert not {a.get("depth") for a in manifest["artifacts"]} & OLD_WORDS
+    assert not {a.get("depth") for a in manifest.get("artifacts") or []} & OLD_WORDS
 
 
 # --- VR-A3 ---------------------------------------------------------------------

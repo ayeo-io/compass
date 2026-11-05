@@ -113,7 +113,7 @@ earlier one. Warnings never stop it and never fail it.
 | `M-HIT-DISALLOWED` | error | A `hit:` policy the effect does not allow, or an unknown effect |
 | `M-ALIAS-COLLISION` | error | One name or alias belongs to two entries of a catalog |
 | `M-CYCLE` | error | Artifacts depend on each other in a cycle. The message gives the path, such as `a -> b -> a`, and the finding sits on the `depends_on` of the first artifact in id order |
-| `M-BOOKKEEPING-INPUT` | error | An artifact lists in `depends_on` an artifact marked `bookkeeping: true`, a record the framework keeps about the work (the dashboard, the receipt, the verification report). A bookkeeping artifact may itself depend on others. The finding sits on the dependent artifact's `depends_on` |
+| `M-BOOKKEEPING-INPUT` | error | An artifact lists in `depends_on` an artifact marked `bookkeeping: true`, a record the framework keeps about the work (the dashboard, the verification report). A bookkeeping artifact may itself depend on others. The finding sits on the dependent artifact's `depends_on` |
 | `M-DIRECTORY-DEPENDENCY` | error | An artifact lists in `depends_on` an artifact whose `file` ends in `/`, a directory. An artifact depends on files, so a verification report names the evidence ids it cites instead. The finding sits on the dependent artifact's `depends_on` |
 | `M-EFFECT-UNKNOWN` | error | A rule's `then:` holds a key that is neither an effect nor a qualifier (`ceiling`, `until`), such as a misspelt `force_minimum_aproach`. `EFFECT_QUALIFIERS` in `catalogue_spec.py` lists the qualifiers |
 | `M-ADD-EXISTS` | error | A full entry names an id that exists, with no `replace: true` |

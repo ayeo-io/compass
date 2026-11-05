@@ -73,10 +73,6 @@ def test_idr_8_runtime_skill_lays_out_the_project_files_as_6_does():
     assert "if `/compass:init` copied one in" not in text
 
 
-def test_idr_8_receipt_md_describes_the_conformance_line():
-    assert "Conformance" in _read("docs/receipt.md")
-
-
 # --- IDR-9: the release entry -------------------------------------------------
 
 def test_idr_9_releasing_md_has_a_6_0_0_entry_with_the_contents():
@@ -139,8 +135,16 @@ def _removed_later(words):
     spelling and a later release removed it: release notes keep naming such a verb."""
     import yaml
     table = yaml.safe_load(_read("cli/aliases.yml"))
-    return any(row.get("removed_in") and row["old"][:len(words)] == words
-               for row in table.get("hints") or [])
+    if any(row.get("removed_in") and row["old"][:len(words)] == words
+           for row in table.get("hints") or []):
+        return True
+    # A verb 9.0.0 removed names its removal when it is run (removed_parts).
+    import sys
+    if str(ROOT / "cli") not in sys.path:
+        sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import removed_parts
+    return any(list(tokens[:len(words)]) == list(words)
+               for tokens, *_ in removed_parts.COMMANDS)
 
 
 def _missing(verbs):
@@ -181,7 +185,6 @@ S1_FILES = (
     "skills/receiving-code-review/SKILL.md",
     "skills/tdd-discipline/test-surface-and-worktrees.md",
     "approaches/assess-procedure.md", "approaches/rubric.md",
-    "templates/delivery-approach.md",
 )
 
 # A paragraph that says one of these is about a project's own files, so a bare

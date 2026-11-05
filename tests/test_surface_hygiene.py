@@ -97,8 +97,8 @@ def test_trc_d2_no_references_to_deleted_skill():
     """
     offenders = []
     for path in _repo_files():
-        # This file necessarily names the string it hunts for, the same way
-        # `compass plan lint` has to exempt the documents that explain it.
+        # This file necessarily names the string it hunts for, so it exempts
+        # itself.
         if path.resolve() == pathlib.Path(__file__).resolve():
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")

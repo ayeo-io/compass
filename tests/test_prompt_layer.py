@@ -169,8 +169,6 @@ def test_trc_f3_nothing_names_a_skill_that_does_not_exist():
 #: Listed rather than derived: "is this document about the framework itself" is
 #: a judgement, and a rule that tried to infer it would be guessing.
 FRAMEWORK_INTERNAL = {
-    "docs/system-spec.md",          # the framework's own dev history, current part
-    "docs/system-spec-archive.md",  # and its archived part
     "docs/releasing.md",            # how to cut a Compass release
     "docs/install-smoke-test.md",   # run after changing Compass's installation
     "docs/desired-state.md",        # where Compass is going
@@ -304,8 +302,8 @@ NOT_ON_THE_LIGHT_PATH = {
     "scenario": "define records scenarios and de-scoped failure modes with it; a quick fix records its one scenario through compass quick-fix start",
     "gate": "verify passes each gate by hand with its evidence id; compass quick-fix finish passes the three gates itself",
     "policy": "verify reads the rules in force with compass policy show for its governance dimension; a quick fix's governance check is the one compass quick-fix finish runs",
-    "analyze": "verify runs it on an issue that registers an intent; a quick fix registers none",
     "review-rule": "the review at verify applies a project's review rules; compass quick-fix finish runs the governance check without them",
+    "issue": "a re-assessment proposes an issue configuration with compass issue configure; a quick fix that outgrows itself goes to /compass:assess, and compass quick-fix start sets the pointer itself",
 }
 
 #: The five stage commands the quick-fix command inlines.
@@ -416,25 +414,15 @@ def _routing_policy():
 
 
 def test_trc_f2_the_quick_fix_shape_requires_no_document():
-    """`delivery-approach.md` is written by assess on every approach, so a
-    shape that needs no artifact of its own needs only that one.
-
-    The quick-fix shape needs no light acceptance-criteria.md or
-    verification-report.md, because the manifest and the test-run evidence
-    carry the same records.
-    """
+    """No delivery approach owes a document since 9.0.0 (ADR-091): the manifest and
+    the test-run evidence carry the records, and `acceptance-criteria.md` is the one
+    document Compass reads. So the quick-fix shape declares no `artifacts:` map."""
     shapes = _routing_policy()["route_shapes"]
     assert QUICK_FIX_SHAPE in shapes, (
         f"the routing policy has no `{QUICK_FIX_SHAPE}` shape - the quick-fix "
         f"approach has been renamed and this check is measuring nothing. "
         f"Shapes: {', '.join(sorted(shapes))}")
-    artifacts = shapes[QUICK_FIX_SHAPE].get("artifacts") or {}
-    # ADR-051 adds the one-screen verification note, which a quick fix gets at its finish.
-    assert set(artifacts) == {"delivery-approach", "verification-note"}, (
-        "the quick-fix shape does not require exactly delivery-approach.md: "
-        + (", ".join(f"{k} ({v})" for k, v in sorted(artifacts.items()))
-           or "it requires nothing at all, so nothing checks that a quick fix "
-              "wrote anything down"))
+    assert "artifacts" not in shapes[QUICK_FIX_SHAPE], shapes[QUICK_FIX_SHAPE]
 
 
 def _quick_fix_issue(project, with_green):
@@ -482,11 +470,6 @@ def _quick_fix_issue(project, with_green):
 def _check(project):
     import subprocess
     import sys
-    # The fixture writes its manifest by hand, so write the issue page as the render
-    # after a command would.
-    subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "issue", "render",
-                    "--issue", "a-quick-fix"], capture_output=True, text=True, timeout=120,
-                   cwd=str(project))
     return subprocess.run(
         [sys.executable, str(ROOT / "cli" / "compass"), "check",
          "--issue", "a-quick-fix", "--verbose"],

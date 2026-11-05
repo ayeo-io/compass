@@ -278,22 +278,22 @@ reassess), and the `compass.yml` it would write.
     {
       "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "full",
-      "operation": "set"
+      "operation": "replace"
     },
     {
       "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "hotfix",
-      "operation": "set"
+      "operation": "replace"
     },
     {
       "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "quick-fix",
-      "operation": "set"
+      "operation": "replace"
     },
     {
       "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "regular",
-      "operation": "set"
+      "operation": "replace"
     },
     {
       "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
@@ -304,11 +304,6 @@ reassess), and the `compass.yml` it would write.
       "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "advisory",
       "operation": "set"
-    },
-    {
-      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "artifact_rules",
-      "operation": "add"
     },
     {
       "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
@@ -352,23 +347,18 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "artifacts-approved",
-      "operation": "add"
+      "id": "borrowed-documents-answered",
+      "operation": "remove"
     },
     {
       "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "contracts-declared",
-      "operation": "add"
+      "id": "consistency-check-passes",
+      "operation": "remove"
     },
     {
       "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "dashboard-current",
       "operation": "remove"
-    },
-    {
-      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "design-within-word-ceiling",
-      "operation": "add"
     },
     {
       "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
@@ -412,11 +402,6 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "rendered-blocks-current",
-      "operation": "add"
-    },
-    {
-      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "suite-passed",
       "operation": "set"
     },
@@ -431,19 +416,64 @@ reassess), and the `compass.yml` it would write.
       "operation": "set"
     },
     {
-      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "bug-report",
-      "operation": "add"
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "verify.analyze",
+      "operation": "remove"
     },
     {
       "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "spike-conclusion",
-      "operation": "add"
+      "id": "acceptance-criteria",
+      "operation": "remove"
     },
     {
       "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "verification-note",
-      "operation": "add"
+      "id": "delivery-approach",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "distribution-map",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "intent",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "launch-readiness",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "requirements-review",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "rollback-plan",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "technical-design",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "threat-model",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "ui-contract",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "verification-report",
+      "operation": "remove"
     },
     {
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
@@ -457,23 +487,18 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "checks.artifacts-approved",
-      "operation": "add"
+      "id": "checks.borrowed-documents-answered",
+      "operation": "remove"
     },
     {
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "checks.contracts-declared",
-      "operation": "add"
+      "id": "checks.consistency-check-passes",
+      "operation": "remove"
     },
     {
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.dashboard-current",
       "operation": "remove"
-    },
-    {
-      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "checks.design-within-word-ceiling",
-      "operation": "add"
     },
     {
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
@@ -503,11 +528,6 @@ reassess), and the `compass.yml` it would write.
     {
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.outer-loop-recorded",
-      "operation": "add"
-    },
-    {
-      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
-      "id": "checks.rendered-blocks-current",
       "operation": "add"
     }
   ],
@@ -553,7 +573,7 @@ reassess), and the `compass.yml` it would write.
   },
   "behaviour": {  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
     "result": "incomparable",
-    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, role engineer, labels none, documents none: approaches.checkpoints (autonomous) is [\"assess\", \"define\"] in the parent and [] in the child",
+    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, role engineer, labels none: approaches.artifacts is [\"delivery-approach\"] in the parent and [] in the child",
     "points": 0,
     "changed": 0
   },

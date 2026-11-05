@@ -56,7 +56,7 @@ Evidence id. Identifies one typed record in the issue's evidence registry that c
 
 **Refers to:** One typed evidence record.
 
-**Appears in:** `manifest.yml evidence[].id`, `gates[].evidence`, `verification-report.md`
+**Appears in:** `manifest.yml evidence[].id`, `gates[].evidence`, `verification-report.md (archive)`
 
 **Related:** `quality-gate`, `evidence`
 
@@ -66,7 +66,7 @@ Follow-up id. Work this issue deferred to ship fast and still owes - the hotfix'
 
 **Refers to:** One piece of work this issue deferred and still owes.
 
-**Appears in:** `manifest.yml follow_ups[].id`, `verification-report.md`
+**Appears in:** `manifest.yml follow_ups[].id`, `verification-report.md (archive)`
 
 **Related:** `follow-up`, `definition-of-done`
 
@@ -196,7 +196,7 @@ The four-dimension judgment the assess stage produces - risk, familiarity, size 
 
 ### audience
 
-The one line in an artifact's catalog entry that says who reads the document and what the reader decides from it.
+The one line in an artifact's catalog entry that says who reads the document and what the reader decides from it. 9.0.0 removed the catalog from the live default (ADR-091); a frozen preset and a stored generation still hold it.
 
 **Related:** `delivery-approach`, `technical-design`
 
@@ -228,7 +228,7 @@ An issue type: a defect in existing behavior, not live-urgent. Starts from a bug
 
 ### bug-report
 
-The intake for a bug fix: observed behavior, expected behavior, reproduction steps.
+The intake for a bug fix: observed behavior, expected behavior, reproduction steps. Compass wrote it as bug-report.md until 9.0.0 removed the document (ADR-091).
 
 **Related:** `bug`
 
@@ -304,7 +304,7 @@ The gate before shipping: acceptance criteria pass, applicable guardrails clear,
 
 ### definition-of-ready
 
-The gate between requirements and plan/implementation: acceptance criteria exist, ambiguities resolved, intent.md reviewed where one exists. Trivially satisfied for a quick fix.
+The gate between requirements and plan/implementation: acceptance criteria exist, ambiguities resolved, the criteria checked against the intent. Trivially satisfied for a quick fix.
 
 **Also:** DoR
 
@@ -312,19 +312,19 @@ The gate between requirements and plan/implementation: acceptance criteria exist
 
 ### delivery-approach
 
-The chosen shape for an issue: which artifacts exist, which gates apply, solo or parallel. Deterministic - same assessment plus same policy always gives the same approach. `full` is the name of the heaviest delivery approach and is not a stage mode: its stages run `thorough`, and the old mode word `full` reads as `thorough` until 9.0.0.
+The chosen shape for an issue: the weight of each stage and the gates that apply, recorded in the manifest. Since 9.0.0 it names no documents (ADR-091). Deterministic - same assessment plus same policy always gives the same approach. `full` is the name of the heaviest delivery approach and is not a stage mode: its stages run `thorough`, and the old mode word `full` reads as `thorough` until 9.0.0.
 
 **Related:** `assess`, `quality-gate`
 
 ### design
 
-The DESIGNER's stage and its command, /compass:design. It produces the UI contract (ui-contract.md) - scenarios written Given/When/Then that flow into the acceptance criteria, not mockup annotations. The word reads as UI work to most people, which is why the designer has it. `design` names the UI contract and `plan` names the technical design, never the other way round: the engineering design is the plan stage (/compass:plan), whose output is technical-design.md. The placeholder scan is the CLI verb `compass plan lint`.
+The DESIGNER's stage and its command, /compass:design. It produces the UI contract (ui-contract.md) - scenarios written Given/When/Then that flow into the acceptance criteria, not mockup annotations. The word reads as UI work to most people, which is why the designer has it. `design` names the UI contract and `plan` names the engineering design, never the other way round: the engineering design is the plan stage (/compass:plan), whose hand-off states it.
 
 **Related:** `plan`, `technical-design`, `delivery-approach`
 
 ### design-doc
 
-The high-level design (HLD): approach, system context, components, interfaces, data model, cross-cutting concerns - with sequence diagrams, named design patterns, and illustrative code where they add clarity.
+The high-level design (HLD): approach, system context, components, interfaces, data model, cross-cutting concerns - with sequence diagrams, named design patterns, and illustrative code where they add clarity. The technical design was Compass's HLD until 9.0.0 removed it (ADR-091).
 
 **Also:** HLD
 
@@ -374,7 +374,7 @@ A runtime switch decoupling deploy from release.
 
 ### first-slice
 
-The 80/20 cut recorded in intent.md: the slice of an initiative that ships first because it delivers most of the value, with what deliberately waits stated beside it. The design and the work breakdown follow the first slice, not the whole document.
+The 80/20 cut that intent.md recorded until 9.0.0 removed that document (ADR-091): the slice of an initiative that ships first because it delivers most of the value, with what deliberately waits stated beside it. The design and the work breakdown follow the first slice, not the whole intent.
 
 **Related:** `intent`, `slice`, `initiative`
 
@@ -410,7 +410,7 @@ A delivery approach for a live-incident fix, expedited: reproduce, fix, ship, th
 
 ### incident
 
-The intake that triggers a hotfix: what broke in production, impact, severity. SRE sense of the word.
+The intake that triggers a hotfix: what broke in production, impact, severity. SRE sense of the word. Compass wrote it as incident.md until 9.0.0 removed the document (ADR-091).
 
 **Related:** `hotfix`, `postmortem`
 
@@ -430,7 +430,7 @@ The unit-level red, green, refactor loop of strategy `S2`, run inside the outer 
 
 ### intent
 
-Two related things, and the entry covers both deliberately. (1) The document: intent.md, the originator's statement of what is wanted and why, AUTHORED at the intake stage or INGESTED from a brief that already exists - it does not presume authorship. (2) The goal it carries: the outcome a change is meant to produce, the "why" end of the traceability chain, carrying the INT- ids that scenarios trace back to. The document holds the goals, which is why one name serves both. As a document it carries problem, users, goals, non-goals, success signals, constraints, open questions, and the first slice (the 80/20 cut) - iterated through review before the design is built. User stories are welcome inside it as a format; acceptance criteria are derived from them. As a goal it is sourced from intent.md's desired outcome, the UI contract, or the issue description - a goal, not a requirement: the functional requirement is the scenario. It goes further than the request: "Add a CSV export" is a request; "let finance self-serve" is the intent, and it may need filters and permissions the request never mentioned.
+The outcome a change is meant to produce: the "why" end of the traceability chain, carrying the INT- ids that scenarios trace back to. The originator states it - problem, users, outcome, constraints - AUTHORED at the intake stage or INGESTED from a brief that already exists, so it does not presume authorship. The define stage writes it into the Summary and Intent links of acceptance-criteria.md. Until 9.0.0 it was also a document, intent.md, which 9.0.0 removed (ADR-091); older issues still hold one, and Compass does not read it. An intent is a goal, not a requirement: the functional requirement is the scenario. It goes further than the request: "Add a CSV export" is a request; "let finance self-serve" is the intent, and it may need filters and permissions the request never mentioned.
 
 **Also:** The product owner's entry point, `/compass:intent`, captures it.
 
@@ -452,7 +452,7 @@ The atomic tracked unit of work: one assessed piece of work, one delivery approa
 
 ### issue-page
 
-The README of an issue's documents folder, `docs/compass/<created>-<slug>/README.md`. Its rendered blocks answer a reader's questions in order: the header, the ask, the decision required, the acceptance, the related issues, the decisions, the documents, the traceability chart, the documents left out on purpose and the follow-ups. `compass issue render` creates it when it is absent.
+The README of an issue's documents folder, `docs/compass/<created>-<slug>/README.md`, which `compass issue render` wrote from the issue's records until 9.0.0 removed it (ADR-091). An older archive can still hold one; nothing writes or reads it now.
 
 **Related:** `rendered-block`, `project-index`
 
@@ -498,7 +498,7 @@ A record, written only by its command, of the project's layering test: the test 
 
 ### lld
 
-Low-level design: the signatures, contracts, file plan and tests of one work unit, in its own document, `low-level-design/U<n>.md`. The planner writes one per unit of the technical design's Work units table, so the design stays short and each builder reads only its own unit. No approach owes one; on the full approach, `compass issue lint` notes a unit that has none.
+Low-level design: the signatures, contracts, file plan and tests of one work unit, in its own document, `low-level-design/U<n>.md`. The planner wrote one per unit of the technical design's Work units table until 9.0.0 removed both documents (ADR-091). Older issues still hold them.
 
 **Related:** `design-doc`, `word_ceiling`
 
@@ -526,7 +526,7 @@ A release checkpoint, not a level in the work hierarchy: a coherent bundle of de
 
 ### not-an-artifact-list
 
-The file names and patterns in an issue's documents folder that are documents of no kind, such as `README.md` and the review briefs. The migrate leaves them in place, and `compass issue lint` does not report them.
+The file names and patterns in an issue's documents folder that are documents of no kind, such as `README.md` and the review briefs. The migrate leaves them in place, and `compass issue lint` does not report them. 9.0.0 removed the catalog from the live default (ADR-091); a frozen preset and a stored generation still hold it.
 
 **Related:** `audience`, `sections`
 
@@ -568,7 +568,7 @@ The `#<sha>` suffix on a git `extends:`, which names the parent commit a project
 
 ### plan
 
-The engineering design stage: the command /compass:plan, the machine key `plan` in a manifest's stages block, the `plan-authoring` skill and the CLI verb `compass plan lint`. Its output is technical-design.md. The delivery approach is a separate thing: it is computed at the assess stage and recorded in delivery-approach.md.
+The engineering design stage: the command /compass:plan, the machine key `plan` in a manifest's stages block and the `plan-authoring` skill. Its hand-off and devlog.md state the design and the work units; it wrote technical-design.md until 9.0.0 removed that document (ADR-091). The delivery approach is a separate thing: it is computed at the assess stage and recorded in the manifest.
 
 **Related:** `technical-design`, `delivery-approach`, `design`
 
@@ -600,7 +600,7 @@ A named, versioned parent layer. `default` is the only preset Compass ships.
 
 ### project-index
 
-The README.md directly in the folder `docs/compass`, one rendered block that lists every issue once, in a table for its state, with a link to its issue page. The last table is the issues completed in the 30 days before the newest completion the project holds.
+The README.md directly in the folder `docs/compass`, which listed every issue once, in a table for its state, until 9.0.0 removed the render (ADR-091). An older checkout can still hold one; nothing writes or reads it now. `compass board render` shows every issue.
 
 **Related:** `rendered-block`, `issue-page`
 
@@ -642,25 +642,25 @@ The `readiness:` key of an issue's manifest, written by every `approach evaluate
 
 ### receipt
 
-The per-issue proof summary rendered from the manifest and the evidence registry: the assessment, the delivery approach, the gates and what cleared them - one screen, shareable as-is. Evidence is the typed records that clear gates; the receipt is the read-only summary that cites them.
+The one-screen summary of an issue that `compass issue receipt` printed until 9.0.0 removed it (ADR-091): the assessment, the delivery approach, the gates and the evidence that cleared them. Older records and decision records still name it. `compass approach show` lists an issue's gates and `compass check` judges its evidence.
 
 **Related:** `evidence`, `quality-gate`
 
 ### rendered-block
 
-The lines between `<!-- compass:render KIND -->` and `<!-- /compass:render -->` in an issue's document. `compass issue render` writes them from the manifest and the evidence and leaves every other byte of the document as it is. A check, `rendered-blocks-current`, compares each block with a fresh render. Every digest of a document and every reader of its text leaves the lines inside a block out.
+The lines between `<!-- compass:render KIND -->` and `<!-- /compass:render -->` in an issue's document, which `compass issue render` wrote from the manifest and the evidence until 9.0.0 removed it (ADR-091). A document written before then can still hold them, so every digest of a document and every reader of its text leaves the lines inside a block out. Nothing writes or checks a block now.
 
 **Related:** `issue-page`, `verification-note`, `project-index`, `item-record`
 
 ### required-when
 
-A condition in an artifact's catalog entry. The document is owed only when the condition holds. The one condition today is a minimum number of subtasks, so the distribution map is owed from two subtasks.
+A condition in an artifact's catalog entry. The document is owed only when the condition holds. The one condition was a minimum number of subtasks, so the distribution map was owed from two subtasks. 9.0.0 removed the catalog from the live default (ADR-091); a frozen preset and a stored generation still hold it.
 
 **Related:** `audience`, `delivery-approach`
 
 ### requirements-review
 
-The review pass that hardens requirements before plan or implementation: ambiguities resolved into recorded decisions, contradictions and gaps closed, intent.md reviewed where one exists. Satisfying it is what makes an issue ready.
+The review pass that hardens requirements before plan or implementation: ambiguities resolved into recorded decisions, contradictions and gaps closed, the criteria checked against the intent. Satisfying it is what makes an issue ready. It wrote requirements-review.md until 9.0.0 removed that document (ADR-091); the decisions and the Definition of Ready items are its record now.
 
 **Related:** `intent`, `definition-of-ready`, `acceptance-criteria`
 
@@ -672,13 +672,13 @@ Compass's cross-issue self-check: is assess consistently over- or under-sizing t
 
 ### review-round
 
-One review of an issue's work by a reviewer who did not write it. Each round is its own document, `review-<n>.md`, and its own entry in the artifact registry. Rounds count from 1.
+One review of an issue's work by a reviewer who did not write it. Rounds count from 1. Until 9.0.0 each round was its own document, `review-<n>.md`, and its own entry in the artifact registry; 9.0.0 removed both (ADR-091).
 
 **Related:** `requirements-review`, `audience`
 
 ### rollback-plan
 
-The recorded way back if the change misbehaves in production.
+The recorded way back if the change misbehaves in production. Compass owed one as rollback-plan.md on migrations work until 9.0.0 removed the document and its rule (ADR-091).
 
 **Related:** `rollout-plan`
 
@@ -690,7 +690,7 @@ How the change reaches users safely: feature flags, canary or incremental rollou
 
 ### router
 
-The agent that runs assess: reads the four assessment dimensions, hands them to the CLI, and writes the delivery-approach record. It assesses; it does not choose a process. Named for what it does - Anthropic's platform docs call this shape "Routing", classifying input and directing it to a specialized path - and for the file it runs, routing-policy.yml. The approach is computed from the assessment by `compass approach evaluate`, which is the determinism boundary.
+The agent that runs assess: reads the four assessment dimensions, hands them to the CLI, and records the delivery approach in the manifest. It assesses; it does not choose a process. Named for what it does - Anthropic's platform docs call this shape "Routing", classifying input and directing it to a specialized path - and for the file it runs, routing-policy.yml. The approach is computed from the assessment by `compass approach evaluate`, which is the determinism boundary.
 
 **Related:** `assess`, `assessment`, `delivery-approach`
 
@@ -708,7 +708,7 @@ The atomic unit of acceptance: one behavior, one Given/When/Then, one executable
 
 ### sections
 
-The headings of an artifact's document, in order, for each depth the document can be written at (`lightweight` and `thorough`). It is a field of the artifact's catalog entry. A document that is one rendered block has an empty list.
+The headings of an artifact's document, in order, for each depth the document can be written at (`lightweight` and `thorough`). It is a field of the artifact's catalog entry. A document that is one rendered block has an empty list. The acceptance criteria are read through the last shipped catalog when the configuration declares none. 9.0.0 removed the catalog from the live default (ADR-091); a frozen preset and a stored generation still hold it.
 
 **Related:** `audience`, `rendered-block`
 
@@ -720,7 +720,7 @@ A top-level key of `compass.yml` that configures the CLI instead of the process.
 
 ### ship
 
-Merging and releasing the change: the PR lands, follow-ups are recorded, the derived system spec is regenerated.
+Merging and releasing the change: the PR lands, follow-ups are recorded and the issue is marked done.
 
 **Related:** `pr`, `rollout-plan`
 
@@ -756,7 +756,7 @@ How a stage runs for an issue, such as `collapsed`. It is the `mode` field of a 
 
 ### stands-for
 
-The name the industry uses for the kind of document an artifact is, such as `hld` for the technical design. It is a field of the artifact's catalog entry.
+The name the industry uses for the kind of document an artifact is, such as `hld` for the technical design. It is a field of the artifact's catalog entry. 9.0.0 removed the catalog from the live default (ADR-091); a frozen preset and a stored generation still hold it.
 
 **Related:** `audience`, `technical-design`
 
@@ -788,7 +788,7 @@ An issue type: work that changes nothing a user sees, such as upkeep, a refactor
 
 ### technical-design
 
-The engineering plan for one issue: the approach, the design decisions as ADR-style notes, the governance check, and the independent work units. Written at the planning stage (/compass:plan) as technical-design.md. The designer's work is the UI contract (ui-contract.md), from /compass:design. In this repository TDD is red-green-refactor and nothing else, so this artifact is never abbreviated to TDD.
+The engineering plan for one issue: the approach, the design decisions as ADR-style notes, the governance check, and the independent work units. The planning stage (/compass:plan) wrote it as technical-design.md until 9.0.0 removed the document (ADR-091). Older issues still hold one; the plan's hand-off states the design now. The designer's work is the UI contract (ui-contract.md), from /compass:design. In this repository TDD is red-green-refactor and nothing else, so this artifact is never abbreviated to TDD.
 
 **Related:** `technical-design`, `delivery-approach`
 
@@ -812,13 +812,13 @@ The chain that makes a change accountable: code traces to a TRC- id, which trace
 
 ### verification-note
 
-A quick fix's one-screen record of what was checked: the scenario, its test, the red and green records, each gate with its status and the files changed. It is one rendered block, written by `compass quick-fix finish` and approved by it. A person can write prose above the block.
+A quick fix's one-screen record of what was checked: the scenario, its test, the red and green records, each gate with its status and the files changed. It was one rendered block, which `compass quick-fix finish` wrote and approved until 9.0.0 removed it (ADR-091). An older quick fix still holds one.
 
 **Related:** `rendered-block`, `quick-fix`
 
 ### voluntary-kind
 
-A document kind that no delivery approach, rule or `every_approach` flag names, so nothing owes it. A person registers it when it is written, and a reassessment never supersedes it. `review` is one.
+A document kind that no delivery approach, rule or `every_approach` flag names, so nothing owes it. A person registered it when it was written, and a reassessment never superseded it. `review` was one. 9.0.0 removed document registration (ADR-091).
 
 **Related:** `required-when`, `review-round`
 
@@ -830,7 +830,7 @@ A recorded departure from a parent's value, with a reason and an approver.
 
 ### word_ceiling
 
-The word limit a document kind carries in the artifacts catalog, per depth, such as 4,000 words for a thorough technical design. Words are counted from the visible text only: rendered blocks and HTML comments do not count. `compass issue lint` notes a document over its limit, and the check `design-within-word-ceiling` refuses a technical design over 1.5 times its limit once plan exit is due. An issue stored before a kind had a limit keeps no limit.
+The word limit a document kind carried in the artifacts catalog, per depth, such as 4,000 words for a thorough technical design. Words were counted from the visible text only: rendered blocks and HTML comments did not count. The check `design-within-word-ceiling` refused a technical design over 1.5 times its limit until 9.0.0 removed the check and the live catalog (ADR-091). A frozen preset and a stored generation still hold the limits.
 
 **Related:** `lld`, `design-doc`
 
@@ -839,199 +839,3 @@ The word limit a document kind carries in the artifacts catalog, per depth, such
 The fixed semantic lifecycle Compass owns: backlog, ready, in-progress, in-review, done. Gates attach to the transitions; transitions are earned (evidence), not dragged. A person sets only backlog (a hold) and done (closed, with a close reason); Compass derives the other states from the issue's records. Board columns are a user-defined projection - every custom column maps to exactly one state.
 
 **Related:** `quality-gate`, `board-column`, `blocked`, `close-reason`
-
-## Document kinds
-
-The kinds of document a process writes, from the artifacts catalog of the
-shipped default. Each entry gives who reads the document, the name the
-industry uses for it, and where it lives.
-
-### `acceptance-criteria`
-
-Every role reads it to agree the behavior that will be built, and the builder turns each scenario into a test.
-
-**Traditional name:** requirements
-
-**Stage:** `define` · **Owner:** spec-author
-
-**Home:** `docs/compass/<created>-<issue-slug>/acceptance-criteria.md`
-
-### `architecture-notes`
-
-The spec author and the planner read it to keep the design inside the system's invariants.
-
-**Traditional name:** architecture-review
-
-**Stage:** `define` · **Owner:** architect
-
-**Home:** `docs/compass/<created>-<issue-slug>/architecture-notes.md`
-
-### `bug-report`
-
-The assessor and the builder read it to reproduce the defect and size the fix.
-
-**Traditional name:** bug-report
-
-**Stage:** `assess` · **Owner:** spec-author
-
-**Home:** `docs/compass/<created>-<issue-slug>/bug-report.md`
-
-### `delivery-approach`
-
-Anyone joining the issue reads it to see how much process the work gets and why.
-
-**Traditional name:** project-plan
-
-**Stage:** `assess` · **Owner:** router
-
-**Home:** `docs/compass/<created>-<issue-slug>/delivery-approach.md`
-
-### `distribution-map`
-
-The session reads it to decide the order in which to build the units and which scenarios each one owns.
-
-**Traditional name:** work-breakdown
-
-**Stage:** `breakdown` · **Owner:** planner
-
-**Home:** `docs/compass/<created>-<issue-slug>/distribution-map.md`
-
-### `intent`
-
-The product owner and the spec author read it to agree which problem is solved and which outcome counts as success.
-
-**Traditional name:** prd
-
-**Stage:** `assess` · **Owner:** product-owner
-
-**Home:** `docs/compass/<created>-<issue-slug>/intent.md`
-
-### `launch-readiness`
-
-The marketer and the person who ships read it to decide whether every public claim is backed by a passing scenario.
-
-**Traditional name:** release-readiness-review
-
-**Stage:** `verify` · **Owner:** product-marketer
-
-**Home:** `docs/compass/<created>-<issue-slug>/launch-readiness.md`
-
-### `low-level-design`
-
-The builder of one work unit reads it for the signatures, contracts, files and tests that unit owns.
-
-**Traditional name:** lld
-
-**Stage:** `plan` · **Owner:** planner
-
-**Home:** `docs/compass/<created>-<issue-slug>/low-level-design/<unit>.md`
-
-### `positioning`
-
-The marketer and the reviewer of claims read it to keep every public message tied to a scenario.
-
-**Traditional name:** positioning-statement
-
-**Stage:** `define` · **Owner:** product-marketer
-
-**Home:** `docs/compass/<created>-<issue-slug>/positioning.md`
-
-### `product-owner-review`
-
-The planner reads it to confirm the design still delivers the intent before implementation starts.
-
-**Traditional name:** stakeholder-review
-
-**Stage:** `plan` · **Owner:** product-owner
-
-**Home:** `docs/compass/<created>-<issue-slug>/product-owner-review.md`
-
-### `requirements-review`
-
-The planner and the person who asked read it to confirm every open question is settled before design starts.
-
-**Traditional name:** requirements-review
-
-**Stage:** `refine` · **Owner:** spec-author
-
-**Home:** `docs/compass/<created>-<issue-slug>/requirements-review.md`
-
-### `review`
-
-The builder and the person who ships read each round to decide what must change before the work passes.
-
-**Traditional name:** review-record
-
-**Stage:** `verify` · **Owner:** reviewer
-
-**Home:** `docs/compass/<created>-<issue-slug>/review-<n>.md`
-
-### `rollback-plan`
-
-The person who runs a release reads it to know how to undo the change and whether that was rehearsed.
-
-**Traditional name:** rollback-plan
-
-**Stage:** `plan` · **Owner:** planner
-
-**Home:** `docs/compass/<created>-<issue-slug>/rollback-plan.md`
-
-### `spike-conclusion`
-
-The person who decides reads it to discard, graduate or defer the spike.
-
-**Traditional name:** spike-report
-
-**Stage:** `verify` · **Owner:** builder
-
-**Home:** `docs/compass/<created>-<issue-slug>/spike-conclusion.md`
-
-### `technical-design`
-
-A reviewer reads it to challenge the design before code is written.
-
-**Traditional name:** hld
-
-**Stage:** `plan` · **Owner:** planner
-
-**Home:** `docs/compass/<created>-<issue-slug>/technical-design.md`
-
-### `threat-model`
-
-A security reviewer reads it to judge whether the risks to data and access are handled before the change lands.
-
-**Traditional name:** threat-model
-
-**Stage:** `plan` · **Owner:** planner
-
-**Home:** `docs/compass/<created>-<issue-slug>/threat-model.md`
-
-### `ui-contract`
-
-The builder and the spec author read it to build the screens and states the designer specified.
-
-**Traditional name:** ui-specification
-
-**Stage:** `define` · **Owner:** designer
-
-**Home:** `docs/compass/<created>-<issue-slug>/ui-contract.md`
-
-### `verification-note`
-
-The person who ships a quick fix reads it to see the scenario, its test and the gates on one screen.
-
-**Traditional name:** test-summary
-
-**Stage:** `verify` · **Owner:** verifier
-
-**Home:** `docs/compass/<created>-<issue-slug>/verification-note.md`
-
-### `verification-report`
-
-The person who ships reads it to decide whether the evidence supports landing the change.
-
-**Traditional name:** test-report
-
-**Stage:** `verify` · **Owner:** verifier
-
-**Home:** `docs/compass/<created>-<issue-slug>/verification-report.md`

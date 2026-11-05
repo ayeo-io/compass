@@ -15,7 +15,7 @@ the comment id. A record written by 6.x, with `at`, `state` and `error` at the
 top level, reads as the `labels` section.
 """
 # DEPENDENCY: compass_pkg.atomic_io, compass_pkg.core (now_iso), yaml. Imported by
-# github_labels and github_page; it imports neither.
+# github_labels; it does not import it.
 from __future__ import annotations
 
 import os

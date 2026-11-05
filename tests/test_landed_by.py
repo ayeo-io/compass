@@ -77,9 +77,6 @@ def _check(project, slug):
     every check, so asserting against the short view would be testing the
     truncation rather than the behaviour.
     """
-    # The issue page is a document the check expects (`rendered-blocks-current`, ADR-051).
-    subprocess.run([sys.executable, str(CLI), "issue", "render", "--issue", slug],
-                   cwd=str(project), capture_output=True, text=True, timeout=120)
     return subprocess.run(
         [sys.executable, str(CLI), "check", "--issue", slug, "--verbose"],
         cwd=str(project), capture_output=True, text=True, timeout=120)

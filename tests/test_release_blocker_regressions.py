@@ -15,8 +15,8 @@ Covered:
   SCN-08  the CI workflow must install Python before running a Python tool
   SCN-10  a spike must still report an owed follow-up
   SCN-11  `compass ship-commit` must refuse to mark landed over unpassed gates
-  SCN-12  `compass issue receipt` must not print "landed cleanly" over pending gates
-  SCN-13  `compass analyze` must not report 0 findings after listing findings
+  SCN-12  (removed in 9.0.0 with compass issue receipt, ADR-091)
+  SCN-13  (removed in 9.0.0 with compass analyze, ADR-091)
 """
 
 # These tests read the per-check detail (name, PASS/FAIL, reason) that
@@ -84,33 +84,13 @@ PENDING_GATES = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# SCN-12 - a pending gate is not a clean land
-# ---------------------------------------------------------------------------
-
-def test_receipt_does_not_report_a_clean_land_over_pending_gates(project):
-    """The receipt is the audit artifact - what someone reads instead of
-    re-deriving the issue. It printed "Verdict: landed cleanly" for an issue
-    whose every gate was pending with no evidence at all, because the pending
-    branch set neither the failure flag nor the caveat flag."""
-    (project / ".compass" / "work" / "t" / "manifest.yml").write_text(
-        _task_yml("t", gates=PENDING_GATES, status="landed",
-                  land_timestamp="2026-08-04T00:00:00Z")
-    )
-    result = _compass(project, "issue", "receipt", "--issue", "t")
-    verdict = [l for l in result.stdout.splitlines() if "Verdict:" in l]
-    assert verdict, f"no verdict line in the receipt:\n{result.stdout}"
-    assert "cleanly" not in verdict[0], (
-        f"a receipt with two pending, unevidenced gates reported {verdict[0]!r}"
-    )
-
 
 # ---------------------------------------------------------------------------
 # SCN-11 - ship-commit must not write `landed` over unpassed gates
 # ---------------------------------------------------------------------------
 
 def test_land_commit_refuses_to_mark_landed_with_unpassed_gates(project):
-    """`status: landed` is what the receipt, `compass flow`, and the rework scan
+    """`status: landed` is what `compass flow` and the rework scan
     all read. Writing it while gates are pending backdates a claim that the work
     cleared its gates."""
     task_path = project / ".compass" / "work" / "t" / "manifest.yml"
@@ -135,47 +115,6 @@ def test_land_commit_refuses_to_mark_landed_with_unpassed_gates(project):
     combined = result.stdout + result.stderr
     assert "verify.correctness" in combined, (
         f"the refusal must name the gates that have not passed:\n{combined}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# SCN-13 - the summary must agree with the findings above it
-# ---------------------------------------------------------------------------
-
-def test_analyze_summary_agrees_with_the_findings_it_listed(project):
-    """In advisory mode the summary line was hardcoded to "PASS - 0 finding(s),
-    consistency checks clean", so the command listed its findings and then
-    denied having any - while the evidence JSON recorded the real count."""
-    task_dir = project / ".compass" / "work" / "t"
-    # Uses `stages=`: the base manifest already sets `stages: {}`, so a
-    # `phases:` key is dropped as a retired duplicate.
-    (task_dir / "manifest.yml").write_text(
-        _task_yml("t", gates=[], stages={"define": "full"})
-    )
-    (task_dir / "delivery-approach.md").write_text("# Route - t\n")
-    (task_dir / "acceptance-criteria.md").write_text("# Spec - t\n\n## Summary\n\n**Goal:** x\n")
-
-    # The verdict is the first line and the findings are a counted section;
-    # the two counts must match.
-    import re as _re
-
-    result = _compass(project, "analyze", "--issue", "t")
-    lines = result.stdout.splitlines()
-    section = [l for l in lines if _re.search(r"findings \((\d+)\)", l)]
-    verdict = [l for l in lines if "compass analyze" in l]
-    assert section and verdict, f"unexpected analyze output:\n{result.stdout}"
-
-    listed = int(_re.search(r"findings \((\d+)\)", section[0]).group(1))
-    # Tolerant of the word between the number and "finding(s)": the verdict
-    # reads "1 coherence finding(s)" on the advisory path. The number and the
-    # noun are what this test is about, not the adjective.
-    _m = _re.search(r"(\d+)\s+(?:\w+\s+)?finding\(s\)", verdict[0])
-    assert _m, ("the verdict does not state a finding count:\n" + verdict[0])
-    stated = int(_m.group(1))
-    assert listed > 0, "fixture produced no findings - the assertion would be empty"
-    assert stated == listed, (
-        f"analyze listed {listed} finding(s) and its verdict says {stated}: "
-        f"{verdict[0]!r}"
     )
 
 

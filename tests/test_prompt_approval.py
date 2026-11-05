@@ -127,21 +127,12 @@ def _same_as_terminal(prompt_root, terminal_root, argv, plugin, form, value, sco
 
 def test_a2_subject_forms_match_terminal(tmp_path):
     plugin = _plugin(tmp_path)
-    # A human check, and a document awaiting approval.
+    # A human check. 9.0.0 removed the document form, --artifact (ADR-091).
     root = project(tmp_path / "a")
-    body = manifest_of(root)
-    (root / "docs").mkdir(exist_ok=True)
-    (root / "docs" / "td.md").write_text("# design\n", encoding="utf-8")
-    body["artifacts"] = [{"id": "ART-TD", "kind": "technical-design",
-                          "status": "awaiting-approval", "path": "docs/td.md"}]
-    save_manifest(root, body)
     twin = tmp_path / "b" / "proj"
     shutil.copytree(root, twin)
     _same_as_terminal(root, twin, ["--check", CHECK, "--scope", "the review"], plugin,
                       "check", CHECK, scope="the review")
-    _same_as_terminal(root, twin, ["--artifact", "technical-design"], plugin, "artifact",
-                      "technical-design")
-    assert manifest_of(root)["artifacts"][0]["status"] == "approved"
 
     # A checkpoint, and the decisions taken for the person.
     from test_checkpoint_outcomes import _define_done, edit
@@ -180,42 +171,6 @@ def test_a3_reject_check_withdraws(setup):
 
 # --- rejecting a document sends it back to draft (`TRC-A4`) --------------------------------
 
-def test_a4_reject_artifact_to_draft(setup):
-    root, plugin = setup
-    from compass_pkg import artifact_status, review_records
-    body = manifest_of(root)
-    (root / "docs").mkdir(exist_ok=True)
-    doc = root / "docs" / "td.md"
-    doc.write_text("# design\n", encoding="utf-8")
-    body["artifacts"] = [{"id": "ART-TD", "kind": "technical-design",
-                          "status": "awaiting-approval", "path": "docs/td.md"}]
-    save_manifest(root, body)
-    _request(root, "artifact", "technical-design")
-    before = len(manifest_of(root)["evidence"])
-    result = _handle(root, plugin, command="compass:reject", args="the threat model is missing")
-    assert not result.block, result
-    after = manifest_of(root)
-    entry = after["artifacts"][0]
-    assert entry["status"] == "draft"
-    assert entry["rejected_by"] == OWNER and entry["rejected_at"]
-    assert entry["rejected_reason"] == "the threat model is missing"
-    assert entry["rejected_digest"] == review_records.file_digest(str(doc))
-    assert len(after["evidence"]) == before
-    assert not _records(root, "artifact-approval")
-
-    def stage_exit(task):
-        return artifact_status.stage_exit(task, None, "ship", "compass ship-commit",
-                                          include_own=True, task_dir=str(task_dir(root)))
-
-    # A later stage record leaves the unchanged file in draft.
-    task = manifest_of(root)
-    assert stage_exit(task) == []
-    assert task["artifacts"][0]["status"] == "draft"
-    # Once the file changes, it moves as ADR-050 describes.
-    doc.write_text("# design\n\nWith a threat model.\n", encoding="utf-8")
-    task = manifest_of(root)
-    moved = stage_exit(task)
-    assert moved and task["artifacts"][0]["status"] in ("approved", "awaiting-approval")
 
 
 # --- rejecting the guardrail 5 sign-off writes no approval record (`TRC-A5`) -------------
@@ -278,21 +233,22 @@ def test_c3_stale_generation_blocks(setup):
 
 # --- the document changed after the request (`TRC-C4`) -------------------------------------
 
-def test_c4_changed_document_blocks(setup):
+def test_c4_a_document_request_written_before_9_0_0_closes(setup):
+    """A pending request for a document's approval, written before 9.0.0, is closed with
+    nothing written: no document has a status since 9.0.0 (ADR-091)."""
     root, plugin = setup
     body = manifest_of(root)
     (root / "docs").mkdir(exist_ok=True)
-    doc = root / "docs" / "td.md"
-    doc.write_text("# design\n", encoding="utf-8")
+    (root / "docs" / "td.md").write_text("# design\n", encoding="utf-8")
     body["artifacts"] = [{"id": "ART-TD", "kind": "technical-design",
                           "status": "awaiting-approval", "path": "docs/td.md"}]
     save_manifest(root, body)
     _request(root, "artifact", "technical-design")
-    doc.write_text("# design\n\nChanged.\n", encoding="utf-8")
     result = _handle(root, plugin)
     assert result.block and not _records(root, "artifact-approval")
     assert read_request(closed_dir(root) / "1.yml")["outcome"] == "stale"
-    assert "changed since the request" in result.message, result.message
+    assert "gives no document a status (ADR-091)" in result.message, result.message
+    assert manifest_of(root)["artifacts"][0]["status"] == "awaiting-approval"
 
 
 # --- the request has not been shown (`TRC-C5`) ---------------------------------------------

@@ -22,13 +22,13 @@ what it explicitly does not.
 
 | Stage | Command | Artifact it writes |
 |---|---|---|
-| Assess | `/compass:assess` | `delivery-approach.md` + the manifest's assessment |
+| Assess | `/compass:assess` | the manifest's assessment and approach |
 | Define acceptance criteria | `/compass:define` | `acceptance-criteria.md` |
-| Requirements review | `/compass:refine` | `requirements-review.md` (ends with the Definition of Ready) |
-| Plan | `/compass:plan` | `technical-design.md` (+ `distribution-map.md` on parallel work) |
-| Break down the work | `/compass:breakdown` | the order of the map's units |
+| Requirements review | `/compass:refine` | the decisions taken and the Definition of Ready, as records |
+| Plan | `/compass:plan` | the design and its work units, in the hand-off and `devlog.md` |
+| Break down the work | `/compass:breakdown` | the order of the work units |
 | Implement | `/compass:implement` | code + the red and green records (named by binding) |
-| Test & review | `/compass:verify` | `verification-report.md` (ends with the Definition of Done, a block `compass issue render` writes from the manifest's records) |
+| Test & review | `/compass:verify` | the gate evidence and the Definition of Done, as records (`compass check` lists each item's state) |
 | Ship | `/compass:ship` | the integration commit + settled follow-ups |
 
 `/compass:assess` itself carries only that light path. The full assess
@@ -125,31 +125,20 @@ compass.yml                     The one file a person edits: settings, and the p
 
 docs/compass/
 └── <created>-<issue-slug>/      One directory per issue: its documents
-    ├── intent.md                Intake (if a product owner was involved)
-    ├── ui-contract.md           Designer contracts (if a designer was involved)
-    ├── acceptance-criteria.md   The shared artifact every role reads
-    ├── requirements-review.md   (ends with the Definition of Ready gate)
-    ├── technical-design.md      The design
-    ├── distribution-map.md      The units of the work, in the order the session builds them
-    ├── positioning.md           Marketer messaging (if written)
-    ├── launch-readiness.md      Marketer claims gate (if `positioning.md` exists)
-    └── verification-report.md   (ends with the Definition of Done gate)
+    ├── acceptance-criteria.md   The one document Compass needs and checks
+    └── ...                      Any note the team keeps, such as ui-contract.md
+                                 or positioning.md; Compass does not read it
 ```
 
-An issue's documents are in `docs/compass/<created>-<issue-slug>/`, where
-`<created>` is the manifest's `created:` date. `compass issue artifact-path
-<kind>` prints where one document is.
+An issue's acceptance criteria are at
+`docs/compass/<created>-<issue-slug>/acceptance-criteria.md`, where `<created>`
+is the manifest's `created:` date. Compass 9.0.0 registers no document and
+keeps no document status (ADR-091). An archived issue's manifest can still hold
+an `artifacts:` list and its folder the documents it names; they stay valid
+and are not read.
 
-The manifest's `artifacts:` registry holds each document's status. The stage
-commands move it: a command that writes the record of a stage approves the
-`draft` documents of earlier stages (`approved_by` names the command), or sets
-`awaiting-approval` for a document with a human check. Ask with `compass evidence
-request --artifact <kind>`; the person types `/compass:approve` (or runs `compass
-evidence approve --artifact <kind>` at a terminal). `compass ship-commit` refuses a
-document that is not approved.
-
-A regular issue owes `intent.md` at depth `lightweight`: the router drafts it
-at assess and the spec author corrects it at define. Every issue whose stored
+The intent opens the acceptance criteria: their Summary and Intent links,
+written at define before any scenario. Every issue whose stored
 configuration sets `release_line: true` on its approach (quick fix, regular,
 hotfix and full on the shipped default) owes a release line, the manifest's
 `release_note` (`schemas/manifest.schema.json`). Give it with
@@ -190,7 +179,7 @@ principle alone does not settle a sentence.
 
 ## When you are unsure
 
-Re-read `delivery-approach.md`. It was written at assessment precisely so a
-later session, or a different agent, can pick the issue up without re-deriving
-the process. If it does not answer the question, the assessment under-sized
+Run `compass approach show` and re-read the manifest. The approach was
+recorded at assessment precisely so a later session, or a different agent, can
+pick the issue up without re-deriving the process. If it does not answer the question, the assessment under-sized
 the work: say so and re-assess rather than improvise.

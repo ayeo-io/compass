@@ -215,11 +215,12 @@ def test_cl_1_the_shipped_policy_has_the_grid_the_decision_records():
     config = classifier_fixtures.preset()
     grid = classify.build_grid(config, config)
     assert grid.labels == ("auth", "migrations", "payments", "personal-data")
-    # The two documents the artifact rules read cross the grid as labels do (ADR-070).
-    assert grid.artifacts == ("intent", "positioning")
+    # The documents an artifact rule reads cross the grid as labels do (ADR-070). The
+    # shipped default has no artifact rule since 9.0.0 (ADR-091), so none crosses it.
+    assert grid.artifacts == ()
     assert grid.closed_points == 72
-    assert grid.points == 4608
-    assert grid.raw_points == 34560          # 540 assessments with each optional one omitted too
+    assert grid.points == 1152
+    assert grid.raw_points == 8640           # 540 assessments with each optional one omitted too
 
 
 # --- CL-2: points combine into a verdict -------------------------------------------
@@ -555,9 +556,9 @@ def test_cl_3_adding_a_plan_exit_check_to_the_shipped_preset_is_tightening(prese
         "stages": {"plan": {"set": {"exit": ["docs-read"]}}}})
     got = _classify(parent, child, cache=preset_cache)
     assert got.result == "tightening", got.reason
-    assert got.grid.points == 4608 and got.grid.evaluated == 4608
+    assert got.grid.points == 1152 and got.grid.evaluated == 1152
     # A second run against the same parent reads the parent's scan.
-    assert len([k for k in preset_cache]) >= 4608
+    assert len([k for k in preset_cache]) >= 1152
 
 
 # --- CL-4: the first difference, and early exit ------------------------------------

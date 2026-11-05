@@ -20,7 +20,8 @@
 #
 # WHAT IT CHECKS
 #   1. The directories and top-level files the repo needs are present.
-#   2. Every expected artifact template exists in templates/.
+#   2. Every shipped template exists in templates/: the acceptance criteria,
+#      the devlog and the five role templates.
 #   3. No command in commands/ names an agent: 9.0.0 ships none (ADR-090), so
 #      any agent a command names would not exist.
 #   4. Every skill referenced anywhere in commands/ exists in skills/.
@@ -78,12 +79,13 @@ for f in CLAUDE.md AGENTS.md README.md docs/methodology.md \
 done
 say ""
 
-# --- 2. expected artifact templates -----------------------------------------
-say "2. Artifact templates"
-for t in delivery-approach intent bug-report incident acceptance-criteria \
-         requirements-review technical-design distribution-map \
-         threat-model rollback-plan \
-         positioning launch-readiness ui-contract verification-report devlog; do
+# --- 2. shipped templates ---------------------------------------------------
+say "2. Templates"
+# 9.0.0 needs only the acceptance criteria (ADR-091). The five role templates
+# stay until their entry points are decided.
+for t in acceptance-criteria devlog \
+         positioning launch-readiness ui-contract architecture-notes \
+         product-owner-review; do
   if [ -f "templates/$t.md" ]; then ok "template $t.md"; else fail "missing template: templates/$t.md"; fi
 done
 say ""
@@ -131,7 +133,7 @@ say ""
 
 # --- 5. templates referenced by commands exist ------------------------------
 say "5. Template references in commands/"
-# Commands say "from `templates/delivery-approach.md`" or "templates/verification-report.md".
+# Commands say "from `templates/acceptance-criteria.md`".
 REFS="$(grep -rohE 'templates/[a-z][a-z.-]+\.md' commands/ 2>/dev/null \
         | sed -E 's:templates/([a-z.-]+)\.md:\1:' | sort -u || true)"
 if [ -z "$REFS" ]; then

@@ -33,7 +33,7 @@ mode the evidence-not-assertion guardrail exists to prevent.
 
 Naming them differently is what stops a judgment call being presented as a
 hard gate, and stops a hard gate being waved through on an opinion. When you
-write the `governance` dimension into `verification-report.md`, the guardrail
+report the `governance` dimension, the guardrail
 findings and the strategy assessment go in clearly separated - evidence on one
 side, judgment on the other.
 
@@ -60,8 +60,7 @@ add ... --meets <item>` records evidence, `compass follow-up add FU-<id>
 --defers <item> --summary "..."` carries the item to ship, and a person ticks
 an item by typing `/compass:approve` for a `compass evidence request --check
 <item>`, or with `compass evidence approve --check <item>` at a terminal. `dod-evidence-typed`
-fails an item with no record. `compass issue render` writes the list and each
-item's state into the verification report.
+fails an item with no record. `compass check` lists each item's state.
 
 ## The loop a red or green belongs to
 
@@ -114,21 +113,18 @@ never a red: the refusal quotes pytest's first error line, and names the fix
 when `conftest.py` imports the driver at module level. With `--loop outer`,
 `--scenario` can repeat and `--every-scenario` binds one run to every
 scenario: one record per scenario, sharing a `run_id`. A red that ends stage 1
-(outer loop, an approach that runs refine, no technical design, distribution
-map or subtask registered) writes `before_implement: true`, no `.red` marker
+(outer loop, an approach that runs refine, plan not handed off, and no
+technical design, distribution map or subtask registered) writes `before_implement: true`, no `.red` marker
 and moves no document (ADR-081). A runner that is not pytest is read from the JUnit report its adapter writes to `COMPASS_JUNIT_REPORT` (ADR-087).
 Only `compass isolation record` and `compass layering record` write the isolation and layering records (ADR-086).
 
-## Records that also move a document
+## Records that move no document
 
 `compass tdd-red` and `compass acceptance record` are the first records of the
-implement stage, except a stage 1 red, which moves nothing. Each one moves the documents of earlier stages that are still
-`draft` and have a path: to `approved` (with `approved_by` naming the command),
-or to `awaiting-approval` when the document has a human check. A person
-approves that document by typing `/compass:approve` for a `compass evidence
-request --artifact <kind>`, or with `compass evidence approve --artifact <kind>`
-at a terminal. That approval is recorded as `artifact-approval`, which no gate accepts and the
-sign-off check of `G5` never reads.
+implement stage. Since 9.0.0 no record moves a document's status: no document
+has one (ADR-091). An `artifact-approval` record an older release wrote, or a
+`--decisions` approval, is accepted by no gate, and the sign-off check of `G5`
+never reads it.
 
 `compass acceptance record --release-note "<text>"` also stores the issue's
 release line in `release_note`, once the command passes. A failed run stores
@@ -154,8 +150,8 @@ A vocabulary - commit, acceptance, and the rest - in
 
 - The **Verifier** does the mechanical half: runs the scenarios as the
   acceptance suite, runs the TDD suite, runs regression, and **writes each
-  capture to an evidence file and links it** from
-  `verification-report.md`. It establishes what is true.
+  capture to an evidence file and registers it** with `compass evidence add`.
+  It establishes what is true.
   **Link, do not paste.** A report that reproduces its evidence stops being
   something a person reads - it becomes a transcript with a summary at the top.
   The record belongs in `evidence/`; the report cites it and states what it
@@ -173,15 +169,15 @@ One checklist per dimension, in `skills/evidence-gates/review-dimensions.md`. Re
 
 ## Passing a gate - the procedure
 
-1. Read `delivery-approach.md` for the gate set and the dimensions in play.
+1. Run `compass approach show` for the gate set and the dimensions in play.
 2. Verifier: run everything the dimensions need, write the raw output to an
-   evidence record and link it from `verification-report.md`, flag every gap.
+   evidence record and register it, flag every gap.
 3. Reviewer: walk each dimension's checklist against the evidence and the
    change. Record per-dimension **pass** or **no-pass with the specific reason**.
-4. Before the verification report is complete, make sure that every required
-   review dimension passed with evidence attached, that every gate in the
-   delivery-approach record and every immovable gate is green, and that no
-   evidence block is empty. The report holds no tick boxes.
+4. Before the verify stage is complete, make sure that every required
+   review dimension passed with evidence attached, that every gate of the
+   approach and every immovable gate is green, and that no evidence record is
+   empty. A tick on a page counts for nothing.
 5. The gate passes only if every applicable dimension passes. One no-pass sends
    the work back to the implement stage, or to a re-assess. A gate is not "mostly passed."
 

@@ -69,6 +69,86 @@ def test_contract_1_a_change_only_a_label_reaches_is_seen():
         "a label-only change went unseen"
 
 
+def _with_floor(policy, rule_id, **change):
+    """`policy`, the shipped one with the two removed rules put back, with one floor
+    changed (or dropped, when `change` is empty)."""
+    from compat_baseline import _with_rules_removed_in_9_0_0
+    policy = copy.deepcopy(_with_rules_removed_in_9_0_0(policy))
+    floors = policy["routing_guardrails"]["floors"]
+    at = next(i for i, rule in enumerate(floors) if rule.get("id") == rule_id)
+    if change:
+        floors[at] = dict(floors[at], **change)
+    else:
+        del floors[at]
+    return policy
+
+
+AUTH = {"risk": "contained", "familiarity": "brownfield-mapped", "size": "medium",
+        "goal": "delivery", "urgency": "none", "role": "engineer", "labels": ["auth"]}
+
+
+def test_contract_1_puts_back_the_gate_and_rules_9_0_0_removed_in_their_place():
+    """9.0.0 routes no `verify.analyze` (ADR-091). The comparison puts the gate and the
+    rule that added it back where 5.6.0 recorded them, and nothing else."""
+    import compat_baseline as cb
+    from compass_pkg.routing import evaluate_route
+    now = evaluate_route(dict(AUTH, labels=["auth"]),
+                         cb._with_rules_removed_in_9_0_0(shipped_policy()))
+    assert "verify.analyze" not in now["gates"]
+    out = compact(AUTH, shipped_policy())
+    assert "verify.analyze" in out["gates"]
+    fired = out["rules_fired"]
+    assert fired.index("RP-REQUIRE-002") + 1 == fired.index("RP-REQUIRE-004"), fired
+    assert "RP-REQUIRE-001" not in fired
+
+
+def test_contract_1_still_sees_any_other_change_beside_the_removed_gate():
+    header, rows = load_routing()
+    # A rule beside the two removed ones is dropped.
+    assert routing_differences(_with_floor(shipped_policy(), "RP-REQUIRE-004"),
+                               header, rows, first_only=True, layered=True)
+    # A removed rule that adds another gate is no longer the removed rule.
+    assert routing_differences(
+        _with_floor(shipped_policy(), "RP-REQUIRE-002", add_gate="verify.claims"),
+        header, rows, first_only=True, layered=True)
+
+
+def test_contract_1_sees_an_evaluator_that_routes_the_removed_gate_again(monkeypatch):
+    """The comparison adds the gate and rule back without merging, so an evaluator
+    that still routed them would record each twice, and differ."""
+    from compass_pkg import routing
+    monkeypatch.setattr(routing, "REMOVED_GATES", {})
+    out = compact(AUTH, shipped_policy())
+    assert out["rules_fired"].count("RP-REQUIRE-002") == 2, out["rules_fired"]
+    assert out["gates"].count("verify.analyze") == 2, out["gates"]
+    header, rows = load_routing()
+    assert routing_differences(shipped_policy(), header, rows, first_only=True,
+                               layered=True)
+
+
+def test_contract_1_puts_back_the_documents_9_0_0_removed():
+    """9.0.0 owes no document (ADR-091). The comparison puts back the approach maps, the
+    two floors and the two document rules 8.0.0 declared, and nothing else."""
+    from compass_pkg.routing import evaluate_route
+    now = evaluate_route(dict(AUTH), shipped_policy())
+    assert now["artifacts"] == [] and now["required_artifacts"] == [], now["artifacts"]
+    assert "RP-REQUIRE-005" not in [f["id"] for f in now["policy_rules_fired"]]
+    out = compact(AUTH, shipped_policy())
+    assert ["threat-model", "full"] in out["artifacts"], out["artifacts"]
+    fired = out["rules_fired"]
+    assert fired.index("RP-REQUIRE-004") + 1 == fired.index("RP-REQUIRE-005"), fired
+
+
+def test_contract_1_still_sees_a_policy_that_owes_a_document_again():
+    """A policy that owes any document is compared as it is, so an approach map that
+    came back would differ from the baseline."""
+    header, rows = load_routing()
+    policy = copy.deepcopy(shipped_policy())
+    policy["route_shapes"]["regular"]["artifacts"] = {"technical-design": "thorough"}
+    assert routing_differences(policy, header, rows, first_only=True, layered=True), \
+        "a returned document map went unseen"
+
+
 # --- contract 2: what each delivery approach owes ---------------------------------
 
 def test_contract_2_each_approach_owes_what_it_owed():
@@ -135,13 +215,64 @@ def test_contract_3_allows_the_removal_of_the_multiagent_check_and_no_other_shap
     assert differs("pass", "fail")
 
 
+def test_contract_3_allows_the_removal_of_the_consistency_check_and_no_other_shape():
+    """9.0.0 removes `consistency-check-passes` with `compass analyze` (ADR-091): a pass,
+    nothing to check or fail may become nothing to check or no row. The archive sample
+    records one fail of it (publish-the-archive). A removed check never passes or fails
+    again, so a move to either is still a difference, and so is a changed exit code."""
+    from compat_baseline import allow_7_0_0_moves, archive_differences
+
+    def differs(old, new):
+        base = {"check_exit": 0, "verdicts": {"suite-passed": "pass"}}
+        then = dict(base, verdicts=dict(base["verdicts"], **({} if old is None else
+                                                            {"consistency-check-passes": old})))
+        now = dict(base, verdicts=dict(base["verdicts"], **({} if new is None else
+                                                           {"consistency-check-passes": new})))
+        return archive_differences(*allow_7_0_0_moves({"x": then}, {"x": now}))
+
+    for old in ("pass", "nothing-to-check"):
+        for new in (None, "nothing-to-check"):
+            assert differs(old, new) == [], (old, new)
+    assert differs("fail", "nothing-to-check") == []
+    assert differs("pass", "fail")
+    assert differs("fail", "pass")
+    assert differs(None, "nothing-to-check")
+    assert archive_differences(*allow_7_0_0_moves(
+        {"x": {"check_exit": 1, "verdicts": {"consistency-check-passes": "fail"}}},
+        {"x": {"check_exit": 0, "verdicts": {}}}))
+
+
+def test_contract_3_allows_the_removal_of_the_rendered_blocks_check_and_no_other_shape():
+    """9.0.0 removes `rendered-blocks-current` with the rendered blocks (ADR-091): a pass or
+    nothing to check may become nothing to check (a stored generation still lists it) or
+    no row, and a row the record did not hold may appear only as nothing to check. A move
+    to pass or fail, or from fail, is still a difference."""
+    from compat_baseline import allow_7_0_0_moves, archive_differences
+
+    def differs(old, new):
+        base = {"check_exit": 0, "verdicts": {"suite-passed": "pass"}}
+        then = dict(base, verdicts=dict(base["verdicts"], **({} if old is None else
+                                                            {"rendered-blocks-current": old})))
+        now = dict(base, verdicts=dict(base["verdicts"], **({} if new is None else
+                                                           {"rendered-blocks-current": new})))
+        return archive_differences(*allow_7_0_0_moves({"x": then}, {"x": now}))
+
+    for old in ("pass", "nothing-to-check"):
+        for new in (None, "nothing-to-check"):
+            assert differs(old, new) == [], (old, new)
+    assert differs(None, "nothing-to-check") == []
+    assert differs("fail", None)
+    assert differs("pass", "fail")
+    assert differs(None, "fail")
+
+
 def test_contract_3_allows_only_the_three_moves_of_7_0_0():
     """The allow-list is exact: a fourth move, or one of the three in another shape, fails."""
     from compat_baseline import allow_7_0_0_moves, archive_differences
     base = {"check_exit": 0, "lint_exit": 0, "receipt_exit": 0,
             "verdicts": {"dashboard-current": "nothing-to-check", "dod-evidence-typed": "pass",
                          "suite-passed": "pass"}}
-    good = {"check_exit": 0, "lint_exit": 0, "receipt_exit": 0,
+    good = {"check_exit": 0, "lint_exit": 0, "show_exit": 0,
             "verdicts": {"rendered-blocks-current": "pass", "dod-evidence-typed": "nothing-to-check",
                          "suite-passed": "pass"}}
 
@@ -163,6 +294,22 @@ def test_contract_3_allows_only_the_three_moves_of_7_0_0():
         assert differs(**{check: "nothing-to-check"}) == []
         assert differs(**{check: "fail"})
         assert differs(**{check: "pass"})
+
+
+def test_contract_6_compares_the_recorded_receipt_exit_as_the_approach_show_exit():
+    """9.0.0 removes `compass issue receipt` (ADR-091). The recorded exit of the receipt is
+    compared as the exit of `approach show`, which reads the same record. Only the key
+    changes: a reader that fails, or a run that records no reader, still differs."""
+    from compat_baseline import allow_7_0_0_moves, archive_differences
+    then = {"check_exit": 0, "lint_exit": 0, "receipt_exit": 0, "verdicts": {}}
+
+    def differs(**now):
+        return archive_differences(*allow_7_0_0_moves({"x": then}, {"x": now}))
+
+    assert differs(check_exit=0, lint_exit=0, show_exit=0, verdicts={}) == []
+    assert differs(check_exit=0, lint_exit=0, show_exit=1, verdicts={})
+    assert differs(check_exit=0, lint_exit=0, verdicts={})
+    assert differs(check_exit=0, lint_exit=0, receipt_exit=0, verdicts={})
 
 
 def test_contract_6_every_sampled_issue_stays_readable():

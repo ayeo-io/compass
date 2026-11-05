@@ -160,9 +160,15 @@ def project(tmp_path, compass_yml=None, assessment=None, evaluate=True):
 
 
 def register(root, kind, status="draft", *more):
-    """`compass issue artifact set <kind> --status <s> --path <its file>`."""
-    return run(root, "issue", "artifact", "set", kind, "--status", status,
-               "--path", f"{DOCS}/{kind}.md", "--issue", SLUG, *more)
+    """Write the entry `compass issue artifact set <kind> --status <s> --path <its file>`
+    wrote before 9.0.0 removed it (ADR-091). Returns `(0, "", "")`, the exit and output
+    the verb gave."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import document_registry
+    assert not more, more
+    document_registry.register(Path(root) / ".compass" / "work" / SLUG, kind,
+                               f"{DOCS}/{kind}.md", status)
+    return 0, "", ""
 
 
 def approve(root, *extra, approver="jed72", role="maintainer", scope="review"):

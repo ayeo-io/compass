@@ -7,14 +7,12 @@
 # re-reading the whole context, against 5 to 6 for the same change done the
 # R1 way. Most of the extra calls were mechanical steps an agent
 # drove one at a time: init, write the manifest from a template read in
-# full, evaluate the approach, write the record, register it, trace
-# changed files, check, record the check, pass three gates, devlog,
+# full, evaluate the approach, write the record, trace changed files, check, record the check, pass three gates, devlog,
 # commit. These two verbs run that same sequence, through the same code
 # every other verb uses, in two calls instead of a dozen.
 #
 # Neither verb re-implements a record. Each step calls the handler that
-# already owns it - `cmd_route_evaluate`, `cmd_issue_artifact`,
-# `cmd_scenario_add`, `cmd_changed_file_add`, `cmd_evidence_add`,
+# already owns it - `cmd_route_evaluate`, `cmd_scenario_add`, `cmd_changed_file_add`, `cmd_evidence_add`,
 # `cmd_gate_pass`, `cmd_check`, `cmd_land_commit` - in-process, with its own
 # printed output captured rather than shown, so the two calls still end in
 # one hand-off apiece instead of a dozen small ones.
@@ -50,7 +48,6 @@ from compass_pkg.core import (
     display_stage, docs_dir, find_governance, find_upwards, reading_matches,
     load_manifest, now_iso, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
 )
-from compass_pkg.artifact_cmd import cmd_issue_artifact
 from compass_pkg.init_cmd import ensure_initialised, resolve_project_root
 from compass_pkg.manifest import (
     cmd_changed_file_add, cmd_evidence_add, cmd_gate_pass, cmd_land_commit,
@@ -181,39 +178,27 @@ def _split_optional(raw, dim):
     return _split_required(raw, dim)
 
 
-def _empty_block(kind):
-    from compass_pkg import rendered_blocks as rb
-    return [rb.OPENING.format(kind=kind), rb.CLOSING]
-
-
-def _delivery_approach_md(slug, intent_text, scenario_id, scenario_text, ledger, advice=()):
-    """The quick fix's record as this command writes it. The header, the assessment and
-    the policy rules that fired and the acceptance-strategy line are empty block pairs: `compass issue render` fills them
-    from the manifest, so the record is never stale against it (ADR-051 decision 2). The
-    advice, intent, scenario and de-scope ledger are prose this command writes once."""
-    lines = [f"# Delivery approach - {slug}", "", *_empty_block("document-header"),
-             "", "## Assessment", "", *_empty_block("assessment"),
-             "", "## Policy rules fired", "", *_empty_block("policy-rules"),
-             "", "## Acceptance strategy", "", *_empty_block("acceptance-strategy")]
+def _start_note(slug, intent_text, scenario_id, scenario_text, ledger, advice=()):
+    """The first lines of the quick fix's devlog. 9.0.0 writes no delivery-approach.md
+    (ADR-091): the manifest holds the approach, and the devlog holds what the manifest
+    has no key for - the intent sentence, the scenario, the advice and the reasons of
+    the de-scope ledger."""
+    lines = [f"# Devlog - {slug}", "", f"INT-1: {intent_text}",
+             f"{scenario_id}: {scenario_text}"]
     if advice:
         # Advisory strategies: they never block, so the record is the only
         # place a session meets them.
-        lines += ["", "## Advice", ""]
+        lines += ["", "Advice:"]
         for s in advice:
             rationale = " ".join(str(s.get("rationale", "")).split()).rstrip(".")
             lines.append(f"- {s.get('strategy', '?')}: {rationale} "
                          f"({s.get('id', '?')})")
-    lines += [
-        "", "## Intent", "", f"INT-1: {intent_text}",
-        "", "## Scenario", "", f"{scenario_id}: {scenario_text}",
-    ]
     if ledger:
-        lines += ["", "## De-scope ledger", "",
-                 "| Stage | Action | Reason |", "|---|---|---|"]
+        lines += ["", "De-scope ledger:"]
         for stage, weight, reason in ledger:
-            lines.append(f"| {display_stage(stage)} | {weight} | {reason} |")
+            lines.append(f"- {display_stage(stage)}: {weight} - {reason}")
     lines.append("")
-    return "\n".join(lines)
+    return "\n".join(lines) + "\n"
 
 
 _LABEL = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
@@ -308,7 +293,7 @@ def cmd_quick_fix_start(args):
     advice = (evaluate_route(readings, policy, autonomy)
               .get("applicable_strategies") or [])
 
-    # The title reaches the living spec at ship; refuse it now, before
+    # The title reaches the release line and the board; refuse it now, before
     # anything is written, if a check on the spec would refuse it there.
     from compass_pkg.manifest import slug_problem, title_problem
     problem = title_problem(resolve_project_root(), args.scenario)
@@ -429,29 +414,13 @@ def cmd_quick_fix_start(args):
     record(os.path.join(project_root, ".compass"),
            os.environ.get(SESSION_ENV, ""), slug)
 
-    doc_dir_rel = docs_dir(task_dir)
-    doc_path_rel = f"{doc_dir_rel}/delivery-approach.md"
-    doc_path_abs = os.path.join(project_root, doc_path_rel)
-    if not os.path.isdir(os.path.join(project_root, "docs", "compass")):
-        created_dirs.append("docs/compass/")
-    os.makedirs(os.path.dirname(doc_path_abs), exist_ok=True)
-    content = _delivery_approach_md(
-        slug=slug, intent_text=args.intent, scenario_id=args.scenario_id,
-        scenario_text=args.scenario, ledger=ledger, advice=advice,
-    )
-    with open(doc_path_abs, "w", encoding="utf-8") as fh:
-        fh.write(content)
-
-    _quiet_run(cmd_issue_artifact, task=slug, kind="delivery-approach",
-              status="draft", reason=None, path=doc_path_rel)
+    devlog_abs = os.path.join(task_dir, "devlog.md")
+    doc_path_rel = os.path.relpath(devlog_abs, project_root).replace(os.sep, "/")
+    with open(devlog_abs, "w", encoding="utf-8") as fh:
+        fh.write(_start_note(slug, args.intent, args.scenario_id, args.scenario, ledger,
+                             advice))
     _quiet_run(cmd_scenario_add, task=slug, scenario_id=args.scenario_id,
               title=args.scenario, intent="INT-1", test=tests)
-    # The record's blocks are filled from the manifest here, as `quick-fix finish` fills the
-    # verification note's, so the record is current from its first line. The after-command
-    # render fills them too, but a project or a test suite can switch that step off.
-    from compass_pkg import render_cmd
-    render_cmd.render_issue(task_dir)
-
     from compass_pkg.decisions import settled
     decisions = settled(project_root)
     return say(
@@ -785,69 +754,6 @@ def _record_usage(task_dir, finish_started_at):
     save_manifest(task, path)
 
 
-NOTE_KIND = "verification-note"
-
-
-def _add_note_block(path, rel):
-    """Make sure a note that already exists holds the `verification-note` block, by adding an
-    empty pair after the person's prose. Without it the render skips the file, and the fix
-    would land with no proof summary."""
-    from compass_pkg import rendered_blocks as rb
-    with open(path, encoding="utf-8", newline="") as fh:
-        text = fh.read()
-    try:
-        held = [b.kind for b in rb.parse(text, rel).blocks]
-    except rb.MarkerError as exc:
-        raise CompassError("compass quick-fix finish: %s cannot take the verification note's "
-                           "block until its render markers are fixed: %s" % (rel, exc))
-    if "verification-note" in held:
-        return
-    eol = rb.line_ending(text)
-    lead = "" if not text or text.endswith("\n") else eol
-    pair = rb.OPENING.format(kind="verification-note") + eol + rb.CLOSING + eol
-    with open(path, "w", encoding="utf-8", newline="") as fh:
-        fh.write(text + lead + (eol if text else "") + pair)
-
-
-def _write_verification_note(task_dir, slug, scenario_ids):
-    """Write the quick fix's one-screen verification note (ADR-051), register it, approve it
-    and fill its block. Returns the note's project-relative path and whether the project
-    commits it (an ignored note is not traced and not staged).
-
-    Called once the three gates have passed, so the note's gate lines are final. It is
-    approved by this command, like the quick fix's other document (ADR-050). A person's
-    prose above the block is kept by every later render."""
-    from compass_pkg import artifact_status, block_renderers, render_cmd
-    rel = docs_dir(task_dir).rstrip("/") + "/" + NOTE_KIND + ".md"
-    path = os.path.join(find_upwards(task_dir, ".compass") or os.getcwd(), *rel.split("/"))
-    task, task_path = load_manifest(task_dir)
-    if not any(isinstance(a, dict) and a.get("kind") == NOTE_KIND for a in task.get("artifacts") or []):
-        # A quick fix started before the approach earned the note.
-        task.setdefault("artifacts", []).append({
-            "id": "ART-VERIFICATION_NOTE", "kind": NOTE_KIND, "status": "draft",
-            "depth": "lightweight", "reason": "One screen of what was checked, for a reader"})
-        save_manifest(task, task_path)
-    if not os.path.isfile(path):
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as fh:
-            fh.write(block_renderers.verification_note_text(slug))
-    else:
-        _add_note_block(path, rel)
-    _quiet_run(cmd_issue_artifact, task=slug, kind=NOTE_KIND, status="draft", path=rel,
-               reason=None)
-    task, task_path = load_manifest(task_dir)
-    if artifact_status.approve_documents(task, artifact_status.BY_QUICK_FIX):
-        save_manifest(task, task_path)
-    render_cmd.render_issue(task_dir)
-    root = find_upwards(task_dir, ".compass") or os.getcwd()
-    if subprocess.run(["git", "check-ignore", "-q", "--", rel], cwd=root).returncode == 0:
-        # A project that ignores its documents commits none of them, so the note is not a
-        # changed file of the fix (the same rule that keeps the other documents out).
-        return rel, False
-    _quiet_run(cmd_changed_file_add, task=slug, path=rel, scenario=list(scenario_ids))
-    return rel, True
-
-
 def cmd_quick_fix_finish(args):
     finish_started_at = now_iso()
     task_dir = resolve_issue_dir(getattr(args, "task", None))
@@ -905,16 +811,6 @@ def cmd_quick_fix_finish(args):
     # because its own paths are relative to that directory.
     invoked_from = os.getcwd()
     project_root = find_upwards(task_dir, ".compass") or invoked_from
-
-    # The note's path is built from the manifest's `created:`, so it is checked, as the render
-    # checks a path, before the test command runs or anything is written.
-    from compass_pkg import render_cmd
-    note_rel = docs_dir(task_dir).rstrip("/") + "/" + NOTE_KIND + ".md"
-    why = render_cmd.unsafe_document_path(task_dir, note_rel, os.path.abspath(project_root))
-    if why:
-        raise CompassError(
-            f"compass quick-fix finish: the verification note at {note_rel} is not written: "
-            f"{why}. Nothing was changed.")
 
     # A finish that lands runs the landing refusals with the other
     # preconditions, before it traces, tests or writes anything. They judge the
@@ -1034,10 +930,6 @@ def cmd_quick_fix_finish(args):
     with _at_project_root(project_root):
         evidence_path_rel = "evidence/check-output.txt"
         evidence_path_abs = os.path.join(task_dir, evidence_path_rel)
-        # The documents are rendered from the records the greens just wrote, so the check
-        # judges what a reader will see (ADR-051).
-        from compass_pkg import render_cmd
-        render_cmd.render_issue(task_dir)
         check_out, check_code = _quiet_run(
             cmd_check, mode="summary", task=slug, evidence_out=evidence_path_abs)
         if check_code != 0:
@@ -1045,13 +937,6 @@ def cmd_quick_fix_finish(args):
                 f"compass quick-fix finish: `compass check` failed - no gate "
                 f"passed and nothing was committed. Full output: "
                 f"{evidence_path_abs}\n{check_out.strip()[-1500:]}")
-
-        # The check has passed, so the quick fix's document is approved by this
-        # command and ship-commit has nothing left to stop on (ADR-050).
-        from compass_pkg import artifact_status
-        task, task_path = load_manifest(task_dir)
-        if artifact_status.approve_documents(task, artifact_status.BY_QUICK_FIX):
-            save_manifest(task, task_path)
 
         task, _ = load_manifest(task_dir)
         existing_ids = {e.get("id") for e in (task.get("evidence") or [])
@@ -1078,8 +963,6 @@ def cmd_quick_fix_finish(args):
         if getattr(args, "no_commit", False):
             # Nothing lands here, so the line is stored now; a landing writes it itself.
             release_line.store(task_dir, note, "compass quick-fix finish")
-
-        note_path, note_committed = _write_verification_note(task_dir, slug, scenario_ids)
 
         devlog_path = os.path.join(task_dir, "devlog.md")
         if not os.path.isfile(devlog_path):
@@ -1130,7 +1013,7 @@ def cmd_quick_fix_finish(args):
             )
 
         stage_paths = sorted(set(production_paths) | set(artifact_paths)
-                             | {f".compass/work/{slug}"} | ({note_path} if note_committed else set()))
+                             | {f".compass/work/{slug}"})
         ship_out, ship_code = _quiet_run(cmd_land_commit, task=slug,
                                          message=args.message,
                                          files=stage_paths, release_note=note)
@@ -1143,21 +1026,6 @@ def cmd_quick_fix_finish(args):
                 + ship_out.strip())
         ship_tail_lines = [ln for ln in ship_out.strip().splitlines() if ln.strip()]
         ship_tail = ship_tail_lines[-1] if ship_tail_lines else "commit recorded"
-        # Landing re-derives the living spec. When that fails the land still
-        # stands, so ship-commit only notes it - and a note finish dropped
-        # left the issue out of the spec with nothing said.
-        spec_lines = [ln.strip() for ln in ship_tail_lines
-                      if "living spec" in ln and ln.strip() != ship_tail.strip()]
-        missing = re.search(r"missing from \.compass/work/: (.+?)\. ", ship_out)
-        if missing:
-            # The output layer shortens a long line, and the names are the
-            # part a reader needs, so they get a short line of their own.
-            spec_lines = ["living spec NOT re-derived: records missing for "
-                          + missing.group(1)]
-        if any("NOT re-derived" in ln or "commit failed" in ln for ln in spec_lines):
-            spec_lines.append(
-                "fix it: copy those issue folders into .compass/work/, then "
-                "run `compass spec sync`")
         landed, _ = load_manifest(task_dir)
         committed_files = _commit_files(landed.get("land_commit"), project_root)
         traced_now = {cf.get("path") for cf in (landed.get("changed_files")
@@ -1176,7 +1044,7 @@ def cmd_quick_fix_finish(args):
             detail=detail + _commit_lines(committed_files, slug)
             + [f"not traced: {_shown(p)} - committed since start; trace it "
                f"with `compass changed-file add` if it is this fix's"
-               for p in untraced] + spec_lines + [ship_tail],
+               for p in untraced] + [ship_tail],
             decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
             committed=True,
         )

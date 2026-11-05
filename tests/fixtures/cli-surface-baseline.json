@@ -141,7 +141,6 @@
   "subcommands": [
     "acceptance",
     "adr",
-    "analyze",
     "approach",
     "bdd",
     "board",
@@ -160,7 +159,6 @@
     "layering",
     "lesson",
     "next",
-    "plan",
     "policy",
     "preset",
     "quick-fix",
@@ -172,7 +170,6 @@
     "rework-scan",
     "scenario",
     "ship-commit",
-    "spec",
     "tdd-green",
     "tdd-red",
     "terminology"

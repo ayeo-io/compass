@@ -1,6 +1,6 @@
 """Acceptance tests for richer plans (issue executable-bdd-and-richer-plans).
 
-The technical-design template carries five optional sections - a Summary
+The technical-design template carried five optional sections - a Summary
 preamble, a sequence diagram, a structural diagram, named design patterns,
 and illustrative code - each with its own rule for when it earns a place,
 governed by a new `plan-authoring` skill.
@@ -23,10 +23,8 @@ from __future__ import annotations
 import pathlib
 import re
 
-import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PLAN_TEMPLATE = ROOT / "templates" / "technical-design.md"
 PLAN_SKILL = ROOT / "skills" / "plan-authoring" / "SKILL.md"
 WRITING_GUIDE = ROOT / "docs" / "writing-specs-and-plans.md"
 
@@ -60,72 +58,9 @@ FIVE_SECTIONS = {
 }
 
 
-def test_trc_c1_template_offers_five_optional_sections():
-    text = PLAN_TEMPLATE.read_text(encoding="utf-8")
-    heads = "\n".join(_headings(text))
-
-    for name, pattern in FIVE_SECTIONS.items():
-        assert re.search(pattern, heads), (
-            f"the plan template has no heading for the {name} section.\n"
-            f"Headings found:\n{heads}"
-        )
-
-    # each of the five is marked optional in the template itself
-    for name, pattern in FIVE_SECTIONS.items():
-        body = _section(text, pattern)
-        assert re.search(r"optional", body, re.I), (
-            f"the {name} section is not marked optional; a reader would take "
-            f"it as mandatory and pad every plan with it"
-        )
-
-    # the Summary comes before Approach, as it does in the spec template, so a
-    # reader who has learned where to find it in one artifact finds it in both
-    order = [h.lower() for h in _headings(text)]
-    summary_at = next(i for i, h in enumerate(order) if "summary" in h)
-    approach_at = next(i for i, h in enumerate(order) if "approach" in h)
-    assert summary_at < approach_at, (
-        f"Summary must precede Approach; got {order}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# `TRC-C2` - each optional section states its own inclusion rule
-# ---------------------------------------------------------------------------
-
-@pytest.mark.parametrize("name,pattern", list(FIVE_SECTIONS.items()))
-def test_trc_c2_each_section_states_inclusion_rule(name, pattern):
-    body = _section(PLAN_TEMPLATE.read_text(encoding="utf-8"), pattern)
-
-    # when to fill it in
-    assert re.search(r"\b(include|use|reach for)\b.*\bwhen\b", body, re.I | re.S), (
-        f"the {name} section never says when it should be filled in"
-    )
-    # and when to leave it out
-    assert re.search(r"\b(omit|skip|leave (it )?out|do not (include|invoke)|none of)\b",
-                     body, re.I | re.S), (
-        f"the {name} section never says when to omit it - an optional section "
-        f"that only says when to use it gets used every time"
-    )
-
-
-# ---------------------------------------------------------------------------
-# `TRC-C3` - the existing sections survive unchanged
-# ---------------------------------------------------------------------------
-
-def test_trc_c3_existing_sections_survive():
-    text = PLAN_TEMPLATE.read_text(encoding="utf-8")
-    heads = "\n".join(_headings(text))
-
-    for required in ["Approach", "Design decisions", "Governance check",
-                     "Work units"]:
-        assert re.search(re.escape(required), heads, re.I), (
-            f"the pre-existing '{required}' section is gone from the template"
-        )
-
-    # The gate checklist is a rendered block, met by records (artifact-catalogue-fields).
-    gate = _section(text, r"Gate")
-    assert not re.findall(r"^- \[[ x]\] ", gate, re.M | re.I), "the gate holds a tick box"
-    assert "<!-- compass:render plan-exit -->" in gate, "the gate lost its plan-exit block"
+# `TRC-C1` to `TRC-C3` read the technical-design template, which 9.0.0
+# deleted (ADR-091). The plan-authoring skill and the writing guide keep the
+# five sections.
 
 
 # ---------------------------------------------------------------------------
@@ -168,18 +103,7 @@ def _route_rule(text, route):
 # ---------------------------------------------------------------------------
 
 def test_trc_c5_named_pattern_requires_reason():
-    body = _section(PLAN_TEMPLATE.read_text(encoding="utf-8"), r"[Pp]attern")
-
-    assert re.search(r"\b(why|reason|earns?|justif)", body, re.I), (
-        "the named-patterns section does not require a reason per pattern, so "
-        "it invites pattern-name-dropping"
-    )
-    assert re.search(r"(cannot|can't|unable to) name|if you cannot", body, re.I), (
-        "the section does not tell the author to omit it when no pattern can "
-        "actually be named"
-    )
-
-    # the skill must carry the same rule, since that is where an author looks
+    # The skill carries the rule, since that is where an author looks.
     skill = PLAN_SKILL.read_text(encoding="utf-8")
     assert re.search(r"\b(why|reason|earns?|justif)", skill, re.I), (
         "the plan-authoring skill does not require a reason per named pattern"

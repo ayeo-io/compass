@@ -1,7 +1,7 @@
 <!--
 TEMPLATE: product-owner-review.md
 Role in the pipeline: the product owner's check, at the plan stage, that the
-design still delivers the intent. It reads intent.md, the acceptance criteria
+design still delivers the intent. It reads the intent (the Summary and Intent links of the acceptance criteria), the acceptance criteria
 and the technical design, and either lets the plan go to breakdown or sends
 it back with findings.
 
@@ -10,20 +10,17 @@ Fill every {{PLACEHOLDER}}.
 
 # Product-owner review - {{ISSUE_SLUG}}
 
-<!-- compass:render document-header -->
-<!-- /compass:render -->
-
 ## Verdict
 
 {{Pass or no pass on intent fidelity, and the one reason that decides it.}}
 
 ## Success signals and measures
 
-{{Each success signal in intent.md, the scenarios and design elements that deliver it, and any signal nothing delivers.}}
+{{Each success signal of the intent, the scenarios and design elements that deliver it, and any signal nothing delivers.}}
 
 ## Scope beyond the intent
 
-{{Anything the design builds that intent.md did not ask for, and whether it should stay.}}
+{{Anything the design builds that the intent did not ask for, and whether it should stay.}}
 
 ## Findings
 

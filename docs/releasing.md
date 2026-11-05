@@ -389,8 +389,8 @@ with the version hidden.
    every issue. (`compass ci` is what CI runs; failing it locally means CI
    will fail.) Run `COMPASS_FULL_ARCHIVE=1 make test` too: the archive
    tests then read every local issue instead of the tracked sample,
-   `tests/fixtures/archive-sample.tar.gz`, and the living-spec and citation
-   tests, which skip without it, run.
+   `tests/fixtures/archive-sample.tar.gz`, and the citation tests, which
+   skip without it, run.
 
 5. **`make release`** - produces `dist/compass-<version>.tar.gz`.
 
@@ -544,20 +544,6 @@ Run these on top of steps 1 to 9, before step 10.
    changed behavior, what is fixed, and "Queued against this release" (step 9).
    Say plainly that nothing is removed, and name the behavior changes listed
    above.
-
----
-
-## Artifact freshness at ship
-
-Compass records the digest of each document when it is written. With the
-`artifact-freshness` capability on, `ship` also refuses a document that is
-stale, because an artifact it depends on changed after it was written. The
-capability is off in the shipped default, so a stale document is refused only
-when the `artifact-freshness` capability is on. Run `compass policy show` to
-see the setting. Before a release, check whether your project turned it on,
-and rewrite each stale document it names. See
-[artifact-freshness.md](artifact-freshness.md) for how to switch it on and how
-to rewrite an approved document.
 
 ---
 
@@ -824,15 +810,7 @@ minutes. Each entry the queue builds runs the whole suite, so
 `max_entries_to_build` sets how many suite runs can go at once.
 
 After the rule is on, merge a pull request with "Merge when ready", which
-adds it to the queue. The living spec is not committed on a branch
-(`living_spec: refresh` in `compass.yml`, see `docs/configuration.md`).
-Before a release, a maintainer re-derives it in one pull request:
-
-```bash
-git switch -c refresh-living-spec origin/main
-compass spec sync
-git push -u origin refresh-living-spec
-```
+adds it to the queue.
 
 ### The pull request text
 

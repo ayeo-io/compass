@@ -90,7 +90,7 @@ def test_prc_3(tmp_path):
     assert readiness_catalogue.floor(layered) == sorted(REQUIRED_SIGNALS)
 
 
-def _diff_result(project, parent="default@7", child="project"):
+def _diff_result(project, parent="default@8", child="project"):
     code, out, err = support.run_compass(project, "policy", "diff", parent, child, "--json")
     assert code == 0, out + err
     return json.loads(out)["classification"]["result"]
@@ -1854,10 +1854,9 @@ def test_prc_30_manifest(tmp_path):
 def test_prc_30(tmp_path):
     stale = _not_measured_manifests(tmp_path)
     _register_approach(stale, FLOOR_SLUG)
-    # The delivery approach says the record was stale, not only that it is missing.
-    code, out, err = support.run_compass(stale, "issue", "render", "--issue", FLOOR_SLUG)
-    assert code == 0, out + err
-    assert "Repository readiness: not measured (record stale" in _delivery_approach_text(stale)
+    # The board says the record was stale, not only that it is missing. Before 9.0.0 the
+    # delivery-approach record said so too (ADR-091 removed the render).
+    assert "Repository readiness: not measured (record stale" in _board_page(stale)
 
 
 def test_prc_36(tmp_path):
@@ -1912,26 +1911,15 @@ def _board_page(project):
     return page.read_text(encoding="utf-8")
 
 
-def _receipt(project, slug=READ_SLUG):
-    code, out, err = support.run_compass(project, "issue", "receipt", "--issue", slug)
-    assert code == 0, out + err
-    return out
-
-
-def _readiness_lines(text):
-    return [line.strip() for line in text.splitlines() if "Repository readiness" in line]
-
-
 def _register_approach(project, slug):
     """Write a delivery approach with the readiness block marker under
     docs/compass and register it in the issue's manifest. Returns the document."""
     rel = f"docs/compass/2026-10-13-{slug}/delivery-approach.md"
     document = Path(project) / rel
     document.parent.mkdir(parents=True, exist_ok=True)
-    template = (ROOT / "templates" / "delivery-approach.md").read_text(encoding="utf-8")
-    start = template.index("## The assessment")
-    document.write_text(f"# Delivery approach - {slug}\n\n" + template[start:].split("\n---\n")[0],
-                        encoding="utf-8")
+    # A record written before 9.0.0, which deleted the template (ADR-091).
+    document.write_text(f"# Delivery approach - {slug}\n\n## The assessment\n\n"
+                        "Risk contained, familiarity mapped, size small.\n", encoding="utf-8")
     path = Path(project) / ".compass" / "work" / slug / "manifest.yml"
     manifest = yaml.safe_load(path.read_text(encoding="utf-8"))
     manifest["delivery_approach"] = "feature"
@@ -1980,9 +1968,7 @@ def test_prc_31(tmp_path):
         "%Y-%m-%dT%H:%M:%S+00:00")
     path.write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
     before = _snapshot_tree(Path(project) / ".compass" / "work", Path(project) / "docs")
-    receipt = _receipt(project, SAMPLE_SLUG)
     page = _board_page(project)
-    assert any(NOT_MEASURED_LINE in line for line in _readiness_lines(receipt)), receipt
     assert NOT_MEASURED_LINE in page
     after = _snapshot_tree(Path(project) / ".compass" / "work", Path(project) / "docs")
     assert after == before
@@ -1998,24 +1984,14 @@ def test_prc_32(tmp_path):
     manifest["readiness"] = summary
     task.write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
     line = "Repository readiness: 9 of 11 signals, floor met"
-    code, out, err = support.run_compass(project, "issue", "render", "--issue", READ_SLUG)
-    assert code == 0, out + err
-    text = document.read_text(encoding="utf-8")
-    assert line in text
-    # The line sits under the assessment, inside a readiness block.
-    assert text.index("## The assessment") < text.index(line)
-    assert "<!-- compass:render readiness -->" in text
-    assert _readiness_lines(_receipt(project)) == [line]
+    # The board shows the line. Before 9.0.0 a readiness block in the delivery-approach
+    # record showed it too (ADR-091 removed the render).
     assert line in _board_page(project)
 
-    # An issue whose record was never measured shows the same words in all three.
-    other, other_document = _read_project(tmp_path / "q", readiness={
+    # An issue whose record was never measured shows the not-measured words.
+    other, _other_document = _read_project(tmp_path / "q", readiness={
         "status": "not-measured", "reason": "missing",
         "detail": "no .compass/readiness.yml; run compass readiness"})
-    code, out, err = support.run_compass(other, "issue", "render", "--issue", READ_SLUG)
-    assert code == 0, out + err
-    assert NOT_MEASURED_LINE in other_document.read_text(encoding="utf-8")
-    assert NOT_MEASURED_LINE in "\n".join(_readiness_lines(_receipt(other)))
     assert NOT_MEASURED_LINE in _board_page(other)
 
 

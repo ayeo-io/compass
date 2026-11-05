@@ -20,8 +20,10 @@ def test_adapter_entries_compose_the_same_policy(tmp_path):
         ("contained", "medium", "exploration", "", "spike"),
         ("contained", "medium", "delivery", "positioning", None),
     ]
-    # The last column was a role before 7.0.0; a document on disk now brings
-    # the claims gate (ADR-070).
+    # The last column was a role before 7.0.0 and a document reading after it.
+    # The shipped default declares no artifact rule since 9.0.0 (ADR-091
+    # decision 3), so the reading adds no claims gate. #354, which removes the
+    # role entry points, decides how claims are reviewed.
     for index, (risk, size, goal, documents, expected) in enumerate(cases):
         results = []
         for name in ("claude-code", "codex"):
@@ -34,7 +36,7 @@ def test_adapter_entries_compose_the_same_policy(tmp_path):
         if expected:
             assert results[0]["delivery_approach"] == expected
         if documents == "positioning":
-            assert "verify.claims" in results[0]["gates"]
+            assert "verify.claims" not in results[0]["gates"]
 
 
 @pytest.mark.parametrize("first,second", [("claude-code", "codex"),
@@ -80,10 +82,8 @@ def test_git_environment_cannot_escape_project(tmp_path, monkeypatch):
                 "GIT_OBJECT_DIRECTORY": str(outside.project / ".git/objects")}
     for key, value in supplied.items():
         monkeypatch.setenv(key, value)
-    monkeypatch.setenv("COMPASS_RENDER_AFTER", "0")
     isolated = Adapter("codex", tmp_path / "isolated")
     assert not set(supplied).intersection(isolated.env), "Git repository selection leaked"
-    assert isolated.env["COMPASS_RENDER_AFTER"] == "1"
     isolated.seed("quick-fix")
     assert (isolated.project / ".git").is_dir()
     after = {str(path.relative_to(outside.project)): hashlib.sha256(path.read_bytes()).hexdigest()
@@ -106,8 +106,9 @@ def test_regular_feature_records_agree(tmp_path):
         assert {gate["id"] for gate in manifest["gates"]} == {
             "verify.correctness", "verify.governance", "verify.traceability",
             "verify.regression", "verify.clarity", "verify.security"}
-        assert {artifact["kind"] for artifact in manifest["artifacts"]} >= {
-            "acceptance-criteria", "technical-design", "distribution-map", "verification-report"}
+        # Routing writes no document list since 9.0.0 (ADR-091); `compass check`
+        # in observe() reads the acceptance criteria at their fixed path.
+        assert manifest["artifacts"] == []
         assert any(record["type"] == "test-run" and record["passed"]
                    for record in observation["evidence"])
         observations.append(observation)
@@ -131,7 +132,6 @@ def test_semantic_changes_and_tampered_evidence_fail(tmp_path):
         "decision": "approved", "scope": "synthetic subject-check input only",
         "timestamp": "2026-10-15T00:00:00Z", "synthetic": True})
     (adapter.issue_dir / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False))
-    adapter.cli("issue", "render", "--issue", adapter.slug)
     original = adapter.observe()
     approval = next(record for record in original["evidence"]
                     if record["type"] == "human-approval")

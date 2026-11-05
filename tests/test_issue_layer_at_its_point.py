@@ -24,9 +24,10 @@ QUICK_FIX = {"size": "small"}
 SPIKE = {"goal": "exploration"}
 # How a refusal names the point it was found at: the fixture's own assessment.
 _OWN = "at risk contained, familiarity brownfield-mapped, size medium, goal "
-# The issue's own point carries the documents it has on disk (ADR-070).
-DELIVERY_POINT = _OWN + "delivery, role engineer, labels none, documents none"
-SPIKE_POINT = _OWN + "exploration, role engineer, labels none, documents none"
+# The issue's own point is its assessment alone: no command reads the documents
+# an issue has on disk (ADR-091), so the point names no documents.
+DELIVERY_POINT = _OWN + "delivery, role engineer, labels none"
+SPIKE_POINT = _OWN + "exploration, role engineer, labels none"
 
 
 def _issue(tmp_path, assessment=None, **extra):
@@ -175,7 +176,7 @@ def test_ip_8_the_preview_classification_is_at_the_issues_own_assessment(tmp_pat
     assert code == 1 and doc["classification"]["result"] == "loosening"
     point = doc["classification"]["first_point"]
     own = fx.manifest_of(task_dir)["assessment"]
-    assert point["assessment"] == dict(own, artifacts=[])
+    assert point["assessment"] == own
     assert point["represents"] == {k: [v] for k, v in own.items() if k != "labels"}
     assert doc["classification"]["scan"] == "full"
 
@@ -200,7 +201,9 @@ def test_ip_9_bare_regular_on_a_quick_fix_issue_names_every_field_that_makes_it_
     assert "approaches.subtask_ceiling" in reason
     tail = reason.split("looser or cannot be compared:", 1)[1]
     assert "approaches.subtask_ceiling" in tail
-    assert "approaches.stages (breakdown)" in tail and "approaches.artifacts" in tail
+    # No approach declares an `artifacts:` map since 9.0.0 (ADR-091), so it is no
+    # longer one of the fields that differ.
+    assert "approaches.stages (breakdown)" in tail and "approaches.artifacts" not in tail
     assert "approaches.gates" not in tail        # a tightening is not listed
 
 

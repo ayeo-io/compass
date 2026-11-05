@@ -120,9 +120,8 @@ def _rewrite(issue, rel, change):
 
 
 def _rendered_check(issue):
-    """`compass check` after the issue page is rendered, as the stages render it, so
-    the only findings are the records'."""
-    issue.must("issue", "render", "--issue", issue.slug)
+    """`compass check`, whose only findings are the records'. Before 9.0.0 the issue
+    page was rendered first; 9.0.0 renders nothing (ADR-091)."""
     return issue.check()
 
 

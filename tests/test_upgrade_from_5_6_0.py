@@ -239,11 +239,27 @@ def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(relea
         # four-layer acceptance strategy's advisory check (8.0.0 preset) by 1, and its
         # outer-loop check (ADR-080) by 1, its support-code check by 1, its
         # `attempts` check (ADR-084) by 1, and its isolation and layering checks and
-        # their evidence types `isolation-proof` and `layering` (ADR-086) by 4.
+        # their evidence types `isolation-proof` and `layering` (ADR-086) by 4. 9.0.0
+        # removes `rendered-blocks-current`, `artifacts-approved`, `contracts-declared`
+        # and the design-size check (ADR-091), which lowers it by 4. Its default
+        # declares no artifact rule (ADR-091 decision 3), so `RP-ART-001` and
+        # `RP-ART-002` go from the drift report, which lowers it by 2 more.
         gates, choices = _evaluate_lines(after)
-        drift = "this project's policy is missing 18 rule(s) or check(s)"
-        assert len([c for c in choices if drift in c]) == 1, slug
-        assert (gates, [c for c in choices if drift not in c]) == _evaluate_lines(before), slug
+        drift = "this project's policy is missing 12 rule(s) or check(s)"
+        assert len([c for c in choices if drift in c]) == 1, (slug, choices)
+        # 9.0.0 drops the removed gate `verify.analyze` (ADR-091), which the copied
+        # 5.6.0 rules `RP-REQUIRE-001` and `RP-REQUIRE-002` add; a rule that only adds it
+        # no longer fires. That is one gate and one choice line for the `auth` issue.
+        (count, rest), old_choices = _evaluate_lines(before)
+        count = str(int(count) - (1 if slug == "add-farewell" else 0))
+        old_choices = [c for c in old_choices
+                       if "RP-REQUIRE-001" not in c and "RP-REQUIRE-002" not in c]
+        # With those two lines gone, the output lists one more fired rule, `RP-REQUIRE-005`,
+        # which the copied 5.6.0 rules fire for this issue too.
+        new_choices = [c for c in choices if drift not in c
+                       and not (slug == "add-farewell" and "RP-REQUIRE-005" in c)]
+        assert (gates, new_choices) == ((count, rest), old_choices), (
+            slug, sorted(set(new_choices) - set(old_choices)), sorted(set(old_choices) - set(new_choices)))
         lint = _cli(CLI, root, "issue", "lint", "--issue", slug)
         assert lint.returncode == 0, lint.stdout + lint.stderr
 

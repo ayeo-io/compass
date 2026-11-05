@@ -436,16 +436,6 @@ class Issue:
     folder: object = None
 
 
-def _point_of(issue, a, b):
-    """The issue's assessment with the documents on disk that either side's
-    conditions name, as an evaluation of the issue would read it."""
-    if not issue.folder or not isinstance(issue.assessment, dict):
-        return issue.assessment
-    from compass_pkg import documents_present
-    return documents_present.with_presence(issue.assessment, issue.folder,
-                                           [a.config, b.config, issue.config])
-
-
 def read_archive(root):
     """Every issue under `.compass/work/` of the project, by slug. A folder
     with no manifest is left out. A manifest that does not parse as a mapping
@@ -481,7 +471,7 @@ def _replay_archive(run, archive):
         if not isinstance(issue.assessment, dict):
             continue
         replayed += 1
-        point = _point_of(issue, *run.sides)
+        point = issue.assessment
         found = run.differences(point)
         if found:
             changes.append(_point("archive", issue.slug, point, None, found))
@@ -579,7 +569,7 @@ def open_report(a, b, issues):
                 unresolved = {"side": name, "message": problem}
                 break
             sides.append(merged)
-        differences, point = [], _point_of(issue, a, b)
+        differences, point = [], issue.assessment
         if unresolved is None:
             if isinstance(issue.assessment, dict):
                 differences = _differences(

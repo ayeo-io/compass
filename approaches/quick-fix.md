@@ -13,9 +13,7 @@ and three skills. The per-stage weights in this document are what that command i
 
 - size is `atomic` or `small`, **and**
 - risk is `trivial` or `contained`, **and**
-- no floor raises the approach, **and**
-- no `intent.md` or `positioning.md` is present (either one adds artifacts and
-  gates, which pull the approach up).
+- no floor raises the approach.
 
 Typical issues: copy fixes, a bounded bug fix with an obvious cause, adding a
 small variant of an existing pattern, a config change with a known shape.
@@ -24,10 +22,10 @@ small variant of an existing pattern, a config change with a known shape.
 
 | Stage | Weight on quick fix |
 |---|---|
-| Assess | Thorough. Always runs, always writes `delivery-approach.md`. ~minutes. |
+| Assess | Thorough. Always runs, always records the approach in the manifest. ~minutes. |
 | Define | **One scenario.** A single Given/When/Then that names the new behavior. That scenario is the spec. |
 | Refine | **Collapsed** - permitted only because the one scenario is unambiguous. If it is not unambiguous, the assessment does not produce quick fix. |
-| Plan | **Collapsed** to a one-line "edit which file(s)" note in `delivery-approach.md`. No `technical-design.md`. |
+| Plan | **Collapsed** to a one-line "edit which file(s)" note in `devlog.md`. No design. |
 | Breakdown | **Skipped.** Solo, current branch, no worktree. |
 | Implement | Thorough TDD: write the failing test for the scenario, make it green, refactor. Test surface = the one scenario plus its obvious edges. |
 | Verify | Lightweight gate: run the new test + the existing suite, paste output. |
@@ -51,7 +49,7 @@ Solo. No worktree. Breakdown is a no-op.
 | Plan | collapsed to a one-liner | No design decision and no new architecture - size `atomic`/`small` with trivial or contained risk means the plan is "edit this file." |
 | Breakdown | skipped | One subtask of work. Parallelism would be pure overhead. |
 
-These justifications are copied into the issue's `delivery-approach.md` so the skip is
+These justifications open the issue's `devlog.md` so the skip is
 auditable per-issue, not just per-approach.
 
 ## quick fix may NOT
@@ -68,4 +66,4 @@ auditable per-issue, not just per-approach.
   block it: the approach record gives `behavior-mapping` as advice
   (`RP-ADV-002`).
 - Be used to "just get the change in" past the approach the evaluator
-  actually computed. `delivery-approach.md` makes that visible.
+  actually computed. `compass approach show` makes that visible.

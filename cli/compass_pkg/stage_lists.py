@@ -12,8 +12,7 @@ configuration has no rows.
 Which list is due. `compass next` names the current stage. The entry list of a
 stage is due once the stage is current or behind the issue, and its exit list
 once the stage is behind it. A landed issue has every list due. A list that is
-not due is still reported, so the receipt can show it, but `compass check`
-counts only due rows.
+not due is still reported, but `compass check` counts only due rows.
 
 How a check is judged:
 
@@ -44,7 +43,7 @@ the assessment, reports a failure as a pass that says so.
 """
 # DEPENDENCY: standard library (dataclasses, os); compass_pkg.check_registry,
 # compass_pkg.check_results, compass_pkg.core, compass_pkg.item_records,
-# compass_pkg.next_cmd, compass_pkg.review_records.
+# compass_pkg.next_cmd, compass_pkg.review_records, compass_pkg.word_map.
 # It reads configuration through an EffectiveView and does not import
 # compass_pkg.obligations, which only classify, effective and replay may import.
 from __future__ import annotations
@@ -56,6 +55,7 @@ from compass_pkg import item_records, review_records
 from compass_pkg.check_registry import CHECK_FNS
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FOUND, OMITTED, resolve_artifact, unregistered_document
+from compass_pkg.stable_ids import DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH, STAGE_REFINE, STAGE_VERIFY
 
 CAPABILITY = "entry-exit-evaluation"
 SIDES = ("entry", "exit")
@@ -122,8 +122,8 @@ class _Documents:
 def _tick(check_id, check, stage, side, documents, task, owes):
     """`(status, detail)` of a human check, or None when its document is
     recorded as omitted (the check is skipped). `owes` is `(approach, kinds)`,
-    the document kinds the routed approach lists among its artifacts, or None
-    when the approach is not known. The records of the manifest decide; the
+    the checklist documents the approach owes (`owes`), or None when the
+    approach is not known. The records of the manifest decide; the
     document is not read."""
     state = documents.state(side)
     if state == "omitted":
@@ -194,24 +194,52 @@ def positions(view, task, task_dir):
     return order, (order.index(current) if current in order else len(order))
 
 
+#: The stage modes that owe each checklist document when an approach declares no
+#: `artifacts:` map (ADR-091): the same approaches as the shipped maps before 9.0.0.
+_OWING_MODES = {"requirements-review": (STAGE_REFINE, (DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH)),
+                "verification-report": (STAGE_VERIFY, (DEPTH_THOROUGH,))}
+
+
+def owed_by_stages(modes):
+    """The checklist documents an issue's stage modes owe: the requirements review (the
+    Definition of Ready) where refine is lightweight or thorough, the verification report
+    (the Definition of Done) where the `verify` stage is thorough. A mode stored in a
+    retired word (`light`, `full`), as a manifest written before the rename holds, is
+    read as its current word."""
+    from compass_pkg import word_map
+    modes = modes if isinstance(modes, dict) else {}
+    renamed = word_map.tables().get("stage_mode") or {}
+    return {kind for kind, (stage, owing) in _OWING_MODES.items()
+            if renamed.get(modes.get(stage), modes.get(stage)) in owing}
+
+
+def owes(approach_name, approach, modes):
+    """`(approach, kinds)`: the checklist documents the approach owes. A configuration that
+    declares the approach's `artifacts:` map, as a stored generation or a frozen preset
+    does, is read as before; one with no map owes by the issue's stage modes, or the
+    approach's own when the issue records none."""
+    if "artifacts" in approach:
+        return approach_name, set(approach.get("artifacts") or {})
+    return approach_name, owed_by_stages(modes or approach.get("stages"))
+
+
 def evaluate(view, task, task_dir, run=True):
     """The rows of every list of the issue, in stage order, entry before exit.
     An empty list for an issue read without a configuration. A check that
     says `requires: [entry-exit-evaluation]` (the shipped Definition of Ready
     and Done) is active only where the capability is on; a check a project adds
     runs whatever the capability. With `run` false a deterministic check is not
-    run and its row is `pending`: the receipt reads the record and never
-    re-runs a check."""
+    run and its row is `pending`, so a reader of the record never re-runs a
+    check."""
     if view is None:
         return []
     config = view.config
     approach_name = task.get("delivery_approach")
     approach = (config.get("approaches") or {}).get(approach_name)
-    owes = (None if approach is None
-            else (approach_name, set(approach.get("artifacts") or {})))
     checks = config.get("checks") or {}
     stages = config.get("stages") or {}
     modes = task.get("stages") if isinstance(task.get("stages"), dict) else {}
+    owes_now = None if approach is None else owes(approach_name, approach, modes)
     reading = view.listing_assessment(task.get("assessment") or {},
                                       task.get("delivery_approach"))
     capabilities = {name for name, on in view.capabilities.items() if on}
@@ -239,7 +267,7 @@ def evaluate(view, task, task_dir, run=True):
                 kind = check.get("kind")
                 status, detail, settled = _outcome(
                     check_id, check, kind, side, stage, producer, modes, task, task_dir,
-                    documents, due, run, owes)
+                    documents, due, run, owes_now)
                 if status != "pending":
                     status, detail = _apply(view, check, status, detail, settled, reading)
                 rows.append(Row(stage, side, check_id, status, detail, due, severity))

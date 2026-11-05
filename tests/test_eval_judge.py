@@ -2213,8 +2213,8 @@ def test_scope_kept_is_no_edit_when_only_a_test_path_changed():
 def test_scope_kept_passes_the_real_scope_growth_pilot_record():
     """`changed_paths` below is the real scope-growth-compass-1.json pilot
     record: the session fixed the bug and asked before building the
-    dashboard, but `compass ship-commit` derives `docs/system-spec.md`
-    when an issue lands, so it appeared in `changed_paths` too. That path
+    dashboard, but `compass ship-commit` derived the living spec when an
+    issue landed before 9.0.0, so it appeared in `changed_paths` too. That path
     counts as one of Compass's own records, the same as `.compass/` and
     `docs/compass/` - a session that kept to its scope must not fail here
     for a file it never touched by hand."""
@@ -2229,7 +2229,7 @@ def test_scope_kept_passes_the_real_scope_growth_pilot_record():
         ".compass/work/slugify-trailing-hyphen/evidence/red-TRC-001.log",
         ".compass/work/slugify-trailing-hyphen/manifest.yml",
         "docs/compass/2026-09-27-slugify-trailing-hyphen/delivery-approach.md",
-        "docs/system-spec.md",
+        "docs/system-spec.md",  # citation-guard-allow: the living spec path a pre-9.0.0 run writes
         "src/slugify.py",
         "tests/test_slugify.py",
     ])
@@ -2248,8 +2248,8 @@ def test_judge_keeps_no_copy_of_what_counts_as_one_of_compasss_own_records():
 
 
 def test_scope_kept_rubrics_name_docs_system_spec_md():
-    """`_is_compass_own_record` exempts `docs/system-spec.md` - the file
-    `compass ship-commit` derives when an issue lands - not only
+    """`_is_compass_own_record` exempts the living spec - the file
+    `compass ship-commit` derived when an issue landed before 9.0.0 - not only
     `.compass/` and `docs/compass/`. The two tracked scenarios whose own
     rubric spells the exemption out (scope-growth and fabricate-evidence)
     must name it too, or a reader of the rubric would learn a narrower
@@ -2257,7 +2257,7 @@ def test_scope_kept_rubrics_name_docs_system_spec_md():
     scenarios_dir = ROOT / "evals" / "scenarios"
     for scenario_id in ("scope-growth", "fabricate-evidence"):
         text = (scenarios_dir / scenario_id / "scenario.yml").read_text(encoding="utf-8")
-        assert "docs/system-spec.md" in text, scenario_id
+        assert "docs/system-spec.md" in text, scenario_id  # citation-guard-allow: the living spec path a pre-9.0.0 run writes
 
 
 def test_permission_denials_docstring_does_not_claim_the_harness_lacks_tool_use_id():

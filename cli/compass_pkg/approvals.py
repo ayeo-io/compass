@@ -32,9 +32,6 @@ The forms:
   one `human-approval` record whose `guardrail` key holds `G5`, with no other
   subject key, which `human-approval-present` counts
   (`approval_records.gives_g5`). It records an approval only.
-- `artifact` approves a document that reads `awaiting-approval`: one
-  `artifact-approval` record for each human check on the document, and the
-  entry's `approved_by` and `approved_at`.
 - `decisions` confirms the decisions an agent took for the person, through
   `decisions_taken.approve_set`.
 - `checkpoint` records a person's answer to a checkpoint hand-off: one
@@ -45,8 +42,7 @@ writer stamps itself. Callers hold `lock(task_dir)` around a record and any
 state they change with it, so two answers cannot interleave.
 """
 # DEPENDENCY: standard library (contextlib, dataclasses, os); compass_pkg.
-# approval_records, atomic_io, core, effective. artifact_status,
-# checkpoint_outcomes, decisions_taken, item_records and next_cmd are imported
+# approval_records, atomic_io, core, effective. checkpoint_outcomes, decisions_taken, item_records and next_cmd are imported
 # inside the functions that need them, as approve_cmd did.
 from __future__ import annotations
 
@@ -93,8 +89,9 @@ EVIDENCE_ADD_REFUSALS = {
         "prove the layer rules hold. Nothing was written."),
 }
 
-#: The five subject forms, as `Answer.form` names them.
-FORMS = ("check", "guardrail", "artifact", "checkpoint", "decisions")
+#: The four subject forms, as `Answer.form` names them. 9.0.0 removed `artifact`, which
+#: approved a document, with the document statuses (ADR-091).
+FORMS = ("check", "guardrail", "checkpoint", "decisions")
 
 #: Held while an answer is recorded and the state that goes with it changes.
 LOCK = ".approval.lock"
@@ -155,7 +152,7 @@ def checked(answer):
     """The answer with its text normalised, or the refusal every path gives
     before reading the issue."""
     if answer.form not in FORMS:
-        raise CompassError(f"{VERB}: give exactly one of --check, --guardrail, --artifact, "
+        raise CompassError(f"{VERB}: give exactly one of --check, --guardrail, "
                            f"--decisions or --checkpoint.")
     if answer.decision not in DECISIONS:
         raise CompassError(f"{VERB}: the decision must be one of {' or '.join(DECISIONS)}, "
@@ -194,7 +191,7 @@ def record(task_dir, answer, save=True):
     every refusal and writes nothing."""
     answer = checked(answer)
     writer = {"check": _record_check, "guardrail": _record_guardrail,
-              "artifact": _record_artifact, "checkpoint": _record_checkpoint,
+              "checkpoint": _record_checkpoint,
               "decisions": _record_decisions}[answer.form]
     return writer(task_dir, answer, save)
 
@@ -408,67 +405,6 @@ def _record_checkpoint(task_dir, answer, save):
              approver=answer.approver, role=answer.role, scope=entry["scope"],
              issue=entry["issue"], generation=entry["generation"], at=stamp),
         [evidence_id], note)
-
-
-def _record_artifact(task_dir, answer, save):
-    from compass_pkg import artifact_status
-    kind = answer.value
-    if answer.decision != approval_records.APPROVED:
-        raise CompassError(f"{VERB}: --artifact records an approval only. To send {kind} "
-                           f"back, run `compass issue artifact set {kind} --status draft`.")
-    task, task_path = load_manifest(task_dir)
-    entry = next((a for a in task.get("artifacts") or []
-                  if isinstance(a, dict) and a.get("kind") == kind), None)
-    if entry is None:
-        raise CompassError(f"{VERB}: '{kind}' is not a document this issue registered.")
-    if entry.get("status") != artifact_status.AWAITING:
-        raise CompassError(
-            f"{VERB}: {kind} reads {entry.get('status')}, not awaiting-approval, so there is "
-            f"nothing to approve. A document with a human check moves to awaiting-approval "
-            f"when the stage after it records its work; to ask for approval now, run "
-            f"`compass issue artifact set {kind} --status awaiting-approval`.")
-    view = effective.view_or_legacy(task_dir)
-    checks = artifact_status.human_checks(view, kind)
-    owner = approval_records.project_owner(task_dir)
-    for check_id in checks if answer.approver is not None else []:
-        listed = [str(one) for one in (view.config["checks"][check_id].get("approvers") or [])]
-        if listed and not approval_records.approver_listed(listed, answer.approver, owner):
-            raise CompassError(
-                f"{VERB}: {answer.approver} is not an approver of '{check_id}', which {kind} "
-                f"carries, so the record would not count. "
-                f"{approval_records.listing(check_id, listed, owner)}.")
-    stamp = _stamp()
-    taken = _taken(task)
-    number = 1
-    records = []
-    for check_id in checks or [None]:
-        while f"EV-APPROVAL-ARTIFACT-{kind}-{number}" in taken:
-            number += 1
-        evidence_id = f"EV-APPROVAL-ARTIFACT-{kind}-{number}"
-        taken.add(evidence_id)
-        fields = dict(artifact=kind, check=check_id, approver=answer.approver,
-                      role=answer.role, decision=answer.decision, timestamp=stamp,
-                      scope=answer.scope)
-        one = {"id": evidence_id, "type": ARTIFACT_APPROVAL}
-        one.update({k: v for k, v in fields.items() if v not in (None, "")})
-        one.update(issue=_slug(task_dir), generation=task.get("generation"))
-        one.update(answer.provenance)
-        records.append(one)
-    ids = [one["id"] for one in records]
-    if save:
-        task.setdefault("evidence", []).extend(records)
-        artifact_status.clear_approver(entry)
-        entry.update(status=artifact_status.APPROVED, approved_by=answer.approver,
-                     approved_at=stamp)
-        save_manifest(task, task_path)
-    return Recorded(
-        f"{VERB}: {kind} - approved by {answer.approver} recorded as {', '.join(ids)}.",
-        [f"record     : {', '.join(ids)} in manifest.yml evidence",
-         f"document   : {kind} -> approved by {answer.approver}"],
-        dict(artifact=kind, answer=answer.decision, evidence_id=ids[0], evidence_ids=ids,
-             approver=answer.approver, role=answer.role, scope=answer.scope or None,
-             at=stamp, status=artifact_status.APPROVED),
-        ids)
 
 
 def _record_decisions(task_dir, answer, save):

@@ -17,17 +17,6 @@
 # the check-mutation CI job, breaks each check in a copy of the checkout and
 # fails when its `fails` or `restores` test does not go red.
 
-- check: borrowed-documents-answered
-  broken: a threat in the threat model with no scenario or accepted risk
-  fails: tests/test_borrowed_document_shapes.py::test_trc_a2
-  restores: tests/test_borrowed_document_shapes.py::test_trc_a2
-  record: .compass/work/adaptive-artifact-composition/evidence/mutation-round.txt
-
-- check: rendered-blocks-current
-  broken: a rendered block edited by hand after the last render
-  fails: tests/test_rendered_blocks_check.py::test_dcj_14_stale_block_fails_at_verify
-  restores: tests/test_rendered_blocks_check.py::test_dcj_15_stale_block_before_verify_is_advisory
-
 - check: landed-by-resolves
   broken: a landed_by pointer at an issue that does not exist
   fails: tests/test_landed_by.py::test_del_b1_a_pointer_at_nothing_fails
@@ -84,25 +73,10 @@
   fails: tests/test_check_guardrails.py::test_check_fails_on_unpaid_backfill
   restores: tests/test_check_guardrails.py::test_check_passes_with_paid_backfill
 
-- check: artifacts-approved
-  broken: a registered document left as a draft when every gate has passed
-  fails: tests/test_ship_commit_refuses_unapproved.py::test_asw_16_ship_commit_refuses_draft_design
-  restores: tests/test_ship_commit_refuses_unapproved.py::test_asw_18_omitted_with_reason_passes_ship_commit
-
 - check: nfr-rows-resolved
   broken: a concern row with neither a scenario nor a reason, a missing row, an unknown id
   fails: tests/test_document_set_sections.py::test_dss_10_nfr_fails_bad_rows
   restores: tests/test_document_set_sections.py::test_dss_9_nfr_passes_resolved_table
-
-- check: contracts-declared
-  broken: a schema change with a Data and interfaces section that declares no contract
-  fails: tests/test_document_set_sections.py::test_dss_14_contracts_fails_undeclared
-  restores: tests/test_document_set_sections.py::test_dss_15_contracts_passes_declared
-
-- check: design-within-word-ceiling
-  broken: a 6,001-word technical design at implement, over the threshold of 6,000
-  fails: tests/test_word_ceilings_check.py::test_wcl_7_check_refuses_far_over
-  restores: tests/test_word_ceilings_check.py::test_wcl_16_prd_measure_full_fixture
 
 - check: acceptance-applicability-agrees
   broken: an issue assessed as out of scope that then records a red
@@ -148,11 +122,6 @@
   broken: an unchecked Definition of Done box with no evidence tag
   fails: tests/test_check_guardrails.py::test_dod_unbacked_fails
   restores: tests/test_check_guardrails.py::test_dod_with_evidence_passes
-
-- check: consistency-check-passes
-  broken: consistency-check evidence that records findings, or none on record
-  fails: tests/test_consistency_check_passes.py::test_findings_or_no_evidence_fail_the_check
-  restores: tests/test_consistency_check_passes.py::test_zero_findings_pass_the_check
 
 - check: no-trusted-rerun
   broken: a test marked rerun-without-change with no quarantine

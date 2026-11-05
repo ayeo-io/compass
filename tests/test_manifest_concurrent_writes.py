@@ -281,21 +281,6 @@ def test_trc_a8_a_copy_of_a_loaded_manifest_merges(task_dir):
     assert body["release_note"] == "Set on a copy."
 
 
-def test_trc_a8_analyze_keeps_a_change_saved_while_it_runs(task_dir, monkeypatch):
-    from compass_pkg import analyze
-
-    def save_after_the_hook(task, path):
-        session_record.record(task_dir, "session-from-the-hook", via="env")
-        core.save_manifest(task, path)
-
-    monkeypatch.setattr(analyze, "save_manifest", save_after_the_hook)
-    analyze._upsert_analyze_evidence_registry(task_dir, "EV-AN", "consistency-check",
-                                              "evidence/an.json")
-    body = on_disk(task_dir)
-    assert body["usage"]["sessions"] == ["session-from-the-hook"]
-    assert [e["id"] for e in body["evidence"]] == ["EV-1", "EV-AN"]
-
-
 def test_trc_a9_every_save_gets_a_manifest_a_load_returned():
     """Each `save_manifest` call in the package saves a mapping that
     `load_manifest`, `manifest_store.load_file` or a caller passed in, never

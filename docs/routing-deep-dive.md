@@ -3,7 +3,7 @@
 `approaches/rubric.md` is the assess stage's rubric: the three scored dimensions, the
 scoring tables, the four-step procedure. This page applies the rubric to six
 issues, walking each one through scoring, composition, policy-rule
-constraint, and the final `delivery-approach.md` - so that the claim
+constraint, and the record the approach leaves in the manifest - so that the claim
 "Compass computes the process per issue" stops being an assertion and
 becomes something you can watch happen.
 
@@ -21,12 +21,15 @@ Every issue, every time, the assess stage runs the same four steps:
    from the dimension contributions, biased by the routing strategies, name
    the reference shape for shared vocabulary, list any deviations.
 3. **Constrain with the routing policy rules** - floors raise the candidate,
-   caps limit it, immovable gates are always added, blocking artifact rules add
-   artifacts and blocks, according to the documents present. Every rule that fires is recorded with its
-   rationale.
-4. **Write `delivery-approach.md` and confirm** - including the de-scope ledger, where
-   every collapsed or skipped stage carries an explicit "safe to skip
-   because…" line.
+   caps limit it, immovable gates are always added, requirement rules add
+   gates. Every rule that fires is recorded with its rationale. Which
+   documents the issue holds is not an input: Compass needs only
+   `acceptance-criteria.md` (ADR-091).
+4. **Record the approach and confirm** - `compass approach evaluate --write`
+   writes the approach, its stage weights, its gates and the rules that fired
+   into `manifest.yml`, and `compass approach show` prints it. The opening
+   `devlog.md` entry gives the de-scope reasons, where every collapsed or
+   skipped stage carries an explicit "safe to skip because…" line.
 
 The five reference shapes - quick fix, regular, full, hotfix, spike - are
 not a menu. They are the common shapes the composition lands near. A perfectly
@@ -48,7 +51,7 @@ What follows is six cases. Read them in order; they build on each other.
 | risk | `trivial` | The wrong outcome is a misspelt word in an error string - cosmetic, instantly obvious, instantly reversible. No data, no money, no auth *behavior* touched. |
 | Familiarity | `brownfield-mapped` | Existing code; the error path is trivially readable. |
 | Size | `atomic` | One file, one string, no design decision, well under thirty minutes. |
-| Goal | `delivery` | Feature pipeline ownership; no `intent.md` or `positioning.md` is present. |
+| Goal | `delivery` | A known change to shipped code; nothing needs exploring first. |
 
 Assess also assigns domain tags. The change is *in* the JWT module, so it
 tags `labels: [auth]` - honestly, because the tag is about where the change
@@ -74,14 +77,17 @@ the full approach.* Not because the change is large - it is
 atomic - but because the risk of the auth module is not a function of
 line count. A floor is domain knowledge overriding the raw dimension assessment.
 
-### Final `delivery-approach.md`
+### Record
 
-The delivery approach is the full approach. The policy-rules section of
-`delivery-approach.md` records:
+The delivery approach is the full approach. The manifest's
+`policy_rules_fired` list records the floor, and `compass approach evaluate
+--verbose` prints it:
 
-> **floor** · `labels: [auth]` · Candidate delivery approach quick fix was
-> raised to the full approach · *"Domain risk overrides size. A one-line auth
-> change is not small."*
+> **floor** · RP-FLOOR-003 · `labels: [auth]` · approach raised quick fix ->
+> full · *"Domain risk overrides size. A one-line auth change is not small."*
+
+The same label fires the requirement rule `RP-REQUIRE-004`, which adds
+`verify.architecture` to the gates.
 
 The engineer sees *why* a typo fix got the full approach. Because the
 delivery approach is advisory until confirmed, they can discuss it - but they
@@ -111,7 +117,7 @@ purpose.
 | risk | `contained` | A broken saved-view is annoying and bounded to the dashboard; recoverable, no data loss, no other surface affected. |
 | Familiarity | `brownfield-mapped` | The dashboard's filter behavior is already captured in scenarios. |
 | Size | `medium` | Several files - a persistence layer, the filter serialization, the UI - and one or two design decisions, 1–3 days. |
-| Goal | `delivery` | No `intent.md`; a well-understood feature is being implemented. |
+| Goal | `delivery` | A well-understood feature is being implemented. |
 
 Domain tags: `labels: [persistence]` might carry, but nothing on the
 policy's floor list (`auth`, `payments`, `personal-data`, `migrations`).
@@ -119,9 +125,9 @@ policy's floor list (`auth`, `payments`, `personal-data`, `migrations`).
 ### Compose
 
 Medium size, contained risk, mapped familiarity. The candidate is
-**regular**, plainly: a small feature set of scenarios, a lightweight-to-thorough
-requirements review pass, a real `technical-design.md` with the design decisions recorded, solo or
-pair orchestration, six gates at verify. No deviation from the reference shape is
+**regular**, plainly: a small feature set of scenarios, a lightweight
+requirements review pass, a thorough plan whose design decisions go into its
+hand-off and `devlog.md`, one session building every unit, six gates at verify. No deviation from the reference shape is
 warranted - risk is only `contained`, so `security` stays scaled
 rather than full and `clarity` and `regression` are on as the regular approach
 always has them.
@@ -133,21 +139,19 @@ No floor matches - no domain tag on the floor list, risk is not
 (`verify.correctness`, `verify.governance`, `verify.traceability`) are
 always added. `verify.regression` is in this approach's own gate set rather
 than added separately - it is approach-scoped, and a quick fix does not run it, which
-is the point of a quick fix. `verify.claims` is added only when `positioning.md` is present, so it does not
-appear here. No artifact rule fires, because neither `intent.md` nor
-`positioning.md` exists.
+is the point of a quick fix. No document on disk adds a gate: a positioning
+or an intent document changes nothing here.
 
-### Final `delivery-approach.md`
+### Record
 
-The policy-rules section reads, in full:
+`compass approach evaluate --verbose` prints, in full:
 
-> No routing policy rule fired. Candidate delivery approach stands.
+> policy rules fired: none
 
-That line is itself the record - silence is not allowed; "nothing fired" is
-written down. The delivery approach is regular, unmodified. The de-scope
-ledger is short: the dedicated orchestrator is skipped (one session builds
-every unit, ADR-090) and the full distribution map is reduced to a
-short list. Both carry their standing justifications.
+The opening `devlog.md` entry writes that down too - silence is not allowed;
+"nothing fired" is recorded. The delivery approach is regular, unmodified.
+The de-scope reasons are short: one session builds every unit (ADR-090), so
+breakdown only logs the order of the units that the plan's hand-off names.
 
 This is the boring case, and the boring case matters: most work is on the regular
 approach, and it should feel like the default working shape, not
@@ -196,21 +200,17 @@ order:
   (RP-FLOOR-003, for `payments` and `migrations`) would force the full
   approach too, but the risk floor has already done it, so the CLI does not
   list it.
-- **Six requirement rules.** `RP-REQUIRE-001` to `RP-REQUIRE-006` each add
-  something the work now owes: the gates `verify.analyze` (`RP-REQUIRE-001` and
-  `RP-REQUIRE-002`) and `verify.architecture` (`RP-REQUIRE-003` and
-  `RP-REQUIRE-004`), the `threat-model` artifact for the payments label
-  (`RP-REQUIRE-005`) and the `rollback-plan` artifact for the migrations label
-  (`RP-REQUIRE-006`).
+- **Two requirement rules.** `RP-REQUIRE-003` (critical risk) and
+  `RP-REQUIRE-004` (the payments and migrations labels) each add the gate
+  `verify.architecture`, so the gate is added once.
 
-Then a **cap** fires - and this is the subtle part. RP-CAP-001: `when: { risk:
-critical }` → `max_worktrees: 1`. So this is the full approach
-that is *capped to a single worktree*. It is heavy - thorough BDD discovery, a
-thorough requirements review, a thorough `technical-design.md`, every gate - and
-**solo**. That is not a contradiction. The cap encodes a real trade-off:
-parallelism is speed, but a multiagent orchestration has coordination risk,
-and on a critical change the coordination risk costs more than the speed
-saves.
+Then a **cap** fires. RP-CAP-001: `when: { risk: critical }` →
+`max_worktrees: 1`. The cap encodes a real trade-off: parallelism is speed,
+but on a critical change the coordination risk costs more than the speed
+saves. Since 9.0.0 one session builds every unit one after another
+(ADR-090), so the cap records that trade-off and changes nothing the session
+does. The approach is heavy - thorough BDD discovery, a thorough requirements
+review, a thorough plan, every gate - and solo.
 
 `governance-check` checks an engineering strategy in `governance/strategies.md`
 (migrations are reversible or come with a written, tested rollback) during
@@ -218,22 +218,18 @@ the plan stage - the delivery approach does not waive it. (If the team has
 hardened that into a project guardrail, it is checked as a guardrail and
 blocks.)
 
-### Final `delivery-approach.md`
+### Record
 
-The delivery approach is the full approach, single worktree. The policy-rules
-section records the floor, the six requirement rules and the cap, each with its
-rationale. The
-orchestration section (§4c of the template) records the worktree count as
-**cap-driven** - not as a de-scope.
-This distinction matters: the de-scope ledger is for things the delivery
-approach *chose* to skip; a cap removing a worktree is a routing policy rule,
-and rule-driven reductions go in the orchestration section, never the
-ledger. The full approach's de-scope ledger is empty by definition, and a
-capped full approach is still the full approach.
+The delivery approach is the full approach. The manifest's
+`policy_rules_fired` list records the floor, the two requirement rules and the
+cap, each with its rationale. The cap is a routing policy rule, not a
+de-scope, so the devlog's de-scope reasons do not list it: they are for
+stages the approach *chose* to skip. The full approach skips none, so the
+list is empty by definition, and a capped full approach is still the full
+approach.
 
-A `distribution-map.md` is still written, even though the work runs solo. The
-map is the record of *what could have been parallel and why it wasn't* - here,
-"it wasn't, because the critical-risk cap pinned it to one worktree."
+The plan's hand-off still names the work units and the scenarios each one
+owns, and breakdown logs their order to `devlog.md`.
 
 ---
 
@@ -259,36 +255,35 @@ that tag would add a floor; assume here it does not.
 
 `product` size with `cross-cutting` risk and `greenfield` familiarity
 is the textbook **full** case, and it composes there with no help from
-the routing policy rules. Full BDD discovery from the intent document;
-scenarios grouped by independence - email delivery, in-app delivery, webhook
+the routing policy rules. Full BDD discovery from the intent; scenarios
+grouped by independence - email delivery, in-app delivery, webhook
 delivery, preferences, the delivery log are plausibly disjoint surfaces; a
-full `technical-design.md` plus a real `distribution-map.md`, whose units the
-session builds one after another (ADR-090); all gates, all dimensions, plus
-a mid-delivery-approach checkpoint.
+thorough plan whose hand-off names those five units, which the session builds
+one after another (ADR-090); all gates, all dimensions, plus a
+mid-delivery-approach checkpoint.
 
 ### Constrain
 
 The `risk: critical` floor does *not* fire - this is `cross-cutting`,
-not `critical`. So the critical-risk cap does *not* apply either: the
-multiagent orchestration is not pinned to one worktree. Subtask count comes
-from the distribution map, bounded by `max_worktrees` in `compass.yml`
-(`.compass/config.yml` in a project without one; default 6). If the map identifies five independent
-subtasks, the multiagent orchestration runs five worktrees.
+not `critical` - so the critical-risk cap does not fire either. The one rule
+that fires is `RP-REQUIRE-003`, which adds `verify.architecture` for
+`cross-cutting` risk.
 
-This is the key contrast with Case 3: Case 3 was *heavy and
-solo* (critical risk, capped); Case 4 is *heavy and parallel*
-(cross-cutting risk, uncapped). Same full-approach reference shape,
-genuinely different orchestration - because the dimensions read differently.
+This is the key contrast with Case 3. Both run the full approach, for
+different reasons: Case 3 because a floor raised it, Case 4 because its own
+dimensions compose there. Only Case 3 carries the floor's never-skip list and
+the cap - because the dimensions read differently.
 
-### Final `delivery-approach.md`
+### Record
 
-The delivery approach is the full approach at full weight, multiagent orchestration,
-empty de-scope ledger (the full approach's
-ledger is empty by definition - it is what the other approaches are measured
-against). If the product owner wrote an `intent.md`, the artifact rule RP-ART-002 would
-fire: the intent-fidelity gate blocks the plan stage. The designer's
-`ui-contract.md` would flow into the define stage as scenarios. Each rule
-that fires is recorded in the policy-rules section.
+The delivery approach is the full approach at full weight, with empty
+de-scope reasons (the full approach skips nothing - it is what the other
+approaches are measured against). If the product owner stated an intent, the
+define stage writes its outcome into the Summary and Intent links of
+`acceptance-criteria.md`, and the plan stage checks the spec against it (the
+intent-fidelity check). The designer's `ui-contract.md` would flow into the
+define stage as scenarios. Neither document adds a gate: no document on disk
+is a routing input (ADR-091).
 
 ---
 
@@ -316,8 +311,8 @@ A live defect with user impact happening *now*, small size, cross-cutting
 risk - the assess stage composes towards a **hotfix**. The shape, stage by
 stage:
 
-- **Assess** is fast but real - `delivery-approach.md` is written even
-  under time pressure, and the audit trail starts here.
+- **Assess** is fast but real - the approach is recorded in the manifest
+  even under time pressure, and the audit trail starts here.
 - **Define** is **reproduce-first**: the spec *is* a failing regression
   test that reproduces the 500, simultaneously the BDD scenario and the
   TDD red.
@@ -347,19 +342,20 @@ Hotfix has no worktree to cap - breakdown is skipped and the fix runs solo.
 
 The methodology's own guard applies here: a fix that turns out to be
 `medium`+ in size is *not* a hotfix - it is an incident. Assess it on the
-full approach, put someone in incident command, use the multiagent
-orchestration if it helps. Assess scores size precisely so that distinction
-holds.
+full approach and put someone in incident command. Assess scores size
+precisely so that distinction holds.
 
-### Final `delivery-approach.md`
+### Record
 
-The delivery approach is hotfix. The §6 "Owed follow-ups" section of `delivery-approach.md` carries an unchecked
-item - the mandatory follow-up - and the issue is not closeable until it is
-resolved: `delivery-approach.md` completed properly (not just the urgent stub), the
-reproduction test promoted into a real Given/When/Then scenario in
-`acceptance-criteria.md` traceable to the defect, and a root-cause line in the
-`devlog.md`. `/compass:status` flags the outstanding follow-up; `/compass:ship`
-refuses to close the issue; the `stop.sh` hook warns at session end.
+The delivery approach is hotfix. The issue owes the mandatory follow-up, and
+it is not closeable until the follow-up is resolved: each dimension justified
+in the manifest and the root-cause note in `devlog.md` filled in properly (not
+just the urgent stub), the reproduction test promoted into a real
+Given/When/Then scenario in `acceptance-criteria.md` traceable to the defect,
+and a root-cause line in `devlog.md`. `/compass:status` flags the outstanding
+follow-up; `/compass:ship` refuses to close the issue; the `stop.sh` hook
+warns at session end while the manifest's `follow_ups:` holds an outstanding
+entry.
 The outstanding process weight has a due date: "before the issue closes."
 
 ---
@@ -388,8 +384,9 @@ as the goal.
 Exploration goal composes towards **spike**, the way live-defect urgency
 composes towards hotfix - the routing strategy
 `when: { goal: exploration } → lean_toward: spike` is the bias. Assess is
-light but real: `delivery-approach.md` records the **question** ("what is
-dropping ~2% of jobs under load?") and a **timebox**. The define stage
+light but real: the approach is recorded in the manifest, and the opening
+`devlog.md` entry records the **question** ("what is dropping ~2% of jobs
+under load?") and a **timebox**. The define stage
 collapses to that question. The requirements review is skipped - there is
 nothing to QA against, the behavior is the unknown. The plan stage
 collapses to a timebox and an approach sketch. Implementation becomes
@@ -407,7 +404,7 @@ could only be answered by touching `auth`, `payments`, `personal-data`, or
 the full approach with discovery-heavy acceptance criteria. Here the investigation stays
 clear of irreversible surface, so spike stands. Nothing is floored.
 
-### Final `delivery-approach.md` - and the exit
+### Record - and the exit
 
 The delivery approach is spike. The verify stage becomes **conclude**: not a test gate, a findings check - *was
 the question answered?* The one gate is "the question is answered (or
@@ -420,8 +417,8 @@ written down." ship becomes **graduate or discard**:
   probably - and the tested-before-ship, acceptance-before-code, and
   traceability guardrails apply to the fix in full. Any diagnostic code
   carried over is now subject to that delivery approach's guardrails; in
-  practice most is rewritten under TDD. The spike's `delivery-approach.md`
-  records "graduated → issue `<slug>`".
+  practice most is rewritten under TDD. The spike's `devlog.md` records
+  "graduated → issue `<slug>`".
 - **Discard** - the spike concluded "this is environmental, not our code" or
   "inconclusive within the timebox." The finding goes in `devlog.md`, any
   follow-up is filed, and the spike closes. A discarded spike with a clear
@@ -452,17 +449,17 @@ correctly.
 
 ### "Add a CSV export" - product owner, "let finance self-serve"
 
-Same three words, but an `intent.md` sits behind them, and the intent
-document's outcome is "let finance self-serve their month-end numbers."
+Same three words, but a product owner's intent sits behind them, and its
+outcome is "let finance self-serve their month-end numbers."
 Assess reads the goal as the *actual outcome wanted*, not the literal
 request - and "self-serve" implies filters that match what finance actually
 needs, perhaps scheduling, perhaps permissions. Size is no longer `small`;
-it is `medium` or larger. Because `intent.md` is present, the artifact rule RP-ART-002 fires: the
-intent-fidelity gate blocks the plan stage. Composes to
-**the regular approach or heavier**, with a gate that checks the export scenarios
-actually deliver "self-serve" and not just "a button that produces a file."
-Same words, a genuinely bigger delivery approach - because the goal under
-them is bigger.
+it is `medium` or larger. Composes to **the regular approach or heavier**.
+The define stage writes the outcome into the Intent links of
+`acceptance-criteria.md`, and the plan stage checks that the export scenarios
+actually deliver "self-serve" and not just "a button that produces a file"
+(the intent-fidelity check). Same words, a genuinely bigger delivery
+approach - because the goal under them is bigger.
 
 ### "Add a CSV export" - engineer, export of the payments ledger
 
@@ -472,25 +469,22 @@ not matter: the policy floor `when: { labels: [payments,
 personal-data] }` fires and forces the full approach. Composes to
 **full** - full
 discovery (what exactly is in this export? what must *not* be?), full requirements review,
-a `technical-design.md` with the data-handling decisions recorded, every gate, `security`
+a plan whose hand-off records the data-handling decisions, every gate, `security`
 full. A "small" feature, the full approach, because of what it touches.
 
 ### "Add a CSV export" - product marketer, a launch feature
 
-A marketer invokes `/compass:position` for an export feature being launched,
-then the issue is re-assessed so the new document counts.
-Because `positioning.md` is present, the artifact rule RP-ART-001 fires:
-`launch-readiness.md` is required, the `claims` review dimension on, and **shipping
-blocked** until every claim ("export your data in one click", "works with
-spreadsheets you already use") traces to a passing scenario. The engineering
-work might be quick fix-sized, but the delivery approach carries the claims
-gate to ship regardless - `verify.claims` blocks shipping whenever
-`positioning.md` is present. Same three words; an extra gate that did not exist in the other
-three cases.
+A marketer invokes `/compass:position` for an export feature being launched.
+The engineering work might be quick fix-sized, and the delivery approach is
+computed from the assessment alone: `positioning.md` adds no gate (ADR-091).
+What the marketer adds is claims ("export your data in one click", "works
+with spreadsheets you already use"). Each claim the manifest's `claims:` list
+holds is checked by `claim-traces-to-scenario`, and **shipping is blocked**
+until every one traces to a passing scenario. Same three words; a check that
+had nothing to read in the other three cases.
 
-Four delivery approaches, one request. The request did not change. The
-assessment did - and Compass computes the delivery approach from the
-assessment.
+Four outcomes, one request. The request did not change. The assessment
+did - and Compass computes the delivery approach from the assessment.
 
 ---
 
@@ -500,9 +494,9 @@ The delivery approach is computed at the assess stage, but a value can turn
 out wrong, and the honest response is not to push on with a delivery
 approach you no longer believe.
 
-`/compass:assess --reassess` re-scores the three dimensions mid-issue, writes a
-**new revision** of `delivery-approach.md` (the prior revision is kept visible under a
-"Superseded" heading), and records what changed and why. A re-assess is a
+`/compass:assess --reassess` re-scores the three dimensions mid-issue,
+recomputes the approach into the manifest, and records what changed and why
+in `devlog.md`. A re-assess is a
 normal event, not a failure. *A delivery approach quietly outgrown is the
 failure.*
 
@@ -537,15 +531,16 @@ The triggers are concrete:
   expand scope; if the decision touches the delivery approach, the consult's
   own gate says to follow it with a re-assess.
 
-The reassessed `delivery-approach.md` is the contract again - the next session reads the
-latest revision and knows exactly where the issue stands.
+The reassessed approach in the manifest is the contract again - the next
+session runs `compass approach show` and knows exactly where the issue stands.
 
 ---
 
 ## What the routing system is really for
 
-Every case above ends in a `delivery-approach.md` that a human can read and a later
-session can resume from. That is the deliverable. Assess does not just
+Every case above ends in an approach recorded in the manifest, with its
+reasons in `devlog.md`, that a human can read and a later session can resume
+from. That is the deliverable. Assess does not just
 classify the issue - it explains the classification, records every policy
 rule that fired, and writes down every skip with the reason it is safe. The
 adaptivity is real, and it is *bounded*: bounded by the three-dimension rubric,

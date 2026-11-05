@@ -349,7 +349,9 @@ the next reassess.
 The pinned example is `tests/fixtures/policy-update-json-example.json`: a
 refused move (no terminal) with one affected waiver. `tests/test_policy_update.py`
 compares the command's output with it, byte for byte, and compares the block
-above with it.
+above with it. The example runs over a test framework whose rules still name
+two documents, so its grid crosses them; the live default names none since
+9.0.0 (ADR-091).
 
 | Key | Type | Meaning |
 |---|---|---|

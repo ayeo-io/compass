@@ -52,8 +52,8 @@ def _tree(task, task_dir, greens):
     """`(fault, note)` about the tree the outer-loop greens ran on. `fault` is text
     when no outer-loop green is on the current tree. `note` is text when the tree
     could not be compared."""
-    # A landed issue's working tree moves on after the land: ship-commit itself
-    # commits the re-derived living spec. `evidence-matches-tree` compares the
+    # A landed issue's working tree moves on after the land, as later issues land.
+    # `evidence-matches-tree` compares the
     # issue's own files with the land commit, so this check does not compare trees.
     if status_words.is_completed(task):
         return None, ("the issue has landed, so the tree was not compared; "

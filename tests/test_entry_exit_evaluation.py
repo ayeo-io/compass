@@ -117,8 +117,6 @@ def test_ee_1_with_the_capability_off_no_reader_shows_a_list(tmp_path):
     assert not [r for r in rows if r["name"] in READY_IDS + DONE_IDS], rows
     code, out, err = _run(root, "next", "--issue", SLUG)
     assert "entry" not in out and "exit" not in out, out
-    code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-    assert "Stage lists" not in out, out
 
 
 def test_ee_1_a_view_with_the_capability_off_gives_no_rows(tmp_path, monkeypatch):
@@ -422,8 +420,13 @@ QUICK_FIX = {"risk": "trivial", "familiarity": "greenfield", "size": "small",
 
 def test_ee_4_a_quick_fix_owes_no_verification_report_so_the_done_checks_have_nothing_to_check(
         tmp_path, monkeypatch):
+    # The live default owes the report by the stage modes since 9.0.0 (ADR-091), so the
+    # manifest holds the quick fix's own modes, as approach evaluate writes them.
     root, task_dir = _config_project(
-        tmp_path, delivery_approach="quick-fix", assessment=QUICK_FIX, current_phase="ship")
+        tmp_path, delivery_approach="quick-fix", assessment=QUICK_FIX, current_phase="ship",
+        stages={"assess": "thorough", "define": "lightweight", "refine": "collapsed",
+                "plan": "collapsed", "breakdown": "skipped", "implement": "thorough",
+                "verify": "lightweight", "ship": "lightweight"})
     rows = [r for r in _rows(_view(root, monkeypatch), task_dir)
             if r.side == "exit" and r.due]
     assert {r.check for r in rows} == set(DONE_IDS)
@@ -436,27 +439,6 @@ def test_ee_4_a_route_that_owes_the_document_fails_when_it_is_missing(tmp_path, 
     rows = [r for r in _rows(_view(root, monkeypatch), task_dir)
             if r.side == "exit" and r.due]
     assert rows and all(r.status == "fail" and "not recorded" in r.detail for r in rows)
-
-
-def test_ee_4_growing_the_quick_fix_artifacts_makes_the_done_checks_owed_everywhere(tmp_path):
-    """The classifier's artifact set and the stage lists read one source."""
-    from compass_pkg import obligations
-    config = {"schema": 1, "capabilities": {CAPABILITY: True},
-              "approaches": {"quick-fix": {"set": {"artifacts": {
-                  "delivery-approach": "light", "verification-note": "light",
-                  "verification-report": "full"}}}}}
-    root, task_dir = _project(tmp_path, manifest=dict(
-        _manifest_for(QUICK_FIX)), compass_yml=config)
-    code, out, err = _evaluate_write(root)
-    assert code == 0, out + err
-    _write_manifest(task_dir, current_phase="ship")
-    assert _manifest(task_dir)["delivery_approach"] == "quick-fix"
-    assert "verification-report" in {a["kind"] for a in _manifest(task_dir)["artifacts"]}
-    data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
-    rows = [r for r in data["checks"] if r["guardrail"] == "stage:verify:exit"]
-    assert [r["name"] for r in rows] == DONE_IDS
-    assert {r["status"] for r in rows} == {"fail"}
-    assert "not recorded" in rows[0]["detail"]
 
 
 def _manifest_for(assessment):
@@ -674,13 +656,6 @@ def test_ee_9_next_names_only_the_current_stages_entry_checks(tmp_path):
     assert "entry not met" not in out, out
 
 
-def test_ee_10_the_stage_lists_come_before_the_verdict(tmp_path):
-    root, task_dir = _committed(tmp_path)
-    _write_review(task_dir)
-    out = _run(root, "issue", "receipt", "--issue", SLUG)[1]
-    assert out.index("Stage lists") < out.index("Verdict:")
-
-
 def test_ee_8_a_spike_check_counts_its_nothing_to_check_rows(tmp_path):
     root, task_dir = _config_project(
         tmp_path, assessment={"risk": "trivial", "familiarity": "greenfield",
@@ -882,17 +857,10 @@ def test_ee_9_next_names_the_unmet_entry_checks_of_the_current_stage(tmp_path):
     assert "entry" not in out, out
 
 
-# --- EE-10: the receipt lists the checks and their state -----------------------------------------
+# --- EE-10: check runs a list's deterministic check ----------------------------------------------
+#
+# The receipt also showed each list and its state; 9.0.0 removed it (ADR-091).
 
-def test_ee_10_the_receipt_shows_each_list_with_its_state(tmp_path):
-    root, task_dir = _committed(tmp_path)
-    _write_review(task_dir, ticked=range(6))
-    code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-    assert code == 0, err
-    assert "Stage lists" in out
-    assert "plan entry (due)" in out and "verify exit (not yet due)" in out
-    assert re.search(r"dor-approach-still-fits\s+fail", out), out
-    assert re.search(r"dor-summary-filled\s+pass", out), out
 
 
 def _project_check_config():
@@ -904,13 +872,11 @@ def _project_check_config():
             "stages": {"plan": {"set": {"entry": {"add": ["list-scenarios-have-tests"]}}}}}
 
 
-def test_ee_10_the_receipt_does_not_run_a_deterministic_check_but_check_does(tmp_path):
+def test_ee_10_check_runs_a_deterministic_check_a_project_adds(tmp_path):
     root, task_dir = _project(tmp_path, compass_yml=_project_check_config())
     assert _evaluate_write(root)[0] == 0
     _write_manifest(task_dir, current_phase="plan")
     _write_review(task_dir)
-    code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-    assert re.search(r"list-scenarios-have-tests\s+pending", out), out
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")
     rows = {r["name"]: r for r in json.loads(out)["checks"]
             if r["guardrail"] == "stage:plan:entry"}

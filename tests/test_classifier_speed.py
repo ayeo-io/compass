@@ -175,7 +175,7 @@ def test_cs_1_a_classification_adapts_each_configuration_once(monkeypatch):
     viewed = _counting(monkeypatch, routing, "canonical_view")
     parent, child = _bench().pair(4)
     got = classify.classify(parent, child)
-    assert got.grid.points == 4608
+    assert got.grid.points == 1152
     assert adapted["calls"] == 2, adapted
     assert viewed["calls"] == 2, viewed
 
@@ -254,7 +254,7 @@ def test_cs_1_equal_facts_are_not_compared_field_by_field(monkeypatch):
     compared = _counting(monkeypatch, classify, "_compare")
     parent, child = _bench().pair(4)
     got = classify.classify(parent, child)
-    assert got.result == "equivalent" and got.grid.points == 4608
+    assert got.result == "equivalent" and got.grid.points == 1152
     assert compared["calls"] == 0, compared
 
 
@@ -290,10 +290,10 @@ def test_cs_3_the_benchmark_pair_at_four_labels_keeps_its_grid_verdict_and_count
     parent, child = _bench().pair(4)
     got = classify.classify(parent, child)
     assert (got.result, got.scan, got.complete) == ("equivalent", "full", True)
-    assert got.grid.points == 4608 and got.grid.raw_points == 34560
+    assert got.grid.points == 1152 and got.grid.raw_points == 8640
     assert got.grid.label_count == 4
-    assert got.counts == {"equal": 4608, "tighter": 0, "looser": 0, "mixed": 0}
-    assert len(calls) == 2 * 4608, "the evaluator runs once for each side at each point"
+    assert got.counts == {"equal": 1152, "tighter": 0, "looser": 0, "mixed": 0}
+    assert len(calls) == 2 * 1152, "the evaluator runs once for each side at each point"
 
 
 def test_cs_3_the_benchmark_records_cpu_seconds_beside_the_clock():
@@ -623,7 +623,15 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # model-tier rule sets, which no comparison read, and a check a release removed
 # owes nothing, so dropping `multiagent-run-recorded` from a list is `equivalent`
 # where version 11 read it as `loosening`. The version is now 12.
-VERDICT_SOURCE_PIN = "4f9a605c1c45c1be"
+# Re-pinned for issue #353 (ADR-091): a review gate a release removed
+# (`routing.REMOVED_GATES`) owes nothing, so dropping `verify.analyze` from an
+# approach's gates is `equivalent` where version 12 read it as `loosening`, and a
+# rule that only added it is left out of the rules that fired. The version is now 13.
+# Re-pinned for issue #353: the evaluator itself leaves a removed gate out of the gate
+# set, so a rule that only added it no longer fires, and obligations stop filtering the
+# rules that fired. Obligations read the same gates and rules as before, so no verdict
+# moves and the version stays 13.
+VERDICT_SOURCE_PIN = "8ff1a2ac9935eb0b"
 
 
 def _verdict_source_digest():

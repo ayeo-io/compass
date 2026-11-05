@@ -117,8 +117,8 @@ def test_scn_b1_unrelated_dirty_file_is_not_swept_into_the_land_commit(repo):
     result = _land(repo)
     assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
 
-    # Read the land commit by the `land_commit` the manifest records, not
-    # HEAD - a spec commit follows the land commit when it lands the issue.
+    # Read the land commit by the `land_commit` the manifest records. No
+    # commit follows it: 9.0.0 derives no living spec (ADR-091).
     land_commit = _land_commit(repo)
     committed = _committed_files(repo, land_commit)
     assert "src/owned.py" in committed, committed
@@ -127,11 +127,7 @@ def test_scn_b1_unrelated_dirty_file_is_not_swept_into_the_land_commit(repo):
     )
 
     head = _git(repo, "rev-parse", "HEAD").stdout.strip()
-    assert head != land_commit, "no spec commit followed the land commit"
-    assert _committed_files(repo, head) == {"docs/system-spec.md",
-                                            "docs/system-spec-archive.md"}, (
-        "the spec commit that follows the land commit must hold only "
-        "docs/system-spec.md and its archive")
+    assert head == land_commit, "a commit followed the land commit"
 
 
 def test_scn_b1_untracked_scratch_is_not_swept_in(repo):

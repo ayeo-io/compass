@@ -8,16 +8,6 @@
 # those two files. The preset is the source now; edit it here.
 schema: 1
 checks:
-  borrowed-documents-answered: {statement: 'The threat model and the rollback plan, where they exist,
-      are answered rather than merely written - every threat names a scenario or an accepted risk, and
-      the rollback records a rehearsal that happened. Declines to check, rather than passing, when the
-      issue earned neither document.', kind: deterministic, impl: borrowed-documents-answered, severity: blocking,
-    on_skipped: not-applicable, locked: true}
-  rendered-blocks-current: {statement: 'Every rendered block in the issue''s documents and its issue page matches
-      a fresh render from the records. A block drawn from the issue''s own records fails the check at `verify`
-      and `ship` and is advisory before; a block drawn from other issues or the project is always advisory.',
-    kind: deterministic, impl: rendered-blocks-current, severity: blocking, on_skipped: fail,
-    locked: true}
   landed-by-resolves: {statement: 'An issue whose work was delivered through a different issue points
       at it with `landed_by:`, and the pointer resolves: the named issue exists, has landed, carries a
       record of its own, and names this one back in `delivered:`. When it holds, four checks about this
@@ -67,36 +57,16 @@ checks:
     impl: human-approval-present, severity: blocking, on_skipped: fail, locked: hard}
   backfills-paid: {statement: The issue manifest's follow-ups list is empty or every item is resolved.,
     kind: deterministic, impl: backfills-paid, severity: blocking, on_skipped: fail}
-  artifacts-approved: {statement: 'Every document the issue registered is accepted when it ships: no
-      artifact reads draft or awaiting-approval, and an omitted artifact records a reason. Judges the
-      state `compass ship-commit` would leave, so a document owned by the ship stage does not fail.
-      Declines to check, rather than passing, until every gate has passed, and for an issue that has
-      closed or does not ship.', kind: deterministic, impl: artifacts-approved, severity: blocking,
-    on_skipped: not-applicable}
   nfr-rows-resolved: {statement: 'Every concern row of the spec''s Non-functional requirements table
       (performance, capacity, compatibility, security, privacy, operability, accessibility, and any row
       added) names scenario ids the manifest holds or a reason the concern does not apply. At thorough
-      depth each cited scenario states a number in its Then. Declines to check, rather than passing,
-      for an issue with no generation, a closed issue, a spec not registered with a path, and a catalogue
-      that does not list the section at the depth the spec is registered at.', kind: deterministic,
+      depth each cited scenario states a number in its Then. The spec is read at the path the manifest
+      registered, else at docs/compass/<created>-<slug>/acceptance-criteria.md, where its depth is the
+      define stage''s mode. Declines to check, rather than passing, for an issue with no generation, a
+      closed issue, an issue created before 2026-11-04 with no spec at either path, an issue whose spec
+      is not written yet, and a registered spec whose catalogue does not list the section at its depth.',
+    kind: deterministic,
     impl: nfr-rows-resolved, severity: blocking, on_skipped: not-applicable}
-  contracts-declared: {statement: 'When a changed file matches a trigger pattern, the technical design''s
-      Data and interfaces section declares a contract: a field table (Name, Type, Required, Meaning,
-      Written by, Read by) or a contract table (Inputs, Outputs, Exit codes, Errors) with a data row,
-      or an erDiagram. A path pattern matches the project-relative path, and a contents pattern also
-      needs the file to hold its text. Declines to check, rather than passing, when no changed file
-      matches, and for an issue with no generation, a closed issue, a design not registered with a
-      path, and a catalogue that does not list the section at the depth the design is registered at.',
-    kind: deterministic, impl: contracts-declared, severity: blocking, on_skipped: not-applicable,
-    params: {trigger_paths: ['schemas/*', 'governance/presets/*', '*.schema.json'], trigger_contents: [
-        {path: '*.py', contains: add_parser(}]}}
-  design-within-word-ceiling: {statement: 'Once plan exit is due, the technical design holds no more
-      words than its word_ceiling at the depth it is registered at, times the factor in params. Words
-      are counted from the visible text, and unit files never lift the limit. Declines to check, rather
-      than passing, for an issue with no generation, a closed issue, a design not registered with a
-      path, a catalogue with no word_ceiling for the design at its depth, and an issue that has not
-      passed the plan stage.', kind: deterministic, impl: design-within-word-ceiling, severity: blocking,
-    on_skipped: not-applicable, params: {factor: 1.5}}
   acceptance-applicability-agrees: {statement: 'The four-layer acceptance strategy (`S17`) applies to
       the issue as its delivery-approach record says: the applicability stored at assess agrees with
       what the red and acceptance records decide, and the project setting has not changed since assess.
@@ -133,14 +103,11 @@ checks:
       recorded with `compass evidence approve --check`, or a follow-up recorded with `compass follow-up
       add --defers`. An item with no record fails. A tick on a page counts for nothing. Cross-issue:
       when another issue has a follow-up with target_task pointing at this issue, that follow-up must
-      be resolved before this issue ships. Declines to check, rather than passing, when no verification
-      report is written yet.
+      be resolved before this issue ships. On an issue created from 2026-11-04
+      it is judged once every gate has passed; on an older issue it declines to check, rather
+      than passing, when no verification report is written yet.
 
       ', kind: deterministic, impl: dod-evidence-typed, severity: blocking, on_skipped: not-applicable,
-    locked: true}
-  consistency-check-passes: {statement: compass analyze reports zero consistency findings. Gate-clearing
-      runs write type consistency-check evidence; advisory runs write command-output and do not clear
-      verify.analyze., kind: deterministic, impl: consistency-check-passes, severity: blocking, on_skipped: fail,
     locked: true}
   no-trusted-rerun: {statement: 'Every test-run evidence entry is checked for rerun integrity. A record
       with rerun_without_change: true must have its test listed in the project quarantine registry (governance/quarantine.yml)
@@ -185,26 +152,26 @@ checks:
         Approach, Why now / what changes) are written, not left as template placeholders. This is where the
         requirement is enforced: the CLI never inspects the spec''s prose, so an empty Summary is caught here
         or not at all.', kind: human, severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
-  dor-problem-traces-up: {statement: 'Problem traces up - the spec serves the Problem and Desired outcome in `intent.md` (or the
-        issue description, if there is no intent.md). No scenario is orphaned from intent.', kind: human,
+  dor-problem-traces-up: {statement: 'Problem traces up - the spec serves the problem and the outcomes its Intent links name, from
+        the issue description or the intent the product owner gave. No scenario is orphaned from intent.', kind: human,
       severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
   dor-behavior-is-gwt: {statement: Behaviour is Given/When/Then - every scenario has an observable `Then`. No scenario is a wish.,
       kind: human, severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
   dor-traceability-ids: {statement: Traceability ids assigned - every scenario has a `TRC-id` so code and claims can point back
         to it., kind: human, severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
-  dor-affected-surface-named: {statement: Affected surface named - the spec or `delivery-approach.md` identifies what code and which
+  dor-affected-surface-named: {statement: Affected surface named - the spec or the issue description identifies what code and which
         components this touches., kind: human, severity: blocking, on_skipped: not-applicable, requires: [
         entry-exit-evaluation]}
-  dor-no-open-questions: {statement: No open questions - the ambiguity ledger above is fully resolved., kind: human, severity: blocking,
+  dor-no-open-questions: {statement: No open questions - every ambiguity the review found is resolved or recorded as a decision., kind: human, severity: blocking,
       on_skipped: not-applicable, requires: [entry-exit-evaluation]}
-  dor-approach-still-fits: {statement: 'Delivery approach still fits - nothing found in refine makes `delivery-approach.md` wrong;
+  dor-approach-still-fits: {statement: 'Delivery approach still fits - nothing found in refine makes the approach `compass approach show` prints wrong;
         if it does, re-assess (`/compass:assess --reassess`) before plan.', kind: human, severity: blocking,
       on_skipped: not-applicable, requires: [entry-exit-evaluation]}
-  dod-every-scenario-passes: {statement: 'Every scenario passes - every row of the "Scenario acceptance results" section is PASS; the spec, read as the acceptance suite, is green.',
+  dod-every-scenario-passes: {statement: 'Every scenario passes - each scenario has a passing test on record; the spec, read as the acceptance suite, is green.',
       kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
-  dod-suite-green: {statement: 'TDD suite green - the "Test suite evidence" section links the record of the full suite passing.', kind: human, severity: blocking,
+  dod-suite-green: {statement: 'TDD suite green - the record of the full suite passing is on file (`compass tdd-green`).', kind: human, severity: blocking,
       on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
-  dod-coverage-floor: {statement: 'Coverage meets the "Tested before it lands" guardrail''s floor (`G1`) - evidence in the "Test suite evidence" section.', kind: human,
+  dod-coverage-floor: {statement: 'Coverage meets the "Tested before it lands" guardrail''s floor (`G1`), with its evidence on record.', kind: human,
       severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
   dod-no-lint-errors: {statement: 'No lint / format / type errors - clean, with the record linked.', kind: human, severity: blocking,
       on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}

@@ -1,8 +1,9 @@
-"""The release line in the living spec and in `compass release notes`.
+"""The release line in `compass release notes`.
 
-The living spec prints an issue's `release_note` under its heading, and the
-`release notes` verb lists the issues completed since a git reference with
-that line. Both are reads: neither writes an issue record.
+The `release notes` verb lists the issues completed since a git reference
+with each issue's `release_note`. It is a read: it writes no issue record.
+9.0.0 derives no living spec (ADR-091), but a revision made before then still
+holds one, and the verb reads it there to place an issue.
 
 Each verb run happens in a fresh interpreter on a parser the test builds, so
 the run shows which modules it loaded and never touches `cli/compass`.
@@ -68,12 +69,6 @@ def _issue(root, slug, approach="regular", stamp="2026-10-08T09:00:00Z",
                                        encoding="utf-8")
 
 
-def _derive(root):
-    from compass_pkg import flow
-    flow.derive_system_spec(str(root))
-    return (Path(root) / "docs" / "system-spec.md").read_text(encoding="utf-8")
-
-
 RUNNER = textwrap.dedent("""
     import argparse, sys
     sys.path.insert(0, {cli!r})
@@ -119,28 +114,6 @@ def _tree_digest(root, *folders):
                 digest.update(str(path.relative_to(root)).encode())
                 digest.update(path.read_bytes())
     return digest.hexdigest()
-
-
-# --- the living spec -----------------------------------------------------------
-
-def test_irl_16_living_spec_release_line(tmp_path):
-    _issue(tmp_path, "a-issue", release_note="Adds the board.")
-    _issue(tmp_path, "b-issue", stamp="2026-10-09T09:00:00Z")
-    spec = _derive(tmp_path)
-    assert ("### a-issue (completed 2026-10-08)\n\nAdds the board.\n\n"
-            "- `S-1` the first scenario\n- `S-2` the second scenario\n") in spec
-    assert ("### b-issue (completed 2026-10-09)\n\n"
-            "- `S-1` the first scenario\n- `S-2` the second scenario\n") in spec
-    first = Path(tmp_path, "docs", "system-spec.md").read_bytes()
-    archive = Path(tmp_path, "docs", "system-spec-archive.md").read_bytes()
-    _derive(tmp_path)
-    assert Path(tmp_path, "docs", "system-spec.md").read_bytes() == first
-    assert Path(tmp_path, "docs", "system-spec-archive.md").read_bytes() == archive
-
-
-def test_irl_16_a_multi_line_release_line_is_one_line_in_the_spec(tmp_path):
-    _issue(tmp_path, "a-issue", release_note="Adds the board.\nShows it by stage.")
-    assert "\n\nAdds the board. Shows it by stage.\n\n- `S-1`" in _derive(tmp_path)
 
 
 # --- release notes: which issues, in what order --------------------------------
@@ -285,6 +258,15 @@ def test_irl_25_the_archive_file_names_an_issue_too(tmp_path):
     assert "old-issue" not in out
 
 
+def test_irl_25_an_older_spec_names_an_issue_under_either_heading_word():
+    # A spec derived before 6.0.0 says "landed" where a later one says "completed".
+    from compass_pkg import shipped_issues
+    text = ("## Current Behaviour\n\n### old-one (landed 2026-08-01)\n\n- `A-1` x\n\n"
+            "### new-one (completed 2026-10-01)\n\n- `B-1` y\n\n"
+            "### third (finished 2026-10-02)\n")
+    assert shipped_issues.issues_named(text) == {"old-one", "new-one"}
+
+
 def test_irl_25_an_issue_neither_part_places_is_counted(tmp_path):
     root, _ = _tagged_repo(tmp_path)
     _git(root, "checkout", "-q", "-b", "side")
@@ -348,92 +330,7 @@ def test_irl_29_the_module_does_not_import_the_parse_cache():
     assert not [line for line in imports if "parse_cache" in line or "flow" in line]
 
 
-# --- the archive derives unchanged ---------------------------------------------
-
-#: What `compass _derive-system-spec --internal` wrote for these issues before
-#: the release line existed. No issue holds `release_note`, so every byte must
-#: stay.
-ARCHIVE_SPEC = """\
-<!-- DERIVED FILE - do not hand-edit; `compass _derive-system-spec` rebuilds it from the scenarios in each completed issue's manifest.yml - edit the scenario there and in the issue's acceptance-criteria.md -->
-
-# System Specification (derived)
-
-> `compass _derive-system-spec` builds this file from the `scenarios:` block of each landed issue's `.compass/work/<slug>/manifest.yml`.
-> **Do not hand-edit** - the next derivation overwrites it.
-> Edit the source: the scenario in that manifest, and its prose in the issue's `acceptance-criteria.md` under `docs/compass/<created>-<slug>/`.
-
-## Current Behavior
-
-### first-issue (completed 2026-09-01)
-
-- `S-1` the first scenario
-- `S-2` the second scenario
-
-### second-issue (completed 2026-09-02)
-
-- `S-1` the first scenario
-- `S-2` the second scenario
-
-### third-fix (completed 2026-09-03)
-
-- `S-1` the first scenario
-- `S-2` the second scenario
-
----
-
-1 superseded scenario(s) are in `docs/system-spec-archive.md`.
-"""
-
-ARCHIVE_ARCHIVE = """\
-<!-- DERIVED FILE - do not hand-edit; `compass _derive-system-spec` rebuilds it from the scenarios in each completed issue's manifest.yml - edit the scenario there and in the issue's acceptance-criteria.md -->
-
-# System Specification - Archive (derived)
-
-> Scenarios whose manifest names a replacement in `superseded_by`. The current behavior is in `docs/system-spec.md`.
-
-## Archived Behavior
-
-> These scenarios name a replacement in `superseded_by`.
-
-### the old scenario _(archived)_
-
-- **Scenario id:** `S-OLD`
-- **Intent:** `INT-1`
-- **Source issue:** `second-issue`
-- **Landed:** 2026-09-02
-"""
-
-
-def test_irl_20_archive_derives_and_renders_unchanged(tmp_path):
-    _issue(tmp_path, "first-issue", stamp="2026-09-01T09:00:00Z")
-    _issue(tmp_path, "second-issue", stamp="2026-09-02T09:00:00Z",
-           scenarios=SCENARIOS + [{"id": "S-OLD", "title": "the old scenario",
-                                   "intent": "INT-1", "superseded_by": "S-1"}])
-    _issue(tmp_path, "third-fix", approach="quick-fix", stamp="2026-09-03T09:00:00Z")
-    _issue(tmp_path, "a-spike", approach="spike", stamp="2026-09-04T09:00:00Z")
-    _issue(tmp_path, "an-open-issue", status="in-progress", close_reason=None)
-    _derive(tmp_path)
-    assert (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8") == ARCHIVE_SPEC
-    assert (tmp_path / "docs" / "system-spec-archive.md").read_text(
-        encoding="utf-8") == ARCHIVE_ARCHIVE
-    # The derivation reads the records and writes only the two living files.
-    assert sorted(p.name for p in (tmp_path / "docs").iterdir()) == [
-        "system-spec-archive.md", "system-spec.md"]
-    # The dry-run render lists the documents it listed before the release line.
-    _git(tmp_path, "init", "-q", "-b", "main")
-    done = subprocess.run([sys.executable, str(CLI / "compass"), "issue", "render",
-                           "--all", "--dry-run"], cwd=str(tmp_path),
-                          capture_output=True, text=True)
-    assert done.returncode == 0, done.stderr
-    listed = [line.split()[2].rstrip(":") for line in done.stdout.splitlines()
-              if line.strip().startswith("would write")]
-    assert listed == ["docs/compass/2026-10-01-a-spike/README.md",
-                      "docs/compass/2026-10-01-an-open-issue/README.md",
-                      "docs/compass/2026-10-01-first-issue/README.md",
-                      "docs/compass/2026-10-01-second-issue/README.md",
-                      "docs/compass/2026-10-01-third-fix/README.md",
-                      "docs/compass/README.md"]
-
+# --- the archive renders unchanged ---------------------------------------------
 
 # --- the help text -------------------------------------------------------------
 

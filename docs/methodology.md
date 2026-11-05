@@ -41,14 +41,15 @@ the project's `compass.yml` and the issue's own `config:` - including floors,
 caps and immovable gates, and reads which documents the issue has on disk.
 
 > Judgement goes into the assessment. Everything after it is deterministic:
-> the same assessment, configuration and documents produce the same approach,
+> the same assessment and configuration produce the same approach,
 > every time ([safety contract](safety-contract.md#1-routing-is-deterministic-after-assessment)).
 
-The kit writes the result to `delivery-approach.md`, including:
+The kit writes the result to the manifest, and `compass approach show` prints
+it. It records:
 
 - the recorded assessment;
 - the computed approach;
-- the stages, artifacts and gates that apply;
+- the stages and gates that apply;
 - the allowed delivery orchestration; and
 - anything omitted, with the reason it is safe to omit.
 
@@ -156,26 +157,18 @@ evidence, the markers and the devlog - is in `.compass/work/<issue>/`. The
 documents are in `docs/compass/<created>-<issue>/`, where `<created>` is the
 manifest's `created:` date.
 
-The pack has two main files, both in `.compass/work/<issue>/`:
+The pack has two main files in `.compass/work/<issue>/`:
 
-- `README.md` is the human dashboard: status, delivery approach, the decision
-  awaited, the review pack, what was deliberately omitted and traceability.
-  `compass next` names the next action.
-- `manifest.yml` is the manifest: assessment, stage state, gates,
-  traceability and evidence registry.
+- `manifest.yml` is the manifest: assessment, delivery approach, stage state,
+  gates, traceability and evidence registry. `compass next` names the next
+  action.
+- `devlog.md` is the running log: what each stage did, the de-scope reasons,
+  follow-ups and reassessments.
 
-Other artifacts are selected by the delivery approach, and are written to
-`docs/compass/<created>-<issue>/`. They can include:
-
-| Concern | Typical artifacts |
-|---|---|
-| Product intent | `intent.md` |
-| Acceptance | `acceptance-criteria.md`, `requirements-review.md` |
-| Architecture and design | HLD, LLD, ADRs, `technical-design.md`, `architecture-notes.md` |
-| Delivery | `distribution-map.md`, implementation plan |
-| Quality | test strategy, `verification-report.md`, `evidence/` |
-| Launch | `positioning.md`, `launch-readiness.md` |
-| History | `devlog.md`, follow-ups and reassessments |
+The one document Compass needs and checks is `acceptance-criteria.md`, written
+to `docs/compass/<created>-<issue>/` (ADR-091). Its Summary and Intent links
+carry the product intent. A team can keep its own notes beside it, such as a
+design, ADRs or `positioning.md`; Compass does not read them.
 
 An artifact must be understandable to a reader who was not in the conversation:
 context before detail, resolvable references, explicit decisions and no

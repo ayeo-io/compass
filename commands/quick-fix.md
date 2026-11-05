@@ -80,9 +80,7 @@ nothing else:
   - `medium`, `large` or `product`: several files, a day or more, one or more
     design decisions. This is heavier than a quick fix.
 
-`--goal` takes `VALUE - reason`; the goal is `delivery` on this path. An
-`intent.md` or `positioning.md` on disk adds a check to the quick fix, not
-weight. A goal of `exploration` changes the approach ("I cannot state this well enough to
+`--goal` takes `VALUE - reason`; the goal is `delivery` on this path. A goal of `exploration` changes the approach ("I cannot state this well enough to
 deliver it yet"): that is a spike, not a small change. `--role` is ignored. `--test` can repeat. The scenario id is `TRC-001` unless you pass `--scenario-id`.
 
 Pass `--labels` with the domains touched, comma-separated. Only `auth`,
@@ -90,8 +88,9 @@ Pass `--labels` with the domains touched, comma-separated. Only `auth`,
 heavier process and a person's sign-off; a synonym such as `pii` does not.
 
 It runs `compass init`, records the assessment, computes the approach
-through `compass approach evaluate`, writes `delivery-approach.md`, and
-registers it with `compass issue artifact set`. If it prints a `created:` line
+through `compass approach evaluate` and writes it to the manifest. It writes
+no document: the intent sentence, the scenario and the advice open the
+issue's `devlog.md`. If it prints a `created:` line
 naming `.compass/` or `docs/compass/`, report it to the user: if a directory
 appears and nobody says so, someone can delete it by hand or commit it by
 mistake.
@@ -166,7 +165,7 @@ only, so run `/compass:assess --reassess` (the `atdd` skill).
 
 ## Gate
 
-- `quick-fix start` wrote `delivery-approach.md` and the one scenario;
+- `quick-fix start` recorded the approach and the one scenario;
 - a red (or acceptance) is on file for it;
 - `quick-fix finish` ran to completion: the green recorded, every changed
   file traced, `compass check` passed, the three gates `pass` with

@@ -84,8 +84,10 @@ def test_si_1_the_constants_equal_the_default_preset():
 
     gates = _preset_ids("gates.yml", "gates")
     assert list(ids.GATE_IDS) == gates
+    # A removed gate keeps its constant, because an older manifest still names it.
     assert {v for k, v in vars(ids).items() if k.startswith("GATE_") and isinstance(v, str)} \
-        == set(gates)
+        == set(gates) | set(ids.REMOVED_GATE_IDS)
+    assert not set(ids.REMOVED_GATE_IDS) & set(gates), "a removed gate is still declared"
 
     aliases = ids.LEGACY_APPROACH_ALIASES
     assert aliases, "no legacy approach names"
@@ -289,6 +291,7 @@ def test_si_5_the_allow_list_is_honest():
 # so adding one or removing one fails until this table changes.
 STAGE_LEDGER = {
     "lessons.py": (2, 'a lesson source named "verify" is not a pipeline stage'),
+    "removed_parts.py": (1, 'the removed verb "compass plan lint" is a command word, not a stage'),
 }
 
 

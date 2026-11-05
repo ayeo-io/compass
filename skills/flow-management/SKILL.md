@@ -19,8 +19,9 @@ how to handle a blocker, and how to write the digest.
 
 A delivery-manager agent would own the board and move issues; Compass has none.
 Issue state is not a label someone sets; it is *inferred
-from the artifacts on disk*. An issue is in the implement stage because `technical-design.md` exists and
-`verification-report.md` does not - not because someone moved a card. So flow
+from the records on disk*. An issue is in the implement stage because its
+tests are on record and its gates are not all passed - not because someone
+moved a card. So flow
 management has nothing to *own* and nothing to *move*. Its entire job is to
 read the artifacts, notice what the per-issue pipeline structurally cannot
 (because each issue only sees itself), and put the right thing in front of a
@@ -41,7 +42,7 @@ is a cross-issue question, and this is the command that answers it.
 Run these against every issue directory under `.compass/work/`. Order of
 severity, worst first:
 
-1. **No `delivery-approach.md`** - a guardrail violation. Work was started without an assessment.
+1. **No `delivery_approach:` in the manifest** - a guardrail violation. Work was started without an assessment.
    This outranks everything; an issue with no computed approach is unaccountable.
    The fix is to run `/compass:assess` now and reconcile.
 

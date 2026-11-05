@@ -88,7 +88,11 @@ JSON_SCHEMA_VERSION = 1
 # Version 12: a check a release removed (`check_registry.REMOVED`) owes nothing,
 # so a list that drops one, such as `multiagent-run-recorded` at 9.0.0, compares
 # as `equivalent`, which version 11 read as `loosening` (ADR-090).
-CLASSIFIER_VERSION = 12
+#
+# Version 13: a review gate a release removed (`routing.REMOVED_GATES`) owes
+# nothing, so an approach whose gates drop one, such as `verify.analyze` at 9.0.0,
+# compares as `equivalent`, which version 12 read as `loosening` (ADR-091).
+CLASSIFIER_VERSION = 13
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")

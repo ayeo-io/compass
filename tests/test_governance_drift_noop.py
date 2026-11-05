@@ -232,11 +232,11 @@ EXPECTED_GUARDRAIL_IDS = {"G1", "G2", "G3", "G4", "G5", "S1", "S2"}
 # or https URL, so a team arriving with one does not retype it - a
 # top-level group rather than a subverb, because no subverb owns it.
 EXPECTED_SUBCOMMANDS = {
-    "approach", "bdd", "check", "analyze", "retro", "ci", "tdd-red",
-    "tdd-green", "policy", "plan", "intent", "issue", "adr", "rework-scan", "flow",
+    "approach", "bdd", "check", "retro", "ci", "tdd-red",
+    "tdd-green", "policy", "intent", "issue", "adr", "rework-scan", "flow",
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
-    "review-rule", "spec", "preset",  # `review-rule list`, `spec sync`, `preset init|test`
+    "review-rule", "preset",  # `review-rule list`, `preset init|test`; 9.0.0 removed `spec` and `plan`
     # `init` creates `.compass/config.yml` and `.compass/work/`, and is safe
     # to run twice. It exists because no other command owns initialisation,
     # and the five entry points call it directly.
@@ -302,11 +302,10 @@ def test_trc_f6_the_framework_should_grow_by_artifacts_and_checks_only():
 def test_trc_f7_evidence_types_agree_across_surfaces():
     """Two shipped surfaces must declare the same evidence types.
 
-    `compass analyze` writes a `consistency-check` entry, and
-    manifest.schema.json did not accept it - so an issue whose delivery
-    approach includes verify.analyze produced evidence its own `compass
-    issue lint` rejected. No issue here had hit it, because verify.analyze
-    only enters the gate set at critical risk or on irreversible surface.
+    `compass analyze` (removed in 9.0.0, ADR-091) wrote a `consistency-check`
+    entry, and manifest.schema.json did not accept it - so an issue whose
+    delivery approach included verify.analyze produced evidence its own
+    `compass issue lint` rejected. An older manifest can still hold one.
     The same defect this issue fixes: two governance surfaces disagreeing,
     with nothing checking.
     """

@@ -5,8 +5,8 @@ A project opts in with the settings key `github_labels` in `compass.yml`:
 `domain` writes the issue's declared domain labels, `status` writes the
 `status:<state>` label and, on a closed issue, `close:<reason>`. Both default
 to off, and with both off nothing in this module reaches `gh`. The third
-switch, `page`, belongs to `github_page`, which uses this module's link and
-`gh` runner.
+switch, `page`, posted the issue page before 9.0.0; it is not read now
+(ADR-091).
 
 The manifest is the source of truth and GitHub is only written. A sync
 compares the labels Compass owns with the labels on the GitHub issue and
@@ -23,7 +23,7 @@ credentials. Compass stores and reads no token.
 # DEPENDENCY: compass_pkg.core, compass_pkg.lifecycle, compass_pkg.status_words,
 # compass_pkg.project_settings, compass_pkg.layers, compass_pkg.effective,
 # compass_pkg.github_sync_record and compass_pkg.terminal. Nothing imports this module
-# except the entry point, `issue lint`, `github_page` and the registry of verbs.
+# except the entry point, `issue lint` and the registry of verbs.
 from __future__ import annotations
 
 import json
@@ -419,7 +419,7 @@ def lint_notes(task, task_dir):
 
 
 def register(pts, issue_arg):
-    """`link set` under `compass issue`. `github_page.register` adds `github sync`."""
+    """`link set` and `github sync` under `compass issue`."""
     link_group = pts.add_parser("link", help="an issue's link to its GitHub issue")
     linker = link_group.add_subparsers(dest="link_cmd", required=True).add_parser(
         "set", help="link an issue to its GitHub issue")
@@ -432,3 +432,45 @@ def register(pts, issue_arg):
                              "merge commit")
     issue_arg(linker)
     linker.set_defaults(func=cmd_issue_link, output_kind="hand-off")
+
+    group = pts.add_parser("github", help="an issue's labels on GitHub")
+    verbs = group.add_subparsers(dest="github_cmd", required=True)
+    syncer = verbs.add_parser("sync", help="write an issue's labels to its GitHub issue now")
+    issue_arg(syncer)
+    syncer.set_defaults(func=cmd_github_sync, output_kind="hand-off")
+
+
+SYNC_VERB = "compass issue github sync"
+
+
+def cmd_github_sync(args):
+    """`compass issue github sync`: bring the linked GitHub issue's labels up to date now.
+    9.0.0 posts no issue page (ADR-091), so the `page` switch sends nothing."""
+    task_dir = resolve_issue_dir(getattr(args, "task", None))
+    task, _ = load_manifest(task_dir)
+    slug = task.get("issue")
+    try:
+        target = link_of(task)
+    except SyncError as exc:
+        raise CompassError(f"{SYNC_VERB}: {exc}") from None
+    if target is None:
+        raise CompassError(
+            f"{SYNC_VERB}: '{slug}' is not linked to a GitHub issue; run "
+            "`compass issue link set --github owner/repo#number` first.")
+    root = _project_root(task_dir)
+    domain_on, status_on = switches(root)
+    if not (domain_on or status_on):
+        return say(args, f"{SYNC_VERB}: no label switch is on, so nothing was sent. Set "
+                         "`github_labels` in compass.yml (docs/github-labels.md).", issue=slug)
+    try:
+        add, remove, skipped = sync_issue(task, task_dir)
+    except SyncError as exc:
+        record_failure(task_dir, exc)
+        raise CompassError(f"{SYNC_VERB}: {slug} -> {target[0]}#{target[1]} - labels: "
+                           f"{exc}.") from None
+    if skipped:
+        sys.stderr.write(_skipped_line(skipped) + "\n")
+    detail = ([f"labels added: {', '.join(add)}"] if add else []) \
+        + ([f"labels removed: {', '.join(remove)}"] if remove else []) \
+        + ([] if add or remove else ["labels: already current"])
+    return say(args, f"{SYNC_VERB}: {slug} -> {target[0]}#{target[1]}.", detail=detail, issue=slug)

@@ -103,8 +103,10 @@ def test_cr_5_an_adopted_folder_gives_the_manifest_an_uninterrupted_reassess_wou
     assert fx.reassess(other_root)[0] == 0
     adopted, direct = fx.manifest_of(task_dir), fx.manifest_of(other_dir)
     for key in ("generation", "delivery_approach", "stages", "gates", "checkpoints",
-                "policy_rules_fired", "subtask_ceiling", "artifacts", "config"):
+                "policy_rules_fired", "subtask_ceiling", "config"):
         assert adopted[key] == direct[key], key
+    # Routing writes no document list since 9.0.0 (ADR-091 decision 4).
+    assert "artifacts" not in adopted and "artifacts" not in direct
 
 
 def test_cr_5_commit_refuses_when_the_project_changed_since_the_crash(

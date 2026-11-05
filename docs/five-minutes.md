@@ -45,7 +45,7 @@ reference shape (spike or hotfix). Domain labels, such as `auth`, can raise the
 floor: the lightest approach the policy allows. Neither is scored.
 
 Judgment goes into the assessment. Everything after it is deterministic: the
-same assessment, configuration and documents on disk produce the same
+same assessment and configuration produce the same
 approach, every time.
 
 For a contained typo, Compass will normally choose a quick-fix-shaped approach.
@@ -91,26 +91,16 @@ shipped default, and the line names the shipped `routing-policy.yml` and its
 version instead. Run against an issue that already has a stored generation, the
 line reads `generation N of this issue (parent ...)`.
 
-Render the issue page:
+See the decision:
 
 ```bash
-compass issue render --issue <issue>
+compass approach show --issue <issue>
 ```
 
-Then open `docs/compass/<created>-<issue>/README.md`. It tells you:
-
-- the proposed approach;
-- what needs human approval;
-- which artifacts will be produced;
-- what Compass deliberately omitted, and why;
-- each scenario's red, green and evidence, with a diagram from intent to
-  scenario to test to evidence that renders in a Markdown preview.
-
-The page does not name the next action. `compass next` does.
-
-Compass renders the page again after each command that changes a record, and
-`compass check` fails a page that no longer matches the records. Run
-`compass issue render` to repair one by hand.
+It prints the approach, the gates and where the issue's files go. `compass
+check` shows each scenario's red, green and evidence, and `compass next` names
+the next action. Compass writes no issue page: the manifest and the evidence
+are the record.
 
 To see every issue at once, with a lane for each stage, run
 `compass board render`. It writes one page and opens it in the browser;
@@ -184,8 +174,8 @@ Run:
 ```
 
 The verify stage checks the acceptance criteria, test evidence, traceability
-and any approach-specific gates. Read `verification-report.md` and resolve
-anything still open.
+and any approach-specific gates. Run `compass check` and resolve anything
+still open.
 
 Then run:
 
@@ -203,20 +193,17 @@ A small issue typically leaves:
 
 ```text
 .compass/work/<issue>/
-├── README.md
 ├── manifest.yml
 ├── devlog.md
 └── evidence/
 
 docs/compass/<date>-<issue>/
-├── delivery-approach.md
-├── acceptance-criteria.md
-└── verification-report.md
+└── acceptance-criteria.md
 ```
 
-`.compass/work/<issue>/` holds the machine state and the dashboard;
-`docs/compass/<date>-<issue>/` holds the documents. The exact pack varies with
-the work. Another person, session or compatible
+`.compass/work/<issue>/` holds the machine state; `docs/compass/<date>-<issue>/`
+holds the acceptance criteria, the one document Compass needs and checks
+(ADR-091). A team can keep its own notes beside it. Another person, session or compatible
 runtime can resume from these files without the original chat.
 
 ## The mental model in five points

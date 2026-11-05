@@ -404,9 +404,9 @@ def test_trc_034(tmp_path):
 def test_trc_038(tmp_path):
     """Scenario id: `TRC-038` in language-key-and-us-english/acceptance-criteria.md
 
-    Every heading of a template is in US English, and a project that sets
-    another language gets the same headings, with a body written in German
-    under them left alone."""
+    Every heading of a template is in US English. The second half, that a
+    project setting another language got the same headings from `compass issue
+    template show`, went with that verb in 9.0.0 (ADR-091)."""
     headings = []
     for template in sorted((ROOT / "templates").rglob("*.md")):
         for number, line in enumerate(template.read_text(encoding="utf-8").splitlines(), 1):
@@ -415,26 +415,6 @@ def test_trc_038(tmp_path):
     assert len(headings) > 40
     for path, number, line in headings:
         assert words.scan_text(line) == [], f"{path}:{number}: {line}"
-    # The fixed headings the CLI writes into the living spec (the `###` headings
-    # of that page are issue names, which are identifiers).
-    spec = (ROOT / "docs" / "system-spec.md").read_text(encoding="utf-8")
-    fixed = [ln for ln in spec.splitlines() if ln.startswith(("# ", "## "))]
-    assert fixed and words.scan_text("\n".join(fixed)) == []
-
-    import test_generation_store as store
-    shown = []
-    for language in (None, "de"):
-        root = tmp_path / (language or "plain")
-        root.mkdir()
-        cfg = {"schema": 1} if language is None else {"schema": 1, "language": language}
-        store._project(root, compass_yml=cfg)
-        assert store._evaluate_write(root)[0] == 0
-        code, out, err = store._run(root, "issue", "template", "show", "requirements-review",
-                                    "--issue", store.SLUG)
-        assert code == 0, out + err
-        german = out.rstrip("\n") + "\n\nDer deutsche Text unter der Ueberschrift.\n"
-        shown.append([ln for ln in german.splitlines() if ln.startswith("#")])
-    assert shown[0] == shown[1] and shown[0]
 
 
 def test_a_kept_line_of_a_json_file_is_covered_in_that_file_and_that_line_only():

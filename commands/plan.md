@@ -1,5 +1,5 @@
 ---
-description: Write the technical design and check it against governance
+description: State the technical approach and check it against governance
 allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Edit(./.compass/**), Edit(./docs/**), Bash(compass *), Glob, Grep
 ---
 
@@ -14,25 +14,27 @@ engineering plan stage.)
 
 ## Setup
 
-- Read `delivery-approach.md`. Its weight for this stage tells you the
-  shape: a one-line "edit which file(s)" note (quick fix - no `technical-design.md`), a
-  real `technical-design.md` (regular), or a full `technical-design.md` plus
-  `distribution-map.md` (the full approach).
-- Read `acceptance-criteria.md` and `requirements-review.md` - the design
-  uses the spec as the requirements review left it.
+- Run `compass approach show`. The plan stage's weight tells you the shape:
+  a one-line "edit which file(s)" note (quick fix), a short design (regular),
+  or a full design with its work units (the full approach).
+- Read `acceptance-criteria.md` - the design uses the spec as the
+  requirements review left it. It is the one document Compass needs and
+  checks; a team can keep its own design notes, and Compass does not read them.
 - Load the `plan-authoring` skill - how to write the design itself: what a
   work unit is, what makes one independent of another, and the
   self-review the author owes the reviewer before the design is handed over.
 - Load the `governance-check` skill.
 - Run this stage in this session; Compass starts no agent for it (ADR-090).
-- If an `intent.md` exists, this stage runs the **intent-fidelity gate**: the
-  spec must be checked against `intent.md` before the design completes. Run it
-  from the product owner's perspective.
+- Check the spec against the outcome the product owner asked for (the
+  **intent-fidelity** check): the Summary and the Intent links of
+  `acceptance-criteria.md` name it. Run it from the product owner's perspective.
 
 ## Procedure
 
-1. **Technical approach.** State the design. Record each design decision as
-   an ADR-style note - what was chosen, what was rejected, why. Read
+1. **Technical approach.** State the design. For each design decision, say
+   what was chosen, what was rejected and why. Record a decision that binds
+   the project as a decision record (`compass adr new`), and a decision you
+   took for the person with `compass issue decision add`. Read
    `architecture-notes.md` in the issue's documents if it exists: each design
    decision then cites an existing ADR (`architecture/decisions/ADR-N-*`),
    names a candidate ADR to write during implementation, or justifies its
@@ -48,26 +50,18 @@ engineering plan stage.)
    run it if the project has changed the rules. A design that breaks a guardrail
    does not pass - revise the design, never waive the guardrail. A design
    that departs from a strategy can pass, but the departure is recorded.
-3. **Distribution map** (when the work splits into independent units). Read
+3. **Work units** (when the work splits into independent units). Read
    the scenario groups from `acceptance-criteria.md`; units that touch
    disjoint code and satisfy disjoint scenarios can run in parallel.
    - On the regular approach: a short list of 2-3 units is enough.
-   - On the full approach: write the full `distribution-map.md` from its
-     template.
-   - This session builds the units one after another (ADR-090); the map
+   - On the full approach: list each unit, the files it touches and the
+     scenarios it owns.
+   - This session builds the units one after another (ADR-090); the list
      records the order and which scenarios each unit owns.
 
-   The unit count comes from the map; a policy cap can bound the count.
-4. **Write `technical-design.md`** from `${CLAUDE_PLUGIN_ROOT}/templates/technical-design.md`,
-   and `distribution-map.md` from its template when applicable.
-
-   **Where it goes.** `docs/compass/<created>-<issue-slug>/technical-design.md`, where the
-   date is the manifest's `created:` field - not today's. Then register it:
-   `compass issue artifact set technical-design --status draft --path <that path>`. The CLI
-   refuses a path outside the project, so the record is checked
-   rather than claimed. If you had to create `docs/compass/`, **say so in one
-   line** - if a directory appears and nobody says so, someone can delete it
-   by hand or commit it by mistake.
+   A policy cap can bound the unit count.
+4. **Show the design in the hand-off.** Compass writes no design document and
+   registers nothing at this stage. Log the design to `devlog.md`.
 
 ## Hand-off
 
@@ -75,9 +69,7 @@ Close the design by handing the technical approach to a human. This is the
 last review before code is written, and the cheapest point at which to change
 the design.
 
-> I have written the design to
-> `docs/compass/<created>-<issue-slug>/technical-design.md`
-> (and the distribution map to `distribution-map.md`).
+> The design is below, and in `devlog.md`.
 >
 > It records N design decisions, the governance check against all of the
 > governance in force, and M work units.
@@ -90,8 +82,8 @@ the design.
 >   decision yet.
 > - **Work units that are not as independent as claimed** - optimistic
 >   decomposition surfaces as a collision at integration, not here.
-> - **Anything still unfinished** - `compass plan lint` reports placeholder
->   phrases, but a design can be vague without using one.
+> - **Anything still unfinished** - a placeholder such as `TBD`, or a design
+>   that is vague without using one.
 >
 > On approval this goes to breakdown, or straight to implementation on solo
 > work.
@@ -100,7 +92,7 @@ Wait for approval only if `plan` is in the manifest's `checkpoints:`.
 The project's `autonomy` setting, read from `compass.yml` (or from
 `.compass/config.yml` in a project without one), decides that list,
 and `compass approach show` shows it. If `plan` is not listed, still
-write the technical design and show this hand-off, then say you are going on without
+state the design and show this hand-off, then say you are going on without
 waiting and name the setting, with "Next" in place of "On approval". Record
 the passed hand-off with `compass issue checkpoint add plan --outcome skipped
 --by planner`, so the person can review it later and send the issue back. If
@@ -125,7 +117,7 @@ the list in the hand-off.
 
 ## Gate
 
-`technical-design.md` exists; the governance check passed (record its result and link
-the record); if an `intent.md` exists, the intent-fidelity gate passed; if the work is parallelisable, a
-distribution map exists. Log to `devlog.md`. Next: `/compass:breakdown` (or
+The design is stated; the governance check passed (record its result with
+`compass evidence add`); the spec meets the outcome the product owner asked for; if the
+work is parallelisable, the work units are listed. Log to `devlog.md`. Next: `/compass:breakdown` (or
 straight to `/compass:implement` on solo work).

@@ -1,7 +1,5 @@
 """`compass next` reports the stage an issue has reached: the
-next-never-leaves-assess issue, scenarios NS-A to NS-I. The current one is in
-`docs/system-spec.md`, and the eight it supersedes are in
-`docs/system-spec-archive.md`.
+next-never-leaves-assess issue, scenarios NS-A to NS-I.
 
 The stage is derived from the records on disk. The status line and the rail
 take it from the same place, so all three must agree.
@@ -50,7 +48,8 @@ def _issue(root: Path, route: str, *, scenarios=True, criteria=None, review=Fals
            review_file=False,
            design=False,
            dist_map=False, subtask=False, red=False, green=(), narrative=(),
-           gates_pass=False, landed=False, current_phase=None, raw=None) -> Path:
+           gates_pass=False, landed=False, current_phase=None, handed_off=(),
+           raw=None) -> Path:
     """A project at `root` whose one issue carries the named records,
     registered as the commands register them: `draft`, with a path."""
     import yaml
@@ -101,6 +100,14 @@ def _issue(root: Path, route: str, *, scenarios=True, criteria=None, review=Fals
         (task / "evidence" / "red.json").write_text("{}")
     m["evidence"] = [{"id": f"EV-T-{s}", "type": "test-run", "path": f"evidence/green-{s}.json",
                       "scenario": s} for s in green]
+    for stage, outcome in handed_off:
+        # As `compass issue checkpoint add` (skipped) and `compass evidence
+        # approve --checkpoint` (waited) record a stage hand-off.
+        entry = {"stage": stage, "outcome": outcome, "by": "spec-author",
+                 "at": "2026-10-02T10:00:00Z"}
+        if outcome == "waited":
+            entry["evidence"] = f"EV-CP-{stage}"
+        m.setdefault("checkpoint_outcomes", []).append(entry)
     if gates_pass:
         for g in m["gates"]:
             g["status"] = "pass"
@@ -148,8 +155,6 @@ CASES = {
     # From 7.0.0 a feature earns a lightweight requirements review (ADR-072), so, as
     # on an initiative, only a registered one clears refine.
     "feature, criteria draft": (dict(route="feature", criteria="draft"), "Refine"),
-    "feature, review file unregistered": (dict(route="feature", criteria="draft",
-                                               review_file=True), "Refine"),
     "feature, requirements review draft": (dict(route="feature", criteria="draft",
                                                 review=True), "Plan"),
     "initiative, criteria draft": (dict(route="initiative", criteria="draft"), "Refine"),
@@ -157,10 +162,22 @@ CASES = {
                                                     criteria="draft"), "Refine"),
     "initiative, requirements review draft": (dict(route="initiative", criteria="draft",
                                                    review=True), "Plan"),
-    # An initiative earns the review, so only a registered one clears refine.
-    "initiative, review file unregistered": (dict(route="initiative", criteria="draft",
-                                                  review_file=True), "Refine"),
+    # The two "review file unregistered" cases went in 9.0.0: they read a review file
+    # beside the placeholder entry routing seeded, and routing seeds none (ADR-091).
     "quick-fix, scenarios only": (dict(route="quick-fix"), "Implement"),
+    # From 9.0.0 refine and plan write no document (ADR-091). The hand-off each
+    # records, skipped or waited, is the stage's record.
+    "feature, refine handed off": (dict(route="feature", criteria="draft",
+                                        handed_off=[("refine", "skipped")]), "Plan"),
+    "feature, refine approved": (dict(route="feature", criteria="draft",
+                                      handed_off=[("refine", "waited")]), "Plan"),
+    # Breakdown records nothing of its own (ADR-090), so plan's hand-off ends it too.
+    "feature, plan handed off": (dict(route="feature", criteria="draft",
+                                      handed_off=[("refine", "skipped"),
+                                                  ("plan", "skipped")]), "Implement"),
+    "feature, plan approved": (dict(route="feature", criteria="draft",
+                                    handed_off=[("refine", "waited"),
+                                                ("plan", "waited")]), "Implement"),
     # NS-C
     "feature, design draft": (dict(route="feature", criteria="draft", design=True), "Breakdown"),
     "feature, subtask recorded": (dict(route="feature", criteria="draft", design=True,

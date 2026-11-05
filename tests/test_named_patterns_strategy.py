@@ -31,6 +31,5 @@ def test_np_1_the_strategy_asks_for_named_and_rejected_patterns():
 def test_np_1_the_rationale_and_the_texts_point_to_it():
     rationale = (ROOT / "governance" / "strategies-rationale.md").read_text(encoding="utf-8")
     assert "(`S16`)" in rationale
-    for rel in ("commands/verify.md", "skills/plan-authoring/SKILL.md",
-                "templates/technical-design.md"):
+    for rel in ("commands/verify.md", "skills/plan-authoring/SKILL.md"):
         assert "S16" in (ROOT / rel).read_text(encoding="utf-8"), rel

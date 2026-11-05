@@ -20,6 +20,7 @@ from xml.etree import ElementTree
 
 import pytest
 
+from tests import document_registry
 from tests.acceptance.atdd_strategy import support, typescript
 
 HOOK = support.ROOT / "hooks" / "pre-tool.sh"
@@ -132,8 +133,7 @@ def _draft_documents(project, issue):
     for kind in ("requirements-review", "acceptance-criteria"):
         rel = f"{folder}/{kind}.md"
         (project.root / rel).write_text(f"# {kind}\n", encoding="utf-8")
-        issue.must("issue", "artifact", "set", kind, "--status", "draft", "--path", rel,
-                   "--issue", issue.slug)
+        document_registry.register(issue.dir, kind, rel)
 
 
 def _statuses(issue):
@@ -180,8 +180,7 @@ def test_trc_c6_an_outer_red_after_refine_writes_the_marker(tmp_path, approach, 
         rel = f"docs/compass/{support.CREATED}-{issue.slug}/{registered}.md"
         (project.root / rel).parent.mkdir(parents=True, exist_ok=True)
         (project.root / rel).write_text("# design\n", encoding="utf-8")
-        issue.must("issue", "artifact", "set", registered, "--status", "draft",
-                   "--path", rel, "--issue", issue.slug)
+        document_registry.register(issue.dir, registered, rel)
     code, out, err = _red(issue, "--scenario", "TRC-1")
     assert code == 0, out + err
     assert (issue.dir / ".red").exists()

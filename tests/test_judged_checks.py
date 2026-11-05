@@ -512,9 +512,6 @@ def test_jc_7_a_changed_input_after_the_verb_re_owes_it_end_to_end(tmp_path):
 
 def test_jc_7_the_verb_leaves_the_other_checks_as_they_were(tmp_path):
     root, task_dir = _cli_project(tmp_path, reviewers=["jed72"])
-    # The verb renders the issue's documents afterwards (ADR-051), so render first: the
-    # question is whether the verb moves any other check, not whether the page was current.
-    assert _run(root, "issue", "render", "--issue", SLUG)[0] == 0
     before = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])["checks"]
     assert _review(root)[0] == 0
     after = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])["checks"]
@@ -815,12 +812,3 @@ def test_jc_12_policy_lint_does_not_warn_about_a_judged_check_in_a_list(tmp_path
                 if f["code"] == "M-LIST-KIND-UNEVALUATED"]
     assert "judged" in __import__("compass_pkg.policy_lint", fromlist=["x"]).EVALUATED_LIST_KINDS
 
-
-def test_jc_12_the_receipt_shows_the_verdict_of_a_judged_check(tmp_path):
-    root, task_dir = _cli_project(tmp_path, reviewers=["jed72"])
-    code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-    assert code == 0, err
-    assert re.search(r"design-review\s+fail", out), out
-    assert _review(root)[0] == 0
-    code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-    assert re.search(r"design-review\s+pass", out), out

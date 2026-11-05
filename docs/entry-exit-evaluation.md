@@ -6,8 +6,8 @@ check is judged, what `on_skipped` does, where the results show, and how the
 documents show the lists. The code is `cli/compass_pkg/stage_lists.py`, which
 judges a list, `cli/compass_pkg/item_records.py`, which reads the manifest
 records that meet an item, `cli/compass_pkg/follow_up_cmd.py`, which records a
-follow-up, and `cli/compass_pkg/template_lists.py`, which prints a template.
-`compass check`, `compass next` and `compass issue receipt` read the first.
+follow-up.
+`compass check` and `compass next` read the first.
 
 ## Switching it on
 
@@ -44,16 +44,15 @@ the next `compass approach evaluate --write`.
 | exit of a stage | the issue is past the stage |
 
 A closed issue has every list due, whatever its close reason. `compass check`
-counts only due checks. The
-receipt shows every list, and says which are not yet due.
+counts only due checks.
 
 ## How a check is judged
 
 | Kind | Judged by |
 |---|---|
 | `human` | A record in the manifest (see [Item records](#item-records)): evidence that meets the check, a person's approval, or a follow-up that carries it to ship. A tick on a page counts for nothing, and the page is never read. With `approvers:` the check needs a current approval by a listed approver (see [Approvers on a human check](#approvers-on-a-human-check)). |
-| `deterministic` | Its registered implementation runs. The receipt does not run it and shows `pending`. |
-| `judged` | A review record: the newest registered `manual-review` record by a listed reviewer must say `pass` and match the check's inputs, definition, issue and generation. The cause of a failure is the first words of the detail. See [judged-checks.md](judged-checks.md). The receipt reads the record and shows the real verdict. |
+| `deterministic` | Its registered implementation runs. |
+| `judged` | A review record: the newest registered `manual-review` record by a listed reviewer must say `pass` and match the check's inputs, definition, issue and generation. The cause of a failure is the first words of the detail. See [judged-checks.md](judged-checks.md). |
 | `evidence` | Not evaluated by this version. A blocking check of this kind fails, so a list cannot pass by naming a check nothing reads. This holds whatever the capability, for a check a project adds, and `compass policy lint` warns (`M-LIST-KIND-UNEVALUATED`, exit code unchanged). The shipped default names none. |
 
 A row passes with the record's name in its detail: `met by EV-T`, `ticked by
@@ -177,36 +176,14 @@ for:
 - an approver the check does not list, because the record would not count;
 - a decision other than `approved` or `rejected`.
 
-#### Approving a document: `--artifact`
+#### Approving a document: `--artifact` (removed in 9.0.0)
 
-A stage command moves a document with a human check to `awaiting-approval`
-when the stage after it records its work (see ADR-050). `compass evidence
-approve --artifact <kind>` approves it. The command refuses, with exit 2 and
-no change, when:
-
-- the entry does not read `awaiting-approval`, naming the status it reads;
-- a human check on the document lists approvers and the approver is not one of
-  them. A human check with no `approvers:` takes any person other than
-  `agent`;
-- the decision is `rejected`. Send a document back with `compass issue
-  artifact set <kind> --status draft`.
-
-It writes one record of the type `artifact-approval` for each human check on
-the document, as `EV-APPROVAL-ARTIFACT-<kind>-<n>`, each holding `artifact`,
-`check`, `approver`, `role`, `decision`, `timestamp`, `issue` and `generation`
-(and `scope` when it is given). A document set to `awaiting-approval` by hand
-with no human check gets one record with no `check`. It then sets the
-entry's `approved_by` to the person and `approved_at` to the record's time.
-
-An `artifact-approval` record meets the human check it names, under every rule
-above except that it needs no `scope`. It is read nowhere else:
-`human-approval-present`, the check of guardrail `G5`, reads only
-`human-approval` records, and a waiver's approval needs one too. A document
-approval therefore never clears a sign-off.
-
-`compass issue artifact set <kind> --status approved` refuses a document with
-a human check and names this command. For a document with none it stays
-allowed and records `approved_by: compass issue artifact set`.
+9.0.0 keeps no document status (ADR-091), so the document form of
+`compass evidence approve` and `compass evidence request` is removed. A pending
+request for a document, written before 9.0.0, closes with nothing written. An
+`artifact-approval` record an older issue holds stays valid: it meets the human
+check it names, and `human-approval-present`, the check of guardrail `G5`,
+still reads only `human-approval` records.
 
 #### Confirming decisions: `--decisions`
 
@@ -482,15 +459,21 @@ A check is skipped in two cases:
 not apply to an approach. A list does not depend on the stage's mode.
 
 A third case is not a skip. When a `human` check's document is missing and the
-approach the issue was given does not list that document kind among its
-artifacts, the approach owes no such document, and the row is nothing to check,
-for example "quick-fix owes no verification-report". The artifact set is read
-from the configuration, so a project that adds `verification-report` to an
-approach makes the Definition of Done owed there. The shipped regular approach
-lists `requirements-review` from 7.0.0, so with this capability on, a regular
-issue assessed from 7.0.0 owes the seven Definition of Ready records at plan
-entry. An issue assessed earlier keeps its stored generation, which does not
-list the kind, so it has nothing to check for the Definition of Ready.
+approach does not owe that list, the row is nothing to check, for example
+"quick-fix owes no verification-report". Since 9.0.0 (ADR-091) the stage modes
+decide what is owed:
+
+- the Definition of Ready (`requirements-review`) where the issue's `refine`
+  mode is `lightweight` or `thorough`;
+- the Definition of Done (`verification-report`) where its `verify` mode is
+  `thorough`.
+
+So the shipped regular and full approaches owe both, hotfix owes only the
+Definition of Done, and quick fix and spike owe neither. A stored generation or
+a frozen preset whose approach still declares an `artifacts:` map is read by
+that map, as before 9.0.0. An issue assessed before 7.0.0 keeps a stored
+generation whose regular approach does not list `requirements-review`, so it
+has nothing to check for the Definition of Ready.
 
 ## A check that an approach does not owe
 
@@ -514,39 +497,12 @@ is added to the output.
 `compass next` appends `entry not met: <check ids>` to its line when the
 current stage has failing entry checks.
 
-`compass issue receipt` adds a "Stage lists" section before the verdict. Each
-list is headed with its stage, its side and whether it is due. Each check shows
-its id, its state (`pass`, `fail`, `nothing-to-check` or `pending`) and its
-detail.
+## Where a list shows
 
-## Where a list shows in a document
-
-The requirements review shows the plan entry list and the verification report
-shows the `verify` exit list, each as a rendered block that `compass issue render`
-writes from the issue's configured list (`docs/rendered-blocks.md`):
-
-| List | Block | Under the heading |
-|---|---|---|
-| `plan` entry | `dor` | `Definition of Ready` |
-| `verify` exit | `dod` | `Definition of Done` |
-
-The first line of a block reads `Definition of Done: 5 of 7 met, 2 carried to
-ship (FU-3, FU-4)`, then one line gives each item's statement and its state.
-A tick written on the page counts for nothing. A list on another stage has no
-block yet; its checks are judged from the same records and are not written into
-a document.
-
-## Printing a template
-
-`compass issue template show <kind> [--depth D] [--issue SLUG] [--json]` prints
-the skeleton of that kind, which [the artifact catalogue](artifact-catalog.md)
-describes. The requirements review and the verification report hold an empty
-rendered block for each list, and the skeleton keeps each block marker as the
-template holds it: the blocks fill when the document is registered and
-`compass issue render` runs. `/compass:refine` and `/compass:verify` write
-their documents from this output. `--json` prints one object with the keys
-`kind`, `issue`, `depth`, `source` and `text`. `source` is `generation`, `live`
-or `none`.
+`compass check` lists each item of the `plan` entry list and the `verify` exit
+list with its state, under `stage:<stage>:<entry|exit>`. A tick written on a page
+counts for nothing. Before 9.0.0 a rendered block showed each list in the
+requirements review and the verification report (ADR-091 removed the render).
 
 ## Limits
 

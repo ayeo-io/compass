@@ -31,7 +31,7 @@ asserting it never gets exercised. `tests/test_human_voice.py`'s `TRC-A2` and
 still uses `pytest.skip` when this developer's own checkout happens to be
 missing the archive.
 
-Criteria: docs/system-spec.md
+Criteria: the issue's acceptance criteria
 """
 from __future__ import annotations
 

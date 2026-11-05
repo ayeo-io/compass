@@ -16,7 +16,7 @@ it "refuses - and writes nothing at all - if any span's archive file is
 missing or does not contain the quoted text verbatim". A span that did not
 parse belongs in that category and was not in it.
 
-Scenario ids: see docs/system-spec.md.
+Scenario ids: see the issue's acceptance criteria.
 """
 from __future__ import annotations
 

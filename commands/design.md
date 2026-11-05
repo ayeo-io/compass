@@ -41,7 +41,8 @@ what `/compass:init` offers separately.
   `compass.yml`) or a strategy; the contract must honor the guardrails and
   respect the strategies. An unmigrated 5.x project runs on its own copied
   `governance/` until `compass policy migrate`.
-- Read `intent.md` if one exists - the interaction serves the outcome.
+- Read the outcome the issue serves, from the issue description or the
+  Summary of `acceptance-criteria.md` - the interaction serves the outcome.
 
 ## Procedure
 
@@ -55,9 +56,9 @@ what `/compass:init` offers separately.
    project runs on its own copied `governance/`; e.g. a project
    accessibility floor). If a contract cannot meet a guardrail, name
    the conflict now, not later.
-3. **Write `ui-contract.md`** into `docs/compass/<created>-<issue-slug>/`,
-   then register it with `compass issue artifact set ui-contract --status draft
-   --path <that path>`. Say so in one line if you created `docs/compass/`.
+3. **Write `ui-contract.md`** into `docs/compass/<created>-<issue-slug>/`.
+   Compass does not register or check it. Say so in one line if you created
+   `docs/compass/`.
 
 ## How this connects to the pipeline
 

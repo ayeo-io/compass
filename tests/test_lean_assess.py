@@ -27,7 +27,7 @@ PROCEDURE_PARTS = (
     "1. **Create the manifest.**", "1a. **Load project architecture if present.**",
     "2. **Read the three scored dimensions - this is the judgment**",
     "3. **Compute the delivery approach - this is the mechanism.**",
-    "4. **Write `delivery-approach.md`**",
+    "4. **Open the devlog with the decision.**",
     "5. **Set the `.compass/current-task` pointer**",
     "6. **On a spike, write the `.spike` marker.**", "7. **Confirm.**",
     "## Voice", "## Gate",

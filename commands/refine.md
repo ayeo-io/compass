@@ -12,11 +12,11 @@ itself and against the governance in force - the guardrails and strategies.
 
 ## First: does the requirements review run?
 
-Read `delivery-approach.md`. The review is **collapsed on a quick fix** (the
+Run `compass approach show`. The review is **collapsed on a quick fix** (the
 single scenario was certified unambiguous when it was defined), **collapsed
 on a hotfix** (the reproduction *is* the clarification), and **skipped on a
 spike** (there is nothing to check - the behavior is what the spike finds out). If
-`delivery-approach.md` collapsed or skipped it, stop - say so, confirm the
+the approach collapsed or skipped it, stop - say so, confirm the
 de-scope reason still holds, and point the user to `/compass:plan`. Do not
 re-add a stage the approach skipped, and do not skip one it kept.
 
@@ -50,12 +50,12 @@ not fix it without saying so, as if it were your own work.
 What is left for you is everything the author could not settle alone:
 
 - **Contradictions** between scenarios that cannot both hold.
-- **Gaps** across the whole set - a stated outcome, or a `intent.md` success
-  signal, with no scenario.
+- **Gaps** across the whole set - a stated outcome, or a success signal in
+  the Intent links, with no scenario.
 - **Governance conflicts** - a scenario that breaks a guardrail, or departs
   from an applicable strategy with no recorded reason.
 - **Ambiguities that need a decision** rather than a correction, each
-  recorded in `requirements-review.md` with its resolution and who made it.
+  recorded with its resolution and who made it.
 
 The difference is who can settle the finding. An unfilled placeholder has
 one correct answer and the author already knows it. "Which of these two
@@ -74,7 +74,7 @@ is for. The same split is written from the spec-author's side in
   unmigrated 5.x project runs on its own copied `governance/` until
   `compass policy migrate`.
 - If a non-engineering role takes part, they review at this stage: invoke
-  `product-owner` (intent fidelity against `intent.md`) and/or `product-marketer`
+  `product-owner` (intent fidelity against the Intent links) and/or `product-marketer`
   (every planned claim has a candidate scenario).
 
 ## Procedure
@@ -87,26 +87,17 @@ is for. The same split is written from the spec-author's side in
 3. **Resolve.** For each ambiguity, either resolve it (update
    `acceptance-criteria.md`) or record it as an open question with an owner.
    An unresolved ambiguity must not pass into design unrecorded.
-4. **Write `requirements-review.md`** from the output of
-   `compass issue template show requirements-review`, which renders the checklist from the
-   issue's entry lists: the ambiguity ledger, each entry resolved or assigned.
-
-   **Where it goes.** `docs/compass/<created>-<issue-slug>/requirements-review.md`, where the
-   date is the manifest's `created:` field - not today's. When the issue owes the
-   document (regular at `lightweight`, full at `thorough`), register it:
-   `compass issue artifact set requirements-review --status draft --path <that path>`. The CLI
-   refuses a path outside the project, so the record is checked
-   rather than claimed. A regular issue assessed before 7.0.0 does not owe it:
-   write the file and leave it unregistered. `compass next`
-   takes the file as refine's record. If you had to create `docs/compass/`, **say so in one
-   line** - if a directory appears and nobody says so, someone can delete it
-   by hand or commit it by mistake.
-
-5. **Record the decisions you took.** Run `compass issue decision add --from-ledger`.
-   It reads the ledger and records each entry whose "Decided by" names an agent, so
-   the person sees those decisions at the next checkpoint. Run it again after you
-   change the ledger: a reworded question is updated, and a changed resolution
-   reopens the decision.
+4. **Record the decisions you took.** For each ambiguity you resolved
+   yourself, run `compass issue decision add <id> --question "<q>" --resolution
+   "<r>" --by <your agent> --stage refine`, so the person sees it at the next
+   checkpoint. Compass writes no requirements-review document; the ambiguity
+   ledger is the list of these decisions and the open questions you show in the
+   hand-off.
+5. **Record the Definition of Ready.** `compass check` lists each item of the
+   issue's entry list and its state. Record an item with `compass evidence add
+   ... --meets <item>`, or ask a person to tick it: run `compass evidence
+   request --check <item>` and the person types `/compass:approve`. A tick
+   written on a page counts for nothing.
 
 ## Reassessment trigger
 
@@ -121,9 +112,8 @@ Close the review by handing the ambiguity ledger to a human. This is the last
 review before work is designed against the spec, so the questions here are
 about decisions, not wording.
 
-> I have written the ambiguity ledger to
-> `docs/compass/<created>-<issue-slug>/requirements-review.md`, and updated
-> `acceptance-criteria.md` where a resolution changed it.
+> The ambiguity ledger is below. I updated `acceptance-criteria.md` where a
+> resolution changed it.
 >
 > I found and resolved N ambiguities. The ones that changed what gets
 > built are: <short list>.
@@ -134,8 +124,8 @@ about decisions, not wording.
 >   make.
 > - **Resolutions that quietly widened scope** - a question answered by
 >   adding work should be visible as such.
-> - **The Definition of Ready** - every box is checked, and each one is meant
->   to be true rather than ticked.
+> - **The Definition of Ready** - `compass check` shows every item met, and
+>   each one is meant to be true rather than ticked.
 >
 > On approval this goes to the plan stage, which turns the spec into a
 > technical approach and runs the governance check against it.
@@ -144,7 +134,7 @@ Wait for approval only if `refine` is in the manifest's `checkpoints:`.
 The project's `autonomy` setting, read from `compass.yml` (or from
 `.compass/config.yml` in a project without one), decides that list,
 and `compass approach show` shows it. If `refine` is not listed, still
-write the ambiguity ledger and show this hand-off, then say you are going on without
+show the ambiguity ledger in this hand-off, then say you are going on without
 waiting and name the setting, with "Next" in place of "On approval". Record
 the passed hand-off with `compass issue checkpoint add refine --outcome skipped
 --by spec-author`, so the person can review it later and send the issue back. If
@@ -172,11 +162,10 @@ label-and-status row. See `skills/compass-runtime/writing-voice.md`.
 
 ## Gate
 
-- `requirements-review.md` exists;
 - every ambiguity is resolved or owned;
 - the spec passes the check against governance;
-- the **Definition of Ready** checklist at the end of
-  `requirements-review.md` is fully checked - that is the entry gate into
-  the plan stage, and an unchecked box stops the plan stage from starting.
+- every item of the **Definition of Ready** is met on the record - that is
+  the entry gate into the plan stage, and an unmet item stops the plan stage
+  from starting.
 
 Log to `devlog.md`. Next: `/compass:plan`.

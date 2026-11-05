@@ -90,6 +90,31 @@ class Rule:
     match: object                    # callable(name, catalogue) -> Target | None
 
 
+
+#: A distribution map's `units:` line, alone on a line or as a list item.
+_UNITS_LINE = re.compile(r"^units:\s*(\S.*?)\s*$")
+
+
+def declared_units(path):
+    """How many work units the distribution map at `path` declares on its `units:`
+    line, or None when it has none. The first line whose value is a whole number or
+    a bracketed list counts; a placeholder such as `{{N}}` is skipped."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+    except (OSError, UnicodeDecodeError, TypeError):
+        return None
+    for line in lines:
+        found = _UNITS_LINE.match(line.strip().lstrip("-* ").strip("`"))
+        if not found:
+            continue
+        value = found.group(1).strip("`").strip()
+        if value.isdecimal():
+            return int(value)
+        if value.startswith("[") and value.endswith("]"):
+            return len([u for u in value[1:-1].split(",") if u.strip()])
+    return None
+
 def _rule_skip(name, _catalogue):
     if any(fnmatch.fnmatchcase(name, pattern) for pattern in NOT_AN_ARTIFACT):
         return Target(SKIP)
@@ -505,8 +530,8 @@ def rekind_entries(entries, moves, project, catalogue):
         if target is None:
             problems.append(
                 "the registry entry %s (kind %s) names %s, and no document maps to it - "
-                "remove the entry, or register its file with `compass issue artifact set` "
-                "and then remove it" % (stem.get("id"), stem.get("kind"),
+                "remove the entry from the manifest's artifacts: list; 9.0.0 registers "
+                "no document (ADR-091)" % (stem.get("id"), stem.get("kind"),
                                         stem.get("path") or "no file"))
             continue
         kind, number = target
@@ -637,7 +662,6 @@ def stub_map(task_dir, data, project, plan=None):
         return None
     # A map that declares one work unit was the record `multiagent-run-recorded` read
     # from the registry before 9.0.0 (ADR-071), not a stub, so it is kept as it is.
-    from compass_pkg.artifact_owed import declared_units
     if declared_units(source) == 1:
         return None
     stub = {"entry": entry.get("id"), "from": rel, "to": rel + ".v6.bak"}

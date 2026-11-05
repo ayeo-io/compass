@@ -29,8 +29,11 @@ def _lint(artifacts):
     from compass_pkg import policy_lint
     from compass_pkg.layers import Layer
     parent = Layer("default", "parent", {"schema": 1, **classifier_fixtures.base()}, "digest")
-    project = Layer("project", "project", {"schema": 1, "artifacts": artifacts}, "digest")
-    return policy_lint.lint_chain(parent, project, None, today=TODAY, cache={})
+    # A project layer can no longer change the catalogue since 9.0.0 (ADR-091), so
+    # the catalogue under test is a git parent's, which can still declare one.
+    team = Layer("team", "parent", {"schema": 1, "artifacts": artifacts}, "digest")
+    return policy_lint.lint_chain(parent, None, None, today=TODAY, cache={},
+                                  extra_parents=(team,))
 
 
 def _only(report, code):
@@ -54,7 +57,7 @@ def test_trc_001_a_bookkeeping_artifact_as_an_input_is_reported():
         "dashboard": _doc("dashboard.md", bookkeeping=True),
         "summary": _doc("summary.md", depends_on=["dashboard"])})
     found = _only(report, "M-BOOKKEEPING-INPUT")
-    assert (found.level, found.layer, found.group) == ("error", "project", "resolved")
+    assert (found.level, found.layer, found.group) == ("error", "team", "resolved")
     assert found.path == "artifacts.summary.depends_on"
     assert "dashboard" in found.message and "summary" in found.message
 
@@ -93,7 +96,7 @@ def test_trc_002_a_dependency_on_a_directory_is_reported():
         "evidence": _doc("evidence/"),
         "verification-report": _doc("verification-report.md", depends_on=["evidence"])})
     found = _only(report, "M-DIRECTORY-DEPENDENCY")
-    assert (found.level, found.layer, found.group) == ("error", "project", "resolved")
+    assert (found.level, found.layer, found.group) == ("error", "team", "resolved")
     assert found.path == "artifacts.verification-report.depends_on"
     assert "evidence" in found.message
 
@@ -174,7 +177,8 @@ def test_trc_004_the_bookkeeping_description_names_the_records_the_design_gives(
     from compass_pkg import catalogue_spec as spec
     text = spec.FIELD_DESCRIPTIONS["artifacts"]["bookkeeping"]
     assert "never an input" in text
-    for record in ("dashboard", "receipt", "verification report"):
+    # The design also named the receipt, which 9.0.0 removed (ADR-091).
+    for record in ("dashboard", "verification report"):
         assert record in text
 
 

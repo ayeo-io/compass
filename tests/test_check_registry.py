@@ -70,8 +70,11 @@ def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
     # strategy's acceptance-applicability-agrees, 28 with its outer-loop-recorded (ADR-080),
     # 29 with its acceptance-support-present, 30 with its `outer-loop-attempts-recorded`
     # (ADR-084), 32 with its isolation-proven and layering-test-passed (ADR-086),
-    # 31 when 9.0.0 removed multiagent-run-recorded (ADR-090).
-    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 31
+    # 31 when 9.0.0 removed multiagent-run-recorded (ADR-090), 30 when it removed
+    # consistency-check-passes with `compass analyze` (ADR-091), 29 when it removed
+    # rendered-blocks-current with the rendered blocks (ADR-091), 25 when it removed
+    # the four checks of the removed documents (ADR-091).
+    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 25
     for name, entry in check_registry.REGISTRY.items():
         # dod-evidence-typed moved to 2.0.0: its verdict on a ticked page with no record changed.
         # human-approval-present moved to 1.1.0: it counts only an approval given for
@@ -80,7 +83,9 @@ def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
         # suite-passed moved to 1.1.0 when a newer issue needed a red
         # for each scenario (ADR-088). evidence-matches-tree moved to 1.1.0 when a
         # landed issue was judged by the SHA-256 of each file (ADR-089).
-        assert entry.version == {"dod-evidence-typed": "2.0.0",
+        # dod-evidence-typed moved to 2.1.0 when a 9.0.0 issue was judged with no
+        # verification report, and its corpus verdicts held (ADR-091).
+        assert entry.version == {"dod-evidence-typed": "2.1.0",
                                  "human-approval-present": "1.2.0",
                                  "suite-passed": "1.1.0",
                                  "evidence-matches-tree": "1.1.0"}.get(name, "1.0.0"), name

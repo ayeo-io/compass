@@ -138,10 +138,8 @@ def _ids(pairs):
 NEW_SPELLINGS = [
     (["approach", "show"], 0, "Approach:  (risk contained"),
     (["approach", "render"], 0, "<!doctype html>"),
-    (["policy", "show"], 0, "capabilities.artifact-freshness"),
+    (["policy", "show"], 0, "capabilities.entry-exit-evaluation"),
     (["review-rule", "list", "--changed-files", "cli/compass"], 0, "RR-001"),
-    (["issue", "template", "show", "requirements-review"], 0,
-     "TEMPLATE: requirements-review.md"),
     (["issue", "migrate"], 0, "nothing to do"),
     (["issue", "migrate", "--config"], 0, "committed generation 1"),
     (["issue", "status", "set", "backlog"], 0, "sample -> backlog"),
@@ -195,7 +193,7 @@ RETIRED_SPELLINGS = [
 # Paths that record history or are derived from it, so they name old spellings.
 NOT_SCANNED = (
     "tests/", "docs/compass/", "governance/decisions/", "architecture/decisions/",
-    "CHANGELOG.md", "docs/system-spec", "cli/aliases.yml", "cli/compass_pkg/aliases.py",
+    "CHANGELOG.md", "cli/aliases.yml", "cli/compass_pkg/aliases.py",
     "docs/upgrade", "evals/",
 )
 
@@ -318,18 +316,20 @@ def _choices(args, cwd):
 def test_vr_e4_group_help_lists_new_verbs_and_no_alias(tmp_path):
     p = _project(tmp_path / "p")
     top = _choices([], p)
-    assert {"review-rule", "spec"} <= top
+    assert {"review-rule"} <= top and "spec" not in top
     assert "migrate" not in top
     assert {"show", "render", "evaluate"} == _choices(["approach"], p)
     issue = _choices(["issue"], p)
-    assert {"status", "migrate", "render", "artifact", "template"} <= issue
+    assert {"status", "migrate"} <= issue
+    assert "artifact" not in issue and "artifact-path" not in issue  # removed in 9.0.0 (ADR-091)
+    assert "template" not in issue  # removed in 9.0.0 (ADR-091)
     assert "dashboard" not in issue
+    assert "render" not in issue    # removed in 9.0.0 (ADR-091)
     assert not issue & {"set-status", "migrate-config", "refresh-spec"}
     assert "subtask" not in issue   # removed in 9.0.0 (ADR-090)
     assert "show" in _choices(["policy"], p)
     assert not _choices(["policy"], p) & {"effective", "review-rules"}
     assert _choices(["review-rule"], p) == {"list"}
-    assert _choices(["issue", "artifact"], p) == {"set"}
 
 
 def test_vr_e4_no_alias_old_spelling_is_a_verb_in_any_help(tmp_path):
@@ -433,7 +433,7 @@ def test_vr_e6_no_hint_spelling_is_held_by_a_release(tmp_path):
 
 FIXED = {"show", "list", "add", "remove", "set", "render", "lint", "test", "diff",
          "update", "migrate", "sync", "init"}
-TOP = {"init", "check", "ci", "run", "next", "retro", "flow", "analyze"}
+TOP = {"init", "check", "ci", "run", "next", "retro", "flow"}
 
 EXCEPTIONS = {
     "tdd-red": "named for the red step of red-green-refactor, which the pre-tool hook and every command file call by this name",
@@ -452,8 +452,6 @@ EXCEPTIONS = {
     "issue friction": "records one process-friction entry; a noun the retro report groups by",
     "issue configure": "proposes a change to one issue's configuration",
     "issue raised-by": "records the issue this one was found in; the maintainer named it an exception",
-    "issue receipt": "renders a landed issue's receipt; the maintainer named it an exception",
-    "issue artifact-path": "prints where a document is; two hooks read its exit code, so its name stays",
     "acceptance start": "opens an acceptance record for a change with no natural red",
     "acceptance record": "closes an acceptance record",
     "isolation record": "runs the suite and writes the isolation proof; record is the verb ADR-086 names for the only writer of the type (#328)",
@@ -538,33 +536,6 @@ def test_vr_e10_a_planted_verb_in_neither_list_fails():
     _subparsers_action(issue).add_parser("frobnicate")
     problems = convention_problems(root)
     assert any(p.startswith("issue frobnicate:") for p in problems), problems
-
-
-# --- VR-E11: issue artifact-path is untouched --------------------------------
-
-def test_vr_e11_artifact_path_keeps_its_name_and_exit_codes(tmp_path):
-    from compass_pkg import aliases
-    argv = ["issue", "artifact-path", "design"]
-    assert aliases.rewrite(argv) == (argv, None)
-    project = _project(tmp_path / "p")
-    (project / ".compass" / "work" / "sample" / "design.md").write_text("# design\n")
-    rc, out, err = _run(["issue", "artifact-path", "design"], project)
-    assert rc == 0 and out.strip().endswith("design.md"), (rc, out, err)
-    assert not _notices(err)
-    rc, out, err = _run(["issue", "artifact-path", "requirements-review"], project)
-    assert rc != 0 and out == "", (rc, out, err)
-    assert not _notices(err)
-
-
-# --- VR-E12: spec sync says what it does -------------------------------------
-
-def test_vr_e12_spec_sync_help_says_merge_derive_and_commit(tmp_path):
-    project = _project(tmp_path / "p")
-    rc, out, err = _run(["spec", "sync", "--help"], project)
-    assert rc == 0, err
-    text = " ".join(out.split()).lower()
-    for phrase in ("merges the base branch", "re-derives the living spec", "commits"):
-        assert phrase in text, (phrase, text)
 
 
 # --- VR-E13: the table agrees with the release tag ---------------------------

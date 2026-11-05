@@ -25,13 +25,14 @@ Checks on the resolved result as a whole (an id nothing defines, equal
 approach weights, rule-set effects) are lint's, not the merge's.
 """
 # DEPENDENCY: standard library (copy); compass_pkg.catalogue_spec,
-# compass_pkg.core (CompassError, only); compass_pkg.word_map; compass_pkg.retired.
+# compass_pkg.core (CompassError, only); compass_pkg.word_map; compass_pkg.retired;
+# compass_pkg.removed_parts (standard library only).
 from __future__ import annotations
 
 import copy
 
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import retired, word_map
+from compass_pkg import removed_parts, retired, word_map
 from compass_pkg.core import CompassError
 
 # Which field of which catalogue holds ids of another catalogue, and how:
@@ -50,6 +51,13 @@ REFERENCES = (
     ("approaches", "extends", "approaches", "scalar"),
     ("gates", "stage", "stages", "scalar"),
 )
+
+# A catalogue a project layer can no longer change. 9.0.0 removed the document
+# kinds from the live default (ADR-091), so a project file written before it
+# can `set` a kind the parent no longer holds. The merge leaves the key out,
+# and `compass policy lint` names it (L-SETTING-REMOVED). A parent or an issue
+# layer is merged as before, so a frozen preset still declares its catalogue.
+PROJECT_REMOVED = tuple(c for c in spec.CATALOGUES if c in removed_parts.SETTINGS)
 
 # A stage's `mode` is the issue layer's choice; no other layer sets one.
 ISSUE_ONLY_FIELDS = {("stages", "mode")}
@@ -87,7 +95,7 @@ def apply(config, layer_doc, kind, name, provenance=None):
     if conflicts:
         raise MergeError(name, conflicts)
     for catalogue in spec.CATALOGUES:
-        if catalogue not in layer_doc:
+        if catalogue not in layer_doc or (kind == "project" and catalogue in PROJECT_REMOVED):
             continue
         entries = layer_doc[catalogue]
         if not isinstance(entries, dict):

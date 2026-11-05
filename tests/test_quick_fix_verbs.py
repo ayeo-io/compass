@@ -186,17 +186,13 @@ def test_qfo1_start_records_the_whole_assessment_in_one_call(repo):
     assert scenarios[0]["tests"] == [
         "tests/test_greeting.py::test_greeting_says_hello"]
 
-    doc = (repo / "docs" / "compass" / f"{manifest['created']}-greet-fix"
-           / "delivery-approach.md")
-    assert doc.is_file()
-    content = doc.read_text()
-    assert "quick fix" in content.lower()
-    assert "TRC-001" in content
-    assert "INT-1" in content
-
-    artifact = next(a for a in manifest["artifacts"]
-                    if a["kind"] == "delivery-approach")
-    assert artifact["status"] == "draft"
+    # 9.0.0 writes no delivery-approach.md and registers no document (ADR-091): the
+    # manifest holds the approach, and the devlog holds the intent and the scenario.
+    assert not (repo / "docs" / "compass").exists()
+    assert "artifacts" not in manifest
+    devlog = (repo / ".compass" / "work" / "greet-fix" / "devlog.md").read_text()
+    assert devlog.startswith("# Devlog - greet-fix\n")
+    assert "INT-1: " in devlog and "TRC-001: " in devlog
 
     current_task = (repo / ".compass" / "current-task").read_text().strip()
     assert current_task == "greet-fix"
@@ -247,7 +243,8 @@ def test_qfo1_start_says_when_it_creates_a_directory(repo):
     result = _start(repo, "greet-new")
     assert result.returncode == 0, result.stderr
     assert ".compass/" in result.stdout
-    assert "docs/compass/" in result.stdout
+    # No document is written, so no documents folder is created (ADR-091).
+    assert "docs/compass/" not in result.stdout
 
 
 # --- QFO-3 -------------------------------------------------------------
@@ -289,8 +286,8 @@ def test_qfo4_finish_traces_checks_passes_the_three_gates_and_lands(repo):
 
     changed = {cf["path"] for cf in manifest["changed_files"]}
     assert "data/greeting.txt" in changed
-    doc_path = f"docs/compass/{manifest['created']}-{slug}/delivery-approach.md"
-    assert doc_path in changed
+    # No document is written, so none is a changed file (ADR-091).
+    assert not any(p.startswith("docs/compass/") for p in changed), changed
 
     check_evidence = next(e for e in manifest["evidence"]
                           if e["type"] == "command-output")
@@ -333,7 +330,7 @@ def test_qfo4_finish_leaves_bytecode_caches_out_and_the_land_checks_clean(repo):
 
     changed = {cf["path"] for cf in _manifest(repo, slug)["changed_files"]}
     assert not [p for p in changed if "__pycache__" in p or p.endswith(".pyc")]
-    committed = _git(repo, "show", "--name-only", "--format=", "HEAD~1")
+    committed = _git(repo, "show", "--name-only", "--format=", "HEAD")
     assert "__pycache__" not in committed
     check = _run(repo, "check", "--issue", slug)
     assert check.returncode == 0, check.stdout + check.stderr
@@ -372,7 +369,8 @@ def test_qfo4_finish_lands_clean_when_every_changed_file_was_tracked(repo):
 
 
 def _files_in_head(root):
-    return set(_git(root, "show", "--name-only", "--format=", "HEAD~1").split())
+    # HEAD is the land commit: no living spec commit follows it (ADR-091).
+    return set(_git(root, "show", "--name-only", "--format=", "HEAD").split())
 
 
 def test_fuu1_an_untracked_file_from_before_start_is_refused(repo):
@@ -566,7 +564,7 @@ def test_fse1_a_new_file_with_an_unusual_name_lands(repo):
     finish = _finish(repo, slug)
     assert finish.returncode == 0, finish.stdout + finish.stderr
     files = set(_git(repo, "show", "--name-only", "-z", "--format=",
-                     "HEAD~1").split("\0"))
+                     "HEAD").split("\0"))
     for name in ("notes with space.txt", "quote'd.txt", "caf\u00e9.txt"):
         assert f"data/{name}" in files, files
 
@@ -633,8 +631,7 @@ def test_sjs2_a_differently_split_command_is_not_reused(repo):
 
 def test_sjs5_finish_lists_the_files_a_land_at_head_holds(repo):
     """When the agent committed the fix itself, `ship-commit` makes no
-    commit and lands at HEAD; finish lists that commit's files, not the
-    living spec's."""
+    commit and lands at HEAD; finish lists that commit's files."""
     slug = "greet-precommitted"
     (repo / ".gitignore").write_text(".compass/\ndocs/\n")
     _git(repo, "add", ".gitignore")
@@ -987,10 +984,11 @@ def test_qfg2_finish_from_a_subdirectory_traces_stages_and_lands(repo):
 
 
 def test_finish_never_traces_the_living_spec_files(repo):
-    """quick-fix finish leaves docs/system-spec.md and its archive out of the
-    issue's changed files. ship-commit derives both at landing, after the
-    green, so a traced copy would always name an older version than the one
-    that lands (TRC-001 of ship-restales-a-traced-living-spec)."""
+    """quick-fix finish leaves the living spec and its archive out of the
+    issue's changed files. Before 9.0.0 ship-commit derived both at landing,
+    after the green, and a branch made then can still change them, so a traced
+    copy would name an older version than the one that lands (TRC-001 of
+    ship-restales-a-traced-living-spec)."""
     docs = repo / "docs"
     docs.mkdir()
     for name in ("system-spec.md", "system-spec-archive.md"):
@@ -999,7 +997,7 @@ def test_finish_never_traces_the_living_spec_files(repo):
     _git(repo, "commit", "-q", "-m", "derived spec")
     slug = "greet-spec"
     _ready_to_finish(repo, slug)
-    # A derivation run before the suite, as a session may do.
+    # A derivation run before the suite, as a session on an older branch may do.
     for name in ("system-spec.md", "system-spec-archive.md"):
         (docs / name).write_text("# derived, again\n")
 

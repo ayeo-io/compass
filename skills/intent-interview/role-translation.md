@@ -18,14 +18,13 @@ scenario file for its own concern.
 ## The five roles
 
 ### Product owner / manager - the **intent** perspective
-Reads each scenario asking: *does this deliver the outcome in `intent.md`?*
-- Walks every success signal in `intent.md` and finds the scenario that delivers
+Reads each scenario asking: *does this deliver the outcome the intent names?*
+- Walks every success signal in the Intent links and finds the scenario that delivers
   it. A signal with no scenario is a gap; a scenario that solves the literal
   request but misses the outcome is drift.
-- Enters *upstream* of the spec - `intent.md` exists before the scenarios - and
-  gates the plan stage: per the routing policy's blocking artifact rule (RP-ART-002), the spec must be
-  checked against `intent.md` before the plan stage starts. Applied by the `product-owner`
-  agent.
+- Enters *upstream* of the spec - the intent is written before the scenarios -
+  and the plan stage checks the spec against it (the intent-fidelity check).
+  Applied from the `product-owner` perspective.
 
 ### Product marketer - the **claims** perspective
 Reads each scenario asking: *what can I truthfully say publicly because this
@@ -71,8 +70,8 @@ moments for it:
 
 - **At refine**, the non-engineering roles review the spec together. This is
   where intent-role, claims-role, and contracts-role disagreements surface
-  while the spec is still cheap to change. An ambiguity one perspective sees is logged
-  in `requirements-review.md` with its resolution.
+  while the spec is still cheap to change. An ambiguity one perspective sees is recorded
+  as a decision with its resolution.
 - **At the gates**, the roles become review dimensions - `claims` is the
   marketer's perspective as a dimension at the verify stage; the intent check is the product owner's perspective as a
   gate before the plan stage.
@@ -83,17 +82,17 @@ moments for it:
   human, often at `/compass:consult` - each non-engineering role curates its
   own strategies (product, voice & positioning) but none of them outranks a
   guardrail. A conflict that governance does not resolve is a
-  `requirements-review.md` entry and, if needed, a re-assess.
+  recorded decision of the requirements review and, if needed, a re-assess.
 
 ## How a non-engineering role enters the pipeline
 
 A role is a perspective a session consults. It is not an assessment dimension.
 When `/compass:intent`, `/compass:position`, or `/compass:design` opens a
-session - or `/compass:consult` convenes several - the session writes the
-role's document (`intent.md`, `positioning.md`, `ui-contract.md`). The
-documents on disk bring the gates: `intent.md` adds the intent check and
-`positioning.md` adds the claims gate. Re-assess an assessed issue after
-writing one. That weight is the framework working as designed, not overhead to trim.
+session - or `/compass:consult` convenes several - the session captures the
+role's view: the intent goes into `acceptance-criteria.md`, and the marketer
+and the designer can keep `positioning.md` and `ui-contract.md` as their own
+notes. A document on disk brings no gate (ADR-091): Compass needs and checks
+only `acceptance-criteria.md`.
 
 ## Anti-patterns
 
@@ -105,9 +104,9 @@ writing one. That weight is the framework working as designed, not overhead to t
   reviewer of finished engineering work. They are *in* the pipeline: the product owner
   upstream of the spec, the marketer parallel to it, the designer feeding into
   it.
-- **Perspective collapse** - flattening a product owner's `intent.md` straight into an
-  engineering issue. `intent.md` is upstream of the spec and the spec must be
-  checked back against it; collapsing the two skips the intent-fidelity gate.
+- **Perspective collapse** - flattening a product owner's intent straight into an
+  engineering issue. The intent is upstream of the scenarios and the spec must be
+  checked back against it; collapsing the two skips the intent-fidelity check.
 - **The unread spec** - a role that has an opinion about the product but has not
   read the scenario file. Every perspective reads the *same* file; an opinion not
   grounded in it is not a perspective, it is a preference.

@@ -11,7 +11,7 @@ decision:
 
 Deleting the second along with the first would make v1 archives unreadable.
 
-Scenario ids: see docs/system-spec.md (RCD-F4).
+Scenario ids: see the issue's acceptance criteria (RCD-F4).
 """
 from __future__ import annotations
 

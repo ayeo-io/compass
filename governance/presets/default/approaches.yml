@@ -14,7 +14,6 @@ approaches:
     stages: {assess: lightweight, define: collapsed, refine: skipped, plan: collapsed, breakdown: skipped,
       implement: explore, verify: conclude, ship: graduate-or-discard}
     gates: [spike.conclude]
-    artifacts: {delivery-approach: lightweight, spike-conclusion: thorough}
     subtask_ceiling: 1
     checkpoints:
       controlled: [assess]
@@ -28,7 +27,6 @@ approaches:
     stages: {assess: thorough, define: lightweight, refine: collapsed, plan: collapsed, breakdown: skipped,
       implement: thorough, verify: lightweight, ship: lightweight}
     gates: [verify.correctness, verify.governance, verify.traceability]
-    artifacts: {delivery-approach: lightweight, verification-note: lightweight}
     subtask_ceiling: 1
     acceptance_strategy: existing-dsl
     checkpoints:
@@ -43,8 +41,6 @@ approaches:
       implement: thorough, verify: thorough, ship: thorough}
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.clarity,
       verify.security]
-    artifacts: {intent: lightweight, acceptance-criteria: thorough, requirements-review: lightweight,
-      technical-design: thorough, distribution-map: lightweight, verification-report: thorough}
     subtask_ceiling: 2
     acceptance_strategy: 'on'
     checkpoints:
@@ -58,7 +54,6 @@ approaches:
     stages: {assess: lightweight, define: reproduce-first, refine: collapsed, plan: collapsed, breakdown: skipped,
       implement: expedited, verify: thorough, ship: thorough-with-follow-up}
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security]
-    artifacts: {bug-report: thorough, acceptance-criteria: lightweight, verification-report: thorough}
     subtask_ceiling: 1
     acceptance_strategy: existing-dsl-isolation
     checkpoints:
@@ -73,8 +68,6 @@ approaches:
       implement: thorough, verify: thorough, ship: thorough}
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security,
       verify.clarity]
-    artifacts: {intent: thorough, acceptance-criteria: thorough, requirements-review: thorough, technical-design: thorough,
-      distribution-map: thorough, verification-report: thorough}
     subtask_ceiling: null
     acceptance_strategy: 'on'
     checkpoints:

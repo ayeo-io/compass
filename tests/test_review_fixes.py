@@ -1,4 +1,5 @@
-"""Fixes from the review of issue `documents-carry-judgement` (DCJ-84 to DCJ-87).
+"""Fixes from the review of issue `documents-carry-judgement`. The fixes to the render (DCJ-84,
+DCJ-87 and DCJ-96) went with it in 9.0.0 (ADR-091).
 
 Each test builds a temporary git repository (`rendered_blocks_support`) and drives
 `cli/compass` the way a person does. No test reads or writes this checkout's own archive.
@@ -13,44 +14,6 @@ import yaml
 
 import rendered_blocks_support as sup
 from rendered_blocks_support import SLUG, WORK, manifest, manifest_file, run
-
-
-# --- DCJ-84: a link name that leaves the work folder is reported and not followed ------------
-
-def _files(top):
-    return sorted(str(p.relative_to(top)) for p in Path(top).rglob("*") if p.is_file())
-
-
-def test_dcj_84_a_link_name_that_leaves_the_work_folder_is_not_followed(tmp_path):
-    root = sup.project(tmp_path / "proj")
-    victim = tmp_path / "victim"
-    work = victim / ".compass" / "work" / "v"
-    work.mkdir(parents=True)
-    (work / "manifest.yml").write_text(yaml.safe_dump({
-        "schema_version": "2.0", "issue": "v", "created": "2026-10-09", "status": "done",
-        "close_reason": "completed"}), encoding="utf-8")
-    before = _files(victim)
-    for field, value in (
-            ("follow_ups", [{"id": "FU-77", "status": "outstanding", "summary": "probe",
-                             "target_task": "../../../../victim/.compass/work/v"}]),
-            ("depends_on", ["../../../../victim/.compass/work/v"]),
-            ("raised_by", "../../../../victim/.compass/work/v"),
-            ("landed_by", {"issue": "../../../../victim/.compass/work/v"}),
-            ("parent", "a/b")):
-        body = manifest(root)
-        body[field] = value
-        sup.base.write_manifest(root, body)
-        code, out, err = run(root, "follow-up", "add", "FU-78", "--summary", "probe",
-                             "--issue", SLUG)
-        assert code == 0, out + err
-        assert _files(victim) == before, (field, sorted(set(_files(victim)) - set(before)))
-        assert "not an issue name" in err, (field, err)
-        body = manifest(root)
-        body.pop(field)
-        body["follow_ups"] = [f for f in body.get("follow_ups") or [] if f["id"] != "FU-78"]
-        sup.base.write_manifest(root, body)
-    # A name that is one safe segment is still followed.
-    assert sorted(p.name for p in (Path(root) / ".compass" / "work").iterdir()) == [SLUG]
 
 
 # --- DCJ-85: a migrated issue reads dod-evidence-typed as 2.0.0 defines it ---------------------
@@ -101,37 +64,6 @@ def test_dcj_85_a_migrated_issue_with_no_list_to_check_does_not_fail(tmp_path):
 
 # --- DCJ-86: a design decision's scope is read from its declared field only -----------------
 
-def test_dcj_86_scope_is_read_from_the_declared_field_not_from_prose():
-    from compass_pkg import issue_page
-    text = "\n".join([
-        "### DD-1 - Prose that starts with the word",
-        "", "  scope to; once-ever is simpler and correct.", "Scope creep is the risk here.",
-        "Scoped: project", "scope: to; once-ever", "Scope: project and more", "",
-        "### DD-2 - The field", "", "Scope: project", "",
-        "### DD-3 - A list field", "", "- **Scope:** issue", "",
-        "### DD-4 - Code format", "", "scope: `project`", "",
-        "### DD-5 - Another value", "", "Scope: everything", ""])
-    scopes = {dd: scope for dd, _title, scope, _adrs in issue_page.design_decisions(text)}
-    assert scopes == {"DD-1": None, "DD-2": "project", "DD-3": "issue", "DD-4": "project",
-                      "DD-5": None}
-
-
-# --- DCJ-87: the issue page shows the blocked flag and its reason ----------------------------
-
-def test_dcj_87_the_issue_page_shows_the_blocked_flag_with_its_reason(tmp_path):
-    root = sup.rich_issue(tmp_path)
-    page = Path(root) / sup.DOCS / "README.md"
-    assert sup.render(root)[0] == 0
-    assert "Blocked" not in page.read_text("utf-8")
-    code, out, err = run(root, "issue", "blocked", "set", "--reason", "waiting on a review",
-                         "--issue", SLUG)
-    assert code == 0, out + err
-    # The command is a record-changing one, so the page was rendered again after it.
-    header = page.read_text("utf-8").split("<!-- /compass:render -->")[0]
-    assert "Blocked: waiting on a review" in header, header
-    code, out, err = run(root, "issue", "blocked", "remove", "--issue", SLUG)
-    assert code == 0, out + err
-    assert "Blocked" not in page.read_text("utf-8")
 
 
 # --- DCJ-93: an issue with no verification report still waits on its outstanding follow-ups ---
@@ -190,63 +122,6 @@ def test_dcj_94_an_evidence_input_keeps_a_full_byte_digest(tmp_path):
 
 # --- DCJ-95: a verification note a person wrote first gets the block it needs -----------------
 
-def _migrate_fixture(tmp_path, path):
-    """A project with a closed quick fix whose manifest registers a verification note at `path`."""
-    from test_migrate_rendered_blocks import _done_issue
-    root = _done_issue(tmp_path / "proj", ["x"] * 7)
-    folder = _extra_issue(root, "fix-done", approach="quick-fix")
-    body = yaml.safe_load((folder / "manifest.yml").read_text("utf-8"))
-    body["artifacts"] = [{"id": "ART-VERIFICATION_NOTE", "kind": "verification-note",
-                          "status": "draft", "depth": "lightweight", "path": path,
-                          "reason": "forged"}]
-    (folder / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
-    return root
-
-
-def test_dcj_95_migrate_does_not_write_a_note_outside_the_documents_folder(tmp_path):
-    from test_migrate_rendered_blocks import _apply
-    outside = tmp_path / "outside"
-    outside.mkdir()
-    for path in ("../outside/note.md", "../../outside/note.md", "docs/../../outside/note.md",
-                 str(outside / "note.md"), "docs/compass/link/note.md",
-                 ".compass/work/fix-done/note.md"):
-        root = _migrate_fixture(tmp_path / path.replace("/", "_").replace(".", "_"), path)
-        if path == "docs/compass/link/note.md":
-            (Path(root) / "docs" / "compass").mkdir(parents=True, exist_ok=True)
-            os.symlink(outside, Path(root) / "docs" / "compass" / "link")
-        code, out, err = _apply(root)
-        assert code == 0, (path, out + err)
-        assert _files(outside) == [], (path, _files(outside))
-        case = Path(root).parent.parent
-        stray = [p for p in case.rglob("note.md") if Path(root) not in p.parents]
-        assert stray == [], (path, stray)
-        assert not (Path(root) / ".compass" / "work" / "fix-done" / "note.md").exists(), path
-        assert "verification note" in out + err and "not written" in out + err, (path, out + err)
-    # A path inside the documents folder is still written.
-    root = _migrate_fixture(tmp_path / "good", "docs/compass/2026-10-10-fix-done/verification-note.md")
-    assert _apply(root)[0] == 0
-    assert (Path(root) / "docs/compass/2026-10-10-fix-done/verification-note.md").is_file()
-
-
-# --- DCJ-96: a rendered link of a hotfix re-renders the issue it repairs ----------------------
-
-def test_dcj_96_a_record_change_on_a_hotfix_renders_the_issue_it_repairs(tmp_path):
-    root = sup.project(tmp_path)
-    folder = _extra_issue(root, "hot", status="in-progress")
-    body = yaml.safe_load((folder / "manifest.yml").read_text("utf-8"))
-    body["repairs"] = SLUG
-    (folder / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
-    assert run(root, "issue", "render", "--all")[0] == 0
-    page = Path(root) / sup.DOCS / "README.md"
-    assert "repaired by" in page.read_text("utf-8")
-    assert "done (not-planned)" not in page.read_text("utf-8")
-    code, out, err = run(root, "issue", "status", "set", "done", "--close-reason", "not-planned",
-                         "--issue", "hot", extra_env={"COMPASS_RENDER_AFTER": "1"})
-    assert code == 0, out + err
-    after_command = page.read_text("utf-8")
-    assert run(root, "issue", "render", "--issue", SLUG)[0] == 0
-    assert "done (not-planned)" in page.read_text("utf-8")
-    assert after_command == page.read_text("utf-8")
 
 
 # --- DCJ-98: migration does not edit a verification report outside the documents folder -------
@@ -279,9 +154,11 @@ def test_dcj_98_migrate_does_not_edit_a_report_outside_the_documents_folder(tmp_
         assert target.read_text("utf-8") == text, (name, "the file outside was edited")
         assert original.read_text("utf-8") == text, (name, "a fallback report was edited")
         assert "verification-report" in out + err and "not edited" in out + err, (name, out + err)
-    # A report inside the documents folder is still edited.
+    # A report inside the documents folder is read for its records and, since 9.0.0,
+    # left as it is too: no block is rendered into it (ADR-091).
     root = Path(_done_issue(tmp_path / "good" / "proj", ["x"] * 3))
     path = root / sup.DOCS / "verification-report.md"
     before = path.read_text("utf-8")
     assert _apply(root)[0] == 0
-    assert path.read_text("utf-8") != before
+    assert path.read_text("utf-8") == before
+    assert manifest(root).get("page_ticks"), "the report's ticked boxes wrote no record"

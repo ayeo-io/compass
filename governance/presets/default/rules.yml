@@ -50,7 +50,7 @@ rules:
   floors:
     kind: floors
     hit: {force_minimum_approach: max, never_skip: collect, require_phase: collect, require_skill: collect,
-      add_gate: collect, add_artifact: collect}
+      add_gate: collect}
     rules:
       RP-FLOOR-001:
         order: 1
@@ -75,41 +75,18 @@ rules:
           labels_any: [auth, payments, personal-data, migrations]
         then: {force_minimum_approach: full}
         rationale: Domain risk overrides size. A one-line auth change is not small.
-      RP-REQUIRE-001:
-        order: 4
-        when: {risk: critical}
-        then: {add_gate: verify.analyze}
-        rationale: Cross-artifact consistency checked before high-care work lands.
-      RP-REQUIRE-002:
-        order: 5
-        when:
-          labels_any: [auth, payments, personal-data, migrations]
-        then: {add_gate: verify.analyze}
-        rationale: Irreversible-surface issues have consistency checked before they ship.
       RP-REQUIRE-003:
-        order: 6
+        order: 4
         when:
           risk: [cross-cutting, critical]
         then: {add_gate: verify.architecture}
         rationale: Architecture checked before cross-cutting or critical changes land.
       RP-REQUIRE-004:
-        order: 7
+        order: 5
         when:
           labels_any: [auth, payments, personal-data, migrations]
         then: {add_gate: verify.architecture}
         rationale: Irreversible-surface issues have architecture checked before they ship.
-      RP-REQUIRE-005:
-        order: 8
-        when:
-          labels_any: [auth, payments, personal-data]
-        then: {add_artifact: threat-model}
-        rationale: Work on a trust boundary states the threats it considered.
-      RP-REQUIRE-006:
-        order: 9
-        when:
-          labels_any: [migrations]
-        then: {add_artifact: rollback-plan}
-        rationale: A change that is hard to undo says in advance how it would be undone.
   caps:
     kind: caps
     hit: {max_worktrees: min}
@@ -177,23 +154,6 @@ rules:
         then: {gate: verify.traceability}
         rationale: Protects the audit trail - code -> criterion -> intent stays intact.
     locked: true
-  artifact_rules:
-    kind: artifact-rules
-    hit: {require_artifact: collect, gate: collect, block_phase: collect}
-    rules:
-      RP-ART-001:
-        order: 1
-        when:
-          artifacts_any: [positioning]
-        then: {require_artifact: launch-readiness, gate: verify.claims, block_phase: ship, until: every
-            claim in positioning.md traces to a passing scenario}
-        rationale: A launch claim with no backing scenario must not ship.
-      RP-ART-002:
-        order: 2
-        when:
-          artifacts_any: [intent]
-        then: {block_phase: plan, until: the spec has been checked against intent.md for intent fidelity}
-        rationale: Built-the-thing-right and built-the-right-thing are different checks.
   advisory:
     kind: advisory
     hit: {strategy: collect}

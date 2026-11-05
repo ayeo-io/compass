@@ -23,8 +23,8 @@ import os
 
 from compass_pkg import autonomy_cost, checkpoint_outcomes, lifecycle, status_words, word_map
 from compass_pkg.stable_ids import (
-    APPROACH_SPIKE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
-    STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
+    APPROACH_SPIKE, REMOVED_GATE_IDS, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS,
+    STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
 from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import (artifact_path, manifest_path,
                               resolve_issue_dir, unregistered_document)
@@ -317,7 +317,8 @@ def _deviations(task_dir, m, stages, shown, records):
                 out.append(f"{st.get('id')} review round {rnd.get('round')} failed")
     if landed:
         for g in _dicts(m.get("gates")):
-            if g.get("status") != "pass":
+            # A removed gate owes nothing, so an issue landed over it is not a finding.
+            if g.get("status") != "pass" and g.get("id") not in REMOVED_GATE_IDS:
                 out.append(f"gate {g.get('id')} is {g.get('status') or 'unset'}")
     return out
 

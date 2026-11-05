@@ -177,10 +177,14 @@ def test_gs_2_resolved_holds_the_catalogues_and_the_issue_inputs(project):
     assert resolved["autonomy"] == "balanced"
     assert resolved["approach"] is None
     assert resolved["conformance"] == {"status": "conformant", "unlocked": []}
-    assert set(resolved["capabilities"]) >= {"entry-exit-evaluation", "artifact-freshness"}
+    # 9.0.0 removed artifact-freshness from the shipped default (ADR-091).
+    assert "entry-exit-evaluation" in resolved["capabilities"]
+    assert "artifact-freshness" not in resolved["capabilities"]
     for name in ("dimensions", "stages", "approaches", "rules", "checks", "gates",
-                 "artifacts", "vocabulary", "evidence_types"):
+                 "vocabulary", "evidence_types"):
         assert resolved[name], name
+    # 9.0.0 declares no document kind (ADR-091), so the empty catalogue is not stored.
+    assert not resolved.get("artifacts"), resolved.get("artifacts")
 
 
 def test_gs_2_versions_record_the_resolver_the_parent_and_the_implementations(project):
@@ -925,7 +929,7 @@ def test_gs_13_ci_prints_nothing_new_for_an_issue_with_no_generation(tmp_path):
 import ast  # noqa: E402
 
 PACKAGE = ROOT / "cli" / "compass_pkg"
-READERS = ("checks", "check_cmd", "routing", "receipt", "manifest", "calibration", "flow",
+READERS = ("checks", "check_cmd", "routing", "manifest", "calibration", "flow",
            "quick_fix_cmd", "loop_ceilings", "lessons", "review_rules", "approach_diagram")
 RESOLVER_MODULES = {"merge", "obligations", "classify", "waivers", "policy_lint",
                     "generation"}
@@ -1421,9 +1425,10 @@ def test_gs_22_evaluator_policy_is_the_adapter_over_the_resolved_configuration(
     stored = effective.effective_for(str(task_dir))
     for view in (live, stored):
         policy = view.evaluator_policy()
-        # The adapter's policy, plus the kinds every approach carries (the catalogue flag
-        # `every_approach`), which only the evaluator reads.
-        assert policy.pop("every_approach") == {"delivery-approach": "assess"}
+        # The adapter's policy. The kinds every approach carries (the catalogue flag
+        # `every_approach`) join it only when the catalogue marks one, and the live
+        # default declares no kind since 9.0.0 (ADR-091).
+        assert "every_approach" not in policy
         assert policy == obligations.policy_adapter(view.config)
         assert {"route_shapes", "assessment_vocabulary", "routing_strategies"} <= set(policy)
     assert live.evaluator_policy() == stored.evaluator_policy()

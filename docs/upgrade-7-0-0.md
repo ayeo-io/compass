@@ -43,7 +43,7 @@ Stage commands now write the status of each registered document. A document that
 
 - **Stage commands write status.** A command that writes the record of a stage moves the `draft` documents of earlier stages that have a path. The commands are `compass issue artifact set` with a path, `compass issue subtask add`, `compass tdd-red`, `compass acceptance record`, `compass gate pass` on a `verify` gate and `compass ship-commit`. A document with no human check becomes `approved`. A document with a human check becomes `awaiting-approval`.
 - **`approved_by` names a person or a command.** A person's approval names the person. A stage's approval names the command, such as `compass tdd-red`. `approved_at` holds the time. The receipt and the dashboard show both.
-- **A person approves with `compass evidence approve --artifact <kind>`.** It needs a terminal, and it refuses the approver `agent`. It writes a record of the new evidence type `artifact-approval`. That record meets the document's human check. It is not a `human-approval` record, so it never clears the sign-off of guardrail `G5`.
+- **A person approves with `compass evidence approve --artifact <kind>`.** It needs a terminal, and it refuses the approver `agent`. It writes a record of the new evidence type `artifact-approval`. That record meets the document's human check. It is not a `human-approval` record, so it never clears the sign-off of guardrail `G5`. <!-- vocabulary-scan: allow - the 7.0.0 guide records the flag 9.0.0 removed (ADR-091) -->
 - **`compass issue artifact set --status approved` refuses a document with a human check.** It names the command above.
 - **A rewrite moves an approved document back to `draft`.** Registering an approved document again after its file changed moves it to `draft` and records why.
 - **Digests are always recorded.** `compass issue artifact set` records the digest of the document on every registration. The stale-document refusals stay behind the capability `artifact-freshness`.
@@ -69,7 +69,7 @@ Stage commands now write the status of each registered document. A document that
 | `approved_by`, `approved_at` | an artifact entry in `manifest.yml` | Who approved the document, and when |
 | `artifact-approval` | the type of an evidence record | A person's approval of a document or of a set of decisions |
 | `artifacts-approved` | a check in the default preset | The ship refusal |
-| `compass evidence approve --artifact` | a flag | Approve a document that reads `awaiting-approval` |
+| `compass evidence approve --artifact` | a flag | Approve a document that reads `awaiting-approval` | <!-- vocabulary-scan: allow - the 7.0.0 guide records the flag 9.0.0 removed (ADR-091) -->
 | `decisions_taken` | `manifest.yml` | The decisions an agent took for the person, with their status |
 | `compass evidence approve --decisions` | a flag | Confirm the decisions taken for the person |
 | `compass issue decision add`, `compass issue decision set` | verbs | Record a decision taken for the person, or reopen one |
@@ -374,7 +374,7 @@ A regular issue now opens with a short intent, and every issue that ships record
 
 ### What changes
 
-- **The regular approach owes `intent` at depth `lightweight`.** It has four headings: Problem, Desired outcome, Success signals and Non-goals. The router drafts it at assess from the issue description, and the spec author corrects it at define. `compass analyze` checks each scenario's intent id against it, and `compass ship-commit` refuses a regular issue while the intent is unwritten, through the check `artifacts-approved`.
+- **The regular approach owes `intent` at depth `lightweight`.** It has four headings: Problem, Desired outcome, Success signals and Non-goals. The router drafts it at assess from the issue description, and the spec author corrects it at define. compass analyze (removed in 9.0.0, ADR-091) checks each scenario's intent id against it, and `compass ship-commit` refuses a regular issue while the intent is unwritten, through the check `artifacts-approved`.
 - **A new approach field, `release_line`.** Quick fix, regular, hotfix and full set it `true` in the shipped default. The spike has no such field. Setting it `false` on an approach that has it is a loosening and needs a waiver.
 - **A new manifest key, `release_note`.** `compass acceptance record`, `compass ship-commit` and `compass quick-fix finish` write it with `--release-note "<text>"`. The latest write wins. A blank line, a line that starts with `#`, and a line the living spec's title rules refuse are refused before anything is written.
 - **Every landing refuses an issue that owes a line and has none**, with the code `release-line-missing`. An issue owes one only when its stored generation sets `release_line: true` on its approach and the issue is neither completed nor closed.

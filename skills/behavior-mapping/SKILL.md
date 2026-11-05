@@ -49,7 +49,7 @@ These go into `acceptance-criteria.md` marked as baseline scenarios. They become
    outcome. Mark them baseline.
 6. **Flag the surprises.** Behavior mapping almost always uncovers behavior nobody
    knew about - undocumented edge cases, latent bugs, dead branches. Record each
-   in `requirements-review.md`: is it behavior other code depends on and
+   as a decision of the requirements review: is it behavior other code depends on and
    must preserve, or a bug to
    fix as part of this change? That decision is made deliberately, not by
    accident of what the new code happens to do.

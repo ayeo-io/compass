@@ -3,9 +3,9 @@
 Every reason code the pre-tool hook can refuse with, and the landing refusals
 of `compass ship-commit` and `compass quick-fix finish` (`checkpoint-no-outcome`,
 `release-line-missing` and `release-line-heading`, which `docs/release-line.md`
-describes, and `project-decision-unrecorded`, which ADR-072 describes), generated
-from `cli/compass_pkg/refusals.py` by `compass _refusal --list`. Do not hand-edit
-the list below - regenerate it after any change to the registry, and
+describes, and `definition-of-done-open`, which only `compass ship-commit`
+gives), generated from `cli/compass_pkg/refusals.py` by
+`compass _refusal --list`. Do not hand-edit the list below - regenerate it after any change to the registry, and
 `tests/test_refusal_registry.py` fails the build if it is out of date.
 
 A refusal always has three lines - `Blocked:`, `Why:`, `Fix:` - and ends
@@ -38,12 +38,6 @@ reason code and are not in the generated list.
 **Blocked:** {target} (tool: {tool})
 **Why:** an approval binds to the request a person was shown.
 **Fix:** do not read, change or run these files. Ask with compass evidence request; the person answers with /compass:approve.
-
-### `artifact-rule-not-applied`
-
-**Blocked:** landing of issue '{slug}'
-**Why:** {documents} is on disk, so {rules} applies, but the recorded approach was evaluated before the document was there.
-**Fix:** run compass approach evaluate --issue {slug} --write, pass any gate it adds, then ship again.
 
 ### `bad-current-task`
 
@@ -87,6 +81,12 @@ reason code and are not in the generated list.
 **Why:** '{file}' could not be read: {detail}
 **Fix:** fix {file} and retry.
 
+### `definition-of-done-open`
+
+**Blocked:** landing of issue '{slug}'
+**Why:** the check dod-evidence-typed failed: {detail}
+**Fix:** record each open item with --meets, --defers or compass evidence approve --check, then ship again.
+
 ### `delegation-caller-mismatch`
 
 **Blocked:** delegated approval (--as {named})
@@ -108,7 +108,7 @@ reason code and are not in the generated list.
 ### `no-delivery-approach`
 
 **Blocked:** this edit
-**Why:** issue '{slug}' has no delivery-approach.md - its assessment did not finish.
+**Why:** issue '{slug}' has no delivery approach in its manifest - its assessment did not finish.
 **Fix:** run /compass:assess.
 
 ### `no-red-on-record`
@@ -130,12 +130,6 @@ reason code and are not in the generated list.
 **Blocked:** this edit
 **Why:** another session moved .compass/current-task in this session's own project from this session's issue '{previous}' to '{slug}', so this edit would count against the wrong issue.
 **Fix:** in this session, run `compass issue use {previous}` to carry on, or `compass issue use {slug}` to switch, then retry.
-
-### `project-decision-unrecorded`
-
-**Blocked:** landing of issue '{slug}'
-**Why:** technical-design.md scopes {decisions} to the whole project, and no record in architecture/decisions/ names {it}.
-**Fix:** write {path} with compass adr new, cite its id under the decision, then ship again.
 
 ### `python-missing`
 
@@ -164,7 +158,7 @@ reason code and are not in the generated list.
 ### `release-line-heading`
 
 **Blocked:** the release line of issue '{slug}'
-**Why:** it starts with #, and the living spec reads a line such as ### <slug> (completed <date>) as one of its issue headings.
+**Why:** it starts with #, and compass release notes prints the line under a heading such as ### <slug> (completed <date>), where it would read as a heading of its own.
 **Fix:** write the release line as plain text that does not start with #, then run the command again.
 
 ### `release-line-missing`

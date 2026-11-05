@@ -23,8 +23,8 @@ function.
 Its inputs are the recorded assessment, the project's resolved configuration
 (the shipped default, an optional git parent, `compass.yml` and the issue's
 own `config:`, which can name the approach with `compass issue configure
---route`) and the documents the issue has on disk, such as `intent.md` and
-`positioning.md`. The same inputs produce the same approach, every time.
+--route`). From 9.0.0 the documents an issue has on disk are not an input
+(ADR-091). The same inputs produce the same approach, every time.
 Without `--write` it reads the configuration stored at the last evaluation;
 with `--write`, the current one.
 
@@ -480,7 +480,7 @@ files, or `manifest.yml`.
 
 How each record was made shows, and is never judged. A record holds `via`:
 `terminal`, `prompt` or `delegation`. The detail of `human-approval-present`
-and the receipt say "via a terminal", "via a typed prompt", "via <agent>
+says "via a terminal", "via a typed prompt", "via <agent>
 under <delegation>", or "written without a Compass command" for a record
 with no `via`, which still counts.
 
@@ -644,7 +644,8 @@ unknown" and does not point at a hook.
 With nothing staged, `compass ship-commit --issue <slug>` lands at HEAD
 only when the issue's own commits at the tip stay inside its declared
 scope. It walks the first parent from HEAD. A commit that changes only
-the living spec is passed over. A commit judged in full keeps the living
+the living spec, which a branch made before 9.0.0 can still hold, is
+passed over. A commit judged in full keeps the living
 spec among its paths, so a hand edit of it is refused unless the issue
 owns it. A merge whose merged-in commits are all on the base branch, such
 as a merge of `origin/main`, counts only the paths it changed against
@@ -655,7 +656,7 @@ The walk stops at the issue's newest other commit, which is judged in
 full.
 
 The base branch is the remote's default branch (`origin/HEAD`), or
-`origin/main`, the base `compass spec sync` merges. When neither
+`origin/main`. When neither
 resolves, such as in a clone with no remote, every merge is judged in
 full, and the refusal says that the base was not found.
 
@@ -1370,7 +1371,7 @@ and date. Repository permissions and review of the pull request that changes
 `compass.yml` are the control.
 
 **Conformance is a statement about the configuration, not about the work.** A project that unlocks a framework entry is reported non-conformant on every
-`compass check`, `compass issue receipt` and `compass approach show`. The
+`compass check` and `compass approach show`. The
 line states that the configuration departs from the framework's locks. It does
 not say that any work was done badly, and a project that unlocks nothing is not
 shown to have done good work. A hard lock (guarantee 5) cannot be unlocked at

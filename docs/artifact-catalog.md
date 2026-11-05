@@ -1,8 +1,8 @@
 # The artifact catalogue
 
-The artifact catalogue describes each kind of document a process writes. A tool reads the description to print a skeleton, to list the kinds and to check a configuration. This page owns the catalogue's fields, the skeleton that `compass issue template show` prints, the word limits, the rounds of a kind that repeats, the documents written once per work unit, the home of each document and the table of shipped kinds.
+**Removed in 9.0.0 (ADR-091).** Compass 9.0.0 needs and checks one document, `acceptance-criteria.md`, so it has no artifact catalogue. The shipped default declares an empty `artifacts:` map, and a project `artifacts:` key is left out of the merge and named by `compass policy lint` (`L-SETTING-REMOVED`). Compass writes, registers and renders no other document; a team can keep its own notes. The commands that printed a skeleton and registered a document are removed.
 
-The catalogue is the `artifacts:` map in `governance/presets/default/artifacts.yml`. A project or a preset adds a kind in its own `artifacts:` map with the same fields.
+The rest of this page records the catalogue as the frozen presets `default@6` and `default@7` still declare it, because archived issues and their stored generations read it. `nfr-rows-resolved` reads the sections of the acceptance criteria from `default@7`. The table of kinds at the end is generated from that catalogue.
 
 ## The fields of a kind
 
@@ -14,7 +14,7 @@ The catalogue is the `artifacts:` map in `governance/presets/default/artifacts.y
 | `audience` | yes | One line saying who reads the document and what they decide from it |
 | `stands_for` | yes | The name the industry uses for this kind of document, such as `prd` or `hld` |
 | `sections` | yes | The headings per depth: a map from `lightweight` or `thorough` to an ordered list of heading texts |
-| `depends_on` | no | The kinds this one is checked against for freshness. Empty when absent |
+| `depends_on` | no | The kinds this one depends on. Nothing reads it since 9.0.0 removed artifact freshness (ADR-091). Empty when absent |
 | `required_when` | no | A condition under which the document is owed. Today `subtasks: {min: N}` |
 | `every_approach` | no | When true, every approach owes the kind |
 | `word_ceiling` | no | The word limit per depth: a map from a depth the kind's `sections` lists to a whole number of at least 1. See Word limits below |
@@ -55,8 +55,7 @@ A kind's `word_ceiling` sets the most words its document should hold at each dep
 | `technical-design` | 4,000 | 1,200 |
 | `acceptance-criteria` | 5,000 | 1,500 |
 
-- One function counts the words: `count_words` in `cli/compass_pkg/word_ceiling.py`. A word is a whitespace-separated token of the visible text. The lines inside a rendered block, the block's marker lines and every HTML comment are left out. Headings, prose, tables and code fences count. A render that changes only block text therefore changes no count.
-- The limit applies at the depth the issue registers the document at. `word_ceiling.limit` reads it from the issue's own catalogue.
+- 9.0.0 removed the word count and the design-size check that read it (ADR-091). The field stays valid and nothing reads it.
 - The field is an obligation field. An issue stored on a generation from before the field existed has no limit, because the reading of an earlier generation never fills the field from the shipped default. The classifier compares it by identity, as it compares `required_when`: a layer that changes a shipped kind's limit needs a waiver.
 - `compass issue lint` prints a note for each registered document over its limit, naming the document, its count, the limit and the depth. The note never changes the exit code. It is silent on an issue with no `generation` key, a closed issue, a document registered with no path and a catalogue with no limit at the registered depth.
 - The check `design-within-word-ceiling` refuses a technical design over 1.5 times its limit once plan exit is due. It belongs to no gate: see `governance/guardrails.md`.
@@ -69,7 +68,7 @@ A kind repeats when its `file` holds `<n>`, as `review-<n>.md` does. The registr
 - `--round N` names an existing round when no path is given.
 - A path that is not `review-<n>.md` is refused, and the refusal names the pattern.
 - `compass issue artifact-path review` prints the latest round. `--round N` prints one.
-- `compass check`, the issue page, the board panel and the receipt each list every round. A finding names the round and its entry id.
+- `compass check`, the issue page and the board panel each list every round. A finding names the round and its entry id.
 
 ## Documents per work unit
 
@@ -79,7 +78,7 @@ A kind is written once per work unit when its `file` holds `<unit>`, as `low-lev
 - `compass issue artifact set low-level-design --unit U<n> --status draft --path docs/compass/<created>-<slug>/low-level-design/U<n>.md` registers unit `U<n>`. Registering the same unit again updates its entry and adds no new one.
 - A unit such as `U0`, `U01` or `core` is refused, and so is a path that is not `low-level-design/<unit>.md` in the documents folder. The refusal names the pattern.
 - `compass issue artifact-path low-level-design --unit U3` prints the home of unit 3. With no `--unit` it refuses when two or more units are registered, and names them.
-- `compass check`, the issue page, the board panel and the receipt list one line per unit.
+- `compass check`, the issue page and the board panel list one line per unit.
 - No approach names the kind, so `compass approach evaluate --write` registers no entry for it. The planner writes one file per unit at the plan stage and registers each one.
 - On a full issue, `compass issue lint` prints a note for each Work units row with no registered low-level design. The note never changes the exit code.
 
@@ -107,7 +106,7 @@ The not-an-artifact list is `NOT_AN_ARTIFACT` in `cli/compass_pkg/stable_ids.py`
 
 ## Documents owed only under a condition
 
-An entry can carry `required_when: {subtasks: {min: 2}}`. The shipped `distribution-map` does. One function, `artifact_owed.owed()`, decides whether the issue owes such a document, and `compass check`, the issue page, the board panel and the receipt all ask it. The count is the length of the manifest's `subtasks:` list when the manifest has that key, as a record written before 9.0.0 does. 9.0.0 records no subtasks (ADR-090), so with no such key the count is the units the registered distribution map declares on its `units:` line, `units: 2` or `units: [U1, U2]`: a map that declares two or more units is owed. No map, or a map with no `units:` line, counts as zero.
+An entry can carry `required_when: {subtasks: {min: 2}}`. The shipped `distribution-map` does. One function, `artifact_owed.owed()`, decides whether the issue owes such a document, and `compass check`, the issue page and the board panel all ask it. The count is the length of the manifest's `subtasks:` list when the manifest has that key, as a record written before 9.0.0 does. 9.0.0 records no subtasks (ADR-090), so with no such key the count is the units the registered distribution map declares on its `units:` line, `units: 2` or `units: [U1, U2]`: a map that declares two or more units is owed. No map, or a map with no `units:` line, counts as zero.
 
 While the condition is false, `artifacts-approved` does not judge the document, and the readers show `not needed: one subtask`, `not needed: one unit` or `not needed: no subtasks recorded`. A document that a person recorded as `omitted` keeps its reason and never reads "not needed". A document written anyway shows its own status. `compass next` is unchanged: a written or omitted map still marks breakdown done.
 
@@ -117,7 +116,7 @@ The `delivery-approach` entry carries `every_approach: true`, so `compass approa
 
 ## Justifications
 
-The manifest's `justifications` key holds one line for each assessed dimension of type `enum` or `ordered-enum` (risk, familiarity, size, goal, urgency). It sits beside `assessment` and never inside it. `compass approach evaluate --write --justify DIM=TEXT` merges the flags over the stored key. It refuses, naming each dimension, when a value is new or changed since the last evaluation and has no non-blank justification, and it writes nothing. An unchanged value keeps its recorded line, or none on an issue that predates the key. `compass issue configure --commit` takes the same flag. `compass quick-fix start` writes the key from the reasons it is given, and refuses a `--goal` without a reason. A `--goal` left out records no value and no justification, and the readers show it as `not assessed`. Role is not an assessment dimension from 7.0.0 (ADR-070): `--justify role=` and `--role` are accepted, print a notice and record nothing, until 9.0.0. `compass issue receipt` reads the key, and falls back to the assessment table of the record for an issue that has none.
+The manifest's `justifications` key holds one line for each assessed dimension of type `enum` or `ordered-enum` (risk, familiarity, size, goal, urgency). It sits beside `assessment` and never inside it. `compass approach evaluate --write --justify DIM=TEXT` merges the flags over the stored key. It refuses, naming each dimension, when a value is new or changed since the last evaluation and has no non-blank justification, and it writes nothing. An unchanged value keeps its recorded line, or none on an issue that predates the key. `compass issue configure --commit` takes the same flag. `compass quick-fix start` writes the key from the reasons it is given, and refuses a `--goal` without a reason. A `--goal` left out records no value and no justification, and the readers show it as `not assessed`. Role is not an assessment dimension from 7.0.0 (ADR-070): `--justify role=` and `--role` are accepted, print a notice and record nothing, until 9.0.0.
 
 ## Closing a spike
 
@@ -129,21 +128,11 @@ A map can carry a `units:` line, `units: 1` or a list such as `units: [U1, U2]`.
 
 ## The rendered blocks of the record
 
-`templates/delivery-approach.md` holds four rendered blocks in place of its tables: `assessment` (under The assessment), `policy-rules` (under Policy rules that fired), `stage-weights` (under Per-stage weight) and `gate-set` (under Gate set). `compass issue render` writes them from the manifest, and `rendered-blocks-current` fails at the verification stage when a reassessment leaves one stale. The four templates with a `## Gate` section hold blocks, not tick boxes: `plan-exit` in `technical-design.md`, `breakdown-exit` in `distribution-map.md`, and the existing `dor` and `dod` blocks. `docs/rendered-blocks.md` describes each kind.
+Before 9.0.0 the delivery-approach template held four rendered blocks in place of its tables: `assessment` (under The assessment), `policy-rules` (under Policy rules that fired), `stage-weights` (under Per-stage weight) and `gate-set` (under Gate set). `compass issue render` writes them from the manifest, and `rendered-blocks-current` fails at the verification stage when a reassessment leaves one stale. The four templates with a `## Gate` section hold blocks, not tick boxes: `plan-exit` in `technical-design.md`, `breakdown-exit` in `distribution-map.md`, and the existing `dor` and `dod` blocks. `docs/rendered-blocks.md` describes each kind.
 
 ## The quick-fix record
 
 `compass quick-fix start` writes the delivery-approach record with its own short headings: Assessment, Policy rules fired, Acceptance strategy, Advice, Intent, Scenario and De-scope ledger. After the title the record holds a `document-header` block. Under Assessment it holds an `assessment` block, under Policy rules fired a `policy-rules` block and under Acceptance strategy an `acceptance-strategy` block, all filled by the render. The record has no `**Approach:**` line, because the header block names the approach. A record written before the blocks existed keeps its tables. They are not an ordered subset of the thorough headings. `sections.lightweight` describes the record a hotfix or a spike writes from the template.
-
-## Measuring the archive
-
-`scripts/measure-artifact-catalogue.py --root <copy>` reads a copy of an archive and prints the figures this catalogue was built to change. It only reads, but run it on a copy.
-
-- With no flag, it gives the figures before the 7.0.0 migrate: the kinds declared, the kinds in use that the catalogue does not declare, the regular issues with the record in the documents folder, the regular issues with a stub distribution map, and the distinct review filenames. `--catalogue` reads the kinds from another `artifacts.yml`, and `--list-kinds FILE` writes the undeclared names.
-- With `--after`, it gives the figures after the migrate: files in a documents folder that match no kind, regular issues that held a record before the migrate and lack it registered in the documents folder, other issues holding a record that is not registered there, regular issues with fewer than two subtasks that carry a map registered at lightweight depth, review filenames that are not `review-<n>.md`, and issues with two review files of one round. It names the issues behind each figure that is not zero. It also prints two counts that are not faults: regular issues that never had a record, for which the migrate writes none, and small maps the migrate adopted with no depth, which it keeps.
-- With `--design-size`, it gives, per approach, the count and the median byte size of the `technical-design.md` files, the regular limit of 3,865 bytes (1.5 times 2,577) and whether the regular median is within it. It adds an informational regular figure for the issues whose stored catalogue lists the Data and interfaces section; no limit applies to that figure. It refuses a `--root` that holds `.git`, so it never reads a working checkout.
-
-`--json` prints either set as JSON.
 
 ## The kinds
 

@@ -185,8 +185,8 @@ parents:
     classification:
       against: "compass:default@6"
       result: loosening
-      points: 4608
-      raw_points: 34560
+      points: 1152
+      raw_points: 8640
       complete: true
       first_looser: { assessment: { risk: trivial, ... }, summary: "at risk trivial, ...: approaches.stages (define) is ..." }
 ```

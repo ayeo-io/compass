@@ -12,12 +12,13 @@ blocked flag is a separate mapping, because it describes an issue that is in
 flight rather than naming a state.
 """
 # DEPENDENCY: compass_pkg.status_words (the words and the two writes),
-# compass_pkg.lifecycle (the state a flag needs) and compass_pkg.core.
+# compass_pkg.lifecycle (the state a flag needs), compass_pkg.gate_status and
+# compass_pkg.core.
 from __future__ import annotations
 
 import os
 
-from compass_pkg import lifecycle, status_words
+from compass_pkg import gate_status, lifecycle, status_words
 from compass_pkg.core import (CompassError, load_manifest, now_iso, resolve_issue_dir,
                               save_manifest)
 from compass_pkg.terminal import say
@@ -31,8 +32,9 @@ def _list(words):
 
 
 def _unmet_gates(task):
-    return [g.get("id", "?") for g in (task.get("gates") or [])
-            if isinstance(g, dict) and g.get("status") != "pass"]
+    """The gates that have not passed. A gate a release removed owes nothing, so an
+    older manifest that still lists it pending can be completed (ADR-091)."""
+    return gate_status.unmet_gates(task)
 
 
 def _close_reason(task, task_dir, close_reason, duplicate_of):

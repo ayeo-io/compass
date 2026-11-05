@@ -49,8 +49,9 @@ def test_wsm_4_an_approved_waiver_records_the_lower_mode(tmp_path):
     assert manifest["delivery_approach"] == "full"
     assert manifest["stages"]["breakdown"] == "skipped"
     gates = {g["id"] for g in manifest["gates"]}
-    assert len(gates) == 8
-    assert {"verify.analyze", "verify.architecture"} <= gates
+    # Seven: 9.0.0 removes the gate `verify.analyze` (ADR-091).
+    assert len(gates) == 7
+    assert "verify.architecture" in gates
     # A read of the stored generation gives the same mode: its provenance
     # keeps the waiver.
     code, out, err = cf.run(root, "approach", "evaluate", "--issue", cf.SLUG, "--json")

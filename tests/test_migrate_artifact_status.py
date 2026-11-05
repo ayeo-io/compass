@@ -192,14 +192,6 @@ def test_drs_1_dry_run_counts_registered_documents(tmp_path):
     assert dry == "would mark" + applied[len("marked"):]
 
 
-def test_drs_2_dry_run_counts_the_verification_note(tmp_path):
-    root, _folder = _one_issue(tmp_path, "quick-fix", "completed",
-                               [_entry("acceptance-criteria", "draft")])
-    dry, applied = _dry_then_apply(root)
-    assert applied == "marked 2 artifact entries approved and 0 superseded"
-    assert dry == "would mark" + applied[len("marked"):]
-
-
 def test_drs_3_dry_run_skips_the_superseded_stub_map(tmp_path):
     root, folder = _one_issue(tmp_path, "regular", "not-planned",
                               [_entry("acceptance-criteria", "draft"),

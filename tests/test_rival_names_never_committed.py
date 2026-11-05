@@ -422,27 +422,6 @@ def test_rn_5_this_project_configures_its_key():
     assert record.get("names_key") == ".compass/private/rival-codes.yml"
 
 
-def test_rn_5_the_living_spec_derivation_writes_codes(fake, tmp_path, monkeypatch):
-    """The living spec is committed but derived from local issue records,
-    whose scenario titles may name a rival."""
-    from compass_pkg import flow
-    key, _ = fake
-    root, _ = _record_project(tmp_path, monkeypatch, key)
-    task = root / ".compass" / "work" / "compare"
-    task.mkdir(parents=True)
-    (task / "manifest.yml").write_text(yaml.safe_dump({
-        "schema_version": "2.0", "issue": "compare", "status": "landed",
-        "land_timestamp": "2026-10-04T00:00:00+00:00",
-        "scenarios": [{"id": "CMP-1", "intent": "INT-1",
-                       "title": "Given a run, then Compass costs at most "
-                                "twice Zorblax Kit."}]}), encoding="utf-8")
-    flow.derive_system_spec(str(root))
-    derived = "".join((root / rel).read_text(encoding="utf-8")
-                      for rel in flow.LIVING_SPEC_FILES)
-    assert "CMP-1" in derived
-    assert "zorblax" not in derived.lower() and "R0" in derived
-
-
 # --- RN-6: CI runs the gate over pull request text ---------------------------
 
 def _rn_6_problems(workflows: Path) -> list:

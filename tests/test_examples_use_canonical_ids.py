@@ -6,7 +6,7 @@ prose cites exists in its manifest - a sample whose spec cites an id its
 own manifest does not carry would teach that the traceability chain is
 decorative.
 
-Scenario ids: see docs/system-spec.md.
+Scenario ids: see the issue's acceptance criteria.
 """
 from __future__ import annotations
 

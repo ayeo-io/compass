@@ -1,7 +1,10 @@
 """A list parameter of a check tightens by superset (ADR-073).
 
-The classifier compares the trigger lists of `contracts-declared` as sets of
-exact entries: a list that holds every shipped entry and more is `tighter`, a
+The classifier compares a check's list parameters as sets of exact entries. Until
+9.0.0 the trigger lists of `contracts-declared` were the shipped example; 9.0.0
+removed that check with the technical design (ADR-091), so these tests plant an
+implementation with the same parameters under the same name, and the comparison
+stays proven: a list that holds every shipped entry and more is `tighter`, a
 list that lacks a shipped entry is `looser`, and a list that lacks one and adds
 another, or is malformed, is `incomparable`.
 
@@ -22,6 +25,20 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
+
+@pytest.fixture(autouse=True)
+def _planted_check(monkeypatch):
+    """`contracts-declared` as it was registered before 9.0.0: two list parameters that
+    tighten by superset."""
+    from compass_pkg import check_registry
+    planted = check_registry.CheckImpl(
+        name="contracts-declared", fn=lambda task, task_dir: (True, ""),
+        params_spec={"trigger_paths": "list", "trigger_contents": "list"},
+        tighter={"trigger_paths": "superset", "trigger_contents": "superset"})
+    monkeypatch.setitem(check_registry.REGISTRY, "contracts-declared", planted)
+    # A removed check owes nothing in the classifier, so the planted one is not removed.
+    monkeypatch.delitem(check_registry.REMOVED, "contracts-declared")
+
 
 PATHS = ["schemas/*", "governance/presets/*", "*.schema.json"]
 PAIR = {"path": "*.py", "contains": "add_parser("}
@@ -228,6 +245,8 @@ def test_only_the_two_trigger_lists_declare_superset():
     declared = {(name, param) for table in (REGISTRY, READINESS)
                 for name, entry in table.items()
                 for param, direction in entry.tighter.items() if direction == "superset"}
+    # The planted check is the only one: no shipped check declares superset since
+    # 9.0.0 removed `contracts-declared` (ADR-091).
     assert declared == {("contracts-declared", PATHS_KEY),
                         ("contracts-declared", CONTENTS_KEY)}
 
@@ -253,10 +272,10 @@ def test_governance_documents_state_the_superset_rule():
     guardrails = _words((ROOT / "governance" / "guardrails.md").read_text(encoding="utf-8"))
     policy = _words((ROOT / "governance" / "routing-policy.md").read_text(encoding="utf-8"))
 
-    entry = guardrails.split("**Trigger paths**", 1)[1].split("**Four conditions", 1)[0]
-    assert "adding an entry" in entry and "needs no waiver" in entry, entry
-    assert "removing or replacing an entry needs a waiver" in entry, entry
-    assert "a trigger path makes the check run, so more entries check more changes" in entry
+    # 9.0.0 removed `contracts-declared`, the one check whose trigger paths
+    # declared `superset` (ADR-091), so guardrails.md no longer describes them.
+    # The rule itself is kept, and the policy below states it.
+    assert "**Trigger paths**" not in guardrails
     assert "with a project waiver, because `tighter` is `none` for the key" not in guardrails
 
     registry = guardrails.split("**The check registry", 1)[1].split("- The corpus is", 1)[0]

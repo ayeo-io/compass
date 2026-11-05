@@ -144,16 +144,6 @@ def test_trc_044():
         assert _run(old, "issue", "lint", "--issue", "sample")[0] == 0
         assert "total re-assessments : 2" in _run(old, "retro")[1]
 
-        # The block that lists the entries shows the current word.
-        assert _run(old, "issue", "render", "--issue", "sample")[0] == 0
-        page = old / "docs" / "compass" / "2026-08-30-sample" / "README.md"
-        page.write_text(page.read_text(encoding="utf-8")
-                        + "\n<!-- compass:render decisions-taken -->\nstale\n"
-                          "<!-- /compass:render -->\n", encoding="utf-8")
-        assert _run(old, "issue", "render", "--issue", "sample")[0] == 0
-        shown = page.read_text(encoding="utf-8")
-        assert shown.count(f"({NEW_KIND})") == 2 and OLD_KIND not in shown, shown
-
         # A read leaves the file as it was.
         assert _manifest_path(old).read_bytes() == original
 
@@ -570,50 +560,20 @@ def test_trc_053(tmp_path):
 
 # --- The JSON keys, the headings and the term --------------------------------
 
-def test_trc_054(tmp_path):
-    from compass_pkg import flow, old_names
+def test_trc_054():
+    # 9.0.0 derives no living spec (ADR-091). A spec an older revision holds can
+    # still use the headings 6.1.0 wrote, and `compass release notes` reads it there.
+    from compass_pkg import old_names, shipped_issues
 
-    work = tmp_path / ".compass" / "work" / "old"
-    work.mkdir(parents=True)
-    (work / "manifest.yml").write_text(yaml.safe_dump({
-        "schema_version": "2.0", "issue": "old", "created": "2026-05-25",
-        "status": "landed", "land_timestamp": "2026-05-25T08:00:00+00:00",
-        "assessment": {"risk": "contained", "familiarity": "greenfield", "size": "small"},
-        "scenarios": [
-            {"id": "SCN-OLD", "title": "old way", "intent": "INT-1", "tests": [],
-             "superseded_by": ["SCN-NEW"]},
-            {"id": "SCN-NEW", "title": "new way", "intent": "INT-1", "tests": []},
-        ]}, sort_keys=False), encoding="utf-8")
-    spec, archive = (tmp_path / "docs" / "system-spec.md",
-                     tmp_path / "docs" / "system-spec-archive.md")
     pairs = [(row["new"], row["old"]) for row in old_names.rows("spec_heading")]
     assert [new for new, _ in pairs] == ["Current Behavior", "Archived Behavior"]
-
-    flow.derive_system_spec(str(tmp_path))
-    fresh = (spec.read_text(encoding="utf-8"), archive.read_text(encoding="utf-8"))
-    assert "## Current Behavior\n" in fresh[0] and "## Archived Behavior\n" in fresh[1]
-
-    # A file written by 6.1.0 holds the old headings.
-    for path in (spec, archive):
-        text = path.read_text(encoding="utf-8")
-        for new, old in pairs:
-            text = text.replace(f"## {new}\n", f"## {old}\n")
-        path.write_text(text, encoding="utf-8")
-    stale = spec.read_text(encoding="utf-8")
+    fresh = "## Current Behavior\n\n### old (completed 2026-05-25)\n\n- `SCN-NEW` new way\n"
+    stale = fresh
+    for new, old in pairs:
+        stale = stale.replace(f"## {new}\n", f"## {old}\n")
     assert "## Current Behaviour\n" in stale
-    # The readers of the spec find its issues under either heading.
-    assert flow._issues_named(stale) == flow._issues_named(fresh[0]) == {"old"}
-
-    # The next derive is not an error and rewrites each file once.
-    flow.derive_system_spec(str(tmp_path))
-    again = (spec.read_text(encoding="utf-8"), archive.read_text(encoding="utf-8"))
-    assert again == fresh
-    for text in again:
-        assert not any(f"## {old}" in text for _, old in pairs)
-        assert sum(f"## {new}" in text for new, _ in pairs) == 1
-    # A second derive changes nothing.
-    flow.derive_system_spec(str(tmp_path))
-    assert (spec.read_text(encoding="utf-8"), archive.read_text(encoding="utf-8")) == again
+    # The reader of the spec finds its issues under either heading.
+    assert shipped_issues.issues_named(stale) == shipped_issues.issues_named(fresh) == {"old"}
 
 
 OLD_PAGE = "artifact-catalog" + "ue.md"

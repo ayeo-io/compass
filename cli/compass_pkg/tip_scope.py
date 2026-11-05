@@ -3,16 +3,21 @@
 nothing staged.
 
 The tip of a branch is not always the issue's own commit. It can be a commit
-that only re-derives the living spec, or a merge of the base branch. This
+that only re-derives the living spec, which a branch made before 9.0.0 can
+still hold, or a merge of the base branch. This
 module walks the first parent from HEAD and returns the paths the issue's own
 commits changed, so the scope check judges those and not what a merge of the
 base brought in.
 """
-# DEPENDENCY: standard library (subprocess); compass_pkg.flow
-# (LIVING_SPEC_FILES), compass_pkg.spec_refresh (DEFAULT_BASE).
+# DEPENDENCY: standard library (subprocess); compass_pkg.shipped_issues
+# (LIVING_SPEC_FILES).
 from __future__ import annotations
 
 import subprocess
+
+# The base branch a merge of the base is judged against when git does not
+# know the remote's default branch.
+DEFAULT_BASE = "origin/main"
 
 
 def _git(args, cwd):
@@ -22,9 +27,8 @@ def _git(args, cwd):
 def _base_ref(cwd):
     """The base branch whose commits a merge may bring in without them
     counting as the issue's: the remote's default branch when git knows
-    it, otherwise the base `compass spec sync` merges. None when neither
-    resolves, such as in a clone with no remote."""
-    from compass_pkg.spec_refresh import DEFAULT_BASE
+    it, otherwise `DEFAULT_BASE`. None when neither resolves, such as in a
+    clone with no remote."""
     named = _git(["symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD"],
                  cwd).stdout.strip()
     for ref in (named, DEFAULT_BASE):
@@ -39,8 +43,9 @@ def tip_own_paths(cwd):
     the first parent from HEAD, and a note when a merge was judged in full
     because the base branch could not be found.
 
-    - A commit that changes only the living spec is passed over: `ship-commit`
-      and `compass spec sync` write it, so it is no issue's change. In a
+    - A commit that changes only the living spec is passed over: before
+      9.0.0 `ship-commit` and `compass spec sync` wrote it, and a branch or
+      tag made then can still hold such a commit, so it is no issue's change. In a
       commit judged in full, the living spec stays: a hand edit of it is the
       issue's change and the scope check judges it.
     - A merge whose merged-in commits are all on the base branch, such as a
@@ -54,7 +59,7 @@ def tip_own_paths(cwd):
       own commit and is judged in full, or at a commit a merged-in branch
       already holds, which was the base of that branch and not the issue's.
     """
-    from compass_pkg.flow import LIVING_SPEC_FILES
+    from compass_pkg.shipped_issues import LIVING_SPEC_FILES
 
     def names(*rng):
         return {n for n in _git(["diff", "--name-only", "-z", *rng],

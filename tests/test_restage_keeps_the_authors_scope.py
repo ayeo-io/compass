@@ -39,7 +39,7 @@ def _git(args, cwd):
 
 def _land_commit(root):
     """The commit ship-commit made, by the `land_commit` the manifest
-    records - not HEAD, which a following spec commit can move past."""
+    records, the commit the checks below judge."""
     manifest = yaml.safe_load(
         (root / ".compass" / "work" / "demo" / "manifest.yml").read_text())
     return manifest["land_commit"]
@@ -118,8 +118,8 @@ def test_ff_3_restage_does_not_widen_the_commit(tmp_path):
     r = _ship(root)
     assert r.returncode == 0, f"{r.stdout}{r.stderr}"
 
-    # Read the land commit by the `land_commit` the manifest records, not
-    # HEAD - a spec commit follows the land commit when it lands the issue.
+    # Read the land commit by the `land_commit` the manifest records. No
+    # commit follows it: 9.0.0 derives no living spec (ADR-091).
     land_commit = _land_commit(root)
     committed = _git(["show", "--name-only", "--pretty=format:", land_commit],
                      root).stdout.split()
@@ -133,12 +133,7 @@ def test_ff_3_restage_does_not_widen_the_commit(tmp_path):
         f"contain: {committed}")
 
     head = _git(["rev-parse", "HEAD"], root).stdout.strip()
-    assert head != land_commit, "no spec commit followed the land commit"
-    spec_committed = _git(
-        ["show", "--name-only", "--pretty=format:", head], root).stdout.split()
-    assert spec_committed == ["docs/system-spec-archive.md", "docs/system-spec.md"], (
-        f"the spec commit that follows the land commit must hold only "
-        f"docs/system-spec.md and its archive: {spec_committed}")
+    assert head == land_commit, "a commit followed the land commit"
 
 
 def test_ff_4_artifacts_are_still_restaged(tmp_path):
@@ -152,8 +147,8 @@ def test_ff_4_artifacts_are_still_restaged(tmp_path):
     r = _ship(root)
     assert r.returncode == 0, f"{r.stdout}{r.stderr}"
 
-    # Read the land commit by the `land_commit` the manifest records, not
-    # HEAD - a spec commit follows the land commit when it lands the issue.
+    # Read the land commit by the `land_commit` the manifest records. No
+    # commit follows it: 9.0.0 derives no living spec (ADR-091).
     land_commit = _land_commit(root)
     committed = _git(["show", "--name-only", "--pretty=format:", land_commit],
                      root).stdout

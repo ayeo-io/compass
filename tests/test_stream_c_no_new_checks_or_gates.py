@@ -28,24 +28,35 @@ REMOVED_CHECKS = {
     # documents-carry-judgement: replaced by `rendered-blocks-current`, which checks
     # every block Compass writes in an issue's documents and not only the README.
     "dashboard-current",
+    # ayeo-io/compass-delivery#353: 9.0.0 renders no block, issue page or project
+    # index (ADR-091). A stored generation that lists it reports it as nothing to check.
+    "rendered-blocks-current",
     # ayeo-io/compass-delivery#352: 9.0.0 runs each issue in one session, so no
     # run splits into subtasks to record (ADR-090). A stored generation that
     # lists it reports it as nothing to check.
     "multiagent-run-recorded",
+    # ayeo-io/compass-delivery#353: 9.0.0 removes `compass analyze`, so no
+    # consistency report is written to check (ADR-091). A stored generation that
+    # lists it reports it as nothing to check.
+    "consistency-check-passes",
+    # ayeo-io/compass-delivery#353: 9.0.0 keeps one issue document (ADR-091), so the
+    # checks that read the others go. A stored generation that lists one reports it as
+    # nothing to check.
+    "artifacts-approved",
+    "contracts-declared",
+    "design-within-word-ceiling",
+    "borrowed-documents-answered",
+}
+
+# Gates a release removed on purpose, each with the change that removed it. A
+# gate here may leave `gate_evidence_requirements`; any other change still fails.
+REMOVED_GATES = {
+    # ayeo-io/compass-delivery#353: `verify.analyze` accepted only the evidence
+    # `compass analyze` wrote, and 9.0.0 removes that command (ADR-091).
+    "verify.analyze",
 }
 
 BASELINE_CHECKS = {
-    # Added by the borrowed document shapes. A threat model that lists
-    # threats and mitigates none is the Threat Modeling Manifesto's named
-    # anti-pattern, and a rollback plan nobody has rehearsed is a guess.
-    # One check reads both, under `G4` rather than as a sixth guardrail
-    # (ADR-002).
-    "borrowed-documents-answered",
-    # Added by documents-carry-judgement, replacing the per-issue review
-    # dashboard check: a block Compass writes into an issue's documents must
-    # not disagree with the manifest and the evidence it was rendered from.
-    # Joins `G4` rather than becoming a sixth guardrail (ADR-002).
-    "rendered-blocks-current",
     "scenarios-have-tests",
     "suite-passed",
     "changed-code-traces-to-scenario",
@@ -87,20 +98,9 @@ BASELINE_CHECKS = {
     # and no-ops entirely for a project that has set no project.bdd_runner,
     # which is nearly all of them.
     "scenarios-are-executable",
-    # Added by artifact-status-written-by-stages (ADR-050). A document that
-    # reads draft or awaiting-approval, or is omitted with no reason, has not
-    # been accepted, so ship refuses it. It sits in no guardrail: a check in
-    # `G4` would be locked, and an issue waiver must be able to excuse it.
-    "artifacts-approved",
     # Added by document-set-sections (ADR-064). The spec's Non-functional
-    # requirements rows and the design's declared contracts. Both sit in no
-    # guardrail, as `artifacts-approved` does: `G2` and `G4` are locked.
+    # requirements rows. It sits in no guardrail: `G2` and `G4` are locked.
     "nfr-rows-resolved",
-    "contracts-declared",
-    # Added by word-ceilings-and-lld (ADR-067). A technical design far over its
-    # word limit once plan exit is due. It sits in no guardrail for the same
-    # reason as the two section checks.
-    "design-within-word-ceiling",
     # Added by acceptance-strategy-core (strategy `S17`). The advisory check that the
     # stored applicability of the four-layer acceptance strategy agrees with the
     # records. It sits in no guardrail, so `G1` and `G4` keep their checks.
@@ -402,6 +402,11 @@ def test_guardrails_gains_no_mechanism_on_this_branch():
                 assert lost <= REMOVED_CHECKS, (
                     f"{gid} lost check(s): {sorted(lost - REMOVED_CHECKS)}")
             continue
+        if field == "gate_evidence_requirements":
+            gone = set(b) - set(a)
+            assert gone <= REMOVED_GATES, (
+                f"guardrails.yml removed gate(s): {sorted(gone - REMOVED_GATES)}.")
+            b = {gate: accepts for gate, accepts in b.items() if gate not in REMOVED_GATES}
         assert _in_current_stages(b) == _in_current_stages(a), (
             f"guardrails.yml changed mechanism in {field!r} relative to main.\n"
             f"  on main: {b!r}\n"

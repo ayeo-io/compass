@@ -921,7 +921,7 @@ def overrule(session, args, where=""):
     None of these reverses anything the agent already did."""
     from compass_pkg import approval_records
     from compass_pkg.core import save_manifest
-    from compass_pkg.prompt_approval import HookResult, _send_back
+    from compass_pkg.prompt_approval import HookResult
     record_id, _, reason = args.partition(" ")
     reason = reason.strip()
     task, path = load_manifest(session.task_dir)
@@ -961,10 +961,6 @@ def overrule(session, args, where=""):
         approvals.record(session.task_dir, answer, save=False)
         save_manifest(task, path)
         written = ", ".join(approvals.record(session.task_dir, answer).evidence_ids)
-    elif record.get("type") == "artifact-approval" and record.get("artifact"):
-        save_manifest(task, path)
-        _send_back(session, record["artifact"], reason)
-        written = f"{record['artifact']} back to draft"
     else:
         raise _refused(f"{record_id} ({subject}) cannot be overruled with /compass:reject; "
                        f"reopen a decision with compass issue decision set.")

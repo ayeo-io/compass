@@ -53,10 +53,10 @@ how much.
 - **Regular** - a small scenario set: the happy path, the realistic edges,
   and the failure modes that actually matter. Not every conceivable edge -
   the ones with real consequence.
-- **Full approach** - full discovery. Work `intent.md` and the problem space for
+- **Full approach** - full discovery. Work the intent and the problem space for
   the whole behavior set. Then **group the scenarios by independence** - disjoint
   code, disjoint scenarios - because that grouping is what seeds the
-  distribution map the Planner builds.
+  work units the plan lists.
 - **Hotfix** - the scenario *is* a failing regression test that
   reproduces the defect. It is written reproduce-first, before any fix,
   and it is simultaneously the BDD scenario and the TDD red. At ship time

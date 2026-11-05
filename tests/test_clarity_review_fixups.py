@@ -13,8 +13,8 @@ Findings covered (numbered as the batch 5-9 review numbers them):
      `governance.py`'s verb.
   2. `cli/compass_pkg/core.py` claimed the delivery-approach evaluator, which
      is `routing.py`'s.
-  3. `cli/compass_pkg/receipt.py` said an evidence type with no renderer
-     entry "lands as a path-only entry"; the renderer has no path column.
+  3. The receipt module said an evidence type with no renderer entry "lands
+     as a path-only entry"; 9.0.0 removed that module (ADR-091).
   4. `scripts/release.sh` gave a tar-exclude cause for a hard-fail check that
      no longer exists - the script never passes `--exclude` to tar.
   10. `cli/compass_pkg/terminal.py` attached "under every `add_parser` call"
@@ -44,7 +44,7 @@ def test_policy_module_header_claims_only_its_own_verbs():
     header_block = "\n".join(header[:6])
     assert "compass policy lint" not in header_block
     assert "compass issue lint" in header_block
-    assert "compass plan lint" in header_block
+    assert "compass plan lint" not in header_block
 
 
 def test_core_module_header_does_not_claim_the_evaluator():
@@ -52,12 +52,6 @@ def test_core_module_header_does_not_claim_the_evaluator():
     header_block = "\n".join(text.split("\n")[:6])
     assert "delivery-approach evaluator" not in header_block
     assert "governance discovery" in header_block
-
-
-def test_receipt_comment_does_not_claim_a_path_only_entry():
-    text = _read("cli/compass_pkg/receipt.py")
-    assert "path-only entry" not in text
-    assert "lands as a path-only entry" not in text
 
 
 def test_release_sh_does_not_claim_a_live_unanchored_exclude():
@@ -116,8 +110,3 @@ def test_checks_py_names_the_spec_file_once():
     text = _read("cli/compass_pkg/checks.py")
     assert "lives only in the spec (it has no structured" not in text
     assert "acceptance-criteria.md (it has no structured" in text
-
-
-def test_analyze_py_names_where_the_invariants_are_defined():
-    text = _read("cli/compass_pkg/analyze.py")
-    assert "architecture/ownership.md" in text

@@ -105,7 +105,7 @@ def cmd_terminology(args):
 # reader opens and the file the build enforces cannot disagree. A hand-written
 # copy of a machine-readable source goes out of date when the source changes.
 #
-# Private, like _derive-system-spec: called at ship, not a public verb.
+# Private: called at ship, not a public verb.
 
 def _fmt(value):
     """One field, flattened. YAML block scalars arrive with newlines in them."""

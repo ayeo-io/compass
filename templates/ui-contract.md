@@ -13,9 +13,6 @@ shape the spec uses - so the handoff into the define stage is mechanical.
 
 # UI Contract - {{ISSUE_SLUG}}
 
-<!-- compass:render document-header -->
-<!-- /compass:render -->
-
 ---
 
 ## Surface
@@ -44,7 +41,7 @@ shape the spec uses - so the handoff into the define stage is mechanical.
      unbroken across the handoff. -->
 
 ### Scenario: {{INTERACTION TITLE}}
-<!-- traceability id: TRC-UI1 · serves: {{INT-id from intent.md, or the issue}} -->
+<!-- traceability id: TRC-UI1 · serves: {{INT-id from the Intent links, or the issue}} -->
 
 ```gherkin
 Scenario: {{scenario title}}

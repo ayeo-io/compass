@@ -23,9 +23,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PROSE_ROOTS = ("approaches", "skills", "agents", "commands", "templates",
                "docs", "governance", "architecture")
 EXEMPT = ("architecture/decisions/", "templates/architecture/decisions/",
-          "docs/compass/",
-          "docs/proposals/", "docs/analysis/", "docs/system-spec.md",
-          "docs/system-spec-archive.md")
+          "governance/decisions/", "docs/compass/",
+          "docs/proposals/", "docs/analysis/")
 
 
 def _tracked(root: Path) -> set[str]:
@@ -124,10 +123,20 @@ def test_a4_named_files_resolve():
     # skims past, and the guard cannot read it.
     named = re.compile(r"(?<![\w/.-])((?:approaches|governance|templates|skills"
                        r"|agents|commands|docs)/[\w./-]+\.md)\b")
+    # An upgrade guide is history: it names a template as it shipped then, and
+    # 9.0.0 deleted fourteen of them (ADR-091).
+    removed = {f"templates/{name}.md" for name in (
+        "delivery-approach", "verification-note", "technical-design", "low-level-design",
+        "distribution-map", "verification-report", "intent", "requirements-review",
+        "threat-model", "rollback-plan", "bug-report", "review", "spike-conclusion",
+        "incident")}
     missing = []
     for p in _prose_files():
+        history = p.relative_to(REPO_ROOT).as_posix().startswith("docs/upgrade-")
         for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
             for path in named.findall(line):
+                if history and path in removed:
+                    continue
                 if not (REPO_ROOT / path).exists():
                     missing.append(f"{p.relative_to(REPO_ROOT)}:{n}: {path}")
     assert not missing, (
@@ -672,6 +681,19 @@ def test_d2_repairs_change_only_retired_names():
     The same issue then removed the four other agent files the fixture held,
     `agents/planner.md`, `agents/product-marketer.md`, `agents/product-owner.md`
     and `agents/spec-author.md`, with the rest of `agents/` (ADR-090).
+
+    One more was re-baselined by ayeo-io/compass-delivery#353 (ADR-091):
+    `governance/guardrails.md` (list_items 99 -> 91) lost the bullets on the
+    checks `artifacts-approved`, `contracts-declared` and
+    `design-within-word-ceiling`, which 9.0.0 removed, and kept those of
+    `nfr-rows-resolved` with its fixed-path rule. The same issue deleted
+    `templates/distribution-map.md` and `templates/requirements-review.md`
+    with twelve other templates, so their entries left the fixture. It
+    re-baselined three more: `approaches/quick-fix.md` (list_items 8 -> 7) and
+    `approaches/rubric.md` (list_items 5 -> 3, table_rows 22 -> 18) lost the
+    rule that an `intent.md` or `positioning.md` on disk adds gates, and
+    `templates/acceptance-criteria.md` (one `##` heading fewer) lost its
+    Coverage ledger, which the removed render wrote.
 
     The other 45 are untouched, and a NEW structural change to any of the 53
     still fails.

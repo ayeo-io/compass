@@ -32,13 +32,14 @@ NEW_INTAKE_TEMPLATES = {"bug-report.md", "incident.md"}
 
 
 def test_templates_carry_the_v2_names():
-    """`TRC-A1`: the template set speaks v2 - every renamed template exists
-    under its v2 name, no template keeps a v1 name, and the two new intake
-    templates exist."""
+    """`TRC-A1`: no template keeps a v1 name. 9.0.0 deleted every renamed
+    template except the acceptance criteria, and both intake templates
+    (ADR-091), so only that one is still expected."""
     names = {p.name for p in (REPO_ROOT / "templates").iterdir() if p.is_file()}
-    missing = (set(V2_TO_V1) | NEW_INTAKE_TEMPLATES) - names
     leftover = set(V2_TO_V1.values()) & names
-    assert not missing, f"templates missing their v2 names: {sorted(missing)}"
+    assert "acceptance-criteria.md" in names
+    assert not (set(V2_TO_V1) - {"acceptance-criteria.md"}) & names
+    assert not NEW_INTAKE_TEMPLATES & names
     assert not leftover, f"templates still carrying v1 names: {sorted(leftover)}"
 
 

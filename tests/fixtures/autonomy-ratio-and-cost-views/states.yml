@@ -3,6 +3,8 @@
 # and the board page's Generated line is masked.
 # Each count of checks with nothing to check is one lower than captured: 9.0.0
 # removed multiagent-run-recorded, which had nothing to check here (ADR-090).
+# Each is four lower again: 9.0.0 removed the four checks of the removed
+# documents from the live default (ADR-091), and each had nothing to check here.
 next-broken.txt: |
   exit 2
   --- stdout
@@ -27,10 +29,8 @@ next-building.txt: |
 check-building.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 9 check(s) failed, 8 had nothing to check on 'building' (regular)
   [mode: enforced]
-
-  ADVISORY rendered-blocks-current: docs/compass/2026-10-01-building/README.md: the issue page is mis…
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
@@ -48,13 +48,11 @@ next-dropped.txt: |
 check-dropped.txt: |
   exit 1
   --- stdout
-  FAIL - 2 of 11 check(s) failed, 12 had nothing to check on 'dropped' (regular)
+  FAIL - 1 of 9 check(s) failed, 8 had nothing to check on 'dropped' (regular)
   [mode: enforced]
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
-  FAIL rendered-blocks-current: docs/compass/2026-10-01-dropped/README.md: the issue page is missing …
-       fix: Run `compass issue render`, then re-read the document.
   --- stderr
 lint-dropped.txt: |
   exit 0
@@ -69,13 +67,11 @@ next-dup.txt: |
 check-dup.txt: |
   exit 1
   --- stdout
-  FAIL - 2 of 11 check(s) failed, 12 had nothing to check on 'dup' (regular)
+  FAIL - 1 of 9 check(s) failed, 8 had nothing to check on 'dup' (regular)
   [mode: enforced]
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
-  FAIL rendered-blocks-current: docs/compass/2026-10-01-dup/README.md: the issue page is missing - ru…
-       fix: Run `compass issue render`, then re-read the document.
   --- stderr
 lint-dup.txt: |
   exit 0
@@ -90,10 +86,8 @@ next-flagged.txt: |
 check-flagged.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 9 check(s) failed, 8 had nothing to check on 'flagged' (regular)
   [mode: enforced]
-
-  ADVISORY rendered-blocks-current: docs/compass/2026-10-01-flagged/README.md: the issue page is miss…
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
@@ -111,10 +105,8 @@ next-held.txt: |
 check-held.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 9 check(s) failed, 8 had nothing to check on 'held' (regular)
   [mode: enforced]
-
-  ADVISORY rendered-blocks-current: docs/compass/2026-10-01-held/README.md: the issue page is missing…
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
@@ -132,10 +124,8 @@ next-held-flag.txt: |
 check-held-flag.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 9 check(s) failed, 8 had nothing to check on 'held-flag' (regular)
   [mode: enforced]
-
-  ADVISORY rendered-blocks-current: docs/compass/2026-10-01-held-flag/README.md: the issue page is mi…
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
@@ -154,10 +144,8 @@ next-odd.txt: |
 check-odd.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 9 check(s) failed, 8 had nothing to check on 'odd' (regular)
   [mode: enforced]
-
-  ADVISORY rendered-blocks-current: docs/compass/2026-10-01-odd/README.md: the issue page is missing …
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
@@ -176,10 +164,8 @@ next-planning.txt: |
 check-planning.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 9 check(s) failed, 8 had nothing to check on 'planning' (regular)
   [mode: enforced]
-
-  ADVISORY rendered-blocks-current: docs/compass/2026-10-01-planning/README.md: the issue page is mis…
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
@@ -193,15 +179,13 @@ next-queued.txt: |
   exit 2
   --- stdout
   --- stderr
-  compass: delivery-approach.md is missing from .compass/work/queued
-    Run /compass:assess to produce delivery-approach.md before using compass next.
+  compass: assess has not chosen a delivery approach for .compass/work/queued
+    Run /compass:assess to record one before using compass next.
 check-queued.txt: |
   exit 1
   --- stdout
-  FAIL - 4 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 4 of 9 check(s) failed, 8 had nothing to check on 'queued' (no approach yet - run `compass a…
   [mode: enforced]
-
-  ADVISORY rendered-blocks-current: docs/compass/2026-09-20-queued/README.md: the issue page is missi…
 
   FAIL scenarios-have-tests: no scenarios in manifest.yml
        fix: List at least one test under each scenario's `tests:` in manifest.yml.
@@ -225,10 +209,8 @@ next-ready.txt: |
 check-ready.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 9 check(s) failed, 8 had nothing to check on 'ready' (regular)
   [mode: enforced]
-
-  ADVISORY rendered-blocks-current: docs/compass/2026-10-01-ready/README.md: the issue page is missin…
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
@@ -246,10 +228,8 @@ next-refining.txt: |
 check-refining.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 9 check(s) failed, 8 had nothing to check on 'refining' (regular)
   [mode: enforced]
-
-  ADVISORY rendered-blocks-current: docs/compass/2026-10-01-refining/README.md: the issue page is mis…
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
@@ -267,7 +247,7 @@ next-reviewing.txt: |
 check-reviewing.txt: |
   exit 1
   --- stdout
-  FAIL - 4 of 11 check(s) failed, 12 had nothing to check on 'reviewing' (regular)
+  FAIL - 3 of 9 check(s) failed, 8 had nothing to check on 'reviewing' (regular)
   [mode: enforced]
 
   FAIL declared-tests-resolve: declared test(s) do not resolve to a test on disk: REVIEWING-1: tests/test_reviewing.py::test_it
@@ -276,7 +256,6 @@ check-reviewing.txt: |
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
   FAIL gate-evidence-present: verify.correctness marked pass with no evidence
        fix: Re-run `compass gate pass <gate> --evidence EV-<id>` with an accepted type.
-  ... and 1 more (rendered-blocks-current) - run with --verbose
   --- stderr
 lint-reviewing.txt: |
   exit 0
@@ -291,15 +270,13 @@ next-shipped.txt: |
 check-shipped.txt: |
   exit 1
   --- stdout
-  FAIL - 3 of 11 check(s) failed, 12 had nothing to check on 'shipped' (regular)
+  FAIL - 2 of 9 check(s) failed, 8 had nothing to check on 'shipped' (regular)
   [mode: enforced]
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
   FAIL gate-evidence-present: verify.correctness marked pass with no evidence verify.traceability mar…
        fix: Re-run `compass gate pass <gate> --evidence EV-<id>` with an accepted type.
-  FAIL rendered-blocks-current: docs/compass/2026-10-01-shipped/README.md: the issue page is missing …
-       fix: Run `compass issue render`, then re-read the document.
   --- stderr
 lint-shipped.txt: |
   exit 0

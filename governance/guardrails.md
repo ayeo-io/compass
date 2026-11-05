@@ -36,8 +36,8 @@ run is on record.**
 - Compass checks that both exist and line up. It does not observe the declared
   test running - see `docs/safety-contract.md` for what a test-run record does
   and does not establish.
-- Checked at Verify and again at ship time. `verification-report.md` carries
-  the recorded run.
+- Checked at Verify and again at ship time. The manifest's evidence registry
+  carries the recorded run.
 - `suite-passed` also needs a failure observed first: a red or an
   acceptance record on an issue that declares scenarios. On an issue
   created on or after 2026-11-03, each scenario that is not narrative needs
@@ -78,11 +78,15 @@ claim.**
   nothing.
 - This guardrail is *about* the others: it defines what "cleared" means.
 
-The check `dod-evidence-typed` applies it to the checklists of
-`verification-report.md`. An unticked box needs an `(evidence: EV-<id>)` or
-`(follow-up: FU-<id>)` tag that resolves. The check reads the Definition of
-Done and the section of every other exit list (`<Stage> exit list`), not only
-the Definition of Done.
+The check `dod-evidence-typed` applies it to the Definition of Done. On an
+issue created from 2026-11-04 each item needs a record in the manifest: evidence
+with `--meets`, a person's approval or a follow-up that defers it. On an older
+issue it reads the checklists of `verification-report.md`, where an unticked
+box needs an `(evidence: EV-<id>)` or `(follow-up: FU-<id>)` tag that resolves,
+in the Definition of Done and the section of every other exit list (`<Stage>
+exit list`). `compass ship-commit` runs this one check before it lands, and
+refuses while it fails (`definition-of-done-open`). A waiver that makes it
+advisory prints one line, and the landing goes on.
 
 The check `evidence-matches-tree` judges a landed issue by the newest test
 record's `file_sha256` and `file_modes`: the SHA-256 and the mode of each
@@ -121,10 +125,10 @@ An issue keeps the trigger stored in its generation, so an issue assessed
 before 7.0.0 still needs the sign-off at critical risk.
 
 Its check, `human-approval-present`, reads only evidence of the type
-`human-approval`. A person's approval of a document or of a set of decisions
-(`compass evidence approve --artifact` and `--decisions`) is recorded as
-`artifact-approval`, which this check never reads, so such an approval never
-clears a sign-off.
+`human-approval`. A person's approval of a set of decisions (`compass evidence
+approve --decisions`) is recorded as `artifact-approval`, which this check never
+reads, so such an approval never clears a sign-off. A document approval an
+older release recorded has the same type.
 
 Of the `human-approval` records, the check counts only one given for
 guardrail `G5` (ADR-066). A record that holds a `check`, `waiver`,
@@ -193,101 +197,44 @@ _(none yet - the shipped default guardrails apply as-is)_
   `stage:<stage>:<entry|exit>` (`docs/entry-exit-evaluation.md`). The shipped
   Definition of Ready and Done checks run only where the capability
   `entry-exit-evaluation` is on; a check a project adds to a list always runs.
-  With the capability `artifact-freshness` on, it also reports each tracked
-  document as fresh or stale under the label `artifact-freshness`
-  (`docs/artifact-freshness.md`). A project with none of these sees no change.
+  A project with neither sees no change.
 - **`land-commit-on-default-branch`** is an advisory row `compass check` adds
   for a landed issue with a `land_commit`, in a clone that records
   `origin/HEAD`. It reports a `land_commit` that origin's default branch does
   not reach, which a squash merge causes, and names `compass issue link set
   --pr`, which moves `land_commit` to the merge commit. It is in no gate and no
   configuration, and it never fails the run (`docs/github-labels.md`).
-- **`artifacts-approved`** is a blocking check in no gate, run by `compass
-  check` and by `compass ship-commit` before the commit. It declines until
-  every gate has passed. Then it judges a copy of the issue with the ship exit
-  applied, which is the state `ship-commit` would leave, and fails on a
-  registered document that reads `draft` or `awaiting-approval`, or that is
-  `omitted` with no reason. Each failure names the command that moves the
-  document. It is unlocked, so an issue waiver can make it advisory. An issue
-  stored on an earlier generation gains it at its next `compass approach
-  evaluate --write`. ADR-050 holds the decision.
-- **`nfr-rows-resolved` and `contracts-declared`** are two blocking checks that
-  read one named section of an issue document. Each is unlocked, has
-  `on_skipped: not-applicable`, and sits in no gate and no stage list, so no
-  locked guardrail changes and an issue waiver can make either advisory.
-  `compass check` runs them, and `artifacts-approved`, after the gate loop
-  through one helper, `outside_gate.judged`. ADR-064 holds the decision.
-  - `nfr-rows-resolved` reads the spec's Non-functional requirements table. A
-    row for each of seven concerns (performance, capacity, compatibility,
+- **`nfr-rows-resolved`** is a blocking check that reads the spec's
+  Non-functional requirements table. It is unlocked, has `on_skipped:
+  not-applicable`, and sits in no gate and no stage list, so no locked
+  guardrail changes and an issue waiver can make it advisory. `compass check`
+  runs it after the gate loop through `outside_gate.judged`. ADR-064 holds the
+  decision.
+  - A row for each of seven concerns (performance, capacity, compatibility,
     security, privacy, operability, accessibility) names scenario ids the
     manifest holds, or a reason the concern does not apply. At `thorough` depth
     each cited scenario states a number in its Then: a digit on the Then line,
     or on a Then, And or But line after it. A `{{...}}` cell counts as empty.
     The pass detail is "n of n concerns resolved".
-  - `contracts-declared` reads the technical design's Data and interfaces
-    section when a changed file is a trigger path. The section must hold a
-    field table (Name, Type, Required, Meaning, Written by, Read by) or a
-    contract table (Inputs, Outputs, Exit codes, Errors) with a data row, or an
-    `erDiagram` fence. A table or fence that holds a `{{...}}` placeholder does
-    not count.
-  - **Trigger paths** are the check's `params` in the configuration:
-    `trigger_paths` and `trigger_contents`. A pattern is an `fnmatch` glob on
-    the project-relative path, where `*` also matches `/`. A contents pattern
-    names a path glob and a text, and the file must hold the text. A project
-    cannot extend the list with `add:`, because `params` is a map and the merge
-    grammar applies `add:` only to a catalogue field. A project sets the whole
-    list, the shipped patterns and its own, in its layer. Both keys declare the
-    direction `superset`. For these keys, adding an entry needs no waiver,
-    because a trigger path makes the check run, so more entries check more
-    changes. Under the same rule, removing or replacing an entry needs a waiver,
-    because fewer entries check fewer changes. A reordered or
-    repeated entry is equal. A list that is missing or malformed cannot be
-    compared and also needs a waiver. These waiver rules apply where the check
-    is placed on a gate, a stage or an artifact, because the classifier
-    compares only a check that one of them lists. The shipped preset places
-    `contracts-declared` on none, so it asks for no waiver until a project
-    places the check.
-  - **Four conditions make either check decline**, reporting `nothing to
-    check`, before it reads a document. The first that holds decides the
-    detail:
-    1. The manifest has no `generation` key: "the issue predates the section
-       checks: its manifest names no stored configuration".
-    2. The issue is closed: "the issue is closed".
-    3. The document the check reads is not registered with a path: "no
-       acceptance-criteria is registered with a path" (or `technical-design`).
-    4. The catalogue of the issue's generation does not list the section at the
-       depth the document is registered at, and an entry with no `depth` lists
-       nothing: "the catalogue of generation N does not list ... for ... at depth
-       D".
-
-    `contracts-declared` also declines, with its own detail, when no changed
-    file matches a trigger pattern.
-  - **A spike** runs these two checks and reads `nothing to check`, because it
-    registers no spec or design. A spike does not run `artifacts-approved`.
-    `ship-commit` runs `artifacts-approved` only.
-  - An issue stored on an earlier generation gains both checks at its next
-    `compass approach evaluate --write`.
-- **`design-within-word-ceiling`** is a blocking check that fails a technical
-  design whose word count is over its `word_ceiling` at the registered depth
-  times `params.factor`, 1.5 in the shipped default: 6,000 words at thorough
-  and 1,800 at lightweight. It is unlocked, has `on_skipped:
-  not-applicable`, and sits in no gate and no stage list. `compass check` runs
-  it after the section checks, through `outside_gate.judged`. ADR-067 holds
-  the decision.
-  - Words are the whitespace tokens of the visible text: rendered block
-    interiors, marker lines and HTML comments are left out, and headings,
-    prose, tables and code fences count. `compass issue lint` counts the same
-    way for its word-limit note.
-  - The design's own count decides. Registered low-level designs never lift
-    the refusal; on the full approach the failure names each work unit with
-    none.
-  - It declines, reporting `nothing to check`, on the four conditions of the
-    section checks, with the design as the document and "has no word_ceiling
-    for technical-design at depth D" as the fourth, and on a fifth: plan exit
-    is not yet due, "plan exit is not yet due: the issue is at S".
-  - A spike runs it and reads `nothing to check`, because it registers no
-    design. An issue stored on an earlier generation gains it at its next
-    `compass approach evaluate --write`.
+  - **Four conditions make it decline**, reporting `nothing to check`, before
+    it reads the spec. The first that holds decides the detail:
+    1. The manifest has no `generation` key.
+    2. The issue is closed.
+    3. No spec is registered with a path, none is at
+       `docs/compass/<created>-<slug>/acceptance-criteria.md`, and the issue
+       was created before 2026-11-04. A spec at that fixed path is read
+       whatever the date, at the depth of the define stage. An issue created
+       on or after 2026-11-04 declines while that file is not written.
+    4. For a registered spec, the catalogue of the issue's generation does not
+       list the section at the depth the spec is registered at. A generation
+       that declares no entry for the spec, as the live default does since
+       9.0.0 (ADR-091), is read through the last shipped catalogue,
+       `default@7`, which lists it at both depths.
+  - A spike runs it and reads `nothing to check`, because it writes no spec.
+- **Removed in 9.0.0** (ADR-091): `artifacts-approved`, `contracts-declared`,
+  `design-within-word-ceiling` and `borrowed-documents-answered` read documents
+  9.0.0 no longer keeps. A stored generation that still declares one reports it
+  as nothing to check.
 - **`acceptance-applicability-agrees`** is the advisory check of the four-layer
   acceptance strategy (`S17`, in `strategies.md`). It is unlocked, declares
   `severity: advisory` and `on_skipped: not-applicable`, and sits in no gate,
@@ -437,7 +384,7 @@ _(none yet - the shipped default guardrails apply as-is)_
 - **The pre-tool hook** enforces red-before-green in service of `G1`. It is
   approach-aware and does not block on a spike.
 - **The review at the `verify` stage**, run in the issue's own session (ADR-090), for the
-  parts that remain judgement. `verification-report.md` records each with its evidence.
+  parts that remain judgement. Each is recorded with its evidence (`compass evidence add`).
 - **`compass approach evaluate`** at Assess applies the routing rules
   deterministically - see `routing-policy.md` and `routing-policy.yml`.
 
@@ -568,7 +515,7 @@ decides the rules. `compass policy lint` reports a refused change as
   parent or a preset that carries `unlock:` is refused. An unlocked entry is no
   longer enforced for the project or the issue below it.
 - **Conformance.** A project that unlocks a framework entry is non-conformant.
-  `compass check`, `compass issue receipt` and `compass approach show` print
+  `compass check` and `compass approach show` print
   `Conformance: non-conformant - this project unlocks framework entries: ...` on
   every run. An unlock of a hard-locked entry, or of an entry the shipped
   default does not lock, is refused, and the commands print `Unlock refused for
@@ -578,5 +525,4 @@ decides the rules. `compass policy lint` reports a refused change as
 
 The report reads `compass.yml` and the shipped default's lock summary. The
 waiver's date and covered revision are checked by the waiver module when it
-lands, and the line for what the hook can enforce comes with the receipt
-provenance.
+lands.

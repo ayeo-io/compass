@@ -45,7 +45,7 @@ def _leaf_parsers():
 
     Recursive on purpose. The tree has 13 nested subparser groups under 47
     `add_parser` calls, so anything that walks only the top level reaches
-    `issue` and misses `issue render` entirely - which is exactly how a
+    `issue` and misses `issue lint` entirely - which is exactly how a
     guard over this tree passes without checking most of it.
     """
     import argparse
@@ -92,7 +92,7 @@ def test_trc_c1_every_verb_accepts_every_mode_flag():
     # stops, so it never sees anything nested. Naming a nested verb catches
     # that directly and does not go out of date as verbs are added, which a
     # bare count would. The floor is a second, cruder net.
-    for nested in ("issue render", "gate pass", "evidence add", "bdd verify"):
+    for nested in ("issue lint", "gate pass", "evidence add", "bdd verify"):
         assert nested in leaves, (
             "%r was not reached, so the walk over the parser tree is not "
             "recursing into nested subcommand groups. Found: %s"
@@ -503,10 +503,10 @@ def test_trc_e1_the_budget_guard_names_the_verb_it_caught():
     """An unactionable failure gets suppressed rather than fixed (`TRC-E1`)."""
     from compass_pkg.terminal import over_budget
 
-    findings = over_budget({"issue render": "\n".join("x" * 3 for _ in range(20))})
+    findings = over_budget({"issue lint": "\n".join("x" * 3 for _ in range(20))})
     assert findings, "a 20-line hand-off was not reported as over budget"
     text = " ".join(findings)
-    assert "issue render" in text, "the finding does not name the verb"
+    assert "issue lint" in text, "the finding does not name the verb"
     assert "20" in text, "the finding does not give the actual line count"
     assert str(HANDOFF_LINES) in text, "the finding does not give the budget"
 
@@ -785,7 +785,7 @@ def _report_verbs():
 # The reports that read an issue tree and produce enough output to be worth
 # testing. `migrate` and the linters need an argument or a broken tree to say
 # anything, so they are exercised by their own suites.
-_LIVE_REPORTS = ["retro", "flow", "terminology", "analyze"]
+_LIVE_REPORTS = ["retro", "flow", "terminology"]
 
 
 @pytest.fixture(scope="module")
@@ -830,11 +830,6 @@ def report_project(tmp_path_factory):
             "delivery_approach": "feature", "stages": {"specify": "full"},
             "gates": [], "evidence": [], "scenarios": [], "changed_files": [],
         }, sort_keys=False))
-    # `analyze` reads the current issue's artifacts, so one issue needs them.
-    (proj / ".compass" / "current-task").write_text("issue-00\n")
-    (work / "issue-00" / "delivery-approach.md").write_text("# Delivery approach\n")
-    (work / "issue-00" / "acceptance-criteria.md").write_text(
-        "# Spec\n\n## Summary\n\n**Goal:** something\n")
     return proj
 
 
@@ -961,7 +956,6 @@ def test_trc_c6_the_report_list_is_not_empty():
 _TAIL_EXEMPT = {
     "_friction-capture": "private, and writes to the manifest as a side effect",
     "_migrate-archive": "private, and rewrites a whole work tree",
-    "_derive-system-spec": "private, and writes a tracked doc",
     "_derive-glossary": "private, and writes a tracked doc",
     "issue migrate": "rewrites a work tree, or with --config stores a new generation; its own suites cover its output",
     "ship-commit": "writes a git commit",
@@ -972,11 +966,9 @@ _TAIL_EXEMPT = {
     # Prints one bare path on stdout and nothing else, on purpose: the two
     # hooks read it in a command substitution, and a hand-off tail in the
     # middle of that would end up in the variable.
-    "issue artifact-path": "prints a bare path for a shell caller to consume",
     "evidence approve": "needs a terminal on standard input and, for each of its --check, --artifact and --decisions forms, a human check, a document awaiting approval or a decision, which this fixture lacks; test_human_checks.py runs it under a pseudo-terminal and pins its --json output",
     # Prints the document and nothing else, on purpose: an agent writes the
     # output to the issue's document, so a hand-off tail would end up in it.
-    "issue template show": "prints a document for a caller to write, with no hand-off tail",
     "lesson add": "writes .compass/lessons.yml and needs a git user name the fixture does not set; test_lessons.py runs it",
     "lesson propose": "writes .compass/lessons-pending.yml; test_lessons.py runs it",
     "lesson accept": "needs a pending proposal and a git user name; test_lessons.py runs it",
@@ -996,20 +988,17 @@ _TAIL_EXEMPT = {
     "record sync": "needs a record repository to push to; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
     "record restore": "needs a record repository to read; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
     "issue use": "writes the pointer and the session record of an existing issue; test_current_task_lease.py runs it, without measuring its output against this contract",
-    "spec sync": "merges a base branch and commits; test_living_spec_refresh.py runs it in a temporary repository, without measuring its output against this contract",
     "issue decision add": "writes one manifest key and needs an issue with a requirements review or full flags; test_decisions_taken.py runs it, without measuring its output against this contract",
     "issue decision set": "needs a terminal on standard input and an existing decision; test_decisions_taken.py runs it under a pseudo-terminal",
     "issue checkpoint add": "needs an issue whose first assessment recorded checkpoint outcomes and a stage the route runs; test_checkpoint_outcomes.py runs it and checks its one line, without measuring it against this contract",
     "issue friction": "needs evidence inside an existing issue folder and writes one manifest key; test_agent_friction.py runs it, without measuring its output against this contract",
     "issue raised-by": "writes one key to an existing issue's manifest and prints one line, or two with the chain hint; test_lineage.py runs it, without measuring its output against this contract",
-    "plan lint": "needs a design with placeholders to say anything",
     "next": "advisory pointer; its own suite covers it",
     "rework-scan": "its own suite covers it",
     "follow-up resolve": "needs an owed follow-up planted first",
     "bdd verify": "needs a project BDD runner wired",
     "acceptance record": "needs an acceptance already started",
     "isolation record": "needs scenarios that declare tests, and runs the suite 1 + 2N times",
-    "analyze": "a report, measured above",
     "retro": "a report, measured above",
     "flow": "a report, measured above",
     "terminology": "a report, measured above",
@@ -1018,8 +1007,6 @@ _TAIL_EXEMPT = {
     # hand-offs, and nothing caught the contradiction.
     "ci": "runs the whole mechanical suite over every issue; too slow here, and "
           "its own suite covers it",
-    "issue receipt": "renders a landed issue's record; needs a landed issue with "
-                     "cleared gates to say anything",
     "quick-fix start": "needs a project with no issue yet, which the shared "
                        "fixture already has one for; test_quick_fix_verbs.py "
                        "runs it, without measuring its output against this "
@@ -1039,7 +1026,6 @@ _TAIL_ARGV = {
     # registry in cli/compass_pkg/refusals.py with the params given on argv.
     "_refusal": ["_refusal", "no-delivery-approach", "slug=demo"],
     "approach evaluate": ["approach", "evaluate"],
-    "issue render": ["issue", "render"],
     # The fixture issue has a test record, so it is in progress and can be
     # blocked; `issue blocked set` sorts before `issue status set`, which holds it.
     "issue blocked set": ["issue", "blocked", "set", "--reason", "waiting on a review"],
@@ -1048,11 +1034,6 @@ _TAIL_ARGV = {
     "issue depends add": ["issue", "depends", "add", "later", "--reason", "needs later"],
     "issue depends remove": ["issue", "depends", "remove", "later"],
     "issue status set": ["issue", "status", "set", "backlog"],
-    # The artifact set is computed by the evaluator, so the fixture runs
-    # `approach evaluate --write` first and this names a document the
-    # assessment actually earned.
-    "issue artifact set": ["issue", "artifact", "set", "acceptance-criteria",
-                       "--status", "draft"],
     "scenario add": ["scenario", "add", "TRC-9", "--title", "a new one",
                      "--intent", "INT-1"],
     "changed-file add": ["changed-file", "add", "src/a.py", "--scenario", "TRC-1"],
@@ -1073,7 +1054,6 @@ _TAIL_ARGV = {
     "tdd-green": ["tdd-green", "--scenario", "TRC-1", "--", "true"],
     "layering record": ["layering", "record", "--", "true"],
     "follow-up add": ["follow-up", "add", "FU-9", "--summary", "settle this at ship"],
-    "issue render": ["issue", "render"],
 }
 
 

@@ -24,6 +24,7 @@ from tests.acceptance.atdd_strategy import support
 from tests.acceptance.atdd_strategy.support import ROOT
 
 sys.path.insert(0, str(ROOT / "tests"))
+import document_registry  # noqa: E402
 
 OWNER = "jed72"
 REVIEWER = "compass:reviewer"
@@ -145,8 +146,8 @@ def test_trc_d2(tmp_path):
     (project.root / folder).mkdir(parents=True, exist_ok=True)
     (project.root / folder / "requirements-review.md").write_text(
         "# Requirements review\n", encoding="utf-8")
-    issue.must("issue", "artifact", "set", "requirements-review", "--status", "draft",
-               "--path", f"{folder}/requirements-review.md", "--issue", SLUG)
+    document_registry.register(issue.dir, "requirements-review",
+                               f"{folder}/requirements-review.md")
     issue.must("tdd-red", "--issue", SLUG, "--loop", "outer", "--", *FAIL)
     code, out, err = _request(issue, "refine")
     assert code == 0, out + err
@@ -307,7 +308,6 @@ def _tested_issue(project):
     issue.must("isolation", "record", "--issue", SLUG, *support.NAMED, "--parallel",
                f"{suite} tests", "--repeat", f"{suite} {{tests}}")
     issue.must("layering", "record", "--issue", SLUG, "--", "sh", "-c", "exit 0")
-    issue.must("issue", "render", "--issue", SLUG)
     return issue
 
 

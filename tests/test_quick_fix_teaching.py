@@ -181,7 +181,8 @@ RULES_MOVED_FROM_THE_SKILL = {
     "size: small test": "solution pattern that already exists",
     "size: medium and above test": "design decisions",
     "size: estimate up when unsure": "estimate up",
-    "goal: an intent.md or positioning.md pulls the approach up": "positioning.md",
+    # The rule that an intent.md or positioning.md pulls the approach up went in
+    # 9.0.0: no command reads which documents an issue has on disk (ADR-091).
     "goal: exploration is a spike": "exploration",
     "the guardrail is tested before it lands": "tested before it lands",
     "a light approach adapts surface, never whether a test exists": "never whether a test exists",

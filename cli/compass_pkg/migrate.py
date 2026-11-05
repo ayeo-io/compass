@@ -143,6 +143,23 @@ def repoint_spine_references(task_dir, node, renamed):
 
 MIGRATED_REASON = "migrated from a 6.0.0 record"
 
+# The statuses of an older registry entry. 9.0.0 gives no document a status (ADR-091),
+# but the migration of a 6.0.0 record still settles the entries that record holds, so a
+# migrated archive reads as it did.
+_DRAFT, _AWAITING, _APPROVED, _SUPERSEDED = ("draft", "awaiting-approval", "approved",
+                                             "superseded")
+_BY_MIGRATE = "compass issue migrate"
+
+
+def _clear_approver(entry):
+    entry.pop("approved_by", None)
+    entry.pop("approved_at", None)
+
+
+def _stamp():
+    from compass_pkg.core import now_iso
+    return now_iso().replace("+00:00", "Z")
+
 
 def _settle_done_artifacts(data, when=None):
     """Settle the artifact status of a done issue, in place.
@@ -154,21 +171,22 @@ def _settle_done_artifacts(data, when=None):
     (approved, superseded); both are 0 for an open issue and for an issue
     already settled, which makes a second run change nothing.
     """
-    from compass_pkg import artifact_status as ast, status_words
+    from compass_pkg import status_words
     if not status_words.is_closed(data):
         return 0, 0
     completed = status_words.is_completed(data)
     approved = superseded = 0
     for entry in data.get("artifacts") or []:
         if not isinstance(entry, dict) \
-                or entry.get("status") not in (ast.DRAFT, ast.AWAITING):
+                or entry.get("status") not in (_DRAFT, _AWAITING):
             continue
         if completed:
-            ast._set_approved(entry, ast.BY_MIGRATE, when or ast.now())
+            entry.update(status=_APPROVED, approved_by=_BY_MIGRATE,
+                         approved_at=when or _stamp())
             approved += 1
         else:
-            entry["status"] = ast.SUPERSEDED
-            ast.clear_approver(entry)
+            entry["status"] = _SUPERSEDED
+            _clear_approver(entry)
             superseded += 1
         # A reason that names the file a document came from stays: the rename map reads it.
         if not str(entry.get("reason") or "").startswith("migrated from "):
@@ -305,9 +323,6 @@ def plan_issue_dir(task_dir, problems=None, totals=None):
             simulated = copy.deepcopy(migrated)
     notes.extend(plan_relocations(task_dir, problems, totals, simulated))
     notes.extend(_blocks(task_dir, True, problems))
-    if simulated is not None:
-        from compass_pkg import migrate_blocks
-        migrate_blocks.register_planned(task_dir, simulated)
     notes.extend(plan_artifact_status(task_dir, simulated))
     notes.extend(_pin_generation(task_dir, True, problems))
     return notes
@@ -1023,13 +1038,12 @@ def _stub_problem(slug, stub, problems):
 def _supersede_stub_entry(data, stub):
     """Mark the stub distribution map's registry entry superseded in `data`. The apply
     writes the result; the dry run keeps it in memory for the status step."""
-    from compass_pkg import artifact_status as ast
     entry = _find_entry(data.get("artifacts") or [], "distribution-map", None)
     if entry is None:
         return
-    entry["status"] = ast.SUPERSEDED
+    entry["status"] = _SUPERSEDED
     entry.pop("path", None)
-    ast.clear_approver(entry)
+    _clear_approver(entry)
     entry["reason"] = ("a map for fewer than two subtasks, kept as %s by the 7.0.0 migrate"
                        % os.path.basename(stub["to"]))
 

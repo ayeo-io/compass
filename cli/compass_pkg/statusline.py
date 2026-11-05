@@ -100,8 +100,8 @@ def render(cwd: str, width: int = 80) -> str:
     # Every entry counts towards the total, a malformed one included: the
     # stage treats it as a gate not passed, so the count must too.
     gates = task.get("gates") or []
-    if not os.path.isfile(artifact_path(task_dir, "delivery-approach.md")):
-        # `compass next` reports no stage without the approach record.
+    if not task.get("delivery_approach"):
+        # `compass next` reports no stage until assess records the approach (ADR-091).
         stage = None
     elif status_words.is_closed(task):
         stage = "done"

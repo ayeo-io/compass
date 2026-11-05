@@ -1,9 +1,10 @@
 """A scenario title that would break a check on the living spec is refused
 when it is recorded: the titles-checked-before-ship issue, GitHub issue #283.
 
-`compass ship-commit` copies scenario titles into docs/system-spec.md after
-the suite has run, so a title the spec's checks reject used to pass locally
-and fail in CI (#224, #281).
+Before 9.0.0 `compass ship-commit` copied scenario titles into the living
+spec after the suite had run, so a title the spec's checks rejected used to
+pass locally and fail in CI (#224, #281). The release line and the board
+still print titles, so the guard stays (ADR-091).
 """
 from __future__ import annotations
 

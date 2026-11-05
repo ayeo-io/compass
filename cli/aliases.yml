@@ -15,9 +15,10 @@
 # row lacks `released_in` and `removed_in`, which together say that a release held the
 # spelling and 7.0.0 removed it (cli/compass_pkg/aliases.py, removal_problems).
 #
-# `old` and `new` are token lists. When `new` begins with `old` (issue
-# artifact -> issue artifact set), a command line that already holds the extra
-# tokens, or a help flag, is left as it is.
+# `old` and `new` are token lists. When `new` begins with `old` (as an alias
+# from `issue artifact` to `issue artifact set` did before 9.0.0 removed that
+# verb), a command line that already holds the extra tokens, or a help flag, is
+# left as it is.
 
 aliases: []
 

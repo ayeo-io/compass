@@ -3,18 +3,21 @@
 # and the board page's Generated line is masked.
 # Each count of checks with nothing to check is one lower than captured: 9.0.0
 # removed multiagent-run-recorded, which had nothing to check here (ADR-090).
+# 9.0.0 also removed the four checks of the removed documents from the live
+# default (ADR-091): artifacts-approved, design-within-word-ceiling,
+# contracts-declared and borrowed-documents-answered. These issues are assessed
+# on the live default, so each has 3 or 4 fewer rows with nothing to check, and
+# an issue in flight one fewer check (artifacts-approved sat in a gate).
 check-old-landed.txt: |
   exit 1
   --- stdout
-  FAIL - 3 of 11 check(s) failed, 12 had nothing to check on 'old-landed' (regular)
+  FAIL - 2 of 9 check(s) failed, 8 had nothing to check on 'old-landed' (regular)
   [mode: enforced]
 
   FAIL suite-passed: test-run evidence EV-1 path does not resolve: evidence/green.json
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
   FAIL gate-evidence-present: verify.correctness marked pass with no evidence verify.traceability mar…
        fix: Re-run `compass gate pass <gate> --evidence EV-<id>` with an accepted type.
-  FAIL rendered-blocks-current: docs/compass/2026-10-01-old-landed/README.md: the issue page is missi…
-       fix: Run `compass issue render`, then re-read the document.
   --- stderr
 lint-old-landed.txt: |
   exit 0
@@ -24,7 +27,7 @@ lint-old-landed.txt: |
 check-old-flight.txt: |
   exit 1
   --- stdout
-  FAIL - 4 of 12 check(s) failed, 11 had nothing to check on 'old-flight' (regular)
+  FAIL - 3 of 9 check(s) failed, 8 had nothing to check on 'old-flight' (regular)
   [mode: enforced]
 
   FAIL declared-tests-resolve: declared test(s) do not resolve to a test on disk: OLD-FLIGHT-1: tests/test_old_flight.py::test_it
@@ -33,7 +36,6 @@ check-old-flight.txt: |
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
   FAIL gate-evidence-present: verify.correctness marked pass with no evidence verify.traceability mar…
        fix: Re-run `compass gate pass <gate> --evidence EV-<id>` with an accepted type.
-  ... and 1 more (rendered-blocks-current) - run with --verbose
   --- stderr
 lint-old-flight.txt: |
   exit 0
@@ -43,7 +45,7 @@ lint-old-flight.txt: |
 check-old-nokey.txt: |
   exit 1
   --- stdout
-  FAIL - 4 of 12 check(s) failed, 11 had nothing to check on 'old-nokey' (regular)
+  FAIL - 3 of 9 check(s) failed, 8 had nothing to check on 'old-nokey' (regular)
   [mode: enforced]
 
   FAIL declared-tests-resolve: declared test(s) do not resolve to a test on disk: OLD-NOKEY-1: tests/test_old_nokey.py::test_it
@@ -52,7 +54,6 @@ check-old-nokey.txt: |
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
   FAIL gate-evidence-present: verify.correctness marked pass with no evidence verify.traceability mar…
        fix: Re-run `compass gate pass <gate> --evidence EV-<id>` with an accepted type.
-  ... and 1 more (rendered-blocks-current) - run with --verbose
   --- stderr
 lint-old-nokey.txt: |
   exit 0
@@ -71,7 +72,7 @@ ci.txt: |
   [issue] old-flight
   compass issue lint: PASS - .compass/work/old-flight/manifest.yml is structurally valid.
 
-  FAIL - 4 of 12 check(s) failed, 11 had nothing to check on 'old-flight' (regular)
+  FAIL - 3 of 9 check(s) failed, 8 had nothing to check on 'old-flight' (regular)
   [mode: enforced]
 
   FAIL declared-tests-resolve: declared test(s) do not resolve to a test on disk: OLD-FLIGHT-1: tests/test_old_flight.py::test_it
@@ -80,25 +81,22 @@ ci.txt: |
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
   FAIL gate-evidence-present: verify.correctness marked pass with no evidence verify.traceability mar…
        fix: Re-run `compass gate pass <gate> --evidence EV-<id>` with an accepted type.
-  ... and 1 more (rendered-blocks-current) - run with --verbose
 
   [issue] old-landed
   compass issue lint: PASS - .compass/work/old-landed/manifest.yml is structurally valid.
 
-  FAIL - 3 of 11 check(s) failed, 12 had nothing to check on 'old-landed' (regular)
+  FAIL - 2 of 9 check(s) failed, 8 had nothing to check on 'old-landed' (regular)
   [mode: enforced]
 
   FAIL suite-passed: test-run evidence EV-1 path does not resolve: evidence/green.json
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
   FAIL gate-evidence-present: verify.correctness marked pass with no evidence verify.traceability mar…
        fix: Re-run `compass gate pass <gate> --evidence EV-<id>` with an accepted type.
-  FAIL rendered-blocks-current: docs/compass/2026-10-01-old-landed/README.md: the issue page is missi…
-       fix: Run `compass issue render`, then re-read the document.
 
   [issue] old-nokey
   compass issue lint: PASS - .compass/work/old-nokey/manifest.yml is structurally valid.
 
-  FAIL - 4 of 12 check(s) failed, 11 had nothing to check on 'old-nokey' (regular)
+  FAIL - 3 of 9 check(s) failed, 8 had nothing to check on 'old-nokey' (regular)
   [mode: enforced]
 
   FAIL declared-tests-resolve: declared test(s) do not resolve to a test on disk: OLD-NOKEY-1: tests/test_old_nokey.py::test_it
@@ -107,7 +105,6 @@ ci.txt: |
        fix: Run `compass tdd-green --scenario TRC-<id> -- <your test command>`.
   FAIL gate-evidence-present: verify.correctness marked pass with no evidence verify.traceability mar…
        fix: Re-run `compass gate pass <gate> --evidence EV-<id>` with an accepted type.
-  ... and 1 more (rendered-blocks-current) - run with --verbose
 
   ============================================================
   compass ci: FAIL - 3 check group(s) failed.

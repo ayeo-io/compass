@@ -52,7 +52,7 @@ the better one could only describe this change.
 
 ## Example 2 - a design decision
 
-Design decisions live in `technical-design.md` under `## 2. Design decisions`, ADR-style. A
+Design decisions live in the plan's Design decisions, ADR-style. A
 decision with no alternative considered is usually not a decision yet - it is a
 preference that has not been tested.
 
@@ -116,7 +116,7 @@ spec can be scanned without opening a single scenario body.
 
 ## Example 4 - a plan work unit
 
-Work units in `technical-design.md` are what the implement stage runs. A unit that reads
+The plan's work units are what the implement stage runs. A unit that reads
 clearly to the planner and vaguely to the builder is the most expensive kind of
 plan defect, because the ambiguity is discovered after the work starts.
 
@@ -142,10 +142,9 @@ plan defect, because the ambiguity is discovered after the work starts.
 **What changed:** every cell that a builder would have had to ask about is
 filled in, and the independence claim now says *why* rather than asserting it.
 
-`compass plan lint` catches the most mechanical version of this - `TBD`, `TODO`,
-"implement later", "add appropriate error handling", and work units that promise
-tests without naming any. It is advisory and always exits 0, so it reports and
-you judge. It cannot catch "similar to U1", which needs a reader.
+The most mechanical version of this is a placeholder - `TBD`, `TODO`,
+"implement later", "add appropriate error handling" - or a work unit that
+promises tests without naming any. "Similar to U1" needs a reader to catch.
 
 ---
 
@@ -156,7 +155,7 @@ you judge. It cannot catch "similar to U1", which needs a reader.
      rendered end to end, which is a different kind of thing. Keeping it out of
      that series leaves the pairing convention intact. -->
 
-`templates/technical-design.md` offers five optional sections beyond Approach, design
+A plan can use five optional sections beyond Approach, design
 decisions, the governance check, and work units: a **Summary**, an
 **interaction** diagram, a **structure** diagram, **named design patterns**,
 and **the shape of the change** in code. They exist so a reviewer can see a
@@ -312,10 +311,10 @@ without having to name someone to imagine.
 **No plan made of small steps, each with the exact commands to run.** Some frameworks make
 the plan a sequence of small steps each with the literal command to run. Compass
 does not, because the implement stage already sequences small units through `compass tdd-red`
-and `compass tdd-green`, and duplicating that in `technical-design.md` inflates the plan
+and `compass tdd-green`, and duplicating that in the plan inflates it
 while it goes out of date as soon as the code changes. The useful part of that idea -
-that a plan should contain no unfinished promises - is kept, as `compass plan
-lint`.
+that a plan should contain no unfinished promises - is kept as the author's
+self-review in the `plan-authoring` skill.
 
 ---
 
@@ -325,7 +324,7 @@ lint`.
   persistence-over-conversation strategy (`S4`), which `S7` extends.
 - `skills/bdd-specification/SKILL.md` - the Summary section, the four-scan
   self-review, and what makes a scenario runnable.
-- `skills/governance-check/SKILL.md` - where `compass plan lint` fits in the
-  strategies walk.
+- `skills/governance-check/SKILL.md` - the strategies walk, where a reviewer
+  judges an unfinished plan.
 - `architecture/decisions/ADR-004-one-spec-many-lenses.md` - why the spec is one <!-- vocabulary-scan: allow - the record's own filename; ADR-004 keeps the word its decision was about, so a citation must name the real file -->
   artifact rather than one per role.

@@ -16,7 +16,7 @@ machine can see. The figures themselves live in `docs/analysis/`, which is
 gitignored, so they stay private by construction - and this test keeps
 working on a clean clone where those files are absent.
 
-Scenario ids: see docs/system-spec.md (RR-4).
+Scenario ids: see the issue's acceptance criteria (RR-4).
 """
 from __future__ import annotations
 

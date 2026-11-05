@@ -47,7 +47,6 @@ DESCRIBING_FILES = (
     "docs/methodology.md",
     "docs/portability.md",
     "docs/quickstart.md",
-    "docs/receipt.md",
     "docs/routing-deep-dive.md",
     "docs/safety-contract.md",
     "governance/routing-policy.md",

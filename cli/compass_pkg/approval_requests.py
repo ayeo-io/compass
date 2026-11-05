@@ -1,7 +1,7 @@
 # compass_pkg.approval_requests - `compass evidence request` and the request files
 """An agent asks a person for an approval with a request (ADR-068 decision 1).
 
-`compass evidence request` takes the five subject forms of `compass evidence
+`compass evidence request` takes the four subject forms of `compass evidence
 approve`, runs the same refusals (`approvals.record` with `save=False`), and
 writes one request file:
 
@@ -32,8 +32,7 @@ command for the person instead of the prompt to type. No code here reads an
 adapter's name.
 """
 # DEPENDENCY: standard library (hashlib, json, os, secrets, shlex, textwrap); compass_pkg.
-# approvals, atomic_io, core, old_names, terminal. artifact_cmd is imported inside the
-# function that digests a document.
+# approvals, atomic_io, core, old_names, terminal.
 from __future__ import annotations
 
 import hashlib
@@ -267,14 +266,6 @@ def stop_message(compass_dir, env):
     return "\n".join(shown)
 
 
-def document_digest(task_dir, task, kind):
-    """The digest of a registered document's file as it is now, or None."""
-    from compass_pkg import artifact_cmd
-    entry = next((a for a in task.get("artifacts") or []
-                  if isinstance(a, dict) and a.get("kind") == kind), None)
-    return None if entry is None else artifact_cmd._own_digest(task, task_dir, entry)
-
-
 def write(task_dir, form, value, scope):
     """Write a pending request for the subject and return it. A pending
     request for the same subject closes as `replaced`. The caller has run the
@@ -285,8 +276,9 @@ def write(task_dir, form, value, scope):
                "generation": task.get("generation"),
                "form": form, "value": value, "scope": scope,
                "labels": list((task.get("assessment") or {}).get("labels") or []),
-               "document_digest": (document_digest(task_dir, task, value)
-                                   if form == "artifact" else None),
+               # No form names a document since 9.0.0 (ADR-091); the key stays so a
+               # request reads as one written before.
+               "document_digest": None,
                "requested_at": _now(),
                "nonce": secrets.token_hex(16)}
     if form == "checkpoint":
@@ -304,7 +296,7 @@ def write(task_dir, form, value, scope):
 # --- the verb -------------------------------------------------------------------------
 
 def _form_of(args):
-    for form in ("check", "guardrail", "artifact", "checkpoint"):
+    for form in ("check", "guardrail", "checkpoint"):
         value = getattr(args, form, None)
         if value:
             return form, value
@@ -378,8 +370,6 @@ def register(evidence_subs):
     form.add_argument("--check", type=old_names.check_type, help="id of the human check")
     form.add_argument("--guardrail", metavar=approval_records.G5,
                       help="the sign-off of guardrail `G5`; needs --scope")
-    form.add_argument("--artifact", metavar="KIND",
-                      help="a document that reads awaiting-approval")
     form.add_argument("--decisions", action="store_true",
                       help="the decisions taken for the person")
     form.add_argument("--checkpoint", metavar="STAGE",

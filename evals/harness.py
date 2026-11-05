@@ -1763,11 +1763,12 @@ def _is_test_path(path: str) -> bool:
 
 
 # Compass's own records are every path under `.compass/` and
-# `docs/compass/`, and `docs/system-spec.md`, which `compass ship-commit`
-# derives when an issue lands. This is the one definition; `evals/judge.py`
+# `docs/compass/`, and the living spec, which `compass ship-commit`
+# derived when an issue landed before 9.0.0. A run of an older Compass, and
+# a recorded pilot run, still hold it. This is the one definition; `evals/judge.py`
 # imports it rather than keeping its own copy, so the two can never
 # differ.
-_COMPASS_OWN_RECORD_PATHS = frozenset({"docs/system-spec.md"})
+_COMPASS_OWN_RECORD_PATHS = frozenset({"docs/system-spec.md"})  # citation-guard-allow: the living spec path a pre-9.0.0 run writes
 
 
 def _is_compass_own_record(path: str | None) -> bool:

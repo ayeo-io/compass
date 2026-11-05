@@ -10,7 +10,7 @@ grounds. It serves the review gate, which is the centre of the pipeline. And
 the labels are ordinary English - issue, suggestion, nitpick, question,
 praise - so an adopting team inherits no jargon with them.
 
-Scenario ids: see docs/system-spec.md.
+Scenario ids: see the issue's acceptance criteria.
 """
 from __future__ import annotations
 

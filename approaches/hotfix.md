@@ -21,10 +21,10 @@ dimensions - they shape the follow-up - but urgency is what selects the shape.
 
 | Stage | Weight on Hotfix |
 |---|---|
-| Assess | Fast but real. `delivery-approach.md` is written - even under time pressure, the audit trail starts here. |
+| Assess | Fast but real. The approach is recorded in the manifest - even under time pressure, the audit trail starts here. |
 | Define | **Reproduce-first.** The spec *is* a failing regression test that reproduces the defect. Writing that test is non-negotiable and comes before any fix - it is simultaneously the BDD scenario and the TDD red. |
 | Refine | Collapsed - the reproduction resolves the ambiguity. The bug is unambiguous once it reproduces. |
-| Plan | Collapsed to a one-line root-cause note in `delivery-approach.md`. (Root cause, not symptom - a hotfix that treats the symptom owes a follow-up initiative.) |
+| Plan | Collapsed to a one-line root-cause note in `devlog.md`. (Root cause, not symptom - a hotfix that treats the symptom owes a follow-up initiative.) |
 | Breakdown | Skipped. Solo. Speed and a single clear owner beat parallelism here. |
 | Implement | Expedited TDD: the reproduction test is already red; make it green with the smallest correct change; refactor only if the refactor itself is low-risk. |
 | Verify | **All Verify gates, no exceptions.** This is the stage Hotfix does *not* compress. The reproduction test passes, the full suite passes, regression is clean, output is pasted. |
@@ -47,8 +47,9 @@ Hotfix defers the requirements review and plan until after the fix, and must
 complete the follow-up before the issue closes. Before the issue closes,
 shipping needs:
 
-1. **`delivery-approach.md` completed** - the dimension assessment and root-cause note,
-   filled in properly, not just the urgent stub.
+1. **The assessment completed** - each dimension justified in the manifest
+   and the root-cause note in `devlog.md`, filled in properly, not just the
+   urgent stub.
 2. **A real scenario** - the reproduction test is promoted into a proper
    Given/When/Then scenario in `acceptance-criteria.md`, traceable to the defect.
 3. **A root-cause line in the devlog** - what allowed this defect to exist,

@@ -80,7 +80,7 @@
     "stdout": "Ship | Plan collapsed in this approach\n"
   },
   "feature/no-approach-record": {
-    "exit": 2,
-    "stdout": ""
+    "exit": 0,
+    "stdout": "Define [gate: verify.correctness]\n"
   }
 }

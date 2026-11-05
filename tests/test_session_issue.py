@@ -104,10 +104,6 @@ def test_si_a_the_variable_blocks_when_its_issue_has_no_red(project):
 # --- SI-B: the CLI ------------------------------------------------------------------
 
 def test_si_b_a_command_without_an_issue_uses_the_variable(project):
-    # A missing issue page is an advisory line that lengthens the first line of `check`
-    # until the slug is cut off, so the pages are written first.
-    for slug in ("ready", "bare"):
-        _cli(project, "issue", "render", "--issue", slug)
     result = _cli(project, "check", issue="ready")
     assert "'ready'" in result.stdout, result.stdout + result.stderr
     explicit = _cli(project, "check", "--issue", "bare", issue="ready")
@@ -147,9 +143,10 @@ def test_si_e_the_stop_hook_checks_the_variable_not_the_pointer(project):
     assert "points at 'gone'" not in result.stdout + result.stderr
 
 
-def test_si_e_the_receipt_and_status_line_read_the_variable(project):
-    receipt = _cli(project, "issue", "receipt", issue="ready")
-    assert "ready" in receipt.stdout, receipt.stdout + receipt.stderr
+def test_si_e_approach_show_and_the_status_line_read_the_variable(project):
+    # The receipt read it too, until 9.0.0 removed it (ADR-091).
+    shown = _cli(project, "approach", "show", issue="ready")
+    assert ".compass/work/ready/" in shown.stdout, shown.stdout + shown.stderr
     sys.path.insert(0, str(ROOT / "cli"))
     from compass_pkg import statusline
     old = os.environ.get("COMPASS_ISSUE")

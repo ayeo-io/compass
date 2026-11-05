@@ -102,9 +102,9 @@ def test_ua_2_quick_fix_start_takes_it_and_records_the_advice(repo):
          "--test", "tests/test_config.py"],
         cwd=repo, capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
-    record = next((repo / "docs" / "compass").glob("*-tidy-config")) \
-        / "delivery-approach.md"
+    # 9.0.0 writes no delivery-approach.md (ADR-091); the advice is in the devlog.
+    record = repo / ".compass" / "work" / "tidy-config" / "devlog.md"
     text = record.read_text(encoding="utf-8")
-    assert "## Advice" in text, text
-    advice = text.split("## Advice", 1)[1].split("\n## ", 1)[0]
+    assert "Advice:" in text, text
+    advice = text.split("Advice:", 1)[1].split("\n\n", 1)[0]
     assert "behavior-mapping" in advice and "RP-ADV-002" in advice, advice

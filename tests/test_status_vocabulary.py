@@ -155,26 +155,6 @@ def test_scn_c2_calibration_excludes_parked_and_abandoned(tmp_path):
         f"parked and abandoned tasks were counted as in flight:\n{r.stdout}")
 
 
-def test_scn_c3_derivation_only_from_landed(tmp_path):
-    """ADR-008: the living system spec derives from landed issues only. Every
-    value added here is non-terminal or abandoned, so none may contribute a
-    scenario - checked by running the derivation, not by reading the code."""
-    scenarios = [{"id": "SCN-KEEP-OUT", "title": "must not be derived",
-                  "intent": "INT-1", "tests": ["tests/test_x.py"]}]
-    tasks = {s: _task(s, extra={"scenarios": scenarios}) for s in NEW_STATUSES}
-    root = _project(tmp_path, tasks)
-
-    sys.path.insert(0, str(ROOT / "cli"))
-    from compass_pkg.flow import derive_system_spec
-    derive_system_spec(str(root))
-
-    spec = root / "docs" / "system-spec.md"
-    derived = spec.read_text(encoding="utf-8") if spec.exists() else ""
-    assert "SCN-KEEP-OUT" not in derived, (
-        "a queued, parked or abandoned task reached the living system spec:\n"
-        + derived[:800])
-
-
 # ---------------------------------------------------------------------------
 # Failure modes
 # ---------------------------------------------------------------------------
@@ -200,14 +180,12 @@ def test_scn_f2_landed_is_the_only_privileged_value(tmp_path):
     assert set(enum) == {"backlog", "done"}, enum
 
     sys.path.insert(0, str(ROOT / "cli"))
-    from compass_pkg.flow import derive_system_spec
+    # `compass release notes` lists only what this reader returns.
+    from compass_pkg.shipped_issues import completed_issues
     scenarios = [{"id": "SCN-PRIV", "title": "s", "intent": "INT-1",
                   "tests": ["tests/test_x.py"]}]
     for status in [s for s in enum if s != "landed"]:
         root = _project(tmp_path / status,
                         {"t": _task(status, extra={"scenarios": scenarios})})
-        derive_system_spec(str(root))
-        spec = root / "docs" / "system-spec.md"
-        derived = spec.read_text(encoding="utf-8") if spec.exists() else ""
-        assert "SCN-PRIV" not in derived, (
-            f"status {status!r} was treated as eligible for derivation")
+        assert completed_issues(str(root)) == [], (
+            f"status {status!r} was treated as completed")

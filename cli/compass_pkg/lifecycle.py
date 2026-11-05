@@ -8,7 +8,7 @@ written.
 
 The second part of this module derives the block a `depends_on` entry causes
 (ADR-062). Every reader of a dependency - `compass next`, the pre-tool hook,
-lint, the board, `compass flow --json`, the issue page and `ship-commit` -
+lint, the board, `compass flow --json` and `ship-commit` -
 judges it here, so no two of them can disagree. A reader passes the function
 that reads another issue: the readers that decide a refusal pass
 `checkout_reader`, which reads this checkout uncached; the readers that only
@@ -40,13 +40,19 @@ def _refine_finished(manifest, task_dir):
     weight = stages.get(STAGE_REFINE) if isinstance(stages, dict) else None
     if isinstance(weight, str) and weight.strip().lower() in next_cmd._SKIPPED_WEIGHTS:
         return True
-    return (next_cmd._registered(manifest, "requirements-review")
+    # 9.0.0 writes no requirements review (ADR-091): refine's hand-off is its record,
+    # as `compass next` reads it. An older issue keeps its review.
+    return (next_cmd._handed_off(manifest, STAGE_REFINE)
+            or next_cmd._registered(manifest, "requirements-review")
             or (not next_cmd._earned(manifest, "requirements-review")
                 and next_cmd._review_written(task_dir)))
 
 
 def _work_started(manifest, task_dir):
-    return (next_cmd._registered(manifest, "technical-design")
+    # Plan's hand-off is plan's record since 9.0.0 (ADR-091); an older issue keeps
+    # its registered design.
+    return (next_cmd._handed_off(manifest, STAGE_PLAN)
+            or next_cmd._registered(manifest, "technical-design")
             or next_cmd._registered(manifest, "distribution-map")
             or bool(next_cmd._entries(manifest, "subtasks"))
             or next_cmd._testing_started(manifest, task_dir))

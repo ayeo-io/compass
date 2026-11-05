@@ -66,3 +66,42 @@ def test_contract_4_capture_refuses_to_overwrite(tmp_path):
     corpus.write_text(cc.CORPUS.read_text(encoding="utf-8"), encoding="utf-8")
     with pytest.raises(RuntimeError, match="already holds captured"):
         cc.capture(corpus)
+
+
+def test_contract_4_a_command_9_0_0_removed_must_name_its_removal():
+    """9.0.0 removes `compass issue receipt` (ADR-091). Its corpus entries are compared
+    with the parse error that names the removal, and nothing looser: the old success,
+    another exit or a bare unknown-command error each differ."""
+    entry = next(e for e in ENTRIES if e["id"] == "issue-receipt-quick-fix")
+    named = "compass: 'compass issue receipt' was removed in 9.0.0 (ADR-091): ..."
+    assert cc.differences(entry, cc.Outcome(2, "", named)) == []
+    assert cc.differences(entry, cc.Outcome(0, "not yet landed", ""))
+    assert cc.differences(entry, cc.Outcome(1, "", named))
+    assert cc.differences(entry, cc.Outcome(2, "", "invalid choice: 'receipt'"))
+    other = next(e for e in ENTRIES if e["id"] == "check-quick-fix-enforced")
+    assert other["id"] not in cc.REMOVED_IN_9_0_0
+
+
+def test_contract_4_a_freshness_phrase_9_0_0_removed_must_be_gone():
+    """9.0.0 removes artifact freshness (ADR-091). The two corpus entries that named a
+    freshness phrase keep their exit code, and the phrase must no longer be printed:
+    a stale-document line after 9.0.0 means the reader came back. The third,
+    artifact-records-digests, ran `compass issue artifact set`, which 9.0.0 removed too,
+    so it is compared with the line that names that removal."""
+    entry = next(e for e in ENTRIES if e["id"] == "next-stale-document")
+    assert cc.differences(entry, cc.Outcome(0, "Implement [gate: x]", "")) == []
+    assert cc.differences(entry, cc.Outcome(0, entry["stdout_contains"], ""))
+    assert cc.differences(entry, cc.Outcome(1, "Implement", ""))
+    assert set(cc.PHRASE_REMOVED_IN_9_0_0) == {"check-stale-document", "next-stale-document"}
+    assert "artifact-records-digests" in cc.REMOVED_IN_9_0_0
+
+
+def test_contract_4_next_reads_the_approach_from_the_manifest():
+    """9.0.0 writes no delivery-approach.md (ADR-091): the manifest holds the approach, so
+    `compass next` answers on an assessed issue with no such file. The entry's recorded
+    refusal (exit 2) is compared as exit 0; any other exit still differs."""
+    entry = next(e for e in ENTRIES if e["id"] == "next-regular-without-approach-record")
+    assert cc.differences(entry, cc.Outcome(0, "Define [gate: verify.correctness]", "")) == []
+    assert cc.differences(entry, cc.Outcome(2, "", "delivery-approach.md is missing"))
+    assert cc.differences(entry, cc.Outcome(1, "", ""))
+    assert cc.EXIT_CHANGED_IN_9_0_0 == {"next-regular-without-approach-record": 0}

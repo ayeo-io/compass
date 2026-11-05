@@ -15,8 +15,11 @@ cheapest moment to change it. Everything below serves that.
 
 ## The six optional sections
 
-`templates/technical-design.md` offers six sections beyond the ones every plan has. They
-are optional individually, and the judgment about which to use is the craft
+A plan can use six sections beyond the ones every plan has (the approach, the
+design decisions, the governance check and the work units). Compass writes no
+design document (ADR-091): the plan is the hand-off of `/compass:plan`, logged
+to `devlog.md`, or a design note the team keeps. The sections are optional
+individually, and the judgment about which to use is the craft
 this skill teaches.
 
 | Section | Include when | Omit when |
@@ -26,7 +29,7 @@ this skill teaches.
 | **3. Structure** (class/module diagram) | New components, changed relationships, or a contract the work units assume. | The change adds no new boundary. |
 | **4. Design patterns invoked** | A real named pattern is genuinely being applied *and* you can say what it buys this change. | You cannot name it, or cannot say what it buys. |
 | **5. The shape of the change** (code) | The shape of an interface, type, or API is itself a decision worth arguing with. | The shape is obvious from section 1. |
-| **5a. Cross-cutting concerns** | The change touches security, privacy, or what you can see in production. *Design Docs at Google* (<https://www.industrialempathy.com/posts/design-docs-at-google/>) names these three as concerns of the design rather than documents of their own. | It touches none of them - or a label earned a full threat-model.md or rollback-plan.md, in which case link that rather than summarizing it here. |
+| **5a. Cross-cutting concerns** | The change touches security, privacy, or what you can see in production. *Design Docs at Google* (<https://www.industrialempathy.com/posts/design-docs-at-google/>) names these three as concerns of the design rather than documents of their own. | It touches none of them - or the team keeps a threat model or rollback plan of its own, in which case link that rather than summarizing it here. |
 
 Where the delivery approach plans in full, section 5a also names the well-architected
 pillars the change touches and what the design does about each. That is
@@ -40,8 +43,8 @@ next author fills it in to be safe.
 
 ## Scaling by delivery approach
 
-- **quick-fix** - none of them. quick-fix writes no `technical-design.md` at all; the plan is
-  a one-line edit note in `delivery-approach.md`.
+- **quick-fix** - none of them. A quick fix has no design at all; the plan is
+  a one-line edit note in `devlog.md`.
 - **regular** - the ones that add clarity. Typically one diagram, and one of
   the other three. Reaching for all six on the regular approach is a sign the
   assessment was too low, not a sign of thoroughness.
@@ -106,13 +109,12 @@ self-review in `bdd-specification`.
 4. **Magic-number scan** - every threshold, timeout, or budget in the plan has
    a stated source: the spec, an ADR, or a measurement. A number with no
    source is a decision someone will have to re-make during implementation, alone.
-5. **Exit check** - the template holds no tick boxes, because a tick on a page
-   counts for nothing. Before hand-off, make sure that every scenario in
-   `acceptance-criteria.md` is covered by a work unit, that the governance check
-   clears every guardrail with evidence and records any strategy deviation, and
-   that `distribution-map.md` is written next when parallel work is possible. The
-   Plan exit block at the end of `technical-design.md` lists the checks the
-   issue's configuration adds to the plan stage, with their state.
+5. **Exit check** - a tick on a page counts for nothing. Before hand-off, make
+   sure that every scenario in `acceptance-criteria.md` is covered by a work
+   unit, that the governance check clears every guardrail with evidence and
+   records any strategy deviation, and that the work units are listed when
+   parallel work is possible. `compass check` lists the checks the issue's
+   configuration adds to the plan stage, with their state.
 
 ## Anti-patterns
 

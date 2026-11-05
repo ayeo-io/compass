@@ -32,13 +32,13 @@ dated digest file (see below).
 ## Procedure
 
 1. **Enumerate.** List every issue directory under `.compass/work/`. For
-   each, read `delivery-approach.md`, `manifest.yml` (the machine-readable
-   manifest), and whichever stage artifacts exist. To report an issue's
+   each, read `manifest.yml` (the machine-readable manifest, which holds the
+   delivery approach) and `devlog.md`. To report an issue's
    *mechanical* gate status you can run `compass check --issue <slug>` - it
    is read-only and changes nothing.
 
 2. **Assess each issue.** Apply the `flow-management` heuristics:
-   - **No `delivery-approach.md`** -> a guardrail violation (work started
+   - **No `delivery_approach:` in the manifest** -> a guardrail violation (work started
      without an assessment). Report this above everything else.
    - **Stalled** -> an in-progress stage with no new `devlog.md` entry for
      longer than the approach's expected cadence. Flag it and name the

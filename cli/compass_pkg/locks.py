@@ -9,7 +9,7 @@ locked entries: the facts that mention them. A waiver is never an input, so
 no waiver excuses a lock refusal. A project lifts a `true` lock with
 `unlock: true` and a waiver that its `owner` approved; no unlock lifts a hard
 lock. A project that unlocks a framework entry is reported non-conformant by
-`compass check`, `compass issue receipt` and `compass approach show`.
+`compass check` and `compass approach show`.
 
 This module reads layer documents and configurations that its caller hands it,
 and reads no preset. The shipped lock set is written once, in the preset's
@@ -25,8 +25,8 @@ what `conformance_lines` returns.
 # evaluator, so this module reaches what it owes through `Scan.obligations`),
 # compass_pkg.merge, compass_pkg.waivers (check), compass_pkg.layers (Layer),
 # compass_pkg.legacy_views (the preset's lock summary, read lazily) and
-# compass_pkg.core (CompassError). Imported by compass_pkg.check_cmd,
-# compass_pkg.receipt and compass_pkg.routing, which print its report.
+# compass_pkg.core (CompassError). Imported by compass_pkg.check_cmd and
+# compass_pkg.routing, which print its report.
 from __future__ import annotations
 
 import copy

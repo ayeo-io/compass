@@ -14,6 +14,8 @@ import re
 import subprocess
 import sys
 import time
+
+import yaml
 from pathlib import Path
 
 import pytest
@@ -134,17 +136,22 @@ def test_the_stage_agrees_with_compass_next(repo, change):
 
 
 def test_no_approach_record_shows_no_stage(repo):
-    """`compass next` reports no stage when delivery-approach.md is missing,
-    so the line shows none either; the other fields stay."""
+    """`compass next` reports no stage when the manifest records no delivery approach,
+    so the line shows none either; the other fields stay. 9.0.0 writes no
+    delivery-approach.md (ADR-091), so the manifest is the record."""
     _start(repo)
-    for record in repo.rglob("delivery-approach.md"):
-        record.unlink()
+    for path in repo.rglob(".compass/work/*/manifest.yml"):
+        body = yaml.safe_load(path.read_text())
+        body.pop("delivery_approach", None)
+        path.write_text(yaml.safe_dump(body, sort_keys=False))
     nxt = subprocess.run([sys.executable, str(CLI), "next"], cwd=repo,
                          capture_output=True, text=True)
     assert nxt.returncode == 2, nxt.stdout
     fields = _statusline(repo).stdout.strip().split(" · ")
-    assert fields[:3] == ["compass", "fix-login-redirect", "quick fix"], fields
-    assert fields[3].startswith("gates "), fields
+    # The approach comes from the same manifest key, so it is not shown either.
+    assert fields[:2] == ["compass", "fix-login-redirect"], fields
+    assert fields[2].startswith("gates "), fields
+    assert not [f for f in fields if f in ("Define", "Implement", "Verify", "done")], fields
 
 
 def test_a_nested_repository_without_compass_is_not_its_parents_project(repo):

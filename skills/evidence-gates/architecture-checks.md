@@ -16,7 +16,7 @@ Adopters declare each architecture check as a project guardrail in
 - is advisory by default;
 - is promoted to blocking by routing floors `RP-REQUIRE-003` (risk ∈
   {cross-cutting, critical}) and `RP-REQUIRE-004` (labels ∈ irreversible
-  domains) - following the same promotion pattern as `verify.analyze`
+  domains) - conditional gate promotion through floors
   (`architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md`);
 - clears without checking anything when no project guardrails declare
   `command-passes`: a project that has not yet declared any architecture

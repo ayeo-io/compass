@@ -7,9 +7,8 @@ Why these are regex assertions over markdown rather than unit tests: the
 "production" change for most of this issue is the text of shipped templates,
 skills, agents and commands. That is the same situation
 tests/test_plugin_doc_drift.py is in, and these follow its approach. The
-executable half of the issue (the `compass plan lint` subcommand) is tested
-separately in tests/test_no_placeholders_check.py, where real unit tests are
-possible.
+executable half of the issue, the `compass plan lint` subcommand, was removed
+in 9.0.0 (ADR-091) with its tests.
 
 These are still real tests: they run under `pytest tests/`, they fail when the
 shipped text drifts, and `compass tdd-red` / `compass tdd-green` write typed
@@ -34,7 +33,6 @@ sys.path.insert(0, str(ROOT / "tests"))
 from archive import archive_root, checkable_root  # noqa: E402
 
 SPEC_TEMPLATE = "templates/acceptance-criteria.md"
-CLARIFICATIONS_TEMPLATE = "templates/requirements-review.md"
 BDD_SKILL = "skills/bdd-specification/SKILL.md"
 SPEC_AUTHOR = "agents/spec-author.md"
 
@@ -145,7 +143,8 @@ def test_trc_a4_template_scenario_machinery_intact():
     )
     assert re.search(r"traceability id:\s*TRC-", tpl), "Traceability id comments lost"
     assert "## Failure-mode scenarios" in tpl, "Failure-mode section lost"
-    assert "## Coverage ledger" in tpl, "Coverage ledger lost"
+    # The coverage block went with rendered blocks in 9.0.0 (ADR-091).
+    assert "## Coverage ledger" not in tpl, "the Coverage ledger has no writer since 9.0.0"
 
 
 def test_trc_a5_spec_author_and_skill_name_summary():
@@ -163,13 +162,7 @@ def test_trc_a5_spec_author_and_skill_name_summary():
 def test_trc_a6_dor_requires_filled_summary():
     """A filled Summary is a condition of leaving the requirements review -
     enforced by the Definition of Ready, not by the CLI. The Ready items live in the
-    shipped preset (the template holds an empty `dor` block that `compass issue render`
-    fills from them)."""
-    body = _section(_read(CLARIFICATIONS_TEMPLATE), "Gate")
-
-    assert "definition of ready" in body.lower(), "Definition of Ready section not found"
-    assert "<!-- compass:render dor -->" in body
-
+    shipped preset; 9.0.0 writes no requirements review to hold them (ADR-091)."""
     from test_ready_and_done_data import READY_IDS, statements
     summary_items = [i for i in statements(READY_IDS) if "summary" in i.lower()]
     assert summary_items, "No Definition of Ready item requiring the spec's Summary"
@@ -270,37 +263,6 @@ def test_trc_b5_express_self_check_recorded_in_devlog():
 GOVERNANCE_SKILL = "skills/governance-check/SKILL.md"
 
 
-def test_trc_c2b_skill_names_command_and_note():
-    """The planner has to know what to run, and what a hit means."""
-    flat = _flat(_read(GOVERNANCE_SKILL))
-
-    assert "compass plan lint" in flat, (
-        "The governance-check skill does not name the command the planner runs"
-    )
-    assert re.search(r"note,? (rather than|not) a (stop|block)", flat), (
-        "The skill does not state that a reported hit is a note rather than a stop"
-    )
-
-
-def test_trc_c3_check_sits_in_strategies_walk():
-    """The check is judgement, so it belongs in the strategies walk. Putting it
-    under the guardrails walk would make it look like it is cleared with
-    evidence, which is exactly the conflation the two-walk split prevents."""
-    text = _read(GOVERNANCE_SKILL)
-
-    i_strategies = text.find("## Walk 2 - the strategies")
-    i_routing = text.find("## Walk 3 - the routing policy")
-    i_check = text.lower().find("compass plan lint")
-
-    assert i_strategies >= 0 and i_routing >= 0, "The governance walks were renamed"
-    assert i_check >= 0, "The no-placeholders check is not in the skill at all"
-    assert i_strategies < i_check < i_routing, (
-        "The no-placeholders check must be described under Walk 2 (strategies, "
-        "assessed as judgement), not under Walk 1 (guardrails, cleared with "
-        "evidence)"
-    )
-
-
 def test_trc_c4_guardrail_count_stays_five():
     """ADR-002: the framework grows by adding artifacts, not rules. A
     sixth guardrail would dilute the concept."""
@@ -358,8 +320,8 @@ HANDOFF_HEADING = "## Hand-off"
 
 HANDOFF_PHASES = {
     "commands/define.md": "acceptance-criteria.md",
-    "commands/refine.md": "requirements-review.md",
-    "commands/plan.md": "technical-design.md",
+    "commands/refine.md": "ambiguity ledger",
+    "commands/plan.md": "devlog.md",
 }
 
 

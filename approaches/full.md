@@ -20,10 +20,10 @@ launch's worth of work.
 | Stage | Weight on the full approach |
 |---|---|
 | Assess | Thorough, plus explicit labels - the full approach is where domain floors most often fire. |
-| Define | **Thorough BDD discovery.** Greenfield: scenario discovery from `intent.md`. Brownfield: `behavior-mapping` of current behavior *then* the new scenarios. Scenarios are grouped by independence - this grouping seeds the distribution map. |
+| Define | **Thorough BDD discovery.** Greenfield: scenario discovery from the intent. Brownfield: `behavior-mapping` of current behavior *then* the new scenarios. Scenarios are grouped by independence - this grouping seeds the plan's work units. |
 | Refine | **Thorough pass.** Self-QA, governance QA, and an explicit ambiguity ledger. Non-engineering roles review here. |
-| Plan | **Thorough `technical-design.md` + `distribution-map.md`.** Architecture, every design decision recorded as an ADR-style note, governance check, and the mapping of scenario groups → independent work subtasks. |
-| Breakdown | **Ordered units.** The session orders the units of the distribution map; it starts no worktree and no agent (ADR-090). |
+| Plan | **Thorough design and work units.** Architecture, every design decision stated with what was rejected, governance check, and the mapping of scenario groups → independent work units. |
+| Breakdown | **Ordered units.** The session orders the plan's work units; it starts no worktree and no agent (ADR-090). |
 | Implement | Thorough TDD, one unit after another, in this session. |
 | Verify | **All gates, all dimensions.** Verification of each unit, then of the whole result. |
 | Ship | **Combined regression.** A full regression across the whole result, living-docs update, every owed follow-up resolved. |
@@ -31,16 +31,16 @@ launch's worth of work.
 ## Gate set
 
 All gates. Review dimensions: `correctness`, `governance`, `traceability`,
-`regression`, `security` (full, not scaled), `clarity`. `claims` is added if `positioning.md` is present. Plus every
+`regression`, `security` (full, not scaled), `clarity`. `claims` is added when the manifest lists claims. Plus every
 `immovable_gate` from the routing policy. Plus a mid-implementation
 checkpoint gate per worktree.
 
 ## Multiagent orchestration
 
 From 9.0.0 the breakdown mode keeps the name multiagent, but the session builds
-the units of the distribution map one after another, with no worktree or agent
+the plan's work units one after another, with no worktree or agent
 per unit (ADR-090). The `caps` in `governance/routing-policy.yml` still record a
-subtask ceiling in `delivery-approach.md`; nothing binds on it until #351
+subtask ceiling in the manifest; nothing binds on it until #351
 replaces the stages.
 
 Roles: one session builds, checks and reviews (ADR-090); the product owner
@@ -56,8 +56,8 @@ those are recorded as *cap-driven*, not as de-scopes.
 
 ## The full approach may NOT
 
-- Run without a `distribution-map.md`, even if it ends up solo (capped). The
-  map is the record of *what could have been parallel and why it wasn't*.
+- Run without listing its work units, even if it ends up solo (capped). The
+  list is the record of *what could have been parallel and why it wasn't*.
 - Build two units at once. The session builds one unit after another, so a
   change to shared code is made once, in order.
 - Skip the combined-regression step at ship time. Per-subtask green does not imply

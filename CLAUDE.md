@@ -218,8 +218,8 @@ such as D272.
 
 ## When you are unsure
 
-Re-read the delivery-approach record (`delivery-approach.md`). It was written
-at the assess stage so a later session, or a different agent, can pick the
-issue up without re-deriving the process. If it does not answer the question,
-the assessment under-sized the process; say so and re-assess rather than
+Run `compass approach show` to read the delivery approach chosen at assess.
+It was recorded so a later session, or a different agent, can pick the issue
+up without re-deriving the process. If it does not answer the question, the
+assessment under-sized the process; say so and re-assess rather than
 improvise.

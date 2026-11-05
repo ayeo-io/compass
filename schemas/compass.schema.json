@@ -243,7 +243,7 @@
               "type": "string"
             },
             "bookkeeping": {
-              "description": "Whether the artifact is a record the framework keeps about the work, such as the dashboard, the receipt or the verification report. Such an artifact is never an input to another.",
+              "description": "Whether the artifact is a record the framework keeps about the work, such as the dashboard or the verification report. Such an artifact is never an input to another.",
               "type": "boolean"
             },
             "checks": {
@@ -338,7 +338,7 @@
                   "type": "string"
                 },
                 "bookkeeping": {
-                  "description": "Whether the artifact is a record the framework keeps about the work, such as the dashboard, the receipt or the verification report. Such an artifact is never an input to another.",
+                  "description": "Whether the artifact is a record the framework keeps about the work, such as the dashboard or the verification report. Such an artifact is never an input to another.",
                   "type": "boolean"
                 },
                 "checks": {
@@ -463,7 +463,7 @@
       "description": "Named switches for new blocking behavior. Each is off in the shipped default.",
       "properties": {
         "artifact-freshness": {
-          "description": "Whether a change to an artifact marks the artifacts and check results that depend on it as stale. Off in the shipped default.",
+          "description": "Removed in 9.0.0 (ADR-091) and not read: whether a change to an artifact marked the artifacts that depend on it as stale. It stays valid so a frozen preset or a stored generation that declares it still loads, and `compass policy lint` names it when a project turns it on.",
           "type": "boolean"
         },
         "entry-exit-evaluation": {
@@ -1277,7 +1277,7 @@
     },
     "github_labels": {
       "additionalProperties": false,
-      "description": "Whether Compass writes an issue's labels and page to its linked GitHub issue, through the switches `domain`, `status` and `page`. All three are off by default, and with all three off no command calls GitHub.",
+      "description": "Whether Compass writes an issue's labels to its linked GitHub issue, through the switches `domain` and `status` (`page` is removed in 9.0.0). Both are off by default, and with both off no command calls GitHub.",
       "properties": {
         "domain": {
           "default": false,
@@ -1309,7 +1309,7 @@
       "type": "string"
     },
     "living_spec": {
-      "description": "When a landing re-derives the living spec, `docs/system-spec.md`: `land` re-derives it and commits it alone after each landing, and `refresh` leaves it as it is, for a person to re-derive with `compass spec sync`. The default is `land`.",
+      "description": "Removed in 9.0.0 (ADR-091) and not read: `land` or `refresh` set when a landing re-derived the living spec. The key stays valid so a project that holds it keeps working, and `compass policy lint` names it.",
       "enum": [
         "land",
         "refresh"

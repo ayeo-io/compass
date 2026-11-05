@@ -165,15 +165,3 @@ def test_trc_011_manifest_template_parses_with_null_orchestration():
     assert data["orchestration"] is None
 
 
-def test_trc_012_releasing_guide_names_artifact_freshness_and_links_its_page():
-    assert (DOCS / "artifact-freshness.md").exists()
-    text = (DOCS / "releasing.md").read_text(encoding="utf-8")
-    assert "artifact freshness" in " ".join(text.lower().split())
-    assert "](artifact-freshness.md" in text
-
-
-def test_trc_013_releasing_guide_says_freshness_refusals_are_opt_in():
-    text = (DOCS / "releasing.md").read_text(encoding="utf-8")
-    assert "`artifact-freshness`" in text
-    assert re.search(r"only\s+when\s+the\s+`artifact-freshness`\s+capability"
-                     r"\s+is\s+on", text)

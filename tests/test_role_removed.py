@@ -3,7 +3,9 @@
 The two blocking role rules became artifact rules keyed on the documents the
 CLI finds on disk, the full approach stopped building in the claims gate, and
 6.x records, configurations and CLI calls keep working. ADR-070 records the
-decision; docs/upgrade-7-0-0.md tells an adopter what changes.
+decision; docs/upgrade-7-0-0.md tells an adopter what changes. Since 9.0.0 no
+command reads the documents on disk (ADR-091), so the tests of that reading
+moved to tests/test_removed_parts_9_0_0_documents.py, inverted.
 
 Each test is named by the scenario of the issue `remove-role-from-assessment`
 that it checks, in the order of that issue's acceptance criteria.
@@ -29,6 +31,10 @@ from compass_pkg import catalogue_spec  # noqa: E402
 from compass_pkg.routing import evaluate_route  # noqa: E402
 
 PRESET = ROOT / "governance" / "presets" / "default"
+# The live default declares no document, approach map or artifact rule since 9.0.0
+# (ADR-091). The 7.0.0 preset is frozen with them, and a stored generation still
+# reads them, so the tests of the artifact rules read that preset.
+FROZEN = ROOT / "governance" / "presets" / "default@7"
 VIEW = ROOT / "governance" / "routing-policy.yml"
 NOT_READ = "role is no longer an assessment dimension"
 
@@ -37,17 +43,17 @@ def _load(path):
     return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
 
 
-def _preset_config():
+def _preset_config(folder=PRESET):
     parts = []
     for name in catalogue_spec.CATALOGUES:
-        part = _load(PRESET / f"{name}.yml")
+        part = _load(folder / f"{name}.yml")
         parts.append({k: v for k, v in part.items() if k != "schema"})
     config, _ = merge.apply({}, {"schema": 1, **merge.combine(parts)}, "parent", "default")
     return config
 
 
-def _policy():
-    return obligations.policy_adapter(_preset_config())
+def _policy(folder=PRESET):
+    return obligations.policy_adapter(_preset_config(folder))
 
 
 def _assess(**kw):
@@ -94,22 +100,6 @@ def _project(tmp_path, slug="t", assessment=None, compass_yml=True):
     (task_dir / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False),
                                            encoding="utf-8")
     return root, task_dir
-
-
-def _write_doc(root, slug, kind, register=True, exists=True):
-    """Put a document of `kind` at its home and register it, as the role entry
-    points do."""
-    rel = f"docs/compass/2026-10-16-{slug}/{kind}.md"
-    if exists:
-        (root / rel).parent.mkdir(parents=True, exist_ok=True)
-        (root / rel).write_text(f"# {kind}\n", encoding="utf-8")
-    if register:
-        path = root / ".compass" / "work" / slug / "manifest.yml"
-        data = _load(path)
-        data.setdefault("artifacts", []).append(
-            {"id": "ART-" + kind.upper(), "kind": kind, "status": "draft", "path": rel})
-        path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
-    return rel
 
 
 # --- group A: the shipped vocabulary and the evaluator ----------------------------
@@ -182,11 +172,14 @@ def test_trc_a4_an_assessment_without_a_role_routes_as_an_engineers_did():
         new = evaluate_route(dict(case), now)
         assert new["delivery_approach"] == old["delivery_approach"] == approach
         assert new["stages"] == old["stages"], approach
-        # Documents a later 7.0.0 change added to the approach (ADR-072) are not part of
-        # the role removal, so they are left out of the comparison.
+        # 9.0.0 owes no document (ADR-091), so the documents are compared on the
+        # frozen 7.0.0 preset. Documents a later 7.0.0 change added to the approach
+        # (ADR-072) are not part of the role removal, so they are left out.
+        assert new["artifacts"] == [], approach
+        seven = evaluate_route(dict(case), _policy(FROZEN))
         added = ADDED_AFTER_ROLE_REMOVAL.get(approach, ())
-        assert [a for a in new["artifacts"] if a["kind"] not in added] == old["artifacts"], \
-            approach
+        assert [a for a in seven["artifacts"] if a["kind"] not in added] \
+            == old["artifacts"], approach
         expected = [g for g in old["gates"]
                     if not (approach == "full" and g == "verify.claims")]
         assert new["gates"] == expected, approach
@@ -198,36 +191,27 @@ def test_trc_a5_the_board_and_flow_show_no_role():
     assert "role" not in flow._ASSESSMENT_DIMENSIONS
 
 
-def test_trc_a5_the_receipt_goal_line_names_no_role(tmp_path):
-    root, task_dir = _project(tmp_path, assessment=_assess(role="product-owner"))
-    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write",
-                          *ALL_REASONS)
-    assert code == 0, err
-    code, out, err = _run(root, "issue", "receipt", "--issue", "t")
-    assert code == 0, err
-    goal = [line for line in out.splitlines() if line.strip().startswith("goal")]
-    assert goal and "product-owner" not in goal[0] and "role" not in goal[0], out
-
-
 # --- group B: the artifact rules -------------------------------------------------
 
 def test_trc_b1_a_positioning_document_brings_the_claims_gate_and_the_ship_block():
-    result = evaluate_route(_assess(artifacts=["positioning"]), _policy())
+    result = evaluate_route(_assess(artifacts=["positioning"]), _policy(FROZEN))
     assert result["delivery_approach"] == "regular"
     assert "RP-ART-001" in _fired(result)
     assert "verify.claims" in result["gates"]
     assert _blocks(result)["ship"] == (
         "every claim in positioning.md traces to a passing scenario")
-    view = evaluate_route(_assess(artifacts=["positioning"]), _load(VIEW))
-    assert "verify.claims" in view["gates"] and "RP-ART-001" in _fired(view)
+    # The live default and its view hold no artifact rule since 9.0.0 (ADR-091).
+    for policy in (_policy(), _load(VIEW)):
+        live = evaluate_route(_assess(artifacts=["positioning"]), policy)
+        assert "verify.claims" not in live["gates"] and "RP-ART-001" not in _fired(live)
 
 
 def test_trc_b2_an_intent_document_brings_the_plan_block():
-    result = evaluate_route(_assess(artifacts=["intent"]), _policy())
+    result = evaluate_route(_assess(artifacts=["intent"]), _policy(FROZEN))
     assert "RP-ART-002" in _fired(result)
     assert _blocks(result)["plan"] == (
         "the spec has been checked against intent.md for intent fidelity")
-    plain = evaluate_route(_assess(), _policy())
+    plain = evaluate_route(_assess(), _policy(FROZEN))
     assert result["gates"] == plain["gates"]
 
 
@@ -247,36 +231,8 @@ def test_trc_b4_a_spike_with_a_positioning_document_carries_only_its_own_gate():
     assert result["gates"] == ["spike.conclude"]
 
 
-def test_trc_b5_presence_is_read_from_the_issues_documents(tmp_path):
-    root, _ = _project(tmp_path / "a", slug="a")
-    _write_doc(root, "a", "positioning")
-    code, _, err = _run(root, "approach", "evaluate", "--issue", "a", "--write",
-                        *ALL_REASONS)
-    assert code == 0, err
-    data = _load(root / ".compass/work/a/manifest.yml")
-    assert "verify.claims" in [g["id"] for g in data["gates"]]
-    assert set(data["assessment"]) == set(_assess())
-
-    root, _ = _project(tmp_path / "b", slug="b")
-    _write_doc(root, "b", "positioning", exists=False)
-    code, _, err = _run(root, "approach", "evaluate", "--issue", "b", "--write",
-                        *ALL_REASONS)
-    assert code == 0, err
-    data = _load(root / ".compass/work/b/manifest.yml")
-    assert "verify.claims" not in [g["id"] for g in data["gates"]]
-    assert set(data["assessment"]) == set(_assess())
-
-
-def test_trc_b5_an_unregistered_document_at_its_home_counts(tmp_path):
-    root, _ = _project(tmp_path, slug="c")
-    _write_doc(root, "c", "positioning", register=False)
-    code, out, err = _run(root, "approach", "evaluate", "--issue", "c", "--json")
-    assert code == 0, err
-    assert "verify.claims" in json.loads(out)["gates"]
-
-
 def test_trc_b6_the_classifier_sees_the_artifact_rules():
-    parent = _preset_config()
+    parent = _preset_config(FROZEN)
     child = _without_rule(parent, "RP-ART-001")
     shown = classify.classify(parent, child)
     assert shown.result == "loosening", shown.reason
@@ -462,7 +418,7 @@ def test_trc_c7_the_retired_rules_table_names_each_replacement():
 # --- group D: the perspectives ---------------------------------------------------
 
 def test_trc_d1_a_document_can_still_name_a_perspective_as_its_owner(tmp_path):
-    artifacts = _load(PRESET / "artifacts.yml")["artifacts"]
+    artifacts = _load(FROZEN / "artifacts.yml")["artifacts"]
     assert artifacts["ui-contract"]["owner"] == "designer"
     assert artifacts["intent"]["owner"] == "product-owner"
     assert artifacts["positioning"]["owner"] == "product-marketer"
@@ -476,7 +432,7 @@ def test_trc_d1_a_document_can_still_name_a_perspective_as_its_owner(tmp_path):
 
 
 DOCS = ("docs/routing-deep-dive.md", "docs/roles-guide.md", "README.md",
-        "templates/manifest.yml", "templates/intent.md")
+        "templates/manifest.yml")
 
 
 def test_trc_d2_the_documents_and_templates_describe_role_as_a_perspective():
@@ -490,39 +446,6 @@ def test_trc_d2_the_documents_and_templates_describe_role_as_a_perspective():
     manifest = (ROOT / "templates" / "manifest.yml").read_text(encoding="utf-8")
     block = manifest.split("assessment:", 1)[1].split("\n\n", 1)[0]
     assert "role:" not in block
-
-
-def test_trc_b6_an_issue_layer_is_judged_at_a_point_with_its_documents(tmp_path):
-    """An issue's own `config:` layer is classified at the issue's assessment. That
-    point carries the documents on disk, so a layer that drops RP-ART-001 from a
-    positioned issue is a loosening, as dropping RP-ROLE-001 from a marketer was."""
-    from compass_pkg import policy_lint
-    root, task_dir = _project(tmp_path)
-    _write_doc(root, "t", "positioning")
-    manifest = _load(task_dir / "manifest.yml")
-    loaded = policy_lint.load_layers(root, manifest=manifest, task_dir=str(task_dir))
-    assert loaded.assessment["artifacts"] == ["positioning"]
-    assert "artifacts" not in _load(task_dir / "manifest.yml")["assessment"]
-    parent = _preset_config()
-    child = _without_rule(parent, "RP-ART-001")
-    assert classify.classify(parent, child, at=loaded.assessment).result == "loosening"
-    plain = dict(loaded.assessment, artifacts=[])
-    assert classify.classify(parent, child, at=plain).result == "equivalent"
-
-
-def test_trc_b6_policy_diff_replays_an_issue_with_its_documents(tmp_path):
-    """`compass policy diff` replays an archived or open issue at the point its
-    evaluation would read: with the documents on disk that either side names."""
-    from types import SimpleNamespace
-
-    from compass_pkg import replay
-    root, task_dir = _project(tmp_path)
-    _write_doc(root, "t", "positioning")
-    (issue,) = replay.read_archive(root)
-    side = SimpleNamespace(config=_preset_config())
-    point = replay._point_of(issue, side, side)
-    assert point["artifacts"] == ["positioning"]
-    assert "documents positioning" in replay._where({"assessment": point, "represents": {}})
 
 
 def test_trc_c8_a_check_that_reads_documents_is_refused(tmp_path):
@@ -609,59 +532,6 @@ def test_trc_c2_a_stored_6x_generation_keeps_its_role_rules_through_the_cli(tmp_
     stored = {n: _load(task_dir / "generations" / str(n) / "resolved.yml") for n in (1, 2)}
     assert "role_rules" in stored[1]["rules"] and "role" in stored[1]["dimensions"]
     assert "role_rules" not in stored[2]["rules"] and "role" not in stored[2]["dimensions"]
-
-
-INTENT_TEXT = ("# Intent\n\n## Problem\n\nx\n\n## Desired outcome\n\n- INT-1: x\n\n"
-               "## Success signals\n\n- x\n\n## Non-goals\n\n- x\n")
-
-
-def test_trc_b2_the_assess_flow_records_the_intent_block(tmp_path):
-    """The assess procedure, step 3: evaluate without --write, draft and register
-    the intent the approach owes, then write. The recorded rules hold RP-ART-002,
-    and the intent keeps the depth the approach owes it."""
-    root, task_dir = _project(tmp_path)
-    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--json")
-    assert code == 0, out + err
-    owed = {a["kind"]: a["depth"] for a in json.loads(out)["artifacts"]}
-    assert owed["intent"] == "lightweight"
-    rel = "docs/compass/2026-10-16-t/intent.md"
-    (root / rel).parent.mkdir(parents=True)
-    (root / rel).write_text(INTENT_TEXT, encoding="utf-8")
-    code, out, err = _run(root, "issue", "artifact", "set", "intent", "--issue", "t",
-                          "--status", "draft", "--path", rel)
-    assert code == 0, out + err
-    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write",
-                          *ALL_REASONS)
-    assert code == 0, out + err
-    data = _load(task_dir / "manifest.yml")
-    assert "RP-ART-002" in [f["id"] for f in data["policy_rules_fired"]]
-    intent = next(a for a in data["artifacts"] if a["kind"] == "intent")
-    assert intent["depth"] == "lightweight" and intent["path"] == rel
-    procedure = (ROOT / "approaches" / "assess-procedure.md").read_text(encoding="utf-8")
-    step3 = procedure.split("3. **Compute the delivery approach", 1)[1].split("\n4. ", 1)[0]
-    assert "without `--write`" in step3 and "before the write" in step3
-
-
-def test_trc_b7_ship_refuses_a_document_whose_rule_the_approach_does_not_hold(tmp_path):
-    """A positioning.md written after the issue was assessed: its rule did not fire
-    at the last evaluation, so the landing is refused until it is re-evaluated."""
-    root, task_dir = _project(tmp_path)
-    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write",
-                          *ALL_REASONS)
-    assert code == 0, out + err
-    _write_doc(root, "t", "positioning")
-    sys.path.insert(0, str(ROOT / "cli"))
-    from compass_pkg import documents_present
-    task = _load(task_dir / "manifest.yml")
-    text = documents_present.landing_refusal(task, str(task_dir))
-    assert text and "RP-ART-001" in text and "positioning.md" in text, text
-    assert "compass approach evaluate --issue t --write" in text
-    from compass_pkg import manifest
-    assert documents_present.landing_refusal in manifest.LANDING_REFUSALS
-    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write")
-    assert code == 0, out + err
-    assert documents_present.landing_refusal(_load(task_dir / "manifest.yml"),
-                                             str(task_dir)) is None
 
 
 def test_trc_c1_a_recorded_role_is_named_as_ignored_on_evaluation(tmp_path):

@@ -9,7 +9,7 @@ The range check can skip when the history is absent. The content assertion
 beside it must not skip: it needs no history and carries the invariant that
 matters now.
 
-Scenario ids: see docs/system-spec.md (TRC-1).
+Scenario ids: see the issue's acceptance criteria (TRC-1).
 """
 from __future__ import annotations
 

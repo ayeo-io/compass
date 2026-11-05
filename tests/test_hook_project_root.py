@@ -10,7 +10,7 @@ The fix walks up from the working directory, and refuses when it finds
 nothing - an enforcement path that cannot tell what it is enforcing must
 never let an edit through.
 
-Scenario ids: see docs/system-spec.md (group A).
+Scenario ids: see the issue's acceptance criteria (group A).
 """
 from __future__ import annotations
 

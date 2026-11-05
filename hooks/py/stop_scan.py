@@ -9,6 +9,7 @@ import compass_pkg                      # noqa: F401 - puts vendor on sys.path
 import yaml
 from compass_pkg import parse_cache, status_words
 from compass_pkg.core import artifact_path
+from compass_pkg.spec_location import spec_path
 
 work_dir, signals = sys.argv[1], sys.argv[2]
 
@@ -68,23 +69,22 @@ def gate_state(task_dir, slug, task):
     # archives still resolve. A kind with no document resolves to where it
     # WOULD be, so the isfile tests below read it as "nothing written".
     try:
-        approach_doc = artifact_path(task_dir, "delivery-approach.md")
-        spec = artifact_path(task_dir, "acceptance-criteria.md")
+        spec = spec_path(task_dir)
         vreport = artifact_path(task_dir, "verification-report.md")
     except Exception:                                       # noqa: BLE001
-        approach_doc = spec = vreport = ""
+        spec = vreport = ""
 
-    # 1. the delivery-approach record missing on in-progress work. A folder
-    # with nothing in it may be an empty scaffold; anything else in it means
-    # work started without the assess stage.
-    if not os.path.isfile(approach_doc):
+    # 1. no delivery approach on in-progress work. The manifest's key is the
+    # record (ADR-091). A folder with nothing in it may be an empty scaffold;
+    # anything else in it means work started without the assess stage.
+    if not (isinstance(task, dict) and task.get("delivery_approach")):
         try:
             has_artifacts = bool(os.listdir(task_dir))
         except OSError:
             has_artifacts = False
         if has_artifacts:
-            emit("W", slug, "the delivery-approach record is MISSING but the issue "
-                 "has artifacts - work started without an assessment. Run /compass:assess.")
+            emit("W", slug, "the delivery approach is MISSING from the manifest but the "
+                 "issue has artifacts - work started without an assessment. Run /compass:assess.")
         return
 
     # 2. a stage whose gate is not cleared. An unresolved red: implementation

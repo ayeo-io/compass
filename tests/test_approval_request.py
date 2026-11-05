@@ -77,7 +77,6 @@ def test_b4_request_refuses_like_approve(tmp_path):
     from approval_support import save_manifest
     save_manifest(root, body)
     for argv in (["--check", "made-up-check", "--scope", "x"],
-                 ["--artifact", "technical-design"],
                  ["--guardrail", "g5", "--scope", "x"]):
         code, out, err = _request(root, *argv)
         assert code != 0, (argv, out + err)

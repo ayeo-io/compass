@@ -1069,10 +1069,11 @@ def test_pd_9_the_command_prints_the_same_lines(looser_text):
     code, out, _ = looser_text
     assert out.splitlines()[0] == "compass policy diff: default@8 -> project"
     assert "classification: loosening" in out
-    # 72 closed points; the labels set crosses four labels and the two
-    # documents the artifact rules read (ADR-070).
+    # 72 closed points; the labels set crosses the 15 combinations of four
+    # labels. 9.0.0 removed the artifact rules (ADR-091), so the two
+    # documents they read no longer multiply the set (ADR-070).
     assert "  grid: 72 replayed, 36 changed" in out
-    assert "  labels: 4536 replayed, 2268 changed" in out
+    assert "  labels: 1080 replayed, 540 changed" in out
     assert "  archive: 3 replayed, 3 changed" in out
     assert 'severity: "blocking" -> "advisory"' in out
     assert "--json lists every one" in out

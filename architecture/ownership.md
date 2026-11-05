@@ -28,7 +28,7 @@ exclusively, and what it must not do.
 | `skills/*/SKILL.md` | Loadable procedures | The instructions a session loads for a stage (9.0.0 ships no agent files, ADR-090) |
 | `governance/` | Routing policy, guardrails, strategies, signals | The machine-readable governance files that the CLI runs |
 | `architecture/` (this tree) | Compass's own architectural record | The ADRs and narrative files that describe the framework itself |
-| `templates/` | Worked examples for adopters | The template shapes adopters copy. The CLI reads `templates/<kind>.md` in two places: `compass issue template show` (`cli/compass_pkg/template_lists.py`) and `compass policy lint` (`cli/compass_pkg/policy_lint.py`). A template change can break either command |
+| `templates/` | Worked examples for adopters | The template shapes adopters copy. The CLI reads `templates/<kind>.md` in one place: `compass policy lint` (`cli/compass_pkg/policy_lint.py`). A template change can break that command |
 
 ---
 

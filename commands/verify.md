@@ -11,7 +11,7 @@ approach. QA owns this gate.
 
 ## On a spike
 
-Read `delivery-approach.md`. On a **spike**, the verify stage is **conclude** - not a
+Run `compass approach show`. On a **spike**, the verify stage is **conclude** - not a
 test gate but a findings check: *did we answer the question?* It runs none of
 the review dimensions, because a spike ships nothing. Its one gate is "the
 question is answered - or explicitly answered with 'inconclusive, here is
@@ -21,7 +21,7 @@ The rest of this command is for delivery work.
 
 ## Setup
 
-- Read `delivery-approach.md` for the gate set and which review dimensions
+- Run `compass approach show` for the gate set and which review dimensions
   apply. The dimension set scales with the approach (see the table in
   `${CLAUDE_PLUGIN_ROOT}/approaches/composition-reference.md`); `correctness`,
   `governance`, and `traceability` are always on for delivery work - they
@@ -58,8 +58,8 @@ The rest of this command is for delivery work.
    `acceptance-criteria.md` as an acceptance check. They are the same
    artifact the spec was - read now at verification time.
 2. **TDD suite.** Run the full test suite through `compass tdd-green -- <cmd>`,
-   which confirms it passes and writes the record. Link that record from the
-   report rather than reproducing the run inside it.
+   which confirms it passes and writes the record. Point to that record
+   rather than reproducing the run.
 3. **Run `compass check`.** This is the **mechanical half** of the verify stage's
    gate: the CLI runs the `guardrails.yml` checks against `manifest.yml` and
    `evidence/` - every scenario has a test, the suite passed
@@ -68,13 +68,7 @@ The rest of this command is for delivery work.
    failure. You still judge the *judgment* dimensions (clarity, security
    depth, governance-as-assessed) - `compass check` is the mechanical part,
    not the whole gate.
-
-   Then run `compass analyze` on an issue that registers an intent, as every
-   regular issue does: it reports a scenario whose intent id `intent.md` does
-   not declare. Record its output as `command-output` evidence for
-   `verify.traceability` (`compass evidence add <EV-id> --type command-output
-   --path <file>`). It blocks nothing unless the issue holds `verify.analyze`.
-4. **Review dimensions.** Apply each dimension `delivery-approach.md`
+4. **Review dimensions.** Apply each dimension the approach
    lists - `correctness`, `governance`, `traceability`, and as the approach
    needs `regression`, `security` (scaled or full), `clarity`, `claims`.
    The `governance` dimension checks the work against the governance in force
@@ -90,20 +84,12 @@ The rest of this command is for delivery work.
    time. `compass check`'s `gate-evidence-present` check checks every `pass`
    gate references an id that resolves - a gate marked pass with no such
    evidence fails the check.
-6. **Write `verification-report.md`** from the output of
-   `compass issue template show verification-report`, which renders the checklist from the
-   issue's exit lists: each dimension, each gate, the evidence, pass/fail.
-   Read the manifest's `failure_modes_descoped` and copy each mode and its
-   reason into the report's "Failure modes de-scoped at define" section, or
-   write "None": a mode named at define must not disappear before ship.
-
-   **Where it goes.** `docs/compass/<created>-<issue-slug>/verification-report.md`, where the
-   date is the manifest's `created:` field - not today's. Then register it:
-   `compass issue artifact set verification-report --status draft --path <that path>`. The CLI
-   refuses a path outside the project, so the record is checked
-   rather than claimed. Registering the report approves it (`approved_by` names `compass issue artifact set`) only when every `verify` gate has passed; registered earlier, it reads `draft` until the last `verify` gate passes. If you had to create `docs/compass/`, **say so in one
-   line** - if a directory appears and nobody says so, someone can delete it
-   by hand or commit it by mistake.
+6. **Report the result.** Compass writes no verification report: the gates,
+   the evidence and the Definition of Done are records in the manifest, and
+   `compass check` prints them. In the hand-off, say each dimension, each
+   gate, its evidence and pass or fail. Read the manifest's
+   `failure_modes_descoped` and name each mode and its reason, or say "None":
+   a mode named at define must not disappear before ship.
 
 ## How the review is done
 
@@ -112,7 +98,7 @@ This session does the review that a separate reviewer agent did before 9.0.0
 
 - **Clarity.** Judge the tells named in `skills/compass-runtime/writing-voice.md`:
   does the prose communicate a decision, or narrate the pipeline? Run
-  `scripts/voice-tells.py` over the issue's artifacts for the tells a fixed
+  `scripts/voice-tells.py` over the issue's documents for the tells a fixed
   string can find. Cold-reader writing is a strategy
   (`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S8` names the calibration
   sample; an unmigrated 5.x project reads its own copied `governance/`), so a
@@ -120,8 +106,8 @@ This session does the review that a separate reviewer agent did before 9.0.0
   never an automatic gate failure.
   Flag a short code with no plain words in front of it: the fix is to
   put the meaning first and the code in brackets, never to delete the code.
-- **Patterns.** On the regular or full approach, check the design's named
-  patterns against the code (`S16`). It is advice: never fail a gate on it.
+- **Patterns.** On the regular or full approach, check the patterns the
+  design names against the code (`S16`). It is advice: never fail a gate on it.
 - **Comments.** Open every comment with a plain-word label - **issue**,
   **suggestion**, **nitpick**, **question**, **praise** (`S12`) - and label
   honestly.
@@ -142,7 +128,7 @@ This session does the review that a separate reviewer agent did before 9.0.0
 
 ## Voice
 
-A verification report is evidence a person reads, not a status board. Say
+The hand-off of this stage is evidence a person reads, not a status board. Say
 what passed and what it means - never that the issue is "ready for the next
 command." See `skills/compass-runtime/writing-voice.md`.
 
@@ -152,17 +138,15 @@ command." See `skills/compass-runtime/writing-voice.md`.
   the record - that is the mechanical half);
 - every required *judgment* dimension passed with evidence;
 - every gate in `manifest.yml` is `pass` with a resolving evidence pointer;
-- `verification-report.md` is written, and the first five items of its
-  **Definition of Done** - every scenario passes, the TDD suite is green,
+- the first five items of the **Definition of Done** - every scenario passes, the TDD suite is green,
   coverage meets the tested-before-ship guardrail's floor, there are no
   lint/format/type errors, and traceability is intact - are met by a record in
   the manifest. Record an item with `compass gate pass ... --meets <item>` or
   `compass evidence add ... --meets <item>`; a person ticks the item that needs
   a person by typing `/compass:approve` after you ask with `compass evidence
   request --check <item>`, or with `compass evidence approve --check <item>` at a
-  terminal. The page lists the
-  items and their state (`compass issue render` writes it); a tick written on
-  the page counts for nothing. That is the exit gate out of verify.
+  terminal. `compass check` lists each item and its state; a tick written on
+  a page counts for nothing. That is the exit gate out of verify.
 
 The Definition of Done's remaining two items - living docs updated, and
 every owed follow-up settled - are carried into ship with

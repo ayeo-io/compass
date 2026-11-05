@@ -76,11 +76,11 @@ on an atomic or small change leans towards hotfix. Each one you set still
 needs a `--justify`. Domain labels need none.
 
 **Goal** - *the actual outcome, not the literal request.*
-- Read `intent.md` if it exists. "Add a CSV export" under an `intent.md` that says "let
-  finance self-serve" may need filters, scheduling, and permissions - the
+- Read the intent the product owner gave, if any. "Add a CSV export" under an
+  intent that says "let finance self-serve" may need filters, scheduling, and permissions - the
   literal request under-describes the intent.
-- Role is not scored. An `intent.md` or `positioning.md` on disk adds artifacts
-  and gates through the artifact rules. That is the framework working, not overhead.
+- Role is not scored. A document on disk adds no gate: Compass needs and checks
+  only `acceptance-criteria.md` (ADR-091).
 - One goal value is **exploration** - "I cannot frame this well
   enough to deliver it yet." Exploration composes towards the **spike** delivery approach the
   way live-defect urgency composes towards hotfix. Still score all three
@@ -96,7 +96,7 @@ The CLI does both. You score the three dimensions, read the two switches and
 the domain labels, and run
 `compass approach evaluate --write --justify DIM="<why>"`, with one
 `--justify` for each new or changed dimension or switch; it composes the first approach and
-applies the floors, caps, immovable gates and artifact rules. That split is the
+applies the floors, caps and immovable gates. That split is the
 determinism boundary and it is the point of the whole design: judgment
 produces the assessment, mechanism produces the approach.
 
@@ -126,12 +126,12 @@ skips earns a row in the de-scope ledger, and each row needs an explicit
 ### Anti-patterns
 
 - **An approach lighter than the assessment** - composed to "just get the
-  change in." `delivery-approach.md` makes this visible; do not do it.
+  change in." `compass approach show` makes this visible; do not do it.
 - **A time-saving justification** - a ledger row whose reason is "to save
   time." Time is not a safety argument. The reason must be about why the
   skip is *safe*, not why it is *convenient*.
 - **Silent constraint** - applying a floor or omitting an immovable gate without
-  a line in `delivery-approach.md`.
+  a line in the manifest's `policy_rules_fired:`.
 
 ## When to re-assess
 
@@ -142,6 +142,6 @@ Re-assessing during an issue is a normal event, not a failure. Trigger it when:
 - Refine finds the spec is bigger or more ambiguous than the delivery approach assumed.
 - A label surfaces late (you discover the change reaches auth).
 
-Run `/compass:assess --reassess`: re-score the dimensions, write a new `delivery-approach.md`
-revision, record what changed and why. A delivery approach quietly outgrown is
+Run `/compass:assess --reassess`: re-score the dimensions and record what changed and
+why in the manifest's `reassessments:` log. A delivery approach quietly outgrown is
 the failure; a delivery approach honestly re-assessed is the system working.

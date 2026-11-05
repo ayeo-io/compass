@@ -20,7 +20,7 @@ both.
 """
 # DEPENDENCY: standard library (dataclasses, datetime, json, os, re);
 # compass_pkg.acceptance_strategy, atomic_io, catalogue_check, catalogue_spec, check_registry,
-# documents_present, layers, locks, merge, retired, waivers, word_map, core.
+# layers, locks, merge, retired, waivers, word_map, core.
 from __future__ import annotations
 
 import datetime
@@ -29,7 +29,7 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from compass_pkg import catalogue_check, documents_present, layers, locks, removed_parts
+from compass_pkg import catalogue_check, layers, locks, removed_parts
 from compass_pkg import merge, parent_states, parents, waivers
 from compass_pkg import catalogue_spec as spec
 from compass_pkg import acceptance_strategy, retired, word_map
@@ -258,10 +258,6 @@ def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True,
         out.registry = tuple(manifest.get("evidence") or ())
         assessment = manifest.get("assessment")
         out.assessment = dict(assessment) if isinstance(assessment, dict) else None
-        if out.assessment is not None and task_dir:     # its documents, as evaluated (ADR-070)
-            docs = [d.doc for d in (parent, *[g.layer for g in out.git_parents],
-                                    out.project, out.issue) if d]
-            out.assessment = documents_present.with_presence(out.assessment, task_dir, docs)
     return out
 
 
@@ -548,11 +544,15 @@ def _agents_and_roles(config):
 
 
 def _template_text(kind):
+    """The kind's shipped template, or None. A kind whose template 9.0.0 deleted
+    is read as the template was, so a frozen preset that declares it still lints."""
     path = os.path.join(FRAMEWORK_ROOT, "templates", f"{kind}.md")
     try:
         with open(path, encoding="utf-8") as fh:
             return fh.read()
     except OSError:
+        if kind == "verification-note":
+            return removed_parts.SINGLE_BLOCK_TEMPLATE
         return None
 
 

@@ -562,8 +562,8 @@ def normalize_spine(task):
             out["subtask_ceiling"] = RETIRED_ORCHESTRATION_CEILING.get(
                 word.split(" ")[0], None)
     # The on-disk schema_version is preserved: readers must be able to say
-    # honestly what generation a manifest was written in (the receipt reports
-    # legacy manifests). Writers stamp the current version when they save.
+    # honestly what generation a manifest was written in. Writers stamp the
+    # current version when they save.
     return word_map.map_manifest(out)
 
 
@@ -614,7 +614,7 @@ def canonical_shape(value):
 
 # Machine delivery-approach values -> the v2 change-type names the display
 # layer prints. The manifest keeps the machine value; the terminal never
-# shows it (the receipt is the most shareable screen Compass produces).
+# shows it.
 # The v2 machine spelling `quick-fix` renders without the hyphen.
 SHAPE_DISPLAY = {APPROACH_QUICK_FIX: "quick fix"}
 for _old, _new in LEGACY_APPROACH_ALIASES.items():

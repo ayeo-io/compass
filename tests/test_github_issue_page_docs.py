@@ -1,7 +1,8 @@
-"""The owning doc says what the issue page sends to GitHub.
+"""The owning doc names the verb that syncs a GitHub issue.
 
-The page posts the issue's documents to everyone who can read the GitHub issue, so the
-owning doc must say so, and must name the markers, the checks and the replacement verb.
+9.0.0 removed the issue page (ADR-091), so the docs no longer describe it. The verb
+`compass issue github sync` is kept, and the docs must name it and record that it
+replaced `compass issue labels sync`.
 """
 from pathlib import Path
 
@@ -14,39 +15,9 @@ def _flat(path):
     return " ".join((ROOT / path).read_text(encoding="utf-8").split())
 
 
-def test_ipg_21_owning_doc_says_what_the_page_exposes():
+def test_ipg_21_owning_doc_names_the_sync_verb():
     raw = (ROOT / "docs" / "github-labels.md").read_text(encoding="utf-8")
     doc = " ".join(raw.split())
-
-    # One paragraph carries the audience statement and the reason for the default.
-    paragraphs = [" ".join(p.split()) for p in raw.split("\n\n")]
-    audience = [p for p in paragraphs
-                if "audience" in p and "readers of the GitHub issue" in p and "off by default" in p]
-    assert len(audience) == 1, audience
-
-    # The switch, both markers, and when the body counts as empty.
-    for needle in ("github_labels.page", "<!-- compass:issue-page -->",
-                   "<!-- compass:issue-ask -->", "counts as empty"):
-        assert needle in doc, needle
-
-    # The two checks, what each refuses, and that a refusal is whole.
-    for needle in ("Two checks", "private path", "credential",
-                   "as it is posted", "refused whole"):
-        assert needle in doc, needle
-    # The page runs no rival-name check, so no description of the page names one.
-    for name in ("docs/github-labels.md", "docs/security.md", "docs/upgrade-7-0-0.md"):
-        text = _flat(name)
-        part = text[text.find("github_labels.page"):]
-        for needle in ("names_key", "names key", "rival product name", "name check"):
-            assert needle not in part, (name, needle)
-
-    # A linked issue's page is refreshed by its own next sync; lint reports it meanwhile.
-    assert "own next sync" in doc and "compass issue lint" in doc and "out of date" in doc
-
-    # Links, size bound, record section, transport, waiting.
-    for needle in ("(not on <branch>)", "size bound", "gh api", "standard input",
-                   "15-second", "makes no call"):
-        assert needle in doc, needle
 
     # The new verb is named, and the old one only in the single line that records its removal.
     assert NEW_VERB in doc
@@ -59,9 +30,11 @@ def test_ipg_21_owning_doc_says_what_the_page_exposes():
     assert NEW_VERB in walkthrough
     assert "labels sync" not in walkthrough
 
-    # The documents that describe what leaves the project say the same.
-    security = _flat("docs/security.md")
-    assert "issue page" in security and "reads no token" in security
-    assert "refused whole" in security and "github_labels.page" in security
+    # The upgrade guide that renamed the verb names both.
     upgrade = _flat("docs/upgrade-7-0-0.md")
-    assert OLD_VERB in upgrade and NEW_VERB in upgrade and "github_labels.page" in upgrade
+    assert OLD_VERB in upgrade and NEW_VERB in upgrade
+
+
+def test_ipg_21_no_current_doc_describes_the_removed_issue_page():
+    for name in ("docs/github-labels.md", "docs/security.md"):
+        assert "github_labels.page" not in _flat(name), name

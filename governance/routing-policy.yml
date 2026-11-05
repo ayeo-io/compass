@@ -107,7 +107,7 @@ routing_guardrails:
   # and/or forces specific stages/skills back to thorough weight.
   # Approach weight order for force_minimum_route: spike < quick-fix < regular
   # < hotfix < full. The evaluator raises the candidate to the max.
-  # NOTE: six of the entries below carry RP-REQUIRE ids because they attach a
+  # NOTE: four of the entries below carry RP-REQUIRE ids because they attach a
   # gate and raise no minimum - they are not floors. The block name lags its
   # contents: moving them into their own section changes a
   # structure the evaluator iterates and the schema checks, which is filed
@@ -137,16 +137,6 @@ routing_guardrails:
       force_minimum_route: full
       rationale: "Domain risk overrides size. A one-line auth change is not small."
 
-    - id: RP-REQUIRE-001
-      when: { risk: critical }
-      add_gate: verify.analyze
-      rationale: "Cross-artifact consistency checked before high-care work lands."
-
-    - id: RP-REQUIRE-002
-      when: { labels_any: [auth, payments, personal-data, migrations] }
-      add_gate: verify.analyze
-      rationale: "Irreversible-surface issues have consistency checked before they ship."
-
     - id: RP-REQUIRE-003
       when: { risk: [cross-cutting, critical] }
       add_gate: verify.architecture
@@ -156,19 +146,6 @@ routing_guardrails:
       when: { labels_any: [auth, payments, personal-data, migrations] }
       add_gate: verify.architecture
       rationale: "Irreversible-surface issues have architecture checked before they ship."
-
-    # Artifacts are an output of the approach, like gates. A dimension the shape does not
-    # know about can earn a document the same way it earns a gate - which is
-    # what stops the artifact set being "whatever this shape always writes".
-    - id: RP-REQUIRE-005
-      when: { labels_any: [auth, payments, personal-data] }
-      add_artifact: threat-model
-      rationale: "Work on a trust boundary states the threats it considered."
-
-    - id: RP-REQUIRE-006
-      when: { labels_any: [migrations] }
-      add_artifact: rollback-plan
-      rationale: "A change that is hard to undo says in advance how it would be undone."
 
   # caps - limits on scaling up.
   caps:
@@ -225,7 +202,7 @@ routing_guardrails:
   # future custom or tuned approach still cannot drop them. NOTE what is NOT
   # here: verify.regression is approach-scoped (quick fix, being atomic+trivial,
   # does not run it - that is quick fix's whole point), and verify.claims is
-  # document-scoped (added by RP-ART-001 when the issue has positioning.md).
+  # added by no shipped rule since 9.0.0 (ADR-091).
   # Immovable means immovable *everywhere* - keep the set to what genuinely is.
   immovable_gates:
     - id: RP-GATE-001
@@ -237,25 +214,6 @@ routing_guardrails:
     - id: RP-GATE-003
       gate: verify.traceability
       rationale: "Protects the audit trail - code -> criterion -> intent stays intact."
-
-  # artifact_rules - a document on disk that ENFORCES a gate or a stage block.
-  # `artifacts_any` matches the documents the CLI finds for the issue, which it
-  # reads at every evaluation and never writes into the assessment (ADR-070).
-  # A 6.x copy of this file holds `role_rules` instead, keyed on a declared
-  # role; the evaluator still reads that block where a copy has it.
-  artifact_rules:
-    - id: RP-ART-001
-      when: { artifacts_any: [positioning] }
-      require_artifact: launch-readiness
-      gate: verify.claims                # adds the claims gate to the approach's set
-      block_phase: ship
-      until: "every claim in positioning.md traces to a passing scenario"
-      rationale: "A launch claim with no backing scenario must not ship."
-    - id: RP-ART-002
-      when: { artifacts_any: [intent] }
-      block_phase: plan
-      until: "the spec has been checked against intent.md for intent fidelity"
-      rationale: "Built-the-thing-right and built-the-right-thing are different checks."
 
 # -----------------------------------------------------------------------------
 # Assessment vocabulary - the legal values the assessment may take. The evaluator
@@ -320,29 +278,16 @@ route_shapes:
     stages: { assess: lightweight, define: collapsed, refine: skipped, plan: collapsed, breakdown: skipped, implement: explore, verify: conclude, ship: graduate-or-discard }
     gates: [spike.conclude]
     subtask_ceiling: 1
-    # A spike owes its delivery-approach record and a conclusion document:
-    # discard, graduate, or defer. The conclusion is also typed evidence,
-    # which `spike-conclusion-present` reads.
-    artifacts: { delivery-approach: lightweight, spike-conclusion: thorough }
   quick-fix:
     weight: 1
     stages: { assess: thorough, define: lightweight, refine: collapsed, plan: collapsed, breakdown: skipped, implement: thorough, verify: lightweight, ship: lightweight }
     gates: [verify.correctness, verify.governance, verify.traceability]
     subtask_ceiling: 1
-    # No document beyond `delivery-approach.md`: the manifest's `scenarios:`
-    # block and a test-run record already hold what a lightweight
-    # acceptance-criteria.md and verification-report.md would repeat - a
-    # stated criterion before the code (`G2`) and a recorded green after it
-    # (`G1`). So "a quick fix writes delivery-approach.md and nothing else" is
-    # a decision of the approach that a check can read, not a convention.
-    artifacts: { delivery-approach: lightweight, verification-note: lightweight }
   regular:
     weight: 2
     stages: { assess: thorough, define: thorough, refine: lightweight, plan: thorough, breakdown: multiagent, implement: thorough, verify: thorough, ship: thorough }
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.clarity, verify.security]
     subtask_ceiling: 2
-    # A multiagent breakdown reads a distribution map, so this approach earns one.
-    artifacts: { intent: lightweight, acceptance-criteria: thorough, requirements-review: lightweight, technical-design: thorough, distribution-map: lightweight, verification-report: thorough }
   hotfix:
     weight: 3
     # The `ship:` value on the `stages` line below is a stage-weight enum the evaluator
@@ -352,10 +297,8 @@ route_shapes:
     stages: { assess: lightweight, define: reproduce-first, refine: collapsed, plan: collapsed, breakdown: skipped, implement: expedited, verify: thorough, ship: thorough-with-follow-up }
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security]
     subtask_ceiling: 1
-    artifacts: { bug-report: thorough, acceptance-criteria: lightweight, verification-report: thorough }
   full:
     weight: 4
     stages: { assess: thorough, define: thorough, refine: thorough, plan: thorough, breakdown: multiagent, implement: thorough, verify: thorough, ship: thorough }
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security, verify.clarity]
     subtask_ceiling: null
-    artifacts: { intent: thorough, acceptance-criteria: thorough, requirements-review: thorough, technical-design: thorough, distribution-map: thorough, verification-report: thorough }

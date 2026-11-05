@@ -20,7 +20,7 @@ import yaml
 
 import rendered_blocks_support as sup
 from rendered_blocks_support import (DOCS, ROOT, SLUG, WORK, block, manifest, manifest_file,
-                                     render, run, write_doc)
+                                     run, write_doc)
 
 ITEMS = ["dod-every-scenario-passes", "dod-suite-green", "dod-coverage-floor",
          "dod-no-lint-errors", "dod-traceability-intact", "dod-living-docs-updated",
@@ -107,20 +107,10 @@ def _row(report, name, guardrail=None):
 
 # --- DCJ-24 -----------------------------------------------------------------
 
-def test_dcj_24_dod_block_reads_as_a_result(tmp_path):
+def test_dcj_24_records_meet_every_item(tmp_path):
+    # Before 9.0.0 a `dod` block also showed each item's record (ADR-091 removed the render).
     root = _issue(tmp_path)
     _record_all(root)
-    _ok(render(root))
-    lines = _dod_block(root)
-    assert lines[0] == "Definition of Done: 5 of 7 met, 2 carried to ship (FU-3, FU-4)", lines
-    items = [x for x in lines[1:] if x.strip()]
-    assert len(items) == 7
-    for item, line in zip(ITEMS, items):
-        assert item in line, (item, line)
-    joined = "\n".join(items)
-    assert "met by EV-T" in joined and "ticked by jed72" in joined
-    assert "carried to ship, FU-3" in joined and "carried to ship, FU-4" in joined
-    assert not [x for x in lines if re.search(r"\[[ xX]\]", x)], lines
     _, report = _report(root)
     assert _row(report, "dod-evidence-typed")["status"] == "pass", _row(report, "dod-evidence-typed")
 
@@ -130,12 +120,6 @@ def test_dcj_24_dod_block_reads_as_a_result(tmp_path):
 def test_dcj_25_item_without_record_open_and_fails(tmp_path):
     root = _issue(tmp_path)
     _record_all(root, skip=("dod-coverage-floor",))
-    _ok(render(root))
-    lines = _dod_block(root)
-    assert lines[0] == ("Definition of Done: 4 of 7 met, 2 carried to ship (FU-3, FU-4), "
-                        "1 open"), lines[0]
-    floor = [x for x in lines if "dod-coverage-floor" in x]
-    assert floor and "open" in floor[0], floor
     _, report = _report(root)
     row = _row(report, "dod-evidence-typed")
     assert row["status"] == "fail", row
@@ -159,8 +143,6 @@ def test_dcj_26_page_ticks_count_for_nothing(tmp_path):
     root = _issue(tmp_path, layer=ON)
     _ticked_page(root)
     sup.base.edit(root, current_phase="ship")
-    _ok(render(root))
-    assert _dod_block(root)[0] == "Definition of Done: 0 of 7 met, 7 open"
     _, report = _report(root)
     row = _row(report, "dod-evidence-typed")
     assert row["status"] == "fail" and all(i in row["detail"] for i in ITEMS), row
@@ -230,8 +212,6 @@ def test_dcj_28_person_ticks_item_from_declared_approvers(tmp_path):
         assert code == 2, out + err
         assert manifest_file(root).read_bytes() == before
     _ok(_approve_check(root, "jed72"))
-    _ok(render(root))
-    assert any("ticked by jed72" in x and "dod-no-lint-errors" in x for x in _dod_block(root))
     # A project that declares no approvers: its owner may tick the item.
     owner_only = _issue(tmp_path / "owner", layer={"schema": 1, "owner": "jed72"})
     code, out, err = _approve_check(owner_only, "alex")
@@ -246,10 +226,9 @@ def test_dcj_29_resolved_follow_up_counts_as_met(tmp_path):
     _record_all(root)
     for fu in ("FU-3", "FU-4"):
         _ok(run(root, "follow-up", "resolve", "--issue", SLUG, fu))
-    lines = _dod_block(root)
-    assert lines[0] == "Definition of Done: 7 of 7 met", lines[0]
-    joined = "\n".join(lines)
-    assert "met, FU-3 resolved" in joined and "met, FU-4 resolved" in joined
+    _, report = _report(root)
+    row = _row(report, "dod-evidence-typed")
+    assert row["status"] == "pass" and "all 7" in row["detail"], row
 
 
 # --- DCJ-30 -----------------------------------------------------------------
@@ -258,14 +237,12 @@ def test_dcj_30_nothing_to_check_before_report_written(tmp_path):
     root = sup.project(tmp_path / "regular")
     (Path(root) / DOCS / "verification-report.md").unlink()     # not written at implement
     sup.base.edit(root, current_phase="implement")
-    entry = next(a for a in manifest(root)["artifacts"] if a["kind"] == "verification-report")
-    assert not entry.get("path")
+    # 9.0.0 registers no document (ADR-091), so the issue holds no entry for the report.
+    assert "artifacts" not in manifest(root)
     _, report = _report(root)
     assert _row(report, "dod-evidence-typed")["status"] == "nothing-to-check"
     quick = sup.project(tmp_path / "quick", assessment={"size": "small", "risk": "contained"})
     (Path(quick) / DOCS / "verification-report.md").unlink(missing_ok=True)
-    kinds = {a["kind"] for a in manifest(quick).get("artifacts") or []}
-    assert "verification-report" not in kinds, kinds
     _, report = _report(quick)
     assert _row(report, "dod-evidence-typed")["status"] == "nothing-to-check"
 
@@ -294,7 +271,7 @@ def test_dcj_31_cross_issue_follow_up_still_blocks(tmp_path):
 
 # --- DCJ-32 -----------------------------------------------------------------
 
-def test_dcj_32_dor_block_and_stage_lists_read_records(tmp_path):
+def test_dcj_32_the_stage_lists_read_records(tmp_path):
     root = sup.project(tmp_path, compass_yml=ON, assessment=SPEC)
     assert manifest(root)["delivery_approach"] == "full"
     write_doc(root, "requirements-review", "# RR\n\n" + block("dor"))
@@ -302,10 +279,6 @@ def test_dcj_32_dor_block_and_stage_lists_read_records(tmp_path):
     for item in READY[:-1]:
         _ok(sup.base.approve(root, "--check", item, approver="jed72", role="maintainer",
                              scope="ready"))
-    _ok(render(root))
-    lines = _dod_block(root, "dor", "requirements-review")
-    assert lines[0] == "Definition of Ready: 6 of 7 met, 1 open", lines[0]
-    assert len([x for x in lines[1:] if x.strip()]) == 7
     _, report = _report(root)
     rows = {c["name"]: c for c in report["checks"] if c["guardrail"] == "stage:plan:entry"}
     assert rows["dor-approach-still-fits"]["status"] == "fail"
@@ -315,10 +288,10 @@ def test_dcj_32_dor_block_and_stage_lists_read_records(tmp_path):
 
 # --- DCJ-33 -----------------------------------------------------------------
 
-def test_dcj_33_blocks_list_configured_items(tmp_path):
+def test_dcj_33_the_check_lists_the_configured_items(tmp_path):
     # The stage `verify` is locked, so removing an item needs a waiver on the entry. A project
     # waiver stands in for the issue layer: the issue layer's waiver needs an approval record
-    # that names it, and the blocks read the same resolved list either way.
+    # that names it, and the check reads the same resolved list either way.
     layer = {**LAYER,
              "checks": {**LAYER["checks"],
                         "dod-perf-budget": {"statement": "Performance stays within budget.",
@@ -331,44 +304,13 @@ def test_dcj_33_blocks_list_configured_items(tmp_path):
     for capability in (True, False):
         folder = tmp_path / ("on" if capability else "off")
         root = _issue(folder, layer={**layer, "capabilities": {"entry-exit-evaluation": capability}})
-        _ok(render(root))
-        lines = _dod_block(root)
-        listed = [i for i in ITEMS + ["dod-perf-budget"] if any(i in x for x in lines[1:])]
-        assert len(listed) == 7 and "dod-perf-budget" in listed, listed
-        assert "dod-coverage-floor" not in listed
-        assert lines[0] == "Definition of Done: 0 of 7 met, 7 open"
+        _, report = _report(root)
+        detail = _row(report, "dod-evidence-typed")["detail"]
+        listed = [i for i in ITEMS + ["dod-perf-budget"] if f"{i} is open" in detail]
+        assert len(listed) == 7 and "dod-perf-budget" in listed, detail
+        assert "dod-coverage-floor" not in detail
 
 
 # --- DCJ-34 -----------------------------------------------------------------
 
-STATE_TABLES = {
-    "acceptance-criteria": ["| Traceability id | Serves intent | Has a failing test"],
-    "verification-report": ["| Scenario id | Title | Result |", "| Record | What it covers |",
-                            "| Gate | Required by | Status |", "| Failure mode | Why no scenario",
-                            "**Every scenario passes**", "**TDD suite green**"],
-    "requirements-review": ["**Summary is filled**", "**Delivery approach still fits**"],
-}
-BLOCKS = {
-    "acceptance-criteria": ["coverage"],
-    "verification-report": ["coverage", "evidence", "gates", "decisions-taken", "dod"],
-    "requirements-review": ["dor"],
-}
 
-
-def test_dcj_34_templates_carry_blocks_not_state_tables(tmp_path):
-    root = sup.project(tmp_path, assessment=SPEC)
-    for kind, kinds in BLOCKS.items():
-        out = _ok(run(root, "issue", "template", "show", kind, "--issue", SLUG))
-        from compass_pkg import rendered_blocks as rb
-        found = rb.parse(out, kind)
-        assert [b.kind for b in found.blocks] == kinds or set(kinds) <= {b.kind for b in found.blocks}, \
-            (kind, [b.kind for b in found.blocks])
-        for block_ in found.blocks:
-            if block_.kind == "document-header":
-                # The header block holds the kind's stage, owner and reader, and a
-                # placeholder for each fact the issue's records give.
-                continue
-            assert block_.end == block_.start + 1, "a block is empty between its markers"
-        for table in STATE_TABLES[kind]:
-            assert table not in out, (kind, table)
-        assert "(evidence: EV-" not in out and "(follow-up: FU-" not in out, kind

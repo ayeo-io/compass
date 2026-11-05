@@ -130,7 +130,7 @@ REFUSALS: dict[str, dict[str, str]] = {
     },
     "no-delivery-approach": {
         "what": "this edit",
-        "why": "issue '{slug}' has no delivery-approach.md - its "
+        "why": "issue '{slug}' has no delivery approach in its manifest - its "
                "assessment did not finish.",
         "fix": "run /compass:assess.",
     },
@@ -219,9 +219,17 @@ REFUSALS: dict[str, dict[str, str]] = {
                "--checkpoint {stage} --approver <you> --role <role>, for each "
                "stage named, then ship again.",
     },
+    # The landing check of `compass ship-commit` (manifest._refuse_open_definition_of_done,
+    # ADR-091): `dod-evidence-typed` failed, so the Definition of Done has an open item.
+    "definition-of-done-open": {
+        "what": "landing of issue '{slug}'",
+        "why": "the check dod-evidence-typed failed: {detail}",
+        "fix": "record each open item with --meets, --defers or compass evidence "
+               "approve --check, then ship again.",
+    },
     # The release-line refusals (release_line.py, ADR-065): a landing of an issue
-    # that owes a line and has none, and a line the living spec would read as an
-    # issue heading. `compass acceptance record` gives the first for a blank line.
+    # that owes a line and has none, and a line the release notes would print as a
+    # heading. `compass acceptance record` gives the first for a blank line.
     "release-line-missing": {
         "what": "landing of issue '{slug}'",
         "why": "issue '{slug}' has no release line, and its approach owes one: a "
@@ -229,29 +237,11 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "give it with --release-note \"<text written for a user>\", then "
                "run the command again.",
     },
-    # A landing of an issue whose documents earned an artifact rule its recorded
-    # approach does not hold (documents_present.py, ADR-070): a positioning.md
-    # written after the issue was assessed, so verify.claims is missing.
-    "artifact-rule-not-applied": {
-        "what": "landing of issue '{slug}'",
-        "why": "{documents} is on disk, so {rules} applies, but the recorded approach "
-               "was evaluated before the document was there.",
-        "fix": "run compass approach evaluate --issue {slug} --write, pass any gate it "
-               "adds, then ship again.",
-    },
-    # A landing of an issue whose design holds a decision scoped `project` that no
-    # record in architecture/decisions/ names (decision_scope.py, ADR-072).
-    "project-decision-unrecorded": {
-        "what": "landing of issue '{slug}'",
-        "why": "technical-design.md scopes {decisions} to the whole project, and no "
-               "record in architecture/decisions/ names {it}.",
-        "fix": "write {path} with compass adr new, cite its id under the decision, then "
-               "ship again.",
-    },
     "release-line-heading": {
         "what": "the release line of issue '{slug}'",
-        "why": "it starts with #, and the living spec reads a line such as "
-               "### <slug> (completed <date>) as one of its issue headings.",
+        "why": "it starts with #, and compass release notes prints the line under a "
+               "heading such as ### <slug> (completed <date>), where it would read as a "
+               "heading of its own.",
         "fix": "write the release line as plain text that does not start with #, "
                "then run the command again.",
     },

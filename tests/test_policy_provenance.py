@@ -27,7 +27,6 @@ import yaml
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 GOVERNANCE = ROOT / "governance"
-ROUTE_TEMPLATE = ROOT / "templates" / "delivery-approach.md"
 
 READINGS = ["--assessment", "risk=cross-cutting", "--assessment",
             "familiarity=brownfield-mapped", "--assessment", "size=standard",
@@ -44,7 +43,7 @@ def _project(tmp_path, stale=False):
         d = yaml.safe_load(rp.read_text())
         rg = d["routing_guardrails"]
         rg["floors"] = [f for f in rg["floors"]
-                        if f["id"] not in ("RP-REQUIRE-001", "RP-REQUIRE-003")]
+                        if f["id"] not in ("RP-REQUIRE-003", "RP-REQUIRE-004")]
         d["version"] = "1.0.0"
         rp.write_text(yaml.safe_dump(d, sort_keys=False))
     return proj
@@ -87,20 +86,5 @@ def test_trc_c2_a_drifted_projects_route_output_should_say_so(tmp_path):
         f"the output does not say the project's policy lacks rules:\n{out}")
 
 
-# ---------------------------------------------------------------------------
-# `TRC-C3` - the delivery-approach template carries a provenance field
-# ---------------------------------------------------------------------------
-
-def test_trc_c3_the_route_template_should_carry_a_provenance_field():
-    text = ROUTE_TEMPLATE.read_text(encoding="utf-8")
-    assert re.search(r"provenance", text, re.I), (
-        "templates/delivery-approach.md has no provenance field, so the audit trail cannot "
-        "record which policy produced the route")
-    section = text[text.lower().index("provenance"):][:1200]
-    assert "routing-policy.yml" in section, (
-        "the provenance field does not name the policy file")
-    assert re.search(r"version", section, re.I), (
-        "the provenance field does not record a version")
-    assert re.search(r"drift|missing", section, re.I), (
-        "the provenance field does not tell the author to record drift the CLI "
-        "reported")
+# `TRC-C3` read the delivery-approach template, which 9.0.0 deleted (ADR-091).
+# The issue's stored generation records which policy produced the approach.

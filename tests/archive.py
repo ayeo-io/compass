@@ -80,11 +80,10 @@ def sample_root():
 
 
 def checkable_root():
-    """The sample as an adopter has it after `compass issue migrate --apply --i-have-a-copy`
-    and `compass issue render --all`: the records the Definition of Done reads, the issue
-    pages and the project index. `compass check` fails an issue that has no page
-    (`rendered-blocks-current`) and an unrecorded Definition of Done item
-    (`dod-evidence-typed`), so a test that runs the check reads this copy. It is a copy of
+    """The sample as an adopter has it after `compass issue migrate --apply --i-have-a-copy`:
+    the records the Definition of Done reads. `compass check` fails an unrecorded
+    Definition of Done item (`dod-evidence-typed`), so a test that runs the check reads
+    this copy. Before 9.0.0 the copy was also rendered (ADR-091 removed the render). It is a copy of
     `sample_root()`, which stays as recorded for the contracts that read it. With the
     switch on it is this checkout's own archive, which a release run migrates itself."""
     if full_archive():
@@ -99,7 +98,7 @@ def checkable_root():
     cli = str(REPO_ROOT / "cli" / "compass")
     env = dict(os.environ, CLAUDE_PROJECT_DIR=str(staging))
     for argv in (["issue", "migrate", str(staging / ".compass" / "work"), "--apply",
-                  "--i-have-a-copy"], ["issue", "render", "--all"]):
+                  "--i-have-a-copy"],):
         done = subprocess.run([sys.executable, cli, *argv], cwd=staging, env=env,
                               capture_output=True, text=True, timeout=600)
         if done.returncode != 0:

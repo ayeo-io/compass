@@ -32,8 +32,8 @@ from compass_pkg.stable_ids import APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUIC
 from compass_pkg.core import (CompassError, _stage_key_renames, canonical_shape,
                               reading_matches)
 from compass_pkg.loop_ceilings import CEILINGS
-from compass_pkg.routing import (RoutingConflict, evaluate_route, prepare_policy,
-                                 route_checkpoints)
+from compass_pkg.routing import (REMOVED_GATES, RoutingConflict, evaluate_route,
+                                 prepare_policy, route_checkpoints)
 
 # The effect names the evaluator reads, from the catalogue spelling (ADR-041).
 # A test holds this equal to the inverse of the table the legacy adapter
@@ -571,8 +571,8 @@ def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
     # What a `when` of a check or a gate reads: the assessment and whether the
     # route ships.
     reading = listing_assessment(assessment, approach)
-    in_force = sorted(set(review) | set(_guardrail_gates(
-        gates, approach.get("ships", True), reading, orders)))
+    in_force = sorted((set(review) | set(_guardrail_gates(
+        gates, approach.get("ships", True), reading, orders))) - REMOVED_GATES.keys())
 
     entry, exit_ = {}, {}
     for stage, body in (config.get("stages") or {}).items():

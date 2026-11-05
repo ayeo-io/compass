@@ -100,8 +100,8 @@ def test_pl_1_a_compass_yml_with_no_schema_and_no_old_file_is_read(tmp_path):
 
 
 def test_pl_1_compass_ci_still_calls_the_legacy_function():
-    from compass_pkg import analyze, governance
-    assert analyze.cmd_policy_lint is governance.cmd_policy_lint
+    from compass_pkg import ci_cmd, governance
+    assert ci_cmd.cmd_policy_lint is governance.cmd_policy_lint
 
 
 # --- the small parent and the layer builders -------------------------------------
@@ -393,9 +393,12 @@ def test_pl_4_a_name_or_alias_collision_is_reported():
 def test_pl_4_a_dependency_cycle_between_artifacts_is_reported_once():
     fields = {"stage": "define", "owner": "planner", "audience": "A reader decides.",
               "stands_for": "a-document", "sections": {"thorough": ["One"]}}
-    report = _lint(project={"artifacts": {
+    # A project layer can no longer change the catalogue since 9.0.0 (ADR-091); a
+    # git parent still can.
+    team = _layer({"schema": 1, "artifacts": {
         "a": {"file": "a.md", "depends_on": ["b"], **fields},
-        "b": {"file": "b.md", "depends_on": ["a"], **fields}}})
+        "b": {"file": "b.md", "depends_on": ["a"], **fields}}}, "parent")
+    report = _lint(extra_parents=(team,))
     found = _one(report, "M-CYCLE")
     assert found.path == "artifacts.a.depends_on"
     assert "a -> b -> a" in found.message
@@ -1025,7 +1028,7 @@ def test_pl_11_each_field_has_the_pinned_keys_and_the_first_one_is_known(tmp_pat
     _, document, _ = _effective_json(_project(tmp_path, {"schema": 1}))
     assert all(list(f) == FIELD_KEYS for f in document["fields"])
     assert document["fields"][0] == {
-        "path": "capabilities.artifact-freshness", "value": False,
+        "path": "capabilities.entry-exit-evaluation", "value": False,
         "source": "default@8.0.0", "op": "add", "waiver": None, "note": None}
 
 

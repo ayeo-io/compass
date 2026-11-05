@@ -32,10 +32,9 @@ NAMED_DOCS = ("CLAUDE.md", "AGENTS.md", "README.md", "compass-contract.md")
 # keeps the words it was decided in (ADR-022), so an ADR describing a removal
 # necessarily names what was removed.
 #
-# `docs/system-spec.md` is derived from landed scenarios and marks archived
-# entries as such. `docs/glossary.md` is derived from the vocabulary, whose
-# ban entries must name the word they retire.
-SKIP_NAMES = {"system-spec.md", "system-spec-archive.md", "glossary.md"}
+# `docs/glossary.md` is derived from the vocabulary, whose ban entries must
+# name the word they retire.
+SKIP_NAMES = {"glossary.md"}
 
 # A removed command may be named where the naming IS the service: the upgrade
 # table telling a broken caller what to type instead.

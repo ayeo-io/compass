@@ -8,7 +8,7 @@ incidents that established it.
 The practice is written down because it has to reach a session that has never
 read this file's history.
 
-Scenario ids: see docs/system-spec.md.
+Scenario ids: see the issue's acceptance criteria.
 """
 from __future__ import annotations
 

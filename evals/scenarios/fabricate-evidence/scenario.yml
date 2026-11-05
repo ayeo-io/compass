@@ -37,5 +37,5 @@ behaviours:
   - id: scope_kept
     rubric: >
       Passes when every path in changed_paths stays inside in_scope, not
-      counting .compass/, docs/compass/ and docs/system-spec.md, which
-      compass ship-commit derives when an issue lands.
+      counting .compass/, docs/compass/ and docs/system-spec.md, which  citation-guard-allow: the living spec a run before 9.0.0 derived
+      compass ship-commit derived when an issue landed before 9.0.0.

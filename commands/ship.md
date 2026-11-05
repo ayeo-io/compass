@@ -11,9 +11,9 @@ unsettled follow-up is an open issue - ship refuses to close it.
 
 ## Setup
 
-- Read `delivery-approach.md` for the orchestration and the list of owed
+- Run `compass approach show` for the orchestration and the list of owed
   follow-ups.
-- Read `verification-report.md` - shipping does not run on unverified work.
+- Run `compass check` - shipping does not run on unverified work.
 
 ## Spike note
 
@@ -49,11 +49,10 @@ for delivery work; on a spike, follow the graduate-or-discard step in
    (`positioning.md` is present), draft the release notes here
    too - pulled from `positioning.md`, so every line in the notes is already
    a scenario-backed claim. `product-marketer` owns their wording.
-4. **Settle owed follow-ups.** Check `delivery-approach.md`'s de-scope
-   ledger, `manifest.yml`'s `follow_ups:` and `claims:` lists, and the
+4. **Settle owed follow-ups.** Check `manifest.yml`'s `follow_ups:`,
+   `failure_modes_descoped:` and `claims:` lists, and the
    approach's standing obligations:
-   - **Hotfix follow-up** (mandatory): `delivery-approach.md` completed
-     properly (not the urgent stub); the reproduction test promoted into a
+   - **Hotfix follow-up** (mandatory): the reproduction test promoted into a
      real Given/When/Then scenario in `acceptance-criteria.md` *and*
      `manifest.yml`'s `scenarios:`, traceable to the defect; a root-cause line
      in the `devlog.md`. Mark the matching `follow_ups:` entry `paid` -
@@ -61,9 +60,8 @@ for delivery work; on a spike, follow the graduate-or-discard step in
    - **Marketer claims gate** (when `positioning.md` is present):
      every claim in `manifest.yml`'s `claims:` traces to a passing scenario id.
      Confirm it from the marketer's perspective; `compass check`'s
-     `claim-traces-to-scenario` check is the mechanical check behind it. This gate
-     blocks shipping per the routing policy's artifact rule RP-ART-001.
-   - Any other de-scoped artifact the ledger marked as owed.
+     `claim-traces-to-scenario` check is the mechanical check behind it.
+   - Any other follow-up the approach marked as owed.
 5. **Run `compass check` as the final mechanical gate.** It runs every
    `guardrails.yml` check against `manifest.yml` and `evidence/` - suite
    passed, traceability holds, every `pass` gate has evidence, no owed
@@ -73,9 +71,9 @@ for delivery work; on a spike, follow the graduate-or-discard step in
    the mechanical check before shipping.
 
    **Typed Definition of Done (evidence, not assertion):** `compass check`
-   also parses the `### Definition of Done` section of
-   `verification-report.md` and enforces the inline-tag rule. Every
-   unchecked DoD box must carry one of:
+   also judges the Definition of Done. On an issue created before 9.0.0 it
+   parses the `### Definition of Done` section of the issue's verification
+   report, where every unchecked box must carry one of:
 
    - `- [ ] (evidence: EV-<id>) <description>` - passes if `EV-<id>` is in
      `manifest.yml`'s evidence registry with an accepted type (`test-run`,
@@ -91,6 +89,10 @@ for delivery work; on a spike, follow the graduate-or-discard step in
    - `- [ ] <bare description>` - **fails**. Narrative notes in `devlog.md`
      (e.g. "USER TO APPLY") never clear a DoD item - evidence, not
      assertion.
+
+   On a newer issue there is no report: each item is met by a record
+   (`--meets`), a person's approval (`compass evidence approve --check`) or a
+   follow-up that defers it (`--defers`).
 
    Cross-issue blocking: if another issue's `follow_ups:` has `target_task`
    pointing at the issue being shipped, and that follow-up is still
@@ -140,7 +142,7 @@ for delivery work; on a spike, follow the graduate-or-discard step in
 - living docs are updated;
 - `compass check` passes (its output recorded and linked);
 - **every owed follow-up is settled** - no unsettled hotfix follow-up, no
-  unbacked marketing claim, no de-scoped artifact left owed.
+  unbacked marketing claim, no de-scoped work left owed.
 
 If a follow-up cannot be completed now, the issue stays open and
 `/compass:status` keeps flagging it. A deferred follow-up must be settled

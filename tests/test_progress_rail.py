@@ -31,7 +31,10 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 # The golden says "collapsed in this approach" where it said "collapsed on this
 # route", because "route" is a verb only (ADR-044). The capture was edited to
-# match, word for word.
+# match, word for word. "feature/no-approach-record" exited 2 with nothing on
+# stdout when delivery-approach.md was missing. 9.0.0 reads the approach from the
+# manifest (ADR-091), so that issue reads as "feature/fresh" does; the capture
+# was edited to match.
 GOLDEN = ROOT / "tests" / "fixtures" / "next-golden.json"
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 

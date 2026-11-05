@@ -34,11 +34,17 @@ FILLED_FIELDS = ("stage", "owner", "audience", "stands_for", "sections", "depend
 _SHIPPED = {}
 
 
+#: The last shipped preset that declares the catalogue. The live default declares
+#: none since 9.0.0 (ADR-091); a stored generation's entries are still filled
+#: from the catalogue it was stored beside.
+CATALOGUE_PRESET = "default@7"
+
+
 def shipped():
-    """The shipped default's artifacts catalogue, or {} when it cannot be read.
+    """The last shipped artifacts catalogue, or {} when it cannot be read.
     Read once per process."""
     if "artifacts" not in _SHIPPED:
-        path = os.path.join(FRAMEWORK_ROOT, "governance", "presets", "default",
+        path = os.path.join(FRAMEWORK_ROOT, "governance", "presets", CATALOGUE_PRESET,
                             "artifacts.yml")
         try:
             body = (load_yaml(path) or {}).get("artifacts")

@@ -26,9 +26,8 @@
 #       utilize
 #
 #   Fenced code blocks and blockquotes are blanked (not dropped, so reported
-#   line numbers stay true to the file) before matching - the same rule
-#   `compass plan lint` uses, because every document that explains this
-#   check has to quote the strings it looks for.
+#   line numbers stay true to the file) before matching, because every
+#   document that explains this check has to quote the strings it looks for.
 #
 # EXIT CODE
 #   0. Always - including when there is no current issue to resolve, and
@@ -59,8 +58,7 @@ def _scannable_lines(text):
     """Yield (lineno, text), with fenced code blocks and blockquotes blanked.
 
     Blanked rather than dropped, so a reported line number still points the
-    reader at the right line. Borrowed from compass plan lint's
-    _plan_lint_scannable in cli/compass_pkg/policy.py.
+    reader at the right line.
     """
     in_fence = False
     for lineno, line in enumerate(text.splitlines(), 1):

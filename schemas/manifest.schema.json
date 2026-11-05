@@ -110,7 +110,7 @@
     },
     "land_timestamp": {
       "type": "string",
-      "description": "Optional. ISO 8601 timestamp of when the issue was landed. Written by `compass ship-commit` alongside status: landed. Used as the primary sort key for the living spec derivation order (ADR-008 §3)."
+      "description": "Optional. ISO 8601 timestamp of when the issue was landed. Written by `compass ship-commit` alongside status: landed. Used as the primary sort key when landed issues are listed, as `compass release notes` lists them."
     },
     "started_at": {
       "type": "string",
@@ -1235,7 +1235,7 @@
           },
           "upstream": {
             "type": "object",
-            "description": "Optional. The digest of each artifact this document depends on, as it was when the document was written. The document is stale when one of them differs now. Only `compass issue artifact set` writes it. The stale-document refusals need the capability `artifact-freshness` on.",
+            "description": "Optional, not read since 9.0.0 removed artifact freshness (ADR-091). The digest of each artifact this document depended on, as it was when the document was written. A manifest written before 9.0.0 can hold it",
             "additionalProperties": {
               "type": "string"
             }

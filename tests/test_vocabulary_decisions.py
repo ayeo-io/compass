@@ -699,8 +699,6 @@ HOOK_OLD_WORD_RE = re.compile(
 RETIRED_NAME_WORDS = ("build", "phase")
 
 RETIRED_NAME_ALLOW = (
-    ("analyze.py", '"build": STAGE_IMPLEMENT',
-     "the table that reads a run stage written before the rename"),
     ("core.py", '"build": "implement"',
      "the table of retired stage names that the loader reads through"),
     ("core.py", 'for key in ("phase", "stage"):',

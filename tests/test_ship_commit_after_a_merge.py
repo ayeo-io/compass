@@ -4,8 +4,9 @@ or a commit that only re-derives the living spec.
 With nothing staged, `ship-commit` lands at HEAD after judging what HEAD
 added against the issue's declared scope. It compared HEAD with its first
 parent only, so a tip that merged another branch listed everything that
-branch brought, and a tip that only re-derived `docs/system-spec.md` listed
-the living spec, which `ship-commit` writes itself. Both were refused.
+branch brought, and a tip that only re-derived the living spec listed it, which `ship-commit` wrote itself before 9.0.0. Both were
+refused. 9.0.0 derives no living spec (ADR-091), but a branch made before
+then can still hold such a commit at its tip.
 
 The check now judges the issue's own commits along the first parent: a
 living-spec-only commit is passed over, a merge whose merged-in commits
@@ -66,7 +67,8 @@ def _side_branch(root, files, on_base=True):
 
 
 def test_trc001_a_living_spec_commit_at_the_tip_lands(repo):
-    """The tip re-derives docs/system-spec.md only: it lands at HEAD."""
+    """The tip re-derives the living spec only, as a branch made before
+    9.0.0 can hold: it lands at HEAD."""
     _issue_commit(repo)
     (repo / "docs").mkdir()
     (repo / "docs" / "system-spec.md").write_text("# System spec\n")

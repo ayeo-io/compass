@@ -56,28 +56,22 @@ what `/compass:init` offers separately.
 3. **Write `positioning.md` and `launch-readiness.md`.**
 
    **Where it goes.** `docs/compass/<created>-<issue-slug>/positioning.md`, where the
-   date is the manifest's `created:` field - not today's. Then register it:
-   `compass issue artifact set positioning --status draft --path <that path>`. The CLI
-   refuses a path outside the project, so the record is checked
-   rather than claimed. If you had to create `docs/compass/`, **say so in one
+   date is the manifest's `created:` field - not today's.
+   `launch-readiness.md` goes to the same directory. Compass does not register
+   or check either file. If you had to create `docs/compass/`, **say so in one
    line** - if a directory appears and nobody says so, someone can delete it
    by hand or commit it by mistake.
-   `launch-readiness.md` goes to the same directory and is registered the
-   same way, with `--path` naming its own file.
 
 ## How this shapes the delivery approach
 
-When `positioning.md` is present, the artifact rule RP-ART-001 (see the
-routing policy) asks for `launch-readiness.md`, adds `verify.claims`, and
-**blocks shipping** until every claim in `positioning.md` traces to a
-passing scenario. It applies on every delivery approach.
-
-On an issue already assessed, re-assess after writing `positioning.md` so
-`verify.claims` joins the gate set.
+Compass does not read which documents an issue has on disk, so
+`positioning.md` adds no gate to the approach (ADR-091). Each claim the
+manifest's `claims:` list holds is checked by `claim-traces-to-scenario`: it
+must trace to a passing scenario before the issue ships.
 
 ## Gate
 
 `positioning.md` and `launch-readiness.md` exist; every claim names a
 backing scenario; voice is consistent with the voice & positioning
-strategies in force. The claims gate is then carried into
-`/compass:verify` and enforced at `/compass:ship`.
+strategies in force. `/compass:verify` reviews the claims from the
+marketer's perspective, and `/compass:ship` settles them.

@@ -1,6 +1,6 @@
 # Issue dependencies
 
-An issue can record the issues it waits for. While it is at the implement stage and a dependency has not reached the agreed point, the pre-tool hook refuses production-code edits, and `compass next`, the board and the issue page say what it waits for. This document owns the `depends_on` shape, the rule that derives the block, the verbs and what each reader shows. The decision behind it is [ADR-062](../architecture/decisions/ADR-062-a-dependency-is-a-manifest-field-and-the-block-is-derived.md).
+An issue can record the issues it waits for. While it is at the implement stage and a dependency has not reached the agreed point, the pre-tool hook refuses production-code edits, and `compass next` and the board say what it waits for. This document owns the `depends_on` shape, the rule that derives the block, the verbs and what each reader shows. The decision behind it is [ADR-062](../architecture/decisions/ADR-062-a-dependency-is-a-manifest-field-and-the-block-is-derived.md).
 
 Nothing stores the block. Every reader derives it from the records each time it reads.
 
@@ -19,7 +19,7 @@ An issue's manifest holds an optional list:
 
 `schemas/manifest.schema.json` (with `additionalProperties: false` on an entry) and `schemas/manifest.reference.yml` state the same shape. A test compares the key names in the schema, the reference manifest and this document, so a change of shape fails until all three agree.
 
-The technical design's Risks and dependencies section holds a `dependencies` block, which `compass issue render` writes from this shape and no other. A renderer calls `lifecycle.entries` and `lifecycle.judge` rather than reading the key itself, so it shows the same words as the board.
+A reader calls `lifecycle.entries` and `lifecycle.judge` rather than reading the key itself, so `compass next`, the board and `ship-commit` show the same words.
 
 ## The `until` values
 
@@ -37,7 +37,7 @@ The technical design's Risks and dependencies section holds a `dependencies` blo
 
 ## When the block counts
 
-The block counts only while the waiting issue is at the implement stage, as `compass next` names it, and is not on hold and not done. An issue at an earlier stage is not blocked, but the board card still says what it waits for. The stored `blocked` flag keeps its own rule (in-progress or in-review only, ADR-045) and is not changed. Where both apply, the board and the issue page show the stored reason first.
+The block counts only while the waiting issue is at the implement stage, as `compass next` names it, and is not on hold and not done. An issue at an earlier stage is not blocked, but the board card still says what it waits for. The stored `blocked` flag keeps its own rule (in-progress or in-review only, ADR-045) and is not changed. Where both apply, the board shows the stored reason first.
 
 ## What the hook reads
 
@@ -92,8 +92,6 @@ Both re-render the waiting issue's page and the pages of the issues its manifest
 | The board card | The line "waits for b" for an open issue with an unmet dependency whose issue was read, and the blocked flag with the wait while the issue is at implement. |
 | The board panel | A Dependencies part: for each entry the slug, the reason, `until <value>`, the state, and one word - `met`, `waiting`, `not found` or `unreadable`. |
 | `compass flow --json` | Every row holds `depends_on`: a list of objects with the keys `issue`, `reason`, `until`, `state`, `stage` and `met`. The list is empty for an issue with none. A dependency that was not read has `state` and `stage` null and `met` false. |
-| The design's `dependencies` block | In Risks and dependencies, one line for each entry: `- <slug> - <reason> - until <until> - <word>`, with the board panel's word (`met`, `waiting`, `not found` or `unreadable`). `None` when there are no entries. `compass issue depends add` and `remove` render it again, and a stale block is an advisory failure of `rendered-blocks-current`. See `docs/rendered-blocks.md`. |
-| The issue page | The header adds `Blocked: waits for ...` on its own line while the block counts. A `depends on` line in the `related` block ends with ` - met` or the wait. |
 | `ship-commit` | After a landing, "these issues were waiting for b:" and a line for each open issue that names it. |
 
 ## Code
@@ -107,4 +105,4 @@ The dependency functions are in `cli/compass_pkg/lifecycle.py`:
 - `lifecycle.checkout_reader` and `lifecycle.mapping_reader` are the readers: this checkout uncached, or manifests a caller already parsed;
 - `lifecycle.hook_lines` is what the hook's dependency reader prints.
 
-The verbs, the cycle walk, the lint lines and the `ship-commit` lines are in `cli/compass_pkg/issue_depends.py`. The board page and the issue page are `board_page.py` and `issue_page.py`; the board rows come from `flow.board`. The board and the page read the copies they already parsed, so a planted parse-cache entry can mislead them but never the hook or `compass next`.
+The verbs, the cycle walk, the lint lines and the `ship-commit` lines are in `cli/compass_pkg/issue_depends.py`. The board page is `board_page.py`; the board rows come from `flow.board`. The board reads the copies it already parsed, so a planted parse-cache entry can mislead it but never the hook or `compass next`.

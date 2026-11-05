@@ -230,25 +230,3 @@ def test_trc_d2_waiving_a_framework_check_by_name_should_be_accepted(tmp_path):
         f"a legitimate waiver for a framework CHECK was rejected as naming a "
         f"nonexistent rule:\n{r.stdout}")
     assert r.returncode == 0, f"a valid waiver failed the lint:\n{r.stdout}"
-
-
-def test_trc_d3_normalisation_should_not_rewrite_unrelated_content(tmp_path):
-    sys.path.insert(0, str(ROOT / "cli"))
-    try:
-        from compass_pkg import flow
-    finally:
-        sys.path.remove(str(ROOT / "cli"))
-
-    proj = tmp_path / "n"
-    (proj / "docs").mkdir(parents=True)
-    tdir = proj / ".compass" / "work" / "t"
-    tdir.mkdir(parents=True)
-    (tdir / "manifest.yml").write_text(_task("t", "standard", "2026-01-02T00:00:00Z")
-        .replace("scenarios: []",
-                 "scenarios:\n- {id: SCN-1, title: 'budget  -  actual variance "
-                 "is reported', intent: INT-1, tests: ['t.py::a']}"))
-    flow.derive_system_spec(str(proj))
-    text = (proj / "docs" / "system-spec.md").read_text()
-    assert "budget  -  actual variance" in text, (
-        "a title containing a padded hyphen and NO em dash was rewritten by the "
-        f"house-style pass:\n{text[:600]}")

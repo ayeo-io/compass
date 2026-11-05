@@ -27,23 +27,18 @@ from compass_pkg.outer_loop import (
 from compass_pkg.support_code import _check_acceptance_support_present
 from compass_pkg.isolation import _check_isolation_proven
 from compass_pkg.layering import _check_layering_test_passed
-from compass_pkg.artifact_status import _check_artifacts_approved
 from compass_pkg.binding import _check_evidence_matches_tree
-from compass_pkg.borrowed_docs import _check_borrowed_documents_answered
 from compass_pkg.checks import (
     _check_backfills_paid, _check_changed_code_traces, _check_claim_traces,
-    _check_coherence_check_passes, _check_command_passes,
-    _check_declared_tests_resolve, _check_dod_evidence_typed,
+    _check_command_passes, _check_declared_tests_resolve, _check_dod_evidence_typed,
     _check_evidence_identity_matches, _check_gate_evidence,
     _check_human_approval, _check_no_trusted_rerun,
     _check_scenario_has_id_and_intent, _check_scenarios_are_executable,
     _check_scenarios_have_tests, _check_spike_conclusion_present,
     _check_spike_no_production_changes, _check_suite_passed)
-from compass_pkg.design_size import _check_design_within_word_ceiling
 from compass_pkg.landed_by import _check_landed_by_resolves
 from compass_pkg.readiness_registry import READINESS  # noqa: F401  (re-exported)
-from compass_pkg.render_check_entry import _check_rendered_blocks_current
-from compass_pkg.section_checks import _check_contracts_declared, _check_nfr_rows_resolved
+from compass_pkg.section_checks import _check_nfr_rows_resolved
 
 CORPUS_ROOT = "tests/fixtures/impls"
 TIGHTER = ("higher", "lower", "none", "superset")
@@ -105,7 +100,10 @@ _ENTRIES = (
     _entry("gate-evidence-present", _check_gate_evidence),
     # 2.0.0: reads the manifest's item records, never the page (ADR-038: its verdict on a
 # page with a ticked box and no record changed from pass to fail).
-    _entry("dod-evidence-typed", _check_dod_evidence_typed, version="2.0.0"),
+    # 2.1.0: an issue created from 2026-11-04 is judged once every gate has passed, with
+    # no verification report; older issues keep the report rule, so the corpus verdicts
+    # hold (ADR-091).
+    _entry("dod-evidence-typed", _check_dod_evidence_typed, version="2.1.0"),
     # 1.1.0: counts only an approval given for guardrail `G5`, with the earlier rule as
     # the floor of a landed issue; the corpus verdicts hold, so the major stays (ADR-066).
     # 1.2.0: a record an `approval-withdrawal` names no longer counts while the issue is
@@ -114,7 +112,6 @@ _ENTRIES = (
     _entry("backfills-paid", _check_backfills_paid),
     _entry("spike-conclusion-present", _check_spike_conclusion_present),
     _entry("spike-no-production-changes", _check_spike_no_production_changes),
-    _entry("consistency-check-passes", _check_coherence_check_passes),
     _entry("no-trusted-rerun", _check_no_trusted_rerun),
     # A guardrail declares exactly one of `command` (a shell string) or
     # `script` (a file run with no shell); policy lint enforces that.
@@ -129,19 +126,7 @@ _ENTRIES = (
     # a record written before that keeps its changes_id reading, so the corpus
     # verdicts hold (ADR-089).
     _entry("evidence-matches-tree", _check_evidence_matches_tree, version="1.1.0"),
-    _entry("rendered-blocks-current", _check_rendered_blocks_current),
-    _entry("borrowed-documents-answered", _check_borrowed_documents_answered),
-    _entry("artifacts-approved", _check_artifacts_approved),
     _entry("nfr-rows-resolved", _check_nfr_rows_resolved),
-    # The trigger patterns are declared data a project layer can extend (ADR-033).
-    # Each entry makes the check run on more changes, so adding entries tightens
-    # the check and removing or replacing one needs a waiver (ADR-073).
-    _entry("contracts-declared", _check_contracts_declared,
-           params_spec={"trigger_paths": "list", "trigger_contents": "list"},
-           tighter={"trigger_paths": "superset", "trigger_contents": "superset"}),
-    # A lower factor refuses more designs, so lowering it tightens the check.
-    _entry("design-within-word-ceiling", _check_design_within_word_ceiling,
-           params_spec={"factor": "number"}, tighter={"factor": "lower"}),
     _entry("acceptance-applicability-agrees", _check_applicability_agrees),
     _entry("outer-loop-recorded", _check_outer_loop_recorded),
     _entry("acceptance-support-present", _check_acceptance_support_present),
@@ -174,9 +159,20 @@ class RemovedCheck:
 
 #: The framework-owned table of removed check ids. It is not configurable.
 REMOVED: dict[str, RemovedCheck] = {
-    "dashboard-current": RemovedCheck("7.0.0", "rendered-blocks-current"),
+    # 7.0.0 replaced it with `rendered-blocks-current`, which 9.0.0 removes in turn, so
+    # nothing replaces it now (ADR-091).
+    "dashboard-current": RemovedCheck("7.0.0", None),
     # 9.0.0 runs each issue in one session, so no run splits into subtasks (ADR-090).
     "multiagent-run-recorded": RemovedCheck("9.0.0", None),
+    # 9.0.0 removes `compass analyze`, so no consistency report is written (ADR-091).
+    "consistency-check-passes": RemovedCheck("9.0.0", None),
+    # 9.0.0 renders no block, issue page or project index (ADR-091).
+    "rendered-blocks-current": RemovedCheck("9.0.0", None),
+    # 9.0.0 keeps one issue document (ADR-091), so the checks of the others go.
+    "artifacts-approved": RemovedCheck("9.0.0", None),
+    "design-within-word-ceiling": RemovedCheck("9.0.0", None),
+    "contracts-declared": RemovedCheck("9.0.0", None),
+    "borrowed-documents-answered": RemovedCheck("9.0.0", None),
 }
 
 # `READINESS` (imported above) holds the readiness signal implementations

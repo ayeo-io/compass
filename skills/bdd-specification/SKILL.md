@@ -67,8 +67,8 @@ input classes and failure modes the brief implies that no scenario yet covers.
 Refine settles each implied failure mode with the person or descopes it: it
 becomes a scenario, a light one if need be, or is recorded with
 `compass scenario descope "<mode>" --reason "<why>"`. Implement adds no
-scenario the specification does not state. The verifier lists every recorded
-mode in the verification report, so nothing named is dropped silently.
+scenario the specification does not state. The verify stage names every recorded
+mode in its hand-off, so nothing named is dropped silently.
 
 - **Worked example, a rate limit.** "Limit search to 100 requests a minute"
   implies a client exactly at 100, a client over it, two clients sharing an
@@ -118,7 +118,7 @@ finding they can produce*.
 | **Who** | the spec-author, alone | spec-author plus reviewer; every role on the full approach |
 | **Cost** | minutes - four mechanical scans over one file | a stage; needs reading, and often a human decision |
 | **Finds** | placeholder, orphan-intent, untestable-`Then`, ambiguous-quantifier | contradictions between scenarios, gaps across the whole set, governance conflicts, ambiguities that need someone to *choose* |
-| **Output** | edits to `acceptance-criteria.md`, in place | `requirements-review.md` - a ledger with a resolution and an owner per entry |
+| **Output** | edits to `acceptance-criteria.md`, in place | a ledger with a resolution and an owner per entry, recorded as decisions |
 | **Delivery approaches** | every approach, including the quick fix | the regular approach and heavier; collapsed on quick fixes and hotfixes, skipped on spikes |
 
 The dividing line: **the self-review fixes what one person can see and
@@ -159,7 +159,7 @@ anyone builds from it.
 Walk it for:
 
 - **Contradictions** - two scenarios that cannot both hold.
-- **Gaps** - a stated outcome (or an `intent.md` success signal) with no scenario.
+- **Gaps** - a stated outcome (or a success signal in the Intent links) with no scenario.
 - **Untestable Thens** - outcomes that cannot be observed from outside.
 - **Ambiguous quantifiers** - "quickly", "most", "large" with no number.
 - **Governance conflicts** - scenarios that cross a guardrail (a project
@@ -167,8 +167,8 @@ Walk it for:
   an applicable strategy without a recorded reason. A guardrail conflict is a
   must-fix; a strategy departure is a note and a conversation.
 
-Record each ambiguity, its resolution, and who resolved it in
-`requirements-review.md`. Before the review is done:
+Record each ambiguity, its resolution, and who resolved it (`compass issue
+decision add` for one you resolved yourself). Before the review is done:
 - no ambiguity is left `open`: every entry is `resolved`;
 - `acceptance-criteria.md` reflects every resolution;
 - the non-engineering roles in play have reviewed (required at this stage on

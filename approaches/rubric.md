@@ -3,8 +3,8 @@
 Assess is the component that runs at the start of every issue. It reads three
 scored dimensions, two switches and any domain labels. It applies the routing
 rules in force (`compass policy show`; an unmigrated 5.x project runs on its
-own copied `governance/` until `compass policy migrate`), and writes
-`delivery-approach.md`. This file is its rubric. The `adaptive-routing`
+own copied `governance/` until `compass policy migrate`), and records the
+delivery approach in the manifest. This file is its rubric. The `adaptive-routing`
 skill is the procedural companion; this is the reference.
 
 Assess does not pick an approach from a list. Assess scores three dimensions
@@ -72,22 +72,19 @@ small change leans towards the hotfix shape (`RP-SHAPE-002`).
 The domain labels are an open list of tags, such as `auth`, `payments`,
 `personal-data` and `migrations`. They are not scored and need no
 justification. Those four raise the approach to at least full
-(`RP-FLOOR-003`), add the `verify.analyze` and `verify.architecture` gates
+(`RP-FLOOR-003`), add the `verify.architecture` gate
 and bring the guardrail 5 sign-off. Critical risk alone does not bring that
 sign-off.
 
 Role is not an assessment dimension. The product owner, product marketer,
-designer and QA are perspectives a session consults. The documents on disk
-bring the gates:
+designer and QA are perspectives a session consults. A document on disk
+brings no gate: Compass needs and checks only `acceptance-criteria.md`
+(ADR-091).
 
-| Document present | What it changes |
-|---|---|
-| `intent.md` | Blocks Plan until the spec is checked against it (the intent-fidelity gate). |
-| `positioning.md` | Adds `launch-readiness.md` and the claims gate; blocks shipping until every claim traces to a passing scenario. |
-
-Intent is also *the actual outcome wanted*, not just the literal request. "Add
-a CSV export" with an `intent.md` that says "let finance self-serve" may need
-more than a button. Assess reads `intent.md` if one exists.
+Intent is *the actual outcome wanted*, not just the literal request. "Add
+a CSV export" from a product owner who says "let finance self-serve" may need
+more than a button. Assess reads the intent the product owner gave, through
+`/compass:intent` or in the issue description.
 
 One goal value is **exploration** - "I cannot frame this well
 enough to deliver it yet." An `exploration` goal composes towards the **Spike**
@@ -110,32 +107,32 @@ value is new or changed. Domain labels need none.
 
 It applies the routing rules in force (the shipped default preset plus the
 project's `compass.yml`) to the assessment you just recorded - composing the
-candidate shape, then applying the floors, caps, immovable gates and blocking
-artifact rules - and folds the result back into the manifest. Same assessment plus
+candidate shape, then applying the floors, caps and immovable gates - and
+folds the result back into the manifest. Same assessment plus
 same configuration gives the same approach, every time.
 
 `approaches/composition-reference.md` has the detail, for tuning the policy
 or explaining a result. `--verbose` prints which rules fired.
 
-## Step 4 - Write `delivery-approach.md` and confirm
+## Step 4 - Record the decision and confirm
 
-Assess writes `delivery-approach.md` from `templates/delivery-approach.md` at
-the path `compass issue artifact-path delivery-approach` prints, in
-`docs/compass/<created>-<issue-slug>/`, and registers it with `compass issue
-artifact set`; on a quick fix, `compass quick-fix start` does both. The
-pre-tool hook finds it through the registry. It contains:
+The manifest is the record of the delivery approach: `compass approach
+evaluate --write` writes it, and on a quick fix `compass quick-fix start`
+does. The pre-tool hook reads the manifest's `delivery_approach:`, and
+`compass approach show` prints the decision. The manifest holds:
 
-- the three scored dimensions and any switches, each with its one-line justification;
-- the composed candidate approach;
-- every routing rule that fired and what it changed;
-- the final approach: per-stage weight, the gate set, the multiagent orchestration;
-- **the de-scope ledger** - every stage or check that is collapsed or skipped,
-  each with an explicit "safe to skip because…" line. A stage with no
-  justification cannot be skipped; if the assess stage cannot justify a skip,
-  the stage runs.
+- the three scored dimensions and any switches, each with its one-line
+  justification (`justifications:`);
+- every routing rule that fired (`policy_rules_fired:`);
+- the final approach: per-stage weight, the gate set, the orchestration.
+
+The opening `devlog.md` entry holds **the de-scope reasons** - every stage or
+check that is collapsed or skipped, each with an explicit "safe to skip
+because…" line. A stage with no justification cannot be skipped; if the
+assess stage cannot justify a skip, the stage runs.
 
 Routing is **advisory until confirmed**. The human can override any dimension or
-the final approach - overrides are recorded in `delivery-approach.md` too, with who and why.
+the final approach - log each override to `devlog.md`, with who and why.
 What cannot be overridden: an `immovable_gate`, or a `floor` (a routing
 rule is governance speaking; changing it means a reviewed change to the
 project's `compass.yml`, not overriding an approach, and a loosening needs a
@@ -151,6 +148,6 @@ issue waiver the project owner approved
 If implementation shows the size was misread - the "small" change is growing
 into a multi-module refactor - the correct move is to **stop and re-assess**,
 not to push on with an approach you no longer believe. `/compass:assess --reassess`
-re-scores the dimensions, writes a new `delivery-approach.md` revision, and records what
-changed and why. A re-assess is a normal event, not a failure. An approach quietly
+re-scores the dimensions and records what changed and why in the manifest's
+`reassessments:` log. A re-assess is a normal event, not a failure. An approach quietly
 outgrown is the failure.

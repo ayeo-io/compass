@@ -4,7 +4,8 @@ The fix is at the print boundary: the machine keys are unchanged, so no
 retired name can be printed whatever the underlying key is called.
 
 Scenario ids: see identifiers-and-vocabulary-in-printed-output/
-acceptance-criteria.md (groups B, C, E).
+acceptance-criteria.md (groups B, C, E). The test that held the receipt to the
+words "policy rules" went when 9.0.0 removed the receipt (ADR-091).
 """
 
 # These tests read the detail `compass approach evaluate --verbose` prints.
@@ -168,67 +169,17 @@ def test_trc_b3_spine_keys_are_the_current_ones(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# `TRC-C1` - a routing rule is not a guardrail
-# ---------------------------------------------------------------------------
-
-def _receipt_out(tmp_path, fired):
-    root = tmp_path / "proj"
-    (root / ".compass" / "work" / "demo").mkdir(parents=True)
-    (root / ".compass" / "config.yml").write_text("version: 1.0.0\n")
-    (root / ".compass" / "work" / "demo" / "manifest.yml").write_text(yaml.safe_dump({
-        "schema_version": "2.0", "task": "demo", "created": "2026-08-13",
-        "status": "landed",
-        "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
-                       "size": "small", "goal": "delivery", "role": "engineer",
-                       "labels": []},
-        "delivery_approach": "standard", "topology": "solo",
-        "policy_rules_fired": fired,
-        "stages": {}, "gates": [], "evidence": [], "scenarios": [],
-        "changed_files": [], "claims": [], "follow_ups": [],
-        "reassessments": [], "friction": [],
-    }, sort_keys=False))
-    r = subprocess.run(
-        [sys.executable, str(CLI), "issue", "receipt", "--issue", "demo"],
-        cwd=str(root), capture_output=True, text=True, timeout=60)
-    assert r.returncode == 0, f"{r.stdout}{r.stderr}"
-    return r.stdout
-
-
-def test_trc_c1_receipt_says_policy_rules(tmp_path):
-    """Both branches of the conditional, which is why this exists.
-
-    The receipt has two sites: the list and the "none" case.
-    """
-    with_rules = _receipt_out(tmp_path / "a", [
-        {"id": "RP-FLOOR-002", "kind": "floor",
-         "rationale": "Domain risk overrides size."}])
-    without = _receipt_out(tmp_path / "b", [])
-
-    for label, out in (("rules fired", with_rules), ("none", without)):
-        assert "routing guardrails" not in out, (
-            f"the receipt's {label} branch still calls a routing rule a "
-            f"guardrail. `guardrail` is the reserved word for the five hard "
-            f"blocking rules:\n{out}")
-        assert "policy rules fired" in out, (
-            f"the receipt's {label} branch does not name policy rules, which "
-            f"is what the evaluator already calls them:\n{out}")
-
-
-# ---------------------------------------------------------------------------
 # `TRC-E1` - a shared effect prints once
 # ---------------------------------------------------------------------------
 
 def test_trc_e1_shared_effect_printed_once():
-    """Two pairs do this, not one.
-
-    RP-REQUIRE-001/002 both add verify.analyze and RP-REQUIRE-003/004 both add
-    verify.architecture. The rules are NOT merged - they fire on different
-    conditions and both conditions are worth seeing - so each still prints
-    with its own rationale.
+    """`RP-REQUIRE-003` and `RP-REQUIRE-004` both add `verify.architecture`. The rules are NOT
+    merged - they fire on different conditions and both conditions are worth
+    seeing - so each still prints with its own rationale.
     """
     out = _evaluate()
 
-    for gate in ("verify.analyze", "verify.architecture"):
+    for gate in ("verify.architecture",):
         effect_lines = [ln for ln in out.splitlines()
                         if ln.strip().startswith("-") and gate in ln]
         assert len(effect_lines) == 1, (
@@ -236,8 +187,7 @@ def test_trc_e1_shared_effect_printed_once():
             f"times; the tool reads as repeating itself:\n"
             + "\n".join(effect_lines))
 
-    for rule in ("RP-REQUIRE-001", "RP-REQUIRE-002",
-                 "RP-REQUIRE-003", "RP-REQUIRE-004"):
+    for rule in ("RP-REQUIRE-003", "RP-REQUIRE-004"):
         assert rule in out, (
             f"{rule} stopped printing - the rules were merged rather than "
             f"their duplicate output deduplicated:\n{out}")

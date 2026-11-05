@@ -13,7 +13,7 @@ github_labels:
   status: true
 ```
 
-Both switches are off until you set them to `true`. A third switch, `page`, posts the issue's README to the GitHub issue as one comment; this walkthrough leaves it off, and [github-labels.md](github-labels.md) describes it. With all three off, Compass never calls GitHub.
+Both switches are off until you set them to `true`. With both off, Compass never calls GitHub.
 
 ## 2. Declare the labels your rules use
 

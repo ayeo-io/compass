@@ -727,30 +727,32 @@ class TestNextLatency:
 
 
 # ---------------------------------------------------------------------------
-# Next on an issue whose delivery-approach.md is missing reports the artifact (`TRC-F6`)
+# Next on an issue whose manifest records no delivery approach names assess (`TRC-F6`)
 # ---------------------------------------------------------------------------
+# 9.0.0 writes no delivery-approach.md (ADR-091): the manifest holds the decision.
 
 class TestNextMissingRouteMd:
     def test_missing_route_md_reported(self, tmp_path):
-        """When delivery-approach.md is absent, next names the missing artifact (`TRC-F6`)."""
+        """When the manifest records no delivery approach, next names assess (`TRC-F6`)."""
         project = make_project(tmp_path)
         task_body = dict(STANDARD_TASK)
         task_body["current_phase"] = "plan"
-        # make_task with route_md=None leaves delivery-approach.md absent
+        task_body.pop("delivery_approach")
         make_task(project, "test-task", task_body, route_md=None)
 
         result = run_next(project)
         assert result.returncode != 0
         combined = result.stdout + result.stderr
-        assert "delivery-approach.md" in combined, (
-            "compass next must name route.md as the missing artifact. "
+        assert "assess" in combined and "delivery approach" in combined, (
+            "compass next must name assess as the step that is missing. "
             f"Got: {combined!r}"
         )
 
     def test_missing_route_md_exit_nonzero(self, tmp_path):
-        """Exit code is non-zero when delivery-approach.md is absent (`TRC-F6`)."""
+        """Exit code is non-zero when the manifest records no delivery approach (`TRC-F6`)."""
         project = make_project(tmp_path)
         task_body = dict(STANDARD_TASK)
+        task_body.pop("delivery_approach")
         make_task(project, "test-task", task_body, route_md=None)
 
         result = run_next(project)

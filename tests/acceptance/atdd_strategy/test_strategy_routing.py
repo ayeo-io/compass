@@ -23,11 +23,9 @@ OFF_REASON = "no deployable candidate yet"
 
 
 def _strategy_line(text):
-    """The line of the rendered `acceptance-strategy` block of a delivery-approach record."""
-    found = re.search(r"<!-- compass:render acceptance-strategy -->\n(.*?)\n"
-                      r"<!-- /compass:render -->", text, re.S)
-    assert found, "the delivery-approach record has no acceptance-strategy block"
-    return " ".join(found.group(1).split())
+    """The acceptance-strategy line, with its white space made single."""
+    assert text, "the issue's records give no acceptance-strategy line"
+    return " ".join(text.split())
 
 
 def _row(document, name=CHECK):
@@ -141,11 +139,9 @@ def test_trc_a6_the_record_quick_fix_start_writes_shows_the_line(tmp_path):
         "--test", "tests/test_readme.py::test_names_the_command",
         "--expected-acceptance", "validation")
     assert code == 0, out + err
-    code, out, err = project.run("issue", "render", "--issue", "docs")
-    assert code == 0, out + err
-    records = list((project.root / "docs" / "compass").glob("*-docs/delivery-approach.md"))
-    assert len(records) == 1
-    line = _strategy_line(records[0].read_text(encoding="utf-8"))
+    task_dir = project.root / ".compass" / "work" / "docs"
+    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
+    line = _strategy_line(support.strategy_line(manifest, task_dir))
     assert "(`S17`): does not apply - acceptance of kind validation" in line, line
     assert line.endswith("Routing on the quick-fix approach: existing DSL only."), line
 
@@ -199,7 +195,6 @@ def test_trc_a12(tmp_path, green, code, failed):
         issue.must("tdd-green", "--issue", "fix", "--scenario", "TRC-1", "--", "sh", "-c",
                    "echo 'tests/test_one.py::test_one PASSED'")
     assert issue.manifest()["acceptance_strategy"]["state"] == "off"
-    issue.must("issue", "render", "--issue", "fix")
     exit_code, document = issue.check()
     assert support.strategy_findings(document) == []
     assert sorted({r[0] for r in support.findings(document) if r[1] == "fail"}) == failed
@@ -476,49 +471,3 @@ def test_trc_a23_a_bad_setting_does_not_stop_a_pinned_project(tmp_path):
         "schema: 1\nextends: compass:default@7\nacceptance_strategy: maybe\n", encoding="utf-8")
     assert issue.run("check", "--issue", "change")[0] != 2
     assert project.run("retro", "--acceptance")[0] == 0
-
-
-def test_trc_a23_a_changed_pin_never_blocks_the_record(tmp_path):
-    """The pin line comes from the project's `compass.yml`, not the issue's own
-    records, so a changed `extends:` makes the block stale only as an advisory,
-    as for any block drawn from the project (`TRC-A23`)."""
-    project = support.Project(tmp_path / "repo")
-    project.setting(None, extends="compass:default@6")
-    issue = project.issue("change")
-    assert issue.assess()[0] == 0
-    issue.approach_record()
-    body = issue.manifest()
-    body["current_phase"] = "verify"
-    issue.write_manifest(body)
-    assert issue.run("issue", "render", "--issue", "change")[0] == 0
-
-    def status():
-        rows = [c for c in issue.check()[1]["checks"] if c["name"] == "rendered-blocks-current"]
-        return rows[0]["status"]
-
-    assert status() == "pass"
-    project.setting(None, extends="compass:default@8")
-    assert status() == "advisory"
-
-
-@pytest.mark.parametrize("stage", ["verify", "done"])
-def test_trc_a23_a_stale_stored_line_still_blocks(tmp_path, stage):
-    """A stored block is the issue's own record, so a line that no longer
-    matches it fails at the `verify` stage and on a done issue (`TRC-A23`)."""
-    project = support.Project(tmp_path / "repo")
-    issue = project.issue("change")
-    assert issue.assess()[0] == 0
-    issue.approach_record()
-    body = issue.manifest()
-    assert body["acceptance_strategy"], body
-    if stage == "verify":
-        body["current_phase"] = "verify"
-    else:
-        body.update(status="done", land_timestamp="2026-10-29T12:00:00Z")
-    issue.write_manifest(body)
-    assert issue.run("issue", "render", "--issue", "change")[0] == 0
-    body = issue.manifest()
-    body["acceptance_strategy"]["why"] = "a reason the record does not show"
-    issue.write_manifest(body)
-    rows = [c for c in issue.check()[1]["checks"] if c["name"] == "rendered-blocks-current"]
-    assert rows[0]["status"] == "fail", rows

@@ -165,7 +165,6 @@ def _rebuild(preset, sidecar, types):
             "floors": rules_of("floors"), "caps": rules_of("caps"),
             "loop_ceilings": rules_of("loop_ceilings"),
             "immovable_gates": rules_of("immovable_gates"),
-            "artifact_rules": rules_of("artifact_rules"),
         },
         "assessment_vocabulary": vocabulary,
         "autonomy_checkpoints": {
@@ -174,7 +173,7 @@ def _rebuild(preset, sidecar, types):
             for level, row in rp["autonomy_checkpoints"].items()},
         "route_shapes": {
             name: {"weight": a["weight"], "stages": a["stages"], "gates": a["gates"],
-                   "subtask_ceiling": a["subtask_ceiling"], "artifacts": a["artifacts"]}
+                   "subtask_ceiling": a["subtask_ceiling"]}
             for name, a in approaches.items()},
     }
 
@@ -270,7 +269,7 @@ def test_dp_1_a_changed_block_phase_or_checked_at_fails_the_rebuild_comparison()
     policy, guardrails = _today()
     assert SIDECAR.is_file(), "governance/legacy-views.yml is missing"
     sidecar = _load(SIDECAR)
-    sidecar["routing_policy"]["legacy_values"]["RP-ART-001"] = {"block_phase": "plan"}
+    sidecar["routing_policy"]["legacy_values"]["RP-FLOOR-002"] = {"require_phase": "plan"}
     changed_policy, _ = _rebuilt(sidecar=sidecar)
     assert changed_policy != policy
     assert _evaluations(changed_policy) != _evaluations(policy)
@@ -300,9 +299,9 @@ def _planted_rebuilds():
         edit(preset, sidecar)
         return _rebuilt(preset, sidecar)
 
-    def drop_artifact_rule_effects(p, s):
-        del p["rules"]["artifact_rules"]["rules"]["RP-ART-002"]["then"]["block_phase"]
-        del p["rules"]["artifact_rules"]["rules"]["RP-ART-001"]["then"]["require_artifact"]
+    def drop_floor_effects(p, s):
+        del p["rules"]["floors"]["rules"]["RP-FLOOR-002"]["then"]["require_phase"]
+        del p["rules"]["floors"]["rules"]["RP-FLOOR-002"]["then"]["require_skill"]
 
     def drop_caps(p, s):
         p["rules"]["caps"]["rules"].clear()
@@ -321,7 +320,7 @@ def _planted_rebuilds():
         s["guardrails"]["checked_at"]["G1"] = s["guardrails"]["checked_at"]["G1"][-1:]
 
     def change_sidecar_value(p, s):
-        s["routing_policy"]["legacy_values"]["RP-ART-001"] = {"block_phase": "land"}
+        s["routing_policy"]["legacy_values"]["RP-FLOOR-002"] = {"require_phase": "plan"}
 
     def drop_fallback_marker(p, s):
         s["routing_policy"]["generated_rules"] = []
@@ -333,7 +332,7 @@ def _planted_rebuilds():
         s["guardrails"]["when_keys"] = {}
 
     return {fn.__name__: planted(fn) for fn in (
-        drop_artifact_rule_effects, drop_caps, raise_loop_limits, null_ceiling, drop_biases,
+        drop_floor_effects, drop_caps, raise_loop_limits, null_ceiling, drop_biases,
         last_checked_at, change_sidecar_value, drop_fallback_marker, change_row_order,
         lose_when_spelling)}
 
@@ -348,19 +347,6 @@ def test_dp_1_each_planted_loss_makes_the_rebuild_differ():
                         == list(policy["autonomy_checkpoints"][lv])
                         for lv in policy["autonomy_checkpoints"]))
         assert not same, f"the rebuild did not notice: {name}"
-
-
-def test_dp_1_the_artifact_rules_keep_every_effect_the_policy_gives_them():
-    policy, _ = _today()
-    rules = _preset()["rules"]["artifact_rules"]["rules"]
-    for legacy in policy["routing_guardrails"]["artifact_rules"]:
-        then = rules[legacy["id"]]["then"]
-        for key in ("require_artifact", "gate", "block_phase", "until"):
-            assert (key in legacy) == (key in then), (legacy["id"], key)
-    second = rules["RP-ART-002"]["then"]
-    assert "require_artifact" not in second
-    assert second.get("block_phase") == "plan"
-    assert "until" in second and "until" not in rules["RP-ART-002"]
 
 
 def test_dp_1_the_rendered_files_are_what_is_committed():
@@ -405,7 +391,11 @@ def test_dp_2_preset_yml_names_default_at_8_0_0_with_capabilities_off():
     assert preset["id"] == "default"
     assert preset["version"] == "8.0.0"
     assert preset["schema"] == 1
-    assert preset["capabilities"] == {name: False for name in catalogue_spec.CAPABILITIES}
+    # A capability 9.0.0 removed (ADR-091) stays valid and is not shipped.
+    from compass_pkg import removed_parts
+    assert preset["capabilities"] == {name: False for name in catalogue_spec.CAPABILITIES
+                                      if name not in removed_parts.CAPABILITIES}
+    assert "artifact-freshness" not in preset["capabilities"]
 
 
 def test_dp_2_the_preset_checks_with_no_error_as_a_parent():
@@ -423,7 +413,9 @@ def test_dp_2_the_check_can_fail_on_the_preset():
 def test_dp_2_every_catalogue_is_filled_and_the_approach_catalogue_is_not_named_routes():
     preset = _preset()
     for name in catalogue_spec.CATALOGUES:
-        assert preset[name], name
+        # 9.0.0 declares no document kind (ADR-091); the file stays, empty.
+        assert preset[name] or name == "artifacts", name
+    assert preset["artifacts"] == {}
     assert not (PRESET / "routes.yml").exists()
     assert set(preset["approaches"]) == {"spike", "quick-fix", "regular", "hotfix", "full"}
     assert len(preset["stages"]) == 8
@@ -680,7 +672,8 @@ def test_dp_5_a_role_rule_with_a_gate_and_no_artifact_converts():
 def test_dp_5_an_artifact_rule_with_a_gate_and_no_artifact_converts():
     policy, guardrails = _today()
     planted = copy.deepcopy(policy)
-    planted["routing_guardrails"]["artifact_rules"].append(
+    # 9.0.0 declares no artifact rule (ADR-091); a 7.0.0 copy still holds the block.
+    planted["routing_guardrails"].setdefault("artifact_rules", []).append(
         {"id": "RP-ART-900", "when": {"artifacts_any": ["ui-contract"]},
          "gate": "verify.claims", "rationale": "A planted rule."})
     rule = _adapted(planted, guardrails)["rules"]["artifact_rules"]["rules"]["RP-ART-900"]
@@ -767,7 +760,7 @@ def test_dp_6_every_reference_in_the_preset_resolves():
     for approach, entry in preset["approaches"].items():
         for gate in entry["gates"]:
             assert gate in gates, (approach, gate)
-        for artifact in entry["artifacts"]:
+        for artifact in entry.get("artifacts") or {}:
             assert artifact in artifacts, (approach, artifact)
         for level, listed in entry["checkpoints"].items():
             assert level in catalogue_spec.AUTONOMY
@@ -930,9 +923,9 @@ def test_dp_1_every_sidecar_value_is_only_another_spelling_of_the_preset_value()
     with pytest.raises(AssertionError):
         _assert_sidecar_only_respells(preset, sidecar)
     changed = _preset()
-    changed["rules"]["artifact_rules"]["rules"]["RP-ART-001"]["then"]["block_phase"] = "plan"
+    changed["rules"]["floors"]["rules"]["RP-FLOOR-002"]["then"]["require_phase"] = "plan"
     sidecar = _load(SIDECAR)
-    sidecar["routing_policy"]["legacy_values"]["RP-ART-001"] = {"block_phase": "land"}
+    sidecar["routing_policy"]["legacy_values"]["RP-FLOOR-002"] = {"require_phase": "define"}
     with pytest.raises(AssertionError):
         _assert_sidecar_only_respells(changed, sidecar)
 

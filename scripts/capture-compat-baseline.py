@@ -54,8 +54,10 @@ def _archive_assessments():
 
 def capture_archive(force):
     """Contracts 3 and 6: `compass check`'s verdict per check on each issue
-    in the archive sample, and the exit of `issue lint` and `issue receipt`
-    on each, so old records are shown to stay readable."""
+    in the archive sample, and the exit of `issue lint` and `approach show`
+    on each, so old records are shown to stay readable. The 5.6.0 capture
+    recorded `issue receipt`, which 9.0.0 removed (ADR-091), as the second
+    reader; `compat_baseline.RECORDED_READER` compares it as `approach show`."""
     from compat_baseline import ARCHIVE, archive_results
     if ARCHIVE.exists() and not force:
         sys.exit(f"{ARCHIVE.relative_to(ROOT)} exists. A baseline is captured once; "

@@ -68,12 +68,6 @@ vocabulary:
   gates.S2:
     name: No production change from a Spike
     aliases: []
-  checks.borrowed-documents-answered:
-    name: Borrowed documents answered
-    aliases: []
-  checks.rendered-blocks-current:
-    name: Rendered blocks current
-    aliases: []
   checks.landed-by-resolves:
     name: Landed-by resolves
     aliases: []
@@ -107,17 +101,8 @@ vocabulary:
   checks.backfills-paid:
     name: Follow-ups resolved
     aliases: []
-  checks.artifacts-approved:
-    name: Documents approved
-    aliases: []
   checks.nfr-rows-resolved:
     name: Non-functional rows resolved
-    aliases: []
-  checks.contracts-declared:
-    name: Contracts declared
-    aliases: []
-  checks.design-within-word-ceiling:
-    name: Design within word ceiling
     aliases: []
   checks.acceptance-applicability-agrees:
     name: Acceptance strategy applicability agrees
@@ -145,9 +130,6 @@ vocabulary:
     aliases: []
   checks.dod-evidence-typed:
     name: Definition of Done evidence is typed
-    aliases: []
-  checks.consistency-check-passes:
-    name: Consistency check passes
     aliases: []
   checks.no-trusted-rerun:
     name: No trusted rerun

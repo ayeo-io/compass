@@ -100,13 +100,14 @@ def _fresh_project_dir() -> Path:
 # ---------------------------------------------------------------------------
 
 def test_blocks_without_frame():
-    """Assessment is still required - hook exits 2 and names missing
-    delivery-approach.md.
+    """Assessment is still required - hook exits 2 and names the missing
+    delivery approach.
 
-    Given a fresh issue with no delivery-approach.md
+    Given a fresh issue with no delivery approach in its manifest and no
+    delivery-approach.md (9.0.0 reads the manifest, ADR-091)
     When any tool tries to Edit a file under the project source (a .py file)
     Then hooks/pre-tool.sh blocks the edit (exit code 2)
-    And the block message names the missing delivery-approach.md
+    And the block message names the missing delivery approach
     """
     assert HOOK_PATH.is_file(), f"pre-tool.sh not found at {HOOK_PATH}"
 
@@ -136,9 +137,9 @@ def test_blocks_without_frame():
             f"Expected exit 2 (block), got {result.returncode}.\n"
             f"stdout: {result.stdout}\nstderr: {result.stderr}"
         )
-        # Block message must name delivery-approach.md
-        assert "delivery-approach.md" in result.stderr, (
-            f"Expected 'delivery-approach.md' in stderr.\nstderr: {result.stderr}"
+        # Block message must name the delivery approach
+        assert "delivery approach" in result.stderr, (
+            f"Expected 'delivery approach' in stderr.\nstderr: {result.stderr}"
         )
     finally:
         shutil.rmtree(str(project), ignore_errors=True)

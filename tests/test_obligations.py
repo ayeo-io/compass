@@ -108,12 +108,12 @@ def test_ob_2_a_stage_with_no_thorough_rank_is_not_lifted_by_rank():
 
 # --- the shipped preset as a resolved configuration ------------------------------
 
-def _preset_config():
+def _preset_config(folder="default"):
     """The committed preset files merged as one parent layer: what a loader
     will hand the obligations function once one exists."""
     import yaml
     from compass_pkg import catalogue_spec, merge
-    preset = ROOT / "governance" / "presets" / "default"
+    preset = ROOT / "governance" / "presets" / folder
     parts = []
     for name in catalogue_spec.CATALOGUES:
         part = yaml.safe_load((preset / f"{name}.yml").read_text(encoding="utf-8"))
@@ -126,6 +126,14 @@ def _preset_config():
 @pytest.fixture(scope="module")
 def preset_config():
     return _preset_config()
+
+
+@pytest.fixture(scope="module")
+def frozen_config():
+    """The frozen 7.0.0 preset. The live default declares no document since 9.0.0
+    (ADR-091); a stored generation still declares its catalogue, approach maps and
+    document rules, so the facts they give are read from this preset."""
+    return _preset_config("default@7")
 
 
 def _respelled(result):
@@ -396,7 +404,9 @@ def test_ob_3_a_critical_change_owes_what_the_policy_says(preset_config):
     got = _api("obligations")(preset_config, _assessment(risk="critical"))
     assert got.approach == "full"
     assert got.stage_mode["refine"] == "thorough"
-    assert {"verify.analyze", "verify.architecture"} <= set(got.gate_set)
+    assert "verify.architecture" in got.gate_set
+    # 9.0.0 removes the gate `verify.analyze` with `compass analyze` (ADR-091).
+    assert "verify.analyze" not in got.gate_set
     assert got.ceilings["max_worktrees"] == 1
     assert got.ceilings["subtask_ceiling"] == 1
 
@@ -416,14 +426,16 @@ def test_ob_3_the_human_signoff_gate_applies_to_a_domain_label(preset_config):
     assert "human-approval-present" in got.checks
 
 
-def test_ob_3_a_spike_owes_only_its_own_guardrails(preset_config):
-    got = _api("obligations")(
-        preset_config, _assessment(goal="exploration", size="small", risk="trivial"))
+def test_ob_3_a_spike_owes_only_its_own_guardrails(preset_config, frozen_config):
+    spike = _assessment(goal="exploration", size="small", risk="trivial")
+    got = _api("obligations")(preset_config, spike)
     assert got.approach == "spike"
     assert "S1" in got.gate_set and "G1" not in got.gate_set
-    # A spike owes its record and its conclusion (issue `artifact-catalogue-fields`).
-    assert got.artifacts_owed == {"delivery-approach": "lightweight",
-                                  "spike-conclusion": "thorough"}
+    # The live default owes no document (ADR-091).
+    assert got.artifacts_owed == {}
+    # A 7.0.0 spike owes its record and its conclusion (issue `artifact-catalogue-fields`).
+    assert _api("obligations")(frozen_config, spike).artifacts_owed == {
+        "delivery-approach": "lightweight", "spike-conclusion": "thorough"}
 
 
 def test_ob_3_loop_ceilings_equal_the_lowest_matching_limit(preset_config):
@@ -468,18 +480,20 @@ def test_ob_3_entry_exit_gate_and_check_facts(preset_config):
 
 
 def _with_artifact_links(config):
+    # A project layer can no longer change the catalogue (ADR-091), so the links
+    # are a parent's, as a stored generation's parent chain can hold them.
     config = _with_entry_lists(config)
     return _layer(config, {"schema": 1, "artifacts": {"technical-design": {"set": {
-        "depends_on": ["acceptance-criteria"], "checks": ["design-reviewed"]}}}})
+        "depends_on": ["acceptance-criteria"], "checks": ["design-reviewed"]}}}}, "parent")
 
 
-def test_ob_3_the_artifact_catalogue_adds_its_links_as_facts(preset_config):
+def test_ob_3_the_artifact_catalogue_adds_its_links_as_facts(frozen_config):
     from compass_pkg.catalogue_spec import OBLIGATION_FIELDS
     assert OBLIGATION_FIELDS["artifacts.depends_on"] == "obligation-set"
     assert OBLIGATION_FIELDS["artifacts.checks"] == "obligation-set"
     assert _api("FACT_FOR_FIELD")["artifacts.depends_on"] == "artifact_depends_on"
     assert _api("FACT_FOR_FIELD")["artifacts.checks"] == "artifact_checks"
-    config = _with_artifact_links(preset_config)
+    config = _with_artifact_links(frozen_config)
     got = _api("obligations")(config, _assessment())
     assert got.artifact_depends_on["technical-design"] == ("acceptance-criteria",)
     assert got.artifact_checks["technical-design"] == ("design-reviewed",)
@@ -487,11 +501,11 @@ def test_ob_3_the_artifact_catalogue_adds_its_links_as_facts(preset_config):
     assert set(got.artifact_checks) == set(got.artifacts_owed)
 
 
-def test_ob_3_detaching_a_check_from_an_artifact_shows(preset_config):
+def test_ob_3_detaching_a_check_from_an_artifact_shows(frozen_config):
     obligations = _api("obligations")
-    config = _with_artifact_links(preset_config)
+    config = _with_artifact_links(frozen_config)
     detached = _layer(config, {"schema": 1, "artifacts": {"technical-design": {
-        "set": {"checks": []}}}})
+        "set": {"checks": []}}}}, "parent")
     before = obligations(config, _assessment()).compared()
     after = obligations(detached, _assessment()).compared()
     assert before["artifact_checks"] != after["artifact_checks"]
@@ -499,32 +513,32 @@ def test_ob_3_detaching_a_check_from_an_artifact_shows(preset_config):
     assert "design-reviewed" in before["checks"]
 
 
-def test_ob_3_the_checks_an_artifact_adds_are_listed(preset_config):
+def test_ob_3_the_checks_an_artifact_adds_are_listed(frozen_config):
     """A check only an artifact names is still a check the configuration owes."""
-    config = _layer(preset_config, {"schema": 1, "checks": {"artifact-only": {
+    config = _layer(frozen_config, {"schema": 1, "checks": {"artifact-only": {
         "statement": "x", "kind": "human", "severity": "blocking",
         "on_skipped": "fail"}}, "artifacts": {"technical-design": {
-            "set": {"checks": ["artifact-only"]}}}})
+            "set": {"checks": ["artifact-only"]}}}}, "parent")
     got = _api("obligations")(config, _assessment())
     assert "artifact-only" in got.checks
     assert all("artifact-only" not in ids for ids in got.gate_checks.values())
     assert all("artifact-only" not in ids for ids in got.entry.values())
 
 
-def test_ob_3_required_artifacts_equal_the_evaluators_answer(preset_config):
-    adapted = _api("policy_adapter")(preset_config)
+def test_ob_3_required_artifacts_equal_the_evaluators_answer(frozen_config):
+    adapted = _api("policy_adapter")(frozen_config)
     for artifacts, expected in ((["intent"], ()),
                                 (["positioning"], ("launch-readiness",)),
                                 ([], ())):
         case = _assessment(artifacts=artifacts)
-        got = _api("obligations")(preset_config, case)
+        got = _api("obligations")(frozen_config, case)
         legacy = evaluate_route(case, adapted)["required_artifacts"]
         assert got.required_artifacts == tuple(sorted(
             a[:-3] if a.endswith(".md") else a for a in legacy)) == expected
 
 
-def test_ob_3_a_legacy_document_name_with_a_suffix_is_its_id(preset_config):
-    config = copy.deepcopy(preset_config)
+def test_ob_3_a_legacy_document_name_with_a_suffix_is_its_id(frozen_config):
+    config = copy.deepcopy(frozen_config)
     config["rules"]["artifact_rules"]["rules"]["RP-ART-001"]["then"][
         "require_artifact"] = "launch-readiness.md"
     got = _api("obligations")(config, _assessment(artifacts=["positioning"]))
@@ -992,8 +1006,8 @@ def test_ob_5_a_skipped_stage_still_lists_its_active_checks(preset_config):
 
 
 def test_ob_5_a_retired_stage_name_in_a_policy_is_read_as_the_current_one(
-        preset_config):
-    config = copy.deepcopy(preset_config)
+        frozen_config):
+    config = copy.deepcopy(frozen_config)
     config["rules"]["artifact_rules"]["rules"]["RP-ART-001"]["then"]["block_phase"] = "land"
     got = _owed(config, _assessment(artifacts=["positioning"]))
     assert got.blocked_stages == ("ship",)
@@ -1131,7 +1145,7 @@ def _empty_issue_verdicts():
 # `fail`. That an empty issue passes them is a defect in the checks, not in the
 # preset, and is filed apart from this issue.
 PASS_WHEN_EMPTY = {"backfills-paid", "changed-code-traces-to-scenario",
-                "consistency-check-passes", "rendered-blocks-current",
+                "rendered-blocks-current",
                 "no-trusted-rerun", "spike-no-production-changes"}
 
 

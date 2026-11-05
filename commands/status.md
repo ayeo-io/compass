@@ -93,31 +93,30 @@ decision, and no Compass vocabulary appears in it beyond issue names.
 
 Here the internal details *are* what the reader wants. Report:
 
-- **Delivery approach** - from `delivery-approach.md` / `manifest.yml`: the
+- **Delivery approach** - from `compass approach show` / `manifest.yml`: the
   nearest reference shape, the three scored dimensions, and any policy
   rule that fired.
-- **Stage** - inferred from which artifacts exist: `delivery-approach.md`
-  -> assessed; `acceptance-criteria.md` -> criteria defined;
-  `requirements-review.md` -> requirements reviewed; `technical-design.md` ->
-  designed; `distribution-map.md` -> broken down;
-  `verification-report.md` -> verified. Cross-check the approach's
-  de-scope ledger so a *collapsed* stage is not reported as *missing*.
-- **Gates** - from `verification-report.md` and `manifest.yml`'s `gates:`. Run
+- **Stage** - from `compass next --issue <slug>`, which reads the records:
+  the approach in the manifest -> assessed; `acceptance-criteria.md` or the
+  scenarios -> criteria defined; the tests on record -> implementing; every
+  gate passed -> verified. Cross-check the approach's stage weights so a
+  *collapsed* stage is not reported as *missing*.
+- **Gates** - from `manifest.yml`'s `gates:`. Run
   `compass check --issue <slug>` for the mechanical view (read-only).
   **Say when a check passes without checking anything.** "no changed_files recorded yet"
   and "0/N pass gates" are green lines that assert nothing; reading them as
   progress is how an issue ships untraced.
-- **Owed follow-ups** - scan `delivery-approach.md`'s de-scope ledger and
-  the approach's standing obligations. Report clearly:
+- **Owed follow-ups** - scan `manifest.yml`'s `follow_ups:` and the
+  approach's standing obligations. Report clearly:
   - an unsettled **hotfix follow-up** (the approach record not completed,
     reproduction test not promoted to a scenario, no root-cause devlog
     line);
   - an **unbacked marketing claim** - a claim in `positioning.md` with no
     passing scenario behind it;
-  - any de-scoped artifact still marked owed.
+  - any de-scoped work still marked owed.
 
 ## Note
 
-If `delivery-approach.md` is missing for a directory under `work/`, that
-issue was started without an assessment - flag it as a guardrail violation, not
+If the manifest of a directory under `work/` has no `delivery_approach:`,
+that issue was started without an assessment - flag it as a guardrail violation, not
 merely an incomplete issue. On the board, that belongs in BLOCKED.

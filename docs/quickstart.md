@@ -164,8 +164,8 @@ floors and caps, assembling the gate set - and writes `delivery_approach`,
 **the regular approach, whose gates include the security review, with the
 architecture review added because risk is cross-cutting**; no routing
 policy rule forces a heavier delivery approach.
-Assess then writes the human-readable `delivery-approach.md` alongside it.
-The same assessment, resolved configuration and documents on disk give this
+`compass approach show` prints the approach from the manifest.
+The same assessment and resolved configuration give this
 exact delivery approach on any machine with the same Compass version - it is
 no longer something an agent decides without a written record
 ([safety contract](safety-contract.md#1-routing-is-deterministic-after-assessment)).
@@ -178,14 +178,14 @@ setting lists assess, which `compass approach show` reports. Under the default,
 `balanced`, a regular approach goes on and logs that it did not wait; it waits
 at define and plan. You read the assessment values, you read the de-scope ledger
 - the regular approach collapses nothing major, so the ledger is short - and you confirm,
-or you override an assessment value and the override is recorded in
-`delivery-approach.md` with your name and reason.
+or you override an assessment value and the override is logged to
+`devlog.md` with your name and reason.
 
 What happens at this gate: the process shows how it got the approach and asks
 you to agree the familiarity was read correctly. Confirming takes a
 moment. The point is that the process for this issue is now *written down* -
-any later session can read `delivery-approach.md` and know exactly how the pipeline
-runs.
+any later session can run `compass approach show` and know exactly how the
+pipeline runs.
 
 ### Define the acceptance criteria
 
@@ -193,7 +193,7 @@ runs.
 /compass:define
 ```
 
-The session reads `delivery-approach.md`, sees "small feature set," and writes
+The session runs `compass approach show`, sees "small feature set," and writes
 `acceptance-criteria.md` - Given/When/Then scenarios for the rate limiter: the happy
 path (a client under the limit is served), the realistic edge cases (a client at
 exactly the limit; the limit window resetting), the failure modes that
@@ -213,7 +213,7 @@ your acceptance suite and the first tests of your TDD cycle.
 On the regular approach, the requirements review is a lightweight-to-thorough pass - never skipped. The `spec-author`
 checks the spec against itself (is "the limit" defined? per-client or global? what
 about unauthenticated traffic?) and against governance. Each ambiguity is
-resolved into `acceptance-criteria.md` or recorded in `requirements-review.md` with an
+resolved into `acceptance-criteria.md` or recorded as a decision with an
 owner, so no open question passes silently into Plan. With the
 `entry-exit-evaluation` capability on, `compass next` also shows plan as not
 ready while a question is open.
@@ -224,12 +224,11 @@ ready while a question is open.
 /compass:plan
 ```
 
-The session writes a real `technical-design.md`: the technical approach, each
+The session states a real design in its hand-off: the technical approach, each
 design decision recorded ADR-style (token bucket vs. sliding window - what was
 chosen, what was rejected, why), and a governance check run against all of
 `governance/` - guardrails, strategies, and the routing policy. The work here
-is one or two subtasks, not four, so the distribution map is a short list, not a
-full `distribution-map.md`. The gate: the governance check passed - every
+is one or two subtasks, not four, so the work units are a short list. The gate: the governance check passed - every
 guardrail cleared with evidence - and you record its result and link it.
 
 ### Implement
@@ -280,7 +279,7 @@ a scenario, every `pass` gate has resolving evidence. The `reviewer` then
 applies the delivery approach's review dimensions: `correctness`, `governance`
 and `traceability` on every approach that ships; `regression`, `clarity` and
 `security` on the regular approach; and `architecture` because risk is
-cross-cutting. The result is `verification-report.md`. A gate
+cross-cutting. The result is the gate evidence in the manifest. A gate
 passes only with evidence attached, and that evidence is **typed** - a
 `{type, path}` record, such as `test-run`, `command-output`,
 `human-approval` or `artifact`, and `guardrails.yml` says which types each gate accepts, so a
@@ -317,7 +316,7 @@ You are a product owner. You do not start at the assess stage - you start
 ```
 
 The session adopts the product owner's vocabulary - outcomes and
-users, not files and functions - and writes `intent.md`: the **problem**
+users, not files and functions - and captures the intent: the **problem**
 (finance cannot self-serve; every month-end is a data request and a wait), the
 **outcome** (finance gets their numbers directly), the **success signals**
 (finance pulls month-end numbers without filing a request; the data team's
@@ -338,11 +337,11 @@ request gets a different approach depending on the intent document behind it.
 /compass:assess "CSV export for finance month-end numbers"
 ```
 
-Assess reads `intent.md` as part of the goal dimension - the goal is
-the *actual outcome wanted*, not the literal request. The `intent.md`
-on disk makes the approach name a check of the spec against it before Plan
-(the **intent-fidelity gate**), which the session runs from the product owner's perspective. The approach is the one the three scored dimensions give;
-the document adds the check, not extra weight.
+Assess reads the intent as part of the goal dimension - the goal is
+the *actual outcome wanted*, not the literal request. The define stage writes
+it into the Summary and Intent links of `acceptance-criteria.md`; Compass
+writes no separate intent document (ADR-091). The approach is the one the
+three scored dimensions give.
 
 ### Define the acceptance criteria, then refine them
 
@@ -360,10 +359,9 @@ recorded decision).
 /compass:plan
 ```
 
-Per the routing policy's artifact rule RP-ART-002, when `intent.md` is present the
-spec **must be checked against `intent.md` before Plan completes**. The
-session runs that check from the product owner's perspective. If the spec drifts from the intent
-document - well-formed scenarios that nonetheless miss the outcome - the
+The plan stage checks the spec **against the intent before Plan
+completes** (the **intent-fidelity** check). The session runs that check from the product owner's perspective. If the spec drifts from the intent -
+well-formed scenarios that nonetheless miss the outcome - the
 spec goes back to define. Well-formed and faithful are different tests, and
 this gate is where an agent checks the difference; no CLI check refuses Plan
 on it.
@@ -429,8 +427,7 @@ Some work is not a known change - it is a question. Finding the cause of a
 defect nobody understands, evaluating whether an approach is even viable, learning an unfamiliar
 API. You cannot state acceptance criteria for it because the behavior is the
 unknown. That is not an exemption from assessment; it is the **spike**.
-Assess still runs (`delivery-approach.md` records the question and a
-timebox), but the define stage collapses to the question, the
+Assess still runs (`devlog.md` records the question and a timebox), but the define stage collapses to the question, the
 requirements review is skipped, and implementation becomes exploration -
 the
 TDD strategy is suspended and the hook does not block, because red-before-green
@@ -497,13 +494,19 @@ rail:
   color. `COMPASS_COLOR=always` shows the rail even when the output is piped.
   `NO_COLOR` still removes the color.
 
+The current stage is the first stage of the approach that the records do not
+show as done. Refine and plan write no document, so each is done once its
+hand-off is on record: `compass issue checkpoint add <stage> --outcome
+skipped`, or a person's approval of the checkpoint. Breakdown writes no record
+of its own, because one session builds the units, so it is done once plan's
+hand-off is on record. The board and `compass flow` read the same hand-offs: an
+issue whose refine is handed off is `ready`, and one whose plan is handed off is
+`in-progress`.
+
 If a project turns on the capability `entry-exit-evaluation`, the line also
 names the entry checks of the current stage that are not met, for example
 `Plan | entry not met: dor-no-open-questions`
-(`docs/entry-exit-evaluation.md`). With the capability `artifact-freshness`
-on, it names a stale document the stage consumes, for example
-`Implement | entry not met: technical-design is stale`
-(`docs/artifact-freshness.md`).
+(`docs/entry-exit-evaluation.md`).
 
 If the issue is at implement and waits for another issue that has not reached
 the point its `depends_on` entry names (`compass issue depends add`), the line

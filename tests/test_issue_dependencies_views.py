@@ -117,61 +117,6 @@ def test_dbi_17_board_card_and_panel(tmp_path):
     assert_no_gh_call(project.root)
 
 
-# --- DBI-19 -----------------------------------------------------------------------
-
-def page_text(project, slug):
-    done = compass(project.root, "issue", "render", "--issue", slug)
-    assert done.returncode == 0, done
-    pages = list((project.root / "docs" / "compass").glob("*-%s/README.md" % slug))
-    assert len(pages) == 1, pages
-    return pages[0].read_text(encoding="utf-8")
-
-
-def block(text, kind):
-    found = re.search(r"<!-- compass:render %s -->\n(.*?)<!-- /compass:render -->" % kind,
-                      text, re.S)
-    assert found, "no %s block" % kind
-    return found.group(1)
-
-
-def test_dbi_19_issue_page_related_block(tmp_path):
-    project = Project(tmp_path)
-    project.issue("b", "implement")
-    project.issue("c", "ship", close="completed")
-    project.issue("a", "implement", depends=[dep("b"), dep("c", "plan", "needs its design")])
-    page = page_text(project, "a")
-    related = block(page, "related")
-    lines = [x for x in related.splitlines() if x.startswith("- depends on:")]
-    assert len(lines) == 2, related
-    assert lines[0].endswith("](../2026-10-01-b/README.md) - in-progress - waits for b to reach done")
-    assert lines[1].endswith("](../2026-10-01-c/README.md) - done (completed) - met")
-    assert "\nBlocked: waits for b to reach done\n" in block(page, "header")
-    assert "depended on by: [a](../2026-10-01-a/README.md)" in block(page_text(project, "b"), "related")
-
-    # A dependency that is not found or unreadable keeps the text it had.
-    project.issue("a", "implement", depends=[dep("gone")])
-    (project.dir("broken")).mkdir()
-    (project.dir("broken") / "manifest.yml").write_text("a: [unclosed\n", encoding="utf-8")
-    manifest = project.manifest("a")
-    manifest["depends_on"].append(dep("broken"))
-    project.write("a", manifest)
-    related = block(page_text(project, "a"), "related")
-    assert "- depends on: `gone` - not found\n" in related + "\n"
-    assert "- depends on: `broken` - unreadable\n" in related + "\n"
-
-    # decision-required and follow-ups are the same with and without depends_on.
-    project.issue("a", "implement", depends=[dep("b")])
-    with_key = page_text(project, "a")
-    manifest = project.manifest("a")
-    del manifest["depends_on"]
-    project.write("a", manifest)
-    without_key = page_text(project, "a")
-    for kind in ("decision-required", "follow-ups"):
-        assert block(with_key, kind) == block(without_key, kind), kind
-    assert "waits for" not in without_key
-    assert_no_gh_call(project.root)
-
-
 # --- DBI-20 -----------------------------------------------------------------------
 
 KEYS = ["issue", "reason", "until"]
@@ -225,8 +170,7 @@ def test_dbi_20_shape_pinned_in_schema_and_doc():
         assert "`%s`" % value in text, value
     for fact in ("not-planned", "duplicate", "implement stage", "no git", "uncached",
                  "median", "fail-safe", "worktree", "bring that issue's folder",
-                 "compass issue depends remove", "ADR-062",
-                 "risks and dependencies"):
+                 "compass issue depends remove", "ADR-062"):
         assert fact.lower() in lowered, fact
     for name in ("reached", "judge", "dependency_block", "blocked_text", "hook_lines",
                  "entries"):

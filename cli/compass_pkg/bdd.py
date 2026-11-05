@@ -36,7 +36,8 @@ import re as _re
 from compass_pkg.checks import _spec_sha256
 from compass_pkg.terminal import say
 from compass_pkg.manifest_store import load_manifest_mapping
-from compass_pkg.core import CompassError, artifact_path, find_upwards, manifest_path, normalize_spine, now_iso, resolve_issue_dir
+from compass_pkg.core import CompassError, find_upwards, manifest_path, normalize_spine, now_iso, resolve_issue_dir
+from compass_pkg.spec_location import spec_path
 from compass_pkg.tdd import _read_config, _run_test, settings_hint
 
 
@@ -490,21 +491,21 @@ def cmd_bdd_extract(args):
     from compass_pkg import rendered_blocks
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     slug = os.path.basename(os.path.normpath(task_dir))
-    spec_path = artifact_path(task_dir, "acceptance-criteria.md")
-    if not os.path.isfile(spec_path):
+    spec_file = spec_path(task_dir)
+    if not os.path.isfile(spec_file):
         raise CompassError(
             "no acceptance criteria for issue '%s' - define them first (%s)"
-            % (slug, spec_path))
+            % (slug, spec_file))
 
     # The spec without its rendered blocks: a coverage block that repeats a
     # scenario must not lift a second scenario.
-    text = rendered_blocks.read_masked(spec_path)
+    text = rendered_blocks.read_masked(spec_file)
 
     scenarios = scan_spec_markdown(text)
 
     # Check everything before writing anything. This is what makes a failed
     # extract leave the filesystem exactly as it was.
-    problems = validate_scenarios(scenarios, os.path.relpath(spec_path, os.getcwd()))
+    problems = validate_scenarios(scenarios, os.path.relpath(spec_file, os.getcwd()))
     if problems:
         sys.stderr.write("compass bdd extract: %d problem(s) found; nothing written.\n"
                          % len(problems))
@@ -513,7 +514,10 @@ def cmd_bdd_extract(args):
         return 1
 
     out_path = _bdd_out_path(args, task_dir, slug)
-    spec_rel = os.path.join(".compass", "work", slug, os.path.basename(spec_path))
+    # Named from the project root, so the feature names the file it was lifted
+    # from wherever the spec is: registered, at its fixed path, or flat.
+    from compass_pkg import layers
+    spec_rel = os.path.relpath(spec_file, layers.find_project_root(task_dir)).replace(os.sep, "/")
     atomic_write(out_path, render_feature(slug, scenarios, spec_rel))
     # Print a sentence around the path: a bare string suits a shell pipeline,
     # not a person. --json carries the path alone, under a key.

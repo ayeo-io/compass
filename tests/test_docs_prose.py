@@ -55,7 +55,7 @@ def test_reference_docs_carry_v2_names():
                 "approaches/*.md", "cli/compass_pkg/*.py"):
         surfaces += sorted(REPO_ROOT.glob(pat))
     for path in surfaces:
-        if not path.is_file() or path.name in ("system-spec.md", "system-spec-archive.md"):
+        if not path.is_file():
             continue
         for lineno, line in enumerate(
                 path.read_text(encoding="utf-8").splitlines(), 1):
@@ -88,17 +88,6 @@ def test_remaining_docs_are_enforced():
               "docs/security.md", "docs/quickstart.md",
               "docs/portability.md", "docs/routing-deep-dive.md"):
         assert f in scan["surfaces"], f"{f} is not a scanned surface"
-    # Asserted as "not scanned", which is the property that matters, rather
-    # than as "exempt". `scan.exempt` applies only to files under
-    # `scan.surfaces`, and this file is under none, so the test asserts
-    # "not scanned".
-    reachable = [sfc for sfc in scan["surfaces"]
-                 if "docs/system-spec.md".startswith(sfc.rstrip("/") + "/")
-                 or sfc == "docs/system-spec.md"]
-    assert not reachable, (
-        f"docs/system-spec.md is now reachable from {reachable} and would be "
-        f"scanned. It is derived at ship time from landed scenarios, so it "
-        f"carries whatever words those scenarios used")
 
 
 def test_install_refusal_points_at_plugin_dir():
@@ -155,7 +144,7 @@ def test_no_live_doc_teaches_a_retired_cli_spelling():
         surfaces += sorted(REPO_ROOT.glob(pat))
     hits = []
     for path in surfaces:
-        if not path.is_file() or path.name in ("system-spec.md", "system-spec-archive.md"):
+        if not path.is_file():
             continue
         for lineno, line in enumerate(
                 path.read_text(encoding="utf-8").splitlines(), 1):

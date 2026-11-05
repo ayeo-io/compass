@@ -227,11 +227,10 @@ def test_no_undefined_internal_identifiers():
     scanned, and the distinction matters. They are the code-to-scenario half
     of the traceability chain guardrail `G3` needs, not internal numbering:
     a test docstring naming one says which acceptance criterion that test
-    exists to satisfy. Most of them resolve through `docs/system-spec.md`,
-    which is derived at ship from shipped issue specs. The ones that do not
-    resolve fail for a structural reason rather than a stylistic one:
-    `.compass/work/` is gitignored, so the specs of the framework's own
-    issues were never committed. Deleting the ids would remove the visible
+    exists to satisfy. Many resolve through the test that names them. The
+    ones that do not resolve fail for a structural reason rather than a
+    stylistic one: `.compass/work/` is gitignored, so the specs of the
+    framework's own issues were never committed. Deleting the ids would remove the visible
     half of a chain the project mandates without making a single spec
     easier to find. Closing that gap means making them resolve, not
     stripping them.
@@ -239,8 +238,7 @@ def test_no_undefined_internal_identifiers():
     Scope is every tracked file, not just prose: a comment in `cli/compass` or
     a test docstring is read by exactly the same person.
 
-    Two exclusions. `docs/system-spec.md` is generated at ship from issue
-    specs and hand-edits to it are silently overwritten. `tests/fixtures/`
+    One exclusion. `tests/fixtures/`
     is data that other tests assert on, so its content is fixed by those
     tests rather than by style.
 
@@ -255,7 +253,7 @@ def test_no_undefined_internal_identifiers():
         "stream" + "-B": "an internal work stream that no file in the repository defines",
         "stream" + "-C": "an internal work stream that no file in the repository defines",
     }
-    excluded = ("docs/system-spec.md:", "docs/system-spec-archive.md:", "tests/fixtures/")
+    excluded = ("tests/fixtures/",)
     hits: list[str] = []
     for needle, why in needles.items():
         for hit in _scan(needle):

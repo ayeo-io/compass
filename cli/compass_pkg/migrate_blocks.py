@@ -1,28 +1,27 @@
 # compass_pkg.migrate_blocks - what `compass issue migrate` adds for rendered blocks
-"""The additions 7.0.0 makes to an issue written before rendered blocks.
+"""The records 7.0.0 adds to an issue written before rendered blocks.
 
-Migration only adds lines and records. It never rewrites an archived table and
-never changes a line of a document (ADR-020, through ADR-051):
+Migration only adds records. It never rewrites an archived table and never
+changes a line of a document (ADR-020, through ADR-051). It writes the records
+the verification report's boxes held: `meets` on the evidence a tag names,
+`defers` on the follow-up a tag names, and a `page_ticks` entry for each ticked
+box (a page tick never counts as a person's approval).
 
-- an empty `dod` marker pair after the Definition of Done section of the
-  verification report, with the registry digests that name the report re-stamped
-  so the report keeps its status;
-- the records the report's boxes held: `meets` on the evidence a tag names,
-  `defers` on the follow-up a tag names, and a `page_ticks` entry for each ticked
-  box (a page tick never counts as a person's approval);
-- an empty verification note for each quick fix closed as completed.
+Before 9.0.0 it also added an empty `dod` marker pair to the report and an empty
+verification note to each completed quick fix. 9.0.0 renders no block and writes
+no note (ADR-091), so the documents are left as they are.
 
 A tag that names an id the manifest does not hold, or evidence of a type the
 Definition of Done does not accept, writes no record. The item stays open and the
 migration reports the issue, the item and the id. A report with no Definition of
-Done heading gets no marker and no record, and is reported.
+Done heading gets no record, and is reported.
 
 `run` computes the change and, unless `would`, writes it. The dry run and the
 apply share it, so the dry run cannot promise more or less than the apply does.
 Only this module reads the tags on a page; the rest of Compass reads records.
 """
 # DEPENDENCY: standard library (copy, os, re); yaml; compass_pkg.core,
-# compass_pkg.doc_sections, compass_pkg.item_records, compass_pkg.rendered_blocks,
+# compass_pkg.doc_sections, compass_pkg.item_records,
 # compass_pkg.status_words and, lazily, compass_pkg.migrate, compass_pkg.checks,
 # compass_pkg.effective, compass_pkg.impl_versions.
 from __future__ import annotations
@@ -30,15 +29,12 @@ from __future__ import annotations
 import os
 import re
 
-from compass_pkg import doc_sections, item_records, rendered_blocks as rb, status_words
-from compass_pkg.core import (FOUND, REFUSED, canonical_shape, docs_dir, resolve_artifact,
+from compass_pkg import doc_sections, item_records, status_words
+from compass_pkg.core import (FOUND, REFUSED, resolve_artifact,
                               unregistered_document)
-from compass_pkg.stable_ids import APPROACH_QUICK_FIX
 
 REPORT = "verification-report"
-NOTE = "verification-note"
 HEADING = doc_sections.list_heading("verify", "exit")
-PAIR = ("dod",)
 #: Earlier statements of a Definition of Done item, as a report written before 7.0.0 holds
 #: them. Those reports cite the report's sections by number; the shipped statements now name
 #: them (ADR-064). A box is matched by its words before its place, so without these a report
@@ -141,41 +137,6 @@ def _map_boxes(boxes, listed):
     return found
 
 
-def _insert_pair(text, end):
-    """The text with an empty `dod` pair before line `end` (a line index of `text.split`),
-    or None when the result would not parse as that block."""
-    eol = rb.line_ending(text)
-    lines = rb.split_lines(text)
-    at = min(end, len(lines))
-    pair = [rb.OPENING.format(kind="dod") + eol, rb.CLOSING + eol]
-    if at and not lines[at - 1].endswith("\n"):
-        lines[at - 1] += eol
-    new = "".join(lines[:at] + pair + lines[at:])
-    try:
-        parsed = rb.parse(new)
-    except rb.MarkerError:
-        return None
-    return new if [b.kind for b in parsed.blocks].count("dod") == 1 else None
-
-
-def _restamp(data, old_digest, new_digest):
-    """Move the digests the registry recorded for the report from the old masked digest to
-    the new one: the report's own and the `upstream` of any document that names it. A digest
-    that was already stale is left stale. Returns how many were moved."""
-    moved = 0
-    for entry in data.get("artifacts") or []:
-        if not isinstance(entry, dict):
-            continue
-        if entry.get("kind") == REPORT and entry.get("digest") == old_digest:
-            entry["digest"] = new_digest
-            moved += 1
-        upstream = entry.get("upstream")
-        if isinstance(upstream, dict) and upstream.get(REPORT) == old_digest:
-            upstream[REPORT] = new_digest
-            moved += 1
-    return moved
-
-
 def _records(slug, data, boxes, checks, source, out):
     """Write the item records the boxes hold into `data`; returns how many were new."""
     from compass_pkg.checks import _DOD_ACCEPTED_EVIDENCE_TYPES
@@ -234,34 +195,28 @@ def _records(slug, data, boxes, checks, source, out):
 
 
 def _definition_of_done(task_dir, data, project, would, out):
-    """Insert the pair and write the records. Returns `(manifest changed, edit)` where `edit`
-    is `(path, new text, old digest)` for the report or None."""
+    """Write the records the report's boxes hold. Returns whether `data` changed. Since
+    9.0.0 the report is left as it is: no block is rendered into it (ADR-091)."""
     slug = os.path.basename(os.path.normpath(task_dir))
     path, why = _report_path(task_dir, project)
     if why:
         out.problems.append("%s: the verification-report is not edited: %s." % (slug, why))
     if not path:
-        return False, None
+        return False
     try:
         with open(path, encoding="utf-8", newline="") as fh:
             text = fh.read()
     except (OSError, UnicodeDecodeError):
         out.problems.append("%s: %s could not be read as UTF-8, so it was left as it was."
                             % (slug, os.path.basename(path)))
-        return False, None
-    try:
-        parsed = rb.parse(text, path)
-    except rb.MarkerError as exc:
-        out.problems.append("%s: %s has a render marker that does not parse (%s), so it was left "
-                            "as it was." % (slug, os.path.basename(path), exc))
-        return False, None
+        return False
     lines = text.split("\n")
     mask = doc_sections.comment_mask(lines)
     found = doc_sections.section(lines, mask, HEADING)
     if found is None:
-        out.problems.append("%s: %s has no \"%s\" heading, so it gets no marker and no record."
+        out.problems.append("%s: %s has no \"%s\" heading, so it gets no record."
                             % (slug, os.path.basename(path), HEADING))
-        return False, None
+        return False
     start, end = found
     boxes = _boxes(lines, start, end)
     listed = item_records.listed_checks(_view(task_dir), "dod")
@@ -273,70 +228,13 @@ def _definition_of_done(task_dir, data, project, would, out):
         parts = ", ".join("%d %s" % (n, word) for word, n in made.items() if n)
         out.notes.append("%s %s (%s)" % (_tense(would, "write", "wrote"),
                                          _plural(total, "item record"), parts))
-    edit = None
-    if not any(b.kind == "dod" for b in parsed.blocks):
-        new = _insert_pair(text, end)
-        if new is None:
-            out.problems.append("%s: %s cannot hold a dod marker pair after its Definition of "
-                                "Done section, so none was added." % (slug, os.path.basename(path)))
-        else:
-            edit = (path, new, rb.masked_digest(path))
-            out.notes.append("%s 1 dod marker pair in %s" % (
-                _tense(would, "insert", "inserted"), source))
-            if any(isinstance(a, dict) and a.get("kind") == REPORT and a.get("digest")
-                   for a in data.get("artifacts") or []):
-                out.notes.append("%s the registry digest of %s" % (
-                    _tense(would, "re-stamp", "re-stamped"), REPORT))
-    return bool(total), edit
+    return bool(total)
 
 
 def _unsafe_path(task_dir, rel, project, allow_work=False):
     """Why a path from a manifest cannot be written, or None (the render's rule)."""
-    from compass_pkg import render_cmd
-    return render_cmd.unsafe_document_path(task_dir, rel, project, allow_work)
-
-
-def _verification_note(task_dir, data, project, would, out):
-    """An empty note for a quick fix closed as completed. Returns whether `data` changed."""
-    if not status_words.is_completed(data) \
-            or canonical_shape(data.get("delivery_approach")) != APPROACH_QUICK_FIX:
-        return False
-    from compass_pkg.block_renderers import verification_note_text
-    slug = os.path.basename(os.path.normpath(task_dir))
-    entry = next((a for a in data.get("artifacts") or []
-                  if isinstance(a, dict) and a.get("kind") == NOTE), None)
-    rel = str((entry or {}).get("path") or "") or docs_dir(task_dir).rstrip("/") + "/" + NOTE + ".md"
-    path = os.path.join(project, *rel.split("/"))
-    why = _unsafe_path(task_dir, rel, project)
-    if why:
-        # A registered path comes from a manifest, so it is checked as the render checks one
-        # before anything is created or written.
-        out.problems.append("%s: the verification note at %s is not written: %s." % (slug, rel, why))
-        return False
-    if os.path.isfile(path) and entry is not None:
-        return False
-    out.notes.append("%s 1 verification note (%s)" % (_tense(would, "write", "wrote"), rel))
-    # Registered before the dry run returns: the dry run's copy of the manifest then
-    # holds the entry the apply adds, and the status step counts it as the apply does.
-    if entry is None:
-        data.setdefault("artifacts", []).append({
-            "id": "ART-VERIFICATION_NOTE", "kind": NOTE, "status": "draft",
-            "depth": "lightweight", "path": rel,
-            "reason": "One screen of what was checked, for a reader (written by migration)"})
-    if would:
-        return True
-    if not os.path.isfile(path):
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8", newline="") as fh:
-            fh.write(verification_note_text(slug))
-    return entry is None
-
-
-def register_planned(task_dir, data):
-    """Add to the dry run's in-memory manifest `data` the registry entries `run` adds in
-    the apply. The notes are discarded: `run` prints them from the disk."""
-    from compass_pkg import migrate as base
-    _verification_note(task_dir, data, base._project_root(task_dir), True, Outcome())
+    from compass_pkg import doc_paths
+    return doc_paths.unsafe_document_path(task_dir, rel, project, allow_work)
 
 
 def run(task_dir, would, out=None):
@@ -348,26 +246,12 @@ def run(task_dir, would, out=None):
         return out
     data = loaded
     project = base._project_root(task_dir)
-    changed_records, edit = _definition_of_done(task_dir, data, project, would, out)
-    noted = _verification_note(task_dir, data, project, would, out)
+    changed_records = _definition_of_done(task_dir, data, project, would, out)
     if would:
         return out
-    if edit is not None:
-        report_path, new_text, old_digest = edit
-        new_digest = "sha256:" + _hex(rb.masked_text(new_text))
-        if _restamp(data, old_digest, new_digest):
-            changed_records = True
-    if changed_records or noted:
+    if changed_records:
         base._write_manifest(path, data)
-    if edit is not None:
-        report_path, new_text, _ = edit
-        rb.write_rendered(report_path, new_text, rb.file_digest(report_path))
     return out
-
-
-def _hex(masked):
-    import hashlib
-    return hashlib.sha256(masked.encode("utf-8")).hexdigest()
 
 
 def pin_stale_generation(task_dir, would, out):

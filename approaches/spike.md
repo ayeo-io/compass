@@ -43,13 +43,13 @@ acceptance-before-code, and traceability guardrails apply in full.
 
 | Stage | Weight on Spike |
 |---|---|
-| Assess | Lightweight but real. `delivery-approach.md` is written - even a spike is accountable. It records the **question** and the **timebox**. |
+| Assess | Lightweight but real. The approach is recorded in the manifest - even a spike is accountable. The opening `devlog.md` entry records the **question** and the **timebox**. |
 | Define | **Collapsed** into the question. The spike's spec is "what do we need to learn, and what would a useful answer look like?" - not acceptance criteria for code. |
 | Refine | **Skipped.** There is nothing to QA the spec against - the behavior is the unknown, and discovering it is the point. |
-| Plan | **Collapsed** to a timebox and an approach sketch in `delivery-approach.md`. |
+| Plan | **Collapsed** to a timebox and an approach sketch in `devlog.md`. |
 | Breakdown | **Skipped.** Solo. |
 | Implement | **= Explore.** Write code freely to answer the question. TDD strategy suspended; the hook does not block. Code here is assumed throwaway. |
-| Verify | **= Conclude.** Not a test gate - a findings check: *did we answer the question?* The output is a written conclusion, not a passing suite. |
+| Verify | **= Conclude.** Not a test gate - a findings check: *did we answer the question?* The output is a written conclusion, not a passing suite, recorded with `compass evidence add EV-SPIKE --type spike-conclusion --path <file> --decision <decision>`. |
 | Ship | **= Graduate or Discard.** Never "merge to main." Either the findings feed a fresh `/compass:assess` for real delivery work, or the spike is discarded with its learnings recorded. |
 
 ## Gate set
@@ -80,14 +80,15 @@ The de-scopes are safe because the approach has no delivery output to protect.
 When a spike answers its question and the team wants to act on it:
 
 1. **Re-assess.** Run `/compass:assess` afresh for the real delivery work. The
-   spike's `delivery-approach.md`, conclusion, and any reference code are inputs to that
+   spike's `devlog.md`, conclusion, and any reference code are inputs to that
    assessment - often very good inputs, because the familiarity is now mapped.
 2. **The new approach owns the code.** Any code carried over from the spike
    is now subject to that approach's guardrails - the tested-before-it-lands,
    acceptance-before-code and traceability guardrails. In practice most spike
    code is rewritten under TDD; some is kept and retro-tested. Either way it
    meets the guardrails before it lands.
-3. **The spike closes.** Its `delivery-approach.md` records "graduated → issue `<slug>`".
+3. **The spike closes.** Its conclusion record names the new issue
+   (`--next-issue <slug>` on `compass evidence add`).
 
 Graduation *is* re-assessment. There is no path from spike code to `main` that
 skips a real approach - that is the whole safety model.

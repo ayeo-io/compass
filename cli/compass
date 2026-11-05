@@ -64,7 +64,6 @@ from compass_pkg._all import *  # noqa: F401,F403
 from compass_pkg.status_cmd import register as register_status_parser  # noqa: E402
 from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # noqa: E402
 from compass_pkg.decisions import register as register_decision_parser  # noqa: E402
-from compass_pkg.spec_refresh import register as register_refresh_spec_parser  # noqa: E402
 from compass_pkg.agent_friction import register as register_issue_friction_parser  # noqa: E402
 from compass_pkg.lineage import cmd_issue_raised_by  # noqa: E402
 from compass_pkg.approach_diagram import cmd_approach_diagram  # noqa: E402
@@ -79,8 +78,8 @@ from compass_pkg.policy_cmd import register_preset as register_preset_parser  # 
 from compass_pkg.approve_cmd import register as register_approve_parser  # noqa: E402
 from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
 from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
-from compass_pkg import github_labels, github_page, isolation, layering  # noqa: E402
-from compass_pkg.render_after_entry import after_command as render_after_command, before_command  # noqa: E402
+from compass_pkg import github_labels, isolation, layering  # noqa: E402
+from compass_pkg.command_guard import before_command  # noqa: E402
 from compass_pkg.effective import MajorRefusal  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
@@ -213,15 +212,6 @@ def build_parser():
     issue_arg(pc)
     pc.set_defaults(func=cmd_check, output_kind="hand-off")
 
-    pan = sub.add_parser(
-        "analyze",
-        help="cross-artifact consistency check - orphaned scenarios, approach "
-             "disagreements, and orphan claims (advisory or gate-clearing "
-             "depending on whether verify.analyze is in the issue's gate set)",
-    )
-    issue_arg(pan)
-    pan.set_defaults(func=cmd_analyze, output_kind="report")
-
     pcal = sub.add_parser("retro",
                           help="the retrospective signal - re-assessment "
                                "patterns across all issues (is assessment "
@@ -321,20 +311,6 @@ def build_parser():
     register_policy_parser(pls)
     register_preset_parser(sub)
     register_review_rules_parser(sub)
-    register_refresh_spec_parser(sub)
-
-    # The planning stage's verb is `plan`, the word its key, skill, agent
-    # and slash command use. `design` names the designer's stage. ADR-024
-    # says why no old alias is kept.
-    ppl = sub.add_parser("plan", help="technical-design.md tools")
-    ppls = ppl.add_subparsers(dest="subcmd", required=True)
-    ppll = ppls.add_parser(
-        "lint",
-        help="scan a technical-design.md for placeholder phrases "
-             "(advisory; always exits 0)")
-    issue_arg(ppll)
-    ppll.add_argument("--file", help="lint a specific technical-design.md file")
-    ppll.set_defaults(func=cmd_plan_lint, output_kind="report")
 
     # The intake-document group. Adding a top-level verb means updating
     # `EXPECTED_PUBLIC_SUBCOMMANDS` in
@@ -378,53 +354,10 @@ def build_parser():
     issue_arg(ptrb)
     ptrb.set_defaults(func=cmd_issue_raised_by, output_kind="hand-off")
 
-    ptr = pts.add_parser("receipt", help="render a one-screen receipt for an issue")
-    issue_arg(ptr)
-    ptr.add_argument("--workdir", help="alternate project root (default: cwd)")
-    ptr.set_defaults(func=cmd_task_receipt, output_kind="hand-off")
-
-    ptrn = pts.add_parser(
-        "render", help="render the blocks of an issue's documents from its records")
-    issue_arg(ptrn)
-    ptrn.add_argument("--all", action="store_true",
-                      help="render every readable issue and the project index; skip an issue whose inputs are unchanged")
-    ptrn.add_argument("--dry-run", dest="dry_run", action="store_true",
-                      help="list what would change; write nothing")
-    ptrn.set_defaults(func=cmd_issue_render, output_kind="hand-off")
-
-    ptag = pts.add_parser("artifact", help="a document's status in the issue's review pack")
-    pta = ptag.add_subparsers(dest="artifact_cmd", required=True).add_parser(
-        "set", help="set a document's status in the issue's review pack")
-    pta.add_argument("kind", help="document kind, e.g. technical-design (any kind the issue's catalog declares)")
-    pta.add_argument("--status", required=True, choices=list(ARTIFACT_STATUSES),
-                     help="new status")
-    pta.add_argument("--reason", help="why - required when omitting")
-    pta.add_argument("--path", help="where the document was written, relative to the project root (e.g. docs/compass/2026-09-08-my-issue/technical-design.md)")
-    pta.add_argument("--round", type=int, help="the round of a kind that repeats, such as review-<n>.md; default is the round in the path, else the latest")
-    pta.add_argument("--unit", help="the work unit of a kind with one document per unit, such as low-level-design/<unit>.md (U1, U2, ...); default is the unit in the path")
-    pta.add_argument("--decision", help="spike-conclusion only: how the spike closes (discard, graduate-to-delivery or defer); also writes the evidence record the check reads")
-    pta.add_argument("--next-issue", dest="next_issue", help="with --decision graduate-to-delivery: the slug of the delivery issue")
-    issue_arg(pta)
-    pta.set_defaults(func=cmd_issue_artifact, output_kind="hand-off")
-
-    ptap = pts.add_parser("artifact-path", help="print where one of an issue's documents is; non-zero when it is not there")
-    ptap.add_argument("kind", help="document kind, e.g. delivery-approach")
-    ptap.add_argument("--round", type=int, help="the round of a kind that repeats, such as review-<n>.md; default is the latest")
-    ptap.add_argument("--unit", help="the work unit of a kind with one document per unit (U1, U2, ...); needed when two or more units are registered")
-    issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
-    pttg = pts.add_parser("template", help="document templates")
-    ptt = pttg.add_subparsers(dest="template_cmd", required=True).add_parser(
-        "show", help="print the skeleton of a document kind from the catalog, or a template that is not a kind as the file")
-    ptt.add_argument("kind", help="document kind or template name, e.g. requirements-review or verification-report")
-    ptt.add_argument("--depth", help="the depth to print, lightweight or thorough; default is the depth the issue registers the kind at, else thorough")
-    issue_arg(ptt)
-    from compass_pkg.template_lists import cmd_issue_template as _cmd_issue_template
-    ptt.set_defaults(func=_cmd_issue_template, output_kind="hand-off")
     register_status_parser(pts, issue_arg)
     from compass_pkg import issue_depends
     issue_depends.register(pts, issue_arg)
     github_labels.register(pts, issue_arg)
-    github_page.register(pts, issue_arg)
 
     from compass_pkg.release_line import add_argument as add_release_note
     pacc = sub.add_parser(
@@ -623,6 +556,11 @@ def build_parser():
     peva.add_argument("--scenario", help="scenario this evidence is for (optional)")
     peva.add_argument("--meets", action="append", metavar="CHECK",
                       help="a Definition of Done or Ready item this evidence meets (repeatable)")
+    peva.add_argument("--decision",
+                      help="with --type spike-conclusion: how the spike closes, discard | "
+                           "graduate-to-delivery | defer")
+    peva.add_argument("--next-issue", dest="next_issue", metavar="SLUG",
+                      help="with --decision graduate-to-delivery: the delivery issue it graduates to")
     peva.set_defaults(func=cmd_evidence_add, output_kind="hand-off")
     register_approve_parser(pevs)
     register_review_parser(pevs)
@@ -653,28 +591,17 @@ def build_parser():
                        help="the term to render (omit to list every term)")
     pterm.set_defaults(func=cmd_terminology, output_kind="report")
 
-    # --- private entry point ---------------------------------
+    # --- private entry points --------------------------------
     # The leading underscore in the name is the convention that marks a
-    # subcommand as private (in-framework callers only).
-    # We register it via add_parser(help=SUPPRESS) to hide it from the
-    # subcommand help listing, and then manually remove it from the
-    # _choices_actions list so it also disappears from the usage line and the
-    # {choices} display.  This keeps private verbs out of the public verb set
-    # that `tests/cross_cutting/test_stream_d_invariants.py` pins.
-    p_derive = sub.add_parser(
-        "_derive-system-spec",
-        help=argparse.SUPPRESS,
-    )
-    p_derive.add_argument(
-        "--internal",
-        action="store_true",
-        help=argparse.SUPPRESS,
-    )
-    p_derive.set_defaults(func=cmd_derive_system_spec, output_kind="report")
-
+    # subcommand as private (in-framework callers only). Each is registered
+    # with add_parser(help=SUPPRESS) to hide it from the subcommand help
+    # listing, and then removed from the _choices_actions list so it also
+    # disappears from the usage line and the {choices} display. This keeps
+    # private verbs out of the public verb set that
+    # `tests/cross_cutting/test_stream_d_invariants.py` pins.
+    #
     # docs/glossary.md is generated from governance/terminology.yml. Private
-    # and called at ship, the same shape as _derive-system-spec: it adds no
-    # public verb.
+    # and called at ship: it adds no public verb.
     p_gloss = sub.add_parser("_derive-glossary", help=argparse.SUPPRESS)
     p_gloss.add_argument("--internal", action="store_true", help=argparse.SUPPRESS)
     p_gloss.add_argument("--out", help=argparse.SUPPRESS)
@@ -774,7 +701,7 @@ def main(argv=None):
         args.command = args.command[1:]
     try:
         before_command(args)
-        return run_with_mode(args, lambda a: github_page.after_command(a, render_after_command(a, github_labels.after_command(a, args.func(a) or 0)))) or 0
+        return run_with_mode(args, lambda a: github_labels.after_command(a, args.func(a) or 0)) or 0
     except (CompassError, MajorRefusal) as exc:
         # Paths in an error open from the project root, like every other
         # path the CLI prints (#293).

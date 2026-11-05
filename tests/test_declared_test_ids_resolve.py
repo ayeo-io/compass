@@ -19,7 +19,7 @@ A matcher that misses either fails at the verify stage, *after* correctness
 has been claimed, which is the worst moment to discover a bookkeeping
 problem.
 
-Scenario ids: see docs/system-spec.md (group C).
+Scenario ids: see the issue's acceptance criteria (group C).
 """
 from __future__ import annotations
 

@@ -1,15 +1,18 @@
 ---
 name: intent-interview
-description: Drawing `intent.md` out of a conversation. Load before acceptance criteria exist.
+description: Drawing the intent out of a conversation. Load before the scenarios exist.
 ---
 
 # Intent interview
 
-There are two ways an issue gets an `intent.md`, and this skill covers both.
+There are two ways an issue gets its intent, and this skill covers both. The
+intent is the opening of `acceptance-criteria.md`: its Summary and its Intent
+links, written before any scenario. Compass writes no separate intent document
+(ADR-091); a team can keep one as its own note.
 
 **Someone arrives with a document.** It is in Notion, or Jira, or a file called
 something nobody would guess. `compass intent ingest` has read it and left a
-snapshot at `intent-source.md`. Your job is to turn it into `intent.md`.
+snapshot at `intent-source.md`. Your job is to turn it into the intent.
 
 **Someone arrives with an idea.** No document at all. Same discipline, longer
 conversation, nothing to reshape.
@@ -19,10 +22,10 @@ anything else.
 
 ## Nothing is invented
 
-**Every statement in `intent.md` traces to the source or to a recorded answer.
+**Every statement in the intent traces to the source or to a recorded answer.
 There is no third origin.**
 
-You can move material, split it, merge it under a template heading, and
+You can move material, split it, merge it under a heading of the intent, and
 reformat it. You must not change what it means, and you must not add to it.
 
 That last part is the one that will tempt you. A source document with no non-goals is a
@@ -43,15 +46,15 @@ forgotten.
 
 **Read the source first, and count what it already answers.** If it carries the
 problem, the outcome, the non-goals, the success signals and a first slice,
-then there is nothing to draw out. Reshape it into the template's sections,
+then there is nothing to draw out. Reshape it into the parts of the intent,
 record every section as `from: source`, and hand it over.
 
 A person who arrives with a complete source document and gets interrogated about it
 learns that Compass wastes their time. That is a worse outcome than a thin
-`intent.md`, because they do not come back.
+intent, because they do not come back.
 
 **Say what you are doing:** "Your source document covers everything the
-template asks for, so I have reshaped it and asked nothing." That sentence is
+intent asks for, so I have reshaped it and asked nothing." That sentence is
 the whole hand-off when the source is good.
 
 ## When there is something to ask
@@ -75,7 +78,7 @@ grateful to have been asked and least likely to volunteer.
 
 ## Declining is a complete answer
 
-**A person can decline every question and must still get an `intent.md`.**
+**A person can decline every question and must still get an intent.**
 Someone in a hurry, or without the answers to hand, needs to start now and
 come back later. A loop that blocks them is worse than no interview.
 
@@ -86,8 +89,8 @@ When a question is declined:
 - record the section as `from: unanswered`
 - write, in the section itself, that it was asked and not answered
 
-**Never write `TBD`.** `TBD` means "someone will get to this", and
-`compass plan lint` scans for it as an unfinished placeholder. A section that
+**Never write `TBD`.** `TBD` means "someone will get to this": it is an
+unfinished placeholder. A section that
 was asked about and deliberately left open is *finished*. Two different states,
 and only one of them is true:
 
@@ -99,17 +102,18 @@ That sentence is a complete section. `TBD` is not.
 
 | Where | What |
 |---|---|
-| `intent.md` | the reshaped document, following `templates/intent.md`'s sections |
+| `acceptance-criteria.md` → Summary and Intent links | the reshaped intent: the problem, the outcomes with their `INT-n` ids, the success signals, the non-goals and any first slice |
 | `manifest.yml` → `intent_source.sections` | one entry per section: `name`, `from` (`source` \| `answer` \| `unanswered`), and `answer_id` where it cites one |
 | `manifest.yml` → `intent_source.interview` | every question asked, with its answer or `null` |
 
-`intent-source.md` is never edited. It is the record `intent.md` is checked
+`intent-source.md` is never edited. It is the record the intent is checked
 against, and a reviewer who wants to know whether you invented something reads
 the two side by side.
 
 ## Hand-off
 
-> I have written `intent.md` from the source document at `<origin>`.
+> I have written the intent into `acceptance-criteria.md` from the source
+> document at `<origin>`.
 >
 > N sections came from the source, M from questions I asked, K were asked
 > about and left open. The questions and answers are recorded in the manifest.

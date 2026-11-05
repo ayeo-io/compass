@@ -33,8 +33,9 @@ from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, COMPASS_SCH
 from compass_pkg.governance import governance_drift
 from compass_pkg import retired, word_map
 from compass_pkg.stable_ids import (APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE,
-                                    ARTIFACT_DEPTHS, DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH, MODE_LIGHTWEIGHT,
-                                    MODE_THOROUGH, STAGE_IMPLEMENT, STAGE_VERIFY)
+                                    ARTIFACT_DEPTHS, DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH,
+                                    GATE_VERIFY_ANALYZE, MODE_LIGHTWEIGHT, MODE_THOROUGH,
+                                    STAGE_IMPLEMENT, STAGE_VERIFY)
 from compass_pkg.render import fired_rule_line
 from compass_pkg.manifest import annotate_gate_accepts_text
 from compass_pkg.readiness_floor import FLOOR_REFUSED, _readiness_floor
@@ -66,6 +67,17 @@ def _display_blocked_phase(phase):
 #: The text a rule's `changed` list holds for a gate it adds. The writer formats it and
 #: `gates_added_by` parses it, so the gate-set block cannot disagree with the evaluator.
 GATE_ADDED = "gate '{gate}' added to the approach's gate set"
+
+
+#: The framework-owned table of removed review gates, each with the release that
+#: removed it. A frozen preset, a stored generation or copied governance can still
+#: name one; it owes nothing, as a removed check owes nothing
+#: (`check_registry.REMOVED`). The evaluator leaves it out of the gate set, so a new
+#: issue never gets a gate that nothing can clear, and a rule whose only effect was
+#: to add it does not fire. `verify.analyze` accepted only the evidence
+#: `compass analyze` wrote, and 9.0.0 removes that command (ADR-091). Frozen presets
+#: still hold `RP-REQUIRE-001` and `RP-REQUIRE-002`, which add it.
+REMOVED_GATES = {GATE_VERIFY_ANALYZE: "9.0.0"}
 _GATE_ADDED_RE = re.compile("^" + re.escape(GATE_ADDED).replace(r"\{gate\}", "(.+?)") + "$")
 
 
@@ -364,7 +376,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
             never_skip.update(fl["never_skip"])
             changed.append("never-skip: " + ", ".join(
                 display_stage(s) for s in fl["never_skip"]))
-        if fl.get("add_gate"):
+        if fl.get("add_gate") and fl["add_gate"] not in REMOVED_GATES:
             floor_gates.append(fl["add_gate"])
             changed.append(GATE_ADDED.format(gate=fl["add_gate"]))
         if fl.get("add_artifact"):
@@ -440,7 +452,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
                                    "until": rr.get("until", "")})
             changed.append(f"stage '{_display_blocked_phase(rr['block_phase'])}' "
                            f"blocked until: {rr.get('until', '')}")
-        if rr.get("gate"):
+        if rr.get("gate") and rr["gate"] not in REMOVED_GATES:
             document_gates.append(rr["gate"])
             changed.append(GATE_ADDED.format(gate=rr["gate"]))
         if changed:
@@ -471,13 +483,13 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     for p in (never_skip | required_phases):
         if _below_thorough(p, phases.get(p), policy.get("stage_mode_ranks")):
             phases[p] = MODE_THOROUGH
-    gates = list(shape.get("gates", []))
+    gates = [g for g in shape.get("gates", []) if g not in REMOVED_GATES]
     # Immovable gates and rule-added gates apply to delivery approaches only. Spike
     # ships nothing - it carries only its own Conclude gate, by design. (A
     # spike that needs a delivery gate is not a spike; it graduates.)
     if final != APPROACH_SPIKE:
         for ig in guardrails.get("immovable_gates", []):
-            if ig.get("gate") and ig["gate"] not in gates:
+            if ig.get("gate") and ig["gate"] not in gates and ig["gate"] not in REMOVED_GATES:
                 gates.append(ig["gate"])
         for rg_gate in document_gates:  # gates a document rule adds (verify.claims)
             if rg_gate not in gates:
@@ -709,7 +721,7 @@ def cmd_route_evaluate(args):
         task_dir = resolve_issue_dir(args.task)
         task, task_path = load_manifest(task_dir)
         if getattr(args, "write", False):
-            # The slug reaches the living spec at ship, as a title does.
+            # The slug reaches the release notes and the board, as a title does.
             from compass_pkg.manifest import slug_problem
             slug = os.path.basename(os.path.normpath(task_dir))
             root = os.path.dirname(os.path.dirname(os.path.dirname(
@@ -787,14 +799,11 @@ def cmd_route_evaluate(args):
         drift_gov = find_governance()
     # The issue's own layer applies before the floors, caps and document rules, as
     # `obligations` applies it for the classifier.
-    # The documents on disk are read now, beside the assessment and never into it.
-    from compass_pkg import documents_present
     for dim in retired.DIMENSIONS:      # a 6.x manifest's role, which a 7.0.0 policy drops
         if dim in readings and dim not in (policy.get("assessment_vocabulary") or {}):
             sys.stderr.write(retired.notice(f"assessment.{dim}") + "\n")
     prepared = prepare_policy(policy)
-    result = evaluate_route(documents_present.with_presence(readings, task_dir, policy),
-                            prepared, autonomy,
+    result = evaluate_route(readings, prepared, autonomy,
                             issue=view.evaluator_issue() if view is not None else None)
     # The block the write stores, and the stage 2 and 3 reviews listed only
     # where the strategy applies to the issue (ADR-083).
@@ -1048,55 +1057,8 @@ def cmd_route_evaluate(args):
             existing.get(gid, {"id": gid, "status": "pending", "evidence": []})
             for gid in result["gates"]
         ]
-        # Seed the artifact registry the same way the gate list is seeded:
-        # what routing computed, without clobbering a status or path a stage
-        # has already recorded against an entry.
-        recorded = [a for a in task.get("artifacts", []) if isinstance(a, dict)]
-        # A kind that repeats has one entry per round, so the merge keys by kind and
-        # round: it keeps every round of an earned kind and never collapses them.
-        from compass_pkg import artifact_kinds
-        voluntary = artifact_kinds.voluntary(view)
-        merged = []
-        for a in result["artifacts"]:
-            keep = [r for r in recorded if r.get("kind") == a["kind"]]
-            if keep and not any(isinstance(r.get("round"), int) for r in keep):
-                keep = keep[-1:]
-            for kept in keep:
-                kept = dict(kept)
-                kept["reason"] = a["reason"]      # the rule that earned it
-                # A document registered before the write (an intent drafted so
-                # RP-ART-002 sees it) takes the depth the approach owes it.
-                kept.setdefault("depth", a["depth"])
-                merged.append(kept)
-            if not keep:
-                merged.append(a)
-        # A human-recorded omission of something routing no longer earns is
-        # kept: it is a decision someone took, not stale computed output.
-        # A document that was written (it has a path) stays too, as
-        # `superseded`, so the file keeps a record of why it is no longer owed.
-        # An entry with no path records no document and is dropped. A voluntary
-        # kind (no approach, rule or flag asks for it) is never superseded: a
-        # reassessment cannot unearn what it never earned.
-        earned = {m["kind"] for m in merged}
-        for a in recorded:
-            if a.get("kind") in earned:
-                continue
-            if a.get("status") == "omitted":
-                merged.append(a)
-            elif a.get("path") and a.get("kind") in voluntary:
-                merged.append(a)
-            elif a.get("path") and evaluated_before:
-                from compass_pkg import artifact_status
-                a = dict(a)
-                if a.get("status") != artifact_status.SUPERSEDED:
-                    a["status"] = artifact_status.SUPERSEDED
-                    a["reason"] = ("superseded by the re-assessment of %s, %s to %s" % (
-                        datetime.date.today().isoformat(),
-                        prior["delivery_approach"] or "an earlier approach",
-                        result["delivery_approach"]))
-                artifact_status.clear_approver(a)
-                merged.append(a)
-        task["artifacts"] = merged
+        # 9.0.0 registers no document (ADR-091). An `artifacts:` list an older release
+        # wrote stays as it is: nothing reads it but the path of an older spec.
         # make sure the evidence registry exists at the top level
         task.setdefault("evidence", [])
         task["subtask_ceiling"] = result["subtask_ceiling"]

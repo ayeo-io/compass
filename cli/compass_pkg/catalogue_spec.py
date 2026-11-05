@@ -301,8 +301,8 @@ AUTONOMY = ("controlled", "balanced", "autonomous")
 ADOPTION = ("advisory", "enforced")
 # `governance_drift`: any value other than `strict` reads as `advisory`.
 GOVERNANCE_DRIFT = ("advisory", "strict")
-# `living_spec`: when the living spec is re-derived. `land` (the default) re-derives
-# and commits it at every landing; `refresh` leaves it to `compass spec sync`.
+# `living_spec`: removed in 9.0.0 (ADR-091) and not read. Its two values stay valid,
+# so a compass.yml that still holds the key loads, and `compass policy lint` names it.
 LIVING_SPEC = ("land", "refresh")
 # The approver lists a layer names (ADR-039); an unlock is the owner's.
 APPROVER_KINDS = ("issue-waiver", "project-waiver")
@@ -314,6 +314,8 @@ LABEL_CAP = 8
 DOCUMENT_CAP = 4
 
 # Named switches for new blocking behaviour, off in the shipped default.
+# `artifact-freshness` was removed in 9.0.0 (ADR-091) and is not read; it stays
+# valid because default@6, default@7 and stored generations declare it.
 CAPABILITIES = ("entry-exit-evaluation", "artifact-freshness")
 
 # Top-level keys of a layer file (ADR-043).
@@ -505,7 +507,7 @@ FIELD_DESCRIPTIONS = {
                       "artifact and a directory are each an error.",
         "checks": "The ids of the checks the artifact carries.",
         "bookkeeping": "Whether the artifact is a record the framework keeps about the work, "
-                       "such as the dashboard, the receipt or the verification report. Such "
+                       "such as the dashboard or the verification report. Such "
                        "an artifact is never an input to another.",
         "stage": "The id of the stage that owns the artifact, for example `plan` for the "
                  "technical design.",
@@ -572,9 +574,12 @@ TOP_DESCRIPTIONS = {
                     "default.",
     "capabilities.entry-exit-evaluation": "Whether the entry and exit checks of each stage are "
                                           "evaluated. Off in the shipped default.",
-    "capabilities.artifact-freshness": "Whether a change to an artifact marks the artifacts and "
-                                       "check results that depend on it as stale. Off in the "
-                                       "shipped default.",
+    "capabilities.artifact-freshness": "Removed in 9.0.0 (ADR-091) and not read: whether a "
+                                       "change to an artifact marked the artifacts that depend "
+                                       "on it as stale. It stays valid so a frozen preset or a "
+                                       "stored generation that declares it still loads, and "
+                                       "`compass policy lint` names it when a project turns it "
+                                       "on.",
     "autonomy": "How often a session stops for a person at a stage hand-off: `controlled` at "
                 "every listed hand-off, `balanced` at fewer, `autonomous` never. "
                 "The shipped default is `balanced`.",
@@ -588,10 +593,9 @@ TOP_DESCRIPTIONS = {
     "governance_drift": "Whether drift from the shipped governance fails: `strict` fails "
                         "`compass policy lint` and `advisory` only reports it. "
                         "The default is `advisory`.",
-    "living_spec": "When a landing re-derives the living spec, `docs/system-spec.md`: `land` "
-                   "re-derives it and commits it alone after each landing, and `refresh` "
-                   "leaves it as it is, for a person to re-derive with `compass spec sync`. "
-                   "The default is `land`.",
+    "living_spec": "Removed in 9.0.0 (ADR-091) and not read: `land` or `refresh` set when a "
+                   "landing re-derived the living spec. The key stays valid so a project that "
+                   "holds it keeps working, and `compass policy lint` names it.",
     "allow_project_commands": "Whether `compass check` may run commands that a project "
                               "guardrail declares, read from the project's own file only. "
                               "The default is `false`.",
@@ -637,9 +641,9 @@ TOP_DESCRIPTIONS = {
                   "key stays valid so a project that holds it keeps working, and `compass "
                   "policy lint` names it.",
     "preset_index": "Reserved for published presets. It has no behavior yet.",
-    "github_labels": "Whether Compass writes an issue's labels and page to its linked GitHub "
-                     "issue, through the switches `domain`, `status` and `page`. All three are "
-                     "off by default, and with all three off no command calls GitHub.",
+    "github_labels": "Whether Compass writes an issue's labels to its linked GitHub issue, "
+                     "through the switches `domain` and `status` (`page` is removed in 9.0.0). "
+                     "Both are off by default, and with both off no command calls GitHub.",
     "github_labels.domain": "Whether Compass writes the issue's declared domain labels to its "
                             "GitHub issue. The default is `false`.",
     "github_labels.status": "Whether Compass writes `status:<state>` to the GitHub issue, and on "

@@ -10,22 +10,23 @@ behaviors, read from different professional perspectives.
 
 | Role | Entry point | Primary artifacts | Governing question |
 |---|---|---|---|
-| Product owner or manager | `/compass:intent` | `intent.md` | Does the specification deliver the intended outcome? |
+| Product owner or manager | `/compass:intent` | the intent, in the Summary and Intent links of `acceptance-criteria.md` | Does the specification deliver the intended outcome? |
 | Product marketer | `/compass:position` | `positioning.md`, `launch-readiness.md` | Which claims does tested behavior support? |
 | Designer | `/compass:design` | `ui-contract.md` | Are interaction states and accessibility expectations specified? |
 | Engineer | `/compass:assess` | approach, design, code and tests | How will each scenario become tested software? |
-| QA | `/compass:verify` | `verification-report.md` | Is the behavior covered, and is the evidence enough? |
+| QA | `/compass:verify` | the gate evidence, in the manifest | Is the behavior covered, and is the evidence enough? |
 
 A role is a perspective a session consults. It does not change the issue's
-assessment. The documents on disk decide: `positioning.md` adds the claims
-gate, and `intent.md` adds a check before plan: the session checks, from the
-product owner's perspective, that the spec matches it. If you write one after the issue is assessed, re-assess the issue.
+assessment, and a document on disk adds no gate: Compass needs and checks
+only `acceptance-criteria.md` (ADR-091). The plan stage checks, from the
+product owner's perspective, that the spec matches the intent its Intent links
+name.
 
 ## How each role reads the spec
 
 Every spec is read by all five roles. Each reads it for a different reason:
 
-- **Product owner / manager** - reads for *intent fidelity*: do these scenarios deliver the outcome in `intent.md`?
+- **Product owner / manager** - reads for *intent fidelity*: do these scenarios deliver the outcome the intent names?
 - **Product marketer** - reads for *claims*: every line of launch copy must point at a scenario id here.
 - **Engineer** - reads for *tests*: scenarios are the acceptance suite and seed the TDD red→green cycle.
 - **QA** - reads for *coverage*: which scenarios are exercised, which edges are not.
@@ -56,7 +57,7 @@ The product owner checks whether the scenario delivers that outcome rather
 than merely implementing “CSV export”. Permissions, latency and the exclusion
 of drafts all affect whether finance can trust and use the result.
 
-If a success signal in `intent.md` has no scenario, or a scenario has no
+If a success signal in the Intent links has no scenario, or a scenario has no
 connection to the intended outcome, the specification is not ready.
 
 ### Marketing: supportable claims
@@ -146,7 +147,7 @@ shape.
 |---|---|
 | A private specification for each role | Contribute to and review the shared scenarios. |
 | Product, design or marketing consulted after implementation | Bring them in through their entry points while change is still inexpensive. |
-| A brief rewritten directly as an engineering issue | Preserve `intent.md` and check the scenarios against it. |
+| A brief rewritten directly as an engineering issue | Keep the intent in the Intent links and check the scenarios against it. |
 | Claims written without scenario links | Change the claim or add the behavior needed to support it. |
 | QA asked only whether tests passed | Ask whether the range of behaviors covered and the evidence are enough. |
 

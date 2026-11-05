@@ -146,18 +146,18 @@ terms:
       UI contract (ui-contract.md) - scenarios written Given/When/Then that
       flow into the acceptance criteria, not mockup annotations. The word
       reads as UI work to most people, which is why the designer has it.
-      `design` names the UI contract and `plan` names the technical design,
+      `design` names the UI contract and `plan` names the engineering design,
       never the other way round: the engineering design is the plan stage
-      (/compass:plan), whose output is technical-design.md. The placeholder
-      scan is the CLI verb `compass plan lint`.
+      (/compass:plan), whose hand-off states it.
     related: [plan, technical-design, delivery-approach]
   plan:
     means: >
       The engineering design stage: the command /compass:plan, the machine
-      key `plan` in a manifest's stages block, the `plan-authoring` skill and
-      the CLI verb `compass plan lint`. Its output is
-      technical-design.md. The delivery approach is a separate thing: it is
-      computed at the assess stage and recorded in delivery-approach.md.
+      key `plan` in a manifest's stages block and the `plan-authoring` skill.
+      Its hand-off and devlog.md state the design and the work units; it
+      wrote technical-design.md until 9.0.0 removed that document (ADR-091).
+      The delivery approach is a separate thing: it is computed at the assess
+      stage and recorded in the manifest.
     related: [technical-design, delivery-approach, design]
 
   # --- Intake artifacts -----------------------------------------------------
@@ -165,28 +165,32 @@ terms:
     means: >
       The engineering plan for one issue: the approach, the design decisions
       as ADR-style notes, the governance check, and the independent work
-      units. Written at the planning stage (/compass:plan) as
-      technical-design.md. The designer's work is the UI contract
-      (ui-contract.md), from /compass:design. In this repository TDD is
-      red-green-refactor and nothing else, so this artifact is never
-      abbreviated to TDD.
+      units. The planning stage (/compass:plan) wrote it as
+      technical-design.md until 9.0.0 removed the document (ADR-091). Older
+      issues still hold one; the plan's hand-off states the design now. The
+      designer's work is the UI contract (ui-contract.md), from
+      /compass:design. In this repository TDD is red-green-refactor and
+      nothing else, so this artifact is never abbreviated to TDD.
     related: [technical-design, delivery-approach]
   first-slice:
     means: >
-      The 80/20 cut recorded in intent.md: the slice of an initiative that
-      ships first because it delivers most of the value, with what
-      deliberately waits stated beside it. The design and the work breakdown
-      follow the first slice, not the whole document.
+      The 80/20 cut that intent.md recorded until 9.0.0 removed that
+      document (ADR-091): the slice of an initiative that ships first because
+      it delivers most of the value, with what deliberately waits stated
+      beside it. The design and the work breakdown follow the first slice,
+      not the whole intent.
     related: [intent, slice, initiative]
   bug-report:
     means: >
       The intake for a bug fix: observed behavior, expected behavior,
-      reproduction steps.
+      reproduction steps. Compass wrote it as bug-report.md until 9.0.0
+      removed the document (ADR-091).
     related: [bug]
   incident:
     means: >
       The intake that triggers a hotfix: what broke in production, impact,
-      severity. SRE sense of the word.
+      severity. SRE sense of the word. Compass wrote it as incident.md until
+      9.0.0 removed the document (ADR-091).
     related: [hotfix, postmortem]
 
   # --- BDD (the triad, first-class) -----------------------------------------
@@ -213,19 +217,14 @@ terms:
     related: [scenario, intent, acceptance-criteria]
   intent:
     means: >
-      Two related things, and the entry covers both deliberately. (1) The
-      document: intent.md, the originator's statement of what is wanted and
-      why, AUTHORED at the intake stage or INGESTED from a brief that already
-      exists - it does not presume authorship. (2) The goal it carries: the
-      outcome a change is meant to produce, the "why" end of the traceability
-      chain, carrying the INT- ids that scenarios trace back to. The document
-      holds the goals, which is why one name serves both.
-      As a document it carries problem, users, goals, non-goals, success
-      signals, constraints, open questions, and the first slice (the 80/20
-      cut) - iterated through review before the design is built. User stories
-      are welcome inside it as a format; acceptance criteria are derived from
-      them. As a goal it is sourced from intent.md's desired outcome, the UI
-      contract, or the issue description - a goal, not a requirement: the
+      The outcome a change is meant to produce: the "why" end of the
+      traceability chain, carrying the INT- ids that scenarios trace back to.
+      The originator states it - problem, users, outcome, constraints -
+      AUTHORED at the intake stage or INGESTED from a brief that already
+      exists, so it does not presume authorship. The define stage writes it into the Summary and Intent links of
+      acceptance-criteria.md. Until 9.0.0 it was also a document, intent.md,
+      which 9.0.0 removed (ADR-091); older issues still hold one, and Compass
+      does not read it. An intent is a goal, not a requirement: the
       functional requirement is the scenario. It goes further than the
       request: "Add a CSV export" is a request; "let finance self-serve" is
       the intent, and it may need filters and permissions the request never
@@ -235,7 +234,7 @@ terms:
   router:
     means: >
       The agent that runs assess: reads the four assessment dimensions, hands
-      them to the CLI, and writes the delivery-approach record. It assesses;
+      them to the CLI, and records the delivery approach in the manifest. It assesses;
       it does not choose a process. Named for what it does - Anthropic's
       platform docs call this shape "Routing", classifying input and directing
       it to a specialized path - and for the file it runs, routing-policy.yml.
@@ -264,27 +263,26 @@ terms:
       The high-level design (HLD): approach, system context, components,
       interfaces, data model, cross-cutting concerns - with sequence
       diagrams, named design patterns, and illustrative code where they add
-      clarity.
+      clarity. The technical design was Compass's HLD until 9.0.0 removed it
+      (ADR-091).
     also: HLD
     related: [lld, adr, operability]
   lld:
     means: >
       Low-level design: the signatures, contracts, file plan and tests of one
       work unit, in its own document, `low-level-design/U<n>.md`. The planner
-      writes one per unit of the technical design's Work units table, so the
-      design stays short and each builder reads only its own unit. No approach
-      owes one; on the full approach, `compass issue lint` notes a unit that
-      has none.
+      wrote one per unit of the technical design's Work units table until
+      9.0.0 removed both documents (ADR-091). Older issues still hold them.
     related: [design-doc, word_ceiling]
   word_ceiling:
     means: >
-      The word limit a document kind carries in the artifacts catalog, per
-      depth, such as 4,000 words for a thorough technical design. Words are
+      The word limit a document kind carried in the artifacts catalog, per
+      depth, such as 4,000 words for a thorough technical design. Words were
       counted from the visible text only: rendered blocks and HTML comments
-      do not count. `compass issue lint` notes a document over its limit, and
-      the check `design-within-word-ceiling` refuses a technical design over
-      1.5 times its limit once plan exit is due. An issue stored before a kind
-      had a limit keeps no limit.
+      did not count. The check `design-within-word-ceiling` refused a
+      technical design over 1.5 times its limit until 9.0.0 removed the check
+      and the live catalog (ADR-091). A frozen preset and a stored generation
+      still hold the limits.
     related: [lld, design-doc]
   adr:
     means: >
@@ -304,8 +302,9 @@ terms:
     related: [delivery-approach, label, issue-type, assessment]
   delivery-approach:
     means: >
-      The chosen shape for an issue: which artifacts exist, which gates
-      apply, solo or parallel. Deterministic - same assessment plus same policy
+      The chosen shape for an issue: the weight of each stage and the gates
+      that apply, recorded in the manifest. Since 9.0.0 it names no documents
+      (ADR-091). Deterministic - same assessment plus same policy
       always gives the same approach. `full` is the name of the heaviest
       delivery approach and is not a stage mode: its stages run `thorough`,
       and the old mode word `full` reads as `thorough` until 9.0.0.
@@ -314,37 +313,48 @@ terms:
     means: >
       The one line in an artifact's catalog entry that says who reads the
       document and what the reader decides from it.
+      9.0.0 removed the catalog from the live default (ADR-091); a frozen
+      preset and a stored generation still hold it.
     related: [delivery-approach, technical-design]
   stands-for:
     means: >
       The name the industry uses for the kind of document an artifact is,
       such as `hld` for the technical design. It is a field of the artifact's
       catalog entry.
+      9.0.0 removed the catalog from the live default (ADR-091); a frozen
+      preset and a stored generation still hold it.
     related: [audience, technical-design]
   sections:
     means: >
       The headings of an artifact's document, in order, for each depth the
       document can be written at (`lightweight` and `thorough`). It is a field
       of the artifact's catalog entry. A document that is one rendered block
-      has an empty list.
+      has an empty list. The acceptance criteria are read through the last
+      shipped catalog when the configuration declares none.
+      9.0.0 removed the catalog from the live default (ADR-091); a frozen
+      preset and a stored generation still hold it.
     related: [audience, rendered-block]
   required-when:
     means: >
       A condition in an artifact's catalog entry. The document is owed only
-      when the condition holds. The one condition today is a minimum number of
-      subtasks, so the distribution map is owed from two subtasks.
+      when the condition holds. The one condition was a minimum number of
+      subtasks, so the distribution map was owed from two subtasks.
+      9.0.0 removed the catalog from the live default (ADR-091); a frozen
+      preset and a stored generation still hold it.
     related: [audience, delivery-approach]
   review-round:
     means: >
-      One review of an issue's work by a reviewer who did not write it. Each
-      round is its own document, `review-<n>.md`, and its own entry in the
-      artifact registry. Rounds count from 1.
+      One review of an issue's work by a reviewer who did not write it.
+      Rounds count from 1. Until 9.0.0 each round was its own document,
+      `review-<n>.md`, and its own entry in the artifact registry; 9.0.0
+      removed both (ADR-091).
     related: [requirements-review, audience]
   voluntary-kind:
     means: >
       A document kind that no delivery approach, rule or `every_approach`
-      flag names, so nothing owes it. A person registers it when it is
-      written, and a reassessment never supersedes it. `review` is one.
+      flag names, so nothing owes it. A person registered it when it was
+      written, and a reassessment never superseded it. `review` was one.
+      9.0.0 removed document registration (ADR-091).
     related: [required-when, review-round]
   not-an-artifact-list:
     means: >
@@ -352,6 +362,8 @@ terms:
       documents of no kind, such as `README.md` and the review briefs. The
       migrate leaves them in place, and `compass issue lint` does not report
       them.
+      9.0.0 removed the catalog from the live default (ADR-091); a frozen
+      preset and a stored generation still hold it.
     related: [audience, sections]
   check:
     means: >
@@ -383,7 +395,7 @@ terms:
   definition-of-ready:
     means: >
       The gate between requirements and plan/implementation: acceptance criteria
-      exist, ambiguities resolved, intent.md reviewed where one exists.
+      exist, ambiguities resolved, the criteria checked against the intent.
       Trivially
       satisfied for a quick fix.
     also: DoR
@@ -392,8 +404,10 @@ terms:
     means: >
       The review pass that hardens requirements before plan or implementation:
       ambiguities resolved into recorded decisions, contradictions and
-      gaps closed, intent.md reviewed where one exists. Satisfying it is
-      what makes an issue ready.
+      gaps closed, the criteria checked against the intent. Satisfying it is
+      what makes an issue ready. It wrote requirements-review.md until 9.0.0
+      removed that document (ADR-091); the decisions and the Definition of
+      Ready items are its record now.
     related: [intent, definition-of-ready, acceptance-criteria]
   definition-of-done:
     means: >
@@ -443,47 +457,46 @@ terms:
 
   receipt:
     means: >
-      The per-issue proof summary rendered from the manifest and the evidence
-      registry: the assessment, the delivery approach, the gates and what
-      cleared them - one screen, shareable as-is. Evidence is the typed
-      records that clear gates; the receipt is the read-only summary that
-      cites them.
+      The one-screen summary of an issue that `compass issue receipt`
+      printed until 9.0.0 removed it (ADR-091): the assessment, the delivery
+      approach, the gates and the evidence that cleared them. Older records
+      and decision records still name it. `compass approach show` lists an
+      issue's gates and `compass check` judges its evidence.
     related: [evidence, quality-gate]
 
   rendered-block:
     means: >
       The lines between `<!-- compass:render KIND -->` and
-      `<!-- /compass:render -->` in an issue's document. `compass issue render`
-      writes them from the manifest and the evidence and leaves every other
-      byte of the document as it is. A check, `rendered-blocks-current`,
-      compares each block with a fresh render. Every digest of a document and
-      every reader of its text leaves the lines inside a block out.
+      `<!-- /compass:render -->` in an issue's document, which `compass issue
+      render` wrote from the manifest and the evidence until 9.0.0 removed it
+      (ADR-091). A document written before then can still hold them, so every
+      digest of a document and every reader of its text leaves the lines
+      inside a block out. Nothing writes or checks a block now.
     related: [issue-page, verification-note, project-index, item-record]
 
   issue-page:
     means: >
       The README of an issue's documents folder,
-      `docs/compass/<created>-<slug>/README.md`. Its rendered blocks answer a
-      reader's questions in order: the header, the ask, the decision required,
-      the acceptance, the related issues, the decisions, the documents, the
-      traceability chart, the documents left out on purpose and the
-      follow-ups. `compass issue render` creates it when it is absent.
+      `docs/compass/<created>-<slug>/README.md`, which `compass issue render`
+      wrote from the issue's records until 9.0.0 removed it (ADR-091). An
+      older archive can still hold one; nothing writes or reads it now.
     related: [rendered-block, project-index]
 
   verification-note:
     means: >
       A quick fix's one-screen record of what was checked: the scenario, its
       test, the red and green records, each gate with its status and the files
-      changed. It is one rendered block, written by `compass quick-fix finish`
-      and approved by it. A person can write prose above the block.
+      changed. It was one rendered block, which `compass quick-fix finish`
+      wrote and approved until 9.0.0 removed it (ADR-091). An older quick fix
+      still holds one.
     related: [rendered-block, quick-fix]
 
   project-index:
     means: >
-      The README.md directly in the folder `docs/compass`, one rendered block that lists every
-      issue once, in a table for its state, with a link to its issue page.
-      The last table is the issues completed in the 30 days before the newest
-      completion the project holds.
+      The README.md directly in the folder `docs/compass`, which listed every
+      issue once, in a table for its state, until 9.0.0 removed the render
+      (ADR-091). An older checkout can still hold one; nothing writes or reads
+      it now. `compass board render` shows every issue.
     related: [rendered-block, issue-page]
 
   item-record:
@@ -564,7 +577,7 @@ terms:
   ship:
     means: >
       Merging and releasing the change: the PR lands, follow-ups are
-      recorded, the derived system spec is regenerated.
+      recorded and the issue is marked done.
     related: [pr, rollout-plan]
   rollout-plan:
     means: >
@@ -579,7 +592,10 @@ terms:
     means: Releasing to a small slice of traffic/users first, watching SLIs.
     related: [rollout-plan, sli]
   rollback-plan:
-    means: The recorded way back if the change misbehaves in production.
+    means: >
+      The recorded way back if the change misbehaves in production. Compass
+      owed one as rollback-plan.md on migrations work until 9.0.0 removed the
+      document and its rule (ADR-091).
     related: [rollout-plan]
   operability:
     means: >
@@ -846,7 +862,7 @@ codes:
       gates. The accepted types are fixed by guardrails.yml; a gate that
       needs a mechanical type cannot be cleared with a written note.
     referent: One typed evidence record.
-    appears_in: ["manifest.yml evidence[].id", "gates[].evidence", verification-report.md]
+    appears_in: ["manifest.yml evidence[].id", "gates[].evidence", "verification-report.md (archive)"]
     related: [quality-gate, evidence]
   FU:
     means: >
@@ -855,7 +871,7 @@ codes:
       work": a newly found defect gets its own issue named by slug. A
       follow-up may carry target_task, naming the issue whose ship it blocks.
     referent: One piece of work this issue deferred and still owes.
-    appears_in: ["manifest.yml follow_ups[].id", verification-report.md]
+    appears_in: ["manifest.yml follow_ups[].id", "verification-report.md (archive)"]
     related: [follow-up, definition-of-done]
   BF:
     means: >
@@ -1047,7 +1063,7 @@ banned:
     context: "As reverse-engineering existing behaviour into scenarios. To anyone working near AI, distillation means training a smaller model from a larger one, so the wrong reading arrives first. The skill is `behaviour-mapping`, which also matches the `brownfield-mapped` familiarity value it serves."
   - term: "coherence check"
     replacement: consistency check
-    context: "As what `compass analyze` does across artifacts. Plain English; `coherent` about an argument is fine."
+    context: "As what `compass analyze` did across artifacts before 9.0.0 removed it. Plain English; `coherent` about an argument is fine."
   - term: "fitness function"
     replacement: architecture check
     context: "As a project-declared architectural rule. NOT renamed to `eval`: an eval measures model output against success criteria in Anthropic's docs, while this checks code structure, so borrowing the word would import a meaning it does not have. The gate is `verify.architecture`."
@@ -1134,8 +1150,6 @@ scan:
     # exempt while their referents keep v1 names.
     - CLAUDE.md
     - AGENTS.md
-    # docs/system-spec.md stays exempt below - it is derived at ship time
-    # and hand-editing it is forbidden.
     - approaches/
     - docs/roles-guide.md
     - docs/safety-contract.md
@@ -1151,7 +1165,6 @@ scan:
     # derivation silently stops matching.
     - docs/releasing.md
     - docs/writing-specs-and-plans.md
-    - docs/receipt.md
     - docs/case-study-compass-rebuilt-itself.md
   # ---------------------------------------------------------------------------
   # POSITION EXEMPTIONS - the inverted default.

@@ -36,8 +36,7 @@ from compass_pkg.stable_ids import APPROACH_SPIKE
 from compass_pkg.core import CHECK_NAME_MAP, migrate_map_section
 from compass_pkg.landed_by import LANDED_BY_RELAXES, landed_by_holds, _check_landed_by_resolves
 from compass_pkg.check_results import ADVISORY_FAILURE
-from compass_pkg.checks import NOTHING_TO_CHECK, _check_backfills_paid, _check_changed_code_traces, _check_claim_traces, _check_coherence_check_passes, _check_evidence_identity_matches, _check_command_passes, _check_declared_tests_resolve, _check_dod_evidence_typed, _check_gate_evidence, _check_human_approval, _check_no_trusted_rerun, _check_scenario_has_id_and_intent, _check_scenarios_are_executable, _check_scenarios_have_tests, _check_spike_conclusion_present, _check_spike_no_production_changes, _check_suite_passed
-from compass_pkg.borrowed_docs import _check_borrowed_documents_answered
+from compass_pkg.checks import NOTHING_TO_CHECK, _check_backfills_paid, _check_changed_code_traces, _check_claim_traces, _check_evidence_identity_matches, _check_command_passes, _check_declared_tests_resolve, _check_dod_evidence_typed, _check_gate_evidence, _check_human_approval, _check_no_trusted_rerun, _check_scenario_has_id_and_intent, _check_scenarios_are_executable, _check_scenarios_have_tests, _check_spike_conclusion_present, _check_spike_no_production_changes, _check_suite_passed
 from compass_pkg.binding import _check_evidence_matches_tree
 from compass_pkg.core import FRAMEWORK_ROOT, exit_for_mode, find_governance, load_mode, load_manifest, load_yaml, mode_banner, reading_matches, resolve_issue_dir
 
@@ -60,11 +59,6 @@ from compass_pkg import outside_gate  # noqa: E402
 # and it would change silently whenever the long text was edited. A missing
 # `do` fails the suite rather than falling back to a truncation.
 CHECK_GUIDANCE = {
-    "borrowed-documents-answered": {
-        "why": "A threat model that lists threats and mitigates none is the Threat Modeling Manifesto's named anti-pattern, \"Admiration for the Problem\". A rollback plan nobody has run is a guess - SWEBOK requires the rollback be rehearsed before the deploy, and a guess recorded as a plan is the assertion the evidence-not-assertion guardrail rejects.",
-        "fix": "In threat-model.md, give every threat either a TRC- scenario id in acceptance-criteria.md, or the words `risk accepted` and the reason. In rollback-plan.md, run the rollback against something and record what happened, when, and against what.",
-        "do": "Answer each threat with a TRC- id or `risk accepted`; rehearse the rollback.",
-    },
     "command-passes": {
         "why": 'A project guardrail with `check: command-passes` runs a real command - an architecture check, a linter, a scanner - and the gate is cleared by that command exiting zero, not by anyone saying it would.',
         "fix": 'Run the command the guardrail names and fix what it reports. If this project declares no such guardrail, nothing was checked and the pass is empty - declare one in governance/guardrails.yml with `check: command-passes` to make the gate mean something.',
@@ -99,11 +93,6 @@ CHECK_GUIDANCE = {
         "why": 'Scenarios are meant to be runnable acceptance criteria. This reads the record `compass bdd verify` writes; it never runs the suite itself.',
         "fix": 'Run `compass bdd verify` so the record exists, and account for any scenario it reports as unmatched. If this project has wired no BDD runner, there is nothing to check - see examples/bdd-adapters/ to opt in.',
         "do": 'Run `compass bdd verify`, or wire a runner (see examples/bdd-adapters/).',
-    },
-    "rendered-blocks-current": {
-        "why": "A rendered block is text Compass writes from the manifest and the evidence: a coverage table, the gates, the Definition of Done. Once the records move or someone edits the block by hand, the document says something the record does not, and a reader cannot tell.",
-        "do": 'Run `compass issue render`, then re-read the document.',
-        "fix": "Run `compass issue render` to rewrite every block of the issue's documents and its issue page from the records, then read the document again. Never edit a block by hand - the next render discards the edit; edit the record instead.",
     },
     "scenarios-have-tests": {
         "why": "Every scenario must have a test that exercises it - without one, the scenario is a wish, not a checkable acceptance criterion (the acceptance-before-code guardrail). EXCEPT a `verifiable: narrative` scenario (a failure-mode playbook), which is cleared by being documented - a non-empty When/Then in acceptance-criteria.md - not by a fabricated test.",
@@ -145,30 +134,15 @@ CHECK_GUIDANCE = {
         "do": 'Settle each owed follow-up: `compass follow-up resolve FU-<id>`.',
         "fix": "Complete each unpaid follow-up (writing the deferred artifact, promoting the reproduction scenario, etc.) and set its `status: paid` in manifest.yml.",
     },
-    "artifacts-approved": {
-        "why": "A document that is still a draft, or waiting for a person's approval, has not been accepted by anyone, and shipping it makes the registry say something untrue. Declined until every gate has passed, because the stages approve their own documents as they go.",
-        "do": 'Run the command the failure names for each document.',
-        "fix": "For each document named: `compass issue artifact set <kind> --status approved` when it has no human check, or `compass issue artifact set <kind> --status awaiting-approval` and then `compass evidence approve --artifact <kind>` at a terminal when it has one. A document you chose not to write is `compass issue artifact set <kind> --status omitted --reason \"<why>\"`.",
-    },
     "nfr-rows-resolved": {
         "why": "A non-functional concern with neither a scenario nor a reason has not been decided, and a cited scenario whose Then states no number cannot be measured, so nobody can tell whether the build meets it.",
         "do": "Give each row the failure names a scenario id or a reason.",
         "fix": "In the spec's Non-functional requirements table, give each concern the detail names a Scenario cell of ids the manifest holds or a Reason it does not apply. At thorough depth, put a number in the Then line of each cited scenario. Add a missing concern row; remove an id the manifest does not hold.",
     },
-    "contracts-declared": {
-        "why": "A change to a schema, a preset or a command line changes a contract other code and people rely on. Unless the design declares it, a reviewer cannot judge the change before it lands.",
-        "do": "Declare a field table, contract table or erDiagram under Data and interfaces.",
-        "fix": "In the technical design's Data and interfaces section, add a field table (Name, Type, Required, Meaning, Written by, Read by) or a contract table (Inputs, Outputs, Exit codes, Errors) with a row for each changed structure or command, or an erDiagram, for the trigger paths the detail names.",
-    },
-    "design-within-word-ceiling": {
-        "why": "A technical design far over its word limit is too long for a reviewer to read before code is written, so the review it exists for does not happen.",
-        "do": "Shorten the design to the threshold the failure names.",
-        "fix": "Move each work unit's signatures, contracts, file plan and tests to low-level-design/<unit>.md, register each with `compass issue artifact set low-level-design --unit U<n> --path <file>`, and cut the design until its word count is at or under the threshold. Unit files alone do not clear the check: the design's own count decides.",
-    },
     "acceptance-applicability-agrees": {
         "why": "The delivery-approach record tells every reader whether the four-layer acceptance strategy applies. A line the records or the project setting no longer agree with misleads the reader and the strategy's checks alike.",
         "do": "Re-assess the issue with the command the finding names.",
-        "fix": "Run `compass approach evaluate --write --expected-acceptance none|validation|refactor --reason \"...\"`, choosing the kind the records show, then `compass issue render` so the delivery-approach record shows the new line.",
+        "fix": "Run `compass approach evaluate --write --expected-acceptance none|validation|refactor --reason \"...\"`, choosing the kind the records show.",
     },
     "outer-loop-recorded": {
         "why": "A unit-test green meets guardrail `G1`, so on a change a client can observe only the outer loop shows the behavior through a client interface. A green from an older tree shows a tree that no longer exists.",
@@ -216,11 +190,6 @@ CHECK_GUIDANCE = {
             "to ship; or (c) `compass evidence approve --check <item>`, which a person "
             "runs at a terminal when the item needs a person."
         ),
-    },
-    "consistency-check-passes": {
-        "why": "Evidence, not assertion: verify.analyze requires a recorded `compass analyze` run with zero coherence findings, backed by a `consistency-check` evidence entry.",
-        "do": 'Run `compass analyze` and settle what it reports.',
-        "fix": "Run `compass analyze` - when verify.analyze is in the gate set it exits non-zero on findings, writes a `consistency-check` evidence record, and clears the gate only when there are zero findings. Resolve any reported orphaned scenarios, approach disagreements, or orphan claims first.",
     },
 }
 
@@ -582,33 +551,11 @@ def _stage_list_pass(run, view, task, task_dir):
     return len(rows), failed, nothing, advisory
 
 
-def _freshness_pass(run, view, task, task_dir):
-    """Add one result per tracked document, when the capability
-    `artifact-freshness` is on, and return `(ran, failed, nothing)` for them.
-    A stale document fails once the issue has reached the stage whose entry it
-    blocks; before that it passes and the detail says it is stale. A project
-    without the capability, or an issue without a configuration, adds nothing."""
-    from compass_pkg import freshness
-
-    if not freshness.enabled(view):
-        return 0, 0, 0
-    run.guardrail(freshness.GUARDRAIL, "artifact freshness")
-    try:
-        findings = freshness.evaluate(view, task, task_dir)
-    except Exception as exc:                            # noqa: BLE001
-        # A check must not crash the run.
-        run.result("freshness", False, f"evaluation errored: {exc}")
-        return 1, 1, 0
-    if not findings:
-        run.result("freshness", NOTHING_TO_CHECK,
-                   "no document records the digests of its upstream")
-        return 1, 0, 1
-    failed = 0
-    for one in findings:
-        broken = one.stale and one.blocking
-        failed += broken
-        run.result(one.artifact, not broken, one.detail)
-    return len(findings), failed, 0
+def _removed_fn(check):
+    """A stand-in for a removed check that a stored configuration still declares
+    (`check_registry.REMOVED`): it reports nothing to check and names the removal."""
+    removed = REMOVED[check]
+    return lambda task, task_dir: (NOTHING_TO_CHECK, removed.detail)
 
 
 def _outside_gate_pass(run, task, task_dir, refused, checks=None):
@@ -630,7 +577,8 @@ def _outside_gate_pass(run, task, task_dir, refused, checks=None):
             if check == acceptance_strategy.CHECK:
                 run.note("  " + acceptance_strategy.notice(task_dir))
             continue
-        verdict = outside_gate.judged(check, CHECK_FNS.get(check), task, task_dir, _judge)
+        verdict = outside_gate.judged(check, CHECK_FNS.get(check) or _removed_fn(check),
+                                      task, task_dir, _judge)
         if verdict is None:
             continue
         run.guardrail("", outside_gate.LABELS[check])
@@ -718,6 +666,15 @@ def _judge(passed, detail, declared, matches, readings):
                                   "blocks when %s."
                                   % (detail, json.dumps(blocking_when)))
     return passed, detail
+
+
+def _removed_entry(check_name, implementation):
+    """The `REMOVED` entry for a listed check, or None. A guardrails.yml
+    written before ADR-023 names a check by its retired spelling, which can be
+    the old name of a check a release removed."""
+    retired = migrate_map_section("values", {}).get("check_name", CHECK_NAME_MAP)
+    return (REMOVED.get(implementation) or REMOVED.get(check_name)
+            or REMOVED.get(retired.get(check_name, "")))
 
 
 def _with_replacements(names, impls):
@@ -905,7 +862,7 @@ def cmd_check(args):
         run.guardrail(gid, g.get("name", ""))
         for check_name in _with_replacements(g.get("checks", []), impls):
             implementation = impls.get(check_name, check_name)
-            removed = REMOVED.get(implementation) or REMOVED.get(check_name)
+            removed = _removed_entry(check_name, implementation)
             if removed is not None:
                 # A stored generation can still list a check a release removed.
                 # It reports nothing to check and is never judged, so an
@@ -988,11 +945,6 @@ def cmd_check(args):
     failures += listed_failed
     nothing_to_check += listed_nothing
     advisory += listed_advisory
-    # The freshness pass runs when the capability `artifact-freshness` is on.
-    fresh_ran, fresh_failed, fresh_nothing = _freshness_pass(run, view, task, task_dir)
-    ran += fresh_ran
-    failures += fresh_failed
-    nothing_to_check += fresh_nothing
     # The checks that sit in no gate: `artifacts-approved`, which stops an unapproved
     # document from shipping, and the two section checks of the spec and the design.
     done, bad, nothing, soft = _outside_gate_pass(run, task, task_dir, refused)
@@ -1014,7 +966,7 @@ def cmd_check(args):
     else:
         try:
             # Wrap this one too: a malformed `follow_ups:` list must not crash
-            # check, receipt, rework-scan, flow --digest or ci.
+            # check, rework-scan, flow --digest or ci.
             passed, detail = _check_backfills_paid(task, task_dir)
         except Exception as exc:                        # noqa: BLE001
             passed, detail = False, f"check errored: {exc}"

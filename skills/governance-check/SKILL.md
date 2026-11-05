@@ -26,9 +26,7 @@ read is not the current file.
 
 **Record which governance you read.** Write the layers that
 `compass policy show` names (for example `default@6.0.0, project`) and the
-issue's `generation:` from `manifest.yml` into the check, the way section 3a
-(policy provenance) of `${CLAUDE_PLUGIN_ROOT}/templates/delivery-approach.md`
-does. An unmigrated 5.x project has no layers line: record the `version:` of its
+issue's `generation:` from `manifest.yml` into the check. An unmigrated 5.x project has no layers line: record the `version:` of its
 copied `guardrails.yml` and `routing-policy.yml` instead. A check that names
 nothing cannot be told apart from one run against wording that has since
 changed, and the prose files carry no version of their own to compare.
@@ -107,47 +105,17 @@ The standard here is different and you must keep it different. A strategy is
   dressed up as evidence. A strategy not followed is a note and a conversation,
   not an automatic stop.
 
-### The no-placeholders check
-
-Before committing `technical-design.md`, run:
-
-```
-compass plan lint
-```
-
-It reports phrases that mean the plan is not actually finished - `TBD`, `TODO`,
-"implement later", "add appropriate error handling" - and work units that
-promise tests without naming any: a decision quietly deferred to whoever
-builds it, who then makes it alone and unrecorded.
-
-**A reported hit is a note, rather than a stop.** The command always exits 0.
-Assess each hit as judgment: fill the gap in, or record why the placeholder
-legitimately stands (a deferred decision with a named owner is a plan, an
-unowned `TBD` is a gap). It never blocks the plan stage, and no floor promotes
-it to a gate.
-
-It ignores text inside fenced code blocks and blockquotes (lines opening with
-`>`), because documents explaining the check quote the phrases it looks for.
-It does not judge softer patterns - a work unit described only as "similar to
-the one above", or an approach section that restates the spec without saying
-how. Those need reading, which is your job in this walk.
-
-Two of the default strategies are approach-aware: **BDD** and **TDD**
-are suspended on a spike. If you are checking a Spike, do not flag the
-absence of scenarios or red-before-green as a strategy failure - that
-suspension is the delivery approach working as designed.
-
 ## Walk 3 - the routing policy
 
 Confirm the plan is consistent with `routing-policy.md`:
 
 - **Routing guardrails** - did every floor that should have fired, fire? Is the
   delivery approach the plan assumes consistent with the caps (e.g. the worktree cap on
-  critical risk)? Are the `immovable_gates` and blocking `artifact_rules`
-  reflected in the plan's gate set and artifact list? A plan that quietly
+  critical risk)? Are the `immovable_gates` reflected in the plan's
+  gate set? A plan that quietly
   assumes a lighter delivery approach than the routing guardrails allow fails here.
 - **Routing strategies** - did the delivery approach follow the default shapes and biases,
-  or is a departure recorded in `delivery-approach.md`? A recorded departure is fine; a
+  or is a departure recorded in `devlog.md`? A recorded departure is fine; a
   silent one is the flag.
 
 ## How to run the check (plan stage)
@@ -155,14 +123,15 @@ Confirm the plan is consistent with `routing-policy.md`:
 1. Run `compass policy show` and read the prose in
    `${CLAUDE_PLUGIN_ROOT}/governance/` (or the project's own copy in an
    unmigrated 5.x project).
-2. Walk 1 - guardrails - against `technical-design.md` and the spec it builds on. Record
+2. Walk 1 - guardrails - against the design and the spec it builds on. Record
    per guardrail: **clears** (with evidence or the plan element that produces
    it) or **fails** (with the specific guardrail).
 3. Walk 2 - strategies - against the same. Record per strategy as **judgment**:
    followed, or departed-and-recorded, or departed-silently (flag it).
 4. Walk 3 - routing policy - confirm the plan's assumed delivery approach is within the
    routing guardrails and consistent with the routing strategies.
-5. Write all three results into `technical-design.md`, with the guardrail findings and the
+5. Record all three results with `compass evidence add` and show them in the
+   plan's hand-off, with the guardrail findings and the
    strategy assessment **visibly separate** - evidence on one side, judgment
    on the other.
 6. A failed guardrail **stops the plan** - revise or re-assess. A strategy

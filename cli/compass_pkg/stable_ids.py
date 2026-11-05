@@ -68,13 +68,15 @@ GATE_VERIFY_TRACEABILITY = "verify.traceability"
 GATE_VERIFY_CLAIMS = "verify.claims"
 GATE_VERIFY_CLARITY = "verify.clarity"
 GATE_SPIKE_CONCLUDE = "spike.conclude"
-GATE_VERIFY_ANALYZE = "verify.analyze"
 GATE_VERIFY_ARCHITECTURE = "verify.architecture"
 GATE_IDS = (GATE_G1, GATE_G2, GATE_G3, GATE_G4, GATE_G5, GATE_S1, GATE_S2,
             GATE_VERIFY_CORRECTNESS, GATE_VERIFY_REGRESSION, GATE_VERIFY_SECURITY,
             GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY, GATE_VERIFY_CLAIMS,
-            GATE_VERIFY_CLARITY, GATE_SPIKE_CONCLUDE, GATE_VERIFY_ANALYZE,
-            GATE_VERIFY_ARCHITECTURE)
+            GATE_VERIFY_CLARITY, GATE_SPIKE_CONCLUDE, GATE_VERIFY_ARCHITECTURE)
+# 9.0.0 removed this gate with `compass analyze` (ADR-091). The live default does
+# not declare it; an older manifest, a frozen preset and a stored generation do.
+GATE_VERIFY_ANALYZE = "verify.analyze"
+REMOVED_GATE_IDS = (GATE_VERIFY_ANALYZE,)
 
 # The names in an issue's documents folder that are not artifacts: the migrate
 # leaves them where they are and does not register them, and `compass issue

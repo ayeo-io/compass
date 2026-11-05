@@ -82,6 +82,8 @@ def test_the_7_0_0_guide_lists_each_removed_spelling_with_its_new_one():
             words.append(word)
         if new.startswith("run ") or new.startswith("issue subtask "):
             continue              # `compass run` and `compass issue subtask` left in 9.0.0 (ADR-090)
+        if new == "issue render" or new.startswith(("issue artifact", "issue template")):
+            continue              # these left in 9.0.0 (ADR-091)
         result = subprocess.run([sys.executable, str(CLI), *words, "--help"], cwd=str(ROOT),
                                 capture_output=True, text=True, env=env, timeout=60)
         assert result.returncode == 0, (new, result.stderr)

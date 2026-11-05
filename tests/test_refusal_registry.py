@@ -87,22 +87,18 @@ FIXTURES = {
     "checkpoint-no-outcome": {"slug": "a" * 40,
                               "stages": "assess, define, refine, plan, implement and verify",
                               "stage": "assess", "is": "are", "it": "them"},
+    # A 40-character slug and a detail of 20 words, the most the registry keeps of a
+    # long parameter, so the 60-word cap is checked where it is tightest.
+    "definition-of-done-open": dict(slug="a" * 40,
+                                    detail=" ".join(f"word{i}" for i in range(20))),
     # A 40-character slug, named twice, so the 60-word cap is checked where it is tightest.
     "release-line-missing": dict(slug="a" * 40),
     "release-line-heading": dict(slug="a" * 40),
-    # A 40-character slug, named twice, and both artifact rules with their documents.
-    "artifact-rule-not-applied": dict(slug="a" * 40, rules="RP-ART-001, RP-ART-002",
-                                      documents="positioning.md, intent.md"),
     # Six-digit size, as the longest form of the length refusal.
     "bash-command-too-long": dict(size="240000", limit="98304"),
     # The longest form of the complexity refusal: a count and its limit.
     "bash-command-too-complex": dict(has="701 command substitutions",
                                      over="more than 700 command substitutions"),
-    # Three decisions and a long record path, so the 60-word cap is checked where it
-    # is tightest.
-    "project-decision-unrecorded": dict(
-        slug="a" * 40, decisions="DD-2, DD-5, DD-11", it="them",
-        path="architecture/decisions/ADR-072-keep-the-cache-in-one-module-for-every-reader.md"),
 }
 
 
@@ -169,6 +165,7 @@ MANIFEST = """schema_version: '2.0'
 issue: matrix
 created: '2026-09-29'
 status: active
+delivery_approach: standard
 stages: {assess: full, define: full, implement: full}
 scenarios:
 - id: M-1
@@ -210,7 +207,7 @@ exec REALPY "$@"
 
 READERS = {
     "code_globs": "fnmatch.fnmatch(path, g)",
-    "approach": "resolve_artifact(sys.argv[1]",
+    "approach": "decided = isinstance(task, dict)",
     "acceptance": 'weight = stages.get("define"',
     "red": "verdict_line(sys.argv[1]",
 }
@@ -232,7 +229,6 @@ def install():
         "version: 1.0.0\nmode: enforced\n"
         "enforcement:\n  code_globs: ['packaging/**']\n")
     (task / "manifest.yml").write_text(MANIFEST)
-    (task / "delivery-approach.md").write_text("# Approach\n")
     (task / "evidence" / "red.json").write_text(json.dumps(_red_record()))
     (task / ".red").write_text("")
     fake_bin = root / "fakebin"

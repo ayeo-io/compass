@@ -1,8 +1,6 @@
 """The suite and the release run on parallel workers, and `make ci` checks
 only recent issues by default: the faster-suite-and-release issue,
-scenarios FS-A, FS-B and FS-D to FS-G. A scenario is in
-`docs/system-spec.md` while current and in `docs/system-spec-archive.md`
-once a later one supersedes it.
+scenarios FS-A, FS-B and FS-D to FS-G.
 
 `make -n` prints the commands a target would run without running them, so
 these tests read the flags each target passes. A stub `xdist` package on
@@ -160,8 +158,6 @@ SERIAL_TESTS = {
     "tests/test_manifest_parse_speed.py::test_trc_b2_flow_faster_than_one_parse_on_sample",
     "tests/test_manifest_parse_speed.py::test_trc_b3_cold_flow_within_ten_percent_of_before[no stored state]",
     "tests/test_manifest_parse_speed.py::test_trc_b3_cold_flow_within_ten_percent_of_before[stale stored state]",
-    "tests/test_render_all.py::test_dcj_63_guard_fails_on_a_planted_archive_write",
-    "tests/test_render_all.py::test_dcj_61_render_all_490_issues_within_bound",
     "tests/test_project_readiness.py::test_prc_37",
     "tests/test_readiness_override_assess.py::test_roa_9_policy_commands_load_compass_yml_in_this_repository",
     "tests/test_issue_dependencies.py::test_dbi_12_hook_cost_budget",

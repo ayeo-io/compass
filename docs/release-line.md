@@ -24,7 +24,7 @@ flag is given:
 | Command | When it writes |
 |---|---|
 | `compass acceptance record --release-note "<text>" -- <command>` | After the command passes, with the evidence record. A failed run stores nothing. |
-| `compass ship-commit --issue <slug> --release-note "<text>"` | After every landing refusal passes and before the landing render, so the landing commit's documents show the line. When nothing is staged and the issue lands at HEAD, after the stale-green, document and scope refusals. |
+| `compass ship-commit --issue <slug> --release-note "<text>"` | After every landing refusal passes and before the landing commit. When nothing is staged and the issue lands at HEAD, after the stale-green, document and scope refusals. |
 | `compass quick-fix finish --release-note "<text>" -- <command>` | It passes the line to `ship-commit`. With `--no-commit`, it stores the line once the three gates pass. |
 
 The latest write wins. A `ship-commit` with no flag keeps the stored line. A write that
@@ -42,9 +42,10 @@ Before anything is written, a given line is stripped of leading and trailing spa
 refused when:
 
 - it is blank: the `release-line-missing` refusal, the same text a landing gives;
-- it starts with `#`: the `release-line-heading` refusal, because the living spec reads
-  a line such as `### <slug> (completed <date>)` as one of its issue headings;
-- the living spec's title rules refuse it as a scenario title, with the reason
+- it starts with `#`: the `release-line-heading` refusal, because `compass release notes`
+  prints the line under a heading such as `### <slug> (completed <date>)`, where it
+  would read as a heading of its own;
+- the scenario title rules refuse it, with the reason
   `compass scenario add` gives: a path that does not exist, an eval scenario id, a
   duration attached to a user's experience, or an outside user's experience.
 
@@ -87,11 +88,6 @@ The refusal is not a check of `compass check`, so no archived issue is judged by
 
 ## Where it is shown
 
-- The verification report's `## Release line` section, through the `release-line`
-  rendered block (`docs/rendered-blocks.md`).
-- The verification note of a quick fix, as `Release: <text>`.
-- The project index, in the Release column.
-- The living spec, under the issue's heading.
 - `compass release notes --since <ref>` (`docs/release-notes.md`).
 
 ## Refusal codes

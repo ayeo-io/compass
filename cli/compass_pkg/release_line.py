@@ -101,10 +101,10 @@ def _project_root(task_dir):
 
 def text_problem(task_dir, text, verb):
     """Why a cleaned line is refused, or None. Blank is no line at all. A line that
-    starts with `#` would read as a heading of the living spec, whose issue headings
-    are `### <slug> (completed <date>)`. A line the living spec's checks would refuse
-    as a scenario title is refused with the reason `compass scenario add` gives,
-    because the living spec prints the line."""
+    starts with `#` would read as a heading in `compass release notes`, which prints
+    each line under `### <slug> (completed <date>)`. A line refused as a scenario
+    title is refused with the reason `compass scenario add` gives, because the
+    release notes and the board print the line as public copy."""
     if not text:
         return missing_text(_slug(task_dir))
     if text.startswith("#"):

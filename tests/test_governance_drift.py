@@ -47,10 +47,10 @@ GOV_FILES = ("routing-policy.yml", "guardrails.yml")
 
 # Rules the framework ships that a ~1.5.0 project predates. Used to build a
 # realistically stale copy rather than an invented one.
-STALE_DROP_FLOORS = ["RP-REQUIRE-001", "RP-REQUIRE-002", "RP-REQUIRE-003",
+STALE_DROP_FLOORS = ["RP-REQUIRE-003",
                      "RP-REQUIRE-004"]
 STALE_DROP_CHECKS = ["declared-tests-resolve", "dod-evidence-typed",
-                     "consistency-check-passes", "no-trusted-rerun",
+                     "no-trusted-rerun",
                      "command-passes"]
 
 
@@ -222,7 +222,8 @@ def test_trc_b1_missing_floors_and_strategies_should_be_named_individually(tmp_p
     out = lint(make_project(tmp_path, stale=True)).stdout
     for rule in STALE_DROP_FLOORS + ["RP-ADV-001"]:
         assert rule in out, f"{rule} is missing from the project but not named:\n{out}"
-    assert "5" in out, f"the report does not state a total count:\n{out}"
+    count = f"{len(STALE_DROP_CHECKS)} check(s)"
+    assert count in out, f"the report does not state a total count:\n{out}"
 
 
 def test_trc_b2_missing_guardrail_checks_should_be_named_individually(tmp_path):
@@ -281,7 +282,7 @@ def test_trc_b6_drift_should_be_advisory_by_default(tmp_path):
     assert result.returncode == 0, (
         "drift blocked by default; ADR-006 says an upgrade must not turn every "
         f"existing adopter's build red:\n{result.stdout}")
-    assert "RP-REQUIRE-001" in result.stdout, "drift was not reported at all"
+    assert "RP-REQUIRE-003" in result.stdout, "drift was not reported at all"
     assert "strict" in result.stdout.lower(), (
         f"the report does not say how to make drift blocking:\n{result.stdout}")
 

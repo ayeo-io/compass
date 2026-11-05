@@ -39,26 +39,26 @@ import fnmatch
 import re as _re
 from compass_pkg import status_words
 from compass_pkg.stable_ids import (
-    APPROACH_QUICK_FIX, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
-    STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
+    APPROACH_QUICK_FIX, REMOVED_GATE_IDS, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS,
+    STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
 from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import (CompassError, artifact_path, canonical_shape, manifest_path,
                               normalize_spine, resolve_issue_dir)
 
 # --- command: next -----------------------------------------------------------
-# `compass next` reads manifest.yml + delivery-approach.md and prints ONE
+# `compass next` reads manifest.yml and prints ONE
 # line (at a terminal, framed by the rail; see `_emit`): the next stage, the next uncleared gate, and delivery-approach-aware
 # collapsed-stage markers. It is strictly READ-ONLY over
 # .compass/work/<task>/ - no file is written or created. It derives its
-# answer from manifest.yml and delivery-approach.md, and checks evidence/
+# answer from manifest.yml, and checks evidence/
 # and the .red marker for a red the manifest does not list.
 #
 # The plain line, which is all piped output and the model ever see:
 #   "<NextPhase> [gate: <gate-id>][ | <phase> collapsed in this approach]"
 # When the issue has landed:
 #   "all phases complete"
-# When delivery-approach.md is missing:
-#   exit non-zero with a message naming delivery-approach.md
+# When the manifest records no delivery approach:
+#   exit non-zero with a message naming assess
 # When manifest.yml is missing (assess has not run):
 #   exit non-zero with a message naming assess
 #
@@ -113,21 +113,20 @@ def _typed(task: dict) -> dict:
 
 
 def _first_pending_gate(gates: list) -> str | None:
-    """Return the id of the first gate whose status is not 'pass'."""
+    """Return the id of the first gate whose status is not 'pass'. A gate a release
+    removed owes nothing, so it is never the next one to clear."""
     for g in (gates or []):
-        if isinstance(g, dict) and g.get("status") != "pass":
+        if (isinstance(g, dict) and g.get("status") != "pass"
+                and g.get("id") not in REMOVED_GATE_IDS):
             return g.get("id")
     return None
 
 
 def _all_gates_pass(gates: list) -> bool:
-    """True when every gate is marked pass."""
-    if not gates:
-        return False
-    return all(
-        isinstance(g, dict) and g.get("status") == "pass"
-        for g in gates
-    )
+    """True when every gate is marked pass. A gate a release removed owes nothing
+    (`gate_status`), so the issue is past the verify stage while only that gate is pending."""
+    from compass_pkg import gate_status
+    return gate_status.all_gates_passed({"gates": gates})
 
 
 def _entries(task: dict, key: str) -> list:
@@ -153,9 +152,9 @@ def _registered(task: dict, kind: str) -> bool:
 
 
 def _earned(task: dict, kind: str) -> bool:
-    """True when the issue's route earns the `kind` document.
-    `approach evaluate` seeds an entry for every document the route earns,
-    and `compass issue artifact set` refuses any other kind."""
+    """True when the issue's route earns the `kind` document. Before 9.0.0
+    `approach evaluate` seeded an entry for every document the route earned;
+    9.0.0 writes no `artifacts:` list (ADR-091), so a newer issue earns none."""
     return any(a.get("kind") == kind for a in _entries(task, "artifacts"))
 
 
@@ -163,13 +162,21 @@ def _review_written(task_dir: str | None) -> bool:
     """True when the issue's requirements review exists on disk, registered
     or not. The resolver finds a registered one, or one beside the manifest
     as issues before 5.0.0 kept it; an unregistered one in the documents
-    folder is what refine writes on a route that does not earn it."""
+    folder is what refine wrote before 9.0.0 on a route that did not earn it."""
     if not task_dir:
         return False
     from compass_pkg.core import unregistered_document
     name = "requirements-review.md"
     return (os.path.isfile(artifact_path(task_dir, name))
             or unregistered_document(task_dir, name) is not None)
+
+
+def _handed_off(task: dict, stage: str) -> bool:
+    """True when the manifest records the hand-off of `stage`: `skipped`, written
+    by `compass issue checkpoint add`, or `waited`, written when a person
+    approved it. Every route that runs the stage records one or the other."""
+    from compass_pkg import checkpoint_outcomes
+    return stage in checkpoint_outcomes.outcomes(task)
 
 
 def _testing_started(task: dict, task_dir: str | None) -> bool:
@@ -208,7 +215,7 @@ def _stages_on_record(task: dict, task_dir: str | None) -> set:
 
     A stage is done when its own record exists, or when a later stage's
     does. The second rule covers a record that was never written, such as
-    a builder starting without a design registered. `compass next` cannot
+    a hand-off nobody recorded before the builder started. `compass next` cannot
     run without the approach record, so assess is always done. Ship's
     record, a closed issue, is handled by the callers before they ask for
     a stage.
@@ -219,15 +226,23 @@ def _stages_on_record(task: dict, task_dir: str | None) -> set:
         # record.
         STAGE_DEFINE: (_registered(task, "acceptance-criteria")
                    or bool(_entries(task, "scenarios"))),
-        # Refine's record is its requirements review. Only a route that earns
-        # the review (an initiative) can register it; elsewhere refine writes
-        # the file and leaves it unregistered (commands/refine.md), so the
-        # file itself is the record.
-        STAGE_REFINE: (_registered(task, "requirements-review")
+        # 9.0.0 writes no requirements review and no technical design
+        # (ADR-091), so refine and plan are done when their hand-off is on
+        # record. An issue made before 9.0.0 can hold the document instead:
+        # refine's review, registered where the route earned it and otherwise
+        # read from the file, and plan's registered design.
+        STAGE_REFINE: (_handed_off(task, STAGE_REFINE)
+                   or _registered(task, "requirements-review")
                    or (not _earned(task, "requirements-review")
                        and _review_written(task_dir))),
-        STAGE_PLAN: _registered(task, "technical-design"),
-        STAGE_BREAKDOWN: bool(_entries(task, "subtasks")) or _registered(task, "distribution-map"),
+        STAGE_PLAN: _handed_off(task, STAGE_PLAN) or _registered(task, "technical-design"),
+        # Breakdown records nothing of its own: one session builds the units
+        # (ADR-090), and 9.0.0 writes no distribution map (ADR-091). It is done
+        # once plan is handed off, unless the route earned a map before 9.0.0.
+        STAGE_BREAKDOWN: (bool(_entries(task, "subtasks"))
+                          or _registered(task, "distribution-map")
+                          or (_handed_off(task, STAGE_PLAN)
+                              and not _earned(task, "distribution-map"))),
         STAGE_IMPLEMENT: _every_scenario_tested(task),
         STAGE_VERIFY: _all_gates_pass(task.get("gates") or []),
         STAGE_SHIP: False,
@@ -272,22 +287,6 @@ def _unmet_entry(task: dict, task_dir: str, stage: str) -> list:
         return stage_lists.unmet_entry(stage_lists.evaluate(view, task, task_dir), stage)
     except Exception:  # noqa: BLE001 - the stage line is the answer; this is extra
         return []
-
-
-def _stale_entry(task: dict, task_dir: str, stage: str) -> list:
-    """The stale documents `stage` consumes, as `<kind> is stale`, when the
-    capability `artifact-freshness` is on for the issue; none otherwise."""
-    try:
-        from compass_pkg import effective, freshness
-        view = effective.view_or_legacy(task_dir)
-        if not freshness.enabled(view):
-            return []
-    except Exception:  # noqa: BLE001 - the stage line is the answer; this is extra
-        return []
-    try:
-        return freshness.unmet_entry(freshness.evaluate(view, task, task_dir), stage)
-    except Exception:  # noqa: BLE001 - with the capability on, a record that cannot be read fails closed
-        return ["artifact freshness cannot be evaluated"] if stage in freshness.CONSUMES else []
 
 
 def _emit(args, task, task_dir, line, current_phase, finished, hint=True):
@@ -345,7 +344,7 @@ def _dependency_block(task, task_dir, stage):
 def cmd_next(args):
     """compass next - what comes next on this issue's delivery approach?
 
-    Reads manifest.yml + delivery-approach.md and prints ONE line, framed
+    Reads manifest.yml and prints ONE line, framed
     by the rail when a person reads it at a terminal.
     Strictly read-only.
     """
@@ -362,13 +361,12 @@ def cmd_next(args):
 
     task = _typed(normalize_spine(load_manifest_mapping(task_path)))
 
-    # --- delivery-approach.md: must exist ---
-    route_md_path = artifact_path(task_dir, "delivery-approach.md")
-    if not os.path.isfile(route_md_path):
+    # --- the delivery approach: must be decided ---
+    # The manifest holds the decision; 9.0.0 writes no delivery-approach.md (ADR-091).
+    if not task.get("delivery_approach"):
         raise CompassError(
-            f"delivery-approach.md is missing from {task_dir}\n"
-            "  Run /compass:assess to produce delivery-approach.md before using "
-            "compass next.")
+            f"assess has not chosen a delivery approach for {task_dir}\n"
+            "  Run /compass:assess to record one before using compass next.")
 
     # --- completed issue ---
     # Passed gates alone do not finish it: ship still runs, and a closed
@@ -407,7 +405,7 @@ def cmd_next(args):
     parts = [next_phase.capitalize()]
     if pending_gate:
         parts[0] += f" [gate: {pending_gate}]"
-    unmet = _unmet_entry(task, task_dir, next_phase) + _stale_entry(task, task_dir, next_phase)
+    unmet = _unmet_entry(task, task_dir, next_phase)
     if unmet:
         parts.append("entry not met: " + ", ".join(unmet))
     if collapsed:

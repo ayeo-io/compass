@@ -35,7 +35,7 @@
 # claims; they do not prove a trusted runner made the claim.
 #
 # DEPENDENCY: standard library (hashlib, os, re, shutil, stat, subprocess, tempfile) and
-# compass_pkg.core, check_results and red_first. tdd.py imports from here, so
+# compass_pkg.core, check_results, gate_status and red_first. tdd.py imports from here, so
 # this module must not import tdd.py.
 # =============================================================================
 """Which tree a test record ran on, and whether that is still the tree."""
@@ -49,7 +49,7 @@ import stat
 import subprocess
 import tempfile
 
-from compass_pkg import status_words
+from compass_pkg import gate_status, status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import CompassError, find_upwards, load_manifest
 from compass_pkg.red_first import load_record
@@ -477,8 +477,8 @@ def _check_evidence_matches_tree(task, task_dir):
     if status_words.is_completed(task):
         return _check_landed(task, root, path, record)
 
-    gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
-    ready = bool(gates) and all(g.get("status") == "pass" for g in gates)
+    # A removed gate left pending does not hold the check back (`gate_status`).
+    ready = gate_status.all_gates_passed(task)
     state = evidence_state(task, task_dir)
     if state == "unknown":
         why = "git cannot name the tree now, so %s cannot be compared" % path

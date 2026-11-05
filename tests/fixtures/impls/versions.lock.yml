@@ -9,14 +9,8 @@ implementations:
   acceptance-support-present:
     verdict_digest: cc450f0b647aa8431e0b650e49382539554bbeda7de277369a5bf61859fb8796
     version: 1.0.0
-  artifacts-approved:
-    verdict_digest: 2b8b264f4e34df9c0cde464b3ed58cb558076b012c74e8a6551bad4b58a93e9f
-    version: 1.0.0
   backfills-paid:
     verdict_digest: 62ed50f7712aa0d5df96f6e1235080bf0b4d3902d30cb7eb4e49bc5f253f2f65
-    version: 1.0.0
-  borrowed-documents-answered:
-    verdict_digest: 87eee465479486d9dba453319a9a5f124e12ecbe667501313d82b22d1bdf7160
     version: 1.0.0
   changed-code-traces-to-scenario:
     verdict_digest: 394197b1855fd37b7bf458182823a4835d1dc90e0af00f64e027e8677570660b
@@ -27,21 +21,12 @@ implementations:
   command-passes:
     verdict_digest: 4b8c7eeaacbf5c4fdcfab903572f07572aea5ab0addbc8dc1d1a14d6b91b356f
     version: 1.0.0
-  consistency-check-passes:
-    verdict_digest: 208c4262608b2760cd1c26c8edb8b86714518fa28c596331c658a618de56bb81
-    version: 1.0.0
-  contracts-declared:
-    verdict_digest: 96de578c9906d02aecacad67edc3aa19ee80f1da5a06a28e98a2e0da40c5ef6f
-    version: 1.0.0
   declared-tests-resolve:
     verdict_digest: 135069d070419a5861e8a4693bd0be2979076b5f97afb2c1669a44c9a9f159a0
     version: 1.0.0
-  design-within-word-ceiling:
-    verdict_digest: a9dad9171ccb7e7c48197ef40ab987cc62ccce86200cc1d40df9d887be30bb99
-    version: 1.0.0
   dod-evidence-typed:
     verdict_digest: ed4b25b3f2949cc152fe8e7808fbd7dfb9879d29b051d68943830149194b7b3d
-    version: 2.0.0
+    version: 2.1.0
   evidence-identity-matches:
     verdict_digest: a19eb720d6c5908a4e1d1dd236c92d2bd8a22a6ec55faa6e8a35a3a048b90a87
     version: 1.0.0
@@ -74,9 +59,6 @@ implementations:
     version: 1.0.0
   outer-loop-recorded:
     verdict_digest: 7e8e64e96ca3605804ee13912e9a8a629e0bec8fe96cc4439e7d115ab46d9b21
-    version: 1.0.0
-  rendered-blocks-current:
-    verdict_digest: 8942dbb4d40c6f28e25aa58db3e88567677c04c5e81768042df1ad36ec1134d1
     version: 1.0.0
   scenario-has-id-and-intent:
     verdict_digest: 6ad20aed1f0071aa85c61afe4e62b17c0984bd98a763244787490bf78ae2c2fd

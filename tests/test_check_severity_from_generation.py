@@ -209,7 +209,7 @@ def test_cs_7_no_shipped_check_that_can_return_nothing_to_check_declares_fail():
     declining = {name for name, body in shipped["checks"].items()
                  if body.get("on_skipped") == "not-applicable"}
     assert {"scenarios-are-executable", "claim-traces-to-scenario", "command-passes",
-            "borrowed-documents-answered", "evidence-matches-tree",
+            "evidence-matches-tree",
             "evidence-identity-matches", "dod-evidence-typed", "landed-by-resolves"} <= declining
 
 
@@ -250,10 +250,10 @@ def test_cs_8_results_file_records_an_advisory_verdict(tmp_path):
 def test_cs_9_an_issue_with_no_generation_reads_the_governance_files_as_before(tmp_path):
     root, _ = _project(tmp_path)
     _, report, _ = _report(root)
-    # The one advisory finding is not a severity from a generation: the issue has no issue page
-    # yet, which `rendered-blocks-current` reports before verify.
+    # No finding is advisory: 9.0.0 has no issue page to report missing (ADR-091), and an
+    # issue with no generation takes no severity from one.
     advisory = [c["name"] for c in report["checks"] if c["status"] == "advisory"]
-    assert advisory == ["rendered-blocks-current"] and report["advisory"] == 1
+    assert advisory == [] and report["advisory"] == 0
     assert "generation" not in report
 
 

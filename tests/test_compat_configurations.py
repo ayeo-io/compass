@@ -155,7 +155,7 @@ def test_contract_3_gives_the_recorded_verdicts_under(kind, archive_runs):
 @pytest.mark.parametrize("kind", BC)
 def test_contract_6_every_sampled_issue_stays_readable_under(kind, archive_runs):
     unreadable = {slug: r for slug, r in archive_runs[kind].items()
-                  if r["lint_exit"] or r["receipt_exit"]}
+                  if r["lint_exit"] or r["show_exit"]}
     assert unreadable == {}
 
 

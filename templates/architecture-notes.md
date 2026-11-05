@@ -13,9 +13,6 @@ Fill every {{PLACEHOLDER}}.
 
 # Architecture notes - {{ISSUE_SLUG}}
 
-<!-- compass:render document-header -->
-<!-- /compass:render -->
-
 ## System under change
 
 {{The modules, files and boundaries this issue touches, and what changes in each.}}

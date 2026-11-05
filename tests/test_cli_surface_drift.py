@@ -94,9 +94,9 @@ def _sub_verbs(parent):
 
 def test_trc_a3_task_sub_verbs_tracked_in_cli_blocks():
     """docs/cli.md's CLI block names every `compass issue` sub-verb (lint,
-    receipt, ...). The earlier tests cover top-level verbs; this one covers
+    diagnose, ...). The earlier tests cover top-level verbs; this one covers
     the sub-verbs under `issue` so a new one cannot ship undocumented
-    behind a top-level no-op (e.g. `compass issue receipt` adding to
+    behind a top-level no-op (e.g. `compass issue diagnose` adding to
     existing `compass issue lint`). docs/five-minutes.md carries no CLI
     block of its own - it points readers at docs/cli.md.
     """
@@ -119,10 +119,11 @@ def test_trc_a3_task_sub_verbs_tracked_in_cli_blocks():
 # ---------------------------------------------------------------------------
 
 def _new_cross_task_commands():
-    """The six commands that ship between fb092c0 and v1.2.0 - must appear in
-    the runtime-neutral adapter contracts."""
+    """The commands that ship between fb092c0 and v1.2.0, less `compass analyze`,
+    which 9.0.0 removed (ADR-091) - must appear in the runtime-neutral adapter
+    contracts."""
     # The contract must name the live verb.
-    return ["compass analyze", "compass rework-scan", "compass follow-up",
+    return ["compass rework-scan", "compass follow-up",
             "compass flow", "compass next", "compass adr"]
 
 

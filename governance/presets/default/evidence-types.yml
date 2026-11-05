@@ -51,9 +51,8 @@ evidence_types:
       - the marketer's audit trail.}
   spike-conclusion: {description: 'A recorded close-out of a spike: what was learned, a decision (discard
       | graduate-to-delivery | defer), and any link to the next issue.'}
-  consistency-check: {description: 'Output of compass analyze - a structured consistency findings list.
-      Gate-clearing: zero findings. Only this type clears verify.analyze; advisory command-output entries
-      do not.'}
+  consistency-check: {description: 'Output of compass analyze, which 9.0.0 removed (ADR-091). Nothing
+      writes it now; it stays valid so an older manifest that holds one still reads.'}
   artifact: {description: 'A written record without a more specific type - a review note, a verification
       report. The weakest, by design: honest for judgement-shaped gates, never enough for a mechanical
       one.'}

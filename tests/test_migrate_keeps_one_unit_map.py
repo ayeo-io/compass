@@ -30,7 +30,7 @@ def map_units(folder):
     """The units the issue's registered distribution map declares, read as the
     migrate reads them, or None when no map is found."""
     from compass_pkg.core import FOUND, resolve_artifact
-    from compass_pkg.artifact_owed import declared_units
+    from compass_pkg.migrate_kinds import declared_units
     state, path, _ = resolve_artifact(str(folder), "distribution-map")
     return declared_units(path) if state == FOUND and path else None
 

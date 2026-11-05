@@ -23,8 +23,8 @@ and that is a no-pass at the verify stage.
   several units, a unit may serve several scenarios - but *onto*: no code
   without at least one scenario above it. The acceptance-before-code guardrail forbids code no stated
   acceptance criterion describes; this link is how that is observable.
-- **scenario → intent.** Every scenario traces up to an intent - the `intent.md`
-  success signal, the ticket, the product outcome it serves. A scenario with no
+- **scenario → intent.** Every scenario traces up to an intent - a success signal
+  in the Intent links, the ticket, the product outcome it serves. A scenario with no
   intent above it is a scenario nobody asked for.
 
 ### claim → scenario

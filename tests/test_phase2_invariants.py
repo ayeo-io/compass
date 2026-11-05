@@ -130,11 +130,11 @@ EXPECTED_GUARDRAIL_IDS = {"G1", "G2", "G3", "G4", "G5", "S1", "S2"}
 # or https URL, so a team arriving with one does not retype it - a
 # top-level group rather than a subverb, because no subverb owns it.
 EXPECTED_SUBCOMMANDS = {
-    "approach", "bdd", "check", "analyze", "retro", "ci", "tdd-red",
-    "tdd-green", "policy", "plan", "intent", "issue", "adr", "rework-scan", "flow",
+    "approach", "bdd", "check", "retro", "ci", "tdd-red",
+    "tdd-green", "policy", "intent", "issue", "adr", "rework-scan", "flow",
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
-    "review-rule", "spec", "preset",  # `review-rule list`, `spec sync`, `preset init|test`
+    "review-rule", "preset",  # `review-rule list`, `preset init|test`; 9.0.0 removed `spec` and `plan`
     # `init` creates `.compass/config.yml` and `.compass/work/`, and is safe
     # to run twice. It exists because no other command owns initialisation,
     # and the five entry points call it directly.

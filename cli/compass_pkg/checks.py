@@ -32,8 +32,9 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg.stable_ids import GATE_VERIFY_ANALYZE, GATE_VERIFY_CORRECTNESS
+from compass_pkg.stable_ids import GATE_VERIFY_CORRECTNESS
 from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, find_governance, load_yaml, manifest_path, normalize_spine
+from compass_pkg.spec_location import spec_path
 from compass_pkg import approval_records, status_words
 from compass_pkg.tdd import _read_config, settings_hint
 from compass_pkg.check_results import NOTHING_TO_CHECK  # re-exported: callers still import it from here
@@ -141,7 +142,7 @@ def _check_scenarios_have_tests(task, task_dir):
     scns = task.get("scenarios") or []
     if not scns:
         return False, "no scenarios in manifest.yml"
-    spec_path = artifact_path(task_dir, "acceptance-criteria.md")
+    spec_file = spec_path(task_dir)
     missing_test, undocumented, documented_narr = [], [], 0
     for s in scns:
         sid = s.get("id", "?")
@@ -149,7 +150,7 @@ def _check_scenarios_have_tests(task, task_dir):
         # test - so an incidental command does not buy a pass, and a documented
         # playbook does not need a fabricated one.
         if s.get("verifiable") == "narrative":
-            if _scenario_documented_in_spec(spec_path, sid):
+            if _scenario_documented_in_spec(spec_file, sid):
                 documented_narr += 1
             else:
                 undocumented.append(sid)
@@ -181,7 +182,7 @@ def _spec_sha256(task_dir):
     matters most.
     """
     from compass_pkg import rendered_blocks
-    path = artifact_path(task_dir, "acceptance-criteria.md")
+    path = spec_path(task_dir)
     found = rendered_blocks.masked_digest(path)
     # The same bytes as before for a spec with no block; with blocks, the
     # lines inside them are left out, so a re-render does not read as an edit.
@@ -635,6 +636,10 @@ def dod_tag_problems(rest, ev_registry, backfills):
     return problems
 
 
+#: The first `created` date of an issue judged with no verification report (ADR-091).
+DOD_WITHOUT_REPORT_FROM = "2026-11-04"
+
+
 def _check_dod_evidence_typed(task, task_dir):
     """Every item of the issue's Definition of Done is met by a record in the
     manifest (implementation 2.0.0, ADR-051).
@@ -661,7 +666,29 @@ def _check_dod_evidence_typed(task, task_dir):
     # The directory name is the true slug; the manifest passed in may hold a template placeholder.
     this_slug = os.path.basename(task_dir) or task.get("task") or ""
     inbound = _check_inbound_backfills(task_dir, this_slug)
-    if not os.path.isfile(report):
+    no_report = not os.path.isfile(report)
+    if no_report and str(task.get("created") or "") >= DOD_WITHOUT_REPORT_FROM:
+        # 9.0.0 writes no report (ADR-091): the Definition of Done is due once every gate has
+        # passed, which is when the verify stage's exit is reached. It belongs to the
+        # approaches that wrote a report before 9.0.0: those whose verify stage is thorough.
+        from compass_pkg import gate_status
+        from compass_pkg.stable_ids import DEPTH_THOROUGH, STAGE_VERIFY
+        stages = task.get("stages") if isinstance(task.get("stages"), dict) else {}
+        if stages.get(STAGE_VERIFY) != DEPTH_THOROUGH:
+            if inbound:
+                return False, "; ".join(inbound)
+            return NOTHING_TO_CHECK, ("the verify stage is %s on this approach, so it holds no "
+                                      "Definition of Done" % (stages.get(STAGE_VERIFY) or "unset"))
+        gates = gate_status.live_gates(task)
+        waiting = gate_status.unmet_gates(task)
+        if not gate_status.all_gates_passed(task):
+            if inbound:
+                return False, "; ".join(inbound)
+            return NOTHING_TO_CHECK, ("the Definition of Done is judged once every gate has "
+                                      "passed; %s" % ("%d gate(s) have not passed: %s"
+                                                      % (len(waiting), ", ".join(waiting))
+                                                      if waiting else "the issue has no gate"))
+    elif no_report:
         # A quick fix writes no report, but another issue's outstanding follow-up that targets
         # it still blocks it.
         if inbound:
@@ -678,7 +705,7 @@ def _check_dod_evidence_typed(task, task_dir):
     rows = item_records.items(task, task_dir, view, "dod")
     problems = ["%s is open - %s" % (row.check, item_records.open_hint(row.check))
                 for row in rows if row.state == item_records.OPEN]
-    if _closed_without_a_list(task, report):
+    if not no_report and _closed_without_a_list(task, report):
         # An archived issue whose page never held a Definition of Done has no record to
         # carry. Only a closed issue is excused: one still in flight is judged, so deleting
         # the section does not clear the check (jed72, 2026-10-11).
@@ -691,7 +718,8 @@ def _check_dod_evidence_typed(task, task_dir):
     problems.extend(inbound)
     if problems:
         return False, "; ".join(problems)
-    where = artifact_location(task_dir, "verification-report.md")
+    where = ("the manifest's records" if no_report
+             else artifact_location(task_dir, "verification-report.md"))
     if not rows:
         return True, ("the issue's Definition of Done lists no item - nothing to evidence "
                       "(read %s)" % where)
@@ -991,42 +1019,6 @@ def _check_no_trusted_rerun(task, task_dir):
         return False, "; ".join(problems)
     note_str = f" (quarantine notes: {len(notes)})" if notes else ""
     return True, f"no trusted-rerun violations{note_str}"
-
-
-def _check_coherence_check_passes(task, task_dir):
-    """`G4` extension (ADR-007): verify.analyze needs a consistency-check
-    evidence entry with zero findings. Only runs when verify.analyze is in the
-    issue's gate set. If the gate is absent, this check trivially passes (the
-    issue is not subject to the consistency-check requirement)."""
-    gates = task.get("gates") or []
-    gate_ids = [g.get("id") for g in gates if isinstance(g, dict)]
-    if GATE_VERIFY_ANALYZE not in gate_ids:
-        return True, "verify.analyze not in gate set - consistency check not required"
-    # Gate is present: look for a consistency-check typed evidence entry
-    registry = {e.get("id"): e for e in (task.get("evidence") or [])
-                if isinstance(e, dict) and e.get("id")}
-    coherence_entries = [e for e in registry.values()
-                         if e.get("type") == "consistency-check"]
-    if not coherence_entries:
-        return False, ("no consistency-check evidence on record - run "
-                       "`compass analyze` to produce the required "
-                       "consistency-check evidence for verify.analyze")
-    # Check that the most recent entry records zero findings
-    entry = coherence_entries[-1]
-    path = entry.get("path")
-    if path:
-        full = path if os.path.isabs(path) else os.path.join(task_dir, path)
-        if os.path.isfile(full):
-            try:
-                data = json.load(open(full, encoding="utf-8"))
-                n = data.get("finding_count", None)
-                if n is not None and n != 0:
-                    return False, (f"consistency-check evidence records "
-                                   f"{n} finding(s) - resolve them before "
-                                   f"clearing verify.analyze")
-            except (OSError, json.JSONDecodeError):
-                pass  # readable but corrupt - gate-evidence-present catches it
-    return True, "consistency-check evidence on record - verify.analyze gate cleared"
 
 
 def _check_command_passes(task, task_dir):

@@ -1133,7 +1133,7 @@ def test_repository_scan_is_green():
 #   * what does the code USE      -> an exact list of retired identifiers,
 #                                    read from governance/terminology.yml
 #
-# Spec: docs/system-spec.md (group G).
+# Spec: the issue's acceptance criteria (group G).
 
 RETIRED_NAMES = {
     e["name"]: e["replacement"]

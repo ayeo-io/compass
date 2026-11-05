@@ -92,8 +92,8 @@ def test_verify_lists_each_descoped_mode():
     # `commands/verify.md` carries the step the verifier agent had until 9.0.0 (ADR-090).
     verifier = (ROOT / "commands" / "verify.md").read_text(encoding="utf-8")
     assert "failure_modes_descoped" in verifier
-    report = (ROOT / "templates" / "verification-report.md").read_text(encoding="utf-8")
-    assert "Failure modes de-scoped at define" in report
+    # 9.0.0 writes no verification report (ADR-091): the stage's hand-off names each mode.
+    assert "a mode named at define must not disappear before ship" in " ".join(verifier.split())
 
 
 def test_the_subcommand_is_on_the_public_surface():
@@ -143,15 +143,9 @@ def test_list_manifest_refused_with_a_clear_error(issue, body):
 
 # Verbs that read one issue's manifest without going through manifest_store.read.
 _LIST_MANIFEST_VERBS = [
-    ("analyze", "--issue", "demo"),
-    ("issue", "artifact-path", "acceptance-criteria", "--issue", "demo"),
-    ("issue", "artifact", "set", "acceptance-criteria", "--status", "draft",
-     "--issue", "demo"),
     ("issue", "diagnose", "--issue", "demo"),
-    ("issue", "template", "show", "technical-design", "--issue", "demo"),
     ("bdd", "verify", "--issue", "demo", "--", "true"),
     ("issue", "configure", "--discard", "--issue", "demo"),
-    ("issue", "receipt", "--issue", "demo"),
     ("check", "--issue", "demo"),
 ]
 

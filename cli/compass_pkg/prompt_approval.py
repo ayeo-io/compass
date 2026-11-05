@@ -579,14 +579,13 @@ def _current(session, request):
                       f"generation {task.get('generation')}. Nothing was written; the agent "
                       f"must ask again with compass evidence request.")
     if request.get("form") == "artifact":
-        now_digest = approval_requests.document_digest(session.task_dir, task,
-                                                       request.get("value"))
-        if now_digest != request.get("document_digest"):
-            approval_requests.close(session.task_dir, request, approval_requests.STALE,
-                                    reason="the document changed")
-            raise Refused(f"Compass: the document '{request.get('value')}' changed since "
-                          f"the request. Nothing was written; the agent must ask again "
-                          f"with compass evidence request.")
+        # A request written before 9.0.0 can ask for a document's approval. No document
+        # has a status now (ADR-091), so it closes with nothing to approve.
+        approval_requests.close(session.task_dir, request, approval_requests.STALE,
+                                reason="documents have no status since 9.0.0")
+        raise Refused(f"Compass: request {number} asks for the approval of the document "
+                      f"'{request.get('value')}', and 9.0.0 gives no document a status "
+                      f"(ADR-091). Nothing was written; the request is closed.")
     verb = f"/compass:{session.command}"
     if not request.get("shown_at"):
         shown = approval_requests.mark_shown(session.task_dir, request)
@@ -777,8 +776,6 @@ def _reject(session, request, reason, where=""):
                                   dict(provenance(session, request),
                                        **({"reason": reason} if reason else {})))
         ids = approvals.record(session.task_dir, answer).evidence_ids
-    elif form == "artifact":
-        _send_back(session, value, reason)
     elif form == "guardrail":
         task, _ = load_manifest(session.task_dir)
         earlier = [e.get("id") for e in task.get("evidence") or []
@@ -799,20 +796,6 @@ def _reject(session, request, reason, where=""):
         f"issue {session.slug}{where}){said}.{recorded}{note}",
         f"The person rejected request {request['number']} ({subject}){said}. Do not go on "
         f"with the work that waited for it; ask the person what should change.")
-
-
-def _send_back(session, kind, reason):
-    """Return a document to draft, holding the digest it was rejected at, so a
-    later stage record leaves it in draft until the file changes."""
-    from compass_pkg import artifact_status
-    task, path = load_manifest(session.task_dir)
-    entry = next(a for a in task.get("artifacts") or []
-                 if isinstance(a, dict) and a.get("kind") == kind)
-    entry["rejected_digest"] = approval_requests.document_digest(session.task_dir, task, kind)
-    artifact_status.clear_approver(entry)
-    entry.update(status=artifact_status.DRAFT, rejected_by=session.approver,
-                 rejected_at=approvals._stamp(), rejected_reason=reason)
-    save_manifest(task, path)
 
 
 def load_event(text):

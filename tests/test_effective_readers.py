@@ -446,16 +446,6 @@ def test_ef_5_an_issue_with_no_generation_reads_the_widened_file(tmp_path):
     assert code == 0, out + err
 
 
-def test_ef_5_the_receipt_flags_a_type_the_generation_does_not_accept(tmp_path):
-    root, task_dir = _committed_project(tmp_path)
-    _write_manifest(
-        task_dir,
-        evidence=[{"id": "EV-A", "type": "artifact", "path": "evidence/a.md"}],
-        gates=[{"id": "verify.correctness", "status": "pass", "evidence": ["EV-A"]}])
-    code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-    assert "TYPE-MISMATCH" in out, out + err
-
-
 def test_ef_5_the_accepts_comments_come_from_the_configuration_committed(tmp_path):
     changed = {"schema": 1, "gates": {"verify.security": {"set": {"accepts": ["security-review"]}}}}
     root, task_dir = _project(tmp_path, compass_yml=changed)
@@ -485,7 +475,9 @@ def _edit_policy(folder, edit):
 
 
 def _add_gate(body):
-    body["route_shapes"]["regular"]["gates"].append("verify.analyze")
+    # A gate the regular shape lacks. Not `verify.analyze`: 9.0.0 removed it, so the
+    # evaluator leaves it out (ADR-091).
+    body["route_shapes"]["regular"]["gates"].append("verify.architecture")
 
 
 def test_ef_6_the_result_matches_the_one_the_governance_files_give(tmp_path):
@@ -509,8 +501,8 @@ def test_ef_6_editing_the_live_policy_does_not_change_the_issue_with_a_generatio
     before = _evaluate_json(root)
     _edit_policy(folder, _add_gate)
     assert _evaluate_json(root) == before
-    assert "verify.analyze" in _evaluate_json(root, "other")["gates"]
-    assert "verify.analyze" not in before["gates"]
+    assert "verify.architecture" in _evaluate_json(root, "other")["gates"]
+    assert "verify.architecture" not in before["gates"]
 
 
 def test_ef_6_the_autonomy_is_the_one_the_generation_stored(tmp_path):
@@ -672,7 +664,7 @@ EXPECTED_READS = {
     ("checks", "_check_command_passes"): 1, ("flow", "_routing_labels"): 1,
     ("lessons", "_guardrail_ids"): 1, ("loop_ceilings", "loop_ceilings"): 1,
     ("manifest", "_load_gate_requirements"): 1, ("quick_fix_cmd", "_quick_fix_blockers"): 1,
-    ("quick_fix_cmd", "cmd_quick_fix_start"): 1, ("receipt", "_receipt_gate_requirements"): 1,
+    ("quick_fix_cmd", "cmd_quick_fix_start"): 1,
     ("review_rules", "_known_ids"): 1, ("routing", "cmd_route_evaluate"): 2,
 }
 

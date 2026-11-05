@@ -30,7 +30,6 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg.flow import _DERIVED_HEADER  # noqa: E402
 from compass_pkg.issue_layout import docs_dir_for  # noqa: E402
 
 DEEP_DIVE = ROOT / "docs" / "routing-deep-dive.md"
@@ -148,15 +147,14 @@ def _shipped_markdown():
     files = subprocess.run(["git", "ls-files", "*.md"], cwd=ROOT,
                            capture_output=True, text=True, check=True).stdout
     return [f for f in files.split()
-            if not re.match(r"docs/compass/[^/]+/", f)
-            and f not in ("docs/system-spec.md", "docs/system-spec-archive.md")]
+            if not re.match(r"docs/compass/[^/]+/", f)]
 
 
 def test_fdg_2_no_document_calls_verify_claims_immovable():
     """`verify.claims` is role-scoped, not immovable. The claim stood in the
     deep dive and, after that was fixed, in six more files, because this
     check named four documents. It now reads every tracked Markdown file
-    outside the issue records and the derived spec."""
+    outside the issue records."""
     assert "verify.claims" not in [g["gate"] for g in POLICY["immovable_gates"]]
     hits = []
     for rel in _shipped_markdown():
@@ -179,15 +177,6 @@ def test_fdg_3_the_contract_names_the_clis_document_home():
                     .split())
     home = docs_dir_for("<created>", "<slug>").replace("\\", "/") + "/"
     _one(re.escape(home), text, "compass-contract.md")
-
-
-def test_fdg_4_the_derived_header_names_the_real_command_and_input():
-    header = _DERIVED_HEADER
-    assert "compass _derive-system-spec" in header, header
-    assert "manifest.yml" in header and "scenarios" in header, header
-    # The scenario's prose lives in acceptance-criteria.md, so the header may
-    # name it as a file to edit; it must not name the retired `<task>` path.
-    assert "<task>" not in header and ".compass/work/<" not in header
 
 
 def test_fdg_5_every_registered_claim_is_found_exactly_once():

@@ -40,8 +40,8 @@ mechanism, not judgment: a portable runtime must shell out to
 `compass approach evaluate` (the kit-layer CLI) rather than reimplement the
 composition, so that the same assessment plus the same policy yield the same
 approach on every runtime. The runtime records the assessment in the manifest
-(`manifest.yml`), runs the evaluator, and writes the human-readable approach
-record (`delivery-approach.md`). The approach is computed from context, not
+(`manifest.yml`) and runs the evaluator, which writes the approach to the
+manifest; `compass approach show` prints it. The approach is computed from context, not
 chosen from a menu. Genuinely exploratory work is not exempt from
 assessment - it composes a **spike**.
 
@@ -67,8 +67,9 @@ this rule describes the trigger.
 8. ship
 
 The delivery approach says which stages are full-weight, which collapse, and
-which are skipped - and why. Each stage emits its artifact (templates in
-`templates/`) to the issue's working directory.
+which are skipped - and why. The one document Compass needs and checks is
+`acceptance-criteria.md` (ADR-091); every other stage leaves records in the
+manifest and `devlog.md`, and a team can keep its own notes.
 
 **3. Enforce the guardrails - few, hard, never crossed:**
    - **Tested before it ships:** no code reaches `main` without a passing
@@ -123,8 +124,8 @@ the one file all five roles read - do not reduce it to an engineering-only
 artifact.
 
 **5. Support solo delivery.** On larger delivery approaches, the plan stage
-produces a distribution map, and the session builds its units one after
-another in one session. Compass 9.0.0 starts no agent and no worktree per
+lists the work units, and the session builds them one after another in one
+session. Compass 9.0.0 starts no agent and no worktree per
 subtask (ADR-090), so a runtime needs no isolated workspaces.
 
 **6. Shell out for CI and the feedback loop too.** Two cross-issue kit
@@ -144,7 +145,7 @@ them.
 |---|---|
 | The eight stages | Invocable commands or equivalent |
 | Assess | A routine that produces the assessment, then *calls the kit* (`compass approach evaluate`) to compose the delivery approach |
-| The kit-layer CLI | A shell-out, not a reimplementation - the adapter runs `compass approach evaluate`, `compass check`, `compass tdd-red/green`, and `compass analyze` (cross-artifact consistency check) for the deterministic parts |
+| The kit-layer CLI | A shell-out, not a reimplementation - the adapter runs `compass approach evaluate`, `compass check` and `compass tdd-red/green` for the deterministic parts |
 | CI and the feedback loop | A shell-out to `compass ci` (honor the exit code), `compass retro` (the retrospective signal), `compass rework-scan` (cross-issue rework signal), and `compass flow` (cross-issue view; `--digest` writes a dated digest combining rework-scan and the retrospective signal) |
 | Role perspectives (product owner, product marketer, architect) | Taken by the session itself; 9.0.0 ships no subagents (ADR-090). The architect perspective reads the project's `architecture/` artifacts and annotates the design via `architecture-notes.md`; it never writes feature code |
 | Skills | Loadable procedural-knowledge modules |
@@ -268,5 +269,5 @@ All issue state is files, not conversation:
   current issue unambiguously.
 
 A different session, agent, or runtime must be able to resume an issue by
-reading the approach record (`delivery-approach.md`), the manifest, and the
-artifacts - nothing essential lives only in context.
+reading the manifest, `acceptance-criteria.md` and `devlog.md` - nothing
+essential lives only in context.

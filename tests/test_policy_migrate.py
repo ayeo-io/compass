@@ -565,11 +565,10 @@ def test_PM_13_an_unedited_copy_of_the_current_files_adopts_nothing(tmp_path):
     _copy_governance(root)
     made = _plan(root)
     assert made.base_release == {"release": "current", "chosen_by": "version"}
-    # The one difference is the word limits: the legacy files cannot hold
-    # `word_ceiling` and the adapter never fills it, so the migrated project
-    # gains the shipped limits the copy does not have.
-    assert made.adopted == [] and made.behaviour["result"] == "incomparable", made.behaviour
-    assert "word_ceiling" in made.behaviour["reason"], made.behaviour
+    # The legacy files cannot hold `word_ceiling`, but the shipped default
+    # declares no document kind (ADR-091 decision 3), so it has no word limit
+    # the copy lacks and the two configurations behave the same.
+    assert made.adopted == [] and made.behaviour["result"] == "equivalent", made.behaviour
 
 
 LOOSENINGS = {
@@ -648,21 +647,25 @@ def test_PM_13_the_report_names_the_base_release_and_what_the_default_adds(tmp_p
 
 @pytest.mark.parametrize("tag", ["v5.0.0", "v6.0.1"])
 def test_PM_16_the_adopted_list_removes_nothing_the_shipped_preset_keeps(tmp_path, tag):
-    # The current legacy files no longer name the UI contract, because the role
-    # rules that added it are gone, but the shipped preset still declares it.
+    # The shipped preset declares no document kind since 9.0.0 (ADR-091), so no
+    # adopted removal can name one it keeps.
     root = _project(tmp_path)
     _copy_release(root, tag)
     made = _plan(root)
     from compass_pkg import merge, policy_lint
     preset = merge.resolve([policy_lint.load_parent()[0]])[0]
-    assert "ui-contract" in preset["artifacts"]
+    assert not preset.get("artifacts")
     kept = [a for a in made.adopted if a["operation"] == "remove"
             and a["id"] in (preset.get(a["catalogue"]) or {})]
     assert kept == [], kept
     assert {"catalogue": "dimensions", "id": "role", "operation": "remove"} in made.adopted
     code, out, err = _run(root, "policy", "migrate")
     assert code == 0, out + err
-    assert "artifacts.ui-contract" not in out
+    # The text output lists the same removals, so a removed kind the copy
+    # declared, such as the UI contract, is printed as a removal.
+    removed = {f"{a['catalogue']}.{a['id']}" for a in made.adopted if a["operation"] == "remove"}
+    assert "artifacts.ui-contract" in removed
+    assert all(f"remove  {name}" in out for name in removed), out
 
 
 # --- PM-14 ------------------------------------------------------------------------

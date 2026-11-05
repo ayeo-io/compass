@@ -7,22 +7,21 @@
 # the next session or a person does not have to find it.
 #
 # WHAT IT CHECKS, per issue under .compass/work/
-#   1. the delivery-approach record missing on in-progress work
-#        => an issue directory exists but has no delivery-approach.md. Work
-#           with no delivery-approach record has no computed process, so the
-#           hook warns.
+#   1. the delivery approach missing on in-progress work
+#        => an issue directory exists but its manifest names no
+#           delivery_approach (ADR-091). Work with no delivery approach has
+#           no computed process, so the hook warns.
 #   2. a stage whose gate is not cleared
 #        => a still-present .red marker means implementation is unfinished (a
 #           failing test is on record and was never taken green). The verify stage
 #           cannot have passed cleanly.
-#        => artifacts present out of order, or a verification-report.md whose
-#           gate decision is RED / blank, mean the verify stage was entered
+#        => on an issue from before 9.0.0, a verification-report.md whose
+#           gate decision is RED / blank means the verify stage was entered
 #           and not cleared.
 #   3. a hotfix with an outstanding follow-up
-#        => the delivery-approach record names a hotfix and its outstanding
-#           follow-ups section still has an unchecked item, or
-#           acceptance-criteria.md still lacks the promoted reproduction
-#           scenario.
+#        => the manifest names a hotfix and its `follow_ups:` still holds an
+#           outstanding entry, or acceptance-criteria.md still lacks the
+#           promoted reproduction scenario.
 #   4. a scope-bloat phrase in the devlog with no re-assessment after it.
 #
 # A closed issue is not checked: its warnings are about work that is over,

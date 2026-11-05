@@ -2589,8 +2589,8 @@ def test_continue_reply_applies_under_either_condition(
 def test_continue_reply_still_sent_when_only_compass_own_record_changed(
     tmp_path, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """`compass ship-commit` derives `docs/system-spec.md` when an issue
-    lands, and this scenario's own `in_scope` is `["**"]` - wide enough to
+    """`compass ship-commit` derived the living spec when an issue
+    landed before 9.0.0, and this scenario's own `in_scope` is `["**"]` - wide enough to
     catch that path too. A call that wrote only
     that file, and not seed.txt, has still done none of the scenario's own
     work, so the continuation reply must still be sent."""
@@ -2601,7 +2601,7 @@ def test_continue_reply_still_sent_when_only_compass_own_record_changed(
     calls, record, _ = _run_condition(
         tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
         plugin_source_dir, out_suffix="-continue-system-spec",
-        extra_config={"no_edit": True, "add_path": "docs/system-spec.md"},
+        extra_config={"no_edit": True, "add_path": "docs/system-spec.md"},  # citation-guard-allow: the living spec path a pre-9.0.0 run writes
     )
     assert len(calls) == 3
     assert record["replies_sent"] == 1

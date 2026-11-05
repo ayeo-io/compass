@@ -13,20 +13,17 @@ ship refuses to close on it.
 
 # Launch Readiness - {{ISSUE_SLUG}}
 
-<!-- compass:render document-header -->
-<!-- /compass:render -->
-
 ---
 
 ## Claims-to-scenarios traceability checklist
 
 <!-- One row per claim from positioning.md. The scenario must not just
-     EXIST - it must PASS at Verify. Pull the pass/fail from
-     verification-report.md. -->
+     EXIST - it must PASS at Verify. Pull the pass/fail from the test
+     records (`compass check`). -->
 
 | Claim # | Claim | Backing scenario id | Scenario passed at Verify? | Cleared to ship? |
 |---|---|---|---|---|
-| CLM-001 | {{from positioning.md}} | {{`TRC-id`}} | {{[ ] / [x] - from verification-report.md}} | {{[ ] / [x]}} |
+| CLM-001 | {{from positioning.md}} | {{`TRC-id`}} | {{[ ] / [x] - from `compass check`}} | {{[ ] / [x]}} |
 | CLM-002 | {{…}} | {{`TRC-id`}} | {{[ ]}} | {{[ ]}} |
 | CLM-003 | {{…}} | {{`TRC-id`}} | {{[ ]}} | {{[ ]}} |
 

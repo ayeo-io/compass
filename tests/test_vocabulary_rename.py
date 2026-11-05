@@ -274,8 +274,9 @@ def test_trc_a1():
     assert "prd.md" not in intent, (
         "`/compass:intent` still writes prd.md - a command and its own output "
         "naming different things is the defect this issue opened on")
-    assert "intent.md" in intent, (
-        "`/compass:intent` does not name intent.md as what it writes")
+    # 9.0.0 writes no intent document (ADR-091): the intent goes into the spec.
+    assert "writes no intent document" in " ".join(intent.split()), (
+        "`/compass:intent` does not say it writes no intent document")
     assert _is_removed("triage"), (
         "`/compass:triage` still ships. It produces an `assessment:` block, "
         "and the command for that is `/compass:assess`; the retired name was "
@@ -298,8 +299,9 @@ def test_trc_a2():
     assert "ui-contract.md" in design, (
         "`/compass:design` does not produce the UI contract, so it is not the "
         "designer's entry point")
-    assert "technical-design.md" in plan, (
-        "`/compass:plan` does not produce technical-design.md")
+    # 9.0.0 writes no technical design (ADR-091).
+    assert "writes no design document" in " ".join(plan.split()), (
+        "`/compass:plan` does not say it writes no design document")
     assert "ui-contract.md" not in plan, (
         "`/compass:plan` claims the designer's artifact")
     assert "technical-design.md" not in design, (
@@ -400,69 +402,10 @@ def test_trc_b6():
             "artifact_path took the retired %s over %s" % (retired, current))
 
 
-def test_trc_b7():
-    """`compass plan lint` still reads a landed issue's design (`TRC-B7`).
-
-    Every other artifact reader goes through `artifact_path`, which knows both
-    names. This one joined the filename itself, so it reported "no such file"
-    on all 36 landed issues that have a design - and then explained the absence
-    with a reason it could have checked and did not, that the design stage
-    collapses on some approaches.
-    """
-    import subprocess
-    import sys
-    import tempfile
-
-    project = Path(tempfile.mkdtemp(prefix="compass-rename-"))
-    work = project / ".compass" / "work" / "landed"
-    work.mkdir(parents=True)
-    (project / ".compass" / "config.yml").write_text("version: 1.0.0\n")
-    (project / ".compass" / "current-task").write_text("landed\n")
-    (work / "manifest.yml").write_text(
-        'schema_version: "2.0"\ntask: "landed"\ncreated: "2026-03-01"\n'
-        "status: landed\ndelivery_approach: feature\n"
-        "stages: {plan: full}\n")
-    # The name 36 landed issue directories actually hold.
-    (work / "design.md").write_text(
-        "# Design - landed\n\n## DD-1\n\nChosen: this. Rejected: that.\n")
-
-    # `compass design lint` was the spelling when this was written; the alias
-    # was removed at 4.0.0 and the verb is `plan`. The defect guarded here -
-    # joining the filename instead of going through `artifact_path` - is a
-    # property of the reader, not of which name invoked it.
-    run = subprocess.run([sys.executable, str(REPO_ROOT / "cli" / "compass"),
-                          "plan", "lint"],
-                         cwd=str(project), capture_output=True, text=True,
-                         timeout=120)
-    combined = run.stdout + run.stderr
-    assert "no such file" not in combined.lower(), (
-        "the design lint could not find the design.md sitting in a landed "
-        "issue directory:\n" + combined)
-    assert run.returncode == 0, combined
-
-
 # ---------------------------------------------------------------------------
 # Group A (continued) - the command moved; its call sites did not
 # ---------------------------------------------------------------------------
 
-def test_trc_a4():
-    """The planning stage answers to `plan` in the CLI too (`TRC-A4`).
-
-    `commands/design.md` was renamed to `commands/plan.md` while the CLI verb
-    stayed `compass design lint` - the same word meaning the engineering
-    design in the CLI and the designer's UI contract in the slash command, in
-    one release. The verb moved to `plan` with a hidden `design` alias, and
-    4.0.0 removed the alias - which is the exact ambiguity this rename exists
-    to remove.
-    """
-    import subprocess
-    import sys
-
-    cli = REPO_ROOT / "cli" / "compass"
-    run = subprocess.run([sys.executable, str(cli), "plan", "lint", "--help"],
-                         capture_output=True, text=True)
-    assert run.returncode == 0, (
-        "`compass plan lint` is not a verb: " + (run.stderr or run.stdout))
 
 
 # Files that may name `/compass:design` without saying which design they mean.
@@ -1144,13 +1087,14 @@ def test_trc_a3():
             "the entry for %r says nothing about what it means" % word)
 
     # `design` is the word that caused this. Its entry has to say which
-    # stage and which verb carry the engineering meaning, or it is a
-    # definition of one of five meanings.
+    # stage carries the engineering meaning, or it is a definition of one of
+    # five meanings. The placeholder scan, `compass plan lint`, was removed in
+    # 9.0.0 (ADR-091), so the entry names only the stage.
     design = " ".join(str(terms["design"].get("means", "")).split())
-    assert "/compass:plan" in design and "compass plan lint" in design, (
-        "the `design` entry does not say where the engineering design and "
-        "the placeholder scan live - naming five things without saying "
-        "which is which is how it stayed ambiguous")
+    assert "/compass:plan" in design, (
+        "the `design` entry does not say where the engineering design "
+        "lives - naming five things without saying which is which is how it "
+        "stayed ambiguous")
 
     # The engineering artifact. `TDD` in this repository is red-green-refactor
     # and nothing else, so the entry says the abbreviation is never used.

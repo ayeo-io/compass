@@ -255,6 +255,27 @@ def test_trc_f2_no_function_should_be_renamed_merged_or_split_by_this_task():
         # renderer, so keeping it meant keeping dead code that disagreed with
         # the code that replaced it.
         "_print_check_result",
+        # 9.0.0 removes `compass analyze` (ADR-091) and its module, analyze.py.
+        # These were its command, its readers of an issue's documents and the
+        # writer of its consistency-check evidence; nothing else called them.
+        "cmd_analyze", "_analyze_task", "_write_analyze_evidence",
+        "_upsert_analyze_evidence_registry", "_parse_intent_ids_from_brief",
+        "_parse_scenario_intents_from_spec", "_parse_claim_ids_from_positioning",
+        "_parse_claimed_scenario_ids_from_spec", "_parse_phase_weights_from_route_md",
+        "_parse_route_from_route_md",
+        # The check `consistency-check-passes` went with it, to check_registry.REMOVED.
+        "_check_coherence_check_passes",
+        # 9.0.0 removes `compass issue receipt` (ADR-091) and its modules, receipt.py
+        # and receipt_provenance.py. These were its command and its renderer;
+        # `compass adr new` moved to adr_cmd.py unchanged.
+        "cmd_task_receipt", "_receipt_resolve_task_dir", "_receipt_gate_requirements",
+        "_receipt_parse_route_md_readings", "_receipt_render", "_receipt_truncate",
+        # 9.0.0 removes the living spec (ADR-091): `compass _derive-system-spec` and
+        # the derivation in flow.py that it and ship-commit ran.
+        "cmd_derive_system_spec", "derive_system_spec",
+        # 9.0.0 removes `compass plan lint` (ADR-091): it scanned the technical design,
+        # which no stage writes now.
+        "_plan_lint_findings", "_plan_lint_scannable", "_plan_stage_weight", "cmd_plan_lint",
     }
     before -= DELIBERATELY_REMOVED
 

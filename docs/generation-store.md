@@ -16,7 +16,7 @@ differs and the commands that change what it holds are built:
 `compass issue migrate --config`, `compass issue configure` (propose, preview,
 `--discard`, `--commit`) and `--reset-config` on the reassess
 ([issue-configure.md](issue-configure.md)). The modules that read
-configuration (`routing`, `check_cmd`, `checks`, `receipt`, `manifest`,
+configuration (`routing`, `check_cmd`, `checks`, `manifest`,
 `calibration`, `flow`, `quick_fix_cmd`, `loop_ceilings`, `lessons`,
 `review_rules` and `approach_diagram`) ask `effective.view_or_legacy` first.
 An issue with a generation is judged by that generation, whatever the project's
@@ -179,11 +179,10 @@ so the refusal opens no file. It raises `MajorRefusal`, which `main` prints as
 
 - `MajorRefusal` derives from `BaseException`, as `SystemExit` does. Several
   readers turn any fault in the configuration into a fallback with `except
-  Exception`, such as the issue page render and the entry checks of `compass
-  next`. A refusal they caught would let the command run on rules it must not use.
-- A command that changes the issue's records (`record_triggers.RENDER_TRIGGERS`,
+  Exception`, such as the entry checks of `compass next`. A refusal they caught would let the command run on rules it must not use.
+- A command that changes the issue's records (`record_triggers.RECORD_TRIGGERS`,
   such as `tdd-green` or `scenario add`) is refused before it runs, by
-  `render_after_entry.before_command`. It can write before it reads the
+  `command_guard.before_command`. It can write before it reads the
   generation, so the refusal comes first and nothing is written. It reads the
   manifest and `versions.yml` only. A command that only reads, such as `compass
   next`, adds no cost for it.
@@ -195,8 +194,7 @@ so the refusal opens no file. It raises `MajorRefusal`, which `main` prints as
   start` on the refused issue is refused.
 - A command over every issue refuses that issue only. `compass flow` lists it as
   unreadable with the message, and `compass ci` reports it as refused, counts a
-  failure and goes on. The project index that a render of any issue rewrites
-  lists the refused issue from its manifest.
+  failure and goes on.
 - A recorded version that is not a version, such as `v2`, is refused with a
   message that says so. A `versions.yml` that is not a mapping makes the
   generation broken.
@@ -220,8 +218,7 @@ Deliberate limits:
   bump, so this is decided before then.
 - A command that saves the manifest and renders nothing is not refused by the
   pre-check (`record_triggers.EXEMPT`: `issue friction`, `friction capture`,
-  `checkpoint add`, `subtask package`, `intent ingest`, and `analyze` in
-  gate-clearing mode). It writes to an issue whose generation is refused. A command
+  `checkpoint add`, `subtask package` and `intent ingest`). It writes to an issue whose generation is refused. A command
   that loads the generation still refuses.
 
 `compass issue migrate --config [--issue SLUG]` fixes both. It stores a new
@@ -302,7 +299,7 @@ an issue with no `generation:` key (or no issue) in a project with no
 | `evaluator_policy()`, `autonomy` | the routing policy and the autonomy value | `routing`, `quick_fix_cmd`, `flow`, `calibration`, `approach_diagram` |
 | `evaluator_issue()` | the issue's own layer as the evaluator takes it: the approach it names, the stage modes it sets, the stages among them that an issue waiver in the provenance covers (`waived_stages`) and its subtask ceiling, or None | `routing` |
 | `guardrail_gates()` | the guardrails in the legacy shape: `defaults`, `spike_guardrails`, `checks` (each check's `severity`, `on_skipped` and `blocking_when`) and `impl` (the implementation each check runs) | `check_cmd` |
-| `gate_requirements()` | the evidence types each gate accepts, and the known types | `checks`, `manifest`, `receipt` |
+| `gate_requirements()` | the evidence types each gate accepts, and the known types | `checks`, `manifest` |
 | `command_checks()` | the checks that run a command the project wrote | `checks` |
 | `loop_ceiling_rules()` | the loop-ceiling rules | `loop_ceilings` |
 | `known_ids()` | the ids of the guardrails that apply to a shipping approach | `lessons`, `review_rules` |

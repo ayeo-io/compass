@@ -4,7 +4,7 @@ A passing test proves the guard runs. It does not prove the guard is
 connected to the thing it names. `governance/strategies-rationale.md` holds
 the incident that established the practice.
 
-Scenario ids: see docs/system-spec.md.
+Scenario ids: see the issue's acceptance criteria.
 """
 from __future__ import annotations
 

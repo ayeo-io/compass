@@ -81,7 +81,7 @@ def env(root, **extra):
         "PATH": f"{_bin(root)}:{Path(sys.executable).parent}:/usr/bin:/bin",
         "HOME": str(root / ".home"), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
         "NO_COLOR": "1", "COLUMNS": "200", "PYTHONDONTWRITEBYTECODE": "1",
-        "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "COMPASS_RENDER_AFTER": "0",
+        "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
         "CLAUDE_PROJECT_DIR": str(root),
         "CLAUDE_CONFIG_DIR": str(root / ".claude-config"),
         "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "user.useConfigOnly",
@@ -181,10 +181,13 @@ def register(root, kind, status="draft", slug=SLUG, cli=CLI):
         # two units record nothing, so the stage records stay as they were.
         units = "\nunits: 2\n" if kind == "distribution-map" else ""
         path.write_text(f"# {kind}\n\nFirst version.\n{units}")
-    done = run(root, "issue", "artifact", "set", kind, "--status", status,
-               "--path", f"{DOCS}/{kind}.md", "--issue", slug, cli=cli)
-    assert done.returncode == 0, done
-    return done
+    # 9.0.0 removed `compass issue artifact set` (ADR-091), so the entry is written as an
+    # older release wrote it.
+    del cli
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import document_registry
+    return document_registry.register(Path(root) / ".compass" / "work" / slug, kind,
+                                      f"{DOCS}/{kind}.md", status)
 
 
 def approve(root, stage, *extra, approver="jed72", role="product-owner", slug=SLUG,
@@ -530,11 +533,11 @@ def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
     # W-APPROVAL-TYPE, as a waiver naming any record that is not a human-approval
     # is: by the configuration lint, so the write that would take the waiver
     # into effect writes nothing, and compass check still fails the sign-off.
-    body["config"] = {"checks": {"artifacts-approved": {
+    body["config"] = {"checks": {"backfills-paid": {
         "set": {"severity": "advisory"},
         "waiver": {"reason": "A one-line fix.", "approved_by": record["id"]}}}}
     write_manifest(root, body)
-    fault = f"W-APPROVAL-TYPE issue:checks.artifacts-approved: {record['id']} is a " \
+    fault = f"W-APPROVAL-TYPE issue:checks.backfills-paid: {record['id']} is a " \
             f"checkpoint-approval record, not a human-approval"
     before = manifest_file(root).read_bytes()
     done = run(root, "approach", "evaluate", "--issue", SLUG, "--write", "--reason", "waive")
@@ -557,13 +560,29 @@ REGULAR_DOCUMENTS = ("delivery-approach", "intent", "requirements-review", "tech
 RELEASE_NOTE = "Each stage hand-off is on record."
 
 
+def meet_definition_of_done(body, root, slug=SLUG):
+    """Add to `body` one review note that meets every item of the issue's Definition of
+    Done. `compass ship-commit` refuses to land while `dod-evidence-typed` fails
+    (ADR-091), so the state it lands from has the Definition of Done met."""
+    from compass_pkg import effective, item_records
+    folder = manifest_file(root, slug).parent
+    ids = [check for check, _ in item_records.listed_checks(
+        effective.view_or_legacy(str(folder)), "dod")]
+    (folder / "evidence").mkdir(exist_ok=True)
+    (folder / "evidence" / "dod-review.txt").write_text("reviewed\n")
+    body["evidence"] = (body.get("evidence") or []) + [
+        {"id": "EV-DOD", "type": "manual-review", "path": "evidence/dod-review.txt",
+         "meets": ids}]
+
+
 def _ready_to_ship(root, cli=CLI):
     """Every gate passed, one changed file traced and staged, a green on record,
-    every document approved and the release line recorded: the state `ship-commit`
-    lands from."""
+    every document approved, the Definition of Done met and the release line
+    recorded: the state `ship-commit` lands from."""
     for kind in REGULAR_DOCUMENTS:
         register(root, kind, "approved", cli=cli)
     body = manifest(root)
+    meet_definition_of_done(body, root)
     for gate in body["gates"]:
         gate["status"] = "pass"
     body["changed_files"] = [{"path": "src/new.py", "scenarios": ["S-1"]}]
@@ -640,7 +659,8 @@ def test_arc_5_landing_refuses_a_checkpoint_with_no_outcome(tmp_path, monkeypatc
 
     # An issue that is not judged lands exactly as the base commit lands it.
     # The captured stdout says "issue marked done.", because the status word
-    # "landed" is retired (ADR-044). The capture was edited to match, word for word.
+    # "landed" is retired (ADR-044). The capture was edited to match, word for word, and again when 9.0.0 stopped
+    # deriving the living spec at landing (ADR-091).
     captured = json.loads((FIXTURES / "base-ship-commit-not-judged.json").read_text())
     assert ship_not_judged(tmp_path / "not-judged") == captured
     _quick_fix_refused(tmp_path / "quick-fix")

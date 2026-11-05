@@ -2,9 +2,9 @@
 
 `approach evaluate` (its summary and its verbose view) and `issue receipt`
 each built the line themselves, and the copies drifted: a plain-language
-fix reached one screen and not the other (#109). They now share
+fix reached one screen and not the other (#109). They shared
 `render.fired_rule_line`, and each screen prints exactly what it printed
-before, pinned below.
+before, pinned below. 9.0.0 removed the receipt (ADR-091).
 
 Scenario id: FR-1 (issue `one-fired-rule-formatter-shared`).
 """
@@ -54,12 +54,8 @@ def test_fr_1_each_screen_prints_what_it_printed_before(tmp_path):
     assert f"  - {FLOOR} (RP-FLOOR-003, floor)\n" in summary
     verbose = _cli(root, "approach", "evaluate", "--issue", "auth-fix", "--verbose")
     assert f"    {FLOOR} (RP-FLOOR-003, floor)\n" in verbose
-    assert ("    Irreversible-surface issues have consistency checked before "
-            "they ship (RP-REQUIRE-002, requirement)\n") in verbose
-    receipt = _cli(root, "issue", "receipt", "--issue", "auth-fix")
-    assert f"    {FLOOR} (RP-FLOOR-003)\n" in receipt
-    assert ("    Work on a trust boundary states the threats it considered "
-            "(RP-REQUIRE-005)\n") in receipt
+    assert ("    Irreversible-surface issues have architecture checked before "
+            "they ship (RP-REQUIRE-004, requirement)\n") in verbose
 
 
 def test_fr_1_the_formatter_covers_each_shape():
@@ -71,8 +67,8 @@ def test_fr_1_the_formatter_covers_each_shape():
     assert fired_rule_line("RP-X-3", with_kind=False) == "(RP-X-3)"
 
 
-def test_fr_1_both_modules_use_the_one_formatter():
-    for name in ("routing.py", "receipt.py"):
+def test_fr_1_the_evaluator_uses_the_one_formatter():
+    for name in ("routing.py",):
         src = (ROOT / "cli" / "compass_pkg" / name).read_text(encoding="utf-8")
         assert "fired_rule_line" in src, name
         assert "rationale']).rstrip().rstrip('.')" not in src, name

@@ -136,7 +136,6 @@ def test_trc_a3_resolvable_test_id_passes(run_cli, make_task, project):
     task_dir = make_task("resolve-me",
                          _task_claiming_correctness(["tests/test_real.py::test_present"]))
     _green(task_dir)
-    run_cli("issue", "render", "--issue", "resolve-me")
 
     r = run_cli("check", "--verbose", "--issue", "resolve-me")
 
@@ -151,7 +150,6 @@ def test_trc_a3_parametrised_id_resolves(run_cli, make_task, project):
         "resolve-me",
         _task_claiming_correctness(["tests/test_real.py::test_present[case-1]"]))
     _green(task_dir)
-    run_cli("issue", "render", "--issue", "resolve-me")
 
     assert run_cli("check", "--verbose", "--issue", "resolve-me").returncode == 0
 
@@ -163,7 +161,6 @@ def test_trc_a3_non_file_shaped_id_is_skipped(run_cli, make_task, project):
         "resolve-me",
         _task_claiming_correctness(["grep: governance/strategies.md carries S7"]))
     _green(task_dir)
-    run_cli("issue", "render", "--issue", "resolve-me")
 
     r = run_cli("check", "--verbose", "--issue", "resolve-me")
     assert r.returncode == 0, r
@@ -335,26 +332,8 @@ def test_trc_f2_task_without_friction_key_loads(run_cli, make_task):
 # Group C - who assessed the judgement
 # ---------------------------------------------------------------------------
 
-def test_trc_c1_review_table_has_assessor_column():
-    tpl = _read("templates/verification-report.md")
-
-    m = re.search(r"^\|\s*Dimension\s*\|.*$", tpl, re.M)
-    assert m, "review-dimensions table header not found"
-    header = m.group(0).lower()
-    assert "assessed by" in header, (
-        f"no column recording who assessed the dimension:\n{m.group(0)}")
-
-
-def test_trc_c2_template_explains_assessor_column():
-    tpl = _read("templates/verification-report.md")
-    i = tpl.find("## Review dimensions")
-    assert i >= 0
-    flat = _flat(tpl[i:i + 2000])
-
-    assert "reviewer" in flat, "guidance does not mention the reviewer agent"
-    assert "author" in flat, "guidance does not mention the author case"
-    assert re.search(r"weaker|less independent|not independent", flat), (
-        "guidance does not say an author-assessed dimension is weaker evidence")
+# `TRC-C1` and `TRC-C2` read the verification report template, which 9.0.0
+# deleted (ADR-091).
 
 
 # ---------------------------------------------------------------------------

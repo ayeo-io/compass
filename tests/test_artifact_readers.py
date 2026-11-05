@@ -35,7 +35,7 @@ from compass_pkg import core  # noqa: E402
 
 #: The modules that read an issue's documents.
 READER_MODULES = [
-    "analyze.py", "checks.py", "check_cmd.py", "policy.py", "receipt.py",
+    "checks.py", "check_cmd.py", "policy.py",
     "next_cmd.py", "artifact_cmd.py", "bdd.py", "flow.py", "routing.py",
     "ingest.py", "borrowed_docs.py", "migrate.py", "verb_help.py",
 ]
@@ -55,7 +55,16 @@ def _document_filenames():
     bypass the resolver does so unobserved.
     """
     machine_state = {"devlog.md", "pull-request-body.md"}
-    return {p.name for p in (ROOT / "templates").glob("*.md")} - machine_state
+    return ({p.name for p in (ROOT / "templates").glob("*.md")} - machine_state) | REMOVED_DOCUMENTS
+
+
+#: The documents whose templates 9.0.0 deleted (ADR-091). An archived issue
+#: still holds them, so a reader of one must still go through the resolver.
+REMOVED_DOCUMENTS = {f"{name}.md" for name in (
+    "delivery-approach", "verification-note", "technical-design", "low-level-design",
+    "distribution-map", "verification-report", "intent", "requirements-review",
+    "threat-model", "rollback-plan", "bug-report", "review", "spike-conclusion",
+    "incident")}
 
 
 # --- `TRC-C2` and `TRC-C3` -------------------------------------------------------
@@ -199,10 +208,6 @@ def _relocated_issue(tmp_path, dod_line, slug="a-moved-issue",
 
 
 def _check(project, slug="a-moved-issue"):
-    # The issue page is written by the render after a command; this fixture wrote the
-    # manifest by hand, so render it as that step would.
-    subprocess.run([sys.executable, str(COMPASS_CLI), "issue", "render", "--issue", slug],
-                   capture_output=True, text=True, timeout=120, cwd=str(project), check=True)
     return subprocess.run(
         [sys.executable, str(COMPASS_CLI), "check", "--issue", slug,
          "--verbose"],

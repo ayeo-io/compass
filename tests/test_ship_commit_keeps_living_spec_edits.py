@@ -2,7 +2,7 @@
 living spec in the issue's own commit.
 
 `tip_scope.tip_own_paths` used to subtract the living-spec files from every
-result. An issue's own commit that edited `docs/system-spec.md` by hand then
+result. An issue's own commit that edited the living spec by hand then
 landed unreported, although the staged path refuses it. The living spec is
 now left out only for a spec-only commit and for a conflict resolution.
 

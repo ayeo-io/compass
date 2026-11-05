@@ -33,7 +33,8 @@ rules:
       request number with what it is.
     allowed:
       - An id a tracked file defines, such as an ADR number, a guardrail or
-        strategy id, an RR- rule id, or a scenario id in docs/system-spec.md.
+        strategy id, an RR- rule id, or a scenario id that a tracked test
+        names.
       - A GitHub issue or pull request number given with what it is.
     incident: >
       The CI review asked for fixes on #237, whose test files cited a spec
@@ -111,8 +112,7 @@ rules:
     enforces: S7
     rule: >
       These files are on an adopter's reading path. They must not point at a
-      document about building Compass, such as docs/system-spec.md or
-      docs/releasing.md: an adopter who follows the pointer lands in a project
+      document about building Compass, such as docs/releasing.md: an adopter who follows the pointer lands in a project
       that is not theirs.
     allowed:
       - A pointer to a document about using Compass, such as
@@ -122,19 +122,6 @@ rules:
       put it in docs/README.md: CLAUDE.md ships to adopters, and
       tests/test_prompt_layer.py fails a file on their reading path that
       points at a document about developing Compass.
-
-  - id: RR-007
-    blocking: true
-    file_patterns: ["docs/system-spec.md", "docs/system-spec-archive.md"]
-    enforces: G4
-    rule: >
-      The living spec ships in the plugin copy the eval sessions run, and
-      ship-commit copies scenario titles into it. A title must not name an
-      eval scenario or judge behaviour by its id; describe the run instead.
-    allowed: []
-    incident: >
-      #224 failed CI because a scenario title named two eval scenarios, and
-      tests/test_eval_harness.py found them in the plugin copy.
 
   - id: RR-008
     blocking: true

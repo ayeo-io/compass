@@ -93,11 +93,11 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `multiagent` | Removed in 9.0.0 and not read (see `multiagent` below) | - | - |
 | `allow_project_commands` | Lets `compass check` and `compass readiness` run commands the project declares | `true`, `false` | `false` |
 | `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
-| `living_spec` | When a landing re-derives the living spec (see `living_spec` below) | `land`, `refresh` | `land` |
+| `living_spec` | Removed in 9.0.0 and not read (see `living_spec` below) | - | - |
 | `language` | The language the agent writes prose in (see `language` below) | a BCP 47 tag such as `en-US` | unset: no instruction |
 | `acceptance_strategy` | Whether the four-layer acceptance strategy (`S17`) is on for the project (see `acceptance_strategy` below) | `state`: `on` or `off`; `reason`: text, needed with `off` | unset: on |
 | `preset_index` | Reserved for published presets; no behavior yet | - | - |
-| `github_labels` | Whether Compass writes an issue's labels and page to its linked GitHub issue (see `docs/github-labels.md`) | `domain`, `status`, `page`: `true` or `false` each | all `false`; no GitHub call |
+| `github_labels` | Whether Compass writes an issue's labels to its linked GitHub issue (see `docs/github-labels.md`) | `domain`, `status`: `true` or `false` each; `page` is removed | all `false`; no GitHub call |
 
 ### `adoption`
 
@@ -208,18 +208,17 @@ own commands. See `docs/security.md`.
 
 ### `github_labels`
 
-Three switches, each `false` unless set to `true`. With all three off, no
-command calls GitHub.
+Two switches, each `false` unless set to `true`. With both off, no command
+calls GitHub.
 
 - `domain`: write the issue's declared domain labels to its linked GitHub
   issue.
 - `status`: write `status:<state>` and, on a closed issue, `status:done` and
   `close:<reason>`.
-- `page`: keep one comment on the linked GitHub issue equal to the issue's
-  README, and write the ask into an empty issue body once. It lets everyone
-  who can read the GitHub issue read the issue's documents, which is why it is
-  off by default. A post is refused when it would carry a path
-  the project keeps out of git, or a credential.
+- `page` posted the issue page as a comment until 9.0.0 removed the issue page
+  (ADR-091). The switch stays valid and is not read; `compass policy lint`
+  names it with `L-SETTING-REMOVED` when it is `true`. Delete it from
+  `compass.yml`.
 
 Any other value, such as `"yes"`, reads as off. The setting is read from the
 project's own file only. See `docs/github-labels.md` for the labels, the
@@ -227,20 +226,11 @@ limits and the failure behavior.
 
 ### `living_spec`
 
-When a landing re-derives the living spec, `docs/system-spec.md` and its
-archive:
-
-- `land`: `compass ship-commit` and `compass quick-fix finish` re-derive the
-  spec after each landing and commit it alone, in a commit after the land
-  commit (ADR-026).
-- `refresh`: a landing leaves the spec as it is and prints one line that
-  says so. A person re-derives it, for example in one pull request before a
-  release, with `compass spec sync`.
-
-Use `refresh` when many branches are open at once: each branch that commits
-its own copy of the spec conflicts with every other open branch once one
-merges. Any other value makes `compass policy lint` report the key. The
-Compass repository sets `refresh`.
+9.0.0 removed the living spec, its archive and the command that merged a
+base branch and re-derived them (ADR-091). No landing derives the spec. The key stays
+valid, so a project that holds it keeps working, and nothing reads it.
+`compass policy lint` names it with `L-SETTING-REMOVED`. Delete it from
+`compass.yml`.
 
 ### `language`
 

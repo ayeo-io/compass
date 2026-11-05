@@ -15,7 +15,7 @@ tells them to do, since it is their audit trail - meets it on day one.
 The sweep still lists every issue it saw and says why one was not checked.
 Nothing hides; a queued issue simply does not fail a build for being queued.
 
-Scenario ids: see docs/system-spec.md (TRC-1, `TRC-2`).
+Scenario ids: see the issue's acceptance criteria (TRC-1, `TRC-2`).
 """
 from __future__ import annotations
 

@@ -113,7 +113,6 @@ def rebuild(root):
             "floors": rules_of("floors"), "caps": rules_of("caps"),
             "loop_ceilings": rules_of("loop_ceilings"),
             "immovable_gates": rules_of("immovable_gates"),
-            "artifact_rules": rules_of("artifact_rules"),
         },
         "assessment_vocabulary": vocabulary,
         "autonomy_checkpoints": {
@@ -122,7 +121,7 @@ def rebuild(root):
             for level, row in rp["autonomy_checkpoints"].items()},
         "route_shapes": {
             name: {"weight": a["weight"], "stages": a["stages"], "gates": a["gates"],
-                   "subtask_ceiling": a["subtask_ceiling"], "artifacts": a["artifacts"]}
+                   "subtask_ceiling": a["subtask_ceiling"]}
             for name, a in approaches.items()},
     }
 

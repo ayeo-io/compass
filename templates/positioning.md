@@ -16,15 +16,12 @@ the point.
 
 # Positioning - {{ISSUE_SLUG}}
 
-<!-- compass:render document-header -->
-<!-- /compass:render -->
-
 ---
 
 ## Audience
 
 <!-- Who is this for? Be specific - the segment, their context, what they
-     are trying to do. Cross-check against intent.md's primary user. -->
+     are trying to do. Cross-check against the primary user the intent names. -->
 
 {{AUDIENCE}}
 
@@ -55,7 +52,7 @@ the point.
 headline benefit}}.
 
 {{PROBLEM PARAGRAPH - the pain this removes, in the user's terms. Cross-check
-against intent.md's Problem.}}
+against the problem the intent names.}}
 
 {{SOLUTION PARAGRAPH - how it works, at the altitude a user cares about. Not
 the implementation.}}
@@ -90,7 +87,7 @@ the implementation.}}
 - **Q: {{does it work with …}}** - A: {{answer}}
 - **Q: {{the obvious edge case}}** - A: {{answer}}
 
-**Internal FAQs** (these mirror intent.md's Internal FAQ - keep them consistent)
+**Internal FAQs** (these mirror the product owner's internal FAQ, if one exists - keep them consistent)
 
 - **Q: Why ship this now?** - A: {{strategic / timing rationale}}
 - **Q: What is in v1 vs later?** - A: {{the cut}}
@@ -103,7 +100,7 @@ the implementation.}}
      may overstate. Checked against the voice & positioning strategies (the
      shipped strategies, or your project's strategies file, if it has one). -->
 
-- {{e.g. "We say 'CSV export for finance', not 'full reporting suite' - a voice strategy; the suite is a non-goal in intent.md."}}
+- {{e.g. "We say 'CSV export for finance', not 'full reporting suite' - a voice strategy; the suite is a non-goal of the intent."}}
 
 ---
 

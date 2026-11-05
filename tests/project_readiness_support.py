@@ -30,7 +30,7 @@ def environment(home, extra=None):
     env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
            "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1", "COLUMNS": "100",
            "PYTHONDONTWRITEBYTECODE": "1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
-           "COMPASS_RENDER_AFTER": "0", **GIT_IDENTITY}
+           **GIT_IDENTITY}
     env.update(extra or {})
     return env
 

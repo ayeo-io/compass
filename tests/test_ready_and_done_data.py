@@ -1,10 +1,9 @@
 """The Definition of Ready and the Definition of Done are data in the default preset.
 
 The seven Definition of Ready items and the seven Definition of Done items are
-`human` checks in `governance/presets/default/checks.yml`. The templates
-`templates/requirements-review.md` and `templates/verification-report.md` hold
-an empty rendered block for each (`dor` and `dod`): `compass issue render` writes
-the items from the lists, so the preset is the only place their text lives. The
+`human` checks in `governance/presets/default/checks.yml`, the only place their
+text lives. 9.0.0 deleted the templates that held a block for each and
+`compass issue render`, which wrote the items into them (ADR-091). The
 `plan` stage's `entry` list holds the first seven and the `verify` stage's `exit`
 list holds the second seven.
 The capability `entry-exit-evaluation` is off in `default@6`, so nothing runs
@@ -27,8 +26,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 
 PRESET = ROOT / "governance" / "presets" / "default"
-READY_TEMPLATE = ROOT / "templates" / "requirements-review.md"
-DONE_TEMPLATE = ROOT / "templates" / "verification-report.md"
 CAPABILITY = "entry-exit-evaluation"
 
 READY_IDS = [
@@ -125,31 +122,20 @@ def _problems_now() -> list[str]:
     return problems(load_preset(), statements(READY_IDS), statements(DONE_IDS))
 
 
-def _block_under(path: Path, heading: str, kind: str) -> bool:
-    """True when the section under `heading` holds an empty `kind` block and no checkbox."""
-    text = path.read_text(encoding="utf-8")
-    start = text.index(f"\n{heading}\n") + len(heading) + 2
-    section = re.split(r"\n#{1,6} |\nNext stage:", text[start:], maxsplit=1)[0]
-    block = f"<!-- compass:render {kind} -->\n<!-- /compass:render -->"
-    return block in section and not re.search(r"^- \[[ xX]\]", section, re.M)
-
-
-def test_rd_1_the_ready_checks_are_the_plan_entry_list_and_the_template_holds_a_block():
+def test_rd_1_the_ready_checks_are_the_plan_entry_list():
     preset = load_preset()
     assert preset["stages"]["plan"].get("entry") == READY_IDS
     for check_id in READY_IDS:
         check = _check(preset, check_id)
         assert check["kind"] == "human" and check["statement"].strip(), check_id
-    assert _block_under(READY_TEMPLATE, "### Definition of Ready", "dor")
 
 
-def test_rd_2_the_done_checks_are_the_verify_exit_list_and_the_template_holds_a_block():
+def test_rd_2_the_done_checks_are_the_verify_exit_list():
     preset = load_preset()
     assert preset["stages"]["verify"].get("exit") == DONE_IDS
     for check_id in DONE_IDS:
         check = _check(preset, check_id)
         assert check["kind"] == "human" and check["statement"].strip(), check_id
-    assert _block_under(DONE_TEMPLATE, "### Definition of Done", "dod")
 
 
 def test_rd_3_the_checks_are_inactive_blocking_and_say_what_a_skipped_stage_returns():
@@ -290,17 +276,12 @@ def test_rd_8_the_preset_headers_do_not_claim_the_adapter_wrote_the_files_once()
 
 # --- The Definition of Done names report sections (TRC-001, issue dod-statements-name-sections)
 
-def test_dsn_1_done_statements_name_report_sections():
-    """A Definition of Done statement names the verification report section it points at,
-    because the report's headings carry no number (ADR-064) and `§1` finds nothing. Scenario
-    `TRC-001`."""
-    headings = {line.lstrip("#").strip()
-                for line in DONE_TEMPLATE.read_text(encoding="utf-8").splitlines()
-                if line.startswith("## ")}
-    named = []
-    for check_id, statement in zip(DONE_IDS, statements(DONE_IDS)):
+def test_dsn_1_no_item_names_a_section_of_a_removed_document():
+    """9.0.0 writes no requirements review or verification report (ADR-091), so no
+    Definition of Ready or Done statement names a section of one, or a removed
+    document. Scenario `TRC-001`."""
+    for check_id, statement in zip(READY_IDS + DONE_IDS, statements(READY_IDS + DONE_IDS)):
         assert not re.search(r"§\s*\d", statement), (check_id, statement)
-        for section in re.findall(r'the "([^"]+)" section', statement):
-            assert section in headings, (check_id, section, sorted(headings))
-            named.append(section)
-    assert sorted(set(named)) == ["Scenario acceptance results", "Test suite evidence"], named
+        assert not re.search(r'the "[^"]+" section', statement), (check_id, statement)
+        for removed in ("intent.md", "delivery-approach.md", "ledger above"):
+            assert removed not in statement, (check_id, removed)

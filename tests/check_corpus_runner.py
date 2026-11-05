@@ -225,25 +225,6 @@ def _(root):
     return _issue(root, {"follow_ups": [{"id": "FU-1", "status": "resolved"}]})
 
 
-def _approved_issue(root, status):
-    return _issue(root, {
-        "delivery_approach": "regular",
-        "gates": [{"id": "verify.correctness", "status": "pass", "evidence": ["EV-1"]}],
-        "artifacts": [{"id": "ART-TECHNICAL_DESIGN", "kind": "technical-design",
-                       "status": status, "path": "docs/technical-design.md",
-                       "reason": "every regular approach carries one"}]})
-
-
-@case("artifacts-approved", "broken")
-def _(root):
-    return _approved_issue(root, "draft")
-
-
-@case("artifacts-approved", "restored")
-def _(root):
-    return _approved_issue(root, "approved")
-
-
 @case("spike-conclusion-present", "broken")
 def _(root):
     return _issue(root, {})
@@ -263,20 +244,6 @@ def _(root):
 @case("spike-no-production-changes", "restored")
 def _(root):
     return _issue(root, {})
-
-
-@case("consistency-check-passes", "broken")
-def _(root):
-    return _issue(root, {"gates": [{"id": "verify.analyze", "status": "pending"}]})
-
-
-@case("consistency-check-passes", "restored")
-def _(root):
-    task, task_dir = _issue(root, {})
-    path = _record(task_dir, "analyze.json", {"finding_count": 0})
-    task["gates"] = [{"id": "verify.analyze", "status": "pending"}]
-    task["evidence"] = [{"id": "EV-1", "type": "consistency-check", "path": path}]
-    return task, task_dir
 
 
 def _rerun(root, attempts):
@@ -351,51 +318,6 @@ def _(root):
 
 # --- checks that read a document or another issue ----------------------------------
 
-@case("borrowed-documents-answered", "broken")
-def _(root):
-    task, task_dir = _issue(root, {})
-    _write(task_dir / "threat-model.md",
-           "| Threat | Answer |\n|---|---|\n| data loss on upgrade | none yet |\n")
-    return task, task_dir
-
-
-@case("borrowed-documents-answered", "restored")
-def _(root):
-    task, task_dir = _issue(root, {})
-    _write(task_dir / "threat-model.md",
-           "| Threat | Answer |\n|---|---|\n| data loss on upgrade | TRC-A1 |\n")
-    return task, task_dir
-
-
-def _rendered(root, stale):
-    """An issue at `verify` whose acceptance criteria hold a coverage block and
-    whose issue page exists, rendered. With `stale`, the block was edited by hand."""
-    from compass_pkg import render_cmd
-    task, task_dir = _issue(root, {
-        "created": "2026-10-10", "current_phase": "verify",
-        "scenarios": [_scenario(title="A scenario")],
-        "artifacts": [{"id": "ART-AC", "kind": "acceptance-criteria", "status": "draft",
-                       "path": "docs/compass/2026-10-10-case/acceptance-criteria.md"}]})
-    doc = root / "docs" / "compass" / "2026-10-10-case" / "acceptance-criteria.md"
-    _write(doc, "# Spec\n\n<!-- compass:render coverage -->\n<!-- /compass:render -->\n")
-    render_cmd.apply(render_cmd.plan_issue(str(task_dir)))
-    if stale:
-        doc.write_text(doc.read_text(encoding="utf-8").replace("Coverage: 0 of 1",
-                                                                "Coverage: 1 of 1"),
-                       encoding="utf-8")
-    return task, task_dir
-
-
-@case("rendered-blocks-current", "broken")
-def _(root):
-    return _rendered(root, True)
-
-
-@case("rendered-blocks-current", "restored")
-def _(root):
-    return _rendered(root, False)
-
-
 def _landed_by(root, delivered):
     task, task_dir = _issue(root, {"status": "landed",
                                    "landed_by": [{"issue": "other"}]})
@@ -429,15 +351,17 @@ def _sectioned(root, kind, doc, *, generation=True, closed=False, registered=Tru
                depth="thorough", sections=None, changed=()):
     """An issue in a project with a `compass.yml`, registering `kind` at `depth` with
     the document `doc`. With `generation`, its configuration is committed as generation
-    1 from the shipped default; `sections` replaces the catalogue's sections of `kind`
-    in that configuration. `closed` marks the issue done once it is committed."""
-    from compass_pkg import effective
+    1 from the shipped default; `sections` gives that stored generation a catalogue
+    entry for `kind` with those sections. `closed` marks the issue done once it is
+    committed.
+
+    Since 9.0.0 a project layer cannot set the catalogue (ADR-091), so `sections` is
+    written into the resolution before it is stored. That is the generation an issue
+    configured before 9.0.0 still holds."""
+    from compass_pkg import effective, layers
     from compass_pkg.core import load_manifest
 
-    layer = {"schema": 1}
-    if sections is not None:
-        layer["artifacts"] = {kind: {"set": {"sections": sections}}}
-    _write(root / "compass.yml", yaml.safe_dump(layer, sort_keys=False))
+    _write(root / "compass.yml", yaml.safe_dump({"schema": 1}, sort_keys=False))
     entry = {"id": "ART-" + kind.upper().replace("-", "_"), "kind": kind, "status": "draft"}
     if depth:
         entry["depth"] = depth
@@ -453,7 +377,13 @@ def _sectioned(root, kind, doc, *, generation=True, closed=False, registered=Tru
         "scenarios": [_scenario(title="Export is fast")],
         "artifacts": [entry], "changed_files": list(changed)})
     if generation:
-        effective.commit_generation(str(task_dir), load_manifest(str(task_dir))[0])
+        manifest = load_manifest(str(task_dir))[0]
+        resolution = None
+        if sections is not None:
+            resolution = effective.resolve_live(layers.find_project_root(str(task_dir)),
+                                                manifest, SLUG, str(task_dir))
+            resolution.resolved.setdefault("artifacts", {})[kind] = {"sections": sections}
+        effective.commit_generation(str(task_dir), manifest, resolution=resolution)
     if closed:
         task, _ = load_manifest(str(task_dir))
         _write(task_dir / "manifest.yml", yaml.safe_dump(dict(task, status="done"),
@@ -483,7 +413,6 @@ def _declining_cases(impl, kind):
     return {name: text for name, (text, _) in shapes.items()}
 
 
-#: A changed file that is a trigger path of `contracts-declared`; the spec check ignores it.
 _CONTRACT_CHANGE = ({"path": "schemas/manifest.schema.json", "scenarios": ["S-1"]},)
 
 _NFR_SPEC = """\
@@ -523,134 +452,6 @@ def _(root):
 def _(root):
     return _sectioned(root, "acceptance-criteria",
                       _NFR_SPEC.format(security=" | No input crosses a trust boundary. "))
-
-
-_DESIGN = """\
-# Plan
-
-## Data and interfaces
-
-<!-- A field table here would not count: it sits in a comment.
-| Name | Type | Required | Meaning | Written by | Read by |
-|---|---|---|---|---|---|
-| a | b | c | d | e | f |
--->
-
-{body}
-## Gate
-
-None.
-"""
-
-CONTRACTS_DECLINING = _declining_cases("contracts-declared", "technical-design")
-
-
-@case("contracts-declared", "broken")
-def _(root):
-    return _sectioned(root, "technical-design", _DESIGN.format(body="None.\n"),
-                      changed=_CONTRACT_CHANGE)
-
-
-@case("contracts-declared", "restored")
-def _(root):
-    table = ("| Name | Type | Required | Meaning | Written by | Read by |\n"
-             "|---|---|---|---|---|---|\n"
-             "| `generation` | integer | no | the stored configuration | assess | check |\n")
-    return _sectioned(root, "technical-design", _DESIGN.format(body=table),
-                      changed=_CONTRACT_CHANGE)
-
-
-# --- the design-size check (ADR-067) -------------------------------------------------
-#
-# The corpus holds the archive shapes the check must decline to judge: no `generation`
-# key, a closed issue, a design not registered with a path, a catalogue with no
-# word_ceiling, and an open issue before plan exit is due. In each the design is 7,000
-# words, far over the shipped threshold of 6,000, so a check that judged it would fail it.
-
-_SIZE_WAIVER = {"reason": "A corpus case stored before word limits existed.",
-                "approved_by": "jed72", "approved_on": "2026-10-15"}
-
-
-def _sized_design(words):
-    """A design of `words` whitespace tokens: a 2-token title, then filler, then a
-    Work units table of 16 tokens."""
-    table = "## Work units\n\n| Unit |\n|---|\n| U1 |\n| U2 |\n| U3 |\n"
-    head = "# Plan\n\n"
-    filler = words - 2 - 16
-    return head + " ".join("w%d" % n for n in range(filler)) + "\n\n" + table
-
-
-def _sized(root, words, *, generation=True, closed=False, registered=True, ceiling=True,
-           stage="implement", approach="full"):
-    """A full issue at `stage` registering a technical design of `words` words at
-    thorough. `ceiling` false stores a catalogue whose design has no word_ceiling.
-    Another `approach`, a quick fix or a spike, owes no design and registers none."""
-    from compass_pkg import effective
-    from compass_pkg.core import load_manifest
-
-    layer = {"schema": 1, "owner": "jed72"}
-    if not ceiling:
-        preset = Path(__file__).resolve().parent.parent / "governance" / "presets" / "default"
-        design = dict(yaml.safe_load((preset / "artifacts.yml").read_text(encoding="utf-8"))
-                      ["artifacts"]["technical-design"])
-        design.pop("word_ceiling")
-        layer["artifacts"] = {"technical-design": dict(design, replace=True,
-                                                       waiver=_SIZE_WAIVER)}
-    _write(root / "compass.yml", yaml.safe_dump(layer, sort_keys=False))
-    entry = {"id": "ART-TECHNICAL_DESIGN", "kind": "technical-design", "status": "draft",
-             "depth": "thorough"}
-    if registered:
-        entry["path"] = _SECTION_FILES["technical-design"]
-        _write(root / entry["path"], _sized_design(words))
-    _, task_dir = _issue(root, {
-        "schema_version": "3.0", "issue": SLUG, "created": "2026-10-15",
-        "assessment": {"risk": "cross-cutting", "familiarity": "brownfield-mapped",
-                       "size": "large", "goal": "delivery", "role": "engineer",
-                       "labels": []},
-        "delivery_approach": approach, "current_phase": stage, "evidence": [],
-        "scenarios": [_scenario(title="Export is fast")],
-        "artifacts": [entry] if approach == "full" else []})
-    if generation:
-        effective.commit_generation(str(task_dir), load_manifest(str(task_dir))[0])
-    if closed:
-        task, _ = load_manifest(str(task_dir))
-        _write(task_dir / "manifest.yml", yaml.safe_dump(dict(task, status="done"),
-                                                         sort_keys=False))
-    return load_manifest(str(task_dir))[0], task_dir
-
-
-#: The input each corpus case of the design-size check describes in its expected.yml.
-SIZE_CASES = {
-    "no-generation": ("an issue with no generation key, whose 7,000-word design names 3 "
-                      "units", {"generation": False}),
-    "closed": ("a closed issue on a generation that declares the check, with a 7,000-word "
-               "design", {"closed": True}),
-    "not-registered": ("an open issue on a generation that declares the check, with the "
-                       "design not registered with a path", {"registered": False}),
-    "no-ceiling": ("an open issue on a generation whose catalogue has no word_ceiling for "
-                   "the design, with a 7,000-word design", {"ceiling": False}),
-    "before-plan-exit": ("an open issue at the plan stage, with a 7,000-word design",
-                         {"stage": "plan"}),
-    "quick-fix": ("an open quick fix at implement, which registers no design",
-                  {"approach": "quick-fix"}),
-    "spike": ("an open spike at implement, which registers no design",
-              {"approach": "spike"}),
-}
-
-for _name, (_, _options) in SIZE_CASES.items():
-    def _build(root, options=_options):
-        return _sized(root, 7000, **options)
-    CASES[("design-within-word-ceiling", _name)] = _build
-
-
-@case("design-within-word-ceiling", "broken")
-def _(root):
-    return _sized(root, 6001)
-
-
-@case("design-within-word-ceiling", "restored")
-def _(root):
-    return _sized(root, 6000)
 
 
 # --- checks that read git or run a project command ---------------------------------

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # =============================================================================
-# compass_pkg.policy - `compass issue lint` and `compass plan lint`
+# compass_pkg.policy - `compass issue lint`
 # =============================================================================
 #
 # DEPENDENCY: PyYAML, bundled at cli/vendor/yaml/ and pinned in
@@ -36,8 +36,8 @@ from compass_pkg import status_words
 from compass_pkg.check_cmd import CHECK_FNS
 from compass_pkg.check_registry import REGISTRY, REMOVED
 from compass_pkg.stable_ids import (
-    APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_SPIKE, STAGE_PLAN)
-from compass_pkg.core import (AUTONOMY_VALUES, ROUTE_NAMES, assessment_key_errors, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT, artifact_path,
+    APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_SPIKE)
+from compass_pkg.core import (AUTONOMY_VALUES, ROUTE_NAMES, assessment_key_errors, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT,
                               load_manifest, load_yaml, normalize_spine,
                               resolve_issue_dir)
 from compass_pkg.manifest_store import load_manifest_mapping
@@ -390,137 +390,6 @@ def _lint_errors_quarantine(gov_dir):
     return errs
 
 
-# --- command: plan lint ------------------------------------------------------
-# Scans a technical-design.md for the phrases that mean the plan is not
-# actually finished. ADVISORY BY DESIGN: it always exits 0 on findings. A hit
-# is a note for the planner to judge, never a gate. The CLI can read a prose
-# document to advise; it must not make the document's structure a condition
-# of passing.
-
-PLAN_PLACEHOLDER_PHRASES = (
-    "TBD",
-    "TODO",
-    "implement later",
-    "add appropriate error handling",
-)
-
-# A work unit that promises tests. It is only a finding when nothing test-shaped
-# follows it - the promise with nothing behind it is the defect, not the phrase.
-PLAN_TEST_PROMISE = "write tests for the above"
-
-
-def _plan_lint_scannable(text):
-    """Yield (lineno, line) with fenced blocks and blockquotes blanked out.
-
-    Blanked rather than dropped, so reported line numbers still match the file
-    the author is looking at. Quoted text is skipped because every document that
-    explains this check has to quote the phrases it looks for - the skill that
-    documents it, the writing guide, and the plan that specified it. A check
-    that fires on its own documentation gets switched off.
-    """
-    in_fence = False
-    for lineno, line in enumerate(text.splitlines(), 1):
-        stripped = line.lstrip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
-            in_fence = not in_fence
-            yield lineno, ""
-            continue
-        if in_fence or stripped.startswith(">"):
-            yield lineno, ""
-            continue
-        yield lineno, line
-
-
-def _plan_lint_findings(text):
-    """Return [(lineno, phrase)] for every placeholder in a plan's prose."""
-    lines = list(_plan_lint_scannable(text))
-    findings = []
-
-    for lineno, line in lines:
-        low = line.lower()
-        for phrase in PLAN_PLACEHOLDER_PHRASES:
-            if phrase.lower() in low:
-                findings.append((lineno, phrase))
-
-        if PLAN_TEST_PROMISE in low:
-            # Kept only if nothing test-shaped follows within a short window.
-            import re as _re
-            following = " ".join(l for n, l in lines if n > lineno)[:600].lower()
-            if not _re.search(r"test_\w+|::|\.py\b|\bit\(|\bdescribe\(", following):
-                findings.append((lineno, PLAN_TEST_PROMISE))
-
-    return sorted(set(findings))
-
-
-def _plan_stage_weight(task_slug):
-    """What this issue's approach says the plan stage weighs, or None.
-
-    Read so the lint can check its own explanation for a missing design
-    against the record, instead of offering a reason that may not apply.
-    Returns None when the manifest cannot be read - an unreadable record is not
-    evidence that the stage collapsed.
-    """
-    try:
-        task, _path = load_manifest(resolve_issue_dir(task_slug))
-    except CompassError:
-        return None
-    stages = task.get("stages") or {}
-    if not isinstance(stages, dict):
-        return None
-    weight = stages.get(STAGE_PLAN)
-    return str(weight).strip().lower() if weight else None
-
-
-def cmd_plan_lint(args):
-    from compass_pkg.terminal import relative_to_project
-    # The default path goes through `artifact_path`, which knows both the name
-    # this framework writes today and the one a landed issue still holds. This
-    # function joined the filename itself, and got it wrong twice: first left
-    # at `plan.md` after the artifact became `design.md`, then moved to
-    # `technical-design.md` with no fallback, which broke it on every issue
-    # that landed holding `design.md`. Every other artifact reader in the CLI
-    # goes through the resolver; this one now does too.
-    if args.file:
-        path = args.file
-    else:
-        task_dir = resolve_issue_dir(args.task)
-        path = artifact_path(task_dir, "technical-design.md")
-
-    if not os.path.isfile(path):
-        print(f"compass plan lint: ERROR - no such file: {relative_to_project(path)}")
-        # Say why it might legitimately be absent AND check that reason against
-        # the record, rather than explaining away an absence the approach says
-        # should not happen.
-        weight = _plan_stage_weight(getattr(args, "task", None))
-        if weight in ("collapsed", "skipped"):
-            print("  This issue's approach records the plan stage as %s, so it "
-                  "has no technical-design.md to lint." % weight)
-        elif weight:
-            print("  This issue's approach records the plan stage as %s, so a "
-                  "technical-design.md is expected and is missing." % weight)
-        else:
-            print("  The plan stage collapses on quick-fix, hotfix and spike "
-                  "approaches, so an issue on one of those has no "
-                  "technical-design.md to lint.")
-        return 2
-
-    with open(path, encoding="utf-8") as fh:
-        findings = _plan_lint_findings(fh.read())
-
-    if not findings:
-        print(f"compass plan lint: PASS - no placeholders found in {relative_to_project(path)}")
-        return 0
-
-    noun = "placeholder" if len(findings) == 1 else "placeholders"
-    print(f"compass plan lint: {len(findings)} possible {noun} in {relative_to_project(path)} [advisory]")
-    for lineno, phrase in findings:
-        print(f"  line {lineno}: {phrase}")
-    print("\n  Advisory, not a gate - this exits 0. Assess these as judgment in "
-          "the strategies\n  walk of the governance check, and either fill them in "
-          "or record why they stand.")
-    return 0
-
-
 def delivery_approach_errors(task):
     """An unknown `delivery_approach`, reported by the built-in lint so the
     check does not depend on the optional `jsonschema` package. An old route
@@ -654,14 +523,10 @@ def cmd_task_lint(args):
     # code, so an unreachable GitHub cannot fail `compass ci`.
     notes = []
     if not args.file:
-        from compass_pkg import github_labels, github_page
+        from compass_pkg import github_labels
         task_dir = os.path.dirname(os.path.abspath(path))
-        notes = github_labels.lint_notes(task, task_dir) + github_page.lint_notes(task, task_dir)
+        notes = github_labels.lint_notes(task, task_dir)
         notes += _unmatched_document_notes(task_dir)
-        from compass_pkg import decision_scope, design_size, verification_plan
-        notes += verification_plan.lint_notes(task, task_dir)
-        notes += design_size.lint_notes(task, task_dir)
-        notes += decision_scope.lint_notes(task, task_dir)
     if errs:
         print(f"compass issue lint: FAIL - {relative_to_project(path)}")
         for e in errs:

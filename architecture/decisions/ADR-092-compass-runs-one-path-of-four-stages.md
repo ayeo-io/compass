@@ -96,6 +96,10 @@ Each question has the default this change builds.
 ## References
 
 - ayeo-io/compass-delivery#351 [Replace the approaches and eight stages with one four-stage path] and its parent, #345 [Reposition Compass 9.0.0 as an ATDD framework with a proof trail].
-- Related issues: #354 (the role entry points and the readers it owns), #355 (the PR approval and the scenario digest freeze), #357 (the configuration layers and the presets) and #359 (`compass migrate` and the upgrade guide).
+- Related issues:
+  - #354 [Remove role entry points, the board, retro reporting, evals and the Codex adapter] owns the role entry points and the readers it removes;
+  - #355 [Read the ship approval from the merged PR review] adds the PR approval and the scenario digest freeze;
+  - #357 [Replace configuration layers and presets with one fixed check set] owns the configuration layers and the presets;
+  - #359 [Add compass migrate and the 9.0.0 upgrade guide] owns `compass migrate` and the upgrade guide.
 - ADR-062 (`depends_on` `until`), ADR-063 and ADR-083 (checkpoints), ADR-079 and ADR-081 (the `S17` acceptance strategy), ADR-088 (a red before the first green), ADR-090 (one session) and ADR-091 (only the acceptance criteria).
 - `cli/compass_pkg/stable_ids.py`, `cli/compass_pkg/routing.py`, `cli/compass_pkg/removed_parts.py`, `governance/presets/default/approaches.yml`, `governance/presets/default/stages.yml`.

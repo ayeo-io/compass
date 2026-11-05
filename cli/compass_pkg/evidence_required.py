@@ -20,8 +20,8 @@ compares them on every point of the contract 1 grid and every subset of the
 `G5` labels.
 """
 # DEPENDENCY: compass_pkg.core (CompassError, reading_matches), red_first
-# (ACCEPTANCE_KINDS), retired (DIMENSIONS) and routing (RoutingConflict,
-# REMOVED_GATES); no standard library module. No module imports this one yet.
+# (ACCEPTANCE_KINDS), retired (DIMENSIONS), routing (RoutingConflict,
+# REMOVED_GATES) and stable_ids (the approach, gate and stage ids); no standard library module. No module imports this one yet.
 from __future__ import annotations
 
 from compass_pkg import retired
@@ -29,13 +29,8 @@ from compass_pkg.core import CompassError, reading_matches
 from compass_pkg.red_first import ACCEPTANCE_KINDS
 from compass_pkg.routing import REMOVED_GATES, RoutingConflict
 
-# The new ids are named here until step 7 of #351 moves this module onto the ids
-# of `stable_ids` (`APPROACH_DELIVERY`, `PATH_STAGE_IDS`, `SPIKE_STAGE_IDS`), which
-# a parallel change adds. Keep the values equal to those.
-APPROACH_DELIVERY = "delivery"
-APPROACH_SPIKE = "spike"
-PATH_STAGE_IDS = ("assess", "specify", "build", "ship")
-SPIKE_STAGE_IDS = ("assess", "build", "ship")
+from compass_pkg.stable_ids import (APPROACH_DELIVERY, APPROACH_SPIKE, GATE_G5,
+                                    PATH_STAGE_IDS, SPIKE_STAGE_IDS)
 
 #: The labels of guardrail `G5`, the irreversible surfaces that owe a person's sign-off.
 G5_LABELS = ("auth", "payments", "personal-data", "migrations")
@@ -95,7 +90,7 @@ ADDITIONS = (
     ("RP-REQUIRE-004", _G5, "architecture"),
     ("RP-EVID-REPRODUCE", {"urgency": "live-defect"}, "reproduce-first"),
     ("RP-EVID-SIGNOFF", {"any_of": [_G5, {"risk": "critical"}]}, "scenario-approval"),
-    ("G5", _G5, "human-approval"),
+    (GATE_G5, _G5, "human-approval"),
 )
 
 _REQUIRED = ("risk", "familiarity", "size")
@@ -136,7 +131,7 @@ def _refuse_exploration(readings, orders):
         raise RoutingConflict(
             "routing conflict - exploration cannot silently become delivery.\n"
             "  Intent is 'exploration' (a spike), but the assessment names critical "
-            "risk or a G5 label, where a change owes a person's sign-off.\n"
+            "risk or a `G5` label, where a change owes a person's sign-off.\n"
             "  A spike ships nothing and must not touch production-critical surface.\n"
             "  Re-assess: either scope a narrower discovery issue that does not touch "
             "the risky surface, or set intent=delivery and accept the evidence that "

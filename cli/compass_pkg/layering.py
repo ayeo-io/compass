@@ -97,11 +97,13 @@ def cmd_layering_record(args):
     strategy_records.register(task_dir, TYPE, EV_ID, os.path.relpath(path, task_dir),
                               payload["record_id"], payload["content_digest"])
     count = "the runner reported no test count" if ran is None else f"{ran} test(s) ran"
-    return say(args, f"compass {VERB}: layering record written (exit {code}; {count}).",
+    from compass_pkg.next_line import announce
+    said = say(args, f"compass {VERB}: layering record written (exit {code}; {count}).",
                detail=[f"command  : {payload['command']}",
                        f"evidence : {path}",
                        "           `compass check` judges it with layering-test-passed."],
                evidence=path, passed=payload["passed"])
+    return announce(args, task_dir, said)
 
 
 # --- the check ---------------------------------------------------------------------------

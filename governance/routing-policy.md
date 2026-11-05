@@ -422,8 +422,8 @@ From 9.0.0 assess selects the evidence a change owes, not a delivery
 approach. `cli/compass_pkg/evidence_required.py` computes it: a pure function
 of the assessment and the configuration in force. It returns the ordered
 `evidence_required` list, the gate ids derived from it, the routing of the
-four-layer acceptance strategy (`S17`) and the rules that fired. No command
-calls it yet; the writer of the four-stage path will.
+four-layer acceptance strategy (`S17`) and the rules that fired. The path
+writer (below) stores it in the manifest.
 
 The rows, first match wins:
 
@@ -470,6 +470,55 @@ the 9.0.0 preset names for the same approaches. `tests/test_evidence_required.py
 checks this on all 1,200 assessments of the contract 1 grid under each of the
 16 subsets of the `G5` labels, against the 8.0.4 governance copy in
 `tests/fixtures/v8.0.4-governance.tgz`.
+
+## The path writer
+
+`compass approach evaluate --write` writes the four-stage path manifest
+(ADR-092) only while the path writer is on. It is dark-launched: the module
+constant `routing.PATH_WRITER` is false, and the environment variable
+`COMPASS_PATH_WRITER=1` turns it on for one run. Step 9b of #351 turns it on for
+good and removes both. While it is off, every command writes what 8.x wrote.
+`cli/compass_pkg/path_writer.py` holds the writer.
+
+With the writer on, a delivery assessment writes these keys:
+
+| Key | Value |
+|---|---|
+| `delivery_approach` | `delivery` |
+| `evidence_required` | the list of the evidence rows above, in their order |
+| `gates` | one pending gate for each gate the list derives |
+| `acceptance_strategy` | the ADR-079 block, with the routing of the evidence row |
+| `checkpoints` | the stage ids that wait for a person, a flat list as before |
+| `checkpoint_outcomes` | `[]`, on the issue's first assessment |
+| `policy_rules_fired` | one entry for each evidence rule, and the configuration's floors as the evaluator wrote them |
+
+It writes no `stages:`, `subtask_ceiling:`, `max_worktrees:` or
+`orchestration:` key, and removes them from a manifest that had them.
+
+- **The checkpoints.** `controlled` lists `assess` and `specify`, and `build`
+  and `ship` where `S17` applies (they end its stage 2 and 3 reviews).
+  `balanced` and `autonomous` list nothing, except `specify` where
+  `scenario-approval` is owed.
+- **The strategy block.** It is stored on the same terms as for an 8.x issue:
+  not for a project pinned before the strategy, not where the configuration
+  does not declare it, and not on a re-assess of an issue assessed before it
+  shipped. Where no block is stored, the `S17` tokens are not owed.
+- **A spike** writes the spike keys as before and no `evidence_required`, so
+  no reader takes it for a path issue.
+- **A re-assess** of an issue assessed before the path (`--write --reason`)
+  writes the path keys, removes `stages:` and logs the move in
+  `reassessments` (`from_route: regular`, `to_route: delivery`).
+- `compass approach show` prints the evidence line (`Evidence: ...`) in place
+  of the gate line on a path issue.
+
+On a path issue, `compass quick-fix start` serves every size and writes
+`acceptance-criteria.md` with the intent and the one scenario in place of the
+devlog. It takes the hotfix setting as `--urgency "live-defect - <reason>"`.
+`compass quick-fix finish` serves any delivery issue on the path. It refuses
+with exit 1, before it writes anything, while the issue owes anything but the
+three immovable gates and the green it records itself, and prints one `next:`
+line for each owed item. Each verb that writes a record of a path issue prints
+`next: <command>` from `next_step.next_command` as its last line in text mode.
 
 ## What a configuration owes an assessment
 

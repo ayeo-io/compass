@@ -735,9 +735,11 @@ def cmd_gate_pass(args):
     save_manifest(task, task_path)
     # 9.0.0 gives no document a status (ADR-091), so a pass moves none on. `moved`
     # stays in the JSON, always empty, so a reader of the old shape still parses it.
-    return say(args, f"compass gate pass: {args.gate_id} -> pass "
+    from compass_pkg.next_line import announce
+    said = say(args, f"compass gate pass: {args.gate_id} -> pass "
                     f"(evidence: {', '.join(ev_ids)}).",
                gate=args.gate_id, status="pass", evidence=list(ev_ids), moved=[])
+    return announce(args, task_dir, said)
 
 
 _TITLE_PATH = re.compile(r"(?:[\w.][\w-]*/)+[\w.-]+\.(?:md|py|yml|yaml|json|sh|feature)\b")
@@ -828,9 +830,11 @@ def cmd_scenario_add(args):
         "tests": list(args.test or []),
     })
     save_manifest(task, task_path)
-    return say(args, f"compass scenario add: {args.scenario_id} added.",
+    from compass_pkg.next_line import announce
+    said = say(args, f"compass scenario add: {args.scenario_id} added.",
                scenario=args.scenario_id, intent=getattr(args, "intent", None),
                tests=list(args.test or []))
+    return announce(args, task_dir, said)
 
 
 def _test_refusal(test_id, project_root):
@@ -888,10 +892,12 @@ def cmd_scenario_tests(args):
                f"`compass tdd-green` before `compass ship-commit`, which refuses a "
                f"green recorded before it."] if new_files else None)
     noun = "test" if len(given) == 1 else "tests"
-    return say(args, f"compass scenario tests set: {args.scenario_id} now declares "
+    from compass_pkg.next_line import announce
+    said = say(args, f"compass scenario tests set: {args.scenario_id} now declares "
                      f"{len(given)} {noun}.", detail=detail,
                scenario=args.scenario_id, issue=os.path.basename(task_dir),
                tests=given, previous=previous, reason=reason or None)
+    return announce(args, task_dir, said)
 
 
 def cmd_scenario_descope(args):
@@ -913,8 +919,10 @@ def cmd_scenario_descope(args):
     modes.append({"mode": mode, "reason": reason,
                   "recorded": datetime.date.today().isoformat()})
     save_manifest(task, task_path)
-    return say(args, f"compass scenario descope: '{mode}' recorded as de-scoped. "
+    from compass_pkg.next_line import announce
+    said = say(args, f"compass scenario descope: '{mode}' recorded as de-scoped. "
                      f"Verify lists it in the verification report.", mode=mode)
+    return announce(args, task_dir, said)
 
 
 def _check_scenario_ids(task, ids, verb):
@@ -952,8 +960,10 @@ def cmd_changed_file_add(args):
     else:
         cfs.append({"path": args.path, "scenarios": sorted(set(given))})
     save_manifest(task, task_path)
-    return say(args, f"compass changed-file add: {args.path} -> {', '.join(given)}.",
+    from compass_pkg.next_line import announce
+    said = say(args, f"compass changed-file add: {args.path} -> {', '.join(given)}.",
                path=args.path, scenario=given[-1], scenarios=given)
+    return announce(args, task_dir, said)
 
 
 def cmd_evidence_add(args):
@@ -1005,9 +1015,11 @@ def cmd_evidence_add(args):
             entry["next_task"] = next_issue
     reg.append(entry)
     save_manifest(task, task_path)
-    return say(args, f"compass evidence add: {args.evidence_id} "
+    from compass_pkg.next_line import announce
+    said = say(args, f"compass evidence add: {args.evidence_id} "
                     f"({args.type}) added.",
                evidence_id=args.evidence_id, type=args.type, path=args.path)
+    return announce(args, task_dir, said)
 
 
 def annotate_gate_accepts_text(text, requirements=None):

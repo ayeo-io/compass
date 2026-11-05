@@ -110,7 +110,9 @@ def cmd_evidence_approve(args):
         done = approvals.record(task_dir, answer)
     if done.note:
         print(done.note)
-    return say(args, done.outcome, detail=done.detail, **done.data)
+    from compass_pkg.next_line import announce
+    said = say(args, done.outcome, detail=done.detail, **done.data)
+    return announce(args, task_dir, said)
 
 
 def _delegated_places(slug):
@@ -232,8 +234,10 @@ def _delegated(args):
         raise CompassError(str(exc) + _stray_files(task_dir, store_compass)) from None
     if done.note:
         print(done.note)
-    return say(args, done.outcome + f" Under {delegation['id']}, by {agent}.",
+    from compass_pkg.next_line import announce
+    said = say(args, done.outcome + f" Under {delegation['id']}, by {agent}.",
                detail=done.detail, **done.data)
+    return announce(args, task_dir, said)
 
 
 def register(evidence_subs):

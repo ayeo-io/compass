@@ -44,7 +44,8 @@ from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import manifest_path
 
 OUTCOME_KEYS = ("delivery_approach", "stages", "gates", "checkpoints",
-                "policy_rules_fired", "subtask_ceiling", "artifacts", "models")
+                "policy_rules_fired", "subtask_ceiling", "artifacts", "models",
+                "evidence_required")
 
 
 @dataclass(frozen=True)

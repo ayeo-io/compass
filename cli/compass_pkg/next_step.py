@@ -33,17 +33,20 @@ them. The rows that only the path adds (`scenario-approval`, `human-approval`)
 are not owed on an old issue; `compass check` still judges its own rules.
 
 The words in angle brackets are for the reader to fill in. This module reads
-records only and never writes.
+records only and never writes. `announce` prints the `next:` line at the end of
+each verb that writes a record, and `owed_commands` lists what `compass
+quick-fix finish` refuses on while it is owed.
 """
-# DEPENDENCY: standard library (os); compass_pkg.path_stages, red_first,
+# DEPENDENCY: standard library (os); compass_pkg.next_line, path_stages, red_first,
 # stable_ids and status_words, and inside functions the readers of
 # acceptance_strategy, checkpoint_outcomes, checks, effective, gate_status and
-# item_records. It must not import next_cmd at load time: next_cmd imports it.
+# item_records, and core, next_cmd and terminal for `announce`. It must not
+# import next_cmd at load time: next_cmd imports it.
 from __future__ import annotations
 
 import os
 
-from compass_pkg import path_stages, red_first, status_words
+from compass_pkg import next_line, path_stages, red_first, status_words
 from compass_pkg.stable_ids import (APPROACH_SPIKE, MODE_THOROUGH, REMOVED_GATE_IDS,
                                     STAGE_SPECIFY, STAGE_VERIFY)
 
@@ -97,6 +100,66 @@ def _first_match(task, task_dir, done):
     if stage:
         return f"compass evidence request --checkpoint {stage}, then stop for /compass:approve"
     return 'compass check, then compass ship-commit -m "<message>"'
+
+
+# --- the `next:` line of the verbs that write a record ------------------------------------
+
+def announce(args, task_dir, code=0):
+    """Print `next: <command>` as the verb's last stdout line, and return `code`.
+
+    Every verb that writes a record of the issue calls this as it returns, so the
+    agent reads the next step where it reads the result (ADR-092 decision 8). It
+    prints only in a text mode (not `--json` or `--quiet`), only after success,
+    and only on a path issue: an issue assessed before the path keeps the output
+    it had."""
+    from compass_pkg.terminal import resolve_mode
+    if code not in (0, None) or resolve_mode(args) not in ("summary", "verbose"):
+        return code
+    try:
+        from compass_pkg.core import load_manifest
+        from compass_pkg.next_cmd import _stages_on_record
+        task, _ = load_manifest(task_dir)
+        if not path_stages.is_path_issue(task):
+            return code
+        command = next_command(task, task_dir, _stages_on_record(task, task_dir))
+    except Exception:  # noqa: BLE001 - the record is written; the hint must not fail it
+        return code
+    if command:
+        print(f"next: {command}")
+    return code
+
+
+def owed_commands(task, task_dir, cleared_gates=()):
+    """One command for each item a path issue still owes, other than the gates in
+    `cleared_gates` and the green, which `compass quick-fix finish` records
+    itself. An empty list means nothing else is owed. A checkpoint is not listed:
+    `compass ship-commit` judges it, as it judges every issue."""
+    out = []
+    if _owed(task, task_dir, "scenario-approval") and not specify_handed_off(task):
+        out.append("compass evidence request --checkpoint specify, "
+                   "then stop for /compass:approve")
+    ids = [s["id"] for s in needing_tests(task)]
+    if ids and _owed(task, task_dir, "outer-loop") and not _outer_red(task_dir):
+        out.append(f"compass tdd-red --loop outer --scenario {ids[0]} "
+                   "-- <acceptance test command>")
+    if _owed(task, task_dir, "isolation") and not _record(task_dir, _ISOLATION_RECORD):
+        out.append('compass isolation record --parallel "<acceptance suite command>" '
+                   '--repeat "<scenario test command>"')
+    if _owed(task, task_dir, "layering") and not _record(task_dir, _LAYERING_RECORD):
+        out.append("compass layering record -- <layering test command>")
+    if _owed(task, task_dir, "definition-of-done"):
+        from compass_pkg import effective, item_records
+        view = effective.view_or_legacy(task_dir)
+        out += [f"compass evidence add <EV-id> --type <type> --path <path> --meets {i.check}"
+                for i in item_records.items(task, task_dir, view, "dod")
+                if i.state == item_records.OPEN]
+    out += [f"compass gate pass {g['id']} --evidence <EV-id>"
+            for g in _dicts(task.get("gates"))
+            if g.get("status") != "pass" and g.get("id") not in REMOVED_GATE_IDS
+            and g.get("id") not in cleared_gates]
+    if _owed(task, task_dir, "human-approval") and not _human_approval(task, task_dir):
+        out.append("compass evidence request --check human-approval-present")
+    return out
 
 
 # --- the rows of each stage ----------------------------------------------------------------
@@ -288,3 +351,8 @@ def _checkpoint_waiting(task, done):
         if done is None or stage in done:
             return stage
     return None
+
+
+# The verbs that write a record reach `announce` through `next_line`, which
+# imports nothing, so no verb imports this module (see `next_line`).
+next_line.register(announce)

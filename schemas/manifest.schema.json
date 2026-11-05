@@ -515,10 +515,11 @@
       }
     },
     "delivery_approach": {
-      "description": "The final delivery approach; filled by `compass approach evaluate --write`. An approach name, or an old name read through cli/migrate-map.yml.",
+      "description": "The final delivery approach; filled by `compass approach evaluate --write`. `delivery` for an issue on the four-stage path (ADR-092), which also holds evidence_required; otherwise an approach name, or an old name read through cli/migrate-map.yml.",
       "anyOf": [
         {
           "enum": [
+            "delivery",
             "quick-fix",
             "regular",
             "full",
@@ -572,6 +573,32 @@
           }
         }
       }
+    },
+    "evidence_required": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "scenarios",
+          "red-before-green",
+          "suite-green",
+          "correctness",
+          "governance",
+          "traceability",
+          "regression",
+          "security",
+          "clarity",
+          "architecture",
+          "outer-loop",
+          "isolation",
+          "layering",
+          "definition-of-done",
+          "reproduce-first",
+          "scenario-approval",
+          "human-approval"
+        ]
+      },
+      "uniqueItems": true,
+      "description": "The evidence the change owes before it ships, in this order; written by `compass approach evaluate --write` on the four-stage path (ADR-092) and read by every check and by `compass next`. Its presence makes the issue a path issue: such a manifest has no stages, subtask_ceiling, max_worktrees or orchestration key. A spike and an issue assessed before the path have none."
     },
     "stages": {
       "type": "object",

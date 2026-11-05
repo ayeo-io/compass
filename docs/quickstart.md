@@ -519,6 +519,18 @@ first names `compass evidence add EV-SPIKE --type spike-conclusion`, then
 `compass gate pass spike.conclude`. `compass next --json` gives the same
 command in a `next` field, and `null` on a closed issue.
 
+On a path issue, each verb that writes a record of the issue ends its text
+output with the same line, `next: <command>`: `compass scenario add`,
+`scenario tests set`, `scenario descope`, `tdd-red`, `tdd-green`, `gate pass`,
+`evidence add`, `changed-file add`, `isolation record`, `layering record`,
+`evidence approve` and `quick-fix start` and `finish`. `--json` and `--quiet`
+output do not change, and an issue assessed before the path prints no such
+line. `compass quick-fix finish` on a path issue refuses with exit 1, before it
+writes anything, while the issue owes anything but the three immovable gates
+and the green it records, and prints one `next:` line for each owed item. The
+path writer that makes path issues is not on yet (`governance/routing-policy.md`,
+"The path writer").
+
 ## See the approach in your terminal
 
 When you run `compass next` in a terminal, it shows the issue's stages as a

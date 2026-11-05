@@ -40,8 +40,9 @@ import textwrap
 from compass_pkg.binding import ids_for
 from compass_pkg.check_cmd import cmd_check
 from compass_pkg import candidate_client, project_settings, retired
+from compass_pkg.path_stages import is_path_issue
 from compass_pkg.stable_ids import (
-    APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY,
+    APPROACH_DELIVERY, APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY,
     STAGE_BREAKDOWN, STAGE_PLAN, STAGE_REFINE)
 from compass_pkg.core import (
     COMPASS_SCHEMA_VERSION, CompassError, WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
@@ -98,6 +99,9 @@ def register(sub, issue_arg):
                     help="size value and its reason")
     st.add_argument("--goal", default=None, metavar="VALUE - REASON",
                     help="goal value and its reason (left out: not assessed)")
+    st.add_argument("--urgency", default=None, metavar="VALUE - REASON",
+                    help="urgency value and its reason, e.g. 'live-defect - production "
+                         "is down' for the hotfix setting (left out: not assessed)")
     st.add_argument("--role", default=None, metavar="VALUE - REASON",
                     help="ignored from 7.0.0 (ADR-070)")
     st.add_argument("--labels", default="", metavar="TAG[,TAG...]",
@@ -263,12 +267,15 @@ def cmd_quick_fix_start(args):
     size_v, size_r = _split_required(args.size, "size")
     size_v = read_size("size", size_v)      # the retired `standard` reads as `medium`
     goal_v, goal_r = _split_optional(args.goal, "goal")
+    urgency_v, urgency_r = _split_optional(getattr(args, "urgency", None), "urgency")
     role_v, role_r = _split_optional(args.role, "role")
 
     readings = {"risk": risk_v, "familiarity": fam_v, "size": size_v}
     reasons = {"risk": risk_r, "familiarity": fam_r, "size": size_r}
     if goal_v is not None:
         readings["goal"], reasons["goal"] = goal_v, goal_r
+    if urgency_v is not None:
+        readings["urgency"], reasons["urgency"] = urgency_v, urgency_r
     readings["labels"] = _split_labels(args.labels)
 
     # Before writing anything: the evaluator runs on the values in memory,
@@ -361,8 +368,11 @@ def cmd_quick_fix_start(args):
     task_dir = resolve_issue_dir(slug)
     task, _ = load_manifest(task_dir)
     approach = task.get("delivery_approach")
+    # On the four-stage path every size starts here: the evidence line says what
+    # the change owes, and `finish` refuses while any of it is owed (ADR-092).
+    on_path = is_path_issue(task)
 
-    if approach != APPROACH_QUICK_FIX:
+    if approach != APPROACH_QUICK_FIX and not on_path:
         say(args,
            f"compass quick-fix start: computes to "
            f"{display_shape(approach)}, heavier than a quick fix.",
@@ -414,16 +424,32 @@ def cmd_quick_fix_start(args):
     record(os.path.join(project_root, ".compass"),
            os.environ.get(SESSION_ENV, ""), slug)
 
-    devlog_abs = os.path.join(task_dir, "devlog.md")
-    doc_path_rel = os.path.relpath(devlog_abs, project_root).replace(os.sep, "/")
-    with open(devlog_abs, "w", encoding="utf-8") as fh:
-        fh.write(_start_note(slug, args.intent, args.scenario_id, args.scenario, ledger,
-                             advice))
+    if on_path:
+        # The path writes no devlog (ADR-092 decision 12): the acceptance
+        # criteria hold the intent and the scenario.
+        from compass_pkg.path_writer import criteria_text
+        doc_path_rel = docs_dir(task_dir) + "/acceptance-criteria.md"
+        doc_abs = os.path.join(project_root, *doc_path_rel.split("/"))
+        os.makedirs(os.path.dirname(doc_abs), exist_ok=True)
+        with open(doc_abs, "w", encoding="utf-8") as fh:
+            fh.write(criteria_text(slug, args.intent, args.scenario_id, args.scenario))
+    else:
+        devlog_abs = os.path.join(task_dir, "devlog.md")
+        doc_path_rel = os.path.relpath(devlog_abs, project_root).replace(os.sep, "/")
+        with open(devlog_abs, "w", encoding="utf-8") as fh:
+            fh.write(_start_note(slug, args.intent, args.scenario_id, args.scenario, ledger,
+                                 advice))
     _quiet_run(cmd_scenario_add, task=slug, scenario_id=args.scenario_id,
               title=args.scenario, intent="INT-1", test=tests)
     from compass_pkg.decisions import settled
     decisions = settled(project_root)
-    return say(
+    # On the path the `next:` line that `announce` prints names the red; the
+    # advice the devlog held is printed instead.
+    steps = ([f"advice : {a.get('strategy', '?')} ({a.get('id', '?')})" for a in advice]
+             if on_path else
+             [f"next   : write the failing test, then `compass tdd-red "
+              f"--scenario {args.scenario_id} -- <test command>`"])
+    said = say(
         args,
         f"compass quick-fix start: '{slug}' recorded as "
         f"{display_shape(approach)}.",
@@ -431,15 +457,15 @@ def cmd_quick_fix_start(args):
                 if created_dirs else []) + chain_detail + (
             ["settled decisions (read any that touch this change):"]
             + [f"  {line}" for line in decisions] if decisions else []) + [
-                f"record : {doc_path_rel}",
-                f"next   : write the failing test, then `compass tdd-red "
-                f"--scenario {args.scenario_id} -- <test command>`",
+                f"record : {doc_path_rel}"] + steps + [
                 f"then   : write the fix, then `compass quick-fix finish -m "
                 f"\"<commit message>\" --no-commit -- <test command>` "
                 f"(leave out --no-commit only if the user asked for a "
                 f"commit)"],
         decision=True, approach=approach, record=doc_path_rel,
     )
+    from compass_pkg.next_line import announce
+    return announce(args, task_dir, said)
 
 
 @contextlib.contextmanager
@@ -754,6 +780,21 @@ def _record_usage(task_dir, finish_started_at):
     save_manifest(task, path)
 
 
+def _owed_refusal(args, slug, owed):
+    """Exit 1 before anything is written, with one `next:` line per owed item.
+    `--json` names them as `owed`, so its document keeps one shape."""
+    from compass_pkg.terminal import resolve_mode
+    outcome = (f"compass quick-fix finish: '{slug}' still owes {len(owed)} item(s); "
+               f"no gate passed and nothing was committed.")
+    if resolve_mode(args) == "json":
+        say(args, outcome, owed=owed)
+        return 1
+    say(args, outcome, decision=True)
+    for command in owed:
+        print(f"next: {command}")
+    return 1
+
+
 def cmd_quick_fix_finish(args):
     finish_started_at = now_iso()
     task_dir = resolve_issue_dir(getattr(args, "task", None))
@@ -772,15 +813,24 @@ def cmd_quick_fix_finish(args):
             "the green covers exactly what lands.")
 
     approach = task.get("delivery_approach")
-    if approach != APPROACH_QUICK_FIX:
+    on_path = is_path_issue(task)
+    if approach != (APPROACH_DELIVERY if on_path else APPROACH_QUICK_FIX):
         raise CompassError(
             f"compass quick-fix finish: '{slug}' is "
-            f"{display_shape(approach)}, not quick fix - this verb only "
-            f"clears the quick-fix gate set.")
+            f"{display_shape(approach)}, not "
+            + ("a delivery issue - this verb clears the gates of a change that ships."
+               if on_path else "quick fix - this verb only clears the quick-fix gate set."))
 
+    # On the path `finish` serves any delivery issue, and refuses while it owes
+    # anything but the three gates and the green it records itself (ADR-092).
+    if on_path:
+        from compass_pkg.next_step import owed_commands
+        owed = owed_commands(task, task_dir, THREE_GATES)
+        if owed:
+            return _owed_refusal(args, slug, owed)
     other_pending = [g.get("id") for g in (task.get("gates") or [])
                      if isinstance(g, dict) and g.get("id") not in THREE_GATES
-                     and g.get("status") == "pending"]
+                     and g.get("status") == "pending"] if not on_path else []
     if other_pending:
         raise CompassError(
             f"compass quick-fix finish: gate(s) {', '.join(other_pending)} "
@@ -964,15 +1014,16 @@ def cmd_quick_fix_finish(args):
             # Nothing lands here, so the line is stored now; a landing writes it itself.
             release_line.store(task_dir, note, "compass quick-fix finish")
 
-        devlog_path = os.path.join(task_dir, "devlog.md")
-        if not os.path.isfile(devlog_path):
-            with open(devlog_path, "w", encoding="utf-8") as fh:
-                fh.write(f"# Devlog - {slug}\n\n")
         evidence_ids = correctness_ids + [check_ev_id]
-        message_first_line = (args.message or "").splitlines()[0] if args.message else ""
-        with open(devlog_path, "a", encoding="utf-8") as fh:
-            fh.write(f"- {datetime.date.today().isoformat()}: "
-                    f"{message_first_line} (evidence: {', '.join(evidence_ids)})\n")
+        if not on_path:     # the path writes no devlog (ADR-092 decision 12)
+            devlog_path = os.path.join(task_dir, "devlog.md")
+            if not os.path.isfile(devlog_path):
+                with open(devlog_path, "w", encoding="utf-8") as fh:
+                    fh.write(f"# Devlog - {slug}\n\n")
+            message_first_line = (args.message or "").splitlines()[0] if args.message else ""
+            with open(devlog_path, "a", encoding="utf-8") as fh:
+                fh.write(f"- {datetime.date.today().isoformat()}: "
+                        f"{message_first_line} (evidence: {', '.join(evidence_ids)})\n")
 
         detail = [f"gates    : {', '.join(THREE_GATES)} -> pass",
                   f"evidence : {', '.join(evidence_ids)}"]
@@ -1001,7 +1052,8 @@ def cmd_quick_fix_finish(args):
             task, _ = load_manifest(task_dir)
             note_flag = (' --release-note "<release line>"'
                          if release_line.landing_refusal(task, task_dir) else "")
-            return say(
+            from compass_pkg.next_line import announce
+            return announce(args, task_dir, say(
                 args,
                 f"compass quick-fix finish: '{slug}' checked, not committed.",
                 # The command has a line of its own, so the output layer never cuts it.
@@ -1010,7 +1062,7 @@ def cmd_quick_fix_finish(args):
                     f"`compass ship-commit --issue {slug} -m \"<message>\"{note_flag}`"],
                 decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
                 committed=False,
-            )
+            ))
 
         stage_paths = sorted(set(production_paths) | set(artifact_paths)
                              | {f".compass/work/{slug}"})

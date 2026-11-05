@@ -135,8 +135,10 @@ def cmd_isolation_record(args):
     lines += [f"evidence : {path}",
               "           `compass check` judges it with isolation-proven."]
     verdict = "every run passed" if payload["passed"] else "a run failed"
-    return say(args, f"compass {VERB}: isolation-proof recorded ({verdict}).",
+    from compass_pkg.next_line import announce
+    said = say(args, f"compass {VERB}: isolation-proof recorded ({verdict}).",
                detail=lines, evidence=path, passed=payload["passed"])
+    return announce(args, task_dir, said)
 
 
 # --- the check ---------------------------------------------------------------------------

@@ -78,6 +78,11 @@ GATE_ADDED = "gate '{gate}' added to the approach's gate set"
 #: `compass analyze` wrote, and 9.0.0 removes that command (ADR-091). Frozen presets
 #: still hold `RP-REQUIRE-001` and `RP-REQUIRE-002`, which add it.
 REMOVED_GATES = {GATE_VERIFY_ANALYZE: "9.0.0"}
+
+#: The four-stage path writer (ADR-092), dark-launched: `approach evaluate --write`
+#: writes the evidence a delivery assessment owes only while this is true, or while
+#: `COMPASS_PATH_WRITER=1` is set (`path_writer.enabled`). Step 9b of #351 deletes it.
+PATH_WRITER = False
 _GATE_ADDED_RE = re.compile("^" + re.escape(GATE_ADDED).replace(r"\{gate\}", "(.+?)") + "$")
 
 
@@ -623,8 +628,9 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
 def cmd_approach_summary(args):
     """`compass approach show`: the three lines a person reads before
     any code - the approach and the assessment behind it, the gates it must
-    pass, and where the issue's files go. `/compass:go` prints this as its
-    decision view, so it stays exactly three lines."""
+    pass (on a path issue, the evidence it owes), and where the issue's files
+    go. `/compass:go` prints this as its decision view, so it stays exactly
+    three lines."""
     from compass_pkg.core import docs_dir
 
     task_dir = resolve_issue_dir(args.task)
@@ -643,7 +649,11 @@ def cmd_approach_summary(args):
         waits = " - does not stop to wait for you"
     print(f"Approach: {display_shape(task.get('delivery_approach'))}"
           + (f" ({readings})" if readings else "") + waits)
-    print("Gates: " + (", ".join(gates) if gates else "none"))
+    from compass_pkg import path_writer
+    from compass_pkg.path_stages import is_path_issue
+    # A path issue owes evidence, and its gates are derived from it (ADR-092).
+    print(path_writer.evidence_line(task) if is_path_issue(task)
+          else "Gates: " + (", ".join(gates) if gates else "none"))
     print(f"Writes: .compass/work/{slug}/ and {docs_dir(task_dir)}/")
     # The three lines stay three for a project that departs from nothing. One
     # that unlocks a framework entry is reported on every run (ADR-039).
@@ -817,6 +827,17 @@ def cmd_route_evaluate(args):
             result["checkpoints"] = route_checkpoints(
                 prepared, result["stages"], result["delivery_approach"], autonomy,
                 strategy_applies=True)
+    # On the four-stage path a delivery assessment owes evidence, not an approach
+    # (ADR-092). A spike keeps the keys above (`path_writer.evaluate` gives None).
+    from compass_pkg import path_writer
+    path = None
+    if task is not None and path_writer.enabled():
+        resolved = plan.resolution.resolved if plan is not None else (
+            view.resolved if view is not None else None)
+        path = path_writer.evaluate(readings, prepared.view, autonomy, result,
+                                    path_writer.strategy_inputs(
+                                        task, task_dir, resolved,
+                                        getattr(args, "expected_acceptance", None)))
     if result.get("renamed_routes"):
         sys.stderr.write(
             "compass: governance/routing-policy.yml uses old approach names ("
@@ -835,8 +856,9 @@ def cmd_route_evaluate(args):
     _mode = resolve_mode(args)
     if readiness is not None:
         result["readiness"] = readiness
+    shown = result if path is None else path_writer.shown(result, path)
     if _mode == "json":
-        print(json.dumps(result, indent=2))
+        print(json.dumps(shown, indent=2))
     elif _mode != "verbose":
         # The default view. Everything below this branch is what --verbose
         # still prints, unchanged: the provenance line, the raw assessment,
@@ -844,7 +866,7 @@ def cmd_route_evaluate(args):
         # and a person deciding whether the approach looks right does not need
         # all of it on the first screen - they need the approach, the rules
         # that produced it, and where it was written.
-        _fired = [fired_rule_line(f) for f in result["policy_rules_fired"]]
+        _fired = [fired_rule_line(f) for f in shown["policy_rules_fired"]]
         _ceiling = result["subtask_ceiling"]
         _concerns = []
         # Policy drift is a CONCERN, not provenance. The plain "which policy
@@ -879,9 +901,10 @@ def cmd_route_evaluate(args):
                      evidence_out=getattr(args, "evidence_out", None))
         _e.hand_off(
             outcome="%s - %d gate(s), %s"
-                    % (display_shape(result["delivery_approach"]),
-                       len(result["gates"]),
-                       "unbounded parallel subtasks" if _ceiling is None
+                    % (display_shape(shown["delivery_approach"]),
+                       len(shown["gates"]),
+                       "%d kinds of evidence owed" % len(path["evidence_required"]) if path
+                       else "unbounded parallel subtasks" if _ceiling is None
                        else "up to %d parallel subtask(s)" % _ceiling),
             # Only if it is actually there. `delivery-approach.md` is written
             # by the assess command, not the evaluator, so do not point the
@@ -915,11 +938,13 @@ def cmd_route_evaluate(args):
         print(f"  assessment      : {json.dumps(readings)}")
         print(f"  first approach  : {display_shape(result['candidate_route'])}  "
               f"<- {result['candidate_via']}")
-        print(f"  FINAL APPROACH  : {display_shape(result['delivery_approach'])}")
-        if result["policy_rules_fired"]:
+        print(f"  FINAL APPROACH  : {display_shape(shown['delivery_approach'])}")
+        if path:
+            print(f"  evidence owed   : {', '.join(path['evidence_required'])}")
+        if shown["policy_rules_fired"]:
             print("  policy rules fired:")
             seen_effects = set()
-            for f in result["policy_rules_fired"]:
+            for f in shown["policy_rules_fired"]:
                 # Meaning first, code in brackets: a bare id must not open
                 # the first screen a new user sees. Keep the kind: it says
                 # whether the rule raised the whole approach or only
@@ -935,12 +960,13 @@ def cmd_route_evaluate(args):
         ceiling = result["subtask_ceiling"]
         permits = ("unbounded by policy" if ceiling is None
                    else f"up to {ceiling}")
-        print(f"  parallel subtasks: {permits} (a ceiling - breakdown sets "
-              f"the orchestration once the distribution map exists)")
-        print("  per-stage weight:")
-        for p, w in result["stages"].items():
-            print(f"    {display_stage(p):<11}: {w}")
-        print(f"  gate set        : {', '.join(result['gates'])}")
+        if not path:
+            print(f"  parallel subtasks: {permits} (a ceiling - breakdown sets "
+                  f"the orchestration once the distribution map exists)")
+            print("  per-stage weight:")
+            for p, w in result["stages"].items():
+                print(f"    {display_stage(p):<11}: {w}")
+        print(f"  gate set        : {', '.join(shown['gates'])}")
         if result["required_artifacts"]:
             print(f"  required artifacts: {', '.join(result['required_artifacts'])}")
         if result["required_skills"]:
@@ -978,6 +1004,7 @@ def cmd_route_evaluate(args):
             "delivery_approach": task.get("delivery_approach"),
             "stages": task.get("stages"),
             "subtask_ceiling": task.get("subtask_ceiling"),
+            "evidence_required": task.get("evidence_required"),
             "gates": sorted(g.get("id") for g in (task.get("gates") or [])
                             if isinstance(g, dict)),
             "policy_rules_fired": sorted(
@@ -986,12 +1013,13 @@ def cmd_route_evaluate(args):
         }
         now = {
             "assessment": task.get("assessment"),
-            "delivery_approach": result["delivery_approach"],
-            "stages": result["stages"],
-            "subtask_ceiling": result.get("subtask_ceiling"),
-            "gates": sorted(result.get("gates") or []),
+            "delivery_approach": shown["delivery_approach"],
+            "stages": shown.get("stages"),
+            "subtask_ceiling": shown.get("subtask_ceiling"),
+            "evidence_required": shown.get("evidence_required"),
+            "gates": sorted(shown.get("gates") or []),
             "policy_rules_fired": sorted(
-                f.get("id") for f in (result["policy_rules_fired"] or [])
+                f.get("id") for f in (shown["policy_rules_fired"] or [])
                 if isinstance(f, dict)),
         }
         # Only fields that were ALREADY recorded can have changed. An issue
@@ -1018,7 +1046,7 @@ def cmd_route_evaluate(args):
                                    "only when nothing changed.")
             task.setdefault("reassessments", []).append({
                 "from_route": prior["delivery_approach"],
-                "to_route": result["delivery_approach"],
+                "to_route": shown["delivery_approach"],
                 "kind": kind,
                 "changed": changed,
                 "reason": reason,
@@ -1070,6 +1098,11 @@ def cmd_route_evaluate(args):
         # Assess never records an orchestration: breakdown owns it, once the
         # distribution map says whether independent subtasks exist.
         task.pop("orchestration", None)
+        if path is not None:
+            path_writer.write(task, path)
+        else:
+            # A manifest with the legacy keys must not also read as a path issue.
+            task.pop("evidence_required", None)
         # The manifest is replaced inside the commit, after the generation's
         # files are whole (ADR-036). A configuration that does not resolve
         # raises here, before any file is written.
@@ -1080,8 +1113,8 @@ def cmd_route_evaluate(args):
         configuring = not reframed and plan.config_changed
         if configuring:
             task.setdefault("reassessments", []).append({
-                "from_route": prior["delivery_approach"] or result["delivery_approach"],
-                "to_route": result["delivery_approach"],
+                "from_route": prior["delivery_approach"] or shown["delivery_approach"],
+                "to_route": shown["delivery_approach"],
                 "kind": "configuration",
                 "changed": {"config": {"from": plan.config_digests[0],
                                        "to": plan.config_digests[1]}},
@@ -1095,7 +1128,7 @@ def cmd_route_evaluate(args):
         unchanged = (evaluated_before and not reframed and not configuring
                      and bool(getattr(args, "reason", None)))
         if unchanged:
-            route = result["delivery_approach"]
+            route = shown["delivery_approach"]
             task.setdefault("reassessments", []).append({
                 "from_route": prior["delivery_approach"] or route,
                 "to_route": route,
@@ -1117,7 +1150,8 @@ def cmd_route_evaluate(args):
             task_dir, task, plan.invalidated, annotate_gate_accepts_text,
             adopt=plan.adopt, proposal=plan.proposal, stamp=stamp,
             resolution=plan.resolution)
-        print(f"\n  wrote the delivery approach, stages and gates -> {task_path}")
+        print(f"\n  wrote the {'evidence owed' if path else 'delivery approach, stages'} "
+              f"and gates -> {task_path}")
         print(f"  {committed.message}")
         if "acceptance_strategy" in task:
             from compass_pkg import acceptance_strategy
@@ -1133,7 +1167,7 @@ def cmd_route_evaluate(args):
                   f"changed, generation {committed.number - 1} -> {committed.number}")
         if reframed:
             print(f"  RE-ASSESSMENT recorded ({task['reassessments'][-1]['kind']}): "
-                  f"{prior['delivery_approach']} -> {result['delivery_approach']}"
+                  f"{prior['delivery_approach']} -> {shown['delivery_approach']}"
                   + (f"  [changed: {', '.join(sorted(changed))}]" if changed else ""))
         if (reframed or configured) and not args.reason:
             sys.stderr.write(

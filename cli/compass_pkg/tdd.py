@@ -562,13 +562,15 @@ def cmd_tdd_red(args):
     judged = ([("judged by exit code only: Compass does not recognize this "
                 "runner, and it wrote no pytest report")]
               if red_kind == "exit-code" else [])
-    return say(args,
+    from compass_pkg.next_line import announce
+    said = say(args,
                f"compass tdd-red: failing test recorded (exit {code}){bound}.",
                detail=judged + [f"evidence : {p}" for p in ev_paths]
                       + [x for x in [_scenario_line(task_dir, s) for s in scenarios] if x]
                       + unlocked,
                scenario=scenario, exit_code=code, evidence=ev_path,
                marker=None if before_implement else marker)
+    return announce(args, task_dir, said)
 
 
 def _source_tree_hash(project_root):

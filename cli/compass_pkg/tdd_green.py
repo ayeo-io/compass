@@ -185,7 +185,8 @@ def cmd_tdd_green(args):
                        "this issue.")
     bound = (f" (bound to {', '.join(scenarios)})" if scenarios
              else " (unbound - consider --scenario)")
-    return say(args,
+    from compass_pkg.next_line import announce
+    said = say(args,
                f"compass tdd-green: passing suite recorded (exit 0){bound}.",
                detail=[f"evidence : {p}" for p in ev_paths]
                       + ["registry : manifest.yml `evidence:` updated with the "
@@ -193,6 +194,7 @@ def cmd_tdd_green(args):
                       + [x for x in [_scenario_line(task_dir, s) for s in scenarios] if x],
                scenario=scenarios[0] if scenarios else None, exit_code=0,
                evidence=ev_paths[0])
+    return announce(args, task_dir, said)
 
 
 def _record_green(task_dir, scenario, loop, command, out, excerpt, tree_ids, extra,

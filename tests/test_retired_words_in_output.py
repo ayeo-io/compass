@@ -11,14 +11,17 @@ import re
 
 
 def test_rwp_7_a_forced_stage_names_thorough(run_cli):
-    """RP-FLOOR-002 forces the define stage on unmapped ground."""
+    """RP-FLOOR-002 on unmapped ground. On the four-stage path (ADR-092) there are no
+    stage modes, so the floor names the skill it requires and no forced stage."""
     r = run_cli("approach", "evaluate", "--verbose",
                 "--assessment", "risk=cross-cutting",
                 "--assessment", "familiarity=brownfield-unmapped",
                 "--assessment", "size=medium",
                 "--assessment", "goal=delivery")
     assert r.returncode == 0, r
-    assert "stage 'define' forced to thorough" in r.stdout, r.stdout
+    assert "(RP-FLOOR-002, floor)" in r.stdout, r.stdout
+    assert "skill 'behavior-mapping' required" in r.stdout, r.stdout
+    assert "forced to thorough" not in r.stdout, r.stdout
     assert "full-weight" not in r.stdout, r.stdout
 
 

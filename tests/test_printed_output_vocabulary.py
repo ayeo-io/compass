@@ -127,7 +127,7 @@ LEGACY_STAGE_KEYS = {"assess", "define", "refine", "plan", "breakdown", "impleme
                      "verify", "ship"}
 
 
-def test_trc_b3_spine_keys_are_the_current_ones(tmp_path, path_writer):
+def test_trc_b3_spine_keys_are_the_current_ones(tmp_path):
     """The manifest is written with the current keys, and old ones still read.
 
     A manifest written today is on the four-stage path (ADR-092): it records
@@ -189,9 +189,10 @@ def test_trc_e1_shared_effect_printed_once():
     """
     out = _evaluate()
 
-    for gate in ("verify.architecture",):
-        effect_lines = [ln for ln in out.splitlines()
-                        if ln.strip().startswith("-") and gate in ln]
+    # On the four-stage path (ADR-092) the shared effect is the evidence both
+    # rules add: the architecture review, which derives `verify.architecture`.
+    for gate in ("evidence owed: architecture",):
+        effect_lines = [ln for ln in out.splitlines() if ln.strip() == "- " + gate]
         assert len(effect_lines) == 1, (
             f"the effect line for {gate} is printed {len(effect_lines)} "
             f"times; the tool reads as repeating itself:\n"

@@ -195,6 +195,9 @@ def strip_ansi(text):
     return _ANSI_SEQUENCE.sub("", text or "")
 
 
+_GUARD_CODE = re.compile(r"^[GS][0-9]+$")
+
+
 def fired_rule_line(rule, with_kind=True):
     """One fired policy rule as a line: its meaning first, then its id, and
     its kind when asked. Every screen that names a fired rule prints it
@@ -203,6 +206,10 @@ def fired_rule_line(rule, with_kind=True):
         return f"({rule})"
     rationale = str(rule.get("rationale") or "").rstrip().rstrip(".")
     code = rule.get("id", "?")
+    # A gate or guardrail code is written in backticks, as the rationale beside
+    # it writes it; a policy rule id is not such a code.
+    if _GUARD_CODE.match(str(code)):
+        code = f"`{code}`"
     if with_kind and rule.get("kind"):
         code = f"{code}, {rule['kind']}"
     return f"{rationale} ({code})" if rationale else f"({code})"

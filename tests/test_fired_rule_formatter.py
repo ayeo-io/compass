@@ -45,17 +45,46 @@ def _project(tmp_path):
     return root
 
 
-FLOOR = "Domain risk overrides size. A one-line auth change is not small"
+ARCHITECTURE = "A change to a `G5` surface owes the architecture review"
+SIGN_OFF = "A change to a `G5` surface owes a person's sign-off before it ships"
 
 
 def test_fr_1_each_screen_prints_what_it_printed_before(tmp_path):
+    # The issue is on the four-stage path (ADR-092): an auth label adds evidence,
+    # and each rule is named by the evidence it adds.
     root = _project(tmp_path)
     summary = _cli(root, "approach", "evaluate", "--issue", "auth-fix", "--summary")
-    assert f"  - {FLOOR} (RP-FLOOR-003, floor)\n" in summary
+    assert f"  - {ARCHITECTURE} (RP-REQUIRE-004, evidence)\n" in summary
     verbose = _cli(root, "approach", "evaluate", "--issue", "auth-fix", "--verbose")
-    assert f"    {FLOOR} (RP-FLOOR-003, floor)\n" in verbose
-    assert ("    Irreversible-surface issues have architecture checked before "
-            "they ship (RP-REQUIRE-004, requirement)\n") in verbose
+    assert f"    {ARCHITECTURE} (RP-REQUIRE-004, evidence)\n" in verbose
+    # A guardrail code is in backticks, as its rationale writes it.
+    assert f"    {SIGN_OFF} (`G5`, guardrail)\n" in verbose
+
+
+def test_fr_1_the_verbose_view_on_the_path_uses_path_words(tmp_path):
+    root = _project(tmp_path)
+    verbose = _cli(root, "approach", "evaluate", "--issue", "auth-fix", "--verbose")
+    assert "  evidence row    : RP-EVID-STANDARD\n" in verbose, verbose
+    assert "first approach" not in verbose and "quick fix" not in verbose, verbose
+    assert "(G5," not in verbose, verbose
+
+
+def test_fr_1_a_floor_on_the_path_keeps_only_the_effects_the_path_has(tmp_path):
+    """`RP-FLOOR-002` forced the define stage to thorough and required a skill. The
+    path has no stage modes, so its entry keeps the skill alone."""
+    root = tmp_path / "p"
+    root.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    _cli(root, "quick-fix", "start", "unmapped", "--risk", "contained - x",
+         "--familiarity", "brownfield-unmapped - x", "--size", "medium - x",
+         "--intent", "i", "--scenario", "Given a, when b, then c", "--test", "tests/test_x.py")
+    import yaml
+    manifest = yaml.safe_load(
+        (root / ".compass" / "work" / "unmapped" / "manifest.yml").read_text())
+    floor = next(f for f in manifest["policy_rules_fired"] if f["id"] == "RP-FLOOR-002")
+    assert floor["changed"] == ["skill 'behavior-mapping' required"], floor
+    verbose = _cli(root, "approach", "evaluate", "--issue", "unmapped", "--verbose")
+    assert "forced to thorough" not in verbose, verbose
 
 
 def test_fr_1_the_formatter_covers_each_shape():
@@ -65,6 +94,9 @@ def test_fr_1_the_formatter_covers_each_shape():
     assert fired_rule_line(rule, with_kind=False) == "Says why (RP-X-1)"
     assert fired_rule_line({"id": "RP-X-2"}, with_kind=False) == "(RP-X-2)"
     assert fired_rule_line("RP-X-3", with_kind=False) == "(RP-X-3)"
+    assert fired_rule_line({"id": "G5", "kind": "guardrail", "rationale": "Why."}) == \
+        "Why (`G5`, guardrail)"
+    assert fired_rule_line({"id": "S17"}, with_kind=False) == "(`S17`)"
 
 
 def test_fr_1_the_evaluator_uses_the_one_formatter():

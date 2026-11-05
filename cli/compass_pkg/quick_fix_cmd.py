@@ -462,10 +462,11 @@ def cmd_quick_fix_start(args):
             ["settled decisions (read any that touch this change):"]
             + [f"  {line}" for line in decisions] if decisions else []) + [
                 f"record : {doc_path_rel}"] + steps + [
-                f"then   : write the fix, then `compass quick-fix finish -m "
-                f"\"<commit message>\" --no-commit -- <test command>` "
-                f"(leave out --no-commit only if the user asked for a "
-                f"commit)"],
+                "then   : write the fix, then run (leave out --no-commit only if the "
+                "user asked for a commit)",
+                # The command has a line of its own, so the output layer never cuts it.
+                "`compass quick-fix finish -m \"<commit message>\" --no-commit "
+                "-- <test command>`"],
         decision=True, approach=approach, record=doc_path_rel,
     )
     from compass_pkg.next_line import announce

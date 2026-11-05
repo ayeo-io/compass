@@ -498,7 +498,10 @@ Run these on top of steps 1 to 9, before step 10.
    `tests/test_compat_configurations.py` (B and C),
    `tests/test_compat_contract_4.py` and `tests/test_compat_contract_5.py`.
    Each contract must hold under these configurations:
-   - **A.** No configuration: the shipped default alone.
+   - **A.** No configuration: the shipped default alone. Contracts 1 and 2
+     read a copy of the 8.0.4 shipped governance in its place
+     (`tests/fixtures/compat/v8.0.4-governance.tgz`, from the `v8.0.4` tag),
+     because 9.0.0 replaces the approaches they compare (ADR-092).
    - **B.** An empty overlay: a `compass.yml` holding `schema: 1` and
      `extends: compass:default@6` and nothing else.
    - Under B, two corpus entries are left out because their answer is about

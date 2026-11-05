@@ -1,9 +1,14 @@
 """Delivery-approach selection: the deterministic core.
 
 These tests prove that `compass approach evaluate` is a pure function: given
-assessment values + the shipped routing-policy.yml, it produces the
-documented delivery approach, fires the documented floors/caps, and permits
-the documented parallelism.
+assessment values + a routing-policy.yml, it produces the documented delivery
+approach, fires the documented floors/caps, and permits the documented
+parallelism.
+
+The policy is the 8.0.4 governance copy (`compat_baseline.GOVERNANCE_8_0_4`),
+the last release that routed delivery approaches. 9.0.0 replaces the
+approaches with one path (ADR-092), so these tests do not read the live
+default: a change to its approaches must not move a recorded route.
 
 The bulk of the proof is the YAML-driven parameterised test at the bottom -
 each fixture in tests/fixtures/routes/ declares an input + expected output.
@@ -18,7 +23,16 @@ from pathlib import Path
 
 import pytest
 
+import compat_baseline as cb
 from conftest import load_route_fixtures
+
+
+@pytest.fixture
+def project(project):
+    """The shared temporary project, with the 8.0.4 governance copy in place of
+    the copy of the live default that the shared fixture puts there."""
+    cb.add_governance_copy(project, source=cb.GOVERNANCE_8_0_4)
+    return project
 
 
 # --- happy-path: each fixture selects the documented delivery approach for

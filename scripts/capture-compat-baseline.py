@@ -86,6 +86,10 @@ def main():
     if ROUTING.exists() and not args.force:
         sys.exit(f"{ROUTING.relative_to(ROOT)} exists. A baseline is captured once; "
                  f"pass --force only for a new major version's defaults.")
+    # The release's own shipped policy, which is what the baseline records. The
+    # tests compare the baseline with the 8.0.4 governance copy instead of the
+    # live default (`compat_baseline.policy_8_0_4`), because 9.0.0 replaces the
+    # delivery approaches the live default routes (ADR-092).
     policy = shipped_policy()
     vocabulary = {d: policy["assessment_vocabulary"][d] for d in DIMENSIONS}
     labels = named_labels(policy)

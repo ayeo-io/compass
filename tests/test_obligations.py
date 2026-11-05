@@ -156,15 +156,17 @@ def _replay(adapted, header, rows, first_only=False):
     """Where the adapted policy routes differently from the baseline, in the
     catalogues' spelling. Grid and archive rows compare with the recorded
     result. A label row records only a digest of the legacy spelling, so it
-    compares with today's policy through the same respelling."""
-    from compat_baseline import compact, digest, label_subsets, shipped_policy
+    compares with the 8.0.4 governance copy through the same respelling. That
+    copy routes as the baseline (contract 1) and, unlike the live default, keeps
+    the delivery approaches that 9.0.0 replaces (ADR-092)."""
+    from compat_baseline import compact, digest, label_subsets, policy_8_0_4
     found, today = [], None
     for row in rows:
         if row["kind"] in ("grid", "archive"):
             if compact(row["assessment"], adapted) != _respelled(row["result"]):
                 found.append(f"{row['kind']} {row['assessment']}")
         elif row["kind"] == "label-digests":
-            today = today or shipped_policy()
+            today = today or policy_8_0_4()
             for subset in label_subsets(header["labels"]):
                 readings = dict(row["assessment"], labels=subset)
                 if (digest(_respelled(compact(readings, adapted)))
@@ -290,12 +292,13 @@ def test_ob_1_a_planted_rank_on_a_mode_a_floor_reaches_breaks_the_replay(
 
 def test_ob_1_a_planted_rank_on_expedited_is_seen_when_a_floor_names_implement(
         preset_config):
-    """Today's policy has no floor on `implement`, so a rank on `expedited`
+    """The baseline's policy has no floor on `implement`, so a rank on `expedited`
     cannot show in the baseline. With one such floor added to both paths, it
-    does."""
+    does. The policy is the 8.0.4 governance copy, which routes as the baseline
+    and keeps the delivery approaches that 9.0.0 replaces (ADR-092)."""
     from compass_pkg import obligations
-    from compat_baseline import shipped_policy
-    today = shipped_policy()
+    from compat_baseline import policy_8_0_4
+    today = policy_8_0_4()
     today["routing_guardrails"]["floors"].append(
         {"id": "RP-PLANT", "when": {"urgency": "live-defect"},
          "require_phase": "implement"})

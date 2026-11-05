@@ -4,7 +4,9 @@
 configurations, and each must equal the 5.6.0 baseline:
 
 - A. No configuration: the shipped default alone. The existing contract files
-  run this one (`test_compat_contracts.py`, `_4`, `_5`).
+  run this one (`test_compat_contracts.py`, `_4`, `_5`). Contracts 1 and 2 read
+  the 8.0.4 governance copy in place of the live default, because 9.0.0
+  replaces the delivery approaches the live default routes (ADR-092).
 - B. An empty overlay: a `compass.yml` holding `schema: 1` and
   `extends: compass:default@6` and nothing else.
 - C. A project that carries a copy of the 5.6.0 governance files, read through
@@ -37,7 +39,7 @@ import compat_hook
 from test_compat_contract_5 import _NOT_MOVABLE, move_settings
 
 BC = ("B", "C")
-ALL = BC  # A has its own files and reads the policy file directly
+ALL = BC  # A has its own files, and contracts 1 and 2 there read the 8.0.4 copy
 
 
 @pytest.fixture(scope="module")

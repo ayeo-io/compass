@@ -563,6 +563,7 @@ def archive_differences(recorded, now):
 # default alone), B (an empty overlay) and C (a copy of the 5.6.0 governance
 # files, read through the legacy adapter). The files for C are byte copies of
 # what 5.6.0 shipped, taken once with `git show v5.6.0:governance/<file>`.
+# Contracts 1 and 2 read the 8.0.4 governance copy in place of A (see below).
 
 # Packed, so the prose scans do not read the 5.6.0 wording as this tree's.
 GOVERNANCE_5_6_0 = FIXTURES / "v5.6.0-governance.tgz"
@@ -631,21 +632,37 @@ def policy_under(kind, scratch, fault=None):
 
 # --- the 8.0.4 governance copy ---------------------------------------------------
 #
-# The last release that routed delivery approaches. The evidence rows of 9.0.0
-# (`compass_pkg.evidence_required`) must owe the gates 8.0.4 routed, so the test
-# of those rows compares them with this copy, read through the legacy adapter as
+# The last release that routed delivery approaches. 9.0.0 replaces the approaches
+# with one path (ADR-092), so the live default stops routing them. Contracts 1 and
+# 2, and the route tests that compare approach routing with a recorded result,
+# read this copy in place of the live default, so a change to the live default's
+# approaches does not move them. The evidence rows of 9.0.0
+# (`compass_pkg.evidence_required`) must owe the gates 8.0.4 routed, so their test
+# compares them with this copy too. It is read through the legacy adapter as
 # configuration C reads the 5.6.0 copy. The two files are byte copies taken with
 # `git show v8.0.4:governance/<file>`, packed for the same reason as the 5.6.0
-# copy. This copy is not one of the configurations the contracts run under: the
-# D of `docs/releasing.md` is the settings moved into `compass.yml`.
+# copy. The copy is not named with a letter: the D of `docs/releasing.md` is the
+# settings moved into `compass.yml`.
 GOVERNANCE_8_0_4 = FIXTURES / "v8.0.4-governance.tgz"
 
+_POLICY_8_0_4 = []
 
-def policy_8_0_4(scratch):
+
+def policy_8_0_4(scratch=None):
     """The routing policy the evaluator reads for a project that carries the 8.0.4
-    governance copy, in the shape `evaluate_route` takes."""
+    governance copy, in the shape `evaluate_route` takes.
+
+    With no `scratch` folder, the project is built once in a temporary folder that
+    is then removed, and each call returns a new copy of that policy, so a caller
+    can change its copy as it can change what `shipped_policy` returns."""
     from compass_pkg import effective
 
+    if scratch is None:
+        if not _POLICY_8_0_4:
+            import tempfile
+            with tempfile.TemporaryDirectory(prefix="policy-8-0-4-") as folder:
+                _POLICY_8_0_4.append(policy_8_0_4(folder))
+        return copy.deepcopy(_POLICY_8_0_4[0])
     root = Path(scratch) / "project"
     (root / ".compass" / "work").mkdir(parents=True)
     add_governance_copy(root, source=GOVERNANCE_8_0_4)

@@ -214,10 +214,15 @@ def test_vr_a6_the_regenerated_views_hold_no_old_depth_word():
 def test_vr_a6_the_regenerated_views_evaluate_as_before_the_rename():
     """The baseline is the 5.6.0 capture, in the old words; the comparison maps
     its inputs and the evaluator's outputs through the rename table in
-    `compat_baseline` (a documented bridge), then compares."""
+    `compat_baseline` (a documented bridge), then compares.
+
+    The views are those of the 8.0.4 governance copy, the last release that routed
+    delivery approaches, which were generated in the new words. 9.0.0 replaces the
+    live default's approaches (ADR-092), so the live views route no approach to
+    compare."""
     import compat_baseline as cb
     header, rows = cb.load_routing()
     grid_rows = [r for r in rows if r["kind"] in ("grid", "archive")]
     # From 7.0.0 the view spells documents and stages as the catalogue does (ADR-070).
-    differences = cb.routing_differences(cb.shipped_policy(), header, grid_rows, layered=True)
+    differences = cb.routing_differences(cb.policy_8_0_4(), header, grid_rows, layered=True)
     assert differences == [], "\n".join(differences[:10])

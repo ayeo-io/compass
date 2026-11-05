@@ -53,7 +53,9 @@ def test_vr_b2_every_baseline_assessment_of_size_standard_routes_alike_as_medium
     wanted = [r for r in rows if r["kind"] in ("grid", "archive")
               and r["assessment"].get("size") == "standard"]
     assert len(wanted) > 200, f"only {len(wanted)} baseline rows have size standard"
-    policy = cb.shipped_policy()
+    # The 8.0.4 governance copy, the last release that routed delivery approaches:
+    # 9.0.0 replaces the live default's approaches (ADR-092).
+    policy = cb.policy_8_0_4()
     wrong = []
     for row in wanted:
         medium = dict(row["assessment"], size="medium")

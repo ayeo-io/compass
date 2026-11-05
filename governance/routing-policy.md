@@ -431,7 +431,7 @@ The rows, first match wins:
 |---|---|---|---|
 | `RP-EVID-SPIKE` | goal `exploration` | none; gate `spike.conclude` | `suspended` |
 | `RP-EVID-LIGHT` | size atomic or small, risk trivial or contained, urgency not `live-defect`, no `G5` label | every-issue tokens | `existing-dsl` |
-| `RP-EVID-DEFECT` | urgency `live-defect`, size atomic or small, risk not critical, no `G5` label | every-issue tokens, `regression`, `security`, `definition-of-done`, `reproduce-first` | `existing-dsl-isolation` |
+| `RP-EVID-DEFECT` | urgency `live-defect`, size atomic or small, risk not critical, no `G5` label | every-issue tokens, `regression`, `security`, `definition-of-done` | `existing-dsl-isolation` |
 | `RP-EVID-STANDARD` | any other delivery assessment | every-issue tokens, `regression`, `security`, `clarity`, `definition-of-done` | `on` |
 
 The every-issue tokens are `scenarios`, `red-before-green`, `suite-green`,
@@ -442,6 +442,7 @@ row:
 |---|---|---|
 | `RP-REQUIRE-003` | risk cross-cutting or critical | `architecture` |
 | `RP-REQUIRE-004` | a `G5` label | `architecture` |
+| `RP-EVID-REPRODUCE` | urgency `live-defect`, at any size | `reproduce-first` |
 | `RP-EVID-SIGNOFF` | a `G5` label, or risk critical | `scenario-approval` |
 | `G5` | a `G5` label | `human-approval` |
 

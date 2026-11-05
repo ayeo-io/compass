@@ -81,7 +81,7 @@ ROWS = (
      EVERY_ISSUE, "existing-dsl"),
     ("RP-EVID-DEFECT",
      dict(_SMALL, urgency="live-defect", **{"not": [{"risk": "critical"}, _G5]}),
-     EVERY_ISSUE + ("regression", "security", "definition-of-done", "reproduce-first"),
+     EVERY_ISSUE + ("regression", "security", "definition-of-done"),
      "existing-dsl-isolation"),
     ("RP-EVID-STANDARD", {},
      EVERY_ISSUE + ("regression", "security", "clarity", "definition-of-done"), "on"),
@@ -93,6 +93,7 @@ ROWS = (
 ADDITIONS = (
     ("RP-REQUIRE-003", {"risk": ["cross-cutting", "critical"]}, "architecture"),
     ("RP-REQUIRE-004", _G5, "architecture"),
+    ("RP-EVID-REPRODUCE", {"urgency": "live-defect"}, "reproduce-first"),
     ("RP-EVID-SIGNOFF", {"any_of": [_G5, {"risk": "critical"}]}, "scenario-approval"),
     ("G5", _G5, "human-approval"),
 )

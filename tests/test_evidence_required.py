@@ -65,7 +65,7 @@ def test_defect_row_adds_the_old_hotfix_evidence(live):
                             "verify.traceability", "verify.regression",
                             "verify.security"]
     assert out["acceptance_routing"] == "existing-dsl-isolation"
-    assert out["rules_fired"] == ["RP-EVID-DEFECT"]
+    assert out["rules_fired"] == ["RP-EVID-DEFECT", "RP-EVID-REPRODUCE"]
 
 
 def test_standard_row_adds_regression_security_clarity_and_the_definition_of_done(live):
@@ -88,7 +88,10 @@ def test_standard_row_adds_regression_security_clarity_and_the_definition_of_don
 def test_every_other_delivery_assessment_takes_the_standard_row(live, over):
     out = er.evaluate(_assess(**over), live)
     assert out["rules_fired"][0] == "RP-EVID-STANDARD"
-    assert "reproduce-first" not in out["evidence_required"]
+    # The hotfix setting owes the reproduction first at every size (ADR-092 D4).
+    live_defect = over.get("urgency") == "live-defect"
+    assert ("reproduce-first" in out["evidence_required"]) is live_defect
+    assert ("RP-EVID-REPRODUCE" in out["rules_fired"]) is live_defect
 
 
 def test_exploration_takes_the_spike_row_and_owes_only_its_conclusion(live):

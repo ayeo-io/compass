@@ -117,6 +117,12 @@ reason code and are not in the generated list.
 **Why:** no failing test is recorded for issue '{slug}' in {project}.
 **Fix:** run compass tdd-red --scenario <id> -- <failing test command>, or compass acceptance start if none fits, then retry.
 
+### `no-scenario`
+
+**Blocked:** edit to {target} (tool: {tool})
+**Why:** the acceptance-before-code guardrail blocks this: the issue is on the four-stage path, which owes scenarios before code, and manifest.yml has none.
+**Fix:** add the first scenario with compass scenario add <slug> --id TRC-001 --intent ..., or run /compass:assess --reassess if this is exploratory.
+
 ### `not-initialized`
 
 **Blocked:** this edit

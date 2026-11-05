@@ -37,9 +37,13 @@ from compass_pkg.check_cmd import CHECK_FNS
 from compass_pkg.check_registry import REGISTRY, REMOVED
 from compass_pkg.stable_ids import (
     APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_SPIKE)
-from compass_pkg.core import (AUTONOMY_VALUES, ROUTE_NAMES, assessment_key_errors, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT,
+from compass_pkg.core import (AUTONOMY_VALUES, ROUTE_NAMES, assessment_key_errors, CompassError, canonical_shape, FRAMEWORK_ROOT,
                               load_manifest, load_yaml, normalize_spine,
                               resolve_issue_dir)
+# A configuration's `autonomy_checkpoints` and the routing name the legacy hand-off
+# stages only. The live preset declares no path stage yet, and the classifier's
+# verdicts must not move until it does.
+from compass_pkg.path_readers import LEGACY_CHECKPOINT_STAGES as CHECKPOINT_STAGES
 from compass_pkg.manifest_store import load_manifest_mapping
 
 

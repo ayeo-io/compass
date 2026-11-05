@@ -667,7 +667,7 @@ def _load_gate_requirements(task_dir=None):
             set((g.get("evidence_types") or {}).keys()))
 
 
-def _validated_meets(args, task_dir, command, types):
+def _validated_meets(args, task_dir, command, types, task=None):
     """The checks `--meets` names, each an item of the issue's Definition of Done
     or Ready, for evidence of these types. A check the issue does not list, or a
     type the lists do not accept, raises before anything is written."""
@@ -677,7 +677,7 @@ def _validated_meets(args, task_dir, command, types):
     from compass_pkg import effective, item_records
     view = effective.view_or_legacy(task_dir)
     for check_id in meets:
-        problem = item_records.unlisted_problem(view, check_id, command)
+        problem = item_records.unlisted_problem(view, check_id, command, task=task)
         if problem:
             raise CompassError(problem)
     for kind in sorted(str(t) for t in types):
@@ -727,7 +727,7 @@ def cmd_gate_pass(args):
             f"mechanical gate cannot be cleared with the wrong kind of evidence. "
             f"Point it at evidence of an accepted type."
         )
-    meets = _validated_meets(args, task_dir, "compass gate pass", types_seen)
+    meets = _validated_meets(args, task_dir, "compass gate pass", types_seen, task)
     gate["status"] = "pass"
     gate["evidence"] = list(ev_ids)
     for eid in ev_ids:
@@ -972,7 +972,7 @@ def cmd_evidence_add(args):
         )
     from compass_pkg import spike_record
     decision, next_issue = spike_record.decision_arguments(args, args.type)
-    meets = _validated_meets(args, task_dir, "compass evidence add", [args.type])
+    meets = _validated_meets(args, task_dir, "compass evidence add", [args.type], task)
     reg = task.setdefault("evidence", [])
     if any(isinstance(e, dict) and e.get("id") == args.evidence_id for e in reg):
         raise CompassError(

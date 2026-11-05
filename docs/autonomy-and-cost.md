@@ -6,12 +6,12 @@ Four things are stored: the checkpoint outcomes, the `checkpoint-approval` recor
 
 ## Checkpoint outcomes
 
-A checkpoint stage is one of `assess`, `define`, `refine`, `plan`, `implement` and `verify`. A listed checkpoint is a checkpoint stage in the manifest's `checkpoints:` list. It waits for a person.
+A checkpoint stage of a path issue (one whose manifest records `evidence_required`, [ADR-092](../architecture/decisions/ADR-092-compass-runs-one-path-of-four-stages.md)) is one of `assess`, `specify`, `build` and `ship`. A checkpoint stage of an issue assessed before 9.0.0 is one of `assess`, `define`, `refine`, `plan`, `implement` and `verify`. `core.CHECKPOINT_STAGES` holds both sets, and each issue reads only its own, so an old outcome keeps its meaning and an outcome in the other set's names is passed over. A listed checkpoint is a checkpoint stage of the issue in the manifest's `checkpoints:` list. It waits for a person. A configuration's `autonomy_checkpoints` still names the legacy stages only, until the shipped default declares the path stages.
 
-`implement` and `verify` end stages 2 and 3 of the four-layer acceptance strategy (`S17`), and are listed only where the strategy applies to the issue ([ADR-083](../architecture/decisions/ADR-083-the-stage-2-and-3-reviews-are-checkpoints-listed-only-where-the-strategy-applies.md)). For an in-scope issue:
+`implement` and `verify` (`build` and `ship` on a path issue) end stages 2 and 3 of the four-layer acceptance strategy (`S17`), and are listed only where the strategy applies to the issue ([ADR-083](../architecture/decisions/ADR-083-the-stage-2-and-3-reviews-are-checkpoints-listed-only-where-the-strategy-applies.md)). For an in-scope issue:
 
-- A request for the `refine`, `implement` or `verify` checkpoint holds `review`: the stage it ends and the questions of that stage from `skills/atdd/references/stage-reviews.md` (`checkpoint_outcomes.review`).
-- `compass next` reads the `implement` and `verify` hand-offs (`checkpoint_outcomes.next_review`). When the records show one done with no outcome, it waits at a listed checkpoint and names `compass evidence request --checkpoint <stage>`. At a checkpoint that is not listed it goes on and names `compass issue checkpoint add <stage> --outcome skipped --by builder` (or `verifier`).
+- A request for the `refine`, `implement` or `verify` checkpoint (`specify`, `build` or `ship` on a path issue) holds `review`: the stage it ends and the questions of that stage from `skills/atdd/references/stage-reviews.md` (`checkpoint_outcomes.review`).
+- `compass next` reads the stage 2 and 3 hand-offs (`checkpoint_outcomes.next_review`). When the records show one done with no outcome, it waits at a listed checkpoint and names `compass evidence request --checkpoint <stage>`. At a checkpoint that is not listed it goes on and names `compass issue checkpoint add <stage> --outcome skipped --by builder` (or `verifier`).
 - A request for either that a person rejects sends the issue back: while the rejection is newer than the stage's outcome, `compass next` names the stage and the reason.
 - `compass check` does not fail on a listed review with no outcome. The landing refusal below refuses it.
 
@@ -47,7 +47,7 @@ An agent records a hand-off that autonomy passed:
 `compass issue checkpoint add <stage> --outcome skipped --by <agent>`
 
 - It writes no evidence record and no devlog line.
-- It refuses a listed checkpoint, a stage that already holds `waited`, a stage that is not a checkpoint stage, a stage the approach collapses or skips, a `--by` that is not an agent, and `--outcome waited`. Each refusal exits 2 and writes nothing.
+- It refuses a listed checkpoint, a stage that already holds `waited`, a stage that is not a checkpoint stage of the issue (a legacy stage on a path issue, or a path stage on an older one), a stage the approach collapses or skips, a `--by` that is not an agent, and `--outcome waited`. Each refusal exits 2 and writes nothing.
 - A repeat for a stage already `skipped` exits 0 and leaves the manifest bytes unchanged.
 
 Both commands refuse an issue that is not judged (see below) and write nothing.

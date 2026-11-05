@@ -86,7 +86,10 @@ box needs an `(evidence: EV-<id>)` or `(follow-up: FU-<id>)` tag that resolves,
 in the Definition of Done and the section of every other exit list (`<Stage>
 exit list`). `compass ship-commit` runs this one check before it lands, and
 refuses while it fails (`definition-of-done-open`). A waiver that makes it
-advisory prints one line, and the landing goes on.
+advisory prints one line, and the landing goes on. A path issue (ADR-092)
+owes the Definition of Done only when its `evidence_required` lists
+`definition-of-done`, and it is judged once every gate has passed; the items
+are the build exit list (`dod_due`).
 
 The check `evidence-matches-tree` judges a landed issue by the newest test
 record's `file_sha256` and `file_modes`: the SHA-256 and the mode of each
@@ -273,9 +276,11 @@ _(none yet - the shipped default guardrails apply as-is)_
   - It reads the `loop` field that `compass tdd-red --loop outer|inner` and
     `compass tdd-green --loop outer|inner` write. The default is outer on a
     quick fix the strategy applies to, whose one declared test is its
-    acceptance test, and inner otherwise. A record with no field reads as
-    inner. The red that ends stage 1 at refine counts as an outer-loop red;
-    `acceptance_strategy.stage_one` decides which red that is (ADR-081). An
+    acceptance test, and on a path issue (ADR-092) whose routing is
+    `existing-dsl`, and inner otherwise. A record with no field reads as
+    inner. The red that ends stage 1 at refine, or at specify on a path
+    issue, counts as an outer-loop red; `acceptance_strategy.stage_one`
+    decides which red that is (ADR-081). An
     outer-loop record is written to `red-<id>.outer.json` or
     `green-<id>.outer.json`, so an inner-loop record bound to the same
     scenario does not replace it (ADR-082).

@@ -151,7 +151,7 @@
         "additionalProperties": false,
         "required": ["stage", "outcome", "by", "at"],
         "properties": {
-          "stage": {"enum": ["assess", "define", "refine", "plan", "implement", "verify"]},
+          "stage": {"enum": ["assess", "specify", "build", "ship", "define", "refine", "plan", "implement", "verify"], "description": "A path stage on a path issue (one with evidence_required); a legacy stage on an issue assessed before 9.0.0."},
           "outcome": {"enum": ["waited", "skipped"]},
           "by": {"type": "string", "description": "The person who answered (the approver of the record cited), or the agent that went on."},
           "at": {"type": "string", "description": "ISO 8601: the record's timestamp for waited, else the time of the command."},
@@ -1317,6 +1317,9 @@
       "items": {
         "enum": [
           "assess",
+          "specify",
+          "build",
+          "ship",
           "define",
           "refine",
           "plan",

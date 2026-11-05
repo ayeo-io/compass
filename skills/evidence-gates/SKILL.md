@@ -68,8 +68,9 @@ fails an item with no record. `compass check` lists each item's state.
 `outer` with `--loop outer`, for a run of the acceptance suite through a
 client interface, and `inner` with `--loop inner`, for a unit test. With no
 flag the loop is `outer` on a quick fix the four-layer acceptance strategy
-applies to, because its one declared test is its acceptance test, and
-`inner` everywhere else. `compass quick-fix finish` takes the same flag. A
+applies to, because its one declared test is its acceptance test, and on a
+path issue whose `S17` routing is `existing-dsl`, which replaces the quick
+fix, and `inner` everywhere else. `compass quick-fix finish` takes the same flag. A
 record with no field reads as inner. Where the four-layer acceptance strategy (`S17`)
 applies, the check `outer-loop-recorded` needs an outer-loop red and an
 outer-loop green recorded on the tree as it is now (ADR-080). `suite-passed`

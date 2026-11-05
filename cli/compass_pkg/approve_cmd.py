@@ -252,8 +252,9 @@ def register(evidence_subs):
     form.add_argument("--decisions", action="store_true",
                       help="confirm the decisions taken for the person")
     form.add_argument("--checkpoint", metavar="STAGE",
-                      help="answer the hand-off of this checkpoint stage (assess, define, "
-                           "refine or plan)")
+                      help="answer the hand-off of this checkpoint stage (assess, specify, "
+                           "build or ship; on an issue assessed before 9.0.0, a legacy "
+                           "stage such as define)")
     issue_arg(p)
     p.add_argument("--approver", help="the approver's person id; required unless --delegated")
     p.add_argument("--role", help="the role the approver acts in; required unless --delegated")

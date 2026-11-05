@@ -10,9 +10,10 @@ writes one request file:
 A request holds facts the CLI derives - the issue, its generation and labels,
 the subject, a document's digest - and the agent's description of the scope.
 It also holds a single-use `nonce`, which the record that answers it copies.
-A request for the `refine`, `implement` or `verify` checkpoint of an issue the
-four-layer acceptance strategy applies to also holds `review`: the stage it
-ends and the atdd skill's questions for it (`checkpoint_outcomes.review`).
+A request for the `specify`, `build` or `ship` checkpoint of a path issue, or the
+`refine`, `implement` or `verify` checkpoint of an issue assessed before 9.0.0,
+that the four-layer acceptance strategy applies to also holds `review`: the stage
+it ends and the atdd skill's questions for it (`checkpoint_outcomes.review`).
 When a request is answered, replaced or found stale it moves to `closed/<n>.yml`
 with its `outcome`. A new request for a subject that already has a pending one
 replaces it. Numbers are unique within the issue.
@@ -373,7 +374,8 @@ def register(evidence_subs):
     form.add_argument("--decisions", action="store_true",
                       help="the decisions taken for the person")
     form.add_argument("--checkpoint", metavar="STAGE",
-                      help="the hand-off of this checkpoint stage")
+                      help="the hand-off of this checkpoint stage: a path stage, or a "
+                           "legacy one on an issue assessed before 9.0.0")
     issue_arg(p)
     p.add_argument("--scope", default="",
                    help="what the approval covers, in your words; required with --check and "

@@ -145,6 +145,18 @@ class HookDriverBase:
         body.pop("delivery_approach", None)
         manifest.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
 
+    def hasPathIssue(self, issue, scenarios):
+        # A path issue (ADR-092) records `evidence_required` and no `stages:` map,
+        # so the old `define: thorough` rule cannot see it.
+        manifest = self.project / ".compass" / "work" / issue / "manifest.yml"
+        body = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+        body.pop("stages", None)
+        body.update(delivery_approach="delivery",
+                    evidence_required=["scenarios", "red-before-green", "suite-green"],
+                    scenarios=[{"id": f"TRC-00{n}", "intent": "INT-1", "tests": ["t"]}
+                               for n in range(1, scenarios + 1)])
+        manifest.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+
     # --- the machine --------------------------------------------------------------------
 
     def _fake(self, name, text):

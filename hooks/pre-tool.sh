@@ -36,10 +36,12 @@
 #                                      drops the .red marker. So the marker
 #                                      means "a real, observed failure is on
 #                                      record", not "someone touched a file".
-#     1. The implement stage: `compass tdd-red -- <your failing test command>`.
+#     1. The build stage (implement on an issue assessed before 9.0.0):
+#        `compass tdd-red -- <your failing test command>`.
 #     2. Edit the production code - this hook sees .red and allows it.
 #     3. `compass tdd-green -- <test command>` confirms green, writes
-#        evidence/green.json, and clears .red - the hand-off to the verify stage.
+#        evidence/green.json, and clears .red - the hand-off to the ship stage
+#        (`verify` on an issue assessed before 9.0.0).
 #   .compass/work/<issue-slug>/.spike  "this issue is a spike - the red-
 #                                      before-green strategy is suspended".
 #                                      /compass:assess

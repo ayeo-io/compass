@@ -644,7 +644,8 @@ def _check_dod_evidence_typed(task, task_dir):
     """Every item of the issue's Definition of Done is met by a record in the
     manifest (implementation 2.0.0, ADR-051).
 
-    The items are the issue's configured `verify` exit list. One of these records
+    The items are the issue's configured Definition of Done: the build exit list,
+    or the `verify` exit list of a legacy configuration. One of these records
     meets an item (`item_records`):
 
     - an evidence entry of an accepted type with `meets: [item]`
@@ -661,13 +662,23 @@ def _check_dod_evidence_typed(task, task_dir):
     Cross-issue half: scan sibling manifest.yml files for follow-ups with
     target_task equal to this issue's slug and status: outstanding - any such
     entry blocks shipping this issue.
+
+    A path issue (ADR-092) is judged by `dod_due.path_verdict`. An issue assessed
+    before 9.0.0 keeps the rules below.
     """
+    from compass_pkg import dod_due
+    from compass_pkg.path_stages import is_path_issue
     report = artifact_path(task_dir, "verification-report.md")
     # The directory name is the true slug; the manifest passed in may hold a template placeholder.
     this_slug = os.path.basename(task_dir) or task.get("task") or ""
     inbound = _check_inbound_backfills(task_dir, this_slug)
     no_report = not os.path.isfile(report)
-    if no_report and str(task.get("created") or "") >= DOD_WITHOUT_REPORT_FROM:
+    if is_path_issue(task):
+        due = dod_due.path_verdict(task, inbound)
+        if due:
+            return due
+        no_report = True        # a path issue's items are judged on the records only
+    elif no_report and str(task.get("created") or "") >= DOD_WITHOUT_REPORT_FROM:
         # 9.0.0 writes no report (ADR-091): the Definition of Done is due once every gate has
         # passed, which is when the verify stage's exit is reached. It belongs to the
         # approaches that wrote a report before 9.0.0: those whose verify stage is thorough.
@@ -680,14 +691,9 @@ def _check_dod_evidence_typed(task, task_dir):
             return NOTHING_TO_CHECK, ("the verify stage is %s on this approach, so it holds no "
                                       "Definition of Done" % (stages.get(STAGE_VERIFY) or "unset"))
         gates = gate_status.live_gates(task)
-        waiting = gate_status.unmet_gates(task)
-        if not gate_status.all_gates_passed(task):
-            if inbound:
-                return False, "; ".join(inbound)
-            return NOTHING_TO_CHECK, ("the Definition of Done is judged once every gate has "
-                                      "passed; %s" % ("%d gate(s) have not passed: %s"
-                                                      % (len(waiting), ", ".join(waiting))
-                                                      if waiting else "the issue has no gate"))
+        waits = dod_due.waits_for_gates(task, inbound)
+        if waits:
+            return waits
     elif no_report:
         # A quick fix writes no report, but another issue's outstanding follow-up that targets
         # it still blocks it.

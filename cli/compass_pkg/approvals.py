@@ -219,7 +219,7 @@ def _taken(task):
 
 # --- the forms ----------------------------------------------------------------------
 
-def _check_of(view, check_id):
+def _check_of(view, check_id, task=None):
     if view is None:
         raise CompassError(f"{VERB}: this issue has no configuration to read its checks from. "
                            f"Run `compass approach evaluate --write`.")
@@ -240,7 +240,7 @@ def _check_of(view, check_id):
         # An item of the Definition of Ready or Done is ticked by a person even when
         # its check lists no approvers (the declared approvers, or the owner, tick it).
         from compass_pkg import item_records
-        if item_records.unlisted_problem(view, check_id, VERB) is None:
+        if item_records.unlisted_problem(view, check_id, VERB, task=task) is None:
             return check
         raise CompassError(f"{VERB}: '{check_id}' lists no approvers and is not an item of "
                            f"this issue's Definition of Ready or Done, so an approval would "
@@ -272,7 +272,7 @@ def _may_tick(task_dir, approver, check_id):
 def _record_check(task_dir, answer, save):
     check_id = answer.value
     task, task_path = load_manifest(task_dir)
-    check = _check_of(effective.view_or_legacy(task_dir), check_id)
+    check = _check_of(effective.view_or_legacy(task_dir), check_id, task)
     owner = approval_records.project_owner(task_dir)
     if answer.approver is None:
         pass

@@ -374,14 +374,21 @@ def default_loop(task_dir):
     """`outer` for a quick fix the four-layer acceptance strategy applies to, else
     `inner` (ADR-080). A quick fix has one scenario, and its declared test is that
     scenario's acceptance test, so its red and green are the outer loop. Whether the
-    strategy applies is `acceptance_strategy.in_scope`, the one scope rule (ADR-079)."""
-    from compass_pkg.acceptance_strategy import in_scope
+    strategy applies is `acceptance_strategy.in_scope`, the one scope rule (ADR-079).
+    A path issue (ADR-092) has no quick fix approach: the light evidence row that
+    replaces it routes the strategy to `existing-dsl`, so that routing defaults to
+    the outer loop."""
+    from compass_pkg.acceptance_strategy import in_scope, stored
+    from compass_pkg.path_stages import is_path_issue
     from compass_pkg.stable_ids import APPROACH_QUICK_FIX
     try:
         task, _ = load_manifest(task_dir)
     except (CompassError, OSError, ValueError):
         return "inner"
-    if not isinstance(task, dict) or task.get("delivery_approach") != APPROACH_QUICK_FIX:
+    if is_path_issue(task):
+        if (stored(task) or {}).get("routing") != "existing-dsl":
+            return "inner"
+    elif not isinstance(task, dict) or task.get("delivery_approach") != APPROACH_QUICK_FIX:
         return "inner"
     return "outer" if in_scope(task, task_dir)[0] else "inner"
 

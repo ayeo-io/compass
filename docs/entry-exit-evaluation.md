@@ -46,6 +46,29 @@ the next `compass approach evaluate --write`.
 A closed issue has every list due, whatever its close reason. `compass check`
 counts only due checks.
 
+## A path issue
+
+A path issue is one whose manifest records `evidence_required` (ADR-092). It
+runs assess, specify, build and ship, and has no stage modes, so none of its
+lists is skipped. `stage_lists.path_lists` gives it its lists:
+
+- A configuration that declares the four path stages is read at those stages
+  as it stands. The build exit list is the Definition of Done, and the ship
+  entry list holds a check such as a project's `agent-review`.
+- A configuration that still declares the legacy stages, as the shipped
+  default does now, has each list moved to the path stage that shows its
+  stage: define, refine and plan to specify, breakdown and implement to
+  build, `verify` and ship to ship. The `verify` exit list, the Definition of
+  Done, moves to the build exit.
+- A path issue owes no Definition of Ready, so no `dor-*` check is listed for
+  it, wherever the configuration lists one.
+- It owes the Definition of Done (`verification-report`) only when its
+  `evidence_required` lists `definition-of-done`. Otherwise each Definition of
+  Done row is nothing to check.
+
+The rows are labelled with the path stage, such as `stage:build:exit`. An
+issue assessed before 9.0.0 keeps its legacy lists, labels and modes exactly.
+
 ## How a check is judged
 
 | Kind | Judged by |
@@ -62,10 +85,14 @@ reads the same records, so an item has one state whoever asks.
 
 ## Item records
 
-An item is a check id in the issue's `verify` exit list (the Definition of
-Done) or `plan` entry list (the Definition of Ready), whatever the capability
-says: the page shows both lists, and the capability only decides whether the
-stage lists run. One of four records meets an item, and a command writes each:
+An item is a check id in the issue's Definition of Done or `plan` entry list
+(the Definition of Ready), whatever the capability says: the page shows both
+lists, and the capability only decides whether the stage lists run. The
+Definition of Done is the build exit list, or the `verify` exit list of a
+configuration that declares a `verify` stage, as every stored generation and
+the shipped default do now. A path issue has only the Definition of Done: a
+command refuses to record a `dor-*` item or a `plan` or `breakdown` exit item
+for it. One of four records meets an item, and a command writes each:
 
 | Record | Written by | The item reads |
 |---|---|---|
@@ -145,7 +172,7 @@ compass evidence approve (--check ID | --guardrail G5 | --artifact KIND | --deci
 | `--guardrail` | `G5`: sign off guardrail `G5`, the only guardrail with a sign-off (below) |
 | `--artifact` | The kind of a document that reads `awaiting-approval` (below) |
 | `--decisions` | Confirm the decisions an agent took for the person |
-| `--checkpoint` | Answer the hand-off of a checkpoint stage: `assess`, `define`, `refine` or `plan` (below) |
+| `--checkpoint` | Answer the hand-off of a checkpoint stage: a path stage on a path issue, a legacy stage such as `define` on an older one (below) |
 | `--approver` | The person's id. It must be listed by the check |
 | `--role` | The role the person acts in |
 | `--scope` | What the approval covers. Required with `--check` and `--guardrail`; with `--checkpoint` it defaults to `the <stage> hand-off` |
@@ -210,9 +237,12 @@ approve --decisions` confirms them as one set.
 
 #### Answering a checkpoint: `--checkpoint`
 
-A checkpoint is a stage hand-off that can wait for a person: `assess`,
-`define`, `refine` or `plan`. `compass evidence approve --checkpoint <stage>`
-records a person's answer to one. ADR-063 owns the decision.
+A checkpoint is a stage hand-off that can wait for a person. On a path issue
+it is `assess`, `specify`, `build` or `ship`. On an issue assessed before 9.0.0
+it is `assess`, `define`, `refine`, `plan`, `implement` or `verify`, and an
+outcome or request in a path stage name is refused, as before.
+`compass evidence approve --checkpoint <stage>` records a person's answer to
+one. ADR-063 owns the decision.
 
 - **What it writes.** One record of the type `checkpoint-approval`, as
   `EV-CHECKPOINT-<stage>-<n>`, holding `checkpoint` (the stage), `approver`,
@@ -422,8 +452,8 @@ compass evidence request (--check ID | --guardrail G5 | --artifact KIND | --deci
   evidence, and no check reads it. The code is
   `cli/compass_pkg/approval_requests.py`.
 - **A stage review.** A request for the `refine`, `implement` or `verify`
-  checkpoint of an issue the four-layer acceptance strategy (`S17`) applies
-  to also holds `review`: the stage of the `atdd` skill it ends and that
+  checkpoint (`specify`, `build` or `ship` on a path issue) of an issue the
+  four-layer acceptance strategy (`S17`) applies to also holds `review`: the stage of the `atdd` skill it ends and that
   stage's questions from `skills/atdd/references/stage-reviews.md`. The
   command prints the questions, the person sees them with the request, and
   the request's digest covers them (ADR-083).

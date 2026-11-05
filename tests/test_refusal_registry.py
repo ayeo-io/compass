@@ -64,6 +64,7 @@ FIXTURES = {
     "pointer-moved": dict(slug="why", previous="ex"),
     "no-delivery-approach": dict(slug="demo"),
     "no-acceptance-criteria": dict(target="src/app.py", tool="Edit"),
+    "no-scenario": dict(target="src/app.py", tool="Edit"),
     "red-unsigned": dict(slug="demo", since_date="2026-09-01"),
     "red-marker-no-record": dict(slug="demo"),
     # The longest form: a 40-character slug and a guard of 20 words, the most

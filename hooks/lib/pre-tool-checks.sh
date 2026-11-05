@@ -22,12 +22,16 @@ fi
 # A guardrail beats a strategy, so this runs BEFORE the red check: you cannot
 # write a red for a scenario that does not exist yet.
 #
-# Only `define: thorough` (or the retired `specify: full`, or `define: full`
-# from before the depth words were renamed) triggers it, which
-# routing-policy.yml gives to the regular and full approaches. A hotfix
-# (reproduce-first) and a spike (collapsed) are exempt by construction, and
-# the .spike early exit above suspends this the same way it suspends
-# red-before-green.
+# On a path issue (ADR-092: its manifest records `evidence_required`) every
+# code edit needs a scenario on record, because every path issue owes
+# scenarios. The refusal is `no-scenario`, and it names `compass scenario add`.
+#
+# On an issue assessed before 9.0.0, only `define: thorough` (or the retired
+# `specify: full`, or `define: full` from before the depth words were renamed)
+# triggers it, which routing-policy.yml gave to the regular and full
+# approaches. A hotfix (reproduce-first) and a spike (collapsed) are exempt by
+# construction. A spike is never a path issue, and the .spike early exit above
+# suspends this the same way it suspends red-before-green.
 #
 # A false block on unreadable state is how a hook teaches people to bypass it,
 # so if there is no manifest.yml, or its YAML does not parse, the hook skips
@@ -54,6 +58,9 @@ if [ -f "$TASK_DIR/manifest.yml" ]; then
   rm -f "$G2_ERR"
   if [ "${G2_VERDICT:-}" = "block" ]; then
     compass_block no-acceptance-criteria "target=$TARGET" "tool=${TOOL:-?}"
+  fi
+  if [ "${G2_VERDICT:-}" = "block-path" ]; then
+    compass_block no-scenario "target=$TARGET" "tool=${TOOL:-?}"
   fi
 fi
 

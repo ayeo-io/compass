@@ -773,6 +773,27 @@ forged record from one line of JSON to a dated one, and no further. And
 `.compass/` is not a guarded path, so the line can be deleted like any other
 project setting.
 
+### A code edit needs a scenario on record, but the hook does not judge the scenario
+
+Guardrail `G2` (acceptance defined before it is built) is enforced before the
+code exists: the pre-tool hook refuses a code edit while the issue owes
+scenarios and its manifest has none.
+
+- On a path issue (one whose manifest records `evidence_required`, ADR-092)
+  every issue owes scenarios, so the hook refuses the edit with
+  `no-scenario`, which names `compass scenario add`.
+- On an issue assessed before 9.0.0 the rule is unchanged: only `define:
+  thorough` owes scenarios before code, and the refusal is
+  `no-acceptance-criteria`. A hotfix and a spike are exempt by their modes.
+- A spike is never a path issue, and its `.spike` marker suspends the check.
+
+The hook counts the manifest's `scenarios:` entries and reads nothing else. It
+does not check that a scenario has an intent or a test, or that it describes the
+change; `compass check` judges those (`G2` and `G3`). This check does not
+refuse an edit when the manifest cannot be read: a false refusal on unreadable
+state teaches people to bypass the hook. The red check that runs after it
+still applies.
+
 ### A dependency between issues is read from this checkout, and a fault never blocks
 
 An issue can record the issues it waits for in its manifest's `depends_on`

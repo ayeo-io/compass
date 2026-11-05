@@ -1,10 +1,12 @@
 # compass_pkg.item_records - which Definition of Done and Ready items the records meet
 """Read the manifest records that meet an exit-list or entry-list item.
 
-The Definition of Done is the issue's configured `verify` exit list and the
-Definition of Ready its `plan` entry list. The `plan` and `breakdown` exit lists are
-read the same way, whatever capability says they are
-evaluated (the page that shows them is not the evaluator). An item is a check
+The Definition of Done is the issue's configured build exit list, or the
+`verify` exit list of a configuration that still declares the legacy stages,
+and the Definition of Ready its `plan` entry list. The `plan` and `breakdown`
+exit lists are read the same way, whatever capability says they are
+evaluated (the page that shows them is not the evaluator). A path issue
+(ADR-092) has only the Definition of Done (`lists_of`). An item is a check
 id in one of those lists. One of four records meets it, and a command writes
 each:
 
@@ -23,17 +25,20 @@ approval check never does.
 This module reads records. It imports no command module and no renderer, so the
 renderers, the stage lists and `dod-evidence-typed` can all use it.
 """
-# DEPENDENCY: standard library (dataclasses); compass_pkg.stable_ids. The accepted
+# DEPENDENCY: standard library (dataclasses); compass_pkg.path_stages,
+# compass_pkg.stable_ids. The accepted
 # evidence types are read from compass_pkg.checks inside `items`, because checks
 # imports the masking module and this one is imported by the renderers.
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from compass_pkg.stable_ids import STAGE_BREAKDOWN, STAGE_PLAN, STAGE_VERIFY
+from compass_pkg.path_stages import is_path_issue
+from compass_pkg.stable_ids import STAGE_BREAKDOWN, STAGE_BUILD, STAGE_PLAN, STAGE_VERIFY
 
-#: The two lists: `dod` is the `verify` exit list, `dor` the `plan` entry list.
-LISTS = {"dod": (STAGE_VERIFY, "exit"), "dor": (STAGE_PLAN, "entry"),
+#: The lists: `dod` is the build exit list (the `verify` exit list of a legacy
+#: configuration, `_list_of`), `dor` the `plan` entry list.
+LISTS = {"dod": (STAGE_BUILD, "exit"), "dor": (STAGE_PLAN, "entry"),
          "plan-exit": (STAGE_PLAN, "exit"), "breakdown-exit": (STAGE_BREAKDOWN, "exit")}
 TITLES = {"dod": "Definition of Done", "dor": "Definition of Ready",
           "plan-exit": "Plan exit checks", "breakdown-exit": "Breakdown exit checks"}
@@ -63,9 +68,10 @@ def listed_checks(view, which):
     without a configuration (a project with no `compass.yml`, an issue with no
     generation) is judged by the shipped default's lists, so the guardrail does not
     go quiet on it."""
-    stage, side = LISTS[which]
     config = view.config if view is not None else _shipped_default()
-    named = ((config.get("stages") or {}).get(stage) or {}).get(side) or []
+    stages = config.get("stages") or {}
+    stage, side = _list_of(stages, which)
+    named = (stages.get(stage) or {}).get(side) or []
     checks = config.get("checks") or {}
     out = []
     for check_id in dict.fromkeys(named):
@@ -73,6 +79,21 @@ def listed_checks(view, which):
         statement = check.get("statement") if isinstance(check, dict) else None
         out.append((str(check_id), " ".join(str(statement or check_id).split())))
     return out
+
+
+def _list_of(stages, which):
+    """`(stage, side)` of the list `which` in a configuration's `stages` map. A
+    configuration that declares a `verify` stage, as every one before 9.0.0 and
+    every stored generation does, holds its Definition of Done there."""
+    if which == "dod" and STAGE_VERIFY in stages:
+        return STAGE_VERIFY, "exit"
+    return LISTS[which]
+
+
+def lists_of(task):
+    """The keys of `LISTS` an issue has. A path issue owes no Definition of Ready
+    and runs no plan or breakdown stage, so it has only the Definition of Done."""
+    return ("dod",) if is_path_issue(task) else tuple(LISTS)
 
 
 def _shipped_default():
@@ -129,10 +150,12 @@ def items(task, task_dir, view, which):
 
 # --- what the commands that record an item check -------------------------------
 
-def unlisted_problem(view, check_id, command):
+def unlisted_problem(view, check_id, command, task=None):
     """Why `command` cannot record `check_id`, or None when the issue lists it. The
-    message names the check and lists the items the issue does list."""
-    lists = {which: [c for c, _ in listed_checks(view, which)] for which in LISTS}
+    message names the check and lists the items the issue does list. With the
+    issue's manifest, only its own lists count (`lists_of`)."""
+    lists = {which: [c for c, _ in listed_checks(view, which)]
+             for which in (lists_of(task) if task is not None else LISTS)}
     if any(check_id in ids for ids in lists.values()):
         return None
     shown = "; ".join("%s: %s" % (TITLES[w], ", ".join(ids) or "no item")

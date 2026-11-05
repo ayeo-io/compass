@@ -46,7 +46,7 @@ def cmd_follow_up_add(args):
     entry = {"id": follow_up_id, "status": "outstanding", "summary": summary}
     if args.defers:
         problem = item_records.unlisted_problem(effective.view_or_legacy(task_dir),
-                                                args.defers, VERB)
+                                                args.defers, VERB, task=task)
         if problem:
             raise CompassError(problem)
         entry["defers"] = args.defers

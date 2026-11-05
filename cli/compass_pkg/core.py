@@ -41,9 +41,9 @@ COMPASS_SCHEMA_VERSION_11 = "1.1"  # schema version that introduced manifest.yml
 from compass_pkg import project_settings  # noqa: E402  (defines CompassError)
 from compass_pkg.project_settings import CompassError  # noqa: E402,F401
 from compass_pkg.stable_ids import (  # noqa: E402
-    APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, STAGE_ASSESS, STAGE_DEFINE, STAGE_IDS,
-    STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_VERIFY)
+    APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, STAGE_IDS)
 from compass_pkg import manifest_store, word_map  # noqa: E402
+from compass_pkg.path_readers import CHECKPOINT_STAGES, LEGACY_CHECKPOINT_STAGES  # noqa: E402,F401
 from compass_pkg.path_stages import rename_v1_stage, rename_v1_stage_keys  # noqa: E402
 
 
@@ -184,10 +184,9 @@ def load_mode():
     return mode if mode == "advisory" else "enforced"
 
 
-# The stage hand-offs that can wait for a person, and the `autonomy:` values that
-# choose among them; `implement` and `verify` end stages 2 and 3 of `S17`.
+# The `autonomy:` values that choose among the stage hand-offs. The hand-off stages
+# (`CHECKPOINT_STAGES`, imported above) are in path_readers, with the path ones.
 # Here, not in policy.py, because core reads the setting and policy imports core.
-CHECKPOINT_STAGES = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN, STAGE_IMPLEMENT, STAGE_VERIFY)
 AUTONOMY_VALUES = ("controlled", "balanced", "autonomous")
 
 

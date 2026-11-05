@@ -8,6 +8,7 @@ import sys
 import compass_pkg                      # noqa: F401 - puts vendor on sys.path
 import yaml
 from compass_pkg import parse_cache, status_words
+from compass_pkg.path_stages import is_path_issue
 from compass_pkg.core import artifact_path
 from compass_pkg.spec_location import spec_path
 
@@ -105,8 +106,9 @@ def gate_state(task_dir, slug, task):
     # 3. a hotfix with an outstanding follow-up. Both facts come from
     # manifest.yml: the template can rename a heading in the prose record
     # without any check failing, and a grep for the old heading then stops
-    # matching with no error.
-    if str(task.get("delivery_approach") or "") != "hotfix":
+    # matching with no error. On a path issue (ADR-092) the hotfix is the
+    # setting `urgency: live-defect`; an older issue names the hotfix approach.
+    if not is_hotfix(task):
         return
     outstanding = [
         f for f in (task.get("follow_ups") or [])
@@ -124,6 +126,16 @@ def gate_state(task_dir, slug, task):
     else:
         emit("W", slug, "HOTFIX follow-up incomplete - acceptance-criteria.md does "
              "not exist; the reproduction test was never promoted to a scenario.")
+
+
+def is_hotfix(task):
+    """True for a path issue assessed with `urgency: live-defect`, or an older issue
+    routed to the hotfix approach. An older issue keeps the approach rule, so an old
+    regular issue with that urgency is still not warned about."""
+    if is_path_issue(task):
+        assessment = task.get("assessment")
+        return isinstance(assessment, dict) and assessment.get("urgency") == "live-defect"
+    return str(task.get("delivery_approach") or "") == "hotfix"
 
 
 def scope_bloat(task_dir, slug, task):

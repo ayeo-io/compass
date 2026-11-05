@@ -143,6 +143,16 @@ REFUSALS: dict[str, dict[str, str]] = {
                "if this is "
                "exploratory.",
     },
+    # The same guardrail on a path issue (ADR-092), which has no stage modes, so
+    # the reason cannot name `define: thorough`.
+    "no-scenario": {
+        "what": "edit to {target} (tool: {tool})",
+        "why": "the acceptance-before-code guardrail blocks this: the issue is on the "
+               "four-stage path, which owes scenarios before code, and manifest.yml has "
+               "none.",
+        "fix": "add the first scenario with compass scenario add <slug> --id TRC-001 "
+               "--intent ..., or run /compass:assess --reassess if this is exploratory.",
+    },
     "red-unsigned": {
         "what": "this edit",
         "why": "the red record for issue '{slug}' carries no identity - no "

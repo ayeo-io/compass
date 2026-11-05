@@ -850,7 +850,9 @@ def test_ee_9_next_names_the_unmet_entry_checks_of_the_current_stage(tmp_path):
     code, out, err = _run(root, "next", "--issue", SLUG)
     assert code == 0, err
     line = out.strip()
-    assert line.startswith("Plan")
+    # The legacy plan stage shows as Specify (ADR-092); the Definition of Ready
+    # checks named below are plan's entry list, so the stage is still plan.
+    assert line.startswith("Specify")
     assert "entry not met: dor-no-open-questions, dor-approach-still-fits" in line, line
     _write_review(task_dir)
     code, out, err = _run(root, "next", "--issue", SLUG)

@@ -388,6 +388,21 @@ def dep(issue, until="done", reason="needs it"):
     return {"issue": issue, "reason": reason, "until": until}
 
 
+def resolved_stage(project, slug):
+    """The legacy stage the resolver gives for `slug`, which the dependency rules
+    act on. `compass next` shows it as the path stage it maps to (ADR-092)."""
+    from compass_pkg import next_cmd
+    from compass_pkg.core import normalize_spine
+    return next_cmd._current_phase_from_task(
+        next_cmd._typed(normalize_spine(project.manifest(slug))), str(project.dir(slug)))
+
+
+def shown(stage):
+    """The path stage word `compass next` prints for a legacy stage."""
+    from compass_pkg.stable_ids import LEGACY_TO_PATH
+    return LEGACY_TO_PATH[stage].capitalize()
+
+
 def next_line(project, slug):
     done = compass(project.root, "next", "--issue", slug)
     assert done.returncode == 0, done
@@ -445,7 +460,8 @@ def test_dbi_8_until_vocabulary(tmp_path):
         derived = lifecycle.dependency_block(manifest, str(project.dir(waiting)), deps)
         assert derived == expected[waiting], (row, derived)
         line = next_line(project, waiting)
-        assert line.startswith("Implement"), (row, line)
+        assert resolved_stage(project, waiting) == "implement", row
+        assert line.startswith("Build"), (row, line)
         if expected[waiting]:
             assert line.rstrip("\n").endswith(" | blocked: " + expected[waiting]), (row, line)
         else:
@@ -540,7 +556,8 @@ def test_dbi_3_depends_add_input_checks(tmp_path):
     project.issue("a", "define")
     project.issue("b", "define")
     nine = ", ".join(lifecycle.UNTIL_VALUES)
-    assert nine == "done, in-review, define, refine, plan, breakdown, implement, verify, ship"
+    assert nine == ("done, in-review, specify, build, ship, define, refine, plan, breakdown, "
+                    "implement, verify")
     cases = [
         (["a", "--reason", "self"], "cannot depend on itself", False),
         (["b", "--reason", "x", "--until", "ready"], "'ready' is not an until value", True),
@@ -686,20 +703,23 @@ def test_dbi_6_next_blocks_at_implement_until_done(tmp_path):
     project.issue("a", "implement", depends=[dep("b")])
     before = project.bytes("a")
     line = next_line(project, "a")
-    assert line.startswith("Implement"), line
+    assert resolved_stage(project, "a") == "implement"
+    assert line.startswith("Build"), line
     assert "blocked: waits for b to reach done" in line, line
     assert project.bytes("a") == before
     project.issue("c", "define")
     project.issue("a", "implement", depends=[dep("b"), dep("c", "plan")])
     before = project.bytes("a")
     line = next_line(project, "a")
-    assert line.startswith("Implement"), line
+    assert resolved_stage(project, "a") == "implement"
+    assert line.startswith("Build"), line
     assert "blocked: waits for b to reach done; waits for c to reach plan" in line, line
     assert project.bytes("a") == before
     project.issue("b", "ship", close="completed")
     project.issue("c", "plan")
     line = next_line(project, "a")
-    assert line.startswith("Implement") and "blocked" not in line, line
+    assert resolved_stage(project, "a") == "implement"
+    assert line.startswith("Build") and "blocked" not in line, line
     assert project.bytes("a") == before
     assert_no_gh_call(project.root)
 
@@ -725,14 +745,16 @@ def test_dbi_7_stages_before_implement_not_blocked(tmp_path):
     for stage in ("define", "refine", "plan", "breakdown"):
         project.issue("a", stage, depends=[dep("b")])
         line = _no_reader_blocks(project)
-        assert line.lower().startswith(stage), (stage, line)
+        assert resolved_stage(project, "a") == stage, stage
+        assert line.startswith(shown(stage)), (stage, line)
         docs = project.root / "docs" / "compass" / "2026-10-01-a"
         for name in ("acceptance-criteria.md", "technical-design.md"):
             done = hook(project, docs / name)
             assert done.returncode == 0, (stage, name, done)
             assert "depends on" not in done.stderr, (stage, name, done)
     project.issue("a", "verify", depends=[dep("b")])
-    assert _no_reader_blocks(project).startswith("Verify")
+    assert _no_reader_blocks(project).startswith("Ship")
+    assert resolved_stage(project, "a") == "verify"
     for setup in (dict(hold=True), dict(close="not-planned")):
         project.issue("a", "implement", depends=[dep("b")], marker=True, **setup)
         _no_reader_blocks(project)

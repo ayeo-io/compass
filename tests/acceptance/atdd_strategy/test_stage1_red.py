@@ -161,13 +161,23 @@ def test_trc_c6(tmp_path):
 
 
 def test_trc_c6_the_issue_still_reads_as_not_started(tmp_path):
-    """A stage 1 red is not the start of implement: `compass next` keeps the stage."""
+    """A stage 1 red is not the start of implement: `compass next` keeps the stage.
+    The `next:` part moves on, because the outer-loop red it named is now on record."""
+    from compass_pkg import next_cmd
+    from compass_pkg.core import normalize_spine
+
+    def stage():
+        return next_cmd._current_phase_from_task(
+            next_cmd._typed(normalize_spine(issue.manifest())), str(issue.dir))
+
     _, issue = _at_refine(tmp_path)
     issue.approach_record()
-    before = issue.must("next", "--issue", issue.slug)
+    before, was = issue.must("next", "--issue", issue.slug), stage()
     code, out, err = _red(issue, "--scenario", "TRC-1")
     assert code == 0, out + err
-    assert issue.must("next", "--issue", issue.slug) == before
+    after = issue.must("next", "--issue", issue.slug)
+    assert stage() == was == "refine"
+    assert after.split(" | next: ")[0] == before.split(" | next: ")[0], (before, after)
 
 
 @pytest.mark.parametrize("approach, registered", [

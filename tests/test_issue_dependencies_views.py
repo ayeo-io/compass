@@ -120,8 +120,10 @@ def test_dbi_17_board_card_and_panel(tmp_path):
 # --- DBI-20 -----------------------------------------------------------------------
 
 KEYS = ["issue", "reason", "until"]
-UNTIL = ["done", "in-review", "define", "refine", "plan", "breakdown", "implement", "verify",
-         "ship"]
+# The path stages first, then the legacy stages an entry written before the
+# four-stage path can name (ADR-092).
+UNTIL = ["done", "in-review", "specify", "build", "ship", "define", "refine", "plan",
+         "breakdown", "implement", "verify"]
 
 
 def doc_keys():

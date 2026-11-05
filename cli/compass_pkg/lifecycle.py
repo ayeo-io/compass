@@ -22,12 +22,12 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from compass_pkg import next_cmd, status_words
+from compass_pkg import next_cmd, path_stages, status_words
 from compass_pkg.core import load_manifest, manifest_path
 from compass_pkg.issue_layout import is_one_segment
 from compass_pkg.stable_ids import (
-    STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
-    STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
+    PATH_STAGE_IDS, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_BUILD, STAGE_DEFINE, STAGE_IDS,
+    STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_SHIP, STAGE_SPECIFY, STAGE_VERIFY)
 
 
 def _define_finished(manifest):
@@ -72,7 +72,9 @@ def _review_started(manifest):
 _STATE_OF_STAGE = {STAGE_ASSESS: "backlog", STAGE_DEFINE: "backlog",
                    STAGE_REFINE: "backlog", STAGE_PLAN: "in-progress",
                    STAGE_BREAKDOWN: "in-progress", STAGE_IMPLEMENT: "in-progress",
-                   STAGE_VERIFY: "in-review", STAGE_SHIP: "in-review"}
+                   STAGE_VERIFY: "in-review", STAGE_SHIP: "in-review",
+                   # The path stages (ADR-092). Ship is in review, as `verify` was.
+                   STAGE_SPECIFY: "backlog", STAGE_BUILD: "in-progress"}
 
 
 def _state_of_named_stage(manifest):
@@ -127,6 +129,17 @@ def status_errors(manifest, raw, task_dir):
     return errors
 
 
+def _path_state(manifest, task_dir):
+    """The state of a path issue from its stage (ADR-092): ready once specify is
+    done and no test is on record, in progress once one is, in review at ship."""
+    stage = next_cmd._current_phase_from_task(manifest, task_dir)
+    if stage == STAGE_SHIP:
+        return "in-review"
+    if stage == STAGE_BUILD:
+        return "in-progress" if next_cmd._testing_started(manifest, task_dir) else "ready"
+    return "backlog"
+
+
 def state_of(manifest, task_dir):
     if status_words.is_closed(manifest):
         return "done"
@@ -137,6 +150,8 @@ def state_of(manifest, task_dir):
     named = _state_of_named_stage(manifest)
     if named:
         return named
+    if path_stages.is_path_issue(manifest):
+        return _path_state(manifest, task_dir)
     if _work_started(manifest, task_dir):
         return "in-progress"
     if _define_finished(manifest) and _refine_finished(manifest, task_dir):
@@ -147,10 +162,15 @@ def state_of(manifest, task_dir):
 # --- dependencies between issues (ADR-062) --------------------------------------
 
 #: The values `until` takes, in the order every message lists them: the two
-#: workflow states, then each stage after assess. A manifest always reaches
-#: assess, so it is not a value.
+#: workflow states, each path stage after assess, then each legacy stage after
+#: assess that is not also a path stage. A manifest always reaches assess, so it
+#: is not a value. A legacy name stays valid on an entry written before the path
+#: (ADR-092); `reached` judges it through `stable_ids.LEGACY_TO_PATH`.
 UNTIL_STATES = ("done", "in-review")
-UNTIL_STAGES = tuple(STAGE_IDS[1:])
+UNTIL_STAGES = tuple(PATH_STAGE_IDS[1:]) + tuple(
+    s for s in STAGE_IDS[1:] if s not in PATH_STAGE_IDS)
+#: Every stage an issue can be at, on the path or on the legacy stages.
+KNOWN_STAGES = tuple(STAGE_IDS) + tuple(s for s in PATH_STAGE_IDS if s not in STAGE_IDS)
 UNTIL_VALUES = UNTIL_STATES + UNTIL_STAGES
 DEFAULT_UNTIL = "done"
 #: The keys of one `depends_on` entry, in the order the writer puts them.
@@ -321,7 +341,12 @@ def reached(until, state, stage, close_reason):
         return state == "in-review"
     if stage == "done":
         return True
-    return STAGE_IDS.index(stage) >= STAGE_IDS.index(until)
+    if stage in STAGE_IDS and until in STAGE_IDS:
+        # Both legacy: judged in the legacy order, so an old pair keeps its verdict.
+        return STAGE_IDS.index(stage) >= STAGE_IDS.index(until)
+    # A path stage on either side: both are judged as the path stages they show.
+    return (PATH_STAGE_IDS.index(path_stages.path_stage_of(stage))
+            >= PATH_STAGE_IDS.index(path_stages.path_stage_of(until)))
 
 
 def _judge_one(entry, slug, read):
@@ -337,7 +362,7 @@ def _judge_one(entry, slug, read):
         state = state_of(manifest, task_dir)
         close = status_words.close_reason(manifest) if state == "done" else None
         stage, problem = stage_of(manifest, task_dir, state)
-        if problem or (stage != "done" and stage not in STAGE_IDS):
+        if problem or (stage != "done" and stage not in KNOWN_STAGES):
             return Dependency(state=state, close_reason=close, fault=UNREADABLE,
                               cause=problem or "it names no stage", **base)
         found = dict(base, state=state, stage=stage, close_reason=close)
@@ -358,12 +383,15 @@ def judge(manifest, slug, read):
 
 
 def in_scope(manifest, task_dir, stage=None):
-    """Whether a dependency can block the issue now: it is at implement and
-    neither on hold nor done. A caller that already knows the stage passes it."""
+    """Whether a dependency can block the issue now: it is at implement, or at
+    build on the path, and neither on hold nor done. A caller that already knows
+    the stage passes it."""
     if status_words.is_closed(manifest) or status_words.is_held(manifest):
         return False
     if stage is None:
         stage, _problem = stage_of(manifest, task_dir, state_of(manifest, task_dir))
+    if path_stages.is_path_issue(manifest):
+        return stage == STAGE_BUILD
     return stage == STAGE_IMPLEMENT
 
 

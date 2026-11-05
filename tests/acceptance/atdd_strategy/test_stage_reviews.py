@@ -110,6 +110,15 @@ def _next(issue):
     return out
 
 
+def _stage(issue):
+    """The legacy stage the resolver gives, which the reviews act on. `compass
+    next` shows it as the path stage it maps to (ADR-092)."""
+    from compass_pkg import next_cmd
+    from compass_pkg.core import normalize_spine
+    return next_cmd._current_phase_from_task(
+        next_cmd._typed(normalize_spine(issue.manifest())), str(issue.dir))
+
+
 def _records(issue, kind="checkpoint-approval"):
     return [e for e in issue.manifest().get("evidence") or [] if e.get("type") == kind]
 
@@ -194,7 +203,8 @@ def test_trc_d4(tmp_path):
     assert [(r["outcome"], r["reason"]) for r in closed] == [("rejected", reason)], closed
     assert [r["checkpoint"] for r in _records(issue)] == ["implement"]
     line = _next(issue)
-    assert line.startswith("Verify"), line
+    # The stage 3 review sends the issue back to `verify`, which shows as Ship.
+    assert line.startswith("Ship"), line
     assert "stage 3 review" in line and reason in line, line
 
 
@@ -271,7 +281,8 @@ def test_trc_d8_autonomous(tmp_path):
     _end_of(issue, "implement")
     out = _next(issue)
     flat = " ".join(out.split())
-    assert out.startswith("Verify"), out
+    assert _stage(issue) == "verify"
+    assert out.startswith("Ship"), out
     assert "stage 2 review" in flat, out
     record = "compass issue checkpoint add implement --outcome skipped --by builder"
     assert record in flat, out

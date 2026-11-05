@@ -72,6 +72,17 @@ def _next(root):
     return out
 
 
+def _stage(root):
+    """The legacy stage the resolver gives, which the checkpoints act on.
+    `compass next` shows it as the path stage it maps to (ADR-092)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "cli"))
+    from compass_pkg import next_cmd
+    from compass_pkg.core import normalize_spine
+    task_dir = manifest_file(root).parent
+    return next_cmd._current_phase_from_task(
+        next_cmd._typed(normalize_spine(manifest(root))), str(task_dir))
+
+
 def _approvals(root):
     return [e for e in manifest(root).get("evidence") or []
             if e.get("type") == "artifact-approval" and e.get("decisions")]
@@ -160,7 +171,8 @@ def test_asw_28_balanced_define_checkpoint_waits_once(tmp_path):
     assert len(records) == 1 and records[0]["decisions"] == ["D-1", "D-2"]
     assert records[0]["approver"] == "jed72" and records[0]["stage"] == "define"
     assert {d["status"] for d in _decisions(root).values()} == {"confirmed"}
-    assert _next(root).splitlines()[0].startswith("Refine")
+    assert _stage(root) == "refine"
+    assert _next(root).splitlines()[0].startswith("Specify")
     # Nothing is left to confirm.
     assert approve(root, "--decisions")[0] == 2
 
@@ -196,7 +208,8 @@ def test_asw_29_controlled_define_checkpoint_waits(tmp_path):
 def test_asw_30_autonomous_lists_without_waiting(tmp_path):
     root = _waiting_project(tmp_path, [], [_entry("D-1"), _entry("D-2")])
     out = _next(root)
-    assert out.splitlines()[0].startswith("Refine")
+    assert _stage(root) == "refine"
+    assert out.splitlines()[0].startswith("Specify")
     assert "Waiting" not in out
     assert "Answer D-1." in out and "Answer D-2." in out
     assert {d["status"] for d in _decisions(root).values()} == {"open"}
@@ -245,7 +258,8 @@ def test_asw_32_later_decision_waits_at_next_checkpoint(tmp_path):
                          "--issue", SLUG)
     assert code == 0, out + err
     out = _next(root)
-    assert "Waiting" not in out and out.splitlines()[0].startswith("Breakdown")
+    assert _stage(root) == "breakdown"
+    assert "Waiting" not in out and out.splitlines()[0].startswith("Build")
     assert _decisions(root)["D-5"]["status"] == "open"
 
 

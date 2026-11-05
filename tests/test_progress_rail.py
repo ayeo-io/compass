@@ -8,7 +8,10 @@ condition must keep today's output byte for byte: `tests/fixtures/next-golden.js
 holds that output, captured before the rail existed, for each route below.
 The next-never-leaves-assess issue re-captured two states per route, because
 `compass next` now derives the stage from the records: "fresh" moved from Assess to Define, and
-"gates-pass" from all phases complete to Ship.
+"gates-pass" from all phases complete to Ship. The four-stage path (ADR-092)
+re-captured every open state: each issue here is assessed on the legacy
+stages, so its stage shows as the path stage it maps to, and the line gains a
+`next:` part.
 
 Regenerate the golden file only for a deliberate change to `compass next`'s
 plain output: `python3 tests/test_progress_rail.py --regen`.
@@ -192,20 +195,33 @@ def test_a_terminal_shows_a_rail_with_one_current_marker(tmp_path):
     assert plain.split("\n")[0] == "regular · feature-implementing", plain
     rail = " ".join(_rail_lines(out))
     assert rail.count("●") == 1, rail
-    assert "Implement ●" in rail, rail
-    assert "Assess ✓" in rail and "Verify ○" in rail and "Ship ○" in rail, rail
+    # An issue assessed before the path is drawn on the four path stages: its
+    # legacy implement stage shows as Build (ADR-092).
+    assert "Build ●" in rail, rail
+    assert "Assess ✓" in rail and "Specify ✓" in rail and "Ship ○" in rail, rail
     assert "\x1b[" in out, "a terminal with no NO_COLOR gets colour"
 
 
+def _skip_specify(root: Path, slug: str) -> None:
+    """Skip every legacy stage that shows as Specify, so the path rail has a
+    skipped stage: a path stage is skipped only when all of its legacy stages
+    are (ADR-092). A shipped quick fix still runs define."""
+    import yaml
+    path = root / ".compass" / "work" / slug / "manifest.yml"
+    m = yaml.safe_load(path.read_text())
+    m["stages"].update(define="skipped", refine="collapsed", plan="collapsed")
+    path.write_text(yaml.safe_dump(m, sort_keys=False))
+
+
 def test_a_skipped_stage_is_shown_not_left_out(tmp_path):
-    """RL-C: the quick fix collapses most stages; each still appears."""
+    """RL-C: a stage the approach skips still appears, marked skipped."""
     root = _build(tmp_path, "quick-fix/implementing")
+    _skip_specify(root, "quick-fix-implementing")
     code, out = _tty(root)
     rail = " ".join(_rail_lines(out))
-    for stage in ("Assess", "Define", "Refine", "Plan", "Breakdown", "Implement",
-                  "Verify", "Ship"):
+    for stage in ("Assess", "Specify", "Build", "Ship"):
         assert stage in rail, (stage, rail)
-    assert "–" in rail, rail
+    assert "Specify –" in rail, rail
 
 
 def test_no_color_drops_the_colour_codes(tmp_path):
@@ -219,6 +235,7 @@ def test_compass_color_never_uses_ascii_markers(tmp_path):
     """RL-E: with COMPASS_COLOR=never, the rail uses ASCII markers and no
     colour codes."""
     root = _build(tmp_path, "quick-fix/implementing")
+    _skip_specify(root, "quick-fix-implementing")
     code, out = _tty(root, COMPASS_COLOR="never")
     rail = " ".join(_rail_lines(out))
     assert "\x1b[" not in out, repr(out)
@@ -279,7 +296,7 @@ def test_a_terminal_that_cannot_encode_the_rail_gets_a_working_output(tmp_path, 
     code, out = _tty(root, **env)
     assert code == 0, out
     assert out.isascii(), out
-    assert "Implement [gate: verify.correctness]" in out, out
+    assert "Build [gate: verify.correctness]" in out, out
     if colour == "never":
         assert "[>]" in out, out
 
@@ -321,11 +338,12 @@ def test_a_narrow_terminal_wraps_the_rail(tmp_path, case):
     """RL-F: every line fits, the plain line under the rail included. A
     quick-fix's plain line names its collapsed stages, so it is the longest."""
     root = _build(tmp_path, case)
-    code, out = _tty(root, columns=40)
+    # 30 columns: the four path stages fit on one line of 40.
+    code, out = _tty(root, columns=30)
     rail = _rail_lines(out)
     assert len(rail) > 1, rail
     for line in ANSI.sub("", out).split("\n"):
-        assert len(line) <= 40, line
+        assert len(line) <= 30, line
     assert " ".join(rail).count("●") == 1, rail
 
 

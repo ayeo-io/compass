@@ -23,21 +23,26 @@ A reader calls `lifecycle.entries` and `lifecycle.judge` rather than reading the
 
 ## The `until` values
 
-`until` takes exactly one of nine lower-case words. The other issue is read in this checkout.
+`until` takes exactly one of eleven lower-case words. The other issue is read in this checkout.
 
 | Value | Met when the depended-on issue ... |
 |---|---|
 | `done` | is `done` with close reason `completed`. |
 | `in-review` | is `in-review`, or `done` with close reason `completed`. |
-| `define`, `refine`, `plan`, `breakdown`, `implement`, `verify`, `ship` | is at that stage or a later one in that order, or is `done` with close reason `completed`. "At a stage" means the stage `compass next` names for it. |
+| `specify`, `build`, `ship` | is at that path stage or a later one, or is `done` with close reason `completed`. |
+| `define`, `refine`, `plan`, `breakdown`, `implement`, `verify` | is at that stage or a later one in the legacy order, or is `done` with close reason `completed`. |
 
-- A dependency closed as `not-planned` or `duplicate` meets none of the nine values. The lint finding says so and names `compass issue depends remove`.
+"At a stage" means the stage the resolver of `compass next` gives for the issue. An issue assessed before the four-stage path (ADR-092) is at a legacy stage, and `compass next` shows it as the path stage it maps to: `define`, `refine` and `plan` show as `specify`; `breakdown` and `implement` as `build`; `verify` and `ship` as `ship`.
+
+- When both the `until` value and the issue's stage are legacy names, they are compared in the legacy order, so an entry written before the path keeps its verdict.
+- When either one is a path stage, both are compared as the path stages they map to. A path issue that waits for an old one, and the reverse, are both judged.
+- A dependency closed as `not-planned` or `duplicate` meets none of the eleven values. The lint finding says so and names `compass issue depends remove`.
 - A dependency on hold (state `backlog`) is judged by the same rules: its stage comes from its records.
 - `assess`, `backlog`, `ready` and `in-progress` are not values.
 
 ## When the block counts
 
-The block counts only while the waiting issue is at the implement stage, as `compass next` names it, and is not on hold and not done. An issue at an earlier stage is not blocked, but the board card still says what it waits for. The stored `blocked` flag keeps its own rule (in-progress or in-review only, ADR-045) and is not changed. Where both apply, the board shows the stored reason first.
+The block counts only while the waiting issue is at the implement stage (at build, for an issue on the four-stage path), as the resolver of `compass next` gives it, and is not on hold and not done. An issue at an earlier stage is not blocked, but the board card still says what it waits for. The stored `blocked` flag keeps its own rule (in-progress or in-review only, ADR-045) and is not changed. Where both apply, the board shows the stored reason first.
 
 ## What the hook reads
 
@@ -60,7 +65,7 @@ A fault never stops work. Each case below allows the edit with one warning line 
 
 - a dependency with no manifest in this checkout;
 - a manifest that does not parse;
-- an `until` that is not one of the nine values;
+- an `until` that is not one of the eleven values;
 - an entry that is not the shape above, or a `depends_on` that is not a list;
 - a direct cycle between two issues, which no reader counts as an unmet wait.
 
@@ -88,7 +93,7 @@ Both re-render the waiting issue's page and the pages of the issues its manifest
 
 | Reader | Shows |
 |---|---|
-| `compass next` | At implement, ` \| blocked: waits for b to reach done` after the usual parts. Only the dependency block, never a fault; lint is where faults show. |
+| `compass next` | At implement (build on the path), ` \| blocked: waits for b to reach done` after the usual parts. Only the dependency block, never a fault; lint is where faults show. |
 | The board card | The line "waits for b" for an open issue with an unmet dependency whose issue was read, and the blocked flag with the wait while the issue is at implement. |
 | The board panel | A Dependencies part: for each entry the slug, the reason, `until <value>`, the state, and one word - `met`, `waiting`, `not found` or `unreadable`. |
 | `compass flow --json` | Every row holds `depends_on`: a list of objects with the keys `issue`, `reason`, `until`, `state`, `stage` and `met`. The list is empty for an issue with none. A dependency that was not read has `state` and `stage` null and `met` false. |

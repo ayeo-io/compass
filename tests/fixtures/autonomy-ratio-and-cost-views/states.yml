@@ -5,6 +5,8 @@
 # removed multiagent-run-recorded, which had nothing to check here (ADR-090).
 # Each is four lower again: 9.0.0 removed the four checks of the removed
 # documents from the live default (ADR-091), and each had nothing to check here.
+# On the four-stage path (ADR-092) compass next shows each legacy stage as the
+# path stage it maps to and adds a next: part; the next-*.txt lines were edited so.
 next-broken.txt: |
   exit 2
   --- stdout
@@ -24,7 +26,7 @@ lint-broken.txt: |
 next-building.txt: |
   exit 0
   --- stdout
-  Implement [gate: verify.correctness]
+  Build [gate: verify.correctness] | next: compass tdd-green --scenario BUILDING-1 -- <test command>
   --- stderr
 check-building.txt: |
   exit 1
@@ -81,7 +83,7 @@ lint-dup.txt: |
 next-flagged.txt: |
   exit 0
   --- stdout
-  Implement [gate: verify.correctness]
+  Build [gate: verify.correctness] | next: compass tdd-green --scenario FLAGGED-1 -- <test command>
   --- stderr
 check-flagged.txt: |
   exit 1
@@ -100,7 +102,7 @@ lint-flagged.txt: |
 next-held.txt: |
   exit 0
   --- stdout
-  Plan [gate: verify.correctness]
+  Specify [gate: verify.correctness] | next: compass tdd-red --scenario HELD-1 -- <test command>
   --- stderr
 check-held.txt: |
   exit 1
@@ -119,7 +121,7 @@ lint-held.txt: |
 next-held-flag.txt: |
   exit 0
   --- stdout
-  Plan [gate: verify.correctness]
+  Specify [gate: verify.correctness] | next: compass tdd-red --scenario HELD-FLAG-1 -- <test command>
   --- stderr
 check-held-flag.txt: |
   exit 1
@@ -139,7 +141,7 @@ lint-held-flag.txt: |
 next-odd.txt: |
   exit 0
   --- stdout
-  Plan [gate: verify.correctness]
+  Specify [gate: verify.correctness] | next: compass tdd-red --scenario ODD-1 -- <test command>
   --- stderr
 check-odd.txt: |
   exit 1
@@ -159,7 +161,7 @@ lint-odd.txt: |
 next-planning.txt: |
   exit 0
   --- stdout
-  Breakdown [gate: verify.correctness]
+  Build [gate: verify.correctness] | next: compass tdd-red --scenario PLANNING-1 -- <test command>
   --- stderr
 check-planning.txt: |
   exit 1
@@ -204,7 +206,7 @@ lint-queued.txt: |
 next-ready.txt: |
   exit 0
   --- stdout
-  Plan [gate: verify.correctness]
+  Specify [gate: verify.correctness] | next: compass tdd-red --scenario READY-1 -- <test command>
   --- stderr
 check-ready.txt: |
   exit 1
@@ -223,7 +225,7 @@ lint-ready.txt: |
 next-refining.txt: |
   exit 0
   --- stdout
-  Refine [gate: verify.correctness]
+  Specify [gate: verify.correctness] | next: compass tdd-red --scenario REFINING-1 -- <test command>
   --- stderr
 check-refining.txt: |
   exit 1
@@ -242,7 +244,7 @@ lint-refining.txt: |
 next-reviewing.txt: |
   exit 0
   --- stdout
-  Verify [gate: verify.traceability]
+  Ship [gate: verify.traceability] | next: compass tdd-red --scenario REVIEWING-1 -- <test command>
   --- stderr
 check-reviewing.txt: |
   exit 1

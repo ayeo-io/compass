@@ -96,6 +96,8 @@ The evidence check for an in-progress issue works out the hash of the files the 
 - **`unreadable` rows** gain `tree`, `manifest_path` and `also_in`.
 - **Every row** gains `depends_on`, a list with one object for each entry of the issue's `depends_on` (keys `issue`, `reason`, `until`, `state`, `stage` and `met`), or an empty list. The card and the panel read it (`docs/issue-dependencies.md`).
 
+A row's `lane` is `backlog`, `done`, or the stage the issue is at. The stage lanes are the issue's own stages (`path_stages.stages_of`): an issue on the four-stage path (ADR-092) sits in the lane of a path stage (`assess`, `specify`, `build` or `ship`), and an issue assessed before the path keeps the lane of its legacy stage.
+
 No key is removed, renamed or retyped, and a test pins the full key set. A row the page cannot place stays in the section it had in 6.0.0 and carries an `unplaceable` reason.
 
 The approach, state, stage, gate count and documents of a row come from `issue_detail.detail` (`cli/compass_pkg/issue_detail.py`), which `board()` calls through its module. The header block of the issue page (`docs/rendered-blocks.md`) calls the same function, so the panel and the page cannot disagree. The board can read an issue from another worktree while the page reads this checkout, and the page names `compass board render` instead of linking the board file.

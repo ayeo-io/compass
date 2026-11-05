@@ -88,7 +88,7 @@ def render(cwd: str, width: int = 80) -> str:
     from compass_pkg.core import (artifact_path, display_shape, display_stage,
                                   load_yaml, manifest_path, normalize_spine)
     from compass_pkg import status_words
-    from compass_pkg.next_cmd import _current_phase_from_task, _typed
+    from compass_pkg.next_cmd import _current_phase_from_task, _typed, shown_stage
 
     path = manifest_path(task_dir)
     if not os.path.isfile(path):
@@ -107,8 +107,9 @@ def render(cwd: str, width: int = 80) -> str:
         stage = "done"
     else:
         phase = _current_phase_from_task(task, task_dir)
-        # Capitalised as `compass next` prints it, so the two read the same.
-        stage = display_stage(phase).capitalize() if phase else "done"
+        # Capitalised and shown as a path stage as `compass next` prints it, so
+        # the two read the same: a legacy stage shows as the path stage it maps to.
+        stage = display_stage(shown_stage(phase)).capitalize() if phase else "done"
     fields = ["compass", slug]
     approach = task.get("delivery_approach")
     if approach:

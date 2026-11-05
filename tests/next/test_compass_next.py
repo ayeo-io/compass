@@ -15,11 +15,12 @@ Design decisions honoured:
   - Shows collapsed stages on quick-fix delivery approaches (TRC-C5).
   - One line output (TRC-C4).
 
-Output format chosen (devlog entry):
-  "<NextPhase> [gate: <next-gate>][ | <phase> collapsed in this approach]"
+Output format chosen (devlog entry), with the stage shown as a path stage and
+the `next:` command added by the four-stage path (ADR-092):
+  "<Stage> [gate: <next-gate>] | next: <command>[ | <phase> collapsed in this approach]"
   Examples:
-    "Define [gate: verify.correctness]"
-    "Plan [gate: verify.correctness] | Define collapsed in this approach"
+    "Specify [gate: verify.correctness] | next: compass scenario add ..."
+    "Specify [gate: verify.correctness] | next: ... | Define collapsed in this approach"
     "all phases complete"   <- when the issue has landed
   This is deliberately plain (no colour escapes) so it is clear in a terminal
   and in logged output.
@@ -293,7 +294,15 @@ class TestNextShowsCollapsedPhases:
 
         result = run_next(project)
         assert result.returncode == 0
-        assert "Plan" in result.stdout
+        # The legacy plan stage stays the stage the readers act on, and shows as
+        # Specify, the path stage it maps to (ADR-092).
+        sys.path.insert(0, str(FRAMEWORK_ROOT / "cli"))
+        from compass_pkg import next_cmd
+        from compass_pkg.core import normalize_spine
+        task_dir = project / ".compass" / "work" / "express-task"
+        assert next_cmd._current_phase_from_task(
+            next_cmd._typed(normalize_spine(task_body)), str(task_dir)) == "plan"
+        assert result.stdout.startswith("Specify [gate: verify.correctness] | next: ")
 
 
 # ---------------------------------------------------------------------------

@@ -130,6 +130,7 @@ same commit.
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |
 | `cli/compass_pkg/flow.py` | `docs/board.md` |
 | `cli/compass_pkg/next_cmd.py`, `cli/compass_pkg/render.py`, `cli/compass_pkg/statusline.py`, `bin/compass-statusline` | `docs/quickstart.md` |
+| `cli/compass_pkg/next_step.py`, `tests/test_next_step.py` | `docs/quickstart.md` (the table of next commands) |
 | `cli/compass`, `cli/compass_pkg/verb_help.py`, `cli/compass_pkg/lineage.py` | `README.md` |
 | `scripts/release.sh`, `scripts/build-plugin-copy.py`, `scripts/plugin-files.txt`, `.claude-plugin/marketplace.json`, `Makefile`, `VERSION` | `docs/releasing.md` |
 | `.github/workflows/`, `scripts/ci-*.py` | `docs/releasing.md` |

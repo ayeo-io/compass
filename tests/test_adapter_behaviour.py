@@ -54,7 +54,13 @@ def test_quick_fix_and_local_handoff(tmp_path, first, second):
     assert manifest_path.read_bytes() == before
     assert {path.name: path.read_bytes()
             for path in (resumed.issue_dir / "evidence").iterdir() if path.is_file()} == evidence_before
-    assert "implement" in resumed.cli("next", "--issue", started.slug).stdout.lower()
+    # The legacy implement stage shows as Build, the path stage it maps to (ADR-092).
+    from compass_pkg import next_cmd
+    from compass_pkg.core import normalize_spine
+    assert next_cmd._current_phase_from_task(
+        next_cmd._typed(normalize_spine(resumed.manifest())), str(resumed.issue_dir)) \
+        == "implement"
+    assert "build" in resumed.cli("next", "--issue", started.slug).stdout.lower()
     resumed.fix("quick-fix")
     resumed.finish_quick_fix()
     result = resumed.manifest()

@@ -105,3 +105,16 @@ def test_contract_4_next_reads_the_approach_from_the_manifest():
     assert cc.differences(entry, cc.Outcome(2, "", "delivery-approach.md is missing"))
     assert cc.differences(entry, cc.Outcome(1, "", ""))
     assert cc.EXIT_CHANGED_IN_9_0_0 == {"next-regular-without-approach-record": 0}
+
+
+def test_contract_4_next_shows_the_path_stage():
+    """`compass next` shows the legacy implement stage as Build, the path stage it maps
+    to (ADR-092). The entry's recorded "Implement" is compared as "Build": the old word
+    alone, or another exit, still differs."""
+    entry = next(e for e in ENTRIES if e["id"] == "next-quick-fix")
+    assert entry["stdout_contains"] == "Implement"
+    line = "Build [gate: verify.correctness] | next: compass tdd-red --scenario A -- x"
+    assert cc.differences(entry, cc.Outcome(0, line, "")) == []
+    assert cc.differences(entry, cc.Outcome(0, "Implement [gate: verify.correctness]", ""))
+    assert cc.differences(entry, cc.Outcome(1, line, ""))
+    assert cc.PHRASE_CHANGED_IN_9_0_0 == {"next-quick-fix": ("Implement", "Build")}

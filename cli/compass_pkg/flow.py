@@ -32,12 +32,12 @@ import re as _re
 import fnmatch
 import re as _re
 import glob
-from compass_pkg import parse_cache, status_words
+from compass_pkg import parse_cache, path_stages, status_words
 from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import (CompassError, find_compass_dir, find_governance,
                               load_yaml, manifest_path, normalize_spine)
 from compass_pkg.rework import cmd_rework_scan
-from compass_pkg.stable_ids import APPROACH_SPIKE, STAGE_IDS, STAGE_SHIP
+from compass_pkg.stable_ids import APPROACH_SPIKE, PATH_STAGE_IDS, STAGE_IDS, STAGE_SHIP
 
 
 
@@ -352,7 +352,7 @@ def _why_fields(m):
         problems.append("schema_version %s is not one this Compass reads"
                         % m.get("schema_version"))
     named = m.get("current_phase")
-    if isinstance(named, str) and named.strip().lower() not in STAGE_IDS:
+    if isinstance(named, str) and named.strip().lower() not in STAGE_IDS + PATH_STAGE_IDS:
         problems.append("current_phase %r names no stage" % named)
     assessment, raw = None, m.get("assessment")
     if isinstance(raw, dict) and raw:
@@ -392,14 +392,16 @@ def _why_fields(m):
     return fields, (problems[0] if problems else None)
 
 
-def _lane_of(row, recorded, held, stage):
+def _lane_of(row, recorded, held, stage, m):
     """The lane the page puts an open issue in (decided here, never again by
-    the page). An unplaceable issue has none."""
+    the page). An unplaceable issue has none. The stage lanes are the issue's
+    own stages (`path_stages.stages_of`): a path issue sits in a path stage's
+    lane, and an issue assessed before the path keeps its legacy stage's lane."""
     if row["unplaceable"]:
         return None
     if not recorded or held:
         return "backlog"
-    if stage in STAGE_IDS:
+    if stage in path_stages.stages_of(m) or stage in STAGE_IDS:
         return stage
     return STAGE_SHIP if stage == "done" else None
 
@@ -450,12 +452,12 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state, r
             src["tree_root"], slug, str(m.get("created") or "")))
         row["stage"], stage_problem = facts.stage, facts.stage_problem
         row["unplaceable"] = problem or stage_problem
-        row["lane"] = _lane_of(row, recorded, held, row["stage"])
+        row["lane"] = _lane_of(row, recorded, held, row["stage"], m)
         out["backlog"].append(row)
     elif state == "ready":
         row["stage"], stage_problem = facts.stage, facts.stage_problem
         row["unplaceable"] = problem or stage_problem
-        row["lane"] = _lane_of(row, recorded, held, row["stage"])
+        row["lane"] = _lane_of(row, recorded, held, row["stage"], m)
         out["ready"].append(row)
     elif state == "done":
         row["unplaceable"] = problem
@@ -467,7 +469,7 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state, r
         if facts.stage_problem:
             raise TypeError(facts.stage_problem)
         row.update(stage=facts.stage, evidence=evidence, unplaceable=problem)
-        row["lane"] = _lane_of(row, recorded, held, row["stage"])
+        row["lane"] = _lane_of(row, recorded, held, row["stage"], m)
         if evidence == "stale":
             out["stale"].append(row)
         else:

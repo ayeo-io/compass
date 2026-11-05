@@ -2,7 +2,9 @@
 next-never-leaves-assess issue, scenarios NS-A to NS-I.
 
 The stage is derived from the records on disk. The status line and the rail
-take it from the same place, so all three must agree.
+take it from the same place, so all three must agree. These issues are assessed
+on the legacy stages: the resolver gives the legacy stage, which every reader
+acts on, and the three show it as the path stage it maps to (ADR-092).
 
 Each test builds a project with `compass approach evaluate`, then adds the
 records a stage leaves, as the commands write them: documents registered as
@@ -129,6 +131,25 @@ def _next(root: Path) -> str:
     return "done" if out == "all phases complete" else out.split()[0].split("[")[0]
 
 
+def _resolved(root: Path) -> str:
+    """The legacy stage the resolver gives, which every reader acts on, or
+    "done". `compass next` shows it as the path stage it maps to (ADR-092)."""
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import next_cmd, status_words
+    from compass_pkg.core import load_yaml, normalize_spine
+    task_dir = root / ".compass" / "work" / SLUG
+    task = next_cmd._typed(normalize_spine(load_yaml(str(task_dir / "manifest.yml"))))
+    if status_words.is_closed(task):
+        return "done"
+    return (next_cmd._current_phase_from_task(task, str(task_dir)) or "done").capitalize()
+
+
+def _shown(stage: str) -> str:
+    """The path stage `compass next` prints for a legacy stage."""
+    from compass_pkg.stable_ids import LEGACY_TO_PATH
+    return stage if stage == "done" else LEGACY_TO_PATH[stage.lower()].capitalize()
+
+
 def _statusline(root: Path) -> str:
     r = subprocess.run([str(SHIM)], input=json.dumps({"cwd": str(root)}),
                        capture_output=True, text=True, env=_env(COLUMNS="200"), timeout=30)
@@ -206,13 +227,15 @@ def test_next_reports_the_stage_the_records_show(tmp_path, case):
     """NS-A to NS-F: each set of records gives the stage the issue has reached."""
     kwargs, expected = CASES[case]
     _issue(tmp_path, **kwargs)
-    assert _next(tmp_path) == expected, case
+    assert _resolved(tmp_path) == expected, case
+    assert _next(tmp_path) == _shown(expected), case
 
 
 def test_current_phase_overrides_the_records(tmp_path):
     """NS-G: fixtures that set the key keep their meaning."""
     _issue(tmp_path, "feature", criteria="draft", green=SCENARIOS, current_phase="plan")
-    assert _next(tmp_path) == "Plan"
+    assert _resolved(tmp_path) == "Plan"
+    assert _next(tmp_path) == "Specify"
 
 
 @pytest.mark.parametrize("case", [c for c, (_, stage) in CASES.items() if stage != "done"])
@@ -220,9 +243,10 @@ def test_status_line_and_rail_name_the_same_stage(tmp_path, case):
     """NS-H: the status line and the rail name the same stage as `compass next`."""
     kwargs, expected = CASES[case]
     _issue(tmp_path, **kwargs)
-    assert _next(tmp_path) == expected
-    assert f" · {expected} · " in _statusline(tmp_path), (case, _statusline(tmp_path))
-    assert _rail_current(tmp_path) == expected, case
+    shown = _shown(expected)
+    assert _next(tmp_path) == shown
+    assert f" · {shown} · " in _statusline(tmp_path), (case, _statusline(tmp_path))
+    assert _rail_current(tmp_path) == shown, case
 
 
 def test_a_landed_issue_reads_done_on_the_status_line(tmp_path):

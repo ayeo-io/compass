@@ -68,9 +68,9 @@
           "reason": {"type": "string", "minLength": 1, "description": "Why this issue waits for it."},
           "until": {
             "type": "string",
-            "enum": ["done", "in-review", "define", "refine", "plan", "breakdown", "implement", "verify", "ship"],
+            "enum": ["done", "in-review", "specify", "build", "ship", "define", "refine", "plan", "breakdown", "implement", "verify"],
             "default": "done",
-            "description": "The point the other issue must reach: done (closed as completed), in-review, or a stage it must be at or past. Written on every entry; done when not given."
+            "description": "The point the other issue must reach: done (closed as completed), in-review, or a stage it must be at or past. A stage is a path stage (specify, build, ship) or, on an entry written before the four-stage path, a legacy stage, judged as the path stage it maps to when either issue is on the path (ADR-092). Written on every entry; done when not given."
           }
         }
       }

@@ -37,10 +37,11 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import status_words
+from compass_pkg import next_step, path_stages, status_words
 from compass_pkg.stable_ids import (
-    APPROACH_QUICK_FIX, REMOVED_GATE_IDS, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS,
-    STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
+    APPROACH_QUICK_FIX, LEGACY_TO_PATH, PATH_STAGE_IDS, REMOVED_GATE_IDS, STAGE_ASSESS,
+    STAGE_BREAKDOWN, STAGE_BUILD, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
+    STAGE_REFINE, STAGE_SHIP, STAGE_SPECIFY, STAGE_VERIFY)
 from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import (CompassError, artifact_path, canonical_shape, manifest_path,
                               normalize_spine, resolve_issue_dir)
@@ -54,7 +55,10 @@ from compass_pkg.core import (CompassError, artifact_path, canonical_shape, mani
 # and the .red marker for a red the manifest does not list.
 #
 # The plain line, which is all piped output and the model ever see:
-#   "<NextPhase> [gate: <gate-id>][ | <phase> collapsed in this approach]"
+#   "<Stage> [gate: <gate-id>] | next: <command>[ | <phase> collapsed in this approach]"
+# <Stage> is a stage of the four-stage path (ADR-092). An issue assessed before
+# the path is still judged on its legacy stages; only the word shown is mapped
+# (`stable_ids.LEGACY_TO_PATH`). <command> comes from `next_step`.
 # When the issue has landed:
 #   "all phases complete"
 # When the manifest records no delivery approach:
@@ -210,6 +214,36 @@ def _every_scenario_tested(task: dict) -> bool:
     return bool(ids) and all(i in tested for i in ids)
 
 
+def _path_stages_on_record(task: dict, task_dir: str | None) -> set:
+    """The path stages the records show as done, on a path issue (ADR-092).
+
+    Assess is done once the approach and `evidence_required` are set; specify
+    once each scenario has an id, an intent and a declared test, and the
+    `specify` checkpoint has an outcome where it is listed; build once each
+    scenario that is not narrative has a red no later than its first green, and
+    the green. Ship's record, a closed issue, is handled by the callers. As on
+    the legacy stages, a later stage's record means every stage before it is
+    done.
+    """
+    from compass_pkg.red_first import scenario_reds
+    specified = next_step.scenarios_specified(task) and (
+        not next_step.specify_listed(task) or next_step.specify_handed_off(task))
+    ids = [s["id"] for s in next_step.needing_tests(task)]
+    reds = scenario_reds(task, task_dir) if task_dir else {"no_red": ids, "late": []}
+    green = next_step.greens(task)
+    built = (specified and not reds["no_red"] and not reds["late"]
+             and all(i in green for i in ids))
+    own = {
+        STAGE_ASSESS: bool(task.get("delivery_approach")),
+        STAGE_SPECIFY: specified,
+        STAGE_BUILD: built,
+        STAGE_SHIP: False,
+    }
+    order = path_stages.stages_of(task)
+    reached = max((i for i, p in enumerate(order) if own.get(p)), default=-1)
+    return set(order[:reached + 1])
+
+
 def _stages_on_record(task: dict, task_dir: str | None) -> set:
     """The stages the records on disk show as done.
 
@@ -218,8 +252,10 @@ def _stages_on_record(task: dict, task_dir: str | None) -> set:
     a hand-off nobody recorded before the builder started. `compass next` cannot
     run without the approach record, so assess is always done. Ship's
     record, a closed issue, is handled by the callers before they ask for
-    a stage.
+    a stage. A path issue has its own records (`_path_stages_on_record`).
     """
+    if path_stages.is_path_issue(task):
+        return _path_stages_on_record(task, task_dir)
     own = {
         STAGE_ASSESS: True,
         # A quick fix earns no criteria document; its scenarios are define's
@@ -267,8 +303,11 @@ def _current_phase_from_task(task: dict, task_dir: str | None = None) -> str | N
     cp = task.get("current_phase")
     if cp and isinstance(cp, str):
         return cp.strip().lower()
-    phases = task.get("stages") or {}
     done = _stages_on_record(task, task_dir)
+    if path_stages.is_path_issue(task):
+        # The path stages have no modes, so none is skipped.
+        return next((p for p in path_stages.stages_of(task) if p not in done), None)
+    phases = task.get("stages") or {}
     for p in _PHASE_ORDER:
         weight = (phases.get(p) or "").strip().lower()
         if weight not in _SKIPPED_WEIGHTS and p not in done:
@@ -289,6 +328,28 @@ def _unmet_entry(task: dict, task_dir: str, stage: str) -> list:
         return []
 
 
+def shown_stage(stage):
+    """The stage word a reader shows: a legacy stage shows as the path stage it
+    maps to (`stable_ids.LEGACY_TO_PATH`); any other name is shown as it is."""
+    return path_stages.path_stage_of(stage) or stage
+
+
+def _rail_order(task):
+    """`(stages, weights)` the rail draws. A path issue has its path stages and no
+    modes. An old issue is drawn on the four path stages too, and a path stage is
+    skipped only when every legacy stage it shows is skipped or collapsed."""
+    if path_stages.is_path_issue(task):
+        return path_stages.stages_of(task), {}
+    legacy = task.get("stages") or {}
+    weights = {}
+    for stage in PATH_STAGE_IDS:
+        mapped = [str(legacy.get(k) or "").strip().lower()
+                  for k, p in LEGACY_TO_PATH.items() if p == stage and k in legacy]
+        if mapped and all(w in _SKIPPED_WEIGHTS for w in mapped):
+            weights[stage] = "skipped"
+    return PATH_STAGE_IDS, weights
+
+
 def _emit(args, task, task_dir, line, current_phase, finished, hint=True):
     """Write `line`, today's output, opened by the rail when a person is
     reading. compass_pkg.render decides that; piped output, `CLAUDECODE`,
@@ -305,13 +366,17 @@ def _emit(args, task, task_dir, line, current_phase, finished, hint=True):
     try:
         approach = task.get("delivery_approach") or ""
         slug = task.get("issue") or os.path.basename(task_dir.rstrip(os.sep))
-        states = stage_states(_PHASE_ORDER, task.get("stages") or {}, current_phase,
-                             finished, _SKIPPED_WEIGHTS)
+        order, weights = _rail_order(task)
+        shown = shown_stage(current_phase) if current_phase else None
+        states = stage_states(order, weights, shown, finished, _SKIPPED_WEIGHTS)
         out = [header([display_shape(approach), slug], style)]
         out += rail([(display_stage(k).capitalize(), st) for k, st in states], style)
         # The plain line is wrapped here only; piped output keeps it whole.
         out += [""] + wrap(line.rstrip("\n"))
-        if hint and not finished and current_phase in _PHASE_ORDER:
+        # The stage commands still serve an issue assessed before the path. A
+        # path issue's line already names its next command.
+        if hint and not finished and current_phase in _PHASE_ORDER \
+                and not path_stages.is_path_issue(task):
             quick = canonical_shape(approach) == APPROACH_QUICK_FIX
             out += wrap("Next: /compass:" + ("quick-fix" if quick else display_stage(current_phase)))
         text = "\n".join(out) + "\n"
@@ -373,7 +438,8 @@ def cmd_next(args):
     # issue is ship's record.
     gates = task.get("gates") or []
     if status_words.is_closed(task):
-        _emit(args, task, task_dir, "all phases complete\n", None, True)
+        if not _json_document(args, ["all phases complete\n"], None):
+            _emit(args, task, task_dir, "all phases complete\n", None, True)
         return 0
 
     # --- determine next stage and collapsed siblings ---
@@ -385,7 +451,8 @@ def cmd_next(args):
     next_phase = current_phase
     if not next_phase:
         # No current stage derivable - delivery approach is complete or degenerate
-        _emit(args, task, task_dir, "all phases complete\n", None, True)
+        if not _json_document(args, ["all phases complete\n"], None):
+            _emit(args, task, task_dir, "all phases complete\n", None, True)
         return 0
 
     # The stage 2 and 3 reviews of strategy `S17`: a rejected one sends the
@@ -402,9 +469,13 @@ def cmd_next(args):
     collapsed = _detect_collapsed_phases(phases)
 
     # --- compose the one-line output ---
-    parts = [next_phase.capitalize()]
+    # The stage is shown as a path stage; the legacy stage stays the one every
+    # reader below acts on, so an old issue keeps its rules (ADR-092).
+    parts = [shown_stage(next_phase).capitalize()]
     if pending_gate:
         parts[0] += f" [gate: {pending_gate}]"
+    command = next_step.next_command(task, task_dir, done)
+    parts.append("next: " + command)
     unmet = _unmet_entry(task, task_dir, next_phase)
     if unmet:
         parts.append("entry not met: " + ", ".join(unmet))
@@ -426,7 +497,28 @@ def cmd_next(args):
     if wait and blocked:
         wait += " | blocked: " + blocked
     line = (wait if wait else " | ".join(parts)) + "\n"
+    if _json_document(args, [line] + [extra + "\n" for extra in more], command):
+        return 0
     _emit(args, task, task_dir, line, next_phase, False, hint=not wait)
     for extra in more:
         print(extra)
     return 0
+
+
+def _json_document(args, lines, command):
+    """Print the `--json` document and return True, or return False outside
+    `--json`. It is the document the output wrapper writes for a verb not
+    converted to the output contract (`terminal._run_with_mode`), with one more
+    key, `next`: the command `next_step` names, or null. With `--evidence-out`
+    the wrapper writes the capture and its own document, which has no `next`."""
+    from compass_pkg.terminal import mark_handled, resolve_mode
+    if resolve_mode(args) != "json" or getattr(args, "evidence_out", None):
+        return False
+    text = "".join(lines)
+    print(json.dumps({"output": text.rstrip("\n").splitlines(),
+                      "structured": False,
+                      "note": "this verb has not been converted to the "
+                              "output contract; these are its own lines",
+                      "next": command}, indent=2))
+    mark_handled()
+    return True

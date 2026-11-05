@@ -443,7 +443,7 @@ Compass can show the current issue in Claude Code's status line, for
 example:
 
 ```text
-compass · fix-login-redirect · quick fix · Implement · gates 1/3 · TRC-002 red
+compass · fix-login-redirect · quick fix · Build · gates 1/3 · TRC-002 red
 ```
 
 The last field says the second traced criterion has a failing test on
@@ -472,22 +472,71 @@ yes. Outside a
 Compass project, the line is empty. The line fits the terminal width that
 Claude Code passes in `COLUMNS`, and assumes 80 columns when it is not set.
 
+## What `compass next` prints
+
+`compass next` prints one line: the issue's stage, the first gate not yet
+passed, and the one command to run next.
+
+```text
+Build [gate: verify.correctness] | next: compass tdd-red --scenario TRC-001 -- <test command>
+```
+
+The stage is one of the four stages of the path (ADR-092): assess, specify,
+build and ship. An issue assessed before the path keeps its legacy stages, and
+every rule reads them as before; `compass next`, the rail and the status line
+show each one as the path stage it maps to:
+
+| Legacy stage | Shown as |
+|---|---|
+| `assess` | Assess |
+| `define`, `refine`, `plan` | Specify |
+| `breakdown`, `implement` | Build |
+| `verify`, `ship` | Ship |
+
+The `next:` command comes from the issue's records, the first row that
+matches (`cli/compass_pkg/next_step.py`):
+
+| The records show | `next:` |
+|---|---|
+| no scenario | `compass scenario add TRC-001 --intent <intent id> --test <path::name>` |
+| a scenario with no test | `compass scenario tests set <id> --test <path::name>` |
+| `scenario-approval` owed, no outcome | `compass evidence request --checkpoint specify`, then stop for `/compass:approve` |
+| `S17` applies, no outer-loop red | `compass tdd-red --loop outer --scenario <id> -- <acceptance test command>` |
+| a scenario with no red | `compass tdd-red --scenario <id> -- <test command>` |
+| a red with no green | `compass tdd-green --scenario <id> -- <test command>` |
+| `isolation` owed | `compass isolation record --parallel "..." --repeat "..."` |
+| `layering` owed | `compass layering record -- <layering test command>` |
+| a Definition of Done item open | `compass evidence add <EV-id> --type <type> --path <path> --meets <item>` |
+| a gate not passed | `compass gate pass <gate> --evidence <EV-id>` |
+| `human-approval` owed | `compass evidence request --check human-approval-present` |
+| a listed checkpoint with no outcome | `compass evidence request --checkpoint <stage>`, then stop for `/compass:approve` |
+| every gate passes | `compass check`, then `compass ship-commit -m "<message>"` |
+
+What a path issue owes comes from its `evidence_required` list. An issue
+assessed before the path owes the `S17` records its `acceptance_strategy` block
+routes, and the Definition of Done when its verify stage is `thorough`. A spike
+first names `compass evidence add EV-SPIKE --type spike-conclusion`, then
+`compass gate pass spike.conclude`. `compass next --json` gives the same
+command in a `next` field, and `null` on a closed issue.
+
 ## See the approach in your terminal
 
-When you run `compass next` in a terminal, it shows the issue's approach as a
+When you run `compass next` in a terminal, it shows the issue's stages as a
 rail, with the current stage marked:
 
 ```text
 regular · feature-implementing
-Assess ✓ → Define ✓ → Refine ✓ → Plan ✓ → Breakdown ✓ → Implement ● → Verify ○ → Ship ○
+Assess ✓ → Specify ✓ → Build ● → Ship ○
 
-Implement [gate: verify.correctness]
+Build [gate: verify.correctness] | next: compass tdd-red --scenario TRC-001 -- <test command>
 Next: /compass:implement
 ```
 
-Piped output, and any run inside Claude Code, keeps the plain one-line form,
-so scripts and the model see no change. Two environment variables change the
-rail:
+The `Next:` line names the stage command of an issue assessed before the path;
+a path issue's `next:` part is its next step. A path stage shows as skipped only
+when every legacy stage it maps to is skipped. Piped output, and any run inside
+Claude Code, keeps the plain one-line form. Two environment variables change
+the rail:
 
 - `NO_COLOR` removes the color.
 - `COMPASS_COLOR=never` uses the ASCII markers `[x] [>] [ ] [-]` and no
@@ -508,10 +557,10 @@ names the entry checks of the current stage that are not met, for example
 `Plan | entry not met: dor-no-open-questions`
 (`docs/entry-exit-evaluation.md`).
 
-If the issue is at implement and waits for another issue that has not reached
-the point its `depends_on` entry names (`compass issue depends add`), the line
-ends with what it waits for, for example
-`Implement [gate: verify.correctness] | blocked: waits for b to reach done`.
+If the issue is at implement (build on the path) and waits for another issue
+that has not reached the point its `depends_on` entry names (`compass issue
+depends add`), the line ends with what it waits for, for example
+`Build [gate: verify.correctness] | next: ... | blocked: waits for b to reach done`.
 The pre-tool hook refuses production-code edits while it can read, in this
 checkout, that the wait is not met, until the dependency is removed. A fault
 in reading it allows the edit with a warning

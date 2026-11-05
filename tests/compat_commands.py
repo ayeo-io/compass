@@ -515,6 +515,13 @@ PHRASE_REMOVED_IN_9_0_0 = {
 EXIT_CHANGED_IN_9_0_0 = {"next-regular-without-approach-record": 0}
 
 
+#: Entries whose phrase 9.0.0 changed on purpose, each with `(recorded, now)`. The exit
+#: is still compared, and stdout must hold the new phrase. `compass next` shows the stage
+#: of an issue assessed on the legacy stages as the path stage it maps to, so implement
+#: shows as Build (ADR-092).
+PHRASE_CHANGED_IN_9_0_0 = {"next-quick-fix": ("Implement", "Build")}
+
+
 def differences(entry: dict, outcome: Outcome) -> list[str]:
     """What the run did that the recorded entry says it should not."""
     found = []
@@ -536,6 +543,9 @@ def differences(entry: dict, outcome: Outcome) -> list[str]:
     if outcome.exit != expected:
         found.append(f"exit {outcome.exit}, recorded {entry['exit']}")
     phrase = entry.get("stdout_contains")
+    recorded, now = PHRASE_CHANGED_IN_9_0_0.get(entry["id"], (None, None))
+    if phrase and phrase == recorded:
+        phrase = now
     if phrase and phrase not in outcome.stdout:
         found.append(f"stdout lacks {phrase!r}")
     phrase = entry.get("stderr_contains")

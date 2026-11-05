@@ -44,6 +44,7 @@ from compass_pkg.stable_ids import (  # noqa: E402
     APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, STAGE_ASSESS, STAGE_DEFINE, STAGE_IDS,
     STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_VERIFY)
 from compass_pkg import manifest_store, word_map  # noqa: E402
+from compass_pkg.path_stages import rename_v1_stage, rename_v1_stage_keys  # noqa: E402
 
 
 # --- small helpers -----------------------------------------------------------
@@ -473,26 +474,25 @@ def normalize_spine(task):
     if not isinstance(task, dict):
         return task
     out = {}
+    source = {}
     for k, v in task.items():
         k2 = SPINE_KEY_MAP.get(k, k)
         if k2 in out and k in SPINE_KEY_MAP:
             continue
         out[k2] = v
+        source[k2] = k
     # Stage keys. `frame` was banned as a stage name at the v2 freeze and
     # survived as a live machine key, because governance/*.yml is not a scanned
     # surface. Archived issues carry the retired spellings, so they
     # are mapped forward on load and rewritten on disk by `compass issue migrate`
     # (ADR-006: accept both, remove the old at the major version).
+    # `specify` and `build` are path stages too (ADR-092), so the rename runs
+    # only on a v1 map: one under the v1 key `phases:`, or one that holds a
+    # v1-only name.
     st = out.get("stages")
     if isinstance(st, dict):
-        renames = _stage_key_renames()
-        mapped = {}
-        for k, v in st.items():
-            k2 = renames.get(k, k)
-            if k2 in mapped and k in renames:
-                continue
-            mapped[k2] = v
-        out["stages"] = mapped
+        out["stages"] = rename_v1_stage_keys(
+            st, _stage_key_renames(), v1=source.get("stages") != "stages")
 
     a = out.get("assessment")
     if isinstance(a, dict):
@@ -513,11 +513,14 @@ def normalize_spine(task):
         for f in fups:
             if isinstance(f, dict) and f.get("status") in FOLLOW_UP_STATUS_MAP:
                 f["status"] = FOLLOW_UP_STATUS_MAP[f["status"]]
-    # A friction entry's stage (key `phase` in earlier releases) maps like a stage key.
+    # A friction entry's stage (key `phase` in earlier releases) maps like a
+    # stage key. The v1 key `phase` marks a v1 entry; under `stage`, only a
+    # v1-only name maps, so a path stage `build` stays `build`.
+    renames = _stage_key_renames()
     for f in (out.get("friction") if isinstance(out.get("friction"), list) else []):
         for key in ("phase", "stage"):
-            if isinstance(f, dict) and f.get(key) in _stage_key_renames():
-                f[key] = _stage_key_renames()[f[key]]
+            if isinstance(f, dict) and key in f:
+                f[key] = rename_v1_stage(f[key], renames, v1=key == "phase")
     # Gate ids. ADR-023 renamed `verify.fitness` to `verify.architecture`.
     # This is not cosmetic: `compass check` looks a gate's accepted evidence
     # types up BY ID, and an id that no longer resolves yields None, which
@@ -825,14 +828,10 @@ def shape_stages(shape):
     # before this rename says `frame:` where the current one says `assess:`,
     # and the evaluator prints these straight - so without this the tool that
     # computes the approach is the loudest place a retired name still appears.
-    renames = _stage_key_renames()
-    out = {}
-    for k, v in raw.items():
-        k2 = renames.get(k, k)
-        if k2 in out and k in renames:
-            continue
-        out[k2] = v
-    return out
+    # Only a v1 block is renamed, because `specify` and `build` are path
+    # stages too (ADR-092).
+    return rename_v1_stage_keys(raw, _stage_key_renames(),
+                                v1=not shape.get("stages") and bool(shape.get("phases")))
 
 
 WHEN_KEY_MAP = {

@@ -232,6 +232,12 @@ The intake for a bug fix: observed behavior, expected behavior, reproduction ste
 
 **Related:** `bug`
 
+### build
+
+The path stage that records a red for each scenario, then the code, then a green. The guardrail `G1` (tested before it lands) is judged here. On an issue assessed before 9.0.0, the breakdown and implement stages show as build. A v1 manifest used the same word for the implement stage and still reads that way.
+
+**Related:** `path`, `scenario`, `evidence`
+
 ### canary
 
 Releasing to a small slice of traffic/users first, watching SLIs.
@@ -354,6 +360,12 @@ A recorded, typed artifact that clears a gate: a test run, a review, a sign-off.
 
 **Related:** `guardrail`, `definition-of-done`
 
+### evidence-required
+
+The list in a path issue's manifest of the evidence the change needs before it ships, such as `scenarios`, `red-before-green` and `suite-green`. Assess computes it from the assessment and the configuration in force. The gates, the acceptance strategy block and the checkpoints come from it, and a manifest that has it is read as a path issue.
+
+**Related:** `path`, `assess`, `evidence`, `quality-gate`
+
 ### feature
 
 An issue type: a self-contained change with its own acceptance criteria that does not warrant a full intent document. Unqualified "feature" always means this issue type. The Gherkin artifact is always called a "feature file".
@@ -404,9 +416,9 @@ A hard rule cleared with evidence; a failed guardrail stops the work. Few by des
 
 ### hotfix
 
-A delivery approach for a live-incident fix, expedited: reproduce, fix, ship, then pay the follow-up (promote the reproduction into proper acceptance criteria; optional postmortem).
+The setting `urgency: live-defect` on the assessment, for a fix to a defect that is live. It adds `reproduce-first` to the evidence required: the first scenario is the reproduction, and its red is recorded before anything else. It also adds the regression, security and Definition of Done evidence. After the ship, the follow-up promotes the reproduction into proper acceptance criteria, with an optional postmortem. Before 9.0.0 the hotfix was a delivery approach, and an issue assessed then keeps that approach.
 
-**Related:** `delivery-approach`, `incident`, `follow-up`, `postmortem`
+**Related:** `evidence-required`, `incident`, `follow-up`, `postmortem`
 
 ### incident
 
@@ -560,6 +572,12 @@ A ticked box that `compass issue migrate` read from a document written before th
 
 **Related:** `item-record`
 
+### path
+
+The four stages a delivery issue runs, in order: assess, specify, build and ship. The stages are fixed in code and have no modes, so the manifest of a path issue has no `stages:` map. A spike runs assess, build and ship. An issue assessed before 9.0.0 keeps its delivery approach and its stages, and each of its stages shows as a path stage.
+
+**Related:** `assess`, `specify`, `build`, `ship`, `evidence-required`
+
 ### pin
 
 The `#<sha>` suffix on a git `extends:`, which names the parent commit a project runs against.
@@ -612,9 +630,9 @@ A check that must pass before an issue moves state. Which gates apply comes from
 
 ### quick-fix
 
-A delivery approach for a small, low-risk change on familiar ground. Produces a test and a PR - nothing else exists for it.
+`/compass:quick-fix`, the short form of `/compass:go` for a change the person already knows is small: start, red, finish. The evidence-required line says what the change owes. Before 9.0.0 the quick fix was a delivery approach for a small, low-risk change, and an issue assessed then keeps that approach.
 
-**Related:** `delivery-approach`
+**Related:** `path`, `evidence-required`, `delivery-approach`
 
 ### readiness-floor
 
@@ -741,6 +759,12 @@ An independently shippable vertical cut of a feature or initiative, with its own
 Service level objective - the target an SLI must meet. Implies an error budget.
 
 **Related:** `sli`, `error-budget`
+
+### specify
+
+The path stage that writes the scenarios, in `acceptance-criteria.md` or a `.feature` file, and declares the test for each one. The guardrails `G2` (acceptance defined before it is built) and `G3` (traceability holds) are judged here. On an issue assessed before 9.0.0, the define, refine and plan stages show as specify. A v1 manifest used the same word for the define stage and still reads that way.
+
+**Related:** `path`, `scenario`, `acceptance-criteria`
 
 ### spike
 

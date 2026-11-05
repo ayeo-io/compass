@@ -17,7 +17,7 @@ different thing and raises.
 """
 # DEPENDENCY: standard library (copy, dataclasses); compass_pkg.catalogue_spec,
 # compass_pkg.core (CompassError, reading_matches, canonical_shape,
-# _stage_key_renames),
+# _stage_key_renames), compass_pkg.path_stages (the v1 stage rename guard),
 # compass_pkg.loop_ceilings (the ceiling names) and compass_pkg.routing
 # (evaluate_route, RoutingConflict, prepare_policy, route_checkpoints), and
 # compass_pkg.stable_ids (the approach ids).
@@ -32,6 +32,7 @@ from compass_pkg.stable_ids import APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUIC
 from compass_pkg.core import (CompassError, _stage_key_renames, canonical_shape,
                               reading_matches)
 from compass_pkg.loop_ceilings import CEILINGS
+from compass_pkg.path_stages import rename_v1_stage_keys
 from compass_pkg.routing import (REMOVED_GATES, RoutingConflict, evaluate_route,
                                  prepare_policy, route_checkpoints)
 
@@ -599,7 +600,6 @@ def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
     artifact_word_ceiling = {kind: body["word_ceiling"] for kind, body in held.items()
                              if body.get("word_ceiling")}
     listed.update(*artifact_checks.values())
-    renames = _stage_key_renames()
     ceilings = {"subtask_ceiling": result["subtask_ceiling"],
                 "max_worktrees": result["max_worktrees"],
                 **_loop_ceilings(config.get("rules") or {}, assessment, orders)}
@@ -615,8 +615,8 @@ def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
         gate_checks=gate_checks, gate_accepts=gate_accepts,
         artifacts_owed=artifacts,
         required_skills=tuple(sorted(result["required_skills"])),
-        blocked_stages=tuple(sorted({renames.get(b["phase"], b["phase"])
-                                     for b in result["blocked_phases"]})),
+        blocked_stages=tuple(sorted(set(rename_v1_stage_keys(
+            [b["phase"] for b in result["blocked_phases"]], _stage_key_renames())))),
         required_artifacts=tuple(sorted(_artifact_id(a)
                                         for a in result["required_artifacts"])),
         checkpoints={v: tuple(r["checkpoints"]) for v, r in results.items()},

@@ -74,13 +74,21 @@ def test_si_1_the_constants_equal_the_default_preset():
 
     approaches = _preset_ids("approaches.yml", "approaches")
     assert list(ids.APPROACH_IDS) == approaches
+    # `delivery` is the approach a four-stage path issue records (ADR-092). The
+    # preset does not declare it, because the path is fixed in code.
+    assert ids.APPROACH_DELIVERY not in approaches
     assert {v for k, v in vars(ids).items() if k.startswith("APPROACH_") and isinstance(v, str)} \
-        == set(approaches)
+        == set(approaches) | {ids.APPROACH_DELIVERY}
 
     stages = _preset_ids("stages.yml", "stages")
     assert list(ids.STAGE_IDS) == stages
+    assert ids.LEGACY_STAGE_IDS is ids.STAGE_IDS
+    # The path stages are fixed in code too; the preset still lists the legacy ones.
     assert {v for k, v in vars(ids).items() if k.startswith("STAGE_") and isinstance(v, str)} \
-        == set(stages)
+        == set(stages) | set(ids.PATH_STAGE_IDS)
+    assert set(ids.SPIKE_STAGE_IDS) < set(ids.PATH_STAGE_IDS)
+    assert set(ids.LEGACY_TO_PATH) == set(stages)
+    assert set(ids.LEGACY_TO_PATH.values()) == set(ids.PATH_STAGE_IDS)
 
     gates = _preset_ids("gates.yml", "gates")
     assert list(ids.GATE_IDS) == gates
@@ -198,8 +206,10 @@ def scan_package():
     """
     ids = _load_stable_ids()
     kinds = {}
-    for kind, values in (("stage", ids.STAGE_IDS), ("legacy", ids.LEGACY_APPROACH_ALIASES),
-                         ("gate", ids.GATE_IDS), ("approach", ids.APPROACH_IDS)):
+    for kind, values in (("stage", (*ids.STAGE_IDS, *ids.PATH_STAGE_IDS)),
+                         ("legacy", ids.LEGACY_APPROACH_ALIASES),
+                         ("gate", ids.GATE_IDS),
+                         ("approach", (*ids.APPROACH_IDS, ids.APPROACH_DELIVERY))):
         for value in values:
             kinds[value] = kind
     found = []
@@ -290,8 +300,12 @@ def test_si_5_the_allow_list_is_honest():
 # Everything else that names a stage as an id uses a constant. The count is exact,
 # so adding one or removing one fails until this table changes.
 STAGE_LEDGER = {
+    "core.py": (2, 'the v1 "specify" and "build" keys in the fallback rename table are retired names'),
     "lessons.py": (2, 'a lesson source named "verify" is not a pipeline stage'),
+    "migrate.py": (2, 'the v1 "specify" and "build" keys in the fallback rename table are retired names'),
+    "pytest_report.py": (1, 'the "build" folder a test run skips is not a pipeline stage'),
     "removed_parts.py": (1, 'the removed verb "compass plan lint" is a command word, not a stage'),
+    "word_map.py": (1, 'the retired run stage "build" in the fallback word table is a v1 name'),
 }
 
 

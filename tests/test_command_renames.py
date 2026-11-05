@@ -101,7 +101,7 @@ def test_the_vocabulary_carries_the_command_names_and_a_version_bump():
         "the Frame ban entry does not name assess as the replacement. It has "
         "to point at the current name: a ban naming a banned replacement "
         "sends a reader to a word they must rename again")
-    stages = bans["Specify / Clarify / Distribute / Land"]
+    stages = bans["Clarify / Distribute / Land"]
     joined = stages.get("replacement", "") + stages.get("context", "")
     for cmd in ("define", "refine", "breakdown", "ship"):
         assert cmd in joined, (

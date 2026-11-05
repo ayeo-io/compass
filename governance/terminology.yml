@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre25
+version: 2.0.0-pre26
 
 terms:
 
@@ -119,15 +119,23 @@ terms:
     related: [issue-type, issue]
   quick-fix:
     means: >
-      A delivery approach for a small, low-risk change on familiar ground.
-      Produces a test and a PR - nothing else exists for it.
-    related: [delivery-approach]
+      `/compass:quick-fix`, the short form of `/compass:go` for a change the
+      person already knows is small: start, red, finish. The evidence-required
+      line says what the change owes. Before 9.0.0 the quick fix was a
+      delivery approach for a small, low-risk change, and an issue assessed
+      then keeps that approach.
+    related: [path, evidence-required, delivery-approach]
   hotfix:
     means: >
-      A delivery approach for a live-incident fix, expedited: reproduce, fix,
-      ship, then pay the follow-up (promote the reproduction into proper
-      acceptance criteria; optional postmortem).
-    related: [delivery-approach, incident, follow-up, postmortem]
+      The setting `urgency: live-defect` on the assessment, for a fix to a
+      defect that is live. It adds `reproduce-first` to the evidence
+      required: the first scenario is the reproduction, and its red is
+      recorded before anything else. It also adds the regression, security
+      and Definition of Done evidence. After the ship, the follow-up promotes
+      the reproduction into proper acceptance criteria, with an optional
+      postmortem. Before 9.0.0 the hotfix was a delivery approach, and an
+      issue assessed then keeps that approach.
+    related: [evidence-required, incident, follow-up, postmortem]
   spike:
     means: >
       A delivery approach for time-boxed exploration whose output is
@@ -309,6 +317,32 @@ terms:
       delivery approach and is not a stage mode: its stages run `thorough`,
       and the old mode word `full` reads as `thorough` until 9.0.0.
     related: [assess, quality-gate]
+  path:
+    means: >
+      The four stages a delivery issue runs, in order: assess, specify,
+      build and ship. The stages are fixed in code and have no modes, so the
+      manifest of a path issue has no `stages:` map. A spike runs assess,
+      build and ship. An issue assessed before 9.0.0 keeps its delivery
+      approach and its stages, and each of its stages shows as a path stage.
+    related: [assess, specify, build, ship, evidence-required]
+  specify:
+    means: >
+      The path stage that writes the scenarios, in `acceptance-criteria.md`
+      or a `.feature` file, and declares the test for each one. The
+      guardrails `G2` (acceptance defined before it is built) and `G3`
+      (traceability holds) are judged here. On an issue assessed before
+      9.0.0, the define, refine and plan stages show as specify. A v1
+      manifest used the same word for the define stage and still reads that
+      way.
+    related: [path, scenario, acceptance-criteria]
+  build:
+    means: >
+      The path stage that records a red for each scenario, then the code,
+      then a green. The guardrail `G1` (tested before it lands) is judged
+      here. On an issue assessed before 9.0.0, the breakdown and implement
+      stages show as build. A v1 manifest used the same word for the
+      implement stage and still reads that way.
+    related: [path, scenario, evidence]
   audience:
     means: >
       The one line in an artifact's catalog entry that says who reads the
@@ -420,6 +454,15 @@ terms:
       A recorded, typed artifact that clears a gate: a test run, a review, a
       sign-off. A claim without evidence clears nothing.
     related: [guardrail, definition-of-done]
+  evidence-required:
+    means: >
+      The list in a path issue's manifest of the evidence the change needs
+      before it ships, such as `scenarios`, `red-before-green` and
+      `suite-green`. Assess computes it from the assessment and the
+      configuration in force. The gates, the acceptance strategy block and
+      the checkpoints come from it, and a manifest that has it is read as a
+      path issue.
+    related: [path, assess, evidence, quality-gate]
   follow-up:
     means: >
       Work owed after an expedited ship (the hotfix's promoted scenario, the
@@ -1029,9 +1072,9 @@ banned:
   - term: "Expedition"
     replacement: full approach
     context: "Route name."
-  - term: "Specify / Clarify / Distribute / Land"
-    replacement: "define acceptance criteria / requirements review / break down the work / ship"
-    context: "As stage names and commands. The commands are /compass:define, /compass:refine, /compass:breakdown, /compass:ship (the planning stage's command is /compass:plan, and Build's is /compass:implement); the retired names were removed at 4.0.0. Capitalised/heading/command usage only; ordinary verbs fine. NOTE: `plan` is NOT retired - it is the planning stage's machine key, skill (plan-authoring), agent (planner) and, since 2026-08-25, its command. A name that was retired can come back; ADR-014 removes retired names, it does not reserve them."
+  - term: "Clarify / Distribute / Land"
+    replacement: "requirements review / break down the work / ship"
+    context: "As stage names and commands. The commands are /compass:refine, /compass:breakdown, /compass:ship (the planning stage's command is /compass:plan, the define stage's is /compass:define, and the implement stage's is /compass:implement); the retired names were removed at 4.0.0. Capitalised/heading/command usage only; ordinary verbs fine. NOTE: `plan` is NOT retired - it is the planning stage's machine key, skill (plan-authoring), agent (planner) and, since 2026-08-25, its command. A name that was retired can come back; ADR-014 removes retired names, it does not reserve them. Specify came back this way: ADR-092 names the second stage of the four-stage path `specify`, so the ban on it is lifted."
   - term: "PRD / prd.md"
     replacement: intent.md
     context: "As the intake document. /compass:intent writes intent.md - the command and its output had never agreed, and the ids the document sources are INT-. The wider industry name is in Anthropic's AI-Native SDLC playbook, which calls the same artifact intent.md. 'product requirements' as ordinary prose is fine."

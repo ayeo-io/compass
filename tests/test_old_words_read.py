@@ -910,9 +910,13 @@ def test_vr_d7_a_run_at_stage_build_and_friction_keyed_phase_read_as_implement_a
 
 
 def test_vr_d7_a_friction_entry_already_keyed_stage_keeps_its_stage_mapped(tmp_path):
+    # Under `stage`, only a v1-only name maps. `build` is also a stage of the
+    # four-stage path (ADR-092), so an entry keyed `stage` keeps it; the v1
+    # key `phase` above still reads `build` as implement.
     task, _ = _loaded(tmp_path, {"friction": [
-        {"stage": "build", "category": "tooling", "source": "human", "observation": "a"}]})
-    assert task["friction"][0]["stage"] == "implement"
+        {"stage": "land", "category": "tooling", "source": "human", "observation": "a"},
+        {"stage": "build", "category": "tooling", "source": "human", "observation": "b"}]})
+    assert [f["stage"] for f in task["friction"]] == ["ship", "build"]
 
 
 EVERY_OLD_WORD = {

@@ -185,23 +185,24 @@ BAN_PATTERNS: dict[str, list[re.Pattern]] = {
         re.compile(r"\bExpedition\b"),
     ],
     # The v1 phase names, as names: command, "X phase", pipeline arrows,
-    # headings. Ordinary lowercase verbs ("specify the format", "landing
-    # gear") stay legal.
-    "Specify / Clarify / Distribute / Land": [
-        re.compile(r"/compass:(?:specify|clarify|distribute|land)\b"),
-        re.compile(r"\b(?:Specify|Clarify|Distribute|Land)\s+phase\b"),
-        re.compile(r"(?:→|->)\s*(?:Specify|Clarify|Distribute|Land)\b"),
-        re.compile(r"\b(?:Specify|Clarify|Distribute|Land)\s*(?:→|->)"),
-        re.compile(r"^#+\s+(?:Specify|Clarify|Distribute|Land)\b", re.M),
+    # headings. Ordinary lowercase verbs ("clarify the format", "landing
+    # gear") stay legal. Specify is not here: ADR-092 brought it back as the
+    # second stage of the four-stage path.
+    "Clarify / Distribute / Land": [
+        re.compile(r"/compass:(?:clarify|distribute|land)\b"),
+        re.compile(r"\b(?:Clarify|Distribute|Land)\s+phase\b"),
+        re.compile(r"(?:→|->)\s*(?:Clarify|Distribute|Land)\b"),
+        re.compile(r"\b(?:Clarify|Distribute|Land)\s*(?:→|->)"),
+        re.compile(r"^#+\s+(?:Clarify|Distribute|Land)\b", re.M),
         # Tuned at the skills-prose review: the capitalised stage name
         # after a preposition or conjunction ("at Land", "and Land", <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
-        # "during Specify") is stage-name usage the suffix forms miss; <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
+        # "during Clarify") is stage-name usage the suffix forms miss; <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
         # lowercase ordinary verbs ("planes land") stay legal.
         re.compile(r"\b(?:during|at|before|after|since|until|and|into)\s+"
-                   r"(?:Specify|Clarify|Distribute|Land)\b"),
+                   r"(?:Clarify|Distribute|Land)\b"),
         # Banned outright, like Frame above and for the same reason. See the <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
         # comment there for the two designs that were measured and rejected.
-        re.compile(r"\b(?:Specify|Clarify|Distribute|Land)\b"),
+        re.compile(r"\b(?:Clarify|Distribute|Land)\b"),
     ],
     # The role-perspective concept, in any casing. Tuned at the
     # skills-prose slice: a hyphen-preceded "lens" is an agent identifier <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
@@ -653,7 +654,7 @@ TERM_SURFACE_EXEMPT = {
     # written, and its own guard failed within seconds. Exempt at file
     # granularity because Python surfaces contribute string literals only, so
     # an inline marker in a comment is invisible to the scanner.
-    "Specify / Clarify / Distribute / Land": (
+    "Clarify / Distribute / Land": (
         "skills/compass-runtime/writing-voice.md",
         "scripts/verify-archive-quotes.py",),
     "Frame / the Needle": ("skills/compass-runtime/writing-voice.md",),
@@ -1747,7 +1748,8 @@ def test_pl_c11_strategies_prose_is_not_path_exempt():
 # exists to repair. See the comment on the Frame patterns above. <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
 # ---------------------------------------------------------------------------
 
-RETIRED_STAGES = ("Frame", "Specify", "Clarify", "Distribute", "Land")
+# Specify was retired with these and came back as a path stage (ADR-092).
+RETIRED_STAGES = ("Frame", "Clarify", "Distribute", "Land")
 
 
 def _sample_holder() -> Path:
@@ -1787,17 +1789,18 @@ def test_b1_label_shape_in_a_table_cell_is_caught():
 
 
 def test_b2_label_shape_in_a_bold_run_is_caught():
-    """The other label form: `- **Specify** - how many scenarios` (`TRC-B2`). <!-- vocabulary-scan: allow - quotes the retired label form this test plants and checks the ban catches -->"""
+    """The other label form: `- **Clarify** - how many scenarios` (`TRC-B2`). <!-- vocabulary-scan: allow - quotes the retired label form this test plants and checks the ban catches -->"""
     for stage in RETIRED_STAGES:
         hits = _scan_text(f"- **{stage}** - how many scenarios and how deep.\n")
         assert hits, f"a bold run holding only '{stage}' was not reported"
 
 
 def test_b3_every_retired_stage_name_has_a_label_pattern():
-    """Five names were retired together and are written alike (`TRC-B3`).
+    """The names retired together are written alike (`TRC-B3`).
 
-    Teaching the shape to one and not the rest is how the next four survive,
-    so this asserts the ban covers all five rather than trusting that it does.
+    Teaching the shape to one and not the rest is how the others survive, so
+    this asserts the ban covers every name still retired rather than trusting
+    that it does.
     """
     for stage in RETIRED_STAGES:
         assert _scan_text(f"| {stage} |\n"), (

@@ -26,7 +26,8 @@ import `core`: `core` imports it, and the import graph is checked to have no
 cycle (`tests/test_cli_module_split.py`).
 """
 # DEPENDENCY: standard library (copy, os, sys);
-# compass_pkg.catalogue_spec, compass_pkg.old_names (a leaf), and
+# compass_pkg.catalogue_spec, compass_pkg.old_names (a leaf),
+# compass_pkg.path_stages (the v1 stage rename guard), and
 # compass_pkg.project_settings for the error it
 # raises on a link. It reads cli/migrate-map.yml only through the reader `core`
 # binds, and imports nothing else from the package.
@@ -38,6 +39,7 @@ import sys
 
 from compass_pkg import catalogue_spec as spec
 from compass_pkg import old_names
+from compass_pkg.path_stages import rename_v1_stage
 
 # The tables that sit under `values:` in cli/migrate-map.yml, and the one
 # top-level table. A manifest field and a layer field read the table named
@@ -515,7 +517,9 @@ def _map_friction(manifest, rows, changes):
                 continue
             value = entry.pop(old)
             if new not in entry:        # a key already in the new word wins
-                entry[new] = stage_keys.get(value, value) if isinstance(value, str) else value
+                # The old key is the v1 key, so its value is a v1 stage name:
+                # `build` here means implement, unlike a path entry's `stage`.
+                entry[new] = rename_v1_stage(value, stage_keys, v1=True)
             changes.append((f"friction[{index}].{old}", old, new))
 
 

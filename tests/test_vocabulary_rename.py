@@ -522,8 +522,8 @@ def _terminology():
 def _banned_spellings(doc):
     """Every individual word a `banned:` entry retires.
 
-    A `term:` may name several at once - "Specify / Clarify / Distribute / <!-- vocabulary-scan: allow - quotes governance/terminology.yml's own term string as the example -->
-    Land" is one entry retiring four words - so the slash-separated parts are <!-- vocabulary-scan: allow - quotes governance/terminology.yml's own term string as the example -->
+    A `term:` may name several at once - "Clarify / Distribute / Land" is <!-- vocabulary-scan: allow - quotes governance/terminology.yml's own term string as the example -->
+    one entry retiring three words - so the slash-separated parts are
     split out and lowercased.
     """
     out = {}

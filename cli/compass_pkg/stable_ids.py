@@ -6,6 +6,9 @@ APPROACH_REGULAR = "regular"
 APPROACH_HOTFIX = "hotfix"
 APPROACH_FULL = "full"
 APPROACH_IDS = (APPROACH_SPIKE, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_HOTFIX, APPROACH_FULL)
+# The one approach a path issue records besides the spike (ADR-092). It is not
+# in `APPROACH_IDS`, which lists the approaches the default preset declares.
+APPROACH_DELIVERY = "delivery"
 
 LEGACY_APPROACH_ALIASES = {
     "express": APPROACH_QUICK_FIX,
@@ -36,8 +39,29 @@ STAGE_BREAKDOWN = "breakdown"
 STAGE_IMPLEMENT = "implement"
 STAGE_VERIFY = "verify"
 STAGE_SHIP = "ship"
-STAGE_IDS = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN, STAGE_BREAKDOWN,
-             STAGE_IMPLEMENT, STAGE_VERIFY, STAGE_SHIP)
+# The eight stages an issue assessed before #351 records in its `stages:` map.
+# `STAGE_IDS` keeps the old name so no importer changes.
+LEGACY_STAGE_IDS = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN, STAGE_BREAKDOWN,
+                    STAGE_IMPLEMENT, STAGE_VERIFY, STAGE_SHIP)
+STAGE_IDS = LEGACY_STAGE_IDS
+
+# The four-stage path (ADR-092). The stages are fixed here, not in a preset,
+# and a path issue writes no `stages:` map. A spike explores in build and
+# concludes in ship, so it has no specify stage. `specify` and `build` are
+# also v1 stage names: `path_stages.rename_v1_stage_keys` renames them only
+# in a v1 record.
+STAGE_SPECIFY = "specify"
+STAGE_BUILD = "build"
+PATH_STAGE_IDS = (STAGE_ASSESS, STAGE_SPECIFY, STAGE_BUILD, STAGE_SHIP)
+SPIKE_STAGE_IDS = (STAGE_ASSESS, STAGE_BUILD, STAGE_SHIP)
+# The path stage that shows a legacy stage, for every reader that shows or acts
+# on the stage of an old issue. `compass migrate` (#359) uses the same mapping.
+LEGACY_TO_PATH = {
+    STAGE_ASSESS: STAGE_ASSESS,
+    STAGE_DEFINE: STAGE_SPECIFY, STAGE_REFINE: STAGE_SPECIFY, STAGE_PLAN: STAGE_SPECIFY,
+    STAGE_BREAKDOWN: STAGE_BUILD, STAGE_IMPLEMENT: STAGE_BUILD,
+    STAGE_VERIFY: STAGE_SHIP, STAGE_SHIP: STAGE_SHIP,
+}
 
 # The model tiers, weakest first. 9.0.0 removed model tiers (ADR-090); the names
 # stay because the `models` setting a project file can still hold is checked

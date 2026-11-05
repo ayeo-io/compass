@@ -631,7 +631,12 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # set, so a rule that only added it no longer fires, and obligations stop filtering the
 # rules that fired. Obligations read the same gates and rules as before, so no verdict
 # moves and the version stays 13.
-VERDICT_SOURCE_PIN = "8ff1a2ac9935eb0b"
+# Re-pinned for #351 step 2: `shape_stages` and the blocked stages go through
+# `path_stages.rename_v1_stage_keys`, now part of the digest, which renames the
+# v1 names `specify` and `build` only in a v1 map. Every shipped preset and
+# fixture policy names its stages in 8.x words or holds a v1-only name, so no
+# verdict moves and the version stays 13.
+VERDICT_SOURCE_PIN = "4d4898b1cd186def"
 
 
 def _verdict_source_digest():
@@ -641,7 +646,7 @@ def _verdict_source_digest():
     import hashlib
     import inspect
     from compass_pkg import classify, classify_lists, core, obligations, routing
-    from compass_pkg import policy
+    from compass_pkg import path_stages, policy
     text = [inspect.getsource(classify), inspect.getsource(classify_lists),
             inspect.getsource(obligations)]
     text += [inspect.getsource(getattr(routing, name)) for name in (
@@ -650,6 +655,7 @@ def _verdict_source_digest():
     text += [inspect.getsource(getattr(core, name)) for name in (
         "reading_matches", "shape_stages", "canonical_shape", "_stage_key_renames")]
     text += [inspect.getsource(policy.checkpoint_table_errors)]
+    text += [inspect.getsource(path_stages)]
     tables = {"hit": obligations.BUILT_IN_HIT, "statement": obligations.STATEMENT_KINDS,
               "stages": policy.CHECKPOINT_STAGES, "widest": classify.WIDEST_WHEN_EMPTY,
               "default_hit": obligations.DEFAULT_HIT,

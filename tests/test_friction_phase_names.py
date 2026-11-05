@@ -61,7 +61,9 @@ def test_fp_1_a_retired_stage_loads_as_its_current_name():
                                           "source": "human"},
                                          {"stage": "build", "category": "other",
                                           "source": "human"}]})
-    assert [f["stage"] for f in task["friction"]] == ["assess", "implement", "implement"]
+    # The v1 key `phase` reads `build` as implement. Under `stage`, `build` is
+    # the four-stage path's build stage (ADR-092), so it keeps its name.
+    assert [f["stage"] for f in task["friction"]] == ["assess", "implement", "build"]
     assert all("phase" not in f for f in task["friction"])
 
 

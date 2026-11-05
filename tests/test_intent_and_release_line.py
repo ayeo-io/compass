@@ -35,6 +35,10 @@ import yaml  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import project_readiness_support as readiness_support  # noqa: E402
 
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
+
 SLUG = "feature"
 CREATED = "2026-10-10"
 DOCS = f"docs/compass/{CREATED}-{SLUG}"
@@ -92,7 +96,9 @@ def env(root, **extra):
         "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "user.useConfigOnly",
         "GIT_CONFIG_VALUE_0": "true",
         "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
-        "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"}
+        "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com",
+        # The path writer's switch reaches the CLI; step 9b of #351 deletes it.
+        **{k: v for k, v in os.environ.items() if k == "COMPASS_PATH_WRITER"}}
     values.update(extra)
     return values
 
@@ -158,7 +164,14 @@ def assess(root, approach="regular", slug=SLUG):
     done = run(root, "approach", "evaluate", "--issue", slug, "--write")
     assert done.returncode == 0, done
     (task_dir / "delivery-approach.md").write_text("# Delivery approach\n")
-    assert manifest(root, slug)["delivery_approach"] == approach, manifest(root, slug)
+    body = manifest(root, slug)
+    if approach == "spike":
+        assert body["delivery_approach"] == "spike", body
+    else:
+        # The four-stage path stores `delivery` and the evidence the assessment owes,
+        # in place of the 8.x approach (ADR-092 decisions 2 and 3).
+        assert body["delivery_approach"] == "delivery", body
+        assert body["evidence_required"] and "stages" not in body, body
     return task_dir
 
 
@@ -384,12 +397,44 @@ def ready_to_ship(root, slug=SLUG, skip=(), path="src/new.py"):
     (root / path).parent.mkdir(parents=True, exist_ok=True)
     (root / path).write_text("y = 1\n")
     # A quick fix in scope of the four-layer acceptance strategy records the outer
-    # loop by default, and its green names a candidate and a client (ADR-085).
-    named = ("--loop", "outer", "--candidate", "local", "--client", "cli") \
-        if manifest(root, slug).get("delivery_approach") == "quick-fix" else ()
+    # loop by default, and its green names a candidate and a client (ADR-085). On
+    # the path the quick fix is the light row, routed to the existing DSL (ADR-092).
+    held = manifest(root, slug)
+    light = (held.get("delivery_approach") == "quick-fix"
+             or (held.get("acceptance_strategy") or {}).get("routing") == "existing-dsl")
+    named = ("--loop", "outer", "--candidate", "local", "--client", "cli") if light else ()
     done = run(root, "tdd-green", "--issue", slug, *named, "--", sys.executable, "-c", "pass")
     assert done.returncode == 0, done
+    _meet_path_records(root, slug)
     git(root, "add", path)
+
+
+def _meet_path_records(root, slug):
+    """On the four-stage path the standard and defect rows owe the Definition of Done,
+    and `scenario-approval` lists the specify checkpoint (ADR-092 decisions 3 and 6).
+    Record each Definition of Done item with typed evidence and give each listed
+    checkpoint a person's outcome, as the gates above are passed, so the landing
+    reaches the refusal a test is about."""
+    from compass_pkg import effective, item_records
+    task_dir = root / ".compass" / "work" / slug
+    body = manifest(root, slug)
+    if "definition-of-done" in (body.get("evidence_required") or []):
+        view = effective.view_or_legacy(str(task_dir), manifest=body)
+        (task_dir / "evidence").mkdir(exist_ok=True)
+        (task_dir / "evidence" / "dod.txt").write_text("1 passed\n")
+        for n, item in enumerate(item_records.items(body, str(task_dir), view, "dod")):
+            done = run(root, "evidence", "add", f"EV-DOD-{n + 1}", "--issue", slug,
+                       "--type", "command-output", "--path", "evidence/dod.txt",
+                       "--meets", item.check)
+            assert done.returncode == 0, done
+    body = manifest(root, slug)
+    have = {e.get("stage") for e in body.get("checkpoint_outcomes") or []}
+    for stage in body.get("checkpoints") or []:
+        if stage not in have and "checkpoint_outcomes" in body:
+            body["checkpoint_outcomes"].append({
+                "stage": stage, "outcome": "waited", "by": "jed72",
+                "at": "2026-10-10T09:00:00Z", "evidence": "EV-CP-" + stage})
+    write_manifest(root, body, slug)
 
 
 def state(root, slug=SLUG):
@@ -464,8 +509,14 @@ def _no_generation(root):
 
 
 def _stored(value):
+    # A path issue has no approach entry of its own: it owes a line when any
+    # approach that ships sets the field (ADR-092), so the field changes on each.
+    def change(resolved):
+        for name in ("quick-fix", "regular", "hotfix", "full"):
+            _approach_field(resolved, name, value)
+
     def apply(root):
-        rewrite_stored(root, lambda resolved: _approach_field(resolved, "regular", value))
+        rewrite_stored(root, change)
         return ("--issue", SLUG)
     return apply
 

@@ -22,8 +22,8 @@
   },
   "assessment": {
     "approach": {
-      "before": "regular",
-      "after": "regular"
+      "before": "delivery",
+      "after": "delivery"
     },
     "result": "equivalent",
     "changes": [],

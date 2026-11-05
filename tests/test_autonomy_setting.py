@@ -21,6 +21,10 @@ from pathlib import Path
 import pytest
 import yaml
 
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
+
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
@@ -82,7 +86,11 @@ def test_au_1_balanced_is_the_default(project):
     _start(project, "bigger", "contained", "standard")
     manifest = yaml.safe_load(
         (project / ".compass" / "work" / "bigger" / "manifest.yml").read_text())
-    assert manifest["checkpoints"] == ["define", "plan"], manifest
+    # On the four-stage path balanced autonomy lists no checkpoint for a change
+    # that owes no `scenario-approval` (ADR-092 open question 7).
+    assert "definition-of-done" in manifest["evidence_required"], manifest
+    assert "stages" not in manifest, manifest
+    assert manifest["checkpoints"] == [], manifest
 
 
 @pytest.mark.parametrize("readings", [QUICK_FIX, FEATURE, INITIATIVE])
@@ -116,14 +124,19 @@ def test_au_3_an_unknown_value_is_refused(project):
 
 def test_au_4_the_summary_stays_three_lines_and_names_the_checkpoints(project):
     assert _start(project, "greeting", "trivial", "atomic").returncode == 0
-    _start(project, "bigger", "contained", "standard")
+    # On the path balanced autonomy waits nowhere on this change, so the bigger
+    # issue is assessed under controlled autonomy, which lists every stage where
+    # `S17` applies (ADR-092 open question 7).
+    _set_autonomy(project, "controlled")
+    assert _start(project, "bigger", "contained", "standard").returncode == 0
     small = _run(project, "approach", "show", "--issue", "greeting")
     big = _run(project, "approach", "show", "--issue", "bigger")
     for view in (small, big):
         assert view.returncode == 0, view.stderr
         assert len(view.stdout.strip().splitlines()) == 3, view.stdout
     assert "does not stop to wait for you" in small.stdout.splitlines()[0]
-    assert "waits for you at: define, plan" in big.stdout.splitlines()[0]
+    assert "waits for you at: assess, specify, build, ship" in big.stdout.splitlines()[0]
+    assert big.stdout.splitlines()[1].startswith("Evidence: "), big.stdout
 
 
 @pytest.mark.parametrize("command", ["assess", "define", "refine", "plan"])

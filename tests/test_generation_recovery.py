@@ -22,6 +22,10 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import configure_fixtures as fx  # noqa: E402
 
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
+
 MODE = ("--mode", "refine=full")
 STEPS = ("resolved", "provenance", "versions", "records", "marker", "manifest", "proposal")
 
@@ -102,9 +106,13 @@ def test_cr_5_an_adopted_folder_gives_the_manifest_an_uninterrupted_reassess_wou
     other_root, other_dir = _proposed_project(tmp_path / "other")
     assert fx.reassess(other_root)[0] == 0
     adopted, direct = fx.manifest_of(task_dir), fx.manifest_of(other_dir)
-    for key in ("generation", "delivery_approach", "stages", "gates", "checkpoints",
-                "policy_rules_fired", "subtask_ceiling", "config"):
+    # The path writes `evidence_required` and no stage modes or ceiling (ADR-092
+    # decisions 1, 3 and 11), so those keys are compared by their absence.
+    for key in ("generation", "delivery_approach", "evidence_required", "gates",
+                "checkpoints", "policy_rules_fired", "config"):
         assert adopted[key] == direct[key], key
+    for key in ("stages", "subtask_ceiling"):
+        assert key not in adopted and key not in direct, key
     # Routing writes no document list since 9.0.0 (ADR-091 decision 4).
     assert "artifacts" not in adopted and "artifacts" not in direct
 
@@ -450,10 +458,16 @@ def test_cr_7_reset_config_without_write_is_refused(tmp_path):
 
 # --- CR-8: the generation a reassessment moved from and to ----------------------------------------
 
+#: A size whose evidence differs from the fixture's medium one. On the path a medium
+#: and a large change owe the same evidence (ADR-092 decision 3), so a reassessment
+#: that must commit a new generation moves the size to small, the light row.
+SMALLER = "small"
+
+
 def test_cr_8_a_reassessment_records_the_generation_it_moved_from_and_to(tmp_path):
     root, task_dir = fx.committed(tmp_path)
     body = fx.manifest_of(task_dir)
-    body["assessment"]["size"] = "large"
+    body["assessment"]["size"] = SMALLER
     fx.write_manifest(task_dir, assessment=body["assessment"])
     code, out, err = fx.reassess(root)
     assert code == 0, out + err
@@ -482,7 +496,8 @@ def test_cr_8_a_reassess_that_changes_only_the_config_records_a_configuration_en
     assert entry["kind"] == "configuration"
     assert entry["reason"] == "test"
     assert entry["generation"] == {"from": 1, "to": 2}
-    assert entry["from_route"] == entry["to_route"] == "regular"
+    # The path stores `delivery` for every delivery assessment (ADR-092 decision 2).
+    assert entry["from_route"] == entry["to_route"] == "delivery"
     assert "was NOT recorded" not in out
     assert "RE-ASSESSMENT recorded (configuration)" in out
     assert fx.run(root, "issue", "lint", "--issue", fx.SLUG)[0] == 0
@@ -501,7 +516,7 @@ def test_cr_8_reset_config_records_a_configuration_entry_too(tmp_path):
 def test_cr_8_a_change_to_the_approach_keeps_its_own_kind_when_the_config_moves_too(tmp_path):
     root, task_dir = _proposed_project(tmp_path)
     body = fx.manifest_of(task_dir)
-    body["assessment"]["size"] = "large"
+    body["assessment"]["size"] = SMALLER
     fx.write_manifest(task_dir, assessment=body["assessment"])
     assert fx.reassess(root)[0] == 0
     entries = fx.manifest_of(task_dir)["reassessments"]
@@ -791,7 +806,7 @@ def test_cr_5_commit_adopts_the_folder_an_interrupted_reset_config_left(
 def test_cr_5_commit_keeps_the_reason_it_is_given(tmp_path, monkeypatch, capsys):
     root, task_dir = fx.committed(tmp_path)
     body = fx.manifest_of(task_dir)
-    body["assessment"]["size"] = "large"
+    body["assessment"]["size"] = SMALLER
     fx.write_manifest(task_dir, assessment=body["assessment"])
     with pytest.raises(RuntimeError):
         _reassess_in_process(root, monkeypatch, capsys, boom_at="marker", reason=None)

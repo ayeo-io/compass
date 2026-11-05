@@ -220,7 +220,11 @@ approve --decisions` confirms them as one set.
 
 - **Which decisions.** At a checkpoint (`compass next` reports `Waiting at the
   <stage> checkpoint`), every unconfirmed decision taken at that stage or
-  earlier. Away from a checkpoint, every unconfirmed decision.
+  earlier. Away from a checkpoint, every unconfirmed decision. On a path issue
+  the stages are assess, specify, build and ship: a decision taken at a legacy
+  stage counts at the path stage that shows it, such as refine at specify, and
+  the decisions wait at a listed `specify` checkpoint once the scenarios are
+  written.
 - **Who may confirm.** A name in any `approvers:` list of the project file, with
   `owner` read as the project's owner. When the project file declares no
   `approvers:`, only its `owner` may confirm.
@@ -262,7 +266,10 @@ one. ADR-063 owns the decision.
   recorded, so it is not judged), a stage that is not a checkpoint stage, a
   stage the approach collapses or skips, a stage whose own record is not written
   yet (`compass next` does not count it done), the decision `rejected`, and a
-  name that may not answer.
+  name that may not answer. On a path issue the specify hand-off can be answered
+  once each scenario has an id, an intent and a declared test, and the ship
+  hand-off once build is done, because those two stages count as done only after
+  their answer or the landing.
 - **What it never clears.** No check reads `checkpoint-approval`:
   `human-approval-present`, the check of guardrail `G5`, reads only
   `human-approval`, a human check reads `human-approval` and

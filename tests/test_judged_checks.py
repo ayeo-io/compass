@@ -30,6 +30,10 @@ from test_entry_exit_evaluation import (CAPABILITY, _by_check, _config_project, 
 from test_generation_store import (SLUG, _evaluate_write, _manifest, _project,  # noqa: E402
                                    _run, _write_manifest)
 
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
+
 CHECK = "design-review"
 STATEMENT = "The design holds against every scenario."
 INPUTS = ["technical-design", "acceptance-criteria"]
@@ -471,7 +475,9 @@ def test_jc_7_the_verb_writes_a_record_that_makes_the_check_pass(tmp_path):
     assert entry == [{"id": "EV-REVIEW-design-review-1", "type": "manual-review",
                       "path": "evidence/review-design-review-1.yml", "check": CHECK}]
     row = _plan_row(root)
-    assert row["status"] == "pass" and row["guardrail"] == "stage:plan:entry"
+    # On a path issue the plan entry list is judged at specify, the path stage that
+    # shows plan (ADR-092).
+    assert row["status"] == "pass" and row["guardrail"] == "stage:specify:entry"
 
 
 def test_jc_7_a_second_review_is_numbered_and_the_newest_decides(tmp_path):
@@ -754,7 +760,10 @@ def test_jc_11_check_output_and_the_manifest_are_unchanged_without_a_judged_chec
     before = (task_dir / "manifest.yml").read_bytes()
     data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
     rows = [r for r in data["checks"] if r["guardrail"].startswith("stage:")]
-    assert len(rows) == 7 and {r["status"] for r in rows} == {"pass"}
+    # The seven rows were plan's Definition of Ready. A path issue owes none (ADR-092
+    # decision 6), and its Definition of Done is due only at ship, so no stage list is
+    # judged here.
+    assert rows == [], rows
     assert not [r for r in data["checks"] if "review record" in r["detail"]]
     assert (task_dir / "manifest.yml").read_bytes() == before
     assert not list((task_dir / "evidence").glob("review-*")) if (task_dir / "evidence").exists() else True

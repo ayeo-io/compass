@@ -18,6 +18,10 @@ from pathlib import Path
 
 import pytest
 
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
@@ -1036,7 +1040,9 @@ def test_lk_8_an_unlock_prints_the_line_on_every_run_of_both_commands(project):
 def test_lk_8_the_summary_prints_its_three_lines_and_then_the_conformance_line(project):
     (project / "compass.yml").write_text(UNLOCK_FILE)
     lines = _run(project, "approach", "show").stdout.splitlines()
-    assert lines[0].startswith("Approach:") and lines[1].startswith("Gates:")
+    # A path issue's middle line names the evidence owed in place of the gates
+    # (ADR-092 decision 3).
+    assert lines[0].startswith("Approach:") and lines[1].startswith("Evidence:")
     assert lines[2].startswith("Writes:") and lines[3].startswith("Conformance:")
     assert len(lines) == 4
 

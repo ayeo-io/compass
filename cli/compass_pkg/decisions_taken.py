@@ -26,8 +26,9 @@ of guardrail `G5` cannot be met by it. Owning decision:
 `architecture/decisions/ADR-050-*.md`.
 """
 # DEPENDENCY: standard library (os, re, json); compass_pkg.core, terminal,
-# approval_records, stable_ids. next_cmd and approve_cmd are imported inside
-# the functions that need them, because both import this module.
+# approval_records, path_stages, stable_ids. next_cmd, next_step and approve_cmd
+# are imported inside the functions that need them, because they import this
+# module.
 from __future__ import annotations
 
 import json
@@ -37,7 +38,8 @@ import re
 
 from compass_pkg.core import (CompassError, issue_arg, load_manifest, now_iso,
                               resolve_issue_dir, save_manifest)
-from compass_pkg.stable_ids import STAGE_IDS
+from compass_pkg.path_stages import is_path_issue, path_stage_of, stages_of
+from compass_pkg.stable_ids import PATH_STAGE_IDS, STAGE_IDS, STAGE_SPECIFY
 from compass_pkg.terminal import say
 
 OPEN, CONFIRMED, REOPENED = "open", "confirmed", "reopened"
@@ -228,9 +230,11 @@ def cmd_decision_add(args):
         raise CompassError("compass issue decision add: --by must name an agent (%s), not "
                            "'%s'. A decision a person took needs no record here."
                            % (", ".join(sorted(agent_names())), args.by))
-    if args.stage not in STAGE_IDS:
+    # A path issue's decision names a path stage; a legacy name still reads (ADR-092).
+    named = STAGE_IDS + tuple(s for s in PATH_STAGE_IDS if s not in STAGE_IDS)
+    if args.stage not in named:
         raise CompassError("compass issue decision add: '%s' is not a stage; use one of %s."
-                           % (args.stage, ", ".join(STAGE_IDS)))
+                           % (args.stage, ", ".join(named)))
     held = task.setdefault("decisions_taken", [])
     if any(isinstance(e, dict) and e.get("id") == args.id for e in held):
         raise CompassError("compass issue decision add: %s exists already. Change it with "
@@ -277,8 +281,18 @@ def cmd_decision_set(args):
 
 # --- the checkpoint wait ----------------------------------------------------------
 
-def _rank(stage):
-    return STAGE_IDS.index(stage) if stage in STAGE_IDS else 0
+def _order(task):
+    """The stages of the issue, in order: the path stages on a path issue (ADR-092)."""
+    return stages_of(task) if is_path_issue(task) else STAGE_IDS
+
+
+def _rank(stage, task=None):
+    """The place of a decision's stage. On a path issue a decision taken at a legacy
+    stage counts at the path stage that shows it, such as refine at specify."""
+    order = _order(task) if task is not None else STAGE_IDS
+    if task is not None and is_path_issue(task):
+        stage = path_stage_of(stage)
+    return order.index(stage) if stage in order else 0
 
 
 def unconfirmed(task):
@@ -294,12 +308,20 @@ def waiting(task, done_stages):
     is in the manifest's `checkpoints:`, and a decision taken at S or earlier
     is not confirmed. The latest such stage is reported. `entries` are the
     unconfirmed decisions taken at that stage or earlier."""
+    order = _order(task)
     checkpoints = task.get("checkpoints")
-    checkpoints = [s for s in checkpoints if s in STAGE_IDS] if isinstance(checkpoints, list) else []
+    checkpoints = [s for s in checkpoints if s in order] if isinstance(checkpoints, list) else []
+    done_stages = set(done_stages)
+    if is_path_issue(task):
+        # A path issue's specify counts as done only once its listed checkpoint has
+        # an outcome; the decisions wait at that checkpoint once its scenarios exist.
+        from compass_pkg import next_step
+        if next_step.specify_written(task):
+            done_stages.add(STAGE_SPECIFY)
     pending = unconfirmed(task)
-    for stage in reversed(STAGE_IDS):
+    for stage in reversed(order):
         if stage in checkpoints and stage in done_stages:
-            here = [e for e in pending if _rank(e.get("stage")) <= _rank(stage)]
+            here = [e for e in pending if _rank(e.get("stage"), task) <= _rank(stage, task)]
             if here:
                 return stage, here
     return None, []
@@ -400,7 +422,8 @@ def approve_set(task_dir, answer, save=True):
     stage, entries = waiting(task, done)
     if stage is None:
         entries = unconfirmed(task)
-        stage = max((e.get("stage") for e in entries), key=_rank, default=None)
+        stage = max((e.get("stage") for e in entries), key=lambda st: _rank(st, task),
+                    default=None)
     if not entries:
         raise CompassError("compass evidence approve: this issue has no decision waiting to "
                            "be confirmed.")

@@ -10,6 +10,7 @@ region, and copies a helper it needs from another region into its own.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -18,6 +19,10 @@ from pathlib import Path
 
 import pytest
 import yaml
+
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
@@ -50,7 +55,9 @@ def _cli(cwd, *argv):
         text=True, timeout=180, stdin=subprocess.DEVNULL,
         env={"PATH": "/usr/bin:/bin", "HOME": str(cwd), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
              "NO_COLOR": "1", "PYTHONDONTWRITEBYTECODE": "1",
-             "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"})
+             "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+             # The path writer's switch reaches the CLI; step 9b of #351 deletes it.
+             **{k: v for k, v in os.environ.items() if k == "COMPASS_PATH_WRITER"}})
     return run.returncode, run.stdout, run.stderr
 
 
@@ -197,7 +204,9 @@ def _u2_run(cwd, *argv):
     """`(code, stdout, stderr)` of one CLI call in the project `cwd`."""
     env = {"PATH": "/usr/bin:/bin", "HOME": str(cwd), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
            "NO_COLOR": "1", "COLUMNS": "200", "PYTHONDONTWRITEBYTECODE": "1",
-           "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "CLAUDE_PROJECT_DIR": str(cwd)}
+           "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "CLAUDE_PROJECT_DIR": str(cwd),
+           # The path writer's switch reaches the CLI; step 9b of #351 deletes it.
+           **{k: v for k, v in os.environ.items() if k == "COMPASS_PATH_WRITER"}}
     env.update(dict(zip(_U2_GIT[::2], _U2_GIT[1::2])))
     run = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), *argv], cwd=cwd,
                          capture_output=True, text=True, timeout=300, stdin=subprocess.DEVNULL,
@@ -583,7 +592,10 @@ def test_dss_12_nfr_nothing_to_check_without_spec(tmp_path):
         # The fixture writes a spec at the fixed path, which is read whenever it
         # exists (ADR-091); this case is the issue without one.
         (root / sup.DOCS / "acceptance-criteria.md").unlink()
-        assert sup.manifest(root)["delivery_approach"] == approach
+        # The four-stage path stores `delivery` for the quick fix's and the regular
+        # issue's assessment, and keeps `spike` (ADR-092 decision 2).
+        stored = "spike" if approach == "spike" else "delivery"
+        assert sup.manifest(root)["delivery_approach"] == stored
         assert NFR in _u3_declared(root), approach
         code, rows = _u3_check(root)
         assert rows.get(NFR) == ("nothing-to-check",

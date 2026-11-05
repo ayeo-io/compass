@@ -17,6 +17,10 @@ from pathlib import Path
 import pytest
 import yaml
 
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
@@ -37,7 +41,9 @@ def _env(home):
     return {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
             "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1",
             "COLUMNS": "100", "PYTHONDONTWRITEBYTECODE": "1",
-            "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+            "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+            # The path writer's switch reaches the CLI; step 9b of #351 deletes it.
+            **{k: v for k, v in os.environ.items() if k == "COMPASS_PATH_WRITER"}}
 
 
 def _run(cwd, *argv):
@@ -752,7 +758,9 @@ def test_gs_11_write_commits_generation_one_for_an_issue_with_none(tmp_path):
     assert "committed generation 1" in out
     assert _manifest(task_dir)["generation"] == 1
     assert (_gen(task_dir, 1) / "complete").is_file()
-    assert _manifest(task_dir)["delivery_approach"] == "regular"
+    # The path stores `delivery` and the evidence owed (ADR-092 decisions 2 and 3).
+    assert _manifest(task_dir)["delivery_approach"] == "delivery"
+    assert _manifest(task_dir)["evidence_required"]
 
 
 def test_gs_11_write_commits_generation_one_for_generation_zero(tmp_path):
@@ -771,9 +779,11 @@ def test_gs_11_a_repeat_says_no_change_and_a_new_assessment_commits_two(tmp_path
     assert "no change" in out and "generation 1" in out
     assert _manifest(task_dir)["generation"] == 1 and not _gen(task_dir, 2).exists()
     body = _manifest(task_dir)
-    body["assessment"]["size"] = "large"
+    # On the path a medium and a large change owe the same evidence (ADR-092
+    # decision 3), so the new assessment moves the size to small, the light row.
+    body["assessment"]["size"] = "small"
     _write_manifest(task_dir, assessment=body["assessment"])
-    code, out, err = _evaluate_write(root, "--reason", "larger than thought")
+    code, out, err = _evaluate_write(root, "--reason", "smaller than thought")
     assert code == 0, out + err
     assert "committed generation 2" in out
     assert _manifest(task_dir)["generation"] == 2
@@ -1051,7 +1061,9 @@ def test_gs_17_the_command_refuses_a_symlinked_folder_with_exit_2(tmp_path):
     (victim / "keep.txt").write_text("mine\n", encoding="utf-8")
     _link(_gen(task_dir, 2), victim)
     body = _manifest(task_dir)
-    body["assessment"]["size"] = "large"
+    # A size whose evidence differs, so the write commits generation 2 (ADR-092
+    # decision 3: a medium and a large change owe the same evidence).
+    body["assessment"]["size"] = "small"
     _write_manifest(task_dir, assessment=body["assessment"])
     code, out, err = _evaluate_write(root)
     assert code == 2, out + err

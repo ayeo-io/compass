@@ -23,6 +23,10 @@ sys.path.insert(0, str(ROOT / "tests"))
 from test_generation_store import (SLUG, _committed_project, _manifest, _project,  # noqa: E402
                                    _run, _write_manifest)
 
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
+
 SHIPPED = ROOT / "governance"
 
 
@@ -475,9 +479,13 @@ def _edit_policy(folder, edit):
 
 
 def _add_gate(body):
-    # A gate the regular shape lacks. Not `verify.analyze`: 9.0.0 removed it, so the
-    # evaluator leaves it out (ADR-091).
-    body["route_shapes"]["regular"]["gates"].append("verify.architecture")
+    # A gate the issue does not owe. Not `verify.analyze`: 9.0.0 removed it, so the
+    # evaluator leaves it out (ADR-091). On the four-stage path the evidence never
+    # reads an approach's gates (ADR-092 decision 10), so the gate joins through a
+    # floor's `add_gate`, which the path still reads.
+    body["routing_guardrails"]["floors"].append({
+        "id": "RP-FLOOR-TEST", "when": {"risk": "contained"},
+        "add_gate": "verify.architecture", "rationale": "A test floor."})
 
 
 def test_ef_6_the_result_matches_the_one_the_governance_files_give(tmp_path):
@@ -489,6 +497,16 @@ def test_ef_6_the_result_matches_the_one_the_governance_files_give(tmp_path):
     # The stored generation also carries the delivery-approach record every approach owes
     # (the catalogue flag `every_approach`); the governance files do not declare the flag.
     stored["artifacts"] = [a for a in stored["artifacts"] if a["kind"] != "delivery-approach"]
+    # On the four-stage path the `S17` evidence is owed only where the configuration
+    # declares the strategy (ADR-092). The stored generation declares it; the
+    # governance files of a project with no `compass.yml` do not, so the preview of
+    # the other issue owes no `S17` token and stores no block. Everything else agrees.
+    s17 = ("outer-loop", "isolation", "layering")
+    assert stored.pop("acceptance_strategy")["applies"] is True
+    assert "acceptance_strategy" not in live
+    assert [t for t in stored["evidence_required"] if t not in s17] == live["evidence_required"]
+    assert set(stored["evidence_required"]) - set(live["evidence_required"]) == set(s17)
+    stored["evidence_required"] = live["evidence_required"]
     assert stored == live
 
 
@@ -508,6 +526,10 @@ def test_ef_6_editing_the_live_policy_does_not_change_the_issue_with_a_generatio
 def test_ef_6_the_autonomy_is_the_one_the_generation_stored(tmp_path):
     root, task_dir = _project(tmp_path)
     _project(tmp_path, slug="other")
+    # On the path balanced autonomy lists no checkpoint on this change (ADR-092 open
+    # question 7), so the issue is assessed under controlled autonomy, which does.
+    (root / ".compass" / "config.yml").write_text("version: 1.0.0\nautonomy: controlled\n",
+                                                  encoding="utf-8")
     code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
     assert code == 0, out + err
     before = _evaluate_json(root)

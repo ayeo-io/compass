@@ -100,13 +100,29 @@ def assessment_effect(manifest, before, after):
     except CompassError as exc:
         return ({"approach": {"before": None, "after": None}, "result": "not-run",
                  "changes": [], "refused": {"before": None, "after": _text(exc)}}, {})
-    return ({"approach": {"before": got.approach[0], "after": got.approach[1]},
+    return ({"approach": {"before": _committed(got.approach[0], manifest),
+                          "after": _committed(got.approach[1], None)},
              "result": got.result,
              "changes": [{"fact": c.fact, "field": c.field, "key": c.key,
                           "outcome": c.outcome, "before": classify.plain(c.parent),
                           "after": classify.plain(c.child)} for c in got.changes],
              "refused": ({"before": got.refused[0], "after": got.refused[1]}
                          if any(got.refused) else None)}, got.stage_modes[0])
+
+
+def _committed(approach, manifest):
+    """The `delivery_approach` a commit stores for the approach the classifier
+    names. On the four-stage path a delivery assessment stores `delivery` and
+    a spike `spike` (ADR-092 decision 2): the path writer's for `after`, the
+    manifest's own for `before`. The classifier still names the approach of
+    the configuration's routing."""
+    from compass_pkg import path_writer
+    from compass_pkg.path_stages import is_path_issue
+    from compass_pkg.stable_ids import APPROACH_DELIVERY, APPROACH_SPIKE
+    on_path = is_path_issue(manifest) if manifest is not None else path_writer.enabled()
+    if approach is None or approach == APPROACH_SPIKE or not on_path:
+        return approach
+    return APPROACH_DELIVERY
 
 
 def _fill_modes(changes, modes):

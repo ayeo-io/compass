@@ -12,7 +12,12 @@ import re
 import sys
 from pathlib import Path
 
+import pytest
 import yaml
+
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
@@ -80,48 +85,75 @@ def test_vr_a1_the_default_preset_holds_only_the_new_depth_words():
 
 # --- VR-A2 ---------------------------------------------------------------------
 
-def test_vr_a2_the_evaluator_writes_the_new_words_and_keeps_the_approach(
-        project, make_task, run_cli):
-    import yaml as _yaml
-    task_dir = make_task("big", {
-        "schema_version": "2.0",
-        "assessment": {"risk": "critical", "familiarity": "brownfield-mapped",
-                       "size": "large", "goal": "delivery", "role": "engineer",
-                       "labels": []}})
-    result = run_cli("approach", "evaluate", "--issue", "big", "--write", timeout=60)
-    assert result.returncode == 0, result
-    manifest = _yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
-    assert manifest["delivery_approach"] == "full"
-    stages = set(manifest["stages"].values())
-    assert stages <= set(RANKS) | SPECIAL, stages
-    assert "thorough" in stages and not stages & OLD_WORDS, stages
-    # 9.0.0 registers no document (ADR-091), so the manifest holds no depth to check.
-    assert "artifacts" not in manifest, manifest.get("artifacts")
+BIG = {"risk": "critical", "familiarity": "brownfield-mapped", "size": "large",
+       "goal": "delivery", "role": "engineer", "labels": []}
 
 
-def test_vr_a2_a_policy_copy_in_the_old_words_still_writes_the_new_ones(
-        project, make_task, run_cli):
-    """A project that copied `governance/` before the rename keeps the old
-    words in its policy; the manifest the evaluator writes does not."""
-    view = project / "governance" / "routing-policy.yml"
-    text = view.read_text(encoding="utf-8")
+def _old_words(text):
+    """`text` of a routing policy, spelled in the words before the rename."""
     for new, old in (("thorough-with-follow-up", "full-plus-backfill"),
                      ("lightweight", "light")):
         text = re.sub(rf"(?<![\w-]){new}(?![\w-])", old, text)
     text = re.sub(r"(?<![\w-])thorough(?![\w-])", "full", text)
     text = re.sub(r"\bsize: medium\b", "size: standard", text)
-    text = re.sub(r"(\[[^\]]*)\bmedium\b", r"\1standard", text)
-    view.write_text(text, encoding="utf-8")
-    task_dir = make_task("big", {
-        "schema_version": "2.0",
-        "assessment": {"risk": "critical", "familiarity": "brownfield-mapped",
-                       "size": "large", "goal": "delivery", "role": "engineer",
-                       "labels": []}})
+    return re.sub(r"(\[[^\]]*)\bmedium\b", r"\1standard", text)
+
+
+def _route_8_0_4(policy=None):
+    """The 8.0.4 evaluator's result for `BIG`. 9.0.0 writes no stage modes for a new
+    issue (ADR-092 decision 1), so the words the evaluator gives a stage are judged
+    on the 8.0.4 governance copy, the last release that routed approaches."""
+    import compat_baseline as cb
+    from compass_pkg import routing
+    return routing.evaluate_route(dict(BIG), routing.prepare_policy(policy or cb.policy_8_0_4()))
+
+
+def _path_write(make_task, run_cli):
+    task_dir = make_task("big", {"schema_version": "2.0", "assessment": dict(BIG)})
     result = run_cli("approach", "evaluate", "--issue", "big", "--write", timeout=60)
     assert result.returncode == 0, result
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
-    assert not set(manifest["stages"].values()) & OLD_WORDS, manifest["stages"]
+    # The four-stage path stores no stage modes (ADR-092 decision 1).
+    assert manifest["delivery_approach"] == "delivery", manifest
+    assert manifest["evidence_required"] and "stages" not in manifest, manifest
+    return manifest
+
+
+def test_vr_a2_the_evaluator_writes_the_new_words_and_keeps_the_approach(
+        project, make_task, run_cli):
+    result = _route_8_0_4()
+    assert result["delivery_approach"] == "full"
+    stages = set(result["stages"].values())
+    assert stages <= set(RANKS) | SPECIAL, stages
+    assert "thorough" in stages and not stages & OLD_WORDS, stages
+    manifest = _path_write(make_task, run_cli)
+    # 9.0.0 registers no document (ADR-091), so the manifest holds no depth to check.
+    assert "artifacts" not in manifest, manifest.get("artifacts")
+
+
+def test_vr_a2_a_policy_copy_in_the_old_words_still_writes_the_new_ones(
+        project, make_task, run_cli, tmp_path_factory):
+    """A project that copied `governance/` before the rename keeps the old
+    words in its policy; the result the evaluator gives does not."""
+    view = project / "governance" / "routing-policy.yml"
+    view.write_text(_old_words(view.read_text(encoding="utf-8")), encoding="utf-8")
+    manifest = _path_write(make_task, run_cli)
     assert not {a.get("depth") for a in manifest.get("artifacts") or []} & OLD_WORDS
+    # The same respelling of the 8.0.4 copy, read as a project reads its copy.
+    import compat_baseline as cb
+    from compass_pkg import effective
+    root = tmp_path_factory.mktemp("old-words") / "project"
+    (root / ".compass" / "work").mkdir(parents=True)
+    cb.add_governance_copy(root, source=cb.GOVERNANCE_8_0_4)
+    copy = root / "governance" / "routing-policy.yml"
+    copy.write_text(_old_words(copy.read_text(encoding="utf-8")), encoding="utf-8")
+    assert "full-plus-backfill" in copy.read_text(encoding="utf-8")
+    resolution = effective.resolve_live(str(root))
+    policy = effective.EffectiveView("live", None, None, resolution.resolved,
+                                     resolution.versions).evaluator_policy()
+    result = _route_8_0_4(policy)
+    assert not set(result["stages"].values()) & OLD_WORDS, result["stages"]
+    assert not {a.get("depth") for a in result.get("artifacts") or []} & OLD_WORDS
 
 
 # --- VR-A3 ---------------------------------------------------------------------

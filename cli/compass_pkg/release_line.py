@@ -8,7 +8,8 @@ and the landing refusal agree:
 
 - `owes` decides whether an issue owes a line: it is neither completed nor
   closed, its manifest has a `generation` key, and its stored configuration sets
-  `release_line: true` on its approach. An issue that predates the field, or the
+  `release_line: true` on its approach; a path issue (ADR-092), when it sets the
+  field on any approach that ships. An issue that predates the field, or the
   archive, never owes one.
 - `landing_refusal` is the entry of `manifest.LANDING_REFUSALS`, so it judges only
   the issue a landing names.
@@ -20,7 +21,8 @@ and the landing refusal agree:
 The owning doc is `docs/release-line.md`.
 """
 # DEPENDENCY: standard library (copy, os); the bundled PyYAML; compass_pkg.atomic_io,
-# core, effective, manifest (title_problem), refusals, status_words.
+# core, effective, manifest (title_problem), path_stages, refusals, stable_ids,
+# status_words.
 from __future__ import annotations
 
 import copy
@@ -68,7 +70,18 @@ def owes(task, task_dir):
     if view is None:
         return False
     approaches = view.config.get("approaches")
-    body = approaches.get(task.get("delivery_approach")) if isinstance(approaches, dict) else None
+    if not isinstance(approaches, dict):
+        return False
+    from compass_pkg.path_stages import is_path_issue
+    if is_path_issue(task):
+        # A path issue has no approach entry (ADR-092 decision 2). It owes a line
+        # when the configuration sets the field on any approach that ships, as
+        # every 8.x delivery approach did, so a frozen preset from before the
+        # field still owes none.
+        from compass_pkg.stable_ids import APPROACH_SPIKE
+        return any(isinstance(body, dict) and body.get("release_line") is True
+                   for name, body in approaches.items() if name != APPROACH_SPIKE)
+    body = approaches.get(task.get("delivery_approach"))
     return isinstance(body, dict) and body.get("release_line") is True
 
 

@@ -69,7 +69,9 @@ The refusal judges an issue only when all four of these hold, and declines other
 1. the landing names the issue (`--issue`, `COMPASS_ISSUE` or the current-task pointer);
 2. the issue is not completed and not closed;
 3. its manifest has a `generation` key;
-4. its stored configuration sets `release_line: true` on its approach.
+4. its stored configuration sets `release_line: true` on its approach. An issue on
+   the four-stage path (ADR-092) has no approach entry: it owes a line when the
+   configuration sets the field on any approach except the spike.
 
 When it judges, it refuses an issue whose `release_note` is absent or blank. So:
 

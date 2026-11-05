@@ -17,6 +17,10 @@ import yaml
 from tests.acceptance.atdd_strategy import support
 from tests.acceptance.atdd_strategy.support import ROOT
 
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
+
 CHECK = "acceptance-applicability-agrees"
 STRATEGY = "four-layer acceptance strategy"
 OFF_REASON = "no deployable candidate yet"
@@ -110,22 +114,30 @@ def test_trc_a5(tmp_path, line):
 
 # --- `TRC-A6` ------------------------------------------------------------------------------
 
-@pytest.mark.parametrize("approach, routing", [
-    ("regular", "on"),
-    ("full", "on"),
-    ("quick-fix", "existing DSL only"),
-    ("hotfix", "existing DSL only, isolation proof required"),
-    ("spike", "suspended, as strategy `S2`"),
+# On the four-stage path assess selects the evidence, not an approach (ADR-092
+# decision 3). Each 8.x approach's assessment now lands on the evidence row that
+# reproduces its gates and keeps its `S17` routing; the line names the stored
+# `delivery_approach`, which is `delivery` for every delivery row (decision 2).
+@pytest.mark.parametrize("approach, stored, row, routing", [
+    ("regular", "delivery", "RP-EVID-STANDARD", "on"),
+    ("full", "delivery", "RP-EVID-STANDARD", "on"),
+    ("quick-fix", "delivery", "RP-EVID-LIGHT", "existing DSL only"),
+    ("hotfix", "delivery", "RP-EVID-DEFECT", "existing DSL only, isolation proof required"),
+    ("spike", "spike", None, "suspended, as strategy `S2`"),
 ])
-def test_trc_a6(tmp_path, approach, routing):
-    """The strategy is routed per delivery approach."""
+def test_trc_a6(tmp_path, approach, stored, row, routing):
+    """The strategy is routed per evidence row; the spike keeps its own routing."""
     project = support.Project(tmp_path / "repo")
     issue = project.issue("change", approach=approach)
     code, out, err = issue.assess()
     assert code == 0, out + err
-    assert issue.manifest()["delivery_approach"] == approach
+    manifest = issue.manifest()
+    assert manifest["delivery_approach"] == stored
+    if row is not None:
+        assert manifest["evidence_required"] and "stages" not in manifest, manifest
+        assert manifest["policy_rules_fired"][0]["id"] == row, manifest["policy_rules_fired"]
     line = _strategy_line(issue.approach_record())
-    assert line.endswith(f"Routing on the {approach} approach: {routing}."), line
+    assert line.endswith(f"Routing on the {stored} approach: {routing}."), line
 
 
 def test_trc_a6_the_record_quick_fix_start_writes_shows_the_line(tmp_path):
@@ -143,7 +155,9 @@ def test_trc_a6_the_record_quick_fix_start_writes_shows_the_line(tmp_path):
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
     line = _strategy_line(support.strategy_line(manifest, task_dir))
     assert "(`S17`): does not apply - acceptance of kind validation" in line, line
-    assert line.endswith("Routing on the quick-fix approach: existing DSL only."), line
+    # The light evidence row keeps the routing the quick fix had (ADR-092 decision 3).
+    assert manifest["delivery_approach"] == "delivery", manifest
+    assert line.endswith("Routing on the delivery approach: existing DSL only."), line
 
 
 # --- `TRC-A9` ------------------------------------------------------------------------------

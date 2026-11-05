@@ -43,6 +43,10 @@ import yaml  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import project_readiness_support as readiness_support  # noqa: E402
 
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
+
 SLUG = "feature"
 CREATED = "2026-10-10"
 DOCS = f"docs/compass/{CREATED}-{SLUG}"
@@ -87,7 +91,9 @@ def env(root, **extra):
         "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "user.useConfigOnly",
         "GIT_CONFIG_VALUE_0": "true",
         "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
-        "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"}
+        "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com",
+        # The path writer's switch reaches the CLI; step 9b of #351 deletes it.
+        **{k: v for k, v in os.environ.items() if k == "COMPASS_PATH_WRITER"}}
     values.update(extra)
     return values
 
@@ -227,50 +233,68 @@ def schema_errors(body):
 
 
 def refine_done(root):
-    """The records show refine complete: its review written and registered."""
+    """The records show refine complete on an issue assessed before the path: its
+    review written and registered. Other test files call it."""
     register(root, "acceptance-criteria")
     register(root, "requirements-review")
+
+
+#: On the four-stage path balanced autonomy lists a checkpoint only where the
+#: scenarios owe a person's approval, which critical risk owes (ADR-092 open
+#: question 7). The tests that need a listed checkpoint beside an unlisted one
+#: assess at that risk: `specify` is listed, and assess, build and ship are not.
+CRITICAL = {"risk": "critical"}
+
+
+def specify_done(root, slug=SLUG):
+    """The records show specify complete on the path: one scenario with an id, an
+    intent and a declared test (ADR-092)."""
+    done = run(root, "scenario", "add", "TRC-001", "--issue", slug, "--intent", "INT-1",
+               "--title", "one", "--test", "tests/test_one.py::test_one")
+    assert done.returncode == 0, done
 
 
 # --- ARC-3 ------------------------------------------------------------------------
 
 def test_arc_3_agent_records_a_skipped_outcome(tmp_path):
-    root = project(tmp_path)
-    assert manifest(root)["checkpoints"] == ["define", "plan"]
-    refine_done(root)
+    root = project(tmp_path, assessment=CRITICAL)
+    assert manifest(root)["checkpoints"] == ["specify"]
+    specify_done(root)
     devlog = manifest_file(root).parent / "devlog.md"
     devlog.write_text("# Devlog\n")
     generations = generation_files(root)
     assert generations, "the issue holds no stored generation to compare"
     evidence_before = manifest(root).get("evidence")
 
+    # The path's assess hand-off is not listed under balanced autonomy, so an
+    # agent records that it passed.
     before = _now()
-    done = skip(root, "refine")
+    done = skip(root, "assess", "router")
     after = _now()
     assert done.returncode == 0, done
     assert done.stdout.strip() == (
-        "compass issue checkpoint add: refine recorded as skipped by spec-author."), done
+        "compass issue checkpoint add: assess recorded as skipped by router."), done
     entries = outcomes(root)
     assert len(entries) == 1, entries
     entry = entries[0]
     assert {k: v for k, v in entry.items() if k != "at"} == {
-        "stage": "refine", "outcome": "skipped", "by": "spec-author"}, entry
+        "stage": "assess", "outcome": "skipped", "by": "router"}, entry
     assert before <= _utc(entry["at"]) <= after, entry
     assert manifest(root).get("evidence") == evidence_before
     assert devlog.read_text() == "# Devlog\n"
     assert not schema_errors(manifest(root)), schema_errors(manifest(root))
 
     same = manifest_file(root).read_bytes()
-    done = skip(root, "refine")
+    done = skip(root, "assess", "router")
     assert done.returncode == 0, done
     assert "already recorded as skipped; nothing was written" in done.stdout, done
     assert manifest_file(root).read_bytes() == same
 
-    done = approve(root, "refine")
+    done = approve(root, "assess")
     assert done.returncode == 0, done
-    refine = [e for e in outcomes(root) if e["stage"] == "refine"]
-    assert len(refine) == 1, outcomes(root)
-    assert refine[0]["outcome"] == "waited" and refine[0]["by"] == "jed72", refine
+    assess = [e for e in outcomes(root) if e["stage"] == "assess"]
+    assert len(assess) == 1, outcomes(root)
+    assert assess[0]["outcome"] == "waited" and assess[0]["by"] == "jed72", assess
     assert generation_files(root) == generations
     assert_no_gh_call(root)
 
@@ -313,15 +337,16 @@ def quick_fix(root, slug="fix-greeting", cli=CLI):
 # --- ARC-4 ------------------------------------------------------------------------
 
 def test_arc_4_skip_refusals(tmp_path):
-    root = project(tmp_path)
-    refine_done(root)
-    assert approve(root, "define").returncode == 0
+    root = project(tmp_path, assessment=CRITICAL)
+    specify_done(root)
+    assert approve(root, "assess").returncode == 0
     cases = [
-        (("plan", "spec-author", "skipped"), "plan is a listed checkpoint, so it waits for a person"),
-        (("define", "spec-author", "skipped"), "define already holds a waited outcome"),
+        (("specify", "spec-author", "skipped"),
+         "specify is a listed checkpoint, so it waits for a person"),
+        (("assess", "router", "skipped"), "assess already holds a waited outcome"),
         (("breakdown", "builder", "skipped"), "'breakdown' is not a checkpoint stage"),
-        (("refine", "jed72", "skipped"), "--by must name an agent"),
-        (("refine", "spec-author", "waited"), "only a person's approval records waited"),
+        (("build", "jed72", "skipped"), "--by must name an agent"),
+        (("build", "builder", "waited"), "only a person's approval records waited"),
     ]
     for (stage, by, outcome), cause in cases:
         before = manifest_file(root).read_bytes()
@@ -330,16 +355,18 @@ def test_arc_4_skip_refusals(tmp_path):
         assert done.returncode == 2, (stage, done)
         assert cause in done.stderr, (stage, done.stderr)
         assert manifest_file(root).read_bytes() == before, stage
-        if stage == "plan" or outcome == "waited":
+        if stage == "specify" or outcome == "waited":
             assert f"compass evidence approve --checkpoint {stage}" in done.stderr, done.stderr
 
+    # Every path stage runs: the path has no stage modes (ADR-092 decision 1), so no
+    # path issue has a stage whose hand-off its approach skips. A legacy stage is not
+    # a stage of a path issue, and the quick fix refuses it by that name instead.
     slug = quick_fix(root)
     before = manifest_file(root, slug).read_bytes()
     done = run(root, "issue", "checkpoint", "add", "refine", "--outcome", "skipped",
                "--by", "builder", "--issue", slug)
     assert done.returncode == 2, done
-    # The message says "approach", because "route" is a verb only (ADR-044).
-    assert "the approach runs no refine hand-off" in done.stderr, done.stderr
+    assert "'refine' is not a stage of the four-stage path" in done.stderr, done.stderr
     assert manifest_file(root, slug).read_bytes() == before
 
     # An issue assessed before outcomes were recorded is not judged: the verb
@@ -348,7 +375,7 @@ def test_arc_4_skip_refusals(tmp_path):
     body.pop("checkpoint_outcomes")
     write_manifest(root, body)
     before = manifest_file(root).read_bytes()
-    done = skip(root, "refine")
+    done = skip(root, "build", "builder")
     assert done.returncode == 2, done
     assert "is not judged and takes no outcome; nothing was written" in done.stderr, done
     assert manifest_file(root).read_bytes() == before
@@ -363,13 +390,13 @@ def _define_done(root):
 
 
 def test_arc_1_person_answers_a_checkpoint(tmp_path):
-    root = project(tmp_path)
-    _define_done(root)
+    root = project(tmp_path, assessment=CRITICAL)
+    specify_done(root)
     body = manifest(root)
-    assert body["checkpoints"] == ["define", "plan"] and body["checkpoint_outcomes"] == []
+    assert body["checkpoints"] == ["specify"] and body["checkpoint_outcomes"] == []
     before = manifest(root)
 
-    done = approve(root, "define")
+    done = approve(root, "specify")
     assert done.returncode == 0, done
     after = manifest(root)
     added = after["evidence"][len(before["evidence"]):]
@@ -378,14 +405,14 @@ def test_arc_1_person_answers_a_checkpoint(tmp_path):
     record = added[0]
     assert record["type"] == "checkpoint-approval", record
     assert {k: v for k, v in record.items() if k not in ("id", "timestamp")} == {
-        "type": "checkpoint-approval", "checkpoint": "define", "approver": "jed72",
-        "role": "product-owner", "scope": "the define hand-off", "decision": "approved",
+        "type": "checkpoint-approval", "checkpoint": "specify", "approver": "jed72",
+        "role": "product-owner", "scope": "the specify hand-off", "decision": "approved",
         "issue": SLUG, "generation": before["generation"], "via": "terminal"}, record
     assert "check" not in record
     _utc(record["timestamp"])
     assert not [e for e in after["evidence"] if e.get("type") == "human-approval"]
     assert after["checkpoint_outcomes"] == [{
-        "stage": "define", "outcome": "waited", "by": "jed72",
+        "stage": "specify", "outcome": "waited", "by": "jed72",
         "at": record["timestamp"], "evidence": record["id"]}]
     unchanged = {k: v for k, v in before.items() if k not in ("evidence", "checkpoint_outcomes")}
     assert {k: v for k, v in after.items() if k in unchanged} == unchanged
@@ -397,20 +424,21 @@ def test_arc_1_person_answers_a_checkpoint(tmp_path):
 # --- ARC-2 ------------------------------------------------------------------------
 
 def test_arc_2_approve_checkpoint_refusals(tmp_path):
-    root = project(tmp_path)
-    _define_done(root)
+    root = project(tmp_path, assessment=CRITICAL)
+    specify_done(root)
     slug = quick_fix(root)
     cases = [
-        ("no terminal", dict(stage="define", terminal=False), "needs a terminal"),
-        ("agent", dict(stage="define", approver="agent"), "an agent cannot approve"),
-        ("not listed", dict(stage="define", approver="sam"),
+        ("no terminal", dict(stage="specify", terminal=False), "needs a terminal"),
+        ("agent", dict(stage="specify", approver="agent"), "an agent cannot approve"),
+        ("not listed", dict(stage="specify", approver="sam"),
          "sam is not an approver of this project"),
         ("not a checkpoint", dict(stage="breakdown"), "'breakdown' is not a checkpoint stage"),
-        # The message says "approach", because "route" is a verb only (ADR-044).
+        # Every path stage runs (ADR-092 decision 1), so the quick fix refuses a legacy
+        # stage as a stage it does not have, not as a hand-off its approach skips.
         ("quick fix refine", dict(stage="refine", slug=slug),
-         "the approach runs no refine hand-off"),
-        ("plan not run", dict(stage="plan"), "plan has not run"),
-        ("rejected", dict(stage="define", extra=("--decision", "rejected")),
+         "'refine' is not a stage of the four-stage path"),
+        ("build not run", dict(stage="build"), "build has not run"),
+        ("rejected", dict(stage="specify", extra=("--decision", "rejected")),
          "--checkpoint records an approval only"),
     ]
     for name, case, cause in cases:
@@ -437,16 +465,17 @@ def test_arc_2_approve_checkpoint_refusals(tmp_path):
     body.pop("checkpoint_outcomes")
     write_manifest(root, body)
     before = manifest_file(root).read_bytes()
-    done = approve(root, "define")
+    done = approve(root, "specify")
     assert done.returncode == 2, done
     assert "is not judged and takes no outcome; nothing was written" in done.stderr, done
     assert manifest_file(root).read_bytes() == before
     assert_no_gh_call(root)
 
     # A project that declares neither approvers nor an owner: any person answers.
-    root = project(tmp_path / "open", compass_yml={"schema": 1, "autonomy": "balanced"})
-    _define_done(root)
-    done = approve(root, "define", approver="sam", role="engineer")
+    root = project(tmp_path / "open", compass_yml={"schema": 1, "autonomy": "balanced"},
+                   assessment=CRITICAL)
+    specify_done(root)
+    done = approve(root, "specify", approver="sam", role="engineer")
     assert done.returncode == 0, done
     lines = [line for line in done.stdout.splitlines() if "declares no approvers" in line]
     assert lines == ["compass evidence approve: this project declares no approvers or owner, "
@@ -503,13 +532,13 @@ def _check_lines(root, *names):
 def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
     root = project(tmp_path, compass_yml=HUMAN_DESIGN,
                    assessment={"risk": "critical", "labels": ["migrations"]})
-    _define_done(root)
-    assert "define" in manifest(root)["checkpoints"]
+    specify_done(root)
+    assert "specify" in manifest(root)["checkpoints"]
     without = _check_lines(root, "human-approval-present", "design-review")
     assert any("FAIL human-approval-present" in line for line in without[1]), without
     assert any("what: no human-approval evidence" in line for line in without[1]), without
 
-    done = approve(root, "define")
+    done = approve(root, "specify")
     assert done.returncode == 0, done
     with_record = _check_lines(root, "human-approval-present", "design-review")
     assert with_record == without, (with_record, without)
@@ -611,11 +640,14 @@ def _masked(text):
 
 
 def test_arc_5_landing_refuses_a_checkpoint_with_no_outcome(tmp_path, monkeypatch):
-    root = project(tmp_path)
-    # A new regular issue's first assessment makes it judged.
+    # On the path balanced autonomy lists only `specify`, where critical risk owes a
+    # person's approval of the scenarios (ADR-092 open question 7): the landing is
+    # refused for that one listed hand-off, as it was for `plan` before.
+    root = project(tmp_path, assessment=CRITICAL)
+    # A new issue's first assessment makes it judged.
     assert manifest(root)["checkpoint_outcomes"] == []
-    register(root, "acceptance-criteria", "approved")
-    assert approve(root, "define").returncode == 0
+    assert manifest(root)["checkpoints"] == ["specify"]
+    specify_done(root)
     _ready_to_ship(root)
     head, before = git(root, "rev-parse", "HEAD"), _tree(root)
 
@@ -624,9 +656,9 @@ def test_arc_5_landing_refuses_a_checkpoint_with_no_outcome(tmp_path, monkeypatc
     lines = done.stderr.strip().splitlines()
     assert lines == [
         f"compass: Blocked: landing of issue '{SLUG}'",
-        "Why: plan is listed in checkpoints with no outcome recorded, so nothing shows a "
-        "person answered it.",
-        "Fix: the person who answers runs compass evidence approve --checkpoint plan "
+        "Why: specify is listed in checkpoints with no outcome recorded, so nothing shows "
+        "a person answered it.",
+        "Fix: the person who answers runs compass evidence approve --checkpoint specify "
         "--approver <you> --role <role>, for each stage named, then ship again. "
         "[checkpoint-no-outcome]"], done.stderr
     assert git(root, "rev-parse", "HEAD") == head
@@ -644,13 +676,12 @@ def test_arc_5_landing_refuses_a_checkpoint_with_no_outcome(tmp_path, monkeypatc
     with pytest.raises(core.CompassError):
         manifest_module.run_landing_refusals(task, str(manifest_file(root).parent))
     assert seen == []
-    task["checkpoint_outcomes"].append({"stage": "plan", "outcome": "skipped",
-                                        "by": "planner", "at": "2026-10-13T00:00:00Z"})
+    task["checkpoint_outcomes"].append({"stage": "specify", "outcome": "skipped",
+                                        "by": "spec-author", "at": "2026-10-13T00:00:00Z"})
     manifest_module.run_landing_refusals(task, str(manifest_file(root).parent))
     assert seen == ["stub"]
 
-    register(root, "technical-design", "approved")
-    assert approve(root, "plan").returncode == 0
+    assert approve(root, "specify").returncode == 0
     git(root, "add", "src/new.py")
     done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG)
     assert done.returncode == 0, done
@@ -687,12 +718,16 @@ def _quick_fix_refused(tmp_path):
     root = project(tmp_path, compass_yml=dict(BALANCED, autonomy="controlled"))
     slug = quick_fix(root)
     body = manifest(root, slug)
-    assert body["checkpoints"] == ["assess"] and body["checkpoint_outcomes"] == []
+    # Controlled autonomy lists every path stage where `S17` applies, as it does to
+    # the light row (ADR-092 open question 7).
+    assert body["checkpoints"] == ["assess", "specify", "build", "ship"], body
+    assert body["checkpoint_outcomes"] == []
     head = git(root, "rev-parse", "HEAD")
     done = run(root, "quick-fix", "finish", "--issue", slug, "-m", "Fix it",
                "--candidate", "local", "--client", "cli", *GREET_CMD)
     assert done.returncode == 2, done
-    assert "assess is listed in checkpoints with no outcome recorded" in done.stderr, done
+    assert ("assess, specify, build and ship are listed in checkpoints with no outcome "
+            "recorded") in done.stderr, done
     assert git(root, "rev-parse", "HEAD") == head
     assert "land_timestamp" not in manifest(root, slug)
     assert_no_gh_call(root)

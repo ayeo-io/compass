@@ -52,7 +52,9 @@ def env(root):
             "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
             "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com",
             "GIT_AUTHOR_DATE": "2026-10-29T09:00:00+00:00",
-            "GIT_COMMITTER_DATE": "2026-10-29T09:00:00+00:00"}
+            "GIT_COMMITTER_DATE": "2026-10-29T09:00:00+00:00",
+            # The path writer's switch reaches the CLI; step 9b of #351 deletes it.
+            **{k: v for k, v in os.environ.items() if k == "COMPASS_PATH_WRITER"}}
 
 
 def git(root, *args):

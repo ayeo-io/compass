@@ -33,7 +33,12 @@ import re
 import subprocess
 import sys
 
+import pytest
 import yaml
+
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
@@ -66,66 +71,78 @@ def _project(tmp_path, manifest=None):
 # Group A - the evaluator emits a ceiling, not a topology <!-- vocabulary-scan: allow - contrasts the retired concept with the ceiling -->
 # ---------------------------------------------------------------------------
 
-def test_trc_a1_evaluator_emits_a_ceiling_not_a_topology(tmp_path):
-    """Assessment says how much parallelism is PERMITTED. It cannot say how
-    much there is, because the work units are not known until plan."""
-    root = _project(tmp_path)
+def _route_8_0_4(assessment):
+    """The 8.0.4 evaluator's result for `assessment`. 9.0.0 writes no ceiling for a
+    new issue (ADR-092 decision 11), so the ceiling rules are judged where they
+    still live: the 8.0.4 governance copy, the last release that routed approaches."""
+    sys.path.insert(0, str(ROOT / "tests"))
+    import compat_baseline as cb
+    from compass_pkg import routing
+    return routing.evaluate_route(assessment, routing.prepare_policy(cb.policy_8_0_4()))
+
+
+def _write(root):
     r = subprocess.run(
         [sys.executable, str(CLI), "approach", "evaluate", "--verbose", "--issue", "demo",
          "--write"], cwd=str(root), capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, f"{r.stdout}{r.stderr}"
+    manifest = yaml.safe_load(
+        (root / ".compass" / "work" / "demo" / "manifest.yml").read_text())
+    return r, manifest
+
+
+def test_trc_a1_evaluator_emits_a_ceiling_not_a_topology(tmp_path):
+    """Assessment says how much parallelism is PERMITTED. It cannot say how
+    much there is, because the work units are not known until plan."""
+    root = _project(tmp_path)
+    r, manifest = _write(root)
 
     assert not re.search(r"^\s*(topology|orchestration)\s*:", r.stdout, re.M), (
         f"the evaluator still prints a topology decision at triage, before "
         f"any work unit is known:\n{r.stdout}")
-    assert re.search(r"parallel subtasks|subtask ceiling|permits", r.stdout, re.I), (
-        f"the evaluator does not report the parallelism it permits:\n{r.stdout}")
+    # The path writes no ceiling and no orchestration (ADR-092 decision 11): the
+    # manifest holds the evidence the change owes instead.
+    assert manifest["evidence_required"], manifest
+    for key in ("subtask_ceiling", "orchestration", "max_worktrees", "stages"):
+        assert key not in manifest, key
+    # The 8.0.4 evaluator still reports the parallelism it permits as a number.
+    assert _route_8_0_4(_spine()["assessment"])["subtask_ceiling"] == 1
 
 
 def test_trc_a2_the_ceiling_is_a_number_not_a_sentence(tmp_path):
     """The bug this replaces: the evaluator wrote the string
     "solo (capped to 1 worktree)" into the manifest's topology field - a sentence <!-- vocabulary-scan: allow - names the retired field the bug wrote into -->
     in a machine field, which nothing downstream can compare against."""
-    root = _project(tmp_path)
-    subprocess.run(
-        [sys.executable, str(CLI), "approach", "evaluate", "--verbose", "--issue", "demo",
-         "--write"], cwd=str(root), capture_output=True, text=True, timeout=60,
-        check=True)
-    manifest = yaml.safe_load(
-        (root / ".compass" / "work" / "demo" / "manifest.yml").read_text())
-
-    ceiling = manifest.get("subtask_ceiling")
+    ceiling = _route_8_0_4(_spine()["assessment"]).get("subtask_ceiling")
     assert isinstance(ceiling, int), (
         f"subtask_ceiling is not an integer: {ceiling!r}")
     assert ceiling == 1, (
         f"critical risk caps parallelism at one worktree, so the ceiling is "
         f"1, not {ceiling!r}")
-    assert not isinstance(manifest.get("orchestration"), str) or not manifest.get("orchestration"), (
+    # The write stores no orchestration, string or otherwise, and on the path no
+    # ceiling either (ADR-092 decision 11).
+    root = _project(tmp_path)
+    _, manifest = _write(root)
+    assert not manifest.get("orchestration"), (
         f"assess still writes an orchestration into the manifest: "
-        f"{manifest.get('orchestration')!r} - breakdown owns that once the "
-        f"distribution map exists")
+        f"{manifest.get('orchestration')!r}")
+    assert "subtask_ceiling" not in manifest, manifest.get("subtask_ceiling")
 
 
-def test_trc_a3_an_uncapped_approach_permits_more_than_one(tmp_path):
+def test_trc_a3_an_uncapped_approach_permits_more_than_one():
     """The control. Without it, a change that hardcoded 1 would pass A2 while
     reporting that Compass never permits parallel work."""
-    root = _project(tmp_path, _spine(assessment={
+    ceiling = _route_8_0_4({
         "risk": "contained", "familiarity": "brownfield-mapped",
         "size": "large", "goal": "delivery", "role": "engineer",
-        "labels": []}))
-    subprocess.run(
-        [sys.executable, str(CLI), "approach", "evaluate", "--verbose", "--issue", "demo",
-         "--write"], cwd=str(root), capture_output=True, text=True, timeout=60,
-        check=True)
-    manifest = yaml.safe_load(
-        (root / ".compass" / "work" / "demo" / "manifest.yml").read_text())
+        "labels": []})["subtask_ceiling"]
     # None means unbounded, which is what an uncapped multiagent actually
     # permits. The assertion is "not pinned to one", not "greater than one" -
     # a fixed ceiling such as 8 would also satisfy "greater than one" without
     # being unbounded.
-    assert manifest["subtask_ceiling"] != 1, (
+    assert ceiling != 1, (
         f"large work on contained risk permits parallel streams; the ceiling "
-        f"came out {manifest['subtask_ceiling']!r}")
+        f"came out {ceiling!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -285,16 +302,10 @@ def test_trc_e1_swarm_has_no_invented_ceiling():
     assert shapes["regular"]["subtask_ceiling"] == 2
 
 
-def test_trc_e2_a_cap_still_produces_a_number(tmp_path):
+def test_trc_e2_a_cap_still_produces_a_number():
     """The control: unbounded must not mean uncappable."""
-    root = _project(tmp_path)          # critical risk -> RP-CAP-001 fires
-    subprocess.run(
-        [sys.executable, str(CLI), "approach", "evaluate", "--verbose", "--issue", "demo",
-         "--write"], cwd=str(root), capture_output=True, text=True, timeout=60,
-        check=True)
-    manifest = yaml.safe_load(
-        (root / ".compass" / "work" / "demo" / "manifest.yml").read_text())
-    assert manifest["subtask_ceiling"] == 1, manifest.get("subtask_ceiling")
+    # Critical risk -> RP-CAP-001 fires in the 8.0.4 evaluator.
+    assert _route_8_0_4(_spine()["assessment"])["subtask_ceiling"] == 1
 
 
 def test_trc_e3_an_old_spine_normalises_to_a_ceiling():

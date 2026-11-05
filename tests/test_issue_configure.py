@@ -21,6 +21,10 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import configure_fixtures as fx  # noqa: E402
 
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
+
 TIGHTER = ("--mode", "refine=full")          # refine is light in this issue's approach
 LOOSER = ("--mode", "define=collapsed")      # define is light there: collapsing it loosens
 
@@ -238,7 +242,8 @@ def test_cr_2_the_assessment_part_shows_what_the_issue_owes_before_and_after(tmp
     code, out, err = fx.configure(root, *TIGHTER, "--json")
     assert code == 0, out + err
     owed = json.loads(out)["assessment"]
-    assert owed["approach"] == {"before": "regular", "after": "regular"}
+    # On the four-stage path the commit stores `delivery` (ADR-092 decision 2).
+    assert owed["approach"] == {"before": "delivery", "after": "delivery"}
     assert owed["result"] in ("tightening", "equivalent")
     assert owed["refused"] is None
     for change in owed["changes"]:

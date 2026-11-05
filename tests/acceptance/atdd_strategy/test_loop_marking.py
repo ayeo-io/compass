@@ -16,6 +16,10 @@ import pytest
 
 from tests.acceptance.atdd_strategy import support
 
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
+
 CHECK = "outer-loop-recorded"
 FAIL = "sh", "-c", "echo 'test_one FAILED'; exit 1"
 PASS = "sh", "-c", "echo 'test_one PASSED'"
@@ -201,7 +205,13 @@ def _quick_fix(tmp_path):
 def test_trc_e7(tmp_path, given, recorded, result):
     """An in-scope quick fix records the outer loop by default."""
     project, issue = _quick_fix(tmp_path)
-    assert issue.manifest()["delivery_approach"] == "quick-fix"
+    # The quick fix is the light evidence row on the four-stage path (ADR-092
+    # decision 3): no Definition of Done, and `S17` on the existing DSL only.
+    manifest = issue.manifest()
+    assert manifest["delivery_approach"] == "delivery"
+    assert "outer-loop" in manifest["evidence_required"], manifest["evidence_required"]
+    assert "definition-of-done" not in manifest["evidence_required"]
+    assert manifest["acceptance_strategy"]["routing"] == "existing-dsl"
     loop = ["--loop", given] if given else []
     command = ["--", sys.executable, "-m", "pytest", "-q", "tests/test_greeting.py::test_greeting"]
     issue.must("tdd-red", "--issue", "greet", "--scenario", "TRC-001", *loop, *command)
@@ -210,7 +220,14 @@ def test_trc_e7(tmp_path, given, recorded, result):
                                "-m", "Say Hello", "--release-note", "The greeting says Hello.",
                                *loop, *(() if given else support.NAMED), *command)
     assert _evidence(issue, "red-TRC-001", recorded)["loop"] == recorded
-    assert _evidence(issue, "green-TRC-001", recorded)["loop"] == recorded
+    if result == "pass":
+        assert _evidence(issue, "green-TRC-001", recorded)["loop"] == recorded
+    else:
+        # On the four-stage path `quick-fix finish` refuses before it writes a
+        # green while the outer loop is owed, and names the next command
+        # (ADR-092 decision 8), so no inner-loop green is recorded.
+        assert not (issue.dir / "evidence" / "green-TRC-001.json").exists()
+        assert "next: compass tdd-red --loop outer --scenario TRC-001" in out, out + err
     assert (code == 0) == (result == "pass"), out + err
     code, document = issue.check()
     assert _row(document)["status"] == result, _row(document)

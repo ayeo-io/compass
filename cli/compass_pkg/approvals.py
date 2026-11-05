@@ -42,7 +42,7 @@ writer stamps itself. Callers hold `lock(task_dir)` around a record and any
 state they change with it, so two answers cannot interleave.
 """
 # DEPENDENCY: standard library (contextlib, dataclasses, os); compass_pkg.
-# approval_records, atomic_io, core, effective. checkpoint_outcomes, decisions_taken, item_records and next_cmd are imported
+# approval_records, atomic_io, core, effective. checkpoint_outcomes, decisions_taken, item_records, next_cmd and next_step are imported
 # inside the functions that need them, as approve_cmd did.
 from __future__ import annotations
 
@@ -363,8 +363,26 @@ def _checkpoint_approver(task_dir, approver):
                        f"the answer would not count. Nothing was written.")
 
 
+def _hand_off_reached(task, task_dir, stage):
+    """True when the stage's work is on record, so its hand-off can be answered.
+    On the four-stage path (ADR-092) specify counts as done only once its listed
+    checkpoint has an outcome, and ship only once the issue is closed, so those
+    two hand-offs are read from the work they hand off: the written scenarios,
+    and a finished build."""
+    from compass_pkg import next_cmd, next_step
+    from compass_pkg.path_stages import is_path_issue
+    from compass_pkg.stable_ids import STAGE_BUILD, STAGE_SHIP, STAGE_SPECIFY
+    typed = next_cmd._typed(task)
+    if is_path_issue(typed) and stage == STAGE_SPECIFY:
+        return next_step.specify_written(typed)
+    done = next_cmd._stages_on_record(typed, task_dir)
+    if is_path_issue(typed) and stage == STAGE_SHIP:
+        return STAGE_BUILD in done
+    return stage in done
+
+
 def _record_checkpoint(task_dir, answer, save):
-    from compass_pkg import checkpoint_outcomes, next_cmd
+    from compass_pkg import checkpoint_outcomes
     stage = answer.value
     if answer.decision != approval_records.APPROVED:
         raise CompassError(f"{VERB}: --checkpoint records an approval only, not "
@@ -373,7 +391,7 @@ def _record_checkpoint(task_dir, answer, save):
     task, task_path = load_manifest(task_dir)
     checkpoint_outcomes.refuse_unjudged(task, task_dir, VERB)
     checkpoint_outcomes.refuse_stage(task, stage, VERB)
-    if stage not in next_cmd._stages_on_record(next_cmd._typed(task), task_dir):
+    if not _hand_off_reached(task, task_dir, stage):
         raise CompassError(f"{VERB}: {stage} has not run: its record is not written, so there "
                            f"is no hand-off to answer yet. Nothing was written.")
     note = (None if answer.approver is None

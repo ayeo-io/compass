@@ -155,7 +155,7 @@ Each nested object, with its keys in this order:
 | | `outcome` | `tighter`, `looser` or `incomparable` |
 | | `parent` | The value before |
 | | `child` | The value with the proposal |
-| `assessment` | `approach` | `{before, after}`: the delivery approach each side gives, or `null` |
+| `assessment` | `approach` | `{before, after}`: the delivery approach each side gives, or `null`. On the four-stage path it is the `delivery_approach` a commit stores: `delivery`, or `spike` (ADR-092) |
 | | `result` | The classification word for the issue's own assessment |
 | | `changes` | The differences at that assessment |
 | each `assessment.changes` item | `fact`, `field`, `key`, `outcome` | As in `first_point.changes` |
@@ -170,8 +170,8 @@ Two examples are pinned. `tests/test_issue_configure.py` compares the
 command's output with the files in `tests/fixtures/` and checks each block
 below against its file.
 
-The first, for `--autonomy controlled` on a regular issue at generation 1,
-is `issue-configure-example.json`.
+The first, for `--autonomy controlled` on a medium issue at generation 1,
+assessed on the four-stage path, is `issue-configure-example.json`.
 
 ```json
 {
@@ -198,8 +198,8 @@ is `issue-configure-example.json`.
   },
   "assessment": {
     "approach": {
-      "before": "regular",
-      "after": "regular"
+      "before": "delivery",
+      "after": "delivery"
     },
     "result": "equivalent",
     "changes": [],
@@ -311,8 +311,8 @@ approval record behind it.
   },
   "assessment": {
     "approach": {
-      "before": "regular",
-      "after": "regular"
+      "before": "delivery",
+      "after": "delivery"
     },
     "result": "loosening",
     "changes": [

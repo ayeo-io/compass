@@ -13,6 +13,7 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -20,6 +21,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from artifact_status_support import (DOCS, HUMAN_DESIGN, SLUG, approve, edit,  # noqa: E402
                                      manifest, manifest_file, project, register, run,
                                      write_manifest)
+
+#: Every issue here is assessed on the four-stage path (ADR-092). Step 9b of #351
+#: turns the path writer on for good and deletes this mark.
+pytestmark = pytest.mark.usefixtures("path_writer")
 
 REVIEW = f"{DOCS}/requirements-review.md"
 
@@ -51,17 +56,22 @@ def _entry(ident, status="open", stage="define", by="builder", **more):
             "by": by, "stage": stage, "status": status, **more}
 
 
-def _define_done(root):
-    """The records show define complete and refine not started."""
+def _specify_done(root):
+    """The records show the path's specify work done: one scenario with an id, an
+    intent and a declared test (ADR-092). A listed `specify` checkpoint still waits."""
     (root / REVIEW).unlink(missing_ok=True)
-    assert register(root, "acceptance-criteria")[0] == 0
+    code, out, err = run(root, "scenario", "add", "TRC-001", "--issue", SLUG, "--intent",
+                         "INT-1", "--title", "one", "--test", "tests/test_one.py::test_one")
+    assert code == 0, out + err
 
 
-def _waiting_project(tmp_path, checkpoints, entries, compass_yml=HUMAN_DESIGN):
+def _waiting_project(tmp_path, checkpoints, entries, compass_yml=HUMAN_DESIGN,
+                     specified=True):
     root = project(tmp_path, compass_yml=compass_yml)
     # `compass next` needs the approach record beside the manifest.
     (manifest_file(root).parent / "delivery-approach.md").write_text("# Approach\n")
-    _define_done(root)
+    if specified:
+        _specify_done(root)
     edit(root, checkpoints=checkpoints, decisions_taken=entries)
     return root
 
@@ -73,8 +83,8 @@ def _next(root):
 
 
 def _stage(root):
-    """The legacy stage the resolver gives, which the checkpoints act on.
-    `compass next` shows it as the path stage it maps to (ADR-092)."""
+    """The stage the resolver gives, which the checkpoints act on: a path stage on a
+    path issue (ADR-092)."""
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "cli"))
     from compass_pkg import next_cmd
     from compass_pkg.core import normalize_spine
@@ -152,14 +162,17 @@ def test_asw_27_decision_add_records_one_entry(tmp_path):
 
 # --- ASW-28 ---------------------------------------------------------------------
 
+# On the four-stage path the define, refine and plan hand-offs are the one specify
+# hand-off (ADR-092 decision 1), so a decision taken at define waits at specify.
+
 def test_asw_28_balanced_define_checkpoint_waits_once(tmp_path):
-    root = _waiting_project(tmp_path, ["define", "plan"],
+    root = _waiting_project(tmp_path, ["specify"],
                             [_entry("D-1"), _entry("D-2")])
     out = _next(root)
     first = out.splitlines()[0]
-    assert first == "Waiting at the define checkpoint: 2 decision(s) to confirm"
+    assert first == "Waiting at the specify checkpoint: 2 decision(s) to confirm"
     assert "Answer D-1." in out and "Answer D-2." in out
-    assert "Refine" not in out
+    assert "Build" not in out
     before = manifest_file(root).read_bytes()
     code, out, err = approve(root, "--decisions", approver="alex",
                              scope="requirement decisions")
@@ -169,16 +182,19 @@ def test_asw_28_balanced_define_checkpoint_waits_once(tmp_path):
     assert code == 0, out + err
     records = _approvals(root)
     assert len(records) == 1 and records[0]["decisions"] == ["D-1", "D-2"]
-    assert records[0]["approver"] == "jed72" and records[0]["stage"] == "define"
+    assert records[0]["approver"] == "jed72" and records[0]["stage"] == "specify"
     assert {d["status"] for d in _decisions(root).values()} == {"confirmed"}
-    assert _stage(root) == "refine"
-    assert _next(root).splitlines()[0].startswith("Specify")
+    # The decisions no longer hold the issue; the specify hand-off itself still
+    # waits for its own answer, so the stage stays specify.
+    assert _stage(root) == "specify"
+    after = _next(root).splitlines()[0]
+    assert after.startswith("Specify") and "decision(s) to confirm" not in after, after
     # Nothing is left to confirm.
     assert approve(root, "--decisions")[0] == 2
 
 
 def test_asw_28_without_declared_approvers_the_owner_confirms(tmp_path):
-    root = _waiting_project(tmp_path, ["define", "plan"], [_entry("D-1")],
+    root = _waiting_project(tmp_path, ["specify"], [_entry("D-1")],
                             compass_yml={"schema": 1, "owner": "jed72"})
     assert approve(root, "--decisions", approver="alex")[0] == 2
     assert _decisions(root)["D-1"]["status"] == "open"
@@ -187,7 +203,7 @@ def test_asw_28_without_declared_approvers_the_owner_confirms(tmp_path):
 
 
 def test_asw_28_rejected_is_refused(tmp_path):
-    root = _waiting_project(tmp_path, ["define", "plan"], [_entry("D-1")])
+    root = _waiting_project(tmp_path, ["specify"], [_entry("D-1")])
     code, out, err = approve(root, "--decisions", "--decision", "rejected")
     assert code == 2 and "compass issue decision set" in out + err
     assert _decisions(root)["D-1"]["status"] == "open"
@@ -196,10 +212,11 @@ def test_asw_28_rejected_is_refused(tmp_path):
 # --- ASW-29 ---------------------------------------------------------------------
 
 def test_asw_29_controlled_define_checkpoint_waits(tmp_path):
-    root = _waiting_project(tmp_path, ["assess", "define", "refine", "plan"],
+    # Controlled autonomy lists every path stage where `S17` applies.
+    root = _waiting_project(tmp_path, ["assess", "specify", "build", "ship"],
                             [_entry("D-1", by="spec-author")])
     out = _next(root)
-    assert out.splitlines()[0] == "Waiting at the define checkpoint: 1 decision(s) to confirm"
+    assert out.splitlines()[0] == "Waiting at the specify checkpoint: 1 decision(s) to confirm"
     assert "Answer D-1." in out
 
 
@@ -208,8 +225,9 @@ def test_asw_29_controlled_define_checkpoint_waits(tmp_path):
 def test_asw_30_autonomous_lists_without_waiting(tmp_path):
     root = _waiting_project(tmp_path, [], [_entry("D-1"), _entry("D-2")])
     out = _next(root)
-    assert _stage(root) == "refine"
-    assert out.splitlines()[0].startswith("Specify")
+    # With no checkpoint listed, specify is done once its scenarios exist.
+    assert _stage(root) == "build"
+    assert out.splitlines()[0].startswith("Build")
     assert "Waiting" not in out
     assert "Answer D-1." in out and "Answer D-2." in out
     assert {d["status"] for d in _decisions(root).values()} == {"open"}
@@ -219,7 +237,7 @@ def test_asw_30_autonomous_lists_without_waiting(tmp_path):
 # --- ASW-31 ---------------------------------------------------------------------
 
 def test_asw_31_change_reopens_decision_and_wait_continues(tmp_path):
-    root = _waiting_project(tmp_path, ["define", "plan"], [_entry("D-1"), _entry("D-2")])
+    root = _waiting_project(tmp_path, ["specify"], [_entry("D-1"), _entry("D-2")])
     argv = ("issue", "decision", "set", "D-2", "--status", "reopened", "--reason",
             "the default is wrong", "--issue", SLUG)
     before = manifest_file(root).read_bytes()
@@ -235,30 +253,40 @@ def test_asw_31_change_reopens_decision_and_wait_continues(tmp_path):
     assert got["D-1"]["status"] == "open"
     assert not _approvals(root)
     out = _next(root)
-    assert out.splitlines()[0] == "Waiting at the define checkpoint: 2 decision(s) to confirm"
+    assert out.splitlines()[0] == "Waiting at the specify checkpoint: 2 decision(s) to confirm"
     assert "D-2" in out and "reopened" in out and "the default is wrong" in out
 
 
 # --- ASW-32 ---------------------------------------------------------------------
 
 def test_asw_32_later_decision_waits_at_next_checkpoint(tmp_path):
-    root = _waiting_project(tmp_path, ["define", "plan"], [_entry("D-1")])
+    # On the path the hand-offs are assess, specify, build and ship (ADR-092): a
+    # decision taken at assess waits at assess, and one taken while the scenarios
+    # are written waits at specify, once they exist.
+    root = _waiting_project(tmp_path, ["assess", "specify"], [_entry("D-1", stage="assess")],
+                            specified=False)
+    assert _next(root).splitlines()[0] == (
+        "Waiting at the assess checkpoint: 1 decision(s) to confirm")
     assert approve(root, "--decisions")[0] == 0
     _ledger(root, ("Q4", "Fourth?", "Do the fourth.", "spec-author"))
     assert _from_ledger(root)[0] == 0
-    assert register(root, "technical-design")[0] == 0
+    _specify_done(root)
     out = _next(root)
-    assert out.splitlines()[0] == "Waiting at the plan checkpoint: 1 decision(s) to confirm"
+    assert out.splitlines()[0] == "Waiting at the specify checkpoint: 1 decision(s) to confirm"
     assert "Answer D-1." not in out and "Do the fourth." in out
     code, out, err = approve(root, "--decisions")
     assert code == 0, out + err
     assert _decisions(root)["Q4"]["status"] == "confirmed"
+    # The specify hand-off is answered, so the issue moves on to build.
+    code, out, err = run(root, "evidence", "approve", "--checkpoint", "specify", "--issue", SLUG,
+                         "--approver", "jed72", "--role", "maintainer", terminal=True)
+    assert code == 0, out + err
     code, out, err = run(root, "issue", "decision", "add", "D-5", "--question", "q",
                          "--resolution", "r", "--by", "builder", "--stage", "implement",
                          "--issue", SLUG)
     assert code == 0, out + err
     out = _next(root)
-    assert _stage(root) == "breakdown"
+    assert _stage(root) == "build"
     assert "Waiting" not in out and out.splitlines()[0].startswith("Build")
     assert _decisions(root)["D-5"]["status"] == "open"
 

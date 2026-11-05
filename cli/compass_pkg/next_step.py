@@ -301,14 +301,22 @@ def specify_done(task):
     outer-loop red is counted in cannot disagree. The checkpoint is read from the
     raw `checkpoints` and `checkpoint_outcomes` lists, so an issue whose manifest
     has no `checkpoint_outcomes` key still waits for a listed `specify`."""
+    if not specify_written(task):
+        return False
+    listed = task.get("checkpoints")
+    return not (isinstance(listed, list) and STAGE_SPECIFY in listed) or specify_handed_off(task)
+
+
+def specify_written(task):
+    """True when a path issue's scenarios are written: it has a scenario, each one
+    has an id and an intent, and each one that is not `verifiable: narrative`
+    declares a test. It is `specify_done` without the checkpoint, so a person can
+    answer the `specify` hand-off once the work it hands off exists."""
     scenarios = _dicts(task.get("scenarios"))
     if not scenarios or not all(isinstance(s.get("id"), str) and s["id"] and s.get("intent")
                                 for s in scenarios):
         return False
-    if not all(_tests_of(s) for s in scenarios if s.get("verifiable") != "narrative"):
-        return False
-    listed = task.get("checkpoints")
-    return not (isinstance(listed, list) and STAGE_SPECIFY in listed) or specify_handed_off(task)
+    return all(_tests_of(s) for s in scenarios if s.get("verifiable") != "narrative")
 
 
 def greens(task):

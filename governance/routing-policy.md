@@ -416,6 +416,60 @@ from the preset and `legacy-views.yml` to show nothing is lost:
   run. The replay against the archive sample is in
   `tests/test_obligations.py` and is described below.
 
+## The evidence rows
+
+From 9.0.0 assess selects the evidence a change owes, not a delivery
+approach. `cli/compass_pkg/evidence_required.py` computes it: a pure function
+of the assessment and the configuration in force. It returns the ordered
+`evidence_required` list, the gate ids derived from it, the routing of the
+four-layer acceptance strategy (`S17`) and the rules that fired. No command
+calls it yet; the writer of the four-stage path will.
+
+The rows, first match wins:
+
+| Rule | When | Evidence | `S17` routing |
+|---|---|---|---|
+| `RP-EVID-SPIKE` | goal `exploration` | none; gate `spike.conclude` | `suspended` |
+| `RP-EVID-LIGHT` | size atomic or small, risk trivial or contained, urgency not `live-defect`, no `G5` label | every-issue tokens | `existing-dsl` |
+| `RP-EVID-DEFECT` | urgency `live-defect`, size atomic or small, risk not critical, no `G5` label | every-issue tokens, `regression`, `security`, `definition-of-done`, `reproduce-first` | `existing-dsl-isolation` |
+| `RP-EVID-STANDARD` | any other delivery assessment | every-issue tokens, `regression`, `security`, `clarity`, `definition-of-done` | `on` |
+
+The every-issue tokens are `scenarios`, `red-before-green`, `suite-green`,
+`correctness`, `governance` and `traceability`. The additions to a delivery
+row:
+
+| Rule | When | Adds |
+|---|---|---|
+| `RP-REQUIRE-003` | risk cross-cutting or critical | `architecture` |
+| `RP-REQUIRE-004` | a `G5` label | `architecture` |
+| `RP-EVID-SIGNOFF` | a `G5` label, or risk critical | `scenario-approval` |
+| `G5` | a `G5` label | `human-approval` |
+
+The `G5` labels are `auth`, `payments`, `personal-data` and `migrations`.
+Exploration with critical risk or a `G5` label is refused, as in 8.x: a spike
+must not touch a surface that owes a person's sign-off.
+
+The `S17` tokens are `outer-loop` (any routing), `isolation` (routing `on` or
+`existing-dsl-isolation`) and `layering` (routing `on`). They are left out
+when the project turns the strategy off, or when assess is told
+`--expected-acceptance validation` or `refactor`.
+
+The configuration adds only what a project can still set for a new issue:
+the gate of each floor that matches (`add_gate`) and each immovable gate, the
+skill a floor asks for (`require_skill`, such as `behavior-mapping` from
+`RP-FLOOR-002`) and the advisory strategies. A gate that a token stands for
+joins as that token, so `gates` stays derived from `evidence_required`. The
+function never reads the configuration's approaches, shapes, stage modes or
+caps. Familiarity does not change the evidence.
+
+The rows reproduce the gate sets 8.0.4 routed: the light row is the old quick
+fix (3 gates), the defect row the old hotfix (5 gates) and the standard row
+the old regular and full approaches (6 gates). The `S17` routings are those
+the 9.0.0 preset names for the same approaches. `tests/test_evidence_required.py`
+checks this on all 1,200 assessments of the contract 1 grid under each of the
+16 subsets of the `G5` labels, against the 8.0.4 governance copy in
+`tests/fixtures/compat/v8.0.4-governance.tgz`.
+
 ## What a configuration owes an assessment
 
 `cli/compass_pkg/obligations.py` computes the facts the classifier compares

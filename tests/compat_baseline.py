@@ -579,12 +579,13 @@ PLANTED_OVERLAY = EMPTY_OVERLAY + (
 BROKEN_OVERLAY = EMPTY_OVERLAY + "approaches: oops\n"
 
 
-def add_governance_copy(root, fault=None):
-    """Put the 5.6.0 governance files in `root/governance/`."""
+def add_governance_copy(root, fault=None, source=GOVERNANCE_5_6_0):
+    """Put the governance files packed in `source` (5.6.0 by default) in
+    `root/governance/`."""
     folder = Path(root) / "governance"
     folder.mkdir(parents=True, exist_ok=True)
     import tarfile
-    with tarfile.open(GOVERNANCE_5_6_0) as tar:
+    with tarfile.open(source) as tar:
         for name in GOVERNANCE_FILES:
             member = tar.extractfile(f"governance/{name}")
             (folder / name).write_bytes(member.read())
@@ -622,6 +623,32 @@ def policy_under(kind, scratch, fault=None):
     root = Path(scratch) / "project"
     (root / ".compass" / "work").mkdir(parents=True)
     build_configuration(kind, root, fault)
+    resolution = effective.resolve_live(str(root))
+    view = effective.EffectiveView("live", None, None, resolution.resolved,
+                                   resolution.versions)
+    return view.evaluator_policy()
+
+
+# --- the 8.0.4 governance copy ---------------------------------------------------
+#
+# The last release that routed delivery approaches. The evidence rows of 9.0.0
+# (`compass_pkg.evidence_required`) must owe the gates 8.0.4 routed, so the test
+# of those rows compares them with this copy, read through the legacy adapter as
+# configuration C reads the 5.6.0 copy. The two files are byte copies taken with
+# `git show v8.0.4:governance/<file>`, packed for the same reason as the 5.6.0
+# copy. This copy is not one of the configurations the contracts run under: the
+# D of `docs/releasing.md` is the settings moved into `compass.yml`.
+GOVERNANCE_8_0_4 = FIXTURES / "v8.0.4-governance.tgz"
+
+
+def policy_8_0_4(scratch):
+    """The routing policy the evaluator reads for a project that carries the 8.0.4
+    governance copy, in the shape `evaluate_route` takes."""
+    from compass_pkg import effective
+
+    root = Path(scratch) / "project"
+    (root / ".compass" / "work").mkdir(parents=True)
+    add_governance_copy(root, source=GOVERNANCE_8_0_4)
     resolution = effective.resolve_live(str(root))
     view = effective.EffectiveView("live", None, None, resolution.resolved,
                                    resolution.versions)

@@ -3689,7 +3689,8 @@ _GROWING_REACH = {
     # case labels (ADR-091).
     # 129 when 9.0.0 removed the four checks of the removed documents and their
     # twenty check-corpus case labels (ADR-091).
-    "PBW-C4": (lambda path: path.startswith("tests/"), 129),
+    # 130 with tests/fixtures/compat/v8.0.4-governance.tgz, the packed 8.0.4 governance files.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 130),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

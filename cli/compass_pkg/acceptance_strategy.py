@@ -24,7 +24,7 @@ Compass reads records here, never project code.
 """
 # DEPENDENCY: standard library (json, os); compass_pkg.candidate_client, check_results,
 # core, project_settings and red_first, and inside functions compass_pkg.layers, parents,
-# effective and status_words. It imports no command
+# effective, next_cmd, next_step and status_words. It imports no command
 # module and no check module at load time, so a check module can import it.
 from __future__ import annotations
 
@@ -279,12 +279,12 @@ def stage_one(task, loop):
     collapse refine, so their outer-loop red is the first record of implement.
 
     On a path issue (ADR-092) stage 1 ends at specify: an outer-loop red is stage
-    1's while specify is not done (`_specify_done`), and build's after."""
-    from compass_pkg import next_cmd
+    1's while specify is not done (`next_step.specify_done`), and build's after."""
+    from compass_pkg import next_cmd, next_step
     from compass_pkg.path_stages import is_path_issue
     from compass_pkg.stable_ids import STAGE_PLAN, STAGE_REFINE
     if is_path_issue(task):
-        return loop == "outer" and not _specify_done(task)
+        return loop == "outer" and not next_step.specify_done(task)
     stages = (task or {}).get("stages")
     weight = stages.get(STAGE_REFINE) if isinstance(stages, dict) else None
     if loop != "outer" or not isinstance(weight, str) \
@@ -294,20 +294,6 @@ def stage_one(task, loop):
                 or next_cmd._registered(task, "technical-design")
                 or next_cmd._registered(task, "distribution-map")
                 or next_cmd._entries(task, "subtasks"))
-
-
-def _specify_done(task):
-    """True when a path issue's specify stage is done: it has a scenario, each
-    scenario has an id and an intent, each one that is not `verifiable: narrative`
-    declares a test, and a listed `specify` checkpoint has an outcome."""
-    from compass_pkg import checkpoint_outcomes
-    from compass_pkg.stable_ids import STAGE_SPECIFY
-    scenarios = [s for s in task.get("scenarios") or [] if isinstance(s, dict)]
-    if not scenarios or not all(s.get("id") and s.get("intent") for s in scenarios):
-        return False
-    if not all(s.get("tests") for s in scenarios if s.get("verifiable") != "narrative"):
-        return False
-    return STAGE_SPECIFY not in checkpoint_outcomes.missing(task)
 
 
 def red_records(task_dir):

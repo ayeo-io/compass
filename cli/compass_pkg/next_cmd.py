@@ -226,8 +226,7 @@ def _path_stages_on_record(task: dict, task_dir: str | None) -> set:
     done.
     """
     from compass_pkg.red_first import scenario_reds
-    specified = next_step.scenarios_specified(task) and (
-        not next_step.specify_listed(task) or next_step.specify_handed_off(task))
+    specified = next_step.specify_done(task)
     ids = [s["id"] for s in next_step.needing_tests(task)]
     reds = scenario_reds(task, task_dir) if task_dir else {"no_red": ids, "late": []}
     green = next_step.greens(task)

@@ -44,7 +44,8 @@ from __future__ import annotations
 import os
 
 from compass_pkg import path_stages, red_first, status_words
-from compass_pkg.stable_ids import APPROACH_SPIKE, REMOVED_GATE_IDS, STAGE_SPECIFY, STAGE_VERIFY
+from compass_pkg.stable_ids import (APPROACH_SPIKE, MODE_THOROUGH, REMOVED_GATE_IDS,
+                                    STAGE_SPECIFY, STAGE_VERIFY)
 
 GO = '/compass:go "<what you want>"'
 FIRST_SCENARIO = "TRC-001"
@@ -62,9 +63,9 @@ _LAYERING_RECORD = "layering.json"
 def next_command(task, task_dir, done=None):
     """The command that comes next on the issue, or None for a closed issue.
 
-    `task` is the loaded manifest, or None when there is none. `done` is the set
-    of stages the records show as done, when the caller already has it; the
-    checkpoint row reads it. A fault in a reader gives `compass check`, which
+    The first argument is the loaded manifest, or None when there is none.
+    `done` is the set of stages the records show as done, when the caller
+    already has it; the checkpoint row reads it. A fault in a reader gives `compass check`, which
     says what is missing, so `compass next` still prints a line.
     """
     if not isinstance(task, dict):
@@ -174,13 +175,25 @@ def _tests_of(scenario):
     return [t for t in tests if isinstance(t, str) and t] if isinstance(tests, list) else []
 
 
-def scenarios_specified(task):
-    """True when the issue has a scenario and each one has an id, an intent and,
-    unless it is narrative, a declared test."""
-    scenarios = _scenarios(task)
-    return bool(scenarios) and all(
-        s.get("intent") and (s.get("verifiable") == "narrative" or _tests_of(s))
-        for s in scenarios)
+def specify_done(task):
+    """True when a path issue's specify stage is done: it has a scenario, each
+    scenario has an id and an intent, each one that is not `verifiable: narrative`
+    declares a test, and a listed `specify` checkpoint has an outcome.
+
+    `compass next` reads it for the stage it shows (`next_cmd`), and the
+    acceptance strategy reads it for where stage 1 ends (`acceptance_strategy`).
+    One rule serves both, so the stage `compass next` shows and the stage an
+    outer-loop red is counted in cannot disagree. The checkpoint is read from the
+    raw `checkpoints` and `checkpoint_outcomes` lists, so an issue whose manifest
+    has no `checkpoint_outcomes` key still waits for a listed `specify`."""
+    scenarios = _dicts(task.get("scenarios"))
+    if not scenarios or not all(isinstance(s.get("id"), str) and s["id"] and s.get("intent")
+                                for s in scenarios):
+        return False
+    if not all(_tests_of(s) for s in scenarios if s.get("verifiable") != "narrative"):
+        return False
+    listed = task.get("checkpoints")
+    return not (isinstance(listed, list) and STAGE_SPECIFY in listed) or specify_handed_off(task)
 
 
 def greens(task):
@@ -188,11 +201,6 @@ def greens(task):
     registers one."""
     return {e["scenario"] for e in _dicts(task.get("evidence"))
             if e.get("type") == "test-run" and isinstance(e.get("scenario"), str)}
-
-
-def specify_listed(task):
-    value = task.get("checkpoints")
-    return isinstance(value, list) and STAGE_SPECIFY in value
 
 
 def specify_handed_off(task):
@@ -242,7 +250,7 @@ def _owed(task, task_dir, token):
     if token == "definition-of-done":
         stages = task.get("stages")
         weight = stages.get(STAGE_VERIFY) if isinstance(stages, dict) else None
-        return isinstance(weight, str) and weight.strip().lower() == "thorough"
+        return isinstance(weight, str) and weight.strip().lower() == MODE_THOROUGH
     return False
 
 

@@ -114,6 +114,13 @@ ROWS = {
     "S17 applies, no outer-loop red": (
         dict(evidence=LIGHT + ["outer-loop"], scenarios=[SCENARIO]),
         "compass tdd-red --loop outer --scenario TRC-001 -- <acceptance test command>"),
+    # The layering test is written and staged before the outer-loop red: added to
+    # the tree after the outer-loop green, it would make the green, isolation and
+    # layering records stale.
+    "layering owed, no outer-loop red": (
+        dict(evidence=LIGHT + ["outer-loop", "isolation", "layering"], scenarios=[SCENARIO]),
+        "write the layering test at <layering test path> and git add it, then compass "
+        "tdd-red --loop outer --scenario TRC-001 -- <acceptance test command>"),
     "a scenario with no red": (
         dict(scenarios=[SCENARIO]), "compass tdd-red --scenario TRC-001 -- <test command>"),
     "a red with no green": (
@@ -153,7 +160,15 @@ ROWS = {
         "compass evidence request --check human-approval-present"),
     "every gate passes": (
         dict(scenarios=[SCENARIO], reds=["TRC-001"], greens=["TRC-001"], gates_pass=True),
-        "compass check, then compass ship-commit -m \"<message>\""),
+        "compass check, then stage the changed files, "
+        "then compass ship-commit -m \"<message>\""),
+    # `compass ship-commit` lands what is staged, so the traced files are named.
+    "every gate passes, files traced": (
+        dict(scenarios=[SCENARIO], reds=["TRC-001"], greens=["TRC-001"], gates_pass=True,
+             raw={"changed_files": [{"path": "greet.py", "scenario": "TRC-001"},
+                                    {"path": "my file.py", "scenario": "TRC-001"}]}),
+        "compass check, then git add -- greet.py 'my file.py', "
+        "then compass ship-commit -m \"<message>\""),
 }
 
 

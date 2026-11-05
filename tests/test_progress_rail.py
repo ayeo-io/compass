@@ -14,7 +14,7 @@ stages, so its stage shows as the path stage it maps to, and the line gains a
 `next:` part. A new assessment writes the path keys, so each golden issue's
 manifest is built as 8.x wrote it, from the 8.0.4 evaluator
 (`test_next_stage.assessed_before_the_path`). The tests at the end run an issue
-assessed on the path itself, with the `path_writer` fixture.
+assessed on the path itself.
 
 Regenerate the golden file only for a deliberate change to `compass next`'s
 plain output: `python3 tests/test_progress_rail.py --regen`.
@@ -418,7 +418,7 @@ def _path_project(tmp: Path, slug=PATH_SLUG) -> Path:
     return root
 
 
-def test_on_the_path_a_terminal_shows_the_four_stages(tmp_path, path_writer):
+def test_on_the_path_a_terminal_shows_the_four_stages(tmp_path):
     """RL-A on the path: the header names the one delivery approach, and the rail
     has the four path stages with one current marker."""
     root = _path_project(tmp_path)
@@ -432,7 +432,7 @@ def test_on_the_path_a_terminal_shows_the_four_stages(tmp_path, path_writer):
     assert "Ship ○" in rail, rail
 
 
-def test_on_the_path_no_stage_is_skipped(tmp_path, path_writer):
+def test_on_the_path_no_stage_is_skipped(tmp_path):
     """RL-C on the path. ADR-092 decision: no stage modes, so no path stage is
     skipped by policy and the rail shows no skipped marker."""
     root = _path_project(tmp_path)
@@ -442,7 +442,7 @@ def test_on_the_path_no_stage_is_skipped(tmp_path, path_writer):
     assert "[-]" not in rail and "[>]" in rail and "[x]" in rail, rail
 
 
-def test_on_the_path_claudecode_and_a_pipe_get_the_one_line(tmp_path, path_writer):
+def test_on_the_path_claudecode_and_a_pipe_get_the_one_line(tmp_path):
     """RL-B and RL-D on the path: what the model sees is the one plain line, with
     the stage and its `next:` command, and no rail."""
     root = _path_project(tmp_path)
@@ -455,16 +455,16 @@ def test_on_the_path_claudecode_and_a_pipe_get_the_one_line(tmp_path, path_write
     assert (code, _neutral(out, root)) == (piped["exit"], piped["stdout"])
 
 
-def test_on_the_path_the_line_names_the_next_command_not_a_stage_command(tmp_path,
-                                                                         path_writer):
+def test_on_the_path_the_line_names_the_next_command_not_a_stage_command(tmp_path):
     """RL-G on the path. ADR-092 removes the stage commands, so the rail adds no
     `Next: /compass:<stage>` line; the plain line's `next:` part is the command."""
     plain = ANSI.sub("", _tty(_path_project(tmp_path))[1])
     assert "Next: /compass:" not in plain, plain
-    assert "next: compass " in plain, plain
+    # Where `layering` is owed the line first says to write the layering test.
+    assert "next: " in plain and "then compass tdd-red --loop outer" in plain, plain
 
 
-def test_on_the_path_a_narrow_terminal_wraps_the_rail(tmp_path, path_writer):
+def test_on_the_path_a_narrow_terminal_wraps_the_rail(tmp_path):
     """RL-F on the path."""
     code, out = _tty(_path_project(tmp_path), columns=30)
     rail = _rail_lines(out)
@@ -474,7 +474,7 @@ def test_on_the_path_a_narrow_terminal_wraps_the_rail(tmp_path, path_writer):
     assert " ".join(rail).count("●") == 1, rail
 
 
-def test_on_the_path_a_manifest_value_cannot_write_escape_codes(tmp_path, path_writer):
+def test_on_the_path_a_manifest_value_cannot_write_escape_codes(tmp_path):
     root = _path_project(tmp_path)
     manifest = root / ".compass" / "work" / PATH_SLUG / "manifest.yml"
     manifest.write_text(manifest.read_text().replace(

@@ -15,7 +15,7 @@ bottom, and the first that matches gives the command:
 | a scenario with no test | `compass scenario tests set <id> --test <path::name>` |
 | `nfr-rows-resolved` fails (a path issue) | `fill the Non-functional requirements rows of <spec>: ...` |
 | `scenario-approval` owed, no outcome | `compass evidence request --checkpoint specify` |
-| `S17` applies, no outer-loop red | `compass tdd-red --loop outer --scenario <id> -- ...` |
+| `S17` applies, no outer-loop red | `compass tdd-red --loop outer --scenario <id> -- ...`, after writing and staging the layering test where `layering` is owed |
 | a scenario with no red | `compass tdd-red --scenario <id> -- <test command>` |
 | `S17` applies, no outer-loop green | `compass tdd-green --loop outer --scenario <id> --candidate ... --client ... -- ...` |
 | a red with no green | `compass tdd-green --scenario <id> -- <test command>` |
@@ -26,7 +26,7 @@ bottom, and the first that matches gives the command:
 | `human-approval` owed | `compass evidence request --check human-approval-present` |
 | a listed checkpoint with no outcome | `compass evidence request --checkpoint <stage>` |
 | a path issue, only the three immovable gates pending | `compass quick-fix finish -m "<commit message>" --no-commit -- <test command>` |
-| every gate passes | `compass check, then compass ship-commit -m "<message>"` |
+| every gate passes | `compass check, then git add <the traced files>, then compass ship-commit -m "<message>"` |
 
 What is owed comes from `evidence_required` on a path issue. An issue assessed
 before the path has no such list, so its owed evidence is read from the records
@@ -40,7 +40,7 @@ records only and never writes. `announce` prints the `next:` line at the end of
 each verb that writes a record, and `owed_commands` lists what `compass
 quick-fix finish` refuses on while it is owed.
 """
-# DEPENDENCY: standard library (os); compass_pkg.next_line, path_stages, red_first,
+# DEPENDENCY: standard library (os, shlex); compass_pkg.next_line, path_stages, red_first,
 # stable_ids and status_words, and inside functions the readers of
 # acceptance_strategy, checkpoint_outcomes, checks, effective, gate_status and
 # item_records, and core, next_cmd and terminal for `announce`. It must not
@@ -48,6 +48,7 @@ quick-fix finish` refuses on while it is owed.
 from __future__ import annotations
 
 import os
+import shlex
 
 from compass_pkg import next_line, path_stages, red_first, status_words
 from compass_pkg.stable_ids import (APPROACH_SPIKE, GATE_VERIFY_CORRECTNESS,
@@ -116,7 +117,18 @@ def _first_match(task, task_dir, done):
         return f"compass evidence request --checkpoint {stage}, then stop for /compass:approve"
     if on_path and _pending_gate(task):
         return FINISH
-    return 'compass check, then compass ship-commit -m "<message>"'
+    return _ship_commit(task)
+
+
+def _ship_commit(task):
+    """The last step: `compass ship-commit` lands what is staged, and `quick-fix
+    finish --no-commit` leaves the change unstaged, so the traced files are
+    staged first. They are named when the issue traces any."""
+    traced = [cf["path"] for cf in _dicts(task.get("changed_files"))
+              if isinstance(cf.get("path"), str) and cf["path"]]
+    stage = ("git add -- " + " ".join(shlex.quote(p) for p in traced) if traced
+             else "stage the changed files")
+    return f'compass check, then {stage}, then compass ship-commit -m "<message>"'
 
 
 # --- the `next:` line of the verbs that write a record ------------------------------------
@@ -157,8 +169,7 @@ def owed_commands(task, task_dir, cleared_gates=()):
                    "then stop for /compass:approve")
     ids = [s["id"] for s in needing_tests(task)]
     if ids and _owed(task, task_dir, "outer-loop") and not _outer_red(task_dir):
-        out.append(f"compass tdd-red --loop outer --scenario {ids[0]} "
-                   "-- <acceptance test command>")
+        out.append(_outer_red_command(task, task_dir, ids[0]))
     if _owed(task, task_dir, "isolation") and not _record(task_dir, _ISOLATION_RECORD):
         out.append(_isolation_command(task, task_dir))
     if _owed(task, task_dir, "layering") and not _record(task_dir, _LAYERING_RECORD):
@@ -206,8 +217,7 @@ def _specify(task, task_dir):
 def _build(task, task_dir):
     ids = [s["id"] for s in needing_tests(task)]
     if ids and _owed(task, task_dir, "outer-loop") and not _outer_red(task_dir):
-        return (f"compass tdd-red --loop outer --scenario {ids[0]} "
-                "-- <acceptance test command>")
+        return _outer_red_command(task, task_dir, ids[0])
     reds = red_first.scenario_reds(task, task_dir) if task_dir else {"no_red": ids}
     if reds["no_red"]:
         return f"compass tdd-red --scenario {reds['no_red'][0]} -- <test command>"
@@ -229,6 +239,18 @@ def _build(task, task_dir):
     if _owed(task, task_dir, "layering") and not _record(task_dir, _LAYERING_RECORD):
         return _LAYERING_COMMAND
     return None
+
+
+def _outer_red_command(task, task_dir, scenario):
+    """The outer-loop red. Where `layering` is owed the layering test is written
+    and staged first: the outer-loop green, the isolation proof and the layering
+    record are bound to the tree, which holds the tracked and staged files. A test
+    file added to it after the green makes all three stale."""
+    red = f"compass tdd-red --loop outer --scenario {scenario} -- <acceptance test command>"
+    if _owed(task, task_dir, "layering") and not _record(task_dir, _LAYERING_RECORD):
+        return (f"write the layering test at <layering test path> and git add it, "
+                f"then {red}")
+    return red
 
 
 def _outer_greens(task, task_dir):

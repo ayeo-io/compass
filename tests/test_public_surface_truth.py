@@ -705,7 +705,11 @@ def test_d2_repairs_change_only_retired_names():
     133 -> 136) gained the section on the pre-tool hook's scenario check on
     a path issue; and `governance/routing-policy.md` (one more `##` heading,
     table_rows 12 -> 25) gained "The evidence rows", with the table of the
-    rows and the table of the rules that add to them.
+    rows and the table of the rules that add to them. The path writer then
+    added three table rows to `docs/quickstart.md` (21 -> 24, the `next:`
+    rows of a path issue) and "The path writer" to
+    `governance/routing-policy.md` (one more `##` heading, list_items
+    62 -> 67, table_rows 25 -> 34).
 
     The other 45 are untouched, and a NEW structural change to any of the 53
     still fails.

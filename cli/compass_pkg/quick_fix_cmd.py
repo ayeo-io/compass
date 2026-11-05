@@ -100,8 +100,8 @@ def register(sub, issue_arg):
     st.add_argument("--goal", default=None, metavar="VALUE - REASON",
                     help="goal value and its reason (left out: not assessed)")
     st.add_argument("--urgency", default=None, metavar="VALUE - REASON",
-                    help="urgency value and its reason, e.g. 'live-defect - production "
-                         "is down' for the hotfix setting (left out: not assessed)")
+                    help="urgency value and its reason; 'live-defect - <reason>' is the "
+                         "hotfix setting")
     st.add_argument("--role", default=None, metavar="VALUE - REASON",
                     help="ignored from 7.0.0 (ADR-070)")
     st.add_argument("--labels", default="", metavar="TAG[,TAG...]",

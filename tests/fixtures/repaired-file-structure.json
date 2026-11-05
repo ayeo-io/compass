@@ -172,7 +172,7 @@
       2
     ],
     "list_items": 22,
-    "table_rows": 21
+    "table_rows": 24
   },
   "docs/routing-deep-dive.md": {
     "fences": 0,
@@ -734,10 +734,11 @@
       2,
       2,
       2,
+      2,
       2
     ],
-    "list_items": 62,
-    "table_rows": 25
+    "list_items": 67,
+    "table_rows": 34
   },
   "governance/strategies.md": {
     "fences": 0,

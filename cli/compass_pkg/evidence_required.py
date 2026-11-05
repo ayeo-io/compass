@@ -15,7 +15,7 @@ module never reads the configuration's approaches, shapes, stage modes or
 caps, so a frozen preset or copied governance that still declares them gives
 the same evidence as the live default.
 
-The rows reproduce the gate sets 8.0.4 routed: `tests/test_evidence_required.py`
+The rows reproduce the gate sets 8.0.4 owed: `tests/test_evidence_required.py`
 compares them on every point of the contract 1 grid and every subset of the
 `G5` labels.
 """

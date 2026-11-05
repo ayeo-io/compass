@@ -55,7 +55,7 @@ STAGE_BUILD = "build"
 PATH_STAGE_IDS = (STAGE_ASSESS, STAGE_SPECIFY, STAGE_BUILD, STAGE_SHIP)
 SPIKE_STAGE_IDS = (STAGE_ASSESS, STAGE_BUILD, STAGE_SHIP)
 # The path stage that shows a legacy stage, for every reader that shows or acts
-# on the stage of an old issue. `compass migrate` (#359) uses the same mapping.
+# on the stage of an old issue. The migration that #359 adds uses the same mapping.
 LEGACY_TO_PATH = {
     STAGE_ASSESS: STAGE_ASSESS,
     STAGE_DEFINE: STAGE_SPECIFY, STAGE_REFINE: STAGE_SPECIFY, STAGE_PLAN: STAGE_SPECIFY,

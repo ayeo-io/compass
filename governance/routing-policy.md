@@ -463,7 +463,7 @@ joins as that token, so `gates` stays derived from `evidence_required`. The
 function never reads the configuration's approaches, shapes, stage modes or
 caps. Familiarity does not change the evidence.
 
-The rows reproduce the gate sets 8.0.4 routed: the light row is the old quick
+The rows reproduce the gate sets 8.0.4 owed: the light row is the old quick
 fix (3 gates), the defect row the old hotfix (5 gates) and the standard row
 the old regular and full approaches (6 gates). The `S17` routings are those
 the 9.0.0 preset names for the same approaches. `tests/test_evidence_required.py`

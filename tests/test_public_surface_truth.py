@@ -695,6 +695,18 @@ def test_d2_repairs_change_only_retired_names():
     `templates/acceptance-criteria.md` (one `##` heading fewer) lost its
     Coverage ledger, which the removed render wrote.
 
+    Three files already counted above were re-baselined again by
+    ayeo-io/compass-delivery#351, which replaces the approaches and eight
+    stages with one four-stage path (ADR-092):
+    `docs/quickstart.md` (one more `##` heading, fences 36 -> 38, table_rows
+    0 -> 21) gained "What `compass next` prints", with an example line, the
+    table of how a legacy stage is shown and the table of the `next:`
+    command; `docs/safety-contract.md` (one more `###` heading, list_items
+    133 -> 136) gained the section on the pre-tool hook's scenario check on
+    a path issue; and `governance/routing-policy.md` (one more `##` heading,
+    table_rows 12 -> 25) gained "The evidence rows", with the table of the
+    rows and the table of the rules that add to them.
+
     The other 45 are untouched, and a NEW structural change to any of the 53
     still fails.
     """

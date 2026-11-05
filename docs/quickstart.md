@@ -481,8 +481,8 @@ passed, and the one command to run next.
 Build [gate: verify.correctness] | next: compass tdd-red --scenario TRC-001 -- <test command>
 ```
 
-The stage is one of the four stages of the path (ADR-092): assess, specify,
-build and ship. An issue assessed before the path keeps its legacy stages, and
+The stage is a stage of the path (ADR-092): assess, specify, build or
+ship. An issue assessed before the path keeps its legacy stages, and
 every rule reads them as before; `compass next`, the rail and the status line
 show each one as the path stage it maps to:
 
@@ -514,7 +514,7 @@ matches (`cli/compass_pkg/next_step.py`):
 
 What a path issue owes comes from its `evidence_required` list. An issue
 assessed before the path owes the `S17` records its `acceptance_strategy` block
-routes, and the Definition of Done when its verify stage is `thorough`. A spike
+names, and the Definition of Done when its verify stage is `thorough`. A spike
 first names `compass evidence add EV-SPIKE --type spike-conclusion`, then
 `compass gate pass spike.conclude`. `compass next --json` gives the same
 command in a `next` field, and `null` on a closed issue.

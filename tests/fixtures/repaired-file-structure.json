@@ -142,7 +142,7 @@
     "table_rows": 13
   },
   "docs/quickstart.md": {
-    "fences": 36,
+    "fences": 38,
     "heading_levels": [
       1,
       2,
@@ -168,10 +168,11 @@
       2,
       2,
       2,
+      2,
       2
     ],
     "list_items": 22,
-    "table_rows": 0
+    "table_rows": 21
   },
   "docs/routing-deep-dive.md": {
     "fences": 0,
@@ -247,10 +248,11 @@
       3,
       3,
       3,
+      3,
       2,
       2
     ],
-    "list_items": 133,
+    "list_items": 136,
     "table_rows": 35
   },
   "examples/README.md": {
@@ -731,10 +733,11 @@
       2,
       2,
       2,
+      2,
       2
     ],
     "list_items": 62,
-    "table_rows": 12
+    "table_rows": 25
   },
   "governance/strategies.md": {
     "fences": 0,

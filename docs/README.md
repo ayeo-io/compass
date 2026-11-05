@@ -113,7 +113,7 @@ same commit.
 | `commands/`, `schemas/` | `skills/compass-runtime/SKILL.md` |
 | `cli/compass_pkg/tdd.py`, `cli/compass_pkg/tdd_green.py`, `cli/compass_pkg/green_attempts.py`, `cli/compass_pkg/evidence_identity.py`, `cli/compass_pkg/evidence_sums.py` | `skills/evidence-gates/SKILL.md` |
 | `cli/compass_pkg/loop_ceilings.py` | `governance/routing-policy.md` |
-| `cli/compass_pkg/evidence_required.py`, `tests/fixtures/compat/v8.0.4-governance.tgz` | `governance/routing-policy.md` |
+| `cli/compass_pkg/evidence_required.py`, `tests/fixtures/v8.0.4-governance.tgz` | `governance/routing-policy.md` |
 | `cli/compass_pkg/host_launch.py` | `evals/README.md` |
 | `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py` | `docs/delivery-record.md` |
 | `cli/compass_pkg/compliance.py`, `cli/compass_pkg/checkpoint_outcomes.py`, `cli/compass_pkg/session_record.py`, `cli/compass_pkg/session_usage.py`, `cli/compass_pkg/issue_usage.py`, `cli/compass_pkg/autonomy_cost.py` | `docs/autonomy-and-cost.md` |

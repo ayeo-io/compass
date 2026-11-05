@@ -26,9 +26,9 @@ fi
 # code edit needs a scenario on record, because every path issue owes
 # scenarios. The refusal is `no-scenario`, and it names `compass scenario add`.
 #
-# On an issue assessed before 9.0.0, only `define: thorough` (or the retired
-# `specify: full`, or `define: full` from before the depth words were renamed)
-# triggers it, which routing-policy.yml gave to the regular and full
+# On an issue assessed before 9.0.0, only `define: thorough` triggers it (or
+# the retired `specify: full`, or `define: full` from before the depth words
+# were renamed), which routing-policy.yml gave to the regular and full
 # approaches. A hotfix (reproduce-first) and a spike (collapsed) are exempt by
 # construction. A spike is never a path issue, and the .spike early exit above
 # suspends this the same way it suspends red-before-green.

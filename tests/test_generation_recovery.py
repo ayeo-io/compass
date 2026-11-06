@@ -22,7 +22,9 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import configure_fixtures as fx  # noqa: E402
 
-MODE = ("--mode", "refine=full")
+# The issue is on the four-stage path (ADR-092): its proposal sets the mode of
+# ship, a stage the path keeps, in the old word `full`.
+MODE = ("--mode", "ship=full")
 STEPS = ("resolved", "provenance", "versions", "records", "marker", "manifest", "proposal")
 
 
@@ -88,7 +90,7 @@ def test_cr_5_commit_adopts_a_whole_folder_the_fresh_resolution_matches(
     assert "adopted generation 2" in out
     body = fx.manifest_of(task_dir)
     assert body["generation"] == 2
-    assert body["config"] == {"stages": {"refine": {"set": {"mode": "full"}}}}
+    assert body["config"] == {"stages": {"ship": {"set": {"mode": "full"}}}}
     assert not (fx.gen(task_dir, 2) / "proposed.yml").exists()
     for name in ("resolved.yml", "provenance.yml", "versions.yml", "records.yml", "complete"):
         assert (fx.gen(task_dir, 2) / name).read_bytes() == files[name], name
@@ -184,7 +186,7 @@ def _commit_adopting(root, task_dir, adopt):
     """The store's own refusal, below the command's early checks."""
     from compass_pkg import effective
     manifest = fx.manifest_of(task_dir)
-    manifest["config"] = {"stages": {"refine": {"set": {"mode": "full"}}}}   # the proposal
+    manifest["config"] = {"stages": {"ship": {"set": {"mode": "full"}}}}   # the proposal
     return effective.commit_generation(str(task_dir), manifest, adopt=adopt)
 
 
@@ -289,7 +291,7 @@ def test_cr_6_the_next_reassess_overwrites_an_incomplete_folder_and_applies_the_
     assert code == 0, out + err
     body = fx.manifest_of(task_dir)
     assert body["generation"] == 2
-    assert body["config"]["stages"]["refine"]["set"]["mode"] == "full"
+    assert body["config"]["stages"]["ship"]["set"]["mode"] == "full"
     assert not (fx.gen(task_dir, 2) / "proposed.yml").exists()
     assert _states(task_dir)[2] == "current"
 
@@ -314,7 +316,7 @@ def test_cr_6_after_the_manifest_replace_the_new_generation_is_in_force(
     root, task_dir = _proposed_project(tmp_path)
     with pytest.raises(RuntimeError):
         _reassess_in_process(root, monkeypatch, capsys, boom_at=step)
-    assert fx.manifest_of(task_dir)["config"]["stages"]["refine"]["set"]["mode"] == "full"
+    assert fx.manifest_of(task_dir)["config"]["stages"]["ship"]["set"]["mode"] == "full"
     code, out, err = fx.reassess(root)
     assert code == 0, out + err
     assert "no change" in out
@@ -332,13 +334,13 @@ def test_cr_7_reassess_commits_the_proposal_as_the_config_and_consumes_it(tmp_pa
     root, task_dir = _proposed_project(tmp_path)
     code, out, err = fx.reassess(root)
     assert code == 0, out + err
-    overlay = {"stages": {"refine": {"set": {"mode": "full"}}}}
+    overlay = {"stages": {"ship": {"set": {"mode": "full"}}}}
     body = fx.manifest_of(task_dir)
     assert body["generation"] == 2 and body["config"] == overlay
     assert not (fx.gen(task_dir, 2) / "proposed.yml").exists()
     # The overlay keeps the word it was written in; the stored result reads it
     # as the new one.
-    assert fx.load(fx.gen(task_dir, 2) / "resolved.yml")["stages"]["refine"]["mode"] == "thorough"
+    assert fx.load(fx.gen(task_dir, 2) / "resolved.yml")["stages"]["ship"]["mode"] == "thorough"
     assert fx.load(fx.gen(task_dir, 2) / "versions.yml")["issue_overlay_digest"] == (
         layers.layer_digest(overlay, "issue"))
     assert "applied the proposed configuration" in out
@@ -372,7 +374,7 @@ def test_cr_7_a_proposal_built_on_another_generation_is_refused(tmp_path):
 
 def test_cr_7_a_proposal_the_lint_refuses_is_kept_and_nothing_is_written(tmp_path):
     root, task_dir = fx.committed(tmp_path)
-    assert fx.configure(root, "--mode", "define=collapsed")[0] == 1
+    assert fx.configure(root, "--mode", "ship=graduate-or-discard")[0] == 1
     snapshot = _snapshot(root)
     code, out, err = fx.reassess(root)
     assert code == 2, out + err
@@ -383,7 +385,7 @@ def test_cr_7_a_proposal_the_lint_refuses_is_kept_and_nothing_is_written(tmp_pat
 
 def test_cr_7_reset_config_drops_the_overlay_and_commits_a_generation_without_it(tmp_path):
     root, task_dir = fx.committed(tmp_path)
-    fx.write_manifest(task_dir, config={"stages": {"refine": {"set": {"mode": "full"}}}})
+    fx.write_manifest(task_dir, config={"stages": {"ship": {"set": {"mode": "full"}}}})
     assert fx.reassess(root)[0] == 0
     assert fx.manifest_of(task_dir)["generation"] == 2
     code, out, err = fx.reassess(root, "--reset-config")
@@ -785,7 +787,7 @@ def test_cr_9_a_waiver_is_valid_again_when_the_parent_value_returns(tmp_path):
 def test_cr_5_commit_adopts_the_folder_an_interrupted_reset_config_left(
         tmp_path, monkeypatch, capsys):
     root, task_dir = fx.committed(tmp_path)
-    fx.write_manifest(task_dir, config={"stages": {"refine": {"set": {"mode": "full"}}}})
+    fx.write_manifest(task_dir, config={"stages": {"ship": {"set": {"mode": "full"}}}})
     assert fx.reassess(root)[0] == 0
     with pytest.raises(RuntimeError):
         _reassess_in_process(root, monkeypatch, capsys, boom_at="marker", reset_config=True)

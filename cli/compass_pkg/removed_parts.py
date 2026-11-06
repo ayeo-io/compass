@@ -23,7 +23,7 @@ read it. Each entry names the decision record that removed it.
 # and compass_pkg.policy_lint (the removed settings).
 from __future__ import annotations
 
-from compass_pkg.stable_ids import (LEGACY_TO_PATH, STAGE_BREAKDOWN, STAGE_DEFINE,
+from compass_pkg.stable_ids import (LEGACY_APPROACH_ALIASES, LEGACY_APPROACH_IDS, LEGACY_TO_PATH, STAGE_BREAKDOWN, STAGE_DEFINE,
                                     STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_VERIFY)
 
 RELEASE = "9.0.0"
@@ -135,6 +135,13 @@ EFFECTS = {
         "mode for", "ADR-092"),
 }
 
+#: The issue-layer key that picks one of the 8.x approaches (ADR-092). Over a
+#: configuration that does not declare the approach it is left out of the merge.
+ISSUE_KEYS = {
+    "approach": ("the delivery approach the issue picked, which the configuration does "
+                 "not declare", "ADR-092"),
+}
+
 #: The fields that list check ids, per catalogue. A project layer that names a removed
 #: check in one of them has the id left out, so the merge finds no unknown reference.
 #: `merge.REFERENCES` holds the same fields; `artifacts` is removed as a whole.
@@ -190,7 +197,7 @@ SWITCHES = {
 
 def setting_note(key):
     """The lint message for a removed `compass.yml` key."""
-    return _note(key, *(SETTINGS.get(key) or EFFECTS[key]))
+    return _note(key, *(SETTINGS.get(key) or EFFECTS.get(key) or ISSUE_KEYS[key]))
 
 
 def capability_note(name):
@@ -459,7 +466,8 @@ def with_mapped_stages(doc, config):
 def unheld_stages(doc, config):
     """The `stages.<id>` and `checks.<id>` keys of an issue layer `doc` that name a
     legacy stage or a Definition of Ready check the configuration below it,
-    `config`, does not hold. An issue assessed before 9.0.0 can set the mode of a
+    `config`, does not hold, and `approach` when the layer picks an 8.x approach
+    `config` does not declare. An issue assessed before 9.0.0 can set the mode of a
     legacy stage or change such a check; over the shipped default, which declares
     neither (ADR-092), the merge leaves the entry out. Over a stored generation
     that holds it, it is kept."""
@@ -470,6 +478,13 @@ def unheld_stages(doc, config):
         if isinstance(entries, dict):
             out += [f"{catalogue}.{entry}" for entry in entries
                     if entry in removed and entry not in held]
+    # An issue's pick of an 8.x approach. Another name is the layer's own fault and
+    # is still refused.
+    approach = doc.get("approach") if isinstance(doc, dict) else None
+    if isinstance(approach, str):
+        name = LEGACY_APPROACH_ALIASES.get(approach, approach)
+        if name in LEGACY_APPROACH_IDS and name not in ((config or {}).get("approaches") or {}):
+            out.append("approach")
     return out
 
 
@@ -480,6 +495,8 @@ def without_unheld_stages(doc, config):
     if not keys:
         return doc
     out = dict(doc)
+    if "approach" in keys:
+        del out["approach"]
     for catalogue in ("stages", "checks"):
         if not isinstance(doc.get(catalogue), dict):
             continue

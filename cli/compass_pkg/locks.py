@@ -39,7 +39,7 @@ from collections import namedtuple
 from dataclasses import dataclass, replace
 
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import classify, merge, waivers
+from compass_pkg import classify, merge, removed_parts, waivers
 from compass_pkg.atomic_io import load_yaml_strict
 from compass_pkg.core import CompassError
 from compass_pkg.layers import Layer
@@ -779,7 +779,9 @@ def enforce_chain(layers, *, directions=None, tighter=None, cache=None,
         if index:
             result = enforce(held, config, after, before_capabilities=capabilities,
                              after_capabilities=after_capabilities,
-                             after_issue=layer.doc if layer.kind == "issue" else None,
+                             # The issue's own input, without what the merge left out.
+                             after_issue=(removed_parts.without_unheld_stages(layer.doc, config)
+                                          if layer.kind == "issue" else None),
                              directions=directions, tighter=tighter, cache=cache,
                              early_exit=early_exit, scan=scan,
                              at=at if layer.kind == "issue" else None)

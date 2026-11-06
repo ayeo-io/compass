@@ -409,3 +409,28 @@ def test_lint_warns_that_a_frozen_major_is_not_loaded(major, warned):
     if warned:
         assert found[0].level == "warning"
         assert "not loaded" in found[0].message and "compass:default@8" in found[0].message
+
+
+def test_an_issue_layer_drops_an_approach_the_shipped_default_does_not_declare():
+    from compass_pkg import merge, policy_lint
+    from compass_pkg.layers import Layer
+    config, _ = merge.apply(_resolved_parent(), {"approach": "full"}, "issue", "issue")
+    assert "approach" not in config
+    assessment = {"risk": "contained", "familiarity": "brownfield-mapped", "size": "medium",
+                  "goal": "delivery", "urgency": "none", "labels": []}
+    report = policy_lint.lint_chain(_parent(), None,
+                                    Layer("issue", "issue", {"approach": "full"}, "d"),
+                                    assessment=assessment)
+    found = [(f.code, f.layer, f.path) for f in report.findings
+             if f.code == "L-SETTING-REMOVED"]
+    assert found == [("L-SETTING-REMOVED", "issue", "approach")], report.findings
+    assert not report.errors, report.errors
+
+
+def test_an_old_issue_keeps_an_approach_its_configuration_declares():
+    from compass_pkg import removed_parts
+    held = _resolved_parent("default@7")
+    assert removed_parts.unheld_stages({"approach": "full"}, held) == []
+    assert removed_parts.without_unheld_stages({"approach": "full"}, held) == {"approach": "full"}
+    # A name that is no approach at all is the layer's own fault and is not left out.
+    assert removed_parts.unheld_stages({"approach": "nonesuch"}, _resolved_parent()) == []

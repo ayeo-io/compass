@@ -893,7 +893,9 @@ def _classification_group(state):
                 parent_config, child_config, valid,
                 parent_capabilities=_capabilities(chain[:index]),
                 child_capabilities=_capabilities(chain[:index + 1]),
-                child_issue=layer.doc if layer.kind == "issue" else None,
+                # The issue's own input, without what the merge left out of it.
+                child_issue=(removed_parts.without_unheld_stages(layer.doc, parent_config)
+                             if layer.kind == "issue" else None),
                 at=state["assessment"] if layer.kind == "issue" else None,
                 exhaustive=state["exhaustive"], cache=state["cache"])
         except CompassError as exc:

@@ -21,8 +21,22 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import configure_fixtures as fx  # noqa: E402
 
-TIGHTER = ("--mode", "refine=full")          # refine is light in this issue's approach
-LOOSER = ("--mode", "define=collapsed")      # define is light there: collapsing it loosens
+# The issue is on the four-stage path (ADR-092), which has no stage mode above
+# thorough. So the issue tightens by adding a check of its own to `G1`, and loosens
+# by giving ship a mode the delivery approach does not run, which no rank orders.
+TIGHT_OVERLAY = {
+    "checks": {"issue-extra": {"statement": "The issue also runs its own suite.",
+                               "kind": "deterministic", "impl": "suite-passed",
+                               "severity": "blocking", "on_skipped": "fail"}},
+    "gates": {"G1": {"set": {"checks": {"add": ["issue-extra"]}}}}}
+LOOSER = ("--mode", "ship=graduate-or-discard")
+
+
+def _tighter(root):
+    """The flags that propose `TIGHT_OVERLAY`, from a file beside the project."""
+    path = Path(root).parent / "tighter.yml"
+    path.write_text(yaml.safe_dump(TIGHT_OVERLAY), encoding="utf-8")
+    return ("--from-file", str(path))
 
 
 def _tree(root):
@@ -34,7 +48,7 @@ def _tree(root):
 def test_cr_1_a_change_writes_the_proposal_and_leaves_the_manifest_as_it_was(tmp_path):
     root, task_dir = fx.committed(tmp_path)
     before = (task_dir / "manifest.yml").read_bytes()
-    code, out, err = fx.configure(root, *TIGHTER)
+    code, out, err = fx.configure(root, *_tighter(root))
     assert code == 0, out + err
     assert (task_dir / "manifest.yml").read_bytes() == before
     folder = fx.gen(task_dir, 2)
@@ -44,15 +58,15 @@ def test_cr_1_a_change_writes_the_proposal_and_leaves_the_manifest_as_it_was(tmp
                               "overlay"]
     assert proposal["schema"] == 1 and proposal["issue"] == fx.SLUG
     assert proposal["base_generation"] == 1
-    assert proposal["overlay"] == {"stages": {"refine": {"set": {"mode": "full"}}}}
+    assert proposal["overlay"] == TIGHT_OVERLAY
 
 
 @pytest.mark.parametrize("flags,overlay", [
     (("--route", "full"), {"approach": "full"}),
     (("--autonomy", "controlled"), {"autonomy": "controlled"}),
     (("--ceiling", "subtask_ceiling=2"), {"ceilings": {"subtask_ceiling": 2}}),
-    (("--mode", "refine=full", "--mode", "define=full"),
-     {"stages": {"refine": {"set": {"mode": "full"}}, "define": {"set": {"mode": "full"}}}}),
+    (("--mode", "ship=thorough", "--mode", "assess=thorough"),
+     {"stages": {"ship": {"set": {"mode": "thorough"}}, "assess": {"set": {"mode": "thorough"}}}}),
 ])
 def test_cr_1_each_flag_builds_its_key_of_the_overlay(tmp_path, flags, overlay):
     root, task_dir = fx.committed(tmp_path)
@@ -74,17 +88,17 @@ def test_cr_1_from_file_replaces_the_overlay_and_a_flag_adds_to_it(tmp_path):
 
 def test_cr_1_a_pending_proposal_is_the_base_of_the_next_call(tmp_path):
     root, task_dir = fx.committed(tmp_path)
-    assert fx.configure(root, *TIGHTER)[0] == 0
+    assert fx.configure(root, *_tighter(root))[0] == 0
     assert fx.configure(root, "--autonomy", "controlled")[0] in (0, 1)
     assert fx.load(fx.gen(task_dir, 2) / "proposed.yml")["overlay"] == {
-        "stages": {"refine": {"set": {"mode": "full"}}}, "autonomy": "controlled"}
+        **TIGHT_OVERLAY, "autonomy": "controlled"}
 
 
 def test_cr_1_a_stale_pending_proposal_is_not_the_base_of_the_next_call(tmp_path):
     """After a hand edit of `config:`, the proposal no longer describes the
     layer the person is changing, so the next call starts from the edit."""
     root, task_dir = fx.committed(tmp_path)
-    assert fx.configure(root, *TIGHTER)[0] == 0
+    assert fx.configure(root, *_tighter(root))[0] == 0
     fx.write_manifest(task_dir, config={"autonomy": "controlled"})
     assert fx.configure(root, "--ceiling", "subtask_ceiling=2")[0] in (0, 1)
     assert fx.load(fx.gen(task_dir, 2) / "proposed.yml")["overlay"] == {
@@ -127,7 +141,7 @@ def test_cr_1_an_issue_without_a_stored_generation_is_refused_with_the_fix(tmp_p
     root, task_dir = fx.project(tmp_path)
     if generation is not None:
         fx.write_manifest(task_dir, generation=generation)
-    code, out, err = fx.configure(root, *TIGHTER)
+    code, out, err = fx.configure(root, *_tighter(root))
     assert code == 2, out + err
     assert "compass approach evaluate --write" in out + err
     assert not (task_dir / "generations").exists()
@@ -137,7 +151,7 @@ def test_cr_1_an_issue_without_a_stored_generation_is_refused_with_the_fix(tmp_p
 
 def test_cr_2_the_preview_names_each_part_and_the_next_step(tmp_path):
     root, task_dir = fx.committed(tmp_path)
-    code, out, err = fx.configure(root, *TIGHTER)
+    code, out, err = fx.configure(root, *_tighter(root))
     assert code == 0, out + err
     lines = out.splitlines()
     assert lines[0].startswith("compass issue configure: feature")
@@ -147,13 +161,13 @@ def test_cr_2_the_preview_names_each_part_and_the_next_step(tmp_path):
               "next:"]
     for label in wanted:
         assert any(line.strip().startswith(label) for line in lines), (label, out)
-    assert any("stages.refine.mode" in line for line in lines), out
+    assert any("gates.G1.checks" in line for line in lines), out
     assert '/compass:assess --reassess --reason "..."' in out
 
 
 def test_cr_2_a_tightening_is_accepted_with_exit_0(tmp_path):
     root, task_dir = fx.committed(tmp_path)
-    code, out, err = fx.configure(root, *TIGHTER, "--json")
+    code, out, err = fx.configure(root, *_tighter(root), "--json")
     assert code == 0, out + err
     doc = json.loads(out)
     assert doc["verdict"] == "accepted" and doc["reasons"] == []
@@ -167,7 +181,7 @@ def test_cr_2_a_loosening_without_a_waiver_writes_the_proposal_and_exits_1(tmp_p
     assert code == 1, out + err
     doc = json.loads(out)
     assert doc["verdict"] == "refused"
-    assert doc["reasons"] and "define" in " ".join(doc["reasons"])
+    assert doc["reasons"] and "ship" in " ".join(doc["reasons"])
     assert doc["classification"]["result"] in ("loosening", "incomparable")
     assert doc["classification"]["first_point"] is not None
     assert (fx.gen(task_dir, 2) / "proposed.yml").is_file()
@@ -178,10 +192,10 @@ def test_cr_2_a_refused_text_preview_prints_the_reasons(tmp_path):
     root, _ = fx.committed(tmp_path)
     code, out, err = fx.configure(root, *LOOSER)
     assert code == 1, out + err
-    assert "refused" in out and "define" in out
+    assert "refused" in out and "ship" in out
 
 
-@pytest.mark.parametrize("flags", [("--route", "nonesuch"), ("--mode", "refine=sideways"),
+@pytest.mark.parametrize("flags", [("--route", "nonesuch"), ("--mode", "ship=sideways"),
                                    ("--mode", "nostage=full")])
 def test_cr_2_the_text_preview_never_prints_a_python_none(tmp_path, flags):
     root, _ = fx.committed(tmp_path)
@@ -195,15 +209,15 @@ def test_cr_2_a_stage_mode_shows_the_mode_the_issue_has_not_null(tmp_path):
     code, out, err = fx.configure(root, *LOOSER, "--json")
     assert code == 1, out + err
     doc = json.loads(out)
-    change = next(c for c in doc["changes"] if c["path"] == "stages.define.mode")
-    assert change["after"] == "collapsed"
-    owed = next(c for c in doc["assessment"]["changes"] if c["key"] == "define")
+    change = next(c for c in doc["changes"] if c["path"] == "stages.ship.mode")
+    assert change["after"] == "graduate-or-discard"
+    owed = next(c for c in doc["assessment"]["changes"] if c["key"] == "ship")
     assert change["before"] == owed["before"] and change["before"] is not None
 
 
 def test_cr_2_the_preview_says_what_it_builds_on(tmp_path):
     root, task_dir = fx.committed(tmp_path)
-    code, out, err = fx.configure(root, *TIGHTER)
+    code, out, err = fx.configure(root, *_tighter(root))
     assert code == 0, out + err
     assert "builds on     : the manifest's config:" in out
     code, out, err = fx.configure(root, "--autonomy", "controlled", "--json")
@@ -235,7 +249,7 @@ def test_cr_2_the_preview_lists_the_resolved_fields_that_change(tmp_path):
 
 def test_cr_2_the_assessment_part_shows_what_the_issue_owes_before_and_after(tmp_path):
     root, _ = fx.committed(tmp_path)
-    code, out, err = fx.configure(root, *TIGHTER, "--json")
+    code, out, err = fx.configure(root, *_tighter(root), "--json")
     assert code == 0, out + err
     owed = json.loads(out)["assessment"]
     # On the four-stage path the commit stores `delivery` (ADR-092 decision 2).
@@ -249,7 +263,7 @@ def test_cr_2_the_assessment_part_shows_what_the_issue_owes_before_and_after(tmp
 def test_cr_2_a_project_layer_that_does_not_load_is_an_error_and_writes_nothing(tmp_path):
     root, task_dir = fx.committed(tmp_path)
     (root / "compass.yml").write_text("schema: 1\nstages: oops\n", encoding="utf-8")
-    code, out, err = fx.configure(root, *TIGHTER)
+    code, out, err = fx.configure(root, *_tighter(root))
     assert code == 2, out + err
     assert "stages" in out + err
     assert not fx.gen(task_dir, 2).exists()
@@ -257,7 +271,7 @@ def test_cr_2_a_project_layer_that_does_not_load_is_an_error_and_writes_nothing(
 
 def test_cr_2_an_unknown_stage_mode_is_refused_at_commit_so_exit_1(tmp_path):
     root, task_dir = fx.committed(tmp_path)
-    code, out, err = fx.configure(root, "--mode", "refine=sideways", "--json")
+    code, out, err = fx.configure(root, "--mode", "ship=sideways", "--json")
     assert code == 1, out + err
     doc = json.loads(out)
     assert doc["verdict"] == "refused" and doc["reasons"]
@@ -366,7 +380,7 @@ def test_cr_3_the_documented_example_is_the_pinned_one():
 
 def test_cr_3_json_goes_to_stdout_alone(tmp_path):
     root, _ = fx.committed(tmp_path)
-    code, out, err = fx.configure(root, *TIGHTER, "--json")
+    code, out, err = fx.configure(root, *_tighter(root), "--json")
     assert code == 0
     json.loads(out)
     assert err == ""
@@ -376,7 +390,7 @@ def test_cr_3_json_goes_to_stdout_alone(tmp_path):
 
 def test_cr_4_discard_removes_a_pending_proposal_and_leaves_the_manifest(tmp_path):
     root, task_dir = fx.committed(tmp_path)
-    fx.configure(root, *TIGHTER)
+    fx.configure(root, *_tighter(root))
     before = (task_dir / "manifest.yml").read_bytes()
     code, out, err = fx.configure(root, "--discard")
     assert code == 0, out + err
@@ -432,7 +446,7 @@ def test_cr_4_discard_without_a_number_names_the_choices_when_there_are_several(
 
 def test_cr_4_discard_does_not_combine_with_a_change(tmp_path):
     root, task_dir = fx.committed(tmp_path)
-    code, out, err = fx.configure(root, "--discard", *TIGHTER)
+    code, out, err = fx.configure(root, "--discard", *_tighter(root))
     assert code == 2, out + err
 
 
@@ -442,7 +456,7 @@ def test_cr_12_a_landed_issue_cannot_be_given_a_proposal(tmp_path):
     root, task_dir = fx.committed(tmp_path)
     fx.write_manifest(task_dir, status="landed")
     before = _tree(root)
-    code, out, err = fx.configure(root, *TIGHTER)
+    code, out, err = fx.configure(root, *_tighter(root))
     assert code == 2, out + err
     assert "is closed and keeps" in out + err
     assert _tree(root) == before
@@ -474,7 +488,7 @@ def test_cr_12_a_landed_issue_is_refused_before_the_preview_is_computed(
         raise RuntimeError("the preview was computed")
     monkeypatch.setattr(config_preview, "build", explode)
     args = types.SimpleNamespace(task=fx.SLUG, discard=None, commit=None, from_file=None,
-                                 mode=["refine=full"], route=None, autonomy=None,
+                                 mode=["assess=thorough"], route=None, autonomy=None,
                                  ceiling=None, reason=None, _mode=None, json=False)
     with pytest.raises(CompassError, match="is closed and keeps"):
         issue_config_cmd.run_configure(args)
@@ -485,7 +499,7 @@ def test_cr_12_a_symbolic_link_in_the_next_folder_is_refused(tmp_path):
     outside = tmp_path / "elsewhere"
     outside.mkdir()
     (task_dir / "generations" / "2").symlink_to(outside, target_is_directory=True)
-    code, out, err = fx.configure(root, *TIGHTER)
+    code, out, err = fx.configure(root, *_tighter(root))
     assert code == 2, out + err
     assert "symbolic link" in out + err
     assert list(outside.iterdir()) == []
@@ -507,7 +521,7 @@ def test_cr_12_a_folder_that_holds_a_generation_is_not_overwritten_by_a_proposal
     root, task_dir = fx.committed(tmp_path)
     shutil.copytree(fx.gen(task_dir, 1), fx.gen(task_dir, 2))
     before = sorted(p.name for p in fx.gen(task_dir, 2).iterdir())
-    code, out, err = fx.configure(root, *TIGHTER)
+    code, out, err = fx.configure(root, *_tighter(root))
     assert code == 2, out + err
     assert "compass issue configure --issue feature --commit 2" in out + err
     assert "compass issue configure --issue feature --discard 2" in out + err
@@ -518,7 +532,7 @@ def test_cr_12_a_proposal_file_that_is_not_ours_is_refused_not_trusted(tmp_path)
     root, task_dir = fx.committed(tmp_path)
     fx.gen(task_dir, 2).mkdir()
     (fx.gen(task_dir, 2) / "proposed.yml").write_text("overlay: [oops\n", encoding="utf-8")
-    code, out, err = fx.configure(root, *TIGHTER)
+    code, out, err = fx.configure(root, *_tighter(root))
     assert code == 2, out + err
     assert "proposed.yml" in out + err
 
@@ -534,7 +548,7 @@ def test_cr_12_a_proposal_of_the_wrong_shape_is_refused_and_not_applied(tmp_path
     path = fx.gen(task_dir, 2) / "proposed.yml"
     path.write_text(text, encoding="utf-8")
     snapshot = _tree(root)
-    code, out, err = fx.configure(root, *TIGHTER)
+    code, out, err = fx.configure(root, *_tighter(root))
     assert code == 2, out + err
     assert "not a proposal" in out + err and "--discard 2" in out + err
     code, out, err = fx.reassess(root)

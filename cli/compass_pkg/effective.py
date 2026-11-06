@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 
 from compass_pkg import (chain_class, generation, layers, legacy_adapter, locks, merge, parents,
                          policy_lint, project_settings, waivers)
-from compass_pkg import obligations, status_words
+from compass_pkg import obligations, removed_parts, status_words
 from compass_pkg import catalogue_spec as spec
 from compass_pkg.atomic_io import digest, load_yaml_strict
 from compass_pkg.check_registry import REGISTRY
@@ -413,7 +413,10 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
     if validate:
         check_chain()
     history, config, configs = _steps(chain)
-    overlay = loaded.issue.doc if loaded.issue else None
+    # The issue's layer as the merge read it, without an entry the configuration
+    # below it does not hold (ADR-092).
+    overlay = (removed_parts.without_unheld_stages(loaded.issue.doc, configs[-2])
+               if loaded.issue and len(configs) > 1 else None)
     project_doc = loaded.project.doc if loaded.project else None
     project_digest = loaded.project.digest if loaded.project else None
     capabilities = {}

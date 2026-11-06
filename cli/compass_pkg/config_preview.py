@@ -17,7 +17,7 @@ It reads and resolves; it writes nothing.
 # effective, policy_lint. The waiver re-check is in `effective`.
 from __future__ import annotations
 
-from compass_pkg import classify, effective, policy_lint
+from compass_pkg import classify, effective, policy_lint, removed_parts
 from compass_pkg import catalogue_spec as spec
 from compass_pkg.core import CompassError
 
@@ -73,7 +73,8 @@ def classification_of(details):
     try:
         found = classify.classify(
             configs[-2], configs[-1], parent_capabilities=_capabilities(chain[:-1]),
-            child_capabilities=_capabilities(chain), child_issue=layer.doc,
+            child_capabilities=_capabilities(chain),
+            child_issue=removed_parts.without_unheld_stages(layer.doc, configs[-2]),
             at=details["loaded"].assessment, parent_name="project", child_name="issue")
     except CompassError as exc:
         return {"result": "not-run", "reason": _text(exc), "scan": "none",
@@ -136,8 +137,12 @@ def _fill_modes(changes, modes):
 
 
 def _overlay(resolution):
+    """The issue's layer as the merge read it: without what it leaves out."""
     layer = resolution.details["loaded"].issue
-    return layer.doc if layer is not None else None
+    if layer is None:
+        return None
+    configs = resolution.details["configs"]
+    return removed_parts.without_unheld_stages(layer.doc, configs[-2] if len(configs) > 1 else {})
 
 
 def _kind(record_id):

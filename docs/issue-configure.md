@@ -48,13 +48,18 @@ configuration above it at that single point, the same point the preview's
 judged over the whole grid, because a project layer applies to every
 assessment the project will see (ADR-037).
 
-What follows from judging at the point:
+What follows from judging at the point. The examples of an approach pick are
+over a configuration that declares the 8.x approaches, such as an old issue's
+stored generation; over the shipped default, which declares only `delivery` and
+`spike` (ADR-092), a pick of an 8.x approach is left out of the merge and named
+with `L-SETTING-REMOVED`, as a mode for a legacy stage is.
 
 - An approach pick is accepted when the issue owes at least as much with it as without it at its own assessment. `--route spike` on a delivery issue is refused by a lock at that assessment. A spike issue that picks `full` is refused by a lock, because it would lose `spike.conclude`.
 - Nothing is accepted or refused by the name or weight of an approach. `full` has no subtask ceiling, and no ceiling is the loosest, so `full` on a `regular` issue is refused as incomparable on `approaches.subtask_ceiling`. An approach pick that is incomparable or looser at the point is refused, and an approach pick has no waiver in 6.0.0.
 - An approach pick is compared field by field, never as a heavier or lighter approach. A pick that raises a ceiling, or changes a mode the stage ranks leave unordered, is a mixed change and is refused, even when it also tightens other fields. The refusal ends with the fields that make it mixed: `fields that are looser or cannot be compared: ...`. Combine the pick with a flag that removes each of them. On a `regular` issue, `--route regular --ceiling subtask_ceiling=1` is a pure tightening and is accepted.
 - `--route regular` on a `quick-fix` issue cannot be fixed that way. It is refused naming `approaches.subtask_ceiling` (1 to 2, looser) and `approaches.stages (breakdown)` (skipped against multiagent, unranked), and adding `--ceiling subtask_ceiling=1` clears only the first.
 - A stage mode already in force is accepted: `--mode refine=collapsed` on a `quick-fix` issue, where refine is already collapsed, loosens nothing. On a `regular` issue it loosens `refine` and is refused without a waiver.
+- On the four-stage path an issue tightens by adding a check or a gate, for example a check of its own in `G1` given with `--from-file`. It loosens by lowering what it owes, such as a mode the delivery approach does not run (`--mode ship=graduate-or-discard`), which is refused without a waiver.
 
 ## Proposing a change
 
@@ -69,7 +74,7 @@ A call needs at least one change. Flags add to the overlay a call starts from:
 | `--from-file PATH` | The whole overlay, replaced by the file's mapping; any flag is applied on top |
 
 The starting overlay is the pending proposal when there is one, otherwise the
-manifest's `config:`. Two calls therefore accumulate: `--mode refine=thorough`
+manifest's `config:`. Two calls therefore accumulate: `--mode ship=thorough`
 then `--ceiling subtask_ceiling=2` proposes both. `--discard` starts again.
 
 `proposed.yml` holds, in this order:
@@ -211,7 +216,7 @@ assessed on the four-stage path, is `issue-configure-example.json`.
 ```
 
 The second, `issue-configure-refused-example.json`, is a loosening
-(`--mode define=collapsed`) on an issue whose waiver went stale because the
+(`--mode ship=graduate-or-discard`) on an issue whose waiver went stale because the
 project changed its own check from `blocking` to `advisory`. It shows a
 refusal with its reasons, a `first_point`, and an invalidated waiver with the
 approval record behind it.
@@ -224,20 +229,20 @@ approval record behind it.
   "proposed": 2,
   "verdict": "refused",
   "reasons": [
-    "C-LOOSENING approaches.stages: at risk contained, familiarity brownfield-mapped, size medium, goal delivery, role engineer, labels none: approaches.stages (define) is \"thorough\" in the parent and \"collapsed\" in the child; a waiver on the entry, approved by the layer above, excuses it; fields that are looser or cannot be compared: approaches.stages (define), approaches.checkpoints (balanced), approaches.checkpoints (controlled)"
+    "C-INCOMPARABLE approaches.stages: at risk contained, familiarity brownfield-mapped, size medium, goal delivery, role engineer, labels none: approaches.stages (ship) is \"thorough\" in the parent and \"graduate-or-discard\" in the child; a waiver on the entry, approved by the layer above, excuses it; fields that are looser or cannot be compared: approaches.stages (ship)"
   ],
   "proposal": ".compass/work/feature/generations/2/proposed.yml",
   "base": "config",
   "changes": [
     {
-      "path": "stages.define.mode",
+      "path": "stages.ship.mode",
       "before": "thorough",
-      "after": "collapsed"
+      "after": "graduate-or-discard"
     }
   ],
   "classification": {
-    "result": "loosening",
-    "reason": "at risk contained, familiarity brownfield-mapped, size medium, goal delivery, role engineer, labels none: approaches.stages (define) is \"thorough\" in the parent and \"collapsed\" in the child",
+    "result": "incomparable",
+    "reason": "at risk contained, familiarity brownfield-mapped, size medium, goal delivery, role engineer, labels none: approaches.stages (ship) is \"thorough\" in the parent and \"graduate-or-discard\" in the child",
     "scan": "full",
     "first_point": {
       "assessment": {
@@ -265,46 +270,16 @@ approval record behind it.
           "engineer"
         ]
       },
-      "outcome": "looser",
-      "summary": "at risk contained, familiarity brownfield-mapped, size medium, goal delivery, role engineer, labels none: approaches.stages (define) is \"thorough\" in the parent and \"collapsed\" in the child",
+      "outcome": "mixed",
+      "summary": "at risk contained, familiarity brownfield-mapped, size medium, goal delivery, role engineer, labels none: approaches.stages (ship) is \"thorough\" in the parent and \"graduate-or-discard\" in the child",
       "changes": [
         {
           "fact": "stage_mode",
           "field": "approaches.stages",
-          "key": "define",
-          "outcome": "looser",
+          "key": "ship",
+          "outcome": "incomparable",
           "parent": "thorough",
-          "child": "collapsed"
-        },
-        {
-          "fact": "checkpoints",
-          "field": "approaches.checkpoints",
-          "key": "balanced",
-          "outcome": "looser",
-          "parent": [
-            "define",
-            "plan"
-          ],
-          "child": [
-            "plan"
-          ]
-        },
-        {
-          "fact": "checkpoints",
-          "field": "approaches.checkpoints",
-          "key": "controlled",
-          "outcome": "looser",
-          "parent": [
-            "assess",
-            "define",
-            "refine",
-            "plan"
-          ],
-          "child": [
-            "assess",
-            "refine",
-            "plan"
-          ]
+          "child": "graduate-or-discard"
         }
       ]
     }
@@ -314,45 +289,15 @@ approval record behind it.
       "before": "delivery",
       "after": "delivery"
     },
-    "result": "loosening",
+    "result": "incomparable",
     "changes": [
       {
         "fact": "stage_mode",
         "field": "approaches.stages",
-        "key": "define",
-        "outcome": "looser",
+        "key": "ship",
+        "outcome": "incomparable",
         "before": "thorough",
-        "after": "collapsed"
-      },
-      {
-        "fact": "checkpoints",
-        "field": "approaches.checkpoints",
-        "key": "balanced",
-        "outcome": "looser",
-        "before": [
-          "define",
-          "plan"
-        ],
-        "after": [
-          "plan"
-        ]
-      },
-      {
-        "fact": "checkpoints",
-        "field": "approaches.checkpoints",
-        "key": "controlled",
-        "outcome": "looser",
-        "before": [
-          "assess",
-          "define",
-          "refine",
-          "plan"
-        ],
-        "after": [
-          "assess",
-          "refine",
-          "plan"
-        ]
+        "after": "graduate-or-discard"
       }
     ],
     "refused": null

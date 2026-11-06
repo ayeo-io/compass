@@ -262,10 +262,11 @@ so with the warning `L-EXTENDS-FROZEN-MAJOR`.
 
 Three more rules keep an older file or issue working:
 
-- An issue's `config:` that sets a legacy stage, or a Definition of Ready
-  check, that its configuration does not hold is merged without it and named
-  with `L-SETTING-REMOVED` on the issue layer; `compass issue configure` shows
-  the warning. Over a stored generation that holds the stage, it is kept.
+- An issue's `config:` that sets a legacy stage or a Definition of Ready
+  check, or picks an 8.x approach (`approach:`), that its configuration does
+  not hold is merged without it and named with `L-SETTING-REMOVED` on the
+  issue layer; `compass issue configure` shows the warning. Over a stored
+  generation that holds it, it is kept.
 - A gate a project layer, or a copy of the 9.0.0 governance files, places at a
   legacy stage the configuration does not declare is read at the path stage
   that shows it (`define`, `refine`, `plan` at specify; `breakdown`,

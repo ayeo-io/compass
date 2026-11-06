@@ -111,9 +111,10 @@ def test_approach_evaluate_default_view_names_ship_not_land(project, run_cli):
     assert _word("land").search(out) is None, (
         f"compass approach evaluate prints the retired stage name "
         f"'land':\n{out}")
-    assert "ship is blocked" in out, (
-        f"the blocked-stage concern did not name the ship stage by its "
-        f"display name:\n{out}")
+    # On the path no rule blocks a stage, so the 8.x block is not shown at all
+    # (`path_writer.NOT_SHOWN`, VD-009 of #351).
+    assert "is blocked" not in out, (
+        f"a path issue's output shows an 8.x stage block:\n{out}")
 
 
 def test_approach_evaluate_verbose_names_ship_not_land(project, run_cli):
@@ -148,7 +149,8 @@ def test_approach_evaluate_verbose_names_ship_not_land(project, run_cli):
 
 def test_approach_evaluate_verbose_on_the_path_names_ship_not_land(project, run_cli):
     """Twin of the test above for a delivery assessment, which is on the path:
-    the BLOCKED phase summary line still names the ship stage."""
+    the retired name is not printed, and no BLOCKED phase line is, because on the
+    path no rule blocks a stage (`path_writer.NOT_SHOWN`, VD-009 of #351)."""
     _copy_blocks_the_ship_stage(project)
     r = run_cli(
         "approach", "evaluate", "--verbose",
@@ -165,8 +167,8 @@ def test_approach_evaluate_verbose_on_the_path_names_ship_not_land(project, run_
     assert _word("land").search(out) is None, (
         f"compass approach evaluate --verbose prints the retired stage "
         f"name 'land':\n{out}")
-    assert "BLOCKED phase   : ship until" in out, (
-        f"the BLOCKED phase summary line did not name the ship stage:\n{out}")
+    assert "BLOCKED phase" not in out, (
+        f"a path issue's verbose output shows an 8.x stage block:\n{out}")
 
 
 def test_retro_transitions_print_no_raw_route_name(make_task, run_cli):

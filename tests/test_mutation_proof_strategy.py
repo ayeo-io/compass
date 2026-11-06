@@ -13,7 +13,7 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STRATEGIES = ROOT / "governance" / "strategies.md"
-VERIFY_COMMAND = ROOT / "commands" / "verify.md"
+SHIP_COMMAND = ROOT / "commands" / "ship.md"
 EVIDENCE_GATES_DIR = ROOT / "skills" / "evidence-gates"
 
 
@@ -124,10 +124,10 @@ def test_trc_2_the_verify_guidance_points_at_the_strategy():
     assert match, "TRC-1 must land before this scenario can"
     s_number = match.group(1)
 
-    for name, path in (("commands/verify.md", VERIFY_COMMAND),
+    for name, path in (("commands/ship.md", SHIP_COMMAND),
                        ("skills/evidence-gates/SKILL.md", EVIDENCE_GATES)):
         text = _flat(path.read_text(encoding="utf-8"))
         assert s_number in text, (
-            f"{name} does not name {s_number}, so a reviewer at the verify "
+            f"{name} does not name {s_number}, so a reviewer at the ship "
             f"stage has no pointer to the practice"
         )

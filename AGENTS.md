@@ -55,21 +55,21 @@ intent-recognition is an adapter responsibility (it is *when* to trigger
 assessment, not what assessment does); methodology describes the stage,
 this rule describes the trigger.
 
-**2. Walk the eight-stage pipeline:**
+**2. Walk the four-stage path (ADR-092):**
 
-1. assess
-2. define acceptance criteria
-3. requirements review
-4. plan
-5. break down the work
-6. implement
-7. test & review
-8. ship
+1. assess - rate the change; the CLI computes the evidence it owes
+2. specify - write the scenarios and declare their tests
+3. build - a red, then a green, for each scenario
+4. ship - the review, the gates with their evidence, and the commit
 
-The delivery approach says which stages are full-weight, which collapse, and
-which are skipped - and why. The one document Compass needs and checks is
+Every delivery change runs the same four stages; the assessment changes the
+evidence each one owes, not which stages run. A spike explores and
+concludes, and ships nothing. Each `compass` verb that writes a record of the
+issue prints a `next:` line with the command to run next, and `compass next`
+prints it at any time, so a runtime follows those lines rather than
+re-deriving the order. The one document Compass needs and checks is
 `acceptance-criteria.md` (ADR-091); every other stage leaves records in the
-manifest and `devlog.md`, and a team can keep its own notes.
+manifest, and a team can keep its own notes.
 
 **3. Enforce the guardrails - few, hard, never crossed:**
    - **Tested before it ships:** no code reaches `main` without a passing
@@ -113,8 +113,8 @@ manifest and `devlog.md`, and a team can keep its own notes.
    states its context before its detail, resolves its own references rather
    than pointing at a discussion, and stops when it has said the thing.
    Commit messages and pull-request bodies the runtime generates carry no
-   agent co-author trailer and no "Generated with" footer; `devlog.md` and
-   the manifest already record provenance in a form the framework can read.
+   agent co-author trailer and no "Generated with" footer; the manifest and
+   the evidence records already record provenance in a form the framework can read.
    Like every strategy this is assessed at review, never gating.
 
 **4. Support five roles, each with its own entry point.** Engineer, product
@@ -123,9 +123,8 @@ artifacts that plug into the same pipeline. The acceptance-criteria file is
 the one file all five roles read - do not reduce it to an engineering-only
 artifact.
 
-**5. Support solo delivery.** On larger delivery approaches, the plan stage
-lists the work units, and the session builds them one after another in one
-session. Compass 9.0.0 starts no agent and no worktree per
+**5. Support solo delivery.** On a larger change, the session builds the
+work units one after another in one session. Compass 9.0.0 starts no agent and no worktree per
 subtask (ADR-090), so a runtime needs no isolated workspaces.
 
 **6. Shell out for CI and the feedback loop too.** Two cross-issue kit
@@ -143,7 +142,7 @@ them.
 
 | Methodology concept | Adapter must map it to… |
 |---|---|
-| The eight stages | Invocable commands or equivalent |
+| The four stages | One command that runs them, following each `next:` line, plus a short form for a small change |
 | Assess | A routine that produces the assessment, then *calls the kit* (`compass approach evaluate`) to compose the delivery approach |
 | The kit-layer CLI | A shell-out, not a reimplementation - the adapter runs `compass approach evaluate`, `compass check` and `compass tdd-red/green` for the deterministic parts |
 | CI and the feedback loop | A shell-out to `compass ci` (honor the exit code), `compass retro` (the retrospective signal), `compass rework-scan` (cross-issue rework signal), and `compass flow` (cross-issue view; `--digest` writes a dated digest combining rework-scan and the retrospective signal) |
@@ -167,7 +166,7 @@ narrates the pipeline instead of communicating a decision teaches nothing.
 `skills/compass-runtime/writing-voice.md` states the rule in one line,
 carries real before/after pairs harvested from this project's own archive,
 and names the tells that mark the narrating kind. A runtime's session-facing
-output - devlog entries, requirements reviews, replies to the person driving
+output - review hand-offs, replies to the person driving
 it - must read the way that reference asks: what happened, what is
 needed, never which stage is running.
 
@@ -258,16 +257,16 @@ All issue state is files, not conversation:
   on them until `compass policy migrate` (`docs/upgrade-6-0-0.md`);
 - each issue's documents in `docs/compass/<created>-<issue-slug>/`;
 - each issue's machine state in `.compass/work/<issue-slug>/`: `manifest.yml`
-  (the manifest), `evidence/` (the CLI's test and gate records), the markers
-  and `devlog.md`;
+  (the manifest), `evidence/` (the CLI's test and gate records) and the
+  markers; an issue assessed before the path also keeps its `devlog.md`;
 - when the project ships an `architecture/` directory, two derived files the
   assess stage writes when present: `architecture-loaded.yml` (the per-issue
   snapshot of which cross-issue architectural state was loaded) and
   `architecture-notes.md` (annotations the architect perspective writes on
-  the technical design, *not* a parallel spec);
+  the change, *not* a parallel spec);
 - a `.compass/current-task` pointer so the CLI and any hooks resolve the
   current issue unambiguously.
 
 A different session, agent, or runtime must be able to resume an issue by
-reading the manifest, `acceptance-criteria.md` and `devlog.md` - nothing
+reading the manifest, the evidence and `acceptance-criteria.md` - nothing
 essential lives only in context.

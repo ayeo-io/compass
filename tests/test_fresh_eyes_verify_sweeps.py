@@ -10,7 +10,7 @@ made each one reported it complete - that is the evidence this strategy
 exists to act on.
 
 This file pins the strategy entry in `governance/strategies.md` and the
-pointer from the verify stage guidance (`commands/verify.md`,
+pointer from the ship stage guidance (`commands/ship.md`,
 `skills/evidence-gates/SKILL.md`) that names where it lives without
 repeating it.
 
@@ -27,7 +27,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parent.parent
 
 STRATEGIES = REPO_ROOT / "governance" / "strategies.md"
-VERIFY_CMD = REPO_ROOT / "commands" / "verify.md"
+SHIP_CMD = REPO_ROOT / "commands" / "ship.md"
 EVIDENCE_GATES = REPO_ROOT / "skills" / "evidence-gates" / "SKILL.md"
 
 def _evidence_gates_text():
@@ -193,11 +193,11 @@ def test_trc_a2_strategy_states_prohibition_evidence_and_cross_references_s8():
 
 
 # ---------------------------------------------------------------------------
-# `TRC-B1` - the verify stage guidance points at the strategy, not repeat it
+# `TRC-B1` - the ship stage guidance points at the strategy, not repeat it
 # ---------------------------------------------------------------------------
 
 def test_trc_b1_verify_guidance_points_at_the_strategy_not_repeat_it():
-    verify_cmd = VERIFY_CMD.read_text(encoding="utf-8")
+    ship_cmd = SHIP_CMD.read_text(encoding="utf-8")
     gates = _evidence_gates_text()
 
     strategy_heading = _strategy_entry().split("\n", 1)[0].strip()
@@ -205,7 +205,7 @@ def test_trc_b1_verify_guidance_points_at_the_strategy_not_repeat_it():
     assert match, "TRC-A1 must land before this scenario can"
     s_number = match.group(1)
 
-    for name, text in (("commands/verify.md", verify_cmd),
+    for name, text in (("commands/ship.md", ship_cmd),
                         ("skills/evidence-gates/SKILL.md", gates)):
         assert "governance/strategies.md" in text, (
             f"{name} must point at governance/strategies.md"

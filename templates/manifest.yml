@@ -1,17 +1,17 @@
 # =============================================================================
 # TEMPLATE: manifest.yml  -  the manifest
-# Produced by: the assess stage (creates it), then every later stage fills its part.
+# Produced by: the assess stage (creates it), then specify, build and ship fill their parts.
 #              Lives at: .compass/work/<issue-slug>/manifest.yml
 # =============================================================================
 # manifest.yml is the structured counterpart to `acceptance-criteria.md`, the one
 # prose document Compass needs. The prose is for humans; this is for the CLI. `compass approach evaluate` reads
-# `assessment` and writes `delivery_approach`/`stages`/`gates`;
+# `assessment` and writes `delivery_approach`/`evidence_required`/`gates`;
 # `compass check` reads the rest and checks the guardrails.
 #
-# It is NOT extra process weight you hand-author. Each stage's command/agent fills
-# its section as a by-product of doing the stage - the assess stage writes the
-# assessment, the acceptance stage adds scenarios, implementation adds
-# changed_files, and so on. On a quick fix this file stays tiny.
+# It is NOT extra process weight you hand-author. Each `compass` verb fills
+# its section as a by-product of doing the stage - assess writes the
+# assessment, specify adds scenarios, build adds changed_files, and so on. On
+# a small change this file stays tiny.
 # `compass issue lint` checks it is well-formed.
 # =============================================================================
 
@@ -44,10 +44,11 @@ assessment:
 
 generation: 0                # 0 = assessed, no stored configuration yet; the evaluator
                              # (--write) commits generation 1. Absent = a pre-6.0.0 issue.
-delivery_approach: null      # filled by the evaluator (--write)
-orchestration: null               # recorded by breakdown
+delivery_approach: null      # filled by the evaluator (--write): delivery or spike
 policy_rules_fired: []       # filled by the evaluator - [{id, kind, rationale, changed}]
-stages: {}                   # filled by the evaluator - {assess: thorough, define: lightweight, …}
+# evidence_required: the evaluator (--write) writes the list of evidence the
+# change owes, such as [scenarios, red-before-green, suite-green, correctness].
+# A spike has none. An issue assessed before 9.0.0 has a `stages:` map instead.
 
 # --- evidence (the registry) -----------------------------------------------
 # A typed, id-tagged registry of every piece of evidence this issue has.
@@ -93,7 +94,7 @@ scenarios: []
 #    tests:
 #      - "tests/api/test_ledger_export.py::test_excludes_drafts"
 
-# --- changed_files (filled during implementation) ---------------------------
+# --- changed_files (filled during build) -----------------------------------
 # Every production file the issue changes, each traced to >=1 scenario id.
 # This is the code -> criterion half of the traceability guardrail.
 changed_files: []
@@ -138,9 +139,9 @@ reassessments: []
 #    reason: "Implementation revealed the change spanned three modules, not one."
 #    date: "{{ISO date}}"
 
-# --- failure modes de-scoped at define ----------------------------------------
+# --- failure modes de-scoped at specify ---------------------------------------
 # A failure mode or input class the brief implies that no scenario covers, with
-# the reason, written by `compass scenario descope`. `/compass:verify` lists
+# the reason, written by `compass scenario descope`. `/compass:ship` lists
 # each in its hand-off. Optional; no gate reads it.
 failure_modes_descoped: []
 
@@ -150,9 +151,9 @@ failure_modes_descoped: []
 # by `compass _friction-capture` and aggregated by `compass retro
 # --friction`.
 friction: []
-#  - stage: plan
+#  - stage: specify
 #    category: over-weight     # over-weight | under-weight | mis-route |
 #                                # missing-strategy | tooling | docs | other
-#    observation: "The full requirements review added a gate the change didn't need."
-#    proposed_change: "routing-policy.yml: lower the review weight for size=small."
+#    observation: "The scenario sign-off added a wait the change didn't need."
+#    proposed_change: "compass.yml: drop scenario-approval for size=small."
 #    source: derived             # derived (auto) | human (given by the author)

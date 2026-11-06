@@ -318,18 +318,20 @@ def test_trc_c6_no_gate_or_floor_added():
 
 HANDOFF_HEADING = "## Hand-off"
 
+# The define, refine and plan commands went with the four-stage path
+# (ADR-092). The specify hand-off is in the go command; the other boundary
+# where a person reviews is the end of ship.
 HANDOFF_PHASES = {
-    "commands/define.md": "acceptance-criteria.md",
-    "commands/refine.md": "ambiguity ledger",
-    "commands/plan.md": "devlog.md",
+    "commands/ship.md": "failure_modes_descoped",
 }
 
 
 def test_trc_d1_specify_handoff_prompt():
-    """Define closes by inviting a cold-reader review: what was written, what
-    to look for, and what happens on approval."""
-    text = _read("commands/define.md")
-    assert HANDOFF_HEADING in text, "commands/define.md has no Hand-off section"
+    """Specify closes by inviting a cold-reader review: what was written, what
+    to look for, and what happens on approval. The go command holds it (the
+    define command until ADR-092)."""
+    text = _read("commands/go.md")
+    assert HANDOFF_HEADING in text, "commands/go.md has no Hand-off section"
 
     flat = _flat(_section(text, "Hand-off"))
 
@@ -340,14 +342,14 @@ def test_trc_d1_specify_handoff_prompt():
             f"The Specify hand-off does not ask the reviewer to check '{look_for}'"
         )
 
-    assert "refine" in flat, (
+    assert "build" in flat, (
         "The Specify hand-off does not say what happens next once the reviewer approves"
     )
 
 
 def test_trc_d2_clarify_and_plan_handoffs_symmetric():
-    """The other two hand-offs do the same three jobs, so a reviewer meets the
-    same shape at every phase boundary."""
+    """The ship hand-off does the same three jobs, so a reviewer meets the
+    same shape at every boundary where a person reviews."""
     for rel, artifact in HANDOFF_PHASES.items():
         text = _read(rel)
         assert HANDOFF_HEADING in text, f"{rel} has no Hand-off section"

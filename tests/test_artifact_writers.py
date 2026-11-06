@@ -212,8 +212,10 @@ def test_trc_b3_creating_the_docs_directory_is_reported():
     or committed by accident. The command that writes the first document has
     to say it made the place to put it."""
     missing, checked = [], []
-    for name in ("assess.md", "define.md", "plan.md", "verify.md",
-                 "intent.md", "refine.md", "quick-fix.md"):
+    # The `define`, `plan`, `refine` and `verify` commands went with the four-stage
+    # path (ADR-092); go and ship run those stages now.
+    for name in ("assess.md", "go.md", "ship.md",
+                 "intent.md", "quick-fix.md"):
         text = (ROOT / "commands" / name).read_text(encoding="utf-8")
         if "docs/compass/" not in text:
             continue

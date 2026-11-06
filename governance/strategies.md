@@ -112,7 +112,7 @@ it after.**
 - The designated suite is a project setting -
   `project.regression_baseline_suite` in `compass.yml` (or `.compass/config.yml` without one), falling back to
   `project.test_command`.
-- The implement stage prompts for the baseline up front, not as an afterthought.
+- The build stage (`commands/go.md`) prompts for the baseline up front, not as an afterthought.
   `compass approach evaluate` surfaces it under `applicable_strategies` when
   the assessment matches (`RP-ADV-001`).
 - It adds no guardrail and no new gate, and does not block shipping when
@@ -276,7 +276,7 @@ change. Agent identity is not a property a check can inspect, and a check that
 tried would trust the same self-report this exists to distrust.
 
 *Cross-reference: `S8` - both are about who judges. Pointer at the point of use
-in `commands/verify.md`.*
+in `commands/ship.md`.*
 
 ### Mutation proof: a guard is accepted on a failure, not on a pass (`S10`)
 
@@ -312,7 +312,7 @@ would accept a pasted table as readily as a real one, trusting the self-report
 the practice exists to replace.
 
 *Cross-reference: `S9` answers who establishes a thing is true, this answers
-how. Pointer at the point of use in `commands/verify.md`.*
+how. Pointer at the point of use in `commands/ship.md`.*
 
 ### Measure before arguing: settle a disagreement with the number (`S11`)
 
@@ -334,7 +334,7 @@ would tax the ordinary case where somebody simply knows the answer.
 
 *Cross-reference: `S10` - both replace a confident assertion with an
 observation. Pointer at the point of use in `CLAUDE.md` and
-`commands/verify.md`.*
+`commands/ship.md`.*
 
 ### Conventional comments: label a review comment before you write it (`S12`)
 

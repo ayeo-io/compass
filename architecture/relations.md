@@ -43,8 +43,8 @@ components. Relations are ordered by the calling component.
 | architect perspective | `.compass/work/<issue>/technical-design.md` | file read | reads the technical approach to annotate | medium |
 | architect perspective | `.compass/work/<issue>/architecture-loaded.yml` | file read | reads the assess stage's load record if present | medium |
 | architect perspective | `.compass/work/<issue>/architecture-notes.md` | file write | writes its output (annotations, boundary risks, candidate ADR titles) | medium |
-| `commands/define.md` | `architecture/decisions/ADR-*.md` | via `architecture-loaded.yml` | reads ADR summaries (id, title, status) to avoid re-litigating closed decisions | low |
-| `commands/plan.md` | `.compass/work/<issue>/architecture-notes.md` | file read | the plan stage reads architect output to compose `technical-design.md §2` design decisions | medium |
+| `commands/go.md` | `architecture/decisions/ADR-*.md` | via `architecture-loaded.yml` | the specify stage reads ADR summaries (id, title, status) to avoid re-litigating closed decisions | low |
+| `commands/go.md` | `docs/compass/<created>-<slug>/architecture-notes.md` | file read | the specify stage reads the architect perspective's notes and turns their boundary risks into scenarios | medium |
 | `cli/compass` (`release notes`) | `.compass/work/` and git | file read, `git` read | `compass release notes --since <ref>` reads completed issue manifests with `load_yaml`, the living spec committed at HEAD and at the ref when that revision holds one (a revision made before 9.0.0), and commit reachability; it writes nothing (ADR-065) | low |
 | `templates/<kind>.md` | `cli/compass_pkg/policy_lint.py` | file read | `compass policy lint` reads it to check an artifact kind's sections | low |
 | `templates/architecture/` | n/a | reference only | no CLI path reads the subfolder; an adopter copies it by hand to bootstrap their own `architecture/` tree | n/a |

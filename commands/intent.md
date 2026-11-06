@@ -55,7 +55,7 @@ what `/compass:init` offers separately.
    so.
 3. **Hand the intent on.** Compass writes no intent document and registers
    nothing: the one document it needs is `acceptance-criteria.md`. Pass the
-   four parts to `/compass:assess` as the description of the work. The define
+   four parts to `/compass:assess` as the description of the work. The specify
    stage writes the problem and the outcome into the Summary of
    `acceptance-criteria.md`, and each outcome into its Intent links with an
    `INT-n` id. A team that wants to keep the intent as its own note can, and
@@ -64,7 +64,7 @@ what `/compass:init` offers separately.
 ## How this shapes the delivery approach
 
 Assess reads the intent as the *actual outcome wanted*, not just the literal
-request. The plan stage checks the spec against that outcome (the
+request. The specify stage checks the scenarios against that outcome (the
 **intent-fidelity** check).
 
 ## Gate

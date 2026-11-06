@@ -33,7 +33,7 @@ what `/compass:init` offers separately.
 - Load `intent-interview` and read its `role-translation.md` - the UI contract is the interaction perspective
   on the shared spec.
 - Load `bdd-specification` - the contract is written in the same
-  Given/When/Then form as the rest of the spec, so the define stage can add it
+  Given/When/Then form as the rest of the spec, so the specify stage can add it
   without rewriting it.
 - Run `compass policy show` for the rules in force, and read the reasons in
   `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md` and `strategies.md` - any
@@ -62,7 +62,7 @@ what `/compass:init` offers separately.
 
 ## How this connects to the pipeline
 
-`ui-contract.md` is an input to the **define** stage. When `spec-author`
+`ui-contract.md` is an input to the **specify** stage. When `spec-author`
 runs, it adds the UI contract scenarios to `acceptance-criteria.md` -
 they become acceptance checks and each starts a TDD cycle like any other
 scenario. Because the contract is already Given/When/Then, spec-author
@@ -73,5 +73,5 @@ change the assessment.
 
 `ui-contract.md` exists; every interaction is a Given/When/Then scenario
 including the non-happy states; it is consistent with the guardrails in
-force. Next: `/compass:assess` to compute the delivery approach,
-then `/compass:define` adds the contract to the acceptance criteria.
+force. Next: `/compass:go` to assess the change; its specify stage adds the
+contract to the acceptance criteria.

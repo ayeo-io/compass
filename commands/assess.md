@@ -1,5 +1,5 @@
 ---
-description: Assess risk, familiarity and size, and compute the delivery approach
+description: Assess risk, familiarity and size, re-assess an issue, or start a spike
 argument-hint: "<issue description> [--reassess]"
 allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Edit(./.compass/**), Edit(./docs/**), Bash(compass *), Glob, Grep
 ---
@@ -7,53 +7,69 @@ allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Edit(./.compass/**)
 # /compass:assess
 
 Assessing is the one stage that never skips. You score the three dimensions -
-judgment - and `compass approach evaluate` computes the delivery approach
-from `governance/routing-policy.yml`. You do not pick a process.
+judgment - and `compass approach evaluate` computes the delivery approach and
+the evidence the change owes from the configuration in force. You do not pick
+a process.
 
 **Issue:** $ARGUMENTS
 
-## A small change an engineer is making
+## A change you can state
 
-This is the whole of `/compass:quick-fix`; you do not need to load it.
+Every delivery change starts with one call, whatever its size. This is the
+start of `/compass:go` and of `/compass:quick-fix`; you do not need to load
+either.
 
 ```
 compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
   --familiarity "<VALUE> - <reason>" --size "<VALUE> - <reason>" \
   --intent "<what will be true afterwards>" \
   --scenario "Given ... When ... Then ..." --test <test node id> \
-  [--labels <tag,...>]
+  [--labels <tag,...>] [--urgency "live-defect - <reason>"]
 ```
 
 Pass `--labels` when the change touches `auth`, `payments`,
-`personal-data` or `migrations`: those tags make the change need a person's sign-off.
+`personal-data` or `migrations`: those tags make the change need a person's
+sign-off. Pass `--urgency "live-defect - <reason>"` for a defect in
+production: the first scenario is the reproduction, and its red comes first.
 
 Risk is `trivial`, `contained`, `cross-cutting` or `critical`; familiarity
 is `greenfield`, `brownfield-mapped` or `brownfield-unmapped`; size is
 `atomic`, `small`, `medium`, `large` or `product`. When unsure, choose
 the larger. `start` runs `compass init` first; if it prints a `created:`
-line, tell the user. If it lists
-settled decisions, read any that touch the change before writing code.
+line, tell the user. If it lists settled decisions, read any that touch the
+change before writing code.
 
-Then write the failing test, record it, and write the fix:
+Run `compass approach show --issue <slug>` and show its three lines. Then
+write the failing test, record it, and write the fix:
 
 ```
 compass tdd-red --scenario TRC-001 -- <test command>
 compass quick-fix finish -m "<commit message>" --no-commit -- <test command>
 ```
 
-`finish` records the green, runs the checks and passes the gates. Leave out
-`--no-commit` only if the user asked for a commit. If `start` says the
-approach is heavier than a quick fix, the manifest holds the values and
-the approach: read the full procedure named below and continue from its step 4,
-giving each value its reason.
+`finish` records the green, runs the checks and passes the gates. While the
+change owes more evidence, it refuses and prints one `next:` line for each
+owed item: run them, as `/compass:go` does. Leave out `--no-commit` only if
+the user asked for a commit.
 
-## Anything else: the full procedure
+## A change you cannot state yet: the spike
 
-Read `${CLAUDE_PLUGIN_ROOT}/approaches/assess-procedure.md` and follow it
-before you write anything when any of these holds:
+If you cannot state what will be true afterwards, that is exploration, and
+it is assessed like anything else. Run the same `compass quick-fix start`
+with `--goal "exploration - <the question>"`. It records the assessment,
+computes a spike and stops. Then read
+`${CLAUDE_PLUGIN_ROOT}/approaches/assess-procedure.md` and follow its steps
+for the pointer and the `.spike` marker. A spike
+explores, concludes with a recorded finding, and ships nothing.
 
-- the change is not a small one an engineer is making;
-- `quick-fix start` said the approach is heavier than a quick fix;
-- `--reassess` was passed; it re-runs `compass approach evaluate --write
-  --reason "..." --justify DIM="..."`, which commits the next generation with any
-  `compass issue configure` proposal; `--reset-config` drops `config:`.
+## Re-assess
+
+When the ratings were wrong or the change grew, re-assess the issue rather
+than continue on the old ratings. Run
+`compass approach evaluate --write --reason "..." --justify DIM="..."`. It
+records the change in the manifest's `reassessments:` log and commits the
+next generation with any `compass issue configure` proposal;
+`--reset-config` drops `config:`. A re-assess of an issue assessed before
+the path moves it onto the path. Read
+`${CLAUDE_PLUGIN_ROOT}/approaches/assess-procedure.md` first for the full
+procedure.

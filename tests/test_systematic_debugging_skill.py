@@ -81,12 +81,12 @@ def test_trc_a3_the_skill_should_be_reachable_from_where_the_failure_happens():
         "the description does not say the skill triggers on a failure, so "
         "nothing tells a reader when to load it")
 
-    # and the implement guidance points at it, because that is where a test goes red
-    pointers = [ROOT / "commands" / "implement.md",
+    # and the build guidance points at it, because that is where a test goes red
+    pointers = [ROOT / "commands" / "go.md",
                 ROOT / "skills" / "tdd-discipline" / "SKILL.md"]
     naming = [p for p in pointers
               if "systematic-debugging" in p.read_text(encoding="utf-8")]
     assert naming, (
-        "neither commands/implement.md nor skills/tdd-discipline names "
+        "neither commands/go.md nor skills/tdd-discipline names "
         "systematic-debugging. A skill nobody is told to load at the moment of "
         "failure is a file, not a method.")

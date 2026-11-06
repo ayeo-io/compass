@@ -1,147 +1,293 @@
 ---
-description: Integrate, run regression, update living docs, settle follow-ups
+description: Review the change, pass the gates with evidence, and commit
 allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 ---
 
 # /compass:ship
 
-Ship closes the issue: integrate the work, check the combined result, update the
-living docs, and settle every follow-up the approach deferred. An issue with an
-unsettled follow-up is an open issue - ship refuses to close it.
+Ship is the last stage of the path. This session reviews the change, passes
+each gate with recorded evidence, settles every owed follow-up and, when the
+person asks, commits. Evidence is recorded command output and artifacts a
+reader can open, never assertion: "it works" passes no gate. An issue with an
+unsettled follow-up is an open issue, and ship refuses to close it.
 
 ## Setup
 
-- Run `compass approach show` for the orchestration and the list of owed
-  follow-ups.
-- Run `compass check` - shipping does not run on unverified work.
+- Run `compass approach show` for the evidence the change owes, and
+  `compass next` for the first step that is still open.
+- Load the `evidence-gates` skill.
+- For a change to behavior a real client can observe, also load `atdd`:
+  ship runs its stage 3, the isolation proof and the checklist.
+- Run the suites and the review in this session; Compass starts no verifier
+  or reviewer agent (ADR-090). A project that lists the advisory
+  `agent-review` check can also have an agent review the change and record
+  its verdict (`docs/judged-checks.md`).
+- If `positioning.md` is present, the `claims` dimension applies - review it
+  from the marketer's perspective too.
+- If this issue is itself a sweep, rename, or cleanup touching many files,
+  check it the way `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S9`
+  describes (an unmigrated 5.x project runs on its own copied `governance/`
+  until `compass policy migrate`): a fresh agent that has not seen the
+  change, not its author.
+- A guard offered as part of the change is accepted on a demonstrated failure
+  rather than a passing test - `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md`
+  `S10` states the method.
+- Where a review comment and the author disagree about a quantity - how many
+  call sites, how much output, how often it fires - measure the number and
+  report it before defending either position
+  (`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S11`; an unmigrated 5.x
+  project reads its own copied `governance/`).
 
 ## Spike note
 
-On a spike, ship is **graduate or discard** - never "merge to main". Nothing
-ships from a spike. Either the findings feed a fresh `/compass:assess` for
-real delivery work (graduation - see `${CLAUDE_PLUGIN_ROOT}/approaches/spike.md`), or the spike is
-discarded with its learnings recorded in `devlog.md`. The procedure below is
-for delivery work; on a spike, follow the graduate-or-discard step in
-`${CLAUDE_PLUGIN_ROOT}/approaches/spike.md` instead.
+On a spike, ship is **conclude, then graduate or discard** - never "merge to
+main". Conclude is a findings check, not a test gate: *did we answer the
+question?* It runs none of the review dimensions, because a spike ships
+nothing. The question is answered - or explicitly answered with
+"inconclusive, here is why" - and the finding is written down. Then the
+findings feed a fresh `/compass:assess` for real delivery work (graduation),
+or the spike is discarded with its learnings recorded. Follow the conclude
+and graduate-or-discard steps in `${CLAUDE_PLUGIN_ROOT}/approaches/spike.md`
+instead of the procedure below.
 
 ## Procedure
 
-1. **Integrate.**
-   - **Solo orchestration:** commit on the current branch with
-     `compass ship-commit -m "<message>"` - it handles pre-commit hooks
-     that fix files themselves (these can otherwise stop the commit with no
-     error and leave HEAD where it was), retries once after re-staging the
-     hooks' fixes, and **fails if HEAD did not move** so a commit that did not happen
-     cannot count as shipped. Pass `--issue <slug>` to mark the issue
-     shipped only on a checked commit. An issue whose approach owes a
-     release line is refused without one: give it once, with
-     `--release-note "<text written for a user>"` (`docs/release-line.md`).
-     For a long message, `-F <file>`
-     reads it from a file; never use `git commit` in its place.
-   - **Message rules:** the message follows the cold-reader strategy: say
-     what changed and why, for someone who was not in the conversation; no
-     `Co-Authored-By:` trailer for any agent and no "Generated with"
-     footer. The same applies to a pull-request body.
-2. **Combined regression.** Run regression across the whole result, every
-   unit together. Record the run and link the record.
-3. **Update living docs.** Update READMEs, architecture notes, and any docs
-   the change touched, so they match the code. If the change is launch-visible
-   (`positioning.md` is present), draft the release notes here
-   too - pulled from `positioning.md`, so every line in the notes is already
-   a scenario-backed claim. `product-marketer` owns their wording.
-4. **Settle owed follow-ups.** Check `manifest.yml`'s `follow_ups:`,
-   `failure_modes_descoped:` and `claims:` lists, and the
-   approach's standing obligations:
-   - **Hotfix follow-up** (mandatory): the reproduction test promoted into a
-     real Given/When/Then scenario in `acceptance-criteria.md` *and*
-     `manifest.yml`'s `scenarios:`, traceable to the defect; a root-cause line
-     in the `devlog.md`. Mark the matching `follow_ups:` entry `paid` -
+1. **Run the scenarios and the suite.** Run every scenario in
+   `acceptance-criteria.md` as an acceptance check. Run the full suite
+   through `compass tdd-green -- <cmd>`, which confirms it passes and writes
+   the record. Point to that record rather than reproducing the run.
+2. **Run `compass check`.** This is the **mechanical half** of the gate: the
+   CLI runs the `guardrails.yml` checks against `manifest.yml` and
+   `evidence/` - every scenario has a test, the suite passed, every changed
+   file traces to a scenario, every `pass` gate has resolving evidence, and
+   so on. It exits non-zero on any failure. You still judge the *judgment*
+   dimensions (clarity, security depth, governance-as-assessed).
+3. **Review dimensions.** Apply each dimension the evidence line lists -
+   `correctness`, `governance`, `traceability`, and as the change needs
+   `regression`, `security`, `clarity`, `claims`. The `governance` dimension
+   checks the work against the governance in force (`compass policy show`;
+   an unmigrated 5.x project runs on its own copied `governance/` until
+   `compass policy migrate`): the guardrails (hard, evidence-backed - `compass check` is the mechanical
+   part) and the applicable strategies (assessed as judgment, reported
+   separately). How to do the review is below.
+4. **Pass the gates.** As each gate is cleared, register the evidence, then
+   pass the gate with it:
+   `compass evidence add <EV-id> --type <type> --path <file>`, then
+   `compass gate pass <gate> --evidence <EV-id>`. A gate takes evidence ids
+   from the issue's registry, not file paths, and the CLI checks the type at
+   write time. `compass quick-fix finish` passes the three immovable gates
+   itself. Each `next:` line names the next gate.
+5. **Report the result.** Compass writes no verification report: the gates,
+   the evidence and the Definition of Done are records in the manifest, and
+   `compass check` prints them. In the hand-off, say each dimension, each
+   gate, its evidence and pass or fail. Read the manifest's
+   `failure_modes_descoped` and name each mode and its reason, or say "None":
+   a mode named at specify must not disappear before ship.
+6. **Settle owed follow-ups.** Check `manifest.yml`'s `follow_ups:`,
+   `failure_modes_descoped:` and `claims:` lists:
+   - **Defect follow-up** (`urgency: live-defect`): the reproduction test is
+     a real Given/When/Then scenario in `acceptance-criteria.md` *and*
+     `manifest.yml`'s `scenarios:`, traceable to the defect, with its root
+     cause stated. Mark the matching `follow_ups:` entry `paid` -
      `compass check` fails at ship while any is owed.
-   - **Marketer claims gate** (when `positioning.md` is present):
-     every claim in `manifest.yml`'s `claims:` traces to a passing scenario id.
-     Confirm it from the marketer's perspective; `compass check`'s
-     `claim-traces-to-scenario` check is the mechanical check behind it.
-   - Any other follow-up the approach marked as owed.
-5. **Run `compass check` as the final mechanical gate.** It runs every
-   `guardrails.yml` check against `manifest.yml` and `evidence/` - suite
-   passed, traceability holds, every `pass` gate has evidence, no owed
-   follow-up unpaid, and (where a human sign-off applies) the approval is
-   on record. It exits non-zero on any failure; record its output and link
-   the record. This is
-   the mechanical check before shipping.
+   - **Marketer claims gate** (when `positioning.md` is present): every
+     claim in `manifest.yml`'s `claims:` traces to a passing scenario id.
+     `compass check`'s `claim-traces-to-scenario` check is the mechanical
+     check behind it.
+   - A Definition of Done item you cannot meet now is carried with
+     `compass follow-up add FU-<id> --defers <item> --summary "..."`.
+7. **Update living docs.** Update READMEs, architecture notes, and any docs
+   the change touched, so they match the code. If `positioning.md` is
+   present, draft the release notes from it, so every line is already a
+   scenario-backed claim.
+8. **Run `compass check` as the final mechanical gate**, and record its
+   output. See the Definition of Done below.
+9. **Commit, when the person asks.** See "Commit" below.
+10. **Capture process friction (advisory - never a gate).** See below.
 
-   **Typed Definition of Done (evidence, not assertion):** `compass check`
-   also judges the Definition of Done. On an issue created before 9.0.0 it
-   parses the `### Definition of Done` section of the issue's verification
-   report, where every unchecked box must carry one of:
+## How the review is done
 
-   - `- [ ] (evidence: EV-<id>) <description>` - passes if `EV-<id>` is in
-     `manifest.yml`'s evidence registry with an accepted type (`test-run`,
-     `command-output`, `manual-review`, `artifact`, etc.). A `human-approval`
-     record comes only from an approval (`/compass:approve`, a delegated
-     agent, or `compass evidence approve`); `compass evidence add` refuses it.
-   - `- [ ] (follow-up: FU-<id>) <description>` - passes if `FU-<id>` is in
-     `manifest.yml`'s `follow_ups:` with `status: outstanding`. The follow-up
-     can carry an optional `target_task: <slug>` field; when set, the named
-     issue's ship check fails until this entry is paid
-     (`compass follow-up resolve --issue <slug> <FU-id>`).
-   - `- [x] <description>` - a human-ticked box passes unconditionally.
-   - `- [ ] <bare description>` - **fails**. Narrative notes in `devlog.md`
-     (e.g. "USER TO APPLY") never clear a DoD item - evidence, not
-     assertion.
+This session does the review that a separate reviewer agent did before 9.0.0
+(ADR-090).
 
-   On a newer issue there is no report: each item is met by a record
-   (`--meets`), a person's approval (`compass evidence approve --check`) or a
-   follow-up that defers it (`--defers`).
+- **Clarity.** Judge the tells named in `skills/compass-runtime/writing-voice.md`:
+  does the prose communicate a decision, or narrate the pipeline? Run
+  `scripts/voice-tells.py` over the issue's documents for the tells a fixed
+  string can find. Cold-reader writing is a strategy
+  (`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S8` names the calibration
+  sample; an unmigrated 5.x project reads its own copied `governance/`), so a
+  finding is a note and a conversation, never an automatic gate failure.
+  Flag a short code with no plain words in front of it: the fix is to
+  put the meaning first and the code in brackets, never to delete the code.
+- **Patterns.** Where the design names patterns, check them against the code
+  (`S16`). It is advice: never fail a gate on it.
+- **Comments.** Open every comment with a plain-word label - **issue**,
+  **suggestion**, **nitpick**, **question**, **praise** (`S12`) - and label
+  honestly.
+- **Settled decisions.** Before you recommend a rename or a reversal, read
+  `governance/decisions/` if the project has one. A point that collides with an
+  entry is "settled by <path>", not a defect.
+- **Review rules.** If the project has `governance/review-rules.yml`, run
+  `compass review-rule list --changed-files <paths>` and apply the rules it
+  prints. Report a breach under the RR- id it breaks, and do not flag what a
+  rule's `allowed` list permits.
+- **Dangling references.** Flag any reference a reader cannot resolve
+  ("Option 2", "Finding 3", "per the review"), and any issue or pull-request
+  link with no statement of what it is.
+- **Attribution.** Flag a commit or pull-request body that carries an agent
+  co-author trailer or a generated-with line.
+- **No green by edit.** Never edit production code or scenarios to make a run
+  go green; a run that fails is a finding.
 
-   Cross-issue blocking: if another issue's `follow_ups:` has `target_task`
-   pointing at the issue being shipped, and that follow-up is still
-   `status: outstanding`, `compass check` fails at ship even if this issue's
-   own DoD section is clean. Pay the other issue's follow-up first.
-6. **Capture process friction (advisory - never a gate).** With the gate
-   already cleared in step 5, record where Compass's *own* process cost more
-   effort than it saved between assess and ship.
-   - Run `compass _friction-capture --internal` - it assembles a draft
-     `friction:` list from signals the CLI already computed (recorded
-     re-assessments, absorbed assessment-debt) and writes it into
-     `manifest.yml`.
-   - Then offer the author **one optional line**: *"anything the framework
-     made harder than it should have been?"* - pass it with `--note "..."
-     --note-category <over-weight|tooling|...> --note-stage <stage>`.
-     **Recording nothing is a valid, common outcome.**
-   - Notes the agent recorded during the run with `compass issue friction`
-     are kept. Each cites evidence and a fix; `compass retro --friction`
-     counts them in their own column, and on their own they never become a lesson.
-   - This step never blocks shipping: it runs after the gate, writes only
-     the `friction:` section (no follow-up, no gate), and
-     `compass retro --friction` later aggregates it across issues as
-     advice, never as a gate (Flow advises but never gates).
-   - If the person corrected something during the issue and said they had
-     to say it before, offer to keep it as a project lesson: run
-     `compass lesson propose "<their words>"`, quoting them,
-     and never `compass lesson add`. It takes effect only when someone runs
-     `compass lesson accept`.
-7. **Final devlog entry.** One entry: what shipped, what checked it,
-   what follow-ups were settled.
-8. **After a review fix.** If review of the pull request changes the
-   issue's own files after `ship-commit` committed it, commit the fix, re-run
-   `compass tdd-green`, then run `compass ship-commit --issue <slug> -m
-   <message>` with nothing staged. It moves `land_commit` to HEAD, and
-   refuses while the newest green does not name HEAD's files.
-9. **Record the pull request.** When the pull request opens, run
-   `compass issue link set --pr <n>` to record it on the issue. Run it again
-   after the merge: a squash merge leaves the commit `ship-commit` made off
-   the default branch, and the command moves `land_commit` to the merge
-   commit `gh pr view` reports. `compass check` reports, as advice, a
-   `land_commit` that origin's default branch does not reach.
+## Answering the reviewer
+
+Load `receiving-code-review`. Check every suggestion against the code
+before acting on it: a suggestion that is right about the symptom and wrong
+about the cause is the normal case, and implementing it verbatim leaves the
+symptom and adds a change nobody needed. Where the reviewer is wrong, say
+so, with technical reasons rather than preference or seniority. Record
+what you did with each comment - a resolved thread with no reply is a
+decision nobody can audit.
+
+## The stage 2 and 3 reviews
+
+On an issue the four-layer acceptance strategy (`S17`) applies to, the end
+of build is the end of stage 2 of the `atdd` skill, and the end of ship is
+the end of stage 3. Wait for approval only if the stage (`build` or `ship`)
+is in the manifest's `checkpoints:`, which lists it only where the strategy
+applies. The three commands of each hand-off, stage 2 at build and stage 3
+at ship:
+
+```
+compass evidence request --checkpoint build
+compass evidence approve --checkpoint build --approver <name> --role <role>
+compass issue checkpoint add build --outcome skipped --by builder
+
+compass evidence request --checkpoint ship
+compass evidence approve --checkpoint ship --approver <name> --role <role>
+compass issue checkpoint add ship --outcome skipped --by verifier
+```
+
+- If it is listed, ask with the first command and wait. The request lists the
+  review questions. The person types `/compass:approve` or
+  `/compass:reject` in Claude Code, or runs the second command at a terminal.
+- A rejection sends the issue back to that stage: `compass next` names it,
+  with the reason.
+- If the stage is not listed and `compass next` names the review, show
+  the hand-off, say you are going on without waiting and name the autonomy
+  setting. Record it with the third command.
+
+`compass check` does not fail on a listed review with no outcome;
+`compass ship-commit` refuses to land the issue until it has one.
+
+## The Definition of Done
+
+`compass check` judges the Definition of Done. Each item is met by a record
+(`compass gate pass ... --meets <item>` or `compass evidence add ... --meets
+<item>`), by a person's approval, or by a follow-up that defers it
+(`--defers`). A person ticks the item that needs a person by typing
+`/compass:approve` after you ask with `compass evidence request --check
+<item>`, or with `compass evidence approve --check <item>` at a terminal. A
+`human-approval` record comes only from an approval; `compass evidence add`
+refuses it. `compass check` lists each item and its state; a tick written on
+a page counts for nothing.
+
+On an issue created before 9.0.0, `compass check` parses the
+`### Definition of Done` section of the issue's verification report, where
+every unchecked box must carry one of:
+
+- `- [ ] (evidence: EV-<id>) <description>` - passes if `EV-<id>` is in
+  `manifest.yml`'s evidence registry with an accepted type (`test-run`,
+  `command-output`, `manual-review`, `artifact`, etc.).
+- `- [ ] (follow-up: FU-<id>) <description>` - passes if `FU-<id>` is in
+  `manifest.yml`'s `follow_ups:` with `status: outstanding`. The follow-up
+  can carry an optional `target_task: <slug>` field; when set, the named
+  issue's ship check fails until this entry is paid
+  (`compass follow-up resolve --issue <slug> <FU-id>`).
+- `- [x] <description>` - a human-ticked box passes unconditionally.
+- `- [ ] <bare description>` - **fails**. A narrative note (e.g. "USER TO
+  APPLY") never clears an item - evidence, not assertion.
+
+Cross-issue blocking: if another issue's `follow_ups:` has `target_task`
+pointing at the issue being shipped, and that follow-up is still
+`status: outstanding`, `compass check` fails at ship even if this issue's
+own items are clean. Pay the other issue's follow-up first.
+
+## Commit
+
+- Commit on the current branch with `compass ship-commit -m "<message>"`,
+  only when the person asks. It handles pre-commit hooks that fix files
+  themselves (these can otherwise stop the commit with no error and leave
+  HEAD where it was), retries once after re-staging the hooks' fixes, and
+  **fails if HEAD did not move**, so a commit that did not happen cannot
+  count as shipped. Pass `--issue <slug>` to mark the issue shipped only on
+  a checked commit. An issue that owes a release line is refused without
+  one: give it once, with `--release-note "<text written for a user>"`
+  (`docs/release-line.md`). For a long message, `-F <file>` reads it from a
+  file; never use `git commit` in its place.
+- **Message rules:** the message follows the cold-reader strategy: say
+  what changed and why, for someone who was not in the conversation; no
+  `Co-Authored-By:` trailer for any agent and no "Generated with"
+  footer. The same applies to a pull-request body.
+- **After a review fix.** If review of the pull request changes the
+  issue's own files after `ship-commit` committed it, commit the fix, re-run
+  `compass tdd-green`, then run `compass ship-commit --issue <slug> -m
+  <message>` with nothing staged. It moves `land_commit` to HEAD, and
+  refuses while the newest green does not name HEAD's files.
+- **Record the pull request.** When the pull request opens, run
+  `compass issue link set --pr <n>` to record it on the issue. Run it again
+  after the merge: a squash merge leaves the commit `ship-commit` made off
+  the default branch, and the command moves `land_commit` to the merge
+  commit `gh pr view` reports. `compass check` reports, as advice, a
+  `land_commit` that origin's default branch does not reach.
+
+## Process friction
+
+With the gate cleared, record where Compass's *own* process cost more effort
+than it saved between assess and ship. This step never blocks shipping.
+
+- Run `compass _friction-capture --internal` - it assembles a draft
+  `friction:` list from signals the CLI already computed (recorded
+  re-assessments, absorbed assessment-debt) and writes it into
+  `manifest.yml`.
+- Then offer the author **one optional line**: *"anything the framework
+  made harder than it should have been?"* - pass it with `--note "..."
+  --note-category <over-weight|tooling|...> --note-stage <stage>`.
+  **Recording nothing is a valid, common outcome.**
+- Notes the agent recorded during the run with `compass issue friction`
+  are kept. Each cites evidence and a fix; `compass retro --friction`
+  counts them in their own column, and on their own they never become a
+  lesson. It writes only the `friction:` section (no follow-up, no gate),
+  and `compass retro --friction` aggregates it across issues as advice,
+  never as a gate.
+- If the person corrected something during the issue and said they had
+  to say it before, offer to keep it as a project lesson: run
+  `compass lesson propose "<their words>"`, quoting them,
+  and never `compass lesson add`. It takes effect only when someone runs
+  `compass lesson accept`.
+
+## Hand-off
+
+Close the review by handing the result to the person: each dimension, each
+gate with its evidence and pass or fail, and each mode in
+`failure_modes_descoped`. Ask them to check the judgment dimensions and any
+deferred Definition of Done item. On approval, or when they ask, the commit
+comes next.
+
+## Voice
+
+The hand-off is evidence a person reads, not a status board. Say what passed
+and what it means - never that the issue is "ready for the next command."
+See `skills/compass-runtime/writing-voice.md`.
 
 ## Gate - ship refuses to close the issue unless
 
-- integration is complete and combined regression is green (evidence recorded
-  and linked);
+- `compass check` passes, its output recorded and linked;
+- every required *judgment* dimension passed with evidence;
+- every gate in `manifest.yml` is `pass` with a resolving evidence pointer;
+- every item of the Definition of Done is met on the record or deferred;
 - living docs are updated;
-- `compass check` passes (its output recorded and linked);
-- **every owed follow-up is settled** - no unsettled hotfix follow-up, no
+- **every owed follow-up is settled** - no unsettled defect follow-up, no
   unbacked marketing claim, no de-scoped work left owed.
 
 If a follow-up cannot be completed now, the issue stays open and

@@ -730,11 +730,11 @@ def _quick_fix_refused(tmp_path):
 # --- ARC-8 ------------------------------------------------------------------------
 
 #: Each hand-off text, the stage it hands off and the agent that runs it.
-HAND_OFFS = (("commands/define.md", "define", "spec-author"),
-             ("commands/refine.md", "refine", "spec-author"),
-             ("commands/plan.md", "plan", "planner"),
-             ("commands/implement.md", "implement", "builder"),
-             ("commands/verify.md", "verify", "verifier"),
+# The six stage commands went with the four-stage path (ADR-092). Ship holds
+# the stage 2 and 3 review hand-offs, at build and at ship; the specify
+# checkpoint is named by the `next:` line where it is listed.
+HAND_OFFS = (("commands/ship.md", "build", "builder"),
+             ("commands/ship.md", "ship", "verifier"),
              ("approaches/assess-procedure.md", "assess", "router"))
 
 

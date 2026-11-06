@@ -28,7 +28,7 @@ LABELS = ("issue", "suggestion", "nitpick", "question", "praise")
 # comments (the reviewer agent until 9.0.0, ADR-090), and the skill for the
 # person answering them.
 POINTER_SURFACES = (
-    ("commands/verify.md", ROOT / "commands" / "verify.md"),
+    ("commands/ship.md", ROOT / "commands" / "ship.md"),
     ("skills/receiving-code-review/SKILL.md",
      ROOT / "skills" / "receiving-code-review" / "SKILL.md"),
 )

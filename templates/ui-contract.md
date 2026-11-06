@@ -8,7 +8,7 @@ downstream consumer. Accessibility commitments here are checked against the
 project's accessibility strategy, if the shipped strategies or your project's strategies file have one.
 
 Fill every {{PLACEHOLDER}}. Write behavior as scenarios - the same Gherkin
-shape the spec uses - so the handoff into the define stage is mechanical.
+shape the spec uses - so the handoff into the specify stage is mechanical.
 -->
 
 # UI Contract - {{ISSUE_SLUG}}
@@ -74,10 +74,10 @@ Scenario: {{scenario title}}
 
 ---
 
-## Handoff to define
+## Handoff to specify
 
 - [ ] Every interaction scenario above has a traceability id and an intent link.
 - [ ] Accessibility commitments meet or exceed the project's accessibility strategy, if the shipped strategies or your project's strategies file have one.
 - [ ] These scenarios are copied into `acceptance-criteria.md` under a UI scenario group.
 
-Next: the scenarios flow into the acceptance criteria (`/compass:define`).
+Next: the scenarios flow into the acceptance criteria at the specify stage of `/compass:go`.

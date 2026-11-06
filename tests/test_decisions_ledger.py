@@ -173,9 +173,9 @@ def test_ci_runs_the_history_check_with_since(repo):
 
 
 def test_reviewers_read_the_ledger():
-    """DL-E: `commands/verify.md` (the reviewer agent until 9.0.0, ADR-090) and
+    """DL-E: `commands/ship.md` (the review since 9.0.0, ADR-090 and ADR-092) and
     the governance-check skill read the ledger before recommending a reversal."""
-    for rel in ("commands/verify.md", "skills/governance-check/SKILL.md"):
+    for rel in ("commands/ship.md", "skills/governance-check/SKILL.md"):
         text = (ROOT / rel).read_text(encoding="utf-8")
         assert "governance/decisions/" in text and "settled by" in text, rel
 

@@ -7,7 +7,7 @@ allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Edit(./.compass/**)
 # /compass:position
 
 The product marketer entry point. The marketer works **at the same time as
-the define stage** - not after the engineering process has finished. Every
+the specify stage** - not after the engineering process has finished. Every
 public claim must trace to a passing scenario; the claims gate blocks
 shipping until it does.
 
@@ -46,7 +46,7 @@ what `/compass:init` offers separately.
    the core message, and the claim set. For **every claim**, name the
    scenario in `acceptance-criteria.md` that backs it. A claim with no
    backing scenario is not yet a claim - it is either a scenario that needs
-   writing (raise it with `spec-author` at the define stage) or a claim
+   writing (raise it with `spec-author` at the specify stage) or a claim
    that must be dropped.
 2. **Write launch readiness.** From `${CLAUDE_PLUGIN_ROOT}/templates/launch-readiness.md`: the
    checklist of what must be true to launch - each claim backed, each
@@ -73,5 +73,5 @@ must trace to a passing scenario before the issue ships.
 
 `positioning.md` and `launch-readiness.md` exist; every claim names a
 backing scenario; voice is consistent with the voice & positioning
-strategies in force. `/compass:verify` reviews the claims from the
-marketer's perspective, and `/compass:ship` settles them.
+strategies in force. `/compass:ship` reviews the claims from the
+marketer's perspective and settles them.

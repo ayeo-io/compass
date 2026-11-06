@@ -470,13 +470,14 @@ def test_trc_c2_the_rewritten_original_is_unmodified_and_cited():
 # ---------------------------------------------------------------------------
 
 def test_trc_d1_the_clarity_dimension_names_the_tells_as_judgement():
-    # `commands/verify.md` carries the review the reviewer agent did until 9.0.0 (ADR-090).
-    reviewer = (REPO_ROOT / "commands" / "verify.md").read_text(encoding="utf-8")
+    # `commands/ship.md` carries the review the reviewer agent did until 9.0.0
+    # (ADR-090, ADR-092).
+    reviewer = (REPO_ROOT / "commands" / "ship.md").read_text(encoding="utf-8")
     gates = _evidence_gates_text()
     reference_path = "skills/compass-runtime/writing-voice.md"
 
     for name, text in (
-        ("commands/verify.md", reviewer),
+        ("commands/ship.md", reviewer),
         ("skills/evidence-gates/SKILL.md", gates),
     ):
         assert reference_path in text, (
@@ -585,10 +586,12 @@ def test_trc_b1_claude_md_and_agents_md_carry_the_voice_paragraph():
 
 
 def test_trc_b2_assess_refine_and_verify_point_at_the_reference():
-    """The three commands whose output a person reads most name the writing
-    reference; no other command does. Every command file is a real command."""
+    """The commands whose output a person reads most name the writing
+    reference; no other command does. Every command file is a real command.
+    The `refine` and `verify` commands went with the four-stage path (ADR-092);
+    ship holds the review hand-off now."""
     command_dir = REPO_ROOT / "commands"
-    included = ["assess.md", "refine.md", "verify.md"]
+    included = ["assess.md", "ship.md"]
     stubs: set[str] = set()
     for name in included:
         text = (command_dir / name).read_text(encoding="utf-8")
@@ -609,7 +612,7 @@ def test_trc_b2_assess_refine_and_verify_point_at_the_reference():
         text = path.read_text(encoding="utf-8")
         assert REFERENCE_PATH not in text, (
             f"commands/{path.name} names the writing-voice reference; only "
-            f"assess, refine, and verify should"
+            f"assess and ship should"
         )
 
 

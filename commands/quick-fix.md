@@ -1,35 +1,26 @@
 ---
-description: Run the whole quick-fix approach for a small, safe change
+description: Start, red and finish for a change you already know is small
 argument-hint: "<what needs fixing>"
 allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 ---
 
 # /compass:quick-fix
 
-The change is small, safe, and in code whose behavior is already written
-down. Three calls: `compass quick-fix start` records the assessment,
-`compass tdd-red` records the failing test, and `compass quick-fix finish`
-checks the fix. Read nothing else unless one of them refuses.
+The short form of the path the go command runs, for a change the person
+already knows is small. Three calls: `compass quick-fix start` records the
+assessment, `compass tdd-red` records the failing test, and
+`compass quick-fix finish` checks the fix. The same three calls serve every
+size: the evidence line of the assessment says what the change owes, and
+each call prints a `next:` line. Read nothing else unless one of them
+refuses.
 
 **Issue:** $ARGUMENTS
 
-## When this command is the wrong one
+## Before you start
 
-Stop and run the full pipeline if any of these is true:
-
-- the failure would spread past one feature, lose data, lose money, or touch
-  auth (that is not a quick fix, whatever the diff size);
-- the existing behavior you are changing is not written down anywhere, and
-  the change is more than small and contained (a small, contained one pins it
-  first, below);
-- it is more than about three files, or there is a design decision in it;
-- you cannot state in one sentence what will be true afterwards;
-- someone other than an engineer is leading the work - a product owner, a marketer or
-  a designer brings artifacts this path does not write.
-
-The most common mistake here is to rate the work too low. When unsure,
-choose the larger size: it is cheap to collapse an easy stage later, but it
-is expensive to find during the build that the process was too light.
+Rate the work honestly. The most common mistake here is to rate the work too
+low. When unsure, choose the larger size: the evidence line then asks for
+more, and `finish` names each item that is still owed.
 
 ## 1. Start
 
@@ -78,26 +69,31 @@ nothing else:
   - `small`: one to three files, a solution pattern that already exists here,
     no new structure.
   - `medium`, `large` or `product`: several files, a day or more, one or more
-    design decisions. This is heavier than a quick fix.
+    design decisions. The change then owes more evidence, and each `next:`
+    line names the next item.
 
-`--goal` takes `VALUE - reason`; the goal is `delivery` on this path. A goal of `exploration` changes the approach ("I cannot state this well enough to
-deliver it yet"): that is a spike, not a small change. `--role` is ignored. `--test` can repeat. The scenario id is `TRC-001` unless you pass `--scenario-id`.
+`--goal` takes `VALUE - reason`; the goal is `delivery` on this path. A goal
+of `exploration` changes the approach ("I cannot state this well enough to
+deliver it yet"): that is a spike, not a small change, so run
+`/compass:assess`. `--urgency "live-defect - <reason>"` marks a defect in
+production: the scenario is the reproduction, and its red comes first.
+`--role` is ignored. `--test` can repeat. The scenario id is `TRC-001` unless
+you pass `--scenario-id`.
 
 Pass `--labels` with the domains touched, comma-separated. Only `auth`,
-`payments`, `personal-data` and `migrations` make the change need the
-heavier process and a person's sign-off; a synonym such as `pii` does not.
+`payments`, `personal-data` and `migrations` make the change need more
+evidence and a person's sign-off; a synonym such as `pii` does not.
 
 It runs `compass init`, records the assessment, computes the approach
 through `compass approach evaluate` and writes it to the manifest. It writes
-no document: the intent sentence, the scenario and the advice open the
-issue's `devlog.md`. If it prints a `created:` line
-naming `.compass/` or `docs/compass/`, report it to the user: if a directory
-appears and nobody says so, someone can delete it by hand or commit it by
-mistake.
+`acceptance-criteria.md` with the intent sentence and the one scenario. If
+it prints a `created:` line naming `.compass/` or `docs/compass/`, report it
+to the user: if a directory appears and nobody says so, someone can delete
+it by hand or commit it by mistake.
 
-If the approach is heavier than a quick fix, it stops and says so. Continue
-with `/compass:assess`: the manifest holds the values and the approach,
-and reasons go into its approach record.
+Then run `compass approach show --issue <slug>` and show its three lines to
+the person: the assessment, the evidence the change owes, and where its
+files go.
 
 ## 2. Red
 
@@ -139,8 +135,11 @@ compass quick-fix finish -m "<commit message>" --release-note "<line>" --candida
 ```
 
 It traces the changed files, records the green through `compass tdd-green`
-with your test command, or the declared acceptance, runs `compass check`, records its output through
-`compass evidence`, passes the three gates and writes the devlog line.
+with your test command, or the declared acceptance, runs `compass check`,
+records its output through `compass evidence` and passes the three gates.
+While the change owes other evidence, it passes nothing and prints one
+`next:` line for each owed item. Run each one, then run `finish` again.
+Stop only where a `next:` line says to wait for a person.
 
 `<build>`: a build id or `local`. `<client>`: `api|web|cli`.
 
@@ -168,5 +167,5 @@ only, so run `/compass:assess --reassess` (the `atdd` skill).
 - `quick-fix start` recorded the approach and the one scenario;
 - a red (or acceptance) is on file for it;
 - `quick-fix finish` ran to completion: the green recorded, every changed
-  file traced, `compass check` passed, the three gates `pass` with
-  evidence, and the devlog line written.
+  file traced, `compass check` passed, and the three gates `pass` with
+  evidence.

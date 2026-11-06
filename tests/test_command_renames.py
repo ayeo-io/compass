@@ -1,8 +1,10 @@
 """The command files speak the v2 names.
 
-The eight pipeline commands are assess, define, refine, plan, breakdown,
-implement, verify, ship; the designer entry point is design; the retired
-names were removed at 4.0.0; the vocabulary file names them; and no live
+The four-stage path (ADR-092) runs through `go`, with `quick-fix` as its short
+form, `assess` for a re-assess and a spike, and `ship` for the review and the
+commit. The six stage commands (`define`, `refine`, `plan`, `breakdown`,
+`implement` and `verify`) went with it. The designer entry point is design; the retired names
+were removed at 4.0.0; the vocabulary file names them; and no live
 instruction surface may point at a retired name.
 """
 from __future__ import annotations
@@ -17,19 +19,16 @@ REPO_ROOT = Path(__file__).parent.parent
 COMMANDS = REPO_ROOT / "commands"
 
 V2_COMMANDS = {
-    "assess", "define", "refine", "plan", "breakdown", "implement",
-    "verify", "ship", "design", "intent", "position", "consult",
+    "assess", "ship", "design", "intent", "position", "consult",
     "status", "flow", "resume", "init",
-    # docs-compass-artifacts: the quick-fix approach's single-command entry
-    # point. It inlines assess, define, implement, verify and ship for a small,
-    # safe change rather than delegating to the five stage commands, so the
-    # light path costs one command file and one skill instead of thirteen files.
+    # The short form of `go`: start, red and finish for a change the person
+    # already knows is small, in one command file.
     "quick-fix",
     # approve-inside-claude-code (ADR-068, ADR-069): the four commands a person
     # types to answer, delegate and revoke approvals. The model cannot invoke them.
     "approve", "reject", "delegate", "revoke",
-    # one-entry-point: the single command for the ordinary path. It assesses
-    # with quick-fix start and continues into the computed approach.
+    # The single command for the four-stage path (ADR-092). It assesses with
+    # quick-fix start and follows the `next:` line each verb prints.
     "go",
 }
 
@@ -156,18 +155,16 @@ def test_no_live_surface_points_at_a_dead_command_name():
 
 
 def test_the_ruling_conditions_hold():
-    """`TRC-6`: define's one-line description leads with 'Acceptance criteria';
-    design's says it produces the UI contract; and the UI-contract
-    template's producer line points at /compass:design."""
+    """`TRC-6`: design's one-line description says it produces the UI
+    contract, and the UI-contract template's producer line points at
+    /compass:design. The define command, whose description led with
+    'Acceptance criteria', went with the four-stage path (ADR-092)."""
     def description(name: str) -> str:
         text = (COMMANDS / f"{name}.md").read_text(encoding="utf-8")
         m = re.search(r"^description:\s*(.+)$", text, re.M)
         assert m, f"{name}.md has no description line"
         return m.group(1)
 
-    assert description("define").startswith("Acceptance criteria"), (
-        "define's description must lead with 'Acceptance criteria' - the "
-        "bare verb is the vaguest in the set")
     assert "UI contract" in description("design"), (
         "wireframe's description must state it produces the UI contract")
     assert "/compass:design" in (

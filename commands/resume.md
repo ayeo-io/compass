@@ -21,26 +21,29 @@ written so that nobody has to work out the process again.
    *this* issue without a `--issue` flag.
 2. **Run `compass approach show` and read `manifest.yml` first.** The
    manifest is the contract for this issue - the delivery approach, the
-   per-stage weight, the gate set, the orchestration and the de-scope
-   reasons - and `compass approach show` prints the decision. Read everything
+   evidence the change owes, the gate set and the de-scope reasons - and
+   `compass approach show` prints the decision. Read everything
    else with it as the reference. After a re-assessment, the manifest's
    `reassessments:` log names what changed.
-3. **Read `acceptance-criteria.md` and `devlog.md`** - the spec, and the
-   record of the work so far. Read any note the team keeps beside them too,
-   such as a role note.
-4. **Find the current stage.** Run `compass next`: it names the stage
-   that is next. Cross-check against the approach's stage weights so a collapsed stage
-   counts as handled, not pending. Note any owed follow-up.
+3. **Read `acceptance-criteria.md`** - the spec - and the records of the
+   work so far. An issue assessed before the path also has a `devlog.md`;
+   read it. Read any note the team keeps beside them too, such as a role
+   note.
+4. **Find the current stage.** Run `compass next`: it names the stage of
+   the path (assess, specify, build or ship) and prints the `next:` command.
+   An issue assessed before the path shows its old stage as the path stage
+   it maps to. Note any owed follow-up.
 5. **Report, then continue.** State plainly: the delivery approach, the
-   last completed stage, the next command to run, and any blocker or owed
-   follow-up. Then continue from that stage - invoke the matching
-   `/compass:*` command's procedure.
-6. **A quick fix finishes in one command.** If the approach is quick fix, write
-   the failing test and run `compass tdd-red --scenario <id> -- <test
-   command>`, write the fix, then run `compass quick-fix finish -m
-   "<message>" --no-commit -- <test command>`. It traces the changed files,
-   runs the check and passes the three gates, even for an issue another
-   session started. Do not pass the gates by hand.
+   current stage, the next command to run, and any blocker or owed
+   follow-up. Then continue as `/compass:go` does from its step 4: run each
+   `next:` command, and stop only where one says to wait for a person.
+6. **The finish is one command.** When only the red, the fix and the three
+   immovable gates are left, write the failing test and run
+   `compass tdd-red --scenario <id> -- <test command>`, write the fix, then
+   run `compass quick-fix finish -m "<message>" --no-commit -- <test
+   command>`. It traces the changed files, runs the check and passes the
+   three gates, even for an issue another session started. Do not pass
+   those gates by hand.
 
 ## When the records do not answer the question
 

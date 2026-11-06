@@ -3,8 +3,8 @@ interruptions an issue took.
 
 A new user had to know that `/compass:assess` starts an issue and
 `/compass:quick-fix` is the light path. `/compass:go <what you want>` runs
-init, assesses, shows a three-line decision view and continues into the
-first stage. Each hook block and each failing `compass check` appends a
+init, assesses, shows a three-line decision view and follows the `next:`
+line of each verb through the four stages of the path. Each hook block and each failing `compass check` appends a
 line to `.compass/interruptions.log`, and `compass retro` reports the
 totals, so "fewer interruptions" can be measured, not claimed.
 """
@@ -30,7 +30,7 @@ def test_go_is_a_command_that_assesses_shows_the_view_and_continues():
     text = (ROOT / "commands" / "go.md").read_text(encoding="utf-8")
     for step in ("compass init", "compass quick-fix start",
                  "compass approach show --issue <slug>", "/compass:assess",
-                 "--no-commit"):
+                 "--no-commit", "`next:`", "/compass:ship"):
         assert step in text, step
     assert len(text.split()) < 700, len(text.split())
 
@@ -164,15 +164,17 @@ def test_retro_reports_the_interruptions(repo):
 # --- GC-1: go does not stop at assess's confirmation (issue `go-confirms-on-the-heavier-route`) ----------------
 
 def test_gc_1_go_and_assess_agree_that_go_does_not_wait_to_confirm():
-    """`/compass:go` hands a heavier route to `/compass:assess` from step 4.
-    Assess step 7 asks for a confirmation; go says not to stop. Both texts
-    must say the same thing: under go, the summary already shown is the
-    confirmation."""
+    """`/compass:go` runs the whole path itself (ADR-092). Assess step 7 asks
+    for a confirmation; go says not to stop. Both texts must say the same
+    thing: under go, the three lines already shown are the confirmation, and
+    go stops only where a `next:` line says to wait for a person."""
     go = (ROOT / "commands" / "go.md").read_text(encoding="utf-8")
+    flat = " ".join(go.split())
     assess = (ROOT / "commands" / "assess.md").read_text(encoding="utf-8") \
         + (ROOT / "approaches" / "assess-procedure.md").read_text(encoding="utf-8")
-    assert "steps 4 to 6" in go, "go must name the assess steps it runs"
-    assert "step 7" in go and "do not wait" in go.lower(), \
-        "go must say it does not wait at assess step 7"
+    assert "do not wait for a confirmation" in flat.lower(), \
+        "go must say it does not wait for a confirmation"
+    assert "Stop only where a `next:` line says to wait for a person" in flat, \
+        "go must say the one place it stops"
     step7 = assess[assess.index("7. **Confirm.**"):assess.index("## Voice")]
     assert "/compass:go" in step7, "assess step 7 must say what go does"

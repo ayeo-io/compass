@@ -177,8 +177,8 @@ PLUGIN_ROOT = "${CLAUDE_PLUGIN_ROOT}/"
 
 S1_FILES = (
     "commands/consult.md", "commands/design.md", "commands/intent.md",
-    "commands/position.md", "commands/refine.md", "commands/plan.md",
-    "commands/verify.md", "commands/flow.md",
+    "commands/position.md", "commands/go.md", "commands/ship.md",
+    "commands/flow.md",
     "skills/governance-check/SKILL.md", "skills/adaptive-routing/SKILL.md",
     "skills/adaptive-routing/composition.md",
     "skills/evidence-gates/review-dimensions.md",
@@ -327,7 +327,7 @@ def s9_findings(text, known_types):
 
 
 S9_FILES = (
-    "commands/consult.md", "commands/verify.md", "approaches/assess-procedure.md",
+    "commands/consult.md", "commands/ship.md", "approaches/assess-procedure.md",
 )
 
 
@@ -338,9 +338,11 @@ def test_trc_s9_plugin_instructions_use_real_types_verbs_and_fields():
     report = {rel: found for rel, found in report.items() if found}
     assert not report, report
 
-    verify = _read("commands/verify.md")
-    assert "compass evidence add <EV-id> --type <type> --path <file>" in verify
-    assert "compass gate pass <gate> --evidence <EV-id>" in verify
+    # The `verify` command's gate steps moved to ship with the four-stage path
+    # (ADR-092).
+    ship = _read("commands/ship.md")
+    assert "compass evidence add <EV-id> --type <type> --path <file>" in ship
+    assert "compass gate pass <gate> --evidence <EV-id>" in ship
 
     for rel in ("approaches/assess-procedure.md",):
         text = _read(rel)

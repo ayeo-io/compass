@@ -271,7 +271,7 @@ def _pin_scan_files():
 
 def test_sb_c2_the_pin_scan_reads_skills_and_templates():
     names = {str(p.relative_to(ROOT)) for p in _pin_scan_files()}
-    assert {"commands/plan.md", "skills/adaptive-routing/SKILL.md",
+    assert {"commands/ship.md", "skills/adaptive-routing/SKILL.md",
             "skills/adaptive-routing/composition.md", "templates/acceptance-criteria.md"} <= names
 
 

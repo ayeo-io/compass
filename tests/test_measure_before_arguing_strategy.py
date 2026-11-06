@@ -19,7 +19,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 STRATEGIES = ROOT / "governance" / "strategies.md"
 
 # Where a session needs the pointer. CLAUDE.md is loaded every session, and
-# commands/verify.md is where the reviewer assesses the practice - the same
+# commands/ship.md is where the reviewer assesses the practice - the same
 # two-surface pattern `S10` (mutation proof) uses.
 #
 # skills/receiving-code-review/SKILL.md would be the natural third home, since
@@ -29,7 +29,7 @@ STRATEGIES = ROOT / "governance" / "strategies.md"
 # the pointer is worth.
 POINTER_SURFACES = (
     ("CLAUDE.md", ROOT / "CLAUDE.md"),
-    ("commands/verify.md", ROOT / "commands" / "verify.md"),
+    ("commands/ship.md", ROOT / "commands" / "ship.md"),
 )
 
 

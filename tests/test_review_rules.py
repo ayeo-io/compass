@@ -192,8 +192,8 @@ def test_the_repository_rules_pass_lint():
 
 def test_reviewer_reads_the_rules():
     """RV-D."""
-    # `commands/verify.md` carries the review the reviewer agent did until 9.0.0 (ADR-090).
-    text = (ROOT / "commands" / "verify.md").read_text(encoding="utf-8")
+    # `commands/ship.md` carries the review the reviewer agent did until 9.0.0 (ADR-090, ADR-092).
+    text = (ROOT / "commands" / "ship.md").read_text(encoding="utf-8")
     assert "compass review-rule list --changed-files" in text
     assert "RR-" in text
     assert re.search(r"`allowed`", text)

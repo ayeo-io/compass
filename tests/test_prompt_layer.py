@@ -269,10 +269,9 @@ def test_trc_f5_the_contract_is_measured_separately_and_reported():
 # `TRC-F1` - a quick fix reads one command file
 # ---------------------------------------------------------------------------
 
-#: The one file a quick fix reads. The five stage commands and the three
-#: skills they load stay on disk and are read on the heavier delivery
-#: approaches; the quick-fix path inlines what it needs instead of
-#: delegating to them.
+#: The one file a quick fix reads. The path commands and the skills they
+#: load stay on disk and are read on a larger change; the quick-fix path
+#: inlines what it needs instead of delegating to them.
 QUICK_FIX_COMMAND = ROOT / "commands" / "quick-fix.md"
 
 #: From the scenario. The path this one replaces measures 11,203 words.
@@ -290,26 +289,27 @@ def test_trc_f1_a_quick_fix_reads_one_command():
         f"over the {QUICK_FIX_WORD_CEILING}-word ceiling")
 
 
-#: `compass` verbs named in the five stage commands that a quick fix does not
+#: `compass` verbs named in the path commands that a quick fix does not
 #: run, each with the reason. Every entry is checked below for still being in
-#: the stage commands, so an entry cannot quietly stop guarding anything.
+#: the path commands, so an entry cannot quietly stop guarding anything.
 NOT_ON_THE_LIGHT_PATH = {
     "_friction-capture": "friction capture is a step of the full ship, which a quick fix collapses",
     "follow-up": "a quick fix borrows no process weight, so it owes nothing to pay back",
-    "next": "a quick fix has no checkpoint to wait at, so compass next has no decisions taken for the person to show",
+    "next": "the quick-fix verbs print the same next: line compass next prints, so a quick fix does not call it",
     "retro": "cross-issue aggregation, not a step of any one issue",
     "lesson": "offered beside friction capture in the full ship, which a quick fix collapses",
-    "scenario": "define records scenarios and de-scoped failure modes with it; a quick fix records its one scenario through compass quick-fix start",
-    "gate": "verify passes each gate by hand with its evidence id; compass quick-fix finish passes the three gates itself",
-    "policy": "verify reads the rules in force with compass policy show for its governance dimension; a quick fix's governance check is the one compass quick-fix finish runs",
-    "review-rule": "the review at verify applies a project's review rules; compass quick-fix finish runs the governance check without them",
+    "scenario": "the specify stage records de-scoped failure modes with it; a quick fix records its one scenario through compass quick-fix start",
+    "gate": "the ship review passes each gate by hand with its evidence id; compass quick-fix finish passes the three gates itself",
+    "policy": "the ship review reads the rules in force with compass policy show for its governance dimension; a quick fix's governance check is the one compass quick-fix finish runs",
+    "review-rule": "the ship review applies a project's review rules; compass quick-fix finish runs the governance check without them",
     "issue": "a re-assessment proposes an issue configuration with compass issue configure; a quick fix that outgrows itself goes to /compass:assess, and compass quick-fix start sets the pointer itself",
 }
 
-#: The five stage commands the quick-fix command inlines.
+#: The path commands the quick-fix command inlines (ADR-092): assess, the
+#: whole path in go, and ship.
 STAGE_COMMANDS = [
     ROOT / "commands" / name for name in
-    ("assess.md", "define.md", "implement.md", "verify.md", "ship.md")
+    ("assess.md", "go.md", "ship.md")
 ]
 
 _VERB = re.compile(r"`compass ([a-z_][a-z-]*)")
@@ -332,7 +332,7 @@ def test_trc_f1_the_quick_fix_command_names_every_cli_call_it_inlines():
     closed at 4.0.0. Counting files and words cannot see drift.
 
     So this pins the two descriptions against each other: every `compass` verb
-    the five stage commands run must be named in the inlined command, or be
+    the path commands run must be named in the inlined command, or be
     listed above as deliberately off the light path.
     """
     assert QUICK_FIX_COMMAND.is_file(), "commands/quick-fix.md does not exist"
@@ -346,7 +346,7 @@ def test_trc_f1_the_quick_fix_command_names_every_cli_call_it_inlines():
             missing.append(f"`compass {verb}` (from commands/{source})")
     assert not missing, (
         "commands/quick-fix.md inlines the light path but does not name every "
-        "CLI call the stage commands make, so the two descriptions have "
+        "CLI call the path commands make, so the two descriptions have "
         "drifted:\n  " + "\n  ".join(missing)
         + "\n\nIf a call genuinely does not belong on the light path, add it "
           "to NOT_ON_THE_LIGHT_PATH with the reason.")
@@ -361,7 +361,7 @@ def test_trc_f1_the_off_path_list_names_verbs_that_still_exist():
     verbs = _stage_command_verbs()
     stale = [v for v in sorted(NOT_ON_THE_LIGHT_PATH) if v not in verbs]
     assert not stale, (
-        "NOT_ON_THE_LIGHT_PATH names verbs the stage commands no longer run, "
+        "NOT_ON_THE_LIGHT_PATH names verbs the path commands no longer run, "
         f"so those entries exclude nothing: {', '.join(stale)}")
 
 

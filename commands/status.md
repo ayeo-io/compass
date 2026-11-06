@@ -43,7 +43,7 @@ So: **the board is the default. Everything else is detail on request.**
    | **BLOCKED** | cannot progress without a decision or an owed follow-up being settled: `compass check` fails, an owed follow-up, a missing human approval on an irreversible change |
    | **READY TO SHIP** | all gates green and `compass check` passes, but not yet marked shipped - finished work nobody has closed |
    | **IN PROGRESS** | started, not finished: an issue whose state is in-progress or in-review. An issue in progress stores no status; `compass flow` reads its state from its records |
-   | **NEXT UP** | ready to start (defined and refined, no work yet), or held in the backlog |
+   | **NEXT UP** | ready to start (assessed, no work yet), or held in the backlog |
    | **DONE** | a stored status of `done`, whatever its close reason |
 
 3. **Write each column as prose, not a table.** Name the issue and say *why
@@ -77,8 +77,8 @@ READY TO SHIP (1)
   its commit made.
 
 IN PROGRESS (5)
-  import-coordinate-crs-normalization is furthest along (criteria defined and
-  designed, not verified). The other four are barely started.
+  import-coordinate-crs-normalization is furthest along (scenarios written
+  and built, not yet reviewed). The other four are barely started.
 
 NEXT UP
   Nothing is ready to start, and the backlog is empty.
@@ -96,11 +96,12 @@ Here the internal details *are* what the reader wants. Report:
 - **Delivery approach** - from `compass approach show` / `manifest.yml`: the
   nearest reference shape, the three scored dimensions, and any policy
   rule that fired.
-- **Stage** - from `compass next --issue <slug>`, which reads the records:
-  the approach in the manifest -> assessed; `acceptance-criteria.md` or the
-  scenarios -> criteria defined; the tests on record -> implementing; every
-  gate passed -> verified. Cross-check the approach's stage weights so a
-  *collapsed* stage is not reported as *missing*.
+- **Stage** - from `compass next --issue <slug>`, which reads the records
+  and names one of the four stages: assess, specify (the scenarios and
+  their tests), build (the red and green records) or ship (the gates, the
+  review and the commit). It also prints the next command. An issue
+  assessed before the path shows its old stage as the path stage it maps
+  to.
 - **Gates** - from `manifest.yml`'s `gates:`. Run
   `compass check --issue <slug>` for the mechanical view (read-only).
   **Say when a check passes without checking anything.** "no changed_files recorded yet"
@@ -108,9 +109,9 @@ Here the internal details *are* what the reader wants. Report:
   progress is how an issue ships untraced.
 - **Owed follow-ups** - scan `manifest.yml`'s `follow_ups:` and the
   approach's standing obligations. Report clearly:
-  - an unsettled **hotfix follow-up** (the approach record not completed,
-    reproduction test not promoted to a scenario, no root-cause devlog
-    line);
+  - an unsettled **defect follow-up** on a change assessed with
+    `urgency: live-defect`, or a hotfix assessed before the path (the
+    reproduction test not promoted to a scenario, no root cause stated);
   - an **unbacked marketing claim** - a claim in `positioning.md` with no
     passing scenario behind it;
   - any de-scoped work still marked owed.

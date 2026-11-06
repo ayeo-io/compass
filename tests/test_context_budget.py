@@ -39,7 +39,11 @@ RULES = {
     "five guardrails": "Five guardrails:",
     "on disk": "**If it is not on disk, it did not happen.**",
     "stages": "**Stages, in order**",
-    "verify stage": "7. verify",
+    # The four stages of the path (ADR-092), in order.
+    "specify stage": "2. specify",
+    "build stage": "3. build",
+    "ship stage": "4. ship",
+    "next line": "prints `next:`",
     "where to look": "`compass <verb> --help`",
     "write for a person": "**Write for a person in the spirit of ASD-STE100.**",
     "approvals": "**Approvals.**",

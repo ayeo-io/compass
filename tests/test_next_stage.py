@@ -116,8 +116,8 @@ def _issue(root: Path, route: str, *, scenarios=True, criteria=None, review=Fals
         arts.append({"id": "ART-AC", "kind": "acceptance-criteria", "status": criteria,
                      "path": "docs/ac.md"})
     if review_file:
-        # Written and left unregistered, as commands/refine.md says to do on
-        # a route that does not earn the review.
+        # Written and left unregistered, as the refine command said to do,
+        # before ADR-092, on a route that does not earn the review.
         docs = root / "docs" / "compass" / f"2026-10-02-{SLUG}"
         docs.mkdir(parents=True, exist_ok=True)   # the issue page render may have made it
         (docs / "requirements-review.md").write_text("# Requirements review\n")

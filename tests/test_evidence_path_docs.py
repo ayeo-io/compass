@@ -147,7 +147,7 @@ def test_a2_docs_state_the_binding_rule():
 
     Removing a false claim is not the same as making the true one available.
     """
-    for name in ("commands/implement.md", "skills/compass-runtime/SKILL.md"):
+    for name in ("commands/go.md", "skills/compass-runtime/SKILL.md"):
         text = (REPO_ROOT / name).read_text(encoding="utf-8")
         assert BOUND.search(text), (
             f"{name} explains the green verb but never mentions the "

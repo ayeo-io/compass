@@ -82,9 +82,16 @@ def test_qfo_6_no_hand_run_gate_or_evidence_step():
         "commands/quick-fix.md still instructs a hand-run `compass evidence add`")
 
 
-def test_qfo_6_the_command_keeps_the_wrong_path_list():
+def test_qfo_6_the_command_has_no_wrong_path_list():
+    """On the four-stage path (ADR-092) no size is wrong for the three calls:
+    the evidence line says what the change owes, and `finish` names each
+    owed item. So the list of cases where this command was the wrong one
+    went, and the command says how the calls serve every size instead."""
     text = _text(COMMAND)
-    assert "When this command is the wrong one" in text
+    assert "When this command is the wrong one" not in text
+    flat = " ".join(text.split())
+    assert "serve every size" in flat
+    assert "`next:` line for each owed item" in flat
 
 
 def test_qfo_6_the_command_keeps_the_reassess_rule():

@@ -33,18 +33,19 @@ dated digest file (see below).
 
 1. **Enumerate.** List every issue directory under `.compass/work/`. For
    each, read `manifest.yml` (the machine-readable manifest, which holds the
-   delivery approach) and `devlog.md`. To report an issue's
+   delivery approach) and, on an issue assessed before the path,
+   `devlog.md`. To report an issue's
    *mechanical* gate status you can run `compass check --issue <slug>` - it
    is read-only and changes nothing.
 
 2. **Assess each issue.** Apply the `flow-management` heuristics:
    - **No `delivery_approach:` in the manifest** -> a guardrail violation (work started
      without an assessment). Report this above everything else.
-   - **Stalled** -> an in-progress stage with no new `devlog.md` entry for
-     longer than the approach's expected cadence. Flag it and name the
-     likely blocker.
-   - **Approach outgrown** -> signs in the devlog that the issue no longer
-     fits its delivery approach. Recommend `/compass:assess --reassess`.
+   - **Stalled** -> an in-progress stage with no new record (evidence, or a
+     `devlog.md` entry on an older issue) for longer than the approach's
+     expected cadence. Flag it and name the likely blocker.
+   - **Approach outgrown** -> signs in the records that the issue no longer
+     fits its assessment. Recommend `/compass:assess --reassess`.
    - **Healthy** -> progressing in line with its approach.
 
 3. **Build the board.** Start from `compass flow`: it lists each issue in
@@ -65,7 +66,7 @@ dated digest file (see below).
 
 5. **Aggregate owed follow-ups.** `/compass:status` flags follow-ups per
    issue; `/compass:flow` collects them all into one list - every unsettled
-   hotfix follow-up, every unbacked marketing claim, every de-scoped
+   defect follow-up, every unbacked marketing claim, every de-scoped
    artifact still owed, across all issues.
 
 6. **Read the retrospective signal.** Run `compass retro` - it reads

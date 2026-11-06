@@ -21,7 +21,9 @@ import re
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
 BDD_SKILL = SKILLS / "bdd-specification" / "SKILL.md"
-CLARIFY_CMD = ROOT / "commands" / "refine.md"
+# The refine command went with the four-stage path (ADR-092): the specify stage
+# of the go command now states the split from its side.
+PATH_CMD = ROOT / "commands" / "go.md"
 
 # The four scans the spec-author runs inline at the end of the define stage.
 FOUR_SCANS = ["placeholder", "orphan", "untestable", "ambiguous"]
@@ -140,26 +142,23 @@ def test_trc_d3_bdd_skill_documents_the_split():
 
 
 # ---------------------------------------------------------------------------
-# The /compass:refine command states the same split from its side (TRC-D4)
+# The /compass:go command states the same split from its side (TRC-D4)
 # ---------------------------------------------------------------------------
 
-def test_trc_d4_clarify_command_documents_the_split():
-    text = CLARIFY_CMD.read_text(encoding="utf-8").lower()
+def test_trc_d4_go_command_documents_the_split():
+    text = " ".join(PATH_CMD.read_text(encoding="utf-8").lower().split())
 
     assert "self-review" in text or "self review" in text, (
-        "commands/refine.md never mentions the inline self-review the "
-        "spec-author has already run, so Clarify looks like it starts from "
-        "nothing"
+        "commands/go.md never mentions the inline self-review at specify"
     )
     assert re.search(r"(does not repeat|not repeat|already (been )?run|already "
                      r"covered|no need to re-?run)", text), (
-        "commands/refine.md does not say that Clarify does not repeat the "
-        "inline scans"
+        "commands/go.md does not say that the inline scans are not repeated"
     )
     # it names the same four scans the skill names
     for scan in FOUR_SCANS:
         assert scan in text, (
-            f"commands/refine.md does not name the {scan!r} scan; the two "
+            f"commands/go.md does not name the {scan!r} scan; the two "
             f"descriptions of the split must agree"
         )
 

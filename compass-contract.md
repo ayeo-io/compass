@@ -39,18 +39,14 @@ runs the guardrails.
 evidence and markers live in `.compass/work/<slug>/`. Another session
 resumes from those files.
 
-**Stages, in order**, each with a `/compass:*` command:
+**Stages, in order**, run by `/compass:go`:
 
 1. assess
-2. define acceptance criteria
-3. refine
-4. plan
-5. break down
-6. implement
-7. verify
-8. ship
+2. specify
+3. build
+4. ship
 
-Honor the delivery approach's stage weights.
+Each verb that writes a record prints `next:`, the command to run next.
 
 **Record friction you observe.** If a step costs more than it returns and
 will recur, run `compass issue friction` with evidence and a fix.

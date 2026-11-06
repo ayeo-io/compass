@@ -2129,6 +2129,10 @@ _REMOVED_IN_9_0_0 = frozenset({
     "tests/test_waived_stage_on_floor.py", "tests/configure_fixtures.py",
     "tests/fixtures/issue-configure-example.json",
     "tests/fixtures/issue-configure-refused-example.json",
+    # The stop hook's phrase file, its schema and its test (ADR-094). The six
+    # phrases are a constant in hooks/py/stop_scan.py now.
+    "governance/signals.yml", "schemas/signals.schema.json",
+    "tests/test_signals_design_smell.py",
 })
 #: Paths 9.0.0 removed that this repository's `compass.yml` still names, keyed by
 #: the path. An agent may not edit `compass.yml`; the owner deletes its readiness

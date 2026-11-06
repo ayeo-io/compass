@@ -79,7 +79,7 @@ Logical surface: **strategies**
 | `governance/routing-policy.yml` | The evaluator reads this at assess to compute the delivery approach | high |
 | `governance/guardrails.yml` | `compass check` reads this to run gate assertions | high |
 | `governance/strategies.md` | Consulted by agents when deciding TDD/BDD application | medium |
-| `governance/signals.yml` | `hooks/stop.sh` reads this | medium |
+| `.compass/work/<issue>/devlog.md` | `hooks/stop.sh` scans it for the scope-bloat phrases in `hooks/py/stop_scan.py` | medium |
 | `.compass/work/<issue>/manifest.yml` | The manifest; written by the assess stage, read by every stage | high |
 | `.compass/work/<issue>/*.md` | Stage artifacts (acceptance criteria, technical design, requirements review, and so on) | high |
 | `.compass/current-task` | One-line pointer resolved by CLI and hooks | high |

@@ -638,7 +638,7 @@ TERM_SURFACE_EXEMPT = {
     # which is enumerable by grep; a path prefix is not.
     "G1..G5 / S1..S14 codes, bare": (
         "governance/guardrails.yml", "governance/routing-policy.yml",
-        "governance/terminology.yml", "governance/signals.yml",
+        "governance/terminology.yml",
         "schemas/", "architecture/",
     ),
     # writing-voice.md teaches by quoting this repository's own archive

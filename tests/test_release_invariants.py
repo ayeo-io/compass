@@ -224,12 +224,6 @@ def test_net_new_gates_is_one():
     assert not extra, f"gate_evidence_requirements gained unexpected gates: {extra}"
 
 
-def test_net_new_signals_category_is_design_smell():
-    """signals.yml gained exactly the design_smell category from this work."""
-    data = yaml.safe_load((REPO_ROOT / "governance/signals.yml").read_text())
-    assert "design_smell" in data, "signals.yml must have a design_smell category (TRC-C4)"
-
-
 # -----------------------------------------------------------------------------
 # `TRC-F7` - pre-existing issues pass without change.
 # Replay compass check against the landed comparison-requirements issue.

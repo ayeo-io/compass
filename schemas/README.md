@@ -1,9 +1,11 @@
 # Schemas
 
-Schemas for the five machine-readable Compass files. Each of the first three
-comes in two forms; `signals.yml` and `compass.yml` have no readable
-companion. 9.0.0 removed the readiness record and its schema (ADR-093); a
-`.compass/readiness.yml` left in a checkout is not read.
+Schemas for the four machine-readable Compass files. Each of the first three
+comes in two forms; `compass.yml` has no readable companion. 9.0.0 removed
+the readiness record and its schema (ADR-093); a `.compass/readiness.yml`
+left in a checkout is not read. 9.0.0 also removed `signals.yml` and its
+schema (ADR-094): the stop hook's scope-bloat phrases are fixed in
+`hooks/py/stop_scan.py`, and a project's own copy is not read.
 
 | File | Executable schema | Readable companion |
 |---|---|---|
@@ -11,7 +13,6 @@ companion. 9.0.0 removed the readiness record and its schema (ADR-093); a
 | `governance/guardrails.yml` | `guardrails.schema.json` | `guardrails.reference.yml` |
 <!-- vocabulary-scan: allow - the row names files on disk by their real names -->
 | `.compass/work/<issue>/manifest.yml` | `manifest.schema.json` | `manifest.reference.yml` |
-| `governance/signals.yml` | `signals.schema.json` | none |
 | `compass.yml` (a project's configuration file, ADR-043) | `compass.schema.json` | none |
 
 **The `.schema.json` files are real, executable JSON Schema** (draft-07;

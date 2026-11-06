@@ -383,7 +383,6 @@
   "tests/test_ship_commit_refuses_a_stale_green.py": 8.92,
   "tests/test_ship_commit_scope.py": 0.01,
   "tests/test_shipped_releases.py": 6.0,
-  "tests/test_signals_design_smell.py": 0.11,
   "tests/test_size_medium.py": 1.36,
   "tests/test_size_targets.py": 0.01,
   "tests/test_skill_bdd_specification_refinement.py": 0.01,

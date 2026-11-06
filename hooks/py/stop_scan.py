@@ -6,13 +6,12 @@ import re
 import sys
 
 import compass_pkg                      # noqa: F401 - puts vendor on sys.path
-import yaml
 from compass_pkg import parse_cache, status_words
 from compass_pkg.path_stages import is_path_issue
 from compass_pkg.core import artifact_path
 from compass_pkg.spec_location import spec_path
 
-work_dir, signals = sys.argv[1], sys.argv[2]
+work_dir = sys.argv[1]
 
 # Saves no manifest. It stores new parse entries in the cache but never
 # calls finish(): pruning the cache is the board's job, and the hook must not
@@ -39,14 +38,18 @@ def any_line(pattern, path):
         pattern.search(line) for line in text.splitlines())
 
 
-def load_phrases():
-    try:
-        with open(signals, encoding="utf-8") as fh:
-            return [str(p) for p in
-                    (yaml.safe_load(fh) or {}).get("scope_bloat_phrases") or []
-                    if p]
-    except Exception:                                       # noqa: BLE001
-        return []
+# The scope-bloat phrases. Each one, at the start of a devlog line, means the
+# work grew past what was assessed. Compass runs one fixed set of checks
+# (ADR-094), so the phrases are fixed here, and a signals.yml in a project's
+# governance folder is not read.
+PHRASES = (
+    "more files than Plan estimated",
+    "narrow scope and spawn sibling",
+    "file deeper layer as a sibling issue at ship",
+    "soften the gate",
+    "(carried to ship)",
+    "USER TO APPLY",
+)
 
 
 # The separator between "FAIL" and the phrase after it is matched as "one or
@@ -59,7 +62,6 @@ FAILING = re.compile(
 PASSING = re.compile(r"Overall:.*PASS", re.IGNORECASE)
 REPRODUCTION = re.compile(r"reproduc|regression|defect|incident", re.IGNORECASE)
 LINE_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}")
-PHRASES = load_phrases() if signals else []
 
 
 def gate_state(task_dir, slug, task):
@@ -147,7 +149,7 @@ def scope_bloat(task_dir, slug, task):
     # A line that starts with whitespace is quoted or indented context and
     # does not fire (TRC-X3).
     devlog = os.path.join(task_dir, "devlog.md")
-    if not PHRASES or not os.path.isfile(devlog) \
+    if not os.path.isfile(devlog) \
             or not os.path.isfile(os.path.join(task_dir, "manifest.yml")):
         return
     text = read_text(devlog)

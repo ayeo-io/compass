@@ -1175,7 +1175,6 @@ scan:
     - examples/           # shipped worked examples - what an adopter copies from
     - governance/routing-policy.yml   # comments only, per the YAML rule
     - governance/guardrails.yml
-    - governance/signals.yml
     # This file. Scanned like any other prose, because docs/glossary.md is
     # GENERATED from its `terms:` and `codes:` blocks and titled "Every word
     # and every id prefix Compass uses" - so it is the single place a retired

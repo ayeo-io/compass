@@ -99,7 +99,6 @@ stale, contradictory strategies is its own kind of mess. So:
 | `strategies.md` | The shipped default method strategies (incl. BDD and TDD) + a project-strategies section | Soft, assessed, accretive |
 | `routing-policy.md` | Routing guardrails (bound assessment) + routing strategies (bias it) | Both, applied to routing |
 | `strategies-rationale.md` | The incidents and worked examples behind the strategies | Neither - evidence, read when a rule looks arbitrary |
-| `signals.yml` | Advisory patterns: scope-bloat phrases the stop-hook prompts on, and the design patterns the review looks for | Soft signals - *not* guardrails; advisory only |
 | `quarantine.yml` | Records of intermittent tests explicitly quarantined with a tracking issue | Pairs with the `no-trusted-rerun` rule on evidence-not-assertion (see `strategies.md` `S5`) |
 
 The framework ships these with sane, active defaults. A project that does

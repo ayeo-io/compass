@@ -370,8 +370,7 @@ with the version hidden.
    - `tests/test_cli_surface_drift.py` (every CLI subcommand documented
      in the public CLI surface blocks)
    - `tests/test_release_invariants.py` (the partial-version-bump guard
-     + the `comparison-requirements` ADR-006 backward-compat fixture +
-     `signals.yml` shape invariants)
+     + the `comparison-requirements` ADR-006 backward-compat fixture)
    - All other existing tests (delivery-approach selection, guardrail
      checks, evidence handling, Spike safety, CI exit codes, the
      retrospective signal, architecture consistency, etc.)
@@ -878,7 +877,6 @@ catch common drift:
 |---|---|
 | All seven version locations agree | `tests/test_release_invariants.py` (partial-bump guard) |
 | Pre-v1.1.0 manifest.yml shapes still lint clean | `tests/test_release_invariants.py` (ADR-006 backward-compat, via the `tests/fixtures/comparison-requirements/` fixture) |
-| `signals.yml` shape stays valid | `tests/test_release_invariants.py` (`design_smell` category, etc.) |
 | Every CLI subcommand appears in the public CLI blocks | `tests/test_cli_surface_drift.py` (parses `compass --help`) |
 | `docs/install-smoke-test.md` shows the current version | `tests/test_cli_surface_drift.py` (reads `VERSION`, asserts the smoke-test matches) |
 | `install.sh` does not double-register hooks in a plugin-source repo | `tests/test_install_plugin_detection.py` |

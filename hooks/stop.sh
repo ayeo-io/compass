@@ -160,22 +160,12 @@ elif [ -f "$POINTER" ]; then
 fi
 
 # --- 1-4. every open issue, in one Python process ---------------------------
-# The scope-bloat phrases come from governance/signals.yml at runtime and are
-# never hardcoded: the project's copy first, then the framework's.
-SIGNALS=""
-if [ -f "$PROJECT_DIR/governance/signals.yml" ]; then
-  SIGNALS="$PROJECT_DIR/governance/signals.yml"
-else
-  _fw_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-  [ -f "$_fw_root/governance/signals.yml" ] && SIGNALS="$_fw_root/governance/signals.yml"
-fi
-
 # Each line of output is a kind, a tab and a message: W for a gate-state
 # warning, N for a scope-bloat reminder. A scan that cannot start prints
 # nothing, which reads as "nothing to report", as an unreadable install did
 # before.
 NUDGES=()
-SCAN="$(compass_python "$HOOK_ROOT/hooks/py/stop_scan.py" "$WORK_DIR" "$SIGNALS" 2>/dev/null </dev/null)" || true
+SCAN="$(compass_python "$HOOK_ROOT/hooks/py/stop_scan.py" "$WORK_DIR" 2>/dev/null </dev/null)" || true
 
 while IFS= read -r _line; do
   case "$_line" in

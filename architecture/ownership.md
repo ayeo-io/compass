@@ -23,10 +23,10 @@ exclusively, and what it must not do.
 |---|---|---|
 | `cli/compass` | Approach evaluation, gate checking, tdd-red/green evidence, ADR helpers | All mechanism-produced writes to issue manifests and evidence directories |
 | `hooks/pre-tool.sh`, with its parts in `hooks/lib/` and its programs in `hooks/py/pre_tool_*.py` | `.red` marker gate enforcement | The decision of whether to block a tool call |
-| `hooks/stop.sh` | Session-end signal scanning, re-assessment prompt | Detection of scope-bloat signals |
+| `hooks/stop.sh`, with its scan in `hooks/py/stop_scan.py` | Session-end signal scanning, re-assessment prompt | Detection of scope-bloat signals |
 | `commands/*.md` | Phase slash-command definitions | The user-facing pipeline protocol |
 | `skills/*/SKILL.md` | Loadable procedures | The instructions a session loads for a stage (9.0.0 ships no agent files, ADR-090) |
-| `governance/` | Routing policy, guardrails, strategies, signals | The machine-readable governance files that the CLI runs |
+| `governance/` | Routing policy, guardrails, strategies | The machine-readable governance files that the CLI runs |
 | `architecture/` (this tree) | Compass's own architectural record | The ADRs and narrative files that describe the framework itself |
 | `templates/` | Worked examples for adopters | The template shapes adopters copy. The CLI reads `templates/<kind>.md` in one place: `compass policy lint` (`cli/compass_pkg/policy_lint.py`). A template change can break that command |
 
@@ -103,13 +103,12 @@ the guardrail it actually serves: a Definition-of-Done check is about evidence
 (`G4`), not about having a test (`G1`), and filing it under `G1` misreports what
 cleared the gate.
 
-### No mechanism may hard-code governance/signals.yml content
+### The scope-bloat phrases have one home
 
-`hooks/stop.sh` must read `governance/signals.yml` at
-runtime, not replicate its patterns in Python or shell code. `signals.yml`
-exists so a project can extend the patterns without touching the CLI;
-hard-coding them takes that away and violates `Inv-7` (deterministic
-mechanism - the CLI must read the file).
+The six scope-bloat phrases are a constant in `hooks/py/stop_scan.py`. No
+other file may hold a copy. Compass runs one fixed set of checks (ADR-094),
+so a project cannot change the phrases, and a project's own
+`signals.yml` is not read.
 
 ---
 

@@ -27,25 +27,24 @@ adopters. This `architecture/` tree is the self-application of that governance.
 
 ## Components
 
-The framework has five logical surfaces. Each maps to artifacts on disk and
-to agent roles that own them.
+The framework has four logical surfaces. Each maps to artifacts on disk and
+to the part of Compass that owns them.
 
 ### Pipeline
 
-The pipeline is the ordered sequence of stages every delivery issue passes
-through: assess → define → refine → plan → breakdown → implement → verify → ship.
-Stage weights (full / light / skipped) are determined at assess by the router.
-The pipeline is implemented through the slash commands in `commands/` and the
-CLI subcommands in `cli/compass`.
+The pipeline is the four-stage path every delivery issue passes through:
+assess → specify → build → ship (ADR-092). The assessment changes the evidence
+each stage owes, not which stages run. The pipeline is implemented through the
+slash commands in `commands/` and the CLI subcommands in `cli/compass`.
 
 Logical surface: **pipeline**
 
 ### Router
 
-The router reads the four context dimensions (risk, familiarity, size,
-goal + role) recorded in `manifest.yml.assessment` and deterministically selects a
-delivery approach, stage weights, and gate set by running `governance/routing-policy.yml`
-through `compass approach evaluate`. No human judgement enters after the assessment
+The router reads the assessment (risk, familiarity and size, with the optional
+goal and urgency) recorded in `manifest.yml.assessment` and deterministically
+computes the delivery approach, the evidence required and the gate set by running
+`governance/routing-policy.yml` through `compass approach evaluate`. No human judgement enters after the assessment
 is recorded; the delivery approach is a pure function of the assessment.
 
 Logical surface: **router**
@@ -72,17 +71,6 @@ correct implementation, and persistence over conversation. They are encoded in
 `hooks/pre-tool.sh` (the `.red` marker gate).
 
 Logical surface: **strategies**
-
-### Role Pipeline
-
-Compass has five roles - engineer, product owner, designer, marketer, QA -
-each with its own entry point into the pipeline. Each role has entry-point slash commands
-(`/compass:intent`, `/compass:position`, `/compass:design`,
-`/compass:consult`), each run in the issue's own session (ADR-090). The
-architect role is an advisory role over the role pipeline, not a sixth full
-role.
-
-Logical surface: **role pipeline**
 
 ## External dependencies
 

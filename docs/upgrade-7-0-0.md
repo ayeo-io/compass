@@ -53,7 +53,7 @@ Stage commands now write the status of each registered document. A document that
 - **A project artifact with no `stage` is owned by ship.** Add `stage: <stage>` to its catalog entry to have an earlier stage approve it. `compass ship-commit` approves the ship-owned ones.
 - **`compass issue migrate` settles the status of done issues.** On a done issue, each `draft` or `awaiting-approval` document becomes `approved` (close reason `completed`, `approved_by: compass issue migrate`) or `superseded` (`not-planned` or `duplicate`), with the reason "migrated from a 6.0.0 record". Documents in any other status and open issues are left as they are. The dry run reports the counts the apply makes. It counts each entry the apply registers before this step, for a relocated document or a verification note. It leaves out a stub distribution map that the apply renames and supersedes before this step. A second run changes nothing.
 - **A decision an agent took for the person is shown at the next checkpoint.** `compass issue decision add` (and `--from-ledger`) records it in `decisions_taken`. On `balanced` and `controlled` autonomy, `compass next` reports `Waiting at the <stage> checkpoint` until a person confirms the set with `compass evidence approve --decisions` or reopens a decision with `compass issue decision set`. On `autonomous` it lists the decisions and does not wait. The approver is a name in the project file's `approvers:` lists, or its `owner` when there are none. The confirmation is an `artifact-approval` record, never a `human-approval` record.
-- **The retro's `--decisions` flag reports how those decisions were settled.** It gives the share confirmed, changed and never confirmed on a done issue.
+- **The retro's `--decisions` flag reports how those decisions were settled.** It gives the share confirmed, changed and never confirmed on a done issue. 9.0.0 removed the retro (ADR-093).
 
 ### What to do
 
@@ -213,7 +213,7 @@ The dry run lists each move, rename, registration, re-point, pointer removal and
 
 ## Checkpoint outcomes and usage
 
-Compass now records what happened at each stage hand-off and what each issue cost. The decision is `architecture/decisions/ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md`, and `docs/checkpoints.md` owns the facts that 9.0.0 kept.
+Compass now records what happened at each stage hand-off and what each issue cost. The decision is `architecture/decisions/ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md`, and `docs/checkpoints.md` owns the facts that 9.0.0 kept. 9.0.0 removed the session record, the usage record, the retro and the cost section of `compass issue diagnose` (ADR-093); this section records 7.0.0.
 
 ### What changes
 
@@ -304,7 +304,7 @@ Then run the `readiness` verb again and assess.
 
 ## The issue page on GitHub
 
-Compass can now post an issue's README to the linked GitHub issue, and the verb that wrote labels on demand has a new spelling. The decision is `architecture/decisions/ADR-057-derived-views-go-to-github-one-way-behind-a-refusal-check.md`. The facts are in `docs/github-labels.md`.
+Compass can now post an issue's README to the linked GitHub issue, and the verb that wrote labels on demand has a new spelling. The decision is `architecture/decisions/ADR-057-derived-views-go-to-github-one-way-behind-a-refusal-check.md`. 9.0.0 removed the label sync, the issue page, `compass issue github sync` and their page, `docs/github-labels.md` (ADR-093); this section records 7.0.0. `docs/github-links.md` owns `compass issue link set`, which stays.
 
 ### What is removed
 
@@ -447,7 +447,7 @@ The catalog gives a document kind a word limit per depth, `compass check` refuse
 
 ## Role is not an assessment dimension
 
-The assessment no longer reads a role. The claims gate and the intent-fidelity block now follow the documents on the issue's disk, and the product-owner, product-marketer and designer stay as perspectives a session consults. The decision is `architecture/decisions/ADR-070-role-is-not-an-assessment-dimension-and-documents-on-disk-bring-the-claims-gate-and-the-intent-block.md`. `governance/routing-policy.md` owns the rules.
+The assessment no longer reads a role. The claims gate and the intent-fidelity block now follow the documents on the issue's disk, and the product-owner, product-marketer and designer stay as perspectives a session consults. The decision is `architecture/decisions/ADR-070-role-is-not-an-assessment-dimension-and-documents-on-disk-bring-the-claims-gate-and-the-intent-block.md`. `governance/routing-policy.md` owns the rules. 9.0.0 removed the role entry points and the role templates, `positioning.md` among them (ADR-093); this section records 7.0.0.
 
 ### What breaks
 
@@ -507,7 +507,7 @@ A person approves or rejects by typing `/compass:approve` or `/compass:reject` i
 ### What changes
 
 - **The agent asks; Compass shows; the person answers.** The agent runs `compass evidence request` with the subject. At the end of its turn Compass shows the request in its own words. The person types `/compass:approve` or `/compass:reject <reason>`, and the hook records the answer through the same writer as the terminal command, with `via: prompt`.
-- **`compass evidence approve` at a terminal still works.** Its records hold `via: terminal`. It is the only path on a host without a person-only approval event, such as Codex.
+- **`compass evidence approve` at a terminal still works.** Its records hold `via: terminal`. It is the only path on a host without a person-only approval event, such as Codex on 8.x. 9.0.0 supports Claude Code only (ADR-093).
 - **A rejected document stays in draft until its file changes.** This amends ADR-050 decision 2.
 - **Delegation.** `/compass:delegate <agent> until <time>` lets one named agent, such as `compass:architect`, approve with `compass evidence approve ... --delegated --as <agent>`. `g5` is covered only when typed, after the person types back a code shown to them. `/compass:revoke` ends it. Each delegated approval names the person, the agent and the delegation; the person sees a summary until they mark it reviewed, and `/compass:reject <record id>` overrules one.
 

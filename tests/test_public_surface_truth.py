@@ -779,7 +779,10 @@ def test_d2_repairs_change_only_retired_names():
     `docs/safety-contract.md` (one `###` heading fewer, list_items 128 -> 125)
     lost the section on the readiness floor's record, and
     `governance/routing-policy.md` (list_items 68 -> 64) lost the floor's
-    list of refusals.
+    list of refusals. The narrative docs step of the same issue
+    re-baselined `architecture/system-context.md` (one `###` heading
+    fewer), which lost its "Role Pipeline" section on the four role entry
+    points.
 
     A NEW structural change to any of the 26 still fails.
     """

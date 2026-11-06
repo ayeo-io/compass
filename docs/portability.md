@@ -45,8 +45,9 @@ bin/compass      the shim that puts the kit on PATH
 .claude-plugin/  the plugin manifest and marketplace entry
 ```
 
-Take care with `architect`: it advises across the path and is not a
-sixth role, so a one-to-one role mapping drops it or turns it into a role.
+Take care with `architect`: it is a perspective the session takes across
+the path, not a separate agent or command, so a port must not turn it into
+one.
 
 A conforming adapter must satisfy the following requirements.
 
@@ -182,7 +183,7 @@ complete and lose the view across open issues:
 |---|---|
 | `compass flow` | no view of blockers or owed follow-ups across issues |
 | `compass next` | the session guesses which stage comes next |
-| `compass follow-up` | an owed follow-up can never be settled, so shipping stays blocked |
+| `compass follow-up` | an open Definition of Done item cannot be linked to the GitHub issue that tracks it, so shipping stays blocked |
 | `compass adr` | decision records are hand-numbered, and numbers get reused |
 
 A port must document the capability mapping below it too.

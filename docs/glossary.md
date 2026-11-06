@@ -32,11 +32,11 @@ The retired spelling of FU-. Still read by the Definition-of-Done tag parser so 
 
 ### `CLM-`
 
-Claim id. A public statement the product marketer intends to make. Every claim must trace to a passing scenario before the issue ships; the claims gate blocks on it.
+Claim id. A public statement the issue intends to make, kept in the manifest's `claims:`. Every claim must trace to a passing scenario before the issue ships (`G3`). Until 9.0.0 removed the role templates (ADR-093) the marketer wrote claims in positioning.md.
 
 **Refers to:** One planned public claim.
 
-**Appears in:** `positioning.md`, `launch-readiness.md`, `manifest.yml claims[].id`
+**Appears in:** `manifest.yml claims[].id`, `positioning.md (archive)`, `launch-readiness.md (archive)`
 
 **Related:** `TRC`, `launch-readiness`
 
@@ -62,7 +62,7 @@ Evidence id. Identifies one typed record in the issue's evidence registry that c
 
 ### `FU-`
 
-Follow-up id. Work this issue deferred to ship fast and still owes - the hotfix's promoted scenario, a de-scoped artifact. Not "any outstanding work": a newly found defect gets its own issue named by slug. A follow-up may carry target_task, naming the issue whose ship it blocks.
+Follow-up id. Work this issue deferred to ship fast and still owes - the hotfix's promoted scenario, a de-scoped artifact. Not "any outstanding work": a newly found defect gets its own issue named by slug. On a path issue a follow-up names the GitHub issue that tracks the work (`--github`). An older follow-up can carry target_task, naming the issue whose ship it blocks.
 
 **Refers to:** One piece of work this issue deferred and still owes.
 
@@ -72,11 +72,11 @@ Follow-up id. Work this issue deferred to ship fast and still owes - the hotfix'
 
 ### `INT-`
 
-Intent id. The "why" end of the traceability chain - the outcome the work is meant to produce, sourced from intent.md's desired outcome, the UI contract, or the issue description. A goal, not a requirement; the requirement is the scenario.
+Intent id. The "why" end of the traceability chain - the outcome the work is meant to produce, sourced from the issue description or a brief. A goal, not a requirement; the requirement is the scenario.
 
 **Refers to:** A stated desired outcome.
 
-**Appears in:** `intent.md`, `acceptance-criteria.md`, `manifest.yml scenarios[].intent`
+**Appears in:** `acceptance-criteria.md`, `manifest.yml scenarios[].intent`, `intent.md (archive)`
 
 **Related:** `TRC`, `intent`
 
@@ -214,7 +214,7 @@ A flag, not a state - an issue is blocked while in-progress or in-review. Carrie
 
 ### board-column
 
-A user-defined view column (Design, UAT, Staging...). Maps to exactly one workflow state so gates keep firing regardless of board shape.
+A user-defined view column (Design, UAT, Staging...) on the HTML board that the `board` verb wrote until 9.0.0 removed it (ADR-093). Each column mapped to exactly one workflow state. Compass ships no board now; `compass flow` lists every issue with its state.
 
 **GitHub:** Project column / status field
 
@@ -324,7 +324,7 @@ The chosen shape for an issue: the weight of each stage and the gates that apply
 
 ### design
 
-The DESIGNER's stage and its command, /compass:design. It produces the UI contract (ui-contract.md) - scenarios written Given/When/Then that flow into the acceptance criteria, not mockup annotations. The word reads as UI work to most people, which is why the designer has it. `design` names the UI contract and never the engineering design. Before 9.0.0 the engineering design was the plan stage (/compass:plan).
+The designer's entry point, /compass:design, which wrote the UI contract (ui-contract.md) until 9.0.0 removed the role entry points and the role templates (ADR-093): scenarios written Given/When/Then that flowed into the acceptance criteria. An older issue can still hold a UI contract. `design` names UI work and never the engineering design. Before 9.0.0 the engineering design was the plan stage (/compass:plan).
 
 **Related:** `plan`, `technical-design`, `delivery-approach`
 
@@ -338,7 +338,7 @@ The high-level design (HLD): approach, system context, components, interfaces, d
 
 ### dora-metrics
 
-Lead time, deployment frequency, change failure rate, MTTR - what the process-impact telemetry measures to ask whether the process itself pays off.
+Lead time, deployment frequency, change failure rate, MTTR - the industry measures of whether a delivery process pays off. Compass measures none of them; sdd-bench is its only measurement (ADR-093).
 
 **Related:** `retrospective-signal`
 
@@ -392,7 +392,7 @@ The 80/20 cut that intent.md recorded until 9.0.0 removed that document (ADR-091
 
 ### follow-up
 
-Work owed after an expedited ship (the hotfix's promoted scenario, the optional postmortem). Tracked with a state pair: outstanding (not yet discharged) and resolved. An issue with an outstanding follow-up does not fully close; `compass follow-up resolve` discharges one.
+Work owed after an expedited ship (the hotfix's promoted scenario, the optional postmortem), or a Definition of Done item carried to later work. On a path issue a follow-up links to the GitHub issue that tracks the work (`compass follow-up add --github`), and a linked follow-up meets the item it defers, resolved or not. On an issue assessed before 9.0.0 a follow-up is outstanding or resolved, the issue does not fully close while one is outstanding, and `compass follow-up resolve` discharges it.
 
 **Related:** `hotfix`, `backlog`
 
@@ -442,9 +442,7 @@ The unit-level red, green, refactor loop of strategy `S2`, run inside the outer 
 
 ### intent
 
-The outcome a change is meant to produce: the "why" end of the traceability chain, carrying the INT- ids that scenarios trace back to. The originator states it - problem, users, outcome, constraints - AUTHORED at the intake stage or INGESTED from a brief that already exists, so it does not presume authorship. The define stage writes it into the Summary and Intent links of acceptance-criteria.md. Until 9.0.0 it was also a document, intent.md, which 9.0.0 removed (ADR-091); older issues still hold one, and Compass does not read it. An intent is a goal, not a requirement: the functional requirement is the scenario. It goes further than the request: "Add a CSV export" is a request; "let finance self-serve" is the intent, and it may need filters and permissions the request never mentioned.
-
-**Also:** The product owner's entry point, `/compass:intent`, captures it.
+The outcome a change is meant to produce: the "why" end of the traceability chain, carrying the INT- ids that scenarios trace back to. The originator states it - problem, users, outcome, constraints - written fresh or ingested from a brief that already exists, so it does not presume authorship, and assess records it with `--intent`. The specify stage writes it into the Summary and Intent links of acceptance-criteria.md. Until 9.0.0 it was also a document, intent.md, which 9.0.0 removed (ADR-091); older issues still hold one, and Compass does not read it. An intent is a goal, not a requirement: the functional requirement is the scenario. It goes further than the request: "Add a CSV export" is a request; "let finance self-serve" is the intent, and it may need filters and permissions the request never mentioned.
 
 **Related:** `first-slice`, `scenario`, `traceability`
 
@@ -636,25 +634,25 @@ A check that must pass before an issue moves state. Which gates apply comes from
 
 ### readiness-floor
 
-The readiness signals whose `required_for_autonomous` is true. A project with every one of them present can run `autonomy: autonomous`.
+The readiness signals whose `required_for_autonomous` is true. Until 9.0.0 removed the floor (ADR-093), assess refused a project on `autonomy: autonomous` unless every one of them was present. Nothing refuses an assess for readiness now.
 
 **Related:** `readiness-signal`, `readiness-summary`
 
 ### readiness-record
 
-The per-checkout file in which a project's readiness measurement is kept: each readiness signal's result and implementation version, when and at which commit it was measured, and the digest of the settings file. Compass never commits it.
+The per-checkout file, `.compass/readiness.yml`, that the `readiness` verb wrote until 9.0.0 removed the verb (ADR-093): each readiness signal's result and implementation version, when and at which commit it was measured, and the digest of the settings file. A checkout can still hold one; nothing reads it.
 
 **Related:** `readiness-signal`, `readiness-summary`
 
 ### readiness-signal
 
-One binary fact about a repository, such as "a lint command is declared and exits 0". An entry of the `readiness` catalog, it is either `present` or `absent` and carries a one-line reason.
+One binary fact about a repository, such as "a lint command is declared and exits 0", that the `readiness` verb measured until 9.0.0 removed the verb (ADR-093). An entry of the `readiness` catalog, it was either `present` or `absent` with a one-line reason. The shipped default declares an empty catalog; a frozen preset and a stored generation still declare their signals.
 
 **Related:** `readiness-floor`, `readiness-record`, `catalog`
 
 ### readiness-summary
 
-The `readiness:` key of an issue's manifest, written by every `approach evaluate --write`: the score, whether the floor is met and which signals are absent, or `not-measured` with the reason. It sits outside the generation's digests.
+The `readiness:` key of an issue's manifest, which `approach evaluate --write` wrote until 9.0.0 removed it (ADR-093): the score, whether the floor was met and which signals were absent, or `not-measured` with the reason. An older manifest still holds one, and the key stays valid.
 
 **Related:** `readiness-record`, `readiness-floor`
 
@@ -684,7 +682,7 @@ The review pass that hardens requirements before plan or implementation: ambigui
 
 ### retrospective-signal
 
-Compass's cross-issue self-check: is assess consistently over- or under-sizing the process? Advisory, surfaced in retro language.
+Compass's cross-issue self-check, whether assess was consistently over- or under-sizing the process, which the `retro` verb reported until 9.0.0 removed it (ADR-093). sdd-bench is the measurement now. The `reassessments:` log still records each re-assessment and its reason.
 
 **Related:** `dora-metrics`, `assess`
 
@@ -812,13 +810,13 @@ An issue type: work that changes nothing a user sees, such as upkeep, a refactor
 
 ### technical-design
 
-The engineering plan for one issue: the approach, the design decisions as ADR-style notes, the governance check, and the independent work units. The planning stage (/compass:plan) wrote it as technical-design.md until 9.0.0 removed the document (ADR-091) and the stage (ADR-092). Older issues still hold one. The designer's work is the UI contract (ui-contract.md), from /compass:design. In this repository TDD is red-green-refactor and nothing else, so this artifact is never abbreviated to TDD.
+The engineering plan for one issue: the approach, the design decisions as ADR-style notes, the governance check, and the independent work units. The planning stage (/compass:plan) wrote it as technical-design.md until 9.0.0 removed the document (ADR-091) and the stage (ADR-092). Older issues still hold one. In this repository TDD is red-green-refactor and nothing else, so this artifact is never abbreviated to TDD.
 
 **Related:** `technical-design`, `delivery-approach`
 
 ### temporary-worktree
 
-The detached Git worktree of HEAD that a readiness measurement creates in the system temp folder to run the project's commands. It is removed when the measurement ends.
+The detached Git worktree of HEAD that a readiness measurement created in the system temp folder to run the project's commands, and removed when the measurement ended. 9.0.0 removed the measurement (ADR-093), so Compass creates none now.
 
 **Related:** `readiness-record`
 
@@ -860,6 +858,6 @@ The word limit a document kind carried in the artifacts catalog, per depth, such
 
 ### workflow-state
 
-The fixed semantic lifecycle Compass owns: backlog, ready, in-progress, in-review, done. Gates attach to the transitions; transitions are earned (evidence), not dragged. A person sets only backlog (a hold) and done (closed, with a close reason); Compass derives the other states from the issue's records. Board columns are a user-defined projection - every custom column maps to exactly one state.
+The fixed semantic lifecycle Compass owns: backlog, ready, in-progress, in-review, done. Gates attach to the transitions; transitions are earned (evidence), not dragged. A person sets only backlog (a hold) and done (closed, with a close reason); Compass derives the other states from the issue's records, and `compass flow` lists every issue with its state.
 
 **Related:** `quality-gate`, `board-column`, `blocked`, `close-reason`

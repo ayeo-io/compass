@@ -81,12 +81,13 @@ manifest, and a team can keep its own notes.
      checkable acceptance criterion.
    - **Traceability:** code → criterion → intent, and claim → criterion.
    - **Evidence, not assertion:** guardrails clear with command output, not
-     claims. The Definition of Done is itself a typed gate - every unchecked
-     item must reference typed inline evidence as `(evidence: EV-<id>)` or a
-     filed follow-up as `(follow-up: FU-<id>)`, or be ticked `[x]` if a human
-     has actually done the work. Bare unchecked items fail `compass check`'s
-     `dod-evidence-typed` rule. An adapter that emits Definition of Done
-     output must emit it in this form.
+     claims. The Definition of Done is itself a typed gate - each item is met
+     by a record in the manifest: typed evidence (`--meets <item>`), a
+     person's approval, or a follow-up that defers the item and links to the
+     GitHub issue that tracks the work (`compass follow-up add FU-<id>
+     --defers <item> --github owner/repo#N`). An item with no record fails
+     `compass check`'s `dod-evidence-typed` rule, and a tick written on a
+     page counts for nothing.
    - **Human sign-off on the irreversible:** data, money, auth, privacy get a
      human checkpoint.
 
@@ -120,11 +121,12 @@ manifest, and a team can keep its own notes.
    the evidence records already record provenance in a form the framework can read.
    Like every strategy this is assessed at review, never gating.
 
-**4. Support five roles, each with its own entry point.** Engineer, product
-owner/manager, product marketer, designer, QA. Each has an entry point and
-artifacts that plug into the same pipeline. The acceptance-criteria file is
-the one file all five roles read - do not reduce it to an engineering-only
-artifact.
+**4. Keep the acceptance criteria readable by everyone.** A product owner, a
+designer, a marketer or QA reads `acceptance-criteria.md` as well as the
+engineer, so do not reduce it to an engineering-only artifact. A brief from
+any of them opens the Summary and Intent of the acceptance criteria. 9.0.0
+has no role entry points (ADR-093); the session itself takes a role's
+perspective when the work needs it.
 
 **5. Support solo delivery.** On a larger change, the session builds the
 work units one after another in one session. Compass 9.0.0 starts no agent and no worktree per
@@ -146,11 +148,10 @@ re-derive it.
 | Assess | A routine that produces the assessment, then *calls the kit* (`compass approach evaluate`) to compose the delivery approach |
 | The kit-layer CLI | A shell-out, not a reimplementation - the adapter runs `compass approach evaluate`, `compass check` and `compass tdd-red/green` for the deterministic parts |
 | CI and the cross-issue view | A shell-out to `compass ci` (honor the exit code) and `compass flow` (cross-issue view; `--digest` writes a dated digest of the backlog) |
-| Role perspectives (product owner, product marketer, architect) | Taken by the session itself; 9.0.0 ships no subagents (ADR-090). The architect perspective reads the project's `architecture/` artifacts and annotates the design via `architecture-notes.md`; it never writes feature code |
+| Role perspectives (product owner, product marketer, architect) | Taken by the session itself; 9.0.0 ships no subagents (ADR-090) and no role entry points (ADR-093). The architect perspective reads the project's `architecture/` artifacts and annotates the design via `architecture-notes.md`; it never writes feature code |
 | Skills | Loadable procedural-knowledge modules |
 | Guardrail enforcement | `compass check` for the mechanical checks; hooks if available for red-before-green, procedural checks otherwise |
-| Role entry points | Distinct session-start modes |
-| Per-issue next-step + follow-up management | The adapter wires `compass next` (surface the next action on the current issue) and `compass follow-up resolve` (mark an owed follow-up as settled) into its issue-resumption and shipping flows |
+| Per-issue next-step + follow-up management | The adapter wires `compass next` (surface the next action on the current issue) and `compass follow-up add --github` (link an owed follow-up to the GitHub issue that tracks it) into its issue-resumption and shipping flows; `compass follow-up resolve` settles a follow-up of an issue assessed before 9.0.0 |
 | Decision-record creation | `compass adr new` (creates a numbered decision record under `architecture/decisions/`) - the adapter exposes this in whatever shape its agents use for recording architectural decisions |
 
 The kit layer (`cli/compass`, `governance/*.yml`, `schemas/`, `manifest.yml`) is

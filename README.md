@@ -171,14 +171,15 @@ the chat history, and a reviewer can open the evidence behind each gate.
 `compass flow` lists every issue by state, with what is blocked and whose
 evidence is stale.
 
-## One path, five roles
+## One path, one specification
 
 ```text
 assess → specify → build → ship
 ```
 
-The stages stay the same while the evidence they judge adapts. A product
-owner's brief opens the acceptance criteria, which every role reads.
+The stages stay the same while the evidence they judge adapts. A brief from a
+product owner, a designer or a marketer opens the acceptance criteria, which
+everyone on the change reads.
 
 ## Built to port
 
@@ -195,7 +196,7 @@ rather than reimplementing the rules ([docs/portability.md](docs/portability.md)
 ## What the repository contains
 
 ```
-commands/     the path and role entry points, under the /compass: namespace
+commands/     the path commands, under the /compass: namespace
 skills/       loadable procedures - adaptive-routing, bdd-specification,
               tdd-discipline, intent-interview and the rest
 hooks/        pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,

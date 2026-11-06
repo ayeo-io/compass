@@ -58,7 +58,7 @@ today. If nothing observable changes, say so plainly and explain what does.}}
 
 | Intent id | Source | Statement |
 |---|---|---|
-| INT-1 | {{the issue description \| ui-contract.md \| a note of your team's own}} | {{one line}} |
+| INT-1 | {{the issue description \| a brief \| a note of your team's own}} | {{one line}} |
 | INT-2 | {{…}} | {{…}} |
 
 ---

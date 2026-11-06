@@ -54,8 +54,8 @@ compass acceptance record  close it with what was observed
 compass adr new            create the next numbered decision record
 compass flow               every issue by state, what is blocked and stale (--json), and the periodic digest (--digest)
 compass next               which stage of the path this issue reached, and the next command
-compass follow-up add      record a follow-up the issue owes
-compass follow-up resolve  settle an owed follow-up
+compass follow-up add      record a follow-up the issue owes, linked to its GitHub issue (--github, required on a path issue)
+compass follow-up resolve  settle an owed follow-up; on an issue assessed before 9.0.0 an unresolved one blocks shipping
 compass ship-commit        commit exactly the files the issue recorded (--release-note: the issue's release line)
 compass release notes      the release lines of the issues completed since a git reference (--since)
 compass gate pass          mark a gate passed, validating the evidence type
@@ -79,7 +79,7 @@ compass lesson propose     hold a lesson for acceptance (how the model adds one)
 compass lesson accept      turn a pending proposal into a lesson
 compass lesson list        each lesson and each pending proposal
 compass lesson remove      delete one lesson
-compass lesson decline     drop a pending proposal; retro will not propose it again
+compass lesson decline     drop a pending proposal; its text stays in the file as a record
 compass record sync        copy the delivery record to its own repository (ADR-031)
 compass record restore     bring the delivery record back into this project
 ```

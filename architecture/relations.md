@@ -8,7 +8,7 @@ date: 2026-05-24
 <!-- the assess stage reads this file and includes it in architecture-loaded.yml as a
      narrative artifact. The architect reads it to determine which
      labels in manifest.yml.assessment map to known component names, so
-     it knows when to fire automatically at the define stage.
+     it knows when to fire automatically at the specify stage.
 
      Format: keep component names consistent with the labels used in
      manifest.yml.assessment.labels so the role can match them.
@@ -35,11 +35,11 @@ components. Relations are ordered by the calling component.
 | `scripts/lib/compass-python.sh`, `scripts/lib/python-check.sh` | `hooks/py/lib_*.py` | python3 call | the setting reader and the version probe the shared shell libraries run | medium |
 | `hooks/pre-tool.sh` | `cli/compass_pkg/comment_only_edit.py` and the edited `.py`, `.yml` or `.yaml` file | python3 call with the tool call on stdin; file read | an Edit that the module proves changes only comments, docstrings or layout is allowed with no failing test and no issue lookup; any doubt, failure or overrun gives the verdict the hook gave before, and a missing `python3` refuses (`docs/safety-contract.md`) | high |
 | `hooks/stop.sh` | `governance/signals.yml` | file read | reads scope-bloat signal patterns at session end | medium |
-| `hooks/stop.sh` | `.compass/work/<issue>/devlog.md` | file read | scans the session's devlog for rework signals before the session closes | medium |
+| `hooks/stop.sh` | `.compass/work/<issue>/devlog.md` | file read | scans the session's devlog for scope-bloat signals before the session closes | medium |
 | `hooks/stop.sh` | `.compass/current-task` | file read | resolves the active issue for devlog location | medium |
 | architect perspective | `architecture/` | file read | reads `system-context.md`, `relations.md`, `ownership.md`, `invariants.yml` (if present), and all `decisions/ADR-*.md` to build its consultation context | medium |
 | architect perspective | `.compass/work/<issue>/acceptance-criteria.md` | file read | reads scenarios the issue must satisfy | medium |
-| architect perspective | `.compass/work/<issue>/technical-design.md` | file read | reads the technical approach to annotate | medium |
+| architect perspective | `.compass/work/<issue>/technical-design.md` | file read | reads the technical approach to annotate, on an issue that holds one (9.0.0 writes none, ADR-091) | medium |
 | architect perspective | `.compass/work/<issue>/architecture-loaded.yml` | file read | reads the assess stage's load record if present | medium |
 | architect perspective | `.compass/work/<issue>/architecture-notes.md` | file write | writes its output (annotations, boundary risks, candidate ADR titles) | medium |
 | `commands/go.md` | `architecture/decisions/ADR-*.md` | via `architecture-loaded.yml` | the specify stage reads ADR summaries (id, title, status) to avoid re-litigating closed decisions | low |

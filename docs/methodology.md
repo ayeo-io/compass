@@ -191,18 +191,21 @@ conversation.
 
 ## 7. One specification, several roles
 
-Product, design, engineering, marketing and QA contribute through distinct
-entry points but share `acceptance-criteria.md`.
+Product, design, engineering, marketing and QA share one
+`acceptance-criteria.md`. From 9.0.0 there are no role entry points
+(ADR-093): a brief from any of them opens the Summary and Intent of the
+acceptance criteria, and the session takes a role's perspective when the work
+needs it.
 
 - Product checks intent fidelity.
-- Design contributes interaction behaviours.
+- Design contributes interaction behaviors.
 - Engineering derives tests and implementation.
 - QA challenges coverage and evidence.
-- Marketing traces claims to tested behaviour.
+- Marketing traces claims to tested behavior.
 
 This prevents parallel specifications from drifting.
 
-The architect perspective is cross-cutting rather than an entry-point role. It checks
+The architect perspective is cross-cutting. It checks
 the issue against project architecture and annotates the design without
 creating a second specification.
 
@@ -216,8 +219,10 @@ note cannot satisfy it. A high-risk gate can need a structured human
 approval rather than a checkbox.
 
 The Definition of Done is therefore checkable state, not narrative status.
-It is the exit list of the build stage, and unchecked items must refer to
-typed evidence or an explicit follow-up. From 9.0.0 there is no Definition of
+It is the exit list of the build stage. Each item is met by a record in the
+manifest: typed evidence, a person's approval, or a follow-up that defers the
+item and links to the GitHub issue that tracks the work (`compass follow-up
+add FU-<id> --defers <item> --github owner/repo#N`). From 9.0.0 there is no Definition of
 Ready: the scenarios with their declared tests are the readiness record.
 
 The [safety contract](safety-contract.md) states the exact guarantees and
@@ -232,7 +237,7 @@ goes through its own red and green before the next one starts. No runtime
 needs isolated workspaces, and Compass records no orchestration or subtask
 count for a new issue.
 
-## 10. Reassessment and the retrospective signal
+## 10. Reassessment
 
 An adaptive framework must learn whether it is adapting well.
 

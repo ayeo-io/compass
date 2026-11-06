@@ -1009,11 +1009,6 @@ _register(Rule(
             "cli/compass_pkg/tdd.py", "terraform validate`, a schema parse",
             "a third-party command's real name (Terraform's own CLI verb), "
             "not the English verb the word table means to catch."),
-        Exemption("architecture/ownership.md", "(verify → ship gate)",
-                   "names the Verify stage, not the verb."),
-        Exemption("architecture/system-context.md",
-                   "implement → verify → ship",
-                   "names the Verify stage, not the verb."),
         Exemption("ci/README.md", "verify time - it does not",
                    "names the Verify stage, not the verb."),
         Exemption("examples/README.md", "Verify is a short note",

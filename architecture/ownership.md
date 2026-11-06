@@ -41,14 +41,14 @@ exclusively, and what it must not do.
   contract).
 - The gate set for each delivery approach (as computed by the router and encoded in
   `manifest.yml.gates`).
-- The Definition of Ready (requirements review → plan gate) and Definition of Done
-  (verify → ship gate).
+- The Definition of Ready (before build) and the Definition of Done (before
+  ship).
 
 ### Router (governance/routing-policy.yml + `compass approach evaluate`)
 
 **Must own:**
-- The deterministic computation of the delivery approach, stage weights, and gate set from
-  the four context-dimension assessment.
+- The deterministic computation of the delivery approach, the evidence required and
+  the gate set from the assessment.
 - The routing rule logic (floors, caps, immovable gates).
 - The `routing-policy.yml` schema and its validation.
 
@@ -87,7 +87,7 @@ spec, which is exactly what the one-spec rule exists to prevent.
 ### No mechanism may write into manifest.yml.assessment
 
 `manifest.yml.assessment` is the sole field the human fills with judgement (risk,
-familiarity, size, goal, role, labels). Every mechanism-produced
+familiarity, size, goal, urgency, labels). Every mechanism-produced
 load record (`architecture-loaded.yml`, `architecture-notes.md`, `evidence/`,
 etc.) lives in its own named file outside `manifest.yml.assessment`. Violating this
 would cross `Inv-1`. The tempting mistake is folding loaded architecture
@@ -116,8 +116,9 @@ mechanism - the CLI must read the file).
 ## Cross-component dependency rules
 
 A change that affects any of the following cross-component pairs must trigger
-an architect consultation (via `/compass:consult architect`) or
-explicitly note why the consultation is not needed:
+an architect review (the session takes the architect perspective, reads
+`architecture/` and writes `architecture-notes.md`) or explicitly note why
+the review is not needed:
 
 | Caller component | Callee component | Risk |
 |---|---|---|

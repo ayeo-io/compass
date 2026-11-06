@@ -2,10 +2,9 @@
 
 This walks you from an empty machine to a finished first issue. It is
 deliberately concrete: real commands, in order, with the artifact each one
-leaves on disk and what happens when you reach each gate. There are three
-walkthroughs - an engineer, a product owner, a marketer - because Compass has
-five roles. Each entry point writes that role's document, and the documents
-on disk add the gates that check them.
+leaves on disk and what happens when you reach each gate. It follows one
+engineer through one issue, then shows how a brief from a product owner and a
+public claim from a marketer enter the same acceptance criteria.
 
 This document uses Compass's vocabulary: the four-stage path, the three
 scored dimensions, the default guardrails, the assess stage. Each term is
@@ -236,7 +235,7 @@ concern, or the reason it does not apply. Ambiguities ("the limit" -
 per-client or global? what about unauthenticated traffic?) are settled in the
 criteria, or recorded as a decision with `compass issue decision add`.
 
-This file is the one every role would read if they were involved - but on a
+This file is the one a product owner, a designer or QA would read if they were involved - but on a
 solo engineering issue, you are reading it for tests. The scenarios become
 your acceptance suite and the first tests of your TDD cycle. A design
 decision worth keeping, such as token bucket against sliding window, goes in
@@ -563,7 +562,7 @@ the artifacts were written precisely so the process never has to be
 re-derived. Once you are running more than one issue at a time, `/compass:flow`
 is the view across all of them - triage, blockers, and a periodic digest.
 
-One more CLI command works across the whole board. `compass ci` runs the full
+One more CLI command works across every issue. `compass ci` runs the full
 mechanical gate suite - `policy lint`, then `issue lint` and `check` for every
 issue - and exits non-zero if anything fails, under the default
 `adoption: enforced`; to add Compass to CI, you only

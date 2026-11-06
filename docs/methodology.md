@@ -200,9 +200,7 @@ entry points but share `acceptance-criteria.md`.
 - QA challenges coverage and evidence.
 - Marketing traces claims to tested behaviour.
 
-This prevents parallel specifications from drifting. See the
-[roles guide](roles-guide.md) for the role commands, artifacts and a worked
-example.
+This prevents parallel specifications from drifting.
 
 The architect perspective is cross-cutting rather than an entry-point role. It checks
 the issue against project architecture and annotates the design without

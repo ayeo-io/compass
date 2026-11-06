@@ -27,7 +27,6 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 PRESET = ROOT / "governance" / "presets" / "default" / "artifacts.yml"
 TEMPLATES = ROOT / "templates"
-ROLES_GUIDE = ROOT / "docs" / "roles-guide.md"
 ROLE_HEADING = "How each role reads this file"
 #: The five lines of the role block, as the spec template held them before this change.
 ROLE_LINES = (
@@ -54,14 +53,13 @@ def _cli(cwd, *argv):
     return run.returncode, run.stdout, run.stderr
 
 
-def test_dss_3_the_role_block_lives_only_in_the_roles_guide():
+def test_dss_3_no_template_holds_the_role_block():
+    """The role block moved to the roles guide, which 9.0.0 deleted with the
+    role entry points (ADR-093). No template and no catalogue holds it."""
     holders = [p.name for p in sorted(TEMPLATES.glob("*.md"))
                if ROLE_HEADING in p.read_text(encoding="utf-8")]
     assert holders == []
     assert ROLE_HEADING not in PRESET.read_text(encoding="utf-8")
-    guide = ROLES_GUIDE.read_text(encoding="utf-8")
-    for line in ROLE_LINES:
-        assert guide.count(line) == 1, line
     for path in sorted(TEMPLATES.glob("*.md")):
         text = path.read_text(encoding="utf-8")
         for line in ROLE_LINES:

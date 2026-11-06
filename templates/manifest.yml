@@ -101,7 +101,7 @@ changed_files: []
 #  - path: "src/api/ledger_export.py"
 #    scenarios: [TRC-001]
 
-# --- claims (filled by positioning - only if positioning.md is present) ---------
+# --- claims (optional - only when the change makes a public claim) ------------
 # Every public/marketing claim, each traced to a backing scenario id.
 # This is the claim -> criterion half of the traceability guardrail.
 claims: []

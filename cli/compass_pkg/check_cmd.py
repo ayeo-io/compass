@@ -116,7 +116,7 @@ CHECK_GUIDANCE = {
     },
     "claim-traces-to-scenario": {
         "why": "Public claims must trace to a scenario that backs them (traceability) - an unbacked claim is a promise the framework cannot prove.",
-        "do": 'Point each claim in launch-readiness.md at a passing scenario id.',
+        "do": "Point each claim in manifest.yml's `claims:` at a passing scenario id.",
         "fix": "Add a backing `scenario:` field to the claim in manifest.yml, or remove the claim from `claims:`.",
     },
     "gate-evidence-present": {

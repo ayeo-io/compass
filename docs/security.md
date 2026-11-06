@@ -64,8 +64,6 @@ relying on this document.
 Compass works on your machine and in your repository. It reaches the network
 only in the cases below, and each one starts only when you ask for it.
 
-- **Fetches** a brief you name over HTTPS, with `compass intent ingest --from
-  <url>`. It refuses any scheme but `https`, on redirects too.
 - **Fetches** a git parent when the project's `extends:` names one
   (`github:<owner>/<repo>@<ref>#<sha>`). It runs `git` for the one pinned
   commit, reads its `compass.yml` as data, and caches it under

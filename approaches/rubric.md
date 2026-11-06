@@ -86,8 +86,8 @@ brings no gate: Compass needs and checks only `acceptance-criteria.md`
 
 Intent is *the actual outcome wanted*, not just the literal request. "Add
 a CSV export" from a product owner who says "let finance self-serve" may need
-more than a button. Assess reads the intent the product owner gave, through
-`/compass:intent` or in the issue description.
+more than a button. Assess reads the intent the product owner gave, in the
+issue description or a brief.
 
 ---
 

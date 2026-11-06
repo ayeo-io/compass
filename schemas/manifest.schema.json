@@ -863,7 +863,7 @@
     },
     "claims": {
       "type": "array",
-      "description": "Public/marketing claims, each traced to a backing scenario; filled by `/compass:position`.",
+      "description": "Public/marketing claims, each traced to a backing scenario. Read by the `claim-traces-to-scenario` check.",
       "items": {
         "type": "object",
         "required": [
@@ -1134,7 +1134,7 @@
     },
     "intent_source": {
       "type": "object",
-      "description": "Optional. The record of a brief ingested with `compass intent ingest`, which writes `origin`, `scheme`, `sha256`, `ingested_at`, `snapshot` and an empty `interview`. The intent-interview skill then adds `sections` and fills `interview`. Read by the intent-fidelity check to trace each section of `intent.md` to the source or to an answer. Absent when `intent.md` was written in the issue rather than ingested.",
+      "description": "Optional. The record of a brief ingested with `compass intent ingest`, which 9.0.0 removed (ADR-093). An older manifest holds `origin`, `scheme`, `sha256`, `ingested_at`, `snapshot`, `interview` and `sections`. It stays valid so the older manifest still reads; nothing writes or reads it now.",
       "properties": {
         "origin": {
           "type": "string",

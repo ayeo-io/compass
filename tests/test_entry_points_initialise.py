@@ -1,8 +1,8 @@
-"""The five entry-point commands initialise the project, and nothing else does.
+"""The entry-point commands initialise the project, and nothing else does.
 
 A user's first Compass command must work in a repository that has never
-used Compass. Each of the five entry points must initialise the project
-before it writes into `.compass/work/<slug>/`.
+used Compass. Each entry point must initialise the project before it writes
+into `.compass/work/<slug>/`.
 
 These are checks on the COMMAND PROSE, because the commands are instructions to
 an agent rather than code with a call site to assert on. What they check is
@@ -20,11 +20,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMMANDS = REPO_ROOT / "commands"
 
-# The five ways a user can arrive first. Every other command needs an issue
-# a previous command created.
-#
-# `design` is the designer entry point that produces the UI contract.
-ENTRY_POINTS = ["assess", "intent", "design", "position", "consult"]
+# The ways a user can arrive first. Every other command needs an issue a
+# previous command created. 9.0.0 removed the four role entry points,
+# `intent`, `design`, `position` and `consult` (ADR-093); `go` and
+# `quick-fix` start an issue of their own.
+ENTRY_POINTS = ["assess", "go", "quick-fix"]
 
 # Commands that report on existing state. Creating a directory because
 # someone ran a read is the silent-creation failure by another route.
@@ -86,7 +86,7 @@ def test_ioi_d2_reading_commands_do_not_initialise():
 
 def test_ioi_c2_entry_points_do_not_run_the_governance_conversation():
     """Being initialised for you is small and reversible. Having governance/
-    copied into your repository because you ran /compass:intent is not.
+    copied into your repository because you ran /compass:assess is not.
 
     Checked as an INSTRUCTION, not a mention: an entry point saying "adopting
     your own governance is what /compass:init offers separately" is telling the

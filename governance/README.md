@@ -67,7 +67,7 @@ When two pieces of governance disagree:
 2. **Guardrail vs guardrail** should not happen - if it does, the guardrail
    set has a bug; fix the set, do not improvise around it.
 3. **Strategy vs strategy** is resolved by context: the delivery approach
-   decides, or a human picks (often via `/compass:consult`).
+   decides, or a human picks.
    A strategy losing a context call is normal - that is what "soft" means.
 
 There is no single supreme document; there is a small hard set that wins, and

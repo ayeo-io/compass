@@ -533,7 +533,7 @@ touches.
 
 ### "Add a CSV export" - product marketer, a launch feature
 
-A marketer invokes `/compass:position` for an export feature being
+A marketer works with the team on an export feature being
 launched. The engineering work might match the light row, and the evidence
 is computed from the assessment alone: `positioning.md` adds no gate
 (ADR-091). What the marketer adds is claims ("export your data in one
@@ -574,8 +574,8 @@ The triggers are concrete:
 - **A label surfaces late.** Mid-build you find the change reaches auth
   after all. Re-assess: the `G5` additions fire, the change owes a person's
   sign-off, and that is recorded, not silent.
-- **A consult changes scope.** `/compass:consult` decides to cut or expand
-  scope; if the decision touches the assessment, follow it with a re-assess.
+- **A decision changes scope.** The team decides to cut or expand scope; if
+  the decision touches the assessment, follow it with a re-assess.
 
 An issue assessed before 9.0.0 moves onto the path the same way:
 `compass approach evaluate --write --reason "..."` writes the path keys and

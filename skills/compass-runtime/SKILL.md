@@ -53,11 +53,9 @@ describes it.
 Cross-issue: `/compass:status` (one issue or a flat list), `/compass:flow`
 (the managed cross-issue view - advisory, never gating), and
 `compass board render` (the same view as one page in the browser;
-`docs/board.md`). Entry points for the consulted perspectives:
-`/compass:intent` (product owner), `/compass:position` (marketer),
-`/compass:design` (designer - produces the UI contract), `/compass:consult`
-(multi-role decisions). `/compass:init` is optional, and it is not what
-creates the project: the entry points above run `compass init` for you.
+`docs/board.md`). `/compass:init` is optional, and it is not what creates
+the project: `/compass:go`, `/compass:quick-fix` and `/compass:assess` run
+`compass init` for you.
 
 A command spelling that a release held and 6.0.0 renamed worked through an
 alias in 6.x. The aliases were removed at 7.0.0, so the old spelling now exits 2
@@ -93,9 +91,8 @@ This session runs every stage; Compass starts no stage agent (ADR-090).
   No stage or gate moves. Not for a refactor.
 - **An unexpected test failure while building** - load `systematic-debugging`,
   and after three failed fixes re-assess rather than try a fourth.
-- **Role-facing work** - load `intent-interview` and read its
-  `role-translation.md`, which is how one set of acceptance criteria is read
-  through five role perspectives.
+- **A brief or an idea with no acceptance criteria yet** - load
+  `intent-interview`, which draws the intent out before any scenario.
 - `evidence-gates` carries `traceability.md`, read whenever an artifact is
   written.
 

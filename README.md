@@ -181,12 +181,8 @@ stage. This example is an invented invoicing product:
 assess → specify → build → ship
 ```
 
-The stages stay the same while the evidence they judge adapts. Engineer, product owner,
-designer, product marketer and QA each enter the same issue through their own
-command; a product owner starts before the spec, with `/compass:intent`. A role is a
-perspective a session consults. A document a role writes, such as
-`positioning.md`, adds the gates that check it. See
-the [roles guide](docs/roles-guide.md).
+The stages stay the same while the evidence they judge adapts. A product
+owner's brief opens the acceptance criteria, which every role reads.
 
 ## Built to port
 
@@ -225,8 +221,6 @@ Compass works on your machine and in your repository. It reaches the network
 only in the cases below, and each one starts only when you ask for it. The
 full account is in [docs/security.md](docs/security.md).
 
-- **Fetches** a brief you name over HTTPS, with `compass intent ingest --from
-  <url>`. It refuses any scheme but `https`, on redirects too.
 - **Fetches** a git parent when the project's `extends:` names one. It runs
   `git` for the one pinned commit and reads its `compass.yml` as data.
   Only `compass policy lint`, `compass policy show`, `compass policy diff`,

@@ -1193,7 +1193,6 @@ scan:
     - CLAUDE.md
     - AGENTS.md
     - approaches/
-    - docs/roles-guide.md
     - docs/safety-contract.md
     - docs/security.md
     - docs/methodology.md

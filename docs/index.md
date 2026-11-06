@@ -33,7 +33,6 @@ where it stops.
 ## How it works
 
 - [Methodology](methodology.md) - the adaptive, spec-driven method and why it is built this way.
-- [Roles](roles-guide.md) - how product, design, engineering, marketing and QA each use Compass.
 - [Portability](portability.md) - how Compass maps onto other agent runtimes.
 
 The source, the CLI reference and the issue tracker are on

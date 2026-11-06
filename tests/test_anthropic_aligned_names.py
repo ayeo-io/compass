@@ -96,11 +96,6 @@ def test_no_agent_file_keeps_a_retired_name():
 
 # --- `TRC-C1` / `TRC-C2` - the command, and the absence of its stub -----------
 
-def test_the_renamed_command_exists():
-    """`TRC-C1`."""
-    assert (COMMANDS / "consult.md").is_file()
-
-
 def test_the_retired_command_name_no_longer_resolves():
     """`TRC-C2`: removed at 4.0.0, the boundary ADR-019 scheduled it for.
 
@@ -110,9 +105,10 @@ def test_the_retired_command_name_no_longer_resolves():
     assert not (COMMANDS / "roundtable.md").is_file(), (
         "`/compass:roundtable` still ships. It was a redirect stub through "
         "3.x and was removed at 4.0.0")
-    assert (COMMANDS / "consult.md").is_file(), (
-        "the retired name is gone but `/compass:consult` does not exist, so "
-        "the rename left a reader nowhere to go")
+    # Its replacement, `/compass:consult`, went with the role entry points
+    # in 9.0.0 (ADR-093), so no stub may point at it either.
+    assert not (COMMANDS / "consult.md").is_file(), (
+        "`/compass:consult` still ships; 9.0.0 removed it (ADR-093)")
 
 
 # --- `TRC-C6` - the skills --------------------------------------------------

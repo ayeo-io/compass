@@ -134,9 +134,9 @@ def test_ioi_a1c_an_explicit_project_dir_is_where_it_initialises(tmp_path):
 def test_ioi_c2_init_creates_no_governance_directory(tmp_path):
     """Auto-initialisation creates project state only.
 
-    Five commands call this on the user's behalf. Being initialised for you is
+    Three commands call this on the user's behalf. Being initialised for you is
     small and reversible; having a governance/ directory copied into your
-    repository because you ran /compass:intent is not, and it would arrive
+    repository because you ran /compass:assess is not, and it would arrive
     without the conversation that is the point of adopting it.
     """
     root = (tmp_path / "fresh").resolve()

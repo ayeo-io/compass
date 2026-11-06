@@ -137,9 +137,8 @@ it is exempt from assessment.
 
 6. **Report.** Summarize what was created or migrated, what the team chose to
    leave at the default (a valid state, not owed work), and the next
-   command: `/compass:assess` for an engineer, or a role entry point -
-   `/compass:intent` (product owner/manager), `/compass:position` (product
-   marketer), or `/compass:design` (designer).
+   command: `/compass:go` for a change, or `/compass:assess` to rate one
+   first.
 
 ## The status line, even when step 1 stops
 

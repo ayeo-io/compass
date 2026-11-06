@@ -315,20 +315,6 @@ def build_parser():
     register_preset_parser(sub)
     register_review_rules_parser(sub)
 
-    # The intake-document group. Adding a top-level verb means updating
-    # `EXPECTED_PUBLIC_SUBCOMMANDS` in
-    # `tests/cross_cutting/test_stream_d_invariants.py`.
-    pin = sub.add_parser("intent", help="intake document tools")
-    pins = pin.add_subparsers(dest="subcmd", required=True)
-    ping = pins.add_parser(
-        "ingest",
-        help="read a brief that already exists, by path or https URL, and "
-             "record where it came from")
-    issue_arg(ping)
-    ping.add_argument("--from", dest="source", required=True, metavar="SOURCE",
-                      help="path to the brief, or an https URL holding it")
-    ping.set_defaults(func=cmd_intent_ingest, output_kind="report")
-
     pt = sub.add_parser("issue", help="issue manifest tools")
     pts = pt.add_subparsers(dest="subcmd", required=True)
     ptl = pts.add_parser("lint", help="structurally validate a manifest.yml")

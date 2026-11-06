@@ -151,7 +151,6 @@ GROUPS = [
             "docs/safety-contract.md", "docs/policy-lint.md",
             "docs/readiness.md", "docs/refusal-codes.md", "docs/glossary.md",
             "docs/policy-migrate.md", "docs/routing-deep-dive.md",
-            "docs/roles-guide.md",
         ],
         "kind": "text",
         "live": True,

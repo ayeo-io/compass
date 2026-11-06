@@ -1145,14 +1145,6 @@ _register(Rule(
             "Implement | Verify}}",
             "names the Verify stage in a placeholder list of stage names, "
             "not the verb."),
-        Exemption(
-            "templates/launch-readiness.md",
-            "passed at Verify?",
-            "names the Verify stage, not the verb."),
-        Exemption(
-            "templates/launch-readiness.md",
-            "failed at Verify}}",
-            "names the Verify stage, not the verb."),
         Exemption("governance/guardrails.md",
                    "Checked at Verify and again at ship time",
                    "names the Verify stage, not the verb."),
@@ -1884,10 +1876,6 @@ _register(Rule(
             "the machine-parsed scenario-id marker `compass bdd extract` "
             "reads; see the comment above."),
         Exemption(
-            "templates/ui-contract.md", "<!-- traceability id:",
-            "the machine-parsed scenario-id marker `compass bdd extract` "
-            "reads; see the comment above."),
-        Exemption(
             "examples/bdd-adapters/behave/docs/compass/"
             "2026-08-03-reset-password/acceptance-criteria.md",
             "<!-- traceability id:",
@@ -2174,6 +2162,15 @@ _REMOVED_IN_9_0_0 = frozenset({
     "approaches/hotfix.md", "skills/plan-authoring/SKILL.md",
     "commands/define.md", "commands/refine.md", "commands/plan.md",
     "commands/breakdown.md", "commands/implement.md", "commands/verify.md",
+    # The role entry points, their brief reader, templates, guide and tests (ADR-093).
+    "commands/intent.md", "commands/position.md", "commands/design.md",
+    "commands/consult.md", "cli/compass_pkg/ingest.py", "docs/roles-guide.md",
+    "skills/intent-interview/role-translation.md", "templates/positioning.md",
+    "templates/launch-readiness.md", "templates/ui-contract.md",
+    "templates/product-owner-review.md", "templates/architecture-notes.md",
+    "tests/test_intent_ingest.py", "tests/test_intent_interview.py",
+    "tests/test_manifest_intent_source_schema.py", "tests/test_consult_doc.py",
+    "tests/test_architect_lens.py",
 })
 # A sample decision record under `templates/architecture/decisions/` is a
 # decision record too.
@@ -2361,18 +2358,14 @@ _register(Rule(
             "the comment quotes a fixture path a test builds, not a real "
             "path - see the PBW-A6 exemption above for the same line."),
         Exemption(
-            "commands/consult.md", "architecture/invariants.yml",
+            "commands/go.md", "architecture/invariants.yml",
             "a real, conditional artifact a consuming project supplies - "
             "`cli/compass_pkg/core.py`'s `_INVARIANTS_FILE` reads it \"if "
             "present\", and `tests/test_frame_loads_architecture.py` "
             "exercises both the present and absent case. Compass's own "
             "architecture/ does not ship one, which is correct, not a "
-            "broken reference."),
-        Exemption(
-            "commands/go.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as commands/consult.md; "
-            "it moved here from the define command, which 9.0.0 removed "
-            "(ADR-092)."),
+            "broken reference. It moved here from the define command, which "
+            "9.0.0 removed (ADR-092)."),
         Exemption(
             "cli/compass_pkg/migrate.py", "`commands/plan.md` is a shipped command file",
             "an example of a repository path a manifest's `changed_files:` "
@@ -2385,10 +2378,10 @@ _register(Rule(
             "above, which the test builds into a fixture manifest."),
         Exemption(
             "templates/architecture/ownership.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as commands/consult.md."),
+            "the same conditional artifact reference as commands/go.md."),
         Exemption(
             "templates/architecture/relations.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as commands/consult.md."),
+            "the same conditional artifact reference as commands/go.md."),
         Exemption(
             "templates/manifest.yml", "tests/api/test_ledger_export.py",
             "the template's own worked example of a scenarios: entry, not a "
@@ -2444,12 +2437,13 @@ _register(Rule(
             "at examples/bdd-adapters/pytest-bdd/tests/steps/"
             "test_reset_password_steps.py, which is tracked."),
         Exemption(
-            "tests/test_architect_lens.py", "architecture/invariants.yml",
-            "the same conditional artifact reference as commands/consult.md; "
-            "found while fixing batch 7, not by the audit."),
+            "tests/test_go_command.py", "architecture/invariants.yml",
+            "the same conditional artifact reference as commands/go.md; "
+            "the architect trigger tests moved here from "
+            "test_architect_lens.py when /compass:consult was removed (ADR-093)."),
         Exemption(
             "tests/test_frame_loads_architecture.py", "architecture/invariants.yml",
-            "the same conditional artifact reference as commands/consult.md; "
+            "the same conditional artifact reference as commands/go.md; "
             "found while fixing batch 7, not by the audit."),
         # writing-style-sweep-drops-the-leading-dot-on-a-dotdir-citation was
         # fixed at the source: `_REFERENCE_RE` above now allows a leading dot

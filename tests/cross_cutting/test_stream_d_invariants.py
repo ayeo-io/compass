@@ -87,12 +87,6 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # placeholder scan `plan lint` (ADR-091)
     "ship-commit",                # framework-field-feedback `R5`
     "gate", "scenario", "changed-file", "evidence",  # framework-field-feedback `R6`/`R9`
-    "intent",                     # ingest-an-existing-brief: `compass intent
-                                  # ingest` reads a brief that already exists,
-                                  # by path or https URL, so a team arriving
-                                  # with one does not retype it. New top-level
-                                  # group - `/compass:intent` was a slash
-                                  # command and the CLI had no verb for it.
     "acceptance",                 # honest-acceptance-for-config-and-refactor:
                                   # `compass acceptance start|record`, the
                                   # honest signal for a change with no natural

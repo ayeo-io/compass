@@ -41,9 +41,6 @@ capabilities:
   - capability: Session-end status check
     obligation: 4
     claude-code: {status: full, path: hooks/stop.sh}
-  - capability: Role entry points
-    obligation: 5
-    claude-code: {status: full, path: commands/intent.md}
   - capability: Distinct agent contexts
     obligation: 7
     claude-code: {status: none, reason: "Removed in 9.0.0: each issue runs in one session, with no stage agents (ADR-090)."}

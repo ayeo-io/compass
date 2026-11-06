@@ -176,8 +176,7 @@ def test_the_verb_check_fails_on_a_verb_the_cli_lacks():
 PLUGIN_ROOT = "${CLAUDE_PLUGIN_ROOT}/"
 
 S1_FILES = (
-    "commands/consult.md", "commands/design.md", "commands/intent.md",
-    "commands/position.md", "commands/go.md", "commands/ship.md",
+    "commands/go.md", "commands/ship.md",
     "commands/flow.md",
     "skills/governance-check/SKILL.md", "skills/adaptive-routing/SKILL.md",
     "skills/adaptive-routing/composition.md",
@@ -327,7 +326,7 @@ def s9_findings(text, known_types):
 
 
 S9_FILES = (
-    "commands/consult.md", "commands/ship.md", "approaches/assess-procedure.md",
+    "commands/ship.md", "approaches/assess-procedure.md",
 )
 
 
@@ -358,33 +357,6 @@ def test_trc_s9_plugin_instructions_use_real_types_verbs_and_fields():
     assert "until 7.0.0" not in runtime
     assert "unknown command rather than a\npointer" not in runtime
     assert "docs/upgrade-7-0-0.md" in runtime
-
-
-def architect_registration_runs(text, tmp_path):
-    """Run the `compass evidence add` command that commands/consult.md documents
-    in a scratch issue whose notes sit where step 4 writes them; return the exit
-    code."""
-    import shlex
-    block = re.search(r"```\n\s*(compass evidence add .*?)```", text, re.S).group(1)
-    argv = shlex.split(block.replace("\\\n", " "))
-    assert argv[:3] == ["compass", "evidence", "add"], argv
-    slug = _scratch_issue(tmp_path, "architect-issue")
-    notes = tmp_path / ".compass" / "work" / slug / "architecture-notes.md"
-    notes.write_text("notes\n", encoding="utf-8")
-    return _cli(tmp_path, *argv[1:], "--issue", slug).returncode
-
-
-def test_trc_s9_the_architect_registration_command_runs(tmp_path):
-    # The architect agent's file held the command until 9.0.0 (ADR-090).
-    assert architect_registration_runs(_read("commands/consult.md"), tmp_path) == 0
-
-
-def test_trc_s9_the_architect_run_reports_a_path_the_cli_cannot_resolve(tmp_path):
-    wrong = _read("commands/consult.md").replace(
-        "--path architecture-notes.md",
-        "--path docs/compass/<created>-<slug>/architecture-notes.md")
-    assert wrong != _read("commands/consult.md")
-    assert architect_registration_runs(wrong, tmp_path) != 0
 
 
 def test_trc_s9_the_scan_reports_the_old_text():

@@ -40,7 +40,6 @@ exclude_docs: |
   !/safety-contract.md
   !/refusal-codes.md
   !/methodology.md
-  !/roles-guide.md
   !/security.md
   !/portability.md
   !/adapter-conformance.md
@@ -75,7 +74,6 @@ nav:
       - Security: security.md
   - How it works:
       - Methodology: methodology.md
-      - Roles: roles-guide.md
       - Artifact catalog: artifact-catalog.md
       - Portability: portability.md
       - Adapter behaviour checks: adapter-conformance.md

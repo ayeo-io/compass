@@ -42,7 +42,7 @@ Four sections are named in the catalogue and read by name, so a checker finds th
 | Verification plan | `technical-design` | the `coverage` block, which adds a Kind column when the heading is present |
 | Risks and dependencies | `technical-design` | the `dependencies` block under its risk table |
 
-The role guide (`How each role reads the spec`) is in `docs/roles-guide.md`; no template and no section list holds it. Both checks are blocking, belong to no gate and decline to judge an archived issue: see `governance/guardrails.md`.
+Both checks are blocking, belong to no gate and decline to judge an archived issue: see `governance/guardrails.md`.
 
 `tests/test_artifact_catalogue_fields.py` compares each template's unmarked headings with `sections.thorough`, and checks that `sections.lightweight` is an ordered subset of it. A `{{...}}` token in a template heading and a `<...>` token in the catalogue count as the same placeholder.
 

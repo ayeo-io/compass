@@ -218,8 +218,6 @@ means.
 
 - Read the [methodology](methodology.md) to understand the path and how
   assess selects the evidence.
-- Read the [roles guide](roles-guide.md) if product, design, marketing or QA
-  will contribute.
 - Read the [safety contract](safety-contract.md) before relying on Compass
   gates.
 - Run the [install smoke test](install-smoke-test.md) if commands or hooks do

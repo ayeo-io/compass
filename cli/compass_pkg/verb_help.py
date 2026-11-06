@@ -67,8 +67,6 @@ VERB_DESCRIPTIONS = {
         "Mark an owed follow-up settled in an issue's manifest. An unresolved follow-up blocks shipping, which is what makes owing one a commitment rather than a note.",
     'gate pass':
         'Mark a gate passed, validating the evidence type at write time against what guardrails.yml says that gate accepts. A mechanical gate cannot be cleared with a written note. With --meets <item> the evidence also meets an item of the Definition of Done or Ready.',
-    'intent ingest':
-        'Read a brief that already exists - a local path or an https URL - write a snapshot of it and record where it came from. Fetches over https only: a document altered in transit would shape the acceptance criteria and everything after them. It does NOT write intent.md; reshaping the document is judgment, and happens in the session with questions asked where the source is thin.',
     'isolation record':
         "Run the acceptance suite in parallel once, then each scenario's declared tests twice with {tests} in --repeat replaced by their ids, and write the isolation-proof record of the exit codes, the candidate and the client. Each command is split into words and run with no shell. It exits 0 when the record is written, even when a run failed, because isolation-proven judges the record; it exits 2 when --repeat holds no {tests}, the issue declares no test, or the candidate or client is missing or unknown.",
     'layering record':

@@ -56,6 +56,11 @@ MERGES = [
     ("role-translation", "intent-interview"),
 ]
 
+#: The merges whose content still lives in the host. 9.0.0 deleted
+#: `role-translation.md` with the role entry points (ADR-093), so that merge
+#: has no content left to find.
+MERGED_CONTENT = [m for m in MERGES if m[0] != "role-translation"]
+
 
 @pytest.mark.parametrize("absorbed,host", MERGES)
 def test_trc_f3_the_absorbed_skill_is_gone(absorbed, host):
@@ -65,7 +70,7 @@ def test_trc_f3_the_absorbed_skill_is_gone(absorbed, host):
         f"dropped and its description is still resident on every turn")
 
 
-@pytest.mark.parametrize("absorbed,host", MERGES)
+@pytest.mark.parametrize("absorbed,host", MERGED_CONTENT)
 def test_trc_f3_nothing_it_taught_was_deleted(absorbed, host):
     """Merging, not deleting. The content has to be somewhere in the host.
 

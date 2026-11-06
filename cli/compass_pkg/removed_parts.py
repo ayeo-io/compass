@@ -1,4 +1,4 @@
-# compass_pkg.removed_parts - the verbs, flags and settings 9.0.0 removed (ADR-090 to ADR-092)
+# compass_pkg.removed_parts - the verbs, flags and settings 9.0.0 removed (ADR-090 to ADR-093)
 """What 9.0.0 removed, named the same way by every reader.
 
 9.0.0 runs an issue in one session (ADR-090). The verbs and flags that
@@ -52,6 +52,7 @@ REASONS = {
     "ADR-090": "Compass runs each issue in one session",
     "ADR-091": "Compass needs only the acceptance criteria",
     "ADR-092": "Compass runs every delivery issue on one four-stage path",
+    "ADR-093": "Compass keeps only what a reviewer of one change needs",
 }
 
 #: Each removed command line, as tokens, what replaces it, and the decision
@@ -94,6 +95,8 @@ COMMANDS = (
      "no technical design is written, so there is no plan to scan", "ADR-091"),
     (("_derive-system-spec",), "compass _derive-system-spec",
      "no living spec is derived; the issue records hold each landed scenario", "ADR-091"),
+    (("intent", "ingest"), "compass intent ingest",
+     "write the Summary and Intent of acceptance-criteria.md from the brief", "ADR-093"),
 )
 
 #: The ten agent names 9.0.0 removed with the `agents/` folder. The shipped

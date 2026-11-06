@@ -178,3 +178,32 @@ def test_gc_1_go_and_assess_agree_that_go_does_not_wait_to_confirm():
         "go must say the one place it stops"
     step7 = assess[assess.index("7. **Confirm.**"):assess.index("## Voice")]
     assert "/compass:go" in step7, "assess step 7 must say what go does"
+
+
+def _flat(path: Path) -> str:
+    """File text with each run of whitespace folded to one space, so a
+    phrase wrapped across two lines still matches."""
+    return " ".join(path.read_text(encoding="utf-8").split())
+
+
+def test_go_command_names_the_architect_trigger_conditions():
+    """The specify stage of commands/go.md names the three conditions that
+    call for the architect's perspective: the `public-api` label, a service in
+    architecture/relations.md, a `lens_trigger_tag` in
+    architecture/invariants.yml (`TRC-001`). Moved here from
+    `test_architect_lens.py` when `/compass:consult` was removed (ADR-093)."""
+    go = _flat(ROOT / "commands" / "go.md")
+    for term in ("public-api", "architecture/relations.md", "lens_trigger_tag"):
+        assert term in go, f"commands/go.md does not name the trigger: {term}"
+
+
+def test_go_command_takes_the_architect_perspective_before_the_scenarios():
+    """commands/go.md takes the architect's perspective first, and writes
+    architecture-notes.md, before the stage writes scenarios (`TRC-001`)."""
+    go = _flat(ROOT / "commands" / "go.md").lower()
+    first = go.find("take the architect's perspective first")
+    notes = go.find("write `architecture-notes.md`")
+    scenarios = go.find("before you write the scenarios")
+    assert first != -1, "commands/go.md does not take the architect's perspective first"
+    assert notes > first, "commands/go.md does not write architecture-notes.md after it"
+    assert scenarios > notes, "commands/go.md does not write the notes before the scenarios"

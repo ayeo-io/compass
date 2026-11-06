@@ -29,8 +29,8 @@ def test_adapter_entries_compose_the_same_policy(tmp_path):
     # `delivery`; an exploration is still a spike (ADR-092).
     # The last column was a role before 7.0.0 and a document reading after it.
     # The shipped default declares no artifact rule since 9.0.0 (ADR-091
-    # decision 3), so the reading adds no claims gate. #354, which removes the
-    # role entry points, decides how claims are reviewed.
+    # decision 3), so the reading adds no claims gate. ADR-093 keeps `claims:`
+    # and the `claim-traces-to-scenario` check; a project adds the gate itself.
     for index, (risk, size, goal, documents, expected) in enumerate(cases):
         adapter = Adapter("claude-code", tmp_path / str(index))
         result = adapter.evaluate(risk=risk, familiarity="brownfield-mapped",

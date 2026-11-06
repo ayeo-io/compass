@@ -31,8 +31,8 @@ and that is a no-pass at ship.
 
 - Every public claim - launch copy, docs, marketing, a sentence in the
   changelog - traces down to a scenario that, when it passes, makes the claim
-  true. This is the marketer's `launch-readiness.md` ledger, and
-  `verify.claims` blocks shipping on it while `positioning.md` is present.
+  true. The manifest's `claims:` is the ledger, and the
+  `claim-traces-to-scenario` check reads it.
 
 ## How to maintain it continuously
 
@@ -46,8 +46,8 @@ at the end is a chain that was guessed.
   is written* - a comment, a test name, a commit message convention, whatever
   the project uses. The link is made at the moment the code is made, when the
   reason is still in your head. Recovering it later is archaeology.
-- **Alongside specify and ship** - the Marketing Perspective adds a `claim → scenario` row
-  to `launch-readiness.md` as each claim is drafted. A claim with no row is not
+- **Alongside specify and ship** - the Marketing Perspective adds a `claim → scenario` entry
+  to the manifest's `claims:` as each claim is drafted. A claim with no entry is not
   yet a shippable claim.
 - **At ship** - the Reviewer runs `traceability` as a review dimension: walk
   the chains, find the breaks. It is on every delivery issue because it is

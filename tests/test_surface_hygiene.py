@@ -202,9 +202,10 @@ def test_trc_f7_skill_count_unchanged_on_net():
         # The four-layer acceptance tests, loaded at the specify, build and
         # ship stage for a change a real client can observe (issue atdd-skill).
         "atdd",
-        # Traceability lives in skills/evidence-gates/traceability.md and
-        # role-translation lives in skills/intent-interview/role-translation.md,
-        # each read beside the skill it merged into. The light path has no
+        # Traceability lives in skills/evidence-gates/traceability.md, read
+        # beside the skill it merged into. role-translation merged into
+        # intent-interview and went with the role entry points (ADR-093).
+        # The light path has no
         # skill: commands/quick-fix.md carries its rules, because a skill
         # named like a command is never loaded.
     }

@@ -71,8 +71,6 @@ ISSUE_FROM = {**{name: "task" for name in RECORD_TRIGGERS}, "cmd_quick_fix_start
 
 #: Commands that save a manifest and are in neither table, each with its reason.
 EXEMPT = {
-    "cmd_intent_ingest": ("saves the intent record the issue was written from, which "
-                          "moves no label"),
     "cmd_friction_capture": ("records a friction note in the manifest, which moves no "
                              "label"),
     "cmd_issue_friction": ("records a friction note in the manifest, which moves no "

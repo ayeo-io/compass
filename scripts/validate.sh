@@ -82,10 +82,8 @@ say ""
 # --- 2. shipped templates ---------------------------------------------------
 say "2. Templates"
 # 9.0.0 needs only the acceptance criteria (ADR-091). The five role templates
-# stay until their entry points are decided.
-for t in acceptance-criteria devlog \
-         positioning launch-readiness ui-contract architecture-notes \
-         product-owner-review; do
+# went with their entry points (ADR-093).
+for t in acceptance-criteria devlog; do
   if [ -f "templates/$t.md" ]; then ok "template $t.md"; else fail "missing template: templates/$t.md"; fi
 done
 say ""

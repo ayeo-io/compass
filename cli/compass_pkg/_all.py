@@ -13,7 +13,6 @@ from compass_pkg.core import *  # noqa: F401,F403
 from compass_pkg.terminal import *  # noqa: F401,F403
 from compass_pkg.flow import *  # noqa: F401,F403
 from compass_pkg.governance import *  # noqa: F401,F403
-from compass_pkg.ingest import *  # noqa: F401,F403
 from compass_pkg.landed_by import *  # noqa: F401,F403
 from compass_pkg.verb_help import *  # noqa: F401,F403
 from compass_pkg.next_cmd import *  # noqa: F401,F403

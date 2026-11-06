@@ -67,14 +67,6 @@ exclusively, and what it must not do.
 - The approach-awareness of strategy enforcement (the spike approach suspends TDD;
   other delivery approaches do not).
 
-### Role Pipeline (commands/consult.md and the role entry points)
-
-**Must own:**
-- Each role's entry-point command and the artifact it produces.
-- The architect perspective's annotation protocol (`architecture-notes.md`
-  with five headed sections, no Given/When/Then).
-- The role-first / planner-second order of operations.
-
 ---
 
 ## Must not do - boundary rules

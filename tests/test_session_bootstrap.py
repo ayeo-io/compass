@@ -28,7 +28,7 @@ from size_targets import warn_if_over
 
 ROOT = Path(__file__).resolve().parent.parent
 # Named so it cannot collide: a bare `contract.md` is a substring of
-# `docs/safety-contract.md` and `templates/ui-contract.md`, and a test that
+# `docs/safety-contract.md`, and a test that
 # greps for it passes on either.
 CONTRACT = ROOT / "compass-contract.md"
 HOOKS_JSON = ROOT / "hooks" / "hooks.json"

@@ -278,7 +278,7 @@ its replacement:
 | Removed | Use instead |
 |---|---|
 | `traceability` skill | `evidence-gates` skill, which now holds it as `traceability.md` |
-| `role-translation` skill | `intent-interview` skill, which now holds it as `role-translation.md` |
+| `role-translation` skill | `intent-interview` skill, which held it as `role-translation.md` until 9.0.0 deleted it (ADR-093) |
 
 Issue documents moved too. The acceptance criteria, technical design,
 delivery approach and the other prose documents now live in

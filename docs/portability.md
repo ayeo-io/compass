@@ -137,14 +137,15 @@ contract states the length limit that holds on every version.
 An adapter limitation can reduce convenience or parallelism. It must not
 silently weaken a guardrail.
 
-### 5. Support the five entry-point roles
+### 5. Keep one specification for every role
 
-The runtime needs distinct entry paths for product, design, engineering,
-marketing and QA. All five contribute to the same acceptance specification and
-produce their normal Compass artifacts.
+From 9.0.0 there are no role entry points (ADR-093). Product, design,
+engineering, marketing and QA read the same acceptance criteria, and a brief
+opens them through the `intent-interview` skill.
 
-The adapter must preserve the role checks, such as intent fidelity and
-claim traceability. Otherwise the role has no effect on delivery.
+The adapter must preserve claim traceability: the manifest's `claims:` and
+the `claim-traces-to-scenario` check. Otherwise a public claim can ship with
+no scenario behind it.
 
 ### 6. Persist state on disk
 
@@ -198,7 +199,6 @@ A port must document the capability mapping below it too.
 | Pre-action enforcement |  |  |
 | Post-action issue logging |  |  |
 | Session-end status check |  |  |
-| Role entry points |  |  |
 | Distinct agent contexts |  |  |
 | Isolated parallel workspaces |  |  |
 | CI integration |  |  |
@@ -276,11 +276,10 @@ the guide defines their required fields and keeps unmeasured results visible.
 1. Complete the conformance mapping.
 2. Wire the target runtime to the unchanged kit CLI.
 3. Implement assessment and the four stages of the path.
-4. Add role entry points.
-5. Add persistence and resumption.
-6. Add the strongest enforcement the runtime supports.
-7. Run cross-runtime conformance tests.
-8. Document install, security and known limitations.
+4. Add persistence and resumption.
+5. Add the strongest enforcement the runtime supports.
+6. Run cross-runtime conformance tests.
+7. Document install, security and known limitations.
 
 The methodology is the long-lived asset, the kit is its deterministic
 mechanism, and the adapter is how a particular runtime reaches both.

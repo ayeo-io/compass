@@ -28,7 +28,7 @@ The architect runs first; the planner reads and cites.
 
 Order of operations:
 1. The architect perspective runs at the define stage (auto-triggered) or via
-   `/compass:consult architect`.  It writes `architecture-notes.md`.
+   `/compass:consult architect`.  It writes `architecture-notes.md`. <!-- vocabulary-scan: allow - a decision record keeps the words it was decided in; the command was removed in 9.0.0 (ADR-093) -->
 2. Planner runs at plan.  It reads `architecture-notes.md` and writes
    `technical-design.md §2` design decisions that either cite an existing ADR,
    name a candidate ADR to author at implement, or explicitly justify

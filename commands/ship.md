@@ -22,8 +22,8 @@ unsettled follow-up is an open issue, and ship refuses to close it.
   or reviewer agent (ADR-090). A project that lists the advisory
   `agent-review` check can also have an agent review the change and record
   its verdict (`docs/judged-checks.md`).
-- If `positioning.md` is present, the `claims` dimension applies - review it
-  from the marketer's perspective too.
+- If `manifest.yml` holds `claims:`, the `claims` dimension applies - review
+  them from the marketer's perspective too.
 - If this issue is itself a sweep, rename, or cleanup touching many files,
   check it the way `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S9`
   describes (an unmigrated 5.x project runs on its own copied `governance/`
@@ -90,15 +90,15 @@ instead of the procedure below.
      `manifest.yml`'s `scenarios:`, traceable to the defect, with its root
      cause stated. Mark the matching `follow_ups:` entry `paid` -
      `compass check` fails at ship while any is owed.
-   - **Marketer claims gate** (when `positioning.md` is present): every
-     claim in `manifest.yml`'s `claims:` traces to a passing scenario id.
+   - **Marketer claims gate** (when `manifest.yml` holds `claims:`): every
+     claim in `claims:` traces to a passing scenario id.
      `compass check`'s `claim-traces-to-scenario` check is the mechanical
      check behind it.
    - A Definition of Done item you cannot meet now is carried with
      `compass follow-up add FU-<id> --defers <item> --summary "..."`.
 7. **Update living docs.** Update READMEs, architecture notes, and any docs
-   the change touched, so they match the code. If `positioning.md` is
-   present, draft the release notes from it, so every line is already a
+   the change touched, so they match the code. If `manifest.yml` holds
+   `claims:`, draft the release notes from them, so every line is already a
    scenario-backed claim.
 8. **Run `compass check` as the final mechanical gate**, and record its
    output. See the Definition of Done below.

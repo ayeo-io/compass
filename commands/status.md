@@ -112,8 +112,8 @@ Here the internal details *are* what the reader wants. Report:
   - an unsettled **defect follow-up** on a change assessed with
     `urgency: live-defect`, or a hotfix assessed before the path (the
     reproduction test not promoted to a scenario, no root cause stated);
-  - an **unbacked marketing claim** - a claim in `positioning.md` with no
-    passing scenario behind it;
+  - an **unbacked marketing claim** - a claim in `manifest.yml`'s `claims:`
+    with no passing scenario behind it;
   - any de-scoped work still marked owed.
 
 ## Note

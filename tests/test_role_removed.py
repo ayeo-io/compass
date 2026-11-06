@@ -441,7 +441,7 @@ def test_trc_d1_a_document_can_still_name_a_perspective_as_its_owner(tmp_path):
     assert "owner" not in out + err
 
 
-DOCS = ("docs/routing-deep-dive.md", "docs/roles-guide.md", "README.md",
+DOCS = ("docs/routing-deep-dive.md", "README.md",
         "templates/manifest.yml")
 
 

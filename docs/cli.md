@@ -42,7 +42,6 @@ compass policy diff        compare two configurations: what one accepts that the
 compass policy migrate     turn copied governance and the old settings file into a compass.yml
 compass policy migrate --words  rewrite compass.yml and policy-test fixtures in the 6.0.0 words
 compass policy update      move the project to another shipped default major, re-approving waivers
-compass intent ingest      read a brief that already exists, by path or https URL
 compass issue lint         structurally validate an issue manifest
 compass issue diagnose     explain one run from its own records: stages, timeline, deviations
 compass issue use          make an issue the current one, for this session

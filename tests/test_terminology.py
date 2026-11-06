@@ -103,7 +103,7 @@ BAN_PATTERNS: dict[str, list[re.Pattern]] = {
         re.compile(r"\bprd\.md\b"),
         re.compile(r"\btemplates/prd\b"),
         # The bare acronym, which the two patterns above never touched - so
-        # 24 live occurrences survived, including `commands/intent.md`'s own
+        # 24 live occurrences survived, including the intent command's own
         # description line, the sentence a user reads in the slash-command
         # menu, which said the command captures intent "as a PRD" while <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
         # writing intent.md. Naming the document. "Product requirements" as

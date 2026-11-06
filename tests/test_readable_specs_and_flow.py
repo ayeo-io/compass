@@ -70,8 +70,7 @@ def _section(text, heading, level="## "):
 
 def test_trc_a1_summary_precedes_role_guide():
     """The Summary is the first thing a cold reader meets: it comes before the
-    intent-links table. The role-guide block lives in docs/roles-guide.md only, so
-    the template holds no copy of it."""
+    intent-links table. The template holds no role-guide block."""
     tpl = _read(SPEC_TEMPLATE)
 
     i_summary = tpl.find("## Summary")
@@ -80,7 +79,7 @@ def test_trc_a1_summary_precedes_role_guide():
     assert i_summary >= 0, "No '## Summary' heading in the spec template"
     assert i_intent >= 0, "The intent-links table disappeared from the spec template"
     assert "## How each role reads this file" not in tpl, (
-        "The role-guide block is in docs/roles-guide.md only, not in the spec template"
+        "The spec template must not hold the role-guide block"
     )
     assert i_summary < i_intent, (
         "The Summary must come before the intent links - a cold reader wants "

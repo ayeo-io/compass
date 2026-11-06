@@ -53,7 +53,7 @@ what `/compass:init` offers separately.
   routing rules.
 - For a non-trivial or ambiguous issue, read the three scored dimensions
   with care in this session; Compass starts no agent for it (ADR-090).
-- If the issue came through `/compass:intent`, or a role note such as
+- If the issue came with a brief, or a note of the team's own such as
   `ui-contract.md` or `positioning.md` exists, read it - intent is the
   *outcome wanted*, not just the literal request.
 

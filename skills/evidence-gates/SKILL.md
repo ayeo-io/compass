@@ -46,7 +46,7 @@ side, judgment on the other.
 | "It's fast enough." | The benchmark output against any project performance-budget guardrail. |
 | "No regressions." | The regression run, before-and-after, showing nothing green before is red now. |
 | "It's secure." | The scan output; the dependency-CVE result where a project security guardrail needs it. |
-| "Every claim is backed." | `launch-readiness.md` with each claim's backing scenario and that scenario's passing status. |
+| "Every claim is backed." | The manifest's `claims:`, each with its backing scenario, and that scenario's passing status. |
 
 The test is simple: **could someone who does not trust you check it from what
 you recorded?** If yes, it is evidence. If they would have to take your word, it

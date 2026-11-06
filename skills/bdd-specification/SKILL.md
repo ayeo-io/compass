@@ -24,7 +24,7 @@ In Compass the BDD spec is not documentation that precedes the tests - it *is*
 the tests, read at a different time. `acceptance-criteria.md` is written once at
 the specify stage, and its tests run red then green at build and as the
 acceptance check at ship. It is also the one artifact
-five roles read (see `skills/intent-interview/role-translation.md`). Write it knowing all of that.
+every role reads. Write it knowing all of that.
 For a change a real client can observe, the `atdd` skill runs one chain from
 it: scenario, DSL, driver, unit tests, each Given, When or Then line one DSL call.
 

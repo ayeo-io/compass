@@ -51,10 +51,9 @@ refused as a per-role spec format in Compass - see
 `architecture/decisions/ADR-004-one-spec-many-lenses.md`. <!-- vocabulary-scan: allow - the record's own filename; ADR-004 keeps the word its decision was about, so a citation must name the real file -->The rationale: a
 user story format embeds a single role's
 perspective into the spec, which means one role's spec and another role's
-spec diverge. Compass uses one `acceptance-criteria.md` that all five roles read
-through their own perspective (see `skills/intent-interview/role-translation.md`), not five separate
-role-scoped artifacts. The BDD scenario *is* the shared artifact; the
-role-translation perspective is how each role reads it. User stories as a format
+spec diverge. Compass uses one `acceptance-criteria.md` that every role reads
+through its own perspective, not five separate
+role-scoped artifacts. The BDD scenario *is* the shared artifact. User stories as a format
 are fine upstream of Compass (in a brief or a Jira ticket) - they
 are not the spec, and they do not replace the scenario.
 

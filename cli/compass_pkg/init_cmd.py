@@ -22,7 +22,7 @@ The split this verb keeps:
 
 Auto-initialisation must never write configuration. Being initialised for you
 is small and reversible; having a compass.yml written into your repository
-because you ran /compass:intent is not, and it would arrive without the
+because you ran /compass:assess is not, and it would arrive without the
 conversation that is the whole point of choosing a configuration.
 
 DEPENDENCY: none beyond the standard library and this package (the readiness modules

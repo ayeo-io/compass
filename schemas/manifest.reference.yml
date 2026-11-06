@@ -22,7 +22,7 @@ assessment:        # (required) map - the four-dimension JUDGMENT assessment (as
   size:     # (required) [atomic, small, medium, large, product]
   goal:          # (optional) [delivery, exploration]   - defaults to delivery
   urgency:       # (optional) [none, live-defect]        - defaults to none
-  role:          # (optional) [engineer, product-owner, product-marketer, designer, qa]
+  role:          # (optional) [engineer, product-owner, product-marketer, designer, qa] - still valid; the role entry points that used it were removed in 9.0.0 (ADR-093)
   labels:        # (optional) list of strings - domain tags (auth, payments, …)
 
 generation:      # (optional) integer, at least 0 - the stored generation of configuration the issue runs against; 0 = assessed under 6.x with none yet; absent = pre-6.0.0, reads live governance
@@ -45,7 +45,7 @@ checkpoint_outcomes: # (optional) list of maps - one outcome per checkpoint stag
     outcome:     #   skipped: the autonomy setting passed it, recorded with compass issue checkpoint add --outcome skipped
     by:          #   the agent that went on, such as spec-author
     at:          #   ISO 8601, the time of the command; a skipped outcome has no evidence
-intent_source:   # (optional) map - the brief ingested with compass intent ingest; absent when intent.md was written in the issue:
+intent_source:   # (optional) map - an older manifest's record of a brief ingested with compass intent ingest, removed in 9.0.0 (ADR-093); still valid, not written or read:
   origin:        #   (optional) string - the file path or URL the brief came from
   scheme:        #   (optional) string - how it was read, such as file
   sha256:        #   (optional) string - digest of the brief as read

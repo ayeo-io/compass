@@ -79,10 +79,10 @@ def test_examples_carry_v2_names():
 
 
 def test_remaining_docs_are_enforced():
-    """`TRC-4`: all six remaining docs are scanned surfaces, and the
-    doctrine document is enforced with them."""
+    """`TRC-4`: the remaining docs are scanned surfaces, and the doctrine
+    document is enforced with them. The roles guide went in 9.0.0 (ADR-093)."""
     scan = _scan_cfg()
-    for f in ("docs/roles-guide.md", "docs/safety-contract.md",
+    for f in ("docs/safety-contract.md",
               "docs/security.md", "docs/quickstart.md",
               "docs/portability.md", "docs/routing-deep-dive.md"):
         assert f in scan["surfaces"], f"{f} is not a scanned surface"

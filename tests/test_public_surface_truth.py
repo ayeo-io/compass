@@ -124,12 +124,14 @@ def test_a4_named_files_resolve():
     named = re.compile(r"(?<![\w/.-])((?:approaches|governance|templates|skills"
                        r"|agents|commands|docs)/[\w./-]+\.md)\b")
     # An upgrade guide is history: it names a template as it shipped then, and
-    # 9.0.0 deleted fourteen of them (ADR-091).
+    # 9.0.0 deleted fourteen of them (ADR-091), then the five role templates and
+    # the roles guide with the role entry points (ADR-093).
     removed = {f"templates/{name}.md" for name in (
         "delivery-approach", "verification-note", "technical-design", "low-level-design",
         "distribution-map", "verification-report", "intent", "requirements-review",
         "threat-model", "rollback-plan", "bug-report", "review", "spike-conclusion",
-        "incident")}
+        "incident", "positioning", "launch-readiness", "ui-contract",
+        "product-owner-review", "architecture-notes")} | {"docs/roles-guide.md"}
     missing = []
     for p in _prose_files():
         history = p.relative_to(REPO_ROOT).as_posix().startswith("docs/upgrade-")
@@ -749,14 +751,25 @@ def test_d2_repairs_change_only_retired_names():
     `examples/README.md` (three `###` headings fewer), which lost the section
     on each deleted example. The fixture holds 30 files now.
 
-    A NEW structural change to any of the 30 still fails.
+    ayeo-io/compass-delivery#354 removed the role entry points (ADR-093). It
+    deleted `templates/positioning.md`, `templates/launch-readiness.md`,
+    `templates/ui-contract.md` and `skills/intent-interview/role-translation.md`,
+    so their entries left the fixture, which holds 43 files now. It
+    re-baselined `docs/quickstart.md` (seven headings fewer, fences 32 -> 26,
+    list_items 25 -> 22): the product owner's and the product marketer's
+    walkthroughs, built on `/compass:intent` and `/compass:position`, became
+    one short section on a brief and a public claim. It also re-baselined
+    `architecture/ownership.md` (one `###` heading fewer, list_items 15 -> 12),
+    which lost the "Role Pipeline" section that named `commands/consult.md`.
+
+    A NEW structural change to any of the 26 still fails.
     """
     import json
     snap = json.loads(
         (REPO_ROOT / "tests" / "fixtures" / "repaired-file-structure.json")
         .read_text(encoding="utf-8"))
-    assert len(snap) == 30, (
-        f"{len(snap)} files in the structure fixture, not 30 - it has been "
+    assert len(snap) == 26, (
+        f"{len(snap)} files in the structure fixture, not 26 - it has been "
         f"truncated, or an entry was added or removed without this count")
 
     drift = []

@@ -57,8 +57,8 @@ against is named in `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` (`S8`; an
 unmigrated 5.x project runs on its own copied `governance/`).
 
 **claims** - When the manifest lists claims: does every
-public claim trace to a *passing* scenario? Evidence is `launch-readiness.md`
-with no red rows.
+public claim trace to a *passing* scenario? Evidence is the manifest's
+`claims:`, each backed by a passing scenario.
 
 **Read the claim, not just the link.** `claim-traces-to-scenario` checks that a
 claim points at a scenario that exists. It cannot check that what the claim says

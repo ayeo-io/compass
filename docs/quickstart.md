@@ -315,116 +315,27 @@ up later.
 
 ---
 
-## 4. First issue - the product owner
+## 4. A brief from a product owner, and a public claim
 
-You are a product owner. You do not start at the assess stage - you start
-*before* the spec, with intent.
+A product owner often arrives with a brief, not a change: "Let finance pull
+their month-end numbers without filing a data request". Start the issue with
+`/compass:go` as before. The session loads the `intent-interview` skill,
+which turns the brief into the Summary and Intent links of
+`acceptance-criteria.md` before any scenario is written. Every statement in
+the intent comes from the brief or from an answer the product owner gave.
+Where the brief is silent, the session asks one question at a time.
 
-### Intent
+Notice what the intent is *not*: it is not "add a CSV export button." That is
+a solution. The intent states the outcome, and every success signal in it
+must have a scenario that delivers it.
 
-```
-/compass:intent "Let finance pull their month-end numbers without filing a data request"
-```
-
-The session adopts the product owner's vocabulary - outcomes and
-users, not files and functions - and captures the intent: the **problem**
-(finance cannot self-serve; every month-end is a data request and a wait), the
-**outcome** (finance gets their numbers directly), the **success signals**
-(finance pulls month-end numbers without filing a request; the data team's
-month-end ticket volume drops), the **constraints**, and the **non-goals** (we
-are *not* building a full reporting suite). It checks the intent document
-against the product strategies in `governance/strategies.md` - the ones the
-product owner curates - and names any conflict rather than passing it
-on to later stages without a record.
-
-Notice what the intent document is *not*: it is not "add a CSV export
-button." That is a solution. The intent document states the outcome, and
-the difference matters - see the routing deep dive for how the same literal
-request owes different evidence depending on the intent document behind it.
-
-### Assess - now with an intent document
-
-```
-/compass:assess "CSV export for finance month-end numbers"
-```
-
-Assess reads the intent as part of the goal dimension - the goal is
-the *actual outcome wanted*, not the literal request. Specify writes
-it into the Summary and Intent links of `acceptance-criteria.md`; Compass
-writes no separate intent document (ADR-091). The evidence the change owes
-is the one the three scored dimensions give.
-
-### Specify the acceptance criteria against the intent
-
-Specify writes `acceptance-criteria.md` against the intent document -
-every success signal in it must have a scenario that delivers it. The session
-then reviews from the product owner's perspective: it takes each success
-signal in turn and finds the scenario behind it, flagging **drift** (a scenario that
-solves the literal request but misses the outcome), **gaps** (a signal with no
-scenario), and **scope creep** (scenarios beyond the intent document with no
-recorded decision).
-
-### The intent-fidelity check before build
-
-Specify checks the spec **against the intent before build starts** (the
-**intent-fidelity** check). The session runs that check from the product
-owner's perspective. If the spec drifts from the intent - well-formed
-scenarios that nonetheless miss the outcome - the session rewrites the
-scenarios before any code. Well-formed and faithful are different tests, and
-this check is where an agent checks the difference; no CLI check refuses
-build on it.
-
-From here the path continues - build, then ship - with the engineer doing
-the work. The product owner's involvement was not a review added at the end;
-it shaped the scenarios from the start and put a check before build.
-
----
-
-## 5. First issue - the product marketer
-
-You are a product marketer. You work *at the same time* as the spec is
-written - not after a finished engineering process.
-
-### Position
-
-```
-/compass:position "The finance self-serve export"
-```
-
-The session adopts the marketer's vocabulary - claims, voice,
-audience - reads the voice & positioning strategies in
-`governance/strategies.md` (the ones the marketer curates), reads
-`acceptance-criteria.md` if it exists yet, and writes two artifacts:
-
-- **`positioning.md`** - the audience, the value proposition, and the claim
-  set. For **every claim**, it names the scenario in `acceptance-criteria.md` that
-  backs it. A claim with no backing scenario is not yet a claim: it is either
-  a scenario that needs writing (raised with `spec-author` at specify) or a
-  claim that has to be cut. The template leaves the backing-scenario slot
-  blank when there is nothing behind the claim yet - an empty slot shows
-  the missing work, which is the point.
-- **`launch-readiness.md`** - the claims ledger: every claim, its backing
-  scenario, and that scenario's verification status.
-
-### How this shapes the review at ship time
-
-A `positioning.md` on disk turns on the `claims` review dimension at ship:
-the reviewer judges that each claim recorded in the manifest names a scenario
-that exists, and that the scenario passes and backs the claim. Since 9.0.0 no
-command reads which documents an issue has (ADR-091), so the document does
-not add the `verify.claims` gate on its own. A project that wants the claims
-gate on every issue adds it with a floor in `compass.yml`
+A change that makes a public claim, such as a line in the release notes,
+records the claim in the manifest's `claims:` with the scenario that backs
+it. The `claim-traces-to-scenario` check fails when a claim names no
+scenario. Whether that scenario backs the claim is the reviewer's judgment
+([safety contract](safety-contract.md#compass-does-not-prove-correctness)).
+A project that wants the claims gate on every issue adds it in `compass.yml`
 (`docs/configuration.md`).
-
-So the marketer's review applies until the last stage. At `/compass:ship`, the
-session checks each row of `launch-readiness.md`. Every row must be green: a
-claim, a backing scenario, that scenario passing at build. A red row - a
-claim whose scenario is missing, failing, or skipped - and the
-claims review does not pass, so ship does not close
-the issue. The marketer's moves at that point are to soften the claim, cut
-it, or file the missing scenario. Compass checks that each recorded claim
-names a scenario that exists; whether that scenario backs the claim is the
-reviewer's judgment ([safety contract](safety-contract.md#compass-does-not-prove-correctness)).
 
 ---
 
@@ -646,8 +557,6 @@ never confirmed on a finished issue.
 - **`docs/routing-deep-dive.md`** - how assess selects the evidence a change
   owes, with worked examples, including the same literal request owing
   different evidence, and a spike worked through end to end.
-- **`docs/roles-guide.md`** - one concrete scenario read through all five
-  roles, and what each role owns.
 - **`docs/portability.md`** - the three layers (methodology / kit / adapter),
   and what porting Compass to another runtime involves: rewrite the adapter,
   keep the methodology and the kit untouched.
@@ -656,8 +565,7 @@ When a session leaves an issue half-finished, `/compass:status` reports where
 every issue stands, and `/compass:resume <issue-slug>` picks one up from disk -
 the artifacts were written precisely so the process never has to be
 re-derived. Once you are running more than one issue at a time, `/compass:flow`
-is the view across all of them - triage, blockers, and a periodic digest;
-`docs/roles-guide.md` explains why it is a capability rather than a role.
+is the view across all of them - triage, blockers, and a periodic digest.
 
 Two more CLI commands work across the whole board. `compass ci` runs the full
 mechanical gate suite - `policy lint`, then `issue lint` and `check` for every

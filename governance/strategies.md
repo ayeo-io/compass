@@ -41,8 +41,7 @@ are the acceptance check at ship.**
 
 - This is the shipped-on way to satisfy "acceptance defined before it is
   built" (`G2`).
-- The scenario file is the shared artifact every role reads - see
-  `docs/roles-guide.md`.
+- The scenario file is the shared artifact every role reads.
 - **`G2` does not need a Gherkin scenario.** It needs acceptance stated
   and checkable.
 
@@ -528,7 +527,8 @@ message must *say*; how you format the subject line is yours.
 - **The review at `ship`** assesses whether the work followed the
   applicable strategies, and reports that as judgement, distinct from the
   evidence-backed guardrail checks.
-- **`/compass:consult`** is where strategy-versus-strategy tensions get resolved.
+- **A person** resolves a strategy-versus-strategy tension the delivery
+  approach does not settle.
 
 A strategy that has hardened into a real must-never - checkable, blocking - has
 outgrown this file. Promote it to `guardrails.md`. That should be rare.

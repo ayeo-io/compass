@@ -75,7 +75,10 @@ def test_sh8_no_prose_names_only_the_old_settings_file():
                                         ALLOWED.get(rel))
         if hits:
             offenders[rel] = hits
-    assert scanned > 100
+    # The floor shows the scan reached the prose, not an exact count. It was
+    # 100 until ADR-093 removed the role entry points, the board docs and the
+    # retro docs, which left 99 files.
+    assert scanned > 90
     assert not offenders, offenders
 
 

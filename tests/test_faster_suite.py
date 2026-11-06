@@ -150,9 +150,8 @@ def test_each_archive_sweep_is_one_test_per_issue(module):
 SERIAL_TESTS = {
     "tests/next/test_compass_next.py::TestNextLatency::test_next_latency_relative_to_reference",
     "tests/test_statusline.py::test_the_shim_is_fast_enough",
-    "tests/test_board_speed.py::test_trc_a4_board_data_speed_on_realistic_archive",
-    "tests/test_board_speed.py::test_trc_a5_commands_speed_on_full_archive",
-    "tests/test_board_speed.py::test_trc_w6_worktrees_speed",
+    # ADR-093 removed the HTML board with the board speed tests and their
+    # three timing tests.
     "tests/test_delivery_board.py::test_db_5_the_board_is_quick_over_many_issues",
     "tests/test_manifest_parse_speed.py::test_trc_b1_flow_within_two_seconds_on_this_repository",
     "tests/test_manifest_parse_speed.py::test_trc_b2_flow_faster_than_one_parse_on_sample",

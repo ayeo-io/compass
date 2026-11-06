@@ -225,8 +225,8 @@ def test_ir_13_flow_and_ci_go_on_to_a_healthy_issue(tmp_path):
 
 def _two_issues(root, shipped=False):
     """Two issues with stored generations under `root`: `feature`, recorded at
-    resolver 2.0.0, and `other`, healthy. Shipped ones hold an approval, so
-    the bands read their configuration."""
+    resolver 2.0.0, and `other`, healthy. Shipped ones are closed and hold an
+    approval."""
     for slug in ("feature", "other"):
         folder = root / ".compass" / "work" / slug
         folder.mkdir(parents=True)
@@ -244,21 +244,6 @@ def _two_issues(root, shipped=False):
                                        "decision": "approved", "path": "evidence/x"}])
             path.write_text(yaml.safe_dump(manifest, sort_keys=False))
     record_versions(root / ".compass" / "work" / "feature", resolver="2.0.0")
-
-
-def test_ir_13_diagnose_refuses_an_open_issue_that_holds_an_approval(tmp_path):
-    # The band count reads the configuration only for an issue that holds an approval. A
-    # refusal there must reach the person, and must not read as "not counted".
-    _two_issues(tmp_path)
-    path = tmp_path / ".compass" / "work" / "feature" / "manifest.yml"
-    manifest = yaml.safe_load(path.read_text())
-    manifest["evidence"] = [{"id": "EV-1", "type": "human-approval", "check": "x",
-                             "decision": "approved", "path": "evidence/x"}]
-    path.write_text(yaml.safe_dump(manifest, sort_keys=False))
-    code, out, err = _run(tmp_path, "issue", "diagnose", "--issue", "feature")
-    assert code == 2, out + err
-    assert "migrate --config --issue feature" in err, out + err
-    assert "not counted" not in out + err, out + err
 
 
 def test_ir_13_a_version_that_is_not_one_is_named_unreadable(committed):

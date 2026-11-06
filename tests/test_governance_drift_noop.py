@@ -322,7 +322,7 @@ EXPECTED_SUBCOMMANDS = {
     "decision",
     "lesson",  # project-lessons (ADR-029)
     "record",  # delivery-record (ADR-031)
-    "board",  # compass-board (ADR-046): render|refresh - the delivery board page
+    # "board" (compass-board, ADR-046): ADR-093 removed the delivery board page.
     "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
     "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
     # isolation-and-layering (#328, ADR-086): `isolation record` and `layering

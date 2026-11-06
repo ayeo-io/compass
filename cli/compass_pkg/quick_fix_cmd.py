@@ -72,11 +72,11 @@ def register(sub, issue_arg):
     """Add `compass quick-fix start|finish` to the top-level parser."""
     p = sub.add_parser(
         "quick-fix",
-        help="assess, implement and ship a quick fix in two calls instead of a dozen")
+        help="start and finish a change of any size on the path, in two calls instead of a dozen")
     subs = p.add_subparsers(dest="subcmd", required=True)
 
     st = subs.add_parser(
-        "start", help="assess, evaluate and record a quick fix in one call")
+        "start", help="assess and record a change and its first scenario in one call")
     st.add_argument("slug", help="issue slug - one path segment")
     st.add_argument("--risk", required=True, metavar="VALUE - REASON",
                     help="risk value and its reason, e.g. 'trivial - a one-line text change'")
@@ -96,7 +96,7 @@ def register(sub, issue_arg):
                          "auth, payments, personal-data or migrations bring "
                          "the human sign-off (default: none)")
     st.add_argument("--intent", required=True,
-                    help="the intent sentence this quick fix serves (recorded as INT-1)")
+                    help="the intent sentence this change serves (recorded as INT-1)")
     st.add_argument("--scenario", required=True,
                     help="the one Given/When/Then scenario that is the spec")
     st.add_argument("--scenario-id", default="TRC-001",
@@ -113,7 +113,7 @@ def register(sub, issue_arg):
     st.set_defaults(func=cmd_quick_fix_start, output_kind="hand-off")
 
     fi = subs.add_parser(
-        "finish", help="trace, check, gate and ship a quick fix in one call")
+        "finish", help="trace, check and gate a change in one call; refuses while other evidence is owed")
     fi.add_argument("-m", "--message", required=True, help="the commit message")
     fi.add_argument("--no-commit", action="store_true",
                     help="pass the gates and write the records, but leave the "

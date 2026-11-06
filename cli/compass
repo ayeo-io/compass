@@ -122,7 +122,7 @@ def build_parser():
     prs = pr.add_subparsers(dest="subcmd", required=True)
     pre = prs.add_parser(
         "evaluate",
-        help="apply routing-policy.yml to an issue's assessment")
+        help="compute the evidence an issue's assessment owes, from the configuration in force")
     pre.add_argument("--issue", dest="task", metavar="SLUG",
                      help="issue slug (default: COMPASS_ISSUE, then the current-task pointer)")
     pre.add_argument("--assessment", dest="reading", metavar="KEY=VALUE",
@@ -130,8 +130,9 @@ def build_parser():
                      help="ad-hoc assessment key=value (repeatable; "
                           "labels=a,b,c)")
     pre.add_argument("--write", action="store_true",
-                     help="fold the approach, stages and gates back into the "
-                          "issue's manifest.yml")
+                     help="fold the approach, the evidence owed and the gates "
+                          "back into the issue's manifest.yml (a spike also "
+                          "keeps its stages)")
     pre.add_argument("--justify", action="append", metavar="DIM=TEXT",
                      help="with --write: the reason for an assessed value, "
                           "recorded under the manifest's justifications key "
@@ -171,17 +172,19 @@ def build_parser():
     pre.set_defaults(func=cmd_route_evaluate, output_kind="hand-off")
     prsum = prs.add_parser(
         "show",
-        help="print the three-line decision view: approach, gates, files")
+        help="print the three-line decision view: approach, evidence, files")
     prsum.add_argument("--issue", dest="task", metavar="SLUG",
                        help="issue slug (default: COMPASS_ISSUE, then the current-task pointer)")
     prsum.set_defaults(func=cmd_approach_summary, output_kind="report")
     prdia = prs.add_parser(
         "render",
-        help="render every delivery approach as one HTML table",
-        description="Render the delivery approaches from the effective "
-                    "routing policy as one HTML table: one row per approach, "
-                    "one column per stage, each weight as a word, and the "
-                    "stages that stop for a person under an autonomy setting.")
+        help="render the path and the spike as one HTML table",
+        description="Render the approaches of the effective routing policy "
+                    "as one HTML table: the four-stage path (`delivery`) and "
+                    "the spike, one column per stage, their gates, and the "
+                    "stages that stop for a person under an autonomy setting. "
+                    "The evidence a path issue owes comes from its assessment, "
+                    "so the table names only the gates every delivery issue owes.")
     prdia.add_argument("--autonomy", help="controlled, balanced or autonomous "
                                           "(default: the project's setting)")
     prdia.add_argument("--out", metavar="PATH", help="write the page here "
@@ -456,7 +459,7 @@ def build_parser():
 
     pnx = sub.add_parser(
         "next",
-        help="what comes next on this issue's delivery approach? (read-only; one line)",
+        help="which stage of the path this issue is at, and the next command (read-only; one line)",
     )
     issue_arg(pnx)
     pnx.set_defaults(func=cmd_next, output_kind="report")

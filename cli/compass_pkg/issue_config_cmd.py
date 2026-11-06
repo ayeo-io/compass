@@ -376,9 +376,13 @@ def register(issue_subs, issue_arg):
     p.add_argument("--from-file", dest="from_file", metavar="PATH",
                    help="replace the proposed overlay with this YAML mapping")
     p.add_argument("--mode", action="append", metavar="STAGE=MODE",
-                   help="set a stage's mode in the overlay (repeatable)")
+                   help="set a stage's mode in the overlay (repeatable). No reader judges a "
+                        "path stage's mode, and a legacy stage the configuration "
+                        "does not hold is dropped with a warning")
     p.add_argument("--route", metavar="NAME",
-                   help="name the delivery approach the issue asks for")
+                   help="name the approach the issue asks for: delivery or spike. One the "
+                        "configuration does not hold, such as an 8.x approach, is "
+                        "dropped with a warning")
     p.add_argument("--autonomy", metavar="VALUE",
                    help="set the issue's autonomy: " + ", ".join(spec.AUTONOMY))
     p.add_argument("--ceiling", action="append", metavar="NAME=N",

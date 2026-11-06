@@ -15,7 +15,7 @@ detail.
 compass init               make this directory a Compass project - create .compass/ (--readiness: then measure and list the absent signals; /compass:init passes it)
 compass approach evaluate  the assessment -> the evidence the change owes, deterministically
 compass approach show      the three-line decision view: approach, evidence, files
-compass approach render    the path, the spike and the evidence rows as one HTML table
+compass approach render    the path and the spike as one HTML table
 compass bdd extract        acceptance criteria -> a runnable .feature
 compass bdd verify         record which scenarios the runner actually ran
 compass check              run the guardrail checks against the manifest and evidence

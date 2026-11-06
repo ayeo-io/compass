@@ -134,7 +134,11 @@ dimension: re-run the evaluation with the new value and its reason, and the
 evidence follows. What cannot be overridden is an `immovable_gate` or a
 floor of the configuration. Changing one is a reviewed change to the
 project's `compass.yml`, not an override for one issue, and a loosening
-needs a waiver that the project's owner approves.
+needs a waiver that the project's owner approves. An issue assessed before
+the path keeps its stage modes: it can keep a lower mode for a stage a floor
+did not name, on the approach the floor raised, only with an issue waiver
+the project owner approved
+(`${CLAUDE_PLUGIN_ROOT}/governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md`).
 
 ---
 

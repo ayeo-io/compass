@@ -1020,12 +1020,6 @@ _register(Rule(
             "the same standard security term as the docs/security.md "
             "exemption above."),
         Exemption(
-            "compass-contract.md", "7. verify",
-            "\"verify\" here is the stage name, one word per line in the "
-            "stage list, in the same form as \"1. assess\" and \"6. "
-            "implement\" beside it - an identifier (section 4), not the "
-            "verb the word table retires"),
-        Exemption(
             "docs/methodology.md", "| `/compass:verify` | Verify |",
             "\"Verify\" is the stage name in the stage-mapping table's own "
             "column, beside \"Assess\", \"Define\" and \"Plan\" - an "
@@ -1041,18 +1035,6 @@ _register(Rule(
             "\"verify\" here is one stage name in a list of stage names "
             "(implement, verify, ship) - an identifier (section 4), not "
             "the verb the word table retires"),
-        Exemption(
-            "tests/test_command_renames.py",
-            "implement, verify, ship; the designer entry point is design;",
-            "\"verify\" is one stage name in the list of eight pipeline "
-            "commands, the same shape as the docs/quickstart.md exemption "
-            "above; found while fixing batch 7, not by the audit."),
-        Exemption(
-            "tests/test_command_renames.py",
-            "point. It inlines assess, define, implement, verify and ship for a small,",
-            "\"verify\" is one stage name in a list of stage names, the "
-            "same shape as the docs/quickstart.md exemption above; found "
-            "while fixing batch 7, not by the audit."),
         Exemption(
             "docs/routing-deep-dive.md", "but verify also runs the",
             "\"verify\" is the stage name here, matching \"feature\" and "
@@ -2346,6 +2328,8 @@ _REMOVED_IN_9_0_0 = frozenset({
     # with the four-stage path (ADR-092).
     "approaches/quick-fix.md", "approaches/regular.md", "approaches/full.md",
     "approaches/hotfix.md", "skills/plan-authoring/SKILL.md",
+    "commands/define.md", "commands/refine.md", "commands/plan.md",
+    "commands/breakdown.md", "commands/implement.md", "commands/verify.md",
 })
 # A sample decision record under `templates/architecture/decisions/` is a
 # decision record too.
@@ -2648,8 +2632,20 @@ _register(Rule(
             "architecture/ does not ship one, which is correct, not a "
             "broken reference."),
         Exemption(
-            "commands/define.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as commands/consult.md."),
+            "commands/go.md", "architecture/invariants.yml",
+            "the same conditional artifact reference as commands/consult.md; "
+            "it moved here from the define command, which 9.0.0 removed "
+            "(ADR-092)."),
+        Exemption(
+            "cli/compass_pkg/migrate.py", "`commands/plan.md` is a shipped command file",
+            "an example of a repository path a manifest's `changed_files:` "
+            "can hold, named as the 8.x plugin shipped it - the comment is "
+            "about a path a manifest names, not a file this tree has."),
+        Exemption(
+            "tests/test_migrate_to_docs_compass.py",
+            "`changed_files:` entry naming `commands/plan.md`",
+            "the same example repository path as the migrate.py comment "
+            "above, which the test builds into a fixture manifest."),
         Exemption(
             "templates/architecture/ownership.md", "architecture/invariants.yml",
             "the same conditional artifact reference as commands/consult.md."),

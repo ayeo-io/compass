@@ -109,7 +109,8 @@ The standard here is different and you must keep it different. A strategy is
 ## Walk 3 - the evidence the issue owes
 
 Confirm the design is consistent with the issue's `evidence_required` list
-(`compass approach show`) and `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`:
+(`compass approach show`) and `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`
+(an unmigrated 5.x project runs on its own copied `governance/`):
 
 - **The configuration's rules** - did every floor that should have fired,
   fire? Are the `immovable_gates` in the manifest's gates? A design that
@@ -179,7 +180,8 @@ How many to use scales with the evidence the issue owes:
   cross-cutting section also names the well-architected pillars the change
   touches and what the design does about each: that is the well-architected
   alignment strategy, `S15`, and the pillars come from
-  `${CLAUDE_PLUGIN_ROOT}/governance/architecture-sources.yml`. It is advice
+  `${CLAUDE_PLUGIN_ROOT}/governance/architecture-sources.yml` (an
+  unmigrated 5.x project runs on its own copied `governance/`). It is advice
   for the reviewer, not a gate.
 
 **Delete the sections you do not use.** An empty optional heading reads as

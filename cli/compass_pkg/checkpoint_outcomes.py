@@ -208,10 +208,18 @@ _HEADING = re.compile(r"^## (Stage \d+) - the (\w+) stage\s*$")
 STAGE_REVIEWS = {STAGE_IMPLEMENT: "builder", STAGE_VERIFY: "verifier"}
 #: The same reviews on a path issue, at build and ship.
 PATH_STAGE_REVIEWS = {STAGE_BUILD: "builder", STAGE_SHIP: "verifier"}
-#: The stage whose heading in the skill holds a path checkpoint's questions. The
-#: skill names the stages an old issue runs.
-_REVIEW_HEADING = {STAGE_SPECIFY: STAGE_REFINE, STAGE_BUILD: STAGE_IMPLEMENT,
-                   STAGE_SHIP: STAGE_VERIFY}
+#: The path stage whose heading in the skill holds an old issue's checkpoint
+#: questions. The skill names the path stages (ADR-092), and the three review
+#: checkpoints of an old issue hold the same three reviews.
+_LEGACY_HEADING = {STAGE_REFINE: STAGE_SPECIFY, STAGE_IMPLEMENT: STAGE_BUILD,
+                   STAGE_VERIFY: STAGE_SHIP}
+
+
+def _heading(task, stage, path=None):
+    """The skill heading that holds the questions of checkpoint `stage`."""
+    if path is None:
+        path = is_path_issue(task)
+    return stage if path else _LEGACY_HEADING.get(stage, stage)
 
 
 def stage_reviews(task):
@@ -243,8 +251,7 @@ def _reviews():
 def review(task, task_dir, stage):
     """`{stage, questions}` of the stage review the checkpoint `stage` holds, when
     the strategy applies to the issue, else None. A request lists it."""
-    heading = _REVIEW_HEADING.get(stage) if is_path_issue(task) else stage
-    held = _reviews().get(heading)
+    held = _reviews().get(_heading(task, stage))
     if not held or not held[1]:
         return None
     from compass_pkg import acceptance_strategy
@@ -296,7 +303,7 @@ def _next_review(task, task_dir, done):
         return None, None, None
     reviews = _reviews()
     path = is_path_issue(task)
-    label = {stage: (reviews.get(_REVIEW_HEADING[stage] if path else stage)
+    label = {stage: (reviews.get(_heading(task, stage, path))
                      or (stage, []))[0] for stage in own}
     back = _sent_back(task, task_dir, have)
     for stage in own:

@@ -61,8 +61,8 @@ why and how to clear it.
 - Load `bdd-specification`. On `brownfield-unmapped` code, load
   `behavior-mapping` and pin what the code does now before the change.
 - When the labels include `public-api`, or the change touches a service in
-  `architecture/relations.md` or a `lens_trigger_tag` in the
-  `invariants.yml` of `architecture/`, take the architect's perspective first, and
+  `architecture/relations.md` or a `lens_trigger_tag` in
+  `architecture/invariants.yml`, take the architect's perspective first, and
   write `architecture-notes.md` beside the acceptance criteria before you
   write the scenarios.
 - Ask which input classes and failure modes the intent implies that no

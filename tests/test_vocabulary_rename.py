@@ -261,12 +261,20 @@ def test_trc_a1():
 
     keys = _cli_stage_keys()
     assert keys, "the CLI declares no stage keys, so this checks nothing"
-    missing = sorted(k for k in keys if k not in names)
-    assert not missing, (
-        "the manifest holds these stage keys and no command of the same name "
-        "exists: %s. The word a person types and the word the manifest holds "
-        "must be the same. Commands present: %s"
-        % (missing, sorted(names)))
+    # On the four-stage path (ADR-092) the six stage commands are gone: the
+    # `next:` line names each specify and build step, so those two stages have
+    # no command. The stages a person still types a command for are assess
+    # and ship, and a command named for a stage must name a path stage, never
+    # a removed one an old manifest still holds.
+    from compass_pkg.stable_ids import PATH_STAGE_IDS
+    for typed in ("assess", "ship"):
+        assert typed in names and typed in PATH_STAGE_IDS, (
+            "no `/compass:%s` command, or it is not a path stage" % typed)
+    stale = sorted(k for k in keys & names if k not in PATH_STAGE_IDS)
+    assert not stale, (
+        "these commands are named for a stage the path removed: %s. The word a "
+        "person types and the word the manifest holds must be the same. "
+        "Commands present: %s" % (stale, sorted(names)))
 
     # The two defects this rule exists for, asserted directly rather than left
     # to the general shape above.
@@ -287,23 +295,27 @@ def test_trc_a2():
     """The designer's command is `design` again, and does not claim
     the engineering stage's job (`TRC-A2`)."""
     names = _command_names()
-    for want in ("design", "plan"):
-        assert want in names, "no `/compass:%s` command: %s" % (want, sorted(names))
+    assert "design" in names, "no `/compass:design` command: %s" % sorted(names)
+    # The plan stage and its command went with the path (ADR-092).
+    assert _is_removed("plan"), "`/compass:plan` still ships"
     assert _is_removed("wireframe"), (
         "`/compass:wireframe` still ships - the designer's entry point is "
         "`/compass:design`, and the retired name was removed at 4.0.0")
 
     design = (COMMANDS / "design.md").read_text(encoding="utf-8")
-    plan = (COMMANDS / "plan.md").read_text(encoding="utf-8")
+    # The engineering design rules moved from the plan stage to the
+    # governance-check skill, "Writing the design down".
+    plan = (REPO_ROOT / "skills" / "governance-check" / "SKILL.md").read_text(
+        encoding="utf-8")
 
     assert "ui-contract.md" in design, (
         "`/compass:design` does not produce the UI contract, so it is not the "
         "designer's entry point")
     # 9.0.0 writes no technical design (ADR-091).
     assert "writes no design document" in " ".join(plan.split()), (
-        "`/compass:plan` does not say it writes no design document")
+        "the governance-check skill does not say Compass writes no design document")
     assert "ui-contract.md" not in plan, (
-        "`/compass:plan` claims the designer's artifact")
+        "the engineering design rules claim the designer's artifact")
     assert "technical-design.md" not in design, (
         "`/compass:design` claims the engineering stage's artifact")
 

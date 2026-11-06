@@ -237,23 +237,28 @@ def test_trc_b4_self_review_complements_clarify():
 
     assert "review still runs" in low, (
         "The self-review does not state that the requirements review still "
-        "runs on the regular approach and above"
+        "runs on a change with more than one scenario"
     )
-    assert "regular" in low, (
-        "The self-review does not name the approaches the requirements "
+    # The path has no regular approach (ADR-092): the review runs by the
+    # number of scenarios.
+    assert "more than one scenario" in low, (
+        "The self-review does not name the changes the requirements "
         "review still runs on")
 
 
 def test_trc_b5_express_self_check_recorded_in_devlog():
     """Where the requirements review collapses, the self-check is the QA -
     so it goes on disk, not into the conversation (`S4`, persistence over
-    conversation)."""
+    conversation). The path writes no devlog.md (ADR-092), so the record on
+    disk is the spec the self-check edited."""
     low = _self_review().lower()
 
-    assert "quick-fix" in low or "quick fix" in low, ("The self-review says nothing about the quick fix")
-    assert "devlog.md" in low, (
-        "The self-review does not require recording the Express self-check in devlog.md"
-    )
+    assert "one-scenario change" in low, (
+        "The self-review says nothing about the one-scenario change")
+    assert "acceptance-criteria.md`, which is the record" in low, (
+        "The self-review does not name where the one-scenario self-check is "
+        "recorded on disk")
+    assert "persistence over conversation" in low
 
 
 # ---------------------------------------------------------------------------

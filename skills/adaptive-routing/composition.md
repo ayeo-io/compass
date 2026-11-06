@@ -26,7 +26,8 @@ no stage weights. It computes the `evidence_required` list:
   immovable gate and project guardrail, and the skill a floor asks for.
 
 `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`, "The evidence rows", holds the exact
-conditions and tokens. Each gate is a review dimension; which ones a row
+conditions and tokens (an unmigrated 5.x project runs on its own copied
+`governance/`). Each gate is a review dimension; which ones a row
 owes is in "The review dimensions by row" in
 `approaches/composition-reference.md`.
 

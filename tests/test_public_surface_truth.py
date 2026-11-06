@@ -713,6 +713,10 @@ def test_d2_repairs_change_only_retired_names():
     bullets to `governance/routing-policy.md` (list_items 67 -> 71): what
     the command shows without `--write`, the evidence row `--verbose` names,
     and the two `compass next` lines on `layering` and on the files to stage.
+    Shipping the path in the default preset left the four 8.x shapes out of
+    the `default_shapes` example in `governance/routing-policy.md`
+    (list_items 71 -> 67) and added the table of the shipped default's two
+    checkpoint rows (table_rows 34 -> 38).
 
     The same issue deleted `approaches/quick-fix.md`, `approaches/regular.md`,
     `approaches/full.md` and `approaches/hotfix.md`, so their entries left the

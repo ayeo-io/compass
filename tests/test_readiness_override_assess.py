@@ -299,7 +299,13 @@ def test_roa_11_policy_lint_without_arguments_lints_compass_yml(
     guardrails.write_text(yaml.safe_dump(doc), encoding="utf-8")
     code, out = _lint_here(capsys)
     assert code == 1 and "missing top-level key: defaults" in out, out
-    assert out.splitlines()[-1] == "compass policy lint: PASS", out     # compass.yml is clean
+    # compass.yml is clean: the layered lint passes and reports no error. It
+    # warns that `extends:` names the frozen major `default@6`, which is not
+    # loaded (L-EXTENDS-FROZEN-MAJOR).
+    lines = out.splitlines()
+    layered = max(i for i, line in enumerate(lines) if line.startswith("compass policy lint:"))
+    assert lines[layered] == "compass policy lint: PASS", out
+    assert all(line.startswith("  - warning ") for line in lines[layered + 1:]), out
 
     text = (ROOT / "scripts" / "validate.sh").read_text(encoding="utf-8")
     assert 'LINT_OUT="$(python3 cli/compass policy lint 2>&1)"' in text

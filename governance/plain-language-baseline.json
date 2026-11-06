@@ -1647,26 +1647,6 @@
     },
     {
       "file": "governance/routing-policy.yml",
-      "line": 35,
-      "code": "RP-SHAPE-002"
-    },
-    {
-      "file": "governance/routing-policy.yml",
-      "line": 39,
-      "code": "RP-SHAPE-003"
-    },
-    {
-      "file": "governance/routing-policy.yml",
-      "line": 43,
-      "code": "RP-SHAPE-004"
-    },
-    {
-      "file": "governance/routing-policy.yml",
-      "line": 47,
-      "code": "RP-SHAPE-005"
-    },
-    {
-      "file": "governance/routing-policy.yml",
       "line": 76,
       "code": "S6"
     },
@@ -1682,18 +1662,8 @@
     },
     {
       "file": "governance/routing-policy.yml",
-      "line": 106,
-      "code": "RP-FLOOR-001"
-    },
-    {
-      "file": "governance/routing-policy.yml",
       "line": 112,
       "code": "RP-FLOOR-002"
-    },
-    {
-      "file": "governance/routing-policy.yml",
-      "line": 118,
-      "code": "RP-FLOOR-003"
     },
     {
       "file": "governance/routing-policy.yml",
@@ -1704,11 +1674,6 @@
       "file": "governance/routing-policy.yml",
       "line": 138,
       "code": "RP-REQUIRE-004"
-    },
-    {
-      "file": "governance/routing-policy.yml",
-      "line": 145,
-      "code": "RP-CAP-001"
     },
     {
       "file": "governance/routing-policy.yml",

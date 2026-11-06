@@ -83,7 +83,7 @@ evidence request`, the Stop hook shows the request in Compass's words, and a
 `UserPromptExpansion` hook records the typed command (ADR-068). At a
 terminal a person runs `compass evidence approve --guardrail` and the value `G5`,
 giving `--approver`, `--role` and `--scope`; on a host whose adapter
-has no person-only approval event, such as Codex, that is the only path.
+has no person-only approval event, that is the only path.
 
 A person can also delegate approvals with `/compass:delegate [--agent <name>]
 [--until <time>] [--on <issues>] [--for <forms>] [--max <n>]` (ADR-069,
@@ -1284,9 +1284,8 @@ the command grows: 10 KB took 4.4 seconds, 20 KB took 33.9 seconds and 50 KB
 did not end in 150 seconds. A command of 20 KB is a fifth of the length
 limit and already runs past the 15-second time limit. The hook before this
 change behaved the same way. On Claude Code 2.1.295 or later the 15-second
-timeout is the only control there. `scripts/install.sh` and the Codex hook
-file do not set these keys, so a source install and a Codex session keep the
-default timeout of 600 seconds.
+timeout is the only control there. `scripts/install.sh` does not set these
+keys, so a source install keeps the default timeout of 600 seconds.
 
 A shell script, makefile or extensionless script is not a built-in
 production-code file type for red-before-green enforcement. A file that

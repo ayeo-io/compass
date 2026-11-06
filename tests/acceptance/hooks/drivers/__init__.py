@@ -3,10 +3,12 @@
 A driver is the only code that runs the hook and the only code that checks
 what it did. It reaches the hook the way a real client does: Claude Code
 sends a JSON event on standard input and reads the exit code and standard
-error; the Codex adapter sends its own event to `adapters/codex/runtime.py`.
+error.
 
-Each specification runs once for each client. `COMPASS_HOOK_CLIENT` set to
-`claude-code` or `codex` runs one only. No specification changes either way.
+9.0.0 ships one client, Claude Code; the Codex adapter and its driver stay on
+8.x (ayeo-io/compass-delivery#345, decision 5). The factory still takes a
+client name, so a second client adds a driver and a name here and no
+specification changes.
 """
 from __future__ import annotations
 
@@ -51,11 +53,11 @@ class HookDriver(Protocol):
     def confirmRefusalDoesNotSay(self, text: str) -> None: ...
 
 
-CLIENTS = ("claude-code", "codex")
+CLIENTS = ("claude-code",)
 
 
 def clients():
-    """The clients a run covers: both, or the one `COMPASS_HOOK_CLIENT` names."""
+    """The clients a run covers: all of them, or the one `COMPASS_HOOK_CLIENT` names."""
     chosen = os.environ.get("COMPASS_HOOK_CLIENT")
     return (chosen,) if chosen else CLIENTS
 
@@ -65,7 +67,4 @@ def driver_for(workspace, client) -> HookDriver:
     if client == "claude-code":
         from tests.acceptance.hooks.drivers.claude_code import ClaudeCodeDriver
         return ClaudeCodeDriver(workspace)
-    if client == "codex":
-        from tests.acceptance.hooks.drivers.codex import CodexDriver
-        return CodexDriver(workspace)
-    raise ValueError(f"COMPASS_HOOK_CLIENT is {client!r}; expected 'claude-code' or 'codex'")
+    raise ValueError(f"COMPASS_HOOK_CLIENT is {client!r}; expected 'claude-code'")

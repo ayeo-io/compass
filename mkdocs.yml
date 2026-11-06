@@ -43,7 +43,6 @@ exclude_docs: |
   !/roles-guide.md
   !/security.md
   !/portability.md
-  !/codex.md
   !/adapter-conformance.md
   !/install-smoke-test.md
   !/cli.md
@@ -79,5 +78,4 @@ nav:
       - Roles: roles-guide.md
       - Artifact catalog: artifact-catalog.md
       - Portability: portability.md
-      - Codex: codex.md
       - Adapter behaviour checks: adapter-conformance.md

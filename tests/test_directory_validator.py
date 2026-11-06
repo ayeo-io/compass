@@ -13,7 +13,6 @@ environment it needs.
 | `TRC-B2` | a command that writes only issue state writes only there |
 | `TRC-B3` | a command that runs a `compass` verb pre-approves `compass` |
 | `TRC-C1` | `gh` gets an allow-list of the environment |
-| `TRC-C2` | the Codex adapter's shared hooks get an allow-list of the environment |
 | `TRC-K1` | the plugin copy passes the directory checks of the local `claude` command |
 | `TRC-K2` | no new subprocess gets the whole environment, no new binary file, nothing new in `bin/` |
 
@@ -323,37 +322,6 @@ def test_trc_c1_gh_gets_only_the_variables_it_needs(monkeypatch):
     assert SECRET not in seen
 
 
-def _runtime():
-    spec = importlib.util.spec_from_file_location(
-        "codex_runtime_under_test", ROOT / "adapters" / "codex" / "runtime.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def test_trc_c2_codex_shared_hooks_get_only_the_variables_they_need(monkeypatch, tmp_path):
-    runtime = _runtime()
-    seen = {}
-
-    def run(argv, **kwargs):
-        seen.update(kwargs["env"])
-        return _Done()
-
-    monkeypatch.setenv("PATH", "/usr/bin")
-    monkeypatch.setenv("HOME", "/home/someone")
-    monkeypatch.setenv("COMPASS_ISSUE", "an-issue")
-    monkeypatch.setenv("CLAUDE_PROJECT_DIR", "/another/project")
-    monkeypatch.setenv(SECRET, "do-not-pass")
-    monkeypatch.setattr(runtime.subprocess, "run", run)
-    runtime.shared_hook("stop.sh", {"cwd": str(tmp_path)})
-    assert seen["PATH"] == "/usr/bin"
-    assert seen["HOME"] == "/home/someone"
-    assert seen["COMPASS_ISSUE"] == "an-issue"
-    assert seen["CLAUDE_PLUGIN_ROOT"] == str(ROOT)
-    assert "CLAUDE_PROJECT_DIR" not in seen
-    assert SECRET not in seen
-
-
 # --- what the plugin copy holds ----------------------------------------------------------------
 
 
@@ -509,7 +477,7 @@ _PROJECT = "runs the person's own test or project command, which needs their env
 
 #: The functions whose calls keep the whole environment, with how many such calls
 #: each holds and the reason. 8.0.4 passed the directory with each of them. A new call needs an allow-list, as the tests
-#: above give `gh` and the Codex hooks, or an entry here that a reviewer accepts.
+#: above give `gh`, or an entry here that a reviewer accepts.
 INHERITS_ENVIRONMENT = {
     ("cli/compass_pkg/ci_cmd.py", "_git_out"): (1, _GIT),
     ("cli/compass_pkg/ci_cmd.py", "_landed_before"): (1, _GIT),

@@ -193,8 +193,8 @@ GROUPS = [
         "live": True,
     },
     {
-        "name": "hooks, schemas and adapters",
-        "paths": ["hooks", "schemas", "adapters"],
+        "name": "hooks and schemas",
+        "paths": ["hooks", "schemas"],
         "kind": "text",
         "live": True,
     },

@@ -7,8 +7,8 @@ and `skills/compass-runtime/SKILL.md` shared 46 sentences verbatim - 39% of
 `compass-runtime` naming nine agents and omitting `architect`.
 
 `AGENTS.md` is deliberately not part of this. It shares no sentence with
-either, because it is the runtime-neutral expression for Codex, Amp and
-Cursor. Other runtimes are out of scope for this contract.
+either, because it is the runtime-neutral expression of Compass for a port to
+another runtime. Other runtimes are out of scope for this contract.
 
 Scenario ids: SB-A1..A3, SB-B1..B4, SB-C1, SB-C2, SB-D1, SB-D2 in
 session-bootstrap/acceptance-criteria.md
@@ -193,8 +193,8 @@ def test_sb_b3_the_runtime_neutral_document_is_untouched():
     """AGENTS.md is not a third copy and is not this cycle's work.
 
     It shares no sentence with either Claude Code document, because it is the
-    portable expression for Codex, Amp and Cursor. Other runtimes are out of
-    scope for this contract.
+    portable expression for a port to another runtime. Other runtimes are out
+    of scope for this contract.
     """
     text = AGENTS_MD.read_text(encoding="utf-8")
     assert "Runtime-Neutral" in text, (

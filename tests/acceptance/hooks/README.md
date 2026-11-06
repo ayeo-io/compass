@@ -6,10 +6,10 @@ The pilot ayeo-io/compass-delivery#306 ("Pilot the four-layer acceptance test mo
 |---|---|---|
 | Specification | `test_hook_refusals.py` | 16 scenarios, one DSL call per Given, When or Then line |
 | DSL | `dsl.py` | `install`, `project`, `machine`, `agent`, `hook`; no checks |
-| Driver | `tests/acceptance/hooks/drivers/base.py`, `tests/acceptance/hooks/drivers/claude_code.py`, `tests/acceptance/hooks/drivers/codex.py` | every set-up, every check, and how each client sends a call |
+| Driver | `tests/acceptance/hooks/drivers/base.py`, `tests/acceptance/hooks/drivers/claude_code.py` | every set-up, every check, and how each client sends a call |
 | System under test | a real install and a real project, in a folder of their own | |
 
-Each scenario runs once through Claude Code's hook interface and once through the Codex adapter. `COMPASS_HOOK_CLIENT=claude-code` or `codex` runs one client only. A scenario a client is known to fail is marked in `conftest.py` with its issue, and the mark is strict.
+Each scenario runs through Claude Code's hook interface. The pilot also ran each one through the Codex adapter, which 9.0.0 removed: it stays on 8.x (ayeo-io/compass-delivery#345, decision 5). `COMPASS_HOOK_CLIENT` names the client to run. A scenario a client is known to fail is marked in `conftest.py` with its issue, and the mark is strict.
 
 ## What the pilot found
 

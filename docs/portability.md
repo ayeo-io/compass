@@ -1,8 +1,8 @@
 # Portability
 
-Compass runs on Claude Code today, but most of Compass is deliberately runtime
-neutral. A port should replace the adapter, not fork the methodology or
-reimplement the policy engine.
+Compass 9.0.0 supports Claude Code only; the Codex adapter stays on 8.x. Most
+of Compass is still deliberately runtime neutral. A port should replace the
+adapter, not fork the methodology or reimplement the policy engine.
 
 ## The three-layer boundary
 
@@ -125,15 +125,14 @@ only after a dated measurement on its host shows that the event fires for a
 command a person typed and that the model cannot raise it, through a tool, a
 scheduled job, a subagent or another session. Until then the adapter sets
 `COMPASS_APPROVAL_CHANNEL=terminal`, and `compass evidence request` prints the
-exact `compass evidence approve` command for the person's own terminal. Codex
-has no such event today, so its users approve at their terminal.
+exact `compass evidence approve` command for the person's own terminal.
 
 **A time limit on the pre-tool hook.** On Claude Code, `hooks/hooks.json` sets
 `"timeout": 15` and `"onFailure": "block"` on the pre-tool hook, so a hook that
 runs out of time can block the call from Claude Code 2.1.295. A source install
-(`scripts/install.sh`) and the Codex hook file do not set these keys and keep
-the default timeout of 600 seconds. An adapter on another runtime needs its own
-bound; the safety contract states the length limit that holds on every version.
+(`scripts/install.sh`) does not set these keys and keeps the default timeout
+of 600 seconds. An adapter on another runtime needs its own bound; the safety
+contract states the length limit that holds on every version.
 
 An adapter limitation can reduce convenience or parallelism. It must not
 silently weaken a guardrail.

@@ -55,13 +55,8 @@ class Adapter:
         for key in ("COMPASS_ISSUE", "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_DATA",
                     "CLAUDE_CODE_SESSION_ID"):
             self.env.pop(key, None)
-        if name == "codex":
-            context = self.command([sys.executable,
-                                    str(ROOT / "adapters/codex/runtime.py"), "context"])
-            source = Path(json.loads(context.stdout)["root"])
-            assert source == ROOT
-            self.entry = [sys.executable, str(source / "cli/compass")]
-        elif name == "claude-code":
+        # 9.0.0 ships one adapter, Claude Code; the Codex adapter stays on 8.x.
+        if name == "claude-code":
             self.entry = ["bash", str(ROOT / "bin/compass")]
         else:
             raise ValueError(f"No local driver for {name}")
@@ -224,22 +219,13 @@ class Adapter:
         payload = {"cwd": str(self.project), "session_id": "local-" + self.name,
                    "hook_event_name": "PreToolUse"}
         if action == "shell":
-            command = "printf x > greeting.py"
-            payload.update(tool_name="exec_command" if self.name == "codex" else "Bash",
-                           tool_input={"cmd" if self.name == "codex" else "command": command})
-        elif self.name == "codex":
-            assert action in ("file", "move")
-            body = ("*** Update File: greeting.py\n@@\n-old\n+new" if action == "file" else
-                    "*** Update File: tests/test_greeting.py\n*** Move to: greeting.py\n@@\n-old\n+new")
-            payload.update(tool_name="apply_patch", tool_input={
-                "command": "*** Begin Patch\n" + body + "\n*** End Patch"})
+            payload.update(tool_name="Bash", tool_input={"command": "printf x > greeting.py"})
         else:
             assert action in ("file", "move")
             payload.update(tool_name="Write", tool_input={
                 "file_path": str(self.project / "greeting.py"), "content": "new"})
-        argv = ([sys.executable, str(ROOT / "adapters/codex/runtime.py"), "hook"]
-                if self.name == "codex" else ["bash", str(ROOT / "hooks/pre-tool.sh")])
-        result = self.command(argv, input=json.dumps(payload), check=False)
+        result = self.command(["bash", str(ROOT / "hooks/pre-tool.sh")],
+                              input=json.dumps(payload), check=False)
         codes = re.findall(r"\[([a-z][a-z0-9-]*)\]\s*$", result.stderr, re.MULTILINE)
         return {"exit_code": result.returncode,
                 "reason": codes[-1] if result.returncode and codes else None}

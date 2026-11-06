@@ -33,7 +33,6 @@ the table does not exist, and when a doc in this folder is not listed.
 ## Running and maintaining Compass
 
 - [install-smoke-test.md](install-smoke-test.md) - the checklist after an install or an install change.
-- [codex.md](codex.md) - Codex source installation, shared stages and the tested limits of the adapter.
 - [adapter-conformance.md](adapter-conformance.md) - local behaviour checks and the separate native and independent acceptance runs.
 - [releasing.md](releasing.md) - how to cut a release.
 - [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 9.0.0, and why there is no supported rollback.
@@ -70,7 +69,6 @@ same commit.
 
 | Area | Owning doc |
 |---|---|
-| `adapters/codex/`, `.codex-plugin/` | `docs/codex.md` |
 | `tests/adapter_conformance/`, `tests/test_adapter_behaviour.py` | `docs/adapter-conformance.md` |
 | `hooks/`, `compass-contract.md`, `cli/compass_pkg/approval_guard.py`, `cli/compass_pkg/approval_words.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/tip_scope.py` | `docs/safety-contract.md` |

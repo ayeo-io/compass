@@ -8,8 +8,9 @@ test model (ayeo-io/compass-delivery#306, in the private delivery record).
 | `TRC-P4` | one scenario runs twice in a row, and four run at once, with the same result |
 | `TRC-P5` | the note gives the counts it is meant to give |
 
-The scenario `TRC-P2`, the same specifications through both hook clients,
+The scenario `TRC-P2`, the same specifications through each hook client,
 is `test_hook_refusals.py` itself: its fixture runs each scenario once per client.
+9.0.0 ships one client, Claude Code.
 """
 from __future__ import annotations
 
@@ -71,8 +72,8 @@ def test_trc_p1_each_specification_is_one_dsl_call_per_step(function):
 
 
 def test_trc_p1_every_refusal_check_names_a_code():
-    # The Codex adapter turns a hook that crashes into a refusal with no code,
-    # so a check that names no code passes on a crash.
+    # A client can turn a hook that crashes into a refusal with no code, so a
+    # check that names no code passes on a crash.
     bare = [f"{function.name} line {node.lineno}" for function in _spec_functions()
             for node in ast.walk(function)
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)

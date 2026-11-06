@@ -99,7 +99,6 @@
   "tests/test_cli_verb_descriptions.py": 0.22,
   "tests/test_cli_voice.py": 11.48,
   "tests/test_clickable_paths.py": 22.82,
-  "tests/test_codex_adapter.py": 2.91,
   "tests/test_colour_in_test_output.py": 0.93,
   "tests/test_command_renames.py": 0.31,
   "tests/test_comment_only_edit_limits_are_stated.py": 0.01,

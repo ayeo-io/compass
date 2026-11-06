@@ -5,8 +5,8 @@ file checks that the list is one constant, that each scan reads what it must
 and ignores what it must, that a planted British word fails in each file
 group, and that an exemption marker works on its own line only.
 
-The guard is live for every file group: the shipped prose, the hooks,
-schemas and adapters, the CLI string literals and the `--help` text. A
+The guard is live for every file group: the shipped prose, the hooks and
+schemas, the CLI string literals and the `--help` text. A
 row's `live` field turns its scan off only while its files are not
 converted.
 """
@@ -343,7 +343,7 @@ NINE_GROUPS = [
     ("commands", ["commands"]),
     ("approaches and templates", ["approaches", "templates"]),
     ("the contract", ["compass-contract.md"]),
-    ("hooks, schemas and adapters", ["hooks", "schemas", "adapters"]),
+    ("hooks and schemas", ["hooks", "schemas"]),
 ]
 
 

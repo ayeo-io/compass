@@ -1,8 +1,11 @@
 # Compass - Runtime-Neutral Agent Instructions
 
 This file is the portable expression of Compass. `CLAUDE.md` is the Claude
-Code adapter; this file is the same intent without runtime-specific syntax,
-for any other agent runtime (Codex, Amp, Cursor, OpenCode, a custom harness).
+Code adapter; this file is the same intent without runtime-specific syntax.
+
+Compass 9.0.0 supports Claude Code only. The Codex adapter stays on 8.x, and
+9.0.0 ships no adapter for another runtime. This file is the contract that a
+port to another agent runtime must satisfy.
 
 It speaks the frozen v2 vocabulary (`governance/terminology.yml`). Commands,
 filenames and machine keys use their v2 names; a name that reads oddly

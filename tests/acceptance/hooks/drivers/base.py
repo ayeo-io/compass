@@ -1,4 +1,4 @@
-"""What both hook drivers share: building the install, the project and the
+"""What every hook driver shares: building the install, the project and the
 machine, and checking what the hook did.
 
 Everything that knows how Compass is laid out, how a fault is planted and
@@ -85,7 +85,7 @@ class HookDriverBase:
 
     def hasCompleteInstall(self):
         if not self.install.exists():
-            for part in ("hooks", "scripts", "cli", "adapters"):
+            for part in ("hooks", "scripts", "cli"):
                 shutil.copytree(ROOT / part, self.install / part,
                                 ignore=shutil.ignore_patterns("__pycache__"))
             (self.install / "compass-contract.md").write_text(

@@ -19,10 +19,7 @@ import pytest
 from tests.acceptance.hooks.drivers import clients
 from tests.acceptance.hooks.dsl import Dsl
 
-KNOWN_FAILURES = {
-    ("codex", "test_hfm_2_with_no_python3_the_refusal_says_so"):
-        "ayeo-io/compass-delivery#308: the Codex hook command exits 127 without python3",
-}
+KNOWN_FAILURES: dict[tuple[str, str], str] = {}
 
 
 @pytest.fixture(params=clients())

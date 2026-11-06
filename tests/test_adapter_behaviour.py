@@ -1,4 +1,9 @@
-"""Local adapter conformance: actual kit entries, never native model turns."""
+"""Local adapter conformance: actual kit entries, never native model turns.
+
+9.0.0 ships one adapter, Claude Code. The cases that compared it with the
+Codex adapter now check the Claude Code result alone; the Codex adapter stays
+on 8.x (ayeo-io/compass-delivery#345, decision 5).
+"""
 from __future__ import annotations
 
 import json
@@ -27,24 +32,19 @@ def test_adapter_entries_compose_the_same_policy(tmp_path):
     # decision 3), so the reading adds no claims gate. #354, which removes the
     # role entry points, decides how claims are reviewed.
     for index, (risk, size, goal, documents, expected) in enumerate(cases):
-        results = []
-        for name in ("claude-code", "codex"):
-            adapter = Adapter(name, tmp_path / str(index) / name)
-            result = adapter.evaluate(risk=risk, familiarity="brownfield-mapped",
-                                      size=size, goal=goal, artifacts=documents)
-            assert adapter.calls[-1]["argv"][:len(adapter.entry)] == adapter.entry
-            results.append(result)
-        assert results[0] == results[1]
+        adapter = Adapter("claude-code", tmp_path / str(index))
+        result = adapter.evaluate(risk=risk, familiarity="brownfield-mapped",
+                                  size=size, goal=goal, artifacts=documents)
+        assert adapter.calls[-1]["argv"][:len(adapter.entry)] == adapter.entry
         if expected:
-            assert results[0]["delivery_approach"] == expected
+            assert result["delivery_approach"] == expected
         if documents == "positioning":
-            assert "verify.claims" not in results[0]["gates"]
+            assert "verify.claims" not in result["gates"]
 
 
-@pytest.mark.parametrize("first,second", [("claude-code", "codex"),
-                                         ("codex", "claude-code")])
-def test_quick_fix_and_local_handoff(tmp_path, first, second):
-    started = Adapter(first, tmp_path / "project")
+def test_quick_fix_and_local_handoff(tmp_path):
+    # A second entry resumes the issue the first one started.
+    started = Adapter("claude-code", tmp_path / "project")
     started.seed("quick-fix")
     started.start_quick_fix()
     started.red()
@@ -52,7 +52,7 @@ def test_quick_fix_and_local_handoff(tmp_path, first, second):
     before = manifest_path.read_bytes()
     evidence_before = {path.name: path.read_bytes()
                        for path in (started.issue_dir / "evidence").iterdir() if path.is_file()}
-    resumed = Adapter(second, started.project)
+    resumed = Adapter("claude-code", started.project)
     assert manifest_path.read_bytes() == before
     assert {path.name: path.read_bytes()
             for path in (resumed.issue_dir / "evidence").iterdir() if path.is_file()} == evidence_before
@@ -90,7 +90,7 @@ def test_git_environment_cannot_escape_project(tmp_path, monkeypatch):
                 "GIT_OBJECT_DIRECTORY": str(outside.project / ".git/objects")}
     for key, value in supplied.items():
         monkeypatch.setenv(key, value)
-    isolated = Adapter("codex", tmp_path / "isolated")
+    isolated = Adapter("claude-code", tmp_path / "isolated")
     assert not set(supplied).intersection(isolated.env), "Git repository selection leaked"
     isolated.seed("quick-fix")
     assert (isolated.project / ".git").is_dir()
@@ -99,28 +99,24 @@ def test_git_environment_cannot_escape_project(tmp_path, monkeypatch):
     assert after == before
 
 
-def test_regular_feature_records_agree(tmp_path):
-    observations = []
-    for name in ("claude-code", "codex"):
-        adapter = Adapter(name, tmp_path / name)
-        adapter.seed("feature")
-        adapter.start_feature()
-        adapter.red()
-        adapter.fix("feature")
-        adapter.green_feature()
-        observation = adapter.observe()
-        manifest = observation["manifest"]
-        assert manifest["delivery_approach"] == "delivery"
-        assert {gate["id"] for gate in manifest["gates"]} == {
-            "verify.correctness", "verify.governance", "verify.traceability",
-            "verify.regression", "verify.clarity", "verify.security"}
-        # Routing writes no document list since 9.0.0 (ADR-091); `compass check`
-        # in observe() reads the acceptance criteria at their fixed path.
-        assert manifest["artifacts"] == []
-        assert any(record["type"] == "test-run" and record["passed"]
-                   for record in observation["evidence"])
-        observations.append(observation)
-    assert observations[0] == observations[1]
+def test_regular_feature_records(tmp_path):
+    adapter = Adapter("claude-code", tmp_path / "claude-code")
+    adapter.seed("feature")
+    adapter.start_feature()
+    adapter.red()
+    adapter.fix("feature")
+    adapter.green_feature()
+    observation = adapter.observe()
+    manifest = observation["manifest"]
+    assert manifest["delivery_approach"] == "delivery"
+    assert {gate["id"] for gate in manifest["gates"]} == {
+        "verify.correctness", "verify.governance", "verify.traceability",
+        "verify.regression", "verify.clarity", "verify.security"}
+    # Routing writes no document list since 9.0.0 (ADR-091); `compass check`
+    # in observe() reads the acceptance criteria at their fixed path.
+    assert manifest["artifacts"] == []
+    assert any(record["type"] == "test-run" and record["passed"]
+               for record in observation["evidence"])
 
 
 def test_semantic_changes_and_tampered_evidence_fail(tmp_path):
@@ -170,51 +166,39 @@ def test_semantic_changes_and_tampered_evidence_fail(tmp_path):
         adapter.observe()
 
 
-def test_hook_decisions_agree(tmp_path):
-    observations = []
-    for name in ("claude-code", "codex"):
-        adapter = Adapter(name, tmp_path / name)
-        adapter.seed("quick-fix")
-        results = []
-        for state, expected_exit in (("unassessed", 2), ("no-red", 2), ("red", 0)):
-            if state == "no-red":
-                adapter.start_quick_fix()
-            elif state == "red":
-                adapter.red()
-            for action in ("file", "move", "shell"):
-                decision = adapter.payload_decision(action)
-                assert decision["exit_code"] == expected_exit, (state, action, decision)
-                if expected_exit:
-                    assert decision["reason"]
-                results.append((state, action, decision))
-        spike = Adapter(name, tmp_path / (name + "-spike"))
-        spike.seed("quick-fix")
-        spike.start_spike()
-        decision = spike.payload_decision("file")
-        assert decision == {"exit_code": 0, "reason": None}
-        results.append(("spike", "file", decision))
-        observations.append(results)
-    assert observations[0] == observations[1]
+def test_hook_decisions(tmp_path):
+    adapter = Adapter("claude-code", tmp_path / "claude-code")
+    adapter.seed("quick-fix")
+    for state, expected_exit in (("unassessed", 2), ("no-red", 2), ("red", 0)):
+        if state == "no-red":
+            adapter.start_quick_fix()
+        elif state == "red":
+            adapter.red()
+        for action in ("file", "move", "shell"):
+            decision = adapter.payload_decision(action)
+            assert decision["exit_code"] == expected_exit, (state, action, decision)
+            if expected_exit:
+                assert decision["reason"]
+    spike = Adapter("claude-code", tmp_path / "claude-code-spike")
+    spike.seed("quick-fix")
+    spike.start_spike()
+    assert spike.payload_decision("file") == {"exit_code": 0, "reason": None}
 
 
 def test_approval_scope_observations(tmp_path):
     # The cap observation ran the multiagent script, which 9.0.0 removed
     # (ADR-090); the approval observation stays.
-    observations = []
-    for name in ("claude-code", "codex"):
-        approval = Adapter(name, tmp_path / name / "approval")
-        approval.seed("quick-fix")
-        approval.start_approval_fixture()
-        subjects = [approval.approval_decision(subject)
-                    for subject in (None, "check", "guardrail")]
-        assert [result["status"] for result in subjects] == ["fail", "fail", "pass"]
-        assert all(result["synthetic"] for result in subjects)
-        observations.append({"approval": subjects})
-    assert observations[0] == observations[1]
+    approval = Adapter("claude-code", tmp_path / "approval")
+    approval.seed("quick-fix")
+    approval.start_approval_fixture()
+    subjects = [approval.approval_decision(subject)
+                for subject in (None, "check", "guardrail")]
+    assert [result["status"] for result in subjects] == ["fail", "fail", "pass"]
+    assert all(result["synthetic"] for result in subjects)
 
 
 def test_local_captures_cannot_claim_native_acceptance(tmp_path):
-    adapter = Adapter("codex", tmp_path / "project")
+    adapter = Adapter("claude-code", tmp_path / "project")
     result = adapter.evaluate(risk="trivial", familiarity="brownfield-mapped",
                               size="atomic", goal="delivery", role="engineer")
     observed = {"evidence_class": "local", "delivery_approach": result["delivery_approach"],
@@ -228,7 +212,7 @@ def test_local_captures_cannot_claim_native_acceptance(tmp_path):
     assert capture["result"]["status"] == "passed"
     assert capture["native"]["status"] == capture["independent"]["status"] == "unmeasured"
     assert capture["calls"] and capture["framework_revision"]
-    assert json.loads(json.dumps(capture))["adapter"] == "codex"
+    assert json.loads(json.dumps(capture))["adapter"] == "claude-code"
     changed = deepcopy(observed)
     changed["delivery_approach"] = "regular"
     assert adapter.capture("route", changed, expected)["result"]["status"] == "failed"

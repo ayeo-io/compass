@@ -324,7 +324,7 @@
   },
   "behaviour": {
     "result": "incomparable",
-    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, role engineer, labels none: approaches.artifacts is [\"delivery-approach\"] in the parent and [] in the child",
+    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, role engineer, labels none: rules.ceilings (builder_attempts) is null in the parent and 3 in the child",
     "points": 0,
     "changed": 0
   },

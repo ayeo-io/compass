@@ -35,7 +35,8 @@ import yaml
 from compass_pkg import catalogue_spec as spec
 from compass_pkg import old_names
 from compass_pkg import (classify, layers, legacy_adapter, merge, policy_lint,
-                         project_settings, retired, shipped_releases, waivers)
+                         project_settings, removed_parts, retired, shipped_releases,
+                         waivers)
 from compass_pkg.atomic_io import atomic_write_text
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, load_yaml, migrate_map_section,
                               now_iso)
@@ -326,6 +327,24 @@ def _entry_change(catalogue, before, after):
     return ("set", {"set": changed}) if changed else None
 
 
+def _without_removed(made, overlay, ops):
+    """`(overlay, ops)` with every entry a 9.0.0 release removed left out (ADR-090
+    to ADR-092), each named in `made.dropped` with `L-SETTING-REMOVED`. A project
+    file cannot change those entries, so the merge would leave them out anyway."""
+    kept_ops = []
+    for op in ops:
+        key = removed_parts.removed_key(op["catalogue"], op["id"])  # us-english-scan: allow - reads the stored key
+        if key is None:
+            kept_ops.append(op)
+            continue
+        overlay[op["catalogue"]].pop(op["id"])  # us-english-scan: allow - reads the stored key
+        if not overlay[op["catalogue"]]:
+            del overlay[op["catalogue"]]
+        made.dropped.append({"key": f"{op['catalogue']}.{op['id']}",  # us-english-scan: allow - reads the stored key
+                             "reason": f"L-SETTING-REMOVED: {removed_parts.setting_note(key)}"})
+    return removed_parts.without_removed(overlay), kept_ops
+
+
 def overlay_between(base, legacy):
     """`(overlay, ops)`: the catalogue entries that turn the configuration
     `base` into `legacy`, and one record per entry in catalogue and id order."""
@@ -613,6 +632,7 @@ def _derive(root, made, settings):
                     if op["operation"] != "remove"
                     or op["id"] not in (parent_config.get(op["catalogue"]) or {})]  # us-english-scan: allow - the key is stored in the migration record
     overlay, ops = overlay_between(base, legacy)
+    overlay, ops = _without_removed(made, overlay, ops)
     made.ops = ops
     made.blocked += _retired_edits(overlay)
     base_views = legacy_adapter.legacy_views(*_release_files(release))
@@ -632,11 +652,17 @@ def _derive(root, made, settings):
                 overlay[op["catalogue"]][op["id"]]["waiver"] = waiver  # us-english-scan: allow - the key is stored in the migration record
                 op["waiver"] = waiver["approved_by"]
         made.doc = _layer_document(overlay, settings)
-        shown, made.equivalence = _verdict(legacy, faithful, parent_name="copy",
+        # A removed key's points are not counted (ADR-092): each side is compared
+        # with the copy's own removed entries in place of its own, so only what a
+        # project file can still change differs.
+        copy_seen = removed_parts.with_removed_from(legacy, legacy)
+        faithful_seen = removed_parts.with_removed_from(faithful, legacy)
+        migrated_seen = removed_parts.with_removed_from(migrated, legacy)
+        shown, made.equivalence = _verdict(copy_seen, faithful_seen, parent_name="copy",
                                            child_name="base plus overlay")
-        _, made.behaviour = _verdict(legacy, migrated, parent_name="copy",
+        _, made.behaviour = _verdict(copy_seen, migrated_seen, parent_name="copy",
                                      child_name="migrated")
-        counts = classify.classify(legacy, migrated).to_json()["counts"]
+        counts = classify.classify(copy_seen, migrated_seen).to_json()["counts"]
         made.behaviour["changed"] = counts["looser"] + counts["tighter"] + counts["mixed"]
         made.behaviour = {k: made.behaviour[k] for k in ("result", "reason", "points", "changed")}
     except CompassError as exc:

@@ -108,8 +108,9 @@ The one exception to the `compass.yml` refusals is the interrupted run above.
    - an entry that lost a field is a `replace` with the whole entry, because a field cannot be unset.
 4. A rule set's `order` numbers are compared by sequence. Removing a rule from the middle renumbers the rules after it and changes no relative position, so the overlay lists only the removal. A rule carries `order` only when its relative position changed or when it is added.
 5. The `project:` guardrails of the copy become project checks and gates: a `command-passes` guardrail becomes a check named by the guardrail id and a slug of its name, with its parameters, and every guardrail becomes a gate at its first `checked_at` stage.
-6. Merge the overlay over the preset. The result is the migrated configuration.
-7. Classify the copy against the base release plus the overlay. It must be `equivalent`. That proves the overlay holds the local edits and nothing else.
+6. Leave out every entry a 9.0.0 release removed from what a project file can change: the approaches, a legacy stage the four-stage path does not keep, the caps rule set, a Definition of Ready check and the document kinds (ADR-090 to ADR-092). The merge would leave each one out anyway. Each is listed under `dropped` with `L-SETTING-REMOVED` and its decision record, and it does not block.
+7. Merge the overlay over the preset. The result is the migrated configuration.
+8. Classify the copy against the base release plus the overlay. It must be `equivalent`. That proves the overlay holds the local edits and nothing else. Each side is compared with the copy's own removed entries in their place, so a removed entry's points are not counted, here or in the `behaviour` below.  <!-- us-english-scan: allow - JSON key kept for old readers -->
 
 Defaults that moved since the base release are **adopted** without a waiver.
 They are listed in the report and in `adopted`, as entry and operation, from the
@@ -573,7 +574,7 @@ reassess), and the `compass.yml` it would write.
   },
   "behaviour": {  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
     "result": "incomparable",
-    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, role engineer, labels none: approaches.artifacts is [\"delivery-approach\"] in the parent and [] in the child",
+    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, role engineer, labels none: rules.ceilings (builder_attempts) is null in the parent and 3 in the child",
     "points": 0,
     "changed": 0
   },

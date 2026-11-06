@@ -210,6 +210,48 @@ def _named_checks(doc):
     return found
 
 
+def removed_key(catalogue, entry_id):
+    """The removed `compass.yml` key that the entry `<catalogue>.<entry_id>` falls
+    under, such as `approaches` or `stages.plan`, or None when it is kept."""
+    if catalogue in SETTINGS:
+        return catalogue
+    key = f"{catalogue}.{entry_id}"
+    return key if key in SETTINGS else None
+
+
+def with_removed_from(config, like):
+    """A copy of the resolved configuration `config` in which every removed entry
+    is the one `like` holds (or is absent when `like` has none), and no field that
+    lists checks names a removed check. Two configurations compared after this
+    differ only in what a project layer can still change."""
+    import copy
+    out = copy.deepcopy(config)
+    for catalogue in {key.split(".", 1)[0] for key in SETTINGS}:
+        entries, other = out.get(catalogue), (like.get(catalogue) or {})
+        if catalogue in SETTINGS:
+            if catalogue in like:
+                out[catalogue] = copy.deepcopy(like[catalogue])
+            else:
+                out.pop(catalogue, None)
+            continue
+        if not isinstance(entries, dict):
+            continue
+        for entry_id in set(entries) | set(other):
+            if removed_key(catalogue, entry_id) is None:
+                continue
+            if entry_id in other:
+                entries[entry_id] = copy.deepcopy(other[entry_id])
+            else:
+                entries.pop(entry_id, None)
+    removed = _removed_checks()
+    for catalogue, fields in CHECK_LIST_FIELDS.items():
+        for entry in (out.get(catalogue) or {}).values():
+            for field in fields:
+                if isinstance(entry, dict) and isinstance(entry.get(field), list):
+                    entry[field] = [item for item in entry[field] if item not in removed]
+    return out
+
+
 def _holds(doc, key):
     """True when a project layer holds the removed key `key`."""
     if "." not in key:

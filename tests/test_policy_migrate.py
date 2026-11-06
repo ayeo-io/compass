@@ -188,12 +188,16 @@ def test_PM_3_a_changed_copy_migrates_to_exactly_its_differing_entries(tmp_path)
     _copy_governance(root, _tighten_and_add)
     made = _plan(root)
     assert made.result == "ready"
-    assert _ops(made) == [("approaches", "regular", "set"), ("rules", "floors", "set"),
-                          ("gates", "G9", "add"), ("vocabulary", "gates.G9", "add")]
+    # A project file cannot change an approach since 9.0.0 (ADR-092), so the lower
+    # subtask ceiling is left out of the overlay and named as dropped.
+    assert _ops(made) == [("rules", "floors", "set"), ("gates", "G9", "add"),
+                          ("vocabulary", "gates.G9", "add")]
     assert made.equivalence["result"] == "equivalent"
     assert made.blocked == []
     doc = yaml.safe_load(made.compass_yml)
-    assert doc["approaches"] == {"regular": {"set": {"subtask_ceiling": 1}}}
+    assert "approaches" not in doc
+    assert [d["key"] for d in made.dropped if "L-SETTING-REMOVED" in d["reason"]] == [
+        "approaches.regular"]
     assert list(doc["rules"]["floors"]["set"]["rules"]) == ["set"]
     assert list(doc["rules"]["floors"]["set"]["rules"]["set"]) == ["RP-FLOOR-900"]
 

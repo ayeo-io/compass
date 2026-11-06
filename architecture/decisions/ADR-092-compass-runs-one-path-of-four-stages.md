@@ -61,7 +61,7 @@ What breaks for a user:
 - `compass quick-fix start` no longer refuses heavier work. `compass quick-fix finish` works on any delivery issue, and refuses with exit 1 while other evidence is owed.
 - The `G2` hook refuses a code edit on every path issue that has no scenario, not only where `define` was `thorough`. `compass quick-fix start` always writes a scenario, and the refusal names `compass scenario add`.
 - Under `controlled`, assess and specify are always checkpoints, and build and ship are checkpoints where `S17` applies. Under `balanced`, the 8.x waits at define and plan on medium work go.
-- A project `compass.yml` that sets `approaches:`, a legacy stage, `autonomy_checkpoints` naming a legacy stage or a caps rule gets an `L-SETTING-REMOVED` warning, and the merge drops the key.
+- A project `compass.yml` that sets `approaches:`, a legacy stage, the caps rule set or a Definition of Ready check gets an `L-SETTING-REMOVED` warning, and the merge drops the key. An `autonomy_checkpoints` table may name the path stages and the legacy stages; nothing in it is dropped, and an old issue still waits only at the legacy hand-offs.
 - An issue writes no `devlog.md`, and no Definition of Ready is owed.
 
 What old issues keep:

@@ -1203,7 +1203,7 @@
     },
     "config": {
       "type": "object",
-      "description": "Optional. The issue's own configuration layer (ADR-036, ADR-043): a person-written input. Editing it changes nothing until `compass approach evaluate --write` commits it into a new generation. Its keys are checked by `compass policy lint --issue`.",
+      "description": "Optional. The issue's own configuration layer of 8.x (ADR-036, ADR-043). It stays valid so an archived manifest validates, and is not written or read since 9.0.0 (ADR-094): a generation committed with it keeps its effect, and `compass issue lint` warns about any other. Its keys are checked by `compass policy lint --issue`.",
       "additionalProperties": true
     },
     "waivers": {

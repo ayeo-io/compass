@@ -615,11 +615,11 @@ as before:
   floor raised, so an owner-approved solo build of a `migrations` issue is
   recorded as `breakdown: skipped`. A floor's `never_skip` and
   `require_phase` still lift the stages they name, and the gates, guardrails,
-  artifacts and forced approach do not change. When the issue's layer or
-  assessment changes, the reassess lints the layer at the issue's own
-  assessment, and refuses the waiver unless its approval record is valid
-  (ADR-039)
+  artifacts and forced approach do not change
   (`governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md`).
+  Since 9.0.0 an issue has no layer of its own (ADR-094): `compass approach
+  evaluate` reads `issue` only from a generation an 8.x reassess stored with
+  one (`EffectiveView.evaluator_issue`), and a manifest's `config:` is not read.
 - `RoutingConflict`, the error class of the two refusals: exploration that a
   floor would turn into delivery, and an approach a cap forbids. A caller that
   compares policies treats these as results (`Refused`). Every other error is

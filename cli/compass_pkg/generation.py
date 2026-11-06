@@ -8,9 +8,11 @@ A generation is a folder, `.compass/work/<slug>/generations/<n>/`, holding:
   configuration and what it was resolved from, fixed at commit;
 - `complete`: a marker written after them, holding a digest of each;
 - `results.yml`: the latest check verdicts, rewritten after each run and not
-  covered by the marker;
-- `proposed.yml`: a pending change to the issue's `config:` layer, written by
-  `compass issue configure` and consumed by the reassess that applies it.
+  covered by the marker.
+
+An 8.x issue could also hold `proposed.yml`, a pending change to its
+`config:` layer. 9.0.0 has no issue layer (ADR-094), so nothing writes or
+reads that file; a commit leaves one it finds in place.
 
 This module owns those files, the order a commit writes them in, and the
 states a folder can be in. It does not resolve configuration: `effective`
@@ -23,9 +25,11 @@ assessed under 6.x and has no generation yet.
 A commit takes an exclusive lock on the issue, then writes in a fixed order:
 the four files, the marker, then the manifest. The manifest replace is the
 commit point: a crash before it leaves the manifest naming the generation
-that was whole. This module never adopts a leftover folder on its own.
+that was whole. The next commit writes the folder again: it removes the files
+a commit writes, complete or not, and refuses a folder that holds anything
+else.
 """
-# DEPENDENCY: standard library (dataclasses, datetime, os, re, shutil);
+# DEPENDENCY: standard library (dataclasses, datetime, os, re);
 # PyYAML (bundled); compass_pkg.atomic_io, compass_pkg.core (CompassError,
 # load_manifest_mapping and manifest_path, only).
 from __future__ import annotations
@@ -33,7 +37,6 @@ from __future__ import annotations
 import datetime
 import os
 import re
-import shutil
 from dataclasses import dataclass, field
 
 import yaml
@@ -53,6 +56,10 @@ RESOLVER_VERSION = "1.0.0"
 FILES = ("resolved.yml", "provenance.yml", "versions.yml", "records.yml")
 MARKER = "complete"
 RESULTS = "results.yml"
+# The pending change to an issue's `config:` layer that 8.x parked in the next
+# folder. 9.0.0 has no issue layer (ADR-094): nothing writes or reads the file,
+# but an archived folder can hold one, so `states` still names such a folder and
+# a commit leaves the file where it is.
 PROPOSED = "proposed.yml"
 LOCK = ".generation.lock"
 DIRECTORY = "generations"
@@ -111,9 +118,8 @@ class GenState:
 
 def _after_step(step):
     """Called after each write of a commit: `resolved`, `provenance`,
-    `versions`, `records`, `marker`, `manifest` and, when a proposal is
-    consumed, `proposal`. A test replaces it to interrupt the commit at that
-    step. Product code has no switch for it."""
+    `versions`, `records`, `marker` and `manifest`. A test replaces it to
+    interrupt the commit at that step. Product code has no switch for it."""
 
 
 def number(manifest):
@@ -133,17 +139,10 @@ def gen_dir(task_dir, n):
     return os.path.join(os.fspath(task_dir), DIRECTORY, str(n))
 
 
-def configure_command(task_dir, *flags):
-    """The `compass issue configure` command a refusal prints for the issue in
-    `task_dir`. It always names the issue: the pointer can name another issue,
-    and the command run as printed would act on that one instead."""
-    slug = os.path.basename(os.path.normpath(os.fspath(task_dir)))
-    return " ".join(("compass issue configure --issue", slug, *map(str, flags)))
-
-
 def evaluate_command(task_dir):
-    """`compass approach evaluate --write` for the issue in `task_dir`, named
-    for the same reason as in `configure_command`."""
+    """`compass approach evaluate --write` for the issue in `task_dir`. It
+    always names the issue: the pointer can name another issue, and the
+    command run as printed would act on that one instead."""
     return f"{FIX_ZERO} --issue {os.path.basename(os.path.normpath(os.fspath(task_dir)))}"
 
 
@@ -314,7 +313,8 @@ def states(task_dir, manifest=None):
             found.append(GenState(n, "superseded" if marked else "incomplete",
                                   "" if marked else "its complete marker is missing"))
         elif names == {PROPOSED}:
-            found.append(GenState(n, "proposal", "a change is proposed"))
+            found.append(GenState(n, "proposal", "an 8.x change to config: that "
+                                                 "nothing reads"))
         elif marked and is_whole(task_dir, n)[0]:
             found.append(GenState(n, "complete-unreferenced",
                                   "complete, but the manifest does not name it"))
@@ -323,141 +323,6 @@ def states(task_dir, manifest=None):
                                   is_whole(task_dir, n)[1] if marked else
                                   "some files and no complete marker"))
     return sorted(found, key=lambda g: g.number)
-
-
-# --- the proposal and the leftovers --------------------------------------------------------
-
-@dataclass
-class Proposal:
-    """A pending change to the issue's `config:` layer, parked in
-    `generations/<n+1>/proposed.yml`. `base_config_digest` is the digest of
-    the manifest's `config:` (an empty mapping when it has none) when the
-    proposal was written; a reassess applies the proposal only while the
-    manifest's `config:` still has that digest."""
-    number: int
-    base_generation: int
-    base_config_digest: str
-    overlay: dict
-
-
-def config_digest(manifest):
-    """The digest a proposal records for the `config:` it was built on."""
-    return digest(manifest.get("config") or {})
-
-
-def read_proposal(task_dir, n):
-    """The proposal in generation folder n, or None when there is none. A
-    `proposed.yml` that cannot be read, or lacks a key, is refused with the
-    command that removes it; it is never trusted."""
-    path = os.path.join(gen_dir(task_dir, n), PROPOSED)
-    if not os.path.isfile(path):
-        return None
-    advice = f"Run `{configure_command(task_dir, '--discard', n)}` to remove it."
-    try:
-        doc = load_yaml_strict(path)
-    except StrictYamlError as exc:
-        raise CompassError(f"{path} cannot be read as a proposal: {exc}. {advice}")
-    ok = (isinstance(doc, dict) and doc.get("schema") == SCHEMA
-          and isinstance(doc.get("overlay"), dict)
-          and isinstance(doc.get("base_generation"), int)
-          and not isinstance(doc.get("base_generation"), bool)
-          and isinstance(doc.get("base_config_digest"), str))
-    if not ok:
-        raise CompassError(f"{path} is not a proposal this version wrote (it needs "
-                           f"schema, base_generation, base_config_digest and an overlay "
-                           f"mapping). {advice}")
-    return Proposal(n, doc["base_generation"], doc["base_config_digest"], doc["overlay"])
-
-
-def pending_proposal(task_dir, manifest):
-    """The proposal waiting above the generation the manifest names, or None."""
-    held = number(manifest)
-    return read_proposal(task_dir, held + 1) if held else None
-
-
-def _leftover_advice(task_dir, target):
-    found = {g.number: g for g in states(task_dir)}.get(target)
-    if found is None or found.state == "proposal":
-        return ""
-    if found.state == "complete-unreferenced":
-        return (f"holds a complete generation {target} that the manifest does not name. "
-                f"Run `{configure_command(task_dir, '--commit', target)}` to adopt it or "
-                f"`{configure_command(task_dir, '--discard', target)}` to remove it")
-    return (f"holds an {found.state} generation {target} ({found.detail}). Run "
-            f"`{configure_command(task_dir, '--discard', target)}` to remove it")
-
-
-def write_proposal(task_dir, manifest, overlay):
-    """Park `overlay` as the pending change to the issue's `config:`, in the
-    folder above the generation in force, and return the `Proposal`. The
-    manifest is not touched. Refuses a landed issue, a folder holding anything
-    but a proposal, and a link anywhere in the way; under the issue's lock, so
-    it cannot meet a commit half way."""
-    task_dir = os.fspath(task_dir)
-    held = number(manifest)
-    if not held:
-        raise CompassError(
-            f"issue {os.path.basename(os.path.normpath(task_dir))} has no stored "
-            f"configuration to change yet; run `{FIX_ZERO} --issue "
-            f"{os.path.basename(os.path.normpath(task_dir))}` first")
-    target = held + 1
-    with locked(os.path.join(task_dir, LOCK)):
-        disk = load_manifest_mapping(manifest_path(task_dir))
-        if number(disk) != held:
-            raise CompassError(f"{manifest_path(task_dir)} changed since it was read (it "
-                               f"now names {_named(number(disk))}); run the command again")
-        if status_words.is_closed(disk):
-            raise CompassError(
-                f"issue {os.path.basename(os.path.normpath(task_dir))} is closed and keeps "
-                f"the configuration it closed under; it cannot be given a proposal")
-        _refuse_links(task_dir, target)
-        folder = gen_dir(task_dir, target)
-        if os.path.isdir(folder):
-            others = sorted(set(os.listdir(folder)) - {PROPOSED})
-            if others:
-                raise CompassError(f"{folder} {_leftover_advice(task_dir, target)}")
-            read_proposal(task_dir, target)       # a proposal we cannot read is refused
-        else:
-            os.makedirs(folder)
-        slug = os.path.basename(os.path.normpath(task_dir))
-        proposal = Proposal(target, held, config_digest(disk), overlay)
-        atomic_write_text(os.path.join(folder, PROPOSED), _dump({
-            "schema": SCHEMA, "issue": slug, "base_generation": held,
-            "base_config_digest": proposal.base_config_digest, "overlay": overlay}))
-    return proposal
-
-
-def discard(task_dir, n=None):
-    """Remove a proposal or a leftover folder above the generation in force,
-    and return its `GenState`. With no number, the one folder there is. The
-    generation in force and every older one are never removed. Refuses a link
-    instead of following it."""
-    task_dir = os.fspath(task_dir)
-    slug = os.path.basename(os.path.normpath(task_dir))
-    with locked(os.path.join(task_dir, LOCK)):
-        manifest = load_manifest_mapping(manifest_path(task_dir))
-        current = number(manifest) or 0
-        above = {g.number: g for g in states(task_dir, manifest) if g.number > current}
-        if n is None:
-            if not above:
-                raise CompassError(f"nothing to discard: {slug} has no proposal or "
-                                   f"leftover folder above generation {current}")
-            if len(above) > 1:
-                raise CompassError(
-                    f"{slug} has leftover folders {', '.join(map(str, above))}; name the "
-                    f"one to remove, as in "
-                    f"`{configure_command(task_dir, '--discard', min(above))}`")
-            n = next(iter(above))
-        elif n <= current:
-            which = "the generation in force" if n == current else "older than the one in force"
-            raise CompassError(
-                f"generation {n} is {which} (generation {current}); only a proposal or "
-                f"a leftover above it can be discarded, so nothing was removed")
-        elif n not in above:
-            raise CompassError(f"nothing to discard: {slug} has no folder for generation {n}")
-        _refuse_links(task_dir, n)
-        shutil.rmtree(gen_dir(task_dir, n))
-    return above[n]
 
 
 # --- the commit ---------------------------------------------------------------------------
@@ -575,31 +440,23 @@ def unwritten_files(task_dir, target):
 
 def unwritten_advice(task_dir, target, others):
     """What a person does about `others` in generation folder `target`."""
-    return (f"Move {'it' if len(others) == 1 else 'them'} out of the folder, or run "
-            f"`{configure_command(task_dir, '--discard', target)}`, which removes "
-            f"the folder and everything in it")
+    return (f"Move {'it' if len(others) == 1 else 'them'} out of the folder, or remove "
+            f"the folder {gen_dir(task_dir, target)} and everything in it")
 
 
 def _prepare_target(task_dir, target):
-    """Make the next folder ready to write into, or refuse. A folder holding a
-    complete generation nothing names is the person's to adopt or discard. A
-    folder holding anything a commit does not write is refused, because the
-    commit cannot tell a person's file from debris and must not delete it.
-    Otherwise the leftover files are removed, except `proposed.yml`, which is
-    kept."""
+    """Make the next folder ready to write into, or refuse. A folder holding
+    anything a commit does not write is refused, because the commit cannot tell
+    a person's file from debris and must not delete it. Otherwise the leftover
+    files are removed, except `proposed.yml`, which is kept. That includes a
+    complete generation the manifest does not name: an interrupted commit
+    leaves one, and the commit writes it again from the configuration as it is
+    now, as the uninterrupted commit would have."""
     _refuse_links(task_dir, target)
     folder = gen_dir(task_dir, target)
     if not os.path.isdir(folder):
         os.makedirs(folder)
         return
-    if os.path.isfile(os.path.join(folder, MARKER)) and is_whole(task_dir, target)[0]:
-        raise CompassError(
-            f"{folder} holds a complete generation {target} that the manifest does not "
-            f"name, so nothing was written. Run "
-            f"`{configure_command(task_dir, '--commit', target)}` to adopt it (add "
-            f"`--reason \"...\"` to keep the reason of the interrupted reassess), or "
-            f"`{configure_command(task_dir, '--discard', target)}` to remove it, then "
-            f"run the command again")
     others = unwritten_files(task_dir, target)
     if others:
         raise CompassError(
@@ -611,43 +468,10 @@ def _prepare_target(task_dir, target):
             os.unlink(os.path.join(folder, name))
 
 
-def _remove(path):
-    if os.path.isfile(path):
-        os.unlink(path)
-
-
-def _check_adoption(task_dir, adopt, target, documents, held):
-    """Refuse unless the leftover folder `adopt` is the next generation, is
-    whole, and holds the four files a fresh resolution gives now. The check
-    is on the digests the marker holds: an adopted generation is one the
-    project and the issue would still resolve to, so the manifest never names
-    a configuration nothing today produces."""
-    folder = gen_dir(task_dir, target)
-    if adopt != target:
-        raise CompassError(
-            f"the manifest names {_named(held)}, so the generation to adopt is "
-            f"{target}, not {adopt}; nothing was written")
-    _refuse_links(task_dir, target)
-    stored, reason = _read_whole(task_dir, target)
-    if stored is None:
-        raise CompassError(
-            f"{folder} cannot be adopted: {reason}. Nothing was written. Run "
-            f"`{configure_command(task_dir, '--discard', target)}` to remove it, or run "
-            f"`{evaluate_command(task_dir)}` to write the generation again")
-    differing = [name for name in FILES
-                 if digest(stored[name[:-4]]) != digest(documents[name])]
-    if differing:
-        raise CompassError(
-            f"{folder} cannot be adopted: {', '.join(differing)} no longer match what "
-            f"the project and the issue resolve to now. Nothing was written. Run "
-            f"`{configure_command(task_dir, '--discard', target)}`, then "
-            f"`{evaluate_command(task_dir)}`")
-
-
-def preflight(task_dir, resolution, manifest, invalidated=None, adopt=None):
+def preflight(task_dir, resolution, manifest, invalidated=None):
     """Refuse, before the caller prints anything, a commit that will refuse
-    later for a reason already known: the issue is landed, the layered lint
-    rejects the configuration, or the folder to adopt does not match. A
+    later for a reason already known: the issue is landed, or the layered lint
+    rejects the configuration. A
     configuration equal to the generation in force is left alone: whether it
     commits depends on the computed outcome, which is not known yet, and the
     commit says "no change" without a lint. `commit` checks again under the
@@ -666,21 +490,13 @@ def preflight(task_dir, resolution, manifest, invalidated=None, adopt=None):
         raise CompassError(
             f"issue {os.path.basename(os.path.normpath(task_dir))} is closed and keeps "
             f"the configuration it closed under; it cannot store a new generation")
-    if adopt is not None:
-        if resolution.finish is not None:
-            # The leftover holds the stored classification of each git parent,
-            # which `commit` adds before it compares; compare with the same
-            # document or a leftover that commit would adopt is refused here.
-            resolution.finish(resolution.versions)
-            documents["versions.yml"] = {"schema": SCHEMA, **resolution.versions}
-        _check_adoption(task_dir, adopt, n + 1, documents, number(disk))
     if resolution.validate is not None:
         resolution.validate()
         resolution.validate = None
 
 
 def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
-           adopt=None, proposal=None, stamp=None, force=False, closed_ok=False):
+           stamp=None, force=False, closed_ok=False):
     """Store `resolution` as the next generation of the issue and replace its
     manifest, or commit nothing when generation n already holds the same
     configuration, overlay and outcome. `force` commits even then: the
@@ -689,18 +505,12 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
     generation built by another resolver or schema major. `manifest` is the mapping to write,
     with the outcome fields folded in; it must still name the generation the
     file on disk names. Raises `CompassError` when the file changed since it
-    was read, the generation in force is broken, or the next folder is a
-    complete generation nobody adopted. `render`, when given, turns the
+    was read, the generation in force is broken, or the next folder holds a
+    file a commit does not write. `render`, when given, turns the
     manifest's text into the text to write (the gate comments), so they are
-    written under the lock, in the same replace.
-
-    `adopt` is the number of a complete leftover folder to adopt: nothing is
-    written but the manifest, and only when the folder holds what a fresh
-    resolution gives. `proposal` is the `Proposal` this commit applies: it
-    must still be the one on disk when the lock is held, and its file is
-    removed after the manifest replace. `stamp(mapping, from, to)` may change the
-    mapping to write, with the generation it moves from and to (the same
-    number twice when nothing is committed).
+    written under the lock, in the same replace. `stamp(mapping, from, to)` may
+    change the mapping to write, with the generation it moves from and to (the
+    same number twice when nothing is committed).
 
     A closed issue keeps its configuration, so it cannot be given a generation, unless
     `closed_ok`: `compass issue migrate` sets it to pin the versions of a closed issue
@@ -720,26 +530,14 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
         n = held or 0
         previous = load(task_dir, n, any_major=force) if n else None
         target = n + 1
-        if proposal is not None and read_proposal(task_dir, target) != proposal:
-            raise CompassError(
-                f"the proposal in generation {target} changed while the command ran, so "
-                f"nothing was written; run the command again")
         documents = _documents(task_dir, target, resolution,
                                previous["records"].get("records", []) if previous else [],
                                invalidated)
         if previous and not force and _unchanged(previous, documents, disk, manifest):
-            if adopt is not None:
-                raise CompassError(
-                    f"generation {n} already holds this configuration, so folder {adopt} "
-                    f"adds nothing; nothing was written. Run "
-                    f"`{configure_command(task_dir, '--discard', adopt)}` to remove it")
             same = dict(manifest)
             stamp(same, n, n)
             same = prepare_manifest_write(same, path)
             atomic_write_text(path, render(_dump(same)))
-            if proposal is not None:
-                # The proposal asked for what the generation already holds.
-                _remove(os.path.join(gen_dir(task_dir, target), PROPOSED))
             return Committed(n, False, f"no change: generation {n} already holds this "
                                        f"configuration")
         if status_words.is_closed(disk) and not closed_ok:
@@ -752,28 +550,21 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
             resolution.finish(resolution.versions)
             documents["versions.yml"] = {"schema": SCHEMA, **resolution.versions}
         folder = gen_dir(task_dir, target)
-        if adopt is None:
-            _prepare_target(task_dir, target)
-            for name in FILES:
-                atomic_write_text(os.path.join(folder, name), _dump(documents[name]))
-                _after_step(name[:-4])
-            # The digest is of the content, so it equals the digest of the file read
-            # back; the marker test checks that, and parsing four files again would
-            # double the commit's cost.
-            marker = {"schema": SCHEMA, "written": _now(),
-                      "files": {name: digest(documents[name]) for name in FILES}}
-            atomic_write_text(os.path.join(folder, MARKER), _dump(marker))
-            _after_step("marker")
-        else:
-            _check_adoption(task_dir, adopt, target, documents, held)
+        _prepare_target(task_dir, target)
+        for name in FILES:
+            atomic_write_text(os.path.join(folder, name), _dump(documents[name]))
+            _after_step(name[:-4])
+        # The digest is of the content, so it equals the digest of the file read
+        # back; the marker test checks that, and parsing four files again would
+        # double the commit's cost.
+        marker = {"schema": SCHEMA, "written": _now(),
+                  "files": {name: digest(documents[name]) for name in FILES}}
+        atomic_write_text(os.path.join(folder, MARKER), _dump(marker))
+        _after_step("marker")
         updated = dict(manifest)
         updated["generation"] = target
         stamp(updated, n, target)
         updated = prepare_manifest_write(updated, path)
         atomic_write_text(path, render(_dump(updated)))
         _after_step("manifest")
-        if proposal is not None:
-            _remove(os.path.join(folder, PROPOSED))
-            _after_step("proposal")
-    verb = "adopted" if adopt is not None else "committed"
-    return Committed(target, True, f"{verb} generation {target} -> {folder}")
+    return Committed(target, True, f"committed generation {target} -> {folder}")

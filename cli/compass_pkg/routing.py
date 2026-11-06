@@ -676,10 +676,11 @@ def read_size(dimension, value):
     return new
 
 
-def _acceptance_block(task, task_dir, plan, result, args, evaluated_before, resolved=None):
+def _acceptance_block(task, task_dir, resolution, result, args, evaluated_before,
+                      resolved=None):
     """The manifest's `acceptance_strategy` block a write stores, or None to
     leave the manifest as it is, as `cmd_route_evaluate` explains where it
-    stores it. With no `plan` (no --write) it previews from `resolved`."""
+    stores it. With no `resolution` (no --write) it previews from `resolved`."""
     from compass_pkg import acceptance_strategy
     from compass_pkg.layers import find_project_root
     held = acceptance_strategy.stored(task)
@@ -689,7 +690,7 @@ def _acceptance_block(task, task_dir, plan, result, args, evaluated_before, reso
     # process: no block, so no check row (decided by jed72, 2026-10-30).
     if acceptance_strategy.pinned_below(find_project_root(task_dir)):
         return None
-    resolved = plan.resolution.resolved if plan is not None else resolved
+    resolved = resolution.resolved if resolution is not None else resolved
     if not acceptance_strategy.declared(resolved):
         return None
     expected = getattr(args, "expected_acceptance", None) or (
@@ -701,7 +702,7 @@ def _acceptance_block(task, task_dir, plan, result, args, evaluated_before, reso
 def cmd_route_evaluate(args):
     task = None
     task_path = None
-    plan = None
+    resolution = None
     task_dir = None
     if getattr(args, "offline", False):
         # Every resolution in this run reads `parents.offline()`.
@@ -741,16 +742,12 @@ def cmd_route_evaluate(args):
         from compass_pkg import acceptance_strategy
         from compass_pkg.layers import find_project_root
         acceptance_strategy.setting(find_project_root(task_dir))
-        # The proposal, the waiver re-check and the flags are settled before
-        # anything prints, so a refusal never follows a printed result.
+        # The configuration a write commits is resolved, and what its commit
+        # would refuse is refused, before anything prints, so a refusal never
+        # follows a printed result.
         if getattr(args, "write", False):
-            from compass_pkg import issue_config_cmd
-            plan = issue_config_cmd.reassess_plan(task, task_dir, args)
-    if plan is None and (getattr(args, "reset_config", False)
-                         or getattr(args, "adopt", None) is not None):
-        flag = "--reset-config" if getattr(args, "reset_config", False) else "--commit"
-        raise CompassError(f"{flag} needs --write and an issue: it works inside the "
-                           f"reassess that commits the next generation")
+            from compass_pkg import effective
+            resolution = effective.reassess_resolution(task_dir, task)
 
     # The configuration the approach is computed from. An issue with a
     # generation is judged by it. `--write` commits the configuration as it is
@@ -758,11 +755,10 @@ def cmd_route_evaluate(args):
     # project with no `compass.yml`, reads the governance files.
     from compass_pkg import effective
     view = effective.view_or_legacy(task_dir, live=bool(args.write))
-    if plan is not None and view is not None:
-        # The reassess plan holds the configuration this write will commit:
-        # the proposal applied, or `config:` dropped, and a stale waiver left out.
-        view = effective.EffectiveView("live", view.issue, None, plan.resolution.resolved,
-                                       plan.resolution.versions, plan.resolution.provenance)
+    if resolution is not None and view is not None:
+        # The configuration this write will commit, resolved once above.
+        view = effective.EffectiveView("live", view.issue, None, resolution.resolved,
+                                       resolution.versions, resolution.provenance)
     if view is None:
         gov = find_governance()
         policy = load_yaml(os.path.join(gov, "routing-policy.yml"))
@@ -799,7 +795,7 @@ def cmd_route_evaluate(args):
     strategy = None
     if task is not None:
         strategy = _acceptance_block(
-            task, task_dir, plan, result, args,
+            task, task_dir, resolution, result, args,
             bool(task.get("delivery_approach")) or bool(task.get("evaluated_assessment")),
             resolved=None if args.write or view is None else view.resolved)
         if (strategy or acceptance_strategy.stored(task) or {}).get("applies"):
@@ -812,8 +808,8 @@ def cmd_route_evaluate(args):
     # one a write would commit: otherwise it would show no `S17` evidence that
     # the write then stores.
     from compass_pkg import path_writer
-    if plan is not None:
-        resolved = plan.resolution.resolved
+    if resolution is not None:
+        resolved = resolution.resolved
     elif view is not None:
         resolved = view.resolved
     else:
@@ -1085,24 +1081,11 @@ def cmd_route_evaluate(args):
         # raises here, before any file is written.
         from compass_pkg import effective
 
-        # A reassess that changes only the issue's `config:` layer is logged
-        # with its own kind: no one misread the work.
-        configuring = not reframed and plan.config_changed
-        if configuring:
-            task.setdefault("reassessments", []).append({
-                "from_route": prior["delivery_approach"] or shown["delivery_approach"],
-                "to_route": shown["delivery_approach"],
-                "kind": "configuration",
-                "changed": {"config": {"from": plan.config_digests[0],
-                                       "to": plan.config_digests[1]}},
-                "reason": args.reason or "(reason not given - fill this in)",
-                "date": datetime.date.today().isoformat(),
-            })
         # A reassess that changes nothing but is given a reason keeps the
         # reason as evidence, under the `unchanged` kind: no one misread the
         # work. Without a reason there is
         # nothing to keep, so nothing is written.
-        unchanged = (evaluated_before and not reframed and not configuring
+        unchanged = (evaluated_before and not reframed
                      and bool(getattr(args, "reason", None)))
         if unchanged:
             route = shown["delivery_approach"]
@@ -1117,36 +1100,27 @@ def cmd_route_evaluate(args):
 
         def stamp(mapping, old, new):
             # The entry says which generation the reassess moved from and to;
-            # both are the same number when nothing was committed. A change to
-            # the config: layer always commits, so a configuration entry never
-            # sees the same number twice.
-            if reframed or configuring or unchanged:
+            # both are the same number when nothing was committed.
+            if reframed or unchanged:
                 mapping["reassessments"][-1]["generation"] = {"from": old, "to": new}
         # The accepted-type comments are written in the same replace, under the lock.
         committed = effective.commit_generation(
-            task_dir, task, plan.invalidated, annotate_gate_accepts_text,
-            adopt=plan.adopt, proposal=plan.proposal, stamp=stamp,
-            resolution=plan.resolution)
+            task_dir, task, None, annotate_gate_accepts_text, stamp=stamp,
+            resolution=resolution)
         print(f"\n  wrote the {'evidence owed' if path else 'delivery approach, stages'} "
               f"and gates -> {task_path}")
         print(f"  {committed.message}")
         if "acceptance_strategy" in task:
             from compass_pkg import acceptance_strategy
             print(f"  {acceptance_strategy.line(task)}")
-        for note in plan.notes:
-            print(f"  {note}")
-        configured = configuring and committed.committed
         if unchanged:
             print(f"  RE-ASSESSMENT recorded (unchanged): the delivery approach "
                   f"stayed {task['reassessments'][-1]['to_route']}; the reason is on record")
-        if configured:
-            print(f"  RE-ASSESSMENT recorded (configuration): the issue's config: layer "
-                  f"changed, generation {committed.number - 1} -> {committed.number}")
         if reframed:
             print(f"  RE-ASSESSMENT recorded ({task['reassessments'][-1]['kind']}): "
                   f"{prior['delivery_approach']} -> {shown['delivery_approach']}"
                   + (f"  [changed: {', '.join(sorted(changed))}]" if changed else ""))
-        if (reframed or configured) and not args.reason:
+        if reframed and not args.reason:
             sys.stderr.write(
                 "compass: re-assessment recorded with no reason. Re-run with "
                 "--reason \"...\" or edit manifest.yml's last `reassessments` "

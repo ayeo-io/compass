@@ -785,12 +785,12 @@ def test_trc_a18(tmp_path):
     assert _row(document, ISOLATION)["status"] == "advisory"
 
 
-@pytest.mark.parametrize("approval, label, exit_code", [
-    ("approved by the project's owner", "advisory", 0),
-    ("with no approval", "fail", 1),
-])
-def test_trc_a20(tmp_path, approval, label, exit_code):
-    """One issue steps off the strategy with a recorded reason."""
+@pytest.mark.parametrize("approval", ["approved by the project's owner", "with no approval"])
+def test_trc_a20(tmp_path, approval):
+    """A waiver written in one issue's `config:` is not read: 9.0.0 has no issue
+    layer (ADR-094), so with or without an approval the checks keep their severity
+    and the notice names the waiver as not approved. One issue steps off the
+    strategy with `compass waiver add` instead."""
     project = _project(tmp_path, owner=OWNER)
     issue = _issue(project)
     body = issue.manifest()
@@ -802,16 +802,14 @@ def test_trc_a20(tmp_path, approval, label, exit_code):
         body["config"]["checks"][LAYERING]["waiver"]["approved_by"] = "EV-W2"
     issue.write_manifest(body)
     code, out, err = issue.assess(reason="step off the strategy for one issue")
-    # The lint that commits `config:` refuses a waiver with no approval, so the issue
-    # keeps the checks as they were.
-    assert (code == 0) == approval.startswith("approved"), out + err
+    assert code == 0, out + err
     code, document = _rendered_check(issue)
-    assert code == exit_code, document if isinstance(document, str) else document["checks"]
+    assert code == 1, document if isinstance(document, str) else document["checks"]
     for name in (ISOLATION, LAYERING):
-        assert _row(document, name)["status"] == label, _row(document, name)
+        assert _row(document, name)["status"] == "fail", _row(document, name)
     code, out, err = issue.run("check", "--issue", issue.slug)
     assert WAIVER_REASON in out, out + err
-    assert ("approved" if label == "advisory" else "not approved") in out, out
+    assert "not approved" in out, out
 
 
 # --- `TRC-X1`: every record ---------------------------------------------------------------------

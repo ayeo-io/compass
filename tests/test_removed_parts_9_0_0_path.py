@@ -338,16 +338,6 @@ def test_an_old_issue_keeps_a_legacy_stage_its_configuration_holds():
     assert config["stages"]["define"]["mode"] == "collapsed"
 
 
-def test_issue_configure_names_the_dropped_stage_and_changes_nothing(tmp_path):
-    import configure_fixtures as cf
-    root, task_dir = cf.committed(tmp_path, compass_yml={"schema": 1})
-    code, out, err = cf.configure(root, "--mode", "refine=full")
-    assert code == 0, out + err
-    assert "verdict          : accepted" in out, out
-    assert "warning: L-SETTING-REMOVED stages.refine" in out, out
-    assert "resolved fields that change (0)" in out, out
-
-
 # --- a reference to a legacy stage in a project or copied layer --------------------------
 
 def _lint_findings(project_doc):

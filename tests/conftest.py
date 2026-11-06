@@ -426,13 +426,13 @@ def _justified_argv(argv, cwd):
     if str(CLI_PATH) not in words:          # another version's CLI does not know --justify
         return argv
     for at in range(len(words) - 1):
-        if words[at:at + 2] in (["approach", "evaluate"], ["issue", "configure"]):
+        if words[at:at + 2] == ["approach", "evaluate"]:
             break
     else:
         return argv
     rest = words[at + 2:]
-    # `approach evaluate --write` and `issue configure --commit` both run the evaluation.
-    if not ({"--write", "--commit"} & set(rest)) or any(w.startswith("--justify") for w in rest):
+    # `approach evaluate --write` runs the evaluation.
+    if "--write" not in rest or any(w.startswith("--justify") for w in rest):
         return argv
     slug = None
     for i, w in enumerate(rest):

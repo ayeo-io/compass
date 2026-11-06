@@ -256,8 +256,7 @@ def test_trc_a13_not_utf8_named_by_manifest_readers(tmp_path):
         _assert_names_file_not_utf8(caught, path)
 
 
-@pytest.mark.parametrize("entry_point", ["write_proposal", "commit"])
-def test_trc_a14_locked_reread_refuses_change(tmp_path, entry_point):
+def test_trc_a14_locked_reread_refuses_change(tmp_path):
     task_dir = tmp_path / ".compass" / "work" / "probe"
     task_dir.mkdir(parents=True)
     path = task_dir / "manifest.yml"
@@ -272,10 +271,7 @@ def test_trc_a14_locked_reread_refuses_change(tmp_path, entry_point):
     assert (after.st_size, after.st_mtime_ns) == (before.st_size, before.st_mtime_ns)
     written = path.read_bytes()
     with pytest.raises(CompassError) as caught:
-        if entry_point == "write_proposal":
-            generation.write_proposal(str(task_dir), manifest, {"checks": {}})
-        else:
-            generation.commit(str(task_dir), None, manifest)
+        generation.commit(str(task_dir), None, manifest)
     assert "changed since it was read" in str(caught.value)
     assert path.read_bytes() == written
 

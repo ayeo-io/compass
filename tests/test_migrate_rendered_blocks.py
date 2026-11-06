@@ -427,9 +427,9 @@ def test_gck_2_a_migrate_pin_keeps_a_file_the_copy_check_never_judged(tmp_path):
     planned = refused(out)
     assert len(planned) == 1 and "would not be pinned" in planned[0], out
     assert "generations/2/ holds notes.md" in planned[0], planned
-    # The migrate covers every issue, so the command must name this one.
-    assert "compass issue configure --issue feature --discard 2" in planned[0], planned
-    assert "everything in it" in planned[0], planned
+    # The migrate covers every issue, so the advice must name this one's folder.
+    assert "remove the folder" in planned[0], planned
+    assert ".compass/work/feature/generations/2 and everything in it" in planned[0], planned
     # No --i-have-a-copy: the copy check lets the run start.
     code, out, err = _migrate(root, "--apply")
     assert code == 0, out + err

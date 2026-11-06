@@ -664,17 +664,35 @@ def test_vr_d15_a_project_that_says_lightweight_is_looser_than_a_parent_that_say
 
 # --- VR-D14: an issue layer in the old words ------------------------------------
 
+def _stored_with_mode(root, task_dir, word):
+    """Store generation 2 as an 8.x reassess stored it when the issue's layer set
+    the mode of assess to `word`: the generation keeps the word as it was written."""
+    from compass_pkg import generation, layers
+    stored = generation.load(str(task_dir), 1)
+    body = {name: {k: v for k, v in stored[name].items()
+                   if k not in ("schema", "issue", "generation")}
+            for name in ("resolved", "provenance", "versions")}
+    resolved = copy.deepcopy(body["resolved"])
+    resolved["stages"]["assess"]["mode"] = word
+    overlay = {"stages": {"assess": {"set": {"mode": word}}}}
+    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
+    manifest["config"] = overlay
+    versions = dict(body["versions"], issue_overlay_digest=layers.layer_digest(overlay, "issue"))
+    generation.commit(str(task_dir), generation.Resolution(
+        resolved=resolved, provenance=body["provenance"], versions=versions), manifest)
+
+
 def test_vr_d14_an_issue_layer_in_the_old_words_evaluates_as_the_new_words_do(
         tmp_path):
+    """9.0.0 writes no issue layer (ADR-094), but a generation an 8.x reassess
+    stored with one keeps the word it was written in, and is read in the new one."""
     results = {}
     for name, word in (("old", "full"), ("new", "thorough")):
         root, task_dir = _project(tmp_path, name)
-        for argv in (("approach", "evaluate", "--issue", "t", "--write"),
-                     ("issue", "configure", "--issue", "t", "--mode", f"assess={word}"),
-                     ("approach", "evaluate", "--issue", "t", "--write", "--reason", "wider")):
-            code, out, err = _cli(root, *argv)
-            assert code == 0, (name, argv, out, err)
-        # The reassess stores the issue's layer; a read-only evaluation applies it.
+        code, out, err = _cli(root, "approach", "evaluate", "--issue", "t", "--write")
+        assert code == 0, (name, out, err)
+        _stored_with_mode(root, task_dir, word)
+        # A read-only evaluation applies the stored layer.
         code, out, err = _cli(root, "approach", "evaluate", "--issue", "t", "--json")
         assert code == 0, (name, out, err)
         results[name] = json.loads(out)

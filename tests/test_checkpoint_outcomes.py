@@ -547,20 +547,19 @@ def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
         == base["governance/presets/default/preset.yml#locks.hard"]
 
     # An issue waiver whose approval names the checkpoint answer is refused with
-    # W-APPROVAL-TYPE, as a waiver naming any record that is not a human-approval
-    # is: by the configuration lint, so the write that would take the waiver
-    # into effect writes nothing, and compass check still fails the sign-off.
+    # W-APPROVAL-TYPE by the configuration lint, as a waiver naming any record that
+    # is not a human-approval is. The write does not read the issue's `config:`
+    # (ADR-094), so it takes nothing into effect, and compass check still fails the
+    # sign-off.
     body["config"] = {"checks": {"backfills-paid": {
         "set": {"severity": "advisory"},
         "waiver": {"reason": "A one-line fix.", "approved_by": record["id"]}}}}
     write_manifest(root, body)
     fault = f"W-APPROVAL-TYPE issue:checks.backfills-paid: {record['id']} is a " \
             f"checkpoint-approval record, not a human-approval"
-    before = manifest_file(root).read_bytes()
     done = run(root, "approach", "evaluate", "--issue", SLUG, "--write", "--reason", "waive")
-    assert done.returncode == 2, done
-    assert fault in done.stderr, done.stderr
-    assert manifest_file(root).read_bytes() == before
+    assert done.returncode == 0, done
+    assert "W-APPROVAL-TYPE" not in done.stdout + done.stderr, done
     done = run(root, "policy", "lint", "--issue", SLUG)
     assert done.returncode != 0, done
     assert "W-APPROVAL-TYPE" in done.stdout and fault.split(": ", 1)[1] in done.stdout, done

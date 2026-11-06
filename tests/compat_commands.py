@@ -503,6 +503,13 @@ REMOVED_IN_9_0_0 = {
     **{entry_id: "'compass retro' was removed in 9.0.0 (ADR-093)"
        for entry_id in ("retro-plain", "retro-no-compass-folder", "retro-friction",
                         "retro-lessons", "retro-lineage", "retro-compliance")},
+    **{entry_id: "'compass issue configure' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("issue-configure-proposes-a-change",
+                        "issue-configure-refused-proposal-exits-1",
+                        "issue-configure-no-change-given", "issue-configure-discard-nothing")},
+    **{entry_id: "'compass approach evaluate --reset-config' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("approach-evaluate-reset-config-needs-write",
+                        "approach-evaluate-write-reset-config")},
 }
 
 
@@ -519,14 +526,10 @@ PHRASE_REMOVED_IN_9_0_0 = {
 #: (ADR-091), so an assessed issue with no such file is answered, not refused. A new
 #: assessment is on the four-stage path (ADR-092), which has no approaches, so
 #: `quick-fix start` no longer refuses work heavier than a quick fix: it starts the
-#: change and records the evidence it owes. An issue layer that sets the mode of a
-#: legacy stage the configuration does not hold is merged without it (ADR-092
-#: decision 10), so a proposal that only lowered such a mode changes nothing and is
-#: accepted.
+#: change and records the evidence it owes.
 EXIT_CHANGED_IN_9_0_0 = {"next-regular-without-approach-record": 0,
                          "quick-fix-start-heavier": 0,
-                         "quick-fix-start-auth-label": 0,
-                         "issue-configure-refused-proposal-exits-1": 0}
+                         "quick-fix-start-auth-label": 0}
 
 
 #: Entries whose phrase 9.0.0 changed on purpose, each with `(recorded, now)`. The exit
@@ -548,23 +551,13 @@ PHRASE_CHANGED_IN_9_0_0 = {
     "quick-fix-start-advisory": ("recorded as quick fix", "recorded as delivery"),
     "quick-fix-start-heavier": ("computes to regular", "recorded as delivery"),
     "quick-fix-start-auth-label": ("computes to full", "recorded as delivery"),
-    "issue-configure-refused-proposal-exits-1": ("verdict          : refused",
-                                                 "verdict          : accepted"),
 }
-
-
-#: The intended changes above that hold only over the shipped default. A copy of the
-#: 5.6.0 governance (configuration C) still declares the legacy stages, so an issue
-#: layer that lowers one is still a loosening there and is refused as recorded.
-SHIPPED_DEFAULT_ONLY = frozenset({"issue-configure-refused-proposal-exits-1"})
 
 
 def differences(entry: dict, outcome: Outcome, configuration: str = "A") -> list[str]:
     """What the run did that the recorded entry says it should not, under
     `configuration` (A, B or C)."""
     found = []
-    if configuration == "C" and entry["id"] in SHIPPED_DEFAULT_ONLY:
-        return _as_recorded(entry, outcome)
     if entry["id"] in PHRASE_REMOVED_IN_9_0_0:
         if outcome.exit != entry["exit"]:
             found.append(f"exit {outcome.exit}, recorded {entry['exit']}")

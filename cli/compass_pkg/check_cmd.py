@@ -482,15 +482,16 @@ def _verdicts(results):
 
 def _generation_lines(run):
     """The notices that name the generation an issue was judged by, and a
-    pending `config:` change. None for an issue with no generation."""
+    `config:` the generation was not committed with. None for an issue with no
+    generation."""
     if run.view is None:
         return []
     view = run.view
     parent = view.parent_version()
     lines = ["generation %d (parent %s)" % (view.generation, parent or "unknown")]
     if view.pending_config(run.task):
-        lines.append("pending: config: is not committed yet; "
-                     "run `compass approach evaluate --write`")
+        lines.append("config: differs from the generation in force and is not read: "
+                     "an issue has no config layer (ADR-094)")
     # A step-off from the four-layer acceptance strategy names its waiver (TRC-A20).
     from compass_pkg.acceptance_strategy import waiver_lines
     return lines + waiver_lines(run.task, view)

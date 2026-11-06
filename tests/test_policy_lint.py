@@ -1429,3 +1429,99 @@ def test_pl_1_a_public_wrapper_answers_what_the_settings_reader_answers(tmp_path
     root = _project(tmp_path, "autonomy: balanced\n")
     assert project_settings.compass_yml_counts(str(root)) is True
     assert project_settings.compass_yml_counts(str(tmp_path / "nowhere")) is False
+
+
+# --- an issue layer is judged at the issue's own assessment (ADR-037) ----------------------
+# Moved from `test_issue_layer_at_its_point.py`, which went with `compass issue
+# configure` (ADR-094). The layer lint at one assessment stays while `compass
+# policy lint --issue` reads an issue's `config:`. Each lints the layer over the
+# 8.0.4 governance copy, the last release whose approaches and stages it can
+# pick, at the assessment of an 8.x issue (scenario ids `IP-2` to `IP-9`).
+
+_IP_ASSESSMENT = {"risk": "contained", "familiarity": "brownfield-mapped", "size": "medium",
+                  "goal": "delivery", "role": "engineer", "labels": []}
+_IP_QUICK_FIX = {"size": "small"}
+_IP_SPIKE = {"goal": "exploration"}
+_IP_SPIKE_POINT = ("at risk contained, familiarity brownfield-mapped, size medium, goal "
+                   "exploration, role engineer, labels none")
+_IP_REFINE_COLLAPSED = {"stages": {"refine": {"set": {"mode": "collapsed"}}}}
+
+
+def _ip_lint_8_0_4(tmp_path, layer, **assessment):
+    """The lint's errors for the issue layer `layer` over the 8.0.4 governance
+    copy, at `_IP_ASSESSMENT` with `assessment` changed."""
+    import compat_baseline as cb
+    from compass_pkg import effective, layers
+    root = tmp_path / "copy-8-0-4"
+    (root / ".compass").mkdir(parents=True, exist_ok=True)
+    cb.add_governance_copy(root, source=cb.GOVERNANCE_8_0_4)
+    parent = effective._legacy_parent(str(root))[0]
+    project = layers.Layer("project", "project", {"schema": 1}, "p")
+    issue = layers.Layer("issue", "issue", layer, "i")
+    report = _api().lint_chain(parent, project, issue,
+                               assessment=dict(_IP_ASSESSMENT, **assessment))
+    return [f"{f.code} {f.path}: {f.message}" for f in report.errors]
+
+
+def test_ip_2_a_spike_issue_that_picks_full_is_refused_by_a_lock(tmp_path):
+    reasons = _ip_lint_8_0_4(tmp_path, {"approach": "full"}, **_IP_SPIKE)
+    locked = [r for r in reasons if r.startswith("K-LOCK-REFUSED")]
+    assert any("spike.conclude" in r for r in locked), reasons
+    assert all(r.endswith(_IP_SPIKE_POINT) for r in locked), locked
+
+
+def test_ip_3_quick_fix_to_regular_is_incomparable_on_the_subtask_ceiling(tmp_path):
+    """The route that owes more gates also allows two subtasks where quick-fix
+    allows one, and a higher ceiling is looser."""
+    reasons = _ip_lint_8_0_4(tmp_path, {"approach": "regular"}, **_IP_QUICK_FIX)
+    assert reasons
+    assert not any(r.startswith("K-LOCK-REFUSED") for r in reasons), reasons
+    assert any("C-INCOMPARABLE" in r and "approaches.subtask_ceiling" in r for r in reasons)
+
+
+def test_ip_4_full_on_a_regular_issue_is_refused_as_incomparable_on_the_ceiling(tmp_path):
+    reasons = _ip_lint_8_0_4(tmp_path, {"approach": "full"})
+    assert reasons
+    assert not any(r.startswith("K-LOCK-REFUSED") for r in reasons), reasons
+    assert any("C-INCOMPARABLE" in r and "approaches.subtask_ceiling" in r
+               for r in reasons), reasons
+
+
+def test_ip_5_refine_collapsed_on_a_quick_fix_issue_is_accepted(tmp_path):
+    assert _ip_lint_8_0_4(tmp_path, _IP_REFINE_COLLAPSED, **_IP_QUICK_FIX) == []
+
+
+def test_ip_5_refine_collapsed_on_a_regular_issue_is_refused_without_a_waiver(tmp_path):
+    reasons = _ip_lint_8_0_4(tmp_path, _IP_REFINE_COLLAPSED)
+    assert any(r.startswith("C-") for r in reasons), reasons
+
+
+def test_ip_6_a_pick_carried_onto_a_spike_assessment_is_refused(tmp_path):
+    """Naming `regular` on a regular issue loosens nothing. At a spike
+    assessment the same pick drops the spike obligations."""
+    assert _ip_lint_8_0_4(tmp_path, {"approach": "regular"}) == []
+    reasons = _ip_lint_8_0_4(tmp_path, {"approach": "regular"}, **_IP_SPIKE)
+    assert any(r.startswith("K-LOCK-REFUSED") for r in reasons), reasons
+
+
+def test_ip_9_bare_regular_on_a_quick_fix_issue_names_every_field_that_makes_it_mixed(tmp_path):
+    [reason] = _ip_lint_8_0_4(tmp_path, {"approach": "regular"}, **_IP_QUICK_FIX)
+    assert "approaches.subtask_ceiling" in reason
+    tail = reason.split("looser or cannot be compared:", 1)[1]
+    assert "approaches.subtask_ceiling" in tail
+    assert "approaches.stages (breakdown)" in tail
+    assert "approaches.gates" not in tail        # a tightening is not listed
+    # The 8.0.4 copy still declares each approach's documents, so their map differs
+    # too; the shipped default declares no `artifacts:` map since 9.0.0 (ADR-091).
+    assert "approaches.artifacts" in tail
+    shipped = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "approaches.yml")
+                             .read_text(encoding="utf-8"))["approaches"]
+    assert not [name for name, body in shipped.items() if "artifacts" in body]
+
+
+def test_ip_9_a_quick_fix_issue_cannot_combine_its_way_to_regular(tmp_path):
+    """The ceiling is one of three fields that block it: breakdown (skipped
+    against multiagent) and the artifacts owed cannot be compared either."""
+    reasons = _ip_lint_8_0_4(tmp_path, {"approach": "regular",
+                                        "ceilings": {"subtask_ceiling": 1}}, **_IP_QUICK_FIX)
+    assert reasons and "approaches.stages (breakdown)" in reasons[0]

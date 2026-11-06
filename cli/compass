@@ -76,7 +76,6 @@ from compass_pkg.policy_cmd import register as register_policy_parser  # noqa: E
 from compass_pkg.policy_cmd import register_preset as register_preset_parser  # noqa: E402
 from compass_pkg.approve_cmd import register as register_approve_parser  # noqa: E402
 from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
-from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
 from compass_pkg import isolation, issue_link, layering, waiver_cmd  # noqa: E402
 from compass_pkg.command_guard import before_command  # noqa: E402
 from compass_pkg.effective import MajorRefusal  # noqa: E402
@@ -150,15 +149,11 @@ def build_parser():
                               "scope-change", "configuration"],
                      help="what kind of re-assessment this is (default: "
                           "judgment). A judgment entry says assessment misread "
-                          "the work; a policy correction does not. A reassess that "
-                          "changes only the issue's config: layer is recorded "
-                          "as configuration without this flag, and one that "
-                          "changes nothing but is given a --reason is "
+                          "the work; a policy correction does not. configuration "
+                          "is the kind 8.x wrote for a change to the issue's "
+                          "config: layer, which 9.0.0 does not read. A reassess "
+                          "that changes nothing but is given a --reason is "
                           "recorded as unchanged by the CLI (not a choice).")
-    pre.add_argument("--reset-config", dest="reset_config", action="store_true",
-                     help="with --write: drop the issue's config: layer in the "
-                          "generation this commits (refused while a change is "
-                          "proposed; see `compass issue configure`)")
     pre.add_argument("--expected-acceptance", dest="expected_acceptance",
                      choices=["none", "validation", "refactor"],
                      help="with --write: the acceptance kind the change is expected to "
@@ -277,7 +272,6 @@ def build_parser():
     register_issue_decision_parser(pts)
     from compass_pkg.checkpoint_outcomes import register as register_issue_checkpoint_parser
     register_issue_checkpoint_parser(pts, issue_arg)
-    register_issue_configure_parser(pts, issue_arg)
 
     ptrb = pts.add_parser(
         "raised-by", help="record the issue this one was found in",

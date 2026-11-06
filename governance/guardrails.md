@@ -529,10 +529,9 @@ decides the rules. `compass policy lint` reports a refused change as
   the amendment of 2026-10-08). Nothing is accepted or refused by the name or
   weight of an approach: the field table decides at that point. Naming `full`
   over `regular` is incomparable on the subtask ceiling, and a spike issue
-  that picks `full` loses `spike.conclude` and is refused by a lock. The lint
-  also runs on an unchanged configuration when the issue's stored assessment
-  changed, so an approach accepted at one assessment cannot carry onto a spike by
-  a reassess that changes nothing else.
+  that picks `full` loses `spike.conclude` and is refused by a lock. Since 9.0.0
+  only `compass policy lint --issue` reads an issue's `config:`: a reassess does
+  not read it (ADR-094).
 - **More than eight named labels is still refused, but only the labels a locked
   entry can read are counted.** The scan keeps a label only where it can reach
   a fact a lock protects, and drops the labels that only these read:

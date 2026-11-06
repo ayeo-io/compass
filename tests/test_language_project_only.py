@@ -1,7 +1,8 @@
 """Only a project's own `compass.yml` can hold the `language` setting.
 
-A parent, a preset or an issue's own configuration refuses the key, and the
-shipped default sets none. The scenario number in each test name is from the
+A parent or a preset refuses the key, and the shipped default sets none. An
+issue has no configuration of its own in 9.0.0 (ADR-094), so the case of an
+issue layer that names it went with `compass issue configure`. The scenario number in each test name is from the
 acceptance criteria of the issue `language-key-and-us-english`.
 """
 from __future__ import annotations
@@ -19,7 +20,6 @@ CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
-import configure_fixtures as fx  # noqa: E402
 from compass_pkg import layers  # noqa: E402
 from compass_pkg.atomic_io import load_yaml_strict  # noqa: E402
 from parent_fixtures import make_remote  # noqa: E402
@@ -62,18 +62,6 @@ def test_trc_011(tmp_path):
     assert code != 0 and "language" in out and "never in a parent" in out, out
     code, out = _run(root, "policy", "show", extra_env=env)
     assert code != 0 and "language" in out and "never in a parent" in out, out
-
-
-def test_trc_012(tmp_path):
-    root, task_dir = fx.committed(tmp_path / "issue")
-    before = (task_dir / "manifest.yml").read_bytes()
-    overlay = tmp_path / "overlay.yml"
-    overlay.write_text("language: de\n", encoding="utf-8")
-    code, out, err = fx.configure(root, "--from-file", str(overlay))
-    assert code != 0, out + err
-    assert "language" in out + err and "not a key an issue layer can hold" in out + err
-    assert "verdict          : refused" in out
-    assert (task_dir / "manifest.yml").read_bytes() == before
 
 
 def _top_level_language(preset_dir):

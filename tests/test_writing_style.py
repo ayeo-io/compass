@@ -2122,6 +2122,13 @@ _REMOVED_IN_9_0_0 = frozenset({
     "docs/readiness.md", "schemas/readiness-record.schema.json",
     "tests/test_project_readiness.py", "tests/project_readiness_support.py",
     "tests/test_readiness_override_assess.py", "tests/test_adr_075_process_group.py",
+    # The issue layer, `compass issue configure`, its doc and its tests (ADR-094).
+    "cli/compass_pkg/issue_config_cmd.py", "cli/compass_pkg/config_preview.py",
+    "docs/issue-configure.md", "tests/test_issue_configure.py",
+    "tests/test_issue_layer_at_its_point.py", "tests/test_issue_layer_evaluator.py",
+    "tests/test_waived_stage_on_floor.py", "tests/configure_fixtures.py",
+    "tests/fixtures/issue-configure-example.json",
+    "tests/fixtures/issue-configure-refused-example.json",
 })
 #: Paths 9.0.0 removed that this repository's `compass.yml` still names, keyed by
 #: the path. An agent may not edit `compass.yml`; the owner deletes its readiness
@@ -3246,8 +3253,8 @@ _GROWING_REACH = {
     # 63 with tests/fixtures/policy-diff-json-example.json, plain JSON;
     # 64 with tests/fixtures/policy-migrate-example.json, plain JSON;
     # 65 with tests/fixtures/policy-update-json-example.json, plain JSON;
-    # 66 with tests/fixtures/issue-configure-example.json, plain JSON;
-    # 67 with tests/fixtures/issue-configure-refused-example.json, plain JSON;
+    # 66 with the JSON example of `compass issue configure`, plain JSON;
+    # 67 with its refused example, plain JSON;
     # 68 with tests/fixtures/scenario-tests-json-example.json, plain JSON;
     # 69 with tests/fixtures/evidence-review-example.json, plain JSON;
     # 70 with tests/fixtures/preset-interfaces/policy-test-groups.json, plain JSON;
@@ -3306,7 +3313,9 @@ _GROWING_REACH = {
     # transcripts and base-quick-fix-usage.json of
     # tests/fixtures/autonomy-ratio-and-cost/, and retro.json and ships.json of
     # tests/fixtures/autonomy-ratio-and-cost-views/.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 122),
+    # 120 when 9.0.0 removed `compass issue configure` and its two plain JSON
+    # examples (ADR-094).
+    "PBW-C4": (lambda path: path.startswith("tests/"), 120),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

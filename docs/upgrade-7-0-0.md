@@ -633,7 +633,7 @@ Nothing. To clear the warning, the project's `owner` replaces `LEGACY` with an a
 
 ## A waived stage mode holds on a floor-raised approach
 
-A floor that raises an issue's approach keeps the issue's lower mode for a stage the floor does not name, when that stage's entry in the issue's `config:` carries an approved issue waiver. `docs/issue-configure.md` states the rule, and `governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md` records the decision.
+A floor that raises an issue's approach keeps the issue's lower mode for a stage the floor does not name, when that stage's entry in the issue's `config:` carries an approved issue waiver. `governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md` records the decision.
 
 ### What changes
 

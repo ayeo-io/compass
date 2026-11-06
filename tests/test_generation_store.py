@@ -228,15 +228,17 @@ def test_gs_2_provenance_names_the_layer_and_operation_behind_a_field(tmp_path, 
     assert versions["project"]["digest"].startswith("sha256:")
 
 
-def test_gs_2_an_issue_overlay_is_recorded_by_digest(tmp_path, monkeypatch):
+def test_gs_2_a_manifest_config_is_not_resolved_or_recorded(tmp_path, monkeypatch):
+    """9.0.0 has no issue layer (ADR-094): a manifest's `config:` adds nothing to
+    the generation, and no overlay digest is recorded."""
     manifest = dict(MANIFEST, config={"checks": {"extra": _new_check()}})
     root, task_dir = _project(tmp_path, manifest=manifest)
     monkeypatch.chdir(root)
     _commit(root, task_dir)
     versions = _load(_gen(task_dir, 1) / "versions.yml")
-    assert versions["issue_overlay_digest"].startswith("sha256:")
-    fields = _load(_gen(task_dir, 1) / "provenance.yml")["fields"]
-    assert fields["checks.extra"]["steps"] == [{"layer": "issue", "op": "add"}]
+    assert versions["issue_overlay_digest"] is None
+    assert "checks.extra" not in _load(_gen(task_dir, 1) / "provenance.yml")["fields"]
+    assert "extra" not in _load(_gen(task_dir, 1) / "resolved.yml")["checks"]
 
 
 def test_gs_2_records_start_empty_and_carry_an_invalidation(project):
@@ -383,20 +385,15 @@ def test_gs_5_a_different_project_layer_commits_the_next_generation(project):
     assert _commit(root, task_dir).committed is False
 
 
-def test_gs_5_a_different_issue_overlay_commits_the_next_generation(project):
+def test_gs_5_a_changed_config_commits_nothing(project):
+    """A manifest's `config:` is not read (ADR-094), so writing one is no change."""
     root, task_dir = project
     _commit(root, task_dir)
-    _write_manifest(task_dir, config={"checks": {"extra": _new_check()}})
-    assert _commit(root, task_dir).number == 2
-
-
-def test_gs_5_an_overlay_that_restates_a_default_is_still_a_different_overlay(project):
-    root, task_dir = project
-    _commit(root, task_dir)
-    _write_manifest(task_dir, config={"autonomy": "balanced"})
+    _write_manifest(task_dir, config={"checks": {"extra": _new_check()},
+                                      "autonomy": "controlled"})
     again = _commit(root, task_dir)
-    assert (again.number, again.committed) == (2, True)
-    assert _load(_gen(task_dir, 2) / "resolved.yml")["autonomy"] == "balanced"
+    assert (again.number, again.committed) == (1, False)
+    assert not _gen(task_dir, 2).exists()
 
 
 def test_gs_5_a_commit_with_no_change_does_not_run_the_lint(project, monkeypatch):
@@ -422,9 +419,11 @@ def test_gs_5_a_commit_with_no_change_does_not_run_the_lint(project, monkeypatch
 
 # --- GS-6: the target folder -------------------------------------------------------------
 
-def test_gs_6_a_complete_unreferenced_target_is_refused(project, monkeypatch):
+def test_gs_6_a_complete_unreferenced_target_is_written_again(project, monkeypatch):
+    """A crash between the marker and the manifest replace leaves a complete folder
+    the manifest does not name. It holds only files a commit writes, so the next
+    commit writes it again from the configuration resolved now."""
     from compass_pkg import generation
-    from compass_pkg.core import CompassError
     root, task_dir = project
     _write_manifest(task_dir, generation=0)
     monkeypatch.setattr(generation, "_after_step",
@@ -434,10 +433,12 @@ def test_gs_6_a_complete_unreferenced_target_is_refused(project, monkeypatch):
         _commit(root, task_dir)
     monkeypatch.undo()
     monkeypatch.chdir(root)
-    with pytest.raises(CompassError) as caught:
-        _commit(root, task_dir)
-    assert "complete" in str(caught.value) and "delete" not in str(caught.value).lower()
-    assert (_gen(task_dir, 1) / "complete").is_file()
+    assert {g.number: g.state for g in generation.states(str(task_dir))} == {
+        1: "complete-unreferenced"}
+    result = _commit(root, task_dir)
+    assert (result.number, result.committed) == (1, True)
+    assert _manifest(task_dir)["generation"] == 1
+    assert {g.number: g.state for g in generation.states(str(task_dir))} == {1: "current"}
 
 
 def test_gs_6_an_incomplete_target_is_overwritten(project, monkeypatch):
@@ -495,10 +496,10 @@ def test_gck_1_a_file_the_commit_did_not_write_is_refused(project, stray):
         _commit(root, task_dir)
     message = str(caught.value)
     assert named in message and str(folder) in message, message
-    # The issue is named: a person may be pointed at another issue, and `--discard`
-    # without it would remove that issue's folder instead.
-    assert "compass issue configure --issue feature --discard 1" in message, message
-    assert "everything in it" in message, message
+    # The folder is named by its path, which names the issue: a person may be
+    # pointed at another issue, and a bare number would not say which.
+    assert f"remove the folder {folder} and everything in it" in message, message
+    assert "compass issue configure" not in message, message
     assert _snapshot(folder) == before
     assert (task_dir / "manifest.yml").read_bytes() == manifest_before
 
@@ -525,52 +526,14 @@ def test_gck_3_files_a_commit_writes_are_still_overwritten(project):
     assert _load(folder / "resolved.yml")["schema"] == 1
 
 
-# --- GRN: a refusal's commands name the refused issue (generation-refusals-name-issue) ----
+# --- GRN: no refusal names a removed command ------------------------------------------------
 
-def _printed_commands(message):
-    import re
-    return re.findall(r"`(compass (?:issue configure|approach evaluate)[^`]*)`", message)
-
-
-def test_grn_1_the_printed_command_acts_on_the_refused_issue(tmp_path, monkeypatch):
-    """A person can be pointed at another issue when a commit refuses. Each command the
-    refusal prints must act on the refused issue, never on the one the pointer names."""
-    import shlex
-    import shutil
-    from compass_pkg.core import CompassError
-    root, task_dir = _project(tmp_path)
-    _, other_dir = _project(tmp_path, slug="other")
-    for slug in (SLUG, "other"):
-        code, out, err = _run(root, "approach", "evaluate", "--issue", slug, "--write")
-        assert code == 0, out + err
-        shutil.copytree(_gen(task_dir.parent / slug, 1), _gen(task_dir.parent / slug, 2))
-    (root / ".compass" / "current-task").write_text("other\n", encoding="utf-8")
-    monkeypatch.chdir(root)
-    with pytest.raises(CompassError) as caught:
-        _commit(root, task_dir, delivery_approach="full")
-    commands = _printed_commands(str(caught.value))
-    assert [c for c in commands if "--commit" in c] and [c for c in commands if "--discard" in c]
-    for command in commands:
-        assert f"--issue {SLUG}" in command, command
-    other_before = _snapshot(_gen(other_dir, 2))
-    for command in sorted(commands, key=lambda c: "--discard" in c):
-        code, out, err = _run(root, *shlex.split(command)[1:])
-        assert "other" not in out + err, out + err
-        assert _snapshot(_gen(other_dir, 2)) == other_before
-    assert not _gen(task_dir, 2).exists()
-
-
-def test_grn_2_every_printed_configure_command_names_the_issue():
-    """Each refusal in these modules that prints `compass issue configure` names
-    `--issue`, so no new message can act on the issue the pointer names."""
-    import re
-    for name in ("generation", "issue_config_cmd"):
+def test_grn_2_no_message_names_the_removed_issue_configure():
+    """`compass issue configure` was removed with the issue layer (ADR-094), so no
+    refusal of the store may tell a person to run it."""
+    for name in ("generation", "effective"):
         source = (PACKAGE / f"{name}.py").read_text(encoding="utf-8")
-        # Join the pieces of an implicitly concatenated string, so a command split
-        # across source lines reads as one.
-        joined = re.sub(r"\"\s*\n\s*f?\"", "", source)
-        bare = re.findall(r"issue configure --(?!issue)\S*", joined)
-        assert not bare, (name, bare)
+        assert "issue configure" not in source, name
 
 
 # --- GS-7: atomic writes -----------------------------------------------------------------
@@ -1181,10 +1144,11 @@ def test_gs_17_messages_name_only_commands_the_cli_has(project, tmp_path):
     shutil.rmtree(_gen(task_dir, 1))
     _write_manifest(task_dir, generation=0)
     _commit(root, task_dir)
-    shutil.copytree(_gen(task_dir, 1), _gen(task_dir, 2))
-    with pytest.raises(CompassError) as unreferenced:
+    _gen(task_dir, 2).mkdir()
+    (_gen(task_dir, 2) / "notes.md").write_text("mine\n", encoding="utf-8")
+    with pytest.raises(CompassError) as unwritten:
         _commit(root, task_dir, delivery_approach="full")
-    messages.append(str(unreferenced.value))
+    messages.append(str(unwritten.value))
     with pytest.raises(CompassError) as zero:
         from compass_pkg import effective
         _write_manifest(task_dir, generation=0)
@@ -1193,31 +1157,8 @@ def test_gs_17_messages_name_only_commands_the_cli_has(project, tmp_path):
     named = [words for text in messages for words in _commands_in(text)]
     assert named, "the messages should name the command that fixes the fault"
     assert [w for w in named if not _exists(w)] == []
-    assert ["issue", "configure"] in named
-    assert not [m for m in messages if "migrate-config" in m]
-
-
-def test_cr_10_the_unreferenced_folder_message_gives_the_path_then_both_commands(project):
-    """Scenario CR-10 (issue configure-and-reassess). The ruling for a complete,
-    unreferenced folder: the path first, then the two commands. The fallback
-    of deleting the folder is gone now the commands exist."""
-    from compass_pkg import generation
-    from compass_pkg.core import CompassError
-    root, task_dir = project
-    _commit(root, task_dir)
-    import shutil
-    shutil.copytree(_gen(task_dir, 1), _gen(task_dir, 2))
-    with pytest.raises(CompassError) as caught:
-        _commit(root, task_dir, delivery_approach="full")
-    text = str(caught.value)
-    folder = str(_gen(task_dir, 2))
-    assert text.startswith(folder)
-    assert "compass issue configure --issue feature --commit" in text
-    assert "compass issue configure --issue feature --discard" in text
-    assert text.index("compass issue configure --issue feature --commit") < text.index(
-        "compass issue configure --issue feature --discard")
-    assert "delete the folder" not in text and "delete" not in text.lower()
-    assert "--reason" in text          # a reason given to the interrupted reassess is kept
+    assert ["approach", "evaluate"] in named
+    assert not [m for m in messages if "migrate-config" in m or "issue configure" in m]
 
 
 def test_gs_17_the_wording_check_can_fail():

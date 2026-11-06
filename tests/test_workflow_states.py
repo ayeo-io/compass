@@ -453,8 +453,7 @@ def test_vr_c16_a_landed_by_pointer_holds_between_completed_issues(
     assert (ran is True) is holds
 
 
-# --- the readers of the configuration: generation, effective, policy,
-# --- issue_config_cmd ----------------------------------------------
+# --- the readers of the configuration: generation, effective, policy ------------
 
 # A closed issue keeps the configuration it closed under; a hold and work in
 # flight can still change it.
@@ -517,18 +516,6 @@ def test_vr_c16_preflight_refuses_a_closed_issue_before_anything_is_printed(
 
 
 @pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
-def test_vr_c16_a_closed_issue_cannot_be_given_a_proposal(tmp_path, monkeypatch, status, extra):
-    from compass_pkg import generation
-    from compass_pkg.core import CompassError
-    root, task_dir, _commit = _stored_issue(tmp_path, monkeypatch, status, extra)
-    import yaml
-    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    with pytest.raises(CompassError) as caught:
-        generation.write_proposal(str(task_dir), manifest, {"checks": {}})
-    assert CLOSED_REFUSAL in str(caught.value) and "landed" not in str(caught.value)
-
-
-@pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
 def test_vr_c16_a_closed_issue_cannot_migrate_its_configuration(
         tmp_path, monkeypatch, status, extra):
     from compass_pkg import effective
@@ -537,17 +524,6 @@ def test_vr_c16_a_closed_issue_cannot_migrate_its_configuration(
     with pytest.raises(CompassError) as caught:
         effective.migrate_generation(str(task_dir))
     assert CLOSED_REFUSAL in str(caught.value) and "landed" not in str(caught.value)
-
-
-@pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
-def test_vr_c16_a_closed_issue_cannot_be_configured(tmp_path, monkeypatch, status, extra):
-    import subprocess
-    root, task_dir, _commit = _stored_issue(tmp_path, monkeypatch, status, extra)
-    r = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "issue", "configure",
-                        "--issue", task_dir.name, "--mode", "implement=lightweight"],
-                       cwd=root, capture_output=True, text=True, timeout=120)
-    assert r.returncode != 0
-    assert CLOSED_REFUSAL in r.stderr and "landed" not in r.stderr, r.stdout + r.stderr
 
 
 @pytest.mark.parametrize("status,extra,needs_assessment", [

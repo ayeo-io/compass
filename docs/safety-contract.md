@@ -21,10 +21,9 @@ are recorded, `compass approach evaluate` applies the routing policy as a pure
 function.
 
 Its inputs are the recorded assessment, the project's resolved configuration
-(the shipped default, an optional git parent, `compass.yml` and the issue's
-own `config:`, which can name the approach with `compass issue configure
---route`). From 9.0.0 the documents an issue has on disk are not an input
-(ADR-091). The same inputs produce the same approach, every time.
+(the shipped default, an optional git parent and `compass.yml`). From 9.0.0
+the issue's own `config:` is not an input (ADR-094), and the documents an issue
+has on disk are not an input (ADR-091). The same inputs produce the same approach, every time.
 Without `--write` it reads the configuration stored at the last evaluation;
 with `--write`, the current one.
 

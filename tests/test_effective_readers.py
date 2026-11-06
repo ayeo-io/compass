@@ -356,16 +356,18 @@ def test_ef_9_check_names_the_generation_and_the_parent_version(tmp_path):
     assert (document["generation"], document["parent_version"]) == (1, parent)
 
 
-def test_ef_9_a_changed_config_is_a_pending_change_that_does_not_fail(tmp_path):
+def test_ef_9_a_changed_config_is_named_as_not_read_and_does_not_fail(tmp_path):
+    """9.0.0 has no issue layer (ADR-094): a `config:` the generation was not
+    committed with is named as not read, and changes nothing."""
     root, task_dir = _committed_project(tmp_path)
     code, clean, _ = _run(root, "check", "--issue", SLUG)
-    assert "pending" not in clean
+    assert "config: differs" not in clean
     _write_manifest(task_dir, config={"checks": {"extra": {
         "statement": "A check.", "kind": "deterministic", "impl": "suite-passed",
         "severity": "advisory", "on_skipped": "fail"}}})
     code2, out, err = _run(root, "check", "--issue", SLUG)
-    assert "pending" in out and "config:" in out, out + err
-    assert "compass approach evaluate --write" in out
+    assert "config: differs from the generation in force and is not read" in out, out + err
+    assert "ADR-094" in out
     assert code2 == code
 
 

@@ -186,8 +186,7 @@ copied governance and `.compass/config.yml`) are read in their old words until
   and asks again for approval of each waiver the move affects. `compass preset
   test` runs a preset's fixtures and checks its locks, and `compass preset
   init` scaffolds a team preset repository.
-- `compass issue configure` proposes, previews, discards or recovers a change to
-  an issue's own configuration. `compass issue migrate --config` pins an issue's
+- `compass issue migrate --config` pins an issue's
   configuration to the installed versions. An implementation major that differs
   from the one a generation recorded is refused, and a check can be advisory.
 - A project can name git parents, singly or in a chain, and each is pinned by

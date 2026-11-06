@@ -24,7 +24,6 @@ FETCHING = ("policy lint", "policy show", "policy diff", "policy update",
 # parent, and the commands each one serves.
 FETCH_MODULES = {
     "effective.py": "approach evaluate --write (the generation it commits)",
-    "issue_config_cmd.py": "approach evaluate --write (the reassess plan)",
     "policy_cmd.py": "policy lint, policy show, policy diff, preset test",
     "policy_update.py": "policy update",
 }
@@ -87,10 +86,8 @@ def test_the_fetch_list_names_every_command_that_fetches():
         for command in FETCHING:
             assert command in text, f"{name} does not list `compass {command}`: {text}"
         assert "compass check" in text, name
-    # `issue configure --commit` runs the reassess, which fetches; the preview
-    # and the proposal do not.
-    assert "issue configure --commit" in security, security
-    assert "issue configure never fetch" not in security, security
+    # `issue configure` went with the issue layer (ADR-094).
+    assert "issue configure" not in security, security
     table = _text("docs", "git-parents.md").split("## When Compass fetches", 1)[1]
     table = _flat(table.split("\n\n", 2)[1])
     for command in ("policy lint", "policy update", "policy diff", "preset test",

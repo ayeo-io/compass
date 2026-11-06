@@ -102,8 +102,8 @@ def _page_commands():
 
 def test_trc_005_every_command_on_the_syntax_page_exists():
     commands = _page_commands()
-    for needed in (("policy", "lint"), ("policy", "show"),
-                   ("policy", "update"), ("issue", "configure")):
+    # `issue configure` went with the issue layer (ADR-094).
+    for needed in (("policy", "lint"), ("policy", "show"), ("policy", "update")):
         assert needed in commands, f"page does not name compass {needed}"
     for words in sorted(commands):
         result = _run([*words, "--help"])

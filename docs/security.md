@@ -71,8 +71,7 @@ only in the cases below, and each one starts only when you ask for it.
   `compass policy diff` (when a reference is a git parent), `compass policy
   update`, `compass preset test` and `compass approach evaluate --write` fetch,
   and only a commit that is not cached yet; never `compass check`.
-  `compass issue configure --commit` fetches too, because it runs the
-  reassess. `compass policy update` always asks the remote which commit its
+  `compass policy update` always asks the remote which commit its
   ref names, unless
   `COMPASS_OFFLINE=1` is set. `--offline` or `COMPASS_OFFLINE=1` stops the others
   fetching. `COMPASS_PARENT_REMOTE_BASE`
@@ -106,13 +105,11 @@ The fetch runs `git` with an argument list and no shell, only over `https`, with
 hooks off and no prompts. It runs with your own git configuration, so your
 credential helper runs and your `url.*.insteadOf` rules apply. Only `compass
 policy lint`, `policy show`, `policy diff` (when a reference is a git parent),
-`policy update`, `preset test` and `compass approach evaluate --write` fetch,
-including a reassess that commits a `compass issue configure` proposal.
+`policy update`, `preset test` and `compass approach evaluate --write` fetch.
 `policy update` always asks the remote which commit its ref names, unless
 `COMPASS_OFFLINE=1` is set.
 `compass policy diff` prints a line on stderr before it fetches. `compass check`
-never fetches. `compass issue configure --commit` fetches, because it runs the
-reassess; the preview and the proposal never fetch. Compass
+never fetches. Compass
 checks each cached parent against a digest it recorded at fetch, and `compass
 policy lint` fails on a mismatch. That catches an accidental edit of the cache,
 not a deliberate one by someone who can write the cache, because the digest

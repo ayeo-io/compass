@@ -219,11 +219,14 @@ def _parent_state(out, root, found):
 
 
 def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True,
-                fetch=False, task_dir=None):
+                fetch=False, task_dir=None, read_issue=True):
     """The chain for a project. `file` lints one `compass.yml` over the
     shipped parent instead of the project's own. `manifest` is a parsed issue
     manifest, whose `config:` is the issue layer and whose `evidence:` is the
-    registry an issue waiver's approval is looked up in. A file that does not
+    registry an issue waiver's approval is looked up in. `read_issue=False`
+    leaves `config:` out: 9.0.0 resolves no issue layer (ADR-094), and only
+    `compass policy lint --issue` and `policy show --issue` still read one.
+    A file that does not
     load is a finding, not an exception; a file that is not there is an
     error for the caller."""
     parent, meta = load_parent()
@@ -248,7 +251,7 @@ def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True,
             out.findings.append(_load_finding("project", path, root, exc))
             out.failed = ("project", "project")
     if manifest is not None:
-        config = manifest.get("config")
+        config = manifest.get("config") if read_issue else None
         if config is not None:
             if _non_text_findings(out, "issue", config):
                 out.failed = out.failed or ("issue", "issue")

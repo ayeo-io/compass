@@ -42,7 +42,6 @@ compass policy update      move the project to another shipped default major, re
 compass issue lint         structurally validate an issue manifest
 compass issue diagnose     explain one run from its own records: stages, timeline, deviations
 compass issue use          make an issue the current one, for this session
-compass issue configure    propose, preview, discard or recover a change to one issue's own configuration
 compass issue migrate      bring older issue directories up to the current schema, and settle the artifact status of done issues; --config pins an issue's configuration to the installed check versions
 compass issue status set   backlog, or done with --close-reason completed | not-planned | duplicate
 compass issue status remove  end a backlog hold; the state then follows the records

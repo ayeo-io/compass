@@ -50,7 +50,7 @@ would refuse.
 |---|---|---|
 | `default` | `parent` | `governance/presets/default/` (the shipped preset) |
 | `project` | `project` | `compass.yml` in the project root |
-| `issue` | `issue` | the `config:` of the issue's `manifest.yml`, only with `--issue SLUG` |
+| `issue` | `issue` | the `config:` of the issue's `manifest.yml`, only with `--issue SLUG`. Only the lint and `compass policy show --issue` read it: since 9.0.0 the resolution an issue runs against does not (ADR-094) |
 
 A project whose `extends:` names a git parent has one more `parent` layer
 between `default` and `project`, named `github:<owner>/<repo>@<ref>#<sha7>`

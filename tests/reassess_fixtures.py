@@ -1,9 +1,9 @@
-"""Scratch projects and helpers for `issue configure` and the reassess commit.
+"""Scratch projects and helpers for the reassess commit.
 
 A project here is a temporary directory with one issue. `committed` runs the
 real `compass approach evaluate --write`, so generation 1 is the one the
-command stores. Used by `test_issue_configure.py` and
-`test_generation_recovery.py` (issue `configure-and-reassess`).
+command stores. Used by `test_generation_recovery.py` and
+`test_old_issue_layer.py`.
 """
 from __future__ import annotations
 
@@ -87,33 +87,3 @@ def committed(tmp_path, **kwargs):
 def reassess(root, *extra):
     return run(root, "approach", "evaluate", "--issue", SLUG, "--write",
                "--reason", "test", *extra)
-
-
-def configure(root, *argv):
-    return run(root, "issue", "configure", "--issue", SLUG, *argv)
-
-
-def team(severity):
-    """A project layer that adds one check of its own."""
-    return {"schema": 1, "owner": "jed72", "checks": {"team-check": {
-        "statement": "A team check.", "kind": "deterministic", "impl": "suite-passed",
-        "severity": severity, "on_skipped": "fail"}}}
-
-
-def waived_project(tmp_path):
-    """An issue at generation 1 whose own layer waives the project check's
-    severity (blocking -> advisory), with the approval record that backs it."""
-    body = dict(MANIFEST)
-    body["config"] = {"checks": {"team-check": {
-        "set": {"severity": "advisory"},
-        "waiver": {"reason": "A one-line fix.", "approved_by": "EV-1"}}}}
-    body["evidence"] = [{
-        "id": "EV-1", "type": "human-approval", "decision": "approved",
-        "approver": "jed72", "role": "owner", "scope": "waiver",
-        "timestamp": "2026-10-07T09:00:00Z",
-        "waiver": {"scope": "issue", "entry": "checks.team-check",
-                   "fields": {"severity": {"from": "blocking", "to": "advisory"}}}}]
-    root, task_dir = project(tmp_path, compass_yml=team("blocking"), manifest=body)
-    code, out, err = reassess(root)
-    assert code == 0, out + err
-    return root, task_dir

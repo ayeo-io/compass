@@ -58,6 +58,6 @@ nothing.
 When the ratings were wrong or the change grew, read that procedure, then
 run `compass approach evaluate --write --reason "..." --justify DIM="..."`.
 It logs the change in
-`reassessments:` and commits the next generation with any
-`compass issue configure` proposal (`--reset-config` drops `config:`). It
-moves an issue assessed before the path onto the path.
+`reassessments:` and commits the next generation. The manifest's `config:`
+is not read (ADR-094). It moves an issue assessed before the path onto the
+path.

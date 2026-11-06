@@ -154,7 +154,6 @@ def test_list_manifest_refused_with_a_clear_error(issue, body):
 _LIST_MANIFEST_VERBS = [
     ("issue", "diagnose", "--issue", "demo"),
     ("bdd", "verify", "--issue", "demo", "--", "true"),
-    ("issue", "configure", "--discard", "--issue", "demo"),
     ("check", "--issue", "demo"),
 ]
 

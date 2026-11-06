@@ -26,7 +26,7 @@ assessment:        # (required) map - the four-dimension JUDGMENT assessment (as
   labels:        # (optional) list of strings - domain tags (auth, payments, …)
 
 generation:      # (optional) integer, at least 0 - the stored generation of configuration the issue runs against; 0 = assessed under 6.x with none yet; absent = pre-6.0.0, reads live governance
-config:          # (optional) map - the issue's own configuration layer, an input; it takes effect when approach evaluate --write commits it
+config:          # (optional) map - the issue's own configuration layer in 8.x; valid, and not written or read since 9.0.0 (ADR-094)
 
 delivery_approach:  # (optional until approach evaluate) string - the final delivery approach name
 orchestration:       # (optional until approach evaluate) string - solo | pair | multiagent | …

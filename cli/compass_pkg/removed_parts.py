@@ -1,4 +1,4 @@
-# compass_pkg.removed_parts - the verbs, flags and settings 9.0.0 removed (ADR-090 to ADR-093)
+# compass_pkg.removed_parts - the verbs, flags and settings 9.0.0 removed (ADR-090 to ADR-094)
 """What 9.0.0 removed, named the same way by every reader.
 
 9.0.0 runs an issue in one session (ADR-090). The verbs and flags that
@@ -12,6 +12,9 @@ are gone from what a project can configure. 9.0.0 keeps only what a reviewer
 of one change needs (ADR-093), so the reports across issues, the brief
 ingest, the HTML board, the GitHub label sync, the readiness measure and the
 follow-up that blocks another issue (`follow-up add --target`) are gone.
+9.0.0 runs one fixed set of checks (ADR-094), so an issue has no
+configuration layer of its own: `compass issue configure` and `approach
+evaluate --reset-config` are gone, and a manifest's `config:` is not read.
 
 A command line that still names a removed verb or flag fails to parse as an
 unknown command, and `line_for` gives the one line the parse error adds.
@@ -56,6 +59,7 @@ REASONS = {
     "ADR-091": "Compass needs only the acceptance criteria",
     "ADR-092": "Compass runs every delivery issue on one four-stage path",
     "ADR-093": "Compass keeps only what a reviewer of one change needs",
+    "ADR-094": "Compass runs one fixed set of checks",
 }
 
 #: Each removed command line, as tokens, what replaces it, and the decision
@@ -117,6 +121,10 @@ COMMANDS = (
      "compass init sets up the project; nothing measures it", "ADR-093"),
     (("follow-up", "add", "--target"), "compass follow-up add --target",
      "link the follow-up to a GitHub issue with --github", "ADR-093"),
+    (("issue", "configure"), "compass issue configure",
+     "the issue layer was removed; record a waiver with compass waiver add", "ADR-094"),
+    (("approach", "evaluate", "--reset-config"), "compass approach evaluate --reset-config",
+     "an issue has no config layer", "ADR-094"),
 )
 
 #: The ten agent names 9.0.0 removed with the `agents/` folder. The shipped
@@ -184,6 +192,8 @@ EFFECTS = {
 
 #: The issue-layer key that picks one of the 8.x approaches (ADR-092). Over a
 #: configuration that does not declare the approach it is left out of the merge.
+#: 9.0.0 resolves no issue layer (ADR-094); only `compass policy lint --issue`
+#: still reads one, until the layers go.
 ISSUE_KEYS = {
     "approach": ("the delivery approach the issue picked, which the configuration does "
                  "not declare", "ADR-092"),

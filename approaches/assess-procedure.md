@@ -77,14 +77,11 @@ approach as `from_route` in `reassessments:`.
 
 A re-assessment also commits the next **generation** of the issue's stored
 configuration (`manifest.yml` names it in `generation:`), and the
-`reassessments:` entry records it as `generation: {from, to}`. To change the
-issue's own configuration, propose the change first with `compass issue
-configure` (for example `--autonomy controlled`), read the preview, then
-re-assess: the re-assessment applies the proposal. `--reset-config` drops the
-issue's `config:` layer instead. After an interrupted re-assessment,
-`compass issue configure --commit` adopts the complete folder it left, and
-`compass issue configure --discard` removes it. `docs/issue-configure.md`
-has the details.
+`reassessments:` entry records it as `generation: {from, to}`. An issue has
+no configuration of its own (ADR-094): the manifest's `config:` is not read,
+and a check the issue cannot meet is excused with a waiver. After an
+interrupted re-assessment, the next re-assessment writes the folder it left
+again. `docs/generation-store.md` has the details.
 
 Re-assessing is also how a **spike graduates**: the spike's findings become
 an input to a fresh assessment for the real delivery work. If the new

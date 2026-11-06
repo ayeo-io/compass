@@ -68,7 +68,7 @@ Compass works out which fields the waiver covers. There is no `covers` field to 
 
 ## Issue waivers
 
-An issue waiver is written in the issue's `config:` and has two fields, `reason` and `approved_by`. Here `approved_by` is the id of a human approval record in the issue's evidence. It has no `approved_on`, because the record holds a timestamp. The waiver ends when the issue lands. Use `compass issue configure` to propose a change to one issue's configuration and to see what it would do.
+An issue waiver is written in the issue's `config:` and has two fields, `reason` and `approved_by`. Here `approved_by` is the id of a human approval record in the issue's evidence. It has no `approved_on`, because the record holds a timestamp. The waiver ends when the issue lands. 9.0.0 does not read an issue's `config:` (ADR-094), so a new issue waiver has no effect; a stored generation keeps the issue waivers it was committed with.
 
 ## Locks
 
@@ -96,7 +96,6 @@ Only the project layer can write `unlock`. The project `owner` must approve it, 
 | `compass policy lint` | Check the layers, the locks and the waivers. Add `--file PATH` to check one file. |
 | `compass policy show` | Print every resolved field, the layer that wrote it and the waiver that excuses it. |
 | `compass policy update` | Move the project to a newer shipped major, and re-approve each waiver the move affects. |
-| `compass issue configure` | Propose a change to one issue's own configuration and preview its effect. |
 
 ## Limit of the approval check
 

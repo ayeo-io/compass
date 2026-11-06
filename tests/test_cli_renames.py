@@ -447,7 +447,6 @@ EXCEPTIONS = {
     "bdd verify": "runs the BDD suite and records the result; a verb of the bdd group",
     "issue diagnose": "explains one run from its records; a verb of the issue group",
     "issue use": "moves the current-issue pointer; the pointer verb every session reads",
-    "issue configure": "proposes a change to one issue's configuration",
     "issue raised-by": "records the issue this one was found in; the maintainer named it an exception",
     "acceptance start": "opens an acceptance record for a change with no natural red",
     "acceptance record": "closes an acceptance record",

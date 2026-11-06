@@ -450,6 +450,27 @@ def _unmatched_document_notes(task_dir):
             "a kind's filename, or leave it: nothing owes it." % name for name in names]
 
 
+def _unread_config_notes(task, task_dir):
+    """A warning for a `config:` that nothing reads. 9.0.0 has no issue layer
+    (ADR-094): an 8.x issue keeps the `config:` its stored generation was
+    committed with, and any other `config:` changes nothing. A warning, not an
+    error: the key stays valid in the schema."""
+    if task.get("config") is None:
+        return []
+    from compass_pkg import effective
+    try:
+        held = effective.generation_number(task)
+        view = effective.effective_for(task_dir, task) if held else None
+        unread = view is None or view.pending_config(task)
+    except Exception:  # noqa: BLE001 - a report must not fail the lint
+        unread = True
+    if not unread:
+        return []
+    return ["warning: config: is not read. An issue has no config layer in 9.0.0 "
+            "(ADR-094); delete the key, or record a waiver for one check with "
+            "compass waiver add."]
+
+
 def cmd_task_lint(args):
     from compass_pkg.terminal import relative_to_project
     if args.file:
@@ -538,10 +559,10 @@ def cmd_task_lint(args):
     if je:
         errs += je
     # Notes beside the result. They never change the exit code.
-    notes = []
+    notes = _unread_config_notes(task, os.path.dirname(os.path.abspath(path)))
     if not args.file:
         task_dir = os.path.dirname(os.path.abspath(path))
-        notes = _unmatched_document_notes(task_dir)
+        notes += _unmatched_document_notes(task_dir)
     if errs:
         print(f"compass issue lint: FAIL - {relative_to_project(path)}")
         for e in errs:

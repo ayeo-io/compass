@@ -373,11 +373,13 @@ def test_trc_c7_policy_migrate_names_the_replacement_of_an_edited_role_rule(tmp_
 def test_trc_c8_a_project_rule_that_reads_role_is_refused(tmp_path):
     root = tmp_path / "proj"
     (root / ".compass").mkdir(parents=True)
+    # The effect is `add_gate`: a rule whose only effect forces an approach is
+    # left out since 9.0.0 (VD-008 of #351), and its condition would not be read.
     (root / "compass.yml").write_text(
         "schema: 1\nextends: compass:default@6\nrules:\n  extra:\n    kind: floors\n"
-        "    hit: {force_minimum_approach: max}\n    rules:\n      X-1:\n"
+        "    hit: {add_gate: collect}\n    rules:\n      X-1:\n"
         "        order: 1\n        when: {role: designer}\n"
-        "        then: {force_minimum_approach: full}\n        rationale: probe\n",
+        "        then: {add_gate: verify.architecture}\n        rationale: probe\n",
         encoding="utf-8")
     code, out, err = _run(root, "policy", "lint")
     assert code == 1, out + err

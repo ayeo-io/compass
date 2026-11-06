@@ -648,11 +648,9 @@ def policy_under(kind, scratch, fault=None):
 # copy. The copy is not named with a letter: the D of `docs/releasing.md` is the
 # settings moved into `compass.yml`.
 #
-# The copy sits in `tests/fixtures/`, not in `tests/fixtures/compat/`. Every file
-# under `compat/` is a frozen corpus whose digest in `tests/fixtures/frozen-digests.yml`
-# records the owner's sign-off, and the owner has not pinned this copy. Move it into
-# `compat/` in the same change that pins its digest.
-GOVERNANCE_8_0_4 = ROOT / "tests" / "fixtures" / "v8.0.4-governance.tgz"
+# The copy is a frozen corpus like the 5.6.0 copy: its digest in
+# `tests/fixtures/frozen-digests.yml` records the owner's sign-off (2026-11-06).
+GOVERNANCE_8_0_4 = FIXTURES / "v8.0.4-governance.tgz"
 
 _POLICY_8_0_4 = []
 

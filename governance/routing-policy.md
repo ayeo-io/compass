@@ -469,7 +469,7 @@ the old regular and full approaches (6 gates). The `S17` routings are those
 the 9.0.0 preset names for the same approaches. `tests/test_evidence_required.py`
 checks this on all 1,200 assessments of the contract 1 grid under each of the
 16 subsets of the `G5` labels, against the 8.0.4 governance copy in
-`tests/fixtures/v8.0.4-governance.tgz`.
+`tests/fixtures/compat/v8.0.4-governance.tgz`.
 
 ## The path writer
 

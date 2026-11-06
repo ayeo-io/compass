@@ -132,6 +132,7 @@ Rules:
 | [ADR-090](ADR-090-compass-runs-in-one-session-with-no-stage-agents.md) | Compass runs in one session with no stage agents | accepted | with ADR-030, ADR-071, ADR-076 and ADR-078 |
 | [ADR-091](ADR-091-compass-needs-only-the-acceptance-criteria.md) | Compass needs only the acceptance criteria | accepted | with ADR-026, ADR-050, ADR-051, ADR-064, ADR-067 and ADR-090 |
 | [ADR-092](ADR-092-compass-runs-one-path-of-four-stages.md) | Compass runs one path of four stages and assess selects the evidence | accepted | with ADR-062, ADR-063, ADR-079, ADR-083, ADR-088, ADR-090 and ADR-091 |
+| [ADR-093](ADR-093-compass-keeps-only-what-a-reviewer-of-one-change-needs.md) | Compass keeps only what a reviewer of one change needs | proposed | with ADR-047, ADR-090, ADR-091 and ADR-092 |
 
 ## Principle → ADR mapping
 

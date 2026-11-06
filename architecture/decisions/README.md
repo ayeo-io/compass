@@ -133,6 +133,7 @@ Rules:
 | [ADR-091](ADR-091-compass-needs-only-the-acceptance-criteria.md) | Compass needs only the acceptance criteria | accepted | with ADR-026, ADR-050, ADR-051, ADR-064, ADR-067 and ADR-090 |
 | [ADR-092](ADR-092-compass-runs-one-path-of-four-stages.md) | Compass runs one path of four stages and assess selects the evidence | accepted | with ADR-062, ADR-063, ADR-079, ADR-083, ADR-088, ADR-090 and ADR-091 |
 | [ADR-093](ADR-093-compass-keeps-only-what-a-reviewer-of-one-change-needs.md) | Compass keeps only what a reviewer of one change needs | proposed | with ADR-047, ADR-090, ADR-091 and ADR-092 |
+| [ADR-094](ADR-094-compass-runs-one-fixed-check-set.md) | Compass runs one fixed check set | proposed | supersedes in part, when accepted, ADR-010 (layers), ADR-033 (the classifier and locks), ADR-035 (`extends:`, floors and locks), ADR-037 (the classifier), ADR-039 (locks and entry waivers), ADR-042 (the preset directory), ADR-043 (git parent pins) and ADR-073; with ADR-036, ADR-038, ADR-090, ADR-091, ADR-092 and ADR-093 |
 
 ## Principle → ADR mapping
 

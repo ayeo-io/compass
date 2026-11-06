@@ -15,8 +15,9 @@ build their text from the same dictionary.
 # compass_pkg.catalogue_spec, compass_pkg.core (CompassError,
 # reading_matches, the `when` key map), compass_pkg.obligations (the obligations function,
 # Refused, the dimension orders) and, for a check parameter's direction,
-# compass_pkg.check_registry, and compass_pkg.classify_lists (a list
-# parameter as sets of entries). compass_pkg.locks imports it and reads `scan`,
+# compass_pkg.check_registry, compass_pkg.classify_lists (a list
+# parameter as sets of entries) and compass_pkg.json_shape (the check of
+# `to_json()` against `JSON_SHAPE`). compass_pkg.locks imports it and reads `scan`,
 # `Scan`, `where`, `plain` and `Refused`; `compass_pkg.waivers` reads
 # `classify`.
 from __future__ import annotations
@@ -32,6 +33,7 @@ from compass_pkg.catalogue_spec import (ARTIFACT_DEPTHS, CEILING_DIRECTIONS, DOC
 from compass_pkg.catalogue_spec import TIGHTER as DIRECTIONS
 from compass_pkg.classify_lists import entry_sets
 from compass_pkg.core import WHEN_KEY_MAP, CompassError, reading_matches
+from compass_pkg.json_shape import shape_errors
 from compass_pkg.obligations import (Refused, assessment_vocabulary,
                                      dimension_orders)
 
@@ -1136,10 +1138,7 @@ def _verdict(out):
     return "equivalent", "every point owes the same"
 
 
-# The documented shape of `to_json()`. A string names a JSON type; `("one of",
-# ...)` is a closed set of strings; `("or null", shape)` is a shape or null; a
-# dictionary is an object with exactly these keys in this order; a one-item
-# list is a list of that shape; `"any"` is any JSON value.
+# The documented shape of `to_json()`, in the form `json_shape` reads.
 _CHANGE_SHAPE = {"fact": "string", "field": "string", "key": ("or null", "string"),
                  "outcome": ("one of", ("tighter", "looser", "incomparable")),
                  "parent": "any", "child": "any"}
@@ -1164,41 +1163,9 @@ JSON_SHAPE = {
     "first_mixed": ("or null", _POINT_SHAPE),
 }
 
-_TYPES = {"string": str, "boolean": bool, "object": dict}
-
-
-def _shape_errors(value, shape, path, errors):
-    if shape == "any":
-        return
-    if isinstance(shape, tuple) and shape[0] == "or null":
-        if value is not None:
-            _shape_errors(value, shape[1], path, errors)
-    elif isinstance(shape, tuple):
-        if value not in shape[1]:
-            errors.append(f"{path}: {value!r} is not one of {', '.join(shape[1])}")
-    elif isinstance(shape, dict):
-        if not isinstance(value, dict):
-            errors.append(f"{path}: expected an object")
-        elif list(value) != list(shape):
-            errors.append(f"{path}: keys are {list(value)}, expected {list(shape)}")
-        else:
-            for key, sub in shape.items():
-                _shape_errors(value[key], sub, f"{path}.{key}", errors)
-    elif isinstance(shape, list):
-        if not isinstance(value, list):
-            errors.append(f"{path}: expected a list")
-        else:
-            for i, item in enumerate(value):
-                _shape_errors(item, shape[0], f"{path}[{i}]", errors)
-    elif shape == "integer":
-        if isinstance(value, bool) or not isinstance(value, int):
-            errors.append(f"{path}: expected an integer")
-    elif not isinstance(value, _TYPES[shape]):
-        errors.append(f"{path}: expected {shape}")
-
 
 def json_shape_errors(document):
     """What differs between a document and `JSON_SHAPE`; empty when it matches."""
     errors = []
-    _shape_errors(document, JSON_SHAPE, "$", errors)
+    shape_errors(document, JSON_SHAPE, "$", errors)
     return errors

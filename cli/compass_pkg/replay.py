@@ -15,7 +15,7 @@ changes none of the modules it calls.
 # load_yaml_strict), catalogue_check, catalogue_spec (LABEL_CAP), the
 # classifier module (the classify and build_grid functions,
 # json_shape_errors), core (CompassError, load_yaml, normalize_spine),
-# lifecycle (state_of), legacy_adapter (adapt), status_words (is_closed), merge, the
+# json_shape (shape_errors), lifecycle (state_of), legacy_adapter (adapt), status_words (is_closed), merge, the
 # obligations module (its function of that name, Refused, COMPARED_FACTS,
 # assessment_vocabulary), policy_lint (load_parent) and waivers (find,
 # describe, recheck) and parents (resolve_chain, ParentError). Only
@@ -38,6 +38,7 @@ from compass_pkg import catalogue_spec as spec
 from compass_pkg import obligations, parents, policy_lint, status_words, waivers
 from compass_pkg.atomic_io import StrictYamlError, digest, load_yaml_strict
 from compass_pkg.core import CompassError, load_yaml, manifest_path, normalize_spine
+from compass_pkg.json_shape import shape_errors
 
 JSON_SCHEMA_VERSION = 1
 
@@ -728,10 +729,7 @@ def diff_text(document):
 
 # --- the documented shape ---------------------------------------------------------------------
 
-# The documented shape of `diff()`. A string names a JSON type; `("one of",
-# ...)` is a closed set of strings; `("or null", shape)` is a shape or null; a
-# dictionary is an object with exactly these keys in this order; a one-item
-# list is a list of that shape; `"any"` is any JSON value. The
+# The documented shape of `diff()`, in the form `json_shape` reads. The
 # `classification` value has the classifier's own shape (`classify.JSON_SHAPE`),
 # which `classify.json_shape_errors` checks.
 SET_NAMES = ("grid", "labels", "archive")
@@ -764,45 +762,13 @@ DIFF_JSON_SHAPE = {
                          "waivers": [_WAIVER_SHAPE], "unreadable": ["string"]}),
 }
 
-_TYPES = {"string": str, "boolean": bool, "object": dict}
-
-
-def _shape_errors(value, shape, path, errors):
-    if shape == "any":
-        return
-    if isinstance(shape, tuple) and shape[0] == "or null":
-        if value is not None:
-            _shape_errors(value, shape[1], path, errors)
-    elif isinstance(shape, tuple):
-        if value not in shape[1]:
-            errors.append(f"{path}: {value!r} is not one of {', '.join(shape[1])}")
-    elif isinstance(shape, dict):
-        if not isinstance(value, dict):
-            errors.append(f"{path}: expected an object")
-        elif list(value) != list(shape):
-            errors.append(f"{path}: keys are {list(value)}, expected {list(shape)}")
-        else:
-            for key, sub in shape.items():
-                _shape_errors(value[key], sub, f"{path}.{key}", errors)
-    elif isinstance(shape, list):
-        if not isinstance(value, list):
-            errors.append(f"{path}: expected a list")
-        else:
-            for i, item in enumerate(value):
-                _shape_errors(item, shape[0], f"{path}[{i}]", errors)
-    elif shape == "integer":
-        if isinstance(value, bool) or not isinstance(value, int):
-            errors.append(f"{path}: expected an integer")
-    elif not isinstance(value, _TYPES[shape]):
-        errors.append(f"{path}: expected {shape}")
-
 
 def diff_shape_errors(document):
     """What differs between a document and `DIFF_JSON_SHAPE`; empty when it
     matches. The `classification` value is checked by
     `classify.json_shape_errors`, and its errors are included."""
     errors = []
-    _shape_errors(document, DIFF_JSON_SHAPE, "$", errors)
+    shape_errors(document, DIFF_JSON_SHAPE, "$", errors)
     if isinstance(document, dict) and isinstance(document.get("classification"), dict):
         errors += [f"$.classification{e[1:]}"
                    for e in classify.json_shape_errors(document["classification"])]

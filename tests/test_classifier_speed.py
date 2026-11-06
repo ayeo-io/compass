@@ -641,7 +641,11 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # error. The routing still gives an old issue only the legacy hand-offs, so such an
 # entry adds no checkpoint and the change compares as `equivalent`. A verdict can
 # differ, so the version is now 14.
-VERDICT_SOURCE_PIN = "e4ecbbce25f3b25f"
+# Re-pinned for #351: the check of `to_json()` against `JSON_SHAPE` moved to
+# `json_shape.shape_errors`, which `replay` shares, so `classify` stays under the
+# module line ceiling. It checks the output document and decides no verdict, so no
+# verdict moves and the version stays 14.
+VERDICT_SOURCE_PIN = "5538b735aea9b473"
 
 
 def _verdict_source_digest():

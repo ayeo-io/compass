@@ -50,7 +50,7 @@ and the things it does not claim.
   `strategies-rationale.md`, which holds the incidents behind the strategies,
   only when a rule looks arbitrary.
 - `compass check` runs `guardrails.yml` against the manifest and `evidence/`.
-  `/compass:verify` calls it.
+  `/compass:ship` and `compass quick-fix finish` call it.
 - Gate evidence is **typed** - a `{type, path}` record, not a bare path.
   `guardrails.yml` says which types each gate accepts, so a mechanical gate
   cannot be cleared with a written note.
@@ -82,8 +82,6 @@ and the things it does not claim.
 
 ## The pipeline
 
-- The requirements review ends with the **Definition of Ready**; where that
-  review collapses it is met without further work.
 - Before shipping comes the **Definition of Done**. Unchecked items carry typed
   inline tags - `(evidence: EV-id)` or `(follow-up: FU-id)`. A bare unchecked
   box fails `compass check`.
@@ -137,7 +135,7 @@ Each code area's facts live in one doc, named in the "Owning docs" table in
 
 Communicate the decision, not the process: what you found, what you need, what
 changed. Read `skills/compass-runtime/writing-voice.md` before a devlog entry,
-a requirements review, or a line of dialogue - and before you say anything out
+the scenarios, or a line of dialogue - and before you say anything out
 loud in this conversation.
 
 ### Plain English

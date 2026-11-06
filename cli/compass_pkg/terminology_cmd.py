@@ -217,6 +217,21 @@ def replace_catalogue_region(doc: str, artifacts: dict) -> str:
             + "\n" + doc[end:])
 
 
+#: The preset whose catalogue the table of `docs/artifact-catalog.md` records. The
+#: live default declares no document kind since 9.0.0 (ADR-091), and the page
+#: records the catalogue that archived issues and their stored generations read.
+CATALOGUE_PRESET = "default@7"
+
+
+def _catalogue(root, preset):
+    """The `artifacts:` map of `governance/presets/<preset>/artifacts.yml`, or {}."""
+    src = os.path.join(root, "governance", "presets", preset, "artifacts.yml")
+    if not os.path.isfile(src):
+        return {}
+    with open(src, "r", encoding="utf-8") as fh:
+        return (yaml.safe_load(fh) or {}).get("artifacts") or {}
+
+
 def cmd_derive_glossary(args):
     root = os.path.dirname(find_compass_dir()) if not getattr(args, "root", None) else args.root
     src = os.path.join(root, "governance", "terminology.yml")
@@ -224,11 +239,7 @@ def cmd_derive_glossary(args):
         raise CompassError(f"no vocabulary file at {src}")
     with open(src, "r", encoding="utf-8") as fh:
         vocab = yaml.safe_load(fh) or {}
-    catalogue_src = os.path.join(root, "governance", "presets", "default", "artifacts.yml")
-    artifacts = {}
-    if os.path.isfile(catalogue_src):
-        with open(catalogue_src, "r", encoding="utf-8") as fh:
-            artifacts = (yaml.safe_load(fh) or {}).get("artifacts") or {}
+    artifacts = _catalogue(root, "default")
     text = render_glossary(vocab, artifacts)
     out = getattr(args, "out", None) or os.path.join(root, "docs", "glossary.md")
     os.makedirs(os.path.dirname(out), exist_ok=True)
@@ -245,7 +256,7 @@ def cmd_derive_glossary(args):
         None if getattr(args, "out", None) else doc_in)
     if doc_out and os.path.isfile(doc_in):
         with open(doc_in, "r", encoding="utf-8") as fh:
-            doc = replace_catalogue_region(fh.read(), artifacts)
+            doc = replace_catalogue_region(fh.read(), _catalogue(root, CATALOGUE_PRESET))
         os.makedirs(os.path.dirname(doc_out), exist_ok=True)
         with open(doc_out, "w", encoding="utf-8") as fh:
             fh.write(doc)

@@ -248,13 +248,16 @@ SWITCHES = {
 #: leaves it alone and lint only names it. `project.test_micro_command` is not here:
 #: `compass tdd-red` and `tdd-green` still read it.
 SETTING_FIELDS = {
-    **{f"project.{field}": (f"the {what} command that compass readiness ran", "ADR-093")
-       for field, what in (("build_command", "build"), ("lint_command", "lint"),
-                           ("format_check_command", "format check"),
-                           ("typecheck_command", "type-check"))},
-    **{f"project.{field}": (f"the {what} declaration that compass readiness read", "ADR-093")
-       for field, what in (("secret_scan", "secret scan"),
-                           ("structured_logging", "structured logging"))},
+    "project.build_command": ("the build command that compass readiness ran", "ADR-093"),
+    "project.lint_command": ("the lint command that compass readiness ran", "ADR-093"),
+    "project.format_check_command": ("the format check command that compass readiness ran",
+                                     "ADR-093"),
+    "project.typecheck_command": ("the type-check command that compass readiness ran",
+                                  "ADR-093"),
+    "project.secret_scan": ("the secret scan declaration that compass readiness read",
+                            "ADR-093"),
+    "project.structured_logging": ("the structured logging declaration that compass "
+                                   "readiness read", "ADR-093"),
 }
 
 

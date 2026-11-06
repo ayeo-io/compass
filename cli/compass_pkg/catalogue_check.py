@@ -49,9 +49,10 @@ _SETTINGS_ENUMS = {"autonomy": spec.AUTONOMY, "adoption": spec.ADOPTION,
                    "living_spec": spec.LIVING_SPEC}
 
 
-def check_layer(doc, layer):
+def check_layer(doc, layer, name=None):
     """Every structural problem in `doc`, as text naming its key path.
-    `layer` is `project`, `parent` or `issue`. Empty means well formed."""
+    `layer` is `project`, `parent` or `issue`, and `name` the layer's name,
+    which tells a git parent from the shipped preset. Empty means well formed."""
     if not isinstance(doc, dict):
         return [f"{layer} layer: expected a mapping, found {type(doc).__name__}"]
     errors = []
@@ -69,8 +70,9 @@ def check_layer(doc, layer):
     # A removed key is named by `removed_parts` (L-SETTING-REMOVED) and is not read,
     # so its value is not checked: a value the old schema refused must not make the
     # project file invalid (ADR-091). That holds for a removed catalogue entry too,
-    # such as a legacy stage (ADR-092).
-    kept = removed_parts.without_removed(doc) if layer == "project" else doc
+    # such as a legacy stage (ADR-092), and for a git parent (VD-006 of #351).
+    kept = (removed_parts.without_removed(doc)
+            if removed_parts.drops_removed(layer, name or layer) else doc)
     errors += _check_top_values(kept)
     ordered = _ordered_dimensions(kept)
     for catalogue in spec.CATALOGUES:

@@ -749,9 +749,18 @@ def test_pt_8_a_folder_that_cannot_be_written_is_an_input_error(tmp_path):
 
 # --- PT-9: a preset that extends a pinned git parent ---------------------------------------------
 
+# A git parent that adds the same gate through a floor. A git parent's change to
+# the approaches is left out since 9.0.0 (ADR-092, VD-006 of #351).
+PARENT_ADDS_A_GATE = {"schema": 1, "owner": "acme-team", "rules": {"floors": {"set": {
+    "rules": {"set": {"RP-TEAM-001": {
+        "order": 9, "when": {}, "then": {"add_gate": "verify.clarity"},
+        "rationale": "The team reviews the clarity of every change."}}}}}}}
+
+
 def _extending(tmp_path):
     base = tmp_path / "remotes"
-    sha = make_remote(base, repo="base", files={"compass.yml": yaml.safe_dump(ADDS_A_GATE)})
+    sha = make_remote(base, repo="base",
+                      files={"compass.yml": yaml.safe_dump(PARENT_ADDS_A_GATE)})
     doc = {"schema": 1, "owner": "acme-team", "extends": f"github:acme/base@1.0.0#{sha}"}
     fixture = _fixture({"approach": "delivery",
                         "gates": sorted(QUICK_FIX_GATES + ["verify.clarity"])})

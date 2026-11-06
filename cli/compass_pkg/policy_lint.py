@@ -280,8 +280,10 @@ def _schema_code(path, message):
 
 def _impl_findings(layer):
     out = []
-    # A removed check in a project layer is not read, so its `impl` is not judged.
-    doc = removed_parts.without_removed(layer.doc) if layer.kind == "project" else layer.doc
+    # A removed check in a project layer or a git parent is not read, so its `impl`
+    # is not judged.
+    doc = (removed_parts.without_removed(layer.doc)
+           if removed_parts.drops_removed(layer.kind, layer.name) else layer.doc)
     checks = doc.get("checks") if isinstance(doc, dict) else None
     for check_id, entry in (checks.items() if isinstance(checks, dict) else ()):
         if not isinstance(entry, dict):
@@ -330,7 +332,7 @@ def _layer_group(state):
         if layer.kind == "project":
             out += _frozen_major(layer)
     for layer in state["chain"]:
-        for text in catalogue_check.check_layer(layer.doc, layer.kind):
+        for text in catalogue_check.check_layer(layer.doc, layer.kind, name=layer.name):
             path, _, message = text.partition(": ")
             out.append(_finding("layer", _schema_code(path, message), layer, path,
                                 message or text))

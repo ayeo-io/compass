@@ -58,9 +58,11 @@ REFERENCES = (
 # written before 9.0.0 can `set` an entry the parent no longer holds, and the
 # merge would refuse it, so every command would stop. `removed_parts.without_removed`
 # leaves each one out, and `compass policy lint` names it (L-SETTING-REMOVED). A
-# parent layer is merged as before, so a frozen preset still declares its
-# catalogue. An issue layer keeps its stage modes where the configuration below it
-# holds the stage, as an old issue's stored generation does; over the shipped
+# git parent is read the same way, so a team's 8.x parent does not stop every
+# project that extends it (`removed_parts.drops_removed`). The shipped preset is
+# merged as before, so a frozen preset still declares its catalogue. An issue
+# layer keeps its stage modes where the configuration below it holds the stage,
+# as an old issue's stored generation does; over the shipped
 # default the mode of a legacy stage is left out and named the same way
 # (`removed_parts.unheld_stages`).
 
@@ -96,8 +98,9 @@ def apply(config, layer_doc, kind, name, provenance=None):
     conflicts = word_map.one_check_conflicts(layer_doc)
     if conflicts:
         raise MergeError(name, conflicts)
-    if kind == "project":
-        # What 9.0.0 removed is left out; the note after `REFERENCES` says why.
+    if removed_parts.drops_removed(kind, name):
+        # What 9.0.0 removed is left out of a project layer and a git parent; the
+        # note after `REFERENCES` says why.
         layer_doc = removed_parts.without_removed(layer_doc)
     elif kind == "issue":
         # An old issue's mode for a legacy stage the configuration does not hold.

@@ -134,9 +134,19 @@ def unlock_findings(layer, locks=None):
     return out
 
 
+def _as_merged(layer):
+    """`layer` as the merge reads it. A project layer or a git parent is read
+    without what 9.0.0 removed (`removed_parts.drops_removed`), so a lock or an
+    unlock on a removed key, which lint says is not read, is not held either."""
+    if isinstance(getattr(layer, "doc", None), dict) and \
+            removed_parts.drops_removed(layer.kind, layer.name):
+        return layer._replace(doc=removed_parts.without_removed(layer.doc))
+    return layer
+
+
 def _lift(held, layer):
     """The lock set after the entries `layer` validly unlocks."""
-    held = dict(held)
+    held, layer = dict(held), _as_merged(layer)
     for found in unlock_findings(layer, held):
         if found.ok:
             held.pop(found.entry, None)
@@ -145,7 +155,7 @@ def _lift(held, layer):
 
 def _declare(held, layer):
     """The lock set with the locks `layer` declares. The higher level stays."""
-    held = dict(held)
+    held, layer = dict(held), _as_merged(layer)
     for entry, level in declared_locks(layer.doc).items():
         old = held.get(entry)
         if old is None or LEVELS.index(level) > LEVELS.index(old.level):

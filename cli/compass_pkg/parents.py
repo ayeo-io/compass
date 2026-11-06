@@ -12,7 +12,8 @@ argument list and never through a shell.
 """
 # DEPENDENCY: standard library (collections, datetime, hashlib, os, re, shutil,
 # subprocess, tempfile); PyYAML (bundled); compass_pkg.atomic_io,
-# compass_pkg.layers, compass_pkg.core (CompassError, only).
+# compass_pkg.layers, compass_pkg.removed_parts (the git parent's name scheme),
+# compass_pkg.core (CompassError, only).
 from __future__ import annotations
 
 import datetime
@@ -26,7 +27,7 @@ from collections import namedtuple
 
 import yaml
 
-from compass_pkg import layers
+from compass_pkg import layers, removed_parts
 from compass_pkg.atomic_io import StrictYamlError, atomic_write_text, load_yaml_strict
 from compass_pkg.core import CompassError
 
@@ -163,7 +164,7 @@ def _cached_file(root, folder):
 
 
 def ref_label(spec):
-    return f"github:{spec.owner}/{spec.repo}@{spec.ref}"
+    return f"{removed_parts.GIT_PARENT_SCHEME}{spec.owner}/{spec.repo}@{spec.ref}"
 
 
 def version_of(ref):

@@ -239,7 +239,7 @@ def _parent_ref(ref, root, fetch):
     documents = [shipped.doc]
     for found in chain:
         layer = found.layer
-        problems = catalogue_check.check_layer(layer.doc, "parent")
+        problems = catalogue_check.check_layer(layer.doc, "parent", name=layer.name)
         if problems:
             raise CompassError(f"{ref}: {layer.name}: {problems[0]} ({len(problems)} "
                                f"problem(s); run compass policy lint)")

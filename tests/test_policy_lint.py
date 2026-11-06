@@ -123,9 +123,11 @@ def _parent_doc():
 
 
 def _team(doc):
-    """A git parent named `team`. A project layer can no longer change the
-    approaches since 9.0.0 (ADR-092), so a test that needs an approach change
-    makes it here; a git parent still can."""
+    """A parent layer named `team`. Since 9.0.0 a project layer and a git parent
+    (named `github:...`) cannot change the approaches or a rule's approach effect
+    (ADR-092, VD-006 of #351). This parent is neither, so it stands for a copied
+    8.x preset, whose catalogue is still merged; a test that needs such a change
+    makes it here."""
     return _layer({"schema": 1, **doc}, "parent", "team")
 
 
@@ -488,9 +490,13 @@ def test_pl_5_an_evaluator_fault_is_one_finding_and_not_also_a_lock_refusal():
 
 def test_pl_5_more_than_eight_labels_is_one_unprovable_finding():
     names = [f"label-{i}" for i in range(9)]
-    project = {"rules": {"floors": {"set": {"rules": {"set": {"F-MANY": {
-        "order": 5, "when": {"labels_any": names},
-        "then": {"force_minimum_approach": "regular"}}}}}}}}
+    # The floor asks for a skill: a project rule that forces an approach is left
+    # out since 9.0.0 (ADR-092 decision 10), so it would name no label.
+    project = {"rules": {"floors": {"set": {
+        "hit": {"set": {"require_skill": "collect"}},
+        "rules": {"set": {"F-MANY": {
+            "order": 5, "when": {"labels_any": names},
+            "then": {"require_skill": "behavior-mapping"}}}}}}}}
     report = _lint(parent=_locked_parent(), project=project)
     found = _one(report, "K-UNPROVABLE")
     assert found.path == "configuration"
@@ -1286,19 +1292,24 @@ EFFECT_TARGET_CASES = [
 
 @pytest.mark.parametrize("effect,policy,value", EFFECT_TARGET_CASES)
 def test_pl_4_an_effect_that_names_an_id_nothing_defines_is_reported(effect, policy, value):
-    report = _lint(project=_rule_set({effect: policy}, {effect: value}))
+    from compass_pkg import removed_parts
+    layer = _rule_set({effect: policy}, {effect: value})
+    # A project layer's approach effect is left out (ADR-092), so it is judged on a
+    # parent that still merges it.
+    where = "team" if effect in removed_parts.APPROACH_EFFECTS else "project"
+    report = _lint(extra_parents=(_team(layer),)) if where == "team" else _lint(project=layer)
     found = _one(report, "M-REF-UNKNOWN")
     assert (found.layer, found.path, found.group) == (
-        "project", f"rules.mine.rules.R1.then.{effect}", "resolved")
+        where, f"rules.mine.rules.R1.then.{effect}", "resolved")
     assert "nonesuch" in found.message or "no" in found.message
 
 
 def test_pl_4_an_effect_that_names_a_defined_id_is_not_reported():
-    ok = _lint(project=_rule_set({"add_gate": "collect", "force_minimum_approach": "max",
-                                  "never_skip": "collect"},
-                                 {"add_gate": "verify.correctness",
-                                  "force_minimum_approach": "full",
-                                  "never_skip": ["define", "verify"]}))
+    # On a parent that still merges a rule's approach effects (`_team`).
+    ok = _lint(extra_parents=(_team(_rule_set(
+        {"add_gate": "collect", "force_minimum_approach": "max", "never_skip": "collect"},
+        {"add_gate": "verify.correctness", "force_minimum_approach": "full",
+         "never_skip": ["define", "verify"]})),))
     assert ok.findings == []
 
 

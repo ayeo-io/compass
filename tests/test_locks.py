@@ -673,9 +673,10 @@ def _chain(project, parent=None):
 
 
 def _team_chain(doc):
-    """The base parent and a git parent named `team` that holds `doc`. A project
-    layer's change to an approach is left out since 9.0.0 (ADR-092); a git parent
-    is still merged and judged."""
+    """The base parent and a parent named `team` that holds `doc`. Since 9.0.0 a
+    project layer's or a git parent's change to an approach is left out (ADR-092,
+    VD-006 of #351). `team` is neither, so it stands for a copied 8.x preset,
+    whose approaches are still merged and judged."""
     return [_layer(_parent_doc(), "parent", "base"), _layer(doc, "parent", "team")]
 
 
@@ -719,9 +720,13 @@ def test_lk_5_a_layer_that_changes_nothing_a_lock_covers_is_allowed():
 
 def test_lk_5_more_than_eight_named_labels_is_refused_with_the_count():
     names = [f"label-{i}" for i in range(9)]
-    project = {"rules": {"floors": {"set": {"rules": {"set": {"F-MANY": {
-        "order": 5, "when": {"labels_any": names},
-        "then": {"force_minimum_approach": "regular"}}}}}}}}
+    # The floor asks for a skill: a project rule that forces an approach is left
+    # out since 9.0.0 (ADR-092 decision 10), so it would name no label.
+    project = {"rules": {"floors": {"set": {
+        "hit": {"set": {"require_skill": "collect"}},
+        "rules": {"set": {"F-MANY": {
+            "order": 5, "when": {"labels_any": names},
+            "then": {"require_skill": "behavior-mapping"}}}}}}}}
     result = _api().enforce_chain(_chain(project))
     assert not result.ok
     refusal = result.refusals[0]
@@ -1349,9 +1354,13 @@ def test_lk_7_the_hard_set_is_read_from_the_preset_summary_not_written_in_the_mo
 
 def _nine_labels():
     names = [f"label-{i}" for i in range(9)]
-    return {"rules": {"floors": {"set": {"rules": {"set": {"F-MANY": {
-        "order": 5, "when": {"labels_any": names},
-        "then": {"force_minimum_approach": "regular"}}}}}}}}
+    # The floor asks for a skill: a project rule that forces an approach is left
+    # out since 9.0.0 (ADR-092 decision 10), so it would name no label.
+    return {"rules": {"floors": {"set": {
+        "hit": {"set": {"require_skill": "collect"}},
+        "rules": {"set": {"F-MANY": {
+            "order": 5, "when": {"labels_any": names},
+            "then": {"require_skill": "behavior-mapping"}}}}}}}}
 
 
 def test_lk_5_the_label_cap_refusal_names_the_remedy_for_a_true_lock():

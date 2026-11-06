@@ -623,13 +623,17 @@ def test_pug_17_a_cache_with_no_record_of_its_fetch_is_cannot_be_checked_not_edi
     assert "was edited" not in text
 
 
-# The shipped default declares the spike and `delivery` (ADR-092). The second
-# loosening lets a written review clear the architecture gate.
+# A git parent's change to the approaches is left out since 9.0.0 (ADR-092, VD-006
+# of #351), so the new commits change kept parts. The first loosening removes the
+# floor that owes the architecture gate at cross-cutting risk; the last lets a
+# written review clear that gate.
 @pytest.mark.parametrize("doc, code", [
     ({"schema": 1, "owner": "platform-team",
-      "approaches": {"delivery": {"set": {"subtask_ceiling": 9}}}}, "C-LOOSENING"),
+      "rules": {"floors": {"set": {"rules": {"remove": ["RP-REQUIRE-003"]}}}}}, "C-LOOSENING"),
     ({"schema": 1, "owner": "platform-team",
-      "approaches": {"delivery": {"set": {"gates": ["verify.correctness", "verify.nonesuch"]}}}},
+      "rules": {"floors": {"set": {"rules": {"set": {"RP-TEAM-001": {
+          "order": 9, "when": {"risk": ["critical"]}, "then": {"add_gate": "verify.nonesuch"},
+          "rationale": "A gate nothing defines."}}}}}}},
      "M-REF-UNKNOWN"),
     ({"schema": 1, "owner": "platform-team",
       "gates": {"verify.architecture": {"set": {"accepts": {"add": ["manual-review"]}}}}},

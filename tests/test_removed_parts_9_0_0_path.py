@@ -19,6 +19,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -434,3 +435,164 @@ def test_an_old_issue_keeps_an_approach_its_configuration_declares():
     assert removed_parts.without_unheld_stages({"approach": "full"}, held) == {"approach": "full"}
     # A name that is no approach at all is the layer's own fault and is not left out.
     assert removed_parts.unheld_stages({"approach": "nonesuch"}, _resolved_parent()) == []
+
+
+# --- a git parent ----------------------------------------------------------------------
+
+#: A team's shared `compass.yml` written for 8.x: it changes the legacy verify stage
+#: and the regular approach, which the live default no longer declares.
+OLD_TEAM_PARENT = {"schema": 1,
+                   "stages": {"verify": {"set": {"exit": {"add": ["backfills-paid"]}}}},
+                   "approaches": {"regular": {"set": {"gates": ["verify.correctness"]}}}}
+
+
+def _team_project(tmp_path, parent_doc):
+    """A project with one issue that extends the git parent `parent_doc`, fetched into
+    its cache, and the `compass policy lint --json` report of it."""
+    import json
+
+    from parent_fixtures import team_parent
+    root = projects.project(tmp_path, compass_yml=projects.BALANCED)
+    team_parent(tmp_path, parent_doc, root)
+    lint = projects.run(root, "policy", "lint", "--json")
+    assert lint.returncode == 0, lint.stdout + lint.stderr
+    return root, json.loads(lint.stdout)["findings"]
+
+
+def test_a_git_parent_that_sets_removed_keys_resolves_and_lint_names_each(tmp_path):
+    """A team parent written for 8.x must not stop every project that extends it
+    (VD-006): the merge leaves each removed key out, as for a project layer, and lint
+    names each one on the git parent's layer."""
+    root, findings = _team_project(tmp_path, OLD_TEAM_PARENT)
+    removed = sorted((f["layer"].split("@", 1)[0], f["path"], f["level"])
+                     for f in findings if f["code"] == "L-SETTING-REMOVED")
+    assert removed == [("github:acme/team", "approaches", "warning"),
+                       ("github:acme/team", "stages.verify", "warning")], findings
+    assert not [f for f in findings if f["level"] == "error"], findings
+    done = projects.run(root, "check", "--issue", projects.SLUG)
+    out = done.stdout + done.stderr
+    assert done.returncode in (0, 1), out
+    assert "M-SET-UNKNOWN" not in out and "nothing can be resolved" not in out, out
+
+
+def test_a_git_parent_gate_at_a_legacy_stage_is_read_at_its_path_stage(tmp_path):
+    import json
+    parent = {"schema": 1, "gates": {"team.review": {
+        "kind": "review", "stage": "verify", "accepts": ["test-run"]}}}
+    root, findings = _team_project(tmp_path, parent)
+    mapped = [(f["layer"].split("@", 1)[0], f["path"], f["level"])
+              for f in findings if f["code"] == "L-STAGE-MAPPED"]
+    assert mapped == [("github:acme/team", "gates.team.review.stage", "warning")], findings
+    show = projects.run(root, "policy", "show", "--json")
+    assert show.returncode == 0, show.stdout + show.stderr
+    rows = {row["path"]: row["value"] for row in json.loads(show.stdout)["fields"]}
+    assert rows["gates.team.review.stage"] == "ship", rows
+
+
+def test_the_shipped_preset_is_not_read_as_a_git_parent():
+    """Only a project layer and a git parent drop what 9.0.0 removed; the shipped
+    preset and a frozen preset keep their catalogue."""
+    from compass_pkg import parents, removed_parts
+    assert removed_parts.drops_removed("project", "project")
+    assert removed_parts.drops_removed("parent", "github:acme/team@1.0.0#abcdef0")
+    assert parents.ref_label(parents.GitSpec("acme", "team", "1.0.0", "a" * 40)) \
+        .startswith(removed_parts.GIT_PARENT_SCHEME)
+    for name in ("default", "default@7", "legacy", "preset", "parent"):
+        assert not removed_parts.drops_removed("parent", name), name
+    assert not removed_parts.drops_removed("issue", "issue")
+
+
+# --- a lock on a removed key -----------------------------------------------------------
+
+#: Locks on removed keys: a whole legacy stage, and the `delivery` approach, which the
+#: live default still declares but a project or git parent can no longer change.
+REMOVED_LOCKS = {"stages": {"verify": {"locked": "hard"}},
+                 "approaches": {"delivery": {"set": {"locked": "hard"}}}}
+
+
+@pytest.mark.parametrize("kind,name", [("project", "project"),
+                                       ("parent", "github:acme/team@1.0.0#abcdef0")])
+def test_a_lock_on_a_removed_key_is_not_held(kind, name):
+    """The merge leaves a removed key out and lint says it is not read, so its lock must
+    not be held or shown as the layer's lock either."""
+    from compass_pkg import locks, policy_effective
+    from compass_pkg.layers import Layer
+    layer = Layer(name, kind, {"schema": 1, **REMOVED_LOCKS}, "d")
+    held = locks.lock_set([_parent(), layer])
+    assert not [entry for entry, lock in held.items() if lock.layer == name], held
+    # The shipped default does not lock the delivery approach, so nothing holds it.
+    assert "approaches.delivery" not in held and "stages.verify" not in held, held
+    chain = dict(project=layer) if kind == "project" else dict(
+        project=None, git_parents=[SimpleNamespace(layer=layer, version="1.0.0")])
+    rows = policy_effective.resolve_effective(_parent(), **chain).rows
+    shown = {row.path: row.source for row in rows if row.path.endswith(".locked")}
+    assert "stages.verify.locked" not in shown and "approaches.delivery.locked" not in shown, \
+        shown
+    assert shown["approaches.spike.locked"].startswith("default"), shown
+
+
+# --- a project rule that forces an approach --------------------------------------------
+
+def _floor(then, hit=None):
+    """A project layer that adds the floors rule `RP-PROJ-001` with `then`."""
+    change = {"rules": {"set": {"RP-PROJ-001": {
+        "order": 9, "when": {"risk": ["critical"]}, "then": then,
+        "rationale": "Critical work runs at least the regular approach."}}}}
+    if hit is not None:
+        change["hit"] = hit
+    return {"rules": {"floors": {"set": change}}}
+
+
+FLOORS_HIT = {"require_skill": "collect", "add_gate": "collect",
+              "force_minimum_approach": "max"}
+
+
+@pytest.mark.parametrize("hit", [None, FLOORS_HIT], ids=["no-hit", "8.x-hit"])
+@pytest.mark.parametrize("approach", ["regular", "delivery"])
+def test_a_project_rule_that_forces_an_approach_is_dropped_and_named(hit, approach):
+    """ADR-092 decision 10: no configuration's approach is read for a new assessment, so
+    a project floor that forces one is left out with a warning. It must not stop lint
+    with an unknown approach, a missing hit policy, a refused lock or C-INCOMPARABLE."""
+    from compass_pkg import merge
+    doc = _floor({"force_minimum_approach": approach}, hit)
+    base = _resolved_parent()
+    config, provenance = merge.apply(base, {"schema": 1, **doc}, "project", "project")
+    assert config == base
+    # The rest of an 8.x hit map restates the shipped one, so only it is written.
+    written = [p for p, step in provenance.items() if step.get("layer") == "project"]
+    assert written == (["rules.floors.hit"] if hit else []), written
+    report = _lint_project(doc)
+    assert not [(f.code, f.path) for f in report.findings if f.level == "error"], [
+        (f.code, f.path, f.message) for f in report.findings if f.level == "error"]
+    removed = sorted(f.path for f in report.findings if f.code == "L-SETTING-REMOVED")
+    expected = ["rules.floors.rules.RP-PROJ-001.then.force_minimum_approach"]
+    if hit:
+        expected = ["rules.floors.hit.force_minimum_approach"] + expected
+    assert removed == expected, report.findings
+    assert all("ADR-092" in f.message for f in report.findings
+               if f.code == "L-SETTING-REMOVED")
+
+
+def test_a_project_rule_keeps_its_other_effects_beside_a_dropped_approach():
+    from compass_pkg import merge
+    doc = _floor({"force_minimum_approach": "full", "add_gate": "verify.architecture"})
+    config, _ = merge.apply(_resolved_parent(), {"schema": 1, **doc}, "project", "project")
+    assert config["rules"]["floors"]["rules"]["RP-PROJ-001"]["then"] == {
+        "add_gate": "verify.architecture"}
+    report = _lint_project(doc)
+    assert not report.errors, report.errors
+    assert [f.path for f in report.findings if f.code == "L-SETTING-REMOVED"] == [
+        "rules.floors.rules.RP-PROJ-001.then.force_minimum_approach"]
+
+
+def test_a_new_project_rule_set_of_approach_floors_is_dropped_whole():
+    from compass_pkg import merge
+    doc = {"rules": {"team_floors": {"kind": "floors",
+                                     "hit": {"force_minimum_approach": "max"},
+                                     "rules": {"T-1": {"order": 1, "when": {},
+                                                       "then": {"forbid_approach": "spike"}}}}}}
+    base = _resolved_parent()
+    config, _ = merge.apply(base, {"schema": 1, **doc}, "project", "project")
+    assert config == base
+    report = _lint_project(doc)
+    assert not report.errors, report.errors

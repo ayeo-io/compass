@@ -569,7 +569,8 @@ LAYERED = {
                      "stage": "verify", "applies_to": {"ships": True}, "checks": ["p-rule"]}},
     "rules": {"floors": {"set": {"rules": {"set": {"RP-PROJECT-FLOOR": {
         "order": 99, "when": {"labels_any": ["zzz-label"]},
-        "then": {"force_minimum_approach": "full"}, "rationale": "A project floor."}}}}}},
+        # Not an approach: a project rule that forces one is left out (ADR-092).
+        "then": {"add_gate": "verify.architecture"}, "rationale": "A project floor."}}}}}},
 }
 
 

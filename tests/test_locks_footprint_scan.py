@@ -246,9 +246,11 @@ ADVICE_NAMING_NINE = {"rules": {"advisory": {"set": {"rules": {"set": {"A-MANY":
     "order": 90, "when": {"labels_any": NINE},
     "then": {"strategy": "regression-baseline"}}}}}}}}
 
+# The floor adds a gate: a project rule that forces an approach is left out since
+# 9.0.0 (ADR-092 decision 10), so it would name no label.
 FLOOR_NAMING_FIVE = {"rules": {"floors": {"set": {"rules": {"set": {"F-FIVE": {
     "order": 90, "when": {"labels_any": NINE[:5]},
-    "then": {"force_minimum_approach": "regular"}}}}}}}}
+    "then": {"add_gate": "verify.architecture"}}}}}}}}
 
 
 def test_cs_6_the_shipped_policy_accepts_a_layer_with_nine_advisory_labels():
@@ -554,6 +556,14 @@ def _issue(doc):
     return [_layer({}, "project"), _layer(doc, "issue")]
 
 
+def _team(doc):
+    """A parent layer named `team` that holds `doc`. Since 9.0.0 a project layer's
+    or a git parent's change to an approach is left out (ADR-092, VD-006 of #351),
+    so a route that changes one would compare nothing. `team` is neither, so it
+    stands for a copied 8.x preset, whose approaches are still merged and judged."""
+    return [_layer(doc, "parent", "team")]
+
+
 def _without_lock(entry):
     return {k: v for k, v in entry.items() if k != "locked"}
 
@@ -601,12 +611,12 @@ def _shipped_routes():
             "set": {"applies_to": {"ships": False}}}}}),
         "gate stage moved": _p({"gates": {"G4": {"set": {"stage": "ship"}}}}),
         "gate accepts widened": _p({"gates": {"G1": {"set": {"accepts": ["note"]}}}}),
-        "stage verify after ship": _p({"stages": {"verify": {"set": {"order": 9}}}}),
+        "stage build after ship": _p({"stages": {"build": {"set": {"order": 9}}}}),
         "stage before assess": _p({"stages": {"intake": {
             "order": 0, "modes": {"full": {"rank": 3}}}}}),
         "remove stage ship": _p({"stages": {"ship": {"remove": True}}}),
-        "spike ships": _p({"approaches": {"spike": {"set": {"ships": True}}}}),
-        "remove the spike approach": _p({"approaches": {"spike": {"remove": True}}}),
+        "spike ships": _team({"approaches": {"spike": {"set": {"ships": True}}}}),
+        "remove the spike approach": _team({"approaches": {"spike": {"remove": True}}}),
         "immovable rule removed": _p({"rules": {"immovable_gates": {
             "set": {"rules": {"remove": ["RP-GATE-001"]}}}}}),
         "immovable hit changed": _p({"rules": {"immovable_gates": {
@@ -618,9 +628,9 @@ def _shipped_routes():
         "issue loosens a check": _issue({"checks": {"suite-passed": {
             "set": {"on_skipped": "pass"}}}}),
         "issue empties a gate": _issue({"gates": {"G1": {"set": {"checks": []}}}}),
-        "approach drops a stage": _p({"approaches": {"regular": {"set": {
-            "stages": {"remove": ["verify"]}}}}}),
-        "spike drops its gate": _p({"approaches": {"spike": {"set": {"gates": []}}}}),
+        "approach drops a stage": _team({"approaches": {"delivery": {"set": {
+            "stages": {"remove": ["build"]}}}}}),
+        "spike drops its gate": _team({"approaches": {"spike": {"set": {"gates": []}}}}),
         "critical leans to spike": _p({"rules": {"default_shapes": {"set": {"rules": {"set": {
             "RP-SHAPE-000": {"order": 0, "when": {"risk": "critical"},
                              "then": {"lean_toward": "spike"}}}}}}}}),
@@ -633,7 +643,8 @@ def _shipped_routes():
             "open": False, "common": []}}}}),
         "an issue drops a risk value": _issue({"dimensions": {"risk": {"set": {"values": [
             "trivial", "contained", "cross-cutting"]}}}}),
-        "an approach loses its gates": _p({"approaches": {"regular": {"set": {"gates": []}}}}),
+        "an approach loses its gates": _team({"approaches": {"delivery": {"set": {
+            "gates": []}}}}),
         "a check only an advisory rule names": _p({
             "checks": {"extra": {"statement": "x", "kind": "deterministic",
                                  "impl": "suite-passed", "severity": "advisory",
@@ -641,7 +652,7 @@ def _shipped_routes():
                                  "when": {"labels_any": ["a", "b", "c", "d", "e"]}}}}),
         "a floor on a new label": _p({"rules": {"floors": {"set": {"rules": {"set": {
             "F-NEW": {"order": 90, "when": {"labels_any": ["a", "b"]},
-                      "then": {"force_minimum_approach": "regular"}}}}}}}}),
+                      "then": {"add_gate": "verify.architecture"}}}}}}}}),
         "a rule set for labels nothing reads": _p(ADVICE_NAMING_NINE),
         "a floor for five new labels": _p(FLOOR_NAMING_FIVE),
         "nothing": _p({}),
@@ -681,6 +692,18 @@ def test_cs_5_both_scans_agree_on_a_route_tried_against_the_shipped_policy(name)
     ROUTE_OUTCOMES[name] = ("capped" if _grid_refusals(full)
                             else "refused" if full.refusals else "allowed")
     assert PROOF["differences"] == [], PROOF["differences"][:1]
+
+
+@pytest.mark.parametrize("name", ["stage build after ship", "spike ships",
+                                  "remove the spike approach", "approach drops a stage",
+                                  "spike drops its gate"])
+def test_cs_5_a_route_that_loosens_a_locked_stage_or_approach_reaches_the_scan(name):
+    """Each route loosens a stage or an approach a lock protects, so the scans compare a
+    refusal. Run on a project layer, an approach change would be left out (ADR-092) and
+    the route would compare nothing."""
+    from compass_pkg.layers import Layer
+    chain = [Layer("parent", "parent", _preset_doc(), "digest"), *ROUTES[name]]
+    assert _locks().enforce_chain(chain, early_exit=False).refusals, name
 
 
 def test_cs_5_the_routes_tried_cover_refusals_allowances_and_the_cap():

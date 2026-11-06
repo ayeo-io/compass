@@ -167,9 +167,7 @@ def _by_check(rows):
 
 def _team_project(tmp_path, parent_doc, project_doc):
     """A scratch project whose `compass.yml` is `project_doc` and extends a git
-    parent that holds `parent_doc`, fetched into its cache. A test that changes
-    a legacy stage such as plan uses it: a project layer's change to one is left
-    out since 9.0.0 (ADR-092), a git parent's is merged."""
+    parent that holds `parent_doc`, fetched into its cache."""
     from parent_fixtures import team_parent
     (tmp_path / "project").mkdir()
     root, task_dir = _project(tmp_path / "project", compass_yml=project_doc)

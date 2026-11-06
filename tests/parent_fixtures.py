@@ -67,9 +67,9 @@ def team_parent(tmp_path, parent_doc, project_root):
     `compass policy lint`. Later commands read the cached parent without the
     mirror. Returns the `extends:` reference.
 
-    A test that changes a legacy stage (such as plan), an approach, the caps
-    rules or a `dor-*` check uses it: since 9.0.0 a project layer's change to one
-    of them is left out (ADR-092), and a git parent's change is still merged."""
+    Since 9.0.0 a git parent is read like a project layer: a change to a legacy
+    stage, an approach, the caps rules or a `dor-*` check is left out of the
+    merge and lint names it (ADR-092, VD-006 of #351)."""
     base = Path(tmp_path) / "remotes"
     sha = make_remote(base, repo="team", files={"compass.yml": yaml.safe_dump(parent_doc)})
     ref = f"github:acme/team@1.0.0#{sha}"

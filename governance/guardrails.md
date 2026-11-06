@@ -14,6 +14,11 @@ under 5.x can omit a shipped guardrail, and `compass check` reports the
 omission. That project keeps running on its copy until `compass policy
 migrate` converts it.
 
+A lock on a key 9.0.0 removed, such as `stages.plan` or an entry of
+`approaches`, is not held. The merge leaves the key out of the project's
+`compass.yml` and of a git parent, and lint names it (`L-SETTING-REMOVED`), so
+`compass policy show` lists no lock for it either.
+
 **This document explains; `guardrails.yml` enforces.** The companion
 `governance/guardrails.yml` is the machine-readable authority for *how each
 guardrail is checked* - it names the mechanical check behind every guardrail,

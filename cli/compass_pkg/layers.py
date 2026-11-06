@@ -153,7 +153,7 @@ def layer_digest(doc, kind="project"):
 
 def _check(doc, kind, where):
     refuse_non_text_keys(doc, where)
-    errors = catalogue_check.check_layer(doc, kind)
+    errors = catalogue_check.check_layer(doc, kind, name=where)
     if errors:
         raise CompassError(f"{where}: " + "; ".join(errors))
 

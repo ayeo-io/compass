@@ -31,5 +31,7 @@ def test_np_1_the_strategy_asks_for_named_and_rejected_patterns():
 def test_np_1_the_rationale_and_the_texts_point_to_it():
     rationale = (ROOT / "governance" / "strategies-rationale.md").read_text(encoding="utf-8")
     assert "(`S16`)" in rationale
-    for rel in ("commands/ship.md", "skills/plan-authoring/SKILL.md"):
+    # The plan-authoring skill went with the plan stage (ADR-092); its
+    # design rules moved to governance-check, "Writing the design down".
+    for rel in ("commands/ship.md", "skills/governance-check/SKILL.md"):
         assert "S16" in (ROOT / rel).read_text(encoding="utf-8"), rel

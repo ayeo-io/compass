@@ -714,16 +714,25 @@ def test_d2_repairs_change_only_retired_names():
     the command shows without `--write`, the evidence row `--verbose` names,
     and the two `compass next` lines on `layering` and on the files to stage.
 
-    The other 45 are untouched, and a NEW structural change to any of the 53
-    still fails.
+    The same issue deleted `approaches/quick-fix.md`, `approaches/regular.md`,
+    `approaches/full.md` and `approaches/hotfix.md`, so their entries left the
+    fixture, and re-baselined two files it rewrote for the path:
+    `approaches/spike.md` (one `##` heading fewer, table_rows 17 -> 9) has
+    one table of its three stages in place of the per-stage weights and the
+    de-scope ledger, and `skills/adaptive-routing/SKILL.md` (list_items
+    21 -> 17) lost the de-scope ledger's bullets, because the path has no
+    stage to skip. The fixture holds 47 files now, and the count is checked
+    exactly, so a truncated fixture still fails.
+
+    A NEW structural change to any of the 47 still fails.
     """
     import json
     snap = json.loads(
         (REPO_ROOT / "tests" / "fixtures" / "repaired-file-structure.json")
         .read_text(encoding="utf-8"))
-    assert len(snap) > 50, (
-        f"only {len(snap)} files in the structure fixture - it has been "
-        f"truncated, and this check would pass over almost nothing")
+    assert len(snap) == 47, (
+        f"{len(snap)} files in the structure fixture, not 47 - it has been "
+        f"truncated, or an entry was added or removed without this count")
 
     drift = []
     for rel, expected in sorted(snap.items()):

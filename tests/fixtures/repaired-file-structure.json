@@ -1,61 +1,4 @@
 {
-  "approaches/regular.md": {
-    "fences": 0,
-    "heading_levels": [
-      1,
-      2,
-      2,
-      2,
-      2,
-      2,
-      2
-    ],
-    "list_items": 7,
-    "table_rows": 14
-  },
-  "approaches/hotfix.md": {
-    "fences": 0,
-    "heading_levels": [
-      1,
-      2,
-      2,
-      2,
-      2,
-      2,
-      2
-    ],
-    "list_items": 11,
-    "table_rows": 10
-  },
-  "approaches/full.md": {
-    "fences": 0,
-    "heading_levels": [
-      1,
-      2,
-      2,
-      2,
-      2,
-      2,
-      2
-    ],
-    "list_items": 8,
-    "table_rows": 10
-  },
-  "approaches/quick-fix.md": {
-    "fences": 0,
-    "heading_levels": [
-      1,
-      2,
-      2,
-      2,
-      2,
-      2,
-      2,
-      2
-    ],
-    "list_items": 7,
-    "table_rows": 15
-  },
   "approaches/rubric.md": {
     "fences": 2,
     "heading_levels": [
@@ -83,11 +26,10 @@
       2,
       2,
       2,
-      2,
       2
     ],
     "list_items": 11,
-    "table_rows": 17
+    "table_rows": 9
   },
   "architecture/ownership.md": {
     "fences": 0,
@@ -782,7 +724,7 @@
       3,
       2
     ],
-    "list_items": 21,
+    "list_items": 17,
     "table_rows": 0
   },
   "skills/evidence-gates/traceability.md": {

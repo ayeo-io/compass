@@ -328,7 +328,7 @@ stage:
 
 Risk here is `cross-cutting`, not `critical`. `RP-FLOOR-001` floors a
 `critical` risk value to the full approach, and no delivery approach composes it as a
-hotfix, however urgent the defect (`approaches/hotfix.md`). Had the discount
+hotfix, however urgent the defect (`approaches/path.md`, "The hotfix setting"). Had the discount
 path also double-charged a card, risk would score `critical` and assess would
 raise the approach to the full approach, under incident command, instead.
 

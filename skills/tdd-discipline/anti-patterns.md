@@ -14,8 +14,8 @@ Read when something has gone wrong, not while it is going right.
 - **Behavior change during refactor.** Changing behavior during the refactor
   step. Behavior changes start at red.
 - **Skipping refactor under deadline.** The mess compounds. Refactor is
-  part of the cycle, not optional - even a hotfix refactors,
-  when the refactor is itself low-risk.
+  part of the cycle, not optional - even under the hotfix setting you
+  refactor, when the refactor is itself low-risk.
 - **Testing implementation, not behavior.** Writing assertions that are coupled
   to how the code works internally - checking which methods were called, which
   internal variables were set, or which collaborators were invoked in which

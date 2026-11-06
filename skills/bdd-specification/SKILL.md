@@ -1,6 +1,6 @@
 ---
 name: bdd-specification
-description: Writing and checking Given/When/Then acceptance scenarios. Load at define and refine.
+description: Writing and checking Given/When/Then acceptance scenarios. Load at specify.
 ---
 
 # BDD Specification
@@ -13,7 +13,7 @@ straight.
 
 - **Acceptance-before-code is the guardrail** - hard, checkable. No code is written that no stated,
   checkable acceptance criterion describes. The outcome - acceptance is stated
-  and it is checkable - is non-negotiable on every delivery approach.
+  and it is checkable - is non-negotiable on every delivery issue.
 - **BDD is the strategy** - Given/When/Then is the *form*. It is the default,
   but it is a strategy: a context where the form genuinely does not
   fit is a recorded strategy deviation, not a framework violation. The hard
@@ -22,7 +22,8 @@ straight.
 
 In Compass the BDD spec is not documentation that precedes the tests - it *is*
 the tests, read at a different time. `acceptance-criteria.md` is written once at
-the define stage and run as the acceptance check at verify. It is also the one artifact
+the specify stage, and its tests run red then green at build and as the
+acceptance check at ship. It is also the one artifact
 five roles read (see `skills/intent-interview/role-translation.md`). Write it knowing all of that.
 For a change a real client can observe, the `atdd` skill runs one chain from
 it: scenario, DSL, driver, unit tests, each Given, When or Then line one DSL call.
@@ -50,9 +51,10 @@ progressively harder for everyone else, and the point at which review quietly
 stops happening.
 
 The Summary is **additive**. It does not replace scenarios, and it is not a
-place to restate them. Length scales with the delivery approach the same way scenario depth
-does: quick fix one to two sentences per field, the regular approach ordinary
-paragraphs, the full approach up to 200 words per field where the work warrants it.
+place to restate them. Length scales with the size of the change the same way
+scenario depth does: an atomic or small change one to two sentences per
+field, a medium change ordinary paragraphs, a large change or a product up to
+200 words per field where the work warrants it.
 
 ## Settle edge cases before scenarios
 
@@ -64,11 +66,11 @@ leaves out. Reproduce a reported bug on current code, not an old build.
 
 After the happy path and the edges, ask which
 input classes and failure modes the brief implies that no scenario yet covers.
-Refine settles each implied failure mode with the person or descopes it: it
+Specify settles each implied failure mode with the person or descopes it: it
 becomes a scenario, a light one if need be, or is recorded with
-`compass scenario descope "<mode>" --reason "<why>"`. Implement adds no
-scenario the specification does not state. The verify stage names every recorded
-mode in its hand-off, so nothing named is dropped silently.
+`compass scenario descope "<mode>" --reason "<why>"`. Build adds no
+scenario the specification does not state. At ship, name every recorded
+mode in the report to the person, so nothing named is dropped silently.
 
 - **Worked example, a rate limit.** "Limit search to 100 requests a minute"
   implies a client exactly at 100, a client over it, two clients sharing an
@@ -100,8 +102,8 @@ a review artifact, and do not invoke a reviewer agent or subagent for this.
    number attached. Either attach the number or cut the word.
 
 **This complements the requirements review; it does not replace it.**
-The review still runs on the regular and heavier approaches, and it does
-things this cannot: it QAs the spec against governance, resolves
+The review still runs on every change with more than one scenario, and it
+does things this cannot: it QAs the spec against governance, resolves
 contradictions, and records an ambiguity ledger with owners. The
 self-check is simply what a spec-author owes the reviewer - the cheap
 findings fixed by whoever made them, so the review's attention goes to
@@ -113,13 +115,13 @@ The two overlap enough that a reader meeting both wonders which is redundant.
 Neither is. They differ in *who does them*, *what they cost*, and *what kind of
 finding they can produce*.
 
-| | Inline self-review (define stage) | Requirements review (its own stage) |
+| | Inline self-review (while writing) | Requirements review (end of specify) |
 |---|---|---|
-| **Who** | the spec-author, alone | spec-author plus reviewer; every role on the full approach |
-| **Cost** | minutes - four mechanical scans over one file | a stage; needs reading, and often a human decision |
+| **Who** | the spec-author, alone | spec-author plus reviewer; the person where `scenario-approval` is owed |
+| **Cost** | minutes - four mechanical scans over one file | needs reading, and often a human decision |
 | **Finds** | placeholder, orphan-intent, untestable-`Then`, ambiguous-quantifier | contradictions between scenarios, gaps across the whole set, governance conflicts, ambiguities that need someone to *choose* |
-| **Output** | edits to `acceptance-criteria.md`, in place | a ledger with a resolution and an owner per entry, recorded as decisions |
-| **Delivery approaches** | every approach, including the quick fix | the regular approach and heavier; collapsed on quick fixes and hotfixes, skipped on spikes |
+| **Output** | edits to `acceptance-criteria.md`, in place | a resolution and an owner per ambiguity, recorded as decisions |
+| **When** | every delivery issue | every delivery issue with more than one scenario; a one-scenario change and the hotfix's reproduction need only the self-review; a spike has neither |
 
 The dividing line: **the self-review fixes what one person can see and
 settle alone; the requirements review resolves what needs a decision.** An unfilled placeholder has
@@ -131,10 +133,10 @@ The review does not re-run the four scans. If it finds one of them still
 open, that means the self-review was skipped: worth saying so, not worth
 silently absorbing.
 
-**On a quick fix, where the review is collapsed, this self-check *is*
-the QA.** Record
-that you ran it, and what it found, in `devlog.md`. A self-check that happened
-only in conversation did not happen (persistence over conversation).
+**On a one-scenario change, this self-check *is* the QA.** Its fixes are
+edits to `acceptance-criteria.md`, which is the record. Say what it found
+in the message that hands the scenario to the person; a finding left only
+in your reasoning did not happen (persistence over conversation).
 
 *Why there is no subagent critic here.* The R1 project shipped a
 subagent review loop between spec and plan and then removed it in their
@@ -144,7 +146,7 @@ trials that found identical quality scores whether the loop ran or not, at
 roughly 25 minutes of overhead per run. Compass has not repeated that
 measurement and takes the published result at face value. Compass already has
 two review points that earn their cost: **the requirements review**, which
-QAs the spec against governance, and the **review** at verify. A
+QAs the spec against governance, and the **review** at ship. A
 third pass between them would double the time without measurably
 improving the spec.
 
@@ -154,8 +156,8 @@ In `skills/bdd-specification/scenario-craft.md`.
 
 ## The requirements review - QA the spec against itself and against governance
 
-The requirements review is where the spec is checked *as a spec*, before
-anyone builds from it.
+The requirements review ends the specify stage. It is where the spec is
+checked *as a spec*, before anyone builds from it.
 Walk it for:
 
 - **Contradictions** - two scenarios that cannot both hold.
@@ -171,17 +173,18 @@ Record each ambiguity, its resolution, and who resolved it (`compass issue
 decision add` for one you resolved yourself). Before the review is done:
 - no ambiguity is left `open`: every entry is `resolved`;
 - `acceptance-criteria.md` reflects every resolution;
-- the non-engineering roles in play have reviewed (required at this stage on
-  full-approach work).
+- each scenario has an id, an intent and a declared test (`G2`), which
+  `compass next` checks before it names a build step;
+- the non-engineering roles in play have reviewed, and on a change that
+  owes `scenario-approval` the person has approved the scenarios: run
+  `compass evidence request --checkpoint specify` and stop until they type
+  `/compass:approve`.
 
-The Definition of Ready block ends the document and is met by records, not by
-ticks. The requirements review:
-- can be *lightweight* on the regular approach;
-- can be *collapsed* on quick fix only because the one scenario was
-  certified unambiguous;
+The path has no Definition of Ready (ADR-092): the records above are what
+end specify. The requirements review:
+- is one read on a change with one scenario, where the self-review carries it;
 - is *skipped* on spike because the unknown is the point;
-- is never simply *absent* where the delivery approach or a routing
-  guardrail calls for it.
+- is never simply *absent* on a change with more than one scenario.
 
 ## Anti-patterns
 
@@ -192,6 +195,6 @@ ticks. The requirements review:
   cannot fail, it cannot pass; it is not a scenario.
 - **The orphan-creating spec** - leaving real behavior with no scenario.
   The acceptance-before-code guardrail forbids code that no stated acceptance criterion describes; the
-  spec is where you prevent the orphan, not the verify stage.
+  spec is where you prevent the orphan, not the ship stage.
 - **The novel** - a scenario with five `Given` lines and three `When` lines.
   Split it.

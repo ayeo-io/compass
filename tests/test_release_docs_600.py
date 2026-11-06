@@ -344,10 +344,14 @@ def test_trc_s9_plugin_instructions_use_real_types_verbs_and_fields():
     assert "compass evidence add <EV-id> --type <type> --path <file>" in ship
     assert "compass gate pass <gate> --evidence <EV-id>" in ship
 
+    # The path writer writes no `subtask_ceiling` and no breakdown stage
+    # records an orchestration (ADR-092): the procedure names the fields the
+    # write stores now, and says it stores no stage map.
     for rel in ("approaches/assess-procedure.md",):
         text = _read(rel)
-        assert "`subtask_ceiling`" in text, rel
-        assert "Breakdown records the" in text, rel
+        assert "`evidence_required`" in text, rel
+        assert "It writes no `stages:` map" in text, rel
+        assert "`subtask_ceiling`" not in text, rel
 
     runtime = _read("skills/compass-runtime/SKILL.md")
     assert "The aliases were removed at 7.0.0" in " ".join(runtime.split())
@@ -396,8 +400,9 @@ def test_trc_s9_the_scan_reports_the_old_text():
 
 # --- Stage-weight tables use the stored words ----------------------------------
 
-S10_FILES = tuple(f"approaches/{name}.md"
-                  for name in ("quick-fix", "regular", "full", "hotfix", "spike"))
+# The four 8.x delivery approach files went with the path (ADR-092); the
+# scan reads the two approach files there are now.
+S10_FILES = tuple(f"approaches/{name}.md" for name in ("path", "spike"))
 STAGES = ("Assess", "Define", "Refine", "Plan", "Breakdown", "Implement", "Verify", "Ship")
 
 
@@ -418,9 +423,10 @@ def test_trc_s10_stage_weight_tables_use_the_stored_words():
     report = {rel: s10_findings(_read(rel)) for rel in S10_FILES}
     report = {rel: found for rel, found in report.items() if found}
     assert not report, report
-    regular = _read("approaches/regular.md")
-    assert "**Lightweight pass.**" in regular
-    assert "Light-to-full" not in regular
+    # The regular approach's refine row, which held the stored word, went with
+    # the stage weights (ADR-092): no approach file has a weight table now.
+    for rel in S10_FILES:
+        assert "Light-to-full" not in _read(rel), rel
 
 
 def test_trc_s10_the_scan_reports_the_old_words():
@@ -688,8 +694,9 @@ def test_trc_s7_quickstart_five_minutes_and_portability_match_the_code(tmp_path)
                   if p.is_dir() and "\ndescription: Renamed to " not in
                   (p / "SKILL.md").read_text(encoding="utf-8"))
     # 14 since `atdd` joined (issue atdd-skill). 13 since 9.0.0 removed
-    # `worktree-multiagent` (ADR-090).
-    assert len(real) == 13
+    # `worktree-multiagent` (ADR-090). 12 since the plan stage and
+    # `plan-authoring` went with the path (ADR-092).
+    assert len(real) == 12
     assert skills_listed(_read("docs/portability.md")) == real
 
 

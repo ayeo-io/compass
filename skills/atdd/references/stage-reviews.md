@@ -2,7 +2,7 @@
 
 The questions for the review that ends each stage of the four-layer model. Each stage ends at the checkpoint of the Compass stage it runs in, and the checkpoint request reads the questions under that stage's heading. Answer each question with what you checked.
 
-## Stage 1 - the refine stage
+## Stage 1 - the specify stage
 
 - Does each specification read like its scenario, with each Given, When or Then line one DSL call?
 - Has an assertion got into the DSL?
@@ -12,7 +12,7 @@ The questions for the review that ends each stage of the four-layer model. Each 
 - Is the support code in place: the alias helper, the driver interface and its factory, the DSL root and the layering test?
 - Does the suite fail with a red the runner reports, with the driver imported inside a fixture rather than at module level in `conftest.py`?
 
-## Stage 2 - the implement stage
+## Stage 2 - the build stage
 
 - Is the driver interface complete, with every method on the interface and on each implementation?
 - Does every check live in the driver, passing by returning and failing by throwing, with a message that shows the expected and the actual value?
@@ -21,7 +21,7 @@ The questions for the review that ends each stage of the four-layer model. Each 
 - Do the tests run, and does each scenario that still fails fail because the feature is not there yet?
 - Was any scenario added that the specification does not state?
 
-## Stage 3 - the verify stage
+## Stage 3 - the ship stage
 
 - Does the suite pass when run in parallel?
 - Does each scenario give the same result when run twice in a row?

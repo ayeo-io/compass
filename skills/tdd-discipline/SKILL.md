@@ -1,6 +1,6 @@
 ---
 name: tdd-discipline
-description: The red-green-refactor cycle as Compass runs it, including what to do when a change has no natural failing test. Load while implementing.
+description: The red-green-refactor cycle as Compass runs it, including what to do when a change has no natural failing test. Load at build.
 ---
 
 # TDD Discipline
@@ -10,10 +10,10 @@ straight is the whole point.
 
 - **The guardrail is tested-before-ship** - hard, checkable, universal. No
   code reaches `main` without a passing automated test it traces to. It is
-  checked at the verify stage and at ship time, with evidence. It never adapts and it
+  checked at build and at ship, with evidence. It never adapts and it
   has no exception.
 - **TDD is the strategy** - red-before-green, the strong, shipped-on
-  default way to satisfy that guardrail on every delivery approach. But it
+  default way to satisfy that guardrail on every delivery issue. But it
   is a strategy, which means it has exactly one suspension: a **spike**
   turns it off (see below). The *outcome* (the tested change) is
   non-negotiable; the *ritual* (red-first) is the default method,
@@ -21,9 +21,9 @@ straight is the whole point.
 
 This is the distinction that keeps Compass from applying full process to
 every change: a one-character typo fix still goes red first; what the
-approach adapts is how much
+assessment adapts is how much
 *surface* the tests cover, and on a spike, whether the ritual runs at all.
-What no delivery approach adapts is the outcome.
+What no assessment adapts is the outcome.
 
 ## Approach-awareness: suspended on a spike
 
@@ -34,15 +34,16 @@ gain.
 
 This is safe because of the hard rule under it: **nothing ships from a
 spike.** A spike's code reaches production only by *graduating* -
-re-assessing into a real delivery approach - and at that point the
+re-assessing onto the path - and at that point the
 guardrail applies in full: graduated code is tested before it ships,
 usually rewritten under TDD, sometimes kept and tested afterwards. The strategy
 is suspended; the guardrail is only *deferred to graduation*, never
 skipped.
 
-On every other approach - quick fix, regular, full, hotfix - the TDD
-strategy applies. Red comes first. It is on the quick fix, and it is on
-the hotfix under time pressure.
+On every delivery issue - the four-stage path, whatever evidence it owes -
+the TDD strategy applies. Red comes first. It is on the lightest change, and
+it is on the hotfix under time pressure, where the reproduction's red comes
+before anything else (`reproduce-first`).
 
 ## The cycle
 
@@ -80,7 +81,7 @@ the step was too big.
   skill spells it out: scenario, DSL, driver, unit tests. The scenario runs
   through the DSL and a driver as the outer loop; the code behind the driver
   is built here, one unit test at a time.
-- Implement adds no scenario the specification does not state. Refine settles
+- Build adds no scenario the specification does not state. Specify settles
   each implied failure mode with the person or descopes it, so a case you
   think is missing goes back to the person, not into the suite.
 - One red at a time. A wall of failing tests written up front is not TDD; it is

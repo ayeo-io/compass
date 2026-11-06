@@ -1,17 +1,17 @@
 ---
 name: atdd
-description: Acceptance tests in four layers - specification, DSL, driver, system - for a change a real client can observe. Load at refine, implement and verify.
+description: Acceptance tests in four layers - specification, DSL, driver, system - for a change a real client can observe. Load at specify, build and ship.
 ---
 
 # Acceptance tests in four layers
 
 Adapted from the `atdd` skill of jed72, the Compass maintainer, a personal skill that is not published. The text is the source's except for these adaptations, one per line:
 
-- The model's three stages land on the Compass stages: stage 1 at refine, stage 2 at implement, stage 3 at verify. No stage is added and no gate moves.
+- The model's three stages land on the Compass stages: stage 1 at specify, stage 2 at build, stage 3 at ship. No stage is added and no gate moves.
 - The review that ends each stage is that stage's checkpoint, and its questions moved to `skills/atdd/references/stage-reviews.md`.
-- Stage 1 ends in a recorded red: the driver factory imports the driver inside a pytest fixture, and a red recorded at refine unlocks no production code.
+- Stage 1 ends in a recorded red: the driver factory imports the driver inside a pytest fixture, and a red recorded at specify unlocks no production code.
 - Each Given, When or Then line is one DSL call, any role writes scenarios, and engineers own the DSL and the drivers.
-- A quick fix or hotfix reuses existing DSL methods only and goes back to assess for a new one; a spike suspends the strategy.
+- A change on the light or defect evidence row reuses existing DSL methods only and goes back to assess for a new one; a spike suspends the strategy.
 - Edge cases follow the Compass rule for each implied failure mode in place of a list of suggestions for the person.
 - Compass never reads project test code: a layering test the project owns checks the layers.
 - The reference example is linked on GitHub, because `examples/` is not in the plugin copy.
@@ -28,19 +28,19 @@ An acceptance test describes what the system does for its users, in words a prod
 
 The four-layer model keeps that detail out of the test by giving each kind of knowledge one place to live. This skill covers the outer loop: one executable test per business scenario, run against a real deployment or a local build. The inner loop, unit-level red-green-refactor, is the `tdd-discipline` skill.
 
-The chain, in order: scenario, DSL, driver, unit tests. A scenario in `acceptance-criteria.md` becomes an executable specification; each of its lines is one DSL call; each DSL call reaches the system through a protocol driver; and the code the driver reaches is written test-first, with unit tests. Refine settles each implied failure mode with the person or descopes it, and implement adds no scenario the specification does not state.
+The chain, in order: scenario, DSL, driver, unit tests. A scenario in `acceptance-criteria.md` becomes an executable specification; each of its lines is one DSL call; each DSL call reaches the system through a protocol driver; and the code the driver reaches is written test-first, with unit tests. Specify settles each implied failure mode with the person or descopes it, and build adds no scenario the specification does not state.
 
 ## When it applies
 
 The four-layer acceptance strategy covers a change to behavior a real client can observe: what a person or a program sees through an interface real clients use, such as an API, a web UI or a CLI. A refactor, a config change or a document change does not use it.
 
-### Regular and full
+### The standard row
 
-All three stages run, as below.
+On the standard evidence row the strategy's routing is `on`: all three stages run, as below, and the change owes `outer-loop`, `isolation` and `layering`.
 
-### Quick fix and hotfix
+### The light and defect rows
 
-These approaches reuse existing DSL methods only. Write the scenario with the DSL the project already has, take it red, then green. Add no DSL method, driver method or support code. A change that needs a new DSL method is re-assessed: run `/compass:assess --reassess` and give the reason. A hotfix still proves isolation at verify.
+On these rows the routing is `existing-dsl` (light) or `existing-dsl-isolation` (defect, the hotfix setting). Reuse existing DSL methods only. Write the scenario with the DSL the project already has, take it red, then green. Add no DSL method, driver method or support code. A change that needs a new DSL method is re-assessed: run `/compass:assess --reassess` and give the reason. A change on the defect row still proves isolation at build.
 
 ### Spike
 
@@ -83,25 +83,25 @@ Name set-up methods `hasX`, actions with a plain business verb and checks `confi
 
 Each stage ends with a review: the checkpoint of the Compass stage it runs in. The questions for each are in `skills/atdd/references/stage-reviews.md`. Do not start the next stage until the review is answered, or recorded as skipped where the project's autonomy setting does not stop there.
 
-### Stage 1, the refine stage: specification and DSL
+### Stage 1, the specify stage: specification and DSL
 
 Write the scenarios, then DSL methods that read like them, then the driver interface. The DSL calls driver methods that do not exist yet, so the suite fails. That failure is the expected starting point. Every scenario first creates its own account, workspace or tenant, and each scenario gets a new DSL instance.
 
-The failure must be one a runner reports. In Python, the driver factory imports the driver inside a pytest fixture, so a missing driver is a setup error in the JUnit report, and that is the stage 1 red. A module-level import in `conftest.py` stops pytest before it writes a report (exit 4), and that run is refused as a red. Record the red with `compass tdd-red --loop outer --every-scenario -- <suite command>`. A red recorded at refine does not unlock production code: production code waits for implement.
+The failure must be one a runner reports. In Python, the driver factory imports the driver inside a pytest fixture, so a missing driver is a setup error in the JUnit report, and that is the stage 1 red. A module-level import in `conftest.py` stops pytest before it writes a report (exit 4), and that run is refused as a red. Record the red with `compass tdd-red --loop outer --every-scenario -- <suite command>`. A red recorded at specify does not unlock production code: production code waits for build.
 
-The refine checkpoint reviews stage 1.
+The specify checkpoint reviews stage 1.
 
-### Stage 2, the implement stage: protocol driver
+### Stage 2, the build stage: protocol driver
 
 Implement the driver interface and put every check in it. Use plain exceptions, not the test framework's `expect()`, and never return a boolean for the caller to check. Wait for asynchronous work by polling with a timeout, not by sleeping. Stub only third-party services you do not control. The code behind the driver is built with the `tdd-discipline` cycle, one unit test at a time.
 
-The implement checkpoint reviews stage 2: the interface is complete and the tests run. Whether they pass depends on whether the system has the feature yet.
+The build checkpoint reviews stage 2: the interface is complete and the tests run. Whether they pass depends on whether the system has the feature yet.
 
-### Stage 3, the verify stage: tidy up and prove isolation
+### Stage 3, the ship stage: tidy up and prove isolation
 
-Run the suite in parallel, then run each scenario twice in a row. Both must give the same result every time. Merge driver methods that do nearly the same thing. Go through `skills/atdd/references/checklist.md` before the review.
+Run the suite in parallel, then run each scenario twice in a row. Both must give the same result every time. Merge driver methods that do nearly the same thing. Go through `skills/atdd/references/checklist.md` before the review. Record the proof with `compass isolation record` and the layering test with `compass layering record`: they are the last build records, and `compass next` names them before any ship step.
 
-The checkpoint of the verify stage reviews stage 3.
+The checkpoint of the ship stage reviews stage 3.
 
 ## Isolation
 
@@ -134,7 +134,7 @@ Stage 1 needs the following. If any of it is missing, build it first or ask the 
 
 ## Rules
 
-- Implement only the behavior the specification states. Refine settles each implied failure mode with the person or descopes it with `compass scenario descope`; implement adds no scenario the specification does not state.
+- Implement only the behavior the specification states. Specify settles each implied failure mode with the person or descopes it with `compass scenario descope`; build adds no scenario the specification does not state.
 - Never sleep in a test. Poll with a timeout.
 - Check results by asking the system, not by trusting what the test code remembers.
 - The driver reaches the system only the way real clients do. It does not call application code directly or read the database.

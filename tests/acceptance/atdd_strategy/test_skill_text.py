@@ -3,11 +3,11 @@
 | Scenario | What it checks |
 |---|---|
 | `TRC-001` | the header names the source and lists each adaptation, one per line |
-| `TRC-002` | each stage lands on refine, implement or `verify`; no stage or gate moves |
+| `TRC-002` | each stage lands on specify, build or ship; no stage or gate moves |
 | `TRC-003` | one line, one DSL call; who owns each layer |
 | `TRC-004` | the pilot's spec extracts to the feature file kept beside it |
 | `TRC-005` | three skills describe one chain |
-| `TRC-006` | a quick fix that needs a new DSL method goes back to assess |
+| `TRC-006` | a light-row change that needs a new DSL method goes back to assess |
 | `TRC-007` | the text passes the vocabulary scans, and a planted breach fails them |
 | `TRC-008` | the review questions sit in one file, one heading per stage |
 | `TRC-009` | stage 1 ends in a red that unlocks no code |
@@ -17,6 +17,11 @@ to Compass stages], part of ayeo-io/compass-delivery#307 [Make the
 four-layer acceptance test model a Compass strategy for client-observable
 behavior]. These are text tests: the skill is read by agents, so the words
 are the behavior.
+
+The skill was adapted to the eight stages. On the four-stage path (ADR-092)
+stage 1 lands at specify, stage 2 at build and stage 3 at ship, the stage
+commands are gone, and the quick fix and hotfix are evidence rows. The tests
+check the same rules where they live now.
 """
 from __future__ import annotations
 
@@ -86,30 +91,34 @@ def test_trc_001_the_header_names_the_source_and_each_adaptation():
         assert after == "" or after.startswith("- "), (
             f"an adaptation runs over two lines: {lines[n]!r} / {after!r}")
     adaptations = _flat("\n".join(lines[n] for n in items))
-    for topic in ("stage 1 at refine", "stage-reviews.md", "one dsl call",
-                  "quick fix", "spike", "failure mode", "never reads",
+    for topic in ("stage 1 at specify", "stage-reviews.md", "one dsl call",
+                  "light or defect evidence row", "spike", "failure mode", "never reads",
                   "github", "us english"):
         assert topic in adaptations, f"no adaptation names {topic!r}"
 
 
 # --- Scenario `TRC-002` ---
 
-def test_trc_002_the_map_loads_atdd_at_refine_implement_and_verify():
+def test_trc_002_the_map_loads_atdd_at_specify_build_and_ship():
     runtime = _section(_text(SKILLS / "compass-runtime" / "SKILL.md"),
                        "Which skill, per stage")
     bullets = [_flat(b) for b in re.split(r"\n(?=- )", runtime)]
     [atdd] = [b for b in bullets if "`atdd`" in b]
-    for stage in ("stage 1 at refine", "stage 2 at implement",
-                  "stage 3 at verify"):
+    for stage in ("stage 1 at specify", "stage 2 at build",
+                  "stage 3 at ship"):
         assert stage in atdd, f"the map does not load atdd for {stage}"
     assert "a real client can observe" in atdd, (
         "the map does not say where the strategy applies")
-    for command, stage in (("refine", "stage 1"), ("implement", "stage 2"),
-                           ("verify", "stage 3")):
-        setup = _flat(_section(_text(ROOT / "commands" / f"{command}.md"),
-                               "Setup"))
-        assert "`atdd`" in setup and stage in setup, (
-            f"commands/{command}.md does not load atdd for {stage}")
+    # The stage commands that loaded the skill went with the path (ADR-092),
+    # so the skill's own description and its stage headings say where it
+    # loads: one heading per Compass stage, in order.
+    description = _flat(_text(ATDD).split("\n---\n", 1)[0])
+    assert "load at specify, build and ship" in description, description
+    for number, stage in ((1, "specify"), (2, "build"), (3, "ship")):
+        heading = _flat(_section(_text(ATDD), f"Stage {number}, the {stage} stage", "### "))
+        assert f"the {stage} checkpoint reviews stage {number}" in heading or (
+            f"the checkpoint of the {stage} stage reviews stage {number}" in heading), (
+            f"stage {number} does not end at the {stage} checkpoint")
 
 
 # The route shapes at commit a74e968, written down so the check holds on a
@@ -189,16 +198,16 @@ def test_trc_005_three_skills_describe_one_chain(skill):
     text = _flat(_text(SKILLS / skill / "SKILL.md"))
     assert "scenario, dsl, driver, unit tests" in text, (
         f"{skill} does not describe the chain in order")
-    assert ("refine settles each implied failure mode with the person or "
-            "descopes it") in text, f"{skill} lacks the refine rule"
-    assert "implement adds no scenario the specification does not state" in text, (
-        f"{skill} lacks the implement rule")
+    assert ("specify settles each implied failure mode with the person or "
+            "descopes it") in text, f"{skill} lacks the specify rule"
+    assert "build adds no scenario the specification does not state" in text, (
+        f"{skill} lacks the build rule")
 
 
 # --- Scenario `TRC-006` ---
 
 def test_trc_006_a_new_dsl_method_sends_a_quick_fix_back_to_assess():
-    section = _flat(_section(_text(ATDD), "Quick fix and hotfix", "### "))
+    section = _flat(_section(_text(ATDD), "The light and defect rows", "### "))
     assert "reuse existing dsl methods only" in section
     assert "needs a new dsl method is re-assessed" in section
     assert "`/compass:assess --reassess`" in section
@@ -265,9 +274,9 @@ def test_trc_008_stage_reviews_has_one_heading_per_stage():
     text = _text(STAGE_REVIEWS)
     headings = re.findall(r"^## (.+)$", text, re.M)
     assert len(headings) == 3, headings
-    for heading, (number, stage) in zip(headings, ((1, "refine"),
-                                                   (2, "implement"),
-                                                   (3, "verify"))):
+    for heading, (number, stage) in zip(headings, ((1, "specify"),
+                                                   (2, "build"),
+                                                   (3, "ship"))):
         assert f"stage {number}" in heading.lower() and stage in heading.lower(), heading
         questions = [line for line in _section(text, heading).splitlines()
                      if line.startswith("- ") and line.rstrip().endswith("?")]
@@ -284,7 +293,7 @@ def test_trc_009_the_stage_1_red_unlocks_no_code():
                    "setup error in the junit report",
                    "module-level import in `conftest.py`",
                    "exit 4", "refused",
-                   "a red recorded at refine does not unlock production code"):
+                   "a red recorded at specify does not unlock production code"):
         assert phrase in stage_1, f"stage 1 does not say {phrase!r}"
     flat = _flat(text)
     assert "compass never reads or parses project test code" in flat

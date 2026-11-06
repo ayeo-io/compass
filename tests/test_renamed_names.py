@@ -182,9 +182,11 @@ def test_trc_045():
     # A stub that grows past 3 lines of body text is caught by the same reader.
     assert len(_stub_body_lines(stub + "A second line.\nA third line.\nA fourth line.\n")) > 3
 
-    # Commands, agents, approaches and the default preset name the new skill.
-    named = ["commands/define.md", "approaches/full.md",
-             "approaches/quick-fix.md", "approaches/regular.md", "approaches/rubric.md",
+    # The stage map, the approaches and the default preset name the new skill.
+    # The define command and the 8.x approach files went with the path
+    # (ADR-092); the stage map loads the skill at specify now.
+    named = ["skills/compass-runtime/SKILL.md", "approaches/path.md",
+             "approaches/composition-reference.md", "approaches/rubric.md",
              "governance/presets/default/rules.yml"]
     for rel in named:
         text = (ROOT / rel).read_text(encoding="utf-8")

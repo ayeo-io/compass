@@ -41,32 +41,32 @@ assert it automatically - those are the same bar.
   feature is a set of scenarios; a line of code traces *up* to a scenario but is
   not one-to-one with it.
 
-## How depth scales with the delivery approach
+## How depth scales with the change
 
-The vocabulary never changes. The depth does - and the approach tells you
-how much.
+The vocabulary never changes. The depth does - and the assessment's size
+tells you how much.
 
-- **Quick fix** - exactly one scenario. The happy path of the new
+- **Atomic or small** - one scenario. The happy path of the new
   behavior, no more. If you cannot capture it in one unambiguous
-  scenario, the assessment was misread: it is not a quick fix. Say so and
-  send it back to the assess stage.
-- **Regular** - a small scenario set: the happy path, the realistic edges,
+  scenario, the size was misread. Say so and re-assess.
+- **Medium** - a small scenario set: the happy path, the realistic edges,
   and the failure modes that actually matter. Not every conceivable edge -
   the ones with real consequence.
-- **Full approach** - full discovery. Work the intent and the problem space for
-  the whole behavior set. Then **group the scenarios by independence** - disjoint
-  code, disjoint scenarios - because that grouping is what seeds the
-  work units the plan lists.
-- **Hotfix** - the scenario *is* a failing regression test that
-  reproduces the defect. It is written reproduce-first, before any fix,
-  and it is simultaneously the BDD scenario and the TDD red. At ship time
-  it gets promoted into a properly-formed Given/When/Then scenario as
-  part of the mandatory follow-up.
+- **Large or product** - full discovery. Work the intent and the problem
+  space for the whole behavior set. Then **group the scenarios by
+  independence** - disjoint code, disjoint scenarios - because that grouping
+  is the order in which the build takes the units.
+- **The hotfix setting** (`urgency: live-defect`) - the first scenario *is*
+  a failing regression test that reproduces the defect. It is written
+  reproduce-first, before any fix, and it is simultaneously the BDD scenario
+  and the TDD red. Before the issue closes it must read as a properly formed
+  Given/When/Then scenario that names the defect, as part of the hotfix's
+  follow-up (`approaches/path.md`).
 - **Spike** - the BDD strategy does **not** run. A spike has no acceptance
-  criteria - its output is knowledge, not behavior - so the define stage
-  collapses to the *question* ("what do we need to learn, and what would
-  a useful answer look like?") and the requirements review is skipped.
+  criteria - its output is knowledge, not behavior - so it has no specify
+  stage: the *question* ("what do we need to learn, and what would a useful
+  answer look like?") takes the place of the scenarios.
   You write no scenario file on a spike. If the spike graduates, real
-  scenarios are written when it re-assesses into a delivery approach,
+  scenarios are written when it re-assesses onto the path,
   where acceptance-before-code applies in full.
 

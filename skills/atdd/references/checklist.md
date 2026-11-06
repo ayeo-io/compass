@@ -1,6 +1,6 @@
 # Acceptance suite checklist
 
-Use this list for the review at the end of stage 3, at the checkpoint of the verify stage, and when you review an existing suite. Report each failed item under its layer. One failure is enough to report, even in a small suite.
+Use this list for the review at the end of stage 3, at the checkpoint of the ship stage, and when you review an existing suite. Report each failed item under its layer. One failure is enough to report, even in a small suite.
 
 ## Executable specification
 
@@ -49,4 +49,4 @@ Use this list for the review at the end of stage 3, at the checkpoint of the ver
 
 ## Scope
 
-- [ ] The suite tests only behavior the specification states. Each implied failure mode was settled at refine with the person, or descoped.
+- [ ] The suite tests only behavior the specification states. Each implied failure mode was settled at specify with the person, or descoped.

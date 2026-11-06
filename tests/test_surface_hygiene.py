@@ -134,9 +134,10 @@ def test_trc_d3_bdd_skill_documents_the_split():
         "the skill never says what work the requirements review does that "
         "the inline self-review does not"
     )
-    # and which delivery approaches run each: quick fix or regular.
-    assert "quick fix" in text and re.search(r"regular", text), (
-        "the skill does not say which delivery approaches run the inline "
+    # and which changes run each. The path has no quick fix or regular
+    # approach (ADR-092): the split follows the number of scenarios.
+    assert "one-scenario change" in text and "more than one scenario" in text, (
+        "the skill does not say which changes run the inline "
         "self-review and which run the requirements review"
     )
 
@@ -178,7 +179,9 @@ def test_trc_f7_skill_count_unchanged_on_net():
     present = {p.name for p in SKILLS.iterdir()
                if p.is_dir() and (p / "SKILL.md").is_file()}
 
-    assert "plan-authoring" in present, "plan-authoring was not added"
+    # plan-authoring joined with the richer plans and went with the plan
+    # stage (ADR-092); its design rules live in governance-check now.
+    assert "plan-authoring" not in present, "plan-authoring was not removed"
     assert "constitution-check" not in present, (
         "constitution-check was not removed")
 
@@ -189,15 +192,15 @@ def test_trc_f7_skill_count_unchanged_on_net():
         # (a project compass.yml can still name it) until 8.0.0.
         "behav" + "iour-mapping",
         "compass-runtime", "evidence-gates", "flow-management",
-        "governance-check", "plan-authoring",
+        "governance-check",
         "tdd-discipline",
         "receiving-code-review",  # a second pass over someone else's diff
         "systematic-debugging",   # notices three failed fixes in a row
         # Turns a brief that already exists into intent.md by asking rather
         # than assuming: "the discipline is the skill".
         "intent-interview",
-        # The four-layer acceptance tests, loaded at the refine, implement and
-        # verify stage for a change a real client can observe (issue atdd-skill).
+        # The four-layer acceptance tests, loaded at the specify, build and
+        # ship stage for a change a real client can observe (issue atdd-skill).
         "atdd",
         # Traceability lives in skills/evidence-gates/traceability.md and
         # role-translation lives in skills/intent-interview/role-translation.md,

@@ -35,7 +35,7 @@ rebuilds that layer and reuses everything under it.
 commands/        the stage interface (the /compass: namespace)
 skills/          adaptive-routing, atdd, bdd-specification, behavior-mapping,
                  compass-runtime, evidence-gates, flow-management,
-                 governance-check, intent-interview, plan-authoring,
+                 governance-check, intent-interview,
                  receiving-code-review, systematic-debugging,
                  tdd-discipline
 hooks/           pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,

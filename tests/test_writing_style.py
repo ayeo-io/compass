@@ -1080,12 +1080,6 @@ _register(Rule(
             "\"Implement\" and \"Ship\" - an identifier (section 4), "
             "not the verb the word table retires"),
         Exemption(
-            "skills/adaptive-routing/composition.md", "**Verify** - which "
-            "review dimensions",
-            "one label in a parallel bulleted list of pipeline-stage names "
-            "(Define, Refine, Plan, Breakdown, Implement, Verify, Ship) - "
-            "the stage name, not the verb."),
-        Exemption(
             "skills/evidence-gates/review-dimensions.md",
             'as "verified"',
             "the word being quoted is the point of the sentence: it names "
@@ -1144,39 +1138,6 @@ _register(Rule(
             "cli/compass_pkg/tdd.py", "terraform validate`, a schema parse",
             "a third-party command's real name (Terraform's own CLI verb), "
             "not the English verb the word table means to catch."),
-        Exemption("approaches/README.md", "but verify adds the security",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/composition-reference.md",
-                   "**Verify** - which review dimensions",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/composition-reference.md",
-                   "Regular, but Verify also runs",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/regular.md",
-                   "| Verify | **Two review points**",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/hotfix.md",
-                   "All Verify gates, no exceptions",
-                   "names the Verify stage and the Verify gate, not the verb."),
-        Exemption("approaches/hotfix.md",
-                   "Thorough Verify gate. Review dimensions",
-                   "names the Verify gate, not the verb."),
-        Exemption("approaches/hotfix.md", "never Verify itself",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/hotfix.md",
-                   "Compress the Verify gate. The stages before Verify are "
-                   "compressed; Verify is",
-                   "names the Verify gate and stage, not the verb."),
-        Exemption("approaches/full.md",
-                   "| Verify | **All gates, all dimensions.**",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/quick-fix.md", "| Verify | Lightweight gate",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/quick-fix.md",
-                   "One review point, at Verify, clearing three gates",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/spike.md", "| Verify | **= Conclude.**",
-                   "names the Verify stage, not the verb."),
         Exemption("architecture/ownership.md", "(verify → ship gate)",
                    "names the Verify stage, not the verb."),
         Exemption("architecture/system-context.md",
@@ -1501,8 +1462,8 @@ _register(Rule(
         Exemption(
             "tests/test_plugin_doc_drift.py",
             "/ `compass tdd-green` write typed test-run evidence the verify gates accept.",
-            "names the verify stage's gates, the same identifier-adjacent "
-            "use as \"All Verify gates\" in approaches/hotfix.md."),
+            "names the verify stage's gates, an identifier-adjacent use "
+            "of the stage name, not the verb."),
         Exemption(
             "tests/test_pre_tool_hook.py",
             "A red recorded with `tdd-red --verified-by` (`TRC-R8-1`, `TRC-R8-2` hook",
@@ -2318,8 +2279,8 @@ def _looks_like_runtime_evidence(path: str) -> bool:
 _LEGACY_SETTINGS_PATHS = frozenset({".compass/config.yml"})
 
 # The files 9.0.0 deleted with the stage agents, the multiagent breakdown,
-# model tiers, execution profiles and the headless runner (ADR-090), and with
-# the living spec (ADR-091). A decision
+# model tiers, execution profiles and the headless runner (ADR-090), with
+# the living spec (ADR-091), and with the approaches and stages (ADR-092). A decision
 # record, and an archived issue's record, is history: it names the file as it
 # was when the work was done, and it is never edited to follow a deletion. So is
 # the ledger of re-baselines in `test_public_surface_truth.py`. Only these exact
@@ -2381,6 +2342,10 @@ _REMOVED_IN_9_0_0 = frozenset({
     "templates/bug-report.md", "templates/review.md",
     "templates/spike-conclusion.md", "templates/incident.md",
     "tests/test_word_ceilings_templates.py",
+    # The 8.x delivery approach files and the plan stage's skill, which went
+    # with the four-stage path (ADR-092).
+    "approaches/quick-fix.md", "approaches/regular.md", "approaches/full.md",
+    "approaches/hotfix.md", "skills/plan-authoring/SKILL.md",
 })
 # A sample decision record under `templates/architecture/decisions/` is a
 # decision record too.

@@ -161,10 +161,11 @@ decisions, the governance check, and work units: a **Summary**, an
 and **the shape of the change** in code. They exist so a reviewer can see a
 design before it is built, which is the cheapest moment to disagree with it.
 
-They are optional individually. `skills/plan-authoring/SKILL.md` carries the
-rule for each; the short version is that quick fix writes no plan at all,
-the regular approach uses the one or two that add clarity, and the full approach can use
-all of them. **Delete the ones you do not use** - an empty optional heading
+They are optional individually. `skills/governance-check/SKILL.md`,
+"Writing the design down", carries the rule for each; the short version is
+that a change on the light evidence row writes no design at all, the
+standard row uses the one or two that add clarity, and a change that owes
+`architecture` can use all of them. **Delete the ones you do not use** - an empty optional heading
 reads as an omission rather than a decision.
 
 Below is a complete worked example for an imaginary issue: adding support for a
@@ -314,7 +315,7 @@ does not, because the implement stage already sequences small units through `com
 and `compass tdd-green`, and duplicating that in the plan inflates it
 while it goes out of date as soon as the code changes. The useful part of that idea -
 that a plan should contain no unfinished promises - is kept as the author's
-self-review in the `plan-authoring` skill.
+self-review in the `governance-check` skill.
 
 ---
 

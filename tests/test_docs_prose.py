@@ -39,11 +39,11 @@ def test_the_ratchet_reaches_zero():
 
 
 def test_reference_docs_carry_v2_names():
-    """`TRC-2`: approaches/ holds the rubric and the five shape docs under
+    """`TRC-2`: approaches/ holds the rubric, the path and the spike under
     v2 names; routes/ is gone; no live surface points at the old path. <!-- vocabulary-scan: allow - names the retired directory this test asserts is gone -->"""
     approaches = REPO_ROOT / "approaches"
-    for name in ("rubric.md", "quick-fix.md", "regular.md",
-                 "full.md", "hotfix.md", "spike.md"):
+    # The four 8.x delivery approach files went with the path (ADR-092).
+    for name in ("rubric.md", "path.md", "spike.md"):
         assert (approaches / name).is_file(), (
             f"approaches/{name} is missing")
     assert not (REPO_ROOT / "routes").exists(), (

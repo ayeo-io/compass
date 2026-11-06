@@ -1,12 +1,12 @@
 ---
 name: governance-check
-description: Checking a design against the guardrails and strategies in force. Load at plan.
+description: Writing a design down and checking it against the guardrails and strategies in force. Load at specify when a change needs a design.
 ---
 
 # Governance Check
 
 Two kinds of rule govern Compass, and the governance check is the
-moment they are applied to a plan, spec, or change. It is not one pass/fail
+moment they are applied to a design, spec, or change. It is not one pass/fail
 against one document - it is three distinct walks against three
 distinct sources, and each has its own standard of proof. The prose is in
 `${CLAUDE_PLUGIN_ROOT}/governance/`; the rules in force are what
@@ -18,8 +18,9 @@ distinct sources, and each has its own standard of proof. The prose is in
 - `strategies.md` - **soft, assessed, accretive.** A strategy is judged, not
   cleared; following it is the default, departing from it is allowed *and
   recorded*. A strategy never stops the work on its own.
-- `routing-policy.md` - the same split applied to the router: **routing
-  guardrails** bound the delivery approach, **routing strategies** bias it.
+- `routing-policy.md` - the same split applied to assess: the evidence rows
+  and the configuration's floors **bound** the evidence a change owes, and
+  the advisory strategies **bias** the assessment.
 
 Read the governance fresh before you start: a cached memory of an earlier
 read is not the current file.
@@ -49,15 +50,15 @@ with a new entry, not passed or failed on your judgment.
 
 ## Walk 1 - the guardrails (hard, evidence)
 
-Walk the plan, spec, or change against every applicable guardrail - the five
+Walk the design, spec, or change against every applicable guardrail - the five
 shipped defaults and any project guardrails.
 
 The five default guardrails:
 
 - **Tested before it lands.** Is the work shaped so that nothing reaches
-  `main` without a passing automated test it traces to? At Plan, this means the
-  plan introduces work test-first (the TDD strategy is how) and the test
-  surface is planned. At the verify stage, it is cleared with the recorded run.
+  `main` without a passing automated test it traces to? At specify, this means
+  the design introduces work test-first (the TDD strategy is how) and the test
+  surface is planned. At build and ship, it is cleared with the recorded run.
 - **Acceptance defined before it is built.** Does every piece of planned
   code trace to a stated, checkable acceptance criterion that exists *before*
   the code? The BDD strategy (Given/When/Then scenarios) is the default way to
@@ -69,25 +70,25 @@ The five default guardrails:
   a guardrail result, the proof is the artifact.
 - **A human signs off on the irreversible.** Does anything that can lose
   data, move money, or breach auth or privacy have an explicit human checkpoint
-  before it lands? Check the plan routes such work to where the checkpoint <!-- vocabulary-scan: allow - route is a verb here -->
+  before it lands? Check the design routes such work to where the checkpoint <!-- vocabulary-scan: allow - route is a verb here -->
   happens.
 
 Then any project guardrails - concrete, measurable floors a project has added
 (a coverage floor, a no-secrets-committed rule, a tested-rollback rule). Floors
-only ratchet up: a plan can exceed a floor, never fall short of one.
+only ratchet up: a design can exceed a floor, never fall short of one.
 
-**The standard of proof is evidence.** At Plan you are checking the plan is
-*shaped* to clear each guardrail; at the verify stage the guardrail is *cleared* with the
+**The standard of proof is evidence.** At specify you are checking the design is
+*shaped* to clear each guardrail; at ship the guardrail is *cleared* with the
 verifier's artifacts. Either way: "looks fine" is not a result. For each
-guardrail, record **clears** (with the evidence, or the plan element that will
+guardrail, record **clears** (with the evidence, or the design element that will
 produce it) or **fails** (with the specific guardrail and how it is crossed). A
-plan that crosses a guardrail does not proceed - it is revised, or the issue
+design that crosses a guardrail does not proceed - it is revised, or the issue
 is re-assessed. There is nothing to waive a guardrail *for*; a guardrail beats every
 strategy and every convenience.
 
 ## Walk 2 - the strategies (soft, assessed)
 
-Walk the same plan, spec, or change against the applicable strategies - the
+Walk the same design, spec, or change against the applicable strategies - the
 shipped default method strategies (including **BDD** and **TDD**) and any
 project strategies (product, engineering, voice & positioning).
 
@@ -105,37 +106,38 @@ The standard here is different and you must keep it different. A strategy is
   dressed up as evidence. A strategy not followed is a note and a conversation,
   not an automatic stop.
 
-## Walk 3 - the routing policy
+## Walk 3 - the evidence the issue owes
 
-Confirm the plan is consistent with `routing-policy.md`:
+Confirm the design is consistent with the issue's `evidence_required` list
+(`compass approach show`) and `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`:
 
-- **Routing guardrails** - did every floor that should have fired, fire? Is the
-  delivery approach the plan assumes consistent with the caps (e.g. the worktree cap on
-  critical risk)? Are the `immovable_gates` reflected in the plan's
-  gate set? A plan that quietly
-  assumes a lighter delivery approach than the routing guardrails allow fails here.
-- **Routing strategies** - did the delivery approach follow the default shapes and biases,
-  or is a departure recorded in `devlog.md`? A recorded departure is fine; a
-  silent one is the flag.
+- **The configuration's rules** - did every floor that should have fired,
+  fire? Are the `immovable_gates` in the manifest's gates? A design that
+  quietly assumes less evidence than the issue owes fails here: for
+  example, a change that reaches `auth` with no `G5` label.
+- **The advisory strategies** - where the work departs from one, is the
+  departure recorded in the `--justify` reason or the report to the person?
+  A recorded departure is fine; a silent one is the flag.
 
-## How to run the check (plan stage)
+## How to run the check (at specify)
 
 1. Run `compass policy show` and read the prose in
    `${CLAUDE_PLUGIN_ROOT}/governance/` (or the project's own copy in an
    unmigrated 5.x project).
 2. Walk 1 - guardrails - against the design and the spec it builds on. Record
-   per guardrail: **clears** (with evidence or the plan element that produces
+   per guardrail: **clears** (with evidence or the design element that produces
    it) or **fails** (with the specific guardrail).
 3. Walk 2 - strategies - against the same. Record per strategy as **judgment**:
    followed, or departed-and-recorded, or departed-silently (flag it).
-4. Walk 3 - routing policy - confirm the plan's assumed delivery approach is within the
-   routing guardrails and consistent with the routing strategies.
+4. Walk 3 - the evidence - confirm the design assumes no less evidence than
+   the issue owes, and that each strategy departure is recorded.
 5. Record all three results with `compass evidence add` and show them in the
-   plan's hand-off, with the guardrail findings and the
+   report to the person, with the guardrail findings and the
    strategy assessment **visibly separate** - evidence on one side, judgment
    on the other.
-6. A failed guardrail **stops the plan** - revise or re-assess. A strategy
-   departure does **not** stop the plan; record it and, if it matters, raise it.
+6. A failed guardrail **stops the build** - revise the design or re-assess.
+   A strategy departure does **not** stop the build; record it and, if it
+   matters, raise it.
    That asymmetry is the whole point of the split.
 7. If a guardrail itself seems wrong, that is an amendment conversation
    (a reviewed change to the project's `compass.yml`, checked by
@@ -144,6 +146,73 @@ Confirm the plan is consistent with `routing-policy.md`:
    project's owner approves) - never a quiet override mid-issue. If a
    strategy keeps getting overridden the same way, that is a curation signal -
    fix the strategy or write down the thing overriding it.
+
+## Writing the design down
+
+A design has one job: **let a reviewer disagree with it before the code
+exists.** That is the cheapest moment to change it. Write one at specify
+when the change has a design decision worth arguing with; a change with no
+design decision needs none. Compass writes no design document (ADR-091): the
+design goes in the report to the person, or in a design note the team keeps
+beside `acceptance-criteria.md`.
+
+Every design states the approach, the design decisions and the work units.
+Six sections are optional, and choosing which to use is the craft:
+
+| Section | Include when | Omit when |
+|---|---|---|
+| **Summary** | A reader who did not write the design needs to know what it delivers before judging how. | The approach is already short enough to be the summary. |
+| **Interaction** (sequence diagram) | Two or more components collaborate and the *order* of their exchanges matters. | The change lives inside one component. |
+| **Structure** (class or module diagram) | New components, changed relationships, or a contract the work units assume. | The change adds no new boundary. |
+| **Design patterns invoked** | A real named pattern is genuinely being applied *and* you can say what it buys this change. | You cannot name it, or cannot say what it buys. |
+| **The shape of the change** (code) | The shape of an interface, type, or API is itself a decision worth arguing with. | The shape is obvious from the approach. |
+| **Cross-cutting concerns** | The change touches security, privacy, or what you can see in production. | It touches none of them, or the team keeps a threat model or rollback plan of its own; link that instead. |
+
+How many to use scales with the evidence the issue owes:
+
+- **The light row** - none of them. There is no design to write.
+- **The standard row** - the ones that add clarity: typically one diagram
+  and one other section. Reaching for all six is a sign the assessment was
+  too low, not a sign of thoroughness.
+- **A change that owes `architecture`** - all of them, freely, where the
+  work warrants it. A reviewer is expected to spend real time in it. The
+  cross-cutting section also names the well-architected pillars the change
+  touches and what the design does about each: that is the well-architected
+  alignment strategy, `S15`, and the pillars come from
+  `${CLAUDE_PLUGIN_ROOT}/governance/architecture-sources.yml`. It is advice
+  for the reviewer, not a gate.
+
+**Delete the sections you do not use.** An empty optional heading reads as
+an omission rather than a decision.
+
+**Diagrams are Mermaid by default.** Mermaid renders in GitHub and in every
+modern IDE viewer. Reach for PlantUML only when Mermaid cannot express the
+shape, because some readers then see source instead of a picture. A diagram
+earns its place by replacing prose: if the paragraph above it already says
+everything the diagram says, cut one of them.
+
+**Name a pattern only with a reason.** A pattern name with no reason is
+name-dropping: it makes a design sound considered without making it
+clearer, and a reviewer cannot disagree with a bare name. Every named
+pattern needs a concrete reason it earns its place *in this change* - an
+existing second variant, a boundary you mock in tests, a change you already
+expect. Where you chose between two, name the one you rejected and why:
+that is the named-patterns strategy, `S16`. If you cannot name a real
+pattern, omit the section.
+
+**Review the design yourself before the check.** Fix what you find inline;
+write no review artifact and start no reviewer agent.
+
+1. **Placeholder scan** - any `{{...}}` left, and any phrase that defers a
+   decision ("TBD", "TODO", "implement later", "add appropriate error
+   handling"). A deferred decision with a named owner is a design; an
+   unowned `TBD` is a gap.
+2. **Coverage scan** - every scenario group in `acceptance-criteria.md` is
+   covered by at least one work unit.
+3. **Pattern-name check** - every named pattern is applied by a work unit
+   and carries its reason.
+4. **Magic-number scan** - every threshold, timeout or budget has a stated
+   source: the spec, an ADR or a measurement.
 
 ## Anti-patterns
 
@@ -163,7 +232,7 @@ Confirm the plan is consistent with `routing-policy.md`:
   Recording the layers and the generation makes this visible.
 - **Floor erosion** - reading a project guardrail floor as a target to *hit*
   rather than a minimum to *clear*. Floors only ratchet up.
-- **Silent delivery-approach assumption** - a plan that assumes a lighter
-  delivery approach than the routing guardrails permit, unnoticed.
+- **Silent evidence assumption** - a design that assumes less evidence than
+  the issue owes, unnoticed.
 - **Treating an un-extended project as broken** - the shipped defaults alone
   are a complete governance state; check against them.

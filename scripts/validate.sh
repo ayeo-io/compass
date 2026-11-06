@@ -194,9 +194,9 @@ for f in hooks/pre-tool.sh hooks/post-tool.sh hooks/stop.sh \
 done
 say ""
 
-# --- 7. the five reference approach docs -------------------------------------
+# --- 7. the approach docs: the path and the spike (ADR-092) ------------------
 say "7. Reference approaches"
-for r in quick-fix regular full hotfix spike; do
+for r in path spike; do
   if [ -f "approaches/$r.md" ]; then
     if grep -qiE "(\`|/| )$r\b" approaches/rubric.md 2>/dev/null; then
       ok "shape  $r  <- exists, named in rubric.md"

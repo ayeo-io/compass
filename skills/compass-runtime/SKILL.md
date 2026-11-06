@@ -1,6 +1,6 @@
 ---
 name: compass-runtime
-description: Which command runs each stage, which skill it loads, where issue state lives. Load when an issue begins.
+description: What runs each stage of the path, which skill it loads, where issue state lives. Load when an issue begins.
 ---
 
 # Compass - the stage map
@@ -10,7 +10,7 @@ puts them in every session before you read this. They are not repeated here,
 so the two cannot disagree.
 
 What this file carries is the mapping a session needs once it is already
-following the contract - which command runs which stage, what each writes,
+following the contract - what runs each stage, what each writes,
 which skill it loads, and where the result lands on disk.
 
 If anything here conflicts with `docs/methodology.md`, the methodology doc
@@ -20,28 +20,35 @@ what it explicitly does not.
 
 ## The stages and their commands
 
-| Stage | Command | Artifact it writes |
+A delivery issue runs one path of four stages (ADR-092,
+`approaches/path.md`). The stages have no commands of their own: one
+command runs the path, and the `next:` line names each step.
+
+| Stage | What runs it | What it writes |
 |---|---|---|
-| Assess | `/compass:assess` | the manifest's assessment and approach |
-| Define acceptance criteria | `/compass:define` | `acceptance-criteria.md` |
-| Requirements review | `/compass:refine` | the decisions taken and the Definition of Ready, as records |
-| Plan | `/compass:plan` | the design and its work units, in the hand-off and `devlog.md` |
-| Break down the work | `/compass:breakdown` | the order of the work units |
-| Implement | `/compass:implement` | code + the red and green records (named by binding) |
-| Test & review | `/compass:verify` | the gate evidence and the Definition of Done, as records (`compass check` lists each item's state) |
-| Ship | `/compass:ship` | the integration commit + settled follow-ups |
+| Assess | `compass quick-fix start`, or `/compass:assess` for the full procedure, `--reassess` and the spike | the assessment, `evidence_required`, the pending gates, the `S17` block and the checkpoints |
+| Specify | the `next:` line: `compass scenario add`, `compass scenario tests set` | the scenarios in `acceptance-criteria.md`, the test each one declares, and the `specify` checkpoint's outcome where `scenario-approval` is owed |
+| Build | the `next:` line: `compass tdd-red`, then the code, then `compass tdd-green` | the red and green records (named by binding), and the outer-loop, isolation and layering records where `S17` applies |
+| Ship | the `next:` line: `compass evidence add`, `compass gate pass`, `compass check`; `/compass:ship` or `compass quick-fix finish` for the commit | the gate evidence and the Definition of Done items as records, the sign-offs, and the commit |
 
-`/compass:assess` itself carries only that light path. The full assess
-procedure - setup, `--reassess`, steps 1 to 7 and the gate - is in
-`approaches/assess-procedure.md`, which assess names for every heavier
-approach and for `--reassess`.
+- `/compass:go` runs the whole path in one session: it assesses with
+  `compass quick-fix start`, shows `compass approach show`, then follows
+  the `next:` line until `compass check` passes. It stops only where a
+  `next:` line says to wait for a person.
+- `/compass:quick-fix` is its short form, for a change the person already
+  knows is small: start, red, finish. It is read alone.
+- `/compass:assess` carries the light path. The full assess procedure -
+  setup, `--reassess`, steps 1 to 7 and the gate - is in
+  `approaches/assess-procedure.md`, which assess names for a change that is
+  not small, for a spike and for `--reassess`.
+- `/compass:ship` lands the change once every gate passes.
+- `compass next` prints the issue's stage and the one command to run next,
+  and every verb that writes a record of a path issue ends its text output
+  with the same `next: <command>` line. Run that command. When you are not
+  sure what comes next, run `compass next`.
 
-When assess computes a **quick fix**, the eight rows above collapse into one
-command: `/compass:quick-fix` carries the whole light path - assess, the one
-scenario, red-green, the check, the commit - inlined in a single file, and it
-is read alone. It is the same pipeline
-at its lightest weight, not a way around it: if `compass approach evaluate`
-returns anything heavier, the rows above are what runs.
+A spike runs assess, build (explore) and ship (conclude); `approaches/spike.md`
+describes it.
 
 Cross-issue: `/compass:status` (one issue or a flat list), `/compass:flow`
 (the managed cross-issue view - advisory, never gating), and
@@ -72,19 +79,19 @@ Nothing else is touched, so one scenario's record cannot overwrite another's.
 This session runs every stage; Compass starts no stage agent (ADR-090).
 
 - **Assess** - load the `adaptive-routing` skill.
-- **Define and refine** - load `bdd-specification`; on brownfield work whose
-  behavior is not yet written down, also load `behavior-mapping`.
-- **Plan** - load `plan-authoring` (which optional design sections earn a
-  place) and `governance-check` (how to check the design against the
-  governance in force).
-- **Implementing** - load `tdd-discipline`; build the map's units in turn.
-- **Test & review** - load `evidence-gates`, and `receiving-code-review`
+- **Specify** - load `bdd-specification`; on brownfield work whose
+  behavior is not yet written down, also load `behavior-mapping`. When the
+  change needs a design a reviewer can argue with, load `governance-check`
+  (how to write the design down and check it against the governance in
+  force).
+- **Build** - load `tdd-discipline`; build the units in turn.
+- **Ship** - load `evidence-gates`, and `receiving-code-review`
   when answering a review's comments.
 - **A change to behavior a real client can observe** - also load `atdd`:
-  stage 1 at refine, stage 2 at implement and stage 3 at verify. Each ends at
+  stage 1 at specify, stage 2 at build and stage 3 at ship. Each ends at
   that stage's checkpoint, whose request lists the stage's review questions.
   No stage or gate moves. Not for a refactor.
-- **An unexpected test failure while implementing** - load `systematic-debugging`,
+- **An unexpected test failure while building** - load `systematic-debugging`,
   and after three failed fixes re-assess rather than try a fourth.
 - **Role-facing work** - load `intent-interview` and read its
   `role-translation.md`, which is how one set of acceptance criteria is read
@@ -119,7 +126,7 @@ compass.yml                     The one file a person edits: settings, and the p
 │       ├── generations/<n>/     The configuration the issue runs against (written by compass approach evaluate --write)
 │       ├── evidence/            red/green records + typed gate evidence
 │       ├── .red, .spike, ...    The markers the hook reads
-│       └── devlog.md            Append-only running log
+│       └── devlog.md            An archived issue's running log; a new issue has none (ADR-092)
 └── flow/
     └── digest-<date>.md         Periodic cross-issue digest
 
@@ -138,9 +145,10 @@ an `artifacts:` list and its folder the documents it names; they stay valid
 and are not read.
 
 The intent opens the acceptance criteria: their Summary and Intent links,
-written at define before any scenario. Every issue whose stored
-configuration sets `release_line: true` on its approach (quick fix, regular,
-hotfix and full on the shipped default) owes a release line, the manifest's
+written at specify before any scenario. A delivery issue owes a release
+line when its stored configuration sets `release_line: true` on any approach
+that ships, as the shipped default does; an issue assessed before the path
+owes one when its own approach sets it. The line is the manifest's
 `release_note` (`schemas/manifest.schema.json`). Give it with
 `--release-note "<text written for a user>"` on `compass ship-commit`,
 `compass quick-fix finish` or `compass acceptance record`; a landing refuses
@@ -166,8 +174,8 @@ side. A lesson is advice: a guardrail always wins.
 
 Before you write:
 
-- a devlog entry, a requirements review, or anything else this skill
-  produces - read `skills/compass-runtime/writing-voice.md`, the principle
+- a scenario's intent, a review, a commit message, or anything else this
+  skill produces - read `skills/compass-runtime/writing-voice.md`, the principle
   and the tells that mark prose narrating the pipeline instead of
   communicating a decision;
 - a repository-wide replacement - read `text-sweeps.md`, what a text sweep
@@ -179,7 +187,8 @@ principle alone does not settle a sentence.
 
 ## When you are unsure
 
-Run `compass approach show` and re-read the manifest. The approach was
-recorded at assessment precisely so a later session, or a different agent, can
-pick the issue up without re-deriving the process. If it does not answer the question, the assessment under-sized
-the work: say so and re-assess rather than improvise.
+Run `compass next` and `compass approach show`, and re-read the manifest.
+The evidence was recorded at assessment precisely so a later session, or a
+different agent, can pick the issue up without re-deriving the process. If
+it does not answer the question, the assessment under-sized the work: say so
+and re-assess rather than improvise.

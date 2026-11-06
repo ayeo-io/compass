@@ -25,7 +25,9 @@ import re
 
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PLAN_SKILL = ROOT / "skills" / "plan-authoring" / "SKILL.md"
+# The plan-authoring skill went with the plan stage (ADR-092). Its rules moved
+# to the governance-check skill, "Writing the design down".
+PLAN_SKILL = ROOT / "skills" / "governance-check" / "SKILL.md"
 WRITING_GUIDE = ROOT / "docs" / "writing-specs-and-plans.md"
 
 
@@ -69,33 +71,34 @@ FIVE_SECTIONS = {
 
 def test_trc_c4_selection_rules_scale_by_route():
     assert PLAN_SKILL.is_file(), (
-        "skills/plan-authoring/SKILL.md does not exist; the selection rules "
-        "have no home a human writing a plan by hand would find"
+        "skills/governance-check/SKILL.md does not exist; the selection rules "
+        "have no home a human writing a design by hand would find"
     )
     text = PLAN_SKILL.read_text(encoding="utf-8")
 
-    express = _route_rule(text, "quick-fix")
+    # The path has no approaches (ADR-092): the rule scales with the evidence
+    # row the issue owes instead of the 8.x quick fix, regular and full.
+    express = _route_rule(text, "**The light row**")
     assert re.search(r"\b(none|no)\b", express, re.I), (
-        f"the skill does not say a quick-fix plan uses none of them: {express!r}")
+        f"the skill does not say a light-row change uses none of them: {express!r}")
 
-    standard = _route_rule(text, "regular")
+    standard = _route_rule(text, "**The standard row**")
     assert re.search(r"\b(clarity|clarify|helps?|add)\b", standard, re.I), (
-        f"the skill does not say a feature plan uses the ones that help: "
+        f"the skill does not say a standard-row design uses the ones that help: "
         f"{standard!r}")
 
-    # "full" is also a stage weight, so the rule is found by its bullet.
-    expedition = next((line for line in text.splitlines() if "**full**" in line), "")
+    expedition = _route_rule(text, "owes `architecture`**")
     assert re.search(r"\b(all|freely|every)\b", expedition, re.I), (
-        f"the skill does not say an initiative plan may use all of them: "
-        f"{expedition!r}")
+        f"the skill does not say a design that owes architecture may use all "
+        f"of them: {expedition!r}")
 
 
-def _route_rule(text, route):
-    """The line in the skill that states the rule for `route`."""
+def _route_rule(text, marker):
+    """The line in the skill that states the rule for the bullet `marker`."""
     for line in text.splitlines():
-        if re.search(rf"\b{route}\b", line):
+        if marker in line:
             return line
-    raise AssertionError(f"the skill never mentions the {route} route")
+    raise AssertionError(f"the skill never states the rule for {marker!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +109,7 @@ def test_trc_c5_named_pattern_requires_reason():
     # The skill carries the rule, since that is where an author looks.
     skill = PLAN_SKILL.read_text(encoding="utf-8")
     assert re.search(r"\b(why|reason|earns?|justif)", skill, re.I), (
-        "the plan-authoring skill does not require a reason per named pattern"
+        "the governance-check skill does not require a reason per named pattern"
     )
 
 

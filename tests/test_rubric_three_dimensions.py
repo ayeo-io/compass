@@ -37,7 +37,7 @@ DESCRIBING_FILES = (
     "approaches/README.md",
     "approaches/assess-procedure.md",
     "approaches/composition-reference.md",
-    "approaches/hotfix.md",
+    "approaches/path.md",
     "approaches/spike.md",
     "commands/assess.md",
     "commands/status.md",

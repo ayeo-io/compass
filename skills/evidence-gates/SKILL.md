@@ -1,13 +1,13 @@
 ---
 name: evidence-gates
-description: What counts as gate evidence, and how to clear a gate. Load at the verify stage.
+description: What counts as gate evidence, and how to clear a gate. Load at ship.
 ---
 
 # Evidence Gates
 
 **The evidence-not-assertion guardrail** says a guardrail clears with artifacts
 and command output, never a claim. "The tests pass" is not a
-gate-passing statement on any delivery approach; the *recorded test run* is. This skill
+gate-passing statement on any delivery issue; the *recorded test run* is. This skill
 covers what counts as evidence, the checklists for each review dimension, and -
 just as important - the line between what is *checked* and what is *assessed*.
 
@@ -67,10 +67,10 @@ fails an item with no record. `compass check` lists each item's state.
 `compass tdd-red` and `compass tdd-green` write `loop` on each record:
 `outer` with `--loop outer`, for a run of the acceptance suite through a
 client interface, and `inner` with `--loop inner`, for a unit test. With no
-flag the loop is `outer` on a quick fix the four-layer acceptance strategy
-applies to, because its one declared test is its acceptance test, and on a
-path issue whose `S17` routing is `existing-dsl`, which replaces the quick
-fix, and `inner` everywhere else. `compass quick-fix finish` takes the same flag. A
+flag the loop is `outer` on a path issue whose `S17` routing is
+`existing-dsl` (the light row), because its declared test is its acceptance
+test, and on an issue assessed before the path as a quick fix the
+four-layer acceptance strategy applies to; it is `inner` everywhere else. `compass quick-fix finish` takes the same flag. A
 record with no field reads as inner. Where the four-layer acceptance strategy (`S17`)
 applies, the check `outer-loop-recorded` needs an outer-loop red and an
 outer-loop green recorded on the tree as it is now (ADR-080). `suite-passed`
@@ -114,15 +114,17 @@ never a red: the refusal quotes pytest's first error line, and names the fix
 when `conftest.py` imports the driver at module level. With `--loop outer`,
 `--scenario` can repeat and `--every-scenario` binds one run to every
 scenario: one record per scenario, sharing a `run_id`. A red that ends stage 1
-(outer loop, an approach that runs refine, plan not handed off, and no
-technical design, distribution map or subtask registered) writes `before_implement: true`, no `.red` marker
-and moves no document (ADR-081). A runner that is not pytest is read from the JUnit report its adapter writes to `COMPASS_JUNIT_REPORT` (ADR-087).
+writes `before_implement: true`, no `.red` marker and moves no document
+(ADR-081). On a path issue that is an outer-loop red while specify is not
+done. On an issue assessed before the path, it is an outer-loop red on an
+approach that runs refine, before plan is handed off and with no technical
+design, distribution map or subtask registered. A runner that is not pytest is read from the JUnit report its adapter writes to `COMPASS_JUNIT_REPORT` (ADR-087).
 Only `compass isolation record` and `compass layering record` write the isolation and layering records (ADR-086).
 
 ## Records that move no document
 
 `compass tdd-red` and `compass acceptance record` are the first records of the
-implement stage. Since 9.0.0 no record moves a document's status: no document
+build stage. Since 9.0.0 no record moves a document's status: no document
 has one (ADR-091). An `artifact-approval` record an older release wrote, or a
 `--decisions` approval, is accepted by no gate, and the sign-off check of `G5`
 never reads it.
@@ -147,7 +149,7 @@ nothing, and the flag is refused on a completed or closed issue
 A vocabulary - commit, acceptance, and the rest - in
 `skills/evidence-gates/evidence-kinds.md`.
 
-## How the two halves of the verify stage split
+## How the two halves of the ship review split
 
 - The **Verifier** does the mechanical half: runs the scenarios as the
   acceptance suite, runs the TDD suite, runs regression, and **writes each
@@ -166,21 +168,23 @@ Verifier's artifacts in hand.
 
 ## The review-dimension checklists
 
-One checklist per dimension, in `skills/evidence-gates/review-dimensions.md`. Read the one for the dimension you are applying - the delivery approach says which the issue carries.
+One checklist per dimension, in `skills/evidence-gates/review-dimensions.md`. Read the one for the dimension you are applying - the issue's `evidence_required` list says which the issue carries.
 
 ## Passing a gate - the procedure
 
-1. Run `compass approach show` for the gate set and the dimensions in play.
+1. Run `compass approach show` for the evidence line and the gates in play.
+   `compass next` names the first gate not yet passed and the command that
+   passes it.
 2. Verifier: run everything the dimensions need, write the raw output to an
    evidence record and register it, flag every gap.
 3. Reviewer: walk each dimension's checklist against the evidence and the
    change. Record per-dimension **pass** or **no-pass with the specific reason**.
-4. Before the verify stage is complete, make sure that every required
-   review dimension passed with evidence attached, that every gate of the
-   approach and every immovable gate is green, and that no evidence record is
-   empty. A tick on a page counts for nothing.
+4. Before the commit, make sure that every review dimension the issue owes
+   passed with evidence attached, that every gate in the manifest and every
+   immovable gate is green, and that no evidence record is empty. A tick on
+   a page counts for nothing. `compass check` must pass.
 5. The gate passes only if every applicable dimension passes. One no-pass sends
-   the work back to the implement stage, or to a re-assess. A gate is not "mostly passed."
+   the work back to the build stage, or to a re-assess. A gate is not "mostly passed."
 
 ## Architecture checks and the verify.architecture gate
 

@@ -110,13 +110,15 @@ def test_trc_f3_the_merge_removes_resident_cost():
     # A skill kept only as a redirect to its renamed successor ("Renamed to
     # ...") is not a skill of its own, so the count leaves it out. `atdd`
     # joined later (issue atdd-skill): the four-layer acceptance tests.
-    # `worktree-multiagent` left in 9.0.0 (ADR-090).
+    # `worktree-multiagent` left in 9.0.0 (ADR-090), and `plan-authoring`
+    # left with the plan stage (ADR-092).
     real = sorted(p.parent.name for p in skills
                   if "\ndescription: Renamed to " not in
                   p.read_text(encoding="utf-8"))
-    assert len(real) == 13, (
-        f"expected 13 skills - 15, less the two merges and quick-fix, plus "
-        f"atdd, less worktree-multiagent - found {len(real)}: " + ", ".join(real))
+    assert len(real) == 12, (
+        f"expected 12 skills - 15, less the two merges and quick-fix, plus "
+        f"atdd, less worktree-multiagent and plan-authoring - found "
+        f"{len(real)}: " + ", ".join(real))
 
 
 def test_trc_f3_nothing_names_a_skill_that_does_not_exist():
@@ -511,14 +513,15 @@ def test_trc_f1_the_quick_fix_entry_point_is_reachable():
     `commands/quick-fix.md` becomes `/compass:quick-fix` because the runtime
     globs `commands/*.md`, but nothing tells an agent that the light path has
     a single-command entry point. The two places an agent looks are the
-    stage-to-command map it loads when an issue begins, and the approach
-    description assess lands on.
+    stage-to-command map it loads when an issue begins, and the description
+    of the path assess lands on (the quick fix approach file went with the
+    path, ADR-092).
     """
     signposts = {
         "skills/compass-runtime/SKILL.md":
             "the stage-to-command map an agent loads when an issue begins",
-        "approaches/quick-fix.md":
-            "the approach description assess lands on",
+        "approaches/path.md":
+            "the description of the path assess lands on",
     }
     missing = [f"{path} ({why})" for path, why in sorted(signposts.items())
                if "/compass:quick-fix" not in (ROOT / path).read_text(encoding="utf-8")]

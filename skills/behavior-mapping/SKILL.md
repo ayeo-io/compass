@@ -1,14 +1,14 @@
 ---
 name: behavior-mapping
-description: Capturing existing behavior as scenarios before changing it. Load on brownfield work with no written behavior.
+description: Capturing existing behavior as scenarios before changing it. Load at specify on brownfield work with no written behavior.
 ---
 
 # Behavior mapping
 
 The rule behind this skill is simple: **you cannot safely change behavior you
 have not first written down.** On `brownfield-unmapped` familiarity the routing
-policy makes this a routing guardrail floor - behavior mapping runs before any new
-scenario, before any change. On an atomic or small change with trivial or
+policy makes this a floor (`RP-FLOOR-002`) - behavior mapping runs at
+specify, before any new scenario, before any change. On an atomic or small change with trivial or
 contained risk and no domain label it is advice (`RP-ADV-002`): pin what the code does now where
 the change touches it with a test. This skill is how you do it well.
 
@@ -28,9 +28,9 @@ These go into `acceptance-criteria.md` marked as baseline scenarios. They become
 
 1. **Bound the surface.** You are not behavior mapping the whole system - only the
    behavior the upcoming change will touch, plus its immediate risk.
-   Use the manifest's `labels:` and the plan's intended change site to draw
-   the boundary. Behavior mapping too wide wastes the time the delivery
-   approach allowed; too narrow misses the regression you are about to cause.
+   Use the manifest's `labels:` and the change site the intent names to draw
+   the boundary. Behavior mapping too wide wastes the time the assessment
+   allowed; too narrow misses the regression you are about to cause.
 2. **Find the interfaces.** Identify the inputs and outputs of the bounded surface -
    the function signatures, the endpoints, the events, the stored state. These
    are where your `When` and `Then` will attach.
@@ -65,7 +65,7 @@ kinds of scenario:
 Keep them labeled and distinct. When the change ships, some baseline scenarios
 are *intentionally* superseded by target scenarios - that is a recorded
 decision, not a silent overwrite. The baseline you are *not* changing must still
-pass at the verify stage; that is the proof you preserved what you meant to.
+pass at ship; that is the proof you preserved what you meant to.
 
 ## When the behavior is genuinely a mess
 
@@ -73,7 +73,7 @@ Sometimes the current behavior is inconsistent - the same input class does
 different things depending on undocumented state. Map it honestly anyway:
 write the scenarios that capture the inconsistency. The mess, written down, is
 something you can decide about. The mess, undescribed, is something that will
-surprise you at the verify stage or in production.
+surprise you at ship or in production.
 
 ## Anti-patterns
 
@@ -81,7 +81,7 @@ surprise you at the verify stage or in production.
   calling it behavior mapping. Now you have no regression baseline and a spec that lies
   about the present.
 - **Mapping too much.** Behavior mapping far beyond the change's risk. The
-  delivery approach did not allow for it and it delays the actual work.
+  assessment did not allow for it and it delays the actual work.
 - **Skipping it because "I understand this code."** Understanding it is not the
   bar - *it being written down* is the bar. The floor is about the artifact, not
   your confidence.

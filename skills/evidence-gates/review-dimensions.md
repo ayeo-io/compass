@@ -1,14 +1,14 @@
 # The review dimensions, one checklist each
 
-Reference: read the checklist for the dimension you are applying, not all of them at once. The skill names which dimensions an approach carries; this says what each asks.
+Reference: read the checklist for the dimension you are applying, not all of them at once. The issue's `evidence_required` list names which dimensions it carries; this says what each asks.
 
 ## The review-dimension checklists
 
-Which dimensions apply is set by the delivery approach (see the table in `approaches/composition-reference.md`).
-`correctness`, `governance`, `traceability` are on every delivery approach - the
-default guardrails in review form. The delivery approach and routing policy can add; they
+Which dimensions apply is set by the evidence row assess selects (see "The review dimensions by row" in `approaches/composition-reference.md`).
+`correctness`, `governance`, `traceability` are on every delivery issue - the
+default guardrails in review form. The additions and the configuration can add; they
 can never remove those or an `immovable_gate`. (Spike runs none of these - it
-ships nothing, so it has only its own Conclude gate.)
+ships nothing, so it has only its own gate, `spike.conclude`.)
 
 **correctness** - Does the change do what the scenarios describe? Is the green
 genuine, or green-by-skipped-test? Do the acceptance scenarios actually exercise
@@ -41,14 +41,14 @@ owning doc in the same commit, or says why the doc still holds.
 When the work has more than one unit, check each unit and then the *combined*
 result at ship time - each unit green does not imply the combination is green.
 
-**security** - Full on the full approach and hotfix, scaled to risk on
-the regular approach, off on quick fix unless a label added it. OWASP floor;
+**security** - On the standard and defect rows, scaled to risk; off on the
+light row unless the configuration added it. OWASP floor;
 dependency-CVE scan where a project security guardrail needs it; evidence is
 scan output, not "looks fine."
 
 **clarity** - Is the code and are its tests legible to the next person - names,
-structure, no surprising control flow? Off on quick fix; deferred to the
-mandatory follow-up on hotfix. This is also where the writing-voice tells
+structure, no surprising control flow? On the standard row; off on the
+light and defect rows. This is also where the writing-voice tells
 named in `skills/compass-runtime/writing-voice.md` are judged - does the
 artifact communicate a decision, or does it narrate the pipeline? Run
 `scripts/voice-tells.py` over the issue's artifacts for the three tells a fixed string can find; a hit is a note and a conversation, never an automatic gate failure.

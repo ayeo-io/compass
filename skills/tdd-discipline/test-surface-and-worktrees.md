@@ -4,28 +4,27 @@ Reference for how much test to write and what the tests are telling you, plus th
 
 ## How test surface scales with risk
 
-This is the dimension the delivery approach *does* adapt. "More surface" means more of the
+This is the dimension the assessment *does* adapt. "More surface" means more of the
 behavior's space is pinned by tests - more edges, more failure modes, more
 adversarial inputs - not "tests at all," which is constant.
 
-- **`trivial` risk** - the scenario and its obvious edges. Quick-fix
-  territory.
+- **`trivial` risk** - the scenario and its obvious edges.
 - **`contained`** - the scenario, its realistic edges, the failure modes
-  that matter. Regular-approach territory.
+  that matter.
 - **`cross-cutting`** - the above plus the interaction surface: how this
   behavior holds when adjacent features are also exercised.
 - **`critical`** - the above plus adversarial and boundary inputs, the rollback
   path, and the failure modes that lose data or money. Plus whatever any
   project coverage or security guardrail floor requires.
 
-An approach must never go *below* a project coverage-floor guardrail in
+No issue may go *below* a project coverage-floor guardrail in
 the rules in force (`compass policy show`; an unmigrated 5.x project runs on
 its own copied `governance/` until `compass policy migrate`). It can need *more* for higher risk, and must
 never need less.
 
 ## Working through several units
 
-Compass 9.0.0 builds the plan's work units one after another in one
+Compass 9.0.0 builds the work units one after another in one
 session, with no worktree per unit (ADR-090). Run each unit's full cycle -
 including its red, failing test - before you start the next, so one unit's red
 never hides another's. If a test for one unit reaches into another unit's

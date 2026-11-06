@@ -1,16 +1,18 @@
 # The full assess procedure
 
 Read by `/compass:assess` when the change is not a small one an engineer
-is making, when `compass quick-fix start` computed a heavier approach, or
-on `--reassess`. The light path stays in `commands/assess.md`.
+is making, for a spike, or on `--reassess`. The light path stays in
+`commands/assess.md`: `compass quick-fix start` assesses a change of any size
+in one call.
 
-Assessing is the one stage that never skips. It reads the three scored
-dimensions - that is **judgment** - and then hands them to the CLI, which
-**computes** the delivery approach deterministically. You do not pick a
-process, and you do not compose the approach in your head: you assess the
-work, record the assessment, and `compass approach evaluate` applies
-the routing rules in force to produce the approach. This is the
-determinism boundary - see `docs/methodology.md` §2.
+Assess is the first of the four stages of the path (`approaches/path.md`),
+and every issue runs it. It reads the three scored dimensions - that is
+**judgment** - and then hands them to the CLI, which **computes** the
+evidence the change owes. You do not pick a process, and you do not select
+the evidence in your head: you assess the work, record the assessment, and
+`compass approach evaluate` applies the configuration in force to produce
+the `evidence_required` list. This is the determinism boundary - see
+`docs/methodology.md` §2.
 
 Assess works on day one with **zero project setup**: the shipped default
 guardrails, strategies, and routing policy apply as-is, so `/compass:init` is
@@ -36,18 +38,17 @@ what `/compass:init` offers separately.
 ## Setup
 
 - Load the `adaptive-routing` skill - it is the procedural companion to the
-  delivery-approach rubric (`${CLAUDE_PLUGIN_ROOT}/approaches/rubric.md`).
+  assessment rubric (`${CLAUDE_PLUGIN_ROOT}/approaches/rubric.md`).
 - Read `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md` for the *why*.
   What `compass approach evaluate` actually runs is the effective
   configuration, which `compass policy show` prints: the shipped default
-  preset with the project's `compass.yml` over it. The CLI applies its
-  **policy floors, caps and immovable gates** (hard) and
-  its **default shapes and tie-breaking biases** (soft). You do not apply
-  these by hand; the CLI does. An unmigrated 5.x project runs on its own
+  preset with the project's `compass.yml` over it. The CLI matches the
+  **evidence rows**, then adds the configuration's **floors, immovable gates
+  and project guardrails**. You do not apply these by hand; the CLI does. An unmigrated 5.x project runs on its own
   copied `governance/`. `compass policy show` prints the shipped default and
   says the project runs on its copy; `compass approach evaluate` reads the copy.
-- Read `compass.yml` for project settings (test command, multiagent
-  worktree root), or `.compass/config.yml` in a 5.x project that has no
+- Read `compass.yml` for project settings (the test command, the
+  autonomy setting), or `.compass/config.yml` in a 5.x project that has no
   `compass.yml`. The same `compass.yml` holds the project's changes to the
   routing rules.
 - For a non-trivial or ambiguous issue, read the three scored dimensions
@@ -63,20 +64,23 @@ assessment - typically because implementation revealed the assessment was
 misread. Run `compass approach show` and read `manifest.yml`, re-read the
 three scored dimensions, update the manifest's `assessment:` block, then re-run
 `compass approach evaluate --write --reason "..." --justify DIM="..."` to recompute
-the approach, with one `--justify` for each value you changed.
+the evidence, with one `--justify` for each value you changed.
 **Always pass `--reason`** on a re-assessment: the CLI records the event in
-the manifest's `reassessments:` log (as kind `unchanged` when the approach did
+the manifest's `reassessments:` log (as kind `unchanged` when the evidence did
 not move, which `compass retro` does not count), and the
-reason is the signal `compass retro` reads. Then log the change to
-`devlog.md`. A re-assessment is a normal event. The failure is an issue that outgrows its
-approach unrecorded; a re-assessment with no reason gives `compass retro`
-nothing to read.
+reason is the signal `compass retro` reads. A re-assessment is a normal
+event. The failure is an issue that outgrows its assessment unrecorded; a
+re-assessment with no reason gives `compass retro` nothing to read.
+
+A re-assessment of an issue assessed before the path moves it onto the path:
+the CLI writes the path keys, removes the old `stages:` map and logs the old
+approach as `from_route` in `reassessments:`.
 
 A re-assessment also commits the next **generation** of the issue's stored
 configuration (`manifest.yml` names it in `generation:`), and the
 `reassessments:` entry records it as `generation: {from, to}`. To change the
 issue's own configuration, propose the change first with `compass issue
-configure` (for example `--mode refine=thorough`), read the preview, then
+configure` (for example `--autonomy controlled`), read the preview, then
 re-assess: the re-assessment applies the proposal. `--reset-config` drops the
 issue's `config:` layer instead. After an interrupted re-assessment,
 `compass issue configure --commit` adopts the complete folder it left, and
@@ -84,11 +88,11 @@ issue's `config:` layer instead. After an interrupted re-assessment,
 has the details.
 
 Re-assessing is also how a **spike graduates**: the spike's findings become
-an input to a fresh assessment for the real delivery work. If the new approach is
-no longer a spike, remove the `.spike` marker so the TDD strategy is back in
+an input to a fresh assessment for the real delivery work. If the new
+assessment puts the issue on the path, remove the `.spike` marker so the TDD strategy is back in
 force; if it is still a spike, leave the marker in place.
 
-## Procedure (follows the delivery-approach rubric exactly)
+## Procedure (follows the rubric exactly)
 
 1. **Create the manifest.** First read `.compass/current-task`. If it names
    an issue whose folder `.compass/work/<issue-slug>/` exists, reuse that
@@ -110,8 +114,9 @@ force; if it is still a spike, leave the marker in place.
    value and a one-line justification; labels need none. If a value cannot be justified, ask the user
    rather than guessing. When size is unsure, estimate *up*. Note:
    **exploration goal** - "I cannot state this well enough to deliver it
-   yet" - leads towards a **spike**, the way live-defect urgency leads towards
-   a hotfix. Write these into the manifest's `assessment:` block. The assessment
+   yet" - selects a **spike**, and **live-defect urgency** - something is
+   broken for users now - is the hotfix setting, which adds
+   `reproduce-first` to the evidence. Write these into the manifest's `assessment:` block. The assessment
    is the only part of the computation that is judgment - everything below
    is mechanism.
    Apply `auth`, `payments`, `personal-data` or `migrations` whenever the
@@ -121,7 +126,7 @@ force; if it is still a spike, leave the marker in place.
    attention to"; check whether the change is one of them before you go on.
 3. **Compute the delivery approach - this is the mechanism.** First run
    `compass approach evaluate --issue <slug>` without `--write`, and read
-   the approach it prints. Then run
+   the evidence it prints. Then run
    `compass approach evaluate --issue <slug> --write --justify
    <dimension>="<why>"` with one `--justify` for each assessed dimension (a
    changed value on a re-run needs a new one; an unchanged value keeps its
@@ -132,26 +137,23 @@ force; if it is still a spike, leave the marker in place.
    change, a refactor that keeps behavior); leave it out otherwise. The first
    write stores whether the four-layer acceptance strategy (`S17`) applies,
    and `compass approach show` shows it. It applies
-   the routing rules in force to the assessment: it composes the first approach,
-   applies the floors, caps and immovable gates, and
-   folds the resulting `delivery_approach`, `stages`, `gates` (status
-   pending), `subtask_ceiling`, and `policy_rules_fired` back into
-   `manifest.yml`. Breakdown records the orchestration later. You
-   do not compose the approach or apply a policy rule by hand - same
-   assessment + same policy => same approach, every time. If the assessment
-   is a misclassification, the CLI fails loudly; re-read the dimension it
-   rejected.
-4. **Open the devlog with the decision.** The manifest is the record of the
-   delivery approach, and `compass approach show` prints it; Compass writes
-   no delivery-approach document. Start `devlog.md` from
-   `${CLAUDE_PLUGIN_ROOT}/templates/devlog.md` with:
-   - the computed approach, and every policy rule the CLI reported as fired;
-   - **the de-scope reasons** - every stage the CLI marked collapsed or
-     skipped, each with an explicit "safe to skip because..." line. A stage
-     with no justification runs.
-
-   The dimensions' justifications are already in the manifest
-   (`justifications:`), so do not copy them.
+   the configuration in force to the assessment: it matches one evidence
+   row, adds what the labels, the risk and the configuration add, and
+   writes `delivery_approach` (`delivery`, or `spike`), `evidence_required`,
+   `gates` (status pending), `acceptance_strategy`, `checkpoints` and
+   `policy_rules_fired` to `manifest.yml`. It writes no `stages:` map: the
+   four stages are fixed. You do not select the evidence or apply a policy
+   rule by hand - same assessment + same configuration => same evidence,
+   every time. If the assessment is a misclassification, the CLI fails
+   loudly; re-read the dimension it rejected.
+4. **Read back the evidence.** Run `compass approach show`. Its evidence
+   line lists what the change owes before it ships, and it is what the
+   person confirms in step 7. The manifest is the record: Compass writes no
+   delivery-approach document and no `devlog.md` for a new issue (ADR-092).
+   Nothing is skipped on the path, so there are no de-scope reasons to
+   write. The dimensions' justifications and each rule that fired are
+   already in the manifest (`justifications:`, `policy_rules_fired:`), so do
+   not copy them.
 
 5. **Set the `.compass/current-task` pointer** with `compass issue use
    <slug>`, so every later `compass` call resolves to this issue without an
@@ -160,28 +162,30 @@ force; if it is still a spike, leave the marker in place.
    If this issue was found while working on another, record that too:
    `compass issue raised-by <parent> --found-at <where>`, where `<where>`
    is `define`, `plan`, `implement`, `verify`, `review`, `ci` or
-   `after-landing`.
+   `after-landing` (the CLI keeps these values; `define` and `plan` are
+   found while specifying, `implement` while building, `verify` at ship).
    `compass retro --lineage` counts these.
-6. **On a spike, write the `.spike` marker.** If the CLI's approach is a
-   spike, create an empty marker file at `.compass/work/<issue-slug>/.spike`.
+6. **On a spike, write the `.spike` marker.** If the CLI's approach is
+   `spike`, create an empty marker file at `.compass/work/<issue-slug>/.spike`.
    The approach-aware pre-tool hook reads this to know the TDD strategy is
    suspended for this issue (the hook does not block code edits). Do **not**
-   create this marker on any other approach.
+   create this marker on a delivery issue.
 7. **Confirm.** The assessment is advisory until confirmed. Present the
-   approach, invite override of any *dimension*, and if a dimension changes,
-   re-run `compass approach evaluate --write --justify DIM="..."` - never hand-edit the computed
-   approach. Log each override to `devlog.md` with who and why.
+   evidence line, invite override of any *dimension*, and if a dimension
+   changes, re-run `compass approach evaluate --write --justify DIM="..."` -
+   never hand-edit the computed evidence. Name who asked for the override,
+   and why, in its `--justify` reason, which the manifest keeps.
    Immovable gates and floors cannot be overridden; changing one means a
    reviewed change to the project's `compass.yml` (`docs/configuration.md`),
-   not overriding one issue's approach. A loosening needs a waiver that the
-   project's owner approves. Under `/compass:go`, the approach it already showed is
+   not overriding one issue's evidence. A loosening needs a waiver that the
+   project's owner approves. Under `/compass:go`, the evidence line it already showed is
    the confirmation: do not stop to wait for one, but act on an override
    whenever the person gives it.
    Wait for the confirmation only if `assess` is in the manifest's
    `checkpoints:`, which the project's `autonomy` setting in
    `compass.yml` decides (or `.compass/config.yml` in a project without
    one). If it is not listed, present the
-   approach, say you are going on without waiting and name the setting,
+   evidence line, say you are going on without waiting and name the setting,
    and record the passed hand-off with `compass issue checkpoint add assess
    --outcome skipped --by router`. If `assess` is listed, ask with `compass
    evidence request --checkpoint assess`; the person types `/compass:approve`, or
@@ -194,14 +198,14 @@ force; if it is still a spike, leave the marker in place.
 ## Voice
 
 Assess output is read by a person deciding what happens next, not narrated
-to them. State the assessment and the approach - never which stage you are
-entering. See `skills/compass-runtime/writing-voice.md`.
+to them. State the assessment and the evidence it owes - never which stage
+you are entering. See `skills/compass-runtime/writing-voice.md`.
 
 ## Gate
 
 `manifest.yml` exists with an `assessment:` block and a CLI-computed
-`delivery_approach`/`stages`/`gates`; every dimension has a justification,
-and every skipped stage has a written reason in `devlog.md`;
-`.compass/current-task` points at the slug. On a spike, the
-`.compass/work/<issue-slug>/.spike` marker exists. Then proceed to
-`/compass:define`.
+`delivery_approach`, `evidence_required` and `gates`; every dimension has a
+justification; `.compass/current-task` points at the slug. On a spike, the
+`.compass/work/<issue-slug>/.spike` marker exists. Then follow the `next:`
+line that `compass next` prints: on a delivery issue it names the first
+Specify step, and on a spike the first step that explores.

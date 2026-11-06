@@ -32,5 +32,5 @@ quality in.
 - **The judgment-free pass** - Reviewer signing off without the Verifier's
   artifacts, on the change "looking fine."
 - **Deadline as a dimension** - letting "we need to ship" stand in for a real
-  check. Hotfix compresses the stages *before* the verify stage; it never
-  compresses the gate.
+  check. The hotfix setting adds evidence (`reproduce-first`); it never
+  removes a gate.

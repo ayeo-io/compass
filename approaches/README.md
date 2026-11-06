@@ -1,47 +1,41 @@
-# Delivery approaches
+# Approaches
 
-A **delivery approach** is the computed shape of the pipeline for one issue:
-how heavy each of the eight stages is, which gates apply, and whether the work
-runs solo or as a multiagent orchestration. Approaches are *composed* from the three scored
-dimensions, two switches and the domain labels - see `rubric.md` - not picked from this list.
+A delivery issue runs one path of four stages: assess, specify, build and
+ship (ADR-092). Assess does not pick a process. It scores the three scored
+dimensions, reads the two switches and the domain labels (`rubric.md`), and
+`compass approach evaluate` selects the evidence the change owes before it
+ships. The path is the same for every size. A small change owes less
+evidence; a change that touches `auth` owes more.
 
-The five files here are **reference shapes**: the common shapes that
-composition lands near. Assess names the nearest one in the issue's
-delivery-approach record so everyone shares vocabulary, then records any
-per-stage deviation from it. "Regular, but verify adds the security
-dimension" is a normal, expected output.
+There are two approaches:
 
 | Approach | One-line character | Gates | Read |
 |---|---|---|---|
-| **quick fix** | The change is small and safe - stay out of the way, but still tested before it lands. | 3 | `quick-fix.md` |
-| **regular** | The default working shape - full pipeline, solo. | 6 | `regular.md` |
-| **full** | Big or cross-cutting - full weight, governance check, the work built unit by unit. | 7 | `full.md` |
-| **hotfix** | Something is broken in production now - reproduce-first, expedited implementation, mandatory follow-up. | 5 | `hotfix.md` |
-| **spike** | You do not understand the problem well enough to state it - explore freely, then graduate or discard. Nothing ships from here. | 1 | `spike.md` |
+| **delivery** | Any change that ships: the four-stage path, with the evidence assess selects. | 3 or more, from the evidence | `path.md` |
+| **spike** | You do not understand the problem well enough to state it. Explore, then graduate or discard. Nothing ships. | 1 | `spike.md` |
 
-The gate counts are what `governance/routing-policy.yml` computes for the
-shape's own assessment, before any floor or requirement adds more. A policy
-rule can raise them: a `critical` risk value turns the regular approach into
-the full approach and adds further gates. `compass approach evaluate --verbose`
-prints the set for any assessment, and it is the authority - this table is a
-summary of it.
+The hotfix is a setting of the assessment, `urgency: live-defect`, not an
+approach. `path.md` says what it adds.
 
-Every approach, however light or exploratory, obeys the **default guardrails**
-(the five in `governance/guardrails.md`). What an approach adapts is *process weight*
-and *strategy* - a spike, for instance, suspends the red-before-green TDD
-strategy, but it cannot suspend the tested-before-ship guardrail, because
-nothing lands from a spike without graduating to a real approach first. If an
-approach file ever seems to permit crossing a guardrail, that is a bug in the
-file: `docs/methodology.md` and `governance/guardrails.md` are the authority.
+`compass approach evaluate --verbose` prints the evidence and the gates for
+any assessment, and it is the authority: this table is a summary of it.
 
-## How to read an approach file
+Every issue, however light or exploratory, obeys the default guardrails in
+`governance/guardrails.md`. A spike suspends the red-before-green strategy,
+but not the tested-before-ship guardrail, because nothing lands from a spike
+until it graduates to the path. If a file here seems to permit crossing a
+guardrail, that is a bug in the file: `docs/methodology.md` and
+`governance/guardrails.md` are the authority.
 
-Each states, in order:
+## The files
 
-- when composition points towards it;
-- the per-stage weight;
-- the gate set;
-- the multiagent orchestration;
-- the de-scope ledger, listing what it collapses or skips with the standing
-  justification for each;
-- what it is *not* allowed to do.
+- `path.md` - the four stages, what each produces, the evidence rows, the
+  hotfix setting and the spike.
+- `spike.md` - the spike: when assess selects it, what it suspends, and how
+  it graduates or is discarded.
+- `rubric.md` - the three scored dimensions, the two switches and the domain
+  labels, with the test for each value.
+- `assess-procedure.md` - the full assess procedure, read by `/compass:assess`
+  for `--reassess` and when the change needs more than the light path.
+- `composition-reference.md` - how `compass approach evaluate` computes the
+  evidence, for a person who tunes the configuration or explains a result.

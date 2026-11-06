@@ -235,9 +235,9 @@ def test_trc_a3_a_moved_program_reads_stdin_only_where_it_did():
 #: project files: define (a hotfix's reproduction test), go, implement, quick-fix,
 #: resume and ship (living documents anywhere in the project).
 # The `breakdown`, `plan`, `refine` and `verify` commands also wrote issue state only;
-# ADR-092 decision 7 deleted them with the stages they ran.
-ISSUE_STATE_ONLY = ("assess", "consult", "design", "flow", "init", "intent",
-                    "position", "status")
+# ADR-092 decision 7 deleted them with the stages they ran. The role entry points
+# `consult`, `design`, `intent` and `position` went with ADR-093.
+ISSUE_STATE_ONLY = ("assess", "flow", "init", "status")
 DELETED_STAGE_COMMANDS = ("breakdown", "plan", "refine", "verify")
 SCOPES = ("./.compass/**", "./docs/**")
 

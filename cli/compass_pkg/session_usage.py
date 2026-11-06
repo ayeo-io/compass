@@ -9,8 +9,7 @@ runtime has no adapter yet and records `not-claude-code`.
 
 `stage_usage` stores only numbers, model names and times: none of the
 transcript's text, paths or error messages is kept, and a reason for
-recording nothing is one of `REASONS`. `events` returns text in memory for
-`compliance` to score; that module prints and stores none of it.
+recording nothing is one of `REASONS`. `events` returns text in memory only.
 """
 # DEPENDENCY: standard library (datetime, glob, json, os); compass_pkg.stable_ids.
 from __future__ import annotations

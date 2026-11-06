@@ -12,10 +12,10 @@ two types: `compass evidence add` refuses both. `isolation-proven` and
 The specification is `acceptance-criteria.md` of the Compass issue
 `atdd-strategy`. This file holds its scenarios of isolation and layering
 (`TRC-F1` to `TRC-F14`), the candidate scenario (`TRC-H5`), the routing
-scenarios (`TRC-A4`, `TRC-A7`, `TRC-A8`, `TRC-A10`, `TRC-A16`, `TRC-A18`
-and `TRC-A20`) and the end-to-end scenario (`TRC-X1`), for
-ayeo-io/compass-delivery#328. Each test names the scenario it checks;
-`support.py` builds the projects.
+scenarios (`TRC-A4`, `TRC-A7`, `TRC-A8`, `TRC-A10`, `TRC-A18` and `TRC-A20`)
+and the end-to-end scenario (`TRC-X1`), for ayeo-io/compass-delivery#328.
+Each test names the scenario it checks; `support.py` builds the projects.
+`TRC-A16` was the retrospective's, which 9.0.0 removed (ADR-093).
 """
 from __future__ import annotations
 
@@ -748,30 +748,6 @@ def test_trc_a10(tmp_path):
     for name in ("outer-loop-recorded", ISOLATION, LAYERING):
         assert _row(document, name)["status"] == "fail", _row(document, name)
     assert "no outer-loop green" in _row(document, "outer-loop-recorded")["detail"]
-
-
-# --- `TRC-A16`: the retrospective --------------------------------------------------------------
-
-def test_trc_a16(tmp_path):
-    """The retrospective counts out-of-scope issues that ran the strategy."""
-    project = _project(tmp_path)
-    for slug, kind in (("docs-a", "validation"), ("docs-b", "validation"),
-                       ("tidy", "refactor")):
-        issue = _issue(project, slug=slug, expected=kind, outer=False)
-        issue.acceptance_start(kind)
-        if slug == "docs-a":
-            _must_isolation(issue)
-        issue.close()
-    in_scope = _issue(project, slug="orders")
-    in_scope.close()
-    code, text, err = project.run("retro", "--acceptance")
-    assert code == 0, text + err
-    code, raw, err = project.run("retro", "--acceptance", "--format", "json")
-    report = json.loads(raw)
-    assert report["kinds"] == {"validation": 2, "refactor": 1, "in scope": 1}, report
-    assert report["ran_strategy"] == ["docs-a"], report
-    assert "2 validation, 1 refactor and 1 in scope" in text, text
-    assert "out-of-scope issues that ran the strategy: 1 (docs-a)" in text, text
 
 
 # --- `TRC-A18` and `TRC-A20`: a waiver makes the isolation check advisory ----------------------

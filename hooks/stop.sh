@@ -218,7 +218,7 @@ if [ "${#NUDGES[@]}" -gt 0 ]; then
     echo "  If the scope grew during Build, re-assess now:"
     echo "    /compass:assess --reassess --reason \"<what changed and why>\""
     echo ""
-    echo "  This preserves the calibration signal (compass retro)."
+    echo "  The reason is kept in the reassessments: log."
     echo "  This reminder does not block - the session ends regardless."
     echo "================================================================"
     echo ""

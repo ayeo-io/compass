@@ -136,13 +136,11 @@ def test_trc_044():
         _two_kinds(new, old=False)
         original = _manifest_path(old).read_bytes()
 
-        for args in (("issue", "lint", "--issue", "sample"), ("check", "--issue", "sample"),
-                     ("retro",)):
+        for args in (("issue", "lint", "--issue", "sample"), ("check", "--issue", "sample")):
             code_old, out_old, _ = _run(old, *args)
             code_new, out_new, _ = _run(new, *args)
             assert code_old == code_new, (args, out_old, out_new)
         assert _run(old, "issue", "lint", "--issue", "sample")[0] == 0
-        assert "total re-assessments : 2" in _run(old, "retro")[1]
 
         # A read leaves the file as it was.
         assert _manifest_path(old).read_bytes() == original
@@ -519,57 +517,15 @@ OLD_BEHAVIOR = "behav" + "iour"
 NEW_BEHAVIOR = "behav" + "ior"
 
 
-def _compliance_json(tmp_path):
-    import json
-    import test_eval_session_compliance as cs
-
-    home = tmp_path / "claude"
-    root = cs._project(tmp_path, {"good-fix": "sess-good", "bad-fix": "sess-bad"})
-    cs._clean("good-fix").write(home, "sess-good")
-    cs._route_around("bad-fix").write(home, "sess-bad")
-    done = cs._report(root, home, "--json")
-    assert done.returncode == 0, done.stdout + done.stderr
-    return json.loads(done.stdout), cs._report(root, home).stdout
-
-
-def _old_keys_emitted(data):
-    """The old twin keys a result still emits, by where they are."""
-    found = [k for k in data if k == OLD_BEHAVIOR + "s"]
-    found += [f"row:{n}" for n, row in data[NEW_BEHAVIOR + "s"].items() if OLD_BEHAVIOR in row]
-    found += [f"failure:{f['issue']}" for f in data["failures"] if OLD_BEHAVIOR in f]
-    return found
-
-
-def test_trc_053(tmp_path):
+def test_trc_053():
     from compass_pkg import old_names
 
-    data, text = _compliance_json(tmp_path)
-    # The id of the behavior the bad session breaks is an eval id, and no
-    # file outside evals/ may name one, so it is joined from two parts.
-    broken = "no_route" + "_around"
-    # The result holds both spellings of the list, with the same content.
-    assert data[NEW_BEHAVIOR + "s"] == data[OLD_BEHAVIOR + "s"]
-    assert data[NEW_BEHAVIOR + "s"][broken]["fail"] == 1
-    # Each row and each failure holds both spellings of its key, equal.
-    for name, row in data[NEW_BEHAVIOR + "s"].items():
-        assert row[NEW_BEHAVIOR] == row[OLD_BEHAVIOR] == name
-    assert data["failures"]
-    for failure in data["failures"]:
-        assert failure[NEW_BEHAVIOR] == failure[OLD_BEHAVIOR]
-    # A consumer that reads only the old keys gets what it got before.
-    assert {"issue": "bad-fix", OLD_BEHAVIOR: broken, "call": 2} in [
-        {k: v for k, v in f.items() if k != NEW_BEHAVIOR} for f in data["failures"]]
-    # The text view prints the US words only.
-    assert OLD_BEHAVIOR not in text and broken in text
-    # The old keys end at 9.0.0: the table lists them, and at 9.0.0 a result
-    # that still emits one is a problem.
-    assert _old_keys_emitted(data)
+    # The old JSON keys end at 9.0.0: the table lists them, and at 9.0.0 the
+    # table reports each one as a problem. The session report that emitted
+    # them was removed with `compass retro` (ADR-093).
     problems = old_names.removal_problems("9.0.0")
     assert any(f"json_key '{OLD_BEHAVIOR}'" in p for p in problems), problems
     assert any(f"json_key '{OLD_BEHAVIOR}s'" in p for p in problems), problems
-    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-    if old_names._version(version) >= (9, 0, 0):
-        assert _old_keys_emitted(data) == [], "an old JSON key is still emitted"
 
 
 # --- The JSON keys, the headings and the term --------------------------------

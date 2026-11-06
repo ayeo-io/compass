@@ -520,8 +520,8 @@ def cmd_land_commit(args):
     # AND only if its gates actually cleared.
     #
     # The tested-before-ship guardrail (`G1`) is checked at the verify stage
-    # and at ship. `compass retro` and every cross-issue report read the
-    # status, so an issue
+    # and at ship. `compass flow` and every reader of the status trust it,
+    # so an issue
     # whose gates failed must not be recorded as landed.
     landed_note = ""
     if getattr(args, "task", None):

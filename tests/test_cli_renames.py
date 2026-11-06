@@ -388,7 +388,8 @@ def test_vr_e6_a_planted_hint_row_names_the_new_spelling_and_runs_nothing():
     assert aliases.hint_for(["policy", "show"], PLANTED_HINTS) is None
     assert aliases.hint_for(
         ["issue", "friction", "--category", "tooling", "--phase=assess"], PLANTED_HINTS) == (
-        "'issue friction --phase' is now 'issue friction --stage'.")
+        "'issue friction --phase' is now 'issue friction --stage', which was removed "
+        "in 9.0.0 (ADR-093).")
     assert aliases.hint_for(["policy", "effective"], {"aliases": [], "hints": []}) is None
     assert aliases.rewrite(["policy", "effective"], PLANTED_HINTS) == (
         ["policy", "effective"], None)
@@ -433,13 +434,12 @@ def test_vr_e6_no_hint_spelling_is_held_by_a_release(tmp_path):
 
 FIXED = {"show", "list", "add", "remove", "set", "render", "lint", "test", "diff",
          "update", "migrate", "sync", "init"}
-TOP = {"init", "check", "ci", "run", "next", "retro", "flow"}
+TOP = {"init", "check", "ci", "run", "next", "flow"}
 
 EXCEPTIONS = {
     "tdd-red": "named for the red step of red-green-refactor, which the pre-tool hook and every command file call by this name",
     "tdd-green": "the green step, paired with tdd-red",
     "ship-commit": "the commit step inside shipping; named in the contract and the ship command",
-    "rework-scan": "a report verb named for what it scans; renaming it needs an alias no release owes yet",
     "terminology": "prints the vocabulary; a noun that is its own command",
     "readiness": "measures the repository and writes the readiness record; a noun that is its own command, named by the spec that added it",
     "release notes": "prints the release lines since a ref; the spelling the requirement that added it names",
@@ -448,7 +448,6 @@ EXCEPTIONS = {
     "bdd verify": "runs the BDD suite and records the result; a verb of the bdd group",
     "issue diagnose": "explains one run from its records; a verb of the issue group",
     "issue use": "moves the current-issue pointer; the pointer verb every session reads",
-    "issue friction": "records one process-friction entry; a noun the retro report groups by",
     "issue configure": "proposes a change to one issue's configuration",
     "issue raised-by": "records the issue this one was found in; the maintainer named it an exception",
     "acceptance start": "opens an acceptance record for a change with no natural red",
@@ -713,40 +712,3 @@ def test_vr_e13_a_planted_value_row_for_an_unreleased_value_fails(tmp_path):
     assert release_problems([held], cli, p) == []
     planted = dict(held, old=["run", "--stage", "implement"], new=["run", "--stage", "x"])
     assert release_problems([planted], cli, p), "a value the tag does not list must fail"
-
-
-# --- VR-E9: issue friction takes --stage; --phase is an unknown option ---------
-
-def test_vr_e9_issue_friction_with_stage_records_an_entry_keyed_stage(tmp_path):
-    project = _project(tmp_path / "p")
-    task = project / ".compass" / "work" / "sample"
-    (task / "evidence").mkdir()
-    (task / "evidence" / "red.log").write_text("1 failed\n", encoding="utf-8")
-    rc, out, err = _run(["issue", "friction", "--category", "tooling", "--stage",
-                         "implement", "--observed", "evidence/red.log",
-                         "--fix", "Run the suite once"], project)
-    assert rc == 0, (out, err)
-    assert "(tooling, implement)" in out and not _notices(err), (out, err)
-    [entry] = yaml.safe_load((task / "manifest.yml").read_text())["friction"]
-    assert entry["stage"] == "implement" and "phase" not in entry, entry
-
-
-def test_vr_e9_the_stage_flag_lists_the_stage_ids_and_the_help_has_no_phase_flag(tmp_path):
-    rc, out, err = _run(["issue", "friction", "--help"], _project(tmp_path / "p"))
-    assert rc == 0, err
-    assert "--stage" in out and "--phase" not in out, out
-
-
-def test_vr_e9_the_phase_flag_records_nothing(tmp_path):
-    project = _project(tmp_path / "p")
-    task = project / ".compass" / "work" / "sample"
-    (task / "evidence").mkdir()
-    (task / "evidence" / "red.log").write_text("1 failed\n", encoding="utf-8")
-    before = (task / "manifest.yml").read_text()
-    rc, out, err = _run(["issue", "friction", "--category", "tooling", "--phase",
-                         "implement", "--observed", "evidence/red.log",
-                         "--fix", "Run the suite once"], project)
-    assert rc == 2 and out == "", (rc, out, err)
-    assert "is now '" not in err, err
-    assert "works until 7.0.0" not in err
-    assert (task / "manifest.yml").read_text() == before

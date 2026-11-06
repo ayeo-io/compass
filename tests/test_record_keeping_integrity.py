@@ -7,8 +7,8 @@ losing or failing to record information.
     exist must not pass `compass check`. Scoped to issues that are still `active`
     AND have already claimed `verify.correctness: pass`, because TDD writes a
     test id at define before the test exists.
-  * friction merge (group B) - `_friction-capture` appends human notes instead
-    of overwriting the list.
+  * friction merge (group B) - `_friction-capture` appended human notes instead
+    of overwriting the list; 9.0.0 removed it (ADR-093).
   * provenance column (group C) - the review-dimensions table records who
     assessed each judgement dimension.
 
@@ -239,93 +239,11 @@ def test_trc_a6_policy_lint_accepts_the_check(run_cli):
 
 
 # ---------------------------------------------------------------------------
-# Group B - friction is appended, not overwritten
+# Group B - friction capture
 # ---------------------------------------------------------------------------
 
-def _friction_task(slug, make_task, friction=None):
-    body = {
-        "task": slug, "created": "2026-08-03", "status": "active",
-        "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
-                     "size": "small", "intent": "delivery"},
-        "delivery_approach": "express", "scenarios": [], "gates": [], "follow_ups": [],
-    }
-    if friction is not None:
-        body["friction"] = friction
-    return make_task(slug, body)
-
-
-def test_trc_b1_second_note_appends(run_cli, make_task):
-    """The defect: `task['friction'] = entries` discarded the first note."""
-    task_dir = _friction_task("fric", make_task, friction=[
-        {"phase": "verify", "category": "tooling", "source": "human",
-         "observation": "the first note"},
-    ])
-
-    r = run_cli("_friction-capture", "--internal", "--issue", "fric",
-                "--note", "the second note", "--note-category", "tooling",
-                "--note-stage", "land")
-    assert r.returncode == 0, r
-
-    got = yaml.safe_load((task_dir / "manifest.yml").read_text())["friction"]
-    observations = [e["observation"] for e in got]
-    assert "the first note" in observations, (
-        "the earlier note was destroyed - this is the bug:\n" + str(got))
-    assert "the second note" in observations
-    assert len(got) == 2, got
-
-
-def test_trc_b2_derived_entries_not_duplicated(run_cli, make_task):
-    """Derived entries are recomputed each run, so a plain append would
-    duplicate them (DD-3)."""
-    task_dir = _friction_task("fric", make_task, friction=[
-        {"phase": "plan", "category": "over-ceremony", "source": "derived",
-         "observation": "a derived observation"},
-    ])
-
-    run_cli("_friction-capture", "--internal", "--issue", "fric",
-            "--note", "a human note", "--note-category", "tooling")
-
-    got = yaml.safe_load((task_dir / "manifest.yml").read_text())["friction"]
-    derived = [e for e in got if e.get("observation") == "a derived observation"]
-    assert len(derived) <= 1, f"derived entry duplicated: {got}"
-
-
-def test_trc_b1_identical_note_not_appended_twice(run_cli, make_task):
-    task_dir = _friction_task("fric", make_task, friction=[
-        {"phase": "verify", "category": "tooling", "source": "human",
-         "observation": "same note"},
-    ])
-
-    run_cli("_friction-capture", "--internal", "--issue", "fric",
-            "--note", "same note", "--note-category", "tooling",
-            "--note-stage", "verify")
-
-    got = yaml.safe_load((task_dir / "manifest.yml").read_text())["friction"]
-    assert len([e for e in got if e["observation"] == "same note"]) == 1, got
-
-
-def test_trc_b3_nothing_captured_stays_absent(run_cli, make_task):
-    """An issue that hit no friction stays a clean no-op (ADR-006)."""
-    task_dir = _friction_task("fric", make_task)
-
-    r = run_cli("_friction-capture", "--internal", "--issue", "fric")
-
-    assert r.returncode == 0, r
-    body = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert "friction" not in body or not body["friction"], body
-    assert "nothing recorded" in r.stdout.lower(), r
-
-
-def test_trc_f2_task_without_friction_key_loads(run_cli, make_task):
-    """A manifest written before the friction key existed must still accept a note."""
-    task_dir = _friction_task("fric", make_task)   # no friction key at all
-
-    r = run_cli("_friction-capture", "--internal", "--issue", "fric",
-                "--note", "a note", "--note-category", "tooling")
-
-    assert r.returncode == 0, r
-    got = yaml.safe_load((task_dir / "manifest.yml").read_text())["friction"]
-    assert [e["observation"] for e in got] == ["a note"], got
+# `TRC-B1` to `TRC-B3` and `TRC-F2` ran `_friction-capture`, which 9.0.0
+# removed (ADR-093).
 
 
 # ---------------------------------------------------------------------------

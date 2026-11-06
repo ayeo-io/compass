@@ -3,7 +3,8 @@ applicability, its routing and the project opt-out.
 
 The specification is `acceptance-criteria.md` of the Compass issue
 `acceptance-strategy-core` (ayeo-io/compass-delivery#321). Each test names
-the scenario it checks; `support.py` builds the projects.
+the scenario it checks; `support.py` builds the projects. `TRC-A15` and
+`TRC-A21` were the retrospective's, which 9.0.0 removed (ADR-093).
 """
 from __future__ import annotations
 
@@ -262,74 +263,6 @@ def test_trc_a14(tmp_path):
     assert _row(issue.check()[1])["status"] == "nothing-to-check"
 
 
-# --- `TRC-A15` and `TRC-A21`: the retrospective ----------------------------------------------
-
-def _retro(project):
-    code, out, err = project.run("retro", "--acceptance")
-    assert code == 0, out + err
-    code, raw, err = project.run("retro", "--acceptance", "--format", "json")
-    assert code == 0, raw + err
-    return out, json.loads(raw)
-
-
-def _closed_in_scope(project, slug):
-    issue = project.issue(slug)
-    assert issue.assess()[0] == 0
-    issue.red()
-    issue.green()
-    issue.close()
-    return issue
-
-
-def test_trc_a15(tmp_path):
-    """The retrospective reports an opted-out project apart."""
-    project = support.Project(tmp_path / "repo")
-    project.setting({"state": "off", "reason": OFF_REASON})
-    for n in range(3):
-        _closed_in_scope(project, f"change-{n}")
-    text, report = _retro(project)
-    assert f"has opted out of the {STRATEGY}" in text and OFF_REASON in text, text
-    assert report["opted_out"] == {"reason": OFF_REASON}
-    assert report["measured"] == []
-    assert sorted(report["off"]) == ["change-0", "change-1", "change-2"]
-
-
-WAIVER_REASON = "the staging environment is down until 3 November"
-
-
-def test_trc_a21(tmp_path):
-    """The retrospective reports an issue that stepped off apart."""
-    project = support.Project(tmp_path / "repo")
-    project.setting(None, owner="jed72")
-    for n in range(3):
-        _closed_in_scope(project, f"change-{n}")
-    issue = support.Issue(project, "change-1")
-    body = issue.manifest()
-    body["config"] = {"checks": {CHECK: {
-        "set": {"on_skipped": "pass"},
-        "waiver": {"reason": WAIVER_REASON, "approved_by": "EV-W1"}}}}
-    body["evidence"].append({
-        "id": "EV-W1", "type": "human-approval", "decision": "approved",
-        "approver": "jed72", "role": "owner", "scope": "waiver",
-        "timestamp": "2026-10-29T10:00:00Z",
-        "waiver": {"scope": "issue", "entry": f"checks.{CHECK}",
-                   "fields": {"on_skipped": {"from": "not-applicable", "to": "pass"}}}})
-    issue.write_manifest(body)
-    code, out, err = issue.assess(reason="step off the strategy for one issue")
-    assert code == 0, out + err
-    # An issue closed as not planned delivered nothing, so it is not measured.
-    dropped = project.issue("dropped")
-    assert dropped.assess()[0] == 0
-    dropped.red()
-    body = dropped.manifest()
-    body.update({"status": "done", "close_reason": "not-planned"})
-    dropped.write_manifest(body)
-    text, report = _retro(project)
-    assert "change-1" in text and WAIVER_REASON in text, text
-    assert sorted(report["measured"]) == ["change-0", "change-2"]
-    assert report["stepped_off"] == [{"issue": "change-1", "reason": WAIVER_REASON}]
-
-
 # --- `TRC-A19` -----------------------------------------------------------------------------
 
 def test_trc_a19():
@@ -491,4 +424,3 @@ def test_trc_a23_a_bad_setting_does_not_stop_a_pinned_project(tmp_path):
     (project.root / "compass.yml").write_text(
         "schema: 1\nextends: compass:default@7\nacceptance_strategy: maybe\n", encoding="utf-8")
     assert issue.run("check", "--issue", "change")[0] != 2
-    assert project.run("retro", "--acceptance")[0] == 0

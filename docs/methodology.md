@@ -240,18 +240,9 @@ Reassess when risk, size, familiarity or goal changes materially, with
 `/compass:assess --reassess --reason "..."`. The re-assessment computes the
 evidence again and records the change. Do not continue as if nothing changed.
 
-Across issues, Compass exposes advisory signals:
-
-- `compass retro` shows whether delivery approaches are commonly increased or reduced,
-  and, in order of assessment, the repository readiness each issue recorded (the score or
-  "not measured", and whether the floor was met);
-- `compass rework-scan` identifies configured cross-issue churn patterns;
-- `compass flow` shows status, blockers and follow-ups; and
-- friction records highlight recurring over-weight, under-weight or
-  tooling problems.
-
-These signals never tune governance automatically and do not gate delivery.
-They inform a human decision to change the rubric, policy or strategies.
+Across issues, `compass flow` shows status, blockers and follow-ups. It is
+advisory: it never tunes governance and does not gate delivery. sdd-bench,
+not Compass, measures whether the framework helps.
 
 ## 11. The three layers: methodology, kit and adapter
 

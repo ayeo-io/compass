@@ -1,9 +1,8 @@
 # compass_pkg.autonomy_cost - the autonomy ratio, the bands and the cost per change
 """Figures derived from what `checkpoint_outcomes` and `usage` record.
 
-Nothing here is stored. The retro (`compass retro --impact`) and
-`compass issue diagnose` call these functions on every read, so both give the
-same number for the same issue. The definitions are in `docs/autonomy-and-cost.md`.
+Nothing here is stored. `compass issue diagnose` calls these functions on
+every read. The definitions are in `docs/autonomy-and-cost.md`.
 
 - A shipped issue is *measurable* when it is judged (it holds the
   `checkpoint_outcomes` key), lists checkpoints as a list and holds an outcome
@@ -22,15 +21,18 @@ A figure below its floor is withheld: its value is `None` and it carries a
 reason, never a zero.
 """
 # DEPENDENCY: standard library (math); compass_pkg.status_words,
-# checkpoint_outcomes, approval_records, effective, decisions_taken. The
-# floors are read from compass_pkg.calibration when a row is built, because
-# that module imports this one.
+# checkpoint_outcomes, approval_records, effective, decisions_taken.
 from __future__ import annotations
 
 import math
 
 from compass_pkg import approval_records, checkpoint_outcomes, status_words
 from compass_pkg.stable_ids import STAGE_IDS
+
+#: Shipped issues a row needs before it shows a value.
+IMPACT_SAMPLE_FLOOR = 20
+#: Issues a delivery-approach group needs before its cost is shown.
+IMPACT_GROUP_FLOOR = 3
 
 #: What each band counts, shown beside its number so no reader adds unlike things.
 UNITS = {"human_judgement": "checkpoints and human checks",
@@ -252,10 +254,9 @@ def decisions_row(work_root, floor, issues=None) -> dict:
 
 
 def impact_rows(issues, work_root) -> dict:
-    """The four row objects of `compass retro --impact`. `issues` is
-    `[(slug, manifest)]`; `work_root` holds each issue's folder."""
-    from compass_pkg import calibration
-    floor, group = calibration.IMPACT_SAMPLE_FLOOR, calibration.IMPACT_GROUP_FLOOR
+    """The four row objects over `issues`, `[(slug, manifest)]`; `work_root`
+    holds each issue's folder."""
+    floor, group = IMPACT_SAMPLE_FLOOR, IMPACT_GROUP_FLOOR
     issues = [(slug, d) for slug, d in issues if isinstance(d, dict)]
     return {"autonomy_ratio": ratio_row(issues, floor),
             "band_split": band_row(issues, work_root, floor),
@@ -274,7 +275,7 @@ def _dollars(value):
 
 
 def render_rows(rows) -> list:
-    """The lines the retro prints after its by-approach block."""
+    """The text lines of the four rows of `impact_rows`."""
     out = []
     ratio = rows["autonomy_ratio"]
     left = " (%d shipped issue(s) not measurable)" % ratio["not_measurable"]
@@ -306,7 +307,7 @@ def render_rows(rows) -> list:
         for approach, g in cost["value"].items():
             if g["withheld"]:
                 out.append("                %-10s n=%d  (under %d - not summarised)"
-                           % (approach, g["issues"], _group_floor()))
+                           % (approach, g["issues"], IMPACT_GROUP_FLOOR))
                 continue
             per_scenario = ("unmeasurable - %s" % g["per_scenario_withheld"]
                             if g.get("per_scenario_withheld")
@@ -331,7 +332,3 @@ def render_rows(rows) -> list:
         out.append(line)
     return out
 
-
-def _group_floor():
-    from compass_pkg import calibration
-    return calibration.IMPACT_GROUP_FLOOR

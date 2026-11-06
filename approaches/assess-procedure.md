@@ -67,10 +67,9 @@ three scored dimensions, update the manifest's `assessment:` block, then re-run
 the evidence, with one `--justify` for each value you changed.
 **Always pass `--reason`** on a re-assessment: the CLI records the event in
 the manifest's `reassessments:` log (as kind `unchanged` when the evidence did
-not move, which `compass retro` does not count), and the
-reason is the signal `compass retro` reads. A re-assessment is a normal
-event. The failure is an issue that outgrows its assessment unrecorded; a
-re-assessment with no reason gives `compass retro` nothing to read.
+not move), with the reason. A re-assessment is a normal event. The failure
+is an issue that outgrows its assessment unrecorded; a re-assessment with no
+reason tells a reviewer nothing.
 
 A re-assessment of an issue assessed before the path moves it onto the path:
 the CLI writes the path keys, removes the old `stages:` map and logs the old
@@ -164,7 +163,6 @@ force; if it is still a spike, leave the marker in place.
    is `define`, `plan`, `implement`, `verify`, `review`, `ci` or
    `after-landing` (the CLI keeps these values; `define` and `plan` are
    found while specifying, `implement` while building, `verify` at ship).
-   `compass retro --lineage` counts these.
 6. **On a spike, write the `.spike` marker.** If the CLI's approach is
    `spike`, create an empty marker file at `.compass/work/<issue-slug>/.spike`.
    The approach-aware pre-tool hook reads this to know the TDD strategy is

@@ -106,13 +106,6 @@ def test_rn_4_an_unknown_delivery_approach_is_reported():
     raise AssertionError("delivery_approach accepts a value that is not a route")
 
 
-def test_rn_5_the_retro_needs_no_translation():
-    source = (ROOT / "cli" / "compass_pkg" / "calibration.py").read_text(
-        encoding="utf-8")
-    assert 'migrate_map_section("values", {})' not in source, (
-        "the retro still copies weights from old names to new")
-
-
 def test_rn_6_the_approach_documents_carry_the_route_names():
     approaches = ROOT / "approaches"
     # ADR-092 decision 1: one path replaces the quick-fix, regular, full and

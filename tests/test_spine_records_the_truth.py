@@ -152,32 +152,6 @@ def test_scn_a4_entry_carries_a_kind(tmp_path):
     assert _task(root)["reassessments"][-1].get("kind") == "judgment", _task(root)["reassessments"]
 
 
-def test_scn_a5_calibration_counts_only_judgement(tmp_path):
-    """A policy-correction reassessment would otherwise read as assessment
-    under-sizing the work, which skews the retro signal."""
-    reframes = [
-        {"from_route": "standard", "to_route": "expedition", "kind": "judgement",
-         "reason": "magnitude under-read", "date": "2026-08-01"},
-        {"from_route": "standard", "to_route": "expedition",
-         "kind": "policy-correction", "reason": "adopted newer policy",
-         "date": "2026-08-02"},
-    ]
-    root = _project(tmp_path, _base(route="expedition", reassessments=reframes))
-    # The 8.0.4 governance copy: the retro weighs a route by the approach
-    # weights of the configuration in force, and the shipped default declares
-    # only the spike and the path since 9.0.0 (ADR-092).
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import compat_baseline as cb
-    cb.add_governance_copy(root, source=cb.GOVERNANCE_8_0_4)
-    r = _run(root, "retro")
-    out = r.stdout + r.stderr
-    assert "policy-correction" in out or "1" in out, out
-    # The judgement re-assessment counts as one up; the policy correction
-    # must not count as a second.
-    assert "(1 up / 0 down)" in out, (
-        f"a policy-correction was counted in the re-sizing signal:\n{out}")
-
-
 # ---------------------------------------------------------------------------
 # Group B - evidence shape (R15)
 # ---------------------------------------------------------------------------
@@ -262,4 +236,3 @@ def test_scn_f1_existing_task_files_unchanged(tmp_path):
          "reason": "magnitude under-read", "date": "2026-07-01"}])
     root = _project(tmp_path, old)
     assert _run(root, "issue", "lint", "--issue", "t").returncode == 0
-    assert _run(root, "retro").returncode == 0

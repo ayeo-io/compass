@@ -64,7 +64,6 @@ from compass_pkg._all import *  # noqa: F401,F403
 from compass_pkg.status_cmd import register as register_status_parser  # noqa: E402
 from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # noqa: E402
 from compass_pkg.decisions import register as register_decision_parser  # noqa: E402
-from compass_pkg.agent_friction import register as register_issue_friction_parser  # noqa: E402
 from compass_pkg.lineage import cmd_issue_raised_by  # noqa: E402
 from compass_pkg.approach_diagram import cmd_approach_diagram  # noqa: E402
 from compass_pkg.diagnose import register as register_diagnose_parser  # noqa: E402
@@ -143,16 +142,15 @@ def build_parser():
                           "nothing; also set by COMPASS_OFFLINE=1")
     pre.add_argument("--reason",
                      help="when --write detects a re-assessment, record this as "
-                          "the reason - it is the retrospective signal. A "
+                          "the reason in the reassessments: log. A "
                           "reassess that changes nothing records it too, as "
                           "an unchanged entry")
     pre.add_argument("--kind", type=old_names.kind_type,
                      choices=["judgment", "policy-correction",
                               "scope-change", "configuration"],
                      help="what kind of re-assessment this is (default: "
-                          "judgment). Only judgment feeds the retrospective "
-                          "re-sizing signal - a policy correction is not "
-                          "assessment mis-reading the work. A reassess that "
+                          "judgment). A judgment entry says assessment misread "
+                          "the work; a policy correction does not. A reassess that "
                           "changes only the issue's config: layer is recorded "
                           "as configuration without this flag, and one that "
                           "changes nothing but is given a --reason is "
@@ -215,55 +213,6 @@ def build_parser():
     issue_arg(pc)
     pc.set_defaults(func=cmd_check, output_kind="hand-off")
 
-    pcal = sub.add_parser("retro",
-                          help="the retrospective signal - re-assessment "
-                               "patterns across all issues (is assessment "
-                               "well-sized?)")
-    pcal.add_argument(
-        "--impact", action="store_true",
-        help="process-impact signal: lead time, land frequency, change-fail and "
-             "restore time, attributed to approach and gate set (advisory)")
-    pcal.add_argument(
-        "--friction",
-        action="store_true",
-        help="aggregate the per-issue `friction:` signal instead of re-assessments - "
-             "recurring process friction grouped by category and proposed "
-             "change (advisory only; exit 0 always)",
-    )
-    pcal.add_argument(
-        "--lessons", action="store_true",
-        help="propose friction seen in three or more issues as pending lessons "
-             "(nothing becomes a lesson until `compass lesson accept`)")
-    pcal.add_argument(
-        "--compliance", action="store_true",
-        help="score real sessions from their transcripts against the "
-             "process behaviors (advisory; exit 0)")
-    pcal.add_argument("--days", type=int, metavar="N",
-                      help="with --compliance: issues started in the last N "
-                           "days (default 14)")
-    pcal.add_argument("--issue", dest="issue_slug", metavar="SLUG",
-                      help="with --compliance: one issue only")
-    pcal.add_argument(
-        "--lineage", action="store_true",
-        help="count issues raised from another issue by where they were "
-             "found, before or after the parent landed (advisory; exit 0)")
-    pcal.add_argument(
-        "--acceptance", action="store_true",
-        help="the four-layer acceptance strategy's measures over closed issues, with an "
-             "opted-out project and each issue that stepped off reported apart "
-             "(advisory; exit 0)")
-    pcal.add_argument(
-        "--decisions", action="store_true",
-        help="count how decisions agents took for the person were settled: confirmed, "
-             "changed, never confirmed (advisory; exit 0)")
-    pcal.add_argument(
-        "--format",
-        choices=["markdown", "json"],
-        default="markdown",
-        help="output format for --friction, --decisions and --impact (default: markdown)",
-    )
-    pcal.set_defaults(func=cmd_calibration, output_kind="report")
-
     pci = sub.add_parser("ci",
                          help="run the full mechanical gate suite (policy lint "
                               "+ issue lint + check, all issues, or with --since "
@@ -324,7 +273,6 @@ def build_parser():
     register_diagnose_parser(pts, issue_arg)
     register_issue_use_parser(pts)
     register_migrate_config_parser(pts, issue_arg)
-    register_issue_friction_parser(pts)
     from compass_pkg.decisions_taken import register as register_issue_decision_parser
     register_issue_decision_parser(pts)
     from compass_pkg.checkpoint_outcomes import register as register_issue_checkpoint_parser
@@ -334,9 +282,8 @@ def build_parser():
     ptrb = pts.add_parser(
         "raised-by", help="record the issue this one was found in",
         description="Record the issue this one was found in, and where: the "
-                    "manifest's raised_by key, which `compass retro --lineage` "
-                    "counts. The third issue in a chain is told to correct "
-                    "every place at once.")
+                    "manifest's raised_by key. The third issue in a chain is "
+                    "told to correct every place at once.")
     ptrb.add_argument("parent", help="the parent issue's slug")
     ptrb.add_argument("--found-at", required=True,
                       help="specify, build, ship, review, ci or after-landing")
@@ -382,32 +329,6 @@ def build_parser():
     )
     padrn.set_defaults(func=cmd_adr_new, output_kind="hand-off")
 
-    prs2 = sub.add_parser(
-        "rework-scan",
-        help="cross-issue rework scanner - detect add-then-delete patterns "
-             "across issues (signal only; exit 0 on detection)",
-    )
-    prs2.add_argument(
-        "--root",
-        default=None,
-        help="root directory to scan for manifest.yml files "
-             "(default: .compass/work/ in the current project)",
-    )
-    prs2.add_argument(
-        "--window-days",
-        type=int,
-        default=None,
-        dest="window_days",
-        help="override the window_days from signals.yml",
-    )
-    prs2.add_argument(
-        "--format",
-        choices=["markdown", "json"],
-        default="markdown",
-        help="output format (default: markdown)",
-    )
-    prs2.set_defaults(func=cmd_rework_scan, output_kind="report")
-
     pfl = sub.add_parser(
         "flow",
         help="cross-issue flow view - status board and optional digest "
@@ -422,8 +343,8 @@ def build_parser():
     pfl.add_argument(
         "--digest",
         action="store_true",
-        help="write a dated digest to stdout including the rework-scan "
-             "section and calibration signal (Inv-4: advisory only)",
+        help="write a dated digest of the backlog to stdout "
+             "(Inv-4: advisory only)",
     )
     pfl.add_argument(
         "--work-root",
@@ -467,8 +388,9 @@ def build_parser():
         "backfill_id", metavar="follow-up-id",
         help="the follow-up id to mark resolved (e.g. BF-1)"
     )
-    pbfp.set_defaults(func=cmd_backfill_pay, output_kind="hand-off")
+    from compass_pkg.follow_up_cmd import cmd_backfill_pay
     from compass_pkg.follow_up_cmd import register as _register_follow_up_add
+    pbfp.set_defaults(func=cmd_backfill_pay, output_kind="hand-off")
     _register_follow_up_add(pbfs)
 
     plc = sub.add_parser(
@@ -605,17 +527,6 @@ def build_parser():
     p_marc.add_argument("roots", nargs="*", help=argparse.SUPPRESS)
     from compass_pkg.migrate import cmd_migrate_archive as _cmd_marc
     p_marc.set_defaults(func=_cmd_marc, output_kind="hand-off")
-
-    # Private entry point for the friction-capture step of ship, called by
-    # `commands/ship.md`. It adds no public verb.
-    p_fric = sub.add_parser("_friction-capture", help=argparse.SUPPRESS)
-    p_fric.add_argument("--internal", action="store_true", help=argparse.SUPPRESS)
-    p_fric.add_argument("--issue", dest="task", metavar="SLUG", help=argparse.SUPPRESS)
-    p_fric.add_argument("--note", help=argparse.SUPPRESS)
-    p_fric.add_argument("--note-category", dest="note_category",
-                        help=argparse.SUPPRESS)
-    p_fric.add_argument("--note-stage", dest="note_stage", help=argparse.SUPPRESS)
-    p_fric.set_defaults(func=cmd_friction_capture, output_kind="hand-off")
 
     # Private entry point that renders one refusal from the registry in
     # cli/compass_pkg/refusals.py. hooks/pre-tool.sh calls it at every

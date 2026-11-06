@@ -176,8 +176,8 @@ compass_block() {
 }
 
 # Counts the block for the current issue in `.compass/interruptions.log`, an
-# append-only log outside every issue folder, so `compass retro` can report
-# how often the framework stopped work. Only once an issue is known (TASK_DIR is set);
+# append-only log outside every issue folder, so `compass issue diagnose` can
+# report how often the framework stopped work. Only once an issue is known (TASK_DIR is set);
 # every error is swallowed and the exit code is untouched, because a count
 # must never change the block it counts.
 compass_count_block() {

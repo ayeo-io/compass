@@ -359,9 +359,9 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         cwd=REPO_ROOT, capture_output=True, text=True, check=True,
     )
     known_verbs = {
-        "approach", "bdd", "check", "retro", "ci", "tdd-red",
-        "tdd-green", "policy", "intent", "issue", "acceptance", "adr",
-        "rework-scan", "flow", "next", "follow-up", "ship-commit", "gate",
+        "approach", "bdd", "check", "ci", "tdd-red",
+        "tdd-green", "policy", "issue", "acceptance", "adr",
+        "flow", "next", "follow-up", "ship-commit", "gate",
         "scenario", "changed-file", "evidence", "review-rule", "preset", "terminology",
         "init", "quick-fix",
         "decision",  # decisions-ledger (ADR-027): the settled-decisions ledger

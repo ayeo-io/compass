@@ -21,9 +21,9 @@ exclusively, and what it must not do.
 
 | Component | Owns | Must own exclusively |
 |---|---|---|
-| `cli/compass` | Approach evaluation, gate checking, tdd-red/green evidence, rework-scan, retro, ADR helpers | All mechanism-produced writes to issue manifests and evidence directories |
+| `cli/compass` | Approach evaluation, gate checking, tdd-red/green evidence, ADR helpers | All mechanism-produced writes to issue manifests and evidence directories |
 | `hooks/pre-tool.sh`, with its parts in `hooks/lib/` and its programs in `hooks/py/pre_tool_*.py` | `.red` marker gate enforcement | The decision of whether to block a tool call |
-| `hooks/stop.sh` | Session-end signal scanning, rework prompt | Detection of scope-bloat and rework signals |
+| `hooks/stop.sh` | Session-end signal scanning, re-assessment prompt | Detection of scope-bloat signals |
 | `commands/*.md` | Phase slash-command definitions | The user-facing pipeline protocol |
 | `skills/*/SKILL.md` | Loadable procedures | The instructions a session loads for a stage (9.0.0 ships no agent files, ADR-090) |
 | `governance/` | Routing policy, guardrails, strategies, signals | The machine-readable governance files that the CLI runs |
@@ -76,23 +76,6 @@ Each rule below names an invariant from the table in
 most likely to break it. These are the places where a plausible, well-meant
 change would quietly cross a line.
 
-### `compass retro` must not mutate manifest.yml
-
-`compass retro` is read-only over all issue manifests. It aggregates
-reassessment data to produce a retrospective report but never writes back to
-any `.compass/work/<issue>/manifest.yml`. Mutation would violate `Inv-4`
-(Flow advises, never gates). The likely way in is a future pass that reads
-every issue's reassessment log: writing a summary marker back into
-`manifest.yml` looks harmless.
-
-### rework-scan must not exit non-zero on detection
-
-`compass rework-scan` exits 0 whether or not rework signals are detected.
-Detection is advisory - it writes a report to `.compass/flow/rework-<date>.md`
-and continues. Exiting non-zero would make rework-scan a blocking gate,
-violating `Inv-4`. Detection is not the same as a verdict, and a scan that
-can fail a build will be tuned until it stops detecting anything.
-
 ### architect must not emit Gherkin scenarios
 
 `architecture-notes.md` contains annotations, candidate ADR titles, and
@@ -122,7 +105,7 @@ cleared the gate.
 
 ### No mechanism may hard-code governance/signals.yml content
 
-`hooks/stop.sh` and `compass rework-scan` must read `governance/signals.yml` at
+`hooks/stop.sh` must read `governance/signals.yml` at
 runtime, not replicate its patterns in Python or shell code. `signals.yml`
 exists so a project can extend the patterns without touching the CLI;
 hard-coding them takes that away and violates `Inv-7` (deterministic

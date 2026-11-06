@@ -5,8 +5,8 @@ A new user had to know that `/compass:assess` starts an issue and
 `/compass:quick-fix` is the light path. `/compass:go <what you want>` runs
 init, assesses, shows a three-line decision view and follows the `next:`
 line of each verb through the four stages of the path. Each hook block and each failing `compass check` appends a
-line to `.compass/interruptions.log`, and `compass retro` reports the
-totals, so "fewer interruptions" can be measured, not claimed.
+line to `.compass/interruptions.log`, and `compass issue diagnose` reports
+them, so "fewer interruptions" can be measured, not claimed.
 """
 from __future__ import annotations
 
@@ -145,20 +145,6 @@ def test_a_ci_sweep_does_not_count(repo):
     _start(repo)
     _run(repo, "ci")
     assert _counted(repo, "greeting", "check_failures") == 0, _log(repo)
-
-
-# --- ONE-5: retro reports them ----------------------------------------------------
-
-def test_retro_reports_the_interruptions(repo):
-    _start(repo)
-    _run(repo, "check", "--issue", "greeting")
-    log = repo / ".compass" / "interruptions.log"
-    with log.open("a") as fh:
-        fh.write("not a valid line\n")
-    r = _run(repo, "retro")
-    assert r.returncode == 0, r.stderr
-    assert "interruptions" in r.stdout.lower(), r.stdout
-    assert "1 check failure" in r.stdout, r.stdout
 
 
 # --- GC-1: go does not stop at assess's confirmation (issue `go-confirms-on-the-heavier-route`) ----------------

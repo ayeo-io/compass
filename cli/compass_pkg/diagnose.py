@@ -3,9 +3,8 @@
 # compass_pkg.diagnose - `compass issue diagnose`
 # =============================================================================
 #
-# Explains one run from its issue's own records, after the session is gone.
-# compass retro, the friction log and compass rework-scan look across issues;
-# this looks at one: each stage against the record that shows it ran, a
+# Explains one run from its issue's own records, after the session is gone:
+# each stage against the record that shows it ran, a
 # timeline of the dated records, the deviations, and the questions only a
 # transcript could answer. It reads and never writes.
 #

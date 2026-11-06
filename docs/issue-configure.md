@@ -357,15 +357,13 @@ the same number when nothing was committed.
 A reassess that changes only the issue's `config:` layer (a proposal applied,
 `--reset-config`, a hand edit, or a waiver left out) appends an entry of kind
 `configuration`, with the `--reason`, `generation: {from, to}` and a `changed`
-note holding the digest of the layer before and after. `compass retro` ignores
-that kind in its sizing signal, as it ignores `policy-correction`: no one
-misread the work. Without `--reason` the entry says so and the command warns.
+note holding the digest of the layer before and after. Like
+`policy-correction`, that kind says no one misread the work. Without `--reason` the entry says so and the command warns.
 
 A reassess that leaves the approach unchanged and is given a `--reason`
 appends an entry of kind `unchanged`: `from_route` equals `to_route`,
 `changed` is empty, and `generation: {from, to}` holds the same number when
-nothing was committed. `compass retro` and the derived friction entries ignore
-that kind. Without `--reason` such a reassess writes no entry and prints no
+nothing was committed. Without `--reason` such a reassess writes no entry and prints no
 warning.
 
 ## Recovery

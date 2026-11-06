@@ -7,12 +7,12 @@ client on outer-loop green records.
 and `client`. On an issue the strategy applies to, an outer-loop green that
 lacks either is refused when it is written and when it is registered with
 `compass evidence add`, and `outer-loop-recorded` fails one that reached the
-registry another way. `compass retro --acceptance` reports the clients per
-issue and the deployed and local candidates apart (ADR-085).
+registry another way (ADR-085).
 
 The specification is `acceptance-criteria.md` of the Compass issue
-`atdd-strategy`, scenarios `TRC-H1` to `TRC-H4`, `TRC-H6` and `TRC-H7`
-(ayeo-io/compass-delivery#326). `TRC-H5` belongs to the isolation proof. The
+`atdd-strategy`, scenarios `TRC-H1` to `TRC-H4` (ayeo-io/compass-delivery#326).
+`TRC-H5` belongs to the isolation proof. `TRC-H6` and `TRC-H7` were the
+retrospective's, which 9.0.0 removed (ADR-093). The
 one-run green for several scenarios is decision 8 of ADR-085.
 Each test names the scenario it checks; `support.py` builds the projects.
 """
@@ -236,52 +236,6 @@ def test_several_scenarios_need_the_outer_loop(tmp_path):
                                "--scenario", "TRC-1", "--scenario", "TRC-2", "--", *PASS)
     assert code == 2, out + err
     assert "--loop outer" in err, err
-
-
-# --- `TRC-H6` and `TRC-H7` ------------------------------------------------------------------
-
-def _closed_issue(project, slug, *greens):
-    """A closed in-scope issue with one outer-loop green per `(candidate, client)`, each
-    bound to its own scenario."""
-    scenarios = tuple(f"TRC-{n}" for n in range(1, len(greens) + 1))
-    issue = _issue(project, slug=slug, scenarios=scenarios)
-    for scenario, (candidate, client) in zip(scenarios, greens):
-        _must_green(issue, "--candidate", candidate, "--client", client, scenario=scenario)
-    issue.close()
-    return issue
-
-
-def _retro(project, fmt=None):
-    argv = ["retro", "--acceptance"] + (["--format", fmt] if fmt else [])
-    code, out, err = project.run(*argv)
-    assert code == 0, out + err
-    return json.loads(out) if fmt == "json" else out
-
-
-def test_trc_h6(tmp_path):
-    """The retrospective reports the client per issue."""
-    project = _project(tmp_path)
-    _closed_issue(project, "orders", ("build-417", "api"))
-    _closed_issue(project, "refunds", ("build-418", "api"), ("build-418", "cli"))
-    out = _retro(project)
-    assert "clients of orders: api" in out, out
-    assert "clients of refunds: api, cli" in out, out
-    document = _retro(project, "json")
-    assert document["clients"] == {"orders": ["api"], "refunds": ["api", "cli"]}, document
-
-
-def test_trc_h7(tmp_path):
-    """The retrospective reports deployed and local candidates apart."""
-    project = _project(tmp_path)
-    _closed_issue(project, "orders", ("build-417", "api"))
-    _closed_issue(project, "refunds", ("build-418", "web"))
-    _closed_issue(project, "returns", ("local", "cli"))
-    out = _retro(project)
-    assert "in-scope issues with a deployed candidate: 2 of 3" in out, out
-    assert "with a local candidate only: returns" in out, out
-    document = _retro(project, "json")
-    assert document["candidates"] == {"deployed": ["orders", "refunds"], "local": ["returns"],
-                                      "none": []}, document
 
 
 # --- `compass quick-fix finish` --------------------------------------------------------------

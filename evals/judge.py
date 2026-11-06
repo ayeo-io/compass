@@ -1595,9 +1595,9 @@ BEHAVIOURS = {
 }
 
 
-# What `compass retro --compliance` (cli/compass_pkg/compliance.py) needs to
-# know about each behaviour when it scores real sessions rather than eval
-# runs. It lives here, not in the CLI, because the eval plugin copy leaves
+# What a scorer of real sessions, rather than eval runs, needs to know about
+# each behaviour. Its only caller, `compass retro --compliance`, was removed
+# in 9.0.0 (ADR-093). It lives here, not in the CLI, because the eval plugin copy leaves
 # `evals/` out: a session under evaluation must not be able to read the
 # behaviour ids it is scored on.
 

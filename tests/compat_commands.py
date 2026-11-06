@@ -500,6 +500,9 @@ REMOVED_IN_9_0_0 = {
        for entry_id in ("issue-template-requirements-review",
                         "issue-template-verification-report-json",
                         "issue-template-unknown-kind")},
+    **{entry_id: "'compass retro' was removed in 9.0.0 (ADR-093)"
+       for entry_id in ("retro-plain", "retro-no-compass-folder", "retro-friction",
+                        "retro-lessons", "retro-lineage", "retro-compliance")},
 }
 
 

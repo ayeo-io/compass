@@ -15,7 +15,7 @@
 # TWO CONTRACTS, NOT ONE RULE.
 #   hand-off - a verb that ends a stage or renders a verdict. One screen.
 #   report   - a verb somebody runs deliberately to GET detail, like
-#              `calibration` or `terminology`. Keeps every finding, but opens
+#              `flow` or `terminology`. Keeps every finding, but opens
 #              with a summary they can stop at. Cutting a report to twelve
 #              lines removes the reason to run it.
 #

@@ -296,21 +296,17 @@ def _second_issue(root, slug, entries, **more):
     write_manifest(root, body, slug)
 
 
-def test_asw_33_retro_reports_decision_shares(tmp_path):
+def test_asw_33_the_report_counts_decision_shares(tmp_path):
+    from compass_pkg import decisions_taken
     root = project(tmp_path, evaluate=False)
     edit(root, decisions_taken=[_entry("A-1", "confirmed"), _entry("A-2", "confirmed")])
     _second_issue(root, "second", [_entry("B-1", "reopened", reason="changed")])
     _second_issue(root, "third", [_entry("C-1", "open")], status="done",
                   close_reason="completed")
-    code, out, err = run(root, "retro", "--decisions")
-    assert code == 0, out + err
-    assert "4 agent decisions" in out
-    assert "50% confirmed" in out and "25% changed" in out and "25% never confirmed" in out
-    code, out, err = run(root, "retro", "--decisions", "--format", "json")
-    assert code == 0, out + err
-    got = json.loads(out)
+    got = decisions_taken.report(str(root / ".compass" / "work"))
     assert (got["total"], got["confirmed"], got["changed"], got["never_confirmed"]) == (4, 2, 1, 1)
     assert got["open_in_flight"] == 0
+    assert got["share"] == {"confirmed": 50, "changed": 25, "never_confirmed": 25}
 
 
 # --- D205: a ledger entry now decided by a person ---------------------------------

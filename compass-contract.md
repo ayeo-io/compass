@@ -48,9 +48,6 @@ resumes from those files.
 
 Each verb that writes a record prints `next:`, the command to run next.
 
-**Record friction you observe.** If a step costs more than it returns and
-will recur, run `compass issue friction` with evidence and a fix.
-
 **Where to look.** `compass <verb> --help` explains a verb; the
 `compass-runtime` skill maps the stages.
 

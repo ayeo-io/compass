@@ -1,9 +1,10 @@
-# compass_pkg.follow_up_cmd - `compass follow-up add`
+# compass_pkg.follow_up_cmd - `compass follow-up add` and `compass follow-up resolve`
 """Record a follow-up in an issue's manifest, and optionally the Definition of
-Done or Ready item it carries.
+Done or Ready item it carries, and mark one resolved.
 
 ```
 compass follow-up add FU-ID [--defers CHECK] --summary TEXT [--target SLUG] [--issue SLUG]
+compass follow-up resolve --issue SLUG FU-ID
 ```
 
 - `--defers CHECK` carries an item of the issue's Definition of Done or Ready to
@@ -14,6 +15,9 @@ compass follow-up add FU-ID [--defers CHECK] --summary TEXT [--target SLUG] [--i
 
 The command refuses, and writes nothing, for a duplicate id, an empty summary, a
 check the issue does not list, and a target that is not a slug.
+
+`compass follow-up resolve` sets one follow-up's status to `resolved`. An issue
+with an outstanding follow-up cannot close until then.
 """
 # DEPENDENCY: standard library (re); compass_pkg.core, effective, item_records,
 # terminal. It imports no renderer: the entry point's after-command step renders.
@@ -63,6 +67,39 @@ def cmd_follow_up_add(args):
         detail.append(f"blocks  : {args.target} until it is resolved")
     return say(args, f"{VERB}: {follow_up_id} recorded as outstanding.", detail=detail,
                follow_up=follow_up_id, defers=args.defers, target=args.target)
+
+
+def cmd_backfill_pay(args):
+    """`compass follow-up resolve`: set the named follow-up's status to
+    `resolved` in the issue's manifest.yml. The function keeps its old name
+    because `record_triggers.RECORD_FURTHER` names it."""
+    task_dir = resolve_issue_dir(args.task)
+    task, task_path = load_manifest(task_dir)
+    bf_id = args.backfill_id
+    follow_ups = task.get("follow_ups") or []
+    found = None
+    for bf in follow_ups:
+        if isinstance(bf, dict) and bf.get("id") == bf_id:
+            found = bf
+            break
+    if not found:
+        raise CompassError(
+            f"follow-up '{bf_id}' not found in issue '{args.task}'. "
+            f"Available follow-ups: "
+            f"{[b.get('id') for b in follow_ups if isinstance(b, dict)]}"
+        )
+    if found.get("status") == "resolved":
+        print(f"compass follow-up resolve: '{bf_id}' is already resolved.")
+        return 0
+    found["status"] = "resolved"
+    task["follow_ups"] = follow_ups
+    save_manifest(task, task_path)
+    target = found.get("target_task")
+    target_note = (f" (cross-issue debt on '{target}' is now cleared)"
+                   if target else "")
+    print(f"compass follow-up resolve: '{bf_id}' in issue '{args.task}' "
+          f"marked resolved{target_note}.")
+    return 0
 
 
 def register(follow_up_subs):

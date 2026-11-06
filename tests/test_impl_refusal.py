@@ -226,7 +226,7 @@ def test_ir_13_flow_and_ci_go_on_to_a_healthy_issue(tmp_path):
 def _two_issues(root, shipped=False):
     """Two issues with stored generations under `root`: `feature`, recorded at
     resolver 2.0.0, and `other`, healthy. Shipped ones hold an approval, so
-    `retro --impact` reads their configuration."""
+    the bands read their configuration."""
     for slug in ("feature", "other"):
         folder = root / ".compass" / "work" / slug
         folder.mkdir(parents=True)
@@ -244,15 +244,6 @@ def _two_issues(root, shipped=False):
                                        "decision": "approved", "path": "evidence/x"}])
             path.write_text(yaml.safe_dump(manifest, sort_keys=False))
     record_versions(root / ".compass" / "work" / "feature", resolver="2.0.0")
-
-
-def test_ir_13_retro_impact_reads_a_shipped_issue_across_a_major(tmp_path):
-    # A shipped issue keeps the generation it closed under, so the retro reads it and
-    # reports every issue.
-    _two_issues(tmp_path, shipped=True)
-    code, out, err = _run(tmp_path, "retro", "--impact")
-    assert code == 0, out + err
-    assert "a different major" not in out + err, out + err
 
 
 def test_ir_13_diagnose_refuses_an_open_issue_that_holds_an_approval(tmp_path):

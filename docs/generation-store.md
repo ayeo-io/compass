@@ -217,8 +217,7 @@ Deliberate limits:
   `tests/test_impl_refusal.py` fails at the first resolver or schema major
   bump, so this is decided before then.
 - A command that saves the manifest and renders nothing is not refused by the
-  pre-check (`record_triggers.EXEMPT`: `issue friction`, `friction capture`,
-  `checkpoint add` and `subtask package`). It writes to an issue whose generation is refused. A command
+  pre-check (`record_triggers.EXEMPT`: `checkpoint add`). It writes to an issue whose generation is refused. A command
   that loads the generation still refuses.
 
 `compass issue migrate --config [--issue SLUG]` fixes both. It stores a new

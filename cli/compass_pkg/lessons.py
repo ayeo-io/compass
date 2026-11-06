@@ -28,8 +28,7 @@ import subprocess
 
 import yaml
 
-from compass_pkg.core import (CompassError, find_compass_dir, find_governance, load_yaml,
-                              manifest_path)
+from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_yaml
 
 LESSONS = "lessons.yml"
 PENDING = "lessons-pending.yml"
@@ -222,8 +221,8 @@ def cmd_lesson_list(args):
 
 
 def _remember(name, key, text):
-    """Keep `text` under `key` in file `name`, so `retro --lessons` does not
-    propose it again."""
+    """Keep `text` under `key` in file `name`, the record of what a person
+    removed or declined."""
     data = _read(name)
     seen = [t for t in data.get(key) or [] if isinstance(t, str)]
     if _norm(text) not in {_norm(t) for t in seen}:
@@ -252,8 +251,7 @@ def cmd_lesson_decline(args):
         raise CompassError(f"no pending proposal {args.id}; see `compass lesson list`.")
     _save(PENDING, [p for p in pending if p is not entry])
     _remember(PENDING, "declined", str(entry.get("rule", "")))
-    print(f"compass lesson decline: {args.id} declined. compass retro --lessons "
-          f"will not propose it again.")
+    print(f"compass lesson decline: {args.id} declined.")
     return 0
 
 
@@ -289,88 +287,6 @@ def render_block(compass_dir):
     return "\n".join(lines)
 
 
-def propose_pending(rule, source, issues):
-    """Add one pending proposal unless it is already a lesson, pending,
-    removed or declined, or the refusal rules turn it away. Returns the new
-    entry or None. Nothing takes effect until `compass lesson accept`."""
-    lessons, pending = _load(LESSONS), _load(PENDING)
-    known = {_norm(l["rule"]) for l in lessons + pending}
-    known |= {_norm(t) for t in _read(LESSONS).get("removed") or [] if isinstance(t, str)}
-    known |= {_norm(t) for t in _read(PENDING).get("declined") or [] if isinstance(t, str)}
-    if _norm(rule) in known or _refusal(rule, source):
-        return None
-    entry = {"id": _next_id("LP-", PENDING), "rule": rule, "category": "process",
-             "applies": "always", "source": source, "issue": sorted(issues)[0],
-             "created": datetime.date.today().isoformat()}
-    pending.append(entry)
-    _save(PENDING, pending)
-    return entry
-
-
-def propose_from_friction(work_dir, min_issues=3):
-    """Pending proposals for friction seen in `min_issues` distinct issues.
-    Exact text after case and spacing are normalised; a reworded row does
-    not match. Returns the new pending entries.
-
-    An agent note counts by its fix, and only towards text that a person or
-    the CLI also recorded in at least one issue: agent notes alone never make
-    a lesson. A note about a guardrail step never counts."""
-    from compass_pkg.agent_friction import is_guardrail_note
-    seen, vouched = {}, set()
-    for slug in sorted(os.listdir(work_dir)) if os.path.isdir(work_dir) else []:
-        path = manifest_path(os.path.join(work_dir, slug))
-        if not os.path.isfile(path):
-            continue
-        try:
-            m = load_yaml(path)
-        except CompassError:
-            continue
-        for row in (m.get("friction") if isinstance(m, dict) else None) or []:
-            if not isinstance(row, dict) or is_guardrail_note(row):
-                continue
-            agent = row.get("source") == "agent"
-            text = row.get("proposed_change" if agent else "observation")
-            if not text:
-                continue
-            text = " ".join(str(text).split())
-            seen.setdefault(_norm(text), (text, set()))[1].add(slug)
-            if not agent:
-                # A person's proposed change backs an agent note naming the
-                # same change, as well as their observation.
-                vouched.add(_norm(text))
-                if row.get("proposed_change"):
-                    vouched.add(_norm(" ".join(str(row["proposed_change"]).split())))
-    seen = {key: value for key, value in seen.items() if key in vouched}
-    lessons, pending = _load(LESSONS), _load(PENDING)
-    known = {_norm(l["rule"]) for l in lessons + pending}
-    known |= {_norm(t) for t in _read(LESSONS).get("removed") or [] if isinstance(t, str)}
-    known |= {_norm(t) for t in _read(PENDING).get("declined") or [] if isinstance(t, str)}
-    added = []
-    for key, (text, issues) in sorted(seen.items()):
-        if len(issues) < min_issues or key in known or _refusal(text, "friction"):
-            continue
-        entry = {"id": _next_id("LP-", PENDING), "rule": text, "category": "process",
-                 "applies": "always", "source": "friction", "issue": sorted(issues)[0],
-                 "created": datetime.date.today().isoformat()}
-        pending.append(entry)
-        added.append(entry)
-        _save(PENDING, pending)
-    return added
-
-
-def cmd_retro_lessons(args):
-    added = propose_from_friction(os.path.join(_dir(), "work"))
-    if not added:
-        print("compass retro --lessons: no friction recurs in three issues that is "
-              "not already a lesson or a proposal.")
-        return 0
-    print(f"compass retro --lessons: {len(added)} proposal(s) pending acceptance:")
-    for e in added:
-        print(f"  {e['id']}  {e['rule']}")
-    print("Accept one with `compass lesson accept <id>`; nothing is a lesson until then.")
-    return 0
-
-
 def register(sub):
     """Add `compass lesson` and its subcommands to the top-level parser."""
     p = sub.add_parser("lesson", help="record this project's lessons for later sessions")
@@ -396,7 +312,7 @@ def register(sub):
     acc.set_defaults(func=cmd_lesson_accept, output_kind="hand-off")
     lst = subs.add_parser("list", help="each lesson and each pending proposal")
     lst.set_defaults(func=cmd_lesson_list, output_kind="hand-off")
-    dec = subs.add_parser("decline", help="drop a pending proposal; retro will not propose it again")
+    dec = subs.add_parser("decline", help="drop a pending proposal")
     dec.add_argument("id", help="the proposal's LP- id")
     dec.set_defaults(func=cmd_lesson_decline, output_kind="hand-off")
     rem = subs.add_parser("remove", help="delete one lesson")

@@ -71,10 +71,6 @@ ISSUE_FROM = {**{name: "task" for name in RECORD_TRIGGERS}, "cmd_quick_fix_start
 
 #: Commands that save a manifest and are in neither table, each with its reason.
 EXEMPT = {
-    "cmd_friction_capture": ("records a friction note in the manifest, which moves no "
-                             "label"),
-    "cmd_issue_friction": ("records a friction note in the manifest, which moves no "
-                           "label"),
     "cmd_checkpoint_add": ("records that a hand-off was passed without waiting, in "
                            "checkpoint_outcomes, which moves no label"),
 }

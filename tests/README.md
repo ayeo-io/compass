@@ -68,7 +68,6 @@ These files check the safety-contract guarantees:
 | `test_spike_safety.py`    | 4 - spike conclusion, no production changes, graduation linkage |
 | `test_ci.py`              | 6 - `compass ci` exit-code aggregation |
 | `test_modes.py`           | 7 - enforced vs advisory adoption mode |
-| `test_calibration.py`     | the assessment feedback loop - reassessment log and trend signal |
 | `test_house_style.py`     | this repository's own writing invariants (the cold-reader strategy, `S7`) - not a safety-contract guarantee |
 
 ## Fixtures

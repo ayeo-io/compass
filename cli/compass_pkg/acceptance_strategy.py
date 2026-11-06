@@ -18,22 +18,22 @@ branches itself. It must tell a changed project setting, an off or suspended
 issue and a line that disagrees with the records apart, each with its own
 message, and `in_scope` gives only one answer for all of them. The module also holds the setting reader, the line the
 delivery-approach record shows, the advisory check
-`acceptance-applicability-agrees` and `compass retro --acceptance`.
+`acceptance-applicability-agrees` and the waiver notices `compass check` prints.
 
 Compass reads records here, never project code.
 """
-# DEPENDENCY: standard library (json, os); compass_pkg.candidate_client, check_results,
+# DEPENDENCY: standard library (json, os); compass_pkg.check_results,
 # core, project_settings and red_first, and inside functions compass_pkg.layers, parents,
-# effective, next_cmd, next_step and status_words. It imports no command
+# next_cmd and next_step. It imports no command
 # module and no check module at load time, so a check module can import it.
 from __future__ import annotations
 
 import json
 import os
 
-from compass_pkg import candidate_client, project_settings
+from compass_pkg import project_settings
 from compass_pkg.check_results import NOTHING_TO_CHECK
-from compass_pkg.core import CompassError, load_yaml, manifest_path
+from compass_pkg.core import CompassError, load_yaml
 from compass_pkg.red_first import ACCEPTANCE_KINDS, is_record_name, load_record
 
 #: The settings key and the manifest key.
@@ -66,11 +66,6 @@ EXPECTED = ("none",) + ACCEPTANCE_KINDS
 LOOPS = ("outer", "inner")
 
 NAME = "four-layer acceptance strategy (`S17`)"
-#: The evidence types only the strategy's commands write (ADR-086).
-STRATEGY_TYPES = ("isolation-proof", "layering")
-#: How the retrospective names an issue the strategy applies to, beside the
-#: acceptance kinds that take an issue out of scope.
-IN_SCOPE = "in scope"
 BEHAVIOR = "client-observable behavior"
 SPIKE_WHY = "a spike ships nothing"
 OLDER = "this issue was assessed before the strategy shipped"
@@ -399,36 +394,6 @@ def _check_applicability_agrees(task, task_dir):
                   f"{'applies' if applies else 'does not apply'} ({why})")
 
 
-# --- the retrospective -----------------------------------------------------------------------
-
-def _closed(task):
-    """Landed, or closed as completed. An issue closed as not planned or as a
-    duplicate delivered nothing, so the measures leave it out."""
-    from compass_pkg import status_words
-    return bool(task.get("land_timestamp")) or status_words.is_completed(task)
-
-
-def step_off(task, task_dir):
-    """The reason of an approved issue waiver of one of the strategy's checks in
-    the issue's stored generation, or None. A waiver the generation holds passed
-    the lint that commits it, so its approval was checked then (ADR-039)."""
-    from compass_pkg import effective
-    try:
-        view = effective.effective_for(task_dir, task)
-    except CompassError:
-        return None
-    records = ((view.provenance or {}).get("waivers") or {}) if view is not None else {}
-    for record in records.values():
-        if not isinstance(record, dict) or record.get("scope") != "issue":
-            continue
-        entry = str(record.get("entry") or "")
-        if entry.startswith("checks.") and entry[len("checks."):] in CHECKS:
-            body = (((task.get("config") or {}).get("checks") or {})
-                    .get(entry[len("checks."):]) or {}).get("waiver") or {}
-            return record.get("reason") or body.get("reason") or "no reason recorded"
-    return None
-
-
 def waiver_lines(task, view):
     """A notice for each issue waiver of one of the strategy's checks in the issue's
     `config:`: the check, the reason and whether it is approved. An approved waiver
@@ -451,94 +416,3 @@ def waiver_lines(task, view):
         lines.append(f"waiver of {check}: {waiver.get('reason') or 'no reason recorded'}"
                      f" - {state}")
     return lines
-
-
-def report(work):
-    """The retrospective over every closed issue under `work` that was assessed
-    with the strategy."""
-    out = {"measured": [], "out_of_scope": [], "off": [], "stepped_off": [],
-           "clients": {}, "candidates": {"deployed": [], "local": [], "none": []},
-           "kinds": {kind: 0 for kind in ACCEPTANCE_KINDS + (IN_SCOPE,)}, "ran_strategy": []}
-    names = sorted(os.listdir(work)) if os.path.isdir(work) else []
-    for slug in names:
-        task_dir = os.path.join(work, slug)
-        path = manifest_path(task_dir)
-        if not os.path.isfile(path):
-            continue
-        try:
-            task = load_yaml(path)
-        except CompassError:
-            continue
-        if not isinstance(task, dict) or stored(task) is None or not _closed(task):
-            continue
-        if stored(task).get("state") == "off":
-            out["off"].append(slug)
-            continue
-        applies, _ = in_scope(task, task_dir)
-        if not applies:
-            out["out_of_scope"].append(slug)
-            kind = acceptance_kind(task, task_dir)
-            if kind:
-                out["kinds"][kind] += 1
-            # An issue out of scope that holds a record of the strategy ran it anyway.
-            if any(isinstance(e, dict) and e.get("type") in STRATEGY_TYPES
-                   for e in task.get("evidence") or []):
-                out["ran_strategy"].append(slug)
-            continue
-        out["kinds"][IN_SCOPE] += 1
-        reason = step_off(task, task_dir)
-        if reason:
-            out["stepped_off"].append({"issue": slug, "reason": reason})
-            continue
-        out["measured"].append(slug)
-        # The clients and the candidate kind its outer-loop greens name (ADR-085).
-        clients, kind = candidate_client.summary(task, task_dir)
-        out["clients"][slug] = clients
-        out["candidates"][kind].append(slug)
-    return out
-
-
-def cmd_retro_acceptance(args):
-    """`compass retro --acceptance`: the strategy's measures, with an opted-out
-    project and each issue that stepped off reported apart. For each counted
-    issue it names the clients its outer-loop greens drove, and it counts the
-    issues with a deployed candidate apart from those with a local one. Exit 0."""
-    from compass_pkg.core import find_compass_dir
-    compass_dir = find_compass_dir()
-    root = os.path.dirname(compass_dir)
-    state, reason = setting(root)
-    out = report(os.path.join(compass_dir, "work"))
-    out = {"opted_out": {"reason": reason} if state == "off" else None, **out}
-    if getattr(args, "format", "markdown") == "json":
-        print(json.dumps(out, indent=2))
-        return 0
-    lines = [f"compass retro --acceptance: the {NAME}"]
-    if state == "off":
-        lines.append(f"  This project has opted out of the four-layer acceptance strategy: "
-                     f"{reason}")
-    lines.append(f"  closed in-scope issues counted in the measures: {len(out['measured'])}"
-                 + (f" ({', '.join(out['measured'])})" if out["measured"] else ""))
-    for slug, clients in out["clients"].items():
-        lines.append(f"    clients of {slug}: {', '.join(clients) or 'none named'}")
-    if out["measured"]:
-        kinds = out["candidates"]
-        lines.append(f"  in-scope issues with a deployed candidate: {len(kinds['deployed'])} "
-                     f"of {len(out['measured'])}")
-        if kinds["local"]:
-            lines.append(f"    with a local candidate only: {', '.join(kinds['local'])}")
-        if kinds["none"]:
-            lines.append(f"    with no candidate named: {', '.join(kinds['none'])}")
-    if out["off"]:
-        lines.append(f"  not counted, assessed while the strategy was off: "
-                     f"{', '.join(out['off'])}")
-    if out["out_of_scope"]:
-        lines.append(f"  not counted, out of scope: {', '.join(out['out_of_scope'])}")
-    counts = [f"{n} {kind}" for kind, n in out["kinds"].items()]
-    lines.append(f"  closed issues per acceptance kind: {', '.join(counts[:-1])} and {counts[-1]}")
-    lines.append(f"  out-of-scope issues that ran the strategy: {len(out['ran_strategy'])}"
-                 + (f" ({', '.join(out['ran_strategy'])})" if out["ran_strategy"] else ""))
-    for item in out["stepped_off"]:
-        lines.append(f"  not counted, stepped off through an approved waiver: "
-                     f"{item['issue']} - {item['reason']}")
-    print("\n".join(lines))
-    return 0

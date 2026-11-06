@@ -110,11 +110,7 @@ claims: []
 #    scenario: TRC-001
 
 # --- repairs (hotfixes only) -------------------------------------------------
-# The slug of the issue this hotfix repairs. `compass retro --impact`
-# reads it to compute the change-fail signal - which issue did we ship that
-# later needed fixing. Optional, and honest about being optional: a hotfix
-# that declares nothing is reported as a coverage gap, never counted as a
-# zero.
+# The slug of the issue this hotfix repairs. Optional.
 # repairs: the-issue-this-fixes
 
 # --- follow_ups (work deferred - e.g. a hotfix's, or de-scoped work) ---------
@@ -128,11 +124,8 @@ follow_ups: []
 # --- reassessments (the assess stage's feedback signal) ----------------------
 # Append-only. `compass approach evaluate --write` adds an entry here whenever
 # it computes a delivery approach that differs from the one already recorded
-# - i.e. a re-assessment. `compass retro` aggregates these across all
-# issues: a pattern of "up" re-assessments means assessment is systematically
-# under-sizing and the routing policy (or the assessment rubric) needs
-# tuning. A re-assessment is a normal event; an unexamined pattern of them
-# is the failure.
+# - i.e. a re-assessment - with the reason it changed. A re-assessment is a
+# normal event.
 reassessments: []
 #  - from_route: express
 #    to_route: standard
@@ -144,16 +137,3 @@ reassessments: []
 # the reason, written by `compass scenario descope`. `/compass:ship` lists
 # each in its hand-off. Optional; no gate reads it.
 failure_modes_descoped: []
-
-# --- friction (the framework's self-calibration signal) ---------------------
-# Optional. Written at ship time. Records where Compass's own process weight cost
-# more than it returned; soft, advisory; it never gates shipping. Assembled
-# by `compass _friction-capture` and aggregated by `compass retro
-# --friction`.
-friction: []
-#  - stage: specify
-#    category: over-weight     # over-weight | under-weight | mis-route |
-#                                # missing-strategy | tooling | docs | other
-#    observation: "The scenario sign-off added a wait the change didn't need."
-#    proposed_change: "compass.yml: drop scenario-approval for size=small."
-#    source: derived             # derived (auto) | human (given by the author)

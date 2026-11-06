@@ -82,7 +82,7 @@ Intent id. The "why" end of the traceability chain - the outcome the work is mea
 
 ### `LP-`
 
-Lesson proposal. A lesson held in `lessons-pending.yml` in the project's `.compass` folder until someone runs `compass lesson accept`. `compass retro --lessons` proposes, and the model is told to propose rather than add.
+Lesson proposal. A lesson held in `lessons-pending.yml` in the project's `.compass` folder until someone runs `compass lesson accept`. The model is told to propose rather than add.
 
 **Refers to:** One pending proposal.
 
@@ -272,7 +272,7 @@ One test that Compass runs against an issue's work and reports as pass, fail or 
 
 ### checkpoint-outcome
 
-What happened at one checkpoint stage hand-off, recorded in the manifest's `checkpoint_outcomes` as the stage, the outcome, who and when. The outcome is `waited` when a person answered the hand-off with `compass evidence approve --checkpoint`, which also writes a `checkpoint-approval` record holding their answer, or `skipped` when an agent went on because the autonomy setting passed the hand-off, recorded with `compass issue checkpoint add`. A `checkpoint-approval` record clears no gate and no human check. `compass ship-commit` refuses a judged issue that lists a checkpoint with no outcome, and `compass retro --impact` reads the outcomes to report how much work ran without a person.
+What happened at one checkpoint stage hand-off, recorded in the manifest's `checkpoint_outcomes` as the stage, the outcome, who and when. The outcome is `waited` when a person answered the hand-off with `compass evidence approve --checkpoint`, which also writes a `checkpoint-approval` record holding their answer, or `skipped` when an agent went on because the autonomy setting passed the hand-off, recorded with `compass issue checkpoint add`. A `checkpoint-approval` record clears no gate and no human check. `compass ship-commit` refuses a judged issue that lists a checkpoint with no outcome, and `compass issue diagnose` shows the outcomes of one issue.
 
 **Related:** `decision-taken`, `evidence`, `issue`
 

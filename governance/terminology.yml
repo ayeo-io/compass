@@ -493,8 +493,7 @@ terms:
       with `compass issue checkpoint add`. A `checkpoint-approval` record
       clears no gate and no human check. `compass ship-commit` refuses a
       judged issue that lists a checkpoint with no outcome, and
-      `compass retro --impact` reads the outcomes to report how much work ran
-      without a person.
+      `compass issue diagnose` shows the outcomes of one issue.
     related: [decision-taken, evidence, issue]
 
   receipt:
@@ -984,8 +983,8 @@ codes:
   LP:
     means: >
       Lesson proposal. A lesson held in `lessons-pending.yml` in the project's `.compass` folder until
-      someone runs `compass lesson accept`. `compass retro --lessons`
-      proposes, and the model is told to propose rather than add.
+      someone runs `compass lesson accept`. The model is told to propose
+      rather than add.
     referent: One pending proposal.
     appears_in: [lessons-pending.yml, "compass lesson list"]
     related: [LS]

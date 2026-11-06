@@ -43,6 +43,138 @@ import test_issue_dependencies as dbi  # noqa: E402
 FIXED_AT = dbi.FIXED_AT
 
 
+# --- the synthetic manifests -------------------------------------------------------
+
+#: The stage weights of every synthetic issue: refine skipped and breakdown
+#: collapsed, so the route runs six stages.
+STAGES = {"assess": "thorough", "define": "thorough", "refine": "skipped",
+          "plan": "thorough", "breakdown": "collapsed", "implement": "thorough",
+          "verify": "thorough", "ship": "thorough"}
+
+#: The bands of a waited issue, counted by hand. Six stages run (assess, define,
+#: plan, implement, `verify`, ship) and `verify` owns the passed gates. Define and
+#: plan waited, so human judgement 2; two gates cite a typed record, so
+#: guardrailed 2; the other three stages are autonomous.
+WAITED_BANDS = {"human_judgement": 2, "guardrailed": 2, "autonomous": 3}
+
+
+def _gates(passed=2, untyped=1):
+    """`passed` gates that cite the typed record EV-1, then `untyped` gates that
+    pass citing an id the evidence does not hold, and one that has not passed."""
+    gates = [{"id": f"verify.g{i}", "status": "pass", "evidence": ["EV-1"]}
+             for i in range(passed)]
+    gates += [{"id": f"verify.u{i}", "status": "pass", "evidence": ["EV-NONE"]}
+              for i in range(untyped)]
+    gates.append({"id": "verify.pending", "status": "pending", "evidence": []})
+    return gates
+
+
+def manifest(slug, *, outcomes="absent", checkpoints=()):
+    """One synthetic shipped manifest of a regular issue. `outcomes` is `absent`
+    (no `checkpoint_outcomes` key) or `waited` (every listed checkpoint answered
+    by a person)."""
+    m = {"schema_version": "3.0", "issue": slug, "created": "2026-09-01",
+         "delivery_approach": "regular", "stages": dict(STAGES),
+         "checkpoints": list(checkpoints),
+         "scenarios": [{"id": f"{slug.upper()}-{i}", "title": "t", "intent": "INT-1"}
+                       for i in range(2)],
+         "evidence": [{"id": "EV-1", "type": "test-run", "path": "evidence/green.json"}],
+         "gates": _gates(), "status": "done", "close_reason": "completed",
+         "land_timestamp": "2026-09-05T10:00:00Z"}
+    if outcomes == "waited":
+        m["checkpoint_outcomes"] = [
+            {"stage": s, "outcome": "waited", "by": "jed72", "at": "2026-09-02T09:00:00Z",
+             "evidence": f"EV-CHECKPOINT-{s}-1"} for s in checkpoints]
+    return m
+
+
+def waited(slug):
+    """A measurable shipped issue whose define and plan a person answered."""
+    return manifest(slug, checkpoints=("define", "plan"), outcomes="waited")
+
+
+def not_judged(slug):
+    """A shipped issue from before outcomes were recorded: it lists no checkpoint
+    and holds no `checkpoint_outcomes` key."""
+    return manifest(slug)
+
+
+def write_project(root, issues):
+    """The synthetic manifests under `root`, as a project."""
+    root = Path(root)
+    for slug, body in issues.items():
+        folder = root / ".compass" / "work" / slug
+        folder.mkdir(parents=True)
+        (folder / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
+                                             encoding="utf-8")
+    (root / ".compass" / "work").mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def impact_rows(root):
+    """`autonomy_cost.impact_rows` over every manifest under `root`, read the way
+    each reader reads them."""
+    from compass_pkg import autonomy_cost
+    from compass_pkg.core import manifest_path, normalize_spine
+    from compass_pkg.manifest_store import load_manifest_mapping
+    work = Path(root) / ".compass" / "work"
+    issues = [(d.name, normalize_spine(load_manifest_mapping(manifest_path(str(d)))))
+              for d in sorted(work.iterdir())
+              if Path(manifest_path(str(d))).is_file()]
+    return autonomy_cost.impact_rows(issues, str(work))
+
+
+def landed_fixture_issue(tmp_path, autonomy):
+    """The regular fixture issue taken through every hand-off on `autonomy`, with
+    every gate passed on typed evidence, and landed by `ship-commit`. Returns
+    the project and the issue's folder."""
+    root = co.project(tmp_path, compass_yml=dict(co.BALANCED, autonomy=autonomy))
+    folder = root / ".compass" / "work" / co.SLUG
+    import test_issue_usage
+    test_issue_usage.assessed_before_the_path(folder, autonomy)
+    listed = co.manifest(root)["checkpoints"]
+    assert listed == (["define", "plan"] if autonomy == "balanced" else [])
+    stages = co.manifest(root)["stages"]
+    assert [s for s, weight in stages.items() if weight not in ("skipped", "collapsed", "none")] \
+        == ["assess", "define", "refine", "plan", "breakdown", "implement", "verify", "ship"]
+
+    co.register(root, "acceptance-criteria")
+    skipped = [("assess", "router")]
+    if "define" in listed:
+        assert co.approve(root, "define").returncode == 0
+    else:
+        skipped.append(("define", "spec-author"))
+    co.refine_done(root)
+    skipped.append(("refine", "spec-author"))
+    co.register(root, "technical-design")
+    if "plan" in listed:
+        assert co.approve(root, "plan").returncode == 0
+    else:
+        skipped.append(("plan", "planner"))
+    for stage, agent in skipped:
+        done = co.skip(root, stage, agent)
+        assert done.returncode == 0, (stage, done)
+
+    body = co.manifest(root)
+    # The default regular approach has six `verify` gates; a project that loads
+    # its architecture has a seventh, which the fixture adds.
+    assert len(body["gates"]) == 6
+    body["gates"].append({"id": "verify.architecture", "status": "pending", "evidence": []})
+    assert all(g["id"].startswith("verify.") for g in body["gates"])
+    (folder / "evidence").mkdir(exist_ok=True)
+    (folder / "evidence" / "gate.txt").write_text("passed\n")
+    body["evidence"] = body.get("evidence", []) + [
+        {"id": "EV-GATE", "type": "command-output", "path": "evidence/gate.txt"}]
+    for gate in body["gates"]:
+        gate["evidence"] = ["EV-GATE"]
+    co.write_manifest(root, body)
+    co._ready_to_ship(root)
+    done = co.run(root, "ship-commit", "-m", "Ship it", "--issue", co.SLUG)
+    assert done.returncode == 0, done
+    co.assert_no_gh_call(root)
+    return root, folder
+
+
 # --- the projects the base commit is compared on ---------------------------------
 
 def _masked(text, root):
@@ -224,32 +356,29 @@ def test_arc_6_landed_issues_are_not_judged(tmp_path):
     assert co.manifest(root)["assessment"]["size"] == "large"
     assert "checkpoint_outcomes" not in co.manifest(root)
 
-    # The retro counts the landed issue as shipped and not measurable.
-    done = dbi.compass(project.root, "retro", "--impact")
-    assert done.returncode == 0, done
-    lines = [line for line in done.stdout.splitlines() if line.startswith("  autonomy ")]
+    # The rows count the landed issue as shipped and not measurable.
+    rows = impact_rows(project.root)
+    from compass_pkg import autonomy_cost
+    lines = [line for line in autonomy_cost.render_rows(rows) if line.startswith("  autonomy ")]
     assert lines == ["  autonomy      unmeasurable - 0 measurable shipped issue(s); 20 required "
-                     "(1 shipped issue(s) not measurable)"], done.stdout
-    row = json.loads(dbi.compass(project.root, "retro", "--impact", "--json").stdout)
-    assert (row["autonomy_ratio"]["issues"], row["autonomy_ratio"]["not_measurable"]) == (0, 1)
+                     "(1 shipped issue(s) not measurable)"], lines
+    row = rows["autonomy_ratio"]
+    assert (row["issues"], row["not_measurable"]) == (0, 1)
     dbi.assert_no_gh_call(project.root)
     co.assert_no_gh_call(root)
 
     # A landed issue that lists no checkpoint and holds no `checkpoint_outcomes`
     # key is not judged: shipped, not measurable, and never autonomous.
-    from compass_pkg import autonomy_cost
-    before = rac.not_judged("before")
+    before = not_judged("before")
     assert autonomy_cost.shipped(before)
     assert not autonomy_cost.measurable(before) and not autonomy_cost.autonomous(before)
-    empty = rac.write_project(tmp_path / "empty", {"before": before})
-    row = json.loads(rac.retro(empty, "--impact", "--json").stdout)
-    assert (row["autonomy_ratio"]["issues"], row["autonomy_ratio"]["not_measurable"]) == (0, 1)
+    empty = write_project(tmp_path / "empty", {"before": before})
+    row = impact_rows(empty)["autonomy_ratio"]
+    assert (row["issues"], row["not_measurable"]) == (0, 1)
     dbi.assert_no_gh_call(empty)
 
 
 # --- ARC-22 -------------------------------------------------------------------------
-
-import test_retro_autonomy_cost as rac  # noqa: E402
 
 COUNTS = {"subagent_requests": 0, "input": 1, "output": 1, "cache_write": 1, "cache_read": 1}
 
@@ -293,7 +422,7 @@ def snapshot(root):
 
 
 def test_arc_22_diagnose_shows_bands_and_cost(tmp_path):
-    root, folder = rac.landed_fixture_issue(tmp_path / "balanced", "balanced")
+    root, folder = landed_fixture_issue(tmp_path / "balanced", "balanced")
     body = co.manifest(root)
     body["usage"] = usage_with()
     co.write_manifest(root, body)
@@ -315,7 +444,7 @@ def test_arc_22_diagnose_shows_bands_and_cost(tmp_path):
         "    implement    not measured (no-window)",
         "    unattributed $0.5000  1 request(s)"], shown
 
-    # The retro's figures for the issue are the same functions' figures.
+    # The rows' figures for the issue are the same functions' figures.
     from compass_pkg import autonomy_cost
     from compass_pkg.core import normalize_spine
     assert autonomy_cost.bands(normalize_spine(co.manifest(root)), str(folder)) == {
@@ -455,10 +584,10 @@ def test_the_bands_read_the_configuration_only_when_an_approval_could_count(
         tmp_path, monkeypatch):
     """A human check passes only with an approval record naming it, so an issue
     that holds none has no human check to count and its configuration is not
-    read: a retro over a large archive does not read it once for each issue. An
+    read: a read of a large archive does not read it once for each issue. An
     issue that holds one needs it, and is left out when it cannot be read."""
     from compass_pkg import autonomy_cost, effective
-    task = rac.waited("shipped")
+    task = waited("shipped")
     folder = tmp_path / "shipped"
     folder.mkdir()
 
@@ -475,8 +604,6 @@ def test_the_bands_read_the_configuration_only_when_an_approval_could_count(
     task["evidence"][-1]["type"] = "checkpoint-approval"
     assert autonomy_cost.bands(task, str(folder)) == WAITED_BANDS
 
-
-WAITED_BANDS = rac.WAITED_BANDS
 
 
 # --- ARC-24 -------------------------------------------------------------------------

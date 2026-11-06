@@ -2,8 +2,9 @@
 
 An interruption is a pre-tool hook block or a failing `compass check`: a
 moment the work stopped and someone had to act. Each one appends a line to
-`.compass/interruptions.log`, so `compass retro` can report whether the
-framework gets in the way, as numbers rather than impressions.
+`.compass/interruptions.log`, so `compass issue diagnose` can report whether
+the framework got in the way of one issue, as numbers rather than
+impressions.
 
 The log is append-only and lives outside every issue folder. Appending one
 short line is safe when another process writes at the same moment, so a

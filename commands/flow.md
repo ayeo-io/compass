@@ -69,45 +69,19 @@ dated digest file (see below).
    defect follow-up, every unbacked marketing claim, every de-scoped
    artifact still owed, across all issues.
 
-6. **Read the retrospective signal.** Run `compass retro` - it reads
-   the `reassessments:` log across every issue and reports whether the
-   assess stage is systematically over- or under-sizing the process (a run
-   of "up" re-assessments means the assess stage keeps rating work lighter
-   than it is).
-   This is how Compass checks itself: a framework that sizes the process
-   to the work must be able to tell whether its sizing is correct. Report the signal; if most re-assessments go the same way, the
-   fix is in the project's `compass.yml` (a reviewed change to the routing
-   rules) or the delivery-approach rubric, not in any one issue.
-
-7. **Run rework-scan.** Run `compass rework-scan --format markdown` and
-   embed the output in the report as a "Rework scan" section. This shows
-   cross-issue add-then-delete patterns within the configured window
-   (`rework_scan.window_days` in `${CLAUDE_PLUGIN_ROOT}/governance/signals.yml`,
-   or in the project's own copy of that file, which the scan reads first; an
-   unmigrated 5.x project runs on its own copied `governance/` until
-   `compass policy migrate`). The
-   scan is a signal - it never gates, never changes issue state, and always exits 0
-   on detection (Flow advises, never gates). If the section is empty,
-   record "0 rework instances detected" to confirm the scan ran.
-
-8. **Report**, ordering by what needs attention first: human decisions ->
-   guardrail violations -> blockers -> owed follow-ups -> rework signals ->
-   retrospective signal -> healthy in progress -> shipped.
+6. **Report**, ordering by what needs attention first: human decisions ->
+   guardrail violations -> blockers -> owed follow-ups -> healthy in
+   progress -> shipped.
 
 ## `--digest`
 
 With `--digest`, also write a dated digest to
 `.compass/flow/digest-{{DATE}}.md` using the format in the
 `flow-management` skill: shipped since the last digest, in flight, blocked,
-owed follow-ups, rework signals, and next up. The digest is the artifact a
+owed follow-ups, and next up. The digest is the artifact a
 team reviews on a cadence - and `/compass:flow --digest` suits a
 scheduled run (e.g. weekly). It is append-only history: never
 overwrite a prior digest.
-
-The digest must include a **Rework scan** section produced by
-`compass rework-scan --format markdown`. This section is informational - it
-does not change any issue's state, and a non-empty rework report does not
-block or gate anything.
 
 ## Note
 

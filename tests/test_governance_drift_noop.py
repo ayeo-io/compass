@@ -298,8 +298,8 @@ EXPECTED_GUARDRAIL_IDS = {"G1", "G2", "G3", "G4", "G5", "S1", "S2"}
 # or https URL, so a team arriving with one does not retype it - a
 # top-level group rather than a subverb, because no subverb owns it.
 EXPECTED_SUBCOMMANDS = {
-    "approach", "bdd", "check", "retro", "ci", "tdd-red",
-    "tdd-green", "policy", "intent", "issue", "adr", "rework-scan", "flow",
+    "approach", "bdd", "check", "ci", "tdd-red",  # 9.0.0 removed `retro` and
+    "tdd-green", "policy", "issue", "adr", "flow",  # `rework-scan` and `intent` (ADR-093)
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
     "review-rule", "preset",  # `review-rule list`, `preset init|test`; 9.0.0 removed `spec` and `plan`

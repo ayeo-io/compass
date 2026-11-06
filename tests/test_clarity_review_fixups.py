@@ -24,8 +24,9 @@ Findings covered (numbered as the batch 5-9 review numbers them):
   12. The multiagent script shipped the reviewing agent's own first-person
       uncertainty in a comment with no owner. 9.0.0 removed the script
       (ADR-090), and its test with it.
-  14. `cli/compass_pkg/calibration.py` used three names for one thing across
-      three lines; two matched the CLI's printed output, one did not.
+  14. The calibration module used three names for one thing across three
+      lines. 9.0.0 removed the module with `compass retro` (ADR-093), and its
+      test with it.
 """
 from __future__ import annotations
 
@@ -80,12 +81,6 @@ def test_manifest_py_g1_sentence_leads_with_a_plain_word():
     text = _read("cli/compass_pkg/manifest.py")
     assert "# `G1` is checked at the verify stage and at ship." not in text
     assert "tested-before-ship guardrail (`G1`)" in text
-
-
-def test_calibration_py_uses_one_name_for_reframe_debt():
-    text = _read("cli/compass_pkg/calibration.py")
-    assert "Reframe debt is a misjudgement nobody recorded" not in text
-    assert "An unrecorded re-assessment is a misjudgement nobody recorded" in text
 
 
 def test_terminal_py_has_no_empty_comment_line():

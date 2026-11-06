@@ -103,7 +103,7 @@ instead of the procedure below.
 8. **Run `compass check` as the final mechanical gate**, and record its
    output. See the Definition of Done below.
 9. **Commit, when the person asks.** See "Commit" below.
-10. **Capture process friction (advisory - never a gate).** See below.
+10. **Offer a project lesson (advisory - never a gate).** See below.
 
 ## How the review is done
 
@@ -241,30 +241,13 @@ own items are clean. Pay the other issue's follow-up first.
   commit `gh pr view` reports. `compass check` reports, as advice, a
   `land_commit` that origin's default branch does not reach.
 
-## Process friction
+## Project lessons
 
-With the gate cleared, record where Compass's *own* process cost more effort
-than it saved between assess and ship. This step never blocks shipping.
-
-- Run `compass _friction-capture --internal` - it assembles a draft
-  `friction:` list from signals the CLI already computed (recorded
-  re-assessments, absorbed assessment-debt) and writes it into
-  `manifest.yml`.
-- Then offer the author **one optional line**: *"anything the framework
-  made harder than it should have been?"* - pass it with `--note "..."
-  --note-category <over-weight|tooling|...> --note-stage <stage>`.
-  **Recording nothing is a valid, common outcome.**
-- Notes the agent recorded during the run with `compass issue friction`
-  are kept. Each cites evidence and a fix; `compass retro --friction`
-  counts them in their own column, and on their own they never become a
-  lesson. It writes only the `friction:` section (no follow-up, no gate),
-  and `compass retro --friction` aggregates it across issues as advice,
-  never as a gate.
-- If the person corrected something during the issue and said they had
-  to say it before, offer to keep it as a project lesson: run
-  `compass lesson propose "<their words>"`, quoting them,
-  and never `compass lesson add`. It takes effect only when someone runs
-  `compass lesson accept`.
+This step never blocks shipping. If the person corrected something during
+the issue and said they had to say it before, offer to keep it as a project
+lesson: run `compass lesson propose "<their words>"`, quoting them, and
+never `compass lesson add`. It takes effect only when someone runs
+`compass lesson accept`.
 
 ## Hand-off
 

@@ -998,8 +998,7 @@ def cmd_route_evaluate(args):
         #
         # Without this, a corrected assessment that leaves the approach
         # unchanged would not be logged, and that correction is the cheapest
-        # evidence there is that sizing was wrong, which is exactly what
-        # `compass retro` aggregates.
+        # evidence there is that sizing was wrong.
         prior = {
             "assessment": task.get("evaluated_assessment"),
             "delivery_approach": task.get("delivery_approach"),
@@ -1036,11 +1035,11 @@ def cmd_route_evaluate(args):
         reframed = evaluated_before and bool(changed)
         if reframed:
             reason = args.reason or "(reason not given - fill this in)"
-            # The kind keeps `compass retro` accurate. Logging a
+            # The kind keeps the log accurate. Logging a
             # governance-driven weight-up as a plain re-assessment would read
             # as assessment under-sizing the work - and it is not: the
             # assessment was right, the policy under it moved. Only
-            # `judgment` feeds the re-sizing aggregate.
+            # `judgment` says the work was misread.
             kind = getattr(args, "kind", None) or "judgment"
             if kind == "unchanged":
                 raise CompassError("kind `unchanged` is recorded by the CLI "
@@ -1116,7 +1115,7 @@ def cmd_route_evaluate(args):
         from compass_pkg import effective
 
         # A reassess that changes only the issue's `config:` layer is logged
-        # with its own kind. `compass retro` ignores it: no one misread the work.
+        # with its own kind: no one misread the work.
         configuring = not reframed and plan.config_changed
         if configuring:
             task.setdefault("reassessments", []).append({
@@ -1129,8 +1128,8 @@ def cmd_route_evaluate(args):
                 "date": datetime.date.today().isoformat(),
             })
         # A reassess that changes nothing but is given a reason keeps the
-        # reason as evidence. `compass retro` and friction capture skip the
-        # `unchanged` kind: no one misread the work. Without a reason there is
+        # reason as evidence, under the `unchanged` kind: no one misread the
+        # work. Without a reason there is
         # nothing to keep, so nothing is written.
         unchanged = (evaluated_before and not reframed and not configuring
                      and bool(getattr(args, "reason", None)))
@@ -1180,6 +1179,6 @@ def cmd_route_evaluate(args):
             sys.stderr.write(
                 "compass: re-assessment recorded with no reason. Re-run with "
                 "--reason \"...\" or edit manifest.yml's last `reassessments` "
-                "entry - the reason is the calibration signal.\n"
+                "entry - the reason says why the assessment changed.\n"
             )
     return 0

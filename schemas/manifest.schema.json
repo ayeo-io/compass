@@ -907,7 +907,7 @@
     },
     "raised_by": {
       "type": "object",
-      "description": "The issue this one was found in, and where. Set by `quick-fix start --raised-by --found-at` or `compass issue raised-by`; read by `compass retro --lineage`. Advisory only.",
+      "description": "The issue this one was found in, and where. Set by `quick-fix start --raised-by --found-at` or `compass issue raised-by`; read by `compass issue lint` and the hint for a chain of three. Advisory only.",
       "required": ["issue", "found_at"],
       "additionalProperties": false,
       "properties": {
@@ -978,7 +978,7 @@
     },
     "reassessments": {
       "type": "array",
-      "description": "Append-only log of re-assessments, written by `compass approach evaluate --write --reason`. Feeds the assessment calibration signal that `compass retro` reads.",
+      "description": "Append-only log of re-assessments, written by `compass approach evaluate --write --reason`. Each entry keeps the reason the assessment changed.",
       "items": {
         "type": "object",
         "required": [
@@ -1010,7 +1010,7 @@
               "configuration",
               "unchanged"
             ],
-            "description": "What kind of re-assessment this was. 'judgement' is the old spelling of 'judgment', read until 9.0.0. Only 'judgment' feeds compass retro's re-sizing signal - a policy correction, a scope change, a change to the issue's own config: layer (configuration) or a reassess that left the approach as it was (unchanged, which keeps only its reason) is not the assessment having misread the work."
+            "description": "What kind of re-assessment this was. 'judgement' is the old spelling of 'judgment', read until 9.0.0. Only 'judgment' says the assessment misread the work - a policy correction, a scope change, a change to the issue's own config: layer (configuration) or a reassess that left the approach as it was (unchanged, which keeps only its reason) is not the assessment having misread the work."
           },
           "generation": {
             "type": "object",
@@ -1066,7 +1066,7 @@
     },
     "friction": {
       "type": "array",
-      "description": "Optional. Written at ship. Records where Compass's own process weight cost more than it returned between assess and ship, and how the framework could have been configured to avoid it. A strategy-class signal (soft, advisory) - never gates ship. Absent on issues that hit no friction; nothing happens for a project that never writes it (ADR-006). Aggregated by `compass retro --friction`.",
+      "description": "Optional. Written at ship. Records where Compass's own process weight cost more than it returned between assess and ship, and how the framework could have been configured to avoid it. A strategy-class signal (soft, advisory) - never gates ship. Absent on issues that hit no friction; nothing happens for a project that never writes it (ADR-006). 9.0.0 writes it no more and still reads it as valid (ADR-093).",
       "items": {
         "type": "object",
         "required": [
@@ -1105,7 +1105,7 @@
               "human",
               "agent"
             ],
-            "description": "derived: assembled automatically at ship from the reassessments log. human: given by the author. agent: recorded by the agent with `compass issue friction`, counted apart and never a lesson on its own."
+            "description": "derived: assembled automatically at ship from the reassessments log. human: given by the author. agent: recorded by the agent with `compass issue friction`, which 9.0.0 removed."
           },
           "evidence": {
             "type": "string",
@@ -1121,7 +1121,7 @@
     "repairs": {
       "type": "string",
       "minLength": 1,
-      "description": "hotfix approaches only: the slug of the issue this hotfix repairs. Read by `compass retro --impact` to compute the change-fail signal. Optional - a hotfix that declares none is reported as a coverage gap rather than silently counted as zero."
+      "description": "hotfix approaches only: the slug of the issue this hotfix repairs. Optional."
     },
     "parked_reason": {
       "type": "string",

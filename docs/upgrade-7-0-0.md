@@ -53,7 +53,7 @@ Stage commands now write the status of each registered document. A document that
 - **A project artifact with no `stage` is owned by ship.** Add `stage: <stage>` to its catalog entry to have an earlier stage approve it. `compass ship-commit` approves the ship-owned ones.
 - **`compass issue migrate` settles the status of done issues.** On a done issue, each `draft` or `awaiting-approval` document becomes `approved` (close reason `completed`, `approved_by: compass issue migrate`) or `superseded` (`not-planned` or `duplicate`), with the reason "migrated from a 6.0.0 record". Documents in any other status and open issues are left as they are. The dry run reports the counts the apply makes. It counts each entry the apply registers before this step, for a relocated document or a verification note. It leaves out a stub distribution map that the apply renames and supersedes before this step. A second run changes nothing.
 - **A decision an agent took for the person is shown at the next checkpoint.** `compass issue decision add` (and `--from-ledger`) records it in `decisions_taken`. On `balanced` and `controlled` autonomy, `compass next` reports `Waiting at the <stage> checkpoint` until a person confirms the set with `compass evidence approve --decisions` or reopens a decision with `compass issue decision set`. On `autonomous` it lists the decisions and does not wait. The approver is a name in the project file's `approvers:` lists, or its `owner` when there are none. The confirmation is an `artifact-approval` record, never a `human-approval` record.
-- **`compass retro --decisions` reports how those decisions were settled.** It gives the share confirmed, changed and never confirmed on a done issue.
+- **The retro's `--decisions` flag reports how those decisions were settled.** It gives the share confirmed, changed and never confirmed on a done issue.
 
 ### What to do
 
@@ -73,7 +73,7 @@ Stage commands now write the status of each registered document. A document that
 | `decisions_taken` | `manifest.yml` | The decisions an agent took for the person, with their status |
 | `compass evidence approve --decisions` | a flag | Confirm the decisions taken for the person |
 | `compass issue decision add`, `compass issue decision set` | verbs | Record a decision taken for the person, or reopen one |
-| `compass retro --decisions` | a flag | Report how decisions taken for the person were settled |
+| The retro's `--decisions` | a flag | Report how decisions taken for the person were settled |
 
 ## Rendered blocks and the issue page
 
@@ -222,7 +222,7 @@ Compass now records what happened at each stage hand-off and what each issue cos
 - **`compass ship-commit` refuses an unanswered listed checkpoint.** It refuses a judged issue that lists a checkpoint with no outcome, before it writes anything, with the code `checkpoint-no-outcome`. A judged issue is one whose first assessment wrote `checkpoint_outcomes`. An issue assessed before this change is never refused, and no migrate adds the key.
 - **The pre-tool hook records each session.** The first time it judges a tool call for an issue, it appends the session id to `usage.sessions`. It never refuses an edit because of it. Every issue folder gains an empty `.manifest.lock` file.
 - **`compass ship-commit` records usage on every approach but the quick fix.** It reads the full transcripts of the recorded sessions and keeps numbers only. Above 1 GiB of transcript it reads none and records the reason `too-large`.
-- **`compass retro --impact` gains four rows**, the autonomy ratio, the band split, the cost per change and the decisions confirmed, each withheld below its floor. `compass retro --impact --json` and `compass retro --impact --format json` print one object. Before, `--json` printed the report's lines under an `output` key.
+- **The retro's `--impact` view gains four rows**, the autonomy ratio, the band split, the cost per change and the decisions confirmed, each withheld below its floor. With `--json` or `--format json` the view prints one object. Before, `--json` printed the report's lines under an `output` key.
 - **`compass issue diagnose` gains a Checkpoints and cost section**, and its last line of what the records cannot show now reads "token use of a session the hook did not record".
 
 ### What to do

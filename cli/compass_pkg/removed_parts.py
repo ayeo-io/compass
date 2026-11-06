@@ -8,7 +8,9 @@ document, the acceptance criteria (ADR-091), so the verbs that wrote or
 checked the other documents are gone. 9.0.0 runs every new delivery issue on
 one four-stage path (ADR-092), so the delivery approaches, the legacy stages
 the path does not keep, the caps rule set and the Definition of Ready checks
-are gone from what a project can configure.
+are gone from what a project can configure. 9.0.0 keeps only what a reviewer
+of one change needs (ADR-093), so the reports across issues and the brief
+ingest are gone.
 
 A command line that still names a removed verb or flag fails to parse as an
 unknown command, and `line_for` gives the one line the parse error adds.
@@ -97,6 +99,11 @@ COMMANDS = (
      "no living spec is derived; the issue records hold each landed scenario", "ADR-091"),
     (("intent", "ingest"), "compass intent ingest",
      "write the Summary and Intent of acceptance-criteria.md from the brief", "ADR-093"),
+    (("retro",), "compass retro",
+     "sdd-bench is the measurement; compass check and compass approach show read one issue",
+     "ADR-093"),
+    (("rework-scan",), "compass rework-scan", "nothing replaces it", "ADR-093"),
+    (("issue", "friction"), "compass issue friction", "nothing replaces it", "ADR-093"),
 )
 
 #: The ten agent names 9.0.0 removed with the `agents/` folder. The shipped

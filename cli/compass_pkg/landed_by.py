@@ -23,9 +23,8 @@ from compass_pkg.issue_layout import is_one_segment
 # `landed_by` - an issue whose work was done through a different issue
 # =============================================================================
 # Use `landed_by:` when the work was delivered through another issue or a
-# commit. Marking such an issue `abandoned` misleads `compass retro`, which
-# reads the status to judge whether assessment is over- or under-sizing the
-# process.
+# commit. Marking such an issue `abandoned` misleads every reader of the
+# status about what was delivered.
 #
 # `landed_by:` MOVES the claim; it does not waive it. The named issue must
 # exist, must be landed, must carry a record of its own, and must name this

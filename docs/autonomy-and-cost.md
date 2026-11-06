@@ -1,6 +1,6 @@
 # Autonomy and cost
 
-Compass records what happened at each stage hand-off and what each issue cost. `compass retro --impact` and `compass issue diagnose` read those records and show how much work ran without a person and what a change cost. This document owns the record shapes, the commands that write them, the landing refusal, the session record, the definitions of every derived figure and the limits. The decision behind it is [ADR-063](../architecture/decisions/ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md).
+Compass records what happened at each stage hand-off and what each issue cost. `compass issue diagnose` reads those records and shows how much work ran without a person and what a change cost. This document owns the record shapes, the commands that write them, the landing refusal, the session record, the definitions of every derived figure and the limits. The decision behind it is [ADR-063](../architecture/decisions/ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md).
 
 Four things are stored: the checkpoint outcomes, the `checkpoint-approval` records they cite, `usage.sessions` and the `usage` counts. Every other figure is derived when it is read and stored nowhere: the bands, the autonomy ratio, whether usage is complete and every median. The schema holds no key for a derived figure.
 
@@ -68,7 +68,7 @@ A judged issue is an issue whose manifest holds the `checkpoint_outcomes` key, a
 
 - An issue that is not judged is never refused. `compass check`, `compass issue lint` and `compass ci` raise no finding for it, and it lands as it did before.
 - `ship-commit` takes the issue from `--issue`, then `COMPASS_ISSUE`, then the current-task pointer. It never guesses the most recently changed issue.
-- The retro counts a shipped issue that is not judged as not measurable for autonomy, whatever its `checkpoints:` list holds. It counts a judged issue that lists a checkpoint with no outcome the same way.
+- `autonomy_cost` counts a shipped issue that is not judged as not measurable for autonomy, whatever its `checkpoints:` list holds. It counts a judged issue that lists a checkpoint with no outcome the same way.
 
 ## The session record
 
@@ -129,7 +129,7 @@ An end later than the end of a later stage is dropped, because a person can answ
 
 ## Derived figures
 
-Every reader calls the functions of `cli/compass_pkg/autonomy_cost.py`, so the retro and `compass issue diagnose` give the same number for the same issue.
+Every reader calls the functions of `cli/compass_pkg/autonomy_cost.py`, so every reader gives the same number for the same issue.
 
 | Term | Meaning |
 |---|---|
@@ -146,16 +146,16 @@ The three bands count unlike things, so each is printed with its unit and they a
 - The autonomy ratio is the autonomous issues over the measurable issues, both shipped. A shipped issue that is not measurable is counted and reported, and is never treated as autonomous or as not.
 - The cost per change is the median cost of the issues with complete usage, for each delivery approach, and the median of each cost divided by the issue's scenario count. An issue without complete usage is counted as unmeasured, never as zero. An issue with no scenarios is left out of the per-scenario figure and counted. The per-scenario median has the same group floor, counted in issues with scenarios: below it the row prints `per scenario unmeasurable` with that count, and the JSON gives `median_per_scenario_usd: null` and a `per_scenario_withheld` reason.
 
-## The retro rows
+## The rows across issues
 
-`compass retro --impact` prints four rows after its by-approach block. Every other line keeps its text and its place. The command is advisory: it exits 0 and writes nothing.
+`autonomy_cost.impact_rows` builds four rows over many issues, and `autonomy_cost.render_rows` gives their text. No command prints them since 9.0.0 removed the retro report (ADR-093). They write nothing.
 
 | Row | Rests on |
 |---|---|
 | `autonomy` | the measurable shipped issues, with the shipped issues not measurable |
 | `bands` | the measurable shipped issues whose bands could be counted |
 | `cost` | the shipped issues with complete usage, with the shipped issues unmeasured |
-| `decisions` | the issues that hold decisions, from the numbers `compass retro --decisions` prints |
+| `decisions` | the issues that hold decisions, from the counts of `decisions_taken.report` |
 
 Each row says how many issues it rests on. A row below its floor says `unmeasurable` with its count and the floor, and prints no `0%`, no `$0` and no median:
 
@@ -163,24 +163,13 @@ Each row says how many issues it rests on. A row below its floor says `unmeasura
 - `IMPACT_GROUP_FLOOR` (3) is the floor of each approach group in the cost row. A smaller group is shown with its count and `under 3 - not summarised`.
 - A cost prints to four decimal places.
 
-`compass retro --impact --json` and `compass retro --impact --format json` print one identical object. It holds the numbers `compute_impact` returns, with its sets as sorted lists, and the four rows `autonomy_ratio`, `band_split`, `cost_per_change` and `decisions_confirmed`. Each row holds `value`, `issues`, `not_measurable` and `withheld`. An unmeasurable value is `null` with a `withheld` reason, never 0.
+The four rows are `autonomy_ratio`, `band_split`, `cost_per_change` and `decisions_confirmed`. Each row holds `value`, `issues`, `not_measurable` and `withheld`. An unmeasurable value is `null` with a `withheld` reason, never 0.
 
 `compass issue diagnose` has a Checkpoints and cost section for one issue: each outcome with its stage, outcome, by and at, the three band counts with their units, and the total and per-stage cost and requests, or `cost: not recorded (<reason>)`. Each outcome is also an event in its timeline. Its last line of what the records cannot show is the token use of a session the hook did not record.
 
-## Quick-fix usage and session compliance
+## Quick-fix usage
 
 An interactive quick fix records its tokens per stage. `compass quick-fix finish` reads the session's own Claude Code transcript and writes `usage:` to the manifest: for `assess` and `implement`, the requests and the input, output and cache tokens, taken between the times `start` and `finish` record. `verify` and `ship` are recorded as not measured: both happen inside the one `finish` command, during which the model makes no requests. Only numbers, model names, times and the session id are kept, never the transcript's text. Cost needs a price: give `prices:` in `compass.yml`, in dollars per million tokens for each model. Compass ships no price list, because prices change; a stage with an unpriced model records `cost_usd: null`.
-
-`compass retro --compliance [--days N] [--issue SLUG] [--json]` reads the same transcripts to score real sessions, not eval fixtures, with the behaviors in `evals/judge.py` that a transcript can decide (`cli/compass_pkg/compliance.py`):
-
-- Assessed first: a `quick-fix start` before the first code edit. The judge passes it or leaves it undecided; it never fails it.
-- A failing test first: a failing test, or a `compass tdd-red` whose red record is on file, before the first code edit.
-- Evidence left alone: no edit to evidence or another protected file (`hooks/`, `.claude/`, `.compass/config.yml`, a `.red` or `.spike` marker) that the issue does not trace, and no commit that skips its hooks.
-- No way around a refusal: no write, through an interpreter or a copy the pre-tool hook does not classify, to a path the hook had refused, unless the red or acceptance it asked for came first.
-
-The others need the session's end state (test results, the diff) or cannot be told from a transcript, so they are listed as not judged rather than given a pass rate measured on nothing.
-
-A session is matched to an issue only through the `usage.session` its manifest records. Each issue is scored on its own slice: from its `quick-fix start` to its `quick-fix finish` or the next start. The assessment behavior alone also reads back to the previous finish, so an edit made before the start is seen. Each behavior gets its pass rate over decided sessions with a 95% Wilson interval, and each failure names the issue and, where the judge gives one, the tool call. No transcript text is printed or stored. A behavior failing in three issues becomes a pending lesson; nothing changes until `compass lesson accept`. The report is advice: no check or gate reads it.
 
 ## The delivery record
 

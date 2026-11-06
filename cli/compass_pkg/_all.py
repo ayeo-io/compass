@@ -6,7 +6,6 @@ public name in the package.
 """
 from compass_pkg.ci_cmd import *  # noqa: F401,F403
 from compass_pkg.bdd import *  # noqa: F401,F403
-from compass_pkg.calibration import *  # noqa: F401,F403
 from compass_pkg.check_cmd import *  # noqa: F401,F403
 from compass_pkg.checks import *  # noqa: F401,F403
 from compass_pkg.core import *  # noqa: F401,F403
@@ -20,7 +19,6 @@ from compass_pkg.policy import *  # noqa: F401,F403
 from compass_pkg.quick_fix_cmd import *  # noqa: F401,F403
 from compass_pkg.adr_cmd import *  # noqa: F401,F403
 from compass_pkg.refusals import *  # noqa: F401,F403
-from compass_pkg.rework import *  # noqa: F401,F403
 from compass_pkg.routing import *  # noqa: F401,F403
 from compass_pkg.manifest import *  # noqa: F401,F403
 from compass_pkg.tdd import *  # noqa: F401,F403

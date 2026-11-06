@@ -684,13 +684,6 @@ _register(Rule(
             "the `backfills:` key is an identifier and stays; this is the "
             "same class of identifier."),
         Exemption(
-            "tests/test_process_impact.py",
-            "tasks: list of (slug, created, landed, route, n_gates, "
-            "repairs|None).",
-            "documents the function's real parameter name `tasks` (an "
-            "identifier, section 4), not a v1-vocabulary use of the word - "
-            "the parameter and every call site in this file use that name."),
-        Exemption(
             "tests/test_no_deprecation_stubs.py",
             "`--task` and `--reading` were tolerated alongside `--issue` and",
             "names the real, retired CLI flag spelling `--task` this test "
@@ -707,20 +700,6 @@ _register(Rule(
             "codes. An unexplained term is a defect whether it is `G5` or `vacuity`, and",  # plain-words: allow - the exemption quotes the offending sentence verbatim, which is how a substring sweep tells it from an ordinary use
             "the same naming-the-banned-word exception as the docstring "
             "line above."),
-        Exemption(
-            "tests/test_rework_scan.py",
-            "`TRC-D2`: file added by task-a and deleted by task-b is reported.",
-            "task-a and task-b are the real fixture directory names "
-            "write_task_yml() writes (section 4, identifiers), not a "
-            "v1-vocabulary use of the word."),
-        Exemption(
-            "tests/test_rework_scan.py",
-            "`TRC-D4`: migration added in task-a and a drop migration added in task-b is reported.",
-            "the same fixture directory names as the exemption above."),
-        Exemption(
-            "tests/test_rework_scan.py",
-            "task-b is 10 days later - outside the window",
-            "the same fixture directory name as the exemptions above."),
         Exemption(
             "tests/test_printed_output_vocabulary.py",
             "only layer 2 catches, and `Land` capitalised is a prose form that only",
@@ -744,12 +723,6 @@ _register(Rule(
             "quotes the specific proposed-but-never-built skill name "
             "`intent-elicitation`, not a live use of the retired word "
             "\"elicitation\"."),
-        Exemption(
-            "tests/test_record_keeping_integrity.py",
-            "The defect: `task['friction'] = entries` discarded the first note.",
-            "a verbatim quote of the real defective line "
-            "(cli/compass_pkg/calibration.py:411, a local variable named "
-            "`task`), not a v1-vocabulary use of the word."),
         Exemption(
             "tests/test_governance_drift_noop.py",
             "approach, gates, topology and fired guardrails against what the fixture",
@@ -778,28 +751,6 @@ _register(Rule(
             "names the real, retired CLI flag spelling `--task` this test "
             "asserts a teaching artifact must not use - an identifier "
             "(section 4), not a v1-vocabulary use of the word."),
-        Exemption(
-            "tests/fixtures/rework-scan/add-then-delete-pair/"
-            "task-adds-handler/task.yml", "Fixture: task-adds-handler",
-            "the real, on-disk directory name of this fixture pair "
-            "(section 4), not a v1-vocabulary use of the word."),
-        Exemption(
-            "tests/fixtures/rework-scan/add-then-delete-pair/"
-            "task-adds-handler/task.yml",
-            "task-removes-handler/task.yml",
-            "the real, on-disk path of the sibling fixture (section 4), "
-            "not a v1-vocabulary use of the word."),
-        Exemption(
-            "tests/fixtures/rework-scan/add-then-delete-pair/"
-            "task-removes-handler/task.yml", "Fixture: task-removes-handler",
-            "the real, on-disk directory name of this fixture pair "
-            "(section 4), not a v1-vocabulary use of the word."),
-        Exemption(
-            "tests/fixtures/rework-scan/add-then-delete-pair/"
-            "task-removes-handler/task.yml",
-            "task-adds-handler/task.yml",
-            "the real, on-disk path of the sibling fixture (section 4), "
-            "not a v1-vocabulary use of the word."),
         Exemption(
             "tests/fixtures/self-architecture/hypothetical-framework-task/"
             "route.md", "hypothetical-framework-task (fixture)",

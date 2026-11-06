@@ -618,20 +618,6 @@ def test_ef_8_flow_knows_the_label_the_compass_yml_names(tmp_path, monkeypatch):
     assert "auth" in flow._routing_labels()
 
 
-def test_ef_8_retro_weights_come_from_the_effective_policy(tmp_path, monkeypatch):
-    from compass_pkg import calibration
-    root, _ = _project(tmp_path, compass_yml=LAYERED)
-    monkeypatch.chdir(root)
-    layered = calibration._route_weights()
-    # The shipped default weighs the path and the spike since 9.0.0 (ADR-092).
-    assert layered and layered["delivery"] == _shipped("routing-policy.yml")[
-        "route_shapes"]["delivery"]["weight"]
-    plain = tmp_path / "plain"
-    (plain / ".compass").mkdir(parents=True)
-    monkeypatch.chdir(plain)
-    assert calibration._route_weights() == layered
-
-
 def test_ef_8_quick_fix_blockers_read_the_policy_through_effective(tmp_path, monkeypatch):
     # The shipped default has no quick-fix shape since 9.0.0 (ADR-092), so the view's
     # policy is the 8.0.4 governance copy's, and the plain project carries that copy.
@@ -679,7 +665,7 @@ POLICY_FILE_OWNERS = frozenset({
 #: many reads that function makes. Every one of these functions asks
 #: `view_or_legacy` first, and a new read, or a second read in one of them, fails.
 EXPECTED_READS = {
-    ("approach_diagram", "cmd_approach_diagram"): 1, ("calibration", "_route_weights"): 1,
+    ("approach_diagram", "cmd_approach_diagram"): 1,
     # judged reads guardrails.yml only after view_or_legacy returns None (ADR-050); it
     # runs every check outside a gate (ADR-064).
     ("outside_gate", "judged"): 1, ("check_cmd", "cmd_check"): 2, ("checks", "_check_gate_evidence"): 1,

@@ -548,10 +548,6 @@ Ship is done only once the
 issue is closed, so its review is due once every gate has passed, and the
 `next:` command then names `compass evidence request --checkpoint ship`.
 
-`compass retro --decisions` reports, across all issues, how many of these
-decisions were confirmed as taken, how many were changed, and how many were
-never confirmed on a finished issue.
-
 ## Where to go next
 
 - **`docs/routing-deep-dive.md`** - how assess selects the evidence a change
@@ -567,12 +563,8 @@ the artifacts were written precisely so the process never has to be
 re-derived. Once you are running more than one issue at a time, `/compass:flow`
 is the view across all of them - triage, blockers, and a periodic digest.
 
-Two more CLI commands work across the whole board. `compass ci` runs the full
+One more CLI command works across the whole board. `compass ci` runs the full
 mechanical gate suite - `policy lint`, then `issue lint` and `check` for every
 issue - and exits non-zero if anything fails, under the default
 `adoption: enforced`; to add Compass to CI, you only
-"run `compass ci`, honor the exit code" (see `ci/README.md`). And
-`compass retro` reads the re-assessment log across every issue and
-reports whether assessment is systematically over- or under-sizing the
-process - the way you find out, from the framework's own records, if the
-routing policy needs changes.
+"run `compass ci`, honor the exit code" (see `ci/README.md`).

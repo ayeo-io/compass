@@ -140,7 +140,7 @@ def is_hotfix(task):
 
 def scope_bloat(task_dir, slug, task):
     # 4. Each phrase is anchored at the start of the line, after an optional
-    # YYYY-MM-DD[: ] date, the way cli/compass_pkg/calibration.py anchors it.
+    # YYYY-MM-DD[: ] date.
     # A line that starts with whitespace is quoted or indented context and
     # does not fire (TRC-X3).
     devlog = os.path.join(task_dir, "devlog.md")

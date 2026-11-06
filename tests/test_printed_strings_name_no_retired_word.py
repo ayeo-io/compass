@@ -22,7 +22,6 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # must not say "triage".
 _SOURCE_FILES = [
     "cli/compass",
-    "cli/compass_pkg/calibration.py",
     "cli/compass_pkg/check_cmd.py",
     "cli/compass_pkg/checks.py",
     "cli/compass_pkg/policy.py",
@@ -171,74 +170,12 @@ def test_approach_evaluate_verbose_on_the_path_names_ship_not_land(project, run_
         f"a path issue's verbose output shows an 8.x stage block:\n{out}")
 
 
-def test_retro_transitions_print_no_raw_route_name(make_task, run_cli):
-    """A re-assessment recorded before the display layer existed still
-    carries the retired route names `express`/`expedition` raw on disk
-    (they are not touched by `normalize_spine`). `compass retro` must map
-    them for display without rewriting the record."""
-    make_task("old-reframe", {
-        "assessment": {
-            "risk": "contained", "familiarity": "brownfield-mapped",
-            "size": "small", "goal": "delivery", "role": "engineer",
-            "labels": [],
-        },
-        "delivery_approach": "feature",
-        "reassessments": [
-            {"date": "2026-06-01", "from_route": "express",
-             "to_route": "expedition", "reason": "scope grew"},
-        ],
-    })
-    r = run_cli("retro")
-    assert r.returncode == 0, r
-    out = r.stdout
-    for retired in ("express", "expedition"):
-        assert _word(retired).search(out) is None, (
-            f"compass retro prints the retired route name {retired!r}:\n"
-            f"{out}")
-    assert "quick fix -> full" in out, (
-        f"compass retro does not show the transition by its current "
-        f"route names:\n{out}")
-
-
-def test_retro_no_route_message_does_not_say_triage(make_task, run_cli):
-    make_task("unrouted-issue", {
-        "assessment": {
-            "risk": "contained", "familiarity": "brownfield-mapped",
-            "size": "small", "goal": "delivery", "role": "engineer",
-            "labels": [],
-        },
-    })
-    r = run_cli("retro")
-    assert r.returncode == 0, r
-    assert "triage" not in r.stdout.lower(), (
-        f"compass retro still prints the retired word 'triage':\n"
-        f"{r.stdout}")
-    assert "unrouted-issue" in r.stdout
-
-
 def test_approach_evaluate_help_does_not_say_triage(run_cli):
     r = run_cli("approach", "evaluate", "--help")
     assert r.returncode == 0, r
     assert "triage" not in r.stdout.lower(), (
         f"'compass approach evaluate --help' still says 'triage':\n"
         f"{r.stdout}")
-
-
-def test_top_level_help_names_retro_without_triage(run_cli):
-    """The `retro` line in `compass --help`'s subcommand listing, which is
-    `cli/compass`'s own `help=` string (line 167) - not
-    `cli/compass_pkg/verb_help.py`'s longer `--description`, which this
-    issue's design does not cover."""
-    r = run_cli("--help")
-    assert r.returncode == 0, r
-    # argparse wraps a long help string onto continuation lines indented past
-    # the next subcommand's column, so the block runs to the next line whose
-    # only leading whitespace is the subcommand column (4 spaces).
-    m = re.search(r"\n {4}retro\b(.*?)(?=\n {4}\S)", r.stdout, re.S)
-    assert m, f"the top-level help does not list 'retro':\n{r.stdout}"
-    assert "triage" not in m.group(1).lower(), (
-        f"the top-level help's 'retro' entry still says 'triage': "
-        f"{m.group(1)!r}")
 
 
 _LITERAL = re.compile(r"""(["'])(?:(?!\1).)*triage(?:(?!\1).)*\1""", re.I)

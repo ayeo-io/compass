@@ -94,7 +94,7 @@ operations. At minimum:
 | Record red and green tests | `compass tdd-red`, `compass tdd-green` |
 | Check governance and issue schemas | `compass policy lint`, `compass issue lint` |
 | Run the CI lane | `compass ci` |
-| Surface retrospective signals | `compass retro`, `compass rework-scan`, `compass flow` |
+| Show every issue's state | `compass flow` |
 
 Schema-owning state changes must also use kit commands where one exists,
 rather than editing `manifest.yml` ad hoc.
@@ -182,8 +182,6 @@ complete and lose the view across open issues:
 |---|---|
 | `compass flow` | no view of blockers or owed follow-ups across issues |
 | `compass next` | the session guesses which stage comes next |
-| `compass retro` | no signal that assessment is systematically mis-sizing work |
-| `compass rework-scan` | nothing reports a file that one issue adds and another issue deletes |
 | `compass follow-up` | an owed follow-up can never be settled, so shipping stays blocked |
 | `compass adr` | decision records are hand-numbered, and numbers get reused |
 

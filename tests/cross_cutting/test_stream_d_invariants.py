@@ -74,10 +74,10 @@ def test_trc_d1_mental_model_bullets_unchanged():
 # terminology was added. The assertion's premise is unchanged - the
 # surface equals the known set, and deliberate changes update it here.
 EXPECTED_PUBLIC_SUBCOMMANDS = {
-    "approach", "check", "retro", "ci",
-    "tdd-red", "tdd-green",
+    "approach", "check", "ci",    # 9.0.0 removed `retro` and `rework-scan`
+    "tdd-red", "tdd-green",       # (ADR-093)
     "policy", "issue", "adr",
-    "rework-scan", "flow", "follow-up",
+    "flow", "follow-up",
     "terminology",                # the CLI-voice slice: the glossary verb
     "review-rule",                # `review-rule list`; 9.0.0 removed `spec sync`
                                   # (ADR-091)

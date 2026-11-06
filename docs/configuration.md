@@ -372,8 +372,7 @@ with a message that names the key, the file and the accepted values, and
 assessed refuse a bad value there. `compass check` on an assessed issue reads
 the configuration stored with the issue, so it does not refuse it. The
 setting needs no
-owner's approval: the manifest's `acceptance_strategy` block and `compass retro
---acceptance` show the choice. It takes effect for an issue at its next
+owner's approval: the manifest's `acceptance_strategy` block shows the choice. It takes effect for an issue at its next
 `compass approach evaluate --write`; until then `compass check` reports the
 changed setting as advice. The setting is read from `compass.yml`, or
 `.compass/config.yml` when `compass.yml` is absent or has no `schema:`.

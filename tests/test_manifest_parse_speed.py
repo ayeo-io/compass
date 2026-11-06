@@ -743,7 +743,9 @@ def test_trc_b3_cold_flow_within_ten_percent_of_before(tmp_path, state):
 # --- group F: no command's output changes ------------------------------------
 
 def _read_only_commands(slugs):
-    commands = [["flow"], ["flow", "--json"], ["flow", "--digest"], ["retro"]]
+    # 9.0.0 removed `compass retro` and the digest's rework and retro sections
+    # (ADR-093), so `flow --digest` is compared with the base's digest up to them.
+    commands = [["flow"], ["flow", "--json"], ["flow", "--digest"]]
     for slug in slugs:
         commands += [["next", "--issue", slug], ["check", "--issue", slug],
                      ["issue", "lint", "--issue", slug]]
@@ -768,11 +770,21 @@ def test_trc_f1_read_only_output_unchanged(tmp_path):
             # The same flow commands again, now that the first run stored its parses.
             results["warm"] = [support.run_compass(cli, args, project, tmp_path,
                                                    clock=support.FIXED_AT)
-                               for args in commands[:4]]
-    assert all(code == 0 and out for code, out, _err in results["base"][:4])
+                               for args in commands[:3]]
+    assert all(code == 0 and out for code, out, _err in results["base"][:3])
     for index, args in enumerate(commands):
-        assert results["current"][index] == results["base"][index], " ".join(args)
-    assert results["warm"] == results["base"][:4]
+        assert _same(results["current"][index], results["base"][index], args), " ".join(args)
+    assert all(_same(warm, base, args) for warm, base, args
+               in zip(results["warm"], results["base"], commands))
+
+
+def _same(current, base, args):
+    """The current result is the base's, except that the current digest ends where
+    the base's rework section began."""
+    if args != ["flow", "--digest"]:
+        return current == base
+    (code, out, err), (base_code, base_out, base_err) = current, base
+    return (code, err) == (base_code, base_err) and base_out.startswith(out.rstrip("\n"))
 
 
 SAVING_PROBE = (b"parity_labels: &parity_a\n- x\nparity_alias: *parity_a\n"

@@ -933,7 +933,7 @@ def test_gs_13_ci_prints_nothing_new_for_an_issue_with_no_generation(tmp_path):
 import ast  # noqa: E402
 
 PACKAGE = ROOT / "cli" / "compass_pkg"
-READERS = ("checks", "check_cmd", "routing", "manifest", "calibration", "flow",
+READERS = ("checks", "check_cmd", "routing", "manifest", "flow",
            "quick_fix_cmd", "loop_ceilings", "lessons", "review_rules", "approach_diagram")
 RESOLVER_MODULES = {"merge", "obligations", "classify", "waivers", "policy_lint",
                     "policy_effective", "generation"}

@@ -146,12 +146,10 @@ commands write; it never reads project code.
 - **Project opt-out.** A project turns the strategy off with the setting
   `acceptance_strategy`, written `acceptance_strategy: {state: "off", reason:
   "<why>"}` in `compass.yml`, or `.compass/config.yml` without one. Assess records the opt-out and its reason,
-  the project keeps every check it has today, and `compass retro --acceptance`
-  reports it. The setting takes effect for an issue at its next assess.
+  and the project keeps every check it has today. The setting takes effect for an issue at its next assess.
 - **Issue waiver.** One issue steps off through an issue waiver of the
   strategy's checks, with a reason, approved by the project's owner
-  (ADR-039). Its findings then report as advice, and the retrospective
-  reports the issue apart.
+  (ADR-039). Its findings then report as advice.
 - **Older issues and pinned projects.** An issue assessed before the
   strategy shipped has no stored applicability, so the strategy never applies
   to it (ADR-006). Nor does it apply in a project whose `compass.yml` extends
@@ -165,8 +163,7 @@ commands write; it never reads project code.
   `attempts` on each outer-loop green, counted for the outer loop alone
   (ADR-084). An in-scope outer-loop green names its candidate, a build id
   or `local` for the working tree, and its client, api, web or cli; one
-  without them is refused (ADR-085). `compass retro --acceptance` lists the
-  clients per issue and counts deployed and local candidates apart.
+  without them is refused (ADR-085).
 - **Isolation and layering.** Records the project's own commands write
   prove both; a written note does not (ADR-086). `compass isolation record`
   runs the suite in parallel once and each scenario's declared tests twice,

@@ -145,16 +145,6 @@ def test_scn_c1_flow_separates_parked(tmp_path):
         f"the held task must be reported under its own heading:\n{out}")
 
 
-def test_scn_c2_calibration_excludes_parked_and_abandoned(tmp_path):
-    root = _project(tmp_path, {
-        "live": _task("active"), "stopped": _task("parked"),
-        "dropped": _task("abandoned")})
-    r = _run(root, "retro")
-    out = (r.stdout + r.stderr).lower()
-    assert "in flight" not in out or "3" not in out.split("in flight")[-1][:40], (
-        f"parked and abandoned tasks were counted as in flight:\n{r.stdout}")
-
-
 # ---------------------------------------------------------------------------
 # Failure modes
 # ---------------------------------------------------------------------------

@@ -795,7 +795,7 @@ def _report_verbs():
 # The reports that read an issue tree and produce enough output to be worth
 # testing. `migrate` and the linters need an argument or a broken tree to say
 # anything, so they are exercised by their own suites.
-_LIVE_REPORTS = ["retro", "flow", "terminology"]
+_LIVE_REPORTS = ["flow", "terminology"]
 
 
 @pytest.fixture(scope="module")
@@ -964,7 +964,6 @@ def test_trc_c6_the_report_list_is_not_empty():
 # Verbs excluded from the run, each with the reason. Kept short and named -
 # an unexplained exclusion is how a guard stops covering things.
 _TAIL_EXEMPT = {
-    "_friction-capture": "private, and writes to the manifest as a side effect",
     "_migrate-archive": "private, and rewrites a whole work tree",
     "_derive-glossary": "private, and writes a tracked doc",
     "issue migrate": "rewrites a work tree, or with --config stores a new generation; its own suites cover its output",
@@ -1001,15 +1000,12 @@ _TAIL_EXEMPT = {
     "issue decision add": "writes one manifest key and needs an issue with a requirements review or full flags; test_decisions_taken.py runs it, without measuring its output against this contract",
     "issue decision set": "needs a terminal on standard input and an existing decision; test_decisions_taken.py runs it under a pseudo-terminal",
     "issue checkpoint add": "needs an issue whose first assessment recorded checkpoint outcomes and a stage the route runs; test_checkpoint_outcomes.py runs it and checks its one line, without measuring it against this contract",
-    "issue friction": "needs evidence inside an existing issue folder and writes one manifest key; test_agent_friction.py runs it, without measuring its output against this contract",
     "issue raised-by": "writes one key to an existing issue's manifest and prints one line, or two with the chain hint; test_lineage.py runs it, without measuring its output against this contract",
     "next": "advisory pointer; its own suite covers it",
-    "rework-scan": "its own suite covers it",
     "follow-up resolve": "needs an owed follow-up planted first",
     "bdd verify": "needs a project BDD runner wired",
     "acceptance record": "needs an acceptance already started",
     "isolation record": "needs scenarios that declare tests, and runs the suite 1 + 2N times",
-    "retro": "a report, measured above",
     "flow": "a report, measured above",
     "terminology": "a report, measured above",
     # These say WHY the verb is not run here, not what kind it is - two of

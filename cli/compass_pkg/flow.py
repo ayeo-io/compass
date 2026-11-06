@@ -33,10 +33,8 @@ import fnmatch
 import re as _re
 import glob
 from compass_pkg import parse_cache, path_stages, status_words
-from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import (CompassError, find_compass_dir, find_governance,
                               load_yaml, manifest_path, normalize_spine)
-from compass_pkg.rework import cmd_rework_scan
 from compass_pkg.stable_ids import APPROACH_SPIKE, PATH_STAGE_IDS, STAGE_IDS, STAGE_SHIP
 
 
@@ -605,9 +603,8 @@ def _write_board_html(work_root, target):
 
 
 def cmd_flow(args):
-    """Produce the flow board; with --digest also output a dated digest section
-    to stdout. The digest includes the rework-scan section and a retro
-    summary. Exit code is always 0 - this is advisory.
+    """Produce the flow board; with --digest output a dated digest of the
+    backlog to stdout instead. Exit code is always 0 - this is advisory.
     """
     work_root = getattr(args, "work_root", None)
     do_digest = getattr(args, "digest", False)
@@ -636,54 +633,11 @@ def cmd_flow(args):
             return 0
         return _render_board(args, data)
 
-    # --digest mode: produce a digest including rework-scan
-    import io as _io
-    import contextlib as _cl
-
+    # --digest mode: the dated backlog list.
     today = datetime.date.today().isoformat()
     print(f"# Flow digest - {today}\n")
     print("> Advisory only. This digest does not modify any issue state (Inv-4).\n")
     top, table = queue_ageing(work_root)
     print(top + "\n")
     print(table)
-
-    # --- Rework scan section (TRC-D5) ---
-    # Capture rework-scan output by invoking the scan logic directly
-    import types as _types
-    scan_args = _types.SimpleNamespace(
-        root=work_root,
-        window_days=None,
-        format="markdown",
-    )
-
-    buf = _io.StringIO()
-    with _cl.redirect_stdout(buf):
-        cmd_rework_scan(scan_args)
-    rework_section = buf.getvalue()
-
-    print(rework_section)
-
-    # --- Calibration summary ---
-    print("## Calibration signal\n")
-    # Enumerate issues for the retro summary
-    tasks = []
-    if os.path.isdir(work_root):
-        for d in sorted(os.listdir(work_root)):
-            tp = manifest_path(os.path.join(work_root, d))
-            if os.path.isfile(tp):
-                try:
-                    data = load_manifest_mapping(tp)
-                    tasks.append((d, data))
-                except CompassError:
-                    pass
-    # An `unchanged` entry keeps a reason; the approach did not move.
-    total_reframes = sum(1 for _, t in tasks for r in (t.get("reassessments") or [])
-                         if r.get("kind") != "unchanged")
-    if total_reframes == 0:
-        print(f"No re-assessments recorded across {len(tasks)} issue(s). "
-              f"Either the sizing is well-calibrated, or there is not enough history yet.\n")
-    else:
-        print(f"{total_reframes} re-assessment(s) recorded across {len(tasks)} issue(s). "
-              f"Run `compass retro` for the full breakdown.\n")
-
     return 0

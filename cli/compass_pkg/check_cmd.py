@@ -966,7 +966,7 @@ def cmd_check(args):
     else:
         try:
             # Wrap this one too: a malformed `follow_ups:` list must not crash
-            # check, rework-scan, flow --digest or ci.
+            # check, flow --digest or ci.
             passed, detail = _check_backfills_paid(task, task_dir)
         except Exception as exc:                        # noqa: BLE001
             passed, detail = False, f"check errored: {exc}"

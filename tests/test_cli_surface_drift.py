@@ -123,8 +123,7 @@ def _new_cross_task_commands():
     which 9.0.0 removed (ADR-091) - must appear in the runtime-neutral adapter
     contracts."""
     # The contract must name the live verb.
-    return ["compass rework-scan", "compass follow-up",
-            "compass flow", "compass next", "compass adr"]
+    return ["compass follow-up", "compass flow", "compass next", "compass adr"]
 
 
 def test_trc_b1_agents_adapter_section_names_new_cross_task_kit_calls():

@@ -696,10 +696,8 @@ def test_arc_15_no_transcript_text_is_stored(tmp_path):
 
     outputs = [ship_at(root)]
     assert outputs[0].returncode == 0, outputs[0]
-    for argv in (("retro", "--impact"), ("retro", "--impact", "--json"),
-                 ("issue", "diagnose", "--issue", co.SLUG)):
-        outputs.append(co.run(root, *argv))
-    assert outputs[1].returncode == 0 and outputs[3].returncode == 0, outputs
+    outputs.append(co.run(root, "issue", "diagnose", "--issue", co.SLUG))
+    assert outputs[1].returncode == 0, outputs
 
     clone = tmp_path / "record-copy"
     # The record pushes to main, but a bare repository's HEAD follows

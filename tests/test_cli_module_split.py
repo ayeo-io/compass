@@ -279,6 +279,16 @@ def test_trc_f2_no_function_should_be_renamed_merged_or_split_by_this_task():
         # `compass next` has read the stage from the records since d342005b, which
         # left this reader of the stage weights with no caller; #351 removed it.
         "_next_active_phase",
+        # 9.0.0 removes `compass retro`, `compass rework-scan` and friction capture
+        # (ADR-093), with their modules calibration.py and rework.py. These were
+        # their commands, their readers of signals.yml and the friction they
+        # derived; `compass follow-up resolve` moved to follow_up_cmd.py unchanged.
+        "cmd_calibration", "_cmd_calibration_friction", "_aggregate_friction",
+        "_find_reframe_debt", "_load_friction_threshold", "_load_scope_bloat_phrases",
+        "cmd_friction_capture", "derive_friction",
+        "cmd_rework_scan", "_find_signals_yml", "_load_signals", "_read_tasks_from_root",
+        "_parse_created_date", "_is_drop_migration", "_matches_migration_glob",
+        "_emit_markdown_report",
     }
     before -= DELIBERATELY_REMOVED
 

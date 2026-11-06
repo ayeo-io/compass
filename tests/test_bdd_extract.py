@@ -307,8 +307,8 @@ def test_trc_f4_extract_mutates_nothing_else(demo_task, run_cli):
 # The full subcommand set, frozen deliberately: a new verb must edit this
 # list, so adding one is a visible decision rather than a silent one.
 EXPECTED_SUBCOMMANDS = {
-    "approach", "bdd", "check", "retro", "ci", "tdd-red",
-    "tdd-green", "policy", "intent", "issue", "adr", "rework-scan", "flow",  # 9.0.0 removed `plan`
+    "approach", "bdd", "check", "ci", "tdd-red",  # 9.0.0 removed `retro` (ADR-093)
+    "tdd-green", "policy", "issue", "adr", "flow",  # and `plan`, `rework-scan`, `intent`
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
     "review-rule", "preset",  # `review-rule list`, `preset init|test`; 9.0.0 removed `spec`

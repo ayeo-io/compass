@@ -6,8 +6,8 @@ The manifest's `decisions_taken` holds one entry per decision:
     id, question, resolution, by (an agent), stage, status, reason
 
 `status` is `open`, `confirmed` or `reopened`. `reason` is written only by a
-reopen and never removed, so `compass retro --decisions` can tell a decision
-that was changed from one that was confirmed as taken.
+reopen and never removed, so a reader can tell a decision that was changed
+from one that was confirmed as taken.
 
 This module owns:
 
@@ -18,7 +18,8 @@ This module owns:
   checkpoint;
 - `approve_set`, the `decisions` form of an approval, which
   `approvals.record` calls for every approval path;
-- `report`, which `compass retro --decisions` prints.
+- `report`, the counts of confirmed, changed and never-confirmed decisions,
+  which `autonomy_cost.decisions_row` reads.
 
 Only `approve_set` writes `confirmed`, as one `artifact-approval` record for
 the whole set. The record is never a `human-approval` record, so the sign-off
@@ -31,7 +32,6 @@ of guardrail `G5` cannot be met by it. Owning decision:
 # module.
 from __future__ import annotations
 
-import json
 import os
 import re
 
@@ -455,7 +455,7 @@ def approve_set(task_dir, answer, save=True):
             [evidence_id])
 
 
-# --- retro --------------------------------------------------------------------------
+# --- the counts over many issues ---------------------------------------------------
 
 def _folder_issues(work_root):
     """`[(manifest, closed)]` read from each manifest in `work_root`. A
@@ -478,10 +478,10 @@ def _folder_issues(work_root):
 
 
 def report(work_root, issues=None):
-    """The counts behind `compass retro --decisions`. `issues` is
-    `[(slug, manifest)]` the caller has already read and normalised, so the
-    retro reads each manifest once; without it the report reads each manifest
-    in `work_root` directly (the parse cache of ADR-049 serves `flow.py` only)."""
+    """The counts of decisions taken over many issues. `issues` is
+    `[(slug, manifest)]` the caller has already read and normalised, so each
+    manifest is read once; without it the report reads each manifest in
+    `work_root` directly (the parse cache of ADR-049 serves `flow.py` only)."""
     from compass_pkg import status_words
     total = confirmed = changed = never = in_flight = held = 0
     if issues is None:
@@ -510,27 +510,6 @@ def report(work_root, issues=None):
             "never_confirmed": never, "open_in_flight": in_flight,
             "share": {"confirmed": share(confirmed), "changed": share(changed),
                       "never_confirmed": share(never)}}
-
-
-def cmd_retro_decisions(args, work_root):
-    data = report(work_root)
-    if getattr(args, "format", "markdown") == "json":
-        print(json.dumps(data, indent=2))
-        return 0
-    if not data["total"]:
-        print("compass retro --decisions: no decisions taken for the person are recorded yet.")
-        return 0
-    s = data["share"]
-    print("compass retro --decisions: %d agent decisions across %d issue(s)."
-          % (data["total"], data["issues"]))
-    print("  %d%% confirmed (%d): confirmed as the agent took them" % (s["confirmed"], data["confirmed"]))
-    print("  %d%% changed (%d): reopened by a person or by a change in the ledger"
-          % (s["changed"], data["changed"]))
-    print("  %d%% never confirmed (%d): still open on a done issue"
-          % (s["never_confirmed"], data["never_confirmed"]))
-    if data["open_in_flight"]:
-        print("  %d open on an issue in flight" % data["open_in_flight"])
-    return 0
 
 
 # --- registration ----------------------------------------------------------------------

@@ -995,8 +995,9 @@ def test_vr_d9_the_manifest_template_holds_no_old_word():
     from compass_pkg import word_map
     text = (ROOT / "templates" / "manifest.yml").read_text(encoding="utf-8")
     assert word_map.old_words(yaml.safe_load(text)) == []
-    assert "- phase:" not in text, "the friction example is keyed phase"
-    assert "- stage:" in text, "the friction example shows the stage key"
+    # The template held a `friction:` example until 9.0.0 stopped writing the
+    # key (ADR-093); no example may come back keyed phase.
+    assert "- phase:" not in text, "an example is keyed phase"
 
 
 def test_vr_d9_no_script_writes_a_manifest_literal_in_an_old_word():
@@ -1020,28 +1021,6 @@ def test_vr_d9_the_scan_for_a_manifest_literal_finds_a_planted_word():
                      r"|size: standard|phase: \w+)\s*$", re.M)
     assert old.search("issue: x\nstatus: active\nassessment:\n")
     assert not old.search("issue: x\nstatus: backlog\n  size: medium\n")
-
-
-def test_vr_d9_friction_and_capture_write_the_new_keys(tmp_path):
-    root, task_dir = _project(tmp_path)
-    (task_dir / "evidence").mkdir()
-    (task_dir / "evidence" / "red.log").write_text("1 failed\n", encoding="utf-8")
-    note = _cli(root, "issue", "friction", "--issue", "t", "--category", "tooling",
-                "--stage", "implement", "--observed", "evidence/red.log",
-                "--fix", "Run the suite once")
-    assert note[0] == 0, note
-    after_note = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
-    assert [e["stage"] for e in after_note["friction"]] == ["implement"], after_note
-    assert _no_old_word(task_dir / "manifest.yml") == []
-    capture = _cli(root, "_friction-capture", "--internal", "--issue", "t",
-                   "--note", "slow", "--note-category", "tooling", "--note-stage", "ship")
-    assert capture[0] == 0, capture
-    saved = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
-    assert {e["source"] for e in saved["friction"]} == {"agent", "human"}
-    for entry in saved["friction"]:
-        assert "phase" not in entry and "stage" in entry, entry
-    assert _no_old_word(task_dir / "manifest.yml") == []
-    assert not (task_dir / "manifest.yml.v5.bak").exists(), "nothing old was on disk"
 
 
 def test_vr_d9_a_quick_fix_start_writes_no_old_word(tmp_path):

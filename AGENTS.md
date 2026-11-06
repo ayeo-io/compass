@@ -130,16 +130,13 @@ artifact.
 work units one after another in one session. Compass 9.0.0 starts no agent and no worktree per
 subtask (ADR-090), so a runtime needs no isolated workspaces.
 
-**6. Shell out for CI and the feedback loop too.** Two cross-issue kit
-commands complete the contract, and a portable runtime must call them
-rather than reinvent them. `compass ci` runs the full mechanical gate suite
-(`policy lint` + `issue lint` + `check` for every issue) and aggregates exit
-codes - the CI integration is "run `compass ci`, honor the exit code" (see
-`ci/README.md`). `compass retro` aggregates the `reassessments` log across
-issues and reports whether assessment is systematically over- or under-sizing
-the process - the framework's own retrospective signal. The adapter wires
-these into the runtime's CI and reporting surfaces; it does not re-derive
-them.
+**6. Shell out for CI too.** One cross-issue kit command completes the
+contract, and a portable runtime must call it rather than reinvent it.
+`compass ci` runs the full mechanical gate suite (`policy lint` + `issue
+lint` + `check` for every issue) and aggregates exit codes - the CI
+integration is "run `compass ci`, honor the exit code" (see
+`ci/README.md`). The adapter wires it into the runtime's CI; it does not
+re-derive it.
 
 ## What a runtime adapter must give
 
@@ -148,7 +145,7 @@ them.
 | The four stages | One command that runs them, following each `next:` line, plus a short form for a small change |
 | Assess | A routine that produces the assessment, then *calls the kit* (`compass approach evaluate`) to compose the delivery approach |
 | The kit-layer CLI | A shell-out, not a reimplementation - the adapter runs `compass approach evaluate`, `compass check` and `compass tdd-red/green` for the deterministic parts |
-| CI and the feedback loop | A shell-out to `compass ci` (honor the exit code), `compass retro` (the retrospective signal), `compass rework-scan` (cross-issue rework signal), and `compass flow` (cross-issue view; `--digest` writes a dated digest combining rework-scan and the retrospective signal) |
+| CI and the cross-issue view | A shell-out to `compass ci` (honor the exit code) and `compass flow` (cross-issue view; `--digest` writes a dated digest of the backlog) |
 | Role perspectives (product owner, product marketer, architect) | Taken by the session itself; 9.0.0 ships no subagents (ADR-090). The architect perspective reads the project's `architecture/` artifacts and annotates the design via `architecture-notes.md`; it never writes feature code |
 | Skills | Loadable procedural-knowledge modules |
 | Guardrail enforcement | `compass check` for the mechanical checks; hooks if available for red-before-green, procedural checks otherwise |

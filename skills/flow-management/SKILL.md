@@ -31,11 +31,9 @@ human first.
 ## The flow toolkit
 
 Flow management reads artifacts; it also has one CLI command of its own.
-`compass retro` aggregates the `reassessments` log across every issue and
-reports whether the assess stage is systematically over- or under-sizing
-the work - the framework's own feedback loop. It is read-only and never gates. Run it as part
-of triage and fold its signal into the digest: "are we right-sizing process?"
-is a cross-issue question, and this is the command that answers it.
+`compass flow` lists every issue under `.compass/work/` by what its records
+show: the backlog with its age, what is in progress, what is blocked and what
+was done this week. It is read-only and never gates. Run it as part of triage.
 
 ## Board heuristics
 
@@ -112,10 +110,6 @@ the natural fit). Keep it short enough to read in two minutes.
 
 ## Outstanding follow-ups
 - {{issue-slug}} - {{outstanding hotfix follow-up | unbacked claim | de-scoped artifact}}
-
-## Calibration
-- {{`compass retro` signal - re-assessment rate, lean toward over- or
-  under-sizing, or "balanced" - or "not enough history yet"}}
 
 ## Next up
 - {{issues triaged but not started, in priority order}}

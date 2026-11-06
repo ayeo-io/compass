@@ -2084,39 +2084,6 @@ def test_prc_34(tmp_path):
     assert not (project / ".compass" / "readiness.yml").exists()
 
 
-def test_prc_35(tmp_path):
-    project = support.make_project(tmp_path / "p", {"schema": 1})
-    measured = {"status": "measured", "signals": 11, "absent": [], "measured_at": "2026-10-10T10:00:00Z"}
-    issues = [("zulu-issue", "2026-10-01", dict(measured, score=4, floor_met=False)),
-              ("mike-issue", "2026-10-02", {"status": "not-measured", "reason": "missing",
-                                              "detail": "run compass readiness"}),
-              ("alpha-issue", "2026-10-03", dict(measured, score=7, floor_met=True))]
-    # The names run against the dates, so neither the folder order nor the
-    # name order can pass for the order of assessment.
-    for slug, created, summary in (issues[2], issues[0], issues[1]):
-        task_dir = Path(project) / ".compass" / "work" / slug
-        task_dir.mkdir(parents=True)
-        manifest = dict(FLOOR_MANIFEST, issue=slug, created=created, readiness=summary)
-        (task_dir / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False),
-                                               encoding="utf-8")
-    code, out, err = support.run_compass(project, "retro")
-    assert code == 0, out + err
-    lines = out.splitlines()
-    assert "Repository readiness at assessment:" in lines, out
-    start = lines.index("Repository readiness at assessment:") + 1
-    rows = []
-    for line in lines[start:]:
-        if not line.strip():
-            break
-        rows.append(line)
-    assert len(rows) == 3, out
-    assert [next(s for s, _, _ in issues if s in line) for line in rows] == [
-        "zulu-issue", "mike-issue", "alpha-issue"], out
-    assert "4 of 11" in rows[0] and "floor not met" in rows[0], rows
-    assert "not measured" in rows[1], rows
-    assert "7 of 11" in rows[2] and "floor met" in rows[2] and "not met" not in rows[2], rows
-
-
 # --- U5 this repository and the measures ---
 
 #: The environment this repository's own commands need when the readiness

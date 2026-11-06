@@ -1,9 +1,10 @@
-"""Flow digest tests - `TRC-F4`, `TRC-C6`, `TRC-D5`.
+"""Flow digest tests - `TRC-F4`.
 
 - `TRC-F4`: Flow advises, never gates. Snapshot SHA256 of every manifest.yml
-  before/after running advisory commands; assert byte-identity.
-- `TRC-D5`: `compass flow --digest` includes a Rework scan section.
-- `TRC-C6`: the digest surfaces calibration's `unrecorded re-assessments` section.
+  before/after running `compass flow --digest`; assert byte-identity.
+- The digest lists the backlog and nothing else: 9.0.0 removed its rework and
+  calibration sections with `compass rework-scan` and `compass retro`
+  (ADR-093). `TRC-D5` and `TRC-C6` were those sections.
 """
 from __future__ import annotations
 
@@ -62,23 +63,6 @@ def write_task_yml(directory: Path, slug: str, changed_files: list,
         yaml.safe_dump(data, fh, sort_keys=False)
 
 
-def write_signals_yml(directory: Path, window_days: int = 14) -> Path:
-    """Write a signals.yml for tests."""
-    data = {
-        "version": "1.0.0",
-        "scope_bloat_phrases": [],
-        "rework_scan": {
-            "window_days": window_days,
-            "public_surface_patterns": ["/api/v[0-9]+/", "pb\\."],
-            "migration_paths": ["migrations/*.sql", "**/migrations/*.sql"],
-        },
-    }
-    path = directory / "signals.yml"
-    with path.open("w", encoding="utf-8") as fh:
-        yaml.safe_dump(data, fh, sort_keys=False)
-    return path
-
-
 def run_subprocess_cli(*args, cwd=None, env_extra=None) -> subprocess.CompletedProcess:
     """Run the compass CLI via subprocess in an isolated cwd."""
     env = dict(os.environ)
@@ -101,7 +85,7 @@ def test_does_not_mutate_tasks(run_cli, make_task, project):
     """`TRC-F4`: Flow still advises, never gates.
 
     Given multiple issues exist in .compass/work/
-    When compass retro runs (the primary advisory/reporting command)
+    When compass flow --digest runs (the advisory digest)
     Then no manifest.yml under .compass/work/ is changed (byte-identical after)
     And no issue is automatically reassessed, downgraded, or blocked.
 
@@ -112,7 +96,7 @@ def test_does_not_mutate_tasks(run_cli, make_task, project):
     compass_work = project / ".compass" / "work"
 
     # --- Given: set up multiple issues with varying reassessment states -----
-    # Issue with no reassessments - calibration must report and not change.
+    # Issue with no reassessments - the digest must report and not change it.
     make_task("alpha-task", {
         "assessment": {
             "risk": "contained",
@@ -126,7 +110,7 @@ def test_does_not_mutate_tasks(run_cli, make_task, project):
         "changed_files": [],
     }, set_current=False)
 
-    # Issue with a reassessment - calibration must count it and not change it.
+    # Issue with a reassessment - the digest must not change it.
     make_task("beta-task", {
         "assessment": {
             "risk": "contained",
@@ -145,13 +129,13 @@ def test_does_not_mutate_tasks(run_cli, make_task, project):
 
     # --- Snapshot before advisory command -----------------------------------
     before = _snapshot_task_ymls(compass_work)
-    assert before, "No manifest.yml found before calibration - test setup failed"
+    assert before, "No manifest.yml found before the digest - test setup failed"
 
     # --- When: run the advisory command -------------------------------------
-    r = run_cli("retro")
-    # calibration always exits 0 (it is advisory, not a gate)
+    r = run_cli("flow", "--digest")
+    # the digest always exits 0 (it is advisory, not a gate)
     assert r.returncode == 0, (
-        f"compass retro should exit 0 (advisory). Got {r.returncode}.\n"
+        f"compass flow --digest should exit 0 (advisory). Got {r.returncode}.\n"
         f"stdout: {r.stdout}\nstderr: {r.stderr}"
     )
 
@@ -159,7 +143,7 @@ def test_does_not_mutate_tasks(run_cli, make_task, project):
     after = _snapshot_task_ymls(compass_work)
 
     assert before == after, (
-        "Advisory command 'compass retro' mutated manifest.yml files - "
+        "Advisory command 'compass flow --digest' mutated manifest.yml files - "
         "this violates Inv-4 (Flow advises, never gates). "
         "Changed files:\n" + "\n".join(
             f"  {k}: before={before[k][:8]}... after={after[k][:8]}..."
@@ -169,8 +153,8 @@ def test_does_not_mutate_tasks(run_cli, make_task, project):
     )
 
 
-def test_calibration_does_not_write_to_work_dir(run_cli, make_task, project):
-    """`TRC-F4` (supplementary): calibration must not create NEW files in
+def test_digest_does_not_write_to_work_dir(run_cli, make_task, project):
+    """`TRC-F4` (supplementary): the digest must not create NEW files in
     .compass/work/ - any output must go to .compass/flow/ or stdout only.
     """
     compass_work = project / ".compass" / "work"
@@ -192,24 +176,23 @@ def test_calibration_does_not_write_to_work_dir(run_cli, make_task, project):
 
     before_files = _all_files_in(compass_work)
 
-    r = run_cli("retro")
+    r = run_cli("flow", "--digest")
     assert r.returncode == 0, r
 
     after_files = _all_files_in(compass_work)
     new_files = after_files - before_files
     assert not new_files, (
-        "compass retro created new files under .compass/work/ - "
+        "compass flow --digest created new files under .compass/work/ - "
         "advisory output must go to stdout or .compass/flow/, not work/.\n"
         f"New files: {sorted(new_files)}"
     )
 
 
 # ---------------------------------------------------------------------------
-# `TRC-D5` - Flow digest absorbs rework-scan
+# The digest holds the backlog and no rework or calibration section
 # ---------------------------------------------------------------------------
 
-def test_includes_rework_scan(tmp_path):
-    """`TRC-D5`: `compass flow --digest` output includes a Rework scan section."""
+def test_digest_holds_the_backlog_and_no_removed_section(tmp_path):
     work_root = tmp_path / "work"
     write_task_yml(work_root / "task-adds", "task-adds", [
         {"path": "services/foo/handler.go", "action": "added"},
@@ -218,85 +201,12 @@ def test_includes_rework_scan(tmp_path):
         {"path": "services/foo/handler.go", "action": "deleted"},
     ], created="2026-05-05")
 
-    signals = write_signals_yml(tmp_path)
+    proc = run_subprocess_cli("flow", "--digest", "--work-root", str(work_root),
+                              cwd=tmp_path)
 
-    proc = run_subprocess_cli(
-        "flow", "--digest",
-        "--work-root", str(work_root),
-        cwd=tmp_path,
-        env_extra={"COMPASS_SIGNALS_YML": str(signals)},
-    )
-
-    assert proc.returncode == 0, (
-        f"compass flow --digest should exit 0; got {proc.returncode}\n"
-        f"stderr: {proc.stderr}\nstdout: {proc.stdout}"
-    )
-
+    assert proc.returncode == 0, proc.stdout + proc.stderr
     output = proc.stdout
-    assert "rework scan" in output.lower(), (
-        f"expected 'Rework scan' section in flow --digest output:\n{output}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# `TRC-C6` - Flow digest includes calibration's `unrecorded re-assessments` section
-# ---------------------------------------------------------------------------
-
-def test_includes_reframe_debt(tmp_path):
-    """`TRC-C6`: calibration output includes an 'unrecorded re-assessments' section when at
-    least one issue has a devlog scope-bloat phrase and an empty re-assessments list.
-    """
-    import shutil
-
-    compass = tmp_path / ".compass"
-    (compass / "work").mkdir(parents=True, exist_ok=True)
-    (compass / "config.yml").write_text("version: 1.0.0\nmode: enforced\n")
-    gov_src = FRAMEWORK_ROOT / "governance"
-    gov_dst = tmp_path / "governance"
-    gov_dst.mkdir(parents=True, exist_ok=True)
-    for f in gov_src.iterdir():
-        if f.is_file():
-            shutil.copy(f, gov_dst / f.name)
-
-    slug = "bloat-no-reframe"
-    task_dir = compass / "work" / slug
-    task_dir.mkdir(parents=True, exist_ok=True)
-    task_body = {
-        "task": slug,
-        "created": "2026-05-20",
-        "assessment": {
-            "risk": "contained",
-            "familiarity": "brownfield-mapped",
-            "size": "small",
-        },
-        "delivery_approach": "standard",
-        "reassessments": [],
-    }
-    with (task_dir / "manifest.yml").open("w") as fh:
-        yaml.safe_dump(task_body, fh, sort_keys=False)
-    (compass / "current-task").write_text(slug)
-    (task_dir / "devlog.md").write_text(
-        "2026-05-20: more files than Plan estimated\n"
-    )
-
-    env = dict(os.environ)
-    result = subprocess.run(
-        [sys.executable, str(CLI_PATH), "retro"],
-        cwd=str(tmp_path),
-        capture_output=True,
-        text=True,
-        env=env,
-        timeout=15,
-    )
-    assert result.returncode == 0, result.stderr
-
-    output = result.stdout.lower()
-    assert "unrecorded re-assessments" in output, (
-        "Expected a 'reframe debt' section in calibration output when "
-        "a task has scope-bloat devlog phrases and empty reframes.\n"
-        f"Got:\n{result.stdout}"
-    )
-    assert "scope grew with no re-assessment" in output, (
-        "The unrecorded re-assessments section should say the scope grew and none was recorded.\n"
-        f"Got:\n{result.stdout}"
-    )
+    assert output.startswith("# Flow digest - "), output
+    assert "Advisory only" in output, output
+    for removed in ("rework", "calibration", "compass retro"):
+        assert removed not in output.lower(), (removed, output)

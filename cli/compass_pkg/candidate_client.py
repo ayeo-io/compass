@@ -14,9 +14,6 @@ tdd-green`, `compass quick-fix finish`) and where it is registered (`compass
 evidence add`), and `outer-loop-recorded` fails one that reached the registry
 another way. The caller decides whether the strategy applies, so this module
 needs no scope rule of its own (ADR-079).
-
-`compass retro --acceptance` reads `summary` for the clients per issue and the
-deployed and local candidates.
 """
 # DEPENDENCY: standard library (os); compass_pkg.core and red_first. It imports
 # no command module and no check module, so the check and command modules and
@@ -138,14 +135,3 @@ def registration_refusal(path, record, applies):
             f"issue, so the record is not registered. Record the green with `compass "
             f"tdd-green --loop outer --candidate <build id>|local --client "
             f"{'|'.join(CLIENTS)}`, which registers it.")
-
-
-def summary(task, task_dir):
-    """`(clients, kind)` of an issue's registered outer-loop greens: the sorted
-    clients they name, and `deployed` when any names a deployed candidate, `local`
-    when the rest name a local one, else `none`."""
-    outer = [r for _, r in green_records(task, task_dir) if r.get("loop") == "outer"]
-    clients = sorted({r["client"] for r in outer if r.get("client") in CLIENTS})
-    kinds = {r.get("candidate_kind") for r in outer if r.get("candidate")}
-    kind = "deployed" if "deployed" in kinds else (LOCAL if LOCAL in kinds else "none")
-    return clients, kind

@@ -311,7 +311,7 @@ def test_vr_c16_the_release_notes_reader_keeps_only_completed_issues(tmp_path):
     assert found == ["kept"], found
 
 
-# --- the readers of the checks: checks, compliance, the ci sweep, diagnose,
+# --- the readers of the checks: checks, the ci sweep, diagnose,
 # --- binding, landed_by ------------------------------------
 
 DONE_WORDS = [("landed", {}), ("done", {"close_reason": "completed"}),
@@ -368,23 +368,6 @@ def test_vr_c16_a_missing_human_approval_is_reported_only_when_the_issue_is_not_
     from compass_pkg import checks
     ok, _detail = checks._check_human_approval(_with(status, extra, evidence=[]), ".")
     assert ok is reported
-
-
-@pytest.mark.parametrize("status,extra,counted", [
-    ("landed", {}, True), ("done", {"close_reason": "completed"}, True),
-    ("active", {}, True), (None, {}, True), ("in-progress", {}, True),
-    ("done", {"close_reason": "not-planned"}, False), ("abandoned", {}, False),
-    ("queued", {}, False), ("parked", {}, False), ("backlog", {}, False)])
-def test_vr_c16_the_compliance_report_reads_completed_and_open_issues(
-        tmp_path, status, extra, counted):
-    import yaml
-    from compass_pkg import compliance
-    work = tmp_path / "work"
-    (work / "the-issue").mkdir(parents=True)
-    (work / "the-issue" / "manifest.yml").write_text(yaml.safe_dump(
-        _with(status, extra, created="2026-10-08")))
-    found = compliance._issues(str(work), None, 3650)
-    assert bool(found) is counted
 
 
 def _ci_output(tmp_path, status_lines):
@@ -586,7 +569,7 @@ def test_vr_c16_lint_asks_for_an_assessment_only_from_an_issue_that_started(
     assert ("assessment" in (run.stdout + run.stderr)) is needs_assessment, run.stdout + run.stderr
 
 
-# --- the last readers: manifest, calibration, replay ---------------------------
+# --- the last readers: manifest, replay ---------------------------
 # (The receipt and its provenance section read the states too, until 9.0.0
 # removed them, ADR-091.)
 
@@ -1024,18 +1007,6 @@ def test_vr_c22_duplicate_of_refuses_itself_an_unknown_issue_and_another_reason(
         assert (task / "manifest.yml").read_text() == before, given
     run(status="done", duplicate_of="the-first", close_reason="duplicate")
     assert _saved(task)["close_reason"] == "duplicate"
-
-
-@pytest.mark.parametrize("status,extra,counted", [
-    ("landed", {}, 1), ("done", {"close_reason": "completed"}, 1),
-    ("done", {"close_reason": "not-planned"}, 0), ("abandoned", {}, 0),
-    ("active", {}, 0), (None, {}, 0)])
-def test_vr_c16_the_impact_report_counts_completed_issues(status, extra, counted):
-    from compass_pkg import calibration
-    impact = calibration.compute_impact([("the-issue", _with(
-        status, extra, delivery_approach="feature", created="2026-10-01",
-        land_timestamp="2026-10-08T09:00:00Z"))])
-    assert impact["n_landed"] == counted
 
 
 def test_vr_c16_the_policy_diff_examines_every_issue_that_is_not_closed():

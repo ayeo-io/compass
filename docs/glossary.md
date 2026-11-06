@@ -324,7 +324,7 @@ The chosen shape for an issue: the weight of each stage and the gates that apply
 
 ### design
 
-The DESIGNER's stage and its command, /compass:design. It produces the UI contract (ui-contract.md) - scenarios written Given/When/Then that flow into the acceptance criteria, not mockup annotations. The word reads as UI work to most people, which is why the designer has it. `design` names the UI contract and `plan` names the engineering design, never the other way round: the engineering design is the plan stage (/compass:plan), whose hand-off states it.
+The DESIGNER's stage and its command, /compass:design. It produces the UI contract (ui-contract.md) - scenarios written Given/When/Then that flow into the acceptance criteria, not mockup annotations. The word reads as UI work to most people, which is why the designer has it. `design` names the UI contract and never the engineering design. Before 9.0.0 the engineering design was the plan stage (/compass:plan).
 
 **Related:** `plan`, `technical-design`, `delivery-approach`
 
@@ -586,9 +586,9 @@ The `#<sha>` suffix on a git `extends:`, which names the parent commit a project
 
 ### plan
 
-The engineering design stage: the command /compass:plan, the machine key `plan` in a manifest's stages block and the `plan-authoring` skill. Its hand-off and devlog.md state the design and the work units; it wrote technical-design.md until 9.0.0 removed that document (ADR-091). The delivery approach is a separate thing: it is computed at the assess stage and recorded in the manifest.
+The machine key `plan` in an archived issue's stages block: the engineering design stage of the eight stages before 9.0.0. 9.0.0 removed the stage, its command /compass:plan and the `plan-authoring` skill (ADR-092); an archived issue keeps the key, and Compass reads it as the specify stage of the path. The stage wrote technical-design.md until 9.0.0 removed that document (ADR-091).
 
-**Related:** `technical-design`, `delivery-approach`, `design`
+**Related:** `path`, `technical-design`, `design`
 
 ### postmortem
 
@@ -812,7 +812,7 @@ An issue type: work that changes nothing a user sees, such as upkeep, a refactor
 
 ### technical-design
 
-The engineering plan for one issue: the approach, the design decisions as ADR-style notes, the governance check, and the independent work units. The planning stage (/compass:plan) wrote it as technical-design.md until 9.0.0 removed the document (ADR-091). Older issues still hold one; the plan's hand-off states the design now. The designer's work is the UI contract (ui-contract.md), from /compass:design. In this repository TDD is red-green-refactor and nothing else, so this artifact is never abbreviated to TDD.
+The engineering plan for one issue: the approach, the design decisions as ADR-style notes, the governance check, and the independent work units. The planning stage (/compass:plan) wrote it as technical-design.md until 9.0.0 removed the document (ADR-091) and the stage (ADR-092). Older issues still hold one. The designer's work is the UI contract (ui-contract.md), from /compass:design. In this repository TDD is red-green-refactor and nothing else, so this artifact is never abbreviated to TDD.
 
 **Related:** `technical-design`, `delivery-approach`
 

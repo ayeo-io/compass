@@ -84,8 +84,13 @@ def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
         # for each scenario (ADR-088). evidence-matches-tree moved to 1.1.0 when a
         # landed issue was judged by the SHA-256 of each file (ADR-089).
         # dod-evidence-typed moved to 2.1.0 when a 9.0.0 issue was judged with no
-        # verification report, and its corpus verdicts held (ADR-091).
-        assert entry.version == {"dod-evidence-typed": "2.1.0",
+        # verification report, and its corpus verdicts held (ADR-091). It moved to
+        # 2.2.0 when a follow-up on a path issue had to link to a GitHub issue, and its
+        # corpus verdicts held (ADR-093). The check that owed follow-ups are resolved
+        # moved to 1.1.0 when a path issue had nothing for it to check, and its corpus
+        # verdicts held (ADR-093).
+        assert entry.version == {"dod-evidence-typed": "2.2.0",
+                                 "backfills-paid": "1.1.0",
                                  "human-approval-present": "1.2.0",
                                  "suite-passed": "1.1.0",
                                  "evidence-matches-tree": "1.1.0"}.get(name, "1.0.0"), name

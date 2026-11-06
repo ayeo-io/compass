@@ -4,13 +4,13 @@
 On a path issue (a manifest with `evidence_required`, ADR-092) an open
 Definition of Done item is met only by a follow-up that links to a GitHub
 issue. `compass follow-up add` needs `--github` there, `--defers` names an item
-of the build exit list, and `backfills-paid` has nothing to check, because the
-linked issue tracks the work.
+of the build exit list, and the check that owed follow-ups are resolved has
+nothing to check, because the linked issue tracks the work.
 
 An issue assessed before 9.0.0 keeps every rule it had: an outstanding
-follow-up carries an item to ship, `backfills-paid` fails until `compass
-follow-up resolve` resolves it, a `target_task` entry blocks the issue it
-names, and a page tag resolves against the follow-ups.
+follow-up carries an item to ship, the check that owed follow-ups are resolved
+fails until `compass follow-up resolve` resolves it, a `target_task` entry
+blocks the issue it names, and a page tag resolves against the follow-ups.
 
 The path tests drive `cli/compass` in a temporary git repository
 (`rendered_blocks_support`); the old-issue tests call the readers on a

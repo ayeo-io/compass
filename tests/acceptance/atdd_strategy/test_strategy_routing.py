@@ -84,7 +84,15 @@ def test_trc_a3(tmp_path, kind):
     issue = support.out_of_scope_issue(project, kind)
     code, document = issue.check()
     assert support.strategy_findings(document) == []
-    assert support.summary(code, document) == support.recorded("out-of-scope-" + kind)
+    expected = support.recorded("out-of-scope-" + kind)
+    # Since 9.0.0 the issue is a path issue, whose follow-ups link to the GitHub
+    # issues that track them, so the check that owed follow-ups are resolved has
+    # nothing to check where 8.0.4 passed it (ADR-093). Every other row is the
+    # 8.0.4 result.
+    changed = [r for r in expected["rows"] if r[0] == "backfills-paid"]
+    assert changed == [["backfills-paid", "pass"]], changed
+    changed[0][1] = "nothing-to-check"
+    assert support.summary(code, document) == expected
 
 
 # --- `TRC-A5` ------------------------------------------------------------------------------

@@ -361,11 +361,11 @@ CATALOGUE_DESCRIPTIONS = {
     "gates": "The gates: groups of checks cleared at a stage. Each key is a gate id.",
     "artifacts": "The documents an issue can owe, such as the acceptance criteria. Each key is an "
                  "artifact id.",
-    "readiness": "The readiness signals: binary facts about a repository that showed whether it "
-                 "was fit for unattended agent work. Each key is a readiness signal id. Not read "
-                 "since 9.0.0 (ADR-093): nothing measures the repository, and the shipped default "
-                 "declares none. The merge leaves out a project's `readiness:`, and `compass "
-                 "policy lint` names it; a frozen preset or a stored generation keeps its own.",
+    "readiness": "The readiness signals of a frozen preset or a stored generation, each keyed "
+                 "by readiness signal id: binary facts that showed whether a repository was fit "
+                 "for unattended agent work. Since 9.0.0 (ADR-093) nothing measures the "
+                 "repository, the shipped default declares no signal, and the merge leaves out "
+                 "a project's `readiness:`, which `compass policy lint` names.",
     "vocabulary": "The display names and aliases of catalog entries. Each key is "
                   "`<catalog>.<id>`, for example `approaches.quick-fix`.",
 }
@@ -543,8 +543,8 @@ FIELD_DESCRIPTIONS = {
     },
     "readiness": {
         "statement": "What the readiness signal asserts, in plain words.",
-        "impl": "The id of the built-in implementation that decided the signal. Each "
-                "implementation carries a version. Lint still checks the id.",
+        "impl": "The id of the built-in implementation that decided the signal, which "
+                "carries a version. Lint still checks the id.",
         "weight": "A whole number that orders the signals in the fix list, higher first. "
                   "It never changes the score, which counts signals.",
         "params": "Named values the implementation reads, such as the project setting it "
@@ -617,10 +617,10 @@ TOP_DESCRIPTIONS = {
     "project": "The project's name, its commands (`test_command`, `test_micro_command`, "
                "`bdd_run_command` and `layering_command`, which `compass layering record` "
                "runs when given no command), and the paths of its acceptance support code "
-               "(`acceptance_support`). `lint_command`, `format_check_command`, "
-               "`build_command`, `typecheck_command`, `secret_scan` and `structured_logging` "
-               "are not read since 9.0.0 (ADR-093): only `compass readiness` read them. They "
-               "stay valid, and `compass policy lint` names each.",
+               "(`acceptance_support`). Since 9.0.0 (ADR-093) nothing reads `lint_command`, "
+               "`format_check_command`, `build_command`, `typecheck_command`, `secret_scan` "
+               "or `structured_logging`, which stay valid and which `compass policy lint` "
+               "names.",
     "project.acceptance_support": "The paths of the support code of the four-layer acceptance "
                                   "strategy (`S17`), each relative to the project root. "
                                   "`acceptance-support-present` reports a piece with no path, or "

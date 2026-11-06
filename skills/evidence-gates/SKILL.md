@@ -33,9 +33,8 @@ mode the evidence-not-assertion guardrail exists to prevent.
 
 Naming them differently is what stops a judgment call being presented as a
 hard gate, and stops a hard gate being waved through on an opinion. When you
-report the `governance` dimension, the guardrail
-findings and the strategy assessment go in clearly separated - evidence on one
-side, judgment on the other.
+report the `governance` dimension, the guardrail findings and the strategy
+assessment go in clearly separated - evidence on one side, judgment on the other.
 
 ## Evidence vs. assertion
 
@@ -59,10 +58,10 @@ tick on the page: `compass gate pass ... --meets <item>` or `compass evidence
 add ... --meets <item>` records evidence, `compass follow-up add FU-<id>
 --defers <item> --github owner/repo#N --summary "..."` carries the item to the
 GitHub issue that tracks it (on a path issue a follow-up with no `--github`
-meets nothing), and a person ticks
-an item by typing `/compass:approve` for a `compass evidence request --check
-<item>`, or with `compass evidence approve --check <item>` at a terminal. `dod-evidence-typed`
-fails an item with no record. `compass check` lists each item's state.
+meets nothing), and a person ticks an item by typing `/compass:approve` for a
+`compass evidence request --check <item>`, or with `compass evidence approve
+--check <item>` at a terminal. `dod-evidence-typed` fails an item with no
+record. `compass check` lists each item's state.
 
 ## The loop a red or green belongs to
 
@@ -90,12 +89,11 @@ client before the command runs, `compass evidence add` refuses to register
 one, and `outer-loop-recorded` fails one registered another way. A unit-test
 green names neither: `compass tdd-green --loop inner` refuses the flags, and
 `compass quick-fix finish`, which chooses its own loop, does not write them
-on the inner loop. Like the red,
-`compass tdd-green --loop outer` takes `--scenario` more than once, or
-`--every-scenario`: one run writes one green per scenario, sharing a
-`run_id`, and every scenario needs its red first. `compass quick-fix finish`
-reuses a green already on record only when it is of the same loop and names
-the same candidate and client.
+on the inner loop. Like the red, `compass tdd-green --loop outer` takes
+`--scenario` more than once, or `--every-scenario`: one run writes one green
+per scenario, sharing a `run_id`, and every scenario needs its red first.
+`compass quick-fix finish` reuses a green already on record only when it is of
+the same loop and names the same candidate and client.
 
 Each loop keeps its own `attempts` count per scenario, so an outer-loop green
 counts outer-loop runs only (ADR-084). An outer-loop run that fails counts as

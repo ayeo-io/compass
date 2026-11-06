@@ -1415,7 +1415,7 @@
       "type": "object"
     },
     "project": {
-      "description": "The project's name, its commands (`test_command`, `test_micro_command`, `bdd_run_command` and `layering_command`, which `compass layering record` runs when given no command), and the paths of its acceptance support code (`acceptance_support`). `lint_command`, `format_check_command`, `build_command`, `typecheck_command`, `secret_scan` and `structured_logging` are not read since 9.0.0 (ADR-093): only `compass readiness` read them. They stay valid, and `compass policy lint` names each.",
+      "description": "The project's name, its commands (`test_command`, `test_micro_command`, `bdd_run_command` and `layering_command`, which `compass layering record` runs when given no command), and the paths of its acceptance support code (`acceptance_support`). Since 9.0.0 (ADR-093) nothing reads `lint_command`, `format_check_command`, `build_command`, `typecheck_command`, `secret_scan` or `structured_logging`, which stay valid and which `compass policy lint` names.",
       "properties": {
         "acceptance_support": {
           "additionalProperties": false,
@@ -1445,14 +1445,14 @@
     },
     "readiness": {
       "additionalProperties": false,
-      "description": "The readiness signals: binary facts about a repository that showed whether it was fit for unattended agent work. Each key is a readiness signal id. Not read since 9.0.0 (ADR-093): nothing measures the repository, and the shipped default declares none. The merge leaves out a project's `readiness:`, and `compass policy lint` names it; a frozen preset or a stored generation keeps its own.",
+      "description": "The readiness signals of a frozen preset or a stored generation, each keyed by readiness signal id: binary facts that showed whether a repository was fit for unattended agent work. Since 9.0.0 (ADR-093) nothing measures the repository, the shipped default declares no signal, and the merge leaves out a project's `readiness:`, which `compass policy lint` names.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
           "description": "One readiness signal: what it asserts, the implementation that decided it and whether the readiness floor needed it. Not read since 9.0.0 (ADR-093).",
           "properties": {
             "impl": {
-              "description": "The id of the built-in implementation that decided the signal. Each implementation carries a version. Lint still checks the id.",
+              "description": "The id of the built-in implementation that decided the signal, which carries a version. Lint still checks the id.",
               "type": "string"
             },
             "locked": {
@@ -1483,7 +1483,7 @@
               "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
                 "impl": {
-                  "description": "The id of the built-in implementation that decided the signal. Each implementation carries a version. Lint still checks the id.",
+                  "description": "The id of the built-in implementation that decided the signal, which carries a version. Lint still checks the id.",
                   "type": "string"
                 },
                 "params": {

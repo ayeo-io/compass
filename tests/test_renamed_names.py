@@ -368,7 +368,8 @@ def test_trc_049():
     assert legacy_views.digest_problems(ROOT) == [], legacy_views.digest_problems(ROOT)
 
 
-# --- The state key, the refusal code and the readiness key -------------------
+# --- The state key and the refusal code ---------------------------------------
+# The readiness key's test went with the readiness record in 9.0.0 (ADR-093).
 
 # The old words of this unit, spelt from pieces so that no scan of the tests
 # finds an old name in a literal of its own.
@@ -376,8 +377,6 @@ _U6_OLD_CODE = "not-initi" + "alised"
 _U6_NEW_CODE = "not-initi" + "alized"
 _U6_OLD_STATE = "initi" + "alised"
 _U6_NEW_STATE = "initi" + "alized"
-_U6_OLD_DIGEST = "catal" + "ogue_digest"
-_U6_NEW_DIGEST = "catal" + "og_digest"
 
 
 def test_trc_050():
@@ -459,58 +458,6 @@ def test_trc_051(tmp_path):
     made = policy_migrate.plan(str(migrate))
     assert list(made.state) == [_U6_NEW_STATE]
     assert made.state[_U6_NEW_STATE] == value
-
-
-def _u6_record(tmp: Path) -> dict:
-    from compass_pkg import readiness_record
-
-    tmp.mkdir(parents=True, exist_ok=True)
-    return readiness_record.new_record(
-        str(tmp), [], {"commands_seconds": 60, "used_seconds": 1})
-
-
-def test_trc_052(tmp_path):
-    import json
-
-    import jsonschema
-    from compass_pkg import readiness_record
-
-    root = str(tmp_path)
-    written = _u6_record(tmp_path)
-    assert written[_U6_NEW_DIGEST] == written[_U6_OLD_DIGEST]
-    digest = written[_U6_NEW_DIGEST]
-    schema = json.loads((ROOT / "schemas" / "readiness-record.schema.json")
-                        .read_text(encoding="utf-8"))
-    jsonschema.validate(written, schema)
-
-    def variant(**keys):
-        record = {k: v for k, v in written.items()
-                  if k not in (_U6_NEW_DIGEST, _U6_OLD_DIGEST)}
-        record.update(keys)
-        return record
-
-    cases = {
-        "only the old key": (variant(**{_U6_OLD_DIGEST: digest}), True),
-        "only the new key": (variant(**{_U6_NEW_DIGEST: digest}), True),
-        "both keys, equal": (variant(**{_U6_OLD_DIGEST: digest,
-                                        _U6_NEW_DIGEST: digest}), True),
-        "only the old key, not equal": (
-            variant(**{_U6_OLD_DIGEST: "sha256:" + "0" * 64}), False),
-    }
-    for name, (record, expected) in cases.items():
-        assert readiness_record.fresh(root, record).fresh is expected, name
-        jsonschema.validate(record, schema)
-    # A record holding neither key is refused by the schema and is stale.
-    neither = variant()
-    with pytest.raises(jsonschema.ValidationError):
-        jsonschema.validate(neither, schema)
-    assert readiness_record.fresh(root, neither).fresh is False
-
-    (tmp_path / ".compass").mkdir()
-    readiness_record.write(root, written)
-    read =readiness_record.read(root)
-    assert read.status == "ok"
-    assert readiness_record.fresh(root, read.record).fresh is True
 
 
 OLD_BEHAVIOR = "behav" + "iour"

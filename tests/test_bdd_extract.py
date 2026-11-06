@@ -319,7 +319,7 @@ EXPECTED_SUBCOMMANDS = {
     "record",                     # sync|restore - the delivery record (ADR-031)
     "decision",                   # record|list|show|check - the ledger (ADR-027)
     # "board" (render|refresh, ADR-046): ADR-093 removed the delivery board page.
-    "readiness",                  # measures the repository and writes the readiness record
+    # "readiness" (ADR-061): ADR-093 removed the readiness measure.
     "release",                    # notes - the release lines since a git reference (ADR-065)
     "isolation",                  # record - the isolation proof (#328, ADR-086)
     "layering",                   # record - the layering record (#328, ADR-086)

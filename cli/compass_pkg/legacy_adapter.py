@@ -568,7 +568,9 @@ def _shipped_readiness():
     """`(catalogue, display names)` of the readiness signals, read from the
     shipped preset. The two legacy files have no readiness entry, so this is the
     one place the adapter takes a catalogue from the preset it is rebuilding
-    (ADR-059): a project with copied governance still has the shipped signals."""
+    (ADR-059): a project with copied governance has the shipped signals. Since
+    9.0.0 the shipped catalogue is empty (ADR-093), so it has none, and no check
+    reads one."""
     directory = os.path.join(core.FRAMEWORK_ROOT, "governance", "presets", "default")
     catalogue = core.load_yaml(os.path.join(directory, "readiness.yml")).get("readiness") or {}
     names = core.load_yaml(os.path.join(directory, "vocabulary.yml")).get("vocabulary") or {}

@@ -154,9 +154,7 @@ work that ships code
   one; overruling a guardrail 5 sign-off does not undo work already landed.
 - **Autonomy is a setting, not a promise.** `autonomy: controlled | balanced
   | autonomous` in `compass.yml` says how often a session stops for a person.
-  An autonomous project must first pass the readiness floor: an agent
-  instructions file, a build, a test suite under two minutes and a clean
-  lint, measured by `compass readiness`. Below the floor, assess refuses.
+  It changes no gate, check or hook.
 - **Decisions an agent takes for you are listed.** On `balanced` and
   `controlled`, the next checkpoint waits for you to confirm or change them.
 - **Each acceptance test stage ends with a review.** On `controlled`, an issue
@@ -236,7 +234,7 @@ full account is in [docs/security.md](docs/security.md).
 - **Runs** commands on your machine: the test command you give `compass
   tdd-red`, `compass tdd-green` and `compass quick-fix finish`, and, when
   `allow_project_commands` is true, your project's own guardrails declared
-  with `check: command-passes` and the readiness commands in `compass.yml`;
+  with `check: command-passes` in `compass.yml`;
   also git in your repository, and the CLI itself from the plugin's hooks.
 - **Reads** a pull request with `gh` when you run `compass issue link set
   --pr`: its number, state and merge commit. Compass writes nothing to GitHub

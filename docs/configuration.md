@@ -36,7 +36,7 @@ follows the same file.
 |---|---|---|
 | New (no `.compass/`) | `compass init`, run by any entry point, creates `.compass/state.yml` and `.compass/work/`. `/compass:init` then writes a minimal `compass.yml` (`schema`, `extends`, `owner`, `project.name`, `project.test_command`) and copies nothing. | `compass.yml`, over the shipped default |
 | From 5.x with a `.compass/config.yml` or copied governance | Nothing changes until it runs `compass policy migrate`. `/compass:init` runs that command (a dry run, then `--apply` on a yes) in place of writing a fresh file. | The old files, as 5.x did |
-| This repository | A hand-written `compass.yml` that holds settings keys, the owner, the readiness commands and one readiness override that times its micro suite, and `.compass/state.yml`. `compass policy migrate` refuses here, because the repository's governance files are generated from the shipped default. | `compass.yml` |
+| This repository | A hand-written `compass.yml` that holds settings keys and the owner, and `.compass/state.yml`. It also holds a `readiness:` override and two readiness commands, which 9.0.0 no longer reads (see `readiness` below). `compass policy migrate` refuses here, because the repository's governance files are generated from the shipped default. | `compass.yml` |
 
 A missing file means every default below. A file the CLI cannot read, or a
 duplicate key in `compass.yml`, is a broken file. Each command then does what
@@ -85,13 +85,13 @@ The state decides what Compass reads, and no state loses a setting silently:
 |---|---|---|---|
 | `adoption` (`mode` in `.compass/config.yml`) | Whether a failed check blocks | `enforced`, `advisory` | `enforced` |
 | `autonomy` | How often a session stops for a person | `controlled`, `balanced`, `autonomous` | `balanced` |
-| `project` | The project's name, commands and declarations | `name`, `test_command`, `test_micro_command`, `bdd_run_command`, `lint_command`, `format_check_command`, `build_command`, `typecheck_command`, `secret_scan`, `structured_logging` | none |
+| `project` | The project's name and commands | `name`, `test_command`, `test_micro_command`, `bdd_run_command`; six readiness keys that 9.0.0 no longer reads (see `project` below) | none |
 | `enforcement` | Extra paths the pre-tool hook guards | `code_globs`: a list of patterns | none |
 | `record` | Where the delivery record is kept | `remote`, `paths`, `names_key` | no record |
 | `prices` | Removed in 9.0.0 and not read (see `prices` below) | - | - |
 | `models` | Removed in 9.0.0 and not read (see `models` below) | - | - |
 | `multiagent` | Removed in 9.0.0 and not read (see `multiagent` below) | - | - |
-| `allow_project_commands` | Lets `compass check` and `compass readiness` run commands the project declares | `true`, `false` | `false` |
+| `allow_project_commands` | Lets `compass check` run commands the project declares | `true`, `false` | `false` |
 | `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
 | `living_spec` | Removed in 9.0.0 and not read (see `living_spec` below) | - | - |
 | `language` | The language the agent writes prose in (see `language` below) | a BCP 47 tag such as `en-US` | unset: no instruction |
@@ -126,13 +126,9 @@ evidence, the pre-tool hook or `compass check`.
   scenarios owe a person's approval (a `G5` label or critical risk).
 - `autonomous`: never wait, except at specify when the scenarios owe a
   person's approval, as under `balanced`. Every other hand-off is shown and
-  logged instead. From
-  7.0.0 an issue on `autonomous` must meet the readiness floor:
-  `compass approach evaluate --write` refuses it, with exit 2, while the
-  repository is below the floor, has no fresh readiness record, or the CI
-  runner reports an untrusted contribution. The session-start hook adds one
-  warning line, and never blocks. `balanced` and `controlled` are never
-  refused. See `docs/readiness.md`.
+  logged instead. From 7.0.0 to 8.x an issue on `autonomous` had to meet
+  the readiness floor. 9.0.0 removed the floor (ADR-093), so no value is
+  refused.
 
 Any other value is refused, naming the file, because a typo that silently
 changed how often a session stops would give no sign.
@@ -145,22 +141,15 @@ changed how often a session stops would give no sign.
   after `--`, and refuse without it.
 - `test_micro_command`: used before `test_command` for those two commands.
 - `bdd_run_command`: the command the `compass bdd` run step uses when none is given.
-- `lint_command`, `format_check_command`, `build_command` and `typecheck_command`:
-  the commands that decide the repository's readiness signals (see the
-  `readiness` catalog in `governance/presets/default/readiness.yml`). Each is
-  optional. Declare the check form of a formatter in `format_check_command`, the
-  one that reports a difference and changes no file. `compass readiness` runs
-  them, with `test_command`, only when `allow_project_commands` is `true` and the
-  contribution is trusted. Each command runs in a clean checkout of HEAD, so it
-  must set up its own dependencies. See `docs/readiness.md` for the order and the
-  time budget.
-- `secret_scan` and `structured_logging`: a one-line declaration of the secret
-  scanner the project runs and of its logging convention. A non-empty string makes the
-  matching readiness signal present. Compass runs nothing for either.
+- `lint_command`, `format_check_command`, `build_command`, `typecheck_command`,
+  `secret_scan` and `structured_logging`: removed in 9.0.0 (ADR-093) and not
+  read. Only the `readiness` verb read them, and it is gone. Each stays valid,
+  so a project that holds one keeps working, and the merge keeps it.
+  `compass policy lint` names each with `L-SETTING-REMOVED`. Delete them from
+  `compass.yml`.
 
-A value of any of these six keys that is not a string is refused, naming the key and
-the file. An empty string reads as not declared. `compass tdd-red` and
-`compass tdd-green` read `test_micro_command` and `test_command` only.
+`compass tdd-red` and `compass tdd-green` read `test_micro_command` and
+`test_command` only.
 
 ### `enforcement`
 
@@ -207,10 +196,7 @@ the project to a file of names that must not reach the record. See
 ### `allow_project_commands`
 
 Project guardrails can declare a command. `compass check` runs one only when
-the contribution is trusted and this setting is `true`. `compass readiness`
-runs the project's build, test, lint, type-check and format-check commands
-under the same two conditions, in the same order; with the setting off, each of
-those readiness signals is absent and names this setting. The setting is read
+the contribution is trusted and this setting is `true`. The setting is read
 from the project's own file only, so a published preset cannot authorize its
 own commands. See `docs/security.md`.
 
@@ -223,6 +209,19 @@ nothing reads it. `compass policy lint` names it with `L-SETTING-REMOVED`:
 once, by `github_labels.page` (ADR-091) when that switch is `true`, and by
 `github_labels` otherwise. Delete it from `compass.yml`. `compass issue link
 set` still records the link (`docs/github-links.md`).
+
+### `readiness`
+
+9.0.0 removed the `readiness` verb, the `--readiness` flag of `compass init`,
+the readiness floor and the session-start readiness line (ADR-093). Nothing measures the
+repository, and the shipped default declares an empty `readiness:` catalog,
+as ADR-091 did for `artifacts:`. A project's `readiness:`, and a git parent's,
+stays valid, so a file that holds it keeps working. The merge leaves it out,
+and its value is not checked. `compass policy lint` names it with
+`L-SETTING-REMOVED`. Delete it from `compass.yml`. A frozen preset
+(`default@6`, `default@7`) and an issue's stored generation keep the catalog
+they were written with, and lint and `compass policy diff` still read it. A
+`.compass/readiness.yml` left in a checkout is not read.
 
 ### `living_spec`
 

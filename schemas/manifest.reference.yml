@@ -53,7 +53,7 @@ intent_source:   # (optional) map - an older manifest's record of a brief ingest
   snapshot:      #   (optional) string - file name of the unedited copy of the brief in the issue directory
   interview:     #   (optional) list of maps - each question asked, with its answer or null; [] before any is asked
   sections:      #   (optional) list of maps {name, from [source, answer, unanswered], answer_id} - where each section of intent.md came from
-readiness:       # (optional) map - the repository's readiness at the last approach evaluate --write: {status: measured, score, signals, floor_met, absent[], measured_at} or {status: not-measured, reason: missing | stale | unreadable, detail}; outside the generation
+readiness:       # (optional) map - written from 7.0.0 to 8.x, not written or read since 9.0.0 (ADR-093); the repository's readiness at the last approach evaluate --write: {status: measured, score, signals, floor_met, absent[], measured_at} or {status: not-measured, reason: missing | stale | unreadable, detail}; outside the generation
 
 evidence:        # (optional) list of maps - the typed evidence registry gates reference by id:
   - id:          #   (required in entry) string - e.g. EV-001 or EV-A1

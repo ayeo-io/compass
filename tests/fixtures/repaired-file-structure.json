@@ -173,11 +173,10 @@
       3,
       3,
       3,
-      3,
       2,
       2
     ],
-    "list_items": 128,
+    "list_items": 125,
     "table_rows": 35
   },
   "examples/README.md": {
@@ -381,7 +380,7 @@
       2,
       2
     ],
-    "list_items": 68,
+    "list_items": 64,
     "table_rows": 38
   },
   "governance/strategies.md": {

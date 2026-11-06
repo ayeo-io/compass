@@ -320,7 +320,7 @@ _(none yet - the shipped default guardrails apply as-is)_
   - On an in-scope issue it tests that each piece of support code named under
     `project.acceptance_support` (`alias_helper`, `driver_factory`,
     `dsl_root`, `layering_test`) exists inside the project root. It opens no
-    file. `compass readiness` reports the same pieces (`docs/readiness.md`).
+    file.
   - A missing piece fails it as advice. The finding names each missing piece
     and states the claim limit. The claim limit is: while a piece is missing,
     the issue can claim that its scenarios pass, and not that its acceptance

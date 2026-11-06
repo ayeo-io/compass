@@ -368,7 +368,7 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         "lesson",  # project-lessons (ADR-029): lessons for later sessions
         "record",  # delivery-record (ADR-031): the record kept off the laptop
         # "board" (compass-board, ADR-046): ADR-093 removed the delivery board page.
-        "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
+        # "readiness" (ADR-061): ADR-093 removed the readiness measure.
         "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
         # isolation-and-layering (#328, ADR-086): `isolation record`, `layering record`
         "isolation", "layering",

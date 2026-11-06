@@ -222,23 +222,14 @@ A frozen preset (`default@6`, `default@7`) and a stored generation keep the
   the domain labels bring.
 - An `autonomy` value that is not one of the three is refused, not read as
   balanced.
-- **The readiness floor caps `autonomous`** (ADR-058). `approach evaluate
-  --write` refuses, with exit 2 and before it prints or writes anything, an
-  issue whose effective autonomy is `autonomous` when:
-  - the CI runner reports an untrusted contribution, read from the
-    environment before the readiness record, so a committed record cannot
-    clear it; no setting lifts this refusal;
-  - the readiness record is missing, stale or unreadable;
-  - the record was measured for an untrusted contribution; or
-  - a readiness signal with `required_for_autonomous: true` is absent.
-
-  Each message names `autonomy` as the setting to change. `balanced` and
-  `controlled` are never refused. Without `--write` the default view shows
-  whether a write would be refused, and `--json` carries `readiness`. The
-  floor is not a gate or a routing rule: it changes no approach, gate or
-  checkpoint, and `compass check` never reads it. Every `--write` records the
-  readiness summary in the manifest's `readiness:` key. `docs/readiness.md`
-  holds the signals and the record.
+- **No readiness floor.** From 7.0.0 to 8.x the readiness floor (ADR-058)
+  refused an `autonomous` issue at `approach evaluate --write` while the
+  repository was below it. 9.0.0 removed the floor with the `readiness` verb
+  (ADR-093): no command writes a fresh readiness record, so a kept floor
+  would refuse every autonomous assess. `approach evaluate` no longer reads
+  a readiness record, its `--json` carries no `readiness`, and `--write`
+  writes no `readiness:` key. The key an older manifest holds stays valid and
+  is not read.
 - A policy without the table, or a table that leaves out a value or an
   approach, waits at every hand-off the approach runs. Only an approach listed with an
   empty list never waits. Approach keys are the current approach names, and a

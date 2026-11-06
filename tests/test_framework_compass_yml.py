@@ -11,8 +11,11 @@ evidence for the default. The old `.compass/config.yml` is gone, and the state
 the CLI wrote (`records_signed_since`) is in the state file. Since governance
 decision 2026-10-13-this-repository-declares-readiness-commands it also turns
 on project commands, declares the readiness commands and holds one readiness
-override, so the repository meets the readiness floor while it runs
-autonomous; any other catalogue key or readiness entry still fails here.
+override, so the repository met the readiness floor while it ran autonomous;
+any other catalogue key or readiness entry still fails here. 9.0.0 removed the
+readiness floor and stopped reading the override and the readiness commands
+(ADR-093). The file keeps them until the owner deletes them, and lint names
+each with the warning `L-SETTING-REMOVED`; the tests below hold both.
 
 Scenario ids: IDR-5 and IDR-6, in the acceptance criteria of the issue
 `init-docs-release`; OWN-1, in the issue `compass-yml-owner`. The IDR-5 test
@@ -154,35 +157,57 @@ PLAIN_MAP_OVERRIDE = {TIMED: {"set": {"params": {"command": "test_micro_command"
 
 
 def test_roa_12_the_override_is_in_map_form_and_keeps_limit_seconds():
-    from compass_pkg import readiness_catalogue
+    # 9.0.0 no longer resolves the override into a readiness catalogue: the
+    # merge leaves a project's `readiness:` out (ADR-093). The file's shape is
+    # still held, so nothing else can be added under the key.
     doc = load_yaml_strict(str(ROOT / "compass.yml"))
     assert doc["autonomy"] == "autonomous"
     assert doc["readiness"] == {
         TIMED: {"set": {"params": {"set": {"command": "test_micro_command"}}}}}
-    entry = readiness_catalogue.catalogue(str(ROOT))[TIMED]
-    assert entry["impl"] == "tests-under-limit"
-    assert entry["params"] == {"command": "test_micro_command", "limit_seconds": 120}
     assert disallowed_keys({"schema": 1, "readiness": doc["readiness"]}) == []
     assert disallowed_keys({"schema": 1, "readiness": PLAIN_MAP_OVERRIDE}) == ["readiness"]
 
 
-def _lint_errors(file=None):
+def _lint(file=None):
     """The write-time lint of this repository's chain, through the loader
     `effective.resolve_live` uses, or of `file` read as the project layer."""
     from compass_pkg import policy_lint
     loaded = policy_lint.load_layers(str(ROOT), file=file, read_project=True)
-    return policy_lint.lint_loaded(loaded).errors
+    return policy_lint.lint_loaded(loaded)
+
+
+#: The settings this repository's file still holds that 9.0.0 no longer reads
+#: (ADR-093). Lint names each once with `L-SETTING-REMOVED`, until the owner
+#: deletes them from `compass.yml`.
+REMOVED_SETTINGS = {"readiness", "project.build_command", "project.lint_command"}
+
+
+def _removed_warnings(result):
+    return sorted(f.path for f in result.findings
+                  if f.code == "L-SETTING-REMOVED" and f.level == "warning")
 
 
 def test_roa_13_compass_yml_passes_the_write_time_lint(tmp_path):
     import yaml
-    errors = _lint_errors()
-    assert errors == [], [(e.code, e.path, e.message) for e in errors]
+    result = _lint()
+    assert result.errors == [], [(e.code, e.path, e.message) for e in result.errors]
+    # The removed settings are warnings, one each, and nothing else is removed.
+    assert _removed_warnings(result) == sorted(REMOVED_SETTINGS)
 
+    # A plain-map override was refused as incomparable while the merge read a
+    # project's `readiness:`. Since 9.0.0 the merge leaves it out, so its value
+    # is not checked: it is one more `L-SETTING-REMOVED` warning, never an error.
     doc = load_yaml_strict(str(ROOT / "compass.yml"))
     doc["readiness"] = PLAIN_MAP_OVERRIDE
     planted = tmp_path / "compass.yml"
     planted.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
-    errors = _lint_errors(file=str(planted))
-    assert [e.code for e in errors][:1] == ["C-INCOMPARABLE"], errors
-    assert errors[0].path.startswith(f"readiness.{TIMED}"), errors[0].path
+    result = _lint(file=str(planted))
+    assert result.errors == [], [(e.code, e.path, e.message) for e in result.errors]
+    assert _removed_warnings(result) == sorted(REMOVED_SETTINGS)
+
+
+def test_test_micro_command_is_kept_and_not_named_by_lint():
+    # `compass tdd-red` and `tdd-green` still read it, so it is no removed setting.
+    settings = project_settings.settings(str(ROOT))
+    assert settings["project"]["test_micro_command"].startswith("pytest -q ")
+    assert "project.test_micro_command" not in _removed_warnings(_lint())

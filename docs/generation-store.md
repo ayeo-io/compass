@@ -79,10 +79,9 @@ outcome all equal generation n, nothing is committed and the command says
 must still name the generation the command read, or the commit refuses.
 
 The manifest's `readiness:` key, the repository's readiness summary, is not an
-outcome field. Every `--write` writes it into the manifest, on the "no change"
-path too, and no generation file or digest in `complete` holds it. A new
-`compass readiness` measurement therefore never forces a new generation
-(ADR-060).
+outcome field, and no generation file or digest in `complete` holds it
+(ADR-060). From 7.0.0 to 8.x every `--write` wrote it. Since 9.0.0 nothing
+writes or reads it (ADR-093); an older manifest keeps it.
 
 The commit refuses, writing nothing, when:
 
@@ -205,7 +204,7 @@ so the refusal opens no file. It raises `MajorRefusal`, which `main` prints as
     stale implementation major. It does not pin an issue refused for its
     resolver or schema major, and prints a line that names the issue and
     `compass issue migrate --config --issue <slug>`;
-  - `compass readiness`, `compass policy update`, `--help` and `--version`,
+  - `compass policy lint`, `compass policy update`, `--help` and `--version`,
     which read no issue's generation.
 
 Deliberate limits:

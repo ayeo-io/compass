@@ -152,7 +152,7 @@ EXPECTED_SUBCOMMANDS = {
     "decision",
     "lesson",  # project-lessons (ADR-029)
     "record",  # delivery-record (ADR-031)
-    "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
+    # "readiness" (ADR-061): ADR-093 removed the readiness measure.
     "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
     # isolation-and-layering (#328, ADR-086): `isolation record` and `layering
     # record`, the two strategy records only their commands write. GROUPS, so a

@@ -174,8 +174,8 @@ commands write; it never reads project code.
   proof; the light row needs neither.
 - **Support code.** The project names the paths of its alias helper,
   driver factory, DSL root and layering test under
-  `project.acceptance_support`. `compass readiness` reports each missing
-  piece and blocks nothing. The first in-scope issue builds the missing
+  `project.acceptance_support`. A missing piece blocks nothing. The first
+  in-scope issue builds the missing
   pieces as its own work. Until then the advisory check
   `acceptance-support-present` states the claim limit: the issue can claim
   that its scenarios pass, but not what a missing piece gives.

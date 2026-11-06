@@ -1071,8 +1071,8 @@ def _check_command_passes(task, task_dir):
     # reports about where the contribution came from. See
     # cli/compass_pkg/trust.py.
     #
-    # `command_permission` holds that order for this check and for
-    # `compass readiness`: trust first (UNKNOWN on CI is refused, because
+    # `command_permission` holds that order for this check: trust first
+    # (UNKNOWN on CI is refused, because
     # Compass cannot tell whose work it is), then the opt-in. It looks the
     # opt-in up from the issue folder, as this check always has.
     permission = None

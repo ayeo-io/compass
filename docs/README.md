@@ -50,7 +50,6 @@ the table does not exist, and when a doc in this folder is not listed.
 - [policy-test.md](policy-test.md) - `compass preset test` and `compass preset init`: the preset folder and fixture format, what the test checks, the exit codes and the JSON shape of both reports.
 - [policy-update.md](policy-update.md) - `compass policy update`: the major bump, the waiver re-check, the terminal re-approval, the exit codes and the JSON shape.
 - [security.md](security.md) - what Compass adds to a repository, and how to review it.
-- [readiness.md](readiness.md) - `compass readiness`: the readiness signals, the project commands it runs in a temporary worktree within one time budget, the readiness record and when it is fresh.
 - [portability.md](portability.md) - the adapter boundary, for running Compass outside Claude Code.
 
 ## Background
@@ -84,7 +83,7 @@ same commit.
 | `cli/compass_pkg/atomic_io.py` | `architecture/decisions/ADR-036-an-issue-runs-against-a-stored-generation.md` |
 | `cli/compass_pkg/obligations.py` | `architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md` |
 | `cli/compass_pkg/classify.py`, `cli/compass_pkg/classify_lists.py`, `cli/compass_pkg/json_shape.py`, `scripts/bench-classifier.py` | `governance/routing-policy.md` |
-| `cli/compass_pkg/policy_lint.py`, `cli/compass_pkg/policy_effective.py`, `cli/compass_pkg/policy_cmd.py` | `docs/policy-lint.md` |
+| `cli/compass_pkg/policy_lint.py`, `cli/compass_pkg/policy_effective.py`, `cli/compass_pkg/policy_cmd.py`, `cli/compass_pkg/readiness_registry.py` | `docs/policy-lint.md` |
 | `cli/compass_pkg/generation.py`, `cli/compass_pkg/effective.py`, `cli/compass_pkg/impl_versions.py`, `scripts/bench-evaluate.py` | `docs/generation-store.md` |
 | `scripts/impl-coverage.py`, `tests/fixtures/impls/versions.lock.yml` | `docs/check-implementations.md` |
 | `cli/compass_pkg/issue_depends.py` | `docs/issue-dependencies.md` |
@@ -100,7 +99,7 @@ same commit.
 | `cli/compass_pkg/waivers.py` | `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md` |
 | `cli/compass_pkg/layers.py`, `cli/compass_pkg/merge.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/locks.py` | `governance/guardrails.md` |
-| `cli/compass_pkg/routing.py`, `cli/compass_pkg/readiness_floor.py`, `cli/compass_pkg/g5_label_prompt.py`, `cli/compass_pkg/approach_diagram.py`, `governance/routing-policy.yml`, `approaches/`, `docs/approach-diagram.html` | `governance/routing-policy.md` |
+| `cli/compass_pkg/routing.py`, `cli/compass_pkg/g5_label_prompt.py`, `cli/compass_pkg/approach_diagram.py`, `governance/routing-policy.yml`, `approaches/`, `docs/approach-diagram.html` | `governance/routing-policy.md` |
 | `cli/compass_pkg/checks.py`, `cli/compass_pkg/dod_due.py`, `cli/compass_pkg/check_cmd.py`, `cli/compass_pkg/check_registry.py`, `cli/compass_pkg/red_first.py`, `governance/guardrails.yml` | `governance/guardrails.md` |
 | `governance/strategies.md` | `governance/strategies-rationale.md` |
 | `governance/terminology.yml` | `docs/glossary.md` |
@@ -117,7 +116,7 @@ same commit.
 | `cli/compass_pkg/record_triggers.py`, `cli/compass_pkg/command_guard.py` | `docs/generation-store.md` |
 | `cli/compass_pkg/section_checks.py`, `cli/compass_pkg/outside_gate.py`, `cli/compass_pkg/spec_location.py` | `governance/guardrails.md` |
 | `cli/compass_pkg/acceptance_strategy.py`, `cli/compass_pkg/outer_loop.py`, `cli/compass_pkg/candidate_client.py`, `cli/compass_pkg/isolation.py`, `cli/compass_pkg/layering.py`, `cli/compass_pkg/strategy_records.py` | `governance/guardrails.md` |
-| `cli/compass_pkg/support_code.py` | `docs/readiness.md` (the support-code block), `governance/guardrails.md` (the check and the claim limit) |
+| `cli/compass_pkg/support_code.py` | `governance/guardrails.md` (the check and the claim limit) |
 | `cli/compass_pkg/migrate.py`, `cli/compass_pkg/migrate_kinds.py`, `cli/compass_pkg/migrate_copy_check.py` | `architecture/decisions/ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md`, `docs/upgrade-7-0-0.md` |
 | `cli/compass_pkg/parse_cache.py` | `architecture/decisions/ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md`, widened by `architecture/decisions/ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md` |
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |
@@ -134,6 +133,5 @@ same commit.
 | `scripts/install.sh`, `.claude-plugin/` | `docs/install-smoke-test.md` |
 | `hooks/hooks.json`, the adapter boundary | `docs/portability.md` |
 | `cli/compass_pkg/project_commands.py`, `cli/compass_pkg/trust.py` | `docs/security.md` |
-| `cli/compass_pkg/readiness_cmd.py`, `cli/compass_pkg/readiness_signals.py`, `cli/compass_pkg/readiness_run.py`, `cli/compass_pkg/readiness_record.py`, `cli/compass_pkg/readiness_registry.py`, `cli/compass_pkg/readiness_catalogue.py`, `schemas/readiness-record.schema.json` | `docs/readiness.md` |
 | `ci/` | `ci/README.md` |
 | `architecture/` | `architecture/decisions/README.md` |

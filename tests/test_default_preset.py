@@ -427,9 +427,11 @@ def test_dp_2_the_check_can_fail_on_the_preset():
 def test_dp_2_every_catalogue_is_filled_and_the_approach_catalogue_is_not_named_routes():
     preset = _preset()
     for name in catalogue_spec.CATALOGUES:
-        # 9.0.0 declares no document kind (ADR-091); the file stays, empty.
-        assert preset[name] or name == "artifacts", name
+        # 9.0.0 declares no document kind (ADR-091) and no readiness signal
+        # (ADR-093); each file stays, empty.
+        assert preset[name] or name in ("artifacts", "readiness"), name
     assert preset["artifacts"] == {}
+    assert preset["readiness"] == {}
     assert not (PRESET / "routes.yml").exists()
     # One path of four stages and the spike (ADR-092). No floor raises a minimum
     # approach any more, and no caps rule set is shipped.

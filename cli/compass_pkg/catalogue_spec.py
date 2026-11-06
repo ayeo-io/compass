@@ -361,8 +361,11 @@ CATALOGUE_DESCRIPTIONS = {
     "gates": "The gates: groups of checks cleared at a stage. Each key is a gate id.",
     "artifacts": "The documents an issue can owe, such as the acceptance criteria. Each key is an "
                  "artifact id.",
-    "readiness": "The readiness signals: binary facts about a repository that show whether it "
-                 "is fit for unattended agent work. Each key is a readiness signal id.",
+    "readiness": "The readiness signals: binary facts about a repository that showed whether it "
+                 "was fit for unattended agent work. Each key is a readiness signal id. Not read "
+                 "since 9.0.0 (ADR-093): nothing measures the repository, and the shipped default "
+                 "declares none. The merge leaves out a project's `readiness:`, and `compass "
+                 "policy lint` names it; a frozen preset or a stored generation keeps its own.",
     "vocabulary": "The display names and aliases of catalog entries. Each key is "
                   "`<catalog>.<id>`, for example `approaches.quick-fix`.",
 }
@@ -376,8 +379,8 @@ ENTRY_DESCRIPTIONS = {
     "gates": "One gate: the checks it groups, the stage it is cleared at and where it applies.",
     "artifacts": "One artifact: the file that holds it, who reads it and who writes it, its "
                  "headings per depth and what it builds on.",
-    "readiness": "One readiness signal: what it asserts, the implementation that decides it and "
-                 "whether the readiness floor needs it.",
+    "readiness": "One readiness signal: what it asserts, the implementation that decided it and "
+                 "whether the readiness floor needed it. Not read since 9.0.0 (ADR-093).",
     "vocabulary": "The display name of one catalog entry, and the other names a person may type "
                   "for it.",
 }
@@ -540,16 +543,16 @@ FIELD_DESCRIPTIONS = {
     },
     "readiness": {
         "statement": "What the readiness signal asserts, in plain words.",
-        "impl": "The id of the built-in implementation that decides the signal. Each "
-                "implementation carries a version, and the readiness record keeps it.",
+        "impl": "The id of the built-in implementation that decided the signal. Each "
+                "implementation carries a version. Lint still checks the id.",
         "weight": "A whole number that orders the signals in the fix list, higher first. "
                   "It never changes the score, which counts signals.",
         "params": "Named values the implementation reads, such as the project setting it "
                   "checks. Lint refuses a name or value the implementation does not allow.",
-        "required_for_autonomous": "Whether the readiness floor needs the signal to be present "
-                                   "before the project can run `autonomy: autonomous`; `true` is "
-                                   "stricter, and the default is `false`. Setting it to `false` on "
-                                   "a shipped signal needs the owner's waiver.",
+        "required_for_autonomous": "Whether the readiness floor needed the signal to be present "
+                                   "before the project could run `autonomy: autonomous`; `true` is "
+                                   "stricter, and the default is `false`. Not read since 9.0.0 "
+                                   "(ADR-093), which removed the floor.",
     },
     "vocabulary": {
         "name": "The display name of the entry, shown to people in place of its id.",
@@ -612,17 +615,17 @@ TOP_DESCRIPTIONS = {
     "record": "Where the delivery record is kept, with `remote`, `paths` and `names_key`. "
               "Without it no record is kept.",
     "project": "The project's name, its commands (`test_command`, `test_micro_command`, "
-               "`bdd_run_command`, `lint_command`, `format_check_command`, `build_command`, "
-               "`typecheck_command` and `layering_command`, which `compass layering record` "
-               "runs when given no command) and two declarations (`secret_scan` and "
-               "`structured_logging`), and the paths of its acceptance support code "
-               "(`acceptance_support`). Declare the check form of a formatter, and note that "
-               "`compass readiness` runs every command in a clean checkout of HEAD.",
+               "`bdd_run_command` and `layering_command`, which `compass layering record` "
+               "runs when given no command), and the paths of its acceptance support code "
+               "(`acceptance_support`). `lint_command`, `format_check_command`, "
+               "`build_command`, `typecheck_command`, `secret_scan` and `structured_logging` "
+               "are not read since 9.0.0 (ADR-093): only `compass readiness` read them. They "
+               "stay valid, and `compass policy lint` names each.",
     "project.acceptance_support": "The paths of the support code of the four-layer acceptance "
                                   "strategy (`S17`), each relative to the project root. "
-                                  "`compass readiness` reports a piece with no path, or a path "
-                                  "that does not exist, as missing; it opens no file and blocks "
-                                  "nothing.",
+                                  "`acceptance-support-present` reports a piece with no path, or "
+                                  "a path that does not exist, as missing; it opens no file and "
+                                  "blocks nothing.",
     "project.acceptance_support.alias_helper": "The path of the alias helper, which makes each "
                                                "identifier a scenario uses unique to the run.",
     "project.acceptance_support.driver_factory": "The path of the driver factory, which picks "

@@ -12,7 +12,7 @@ what the result means. This page gives one line per verb; `--help` gives the
 detail.
 
 ```text
-compass init               make this directory a Compass project - create .compass/ (--readiness: then measure and list the absent signals; /compass:init passes it)
+compass init               make this directory a Compass project - create .compass/
 compass approach evaluate  the assessment -> the evidence the change owes, deterministically
 compass approach show      the three-line decision view: approach, evidence, files
 compass approach render    the path and the spike as one HTML table
@@ -53,7 +53,6 @@ compass acceptance start   open an honest record where there is no natural red
 compass acceptance record  close it with what was observed
 compass adr new            create the next numbered decision record
 compass flow               every issue by state, what is blocked and stale (--json), and the periodic digest (--digest)
-compass readiness          measure whether the repository is fit for unattended agent work (--json, --fix-list)
 compass next               which stage of the path this issue reached, and the next command
 compass follow-up add      record a follow-up the issue owes
 compass follow-up resolve  settle an owed follow-up
@@ -101,7 +100,8 @@ of issues.
   object for each entry of the issue's `depends_on`
   (`docs/issue-dependencies.md`). 9.0.0 removed the `friction` key and the
   summary's friction line, because nothing records friction any more
-  (ADR-093).
+  (ADR-093). It also removed the `readiness` key, because nothing measures
+  the repository any more (ADR-093).
 - `compass flow --digest` prints a dated list of the backlog, oldest first,
   and flags a queued issue that waited too long.
 
@@ -114,5 +114,6 @@ write loose objects to the repository's object store. `git gc` removes them
 after its prune period.
 
 9.0.0 removed the HTML board page and the commands and the option that wrote
-it (ADR-093). A command line that names one fails to parse with a line naming
-ADR-093.
+it (ADR-093). It also removed the `readiness` verb and the `--readiness` flag
+of `compass init` (ADR-093): nothing measures the repository. A command line
+that names one fails to parse with a line naming ADR-093.

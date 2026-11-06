@@ -9,17 +9,17 @@ The function takes the manifest and the issue's folder and reads nothing else,
 unless the caller passes a reader for the issues it depends on (ADR-062), so the
 board can read an issue from another worktree (ADR-048).
 
-This module is a leaf: it imports `lifecycle`, `readiness_record`, `status_words`
-and `effective` (inside a function), and none of `flow` or `check_cmd`.
+This module is a leaf: it imports `lifecycle`, `status_words` and `effective`
+(inside a function), and none of `flow` or `check_cmd`.
 """
 # DEPENDENCY: standard library (dataclasses, os); compass_pkg.lifecycle,
-# readiness_record, status_words, effective (imported inside a function).
+# status_words, effective (imported inside a function).
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
 
-from compass_pkg import lifecycle, readiness_record, status_words
+from compass_pkg import lifecycle, status_words
 
 NOT_ASSESSED = "not assessed"
 
@@ -36,8 +36,6 @@ class IssueDetail:
     stage_problem: object = None
     #: The reason of the blocked flag while it counts (an issue in progress or in review), else None.
     blocked: object = None
-    #: The repository readiness line, from the manifest's `readiness:` summary.
-    readiness: str = ""
     #: One `{id, kind, round, status, path}` for each registered document, in registry order. A
     #: kind that repeats has one for each round, so no reader shows only the first, and a
     #: kind with a document per work unit has one for each `unit`.
@@ -118,7 +116,6 @@ def detail(manifest, task_dir, read=None, other=False):
     return IssueDetail(str(manifest.get("delivery_approach") or NOT_ASSESSED), state, stage,
                        passed, total, problem,
                        str(flag.get("reason") or "no reason recorded") if flag else None,
-                       readiness_record.line(manifest.get("readiness")),
                        _documents(manifest, task_dir, other), waits, deps)
 
 

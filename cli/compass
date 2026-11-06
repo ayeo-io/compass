@@ -349,8 +349,6 @@ def build_parser():
     )
     pfl.set_defaults(func=cmd_flow, output_kind="report")
 
-    from compass_pkg.readiness_cmd import register as _register_readiness
-    _register_readiness(sub)
     from compass_pkg.release_notes import register as _register_release_notes
     _register_release_notes(sub)
 
@@ -478,11 +476,6 @@ def build_parser():
         help="make this directory a Compass project - create .compass/ "
              "(safe to run twice)")
     pinit.add_argument("--by", help="what is initializing - the entry-point command, if not a person")
-    pinit.add_argument(
-        "--readiness", action="store_true",
-        help="after initializing, measure the repository when compass.yml exists and "
-             "print the absent readiness signals; exits 0 whatever happens "
-             "(/compass:init passes it)")
     pinit.set_defaults(func=cmd_init, output_kind="hand-off")
     pterm = sub.add_parser(
         "terminology",

@@ -326,6 +326,8 @@ def _frozen_major(layer):
 
 
 def _layer_group(state):
+    # A removed key (`removed_parts.SETTINGS`), switch (`SWITCHES`), settings field
+    # (`SETTING_FIELDS`, such as `project.lint_command`) or capability, each named once.
     out = [_finding("layer", "L-SETTING-REMOVED", layer, key, note, "warning")
            for layer, key, note in removed_parts.setting_findings(state["chain"])]
     for layer in state["chain"]:

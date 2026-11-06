@@ -157,8 +157,6 @@ SERIAL_TESTS = {
     "tests/test_manifest_parse_speed.py::test_trc_b2_flow_faster_than_one_parse_on_sample",
     "tests/test_manifest_parse_speed.py::test_trc_b3_cold_flow_within_ten_percent_of_before[no stored state]",
     "tests/test_manifest_parse_speed.py::test_trc_b3_cold_flow_within_ten_percent_of_before[stale stored state]",
-    "tests/test_project_readiness.py::test_prc_37",
-    "tests/test_readiness_override_assess.py::test_roa_9_policy_commands_load_compass_yml_in_this_repository",
     "tests/test_issue_dependencies.py::test_dbi_12_hook_cost_budget",
     "tests/test_approval_guard_refusal_text.py::test_trc_032_a_long_command_is_judged_within_two_seconds",
     "tests/test_approval_guard_refusal_text.py::test_trc_053_a_very_long_or_deeply_nested_command_is_judged_within_two_seconds",

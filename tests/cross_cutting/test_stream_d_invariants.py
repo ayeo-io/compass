@@ -121,11 +121,8 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
     "decision",                   # decisions-ledger (ADR-027): record|list|
                                   # show|check, the settled-decisions ledger.
                                   # A GROUP; record reads the decider from git.
-    "readiness",                  # project-readiness-caps-autonomy: `compass
-                                  # readiness`, which measures the repository
-                                  # against the readiness signals and writes
-                                  # .compass/readiness.yml. A verb: it has one
-                                  # action and two output forms.
+    # "readiness" (project-readiness-caps-autonomy): ADR-093 removed the
+    # readiness measure.
     "isolation", "layering",      # isolation-and-layering (#328, ADR-086):
                                   # `compass isolation record` and `compass
                                   # layering record`, the only writers of the

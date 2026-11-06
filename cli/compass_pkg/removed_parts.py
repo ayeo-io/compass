@@ -10,7 +10,8 @@ one four-stage path (ADR-092), so the delivery approaches, the legacy stages
 the path does not keep, the caps rule set and the Definition of Ready checks
 are gone from what a project can configure. 9.0.0 keeps only what a reviewer
 of one change needs (ADR-093), so the reports across issues, the brief
-ingest, the HTML board and the GitHub label sync are gone.
+ingest, the HTML board, the GitHub label sync and the readiness measure are
+gone.
 
 A command line that still names a removed verb or flag fails to parse as an
 unknown command, and `line_for` gives the one line the parse error adds.
@@ -109,6 +110,11 @@ COMMANDS = (
      "compass flow prints the issues; no page is written", "ADR-093"),
     (("issue", "github", "sync"), "compass issue github sync",
      "compass issue link set keeps the link; no label is written", "ADR-093"),
+    (("readiness",), "compass readiness",
+     "nothing measures the repository; the hooks and compass check guard each change",
+     "ADR-093"),
+    (("init", "--readiness"), "compass init --readiness",
+     "compass init sets up the project; nothing measures it", "ADR-093"),
 )
 
 #: The ten agent names 9.0.0 removed with the `agents/` folder. The shipped
@@ -153,6 +159,8 @@ SETTINGS = {
     "prices": ("the dollars per million tokens that priced an issue's usage", "ADR-093"),
     "github_labels": ("whether Compass wrote an issue's labels to its linked GitHub issue",
                       "ADR-093"),
+    "readiness": ("the readiness signals compass readiness measured and the floor an "
+                  "autonomous issue had to meet", "ADR-093"),
 }
 
 #: The rule set and the rule effects whose only use was to pick an approach. No
@@ -229,6 +237,22 @@ def _note(key, what, adr):
 SWITCHES = {
     "github_labels.page": ("posting the issue page as a comment on the linked GitHub issue",
                            "ADR-091"),
+}
+
+
+#: Each removed field of a settings key, as `key.field`: what it set, and the decision
+#: record that removed it. A project names it with any value. Unlike a key of `SETTINGS`,
+#: the merge keeps it: `project` is a settings key, not a catalogue, so `without_removed`
+#: leaves it alone and lint only names it. `project.test_micro_command` is not here:
+#: `compass tdd-red` and `tdd-green` still read it.
+SETTING_FIELDS = {
+    **{f"project.{field}": (f"the {what} command that compass readiness ran", "ADR-093")
+       for field, what in (("build_command", "build"), ("lint_command", "lint"),
+                           ("format_check_command", "format check"),
+                           ("typecheck_command", "type-check"))},
+    **{f"project.{field}": (f"the {what} declaration that compass readiness read", "ADR-093")
+       for field, what in (("secret_scan", "secret scan"),
+                           ("structured_logging", "structured logging"))},
 }
 
 
@@ -633,9 +657,9 @@ def without_unheld_stages(doc, config):
 
 
 def setting_findings(chain):
-    """`(layer, path, message)` for each removed key or capability a project layer or a
-    git parent holds (`drops_removed`). A removed check named only in a list of checks
-    is reported under its own key."""
+    """`(layer, path, message)` for each removed key, field or capability a project
+    layer or a git parent holds (`drops_removed`). A removed check named only in a list
+    of checks is reported under its own key."""
     out = []
     for layer in chain:
         if not drops_removed(layer.kind, layer.name) or not isinstance(layer.doc, dict):
@@ -657,6 +681,11 @@ def setting_findings(chain):
         out += [(layer, key, setting_note(key)) for key in held_effects(layer.doc)]
         out += [(layer, key, setting_note(key)) for key in _approach_effects(layer.doc)]
         out += switched
+        for path, (what, adr) in SETTING_FIELDS.items():
+            key, field = path.split(".", 1)
+            held = layer.doc.get(key)
+            if isinstance(held, dict) and field in held:
+                out.append((layer, path, _note(path, what, adr)))
         capabilities = layer.doc.get("capabilities")
         if isinstance(capabilities, dict):
             out += [(layer, f"capabilities.{name}", capability_note(name))

@@ -38,7 +38,6 @@ from compass_pkg.stable_ids import (APPROACH_FULL, APPROACH_REGULAR, APPROACH_SP
                                     STAGE_IMPLEMENT, STAGE_VERIFY)
 from compass_pkg.render import fired_rule_line
 from compass_pkg.manifest import annotate_gate_accepts_text
-from compass_pkg.readiness_floor import FLOOR_REFUSED, _readiness_floor
 
 
 
@@ -773,11 +772,6 @@ def cmd_route_evaluate(args):
         gov = None
         policy = view.evaluator_policy()
         autonomy = view.autonomy
-    # The readiness floor is settled here, before anything prints, as the
-    # refusals above are: an autonomous issue below it is refused at --write.
-    readiness = _readiness_floor(task_dir, task, autonomy)
-    if args.write and readiness is not None and readiness["would_refuse"]:
-        raise CompassError(readiness["would_refuse"])
     # The justifications are settled before anything prints or is written, so a
     # refusal leaves the manifest, the generations and the documents as they were.
     recorded_reasons = None
@@ -844,8 +838,6 @@ def cmd_route_evaluate(args):
     # "unconverted verb" envelope.
     mark_handled()
     _mode = resolve_mode(args)
-    if readiness is not None:
-        result["readiness"] = readiness
     # A spike keeps its stage map but, like a path issue, no subtask ceiling
     # (ADR-092 decision 11).
     shown = (path_writer.shown(result, path) if path is not None else
@@ -884,11 +876,6 @@ def cmd_route_evaluate(args):
         _g5_prompt = g5_label_prompt.prompt(view, readings)
         if _g5_prompt:
             _concerns.append(_g5_prompt)
-        if readiness is not None and autonomy == "autonomous":
-            _concerns.append(
-                "evaluate --write would be refused: "
-                + readiness["would_refuse"][len(FLOOR_REFUSED):].splitlines()[0]
-                if readiness["would_refuse"] else "readiness floor met")
         _e = Emitter(mode=_mode,
                      evidence_out=getattr(args, "evidence_out", None))
         _e.hand_off(
@@ -1081,11 +1068,6 @@ def cmd_route_evaluate(args):
         # wrote stays as it is: nothing reads it but the path of an older spec.
         # make sure the evidence registry exists at the top level
         task.setdefault("evidence", [])
-        # The repository's readiness when this issue was assessed. It is not a
-        # generation outcome key, so a new measurement rewrites it here and
-        # never forces a new generation (ADR-060).
-        if readiness is not None:
-            task["readiness"] = {k: v for k, v in readiness.items() if k != "would_refuse"}
         # Assess never records an orchestration: breakdown owns it, once the
         # distribution map says whether independent subtasks exist.
         task.pop("orchestration", None)

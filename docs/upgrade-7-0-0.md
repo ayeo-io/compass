@@ -233,19 +233,19 @@ Compass now records what happened at each stage hand-off and what each issue cos
 
 ## Repository readiness and autonomous work
 
-From 7.0.0 a project on `autonomy: autonomous` must meet the readiness floor before an issue can be assessed. An autonomous project below the floor, or with no fresh readiness record, is refused at `compass approach evaluate --write`, which every assess and reassess runs. The decision is `architecture/decisions/ADR-058-the-readiness-floor-caps-autonomous-work.md`. The facts are in `docs/readiness.md`.
+From 7.0.0 a project on `autonomy: autonomous` must meet the readiness floor before an issue can be assessed. An autonomous project below the floor, or with no fresh readiness record, is refused at `compass approach evaluate --write`, which every assess and reassess runs. The decision is `architecture/decisions/ADR-058-the-readiness-floor-caps-autonomous-work.md`. 9.0.0 removed the floor, the `readiness` verb and its page, `docs/readiness.md` (ADR-093); this section records 7.0.0.
 
 ### What breaks
 
 - **An autonomous project below the readiness floor is refused at assess.** `approach evaluate --write` exits 2 and writes nothing. The message names each absent readiness signal with the change that makes it present, and names `autonomy` as the setting to change.
-- **An autonomous project with no fresh readiness record is refused.** The message says whether the record is missing, stale or unreadable, and names `compass readiness`.
+- **An autonomous project with no fresh readiness record is refused.** The message says whether the record is missing, stale or unreadable, and names the `readiness` verb.
 - **An untrusted CI contribution cannot run an autonomous project.** Trust is read from the CI runner's environment before the record, so a record committed with the contribution does not count. No setting changes this. Measuring again does not help, so the message does not ask for it.
 
 ### What changes
 
 - **The four required signals** form the floor: `agent-instructions-present`, `build-declared-and-succeeds`, `tests-declared-and-under-two-minutes` and `lint-declared-and-clean`. The floor is met when each is present.
-- **`compass readiness`** measures the repository against eleven readiness signals and writes `.compass/readiness.yml`. `compass readiness --fix-list` lists the absent ones, those on the floor first, with the change for each.
-- **Six optional project keys** in `compass.yml`: `project.lint_command`, `project.format_check_command`, `project.build_command` and `project.typecheck_command`, which `compass readiness` runs, and `project.secret_scan` and `project.structured_logging`, which it only reads.
+- **The `readiness` verb** measures the repository against eleven readiness signals and writes `.compass/readiness.yml`. The readiness verb's `--fix-list` lists the absent ones, those on the floor first, with the change for each.
+- **Six optional project keys** in `compass.yml`: `project.lint_command`, `project.format_check_command`, `project.build_command` and `project.typecheck_command`, which the `readiness` verb runs, and `project.secret_scan` and `project.structured_logging`, which it only reads.
 - **The readiness line.** Every `approach evaluate --write` records the repository's readiness in the manifest's `readiness:` key, outside the generation, so a new measurement never forces a new generation. On an autonomous project below the floor, or with no fresh record, a session starts with one warning line. The session is never blocked.
 - **The floor is not a guardrail.** No gate, routing rule or `compass check` result names a readiness signal.
 
@@ -265,17 +265,17 @@ From 7.0.0 a project on `autonomy: autonomous` must meet the readiness floor bef
 
 ### The commands
 
-- `compass readiness` runs a project command only when `allow_project_commands: true` is set and the contribution is trusted.
+- The `readiness` verb runs a project command only when `allow_project_commands: true` is set and the contribution is trusted.
 - Every project command runs in a clean checkout of HEAD, in a temporary worktree, so a command that needs installed dependencies must set them up itself.
 - One run finishes within five minutes. The test command must pass within two minutes.
-- A CI job that assesses autonomous work runs `compass readiness` as a step before assess, because the CI checkout has no record.
+- A CI job that assesses autonomous work runs the `readiness` verb as a step before assess, because the CI checkout has no record.
 
 ### What to do
 
-On an autonomous project, run `compass readiness`. If it reports the floor as not met, take one of three ways to continue:
+On an autonomous project, run the `readiness` verb. If it reports the floor as not met, take one of three ways to continue:
 
 1. **Change `autonomy`** to `balanced` or `controlled` in `compass.yml`. The stage hand-offs that value lists then wait for a person.
-2. **Make the absent signals present.** `compass readiness --fix-list` names the change for each, such as declaring `project.build_command`. For a long suite, set the test signal's `command` parameter to `test_micro_command` in a project layer, and declare a micro suite that passes within two minutes.
+2. **Make the absent signals present.** The readiness verb's `--fix-list` names the change for each, such as declaring `project.build_command`. For a long suite, set the test signal's `command` parameter to `test_micro_command` in a project layer, and declare a micro suite that passes within two minutes.
 3. **Set `required_for_autonomous: false`** on a readiness signal in a project layer. That takes the signal off the floor, so it needs the owner's waiver in the same entry:
 
    ```yaml
@@ -288,14 +288,14 @@ On an autonomous project, run `compass readiness`. If it reports the floor as no
          approved_on: 2026-10-13
    ```
 
-Then run `compass readiness` again and assess.
+Then run the `readiness` verb again and assess.
 
 ### New verbs, flags and keys
 
 | Name | Where | Meaning |
 |---|---|---|
-| `compass readiness [--json] [--fix-list]` | verb | Measure the repository and write the readiness record, or list the absent signals from a fresh record |
-| `project.lint_command`, `project.format_check_command`, `project.build_command`, `project.typecheck_command` | `compass.yml` | The project commands `compass readiness` runs |
+| The `readiness` verb, with `--json` and `--fix-list` | verb | Measure the repository and write the readiness record, or list the absent signals from a fresh record |
+| `project.lint_command`, `project.format_check_command`, `project.build_command`, `project.typecheck_command` | `compass.yml` | The project commands the `readiness` verb runs |
 | `project.secret_scan`, `project.structured_logging` | `compass.yml` | Declarations; a non-empty string makes the signal present |
 | `readiness` | catalog in a preset or project layer | The readiness signals |
 | `required_for_autonomous` | field of a readiness signal | `true` puts the signal on the floor |

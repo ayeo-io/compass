@@ -149,7 +149,7 @@ GROUPS = [
             "docs/release-notes.md", "docs/upgrade-6-0-0.md",
             "docs/upgrade-7-0-0.md", "docs/configuration.md",
             "docs/safety-contract.md", "docs/policy-lint.md",
-            "docs/readiness.md", "docs/refusal-codes.md", "docs/glossary.md",
+            "docs/refusal-codes.md", "docs/glossary.md",
             "docs/policy-migrate.md", "docs/routing-deep-dive.md",
         ],
         "kind": "text",

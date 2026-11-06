@@ -40,9 +40,6 @@ STAGE_OF = {"specify": "Stage 1", "build": "Stage 2", "ship": "Stage 3"}
 def _project(tmp_path, autonomy="controlled"):
     project = support.Project(tmp_path / "repo")
     project.setting(None, owner=OWNER, autonomy=autonomy)
-    if autonomy == "autonomous":
-        from tests.project_readiness_support import meet_readiness_floor
-        meet_readiness_floor(project.root)
     return project
 
 

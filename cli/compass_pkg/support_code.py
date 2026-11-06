@@ -13,10 +13,8 @@ Compass never reads project code. The project names each piece's path in
 `project.acceptance_support`, as it names `project.bdd_runner`, and this
 module tests only that each named path exists inside the project root. A
 piece with no setting, or a path that does not exist, is missing (decision
-of the issue `atdd-strategy`). `compass readiness` prints the pieces in
-a block of their own: they are not a readiness signal, so they change neither
-the score nor the floor. `docs/readiness.md` and `governance/guardrails.md`
-own this behavior.
+of the issue `atdd-strategy`). `governance/guardrails.md` owns this
+behavior.
 """
 # DEPENDENCY: standard library (os); compass_pkg.acceptance_strategy,
 # catalogue_spec, check_results, core and project_settings, and inside functions
@@ -35,7 +33,7 @@ CHECK = "acceptance-support-present"
 KEY = "acceptance_support"
 
 #: Each piece of support code: its key under `project.acceptance_support` and
-#: the name a person reads, in the order readiness prints them.
+#: the name a person reads, in the order the check names them.
 PIECES = tuple(zip(ACCEPTANCE_SUPPORT, ("alias helper", "driver factory", "DSL root",
                                          "layering test")))
 
@@ -103,29 +101,6 @@ def missing(found):
     return [p["name"] for p in found if p["result"] == "missing"]
 
 
-def report(project_root):
-    """What `compass readiness` shows: `{pieces, missing}`, or None when the
-    project turned the strategy off or pins a default major before it."""
-    state, _ = acceptance_strategy.setting(project_root)
-    if state == "off" or acceptance_strategy.pinned_below(project_root):
-        return None
-    found = pieces(project_root)
-    return {"pieces": found, "missing": missing(found)}
-
-
-def lines(reported):
-    """The text block of `compass readiness` for `report`'s result."""
-    if reported is None:
-        return ["  Support code: not reported - the four-layer acceptance strategy is off "
-                "for this project."]
-    width = max(len(name) for _, name in PIECES)
-    out = ["  Support code of the four-layer acceptance strategy (`S17`), reported only: "
-           "it changes neither the score nor the floor."]
-    out += [f"    {p['name']:<{width}}  {p['result']:<7}  {p['reason']}"
-            for p in reported["pieces"]]
-    return out
-
-
 def _check_acceptance_support_present(task, task_dir):
     """The advisory check: on an issue the strategy applies to that has a green
     on record, every piece of support code is named and exists. A missing piece
@@ -134,7 +109,7 @@ def _check_acceptance_support_present(task, task_dir):
     if not applies:
         return NOTHING_TO_CHECK, f"not required: the strategy does not apply - {why}"
     # The claim limit is about what a passing run lets the issue claim. Before
-    # a green there is no claim to limit, and readiness already names the pieces.
+    # a green there is no claim to limit.
     from compass_pkg.outer_loop import green_records
     if not green_records(task, task_dir):
         return NOTHING_TO_CHECK, ("not yet judged: no green is on record, so the issue "

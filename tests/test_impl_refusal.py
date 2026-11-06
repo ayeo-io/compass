@@ -334,7 +334,9 @@ def test_ir_14_migrate_config_repairs_the_issue(committed, change):
         assert code in (0, 1), (argv, out + err)
 
 
-@pytest.mark.parametrize("argv", [("--version",), ("--help",), ("readiness",),
+# `readiness` was one of these until 9.0.0 removed it (ADR-093); `policy lint`
+# reads the project's configuration with no issue in the same way.
+@pytest.mark.parametrize("argv", [("--version",), ("--help",), ("policy", "lint"),
                                   ("policy", "update")])
 def test_ir_14_the_commands_that_need_no_issue_still_run(committed, argv):
     root, task_dir = committed

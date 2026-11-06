@@ -1415,11 +1415,11 @@
       "type": "object"
     },
     "project": {
-      "description": "The project's name, its commands (`test_command`, `test_micro_command`, `bdd_run_command`, `lint_command`, `format_check_command`, `build_command`, `typecheck_command` and `layering_command`, which `compass layering record` runs when given no command) and two declarations (`secret_scan` and `structured_logging`), and the paths of its acceptance support code (`acceptance_support`). Declare the check form of a formatter, and note that `compass readiness` runs every command in a clean checkout of HEAD.",
+      "description": "The project's name, its commands (`test_command`, `test_micro_command`, `bdd_run_command` and `layering_command`, which `compass layering record` runs when given no command), and the paths of its acceptance support code (`acceptance_support`). `lint_command`, `format_check_command`, `build_command`, `typecheck_command`, `secret_scan` and `structured_logging` are not read since 9.0.0 (ADR-093): only `compass readiness` read them. They stay valid, and `compass policy lint` names each.",
       "properties": {
         "acceptance_support": {
           "additionalProperties": false,
-          "description": "The paths of the support code of the four-layer acceptance strategy (`S17`), each relative to the project root. `compass readiness` reports a piece with no path, or a path that does not exist, as missing; it opens no file and blocks nothing.",
+          "description": "The paths of the support code of the four-layer acceptance strategy (`S17`), each relative to the project root. `acceptance-support-present` reports a piece with no path, or a path that does not exist, as missing; it opens no file and blocks nothing.",
           "properties": {
             "alias_helper": {
               "description": "The path of the alias helper, which makes each identifier a scenario uses unique to the run.",
@@ -1445,14 +1445,14 @@
     },
     "readiness": {
       "additionalProperties": false,
-      "description": "The readiness signals: binary facts about a repository that show whether it is fit for unattended agent work. Each key is a readiness signal id.",
+      "description": "The readiness signals: binary facts about a repository that showed whether it was fit for unattended agent work. Each key is a readiness signal id. Not read since 9.0.0 (ADR-093): nothing measures the repository, and the shipped default declares none. The merge leaves out a project's `readiness:`, and `compass policy lint` names it; a frozen preset or a stored generation keeps its own.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
-          "description": "One readiness signal: what it asserts, the implementation that decides it and whether the readiness floor needs it.",
+          "description": "One readiness signal: what it asserts, the implementation that decided it and whether the readiness floor needed it. Not read since 9.0.0 (ADR-093).",
           "properties": {
             "impl": {
-              "description": "The id of the built-in implementation that decides the signal. Each implementation carries a version, and the readiness record keeps it.",
+              "description": "The id of the built-in implementation that decided the signal. Each implementation carries a version. Lint still checks the id.",
               "type": "string"
             },
             "locked": {
@@ -1475,7 +1475,7 @@
               "description": "When `true`, the entry in this layer replaces the inherited entry as a whole."
             },
             "required_for_autonomous": {
-              "description": "Whether the readiness floor needs the signal to be present before the project can run `autonomy: autonomous`; `true` is stricter, and the default is `false`. Setting it to `false` on a shipped signal needs the owner's waiver.",
+              "description": "Whether the readiness floor needed the signal to be present before the project could run `autonomy: autonomous`; `true` is stricter, and the default is `false`. Not read since 9.0.0 (ADR-093), which removed the floor.",
               "type": "boolean"
             },
             "set": {
@@ -1483,7 +1483,7 @@
               "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
                 "impl": {
-                  "description": "The id of the built-in implementation that decides the signal. Each implementation carries a version, and the readiness record keeps it.",
+                  "description": "The id of the built-in implementation that decided the signal. Each implementation carries a version. Lint still checks the id.",
                   "type": "string"
                 },
                 "params": {
@@ -1491,7 +1491,7 @@
                   "type": "object"
                 },
                 "required_for_autonomous": {
-                  "description": "Whether the readiness floor needs the signal to be present before the project can run `autonomy: autonomous`; `true` is stricter, and the default is `false`. Setting it to `false` on a shipped signal needs the owner's waiver.",
+                  "description": "Whether the readiness floor needed the signal to be present before the project could run `autonomy: autonomous`; `true` is stricter, and the default is `false`. Not read since 9.0.0 (ADR-093), which removed the floor.",
                   "type": "boolean"
                 },
                 "statement": {

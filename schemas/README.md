@@ -1,8 +1,9 @@
 # Schemas
 
-Schemas for the six machine-readable Compass files. Each of the first three
-comes in two forms; `signals.yml`, `compass.yml` and the readiness record have
-no readable companion.
+Schemas for the five machine-readable Compass files. Each of the first three
+comes in two forms; `signals.yml` and `compass.yml` have no readable
+companion. 9.0.0 removed the readiness record and its schema (ADR-093); a
+`.compass/readiness.yml` left in a checkout is not read.
 
 | File | Executable schema | Readable companion |
 |---|---|---|
@@ -12,7 +13,6 @@ no readable companion.
 | `.compass/work/<issue>/manifest.yml` | `manifest.schema.json` | `manifest.reference.yml` |
 | `governance/signals.yml` | `signals.schema.json` | none |
 | `compass.yml` (a project's configuration file, ADR-043) | `compass.schema.json` | none |
-| `.compass/readiness.yml` (the readiness record, per checkout; see `docs/readiness.md`) | `readiness-record.schema.json` | none |
 
 **The `.schema.json` files are real, executable JSON Schema** (draft-07;
 `compass.schema.json` declares 2020-12 and uses only what draft-07 also

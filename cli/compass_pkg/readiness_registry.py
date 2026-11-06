@@ -1,17 +1,21 @@
 # compass_pkg.readiness_registry - the registry of readiness signal implementations
 """The implementations a readiness signal can name (ADR-059).
 
-A catalogue entry of `readiness.yml` names an implementation by id, and the CLI
-runs the version it ships. Each implementation here has a semantic version, the
-types of its parameters and the values a parameter may take. The version is
-written into the readiness record, so a changed implementation cannot keep an
-old result fresh.
+A catalogue entry of `readiness.yml` names an implementation by id. Each
+implementation here has a semantic version, the types of its parameters and
+the values a parameter may take.
 
-This is a leaf module: it imports the standard library only, so the
-session-start hook and the record reader can import it without loading the
-check implementations. `check_registry.READINESS` is this table, so an
-implementation is looked up in one place. `compass check` never runs one:
-`check_registry.REGISTRY` and `CHECK_FNS` do not hold them.
+Since 9.0.0 nothing runs a readiness signal: `compass readiness` and the
+readiness floor are gone (ADR-093), and the shipped default declares an empty
+`readiness:` catalogue. A frozen preset (`default@6`, `default@7`) and a stored
+generation still declare one, so `compass policy lint` (`M-READINESS-IMPL`,
+`M-READINESS-PARAM`), `compass policy diff` and the classifier read this table
+to judge it.
+
+This is a leaf module: it imports the standard library only.
+`check_registry.READINESS` is this table, so an implementation is looked up in
+one place. `compass check` never runs one: `check_registry.REGISTRY` and
+`CHECK_FNS` do not hold them.
 """
 # DEPENDENCY: standard library (dataclasses); imports nothing from Compass.
 from __future__ import annotations
@@ -22,7 +26,7 @@ from dataclasses import dataclass, field
 @dataclass(frozen=True)
 class ReadinessImpl:
     name: str
-    # The attribute of `readiness_signals` that decides the signal.
+    # The function of the removed `readiness_signals` module that decided the signal.
     function: str
     version: str = "1.0.0"
     # Parameter name -> type name (`string`, `integer`).

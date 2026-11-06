@@ -299,7 +299,7 @@ EXPECTED_GUARDRAIL_IDS = {"G1", "G2", "G3", "G4", "G5", "S1", "S2"}
 # top-level group rather than a subverb, because no subverb owns it.
 EXPECTED_SUBCOMMANDS = {
     "approach", "bdd", "check", "ci", "tdd-red",  # 9.0.0 removed `retro` and
-    "tdd-green", "policy", "issue", "adr", "flow",  # `rework-scan` and `intent` (ADR-093)
+    "tdd-green", "policy", "issue", "adr", "flow",  # `rework-scan`, `intent` and `readiness` (ADR-093)
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
     "review-rule", "preset",  # `review-rule list`, `preset init|test`; 9.0.0 removed `spec` and `plan`
@@ -323,7 +323,7 @@ EXPECTED_SUBCOMMANDS = {
     "lesson",  # project-lessons (ADR-029)
     "record",  # delivery-record (ADR-031)
     # "board" (compass-board, ADR-046): ADR-093 removed the delivery board page.
-    "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
+    # "readiness" (ADR-061): ADR-093 removed the readiness measure.
     "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
     # isolation-and-layering (#328, ADR-086): `isolation record` and `layering
     # record`, the two strategy records only their commands write. GROUPS, so a

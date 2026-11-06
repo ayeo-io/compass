@@ -1,4 +1,4 @@
-"""Scenario group I of the four-layer acceptance strategy: readiness names the
+"""Scenario group I of the four-layer acceptance strategy: Compass names the
 support code a project has not built, and the missing code blocks nothing.
 
 The specification is `acceptance-criteria.md` of the Compass issue
@@ -6,11 +6,15 @@ The specification is `acceptance-criteria.md` of the Compass issue
 scenario it checks; `support.py` builds the projects.
 
 The project names each piece of support code in `project.acceptance_support`.
-Readiness tests only that each named path exists; it reads no project code.
+Compass tests only that each named path exists; it reads no project code.
+`TRC-I1` was first shown through `compass readiness`. 9.0.0 removed that
+command (ADR-093), so the `TRC-I1` tests read `support_code.pieces`, the
+function the check `acceptance-support-present` reads. The tests of the score,
+the floor and the readiness text block went with the command. The file keeps
+its name because the issue `atdd-strategy` declares its tests by path.
 """
 from __future__ import annotations
 
-import json
 import re
 import sys
 
@@ -20,9 +24,13 @@ import yaml
 from tests.acceptance.atdd_strategy import support
 from tests.acceptance.atdd_strategy.support import ROOT
 
+sys.path.insert(0, str(ROOT / "cli"))
+from compass_pkg import support_code  # noqa: E402
+from compass_pkg.core import CompassError  # noqa: E402
+
 CHECK = "acceptance-support-present"
 
-#: Each piece of support code: its settings key, the name readiness prints and
+#: Each piece of support code: its settings key, the name Compass gives it and
 #: where the Python reference example keeps it.
 PIECES = {
     "alias_helper": ("alias helper", "tests/acceptance/alias.py"),
@@ -47,28 +55,13 @@ def _project(tmp_path, present, named=ALL, name="repo"):
     return project
 
 
-def _readiness(project):
-    code, out, err = project.run("readiness", "--json")
-    assert code == 0, out + err
-    return json.loads(out)
+def _pieces(project):
+    """`support_code.pieces` of `project`: what the check reads."""
+    return support_code.pieces(str(project.root))
 
 
-def _status(document):
-    """What readiness decides about the project: each signal, the score and the floor."""
-    return {"signals": [(s["id"], s["result"]) for s in document["signals"]],
-            "score": document["score"], "floor_met": document["floor_met"],
-            "below_floor": document["below_floor"]}
-
-
-def _support_lines(text):
-    """`{piece name: line}` of the support-code block of `compass readiness`."""
-    names = [name for name, _ in PIECES.values()]
-    lines = {}
-    for line in text.splitlines():
-        for name in names:
-            if re.match(rf"\s+{re.escape(name)}\s+(present|missing)\b", line):
-                lines[name] = line
-    return lines
+def _missing(project):
+    return support_code.missing(_pieces(project))
 
 
 # --- `TRC-I1` ------------------------------------------------------------------------------
@@ -79,74 +72,48 @@ def _support_lines(text):
     (ALL, ()),
 ])
 def test_trc_i1(tmp_path, present, missing):
-    """Readiness names the missing support code."""
+    """Compass names the missing support code."""
     project = _project(tmp_path, present)
-    document = _readiness(project)
-    pieces = {p["key"]: p for p in document["support_code"]["pieces"]}
+    pieces = {p["key"]: p for p in _pieces(project)}
     assert sorted(k for k, p in pieces.items() if p["result"] == "missing") == sorted(missing)
-    assert document["support_code"]["missing"] == [PIECES[k][0] for k in ALL if k in missing]
-
-    code, out, err = project.run("readiness")
-    assert code == 0, out + err
-    lines = _support_lines(out)
-    assert set(lines) == {name for name, _ in PIECES.values()}, out
+    assert _missing(project) == [PIECES[k][0] for k in ALL if k in missing]
     for key, (name, path) in PIECES.items():
-        state = "missing" if key in missing else "present"
-        assert re.match(rf"\s+{re.escape(name)}\s+{state}\b", lines[name]), lines[name]
-        assert path in lines[name], lines[name]
-
-    complete = _readiness(_project(tmp_path, ALL, name="complete"))
-    assert _status(document) == _status(complete)
+        assert pieces[key]["name"] == name
+        assert pieces[key]["result"] == ("missing" if key in missing else "present")
+        assert path in pieces[key]["reason"], pieces[key]
 
 
 def test_trc_i1_a_piece_with_no_setting_is_missing(tmp_path):
-    """A piece the settings do not name is missing, and the line names the setting
-    to add (`TRC-I1`)."""
+    """A piece the settings do not name is missing, and the reason names the
+    setting to add (`TRC-I1`)."""
     project = _project(tmp_path, ALL, named=("driver_factory", "dsl_root", "layering_test"))
-    document = _readiness(project)
-    assert document["support_code"]["missing"] == ["alias helper"]
-    out = project.run("readiness")[1]
-    line = _support_lines(out)["alias helper"]
-    assert "missing" in line and "project.acceptance_support.alias_helper" in line, line
-    assert "compass.yml" in line, line
+    assert _missing(project) == ["alias helper"]
+    reason = _pieces(project)[0]["reason"]
+    assert "project.acceptance_support.alias_helper" in reason, reason
+    assert "compass.yml" in reason, reason
 
 
 def test_trc_i1_a_path_outside_the_project_is_missing(tmp_path):
-    """Readiness tests only paths inside the project root, so a path that leaves
+    """Compass tests only paths inside the project root, so a path that leaves
     it is missing even when it exists (`TRC-I1`)."""
     project = _project(tmp_path, ALL)
     (tmp_path / "outside.py").write_text("# elsewhere\n", encoding="utf-8")
     settings = yaml.safe_load((project.root / "compass.yml").read_text(encoding="utf-8"))
     settings["project"]["acceptance_support"]["alias_helper"] = "../outside.py"
     (project.root / "compass.yml").write_text(yaml.safe_dump(settings), encoding="utf-8")
-    document = _readiness(project)
-    assert document["support_code"]["missing"] == ["alias helper"]
-    piece = document["support_code"]["pieces"][0]
+    assert _missing(project) == ["alias helper"]
+    piece = _pieces(project)[0]
     assert "outside the project root" in piece["reason"], piece
 
 
 @pytest.mark.parametrize("value", ["tests/acceptance", {"alias_helper": ["a.py"]}])
 def test_trc_i1_a_setting_that_is_not_paths_is_refused(tmp_path, value):
-    """A setting readiness cannot read is refused with exit 2 before any command
-    runs, so a typo does not report every piece as missing (`TRC-I1`)."""
+    """A setting Compass cannot read is refused, naming the key, so a typo does
+    not report every piece as missing (`TRC-I1`)."""
     project = support.Project(tmp_path / "repo")
     project.setting(None, project={"acceptance_support": value})
-    code, out, err = project.run("readiness")
-    assert code == 2, out + err
-    assert "project.acceptance_support" in err, err
-    assert not (project.root / ".compass" / "readiness.yml").exists()
-
-
-def test_trc_i1_an_opted_out_project_gets_no_support_code_block(tmp_path):
-    """A project that turned the strategy off is told the block is not reported
-    (`TRC-I1`)."""
-    project = support.Project(tmp_path / "repo")
-    project.setting({"state": "off", "reason": "no client interface yet"})
-    document = _readiness(project)
-    assert document["support_code"] is None
-    out = project.run("readiness")[1]
-    assert not _support_lines(out), out
-    assert "four-layer acceptance strategy is off" in out, out
+    with pytest.raises(CompassError, match=r"project\.acceptance_support"):
+        _pieces(project)
 
 
 # --- `TRC-I2` ------------------------------------------------------------------------------
@@ -183,7 +150,7 @@ def _quick_fix(project):
 
 
 def test_trc_i2(tmp_path):
-    """Readiness reports and does not block."""
+    """The missing support code is reported and does not block."""
     project = _project(tmp_path, ("driver_factory", "dsl_root", "layering_test"))
     issue = _quick_fix(project)
     assert issue.manifest()["acceptance_strategy"]["applies"] is True

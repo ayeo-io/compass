@@ -32,9 +32,6 @@ sys.path.insert(0, str(ROOT / "cli"))
 import compass_pkg  # noqa: E402,F401 - puts the bundled PyYAML first
 import yaml  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import project_readiness_support as readiness_support  # noqa: E402
-
 SLUG = "feature"
 CREATED = "2026-10-10"
 DOCS = f"docs/compass/{CREATED}-{SLUG}"
@@ -142,9 +139,6 @@ def repo(tmp_path, compass_yml=AUTONOMOUS):
     assert done.returncode == 0, done
     if compass_yml is not None:
         (root / "compass.yml").write_text(yaml.safe_dump(compass_yml), encoding="utf-8")
-        if compass_yml.get("autonomy") == "autonomous":
-            # An autonomous issue is assessed only above the readiness floor.
-            readiness_support.meet_readiness_floor(root)
     return root
 
 

@@ -334,7 +334,7 @@ NINE_GROUPS = [
     ("the adopter docs", ["docs/quickstart.md", "docs/five-minutes.md", "docs/install-smoke-test.md",
                           "docs/releasing.md", "docs/release-notes.md", "docs/upgrade-6-0-0.md",
                           "docs/upgrade-7-0-0.md", "docs/configuration.md", "docs/safety-contract.md",
-                          "docs/policy-lint.md", "docs/readiness.md", "docs/refusal-codes.md",
+                          "docs/policy-lint.md", "docs/refusal-codes.md",
                           "docs/glossary.md", "docs/policy-migrate.md", "docs/routing-deep-dive.md"]),
     ("the house files", ["CLAUDE.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md"]),
     ("the review workflow", [".github/workflows/claude-review.yml"]),

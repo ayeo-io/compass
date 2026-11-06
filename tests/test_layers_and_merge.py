@@ -405,10 +405,10 @@ extends: compass:default@6
 owner: jed72
 autonomy: balanced
 checks:
-  dor-affected-surface-named:
+  dod-living-docs-updated:
     set: { severity: advisory }
     waiver:
-      reason: "Scenarios are written at plan in this repo."
+      reason: "This repo keeps no living docs."
       approved_by: jed72
       approved_on: 2026-10-05
 """

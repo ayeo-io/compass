@@ -3,7 +3,8 @@
 `project(tmp_path)` copies one template project, built once per test run:
 
 - `compass.yml` names the owner `jed72` and a human check `dod-reviewed`
-  that lists `owner`, in the `plan` entry list;
+  that lists `owner`. The check's own `approvers` list decides who may
+  approve it, so no stage needs to list it;
 - issue `feature` is labelled payments and migrations, at generation 1,
   with the `requirements-review.md` box of the check ticked;
 - `.compass/current-task` names the issue.
@@ -64,8 +65,7 @@ def run(root, *argv, terminal=False, **extra_env):
 def _build(root):
     human = {"kind": "human", "severity": "blocking", "on_skipped": "fail"}
     config = {"schema": 1, "owner": OWNER, "capabilities": {"entry-exit-evaluation": True},
-              "checks": {CHECK: dict(human, statement=STATEMENT, approvers=["owner"])},
-              "stages": {"plan": {"set": {"entry": {"add": [CHECK]}}}}}
+              "checks": {CHECK: dict(human, statement=STATEMENT, approvers=["owner"])}}
     task_dir = root / ".compass" / "work" / SLUG
     task_dir.mkdir(parents=True)
     (root / "compass.yml").write_text(yaml.safe_dump(config), encoding="utf-8")

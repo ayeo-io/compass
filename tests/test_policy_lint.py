@@ -1188,12 +1188,15 @@ def test_pl_10_every_key_of_every_raw_preset_entry_is_listed_even_a_lock(tmp_pat
 def test_pl_10_a_lock_on_a_stage_follows_the_stages_own_fields_and_names_its_layer():
     parent = _parent_doc()
     parent["stages"]["define"]["locked"] = True
+    # The project locks `ship`: 9.0.0 leaves a project's change to a legacy
+    # stage, such as `verify`, out of the merge (ADR-092).
+    parent["stages"]["ship"] = {"order": 4, "modes": {"thorough": {"rank": 3}}}
     eff = _effective(parent=_layer(parent, "parent"), project={
-        "stages": {"verify": {"locked": "hard"}}})
+        "stages": {"ship": {"locked": "hard"}}})
     paths = [r.path for r in eff.rows if r.path.startswith("stages.define.")]
     assert paths == ["stages.define.order", "stages.define.modes", "stages.define.locked"]
-    assert _row(eff, "stages.verify.locked").source == "project"
-    assert _row(eff, "stages.verify.locked").value == "hard"
+    assert _row(eff, "stages.ship.locked").source == "project"
+    assert _row(eff, "stages.ship.locked").value == "hard"
     assert [r for r in eff.rows if r.path == "checks.tests-pass.locked"] == []
 
 

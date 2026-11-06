@@ -100,7 +100,9 @@ def test_the_lint_advisory_says_8_0_0(tmp_path):
     (tmp_path / ".compass").mkdir()
     (tmp_path / "compass.yml").write_text(
         "schema: 1\nextends: compass:default@6\n\n"
-        "approaches:\n  regular:\n    set:\n      stages: {plan: \"full\"}\n",
+        "rules:\n  extra:\n    kind: advisory\n    hit: {strategy: collect}\n"
+        "    rules:\n      X-1:\n        order: 1\n        when: {size: standard}\n"
+        "        then: {strategy: regression-baseline}\n        rationale: probe\n",
         encoding="utf-8")
     subprocess.run(["git", "init", "--quiet", "-b", "main"], cwd=tmp_path, check=True)
     result = _cli(tmp_path, "policy", "lint")

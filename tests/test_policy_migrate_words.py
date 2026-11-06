@@ -178,7 +178,10 @@ def test_crw_4_apply_keeps_comments_order_and_quoting(tmp_path):
 
 
 def test_crw_5_after_apply_lint_is_quiet_and_a_second_run_changes_nothing(tmp_path):
-    root = _project(tmp_path, {"compass.yml": OLD_LAYER + OLD_RULE})
+    # 9.0.0 leaves `approaches` out of the merge, so the old word the lint
+    # reads here sits in a rule set a project can still change.
+    root = _project(tmp_path, {"compass.yml": "schema: 1\nextends: compass:default@6\n"
+                                              + OLD_RULE})
     _, out, err = _cli(root, "policy", "lint")
     assert ADVISORY in out + err, out + err          # the lint sees the old words first
     code, out, err = _run(root, "--words", "--apply")

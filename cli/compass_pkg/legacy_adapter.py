@@ -41,8 +41,10 @@ import yaml
 from compass_pkg import artifact_kinds, core, outside_gate, removed_parts, retired, stable_ids, word_map
 from compass_pkg.catalogue_spec import CAPABILITIES
 from compass_pkg.routing import canonical_routes
-from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, GATE_SPIKE_CONCLUDE, STAGE_ASSESS,
-                                    STAGE_IDS, STAGE_SHIP, STAGE_VERIFY)
+from compass_pkg.path_stages import rename_v1_stage_keys
+from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, GATE_SPIKE_CONCLUDE,
+                                    PATH_STAGE_IDS, STAGE_ASSESS, STAGE_BUILD, STAGE_IDS,
+                                    STAGE_SHIP, STAGE_VERIFY)
 
 PRESET_ID = "default"
 PRESET_VERSION = "8.0.0"
@@ -87,7 +89,9 @@ ARTIFACT_EFFECTS = ("add_artifact", "require_artifact", "suggest_artifact")
 
 # Locks (ADR-039). The human sign-off guardrail `G5` and its check cannot be
 # unlocked by anyone.
-LOCKED_STAGES = (STAGE_ASSESS, STAGE_VERIFY, STAGE_SHIP)
+# On the four-stage path (ADR-092) the build stage holds the Definition of Done,
+# which the `verify` stage held before, so it takes that stage's lock.
+LOCKED_STAGES = (STAGE_ASSESS, STAGE_VERIFY, STAGE_BUILD, STAGE_SHIP)
 LOCKED_REVIEW_GATES = (GATE_SPIKE_CONCLUDE,)
 HARD_GUARDRAILS = (GATE_G5,)
 
@@ -170,6 +174,19 @@ def _stage(name):
     return core._stage_key_renames().get(name, name)
 
 
+def _stage_list(names):
+    """A list of stage names with the v1 names renamed only when the list is v1:
+    `specify` and `build` are path stages too (ADR-092), so a 9.0.0 list keeps them."""
+    return rename_v1_stage_keys(list(names), core._stage_key_renames())
+
+
+def _on_path(policy):
+    """True for a policy whose approaches name only the path stages (ADR-092)."""
+    shapes = (policy.get("route_shapes") or {}).values()
+    used = {s for shape in shapes for s in core.shape_stages(shape)}
+    return bool(used) and used <= set(PATH_STAGE_IDS)
+
+
 def _artifact_id(value):
     value = str(value)
     return value[:-3] if value.endswith(".md") else value
@@ -222,7 +239,7 @@ def _approaches(policy):
             entry["artifacts"] = {_artifact_id(k): v for k, v in shape["artifacts"].items()}
         # An autonomy level or approach the table leaves out waits at every
         # hand-off, so it is left out here too rather than given an empty list.
-        checkpoints = {level: [_stage(s) for s in row[name]]
+        checkpoints = {level: _stage_list(row[name])
                        for level, row in table.items()
                        if isinstance(row, dict) and name in row}
         if checkpoints:
@@ -240,8 +257,10 @@ def _stages(approaches):
             used.setdefault(stage, [])
             if mode not in used[stage]:
                 used[stage].append(mode)
-    names = [s for s in STAGE_ORDER if s in used]
-    names += [s for s in used if s not in STAGE_ORDER]
+    # A policy on the four-stage path lists its stages in path order (ADR-092).
+    order = PATH_STAGE_IDS if set(used) <= set(PATH_STAGE_IDS) else STAGE_ORDER
+    names = [s for s in order if s in used]
+    names += [s for s in used if s not in order]
     out = {}
     for order, stage in enumerate(names, start=1):
         modes = sorted(used[stage], key=lambda m: (m not in MODE_RANKS,
@@ -330,7 +349,9 @@ def _rules(policy, notes):
                    {"rationale": "No other shape matched, so the working default."}))
     out["default_shapes"] = _rule_set("shapes", shapes)
     out["floors"] = _rule_set("floors", converted(guard.get("floors")))
-    out["caps"] = _rule_set("caps", converted(guard.get("caps")))
+    # A 9.0.0 view holds no caps (ADR-092), so it makes no rule set.
+    if "caps" in guard:
+        out["caps"] = _rule_set("caps", converted(guard.get("caps")))
     out["loop_ceilings"] = _rule_set("ceilings", converted(guard.get("loop_ceilings")))
     out["immovable_gates"] = _rule_set(
         "immovable-gates", converted(guard.get("immovable_gates")), locked=True)
@@ -412,8 +433,8 @@ def _checks(guardrails, notes):
 
 
 def _first_stage(guardrail):
-    for stage in guardrail.get("checked_at") or []:
-        return _stage(stage)
+    for stage in _stage_list(guardrail.get("checked_at") or []):
+        return stage
     return None
 
 
@@ -462,8 +483,11 @@ def _gates(policy, guardrails, approaches, rules, notes):
                 gate = (rule.get("then") or {}).get(key)
                 if gate and gate not in review:
                     review.append(gate)
+    # A review gate is judged at the `verify` stage, or at ship on the four-stage
+    # path (ADR-092).
+    review_stage = STAGE_SHIP if _on_path(policy) else STAGE_VERIFY
     for gate in review:
-        entry = {"kind": "review", "stage": "verify"}
+        entry = {"kind": "review", "stage": review_stage}
         if gate in accepted:
             entry["accepts"] = list(accepted[gate])
         if gate in immovable or gate in LOCKED_REVIEW_GATES:

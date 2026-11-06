@@ -334,6 +334,8 @@ def _without_removed(made, overlay, ops):
     kept_ops = []
     for op in ops:
         name = op["catalogue"]  # us-english-scan: allow - reads the stored key
+        if name == "rules" and _without_approach_rules(made, overlay, op["id"]):
+            continue
         key = removed_parts.removed_key(name, op["id"])
         if key is None:
             kept_ops.append(op)
@@ -344,6 +346,42 @@ def _without_removed(made, overlay, ops):
         made.dropped.append({"key": f"{op['catalogue']}.{op['id']}",  # us-english-scan: allow - reads the stored key
                              "reason": f"L-SETTING-REMOVED: {removed_parts.setting_note(key)}"})
     return removed_parts.without_removed(overlay), kept_ops
+
+
+def _without_approach_rules(made, overlay, set_id):
+    """Leave out of the overlay's rule set `set_id` each rule whose only effect
+    picked an approach (`removed_parts.APPROACH_EFFECTS`), and the shapes rule set
+    as a whole. The four-stage path reads no configuration's approach (ADR-092), so
+    the merge would refuse them and nothing would read them. True when nothing of
+    the entry is left."""
+    entry = overlay["rules"][set_id]
+    changes = entry.get("set") if isinstance(entry, dict) else None
+    if set_id in removed_parts.APPROACH_RULE_SETS:
+        dropped = [set_id]
+    else:
+        rules = ((changes or {}).get("rules") or {}).get("set") \
+            if isinstance(changes, dict) else None
+        if not isinstance(rules, dict):
+            return False
+        dropped = [rule_id for rule_id, rule in rules.items()
+                   if isinstance(rule, dict) and isinstance(rule.get("then"), dict)
+                   and rule["then"] and set(rule["then"]) <= set(removed_parts.APPROACH_EFFECTS)]
+        for rule_id in dropped:
+            del rules[rule_id]
+        if not rules:
+            del changes["rules"]
+        dropped = [f"{set_id}.rules.{rule_id}" for rule_id in dropped]
+    for key in dropped:
+        made.dropped.append({"key": f"rules.{key}",
+                             "reason": "L-SETTING-REMOVED: the rule picked a delivery "
+                                       "approach, which the four-stage path does not read "
+                                       "(ADR-092)"})
+    if set_id in removed_parts.APPROACH_RULE_SETS or not changes:
+        overlay["rules"].pop(set_id)
+        if not overlay["rules"]:
+            del overlay["rules"]
+        return True
+    return False
 
 
 def overlay_between(base, legacy):
@@ -603,6 +641,22 @@ def _legacy_waiver(release, legacy, op, recorded, cache):
             "approved_by": waivers.LEGACY}
 
 
+def _on_parent_stages(overlay, parent_config):
+    """A copy of `overlay` whose gate stages are stages the parent holds. A copy
+    written before 9.0.0 checks a gate at a legacy stage, which the shipped
+    default shows as the path stage it maps to (ADR-092); the comparison with the
+    base release reads the overlay as it is."""
+    from compass_pkg.path_stages import path_stage_of
+    stages = parent_config.get("stages") or {}
+    out = copy.deepcopy(overlay)
+    for entry in (out.get("gates") or {}).values():
+        body = entry.get("set") if isinstance(entry, dict) and "set" in entry else entry
+        if isinstance(body, dict) and isinstance(body.get("stage"), str) \
+                and body["stage"] not in stages and path_stage_of(body["stage"]) in stages:
+            body["stage"] = path_stage_of(body["stage"])
+    return out
+
+
 def _verdict(parent, child, **names):
     shown = classify.classify(parent, child, **names).to_json()
     return shown, {"result": shown["result"], "reason": shown["reason"],
@@ -639,10 +693,11 @@ def _derive(root, made, settings):
     base_views = legacy_adapter.legacy_views(*_release_files(release))
     made.blocked += _unexpressed(base_views, legacy_adapter.legacy_views(policy, guardrails))
     try:
-        migrated = merge.resolve([parent, _project_layer(_layer_document(overlay))])[0]
+        migrated = merge.resolve([parent, _project_layer(_layer_document(
+            _on_parent_stages(overlay, parent_config)))])[0]
         faithful = merge.apply(base, overlay, "project", "project")[0]
     except merge.MergeError as exc:
-        made.doc = _layer_document(overlay, settings)
+        made.doc = _layer_document(_on_parent_stages(overlay, parent_config), settings)
         made.blocked += _blocked_from(exc.errors)
         return False
     try:
@@ -652,7 +707,7 @@ def _derive(root, made, settings):
                 waiver = _legacy_waiver(release, legacy, op, recorded, cache) or _stub()
                 overlay[op["catalogue"]][op["id"]]["waiver"] = waiver  # us-english-scan: allow - the key is stored in the migration record
                 op["waiver"] = waiver["approved_by"]
-        made.doc = _layer_document(overlay, settings)
+        made.doc = _layer_document(_on_parent_stages(overlay, parent_config), settings)
         # A removed key's points are not counted (ADR-092): each side is compared
         # with the copy's own removed entries in place of its own, so only what a
         # project file can still change differs.
@@ -667,7 +722,8 @@ def _derive(root, made, settings):
         made.behaviour["changed"] = counts["looser"] + counts["tighter"] + counts["mixed"]
         made.behaviour = {k: made.behaviour[k] for k in ("result", "reason", "points", "changed")}
     except CompassError as exc:
-        made.doc = made.doc or _layer_document(overlay, settings)
+        made.doc = made.doc or _layer_document(_on_parent_stages(overlay, parent_config),
+                                                settings)
         made.blocked.append({"code": UNCLASSIFIABLE, "path": "configuration",
                              "message": f"the classifier cannot compare the configurations: {exc}"})
         return True

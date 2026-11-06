@@ -118,6 +118,14 @@ SETTINGS = {
                            "ADR-092") for check in READY_CHECKS},
 }
 
+#: The rule set and the rule effects whose only use was to pick an approach. No
+#: configuration's approach is read on the four-stage path (ADR-092), so a
+#: comparison that takes the approaches from one side (`with_removed_from`) takes
+#: these from it too: the shapes that lean towards an approach, and each rule whose
+#: effects all raise, forbid or fix the stages of one.
+APPROACH_RULE_SETS = ("default_shapes",)
+APPROACH_EFFECTS = ("force_minimum_approach", "forbid_approach", "never_skip")
+
 #: The fields that list check ids, per catalogue. A project layer that names a removed
 #: check in one of them has the id left out, so the merge finds no unknown reference.
 #: `merge.REFERENCES` holds the same fields; `artifacts` is removed as a whole.
@@ -243,6 +251,7 @@ def with_removed_from(config, like):
                 entries[entry_id] = copy.deepcopy(other[entry_id])
             else:
                 entries.pop(entry_id, None)
+    _approach_rules_from(out, like)
     removed = _removed_checks()
     for catalogue, fields in CHECK_LIST_FIELDS.items():
         for entry in (out.get(catalogue) or {}).values():
@@ -250,6 +259,41 @@ def with_removed_from(config, like):
                 if isinstance(entry, dict) and isinstance(entry.get(field), list):
                     entry[field] = [item for item in entry[field] if item not in removed]
     return out
+
+
+def _approach_rules_from(out, like):
+    """Give `out` the approach-picking rules of `like` in place of its own
+    (`APPROACH_RULE_SETS`, `APPROACH_EFFECTS`), with the hit policy each needs."""
+    import copy
+    rules, other = out.get("rules"), like.get("rules") or {}
+    if not isinstance(rules, dict):
+        return
+    for set_id in APPROACH_RULE_SETS:
+        if set_id in other:
+            rules[set_id] = copy.deepcopy(other[set_id])
+        else:
+            rules.pop(set_id, None)
+
+    def picks(rule):
+        then = rule.get("then") if isinstance(rule, dict) else None
+        return isinstance(then, dict) and bool(then) and set(then) <= set(APPROACH_EFFECTS)
+
+    for set_id in set(rules) | set(other):
+        if set_id in APPROACH_RULE_SETS:
+            continue
+        mine, theirs = rules.get(set_id), other.get(set_id)
+        if not isinstance(mine, dict) or not isinstance(mine.get("rules"), dict):
+            continue
+        body = mine["rules"]
+        for rule_id in [r for r, rule in body.items() if picks(rule)]:
+            del body[rule_id]
+        if isinstance(theirs, dict):
+            for rule_id, rule in (theirs.get("rules") or {}).items():
+                if picks(rule):
+                    body[rule_id] = copy.deepcopy(rule)
+                    for effect in rule["then"]:
+                        if effect in (theirs.get("hit") or {}):
+                            mine.setdefault("hit", {})[effect] = theirs["hit"][effect]
 
 
 def _holds(doc, key):

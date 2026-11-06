@@ -7,12 +7,17 @@
 # cli/compass_pkg/legacy_adapter.py wrote the first version of these files from
 # those two files. The preset is the source now; edit it here.
 schema: 1
+# 9.0.0 runs every delivery issue on one path of four stages (ADR-092). What a
+# delivery issue owes is its evidence_required list, which
+# cli/compass_pkg/evidence_required.py computes, so `delivery` declares no gate
+# set of its own beyond the three immovable gates. Its stage modes exist only
+# because the catalogue needs a mode per stage; no reader judges them. A spike
+# keeps its own entry: it is not on the path and its manifest keeps a stage map.
 approaches:
   spike:
     weight: 0
     ships: false
-    stages: {assess: lightweight, define: collapsed, refine: skipped, plan: collapsed, breakdown: skipped,
-      implement: explore, verify: conclude, ship: graduate-or-discard}
+    stages: {assess: lightweight, build: explore, ship: graduate-or-discard}
     gates: [spike.conclude]
     subtask_ceiling: 1
     checkpoints:
@@ -20,57 +25,15 @@ approaches:
       balanced: []
       autonomous: []
     locked: true
-  quick-fix:
+  delivery:
     weight: 1
     ships: true
     release_line: true
-    stages: {assess: thorough, define: lightweight, refine: collapsed, plan: collapsed, breakdown: skipped,
-      implement: thorough, verify: lightweight, ship: lightweight}
+    stages: {assess: thorough, specify: thorough, build: thorough, ship: thorough}
     gates: [verify.correctness, verify.governance, verify.traceability]
     subtask_ceiling: 1
-    acceptance_strategy: existing-dsl
-    checkpoints:
-      controlled: [assess]
-      balanced: []
-      autonomous: []
-  regular:
-    weight: 2
-    ships: true
-    release_line: true
-    stages: {assess: thorough, define: thorough, refine: lightweight, plan: thorough, breakdown: multiagent,
-      implement: thorough, verify: thorough, ship: thorough}
-    gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.clarity,
-      verify.security]
-    subtask_ceiling: 2
     acceptance_strategy: 'on'
     checkpoints:
-      controlled: [assess, define, refine, plan, implement, verify]
-      balanced: [define, plan]
-      autonomous: []
-  hotfix:
-    weight: 3
-    ships: true
-    release_line: true
-    stages: {assess: lightweight, define: reproduce-first, refine: collapsed, plan: collapsed, breakdown: skipped,
-      implement: expedited, verify: thorough, ship: thorough-with-follow-up}
-    gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security]
-    subtask_ceiling: 1
-    acceptance_strategy: existing-dsl-isolation
-    checkpoints:
-      controlled: [assess, define]
+      controlled: [assess, specify]
       balanced: []
-      autonomous: []
-  full:
-    weight: 4
-    ships: true
-    release_line: true
-    stages: {assess: thorough, define: thorough, refine: thorough, plan: thorough, breakdown: multiagent,
-      implement: thorough, verify: thorough, ship: thorough}
-    gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security,
-      verify.clarity]
-    subtask_ceiling: null
-    acceptance_strategy: 'on'
-    checkpoints:
-      controlled: [assess, define, refine, plan, implement, verify]
-      balanced: [assess, define, refine, plan]
       autonomous: []

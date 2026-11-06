@@ -198,8 +198,10 @@ _(none yet - the shipped default guardrails apply as-is)_
   counted apart; it does not fail the run. It also checks the entry and exit
   lists of the stages the issue has reached, under the label
   `stage:<stage>:<entry|exit>` (`docs/entry-exit-evaluation.md`). The shipped
-  Definition of Ready and Done checks run only where the capability
-  `entry-exit-evaluation` is on; a check a project adds to a list always runs.
+  Definition of Done checks, the `build` exit list, run only where the
+  capability `entry-exit-evaluation` is on; a check a project adds to a list
+  always runs. The shipped default holds no Definition of Ready since 9.0.0
+  (ADR-092); a stored generation that lists one still judges it.
   A project with neither sees no change.
 - **`land-commit-on-default-branch`** is an advisory row `compass check` adds
   for a landed issue with a `land_commit`, in a clone that records
@@ -350,14 +352,14 @@ _(none yet - the shipped default guardrails apply as-is)_
     registry entry's, or whose `content_digest` no longer matches what it
     holds, was not written by the command and fails, as does one that names
     no tree where git can name one.
-  - On an in-scope issue on the routing `on` or `existing-dsl-isolation` (the
-    hotfix) it fails when no record is registered, when the record cannot be
+  - On an in-scope issue on the routing `on` or `existing-dsl-isolation` (a
+    live defect) it fails when no record is registered, when the record cannot be
     read or lacks a result, when the parallel run failed, when a scenario did
     not pass both runs, when a declared test is in no repeat entry, when the
     record was made on another tree, and when its candidate is not the
     newest outer-loop green's. The finding names the record and each fault.
   - It declines with "not required" when the strategy does not apply and on
-    the routing `existing-dsl` (the quick fix). The row lists a record the
+    the routing `existing-dsl` (a small, contained change). The row lists a record the
     issue holds, with its result, and the result judges nothing.
 - **`layering-test-passed`** is the layering check of the four-layer
   acceptance strategy (`S17`, ADR-086). It is unlocked, declares `severity:
@@ -376,8 +378,8 @@ _(none yet - the shipped default guardrails apply as-is)_
     record with no test count (`tests_ran: null`) is not judged on it, so a
     layering test that is a shell script passes when it exits 0.
   - It declines with "not required" when the strategy does not apply and on
-    the routings `existing-dsl` and `existing-dsl-isolation` (the quick fix and
-    the hotfix), and lists a record the issue holds, with its result.
+    the routings `existing-dsl` and `existing-dsl-isolation` (a small, contained
+    change and a live defect), and lists a record the issue holds, with its result.
   - A project waiver, or an issue waiver approved by the project's owner, can
     make it or `isolation-proven` advisory. `compass check` names each issue
     waiver of one of the strategy's checks, with its reason and whether it is

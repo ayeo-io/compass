@@ -368,8 +368,14 @@
     },
     "route_shapes": {
       "type": "object",
-      "description": "The machine mirror of the five reference approaches. A policy copied before the approaches were renamed keys them by the old names, read as the new ones.",
+      "description": "The machine mirror of the approaches. The shipped default declares the spike and delivery, the four-stage path (ADR-092). A policy copied from an 8.x release declares its five approaches, and one copied before the approaches were renamed keys them by the old names, read as the new ones.",
       "anyOf": [
+        {
+          "required": [
+            "spike",
+            "delivery"
+          ]
+        },
         {
           "required": [
             "spike",
@@ -422,7 +428,7 @@
     },
     "autonomy_checkpoints": {
       "type": "object",
-      "description": "Autonomy value -> approach -> the checkpoint stages that wait for a person. Only assess, define, refine, plan, `implement` and `verify` can be named.",
+      "description": "Autonomy value -> approach -> the checkpoint stages that wait for a person. Only a checkpoint stage can be named: a path stage (assess, specify, build, ship; ADR-092) or a legacy one (define, refine, plan, `implement` and `verify`).",
       "additionalProperties": false,
       "properties": {
         "controlled": {
@@ -432,6 +438,9 @@
             "items": {
               "enum": [
                 "assess",
+                "specify",
+                "build",
+                "ship",
                 "define",
                 "refine",
                 "plan",
@@ -449,6 +458,9 @@
             "items": {
               "enum": [
                 "assess",
+                "specify",
+                "build",
+                "ship",
                 "define",
                 "refine",
                 "plan",
@@ -466,6 +478,9 @@
             "items": {
               "enum": [
                 "assess",
+                "specify",
+                "build",
+                "ship",
                 "define",
                 "refine",
                 "plan",

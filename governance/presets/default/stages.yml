@@ -7,6 +7,10 @@
 # cli/compass_pkg/legacy_adapter.py wrote the first version of these files from
 # those two files. The preset is the source now; edit it here.
 schema: 1
+# The four stages of the path (ADR-092). The build exit list is the Definition
+# of Done. No stage has an entry list: the path owes no Definition of Ready.
+# A mode is declared only where an approach names it, because the catalogue
+# needs a mode per stage of an approach.
 stages:
   assess:
     order: 1
@@ -14,52 +18,21 @@ stages:
       lightweight: {rank: 2}
       thorough: {rank: 3}
     locked: true
-  define:
+  specify:
     order: 2
     modes:
-      collapsed: {rank: 1}
-      lightweight: {rank: 2}
       thorough: {rank: 3}
-      reproduce-first: {}
-  refine:
+  build:
     order: 3
     modes:
-      skipped: {rank: 0}
-      collapsed: {rank: 1}
-      lightweight: {rank: 2}
       thorough: {rank: 3}
-  plan:
-    order: 4
-    modes:
-      collapsed: {rank: 1}
-      thorough: {rank: 3}
-    entry: [dor-summary-filled, dor-problem-traces-up, dor-behavior-is-gwt, dor-traceability-ids,
-      dor-affected-surface-named, dor-no-open-questions, dor-approach-still-fits]
-  breakdown:
-    order: 5
-    modes:
-      skipped: {rank: 0}
-      multiagent: {}
-  implement:
-    order: 6
-    modes:
-      thorough: {rank: 3}
-      expedited: {}
       explore: {}
-  verify:
-    order: 7
-    modes:
-      lightweight: {rank: 2}
-      thorough: {rank: 3}
-      conclude: {}
     exit: [dod-every-scenario-passes, dod-suite-green, dod-coverage-floor, dod-no-lint-errors,
       dod-traceability-intact, dod-living-docs-updated, dod-follow-ups-settled]
     locked: true
   ship:
-    order: 8
+    order: 4
     modes:
-      lightweight: {rank: 2}
       thorough: {rank: 3}
-      thorough-with-follow-up: {rank: 4}
       graduate-or-discard: {}
     locked: true

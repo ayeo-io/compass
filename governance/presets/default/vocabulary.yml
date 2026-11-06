@@ -11,38 +11,17 @@ vocabulary:
   approaches.spike:
     name: spike
     aliases: []
-  approaches.quick-fix:
-    name: quick fix
-    aliases: []
-  approaches.regular:
-    name: regular
-    aliases: []
-  approaches.hotfix:
-    name: hotfix
-    aliases: []
-  approaches.full:
-    name: full
+  approaches.delivery:
+    name: delivery
     aliases: []
   stages.assess:
     name: assess
     aliases: []
-  stages.define:
-    name: define
+  stages.specify:
+    name: specify
     aliases: []
-  stages.refine:
-    name: refine
-    aliases: []
-  stages.plan:
-    name: plan
-    aliases: []
-  stages.breakdown:
-    name: breakdown
-    aliases: []
-  stages.implement:
-    name: implement
-    aliases: []
-  stages.verify:
-    name: verify
+  stages.build:
+    name: build
     aliases: []
   stages.ship:
     name: ship

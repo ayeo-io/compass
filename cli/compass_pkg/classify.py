@@ -99,7 +99,12 @@ JSON_SCHEMA_VERSION = 1
 # `build`, `ship`). An issue assessed before 9.0.0 waits only at the legacy hand-offs,
 # so the evaluator reads such an entry as nothing, and a configuration that adds one
 # compares as `equivalent`, which version 13 refused as a table error (ADR-092).
-CLASSIFIER_VERSION = 14
+#
+# Version 15: the evaluator knows the approach `delivery`, the shipped default's
+# fallback onto the four-stage path, and an `autonomy_checkpoints` table may name
+# it. A configuration that declares it is compared, where version 14 refused it as
+# a fault in the configuration (ADR-092).
+CLASSIFIER_VERSION = 15
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")

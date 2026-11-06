@@ -290,6 +290,10 @@ def evaluate(view, task, task_dir, run=True):
     checks = config.get("checks") or {}
     stages = config.get("stages") or {}
     modes = task.get("stages") if isinstance(task.get("stages"), dict) else {}
+    # An issue assessed before 9.0.0 names an approach the shipped default no longer
+    # declares (ADR-092); it owes by its own stage modes, as it did before.
+    if approach is None and modes and not is_path_issue(task):
+        approach = {}
     owes_now = None if approach is None else owes(approach_name, approach, modes)
     if is_path_issue(task):
         # A path issue has no modes and no approach in the catalogue: what it owes is

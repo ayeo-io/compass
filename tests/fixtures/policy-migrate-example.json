@@ -27,24 +27,74 @@
       "operation": "remove"
     },
     {
+      "catalogue": "stages",
+      "id": "breakdown",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "stages",
+      "id": "build",
+      "operation": "add"
+    },
+    {
+      "catalogue": "stages",
+      "id": "define",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "stages",
+      "id": "implement",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "stages",
+      "id": "plan",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "stages",
+      "id": "refine",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "stages",
+      "id": "ship",
+      "operation": "set"
+    },
+    {
+      "catalogue": "stages",
+      "id": "specify",
+      "operation": "add"
+    },
+    {
+      "catalogue": "stages",
+      "id": "verify",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "approaches",
+      "id": "delivery",
+      "operation": "add"
+    },
+    {
       "catalogue": "approaches",
       "id": "full",
-      "operation": "replace"
+      "operation": "remove"
     },
     {
       "catalogue": "approaches",
       "id": "hotfix",
-      "operation": "replace"
+      "operation": "remove"
     },
     {
       "catalogue": "approaches",
       "id": "quick-fix",
-      "operation": "replace"
+      "operation": "remove"
     },
     {
       "catalogue": "approaches",
       "id": "regular",
-      "operation": "replace"
+      "operation": "remove"
     },
     {
       "catalogue": "approaches",
@@ -60,6 +110,11 @@
       "catalogue": "rules",
       "id": "biases",
       "operation": "set"
+    },
+    {
+      "catalogue": "rules",
+      "id": "caps",
+      "operation": "remove"
     },
     {
       "catalogue": "rules",
@@ -113,6 +168,11 @@
     },
     {
       "catalogue": "checks",
+      "id": "declared-tests-resolve",
+      "operation": "set"
+    },
+    {
+      "catalogue": "checks",
       "id": "dod-evidence-typed",
       "operation": "set"
     },
@@ -158,6 +218,21 @@
     },
     {
       "catalogue": "gates",
+      "id": "G1",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",
+      "id": "G2",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",
+      "id": "G3",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",
       "id": "G4",
       "operation": "set"
     },
@@ -168,8 +243,53 @@
     },
     {
       "catalogue": "gates",
+      "id": "spike.conclude",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",
       "id": "verify.analyze",
       "operation": "remove"
+    },
+    {
+      "catalogue": "gates",
+      "id": "verify.architecture",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",
+      "id": "verify.claims",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",
+      "id": "verify.clarity",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",
+      "id": "verify.correctness",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",
+      "id": "verify.governance",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",
+      "id": "verify.regression",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",
+      "id": "verify.security",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",
+      "id": "verify.traceability",
+      "operation": "set"
     },
     {
       "catalogue": "artifacts",
@@ -228,6 +348,31 @@
     },
     {
       "catalogue": "vocabulary",
+      "id": "approaches.delivery",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "approaches.full",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "approaches.hotfix",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "approaches.quick-fix",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "approaches.regular",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",
       "id": "checks.acceptance-applicability-agrees",
       "operation": "add"
     },
@@ -280,6 +425,46 @@
       "catalogue": "vocabulary",
       "id": "checks.outer-loop-recorded",
       "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "stages.breakdown",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "stages.build",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "stages.define",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "stages.implement",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "stages.plan",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "stages.refine",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "stages.specify",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "stages.verify",
+      "operation": "remove"
     }
   ],
   "overlay": {
@@ -371,5 +556,5 @@
       "to": null
     }
   ],
-  "compass_yml": "# Written by compass policy migrate. This file holds only what differs from\n# the shipped default preset named in extends, and the project's settings.\nschema: 1\nextends: compass:default@8\nadoption: advisory\nrules:\n  floors:\n    set:\n      rules:\n        set:\n          RP-FLOOR-001:\n            order: 1\n            when:\n              risk: critical\n            then:\n              force_minimum_approach: full\n              never_skip:\n              - define\n              - refine\n              - verify\n              - ship\n            rationale: Critical changes coordinate, or they break things quietly.\n"
+  "compass_yml": "# Written by compass policy migrate. This file holds only what differs from\n# the shipped default preset named in extends, and the project's settings.\nschema: 1\nextends: compass:default@8\nadoption: advisory\nrules:\n  floors:\n    set:\n      rules:\n        set:\n          RP-REQUIRE-004:\n            order: 7\n            when:\n              labels_any:\n              - auth\n              - payments\n              - personal-data\n              - migrations\n              - billing\n            then:\n              add_gate: verify.architecture\n            rationale: Irreversible-surface issues have architecture checked before they ship.\n"
 }

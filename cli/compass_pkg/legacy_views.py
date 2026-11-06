@@ -110,7 +110,7 @@ def rebuild(root):
             "advisory_strategies": rules_of("advisory"),
         },
         "routing_guardrails": {
-            "floors": rules_of("floors"), "caps": rules_of("caps"),
+            "floors": rules_of("floors"),
             "loop_ceilings": rules_of("loop_ceilings"),
             "immovable_gates": rules_of("immovable_gates"),
         },

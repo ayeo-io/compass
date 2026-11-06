@@ -4,13 +4,13 @@
 # It goes with the views at 9.0.0.
 schema: 1
 routing_policy:
-  version: 3.4.0
-  default_route: regular
+  version: 4.0.0
+  default_route: delivery
   generated_rules: [RP-SHAPE-FALLBACK]
   autonomy_checkpoints:
-    controlled: [quick-fix, regular, full, hotfix, spike]
-    balanced: [quick-fix, regular, full, hotfix, spike]
-    autonomous: [quick-fix, regular, full, hotfix, spike]
+    controlled: [delivery, spike]
+    balanced: [delivery, spike]
+    autonomous: [delivery, spike]
   when_keys: {}
   rule_key_order:
     RP-LOOP-003: [id, ceiling, when, limit, rationale]
@@ -22,14 +22,14 @@ routing_policy:
     RP-ROLE-002: {replaced_by: RP-ART-002, retired_in: 7.0.0}
     RP-SROLE-001: {replaced_by: null, retired_in: 7.0.0}
 guardrails:
-  version: 1.40.0
+  version: 1.41.0
   project: []
   when_keys: {risk: blast_radius, labels_any: touches_any}
   checked_at:
-    G1: [verify, ship]
-    G2: [refine, verify]
-    G3: [refine, implement, verify, ship]
-    G4: [verify, ship]
+    G1: [build, ship]
+    G2: [specify, ship]
+    G3: [specify, build, ship]
+    G4: [ship]
     G5: [ship]
     S1: [ship]
     S2: [ship]

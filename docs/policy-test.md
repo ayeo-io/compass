@@ -124,10 +124,10 @@ assessment:
   goal: delivery
   labels: []
 expect:
-  approach: quick-fix
+  approach: delivery
   gates: [G1, G2, G3, G4, verify.clarity, verify.correctness, verify.governance,
     verify.traceability]
-  stages: {implement: thorough}
+  stages: {build: thorough}
 ```
 
 Fixtures run in this order: the fixtures with no group, then each group by name,
@@ -239,7 +239,7 @@ them.
       "file": "example.yml",
       "name": "Small contained work also gets the clarity review",
       "status": "fail",
-      "mismatches": [{"field": "stages.implement", "expected": "lightweight", "actual": "thorough"}],
+      "mismatches": [{"field": "stages.build", "expected": "lightweight", "actual": "thorough"}],
       "message": null,
       "group": "meets/banking"
     }
@@ -271,7 +271,7 @@ missing.
 
 | File | Content |
 |---|---|
-| `compass.yml` | `schema: 1`, the `owner` given, and one change to the shipped default: the quick fix approach also runs the clarity review |
+| `compass.yml` | `schema: 1`, the `owner` given, and one change to the shipped default: a rule that adds the clarity review to every delivery issue |
 | `example.yml` in `compass-fixtures/` | A fixture that expects that change, and shows the four `expect` keys. Its gates are computed when the file is written, so they match the shipped default of that release |
 | `README.md` | How to test the preset, how to write a fixture and how a project extends the preset |
 | `.gitignore` | Ignores `.compass/`, where a fetched git parent is cached |

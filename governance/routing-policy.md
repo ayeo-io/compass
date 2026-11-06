@@ -52,21 +52,25 @@ composing and constraining the delivery approach from the assessment, which is d
 
 ## Routing rules (hard - they bound assess)
 
-### `floors` - an assessment value forces *at least* a given approach
+### `floors` - an assessment value adds a skill or a gate
 
-A floor says: "when the context looks like X, the delivery approach may not
-be lighter than Y." Floors are how domain risk overrides the raw dimension
-assessment - the canonical case is that size reads a one-line auth change as
-`atomic`, but a floor forces it heavier because the risk of auth is not a
-function of line count.
+A floor says: "when the context looks like X, the work also needs Y." Before
+9.0.0 a floor could also force the delivery approach to be at least a given
+weight. Since 9.0.0 every delivery issue runs the one four-stage path
+(ADR-092), and the evidence rows below decide what it owes from the
+assessment, so the shipped floors only ask for a skill or add a gate. Domain
+risk still overrides the raw dimension assessment: a one-line auth change
+reads as `atomic`, and the evidence row for a `G5` label owes the
+architecture review, a person's approval of the scenarios and the human
+sign-off whatever the size.
 
-### `caps` - limits on scaling up
+### `caps` - not shipped since 9.0.0
 
-The mirror of floors. Where a floor stops the delivery approach going too
-light, a cap stops it going too heavy in a way that adds risk. The default
-cap - critical risk caps worktrees at 1 - encodes a real tradeoff: multiagent
-orchestration is faster, but it is also coordination risk, and on a critical
-change the coordination risk costs more than the speed saves.
+The one cap, `RP-CAP-001`, limited a critical change to one worktree. 9.0.0
+makes no worktree (ADR-090) and ships no caps (ADR-092). A frozen preset or a
+stored generation still declares it; a project file that sets the caps rule
+set is merged without it and `compass policy lint` names it
+(`L-SETTING-REMOVED`).
 
 ### `immovable_gates` - gates no delivery approach may remove
 
@@ -97,14 +101,14 @@ project's copied 6.x governance keeps them until `compass policy migrate` runs.
 
 The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
 
-- **floors** - `RP-FLOOR-001` critical risk → at least the full approach,
-  never skip refine/verify/ship; `RP-FLOOR-002` brownfield-unmapped familiarity
-  at medium size or more, with cross-cutting or critical risk, or with one
-  of the four domain labels → define
-  runs thorough-weight with `behavior-mapping` (below that, `RP-ADV-002` gives
-  the skill as advice); `RP-FLOOR-003`
-  touching auth/payments/personal-data/migrations → at least the full approach.
-- **caps** - `RP-CAP-001` critical risk caps worktrees at 1.
+- **floors** - `RP-FLOOR-002` brownfield-unmapped familiarity at medium size
+  or more, with cross-cutting or critical risk, or with one of the four domain
+  labels → the `behavior-mapping` skill is required (below that, `RP-ADV-002`
+  gives the skill as advice); `RP-REQUIRE-003` cross-cutting or critical risk
+  and `RP-REQUIRE-004` one of the four domain labels → the gate
+  `verify.architecture`. `RP-FLOOR-001` and `RP-FLOOR-003`, whose only effect
+  was a minimum approach, are gone since 9.0.0 (ADR-092).
+- **caps** - none since 9.0.0.
 - **immovable_gates** - `RP-GATE-001..003`: `verify.correctness`,
   `verify.governance`, `verify.traceability`. Deliberately not here:
   `verify.regression` is scoped by the delivery approach, so it is not
@@ -114,40 +118,32 @@ The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
   documents (ADR-091): no command reads which documents an issue has on disk.
   The frozen presets `default@6` and `default@7` still declare them.
 
-The `verify.governance` immovable gate is what makes `G5` (a human signs off
-on the irreversible) hold: a change labelled with an irreversible surface is
-floored to the full approach, where the human checkpoint is part of the gate set.
-From 7.0.0 the checkpoint's trigger is those four labels only. Critical risk
-still floors an issue to the full approach and every other gate, but it does
-not bring the sign-off on its own, so `compass approach evaluate` names the
-four labels when risk is critical and none is set
+`G5` (a human signs off on the irreversible) holds through the evidence rows:
+a change labelled with an irreversible surface owes `human-approval`, the
+`G5` check, whatever its size. From 7.0.0 the trigger is those four labels
+only. Critical risk owes the architecture review and a person's approval of
+the scenarios, but it does not bring the sign-off on its own, so `compass
+approach evaluate` names the four labels when risk is critical and none is set
 (`governance/guardrails.md`).
 
 ---
 
 ## Routing strategies (soft - they bias assess)
 
-These are the assess stage's defaults: the delivery-approach shapes it
-reaches for, and how it breaks ties. Assess starts here and tunes; a
-departure is normal and is recorded in `devlog.md`, not punished.
+These are the assess stage's defaults: the approach it reaches for, and how
+it breaks ties. Since 9.0.0 one shape remains: exploration is a spike, and
+every other assessment falls back to `delivery`, the four-stage path
+(ADR-092). What a delivery issue owes is the evidence rows below, not a shape.
 
 ```yaml
 routing_strategies:
-  # The reference shapes triage composes toward. See approaches/.
   # These mirror governance/routing-policy.yml; the live file also carries an
   # `id:` and a `rationale:` per entry, which the evaluator reports when a
   # shape fires.
   default_shapes:
-    - when: { size: [atomic, small], risk: [trivial, contained] }
-      lean_toward: quick-fix
-    - when: { size: medium }
-      lean_toward: regular
-    - when: { size: [large, product] }
-      lean_toward: full
-    - when: { urgency: live-defect, size: [atomic, small] }
-      lean_toward: hotfix
     - when: { goal: exploration }      # "I need to understand this before I can scope it"
       lean_toward: spike
+  default_route: delivery
 
   # Tie-breaking biases.
   biases:
@@ -169,6 +165,19 @@ the four-layer acceptance strategy (`S17`). `compass.yml` (or `.compass/config.y
 autonomous` (balanced when left out). The `autonomy_checkpoints:` table maps
 each value and approach to the checkpoints that wait, and the evaluator writes
 the answer into the manifest as `checkpoints:`.
+
+The shipped default holds two rows. A path issue's checkpoints come from the
+path writer (below), which lists `build` and `ship` as well where `S17`
+applies, and `specify` under every value where the scenarios owe a person's
+approval.
+
+| Approach | controlled | balanced | autonomous |
+|---|---|---|---|
+| delivery | assess, specify | none | none |
+| spike | assess | none | none |
+
+A frozen preset (`default@6`, `default@7`) and a stored generation keep the
+8.x rows, which an issue assessed before 9.0.0 reads:
 
 | Approach | controlled | balanced | autonomous |
 |---|---|---|---|
@@ -204,7 +213,8 @@ the answer into the manifest as `checkpoints:`.
   Only an issue whose first assessment wrote `checkpoint_outcomes` is judged;
   an issue assessed before outcomes were recorded is never refused, and the
   two commands refuse it.
-- The table can name only the six checkpoint stages. `compass policy lint`
+- The table can name only a checkpoint stage: a path stage or one of the six
+  legacy ones. `compass policy lint`
   and the evaluator refuse anything else, so the setting cannot reach a gate,
   evidence, the pre-tool hook, `compass check`, guardrail 5 or the sign-off
   the domain labels bring.
@@ -276,7 +286,7 @@ keys, with or without `jsonschema` installed.
 Routing-rule keys: `force_minimum_route`, `require_phase`,
 `require_skill`, `never_skip`, `max_worktrees`, `forbid_route`,
 `block_phase` + `until`, `require_artifact`, `add_gate`, `gate`. Every rule
-carries a stable `id` (e.g. `RP-FLOOR-001`) so the manifest's
+carries a stable `id` (e.g. `RP-FLOOR-002`) so the manifest's
 `policy_rules_fired:` can name exactly which one fired.
 
 Routing-strategy keys: `lean_toward`, `suggest_artifact`, free-text `biases`.
@@ -323,13 +333,21 @@ round of a kind that repeats survives a reassessment. It never marks a voluntary
 (a kind no approach, rule or `every_approach` flag names) as `superseded`
 (`architecture/decisions/ADR-054-an-artifact-kind-can-repeat-keyed-by-round.md`).
 
-The live preset is version 8.0.0. It carries the four-layer acceptance
-strategy (`S17`): the advisory check `acceptance-applicability-agrees` in
-`checks.yml`, and `acceptance_strategy` on each approach in `approaches.yml`,
-which sets the strategy to `on` for regular and full, `existing-dsl` for
-quick-fix and `existing-dsl-isolation` for hotfix. An approach without the key
-reads `on` when it ships and `suspended` when it does not, so the locked spike
-entry, which ships nothing, stays as it was and reads `suspended`. The classifier does not compare the field
+The live preset is version 8.0.0; #351 does not raise it, the 9.0.0 release
+does (ADR-092). It declares two approaches, `spike` and `delivery`, and the four
+path stages: assess, specify, build and ship. `delivery` is the fallback of
+`default_shapes` and holds the three immovable gates and a mode per path
+stage, which no reader judges: the path writer computes a delivery issue's
+gates from its evidence. The spike keeps a stage map (assess, build, ship) and
+its own gate. Each gate's `stage:` in `gates.yml` is the path stage where it is
+judged: `G2` and `G3` at specify, `G1` at build, and `G4`, `G5`, `S1`, `S2` and
+every review gate at ship. The locks hold `stages.assess`, `stages.build`
+(which holds the Definition of Done) and `stages.ship`. The preset carries the
+four-layer acceptance strategy (`S17`): the advisory check
+`acceptance-applicability-agrees` in `checks.yml`, and `acceptance_strategy:
+'on'` on `delivery`; the evidence row decides each issue's routing. An approach
+without the key reads `on` when it ships and `suspended` when it does not, so
+the locked spike entry, which ships nothing, reads `suspended`. The classifier does not compare the field
 (compare kind `never`), because the project setting `acceptance_strategy`
 turns the whole strategy off with no approval. `compass approach evaluate
 --write` stores the issue's applicability from it, as the strategy's entry in
@@ -366,18 +384,18 @@ to turn the strategy off (decided by jed72, 2026-10-30).
 - The mutation-proof register test and the plain-language check read the
   checks and the guardrail statements from the preset.
 
-The preset also holds checks of kind `human`: the seven Definition of Ready
-items and the seven Definition of Done items. The preset is the only place
-their text lives: 9.0.0 writes no requirements review or verification report
-to hold them (ADR-091), and `tests/test_ready_and_done_data.py` fails when a
-statement names a removed document. The `plan` stage's `entry` list holds the first
-seven and the `verify` stage's `exit` list holds the second seven. Each check
-needs the capability `entry-exit-evaluation`, which is off in `default@6`,
-so `compass check` does not run them and the two views do not name them (a
-legacy `checks:` entry needs an implementation). A Definition of Ready check
-returns `not-applicable` when its stage is skipped, because a collapsed or
-skipped refine meets it by construction. A Definition of Done check returns
-`fail`, as `dod-evidence-typed` does. Each Definition of Done check says
+The preset also holds checks of kind `human`: the seven Definition of Done
+items. The preset is the only place their text lives: 9.0.0 writes no
+verification report to hold them (ADR-091), and
+`tests/test_ready_and_done_data.py` fails when a statement names a removed
+document. The `build` stage's `exit` list holds them. The four-stage path owes
+no Definition of Ready (ADR-092), so the shipped default declares none of its
+seven checks; the frozen presets keep them in their `plan` entry list, where a
+stored generation still reads them. Each check needs the capability
+`entry-exit-evaluation`, which is off in `default@6`, so `compass check` does
+not run them and the two views do not name them (a legacy `checks:` entry
+needs an implementation). A Definition of Done check returns `fail`, as
+`dod-evidence-typed` does. Each Definition of Done check says
 `when: {ships: true}`, so an approach that does not ship, the spike, owes none
 of them when the capability is on. `ships` is a key that evaluation derives
 from the approach, not a dimension. `docs/entry-exit-evaluation.md` states
@@ -386,8 +404,8 @@ how the lists run once the capability is on.
 Before 9.0.0 an approach owed documents, such as the intent and the
 requirements review on the regular approach (ADR-065, ADR-072). 9.0.0 owes
 none but the acceptance criteria (ADR-091); a stored generation keeps its own
-set. Quick fix, regular, hotfix and
-full set the approach field `release_line: true`: an issue whose stored
+set. `delivery`, like quick fix, regular, hotfix and full in the frozen
+presets, sets the approach field `release_line: true`: an issue whose stored
 generation sets it owes a release line, and every landing refuses it while its
 manifest's `release_note` holds none (`docs/release-line.md`). The spike, which
 is locked, has no such field. The field is compared `false` below `true`, so a
@@ -403,7 +421,9 @@ The conversion changes these things, and the test rebuilds the two files
 from the preset and `legacy-views.yml` to show nothing is lost:
 
 - `checked_at` keeps its first stage as the gate's `stage`; the full list is
-  in `legacy-views.yml`.
+  in `legacy-views.yml`. The 9.0.0 lists name the path stages: `G1` is
+  checked at build and ship, `G2` at specify and ship, `G3` at specify, build
+  and ship, and `G4` at ship.
 - The floor effect `force_minimum_route` becomes `force_minimum_approach`
   (ADR-041).
 - Old dimension names and old stage names (`clarify`, `build`, `land`)

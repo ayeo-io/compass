@@ -185,10 +185,10 @@ parents:
     classification:
       against: "compass:default@6"
       result: loosening
-      points: 1152
+      points: 256
       raw_points: 8640
       complete: true
-      first_looser: { assessment: { risk: trivial, ... }, summary: "at risk trivial, ...: approaches.stages (define) is ..." }
+      first_looser: { assessment: { risk: cross-cutting, ... }, summary: "at risk cross-cutting, ...: gates.accepts (verify.architecture) is ..." }
 ```
 
 `digest` is the digest of the parent's layer keys. An issue with a stored generation keeps the parent it ran against: moving the pin in `compass.yml` changes nothing for it until a new generation is committed.

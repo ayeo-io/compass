@@ -16,7 +16,7 @@ gates:
       docs/safety-contract.md for what a test-run record does and does not establish.
 
       '
-    stage: verify
+    stage: build
     applies_to: {ships: true}
     checks: [scenarios-have-tests, declared-tests-resolve, suite-passed, changed-code-traces-to-scenario,
       scenarios-are-executable]
@@ -28,7 +28,7 @@ gates:
       (strategy `S1`) are the default form.
 
       '
-    stage: refine
+    stage: specify
     applies_to: {ships: true}
     checks: [scenario-has-id-and-intent]
     locked: true
@@ -38,7 +38,7 @@ gates:
     statement: 'code -> acceptance criterion -> intent, and public claim -> criterion, maintained continuously.
 
       '
-    stage: refine
+    stage: specify
     applies_to: {ships: true}
     checks: [changed-code-traces-to-scenario, scenario-has-id-and-intent, claim-traces-to-scenario, landed-by-resolves]
     locked: true
@@ -51,7 +51,7 @@ gates:
       never clears it.
 
       '
-    stage: verify
+    stage: ship
     applies_to: {ships: true}
     checks: [gate-evidence-present, dod-evidence-typed, no-trusted-rerun, command-passes, evidence-identity-matches,
       evidence-matches-tree]
@@ -95,41 +95,41 @@ gates:
     locked: true
   verify.correctness:
     kind: review
-    stage: verify
+    stage: ship
     accepts: [test-run]
     locked: true
   verify.regression:
     kind: review
-    stage: verify
+    stage: ship
     accepts: [test-run]
   verify.security:
     kind: review
-    stage: verify
+    stage: ship
     accepts: [security-review, command-output, test-run]
   verify.governance:
     kind: review
-    stage: verify
+    stage: ship
     accepts: [command-output, manual-review, artifact]
     locked: true
   verify.traceability:
     kind: review
-    stage: verify
+    stage: ship
     accepts: [command-output, artifact]
     locked: true
   verify.claims:
     kind: review
-    stage: verify
+    stage: ship
     accepts: [claim-review, command-output, artifact]
   verify.clarity:
     kind: review
-    stage: verify
+    stage: ship
     accepts: [manual-review, artifact]
   spike.conclude:
     kind: review
-    stage: verify
+    stage: ship
     accepts: [spike-conclusion]
     locked: true
   verify.architecture:
     kind: review
-    stage: verify
+    stage: ship
     accepts: [test-run, command-output]

@@ -36,8 +36,9 @@ from compass_pkg import status_words
 from compass_pkg.check_cmd import CHECK_FNS
 from compass_pkg.check_registry import REGISTRY, REMOVED
 from compass_pkg.stable_ids import (
-    APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_SPIKE)
-from compass_pkg.core import (AUTONOMY_VALUES, ROUTE_NAMES, assessment_key_errors, CompassError, canonical_shape, FRAMEWORK_ROOT,
+    APPROACH_DELIVERY, APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR,
+    APPROACH_SPIKE)
+from compass_pkg.core import (AUTONOMY_VALUES, LEGACY_ROUTE_NAMES, ROUTE_NAMES, assessment_key_errors, CompassError, canonical_shape, FRAMEWORK_ROOT,
                               load_manifest, load_yaml, normalize_spine,
                               resolve_issue_dir)
 # The routing gives an issue assessed before 9.0.0 the legacy hand-off stages only,
@@ -83,7 +84,10 @@ def _jsonschema_errors(instance, schema_name):
 # Current route names. A retired name (`express`, `standard`, `expedition`,
 # or `feature` and `initiative` before 5 October 2026) is read as its
 # current one, so an older project policy keeps working.
-CHECKPOINT_ROUTES = (APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_FULL, APPROACH_HOTFIX, APPROACH_SPIKE)
+# `delivery` is the shipped default's own (ADR-092); the other five are the 8.x
+# approaches, which a frozen preset or a stored generation still names.
+CHECKPOINT_ROUTES = (APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_FULL, APPROACH_HOTFIX, APPROACH_SPIKE,
+                     APPROACH_DELIVERY)
 
 
 def checkpoint_table_errors(p):
@@ -214,7 +218,10 @@ def _lint_errors_routing_policy(p):
     # A policy copied before the routes were renamed still keys them by the
     # old names; read them as the new ones, as the evaluator does.
     shapes = {canonical_shape(k): v for k, v in (p.get("route_shapes") or {}).items()}
-    for name in ROUTE_NAMES:
+    # A policy declares the shipped default's two approaches (ADR-092) or, when it
+    # was copied from an 8.x release, the five approaches of that release.
+    names = ROUTE_NAMES if APPROACH_DELIVERY in shapes else LEGACY_ROUTE_NAMES
+    for name in names:
         if name not in shapes:
             errs.append(f"route_shapes is missing the shape named by default_shapes: {name}")
         elif "weight" not in shapes[name]:
@@ -405,12 +412,12 @@ def delivery_approach_errors(task):
     from compass_pkg.path_stages import is_path_issue
     from compass_pkg.stable_ids import APPROACH_DELIVERY
     value = task.get("delivery_approach")
-    if value is None or value in ROUTE_NAMES or value in SHAPE_VALUE_MAP:
+    if value is None or value in LEGACY_ROUTE_NAMES or value in SHAPE_VALUE_MAP:
         return []
     if value == APPROACH_DELIVERY and is_path_issue(task):
         return []
     return [f"`delivery_approach: {value}` is not a delivery approach; the "
-            f"approaches are {', '.join(ROUTE_NAMES)}"]
+            f"approaches are {', '.join(LEGACY_ROUTE_NAMES)}"]
 
 
 def raised_by_errors(task):

@@ -27,7 +27,7 @@ checks:
     on_skipped: not-applicable
     locked: true
   declared-tests-resolve: {statement: Every declared test id points at a test that exists on disk. Fires
-      only once an issue has claimed verify.correctness and is still active - before that the test legitimately
+      only once an issue has claimed the gate verify.correctness and is still active - before that the test legitimately
       does not exist yet; after landing the manifest is a historical record., kind: deterministic, impl: declared-tests-resolve,
     severity: blocking, on_skipped: pass, locked: true}
   suite-passed: {statement: 'A green record on file shows the full suite passing, recently. The record
@@ -68,7 +68,7 @@ checks:
     kind: deterministic,
     impl: nfr-rows-resolved, severity: blocking, on_skipped: not-applicable}
   acceptance-applicability-agrees: {statement: 'The four-layer acceptance strategy (`S17`) applies to
-      the issue as its delivery-approach record says: the applicability stored at assess agrees with
+      the issue as assess recorded it: the applicability stored at assess agrees with
       what the red and acceptance records decide, and the project setting has not changed since assess.
       Advisory: a disagreement names the re-assess command and never fails the run. Declines to check,
       rather than passing, for an issue assessed before the strategy shipped and for a project that
@@ -88,9 +88,9 @@ checks:
     severity: advisory, on_skipped: not-applicable}
   outer-loop-attempts-recorded: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to, every registered outer-loop green records `attempts`, a whole number of 1 or more, so `no-trusted-rerun` can tell a rerun from a first pass. An inner-loop green needs none. Declines to check, rather than passing, for an issue the strategy does not apply to and for an issue with no outer-loop green.', kind: deterministic, impl: outer-loop-attempts-recorded,
     severity: blocking, on_skipped: not-applicable}
-  isolation-proven: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to, on the routing `on` or `existing-dsl-isolation` (the hotfix), an `isolation-proof` record written by `compass isolation record` shows the parallel run passed, every test the issue declares ran twice with both runs passing, the record was made on the tree as it is now, and its candidate is the outer-loop green''s. A written note does not count. Declines to check, rather than passing, for an issue the strategy does not apply to and on the routing `existing-dsl` (the quick fix).', kind: deterministic, impl: isolation-proven,
+  isolation-proven: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to, on the routing `on` or `existing-dsl-isolation` (a live defect), an `isolation-proof` record written by `compass isolation record` shows the parallel run passed, every test the issue declares ran twice with both runs passing, the record was made on the tree as it is now, and its candidate is the outer-loop green''s. A written note does not count. Declines to check, rather than passing, for an issue the strategy does not apply to and on the routing `existing-dsl` (a small, contained change).', kind: deterministic, impl: isolation-proven,
     severity: blocking, on_skipped: not-applicable}
-  layering-test-passed: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to, on the routing `on`, a `layering` record written by `compass layering record` shows the project''s own layering test passed on the tree as it is now, and does not show that 0 tests ran. A written note does not count. Declines to check, rather than passing, for an issue the strategy does not apply to and on the routings `existing-dsl` and `existing-dsl-isolation` (the quick fix and the hotfix).', kind: deterministic, impl: layering-test-passed,
+  layering-test-passed: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to, on the routing `on`, a `layering` record written by `compass layering record` shows the project''s own layering test passed on the tree as it is now, and does not show that 0 tests ran. A written note does not count. Declines to check, rather than passing, for an issue the strategy does not apply to and on the routings `existing-dsl` and `existing-dsl-isolation` (a small, contained change and a live defect).', kind: deterministic, impl: layering-test-passed,
     severity: blocking, on_skipped: not-applicable}
   spike-conclusion-present: {statement: A spike has a `spike-conclusion` evidence entry with a recorded
       decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue., kind: deterministic,
@@ -98,7 +98,7 @@ checks:
   spike-no-production-changes: {statement: 'A Spike''s `changed_files` is empty - a spike ships nothing;
       graduating to delivery is a fresh assessment, not a merge.', kind: deterministic, impl: spike-no-production-changes,
     severity: blocking, on_skipped: fail, locked: true}
-  dod-evidence-typed: {statement: 'Every item of the issue''s Definition of Done (its `verify` exit list)
+  dod-evidence-typed: {statement: 'Every item of the issue''s Definition of Done (its build exit list)
       is met by a record in the manifest: evidence recorded with `--meets`, a person''s approval
       recorded with `compass evidence approve --check`, or a follow-up recorded with `compass follow-up
       add --defers`. An item with no record fails. A tick on a page counts for nothing. Cross-issue:
@@ -148,25 +148,6 @@ checks:
       guardrails declare command-passes, it passes without checking anything (no declarations means there
       are no architecture checks to run).', kind: deterministic, impl: command-passes, severity: blocking,
     on_skipped: not-applicable, locked: true}
-  dor-summary-filled: {statement: 'Summary is filled - `acceptance-criteria.md` opens with a Summary whose three fields (Goal,
-        Approach, Why now / what changes) are written, not left as template placeholders. This is where the
-        requirement is enforced: the CLI never inspects the spec''s prose, so an empty Summary is caught here
-        or not at all.', kind: human, severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
-  dor-problem-traces-up: {statement: 'Problem traces up - the spec serves the problem and the outcomes its Intent links name, from
-        the issue description or the intent the product owner gave. No scenario is orphaned from intent.', kind: human,
-      severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
-  dor-behavior-is-gwt: {statement: Behaviour is Given/When/Then - every scenario has an observable `Then`. No scenario is a wish.,
-      kind: human, severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
-  dor-traceability-ids: {statement: Traceability ids assigned - every scenario has a `TRC-id` so code and claims can point back
-        to it., kind: human, severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
-  dor-affected-surface-named: {statement: Affected surface named - the spec or the issue description identifies what code and which
-        components this touches., kind: human, severity: blocking, on_skipped: not-applicable, requires: [
-        entry-exit-evaluation]}
-  dor-no-open-questions: {statement: No open questions - every ambiguity the review found is resolved or recorded as a decision., kind: human, severity: blocking,
-      on_skipped: not-applicable, requires: [entry-exit-evaluation]}
-  dor-approach-still-fits: {statement: 'Delivery approach still fits - nothing found in refine makes the approach `compass approach show` prints wrong;
-        if it does, re-assess (`/compass:assess --reassess`) before plan.', kind: human, severity: blocking,
-      on_skipped: not-applicable, requires: [entry-exit-evaluation]}
   dod-every-scenario-passes: {statement: 'Every scenario passes - each scenario has a passing test on record; the spec, read as the acceptance suite, is green.',
       kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
   dod-suite-green: {statement: 'TDD suite green - the record of the full suite passing is on file (`compass tdd-green`).', kind: human, severity: blocking,

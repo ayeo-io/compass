@@ -57,7 +57,7 @@ def pair(labels):
     if extra:
         parent["rules"]["floors"]["rules"]["BENCH-LABELS"] = {
             "order": 99, "when": {"labels_any": extra},
-            "then": {"force_minimum_approach": "regular"}}
+            "then": {"add_gate": "verify.architecture"}}
     child = copy.deepcopy(parent)
     child["checks"]["bench-unlisted"] = {
         "statement": "Nothing lists this check.", "kind": "deterministic",

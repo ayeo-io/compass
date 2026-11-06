@@ -28,7 +28,8 @@ import copy
 from dataclasses import dataclass, fields
 
 from compass_pkg.catalogue_spec import AUTONOMY, CAPABILITIES, ISSUE_KEYS
-from compass_pkg.stable_ids import APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_SPIKE
+from compass_pkg.stable_ids import (APPROACH_DELIVERY, APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX,
+                                    APPROACH_REGULAR, APPROACH_SPIKE)
 from compass_pkg.core import (CompassError, _stage_key_renames, canonical_shape,
                               reading_matches)
 from compass_pkg.loop_ceilings import CEILINGS
@@ -54,8 +55,10 @@ DEFAULT_HIT = "collect"
 # spike as a literal where it adds the gates every shipping approach carries,
 # and its checkpoint table accepts only these names, so another approach, or a
 # changed `ships`, would be a fact it never reads.
+# `delivery` is the shipped default's fallback (ADR-092); the evaluator routes
+# to it only to collect the floors, so it is never written as an approach.
 EVALUATOR_APPROACHES = {APPROACH_SPIKE: False, APPROACH_QUICK_FIX: True, APPROACH_REGULAR: True,
-                        APPROACH_HOTFIX: True, APPROACH_FULL: True}
+                        APPROACH_HOTFIX: True, APPROACH_FULL: True, APPROACH_DELIVERY: True}
 
 # Which legacy block a rule set's `kind` fills (`role-rules`: a 6.x generation).
 _GUARDRAIL_BLOCKS = {"floors": "floors", "caps": "caps", "ceilings": "loop_ceilings",

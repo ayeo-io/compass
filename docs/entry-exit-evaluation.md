@@ -52,11 +52,12 @@ A path issue is one whose manifest records `evidence_required` (ADR-092). It
 runs assess, specify, build and ship, and has no stage modes, so none of its
 lists is skipped. `stage_lists.path_lists` gives it its lists:
 
-- A configuration that declares the four path stages is read at those stages
-  as it stands. The build exit list is the Definition of Done, and the ship
-  entry list holds a check such as a project's `agent-review`.
-- A configuration that still declares the legacy stages, as the shipped
-  default does now, has each list moved to the path stage that shows its
+- A configuration that declares the four path stages, as the shipped default
+  does since 9.0.0 (ADR-092), is read at those stages as it stands. The build
+  exit list is the Definition of Done, and the ship entry list holds a check
+  such as a project's `agent-review`.
+- A configuration that still declares the legacy stages, as a frozen preset
+  or a stored generation does, has each list moved to the path stage that shows its
   stage: define, refine and plan to specify, breakdown and implement to
   build, `verify` and ship to ship. The `verify` exit list, the Definition of
   Done, moves to the build exit.
@@ -505,8 +506,10 @@ decide what is owed:
 - the Definition of Done (`verification-report`) where its `verify` mode is
   `thorough`.
 
-So the shipped regular and full approaches owe both, hotfix owes only the
-Definition of Done, and quick fix and spike owe neither. A stored generation or
+So the 8.x regular and full approaches owe both, hotfix owes only the
+Definition of Done, and quick fix and spike owe neither. An issue assessed
+before 9.0.0 names an approach the shipped default no longer declares
+(ADR-092); it owes by its own stage modes in the same way. A stored generation or
 a frozen preset whose approach still declares an `artifacts:` map is read by
 that map, as before 9.0.0. An issue assessed before 7.0.0 keeps a stored
 generation whose regular approach does not list `requirements-review`, so it

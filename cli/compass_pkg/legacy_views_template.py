@@ -14,9 +14,8 @@ A `<<name>>` line in a template is replaced by the rendered data of that
 section.
 """
 from compass_pkg.stable_ids import (
-    APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_SPIKE, GATE_G1, GATE_G2, GATE_G3, GATE_G4,
-    GATE_G5, GATE_S1, GATE_S2, GATE_SPIKE_CONCLUDE, GATE_VERIFY_ANALYZE, GATE_VERIFY_ARCHITECTURE,
-    GATE_VERIFY_CLARITY)
+    GATE_G1, GATE_G2, GATE_G3, GATE_G4, GATE_G5, GATE_S1, GATE_S2, GATE_SPIKE_CONCLUDE,
+    GATE_VERIFY_ANALYZE, GATE_VERIFY_ARCHITECTURE, GATE_VERIFY_CLARITY)
 
 REGENERATE_COMMAND = "python3 scripts/generate-legacy-views.py"
 
@@ -87,11 +86,11 @@ routing_strategies:
 # -----------------------------------------------------------------------------
 routing_guardrails:
 
-  # floors - a matching assessment value forces the delivery approach to be AT LEAST a given weight,
-  # and/or forces specific stages/skills back to thorough weight.
-  # Approach weight order for force_minimum_route: spike < quick-fix < regular
-  # < hotfix < full. The evaluator raises the candidate to the max.
-  # NOTE: four of the entries below carry RP-REQUIRE ids because they attach a
+  # floors - a matching assessment value asks for a skill or adds a gate. Since
+  # 9.0.0 no floor raises the delivery approach (ADR-092): every delivery issue
+  # runs the four-stage path, and the evidence it owes is computed from its
+  # assessment. A copy of an older file can still say `force_minimum_route`.
+  # NOTE: two of the entries below carry RP-REQUIRE ids because they attach a
   # gate and raise no minimum - they are not floors. The block name lags its
   # contents: moving them into their own section changes a
   # structure the evaluator iterates and the schema checks, which is filed
@@ -99,9 +98,8 @@ routing_guardrails:
   floors:
 <<floors>>
 
-  # caps - limits on scaling up.
-  caps:
-<<caps>>
+  # 9.0.0 has no caps (ADR-092): the one cap limited the worktrees of a
+  # critical change, and 9.0.0 makes no worktree (ADR-090).
 
   # loop_ceilings - how far a multiagent run or an unattended run went
   # before it stopped with a reason. 9.0.0 removed both runs (ADR-090), so
@@ -113,11 +111,11 @@ routing_guardrails:
 
   # immovable_gates - review gates no delivery approach may drop.
   # These three are "the default guardrails in review form": every delivery
-  # approach's route_shape already includes them, and listing them here means a
-  # future custom or tuned approach still cannot drop them. NOTE what is NOT
-  # here: verify.regression is approach-scoped (quick fix, being atomic+trivial,
-  # does not run it - that is quick fix's whole point), and verify.claims is
-  # added by no shipped rule since 9.0.0 (ADR-091).
+  # issue owes them, and listing them here means a tuned configuration still
+  # cannot drop them. NOTE what is NOT here: verify.regression is owed only
+  # where the evidence an issue owes lists `regression` (a small, contained
+  # change does not run it), and verify.claims is added by no shipped rule
+  # since 9.0.0 (ADR-091).
   # Immovable means immovable *everywhere* - keep the set to what genuinely is.
   immovable_gates:
 <<immovable_gates>>
@@ -132,29 +130,27 @@ assessment_vocabulary:
 
 # -----------------------------------------------------------------------------
 # Autonomy checkpoints - which stage hand-offs wait for a person. A checkpoint
-# is a hand-off where the session stops: assess step 7 (confirm the approach),
-# the define, refine and plan hand-offs, and the `implement` and `verify` hand-offs
-# that end stages 2 and 3 of strategy `S17`. `autonomy:` in `compass.yml`
-# (or `.compass/config.yml` in a project without one) sets it, default
-# balanced; the evaluator looks up the approach here and
-# writes the result to the manifest as `checkpoints:`. A stage the approach
-# collapses or skips has no hand-off, so it never waits whatever this says.
-# Only the six checkpoint stages can be named: the setting never changes a
-# gate, evidence, the pre-tool hook, `compass check`, guardrail 5 or the
-# sign-off the domain labels bring. A policy without this block, or a
-# value or approach left out of it, waits at every hand-off the approach runs.
-# Added 2026-10-03, issue #329.
+# is a hand-off where the session stops. `autonomy:` in `compass.yml` (or
+# `.compass/config.yml` in a project without one) sets it, default balanced.
+# On the four-stage path (ADR-092) the hand-offs are assess, specify, build
+# and ship, and the path decides which wait from the autonomy value and the
+# evidence the issue owes; the `delivery` row below says what it decides for an
+# issue that owes no person's approval of its scenarios. An issue assessed
+# before 9.0.0 waits at the legacy hand-offs its own approach lists. Only a
+# checkpoint stage can be named: the setting never changes a gate, evidence,
+# the pre-tool hook, `compass check`, guardrail 5 or the sign-off the domain
+# labels bring. Added 2026-10-03, issue #329.
 # -----------------------------------------------------------------------------
 autonomy_checkpoints:
 <<autonomy_checkpoints>>
 
 # -----------------------------------------------------------------------------
-# Approach shapes - the machine-readable mirror of the five reference delivery approaches. The
-# approaches/*.md files are the human-readable canonical descriptions; this is what
-# `compass approach evaluate` reads to emit the per-stage weight, gate set, and
-# subtask ceiling once the final delivery approach is known. The weight ladder for
-# force_minimum_route (spike < quick-fix < regular < hotfix < full) is the
-# `weight:` field.
+# Approach shapes - the machine-readable mirror of the two approaches: the
+# spike and `delivery`, the four-stage path (ADR-092). approaches/spike.md and
+# approaches/path.md describe them. A spike's manifest keeps the stage map and
+# gate below. A delivery issue writes no stage map: its gates come from the
+# evidence it owes, so the `delivery` entry holds only the three immovable
+# gates and a mode per path stage, which no reader judges.
 # -----------------------------------------------------------------------------
 route_shapes:
 <<route_shapes>>
@@ -254,27 +250,20 @@ project: <<project>>
 #    statement: "Line coverage does not drop below 80%."
 #    checks: [coverage-floor]          # <- a project-added check
 #    params: { min_line_coverage: 80 }
-#    checked_at: [verify]
+#    checked_at: [build]
 #    # Coverage is a floor, never a target - a high coverage number is a side effect of test discipline, not its goal.
 
 # -----------------------------------------------------------------------------
 # Cross-cutting: the conflict rule (a guardrail beats a strategy) and the
-# Definition of Ready / Definition of Done checklists are governance too, but
-# they live where they are used - see governance/README.md and the `plan` entry
-# and `verify` exit lists of the shipped preset.
+# Definition of Done checklist are governance too, but they live where they
+# are used - see governance/README.md and the `build` exit list of the shipped
+# preset. The four-stage path owes no Definition of Ready (ADR-092).
 # -----------------------------------------------------------------------------
 """
 
 # Comment lines written before one entry (`id` is the key) or before one key
 # of an entry, keyed by (entry id, key).
 ENTRY_COMMENTS = {
-    ('RP-SHAPE-003', 'rationale'): [
-        '# Any familiarity qualifies. Unmapped ground on a change this small',
-        '# gets behavior-mapping as advice (RP-ADV-002), not a floor: two of',
-        '# the three stops in the comparison run of 30 Sep 2026',
-        '# (docs/compass/2026-09-30-eval-comparison-discriminating.md) came',
-        '# from sending it to define at thorough weight (issue #324).',
-    ],
     ('RP-FLOOR-002', 'rationale'): [
         '# A small, contained change on unmapped ground with none of the four',
         '# domain labels gets the same skill as advice instead (RP-ADV-002).',
@@ -290,12 +279,6 @@ ENTRY_COMMENTS = {
     ],
     ('assessment_vocabulary', 'labels_common'): [
         '# `labels` is an open list of domain tags - common ones, not exhaustive:',
-    ],
-    (APPROACH_HOTFIX, 'stages'): [
-        '# The `ship:` value on the `stages` line below is a stage-weight enum the evaluator',
-        '# and every manifest on disk read; renaming it is a migration with a',
-        '# back-compat shim, not a text sweep.',
-        '# vocabulary-scan: allow - machine enum value, see above',
     ],
     ('scenarios-are-executable', 'blocking_when'): [
         "# Assessment-scoped, exactly like a guardrail's `applies_when:`.",

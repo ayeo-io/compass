@@ -32,11 +32,19 @@ COMPASS_YML = """\
 schema: 1
 owner: {owner}
 # Add or set entries in approaches, checks, gates, stages and rules here.
-# This example makes the quick fix approach also run the clarity review.
-approaches:
-  quick-fix:
-    set:
-      gates: {{add: [verify.clarity]}}
+# This example makes every delivery issue also owe the clarity review. A rule
+# that adds a gate reaches every issue: the four-stage path computes what an
+# issue owes from its assessment and adds each gate a rule adds (ADR-092).
+rules:
+  team_floors:
+    kind: floors
+    hit: {{add_gate: collect}}
+    rules:
+      TEAM-001:
+        order: 1
+        when: {{}}
+        then: {{add_gate: verify.clarity}}
+        rationale: This team reviews clarity on every change.
 """
 
 EXAMPLE_FIXTURE = """\
@@ -51,9 +59,9 @@ assessment:
   goal: delivery
   labels: []
 expect:
-  approach: quick-fix
+  approach: delivery
   gates: [{gates}]
-  stages: {{implement: thorough}}
+  stages: {{build: thorough}}
 """
 
 # The assessment of the example fixture. The fixture's gates are computed from

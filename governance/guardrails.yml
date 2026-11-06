@@ -32,7 +32,7 @@
 # schemas/guardrails.schema.json.
 # =============================================================================
 
-version: 1.40.0
+version: 1.41.0
 # -----------------------------------------------------------------------------
 # Named checks - the mechanical checks `compass check` knows how to run. Each
 # guardrail below references one or more of these by name. The check reads
@@ -52,7 +52,7 @@ checks:
     # finding is the honest default (ADR-006).
     blocking_when: { blast_radius: [cross-cutting, critical] }
   declared-tests-resolve:
-    description: "Every declared test id points at a test that exists on disk. Fires only once an issue has claimed verify.correctness and is still active - before that the test legitimately does not exist yet; after landing the manifest is a historical record."
+    description: "Every declared test id points at a test that exists on disk. Fires only once an issue has claimed the gate verify.correctness and is still active - before that the test legitimately does not exist yet; after landing the manifest is a historical record."
   suite-passed:
     description: >
       A green record on file shows the full suite passing, recently. The
@@ -87,7 +87,7 @@ checks:
   nfr-rows-resolved:
     description: "Every concern row of the spec's Non-functional requirements table (performance, capacity, compatibility, security, privacy, operability, accessibility, and any row added) names scenario ids the manifest holds or a reason the concern does not apply. At thorough depth each cited scenario states a number in its Then. The spec is read at the path the manifest registered, else at docs/compass/<created>-<slug>/acceptance-criteria.md, where its depth is the define stage's mode. Declines to check, rather than passing, for an issue with no generation, a closed issue, an issue created before 2026-11-04 with no spec at either path, an issue whose spec is not written yet, and a registered spec whose catalogue does not list the section at its depth."
   acceptance-applicability-agrees:
-    description: "The four-layer acceptance strategy (`S17`) applies to the issue as its delivery-approach record says: the applicability stored at assess agrees with what the red and acceptance records decide, and the project setting has not changed since assess. Advisory: a disagreement names the re-assess command and never fails the run. Declines to check, rather than passing, for an issue assessed before the strategy shipped and for a project that turned the strategy off."
+    description: "The four-layer acceptance strategy (`S17`) applies to the issue as assess recorded it: the applicability stored at assess agrees with what the red and acceptance records decide, and the project setting has not changed since assess. Advisory: a disagreement names the re-assess command and never fails the run. Declines to check, rather than passing, for an issue assessed before the strategy shipped and for a project that turned the strategy off."
   outer-loop-recorded:
     description: "On an issue the four-layer acceptance strategy (`S17`) applies to, a red record and a green record say loop outer, an outer-loop green was recorded on the tree as it is now, and every registered outer-loop green names its candidate and its client (api, web or cli). A record with no loop field reads as inner. Declines to check, rather than passing, for an issue the strategy does not apply to."
   acceptance-support-present:
@@ -95,19 +95,19 @@ checks:
   outer-loop-attempts-recorded:
     description: "On an issue the four-layer acceptance strategy (`S17`) applies to, every registered outer-loop green records `attempts`, a whole number of 1 or more, so `no-trusted-rerun` can tell a rerun from a first pass. An inner-loop green needs none. Declines to check, rather than passing, for an issue the strategy does not apply to and for an issue with no outer-loop green."
   isolation-proven:
-    description: "On an issue the four-layer acceptance strategy (`S17`) applies to, on the routing `on` or `existing-dsl-isolation` (the hotfix), an `isolation-proof` record written by `compass isolation record` shows the parallel run passed, every test the issue declares ran twice with both runs passing, the record was made on the tree as it is now, and its candidate is the outer-loop green's. A written note does not count. Declines to check, rather than passing, for an issue the strategy does not apply to and on the routing `existing-dsl` (the quick fix)."
+    description: "On an issue the four-layer acceptance strategy (`S17`) applies to, on the routing `on` or `existing-dsl-isolation` (a live defect), an `isolation-proof` record written by `compass isolation record` shows the parallel run passed, every test the issue declares ran twice with both runs passing, the record was made on the tree as it is now, and its candidate is the outer-loop green's. A written note does not count. Declines to check, rather than passing, for an issue the strategy does not apply to and on the routing `existing-dsl` (a small, contained change)."
   layering-test-passed:
-    description: "On an issue the four-layer acceptance strategy (`S17`) applies to, on the routing `on`, a `layering` record written by `compass layering record` shows the project's own layering test passed on the tree as it is now, and does not show that 0 tests ran. A written note does not count. Declines to check, rather than passing, for an issue the strategy does not apply to and on the routings `existing-dsl` and `existing-dsl-isolation` (the quick fix and the hotfix)."
+    description: "On an issue the four-layer acceptance strategy (`S17`) applies to, on the routing `on`, a `layering` record written by `compass layering record` shows the project's own layering test passed on the tree as it is now, and does not show that 0 tests ran. A written note does not count. Declines to check, rather than passing, for an issue the strategy does not apply to and on the routings `existing-dsl` and `existing-dsl-isolation` (a small, contained change and a live defect)."
   spike-conclusion-present:
     description: "A spike has a `spike-conclusion` evidence entry with a recorded decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue."
   spike-no-production-changes:
     description: "A Spike's `changed_files` is empty - a spike ships nothing; graduating to delivery is a fresh assessment, not a merge."
   dod-evidence-typed:
     description: >
-      Every item of the issue's Definition of Done (its `verify` exit list)
-      is met by a record in the manifest: evidence recorded with `--meets`,
-      a person's approval recorded with `compass evidence approve --check`,
-      or a follow-up recorded with `compass follow-up add --defers`. An item
+      Every item of the issue's Definition of Done (its build exit list) is
+      met by a record in the manifest: evidence recorded with `--meets`, a
+      person's approval recorded with `compass evidence approve --check`, or
+      a follow-up recorded with `compass follow-up add --defers`. An item
       with no record fails. A tick on a page counts for nothing.
       Cross-issue: when another issue has a follow-up with target_task
       pointing at this issue, that follow-up must be resolved before this
@@ -250,7 +250,7 @@ defaults:
     # does not exist yet, and after landing the manifest is a historical record.
     checks: [scenarios-have-tests, declared-tests-resolve, suite-passed,
              changed-code-traces-to-scenario, scenarios-are-executable]
-    checked_at: [verify, ship]
+    checked_at: [build, ship]
 
   - id: G2
     name: "Acceptance defined before it is built"
@@ -258,7 +258,7 @@ defaults:
       No code is written that no stated, checkable acceptance criterion
       describes. BDD scenarios (strategy `S1`) are the default form.
     checks: [scenario-has-id-and-intent]
-    checked_at: [refine, verify]
+    checked_at: [specify, ship]
 
   - id: G3
     name: "Traceability holds"
@@ -272,7 +272,7 @@ defaults:
     # could vouch for one another.
     checks: [changed-code-traces-to-scenario, scenario-has-id-and-intent, claim-traces-to-scenario,
              landed-by-resolves]
-    checked_at: [refine, implement, verify, ship]
+    checked_at: [specify, build, ship]
 
   - id: G4
     name: "Evidence, not assertion"
@@ -284,7 +284,7 @@ defaults:
       narrative note never clears it.
     checks: [gate-evidence-present, dod-evidence-typed, no-trusted-rerun, command-passes,
              evidence-identity-matches, evidence-matches-tree]
-    checked_at: [verify, ship]
+    checked_at: [ship]
 
   - id: G5
     name: "A human signs off on the irreversible"
@@ -345,12 +345,12 @@ project: []
 #    statement: "Line coverage does not drop below 80%."
 #    checks: [coverage-floor]          # <- a project-added check
 #    params: { min_line_coverage: 80 }
-#    checked_at: [verify]
+#    checked_at: [build]
 #    # Coverage is a floor, never a target - a high coverage number is a side effect of test discipline, not its goal.
 
 # -----------------------------------------------------------------------------
 # Cross-cutting: the conflict rule (a guardrail beats a strategy) and the
-# Definition of Ready / Definition of Done checklists are governance too, but
-# they live where they are used - see governance/README.md and the `plan` entry
-# and `verify` exit lists of the shipped preset.
+# Definition of Done checklist are governance too, but they live where they
+# are used - see governance/README.md and the `build` exit list of the shipped
+# preset. The four-stage path owes no Definition of Ready (ADR-092).
 # -----------------------------------------------------------------------------

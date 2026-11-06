@@ -41,7 +41,7 @@ COMPASS_SCHEMA_VERSION_11 = "1.1"  # schema version that introduced manifest.yml
 from compass_pkg import project_settings  # noqa: E402  (defines CompassError)
 from compass_pkg.project_settings import CompassError  # noqa: E402,F401
 from compass_pkg.stable_ids import (  # noqa: E402
-    APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, STAGE_IDS)
+    APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, LEGACY_APPROACH_IDS, STAGE_IDS)
 from compass_pkg import manifest_store, word_map  # noqa: E402
 from compass_pkg.path_readers import CHECKPOINT_STAGES, LEGACY_CHECKPOINT_STAGES  # noqa: E402,F401
 from compass_pkg.path_stages import rename_v1_stage, rename_v1_stage_keys  # noqa: E402
@@ -608,6 +608,9 @@ CHECK_NAME_MAP = {"coherence-check-passes": "consistency-check-passes"}
 SHAPE_VALUE_MAP = dict(LEGACY_APPROACH_ALIASES)
 #: The route names in weight order; a test keeps them equal to route_shapes.
 ROUTE_NAMES = APPROACH_IDS
+#: The route names of the 8.x presets, which an issue assessed before 9.0.0
+#: records and a frozen preset or copied governance still declares.
+LEGACY_ROUTE_NAMES = LEGACY_APPROACH_IDS
 
 
 def canonical_shape(value):

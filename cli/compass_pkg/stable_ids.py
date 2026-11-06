@@ -5,10 +5,15 @@ APPROACH_QUICK_FIX = "quick-fix"
 APPROACH_REGULAR = "regular"
 APPROACH_HOTFIX = "hotfix"
 APPROACH_FULL = "full"
-APPROACH_IDS = (APPROACH_SPIKE, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_HOTFIX, APPROACH_FULL)
-# The one approach a path issue records besides the spike (ADR-092). It is not
-# in `APPROACH_IDS`, which lists the approaches the default preset declares.
+# The one approach a path issue records besides the spike (ADR-092).
 APPROACH_DELIVERY = "delivery"
+# The approaches the default preset declares (ADR-092): the spike and the path.
+APPROACH_IDS = (APPROACH_SPIKE, APPROACH_DELIVERY)
+# The five approaches of the 8.x presets. A frozen preset (`default@6`,
+# `default@7`), a stored generation and copied governance declare them, and an
+# issue assessed before 9.0.0 records one of them.
+LEGACY_APPROACH_IDS = (APPROACH_SPIKE, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_HOTFIX,
+                       APPROACH_FULL)
 
 LEGACY_APPROACH_ALIASES = {
     "express": APPROACH_QUICK_FIX,

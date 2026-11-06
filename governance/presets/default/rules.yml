@@ -17,85 +17,37 @@ rules:
         when: {goal: exploration}
         then: {lean_toward: spike}
         rationale: Exploration intent - cannot frame for delivery yet.
-      RP-SHAPE-002:
-        order: 2
-        when:
-          urgency: live-defect
-          size: [atomic, small]
-        then: {lean_toward: hotfix}
-        rationale: A live defect, small enough to reproduce-and-fix fast.
-      RP-SHAPE-003:
-        order: 3
-        when:
-          size: [atomic, small]
-          risk: [trivial, contained]
-        then: {lean_toward: quick-fix}
-        rationale: Small on every axis.
-      RP-SHAPE-004:
-        order: 4
-        when:
-          size: [large, product]
-        then: {lean_toward: full}
-        rationale: Large work - thorough weight, plausibly parallel.
-      RP-SHAPE-005:
-        order: 5
-        when: {size: medium}
-        then: {lean_toward: regular}
-        rationale: The default working shape.
       RP-SHAPE-FALLBACK:
-        order: 6
+        order: 2
         when: {}
-        then: {lean_toward: regular}
+        then: {lean_toward: delivery}
         rationale: No other shape matched, so the working default.
   floors:
     kind: floors
-    hit: {force_minimum_approach: max, never_skip: collect, require_phase: collect, require_skill: collect,
-      add_gate: collect}
+    hit: {require_skill: collect, add_gate: collect}
     rules:
-      RP-FLOOR-001:
-        order: 1
-        when: {risk: critical}
-        then:
-          force_minimum_approach: full
-          never_skip: [refine, verify, ship]
-        rationale: Critical changes coordinate, or they break things quietly.
       RP-FLOOR-002:
-        order: 2
+        order: 1
         when:
           familiarity: brownfield-unmapped
           any_of:
           - size: [medium, large, product]
           - risk: [cross-cutting, critical]
           - labels_any: [auth, payments, personal-data, migrations]
-        then: {require_phase: define, require_skill: behavior-mapping}
+        then: {require_skill: behavior-mapping}
         rationale: You cannot safely change behaviour you have not first written down.
-      RP-FLOOR-003:
-        order: 3
-        when:
-          labels_any: [auth, payments, personal-data, migrations]
-        then: {force_minimum_approach: full}
-        rationale: Domain risk overrides size. A one-line auth change is not small.
       RP-REQUIRE-003:
-        order: 4
+        order: 2
         when:
           risk: [cross-cutting, critical]
         then: {add_gate: verify.architecture}
         rationale: Architecture checked before cross-cutting or critical changes land.
       RP-REQUIRE-004:
-        order: 5
+        order: 3
         when:
           labels_any: [auth, payments, personal-data, migrations]
         then: {add_gate: verify.architecture}
         rationale: Irreversible-surface issues have architecture checked before they ship.
-  caps:
-    kind: caps
-    hit: {max_worktrees: min}
-    rules:
-      RP-CAP-001:
-        order: 1
-        when: {risk: critical}
-        then: {max_worktrees: 1}
-        rationale: Coordination risk on critical changes outweighs parallelism.
   loop_ceilings:
     kind: ceilings
     hit: {limit: min}

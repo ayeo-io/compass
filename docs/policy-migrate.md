@@ -108,7 +108,7 @@ The one exception to the `compass.yml` refusals is the interrupted run above.
    - an entry that lost a field is a `replace` with the whole entry, because a field cannot be unset.
 4. A rule set's `order` numbers are compared by sequence. Removing a rule from the middle renumbers the rules after it and changes no relative position, so the overlay lists only the removal. A rule carries `order` only when its relative position changed or when it is added.
 5. The `project:` guardrails of the copy become project checks and gates: a `command-passes` guardrail becomes a check named by the guardrail id and a slug of its name, with its parameters, and every guardrail becomes a gate at its first `checked_at` stage.
-6. Leave out every entry a 9.0.0 release removed from what a project file can change: the approaches, a legacy stage the four-stage path does not keep, the caps rule set, a Definition of Ready check and the document kinds (ADR-090 to ADR-092). The merge would leave each one out anyway. Each is listed under `dropped` with `L-SETTING-REMOVED` and its decision record, and it does not block.
+6. Leave out every entry a 9.0.0 release removed from what a project file can change: the approaches, a legacy stage the four-stage path does not keep, the caps rule set, a Definition of Ready check and the document kinds (ADR-090 to ADR-092). The merge would leave each one out anyway. The same holds for a rule that only picked an approach: the shapes rule set, and a floor whose every effect raises an approach or fixes its stages, such as `RP-FLOOR-001`. Each is listed under `dropped` with `L-SETTING-REMOVED` and its decision record, and it does not block. A gate the copy checks at a legacy stage is written at the path stage that stage maps to, such as `verify` to `ship`.
 7. Merge the overlay over the preset. The result is the migrated configuration.
 8. Classify the copy against the base release plus the overlay. It must be `equivalent`. That proves the overlay holds the local edits and nothing else. Each side is compared with the copy's own removed entries in their place, so a removed entry's points are not counted, here or in the `behaviour` below.  <!-- us-english-scan: allow - JSON key kept for old readers -->
 
@@ -277,24 +277,74 @@ reassess), and the `compass.yml` it would write.
       "operation": "remove"
     },
     {
+      "catalogue": "stages",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "breakdown",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "stages",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "build",
+      "operation": "add"
+    },
+    {
+      "catalogue": "stages",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "define",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "stages",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "implement",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "stages",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "plan",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "stages",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "refine",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "stages",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "ship",
+      "operation": "set"
+    },
+    {
+      "catalogue": "stages",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "specify",
+      "operation": "add"
+    },
+    {
+      "catalogue": "stages",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "verify",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "delivery",
+      "operation": "add"
+    },
+    {
       "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "full",
-      "operation": "replace"
+      "operation": "remove"
     },
     {
       "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "hotfix",
-      "operation": "replace"
+      "operation": "remove"
     },
     {
       "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "quick-fix",
-      "operation": "replace"
+      "operation": "remove"
     },
     {
       "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "regular",
-      "operation": "replace"
+      "operation": "remove"
     },
     {
       "catalogue": "approaches",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
@@ -310,6 +360,11 @@ reassess), and the `compass.yml` it would write.
       "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "biases",
       "operation": "set"
+    },
+    {
+      "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "caps",
+      "operation": "remove"
     },
     {
       "catalogue": "rules",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
@@ -363,6 +418,11 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "declared-tests-resolve",
+      "operation": "set"
+    },
+    {
+      "catalogue": "checks",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "dod-evidence-typed",
       "operation": "set"
     },
@@ -408,6 +468,21 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "G1",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "G2",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "G3",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "G4",
       "operation": "set"
     },
@@ -418,8 +493,53 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "spike.conclude",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "verify.analyze",
       "operation": "remove"
+    },
+    {
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "verify.architecture",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "verify.claims",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "verify.clarity",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "verify.correctness",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "verify.governance",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "verify.regression",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "verify.security",
+      "operation": "set"
+    },
+    {
+      "catalogue": "gates",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "verify.traceability",
+      "operation": "set"
     },
     {
       "catalogue": "artifacts",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
@@ -478,6 +598,31 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "approaches.delivery",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "approaches.full",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "approaches.hotfix",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "approaches.quick-fix",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "approaches.regular",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.acceptance-applicability-agrees",
       "operation": "add"
     },
@@ -530,6 +675,46 @@ reassess), and the `compass.yml` it would write.
       "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
       "id": "checks.outer-loop-recorded",
       "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "stages.breakdown",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "stages.build",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "stages.define",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "stages.implement",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "stages.plan",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "stages.refine",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "stages.specify",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",  <!-- us-english-scan: allow - a file name, a variable or a stored key, not prose -->
+      "id": "stages.verify",
+      "operation": "remove"
     }
   ],
   "overlay": {
@@ -621,7 +806,7 @@ reassess), and the `compass.yml` it would write.
       "to": null
     }
   ],
-  "compass_yml": "# Written by compass policy migrate. This file holds only what differs from\n# the shipped default preset named in extends, and the project's settings.\nschema: 1\nextends: compass:default@8\nadoption: advisory\nrules:\n  floors:\n    set:\n      rules:\n        set:\n          RP-FLOOR-001:\n            order: 1\n            when:\n              risk: critical\n            then:\n              force_minimum_approach: full\n              never_skip:\n              - define\n              - refine\n              - verify\n              - ship\n            rationale: Critical changes coordinate, or they break things quietly.\n"
+  "compass_yml": "# Written by compass policy migrate. This file holds only what differs from\n# the shipped default preset named in extends, and the project's settings.\nschema: 1\nextends: compass:default@8\nadoption: advisory\nrules:\n  floors:\n    set:\n      rules:\n        set:\n          RP-REQUIRE-004:\n            order: 7\n            when:\n              labels_any:\n              - auth\n              - payments\n              - personal-data\n              - migrations\n              - billing\n            then:\n              add_gate: verify.architecture\n            rationale: Irreversible-surface issues have architecture checked before they ship.\n"
 }
 ```
 

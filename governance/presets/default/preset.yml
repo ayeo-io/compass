@@ -12,7 +12,7 @@ version: 8.0.0
 capabilities: {entry-exit-evaluation: false}
 locks:
   hard: [checks.human-approval-present, gates.G5]
-  locked: [stages.assess, stages.verify, stages.ship, approaches.spike, rules.immovable_gates, checks.landed-by-resolves,
+  locked: [stages.assess, stages.build, stages.ship, approaches.spike, rules.immovable_gates, checks.landed-by-resolves,
     checks.scenarios-have-tests, checks.scenarios-are-executable, checks.declared-tests-resolve, checks.suite-passed,
     checks.changed-code-traces-to-scenario, checks.scenario-has-id-and-intent, checks.claim-traces-to-scenario,
     checks.gate-evidence-present, checks.spike-conclusion-present, checks.spike-no-production-changes,

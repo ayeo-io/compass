@@ -194,7 +194,7 @@ RETIRED_SPELLINGS = [
 NOT_SCANNED = (
     "tests/", "docs/compass/", "governance/decisions/", "architecture/decisions/",
     "CHANGELOG.md", "cli/aliases.yml", "cli/compass_pkg/aliases.py",
-    "docs/upgrade", "evals/",
+    "docs/upgrade",
 )
 
 # Markers written into pages on disk. A page made before the rename holds the

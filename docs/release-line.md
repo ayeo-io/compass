@@ -46,8 +46,8 @@ refused when:
   prints the line under a heading such as `### <slug> (completed <date>)`, where it
   would read as a heading of its own;
 - the scenario title rules refuse it, with the reason
-  `compass scenario add` gives: a path that does not exist, an eval scenario id, a
-  duration attached to a user's experience, or an outside user's experience.
+  `compass scenario add` gives: a path that does not exist, a duration attached to
+  a user's experience, or an outside user's experience.
 
 Each writer also refuses a completed or closed issue, naming it as completed or closed,
 so a landed record is never rewritten. `ship-commit --release-note` takes the issue from

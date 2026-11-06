@@ -559,27 +559,24 @@ any of them must be measured, not judged:
 - a refusal message in `hooks/pre-tool.sh`;
 - `skills/tdd-discipline/SKILL.md`.
 
-Before the change is merged:
+Before the change is merged, measure it with sdd-bench, the only
+measurement Compass accepts (ADR-093). The runner is `harness.py` in the
+sdd-bench `tools` folder:
 
-1. Commit the change: the harness loads the checkout's `HEAD`. Then run
-   the scenarios the text serves under the compass condition, into a
-   directory of their own:
-   `python3 evals/harness.py --scenario <id> --condition compass --runs 5 --out <dir>`.
-2. Score them with the model judge, which the baseline used:
-   `python3 evals/judge.py <dir>/*.json --report <file> --llm`. Each
-   result the rules leave undecided costs one more call, capped at $0.50.
-3. Compare the report with the baseline and put the comparison in the PR.
-   The baseline is the latest eval report in `docs/compass/`, named
-   `<date>-eval-*.md`; the first is `2026-09-26-eval-pilot.md`.
+1. Commit the change. Then run the sdd-bench scenarios under the compass
+   condition, with `--plugin-source` naming this checkout, into a directory
+   of their own. The runner records the checkout's `HEAD` as the commit
+   under measurement.
+2. Score each finished tree with the sdd-bench scorer, `score.py` in the
+   same `tools` folder.
+3. Compare the scores with the latest published sdd-bench result for
+   Compass, and put the comparison in the PR.
 
-A change that lowers a behavior's pass rate against the baseline does not
-merge without a written reason. This blocks only when both reports have at
+A change that lowers a behavior's pass rate against that result does not
+merge without a written reason. This blocks only when both results have at
 least five runs per scenario and condition: with fewer, one flipped result
 can be chance, so the comparison goes in the PR and does not block. The
-published baseline has one run per scenario and condition, so no
-comparison blocks until a five-run baseline is published.
-`evals/README.md` says which scenarios each text serves, and what a run
-costs.
+sdd-bench README says how to run a scenario and what a run records.
 
 ---
 
@@ -622,12 +619,10 @@ queue, and marking it ready for review (`ready_for_review`) runs them.
 | `bdd-adapter`, `bdd-adapter-behave`, `bdd-adapter-cucumber-js`, `bdd-adapter-godog` | Run each BDD reference adapter. |
 | `atdd-adapter-python` | Runs the Python reference example of four-layer acceptance tests (`examples/atdd-adapters/python/`) through its API driver and its CLI driver on two workers each, then its layering test. |
 | `atdd-adapter-typescript` | Installs the TypeScript reference example's pinned packages (`examples/atdd-adapters/typescript/`, `npm ci`) on Node 22.13.0, type-checks it, runs it through its API driver and its CLI driver on two workers each, then its layering test. Then it runs the Compass tests that need Node (`TRC-C5`, `TRC-J6`, `TRC-X3`) with `COMPASS_REQUIRE_TYPESCRIPT=1`, so a missing Node or package fails them instead of skipping them. Other jobs skip those tests. It is not a ruleset-required check, but `self-check` needs it. |
-| `harness-root` | Runs the real-root harness tests, only when the change touches the files they depend on. It is not a required check. |
 | `check-mutation` | Breaks each shipped check and confirms its register tests go red. |
 
-The shards, `serial`, `check-mutation`, the adapter jobs and
-`harness-root` are the suite jobs: they run in a merge group and on a push
-to main only. A new push to a pull request, or a change of its base branch,
+The shards, `serial`, `check-mutation` and the adapter jobs are the suite
+jobs: they run in a merge group and on a push to main only. A new push to a pull request, or a change of its base branch,
 cancels the run it replaces. A merge group and a push to main are never
 cancelled by this workflow; GitHub cancels a merge group's run itself when
 it rebuilds the group.
@@ -716,7 +711,7 @@ pull request passes there, and `self-check` carries the real result:
 - `docs.yml`'s `build` runs on every pull request and in every merge
   group. When the change touches none of `docs/`, `mkdocs.yml` and
   `.github/workflows/docs.yml`, it skips its own steps and ends in success.
-  `harness-root` uses the same change test, `scripts/ci-changed.py`;
+  The change test is `scripts/ci-changed.py`;
 - `pr-text.yml` runs in a merge group too. A merge group has no title or
   body, so the job passes there without a scan; the pull request's own runs
   scanned its text, on every edit.

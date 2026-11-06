@@ -108,7 +108,6 @@ same commit.
 | `cli/compass_pkg/tdd.py`, `cli/compass_pkg/tdd_green.py`, `cli/compass_pkg/green_attempts.py`, `cli/compass_pkg/evidence_identity.py`, `cli/compass_pkg/evidence_sums.py` | `skills/evidence-gates/SKILL.md` |
 | `cli/compass_pkg/loop_ceilings.py` | `governance/routing-policy.md` |
 | `cli/compass_pkg/evidence_required.py`, `cli/compass_pkg/path_writer.py`, `tests/fixtures/compat/v8.0.4-governance.tgz`, `tests/test_path_writer.py`, `tests/test_quick_fix_path.py` | `governance/routing-policy.md` |
-| `cli/compass_pkg/host_launch.py` | `evals/README.md` |
 | `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py` | `docs/delivery-record.md` |
 | `cli/compass_pkg/checkpoint_outcomes.py` | `docs/checkpoints.md` |
 | `cli/compass_pkg/issue_link.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `tests/fake_gh.py` | `docs/github-links.md` |
@@ -136,6 +135,5 @@ same commit.
 | `hooks/hooks.json`, the adapter boundary | `docs/portability.md` |
 | `cli/compass_pkg/project_commands.py`, `cli/compass_pkg/trust.py` | `docs/security.md` |
 | `cli/compass_pkg/readiness_cmd.py`, `cli/compass_pkg/readiness_signals.py`, `cli/compass_pkg/readiness_run.py`, `cli/compass_pkg/readiness_record.py`, `cli/compass_pkg/readiness_registry.py`, `cli/compass_pkg/readiness_catalogue.py`, `schemas/readiness-record.schema.json` | `docs/readiness.md` |
-| `evals/` | `evals/README.md` |
 | `ci/` | `ci/README.md` |
 | `architecture/` | `architecture/decisions/README.md` |

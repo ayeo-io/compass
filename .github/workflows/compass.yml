@@ -64,7 +64,7 @@ concurrency:
 #   so a title or body edit runs none; a base change runs them, because a
 #   run tests the head merged into the base;
 # - a merge group runs `checks`, `count` and every suite job: the shards,
-#   `serial`, `check-mutation`, the adapter jobs and `harness-root`. Each
+#   `serial`, `check-mutation` and the adapter jobs. Each
 #   suite job carries `github.event_name != 'pull_request'`;
 # - a push to main runs what a merge group runs, unless already-tested says
 #   a merge group tested this commit green; then every job skips together.
@@ -663,63 +663,6 @@ jobs:
         env:
           COMPASS_REQUIRE_TYPESCRIPT: '1'
         run: python3 -m pytest -q tests/acceptance/atdd_strategy -k "trc_c5 or trc_j6 or trc_x3"
-
-  # The eval harness's --session-user path runs as root and hands each session
-  # to an unprivileged user. A test that only plays root cannot fail on
-  # ownership or privilege, so this job runs tests/test_harness_root_real.py
-  # as real root against a real dedicated user. Every other job skips it.
-  # It is not a required check, so it may skip its steps when the change
-  # touches none of the files those tests depend on. It runs in a merge
-  # group and on a push to main, like the other suite jobs.
-  harness-root:
-    needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && github.event_name != 'pull_request' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0          # the change test diffs against the base
-
-      # Before the change test, which runs Python too.
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: "3.11"
-
-      - id: changed
-        name: Did this change touch the real-root harness?
-        env:
-          BASE_SHA: ${{ github.event.merge_group.base_sha || github.event.before }}
-          HEAD_SHA: ${{ github.sha }}
-        run: >-
-          python3 scripts/ci-changed.py --base "$BASE_SHA" --head "$HEAD_SHA"
-          --output "$GITHUB_OUTPUT"
-          evals/ tests/test_harness_root_real.py tests/test_eval_harness.py
-          .github/requirements/self-check.txt .github/workflows/compass.yml
-
-      - name: Install the test tooling
-        if: steps.changed.outputs.run == 'true'
-        run: pip install -r .github/requirements/self-check.txt
-
-      - name: Create the dedicated session user
-        if: steps.changed.outputs.run == 'true'
-        run: sudo useradd --create-home evaluser
-
-      - name: Run the real-root tests as root, and fail on a skip
-        # sudo resets PATH, so the interpreter is named by its full path.
-        # Root's git must accept a checkout the runner user owns. A skip here
-        # means the tests did not run as root, which is the failure this job
-        # exists to catch; `shell: bash` adds pipefail so tee hides nothing.
-        if: steps.changed.outputs.run == 'true'
-        shell: bash
-        run: |
-          PY="$(command -v python3)"
-          sudo git config --global --add safe.directory "$PWD"
-          sudo env COMPASS_ROOT_TEST_USER=evaluser PYTHONDONTWRITEBYTECODE=1 \
-            "$PY" -m pytest -rs --color=no -p no:cacheprovider \
-            tests/test_harness_root_real.py | tee /tmp/harness-root.txt
-          ! grep -q "^SKIPPED" /tmp/harness-root.txt || {
-            echo "A real-root test skipped in the job that runs as root."; exit 1; }
 
   check-mutation:
     # Breaks each shipped check, in a copy of the checkout, to always pass and

@@ -367,19 +367,6 @@ _FIXTURE_PREFIX = "tests/fixtures/writing-style/"
 _OLDER_ISSUE_RESOLVED = ("tests/acceptance/atdd_strategy/fixtures/assessed-by-8.0.4/"
                          ".compass/work/older/generations/1/resolved.yml")
 
-# Other frameworks' own records. An eval scenario lays a `seed_R1/`
-# or `seed_R3/` overlay over its seed for a session under that
-# framework, in the words that framework writes. Compass's writing rules must
-# not rewrite them, and an allow marker would appear in the text the session
-# reads, so every file in such an overlay is left out.
-_OTHER_FRAMEWORKS_OVERLAYS = ("/seed_R1/", "/seed_R3/")
-
-
-def _is_other_frameworks_record(rel: str) -> bool:
-    return rel.startswith("evals/scenarios/") and any(
-        part in rel for part in _OTHER_FRAMEWORKS_OVERLAYS)
-
-
 def scanned_paths() -> list[Path]:
     """Every tracked path, minus `EXCLUDED_PATHS`, minus this mechanism's own
     planted-breach fixtures. The fixtures are not on `EXCLUDED_PATHS` - that
@@ -388,8 +375,7 @@ def scanned_paths() -> list[Path]:
     a real, unfixed finding."""
     return [REPO_ROOT / rel for rel in _git_ls_files()
             if not _is_excluded(rel)
-            and not rel.startswith(_FIXTURE_PREFIX)
-            and not _is_other_frameworks_record(rel)]
+            and not rel.startswith(_FIXTURE_PREFIX)]
 
 
 # ---------------------------------------------------------------------------
@@ -1401,17 +1387,6 @@ _register(Rule(
                    "ADR-007-conditional-gate-promotion-via-floors.md",
                    "EV-ANALYZE-ADVISORY",
                    "evidence-id prefix, a machine identifier."),
-        # The same no-op case as the ADR-007 exemption above: R3's own
-        # real command name, hyphenated, so the backtick right before the
-        # match opens two segments earlier and the identifier is not caught.
-        Exemption("evals/harness.py",
-                   "`R3-analyze`",
-                   "R3's own real command name, a machine identifier "
-                   "- same case as the ADR-007 exemption above."),
-        Exemption("tests/test_eval_harness.py",
-                   "`R3-implement`, `R3-analyze`",
-                   "R3's own real command name, a machine identifier "
-                   "- same case as the ADR-007 exemption above."),
     ),
 ))
 
@@ -2131,6 +2106,9 @@ _REMOVED_IN_9_0_0 = frozenset({
     "tests/test_board_file.py", "tests/test_board_page.py", "tests/test_board_speed.py",
     "tests/test_board_worktrees.py", "tests/test_github_label_sync.py",
     "tests/test_github_issue_page_docs.py",
+    # The eval harness, which moved to sdd-bench, and what only it used (ADR-093).
+    "evals/README.md", "evals/harness.py", "evals/judge.py", "evals/compare.py",
+    "cli/compass_pkg/host_launch.py", "tests/test_eval_comparison_tasks.py",
 })
 # A sample decision record under `templates/architecture/decisions/` is a
 # decision record too.
@@ -2161,20 +2139,11 @@ def _find_missing_reference(span: ProseSpan) -> list[Finding]:
             continue
         if _looks_like_issue_citation(path) or _looks_like_runtime_evidence(path):
             continue
-        if (not (REPO_ROOT / path).exists() and not _exists_in_own_seed(span.path, path)
+        if (not (REPO_ROOT / path).exists()
                 and not _exists_in_own_example(span.path, path)):
             findings.append(Finding(
                 span.path, span.line, f'named path "{path}" does not exist'))
     return findings
-
-
-def _exists_in_own_seed(file_path: str, path: str) -> bool:
-    """An eval scenario's seed is its own small repository: a file in the
-    scenario names paths relative to that seed, not to this repository."""
-    parts = Path(file_path).parts
-    if len(parts) < 3 or parts[:2] != ("evals", "scenarios"):
-        return False
-    return (REPO_ROOT / "evals" / "scenarios" / parts[2] / "seed" / path).exists()
 
 
 def _exists_in_own_example(file_path: str, path: str) -> bool:
@@ -2203,28 +2172,6 @@ def test_pbw_a8_an_example_path_resolves_only_in_its_own_example():
     assert not _find_missing_reference(present)
     elsewhere = ProseSpan("docs/five-minutes.md", 1, f"See `{named}`.", "markdown")
     assert _find_missing_reference(elsewhere)
-
-
-def test_pbw_a8_a_scenario_path_resolves_only_in_its_own_seed():
-    """The seed rule narrows the check to the scenario's own seed: a path
-    that exists there is fine, and one that does not is still reported.
-    The scenario is found at run time, so this file names none - a scenario
-    id outside evals/ would reach the eval sessions' plugin copy."""
-    for seed_test in sorted((REPO_ROOT / "evals" / "scenarios").glob("*/seed/tests/*.py")):
-        if not (REPO_ROOT / "tests" / seed_test.name).exists():
-            break
-    else:
-        pytest.skip("no seed test file with a name unique to its seed")
-    scenario_file = str(seed_test.relative_to(REPO_ROOT))
-    named = f"tests/{seed_test.name}"
-    assert _exists_in_own_seed(scenario_file, named)
-    assert not _exists_in_own_seed(scenario_file, "tests/no_such_seed_file.py")
-    assert not _exists_in_own_seed("docs/five-minutes.md", named)
-    # And the check itself still reports a path missing from the seed.
-    missing = ProseSpan(scenario_file, 1, "See `tests/no_such_seed_file.py`.", "markdown")
-    assert _find_missing_reference(missing)
-    present = ProseSpan(scenario_file, 1, f"See `{named}`.", "markdown")
-    assert not _find_missing_reference(present)
 
 
 def test_pbw_a8_a_path_9_0_0_removed_is_excused_only_in_a_decision_record():
@@ -4501,18 +4448,6 @@ def test_pbw_c4_the_stage_key_rename_block_has_a_marker():
         "the stage-key rename block's opening phrase must be a named "
         "marker, the same as the vocabulary-rename block's")
 
-
-
-def test_other_frameworks_records_are_left_out_and_nothing_else_is():
-    """Files in another framework's overlay under `evals/scenarios/` are in
-    that framework's own words, so no Compass writing rule reads them; every
-    other file under `evals/scenarios/` is still scanned, and at least one
-    overlay file exists, so the rule is not checking nothing."""
-    scanned = {str(p.relative_to(REPO_ROOT)) for p in scanned_paths()}
-    tracked = [r for r in _git_ls_files() if r.startswith("evals/scenarios/")]
-    overlays = [r for r in tracked if _is_other_frameworks_record(r)]
-    assert overlays, "no other framework's record is tracked"
-    assert sorted(r for r in tracked if r not in scanned) == sorted(overlays)
 
 
 def test_dcj_103_pbw_a6_counts_only_committed_ignore_rules(tmp_path):

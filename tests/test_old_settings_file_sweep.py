@@ -7,9 +7,9 @@ check that names only the old file sends a reader to a file a new project does
 not have, or tests for a file this repository no longer has.
 
 `tests/test_settings_prose.py` scans markdown. This scan covers the other
-tracked sources: the CLI, the hook and scripts, the eval harness, CI and the
-Makefile. A paragraph (lines between blank lines) that names the old file must
-also name `compass.yml` or the state file.
+tracked sources: the CLI, the hook and scripts, CI and the Makefile. A
+paragraph (lines between blank lines) that names the old file must also name
+`compass.yml` or the state file.
 
 Scenario id: IDR-7, in the acceptance criteria of the issue `init-docs-release`.
 """
@@ -24,12 +24,10 @@ ROOT = Path(__file__).resolve().parent.parent
 OLD = ".compass/config.yml"
 NEW = re.compile(r"(?<![.\w])compass\.yml|state\.yml|state file")
 
-SCANNED = ("cli/", "hooks/", "scripts/", "evals/", "ci/", ".github/", "Makefile")
+SCANNED = ("cli/", "hooks/", "scripts/", "ci/", ".github/", "Makefile")
 SUFFIXES = (".py", ".sh", ".yml", ".yaml", ".toml", "Makefile")
 # Files that define the fallback to the old file, or are fixtures of it.
-EXEMPT = ("cli/vendor/",
-          # The scenario names the old file as a file an agent must not touch.
-          "evals/scenarios/")
+EXEMPT = ("cli/vendor/",)
 
 
 def _tracked():

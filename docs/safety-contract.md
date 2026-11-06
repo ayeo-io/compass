@@ -1032,9 +1032,10 @@ ends within 6 seconds.
 
 Three more rules apply with this one:
 
-- Path classes. `evals/*/seed/` holds input that the eval harness copies into a
-  sandbox and never runs in place, so it is not production code and needs no
-  failing test. The pattern starts at the project root, and a path with a `..`
+- Path classes. In any project, `evals/*/seed/` by convention holds input that
+  an evaluation harness copies into a sandbox and never runs in place, so it is
+  not production code and needs no failing test. Compass ships no harness
+  (ADR-093); the exemption stays for a project that keeps such a folder. The pattern starts at the project root, and a path with a `..`
   step cannot get the exemption. These stay guarded: `examples/`, `cli/vendor/` (every Compass
   process runs it), `.github/scripts/` (CI runs it), `evals/` outside `seed/`,
   `src/examples/` and `db/seed/`. The setting `enforcement.code_globs` only

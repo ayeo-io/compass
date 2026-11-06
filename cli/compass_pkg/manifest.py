@@ -745,45 +745,6 @@ def cmd_gate_pass(args):
 _TITLE_PATH = re.compile(r"(?:[\w.][\w-]*/)+[\w.-]+\.(?:md|py|yml|yaml|json|sh|feature)\b")
 
 
-def _eval_ids(project_root):
-    """Eval scenario and judge behaviour ids, where the project has evals."""
-    ids = set()
-    scen = os.path.join(project_root, "evals", "scenarios")
-    if os.path.isdir(scen):
-        ids |= {d for d in os.listdir(scen)
-                if os.path.isfile(os.path.join(scen, d, "scenario.yml"))}
-    judge = os.path.join(project_root, "evals", "judge.py")
-    if os.path.isfile(judge):
-        import ast
-        try:
-            tree = ast.parse(open(judge, encoding="utf-8").read())
-        except (OSError, SyntaxError):
-            tree = None
-        for node in getattr(tree, "body", []):
-            if (isinstance(node, ast.Assign) and isinstance(node.value, ast.Dict)
-                    and any(isinstance(t, ast.Name) and t.id == "BEHAVIOURS"  # us-english-scan: allow - name of a data table in the eval files
-                            for t in node.targets)):
-                ids |= {k.value for k in node.value.keys
-                        if isinstance(k, ast.Constant) and isinstance(k.value, str)}
-    return ids
-
-
-def slug_problem(project_root, slug):
-    """Why an issue slug would break public copy, or None. The release notes
-    and the board print every landed issue by slug, and an older living spec
-    in the eval plugin copy listed them, so a slug must name no eval scenario
-    or behaviour (ADR-091). A hyphen joins a slug's
-    words, so it counts as a boundary here, unlike in a title (#382)."""
-    for ident in sorted(_eval_ids(project_root)):
-        if re.search(rf"(?<![A-Za-z0-9_]){re.escape(ident)}(?![A-Za-z0-9_])",
-                     slug or ""):
-            return (f"it names the eval scenario or behavior {ident}; the release "
-                    f"notes and the board print every landed issue by slug, and "
-                    f"public copy must name none. Pick a slug that describes the "
-                    f"change instead.")
-    return None
-
-
 def title_problem(project_root, title):
     """Why a scenario title would break a check on public copy, or None.
     Before 9.0.0 ship-commit copied titles into the living spec after the
@@ -794,11 +755,6 @@ def title_problem(project_root, title):
             return (f"it names the path {m.group(0)}, which does not exist; a title reaches the "
                     f"release line and the board, which must name no missing file. "
                     f"Describe it instead.")
-    for ident in sorted(_eval_ids(project_root)):
-        if re.search(rf"(?<![\w-]){re.escape(ident)}(?![\w-])", title or ""):
-            return (f"it names the eval scenario or behavior {ident}; a title reaches "
-                    f"the release line and the board, and public copy must name none. "
-                    f"Describe the run instead.")
     from compass_pkg import public_copy
     if public_copy.first_match(title, public_copy.USER_TIMING_PATTERNS):
         return ("it attaches a duration to a user's experience, which a title, as "

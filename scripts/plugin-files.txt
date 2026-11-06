@@ -16,10 +16,6 @@ assets/
 bin/
 cli/
 commands/
-# `compass retro --compliance` runs the eval judge, which imports the harness.
-evals/__init__.py
-evals/harness.py
-evals/judge.py
 governance/
 # The decision records are the repository's history, not something a
 # project reads. A record that a shipped file sends the agent to is listed

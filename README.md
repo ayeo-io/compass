@@ -241,8 +241,6 @@ full account is in [docs/security.md](docs/security.md).
 - **Reads** a pull request with `gh` when you run `compass issue link set
   --pr`: its number, state and merge commit. Compass writes nothing to GitHub
   ([docs/security.md](docs/security.md)).
-- **Clones and installs** other frameworks only in the evaluation harness,
-  `evals/harness.py`, which maintainers run by hand.
 
 ## Read next
 

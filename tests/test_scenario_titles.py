@@ -69,14 +69,11 @@ def test_a_title_naming_a_real_path_is_recorded(project):
     "Given the zz-made-up-run run, then it passes",
     "Given zz_made_up_behaviour, then it is judged",
 ])
-def test_an_eval_scenario_or_behaviour_id_is_refused(with_evals, title):
+def test_a_project_eval_id_in_a_title_is_recorded(with_evals, title):
+    """A project's `evals/` folder is not a Compass concept since the harness
+    moved to sdd-bench (ADR-093), so a title that names one of its ids is
+    recorded like any other."""
     r = _start(with_evals, title)
-    assert r.returncode != 0, r.stdout
-    assert "eval" in (r.stdout + r.stderr).lower()
-
-
-def test_without_evals_the_same_words_are_recorded(project):
-    r = _start(project, "Given the zz-made-up-run run, then it passes")
     assert r.returncode == 0, r.stdout + r.stderr
 
 

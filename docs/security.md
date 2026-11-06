@@ -88,8 +88,9 @@ only in the cases below, and each one starts only when you ask for it.
   tdd-red`, `compass tdd-green` and `compass quick-fix finish`, your
   project's own guardrails declared with `check: command-passes`, git in your
   repository, and the CLI itself from the plugin's hooks.
-- **Clones and installs** other frameworks only in the evaluation harness,
-  `evals/harness.py`, which maintainers run by hand to compare conditions.
+- **Clones and installs** no other framework. The evaluation harness that
+  compares frameworks is `harness.py` in the sdd-bench `tools` folder, which
+  maintainers run by hand (ADR-093).
 
 ## Git parents
 

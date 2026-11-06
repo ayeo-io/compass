@@ -139,13 +139,18 @@ def test_au_4_the_summary_stays_three_lines_and_names_the_checkpoints(project):
     assert big.stdout.splitlines()[1].startswith("Evidence: "), big.stdout
 
 
-@pytest.mark.parametrize("command", ["assess", "define", "refine", "plan"])
+@pytest.mark.parametrize("command", ["assess", "go"])
 def test_au_5_each_hand_off_waits_only_when_listed(command):
+    # ADR-092 D7: the define, refine and plan commands are gone. Assess keeps
+    # its procedure, and the specify hand-off is in `/compass:go`. A path
+    # issue writes no `devlog.md` (D12), so the record of a skipped wait is
+    # the checkpoint outcome, not a devlog line.
     text = (ROOT / "commands" / f"{command}.md").read_text(encoding="utf-8")
     if command == "assess":   # its full procedure is a reference file
         text += (ROOT / "approaches" / "assess-procedure.md").read_text(encoding="utf-8")
-    assert "`checkpoints:`" in text, command
-    assert "devlog.md" in text, command
+        assert "`checkpoints:`" in text, command
+    else:
+        assert "`specify` checkpoint is\nlisted, wait for approval" in text, command
     assert "autonomy" in text, command
 
 

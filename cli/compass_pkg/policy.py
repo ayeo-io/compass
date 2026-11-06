@@ -423,7 +423,7 @@ def delivery_approach_errors(task):
 def raised_by_errors(task):
     """A malformed `raised_by`, reported by the built-in lint for the same
     reason as `delivery_approach_errors`: jsonschema is optional."""
-    from compass_pkg.lineage import FOUND_AT
+    from compass_pkg.lineage import FOUND_AT, places_text
     raised = task.get("raised_by")
     if raised is None:
         return []
@@ -431,7 +431,7 @@ def raised_by_errors(task):
         return ["`raised_by` must name the parent issue: {issue: <slug>, found_at: <where>}"]
     if raised.get("found_at") not in FOUND_AT:
         return [f"`raised_by.found_at: {raised.get('found_at')}` is not a place an "
-                f"issue is found; use one of {', '.join(FOUND_AT)}"]
+                f"issue is found; use one of {places_text()}"]
     return []
 
 

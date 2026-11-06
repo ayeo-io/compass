@@ -353,7 +353,7 @@ def build_parser():
                     "every place at once.")
     ptrb.add_argument("parent", help="the parent issue's slug")
     ptrb.add_argument("--found-at", required=True,
-                      help="define, plan, implement, verify, review, ci or after-landing")
+                      help="specify, build, ship, review, ci or after-landing")
     issue_arg(ptrb)
     ptrb.set_defaults(func=cmd_issue_raised_by, output_kind="hand-off")
 

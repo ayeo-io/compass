@@ -5,7 +5,9 @@ and only private prose recorded it, so Compass could not say how much the `verif
 stage catches before an issue lands. An issue now carries `raised_by` (parent and
 `found_at`), and `compass retro --lineage` counts it.
 
-Scenario ids: LN-1, LN-2, LN-3 and LN-5 (issue `lineage`).
+Scenario ids: LN-1, LN-2, LN-3 and LN-5 (issue `lineage`). The path stage
+tests are #351 [Replace the approaches and eight stages with one four-stage
+path].
 """
 from __future__ import annotations
 
@@ -46,6 +48,42 @@ def test_ln_1_issue_raised_by_records_the_parent_on_an_existing_issue(repo):
     assert result.returncode == 0, result.stdout + result.stderr
     assert _manifest(repo, "later-fix")["raised_by"] == {
         "issue": "parent-fix", "found_at": "after-landing"}
+
+
+def test_ln_1_a_path_stage_is_accepted_where_it_was_found(repo):
+    assert _start(repo, "parent-fix").returncode == 0
+    result = _raised(repo, "child-fix", "parent-fix", found_at="build")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _manifest(repo, "child-fix")["raised_by"] == {
+        "issue": "parent-fix", "found_at": "build"}
+    assert _start(repo, "later-fix").returncode == 0
+    result = _run(repo, "issue", "raised-by", "parent-fix", "--found-at",
+                  "specify", "--issue", "later-fix")
+    assert result.returncode == 0, result.stdout + result.stderr
+    for slug in ("child-fix", "later-fix"):
+        lint = _run(repo, "issue", "lint", "--issue", slug)
+        assert lint.returncode == 0, lint.stdout + lint.stderr
+
+
+def test_ln_1_a_legacy_stage_is_still_accepted_and_counted_at_its_path_stage(repo):
+    assert _start(repo, "root-fix").returncode == 0
+    result = _raised(repo, "a-fix", "root-fix", found_at="verify")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _manifest(repo, "a-fix")["raised_by"]["found_at"] == "verify"
+    lint = _run(repo, "issue", "lint", "--issue", "a-fix")
+    assert lint.returncode == 0, lint.stdout + lint.stderr
+    assert _raised(repo, "b-fix", "root-fix", found_at="ship").returncode == 0
+    out = _run(repo, "retro", "--lineage").stdout
+    assert "found before the parent landed: 2" in out, out
+    assert "ship 2" in out and "verify" not in out, out
+
+
+def test_ln_2_assess_is_not_a_place_and_the_refusal_names_the_path_stages(repo):
+    assert _start(repo, "parent-fix").returncode == 0
+    result = _raised(repo, "child-fix", "parent-fix", found_at="assess")
+    assert result.returncode != 0
+    assert "specify, build, ship, review, ci or after-landing" in result.stderr, result.stderr
+    assert not (repo / ".compass" / "work" / "child-fix").exists()
 
 
 # --- LN-2: refusals --------------------------------------------------------------

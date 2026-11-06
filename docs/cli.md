@@ -23,7 +23,7 @@ compass retro              is triage systematically over- or under-sizing the pr
 compass retro --lineage    how many issues were found in another, and how many before it landed
 compass retro --decisions  how many decisions agents took for the person were confirmed, changed or never confirmed
 compass retro --acceptance the four-layer acceptance strategy's closed in-scope issues, their clients and candidates, the closed issues per acceptance kind and the out-of-scope ones that ran it, with an opted-out project and each stepped-off issue apart
-compass issue raised-by    record the issue this one was found in, and where
+compass issue raised-by    record the issue this one was found in, and where: specify, build, ship, review, ci or after-landing (an 8.x stage name still reads, counted at its path stage)
 compass issue friction     record friction the agent observed, with evidence and a fix
 compass issue decision add record a decision an agent took for the person (--from-ledger reads the requirements review)
 compass issue decision set reopen such a decision; it stays unconfirmed and the checkpoint keeps waiting

@@ -912,7 +912,7 @@
       "additionalProperties": false,
       "properties": {
         "issue": {"type": "string", "minLength": 1},
-        "found_at": {"enum": ["define", "plan", "implement", "verify", "review", "ci", "after-landing"]}
+        "found_at": {"enum": ["specify", "build", "ship", "review", "ci", "after-landing", "define", "plan", "implement", "verify"]}
       }
     },
     "page_ticks": {

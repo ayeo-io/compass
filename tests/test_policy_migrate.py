@@ -819,14 +819,17 @@ def test_PM_15_a_rule_added_in_the_middle_keeps_the_order_unambiguous(tmp_path):
     root = _project(tmp_path)
 
     def add(policy, guardrails):
+        # A floor that adds a gate: one that forces an approach is left out of the
+        # project layer since 9.0.0 (ADR-092), so it would not be in the order at all.
         policy["routing_guardrails"]["floors"].insert(1, {
             "id": "RP-FLOOR-901", "when": {"risk": "critical"},
-            "force_minimum_route": "full", "rationale": "Inserted."})
+            "add_gate": "verify.security", "rationale": "Inserted."})
 
     _copy_governance(root, add)
     made = _plan(root)
     assert made.equivalence["result"] == "equivalent"
     rules = yaml.safe_load(made.compass_yml)["rules"]["floors"]["set"]["rules"]["set"]
+    assert "RP-FLOOR-901" in rules, rules
     orders = [rule["order"] for rule in rules.values()]
     assert len(set(orders)) == len(orders)
     merged = _api().merge.resolve([_api().policy_lint.load_parent()[0],

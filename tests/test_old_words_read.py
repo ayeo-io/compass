@@ -263,7 +263,8 @@ def test_vr_d17_a_layer_digest_is_taken_before_the_old_words_are_mapped(
     from compass_pkg import layers
     wm = _word_map()
     (tmp_path / ".compass").mkdir()
-    raw = {"schema": 1, "stages": {"implement": {"set": {"modes": {
+    # `ship` is a path stage: a project's change to a legacy stage is not read (ADR-092).
+    raw = {"schema": 1, "stages": {"ship": {"set": {"modes": {
         "full": {"rank": 3}}}}}, "checks": {"c": {"set": {"when": {"size": "standard"}}}}}
     (tmp_path / "compass.yml").write_text(yaml.safe_dump(raw), encoding="utf-8")
 
@@ -273,8 +274,8 @@ def test_vr_d17_a_layer_digest_is_taken_before_the_old_words_are_mapped(
     mapped, _ = layers.load_project_layer(tmp_path)
 
     assert mapped.digest == unmapped.digest, "the rename alone must change no digest"
-    assert mapped.doc["stages"]["implement"]["set"]["modes"] == {"thorough": {"rank": 3}}
-    assert unmapped.doc["stages"]["implement"]["set"]["modes"] == {"full": {"rank": 3}}
+    assert mapped.doc["stages"]["ship"]["set"]["modes"] == {"thorough": {"rank": 3}}
+    assert unmapped.doc["stages"]["ship"]["set"]["modes"] == {"full": {"rank": 3}}
     assert mapped.doc["checks"]["c"]["set"]["when"] == {"size": "medium"}
 
 
@@ -294,11 +295,14 @@ def test_vr_d17_an_issue_layer_digest_is_taken_before_mapping(monkeypatch):
 def test_vr_d17_merge_apply_maps_a_layer_that_arrives_unmapped(rows):
     from compass_pkg import merge
     parent = rows.map_layer(_base())[0]
-    child = {"schema": 1, "stages": {"verify": {"set": {"modes": {
-        "full": {"rank": 3}, "light": {"rank": 2}, "reproduce-first": {}}}}}}
+    # The project adds a stage of its own: its change to a legacy stage such as
+    # `verify` is left out since 9.0.0 (ADR-092), and the parent's own modes would
+    # then pass this test with no mapping of the child at all.
+    child = {"schema": 1, "stages": {"review": {"order": 9, "modes": {
+        "full": {"rank": 3}, "light": {"rank": 2}, "reproduce-first": {}}}}}
     config, _ = merge.apply({}, parent, "parent", "p", {})
     config, _ = merge.apply(config, child, "project", "c", {})
-    assert set(config["stages"]["verify"]["modes"]) == {
+    assert set(config["stages"]["review"]["modes"]) == {
         "thorough", "lightweight", "reproduce-first"}
 
 
@@ -564,7 +568,9 @@ def test_vr_d6_size_standard_reads_as_medium_in_both_assessments(tmp_path):
 
 # --- VR-D10: a project layer in the old words ----------------------------------
 
-OLD_PROJECT = ("schema: 1\nstages:\n  implement:\n    set:\n"
+#: A project change to a path stage in the old words. A legacy stage such as
+#: `implement` is not read since 9.0.0 (ADR-092), so the change is to `ship`.
+OLD_PROJECT = ("schema: 1\nstages:\n  ship:\n    set:\n"
                "      modes: {full: {rank: 3}, expedited: {}, explore: {}}\n")
 
 
@@ -689,7 +695,7 @@ def test_vr_d19_policy_lint_advises_and_keeps_its_exit_status(tmp_path):
     new = _cli(new_root, "policy", "lint")
     assert old[0] == new[0] == 0, (old, new)
     assert old[1] == new[1], "the report on standard output is the same"
-    assert "stages.implement.set.modes" in old[2] and "thorough" in old[2], old[2]
+    assert "stages.ship.set.modes" in old[2] and "thorough" in old[2], old[2]
     assert "9.0.0" in old[2] and "project" in old[2], old[2]
     assert new[2] == "", "a layer in the new words gets no advisory"
 
@@ -697,13 +703,16 @@ def test_vr_d19_policy_lint_advises_and_keeps_its_exit_status(tmp_path):
 def test_vr_d19_the_advisory_names_the_layer_and_a_git_parent_by_its_sha():
     from compass_pkg import layers, policy_lint
     shipped, _ = policy_lint.load_parent()
-    doc = _old_parent_doc("light")
+    # A git parent's change to the approaches is not read since 9.0.0 (VD-006 of
+    # #351), so the parent adds a stage of its own in the old words.
+    doc = {"schema": 1, "stages": {"review": {"order": 9, "modes": {"light": {"rank": 2}}}}}
     git = layers.Layer("github:acme/team@1.0.0#abc1234", "parent", doc,
                        layers.layer_digest(doc, "parent"))
     report = policy_lint.lint_chain(shipped, None, extra_parents=[git])
+    assert report.ok, report.findings
     lines = report.advisories
     assert lines and all("github:acme/team@1.0.0#abc1234" in line for line in lines), lines
-    assert any("approaches.regular.set.stages" in line and "lightweight" in line
+    assert any("stages.review.modes" in line and "lightweight" in line
                and "9.0.0" in line for line in lines), lines
 
 

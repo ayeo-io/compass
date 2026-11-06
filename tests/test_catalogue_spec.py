@@ -64,7 +64,9 @@ GOOD = {
                            "kind": "evidence", "accepts": ["artifact"],
                            "when": {"risk": {"at_least": "cross-cutting"}},
                            "severity": "blocking", "on_skipped": "fail"}},
-    "stages": {"plan": {"set": {"exit": {"add": ["CHK-ADR"]}}}},
+    # A path stage: a project's change to a legacy stage such as `plan` is left out
+    # unchecked since 9.0.0 (ADR-092), so it would check nothing here.
+    "stages": {"specify": {"set": {"exit": {"add": ["CHK-ADR"]}}}},
 }
 
 

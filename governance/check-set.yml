@@ -1,0 +1,741 @@
+# The fixed check set: every check, gate and evidence type Compass runs
+# (ADR-094). Every project runs this one set. A project can add to it only
+# through the tighten-only settings of compass.yml, never take from it.
+#
+# cli/compass_pkg/check_set.py reads this file and returns it in the shape
+# generations/<n>/resolved.yml holds. tests/fixtures/check-set-digests.yml pins
+# the sha256sum of these bytes for each version: change the file, raise
+# `version` (a major when a check owes less or goes, a minor when one is added
+# or tightened), and pin the new digest in the same commit.
+schema: 1
+id: compass-checks
+version: 9.0.0
+capabilities: {entry-exit-evaluation: false}
+# No waiver can excuse these.
+never_waived: [checks.human-approval-present, gates.G5]
+
+# What an assessment reads, with the order of each ordered dimension.
+dimensions:
+  risk:
+    type: ordered-enum
+    values: [trivial, contained, cross-cutting, critical]
+    tighter: higher
+    required: true
+  familiarity:
+    type: enum
+    values: [greenfield, brownfield-mapped, brownfield-unmapped]
+    required: true
+  size:
+    type: ordered-enum
+    values: [atomic, small, medium, large, product]
+    tighter: higher
+    required: true
+  goal:
+    type: enum
+    values: [delivery, exploration]
+  urgency:
+    type: enum
+    values: [none, live-defect]
+  labels:
+    type: set
+    open: true
+    common: [auth, payments, personal-data, migrations, public-api, infra, ci]
+
+# The four stages of the path (ADR-092). The build exit list is the Definition
+# of Done. No stage has an entry list: the path owes no Definition of Ready.
+# A mode is declared only where an approach names it.
+stages:
+  assess:
+    order: 1
+    modes:
+      lightweight: {rank: 2}
+      thorough: {rank: 3}
+  specify:
+    order: 2
+    modes:
+      thorough: {rank: 3}
+  build:
+    order: 3
+    modes:
+      thorough: {rank: 3}
+      explore: {}
+    exit: [dod-every-scenario-passes, dod-suite-green, dod-coverage-floor, dod-no-lint-errors, dod-traceability-intact,
+      dod-living-docs-updated, dod-follow-ups-settled]
+  ship:
+    order: 4
+    modes:
+      thorough: {rank: 3}
+      graduate-or-discard: {}
+
+# Every delivery issue runs on the path; what it owes is its evidence_required
+# list (cli/compass_pkg/evidence_required.py). A spike keeps its own entry,
+# because it is not on the path and its manifest keeps a stage map.
+approaches:
+  spike:
+    weight: 0
+    ships: false
+    stages: {assess: lightweight, build: explore, ship: graduate-or-discard}
+    gates: [spike.conclude]
+    subtask_ceiling: 1
+    checkpoints:
+      controlled: [assess]
+      balanced: []
+      autonomous: []
+  delivery:
+    weight: 1
+    ships: true
+    release_line: true
+    stages: {assess: thorough, specify: thorough, build: thorough, ship: thorough}
+    gates: [verify.correctness, verify.governance, verify.traceability]
+    subtask_ceiling: 1
+    acceptance_strategy: 'on'
+    checkpoints:
+      controlled: [assess, specify]
+      balanced: []
+      autonomous: []
+
+# The floors, immovable gates and advisory strategies feed evidence_required;
+# the loop ceilings bound an unattended run.
+rules:
+  default_shapes:
+    kind: shapes
+    hit: {lean_toward: first}
+    rules:
+      RP-SHAPE-001:
+        order: 1
+        when: {goal: exploration}
+        then: {lean_toward: spike}
+        rationale: Exploration intent - cannot frame for delivery yet.
+      RP-SHAPE-FALLBACK:
+        order: 2
+        when: {}
+        then: {lean_toward: delivery}
+        rationale: No other shape matched, so the working default.
+  floors:
+    kind: floors
+    hit: {require_skill: collect, add_gate: collect}
+    rules:
+      RP-FLOOR-002:
+        order: 1
+        when:
+          familiarity: brownfield-unmapped
+          any_of:
+          - size: [medium, large, product]
+          - risk: [cross-cutting, critical]
+          - labels_any: [auth, payments, personal-data, migrations]
+        then: {require_skill: behavior-mapping}
+        rationale: You cannot safely change behaviour you have not first written down.
+      RP-REQUIRE-003:
+        order: 2
+        when:
+          risk: [cross-cutting, critical]
+        then: {add_gate: verify.architecture}
+        rationale: Architecture checked before cross-cutting or critical changes land.
+      RP-REQUIRE-004:
+        order: 3
+        when:
+          labels_any: [auth, payments, personal-data, migrations]
+        then: {add_gate: verify.architecture}
+        rationale: Irreversible-surface issues have architecture checked before they ship.
+  loop_ceilings:
+    kind: ceilings
+    hit: {limit: min}
+    rules:
+      RP-LOOP-001:
+        order: 1
+        then: {ceiling: builder_attempts, limit: 3}
+        rationale: A builder that has failed three times needs a new brief or a stop, not a fourth try.
+      RP-LOOP-002:
+        order: 2
+        then: {ceiling: review_rounds, limit: 3}
+        rationale: Review rounds past three mean the brief or the plan is wrong; record why before landing.
+      RP-LOOP-003:
+        order: 3
+        when:
+          risk: [trivial, contained]
+        then: {ceiling: review_rounds, limit: 2}
+        rationale: A contained change that has not passed in two rounds needs a recorded reason.
+      RP-LOOP-004:
+        order: 4
+        then: {ceiling: replans, limit: 2}
+        rationale: A breakdown replanned twice is not converging; stop and ask.
+      RP-LOOP-005:
+        order: 5
+        then: {ceiling: repeated_error, limit: 3}
+        rationale: The same error three times is a failure, not a reason for a fourth attempt.
+      RP-LOOP-006:
+        order: 6
+        then: {ceiling: run_cycles, limit: 30}
+        rationale: One long unattended run loses the thread; a run that has not finished in 30 sessions
+          needs a person.
+      RP-LOOP-007:
+        order: 7
+        then: {ceiling: run_minutes, limit: 240}
+        rationale: An unattended run that is still going after four hours is not converging, and is spending
+          money.
+      RP-LOOP-008:
+        order: 8
+        then: {ceiling: run_cost_usd, limit: 5}
+        rationale: Every session of an unattended run is paid; five US dollars is the most one run may
+          spend, set by the maintainer on 2026-10-03.
+  immovable_gates:
+    kind: immovable-gates
+    hit: {gate: collect}
+    rules:
+      RP-GATE-001:
+        order: 1
+        then: {gate: verify.correctness}
+        rationale: Protects the user - the work must satisfy its acceptance criteria.
+      RP-GATE-002:
+        order: 2
+        then: {gate: verify.governance}
+        rationale: Protects the project's own rules - honours guardrails and strategies.
+      RP-GATE-003:
+        order: 3
+        then: {gate: verify.traceability}
+        rationale: Protects the audit trail - code -> criterion -> intent stays intact.
+  advisory:
+    kind: advisory
+    hit: {strategy: collect}
+    rules:
+      RP-ADV-001:
+        order: 1
+        when:
+          risk: [cross-cutting, critical]
+        then: {strategy: regression-baseline}
+        rationale: 'Shared/critical surface - capture a green baseline of the designated existing suite
+          (project.regression_baseline_suite, else test_command) BEFORE the change and re-run it AFTER;
+          record both as test-run evidence on verify.regression. Soft: assessed as reviewer judgement,
+          never gating - it is the regression-baseline strategy, and a strategy is assessed rather than
+          checked.'
+      RP-ADV-002:
+        order: 2
+        when:
+          familiarity: brownfield-unmapped
+          size: [atomic, small]
+          risk: [trivial, contained]
+        then: {strategy: behavior-mapping}
+        rationale: 'Unmapped ground on a small change - before editing, write a test that pins what the
+          code does now where the change touches it, so the change cannot break behaviour nobody wrote
+          down. Advice, not a floor: a larger, riskier or domain-labelled unmapped change meets RP-FLOOR-002.'
+  biases:
+    kind: biases
+    hit: {}
+    rules:
+      RP-BIAS-001: {order: 1, rationale: 'When size is genuinely unclear, estimate up - it is cheaper
+          to collapse a stage that turned out easy than to discover mid-implementation that the approach
+          was too light.'}
+      RP-BIAS-002: {order: 2, rationale: Prefer the lightest delivery approach that still clears every
+          routing guardrail and the applicable gates. Process weight is a cost; spend it where it buys
+          safety.}
+
+# The deterministic checks with their implementation and severity, and the
+# seven human items of the Definition of Done.
+checks:
+  landed-by-resolves: {statement: 'An issue whose work was delivered through a different issue points
+      at it with `landed_by:`, and the pointer resolves: the named issue exists, has landed, carries a
+      record of its own, and names this one back in `delivered:`. When it holds, four checks about this
+      issue carrying its OWN record stand down - the claim moves rather than being waived. Declines to
+      check when there is no pointer.', kind: deterministic, impl: landed-by-resolves, severity: blocking,
+    on_skipped: not-applicable}
+  scenarios-have-tests: {statement: Every scenario in manifest.yml lists at least one test., kind: deterministic,
+    impl: scenarios-have-tests, severity: blocking, on_skipped: fail}
+  scenarios-are-executable:
+    statement: Every scenario in manifest.yml was accounted for by the project's BDD runner. Reads the
+      record `compass bdd verify` writes; never runs the suite. No-ops when project.bdd_runner is unset.
+    kind: deterministic
+    impl: scenarios-are-executable
+    severity: blocking
+    blocking_when:
+      risk: [cross-cutting, critical]
+    on_skipped: not-applicable
+  declared-tests-resolve: {statement: Every declared test id points at a test that exists on disk. Fires
+      only once an issue has claimed the gate verify.correctness and is still active - before that the
+      test legitimately does not exist yet; after landing the manifest is a historical record., kind: deterministic,
+    impl: declared-tests-resolve, severity: blocking, on_skipped: pass}
+  suite-passed: {statement: 'A green record on file shows the full suite passing, recently. The record
+      is named by its binding - evidence/green-<scenario>.json when bound, evidence/green.json when not
+      - and the registry entry names whichever was written. When the issue declares scenarios and was
+      created on or after 2026-09-24, or has an evidence record dated on or after it, a red record (evidence/red.json
+      or evidence/red-<scenario>.json, recording a failed run) or an acceptance record from `compass acceptance
+      record` must also be on the issue. On an issue created on or after 2026-11-03, or with no red, green
+      or acceptance record dated before it, each scenario that is not narrative also needs a red bound
+      to it, of either loop, dated no later than its first green, bound or unbound, unless an acceptance
+      declared before that green closes it. A green alone shows the suite passes, not that a test failed
+      first.
+
+      ', kind: deterministic, impl: suite-passed, severity: blocking, on_skipped: fail}
+  changed-code-traces-to-scenario: {statement: Every changed production file maps to >=1 scenario id.,
+    kind: deterministic, impl: changed-code-traces-to-scenario, severity: blocking, on_skipped: fail}
+  scenario-has-id-and-intent: {statement: Every scenario has a stable id and a linked intent id., kind: deterministic,
+    impl: scenario-has-id-and-intent, severity: blocking, on_skipped: fail}
+  claim-traces-to-scenario: {statement: 'Every claim maps to a scenario id that exists. This checks traceability,
+      not truth; the reviewer at verify.claims checks whether the claim is true.
+
+      ', kind: deterministic, impl: claim-traces-to-scenario, severity: blocking, on_skipped: not-applicable}
+  gate-evidence-present: {statement: Every gate marked pass has an evidence pointer that resolves., kind: deterministic,
+    impl: gate-evidence-present, severity: blocking, on_skipped: fail}
+  human-approval-present: {statement: An approval record exists for an irreversible change., kind: deterministic,
+    impl: human-approval-present, severity: blocking, on_skipped: fail}
+  backfills-paid: {statement: 'On an issue assessed before 9.0.0, the manifest''s follow-ups list is empty
+      or every item is resolved. A path issue has nothing to check: each of its follow-ups links to a
+      GitHub issue, which tracks the work.', kind: deterministic, impl: backfills-paid, severity: blocking,
+    on_skipped: fail}
+  nfr-rows-resolved: {statement: 'Every concern row of the spec''s Non-functional requirements table (performance,
+      capacity, compatibility, security, privacy, operability, accessibility, and any row added) names
+      scenario ids the manifest holds or a reason the concern does not apply. At thorough depth each cited
+      scenario states a number in its Then. The spec is read at the path the manifest registered, else
+      at docs/compass/<created>-<slug>/acceptance-criteria.md, where its depth is the define stage''s
+      mode. Declines to check, rather than passing, for an issue with no generation, a closed issue, an
+      issue created before 2026-11-04 with no spec at either path, an issue whose spec is not written
+      yet, and a registered spec whose catalogue does not list the section at its depth.', kind: deterministic,
+    impl: nfr-rows-resolved, severity: blocking, on_skipped: not-applicable}
+  acceptance-applicability-agrees: {statement: 'The four-layer acceptance strategy (`S17`) applies to
+      the issue as assess recorded it: the applicability stored at assess agrees with what the red and
+      acceptance records decide, and the project setting has not changed since assess. Advisory: a disagreement
+      names the re-assess command and never fails the run. Declines to check, rather than passing, for
+      an issue assessed before the strategy shipped and for a project that turned the strategy off.',
+    kind: deterministic, impl: acceptance-applicability-agrees, severity: advisory, on_skipped: not-applicable}
+  outer-loop-recorded: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to,
+      a red record and a green record say loop outer, an outer-loop green was recorded on the tree as
+      it is now, and every registered outer-loop green names its candidate and its client (api, web or
+      cli). A record with no loop field reads as inner. Declines to check, rather than passing, for an
+      issue the strategy does not apply to.', kind: deterministic, impl: outer-loop-recorded, severity: blocking,
+    on_skipped: not-applicable}
+  acceptance-support-present: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies
+      to, the project names each piece of its acceptance support code under `project.acceptance_support`
+      (alias helper, driver factory, DSL root, layering test) and each named path exists inside the project
+      root; no file is read. The first issue the strategy applies to builds the missing pieces as its
+      own work. Claim limit: while a piece is missing, the issue can claim that its scenarios pass, and
+      not that its acceptance tests are isolated from each other (alias helper), run through a driver
+      chosen at start-up (driver factory), keep driver detail out of the specifications (DSL root) or
+      keep the layer rules (layering test). Advisory: a missing piece never fails the run. Declines to
+      check, rather than passing, for an issue the strategy does not apply to and for one with no green
+      on record.', kind: deterministic, impl: acceptance-support-present, severity: advisory, on_skipped: not-applicable}
+  outer-loop-attempts-recorded: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies
+      to, every registered outer-loop green records `attempts`, a whole number of 1 or more, so `no-trusted-rerun`
+      can tell a rerun from a first pass. An inner-loop green needs none. Declines to check, rather than
+      passing, for an issue the strategy does not apply to and for an issue with no outer-loop green.',
+    kind: deterministic, impl: outer-loop-attempts-recorded, severity: blocking, on_skipped: not-applicable}
+  isolation-proven: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to, on
+      the routing `on` or `existing-dsl-isolation` (a live defect), an `isolation-proof` record written
+      by `compass isolation record` shows the parallel run passed, every test the issue declares ran twice
+      with both runs passing, the record was made on the tree as it is now, and its candidate is the outer-loop
+      green''s. A written note does not count. Declines to check, rather than passing, for an issue the
+      strategy does not apply to and on the routing `existing-dsl` (a small, contained change).', kind: deterministic,
+    impl: isolation-proven, severity: blocking, on_skipped: not-applicable}
+  layering-test-passed: {statement: 'On an issue the four-layer acceptance strategy (`S17`) applies to,
+      on the routing `on`, a `layering` record written by `compass layering record` shows the project''s
+      own layering test passed on the tree as it is now, and does not show that 0 tests ran. A written
+      note does not count. Declines to check, rather than passing, for an issue the strategy does not
+      apply to and on the routings `existing-dsl` and `existing-dsl-isolation` (a small, contained change
+      and a live defect).', kind: deterministic, impl: layering-test-passed, severity: blocking, on_skipped: not-applicable}
+  spike-conclusion-present: {statement: A spike has a `spike-conclusion` evidence entry with a recorded
+      decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue., kind: deterministic,
+    impl: spike-conclusion-present, severity: blocking, on_skipped: fail}
+  spike-no-production-changes: {statement: 'A Spike''s `changed_files` is empty - a spike ships nothing;
+      graduating to delivery is a fresh assessment, not a merge.', kind: deterministic, impl: spike-no-production-changes,
+    severity: blocking, on_skipped: fail}
+  dod-evidence-typed: {statement: 'Every item of the issue''s Definition of Done (its build exit list)
+      is met by a record in the manifest: evidence recorded with `--meets`, a person''s approval recorded
+      with `compass evidence approve --check`, or a follow-up recorded with `compass follow-up add --defers`.
+      On a path issue a follow-up meets the item only when it links to a GitHub issue (`--github owner/repo#N`),
+      and need not be resolved. An item with no record fails. A tick on a page counts for nothing. Cross-issue:
+      when an issue assessed before 9.0.0 has a follow-up with target_task pointing at this issue, that
+      follow-up must be resolved before this issue ships. On an issue created from 2026-11-04 it is judged
+      once every gate has passed; on an older issue it declines to check, rather than passing, when no
+      verification report is written yet.
+
+      ', kind: deterministic, impl: dod-evidence-typed, severity: blocking, on_skipped: not-applicable}
+  no-trusted-rerun: {statement: 'Every test-run evidence entry is checked for rerun integrity. A record
+      with rerun_without_change: true must have its test listed in the project quarantine registry (governance/quarantine.yml)
+      with a tracking issue - a rerun-to-green without a quarantine entry is a `G4` failure (`S5`: intermittency
+      is failure). A record with `attempts` > 1 but no rerun_without_change marker is also rejected -
+      incomplete evidence cannot clear `G4`. Old evidence without an `attempts` field passes trivially
+      (backward compatibility, ADR-006, `TRC-A5`). May carry attempts: <int> and rerun_without_change:
+      <bool> to signal rerun integrity (see strategy `S5`).
+
+      ', kind: deterministic, impl: no-trusted-rerun, severity: blocking, on_skipped: fail}
+  evidence-identity-matches: {statement: 'Every registry entry still names the record it was created from.
+      Records are stamped at write time with a `record_id` (unique per write) and a `content_digest` (over
+      the payload); the entry stores both. A different record_id means the file was replaced after it
+      was cited; a matching record_id with a different digest means it was edited in place. An entry with
+      no record_id predates stamping and is UNVERIFIABLE - reported and counted apart from the passes,
+      never treated as checked, because an unstamped record cannot be checked against its citation.
+
+      ', kind: deterministic, impl: evidence-identity-matches, severity: blocking, on_skipped: not-applicable}
+  evidence-matches-tree: {statement: 'The newest test record still names the tree that ships. Every red,
+      green and acceptance record carries tree_id, the git tree id of the tracked files on disk plus the
+      issue''s untracked changed files, less .compass/ and docs/compass/, and file_sha256 and file_modes,
+      the SHA-256 and the git mode of each changed file and each test file the scenarios declare. For
+      an issue in flight the check compares tree_id with the tree now, and fails only once every gate
+      has passed; before that a stale record is a note. For a landed issue it compares file_sha256 and
+      file_modes with the same files in land_commit, the commit ship-commit made, read as a checkout writes
+      them, and names each file that differs; a record written before file_sha256 is compared by its changes_id,
+      a tree of the same files. A record with no tree_id, or a landed issue with no land_commit, is not
+      judged; a land_commit that is not a commit id fails. It shows which tree a record claims, not that
+      a trusted runner made the claim.
+
+      ', kind: deterministic, impl: evidence-matches-tree, severity: blocking, on_skipped: not-applicable}
+  command-passes: {statement: 'Runs the project guardrail''s declared `command:` via subprocess and checks
+      it exits 0. On success: emits a command-output evidence entry. On failure: emits a command-output
+      evidence entry with exit code + stderr. When verify.architecture is in the gate set and zero project
+      guardrails declare command-passes, it passes without checking anything (no declarations means there
+      are no architecture checks to run).', kind: deterministic, impl: command-passes, severity: blocking,
+    on_skipped: not-applicable}
+  dod-every-scenario-passes:
+    statement: Every scenario passes - each scenario has a passing test on record; the spec, read as the
+      acceptance suite, is green.
+    kind: human
+    severity: blocking
+    on_skipped: fail
+    requires: [entry-exit-evaluation]
+    when: {ships: true}
+  dod-suite-green:
+    statement: TDD suite green - the record of the full suite passing is on file (`compass tdd-green`).
+    kind: human
+    severity: blocking
+    on_skipped: fail
+    requires: [entry-exit-evaluation]
+    when: {ships: true}
+  dod-coverage-floor:
+    statement: Coverage meets the "Tested before it lands" guardrail's floor (`G1`), with its evidence
+      on record.
+    kind: human
+    severity: blocking
+    on_skipped: fail
+    requires: [entry-exit-evaluation]
+    when: {ships: true}
+  dod-no-lint-errors:
+    statement: No lint / format / type errors - clean, with the record linked.
+    kind: human
+    severity: blocking
+    on_skipped: fail
+    requires: [entry-exit-evaluation]
+    when: {ships: true}
+  dod-traceability-intact:
+    statement: Traceability intact - code → scenario → intent holds; claim → scenario holds where the
+      marketer is in play.
+    kind: human
+    severity: blocking
+    on_skipped: fail
+    requires: [entry-exit-evaluation]
+    when: {ships: true}
+  dod-living-docs-updated:
+    statement: (carried to ship) Living docs updated to match reality.
+    kind: human
+    severity: blocking
+    on_skipped: fail
+    requires: [entry-exit-evaluation]
+    when: {ships: true}
+  dod-follow-ups-settled:
+    statement: (carried to ship) Every follow-up is settled or links to the GitHub issue that tracks it
+      - no unsettled, unlinked hotfix follow-up, no unbacked marketing claim.
+    kind: human
+    severity: blocking
+    on_skipped: fail
+    requires: [entry-exit-evaluation]
+    when: {ships: true}
+
+# The guardrails and the review gates, each with its stage and its checks or
+# the evidence types it accepts.
+gates:
+  G1:
+    kind: guardrail
+    name: Tested before it lands
+    statement: 'No code reaches main unless it traces to a declared test and a green test run is on record.
+      Compass checks that both exist and line up; it does not observe the declared test running - see
+      docs/safety-contract.md for what a test-run record does and does not establish.
+
+      '
+    stage: build
+    applies_to: {ships: true}
+    checks: [scenarios-have-tests, declared-tests-resolve, suite-passed, changed-code-traces-to-scenario,
+      scenarios-are-executable]
+  G2:
+    kind: guardrail
+    name: Acceptance defined before it is built
+    statement: 'No code is written that no stated, checkable acceptance criterion describes. BDD scenarios
+      (strategy `S1`) are the default form.
+
+      '
+    stage: specify
+    applies_to: {ships: true}
+    checks: [scenario-has-id-and-intent]
+  G3:
+    kind: guardrail
+    name: Traceability holds
+    statement: 'code -> acceptance criterion -> intent, and public claim -> criterion, maintained continuously.
+
+      '
+    stage: specify
+    applies_to: {ships: true}
+    checks: [changed-code-traces-to-scenario, scenario-has-id-and-intent, claim-traces-to-scenario, landed-by-resolves]
+  G4:
+    kind: guardrail
+    name: Evidence, not assertion
+    statement: 'A guardrail is cleared with artifacts and command output, never a claim. The Definition
+      of Done is a typed gate: every item of the Definition of Done is met by a record in the manifest
+      (typed evidence, a person''s approval or a filed follow-up) - a tick on a page or a narrative note
+      never clears it.
+
+      '
+    stage: ship
+    applies_to: {ships: true}
+    checks: [gate-evidence-present, dod-evidence-typed, no-trusted-rerun, command-passes, evidence-identity-matches,
+      evidence-matches-tree]
+  G5:
+    kind: guardrail
+    name: A human signs off on the irreversible
+    statement: 'A change labelled auth, payments, personal-data or migrations gets an explicit human checkpoint
+      before it lands: it can breach auth, move money, expose personal data or lose data that cannot be
+      restored.
+
+      '
+    stage: ship
+    applies_to: {ships: true}
+    when:
+      labels_any: [auth, payments, personal-data, migrations]
+    checks: [human-approval-present]
+  S1:
+    kind: guardrail
+    name: Spike conclusion recorded
+    statement: 'A Spike must record what it learned and a close-out decision: discard the work, graduate
+      to delivery, or defer. Without a recorded conclusion a Spike is just untracked work.
+
+      '
+    stage: ship
+    applies_to: {ships: false}
+    checks: [spike-conclusion-present]
+  S2:
+    kind: guardrail
+    name: No production change from a Spike
+    statement: 'A Spike ships nothing - its `changed_files` must be empty. Exploration code lives on a
+      scratch branch; if the finding is acted on, a fresh assessment owns the code under a real delivery
+      approach''s guardrails. This is the safety model: a Spike cannot silently become delivery.
+
+      '
+    stage: ship
+    applies_to: {ships: false}
+    checks: [spike-no-production-changes]
+  verify.correctness:
+    kind: review
+    stage: ship
+    accepts: [test-run]
+  verify.regression:
+    kind: review
+    stage: ship
+    accepts: [test-run]
+  verify.security:
+    kind: review
+    stage: ship
+    accepts: [security-review, command-output, test-run]
+  verify.governance:
+    kind: review
+    stage: ship
+    accepts: [command-output, manual-review, artifact]
+  verify.traceability:
+    kind: review
+    stage: ship
+    accepts: [command-output, artifact]
+  verify.claims:
+    kind: review
+    stage: ship
+    accepts: [claim-review, command-output, artifact]
+  verify.clarity:
+    kind: review
+    stage: ship
+    accepts: [manual-review, artifact]
+  spike.conclude:
+    kind: review
+    stage: ship
+    accepts: [spike-conclusion]
+  verify.architecture:
+    kind: review
+    stage: ship
+    accepts: [test-run, command-output]
+
+# The evidence types a gate can accept.
+evidence_types:
+  test-run: {description: 'A recorded test execution - e.g. evidence/green-<scenario>.json from a scenario-bound
+      `compass tdd-green`, or evidence/green.json from an unbound one. The strongest: a machine ran it.
+      May carry attempts: <int> and rerun_without_change: <bool> to signal rerun integrity (see strategy
+      `S5` and the no-trusted-rerun check).
+
+      '}
+  command-output: {description: 'Captured output of a command - a scanner, a linter, a coverage run, a
+      `compass check` run.'}
+  manual-review: {description: 'A recorded reviewer judgement - a code review or governance review captured
+      in a file. Stronger than a generic artifact because it is a named review, not a stray note.'}
+  human-approval: {description: 'A recorded human sign-off - for irreversible changes (guardrail `G5`).
+      Has structured fields: approver, role, decision, timestamp, scope, conditions. Only a record given
+      for guardrail `G5` clears `human-approval-present`: one with no check, waiver, checkpoint, artifact
+      or decisions key, and a guardrail key that is absent or exactly `G5`. A person records one by typing
+      `/compass:approve` in Claude Code, or with `compass evidence approve --guardrail` and the value
+      `G5` at a terminal; an agent under a delegation that covers g5 records one with `--issue <slug>
+      --delegated --as <agent>`.'}
+  artifact-approval: {description: A person's approval of one document or of a set of decisions taken
+      for the person. Meets an artifact's human check; never a sign-off for guardrail `G5`.}
+  approval-withdrawal: {description: 'A person''s withdrawal of a guardrail `G5` sign-off made under a
+      delegation, written only by `/compass:reject <record id>`. Names the record in `withdraws`; `human-approval-present`
+      then skips that record while the issue is in flight. It reverses nothing already done.'}
+  checkpoint-approval: {description: 'A person''s answer to one checkpoint hand-off, written only by `compass
+      evidence approve --checkpoint`. It never meets guardrail `G5` or a human check.'}
+  isolation-proof: {description: 'A record, written only by `compass isolation record`, of the project''s
+      acceptance suite run in parallel once and each scenario''s declared tests run twice: the exit codes,
+      the candidate and the client. `compass evidence add` refuses the type, so a written note cannot
+      stand in for one.'}
+  layering: {description: 'A record, written only by `compass layering record`, of one run of the project''s
+      own layering test: the command, the test path, the exit code, the number of tests that ran, the
+      tree id and the time. `compass evidence add` refuses the type.'}
+  security-review: {description: A recorded security review or scan result - for security-sensitive changes.}
+  migration-plan: {description: 'A recorded plan for a data, schema, or infrastructure migration.'}
+  rollback-plan: {description: 'A record showing the rollback was REHEARSED - what was run, when, and
+      against what. Not a plan: SWEBOK v4 §6.3.3 needs "a planned and rehearsed rollback" before a new
+      version is deployed, and a rollback nobody has run is a guess. A guess recorded as a plan is the
+      assertion guardrail `G4` exists to reject.
+
+      '}
+  claim-review: {description: A recorded review of public/user-facing claims against backing scenarios
+      - the marketer's audit trail.}
+  spike-conclusion: {description: 'A recorded close-out of a spike: what was learned, a decision (discard
+      | graduate-to-delivery | defer), and any link to the next issue.'}
+  consistency-check: {description: 'Output of compass analyze, which 9.0.0 removed (ADR-091). Nothing
+      writes it now; it stays valid so an older manifest that holds one still reads.'}
+  artifact: {description: 'A written record without a more specific type - a review note, a verification
+      report. The weakest, by design: honest for judgement-shaped gates, never enough for a mechanical
+      one.'}
+
+# The display name of each entry. The reader returns it as `vocabulary`.
+names:
+  approaches.spike:
+    name: spike
+    aliases: []
+  approaches.delivery:
+    name: delivery
+    aliases: []
+  stages.assess:
+    name: assess
+    aliases: []
+  stages.specify:
+    name: specify
+    aliases: []
+  stages.build:
+    name: build
+    aliases: []
+  stages.ship:
+    name: ship
+    aliases: []
+  gates.G1:
+    name: Tested before it lands
+    aliases: []
+  gates.G2:
+    name: Acceptance defined before it is built
+    aliases: []
+  gates.G3:
+    name: Traceability holds
+    aliases: []
+  gates.G4:
+    name: Evidence, not assertion
+    aliases: []
+  gates.G5:
+    name: A human signs off on the irreversible
+    aliases: []
+  gates.S1:
+    name: Spike conclusion recorded
+    aliases: []
+  gates.S2:
+    name: No production change from a Spike
+    aliases: []
+  checks.landed-by-resolves:
+    name: Landed-by resolves
+    aliases: []
+  checks.scenarios-have-tests:
+    name: Scenarios have tests
+    aliases: []
+  checks.scenarios-are-executable:
+    name: Scenarios are executable
+    aliases: []
+  checks.declared-tests-resolve:
+    name: Declared tests resolve
+    aliases: []
+  checks.suite-passed:
+    name: Suite passed
+    aliases: []
+  checks.changed-code-traces-to-scenario:
+    name: Changed code traces to scenario
+    aliases: []
+  checks.scenario-has-id-and-intent:
+    name: Scenario has id and intent
+    aliases: []
+  checks.claim-traces-to-scenario:
+    name: Claim traces to scenario
+    aliases: []
+  checks.gate-evidence-present:
+    name: Gate evidence present
+    aliases: []
+  checks.human-approval-present:
+    name: Human approval present
+    aliases: []
+  checks.backfills-paid:
+    name: Follow-ups resolved
+    aliases: []
+  checks.nfr-rows-resolved:
+    name: Non-functional rows resolved
+    aliases: []
+  checks.acceptance-applicability-agrees:
+    name: Acceptance strategy applicability agrees
+    aliases: []
+  checks.outer-loop-recorded:
+    name: Outer-loop red and green recorded
+    aliases: []
+  checks.acceptance-support-present:
+    name: Acceptance support code present
+    aliases: []
+  checks.outer-loop-attempts-recorded:
+    name: Outer-loop run count recorded
+    aliases: []
+  checks.isolation-proven:
+    name: Isolation proven
+    aliases: []
+  checks.layering-test-passed:
+    name: Layering test passed
+    aliases: []
+  checks.spike-conclusion-present:
+    name: Spike conclusion present
+    aliases: []
+  checks.spike-no-production-changes:
+    name: Spike changes no production code
+    aliases: []
+  checks.dod-evidence-typed:
+    name: Definition of Done evidence is typed
+    aliases: []
+  checks.no-trusted-rerun:
+    name: No trusted rerun
+    aliases: []
+  checks.evidence-identity-matches:
+    name: Evidence identity matches
+    aliases: []
+  checks.evidence-matches-tree:
+    name: Evidence matches tree
+    aliases: []
+  checks.command-passes:
+    name: Command passes
+    aliases: []
+
+# Entries the set holds but does not run. Each is keyed by the compass.yml
+# setting that turns it on; `resolved` leaves them out. `agent_review: on`
+# adds the advisory judged check of ADR-090 decision 7 at the ship entry.
+optional:
+  agent_review:
+    checks:
+      agent-review:
+        statement: An agent that did not write the change reviewed it against the acceptance criteria.
+        kind: judged
+        reviewers: [agent]
+        inputs: [acceptance-criteria]
+        severity: advisory
+        on_skipped: not-applicable
+    stages:
+      ship:
+        entry: [agent-review]

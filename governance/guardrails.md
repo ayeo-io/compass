@@ -451,6 +451,35 @@ Why it is enforced rather than warned about:
   the issue's generation recorded, and `compass issue migrate --config` moves the
   generation on. `docs/generation-store.md` states both.
 
+## The fixed check set
+
+`governance/check-set.yml` holds every check, gate and evidence type Compass
+runs, as one file with `id: compass-checks` and a `version` (ADR-094). One
+file has one `sha256sum`, so a change can name its rules by one id, one version
+and one digest, such as `compass-checks@9.0.0`.
+
+- `cli/compass_pkg/check_set.py` reads the file. `load` checks its shape,
+  `sha256` gives the digest as `sha256sum` prints it, and `resolved` returns
+  the set in the shape `generations/<n>/resolved.yml` holds.
+- The set holds no `locked:` field, because no layer sits above it.
+  `never_waived` names the two entries no waiver can excuse: the check
+  `human-approval-present` and the guardrail `G5`.
+- `optional` holds entries that run only when a project turns them on. The one
+  entry is the advisory agent review of `docs/judged-checks.md`, for the
+  setting `agent_review`.
+- `version` is the release that last changed the file. A change that makes a
+  check owe less, or removes one, raises the major; a change that adds or
+  tightens raises the minor. `tests/fixtures/check-set-digests.yml` pins the
+  digest of each version, and `tests/test_check_set.py` fails when the bytes
+  change and the pin does not. The change that edits the file pins the new
+  digest.
+
+No command reads the set yet: `compass check` and assess still read the default
+preset. `tests/test_check_set.py` checks that the set resolves to the same
+configuration as the default preset does for a project with no `compass.yml`,
+less the `locked:` fields. It compares the guardrails, the checks, the evidence
+types and the evidence each point of the contract 1 grid owes.
+
 ## Locks and conformance
 
 `cli/compass_pkg/locks.py` protects the framework's guarantees when a layer

@@ -1,0 +1,6 @@
+# The sha256sum of governance/check-set.yml for each version of the check set.
+# tests/test_check_set.py fails when the file's bytes change and the pin for
+# its version does not. This is not an owner pin: the change that edits the
+# file raises its `version` and adds the new digest here, in the same commit.
+# Print the digest with: sha256sum governance/check-set.yml
+compass-checks@9.0.0: 747226ac1c0d344a8f225bd6c0fb09c207823b298979a46638cd85980fe42a94

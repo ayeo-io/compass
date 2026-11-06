@@ -784,6 +784,11 @@ def test_d2_repairs_change_only_retired_names():
     fewer), which lost its "Role Pipeline" section on the four role entry
     points.
 
+    One more was re-baselined by #357, step 2 (the fixed check set):
+    `governance/guardrails.md` (one `##` heading more, list_items 91 -> 95)
+    gained the section "The fixed check set", on `governance/check-set.yml`
+    and its reader.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

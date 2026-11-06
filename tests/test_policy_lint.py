@@ -116,6 +116,13 @@ def _parent_doc():
     return {"schema": 1, **classifier_fixtures.base()}
 
 
+def _team(doc):
+    """A git parent named `team`. A project layer can no longer change the
+    approaches since 9.0.0 (ADR-092), so a test that needs an approach change
+    makes it here; a git parent still can."""
+    return _layer({"schema": 1, **doc}, "parent", "team")
+
+
 def _lint(project=None, issue=None, parent=True, **kwargs):
     kwargs.setdefault("today", TODAY)
     kwargs.setdefault("cache", _CACHE)
@@ -301,8 +308,11 @@ MERGE_CASES = {
     "M-LIST-ADD-PRESENT": ({"gates": {"G1": {"set": {"checks": {"add": ["tests-pass"]}}}}},
                            "gates.G1.set.checks"),
     "M-REF-REMOVED": ({"checks": {"tests-pass": {"remove": True}}}, "checks.tests-pass"),
-    "M-FIELD-LAYER": ({"stages": {"define": {"set": {"mode": "light"}}}},
-                      "stages.define.set.mode"),
+    # A project layer can no longer change a legacy stage since 9.0.0 (ADR-092), so
+    # the mode is written on a stage the four-stage path keeps.
+    "M-FIELD-LAYER": ({"stages": {"ship": {"order": 8, "modes": {"light": {}},
+                                           "mode": "light"}}},
+                      "stages.ship.mode"),
     "M-OP-CONFLICT": ({"checks": {"tests-pass": {"set": {"severity": "advisory"},
                                                  "remove": True}}}, "checks.tests-pass"),
 }
@@ -346,21 +356,21 @@ def _rule_set(hit, then, kind="floors"):
 
 
 def test_pl_4_an_id_nothing_defines_is_reported_with_the_field_that_names_it():
-    report = _lint(project={
-        "gates": {"G9": {"kind": "review", "checks": ["ghost"]}},
-        "approaches": {"regular": {"set": {"gates": {"add": ["no-gate"]}}}}})
+    report = _lint(project={"gates": {"G9": {"kind": "review", "checks": ["ghost"]}}},
+                   extra_parents=(_team({"approaches": {"regular": {"set": {"gates": {
+                       "add": ["no-gate"]}}}}}),))
     found = {(f.code, f.layer, f.path, f.group) for f in report.findings}
     assert found == {("M-REF-UNKNOWN", "project", "gates.G9.checks", "resolved"),
-                     ("M-REF-UNKNOWN", "project", "approaches.regular.gates", "resolved")}
+                     ("M-REF-UNKNOWN", "team", "approaches.regular.gates", "resolved")}
     assert report.stopped_after == "resolved"
     assert any("ghost" in f.message for f in report.findings)
 
 
 def test_pl_4_two_approaches_with_one_weight_are_a_tie_blamed_on_the_later_layer():
     extra = {"weight": 2, "ships": True, "stages": {"define": "light"}}
-    report = _lint(project={"approaches": {"extra": extra}})
+    report = _lint(extra_parents=(_team({"approaches": {"extra": extra}}),))
     found = _one(report, "M-WEIGHT-TIE")
-    assert (found.layer, found.path) == ("project", "approaches.extra.weight")
+    assert (found.layer, found.path) == ("team", "approaches.extra.weight")
     assert "extra" in found.message and "regular" in found.message
 
 
@@ -461,8 +471,8 @@ def test_pl_5_an_unlock_approved_by_someone_else_is_refused():
 
 
 def test_pl_5_an_evaluator_fault_is_one_finding_and_not_also_a_lock_refusal():
-    report = _lint(parent=_locked_parent(),
-                   project={"approaches": {"regular": {"set": {"ships": False}}}})
+    report = _lint(parent=_locked_parent(), extra_parents=(_team(
+        {"approaches": {"regular": {"set": {"ships": False}}}}),))
     assert [(f.code, f.group, f.level) for f in report.findings] == [
         ("E-EVALUATION", "locks", "error")]
     assert "evaluator treats it as shipping" in report.findings[0].message
@@ -586,7 +596,8 @@ def test_pl_6_the_full_grid_gives_the_same_verdict_as_the_grouped_one():
 
 
 def test_pl_6_an_evaluator_fault_with_no_locks_is_one_finding():
-    report = _lint(project={"approaches": {"regular": {"set": {"ships": False}}}})
+    report = _lint(extra_parents=(_team({"approaches": {"regular": {"set": {
+        "ships": False}}}}),))
     assert [(f.code, f.group) for f in report.findings] == [("E-EVALUATION", "classification")]
     assert "evaluator treats it as shipping" in report.findings[0].message
 
@@ -1290,16 +1301,16 @@ def test_pl_4_a_misspelt_effect_key_is_refused_and_a_qualifier_is_not():
 
 
 def test_pl_6_the_refusal_path_names_the_approach_and_the_stage_that_changed():
-    report = _lint(project={"owner": "o", "approaches": {"regular": {"set": {
-        "stages": {"set": {"define": "light"}}}}}})
+    report = _lint(project={"owner": "o"}, extra_parents=(_team({"approaches": {"regular": {
+        "set": {"stages": {"set": {"define": "light"}}}}}}),))
     found = _one(report, "C-LOOSENING")
     assert found.path == "approaches.regular.stages.define"
     assert found.detail["field"] == "approaches.stages"
 
 
 def test_pl_6_the_refusal_path_of_an_approach_field_with_no_key_names_the_approach():
-    report = _lint(project={"owner": "o", "approaches": {"full": {"set": {
-        "subtask_ceiling": 9}}}})
+    report = _lint(project={"owner": "o"}, extra_parents=(_team({"approaches": {"full": {
+        "set": {"subtask_ceiling": 9}}}}),))
     assert _one(report, "C-LOOSENING").path == "approaches.full.subtask_ceiling"
 
 
@@ -1310,14 +1321,15 @@ def test_pl_6_the_refusal_path_of_a_check_or_gate_field_is_unchanged():
 
 
 def test_pl_6_an_evaluator_fault_shared_by_two_layers_is_one_finding():
-    report = _lint(project={"approaches": {"regular": {"set": {"ships": False}}}},
+    report = _lint(extra_parents=(_team({"approaches": {"regular": {"set": {
+        "ships": False}}}}),),
                    issue={"checks": {"tests-pass": {"set": {"on_skipped": "pass"}}}})
     assert [f.code for f in report.findings] == ["E-EVALUATION"]
 
 
 def test_pl_5_the_evaluator_finding_holds_the_evaluators_text_and_nothing_of_the_lock():
-    report = _lint(parent=_locked_parent(),
-                   project={"approaches": {"regular": {"set": {"ships": False}}}})
+    report = _lint(parent=_locked_parent(), extra_parents=(_team(
+        {"approaches": {"regular": {"set": {"ships": False}}}}),))
     message = report.findings[0].message
     assert "unlock cannot help" not in message and "fix the configuration" not in message
     assert message.endswith("evaluator treats it as shipping")

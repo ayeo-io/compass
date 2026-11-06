@@ -37,7 +37,7 @@
     },
     "approaches": {
       "additionalProperties": false,
-      "description": "The delivery approaches: which mode each stage runs in, which gates and artifacts are owed, and how far work may be split. Each key is an approach id.",
+      "description": "The delivery approaches: which mode each stage runs in, which gates and artifacts are owed, and how far work may be split, each keyed by approach id. Since 9.0.0 (ADR-092) the merge leaves the key out of a project's own file, and `compass policy lint` names it.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
@@ -475,7 +475,7 @@
     },
     "checks": {
       "additionalProperties": false,
-      "description": "The checks a gate is made of. Each key is a check id.",
+      "description": "The checks a gate is made of, each keyed by check id. Since 9.0.0 (ADR-092) the merge leaves out a project's change to a Definition of Ready check (`dor-*`) and its id in a list of checks, and `compass policy lint` names it.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
@@ -1533,7 +1533,7 @@
     },
     "rules": {
       "additionalProperties": false,
-      "description": "The rule sets the evaluator reads to choose an approach and to raise its minimum. Each key is a rule set id.",
+      "description": "The rule sets the evaluator reads to choose an approach and to raise its minimum, each keyed by rule set id. Since 9.0.0 (ADR-092) the merge leaves out a project's change to the `caps` rule set, and `compass policy lint` names it.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
@@ -1605,7 +1605,7 @@
     },
     "stages": {
       "additionalProperties": false,
-      "description": "The eight stages of delivery, from assess to ship. Each key is a stage id.",
+      "description": "The stages of delivery, from assess to ship, each keyed by stage id. Since 9.0.0 (ADR-092) the merge leaves out a project's change to a legacy stage the four-stage path does not keep (`define`, `refine`, `plan`, `breakdown`, `implement`, `verify`), and `compass policy lint` names it.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,

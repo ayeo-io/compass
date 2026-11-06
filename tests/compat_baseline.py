@@ -573,11 +573,15 @@ EMPTY_OVERLAY = "schema: 1\nextends: compass:default@6\n"
 # configuration has something to see:
 #   routing: a valid configuration that routes differently from 5.6.0;
 #   broken:  a configuration Compass cannot read.
+# A project file cannot change the approaches since 9.0.0 (ADR-092): the merge leaves
+# the key out. So the planted routing fault is a floor that adds a gate to every
+# assessment, and the broken file is a `gates:` that is not a mapping.
 PLANTED_OVERLAY = EMPTY_OVERLAY + (
-    "approaches:\n  regular:\n    set:\n      subtask_ceiling: 5\n"
-    "      gates: [verify.correctness, verify.governance, verify.traceability,"
-    " verify.clarity, verify.security]\n")
-BROKEN_OVERLAY = EMPTY_OVERLAY + "approaches: oops\n"
+    "rules:\n  planted:\n    kind: floors\n    hit: {add_gate: collect}\n"
+    "    rules:\n      RP-PLANTED-001:\n        order: 1\n        when: {}\n"
+    "        then: {add_gate: verify.architecture}\n"
+    "        rationale: A planted fault for the compatibility contracts.\n")
+BROKEN_OVERLAY = EMPTY_OVERLAY + "gates: oops\n"
 
 
 def add_governance_copy(root, fault=None, source=GOVERNANCE_5_6_0):

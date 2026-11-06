@@ -334,7 +334,10 @@ def _assessment(**kw):
     return base
 
 
-def _layer(config, doc, kind="project"):
+def _layer(config, doc, kind="parent"):
+    """`config` with `doc` merged on it. The default is a parent layer: a project
+    layer's change to an approach, a legacy stage or the caps rule set is left out
+    since 9.0.0 (ADR-092), and these tests build configurations that change them."""
     from compass_pkg import merge
     return merge.apply(config, doc, kind, f"test-{kind}")[0]
 

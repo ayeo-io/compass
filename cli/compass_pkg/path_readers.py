@@ -19,12 +19,13 @@ from compass_pkg.stable_ids import (PATH_STAGE_IDS, STAGE_ASSESS, STAGE_DEFINE,
                                     STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_VERIFY)
 
 #: The stage hand-offs an issue assessed before 9.0.0 can wait at (ADR-063, ADR-083).
-#: The routing table check and the classifier read this tuple, so a configuration
-#: cannot list a path checkpoint until the live preset declares the path stages.
+#: The routing reads this tuple, so an old issue's checkpoints stay as they were even
+#: when a configuration's `autonomy_checkpoints` table names a path stage.
 LEGACY_CHECKPOINT_STAGES = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN,
                             STAGE_IMPLEMENT, STAGE_VERIFY)
 #: Every stage a checkpoint outcome or request can name: the path stages, then the
-#: legacy ones, so an old issue's `define` outcome still reads and still closes.
+#: legacy ones, so an old issue's `define` outcome still reads and still closes. An
+#: `autonomy_checkpoints` table can name any of them (`policy.checkpoint_table_errors`).
 CHECKPOINT_STAGES = PATH_STAGE_IDS + tuple(
     s for s in LEGACY_CHECKPOINT_STAGES if s not in PATH_STAGE_IDS)
 

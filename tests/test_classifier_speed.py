@@ -636,7 +636,12 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # v1 names `specify` and `build` only in a v1 map. Every shipped preset and
 # fixture policy names its stages in 8.x words or holds a v1-only name, so no
 # verdict moves and the version stays 13.
-VERDICT_SOURCE_PIN = "4d4898b1cd186def"
+# Re-pinned for #351 step 10 (ADR-092): `policy.checkpoint_table_errors` accepts a
+# path stage in an `autonomy_checkpoints` table, which version 13 refused as a table
+# error. The routing still gives an old issue only the legacy hand-offs, so such an
+# entry adds no checkpoint and the change compares as `equivalent`. A verdict can
+# differ, so the version is now 14.
+VERDICT_SOURCE_PIN = "e4ecbbce25f3b25f"
 
 
 def _verdict_source_digest():

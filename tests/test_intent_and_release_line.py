@@ -279,18 +279,30 @@ def test_irl_23_default_declares_release_line(tmp_path):
     assert approach_props["release_line"] == {"type": "boolean"} or \
         approach_props["release_line"].get("type") == "boolean", approach_props["release_line"]
 
-    # A project may set the field: lint reports no error for a value equal to the default.
+    # Since 9.0.0 a project's own file cannot change an approach (ADR-092): lint names
+    # the key with the one warning and reports no error, whatever the value.
     root = repo(tmp_path / "set")
-    (root / "compass.yml").write_text(yaml.safe_dump(dict(
-        AUTONOMOUS, approaches={"regular": {"set": {"release_line": True}}})))
-    done, codes = _lint_codes(root)
-    assert not [c for c in codes if c[0] and c[0][0] in "LMCK"], (codes, done.stdout)
+    for value in (True, False):
+        (root / "compass.yml").write_text(yaml.safe_dump(dict(
+            AUTONOMOUS, approaches={"regular": {"set": {"release_line": value}}})))
+        done, codes = _lint_codes(root)
+        assert [c for c in codes if c[0] and c[0][0] in "LMCK"] == [
+            ("L-SETTING-REMOVED", "approaches")], (value, codes, done.stdout)
 
-    # Setting it false on regular is a loosening that needs a waiver.
-    (root / "compass.yml").write_text(yaml.safe_dump(dict(
-        AUTONOMOUS, approaches={"regular": {"set": {"release_line": False}}})))
-    done, codes = _lint_codes(root)
-    assert ("C-LOOSENING", "approaches.regular.release_line") in codes, (codes, done.stdout)
+    # A git parent still can. Setting it true there is no change; setting it false on
+    # regular is a loosening that needs a waiver.
+    from compass_pkg import policy_lint
+    from compass_pkg.layers import Layer
+    shipped, _ = policy_lint.load_parent()
+    for value, loosening in ((True, False), (False, True)):
+        team = Layer("team", "parent", {"schema": 1, "approaches": {"regular": {"set": {
+            "release_line": value}}}}, "d")
+        report = policy_lint.lint_chain(shipped, None, extra_parents=(team,))
+        codes = [(f.code, f.path) for f in report.findings]
+        assert (("C-LOOSENING", "approaches.regular.release_line") in codes) is loosening, (
+            value, codes)
+        if not loosening:
+            assert not [c for c in codes if c[0][0] in "LMCK"], codes
 
     # The generated views carry a raised version.
     for name, before in (("routing-policy.yml", "2.22.0"), ("guardrails.yml", "1.29.0")):

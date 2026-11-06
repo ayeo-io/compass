@@ -672,6 +672,13 @@ def _chain(project, parent=None):
     return [_layer(parent or _parent_doc(), "parent", "base"), _layer(project)]
 
 
+def _team_chain(doc):
+    """The base parent and a git parent named `team` that holds `doc`. A project
+    layer's change to an approach is left out since 9.0.0 (ADR-092); a git parent
+    is still merged and judged."""
+    return [_layer(_parent_doc(), "parent", "base"), _layer(doc, "parent", "team")]
+
+
 def _loosen_tests_pass():
     return {"owner": "owner-1", "checks": {"tests-pass": {
         "set": {"on_skipped": "pass"}, "waiver": _waiver()}}}
@@ -724,7 +731,7 @@ def test_lk_5_more_than_eight_named_labels_is_refused_with_the_count():
 
 def test_lk_5_a_configuration_the_evaluator_rejects_cannot_be_shown_to_hold():
     project = {"approaches": {"regular": {"set": {"ships": False}}}}
-    result = _api().enforce_chain(_chain(project))
+    result = _api().enforce_chain(_team_chain(project))
     assert not result.ok
     assert result.refusals[0].field == "evaluation"
     assert "evaluator" in result.refusals[0].message
@@ -1360,7 +1367,7 @@ def test_lk_5_an_issue_below_a_nine_label_project_is_refused_too():
 
 def test_lk_5_a_rejected_configuration_says_an_unlock_cannot_help():
     project = {"approaches": {"regular": {"set": {"ships": False}}}}
-    text = _api().enforce_chain(_chain(project)).refusals[0].message
+    text = _api().enforce_chain(_team_chain(project)).refusals[0].message
     assert "An unlock cannot help" in text and "fix the configuration" in text
 
 

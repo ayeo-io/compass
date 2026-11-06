@@ -1,22 +1,30 @@
-# compass_pkg.removed_parts - the verbs, flags and settings 9.0.0 removed (ADR-090, ADR-091)
+# compass_pkg.removed_parts - the verbs, flags and settings 9.0.0 removed (ADR-090 to ADR-092)
 """What 9.0.0 removed, named the same way by every reader.
 
 9.0.0 runs an issue in one session (ADR-090). The verbs and flags that
 dispatched agents, recorded subtasks, mapped model tiers, stored execution
 profiles or started headless sessions are gone. 9.0.0 also keeps one issue
 document, the acceptance criteria (ADR-091), so the verbs that wrote or
-checked the other documents are gone.
+checked the other documents are gone. 9.0.0 runs every new delivery issue on
+one four-stage path (ADR-092), so the delivery approaches, the legacy stages
+the path does not keep, the caps rule set and the Definition of Ready checks
+are gone from what a project can configure.
 
 A command line that still names a removed verb or flag fails to parse as an
 unknown command, and `line_for` gives the one line the parse error adds.
 Each removed `compass.yml` key and capability stays valid and is not read;
-`compass policy lint` names it through `setting_findings`. Each entry names
-the decision record that removed it.
+`compass policy lint` names it through `setting_findings`. A removed key of a
+catalogue (the approaches, a legacy stage, a rule set or a check) is left out
+of a project layer by `without_removed` before the merge and the schema check
+read it. Each entry names the decision record that removed it.
 """
-# DEPENDENCY: standard library only. Imported by compass_pkg.aliases (the parse
+# DEPENDENCY: compass_pkg.stable_ids (constants only). Imported by compass_pkg.aliases (the parse
 # error), compass_pkg.merge (the catalogue a project layer can no longer change)
 # and compass_pkg.policy_lint (the removed settings).
 from __future__ import annotations
+
+from compass_pkg.stable_ids import (STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IMPLEMENT, STAGE_PLAN,
+                                    STAGE_REFINE, STAGE_VERIFY)
 
 RELEASE = "9.0.0"
 
@@ -24,6 +32,7 @@ RELEASE = "9.0.0"
 REASONS = {
     "ADR-090": "Compass runs each issue in one session",
     "ADR-091": "Compass needs only the acceptance criteria",
+    "ADR-092": "Compass runs every delivery issue on one four-stage path",
 }
 
 #: Each removed command line, as tokens, what replaces it, and the decision
@@ -79,15 +88,40 @@ AGENT_NAMES = ("architect", "builder", "orchestrator", "planner", "product-marke
 #: it at `lightweight`, so `compass policy lint` reads the kind as this text.
 SINGLE_BLOCK_TEMPLATE = "<!-- compass:render verification-note -->\n<!-- /compass:render -->\n"
 
+#: The legacy stages the four-stage path does not keep (ADR-092). The path keeps
+#: `assess` and `ship`, so a project can still change those two.
+LEGACY_STAGES = (STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN, STAGE_BREAKDOWN, STAGE_IMPLEMENT,
+                 STAGE_VERIFY)
+
+#: The seven Definition of Ready checks (ADR-092). They are human checks with no
+#: implementation, so `check_registry.REMOVED` does not list them; a stored
+#: generation that lists them still judges them from its own lists.
+READY_CHECKS = ("dor-summary-filled", "dor-problem-traces-up", "dor-behavior-is-gwt",
+                "dor-traceability-ids", "dor-affected-surface-named", "dor-no-open-questions",
+                "dor-approach-still-fits")
+
 #: Each removed `compass.yml` key: what it set, and the decision record that
-#: removed it.
+#: removed it. A key with a dot is one entry of a catalogue, `<catalogue>.<id>`.
 SETTINGS = {
     "models": ("the model and effort of each tier", "ADR-090"),
     "multiagent": ("where multiagent worktrees go and how many are allowed", "ADR-090"),
     "living_spec": ("when a landing re-derived the living spec, docs/system-spec.md",
                     "ADR-091"),
     "artifacts": ("the documents an issue owes and their headings", "ADR-091"),
+    "approaches": ("the delivery approaches, the mode of each stage and the gates each owes",
+                   "ADR-092"),
+    **{f"stages.{stage}": (f"the legacy {stage} stage, which the four-stage path does not "
+                           f"keep", "ADR-092") for stage in LEGACY_STAGES},
+    "rules.caps": ("the caps rule set, which limited the worktrees of a critical change",
+                   "ADR-092"),
+    **{f"checks.{check}": ("a Definition of Ready check, which a path issue does not owe",
+                           "ADR-092") for check in READY_CHECKS},
 }
+
+#: The fields that list check ids, per catalogue. A project layer that names a removed
+#: check in one of them has the id left out, so the merge finds no unknown reference.
+#: `merge.REFERENCES` holds the same fields; `artifacts` is removed as a whole.
+CHECK_LIST_FIELDS = {"gates": ("checks",), "stages": ("entry", "exit")}
 
 #: Each removed capability (a key under `capabilities:`): what it turned on,
 #: and the decision record that removed it. A project names it only when it
@@ -147,13 +181,119 @@ def capability_note(name):
     return _note(f"capabilities.{name}", *CAPABILITIES[name])
 
 
+def _removed_checks():
+    return {key.split(".", 1)[1] for key in SETTINGS if key.startswith("checks.")}
+
+
+def _items(value):
+    """The ids a list field names, written plain or as `{add, remove}`."""
+    if isinstance(value, list):
+        return list(value)
+    if isinstance(value, dict):
+        return [item for part in ("add", "remove")
+                for item in (value.get(part) if isinstance(value.get(part), list) else [])]
+    return []
+
+
+def _named_checks(doc):
+    """The removed check ids a layer names in a field that lists checks."""
+    removed, found = _removed_checks(), set()
+    for catalogue, fields in CHECK_LIST_FIELDS.items():
+        entries = doc.get(catalogue)
+        for entry in (entries.values() if isinstance(entries, dict) else ()):
+            if not isinstance(entry, dict):
+                continue
+            changes = entry.get("set")
+            for holder in (entry, changes if isinstance(changes, dict) else {}):
+                for field in fields:
+                    found |= {item for item in _items(holder.get(field)) if item in removed}
+    return found
+
+
+def _holds(doc, key):
+    """True when a project layer holds the removed key `key`."""
+    if "." not in key:
+        return key in doc
+    catalogue, entry_id = key.split(".", 1)
+    entries = doc.get(catalogue)
+    return isinstance(entries, dict) and entry_id in entries
+
+
+def _without_checks(value, removed):
+    """A list field, plain or `{add, remove}`, with the removed check ids left out."""
+    if isinstance(value, list):
+        return [item for item in value if item not in removed]
+    if isinstance(value, dict):
+        return {part: ([item for item in items if item not in removed]
+                       if isinstance(items, list) else items)
+                for part, items in value.items()}
+    return value
+
+
+def _empty(value):
+    return value == [] or (isinstance(value, dict) and not any(value.values()))
+
+
+def without_removed(doc):
+    """A copy of a project layer's document with every removed key left out: a
+    removed top-level key, a removed catalogue entry, and a removed check id in a
+    field that lists checks. A `set:` change that named only removed checks is
+    left out whole, so the inherited list stays as it is. Nothing here judges the
+    value of what it leaves out: a value the old schema refused must not make the
+    project file invalid. A parent or an issue layer is never passed here."""
+    if not isinstance(doc, dict):
+        return doc
+    out = {key: value for key, value in doc.items() if key not in SETTINGS}
+    removed = _removed_checks()
+    for catalogue in {key.split(".", 1)[0] for key in SETTINGS if "." in key}:
+        entries = out.get(catalogue)
+        if not isinstance(entries, dict):
+            continue
+        out[catalogue] = {entry_id: entry for entry_id, entry in entries.items()
+                          if f"{catalogue}.{entry_id}" not in SETTINGS}
+    for catalogue, fields in CHECK_LIST_FIELDS.items():
+        entries = out.get(catalogue)
+        if not isinstance(entries, dict):
+            continue
+        kept = {}
+        for entry_id, entry in entries.items():
+            if not isinstance(entry, dict):
+                kept[entry_id] = entry
+                continue
+            entry = dict(entry)
+            for field in fields:
+                if field in entry:
+                    entry[field] = _without_checks(entry[field], removed)
+            changes = entry.get("set")
+            if isinstance(changes, dict):
+                changes = dict(changes)
+                for field in fields:
+                    if field in changes:
+                        before = changes[field]
+                        changes[field] = _without_checks(before, removed)
+                        if _empty(changes[field]) and not _empty(before):
+                            del changes[field]
+                if changes or not entry["set"]:
+                    entry["set"] = changes
+                else:
+                    del entry["set"]
+            if entry or not entries[entry_id]:
+                kept[entry_id] = entry
+        out[catalogue] = kept
+    return out
+
+
 def setting_findings(chain):
-    """`(layer, path, message)` for each removed key or capability a project layer holds."""
+    """`(layer, path, message)` for each removed key or capability a project layer holds.
+    A removed check named only in a list of checks is reported under its own key."""
     out = []
     for layer in chain:
         if layer.kind != "project" or not isinstance(layer.doc, dict):
             continue
-        out += [(layer, key, setting_note(key)) for key in SETTINGS if key in layer.doc]
+        named = _named_checks(layer.doc)
+        out += [(layer, key, setting_note(key)) for key in SETTINGS
+                if _holds(layer.doc, key)
+                or (key.startswith("checks.") and key.split(".", 1)[1] in named)]
         for path, (what, adr) in SWITCHES.items():
             key, switch = path.split(".", 1)
             held = layer.doc.get(key)

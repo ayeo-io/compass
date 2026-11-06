@@ -224,8 +224,10 @@ def test_cs_2_unlocks_at_the_top_gets_its_own_message():
     ({"capabilities": {"entry-exit-evalution": True}}, "entry-exit-evalution"),
     ({"autonomy": "yolo"}, "yolo"),
     ({"adoption": "lax"}, "lax"),
-    ({"stages": {"plan": {"set": {"entry": "CHK-X"}}}}, "entry"),
-    ({"stages": {"plan": {"order": "four", "modes": {}}}}, "order"),
+    # `ship` is kept by the four-stage path; a project's change to a legacy stage such
+    # as `plan` is left out unchecked since 9.0.0 (ADR-092).
+    ({"stages": {"ship": {"set": {"entry": "CHK-X"}}}}, "entry"),
+    ({"stages": {"ship": {"order": "four", "modes": {}}}}, "order"),
     ({"checks": {"CHK-X": {"set": {"statment": "x"}}}}, "statment"),
     ({"checks": {"CHK-X": {"set": {"severity": "fatal"}}}}, "fatal"),
     ({"gates": {"G9": {"kind": "wall"}}}, "wall"),

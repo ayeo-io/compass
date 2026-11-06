@@ -281,11 +281,16 @@ def test_trc_047():
                 code, out, err = _run(project, "policy", "lint")
                 assert code == 0, (check_id, waiver, out + err)
                 assert "unknown check" not in out + err
+                # A project's change to a Definition of Ready check is left out since
+                # 9.0.0 (ADR-092). Lint names it by its new id, so the old id was read
+                # as the new one.
+                assert f"L-SETTING-REMOVED [project] checks.{NEW_CHECK}" in out, out
                 code, shown, err = _run(project, "policy", "show")
                 assert code == 0, shown + err
                 rows = [line for line in shown.splitlines()
                         if ".severity" in line and "dor-behav" in line]
-                assert len(rows) == 1 and NEW_CHECK in rows[0] and "advisory" in rows[0], rows
+                assert len(rows) == 1 and NEW_CHECK in rows[0] and "blocking" in rows[0], rows
+                assert "advisory" not in rows[0], rows
                 assert OLD_CHECK not in shown, (check_id, waiver)
 
         # An issue's own `config:` names the id too.

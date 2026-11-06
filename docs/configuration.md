@@ -232,6 +232,33 @@ valid, so a project that holds it keeps working, and nothing reads it.
 `compass policy lint` names it with `L-SETTING-REMOVED`. Delete it from
 `compass.yml`.
 
+### Governance edits 9.0.0 removed
+
+9.0.0 runs every new delivery issue on one four-stage path (ADR-092). A
+project's `compass.yml` can no longer change these parts of the governance:
+
+- `approaches`, the whole catalogue;
+- a legacy stage the path does not keep, under `stages`: `define`, `refine`,
+  `plan`, `breakdown`, `implement` or `verify`;
+- the caps rule set, `rules.caps`;
+- a Definition of Ready check (`dor-summary-filled`, `dor-problem-traces-up`,
+  `dor-behavior-is-gwt`, `dor-traceability-ids`, `dor-affected-surface-named`,
+  `dor-no-open-questions`, `dor-approach-still-fits`), as an entry under
+  `checks` or as an id in a gate's `checks` or a stage's `entry` or `exit`.
+
+A file that still holds one keeps working. The merge leaves the part out,
+so a `set:` on a stage the live default no longer declares does not stop
+every command, and its value is not checked. `compass policy lint` names
+each part with `L-SETTING-REMOVED`. Delete it from `compass.yml`.
+
+A parent is not changed. A frozen preset (`compass:default@6`,
+`compass:default@7`) and a git parent keep their approaches, stages, caps and
+lists, and an issue's stored generation keeps the configuration it was
+assessed with. `stages.assess` and `stages.ship` are path stages, so a
+project can still change them. An `autonomy_checkpoints` table can name the
+path stages `specify`, `build` and `ship` beside the legacy ones; an issue
+assessed before 9.0.0 still waits only at the legacy hand-offs.
+
 ### `language`
 
 The language the agent writes the project's prose in, as a BCP 47 tag:

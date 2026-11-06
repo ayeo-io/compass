@@ -697,9 +697,10 @@ The grid:
   check fewer changes. A project list that lacks a shipped entry and adds
   another is `incomparable`. A list that is missing, is not a list, or holds a
   malformed entry is `incomparable` and raises no error. The registry refuses
-  `superset` on a parameter that is not a list. `CLASSIFIER_VERSION` is 13
+  `superset` on a parameter that is not a list. `CLASSIFIER_VERSION` is 14
   since the list rule (ADR-073), the rule that a check a release removed
-  owes nothing (ADR-090) and the same rule for a review gate (ADR-091).
+  owes nothing (ADR-090), the same rule for a review gate (ADR-091) and the
+  rule that a checkpoint table may name a path stage (ADR-092).
 - `stages.order` and `gates.stage` are the footprint of a lock, not facts the
   classifier reads. Reordering an unlocked stage or moving a gate to another
   stage reads `equivalent` here, and the locks increment compares both.

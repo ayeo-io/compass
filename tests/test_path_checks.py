@@ -257,9 +257,10 @@ def test_the_checkpoint_stages_are_the_path_stages_and_the_legacy_ones():
                                            "refine", "plan", "implement", "verify"}
     assert core.LEGACY_CHECKPOINT_STAGES == ("assess", "define", "refine", "plan",
                                              "implement", "verify")
-    # The routing table check and the classifier keep the legacy stages: no
-    # configuration lists a path checkpoint before the live preset declares one.
+    # The routing and the classifier keep the legacy stages, so an old issue's
+    # checkpoints do not move. The table check accepts both sets (ADR-092).
     assert policy.CHECKPOINT_STAGES == core.LEGACY_CHECKPOINT_STAGES
+    assert policy.TABLE_CHECKPOINT_STAGES == core.CHECKPOINT_STAGES
     assert path_readers.checkpoint_stages_of(_path_task()) == ("assess", "specify", "build",
                                                               "ship")
     assert path_readers.checkpoint_stages_of(_old_task()) == core.LEGACY_CHECKPOINT_STAGES

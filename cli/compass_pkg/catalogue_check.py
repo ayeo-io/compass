@@ -68,13 +68,14 @@ def check_layer(doc, layer):
                           f"{layer} layer can hold")
     # A removed key is named by `removed_parts` (L-SETTING-REMOVED) and is not read,
     # so its value is not checked: a value the old schema refused must not make the
-    # project file invalid (ADR-091).
-    removed = set(removed_parts.SETTINGS) if layer == "project" else set()
-    errors += _check_top_values({k: v for k, v in doc.items() if k not in removed})
-    ordered = _ordered_dimensions(doc)
+    # project file invalid (ADR-091). That holds for a removed catalogue entry too,
+    # such as a legacy stage (ADR-092).
+    kept = removed_parts.without_removed(doc) if layer == "project" else doc
+    errors += _check_top_values(kept)
+    ordered = _ordered_dimensions(kept)
     for catalogue in spec.CATALOGUES:
-        if catalogue in doc and catalogue in allowed and catalogue not in removed:
-            errors += _check_catalogue(catalogue, doc[catalogue], ordered, layer)
+        if catalogue in kept and catalogue in allowed:
+            errors += _check_catalogue(catalogue, kept[catalogue], ordered, layer)
     return errors
 
 

@@ -568,13 +568,19 @@ OLD_PROJECT = ("schema: 1\nstages:\n  implement:\n    set:\n"
                "      modes: {full: {rank: 3}, expedited: {}, explore: {}}\n")
 
 
+#: A project stage in the old words. A project's change to a legacy stage such as
+#: `implement` is left out since 9.0.0 (ADR-092), so the project adds a stage of its own.
+OLD_PROJECT_STAGE = ("schema: 1\nstages:\n  review:\n    order: 9\n"
+                     "    modes: {full: {rank: 3}, expedited: {}, explore: {}}\n")
+
+
 def test_vr_d10_policy_show_reads_a_project_stage_mode_full_as_thorough(tmp_path):
-    root, _ = _project(tmp_path, compass_yml=OLD_PROJECT)
+    root, _ = _project(tmp_path, compass_yml=OLD_PROJECT_STAGE)
     code, out, err = _cli(root, "policy", "show", "--json")
     assert code == 0, (out, err)
-    row = next(r for r in json.loads(out)["fields"] if r["path"] == "stages.implement.modes")
+    row = next(r for r in json.loads(out)["fields"] if r["path"] == "stages.review.modes")
     assert sorted(row["value"]) == ["expedited", "explore", "thorough"], row
-    assert row["source"] == "project" and row["op"] == "set"
+    assert row["source"] == "project" and row["op"] == "add"
 
 
 # --- VR-D11, VR-D15: ranking reads both sides in the new words ------------------
@@ -630,10 +636,13 @@ def _in_new_words(parent):
 
 
 def _chain_classification(parent, project):
+    """The classification of `project` on `parent`. The change is merged as a git
+    parent: a project layer's change to an approach is left out since 9.0.0
+    (ADR-092)."""
     from compass_pkg import classify, layers, merge
     above = merge.resolve(layers.build_chain(parent=copy.deepcopy(parent)))[0]
-    layer = layers.Layer("project", "project", copy.deepcopy(project), "")
-    below = merge.resolve(layers.build_chain(parent=copy.deepcopy(parent), project=layer))[0]
+    layer = layers.Layer("team", "parent", copy.deepcopy(project), "")
+    below = merge.resolve(layers.build_chain(parent=copy.deepcopy(parent)) + [layer])[0]
     return classify.classify(above, below)
 
 

@@ -279,7 +279,9 @@ def _schema_code(path, message):
 
 def _impl_findings(layer):
     out = []
-    checks = layer.doc.get("checks") if isinstance(layer.doc, dict) else None
+    # A removed check in a project layer is not read, so its `impl` is not judged.
+    doc = removed_parts.without_removed(layer.doc) if layer.kind == "project" else layer.doc
+    checks = doc.get("checks") if isinstance(doc, dict) else None
     for check_id, entry in (checks.items() if isinstance(checks, dict) else ()):
         if not isinstance(entry, dict):
             continue

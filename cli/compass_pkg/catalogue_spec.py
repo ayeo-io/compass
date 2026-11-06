@@ -344,12 +344,20 @@ ISSUE_KEYS = ("stages", "checks", "gates", "rules", "autonomy", "ceilings", "app
 CATALOGUE_DESCRIPTIONS = {
     "dimensions": "The facts an assessment records about a piece of work, such as risk and size. "
                   "Each key is a dimension id.",
-    "stages": "The eight stages of delivery, from assess to ship. Each key is a stage id.",
+    "stages": "The stages of delivery, from assess to ship, each keyed by stage id. Since 9.0.0 "
+              "(ADR-092) the merge leaves out a project's change to a legacy stage the "
+              "four-stage path does not keep (`define`, `refine`, `plan`, `breakdown`, "
+              "`implement`, `verify`), and `compass policy lint` names it.",
     "approaches": "The delivery approaches: which mode each stage runs in, which gates and "
-                  "artifacts are owed, and how far work may be split. Each key is an approach id.",
-    "rules": "The rule sets the evaluator reads to choose an approach and to raise its minimum. "
-             "Each key is a rule set id.",
-    "checks": "The checks a gate is made of. Each key is a check id.",
+                  "artifacts are owed, and how far work may be split, each keyed by approach id. "
+                  "Since 9.0.0 (ADR-092) the merge leaves the key out of a project's own file, "
+                  "and `compass policy lint` names it.",
+    "rules": "The rule sets the evaluator reads to choose an approach and to raise its minimum, "
+             "each keyed by rule set id. Since 9.0.0 (ADR-092) the merge leaves out a "
+             "project's change to the `caps` rule set, and `compass policy lint` names it.",
+    "checks": "The checks a gate is made of, each keyed by check id. Since 9.0.0 (ADR-092) the "
+              "merge leaves out a project's change to a Definition of Ready check (`dor-*`) "
+              "and its id in a list of checks, and `compass policy lint` names it.",
     "gates": "The gates: groups of checks cleared at a stage. Each key is a gate id.",
     "artifacts": "The documents an issue can owe, such as the acceptance criteria. Each key is an "
                  "artifact id.",

@@ -553,7 +553,10 @@ def test_cl_3_adding_a_plan_exit_check_to_the_shipped_preset_is_tightening(prese
         "checks": {"docs-read": {"statement": "x", "kind": "deterministic",
                                  "impl": "suite-passed", "severity": "blocking",
                                  "on_skipped": "fail"}},
-        "stages": {"plan": {"set": {"exit": ["docs-read"]}}}})
+        "stages": {"plan": {"set": {"exit": ["docs-read"]}}}},
+        # A project layer's change to a legacy stage is left out since 9.0.0
+        # (ADR-092); a parent's is merged, so the classifier still sees it.
+        kind="parent")
     got = _classify(parent, child, cache=preset_cache)
     assert got.result == "tightening", got.reason
     assert got.grid.points == 1152 and got.grid.evaluated == 1152

@@ -40,9 +40,10 @@ from compass_pkg.stable_ids import (
 from compass_pkg.core import (AUTONOMY_VALUES, ROUTE_NAMES, assessment_key_errors, CompassError, canonical_shape, FRAMEWORK_ROOT,
                               load_manifest, load_yaml, normalize_spine,
                               resolve_issue_dir)
-# A configuration's `autonomy_checkpoints` and the routing name the legacy hand-off
-# stages only. The live preset declares no path stage yet, and the classifier's
-# verdicts must not move until it does.
+# The routing gives an issue assessed before 9.0.0 the legacy hand-off stages only,
+# so its checkpoints stay as they were. A configuration's `autonomy_checkpoints`
+# table may also name the path stages (ADR-092): `TABLE_CHECKPOINT_STAGES`.
+from compass_pkg.path_readers import CHECKPOINT_STAGES as TABLE_CHECKPOINT_STAGES
 from compass_pkg.path_readers import LEGACY_CHECKPOINT_STAGES as CHECKPOINT_STAGES
 from compass_pkg.manifest_store import load_manifest_mapping
 
@@ -88,9 +89,9 @@ CHECKPOINT_ROUTES = (APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_FULL, APPROA
 def checkpoint_table_errors(p):
     """Problems with the policy's `autonomy_checkpoints:` table. Checked by
     `compass policy lint` and by the evaluator, so a bad table is refused
-    whether or not `jsonschema` is installed. Only the six checkpoint
-    stages can be named: an entry naming a gate or another stage would let
-    the setting reach something it must never change."""
+    whether or not `jsonschema` is installed. Only a checkpoint stage, a path
+    stage or a legacy one, can be named: an entry naming a gate or another
+    stage would let the setting reach something it must never change."""
     table = p.get("autonomy_checkpoints")
     if table is None:
         return []
@@ -121,11 +122,11 @@ def checkpoint_table_errors(p):
                 errs.append(f"`autonomy_checkpoints.{value}.{route}` must be a list")
                 continue
             for stage in stages:
-                if stage not in CHECKPOINT_STAGES:
+                if stage not in TABLE_CHECKPOINT_STAGES:
                     errs.append(
                         f"`autonomy_checkpoints.{value}.{route}` names '{stage}', "
                         f"which is not a checkpoint; a checkpoint is one of "
-                        f"{', '.join(CHECKPOINT_STAGES)}")
+                        f"{', '.join(TABLE_CHECKPOINT_STAGES)}")
     return errs
 
 

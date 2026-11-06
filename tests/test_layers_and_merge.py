@@ -350,13 +350,15 @@ def test_lm_9_an_operation_a_layer_may_not_use():
 
 
 def test_lm_9_a_stages_mode_outside_the_issue_layer():
-    stages = {"stages": {"verify": {"order": 7, "modes": {"thorough": {}}}}}
+    # `ship` is a stage the four-stage path keeps: a project layer that changes a
+    # legacy stage such as `verify` is merged without it since 9.0.0 (ADR-092).
+    stages = {"stages": {"ship": {"order": 8, "modes": {"thorough": {}}}}}
     config, _ = merge.apply({}, stages, "parent", "parent")
-    _fails({"stages": {"verify": {"set": {"mode": "thorough"}}}},
-           "M-FIELD-LAYER", "stages.verify.set.mode", config=config)
-    resolved, _ = merge.apply(config, {"stages": {"verify": {"set": {"mode": "thorough"}}}},
+    _fails({"stages": {"ship": {"set": {"mode": "thorough"}}}},
+           "M-FIELD-LAYER", "stages.ship.set.mode", config=config)
+    resolved, _ = merge.apply(config, {"stages": {"ship": {"set": {"mode": "thorough"}}}},
                               "issue", "issue")
-    assert resolved["stages"]["verify"]["mode"] == "thorough"
+    assert resolved["stages"]["ship"]["mode"] == "thorough"
 
 
 def test_lm_10_removing_an_entry_something_refers_to_names_each_referrer():

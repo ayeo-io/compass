@@ -12,6 +12,7 @@ Scenario ids: RD-1, RD-2, RD-3, RD-5 and RD-6 (issue `approach-diagram`) and EF-
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -25,9 +26,10 @@ CLI = ROOT / "cli" / "compass"
 COMMITTED = ROOT / "docs" / "approach-diagram.html"
 
 
-def _diagram(cwd, *args):
+def _diagram(cwd, *args, env=None):
     return subprocess.run([sys.executable, str(CLI), "approach", "render", *args],
-                          cwd=cwd, capture_output=True, text=True, timeout=60)
+                          cwd=cwd, capture_output=True, text=True, timeout=60,
+                          env=None if env is None else {**os.environ, **env})
 
 
 def _project(tmp_path, autonomy="balanced", policy=None):
@@ -190,8 +192,36 @@ approaches:
 """
 
 
-def test_ef_12_a_compass_yml_changes_the_approaches_shown(tmp_path):
+def _with_git_parent(tmp_path, parent_yml):
+    """A project whose `compass.yml` extends a local git parent holding
+    `parent_yml`, and the environment that lets Compass fetch it. A project's own
+    file cannot change the approaches since 9.0.0 (ADR-092); a git parent still can."""
+    sys.path.insert(0, str(ROOT / "tests"))
+    from parent_fixtures import make_remote
+    base = tmp_path / "remotes"
+    sha = make_remote(base, files={"compass.yml": parent_yml})
+    extends = {"from": f"github:acme/bank@1.2.0#{sha}", "approved_by": "jed72",
+               "approved_on": "2026-10-06"}
+    root = _layered(tmp_path, yaml.safe_dump({"schema": 1, "extends": extends}))
+    env = {"COMPASS_PARENT_REMOTE_BASE": str(base)}
+    # `approach render` reads the parent cache only; `policy lint` fetches into it.
+    subprocess.run([sys.executable, str(CLI), "policy", "lint"], cwd=root, capture_output=True,
+                   text=True, timeout=60, env={**os.environ, **env})
+    return root, env
+
+
+def test_ef_12_a_compass_yml_that_sets_approaches_shows_the_shipped_default(tmp_path):
     html = _diagram(_layered(tmp_path, LAYERED), "--autonomy", "balanced").stdout
+    shipped = _diagram(_layered(tmp_path / "plain", "schema: 1\n"), "--autonomy",
+                       "balanced").stdout
+    assert _row(html, "quick-fix") == _row(shipped, "quick-fix")
+
+
+def test_ef_12_a_git_parent_changes_the_approaches_shown(tmp_path):
+    root, env = _with_git_parent(tmp_path, LAYERED)
+    done = _diagram(root, "--autonomy", "balanced", env=env)
+    html = done.stdout
+    assert html, done.stderr
     row = _row(html, "quick-fix")
     assert "thorough" in _cell(row, "define")      # the layer says `full`, read as `thorough`
     assert "stops for you" in _cell(row, "implement")
@@ -213,7 +243,7 @@ def test_ef_12_the_page_names_the_configuration_it_was_rendered_from(tmp_path):
 
 
 def test_ef_12_a_compass_yml_that_cannot_resolve_is_refused(tmp_path):
-    bad = "schema: 1\napproaches:\n  nosuch: {set: {ships: true}}\n"
+    bad = "schema: 1\ngates:\n  nosuch: {set: {kind: review}}\n"
     result = _diagram(_layered(tmp_path, bad))
     assert result.returncode != 0
     assert result.stdout == ""

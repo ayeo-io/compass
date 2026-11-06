@@ -31,7 +31,7 @@ compass tdd-red            run a test, assert it FAILS, record the red
 compass tdd-green          run a test, assert it PASSES, record the green
 compass isolation record   run the suite in parallel and each scenario's tests twice, and record the exit codes
 compass layering record    run the project's layering test and record the run
-compass policy lint        structurally validate the governance YAML
+compass policy lint        structurally validate the governance YAML, and warn (L-SETTING-REMOVED) on each key 9.0.0 removed, such as approaches or a legacy stage
 compass policy show        every resolved configuration field, with its source layer
 compass preset init        scaffold a team preset repository
 compass preset test        run a preset's fixtures and check its locks

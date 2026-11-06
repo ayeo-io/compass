@@ -26,7 +26,7 @@ approach weights, rule-set effects) are lint's, not the merge's.
 """
 # DEPENDENCY: standard library (copy); compass_pkg.catalogue_spec,
 # compass_pkg.core (CompassError, only); compass_pkg.word_map; compass_pkg.retired;
-# compass_pkg.removed_parts (standard library only).
+# compass_pkg.removed_parts (compass_pkg.stable_ids only).
 from __future__ import annotations
 
 import copy
@@ -52,12 +52,14 @@ REFERENCES = (
     ("gates", "stage", "stages", "scalar"),
 )
 
-# A catalogue a project layer can no longer change. 9.0.0 removed the document
-# kinds from the live default (ADR-091), so a project file written before it
-# can `set` a kind the parent no longer holds. The merge leaves the key out,
-# and `compass policy lint` names it (L-SETTING-REMOVED). A parent or an issue
-# layer is merged as before, so a frozen preset still declares its catalogue.
-PROJECT_REMOVED = tuple(c for c in spec.CATALOGUES if c in removed_parts.SETTINGS)
+# A project layer is merged without what 9.0.0 removed from the live default:
+# the document kinds (ADR-091), the delivery approaches, the legacy stages, the
+# caps rule set and the Definition of Ready checks (ADR-092). A project file
+# written before 9.0.0 can `set` an entry the parent no longer holds, and the
+# merge would refuse it, so every command would stop. `removed_parts.without_removed`
+# leaves each one out, and `compass policy lint` names it (L-SETTING-REMOVED). A
+# parent or an issue layer is merged as before, so a frozen preset still declares
+# its catalogue and an issue still sets its stage modes.
 
 # A stage's `mode` is the issue layer's choice; no other layer sets one.
 ISSUE_ONLY_FIELDS = {("stages", "mode")}
@@ -86,16 +88,21 @@ def apply(config, layer_doc, kind, name, provenance=None):
     `layers` already mapped costs a walk and changes nothing; one that came by
     another road (the classifier's chain, a policy test) is mapped too."""
     layer_doc = word_map.map_layer(layer_doc)[0]
+    # Two spellings of one check that disagree are refused before anything is left
+    # out, so a removed check under both spellings still names the conflict.
+    conflicts = word_map.one_check_conflicts(layer_doc)
+    if conflicts:
+        raise MergeError(name, conflicts)
+    if kind == "project":
+        # What 9.0.0 removed is left out; the note after `REFERENCES` says why.
+        layer_doc = removed_parts.without_removed(layer_doc)
     work = copy.deepcopy(config)
     prov = dict(provenance or {})
     errors = []
     removed = []
     ctx = _Context(kind, name, errors, prov)
-    conflicts = word_map.one_check_conflicts(layer_doc)
-    if conflicts:
-        raise MergeError(name, conflicts)
     for catalogue in spec.CATALOGUES:
-        if catalogue not in layer_doc or (kind == "project" and catalogue in PROJECT_REMOVED):
+        if catalogue not in layer_doc:
             continue
         entries = layer_doc[catalogue]
         if not isinstance(entries, dict):

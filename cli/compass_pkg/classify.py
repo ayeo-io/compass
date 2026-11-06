@@ -92,7 +92,12 @@ JSON_SCHEMA_VERSION = 1
 # Version 13: a review gate a release removed (`routing.REMOVED_GATES`) owes
 # nothing, so an approach whose gates drop one, such as `verify.analyze` at 9.0.0,
 # compares as `equivalent`, which version 12 read as `loosening` (ADR-091).
-CLASSIFIER_VERSION = 13
+#
+# Version 14: an `autonomy_checkpoints` table may name a path stage (`specify`,
+# `build`, `ship`). An issue assessed before 9.0.0 waits only at the legacy hand-offs,
+# so the evaluator reads such an entry as nothing, and a configuration that adds one
+# compares as `equivalent`, which version 13 refused as a table error (ADR-092).
+CLASSIFIER_VERSION = 14
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")

@@ -61,7 +61,7 @@ assessment:
 expect:
   approach: delivery
   gates: [{gates}]
-  stages: {{build: thorough}}
+  stages: {{assess: thorough}}
 """
 
 # The assessment of the example fixture. The fixture's gates are computed from

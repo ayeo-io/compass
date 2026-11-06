@@ -23,8 +23,8 @@ read it. Each entry names the decision record that removed it.
 # and compass_pkg.policy_lint (the removed settings).
 from __future__ import annotations
 
-from compass_pkg.stable_ids import (STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IMPLEMENT, STAGE_PLAN,
-                                    STAGE_REFINE, STAGE_VERIFY)
+from compass_pkg.stable_ids import (LEGACY_TO_PATH, STAGE_BREAKDOWN, STAGE_DEFINE,
+                                    STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_VERIFY)
 
 RELEASE = "9.0.0"
 
@@ -126,6 +126,15 @@ SETTINGS = {
 APPROACH_RULE_SETS = ("default_shapes",)
 APPROACH_EFFECTS = ("force_minimum_approach", "forbid_approach", "never_skip")
 
+#: Each removed effect of a shipped rule a project layer can still restate, keyed by
+#: `rules.<set>.rules.<id>.then.<effect>`. `RP-FLOOR-002` forced the define stage to
+#: thorough, and the four-stage path has no stage modes (ADR-092); its skill stays.
+EFFECTS = {
+    "rules.floors.rules.RP-FLOOR-002.then.require_phase": (
+        "the stage RP-FLOOR-002 forced to thorough, which the four-stage path has no "
+        "mode for", "ADR-092"),
+}
+
 #: The fields that list check ids, per catalogue. A project layer that names a removed
 #: check in one of them has the id left out, so the merge finds no unknown reference.
 #: `merge.REFERENCES` holds the same fields; `artifacts` is removed as a whole.
@@ -181,7 +190,7 @@ SWITCHES = {
 
 def setting_note(key):
     """The lint message for a removed `compass.yml` key."""
-    return _note(key, *SETTINGS[key])
+    return _note(key, *(SETTINGS.get(key) or EFFECTS[key]))
 
 
 def capability_note(name):
@@ -329,7 +338,7 @@ def without_removed(doc):
     project file invalid. A parent or an issue layer is never passed here."""
     if not isinstance(doc, dict):
         return doc
-    out = {key: value for key, value in doc.items() if key not in SETTINGS}
+    out = {key: value for key, value in _without_effects(doc).items() if key not in SETTINGS}
     removed = _removed_checks()
     for catalogue in {key.split(".", 1)[0] for key in SETTINGS if "." in key}:
         entries = out.get(catalogue)
@@ -369,6 +378,118 @@ def without_removed(doc):
     return out
 
 
+def _rule_bodies(doc, set_id, rule_id):
+    """The bodies a layer gives rule `rule_id` of rule set `set_id`: a new rule
+    set's own `rules:` map, or a `set:` change's `rules:` map (whole, or by `set:`
+    or `add:`)."""
+    entry = ((doc.get("rules") or {}) if isinstance(doc, dict) else {}).get(set_id)
+    if not isinstance(entry, dict):
+        return []
+    maps = [entry.get("rules")]
+    changes = entry.get("set")
+    if isinstance(changes, dict):
+        inner = changes.get("rules")
+        maps.append(inner)
+        if isinstance(inner, dict):
+            maps += [inner.get("set"), inner.get("add")]
+    return [m[rule_id] for m in maps if isinstance(m, dict) and isinstance(m.get(rule_id), dict)]
+
+
+def held_effects(doc):
+    """The `EFFECTS` keys a project layer `doc` sets."""
+    out = []
+    for key in EFFECTS:
+        _, set_id, _, rule_id, _, effect = key.split(".", 5)
+        if any(isinstance(body.get("then"), dict) and effect in body["then"]
+               for body in _rule_bodies(doc, set_id, rule_id)):
+            out.append(key)
+    return out
+
+
+def _without_effects(doc):
+    keys = held_effects(doc)
+    if not keys:
+        return doc
+    import copy
+    out = copy.deepcopy(doc)
+    for key in keys:
+        _, set_id, _, rule_id, _, effect = key.split(".", 5)
+        for body in _rule_bodies(out, set_id, rule_id):
+            if isinstance(body.get("then"), dict):
+                body["then"].pop(effect, None)
+    return out
+
+
+def mapped_stages(doc, config):
+    """`(gate id, legacy stage, path stage)` for each gate a layer `doc` places at
+    a legacy stage that neither the configuration below it, `config`, nor the
+    layer itself declares. The merge reads such a gate at the path stage that
+    shows the legacy one (`stable_ids.LEGACY_TO_PATH`, ADR-092). A copy of the
+    9.0.0 governance files declares only the path stages, so a project guardrail
+    it checks at `verify` is read at ship; a copy made before 9.0.0 declares the
+    legacy stages and is read as it is."""
+    own = (doc.get("stages") or {}) if isinstance(doc, dict) else {}
+    held = {**((config or {}).get("stages") or {}), **(own if isinstance(own, dict) else {})}
+    out = []
+    for gate_id, entry in ((doc.get("gates") or {}) if isinstance(doc, dict) else {}).items():
+        if not isinstance(entry, dict):
+            continue
+        body = entry.get("set") if isinstance(entry.get("set"), dict) else entry
+        stage = body.get("stage")
+        if isinstance(stage, str) and stage not in held and LEGACY_TO_PATH.get(stage, stage) != stage \
+                and LEGACY_TO_PATH[stage] in held:
+            out.append((gate_id, stage, LEGACY_TO_PATH[stage]))
+    return out
+
+
+def with_mapped_stages(doc, config):
+    """A copy of `doc` with each gate `mapped_stages` names at its path stage."""
+    found = mapped_stages(doc, config)
+    if not found:
+        return doc
+    import copy
+    out = copy.deepcopy(doc)
+    for gate_id, _, stage in found:
+        entry = out["gates"][gate_id]
+        body = entry.get("set") if isinstance(entry.get("set"), dict) else entry
+        body["stage"] = stage
+    return out
+
+
+def unheld_stages(doc, config):
+    """The `stages.<id>` and `checks.<id>` keys of an issue layer `doc` that name a
+    legacy stage or a Definition of Ready check the configuration below it,
+    `config`, does not hold. An issue assessed before 9.0.0 can set the mode of a
+    legacy stage or change such a check; over the shipped default, which declares
+    neither (ADR-092), the merge leaves the entry out. Over a stored generation
+    that holds it, it is kept."""
+    out = []
+    for catalogue, removed in (("stages", LEGACY_STAGES), ("checks", READY_CHECKS)):
+        entries = doc.get(catalogue) if isinstance(doc, dict) else None
+        held = (config or {}).get(catalogue) or {}
+        if isinstance(entries, dict):
+            out += [f"{catalogue}.{entry}" for entry in entries
+                    if entry in removed and entry not in held]
+    return out
+
+
+def without_unheld_stages(doc, config):
+    """A copy of the issue layer `doc` without the entries `unheld_stages` names: a
+    legacy stage or a Definition of Ready check the configuration does not hold."""
+    keys = unheld_stages(doc, config)
+    if not keys:
+        return doc
+    out = dict(doc)
+    for catalogue in ("stages", "checks"):
+        if not isinstance(doc.get(catalogue), dict):
+            continue
+        out[catalogue] = {entry: body for entry, body in doc[catalogue].items()
+                          if f"{catalogue}.{entry}" not in keys}
+        if not out[catalogue]:
+            del out[catalogue]
+    return out
+
+
 def setting_findings(chain):
     """`(layer, path, message)` for each removed key or capability a project layer holds.
     A removed check named only in a list of checks is reported under its own key."""
@@ -380,6 +501,7 @@ def setting_findings(chain):
         out += [(layer, key, setting_note(key)) for key in SETTINGS
                 if _holds(layer.doc, key)
                 or (key.startswith("checks.") and key.split(".", 1)[1] in named)]
+        out += [(layer, key, setting_note(key)) for key in held_effects(layer.doc)]
         for path, (what, adr) in SWITCHES.items():
             key, switch = path.split(".", 1)
             held = layer.doc.get(key)

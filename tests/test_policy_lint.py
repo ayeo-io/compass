@@ -999,12 +999,14 @@ def test_pl_10_issue_resolves_the_manifests_config_over_the_project_file(tmp_pat
     work = root / ".compass" / "work" / "demo"
     work.mkdir(parents=True)
     (work / "manifest.yml").write_text(
-        "schema_version: '2.0'\nissue: demo\nconfig:\n  stages:\n    define:\n"
+        "schema_version: '2.0'\nissue: demo\nconfig:\n  stages:\n    assess:\n"
         "      set: {mode: light}\n", encoding="utf-8")
+    # The shipped default declares the path stages since 9.0.0 (ADR-092), so the
+    # issue sets the mode of one of them; `light` is read as `lightweight`.
     code, out, _ = _run(root, "policy", "show", "--issue", "demo")
     assert code == 0, out
     assert out.splitlines()[0].startswith("compass policy show: issue demo")
-    line = next(l for l in out.splitlines() if l.startswith("stages.define.mode "))
+    line = next(l for l in out.splitlines() if l.startswith("stages.assess.mode "))
     assert "issue (set)" in line
 
 
@@ -1088,13 +1090,13 @@ def test_pl_11_issue_scope_names_the_issue_and_marks_the_issue_layer(tmp_path):
     work = root / ".compass" / "work" / "demo"
     work.mkdir(parents=True)
     (work / "manifest.yml").write_text(
-        "schema_version: '2.0'\nissue: demo\nconfig:\n  stages:\n    define:\n"
+        "schema_version: '2.0'\nissue: demo\nconfig:\n  stages:\n    assess:\n"
         "      set: {mode: lightweight}\n", encoding="utf-8")
     code, document, _ = _effective_json(root, "--issue", "demo")
     assert code == 0
     assert document["scope"] == {"kind": "issue", "issue": "demo", "resolved": "live"}
     assert [l["name"] for l in document["layers"]] == ["default", "project", "issue"]
-    mode = next(f for f in document["fields"] if f["path"] == "stages.define.mode")
+    mode = next(f for f in document["fields"] if f["path"] == "stages.assess.mode")
     assert (mode["value"], mode["source"], mode["op"]) == ("lightweight", "issue", "set")
 
 
@@ -1392,12 +1394,14 @@ def test_pl_9_the_legacy_json_keeps_a_waived_rule_as_an_info_finding(tmp_path):
         (governance / name).write_text((ROOT / "governance" / name).read_text(
             encoding="utf-8"), encoding="utf-8")
     policy = yaml.safe_load((governance / "routing-policy.yml").read_text(encoding="utf-8"))
-    policy["routing_guardrails"]["waived"] = [{"id": "RP-CAP-001", "reason": "A reason."}]
+    # The copy is of the 9.0.0 views, which hold no caps rule (ADR-092), so the
+    # waived rule is a floor the views still hold.
+    policy["routing_guardrails"]["waived"] = [{"id": "RP-FLOOR-002", "reason": "A reason."}]
     (governance / "routing-policy.yml").write_text(yaml.safe_dump(policy), encoding="utf-8")
     code, document, _ = _json(root)
-    assert code == 0
+    assert code == 0, document
     info = [f for f in document["findings"] if f["level"] == "info"]
-    assert [(f["code"], f["path"]) for f in info] == [("LEGACY-WAIVED", "RP-CAP-001")]
+    assert [(f["code"], f["path"]) for f in info] == [("LEGACY-WAIVED", "RP-FLOOR-002")]
     assert document["counts"]["errors"] == 0
     assert document["counts"]["warnings"] == len(
         [f for f in document["findings"] if f["level"] == "warning"])

@@ -418,13 +418,13 @@ def _routing_policy():
 def test_trc_f2_the_quick_fix_shape_requires_no_document():
     """No delivery approach owes a document since 9.0.0 (ADR-091): the manifest and
     the test-run evidence carry the records, and `acceptance-criteria.md` is the one
-    document Compass reads. So the quick-fix shape declares no `artifacts:` map."""
+    document Compass reads. So no shape of the shipped default declares an
+    `artifacts:` map. The quick fix is no approach of the shipped default since 9.0.0
+    (ADR-092): a small change is a `delivery` issue, so that shape is checked."""
     shapes = _routing_policy()["route_shapes"]
-    assert QUICK_FIX_SHAPE in shapes, (
-        f"the routing policy has no `{QUICK_FIX_SHAPE}` shape - the quick-fix "
-        f"approach has been renamed and this check is measuring nothing. "
-        f"Shapes: {', '.join(sorted(shapes))}")
-    assert "artifacts" not in shapes[QUICK_FIX_SHAPE], shapes[QUICK_FIX_SHAPE]
+    assert set(shapes) == {"delivery", "spike"}, sorted(shapes)
+    for name, shape in shapes.items():
+        assert "artifacts" not in shape, (name, shape)
 
 
 def _quick_fix_issue(project, with_green):

@@ -472,7 +472,9 @@ def _waiver_chain(place, *, approver, owner=True, above=None):
         if owner or n != place:
             doc["owner"] = f"owner-{n}"
         if n == place:
-            doc["checks"] = {"dor-summary-filled": {
+            # A human check the shipped default holds; it has no Definition of Ready
+            # since 9.0.0 (ADR-092).
+            doc["checks"] = {"dod-suite-green": {
                 "set": {"severity": "advisory"},
                 "waiver": fx.project_waiver(approved_by=approver)}}
         if above is not None and n == place - 1:

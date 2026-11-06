@@ -48,7 +48,7 @@ FINDING_CODES = (
     "L-IMPL-TEMPLATED", "L-IGNORED-FILE", "L-SETTING-REMOVED", "L-PARENT-FORM", "L-PARENT-NO-SHA",
     "L-PARENT-NOT-CACHED", "L-PARENT-FETCH", "L-PARENT-CONTENT", "L-PARENT-SHA-MISMATCH",
     "L-PARENT-SYMLINK", "L-PARENT-CACHE", "L-PARENT-CHAIN", "L-PARENT-SHA-AMBIGUOUS",
-    "L-PARENT-CYCLE",
+    "L-PARENT-CYCLE", "L-EXTENDS-FROZEN-MAJOR", "L-STAGE-MAPPED",
     "S-PARENT-UP-TO-DATE", "S-PARENT-STALE", "S-PARENT-MODIFIED", "S-PARENT-BOTH",
     "M-REF-UNKNOWN", "M-WEIGHT-TIE", "M-HIT-MISSING", "M-HIT-DISALLOWED", "M-CYCLE",
     "M-BOOKKEEPING-INPUT", "M-DIRECTORY-DEPENDENCY",
@@ -304,9 +304,30 @@ def _impl_findings(layer):
     return out
 
 
+def _frozen_major(layer):
+    """A warning for a project layer whose `extends:` names a shipped major other
+    than the live one. Resolution reads only the live preset (the owner's decision
+    of 2026-10-30), so the named major is not loaded."""
+    extends = layer.doc.get("extends") if isinstance(layer.doc, dict) else None
+    try:
+        name, major = layers.parse_extends(extends)
+    except CompassError:
+        return []
+    live = str(load_parent()[1].get("version", "")).split(".", 1)[0]
+    if name != "default" or not live.isdigit() or major == int(live):
+        return []
+    return [_finding("layer", "L-EXTENDS-FROZEN-MAJOR", layer, "extends",
+                     f"names {extends}, which is not loaded: resolution reads only the "
+                     f"live preset, compass:default@{live}, whatever major extends names",
+                     "warning")]
+
+
 def _layer_group(state):
     out = [_finding("layer", "L-SETTING-REMOVED", layer, key, note, "warning")
            for layer, key, note in removed_parts.setting_findings(state["chain"])]
+    for layer in state["chain"]:
+        if layer.kind == "project":
+            out += _frozen_major(layer)
     for layer in state["chain"]:
         for text in catalogue_check.check_layer(layer.doc, layer.kind):
             path, _, message = text.partition(": ")
@@ -332,6 +353,18 @@ def _merge_group(state):
     config, provenance, out = {}, {}, []
     state["configs"] = []
     for layer in state["chain"]:
+        if layer.kind in ("project", "parent"):
+            # The merge reads these at their path stage (`removed_parts.mapped_stages`).
+            out += [_finding("layer", "L-STAGE-MAPPED", layer, f"gates.{gate}.stage",
+                             f"names the {legacy} stage, which the four-stage path does not "
+                             f"keep; the gate is read at {path}, the path stage that shows "
+                             f"{legacy} (ADR-092)", "warning")
+                    for gate, legacy, path in removed_parts.mapped_stages(layer.doc, config)]
+        if layer.kind == "issue":
+            # The merge leaves these out (`removed_parts.unheld_stages`), so name each.
+            out += [_finding("layer", "L-SETTING-REMOVED", layer, key,
+                             removed_parts.setting_note(key), "warning")
+                    for key in removed_parts.unheld_stages(layer.doc, config)]
         try:
             config, provenance = merge.apply(config, layer.doc, layer.kind, layer.name,
                                              provenance)
@@ -1025,7 +1058,8 @@ def resolve_effective(parent, project, issue=None, *, meta=None, slug=None,
     versions = {p.layer.name: p.version or None for p in git_parents}
     state = {"chain": chain, "today": datetime.date.today()}
     # A warning, such as a removed setting (ADR-090), does not stop resolution.
-    problems = [f for f in _layer_group(state) if f.level == "error"] or _merge_group(state)
+    problems = [f for f in _layer_group(state) if f.level == "error"] or [
+        f for f in _merge_group(state) if f.level == "error"]
     if problems:
         first = problems[0]
         raise CompassError(

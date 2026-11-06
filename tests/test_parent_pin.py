@@ -1123,7 +1123,9 @@ def _chain_report(parent_owner, approver, project_owner="project-owner"):
     sys.path.insert(0, str(ROOT / "tests"))
     import waiver_fixtures as fx
     default, _ = policy_lint.load_parent()
-    doc = {"schema": 1, "checks": {"dor-summary-filled": {
+    # A human check the shipped default holds; it has no Definition of Ready
+    # since 9.0.0 (ADR-092).
+    doc = {"schema": 1, "checks": {"dod-suite-green": {
         "set": {"severity": "advisory"}, "waiver": fx.project_waiver(approved_by=approver)}}}
     if parent_owner:
         doc["owner"] = parent_owner

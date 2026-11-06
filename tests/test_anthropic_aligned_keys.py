@@ -127,7 +127,16 @@ def test_breakdown_stage_weight_is_one_of_the_allowed_values():
     A guard that lists forbidden values passes on any value nobody listed,
     such as `banana`, so it cannot tell a correct rename from a wrong one.
     """
-    policy = _yaml(ROOT / "governance" / "routing-policy.yml")
+    # The shipped default declares no 8.x approach since 9.0.0 (ADR-092), so the
+    # shapes are read from the 8.0.4 governance copy, the last release that had them.
+    import sys as _sys
+    import yaml as _yaml_mod
+    import tarfile
+    _sys.path.insert(0, str(ROOT / "tests"))
+    from compat_baseline import GOVERNANCE_8_0_4
+    with tarfile.open(GOVERNANCE_8_0_4) as tar:
+        _v8 = tar.extractfile("governance/routing-policy.yml").read().decode("utf-8")
+    policy = _yaml_mod.safe_load(_v8)
     for name, shape in policy["route_shapes"].items():
         weight = shape.get("stages", {}).get("breakdown")
         assert weight in BREAKDOWN_WEIGHTS, (

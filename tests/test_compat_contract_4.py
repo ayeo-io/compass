@@ -123,14 +123,19 @@ def test_contract_4_next_shows_the_path_stage():
 def test_contract_4_the_intended_9_0_0_changes_are_the_listed_ones():
     """Each entry 9.0.0 changes on purpose is named here, so a new one is a decision
     made in this file and not a drift the tables absorb."""
+    # `issue-configure-refused-proposal-exits-1` lowers the mode of `define`, a legacy
+    # stage the shipped default does not hold, so the merge leaves it out (ADR-092
+    # decision 10, agreed by the owner for step 11 of #351).
     assert cc.EXIT_CHANGED_IN_9_0_0 == {"next-regular-without-approach-record": 0,
                                         "quick-fix-start-heavier": 0,
-                                        "quick-fix-start-auth-label": 0}
+                                        "quick-fix-start-auth-label": 0,
+                                        "issue-configure-refused-proposal-exits-1": 0}
     assert set(cc.PHRASE_CHANGED_IN_9_0_0) == {
         "next-quick-fix", "approach-evaluate-quick-fix", "approach-evaluate-no-compass-folder",
         "approach-evaluate-copied-governance", "approach-evaluate-controlled-autonomy",
         "approach-summary-regular", "quick-fix-start-valid", "quick-fix-start-advisory",
-        "quick-fix-start-heavier", "quick-fix-start-auth-label"}
+        "quick-fix-start-heavier", "quick-fix-start-auth-label",
+        "issue-configure-refused-proposal-exits-1"}
     for entry_id, (recorded, _) in cc.PHRASE_CHANGED_IN_9_0_0.items():
         entry = next(e for e in ENTRIES if e["id"] == entry_id)
         assert entry["stdout_contains"] == recorded, entry_id

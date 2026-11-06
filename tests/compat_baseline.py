@@ -620,13 +620,32 @@ def build_configuration(kind, root, fault=None):
         raise ValueError(f"unknown configuration {kind!r}")
 
 
-def policy_under(kind, scratch, fault=None):
+def policy_under(kind, scratch, fault=None, governance=None):
     """The routing policy the evaluator reads for a project in configuration
-    `kind`: the resolved configuration, in the shape `evaluate_route` takes."""
+    `kind`: the resolved configuration, in the shape `evaluate_route` takes.
+    With `governance`, a packed governance copy, the project carries that copy
+    under the configuration: contracts 1 and 2 read configuration B as the
+    empty overlay over the 8.0.4 copy, because 9.0.0 replaces the delivery
+    approaches the live default routes (ADR-092), as they read A."""
     from compass_pkg import effective
 
     root = Path(scratch) / "project"
     (root / ".compass" / "work").mkdir(parents=True)
+    if governance is not None:
+        # A project with a `compass.yml` resolves the live preset, never its copy,
+        # so the overlay is merged on the copy's catalogue form here.
+        from compass_pkg import layers, merge
+        add_governance_copy(root, source=governance)
+        parent = effective._legacy_parent(str(root))[0]
+        build_configuration(kind, root, fault)
+        doc = load_yaml(str(root / "compass.yml"))
+        if not isinstance(doc, dict) or not isinstance(doc.get("gates", {}), dict):
+            raise CompassError("the overlay of configuration B cannot be read")
+        doc = {k: v for k, v in doc.items() if k != "extends"}
+        project = layers.Layer("project", "project", doc, layers.layer_digest(doc, "project"))
+        resolved = merge.resolve([parent, project])[0]
+        resolved["capabilities"] = dict(parent.doc.get("capabilities") or {})
+        return effective.EffectiveView("live", None, None, resolved, {}).evaluator_policy()
     build_configuration(kind, root, fault)
     resolution = effective.resolve_live(str(root))
     view = effective.EffectiveView("live", None, None, resolution.resolved,

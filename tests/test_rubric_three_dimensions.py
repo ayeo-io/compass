@@ -60,19 +60,23 @@ def _text(rel: str) -> str:
 
 
 def _switches() -> list[str]:
-    """The dimensions a shipped default shape reads that are not scored."""
-    policy = yaml.safe_load(_text("governance/routing-policy.yml"))
-    keys = []
-    for shape in policy["routing_strategies"]["default_shapes"]:
-        for key in shape["when"]:
-            if key not in EVALUATOR_REQUIRED and key not in keys:
-                keys.append(key)
-    return keys
+    """The closed dimensions of the shipped default that are not scored. Since 9.0.0
+    the shapes read only `goal` (the spike) and the evidence rows read `urgency`
+    (ADR-092), so the switches are read from the dimensions catalogue."""
+    dims = yaml.safe_load(_text("governance/presets/default/dimensions.yml"))["dimensions"]
+    return [name for name, body in dims.items()
+            if name not in EVALUATOR_REQUIRED and body.get("type") != "set"]
 
 
 def test_the_switches_are_goal_and_urgency():
     assert EVALUATOR_REQUIRED == ("risk", "familiarity", "size")
     assert _switches() == ["goal", "urgency"]
+    # The spike shape reads `goal`, and the evidence rows read `urgency`.
+    policy = yaml.safe_load(_text("governance/routing-policy.yml"))
+    read = {key for shape in policy["routing_strategies"]["default_shapes"]
+            for key in shape["when"]}
+    assert read == {"goal"}, read
+    assert '"urgency"' in _text("cli/compass_pkg/evidence_required.py")
 
 
 def test_rubric_names_three_scored_dimensions():

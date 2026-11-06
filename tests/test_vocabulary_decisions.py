@@ -652,7 +652,9 @@ def test_vr_g12_stable_ids_holds_each_depth_word_once():
     assert stable_ids.MODE_THOROUGH_WITH_FOLLOW_UP == "thorough-with-follow-up"
     assert stable_ids.DEPTH_THOROUGH == "thorough"
     assert stable_ids.DEPTH_LIGHTWEIGHT == "lightweight"
-    ranks = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "stages.yml")
+    # The frozen `default@7` declares each word; the shipped default's path stages
+    # declare only the modes its two approaches name since 9.0.0 (ADR-092).
+    ranks = yaml.safe_load((ROOT / "governance" / "presets" / "default@7" / "stages.yml")
                            .read_text(encoding="utf-8"))["stages"]
     declared = {mode for body in ranks.values() for mode in body["modes"]}
     assert {stable_ids.MODE_THOROUGH, stable_ids.MODE_LIGHTWEIGHT,

@@ -161,7 +161,11 @@ def test_acf_1(tmp_path):
     shown = _show(root)
     assert _catalogue_of(root) == {}
     catalogue = _frozen_doc()["artifacts"]
-    stages = {p.split(".")[1] for p in shown if p.startswith("stages.")}
+    # The frozen catalogue names the legacy stages its own preset declares; the
+    # shipped default shows the four path stages since 9.0.0 (ADR-092).
+    assert {p.split(".")[1] for p in shown if p.startswith("stages.")} == {
+        "assess", "specify", "build", "ship"}
+    stages = set(_frozen_doc()["stages"])
     assert set(SHIPPED_KINDS) <= set(catalogue)
     for kind, entry in catalogue.items():
         for field in SIX_FIELDS:

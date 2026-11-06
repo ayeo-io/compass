@@ -951,11 +951,14 @@ def test_trc_b8_a_policy_floor_written_with_a_retired_stage_key_still_applies():
     import copy
     import os
 
-    from compass_pkg import core
     from compass_pkg.routing import evaluate_route
 
-    policy = core.load_yaml(
-        os.path.join(core.find_governance(), "routing-policy.yml"))
+    # The shipped floor drops `require_phase` since 9.0.0, which has no stage
+    # modes (ADR-092); the 8.0.4 governance copy keeps it, so the floor is read there.
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
+    import compat_baseline as cb
+    policy = cb.policy_8_0_4()
     assessment = {"risk": "contained", "familiarity": "brownfield-unmapped",
                   "size": "medium", "goal": "delivery", "role": "engineer",
                   "labels": []}

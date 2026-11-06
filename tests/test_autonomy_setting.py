@@ -155,7 +155,12 @@ def test_au_5_each_hand_off_waits_only_when_listed(command):
 
 
 def test_au_6_a_table_naming_another_stage_is_refused(project):
-    shutil.copytree(ROOT / "governance", project / "governance")
+    # The 8.0.4 copy keeps the regular row the table edits; the shipped default has
+    # only the delivery and spike rows since 9.0.0 (ADR-092).
+    import sys as _sys
+    _sys.path.insert(0, str(ROOT / "tests"))
+    import compat_baseline as cb
+    cb.add_governance_copy(project, source=cb.GOVERNANCE_8_0_4)
     path = project / "governance" / "routing-policy.yml"
     policy = yaml.safe_load(path.read_text())
     policy["autonomy_checkpoints"]["balanced"]["regular"].append("breakdown")

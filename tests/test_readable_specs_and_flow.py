@@ -162,9 +162,11 @@ def test_trc_a5_spec_author_and_skill_name_summary():
 def test_trc_a6_dor_requires_filled_summary():
     """A filled Summary is a condition of leaving the requirements review -
     enforced by the Definition of Ready, not by the CLI. The Ready items live in the
-    shipped preset; 9.0.0 writes no requirements review to hold them (ADR-091)."""
-    from test_ready_and_done_data import READY_IDS, statements
-    summary_items = [i for i in statements(READY_IDS) if "summary" in i.lower()]
+    frozen `default@7` preset, which a stored 8.x generation reads; the four-stage
+    path owes no Definition of Ready (ADR-092), and 9.0.0 writes no requirements
+    review to hold them (ADR-091)."""
+    from test_ready_and_done_data import FROZEN, READY_IDS, statements
+    summary_items = [i for i in statements(READY_IDS, FROZEN) if "summary" in i.lower()]
     assert summary_items, "No Definition of Ready item requiring the spec's Summary"
 
     item = _flat(summary_items[0])

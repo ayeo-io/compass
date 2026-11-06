@@ -244,17 +244,33 @@ project's `compass.yml` can no longer change these parts of the governance:
 - a Definition of Ready check (`dor-summary-filled`, `dor-problem-traces-up`,
   `dor-behavior-is-gwt`, `dor-traceability-ids`, `dor-affected-surface-named`,
   `dor-no-open-questions`, `dor-approach-still-fits`), as an entry under
-  `checks` or as an id in a gate's `checks` or a stage's `entry` or `exit`.
+  `checks` or as an id in a gate's `checks` or a stage's `entry` or `exit`;
+- the `require_phase` effect of `RP-FLOOR-002`, which forced the define stage
+  to thorough; the path has no stage modes, and the floor keeps its skill.
 
 A file that still holds one keeps working. The merge leaves the part out,
 so a `set:` on a stage the live default no longer declares does not stop
 every command, and its value is not checked. `compass policy lint` names
 each part with `L-SETTING-REMOVED`. Delete it from `compass.yml`.
 
-A parent is not changed. A frozen preset (`compass:default@6`,
-`compass:default@7`) and a git parent keep their approaches, stages, caps and
-lists, and an issue's stored generation keeps the configuration it was
-assessed with. `stages.assess` and `stages.ship` are path stages, so a
+A frozen preset (`default@6`, `default@7`) and a git parent keep their
+approaches, stages, caps and lists, and an issue's stored generation keeps the
+configuration it was assessed with. Resolution reads only the live preset,
+whatever major `extends:` names (decided 2026-10-30), so a project that
+extends `compass:default@6` or `@7` gets the path; `compass policy lint` says
+so with the warning `L-EXTENDS-FROZEN-MAJOR`.
+
+Three more rules keep an older file or issue working:
+
+- An issue's `config:` that sets a legacy stage, or a Definition of Ready
+  check, that its configuration does not hold is merged without it and named
+  with `L-SETTING-REMOVED` on the issue layer; `compass issue configure` shows
+  the warning. Over a stored generation that holds the stage, it is kept.
+- A gate a project layer, or a copy of the 9.0.0 governance files, places at a
+  legacy stage the configuration does not declare is read at the path stage
+  that shows it (`define`, `refine`, `plan` at specify; `breakdown`,
+  `implement` at build; `verify` at ship). `compass policy lint` names each
+  with `L-STAGE-MAPPED`. `stages.assess` and `stages.ship` are path stages, so a
 project can still change them. An `autonomy_checkpoints` table can name the
 path stages `specify`, `build` and `ship` beside the legacy ones; an issue
 assessed before 9.0.0 still waits only at the legacy hand-offs.

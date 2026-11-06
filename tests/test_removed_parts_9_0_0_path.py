@@ -216,14 +216,19 @@ def test_evaluate_write_and_check_run_on_an_old_project_file(tmp_path):
 
 
 @pytest.mark.parametrize("frozen", ["compass:default@6", "compass:default@7"])
-def test_a_project_on_a_frozen_preset_still_loads_its_approaches(tmp_path, frozen):
+def test_a_project_pinned_to_a_frozen_major_resolves_the_path_approaches(tmp_path, frozen):
+    """Resolution reads only the live preset, whatever major `extends:` names (the
+    owner's decision of 2026-10-30), and ADR-092 rejects a pinned frozen preset
+    keeping its approaches. So such a project resolves the path, and its issues
+    still check."""
     from compass_pkg import effective
     root = projects.project(tmp_path, compass_yml=dict(projects.BALANCED, extends=frozen))
     view = effective.view_or_legacy(start=str(root))
-    assert {"quick-fix", "regular", "full"} <= set(view.config["approaches"]), frozen
-    assert "plan" in view.config["stages"], frozen
+    assert set(view.config["approaches"]) == {"delivery", "spike"}, frozen
+    assert list(view.stage_order()) == ["assess", "specify", "build", "ship"], frozen
     done = projects.run(root, "check", "--issue", projects.SLUG)
     assert done.returncode in (0, 1), done.stdout + done.stderr
+    assert "M-" not in done.stdout + done.stderr, done.stdout + done.stderr
 
 
 # --- checkpoints -----------------------------------------------------------------------
@@ -304,3 +309,103 @@ def test_update_reports_a_waiver_on_a_removed_key_as_moot(tmp_path):
     assert view not in made.invalidated
     lines = "\n".join(policy_update.plan_lines(made))
     assert "approaches.regular: moot" in lines and "ADR-092" in lines, lines
+
+
+# --- an issue layer that sets a legacy stage (ADR-092 decision 10) ----------------------
+
+def test_an_issue_layer_drops_a_legacy_stage_the_shipped_default_does_not_hold():
+    from compass_pkg import merge, policy_lint
+    from compass_pkg.layers import Layer
+    base = _resolved_parent()
+    doc = {"stages": {"define": {"set": {"mode": "collapsed"}},
+                      "ship": {"set": {"mode": "thorough"}}}}
+    config, _ = merge.apply(base, doc, "issue", "issue")
+    assert "define" not in config["stages"]
+    assert config["stages"]["ship"]["mode"] == "thorough"
+    only = {"stages": {"define": {"set": {"mode": "collapsed"}}}}
+    report = policy_lint.lint_chain(_parent(), None, Layer("issue", "issue", only, "d"))
+    found = [f for f in report.findings if f.code == "L-SETTING-REMOVED"]
+    assert [(f.layer, f.path) for f in found] == [("issue", "stages.define")], found
+    assert not report.errors, report.errors
+
+
+def test_an_old_issue_keeps_a_legacy_stage_its_configuration_holds():
+    from compass_pkg import merge
+    base = _resolved_parent("default@7")
+    config, _ = merge.apply(base, {"stages": {"define": {"set": {"mode": "collapsed"}}}},
+                            "issue", "issue")
+    assert config["stages"]["define"]["mode"] == "collapsed"
+
+
+def test_issue_configure_names_the_dropped_stage_and_changes_nothing(tmp_path):
+    import configure_fixtures as cf
+    root, task_dir = cf.committed(tmp_path, compass_yml={"schema": 1})
+    code, out, err = cf.configure(root, "--mode", "refine=full")
+    assert code == 0, out + err
+    assert "verdict          : accepted" in out, out
+    assert "warning: L-SETTING-REMOVED stages.refine" in out, out
+    assert "resolved fields that change (0)" in out, out
+
+
+# --- a reference to a legacy stage in a project or copied layer --------------------------
+
+def _lint_findings(project_doc):
+    from compass_pkg import policy_lint
+    from compass_pkg.layers import Layer
+    report = policy_lint.lint_chain(_parent(), Layer("project", "project",
+                                                     {"schema": 1, **project_doc}, "d"))
+    return report
+
+
+def test_a_project_gate_at_a_legacy_stage_is_read_at_its_path_stage():
+    from compass_pkg import merge
+    doc = {"schema": 1, "gates": {"project.review": {
+        "kind": "review", "stage": "verify", "accepts": ["test-run"]}}}
+    config, _ = merge.apply(_resolved_parent(), doc, "project", "project")
+    assert config["gates"]["project.review"]["stage"] == "ship"
+    report = _lint_findings(doc)
+    mapped = [f for f in report.findings if f.code == "L-STAGE-MAPPED"]
+    assert [(f.path, f.level) for f in mapped] == [("gates.project.review.stage", "warning")]
+    assert "verify" in mapped[0].message and "ship" in mapped[0].message
+    assert not report.errors, report.errors
+
+
+def test_a_copied_guardrail_checked_at_a_legacy_stage_is_read_at_its_path_stage():
+    from compass_pkg import merge
+    # A copy of the 9.0.0 files declares only the path stages, so a project
+    # guardrail it checks at `verify` names a stage the copy does not hold.
+    doc = {"stages": {"assess": {"order": 1, "modes": {"thorough": {"rank": 3}}},
+                      "ship": {"order": 4, "modes": {"thorough": {"rank": 3}}}},
+           "gates": {"PG-A": {"kind": "guardrail", "stage": "verify",
+                              "applies_to": {"ships": True}, "checks": []}}}
+    config, _ = merge.apply({}, doc, "parent", "legacy")
+    assert config["gates"]["PG-A"]["stage"] == "ship"
+    # A copy made before 9.0.0 declares its legacy stages and is read as it is.
+    old = dict(doc, stages=dict(doc["stages"], verify={"order": 3, "modes": {}}))
+    config, _ = merge.apply({}, old, "parent", "legacy")
+    assert config["gates"]["PG-A"]["stage"] == "verify"
+
+
+def test_a_project_that_restates_the_removed_require_phase_gets_a_warning():
+    from compass_pkg import merge
+    floor = {"order": 1, "when": {"familiarity": "brownfield-unmapped"},
+             "then": {"require_phase": "define", "require_skill": "behavior-mapping"},
+             "rationale": "The project restates the floor."}
+    doc = {"schema": 1, "rules": {"floors": {"set": {"rules": {"set": {"RP-FLOOR-002": floor}}}}}}
+    config, _ = merge.apply(_resolved_parent(), doc, "project", "project")
+    then = config["rules"]["floors"]["rules"]["RP-FLOOR-002"]["then"]
+    assert then == {"require_skill": "behavior-mapping"}
+    report = _lint_findings(doc)
+    codes = [(f.code, f.path) for f in report.findings]
+    assert ("L-SETTING-REMOVED", "rules.floors.rules.RP-FLOOR-002.then.require_phase") in codes
+    assert "M-HIT-MISSING" not in [c for c, _ in codes], codes
+
+
+@pytest.mark.parametrize("major, warned", [("6", True), ("7", True), ("8", False)])
+def test_lint_warns_that_a_frozen_major_is_not_loaded(major, warned):
+    report = _lint_findings({"extends": f"compass:default@{major}"})
+    found = [f for f in report.findings if f.code == "L-EXTENDS-FROZEN-MAJOR"]
+    assert bool(found) == warned, report.findings
+    if warned:
+        assert found[0].level == "warning"
+        assert "not loaded" in found[0].message and "compass:default@8" in found[0].message

@@ -19,6 +19,11 @@ sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
 PRESET = ROOT / "governance" / "presets" / "default"
+# The shipped default declares the four path stages and only the modes its two
+# approaches name since 9.0.0 (ADR-092). The renamed words are in use in the
+# frozen `default@7` preset and the 8.0.4 views, so their presence is read there,
+# and the live preset and views are held to hold no old word.
+FROZEN = ROOT / "governance" / "presets" / "default@7"
 POLICY_VIEW = ROOT / "governance" / "routing-policy.yml"
 
 OLD_WORDS = {"full", "light", "full-plus-backfill"}
@@ -28,8 +33,15 @@ SPECIAL = {"multiagent", "reproduce-first", "expedited", "explore", "conclude",
            "graduate-or-discard"}
 
 
-def _preset(name):
-    return yaml.safe_load((PRESET / name).read_text(encoding="utf-8"))
+def _preset(name, folder=PRESET):
+    return yaml.safe_load((folder / name).read_text(encoding="utf-8"))
+
+
+def _policy_8_0_4_text():
+    import tarfile
+    import compat_baseline as cb
+    with tarfile.open(cb.GOVERNANCE_8_0_4) as tar:
+        return tar.extractfile("governance/routing-policy.yml").read().decode("utf-8")
 
 
 def _modes(doc):
@@ -51,9 +63,9 @@ def _approach_words(doc):
     return modes, depths
 
 
-def _view_words():
-    """The same words in the legacy routing policy view."""
-    policy = yaml.safe_load(POLICY_VIEW.read_text(encoding="utf-8"))
+def _view_words(text=None):
+    """The same words in the legacy routing policy view, or in `text`."""
+    policy = yaml.safe_load(text if text is not None else POLICY_VIEW.read_text(encoding="utf-8"))
     modes, depths = [], []
     for name, shape in policy["route_shapes"].items():
         modes += [(f"route_shapes.{name}.stages.{stage}", mode)
@@ -71,7 +83,11 @@ def test_vr_a1_the_default_preset_holds_only_the_new_depth_words():
     words = {word for _, word in modes + used}
     assert words <= set(RANKS) | SPECIAL, sorted(words - set(RANKS) - SPECIAL)
     assert not words & OLD_WORDS, sorted(words & OLD_WORDS)
-    assert {"thorough", "lightweight", "thorough-with-follow-up"} <= words, (
+    assert {"thorough", "lightweight"} <= words
+    frozen = {word for _, word in _modes(_preset("stages.yml", FROZEN))
+              + _approach_words(_preset("approaches.yml", FROZEN))[0]}
+    assert not frozen & OLD_WORDS, sorted(frozen & OLD_WORDS)
+    assert {"thorough", "lightweight", "thorough-with-follow-up"} <= frozen, (
         "each renamed word is in use, so this check has something to find")
     # 9.0.0 declares no approach `artifacts:` map (ADR-091), so no document depth is
     # left to read in the live default.
@@ -153,17 +169,27 @@ def test_vr_a2_a_policy_copy_in_the_old_words_still_writes_the_new_ones(
 
 # --- VR-A3 ---------------------------------------------------------------------
 
+def _cells(html):
+    return re.findall(r'<td data-stage="[a-z]+" class="[^"]+">([^<]+)</td>', html)
+
+
 def test_vr_a3_render_prints_each_stage_weight_in_the_new_words(run_cli):
     result = run_cli("approach", "render", timeout=30)
     assert result.returncode == 0, result
-    cells = re.findall(r'<td data-stage="[a-z]+" class="[^"]+">([^<]+)</td>', result.stdout)
+    cells = _cells(result.stdout)
     assert cells, "the table has no stage cells"
     assert not set(cells) & OLD_WORDS, sorted(set(cells) & OLD_WORDS)
-    assert {"thorough", "lightweight", "thorough-with-follow-up"} <= set(cells)
     names = re.findall(r'<tr data-approach="([^"]+)">', result.stdout)
-    assert names == ["spike", "quick-fix", "regular", "hotfix", "full"], names
+    assert names == ["spike", "delivery"], names
+    # The 8.0.4 views, read through the renderer, still name every renamed word.
+    from compass_pkg.approach_diagram import render
+    old = render(yaml.safe_load(_policy_8_0_4_text()), "balanced")
+    assert not set(_cells(old)) & OLD_WORDS, sorted(set(_cells(old)) & OLD_WORDS)
+    assert {"thorough", "lightweight", "thorough-with-follow-up"} <= set(_cells(old))
+    assert re.findall(r'<tr data-approach="([^"]+)">', old) == [
+        "spike", "quick-fix", "regular", "hotfix", "full"]
     owed = " ".join(re.findall(r"[a-z-]+ \((?:thorough|lightweight|full|light)\)",
-                               result.stdout))
+                               result.stdout + old))
     assert "(full)" not in owed and "(light)" not in owed, owed
 
 
@@ -180,7 +206,7 @@ def test_vr_a3_show_keeps_the_approach_name_full(make_task, run_cli):
 
 def test_vr_a4_the_ranks_keep_their_order_under_the_new_names():
     ranks = {}
-    for stage, body in _preset("stages.yml")["stages"].items():
+    for stage, body in _preset("stages.yml", FROZEN)["stages"].items():
         for mode, spec in (body.get("modes") or {}).items():
             if "rank" in (spec or {}):
                 ranks.setdefault(mode, set()).add(spec["rank"])
@@ -217,9 +243,12 @@ def test_vr_a4_the_legacy_adapter_ranks_match_the_preset():
 # --- VR-A5 ---------------------------------------------------------------------
 
 def test_vr_a5_the_special_modes_and_the_two_ends_keep_their_names():
-    declared = {mode for stage in _preset("stages.yml")["stages"].values()
+    declared = {mode for stage in _preset("stages.yml", FROZEN)["stages"].values()
                 for mode in stage.get("modes") or {}}
     assert SPECIAL <= declared, sorted(SPECIAL - declared)
+    live = {mode for stage in _preset("stages.yml")["stages"].values()
+            for mode in stage.get("modes") or {}}
+    assert live <= set(RANKS) | SPECIAL, sorted(live - set(RANKS) - SPECIAL)
     assert {"collapsed", "skipped"} <= declared
     from compass_pkg import catalogue_spec
     assert catalogue_spec.ARTIFACT_DEPTHS == ("lightweight", "thorough")
@@ -232,7 +261,11 @@ def test_vr_a6_the_regenerated_views_hold_no_old_depth_word():
     words = {word for _, word in modes}
     assert not words & OLD_WORDS, sorted(words & OLD_WORDS)
     assert not {d for _, d in depths} & OLD_WORDS
-    assert {"thorough", "lightweight", "thorough-with-follow-up"} <= words
+    assert {"thorough", "lightweight"} <= words
+    _, old_modes, _ = _view_words(_policy_8_0_4_text())
+    old = {word for _, word in old_modes}
+    assert not old & OLD_WORDS, sorted(old & OLD_WORDS)
+    assert {"thorough", "lightweight", "thorough-with-follow-up"} <= old
     ranks = policy.get("stage_mode_ranks") or {}
     ranked = {mode for stage in ranks.values() for mode in stage}
     assert not ranked & OLD_WORDS, sorted(ranked & OLD_WORDS)

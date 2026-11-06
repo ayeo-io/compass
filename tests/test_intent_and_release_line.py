@@ -248,10 +248,11 @@ def _flat(path):
 
 PRESET = ROOT / "governance" / "presets" / "default"
 
-#: The digest of the locked spike entry's parsed content before this change (bce610c2):
-#: sha256 over its JSON with sorted keys. 9.0.0 took its `artifacts:` map out (ADR-091),
-#: so the digest is of the entry without it; nothing else in the entry moved.
-SPIKE_DIGEST = "26c485cf0f0b28ea79d0d0bee3a8c2747e574fb5d6d60c171e1bf303684b6734"
+#: The digest of the locked spike entry's parsed content: sha256 over its JSON with
+#: sorted keys. 9.0.0 took its `artifacts:` map out (ADR-091), and its stage map now
+#: names the path stages it runs, assess, build and ship (ADR-092); nothing else in
+#: the entry moved.
+SPIKE_DIGEST = "da78de1e9c3f5a303cf2599deaa1f916f614abdb624a525b2a7ee88dcc0bf656"
 
 
 def _entry_digest(entry):
@@ -267,8 +268,9 @@ def _lint_codes(root):
 
 def test_irl_23_default_declares_release_line(tmp_path):
     approaches = yaml.safe_load((PRESET / "approaches.yml").read_text())["approaches"]
-    for name in ("quick-fix", "regular", "hotfix", "full"):
-        assert approaches[name].get("release_line") is True, (name, approaches[name])
+    # The shipped default's one approach that ships is the path (ADR-092).
+    assert set(approaches) == {"delivery", "spike"}
+    assert approaches["delivery"].get("release_line") is True, approaches["delivery"]
     assert "release_line" not in approaches["spike"], approaches["spike"]
 
     # The locked spike entry is as it was: its digest over the parsed entry has not moved.
@@ -290,16 +292,16 @@ def test_irl_23_default_declares_release_line(tmp_path):
             ("L-SETTING-REMOVED", "approaches")], (value, codes, done.stdout)
 
     # A git parent still can. Setting it true there is no change; setting it false on
-    # regular is a loosening that needs a waiver.
+    # delivery is a loosening that needs a waiver.
     from compass_pkg import policy_lint
     from compass_pkg.layers import Layer
     shipped, _ = policy_lint.load_parent()
     for value, loosening in ((True, False), (False, True)):
-        team = Layer("team", "parent", {"schema": 1, "approaches": {"regular": {"set": {
+        team = Layer("team", "parent", {"schema": 1, "approaches": {"delivery": {"set": {
             "release_line": value}}}}, "d")
         report = policy_lint.lint_chain(shipped, None, extra_parents=(team,))
         codes = [(f.code, f.path) for f in report.findings]
-        assert (("C-LOOSENING", "approaches.regular.release_line") in codes) is loosening, (
+        assert (("C-LOOSENING", "approaches.delivery.release_line") in codes) is loosening, (
             value, codes)
         if not loosening:
             assert not [c for c in codes if c[0][0] in "LMCK"], codes
@@ -456,7 +458,8 @@ def state(root, slug=SLUG):
     ("quick-fix", ABSENT), ("regular", ABSENT), ("hotfix", ""), ("full", "   ")])
 def test_irl_10_ship_commit_refuses_missing_release_line(tmp_path, approach, stored):
     root = project(tmp_path, approach)
-    assert generation_config(root)["approaches"][approach]["release_line"] is True
+    # Every delivery assessment is stored as `delivery` (ADR-092).
+    assert generation_config(root)["approaches"]["delivery"]["release_line"] is True
     ready_to_ship(root)
     set_keys(root, release_note=stored)
     before = state(root)
@@ -518,8 +521,9 @@ def _stored(value):
     # A path issue has no approach entry of its own: it owes a line when any
     # approach that ships sets the field (ADR-092), so the field changes on each.
     def change(resolved):
-        for name in ("quick-fix", "regular", "hotfix", "full"):
-            _approach_field(resolved, name, value)
+        for name, body in resolved["approaches"].items():
+            if body.get("ships", True):
+                _approach_field(resolved, name, value)
 
     def apply(root):
         rewrite_stored(root, change)

@@ -26,7 +26,7 @@ import copy
 import pytest
 import yaml
 
-from compat_baseline import (OWED, compact, grid,
+from compat_baseline import (GOVERNANCE_8_0_4, OWED, compact, grid,
                              load_routing, named_labels, owed_by_approach,
                              policy_8_0_4, policy_under, routing_differences)
 
@@ -157,11 +157,13 @@ def test_contract_1_puts_back_the_documents_9_0_0_removed(policy_b):
     assert fired.index("RP-REQUIRE-004") + 1 == fired.index("RP-REQUIRE-005"), fired
 
 
-def test_contract_1_still_sees_a_policy_that_owes_a_document_again(policy_b):
+def test_contract_1_still_sees_a_policy_that_owes_a_document_again(tmp_path):
     """A policy that owes any document is compared as it is, so an approach map that
-    came back would differ from the baseline."""
+    came back would differ from the baseline. The shipped default declares no 8.x
+    approach since 9.0.0 (ADR-092), so B's empty overlay is read over the 8.0.4
+    governance copy, as contract 1 reads it."""
     header, rows = load_routing()
-    policy = copy.deepcopy(policy_b)
+    policy = copy.deepcopy(policy_under("B", tmp_path, governance=GOVERNANCE_8_0_4))
     policy["route_shapes"]["regular"]["artifacts"] = {"technical-design": "thorough"}
     assert routing_differences(policy, header, rows, first_only=True, layered=True), \
         "a returned document map went unseen"

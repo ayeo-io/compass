@@ -297,7 +297,9 @@ def test_ef_4_a_project_guardrail_gate_stores_its_stage_and_its_checks(tmp_path)
     assert code == 0, out + err
     stored = _yaml.safe_load((task_dir / "generations" / "1" / "resolved.yml")
                              .read_text(encoding="utf-8"))
-    assert stored["gates"]["PG-A"]["stage"] == "verify"
+    # The copy of the 9.0.0 files declares only the path stages, so a guardrail it
+    # checks at `verify` is stored at ship, the path stage that shows it (ADR-092).
+    assert stored["gates"]["PG-A"]["stage"] == "ship"
     assert stored["gates"]["PG-E"]["checks"] == ["PG-E-command-and-suite", "suite-passed"]
     assert stored["checks"]["PG-E-command-and-suite"]["params"] == {"command": "true"}
 
@@ -620,8 +622,9 @@ def test_ef_8_retro_weights_come_from_the_effective_policy(tmp_path, monkeypatch
     root, _ = _project(tmp_path, compass_yml=LAYERED)
     monkeypatch.chdir(root)
     layered = calibration._route_weights()
-    assert layered and layered["regular"] == _shipped("routing-policy.yml")[
-        "route_shapes"]["regular"]["weight"]
+    # The shipped default weighs the path and the spike since 9.0.0 (ADR-092).
+    assert layered and layered["delivery"] == _shipped("routing-policy.yml")[
+        "route_shapes"]["delivery"]["weight"]
     plain = tmp_path / "plain"
     (plain / ".compass").mkdir(parents=True)
     monkeypatch.chdir(plain)
@@ -629,6 +632,9 @@ def test_ef_8_retro_weights_come_from_the_effective_policy(tmp_path, monkeypatch
 
 
 def test_ef_8_quick_fix_blockers_read_the_policy_through_effective(tmp_path, monkeypatch):
+    # The shipped default has no quick-fix shape since 9.0.0 (ADR-092), so the view's
+    # policy is the 8.0.4 governance copy's, and the plain project carries that copy.
+    import compat_baseline as cb
     from compass_pkg import effective, quick_fix_cmd
     root, _ = _project(tmp_path, compass_yml=LAYERED)
     monkeypatch.chdir(root)
@@ -638,12 +644,15 @@ def test_ef_8_quick_fix_blockers_read_the_policy_through_effective(tmp_path, mon
     real = effective.view_or_legacy
     monkeypatch.setattr(effective, "view_or_legacy",
                         lambda *a, **k: asked.append(a) or real(*a, **k))
+    v8 = cb.policy_8_0_4()
+    monkeypatch.setattr(effective.EffectiveView, "evaluator_policy", lambda self: v8)
     layered = quick_fix_cmd._quick_fix_blockers(readings, {})
     assert asked, "the blockers did not ask the effective view"
     assert any(line.startswith("blocked: risk is critical") for line in layered), layered
     monkeypatch.undo()
     plain = tmp_path / "plain"
     (plain / ".compass").mkdir(parents=True)
+    cb.add_governance_copy(plain, source=cb.GOVERNANCE_8_0_4)
     monkeypatch.chdir(plain)
     assert quick_fix_cmd._quick_fix_blockers(readings, {}) == layered
 

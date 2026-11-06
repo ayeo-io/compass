@@ -127,7 +127,7 @@ expect:
   approach: delivery
   gates: [G1, G2, G3, G4, verify.clarity, verify.correctness, verify.governance,
     verify.traceability]
-  stages: {build: thorough}
+  stages: {assess: thorough}
 ```
 
 Fixtures run in this order: the fixtures with no group, then each group by name,

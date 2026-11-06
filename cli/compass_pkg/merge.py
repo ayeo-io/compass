@@ -58,8 +58,11 @@ REFERENCES = (
 # written before 9.0.0 can `set` an entry the parent no longer holds, and the
 # merge would refuse it, so every command would stop. `removed_parts.without_removed`
 # leaves each one out, and `compass policy lint` names it (L-SETTING-REMOVED). A
-# parent or an issue layer is merged as before, so a frozen preset still declares
-# its catalogue and an issue still sets its stage modes.
+# parent layer is merged as before, so a frozen preset still declares its
+# catalogue. An issue layer keeps its stage modes where the configuration below it
+# holds the stage, as an old issue's stored generation does; over the shipped
+# default the mode of a legacy stage is left out and named the same way
+# (`removed_parts.unheld_stages`).
 
 # A stage's `mode` is the issue layer's choice; no other layer sets one.
 ISSUE_ONLY_FIELDS = {("stages", "mode")}
@@ -96,6 +99,12 @@ def apply(config, layer_doc, kind, name, provenance=None):
     if kind == "project":
         # What 9.0.0 removed is left out; the note after `REFERENCES` says why.
         layer_doc = removed_parts.without_removed(layer_doc)
+    elif kind == "issue":
+        # An old issue's mode for a legacy stage the configuration does not hold.
+        layer_doc = removed_parts.without_unheld_stages(layer_doc, config)
+    if kind in ("project", "parent"):
+        # A gate placed at a legacy stage is read at the path stage that shows it.
+        layer_doc = removed_parts.with_mapped_stages(layer_doc, config)
     work = copy.deepcopy(config)
     prov = dict(provenance or {})
     errors = []

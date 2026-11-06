@@ -326,12 +326,13 @@ def test_the_rename_does_not_change_any_computed_approach():
 
     `compass approach evaluate` now prints the path for a delivery assessment
     (ADR-092), so the approach is computed by the 8.x evaluator in process, on
-    the governance the command read. The twin below runs the command.
+    the 8.0.4 governance copy, the last release that routed approaches; the shipped
+    default declares none of them. The twin below runs the command.
     """
-    from compat_baseline import shipped_policy
+    from compat_baseline import policy_8_0_4
     from compass_pkg.routing import evaluate_route
 
-    out = evaluate_route(dict(PROBE), shipped_policy())
+    out = evaluate_route(dict(PROBE), policy_8_0_4())
     assert out["delivery_approach"] == "full", f"the computed approach changed:\n{out}"
     assert "verify.architecture" in out["gates"], (
         f"the fitness gate is no longer added on a cross-cutting change - the "

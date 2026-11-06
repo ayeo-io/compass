@@ -595,8 +595,11 @@ def _old_parent_doc(define):
 
 
 def _classify_chain(doc):
+    # The parent sets the regular approach, which the shipped default no longer
+    # declares since 9.0.0 (ADR-092); the frozen 7.0.0 preset it was pinned over does.
     from compass_pkg import chain_class, layers, policy_lint
-    shipped, _ = policy_lint.load_parent()
+    shipped, _ = policy_lint.load_parent(
+        directory=Path(__file__).resolve().parent.parent / "governance" / "presets" / "default@7")
     layer = layers.Layer("git-parent#abc1234", "parent", doc,
                          layers.layer_digest(doc, "parent"))
     return chain_class.classify_chain(shipped, [layer], "compass:default@6")[0]
@@ -661,7 +664,7 @@ def test_vr_d14_an_issue_layer_in_the_old_words_evaluates_as_the_new_words_do(
     for name, word in (("old", "full"), ("new", "thorough")):
         root, task_dir = _project(tmp_path, name)
         for argv in (("approach", "evaluate", "--issue", "t", "--write"),
-                     ("issue", "configure", "--issue", "t", "--mode", f"refine={word}"),
+                     ("issue", "configure", "--issue", "t", "--mode", f"assess={word}"),
                      ("approach", "evaluate", "--issue", "t", "--write", "--reason", "wider")):
             code, out, err = _cli(root, *argv)
             assert code == 0, (name, argv, out, err)
@@ -671,9 +674,10 @@ def test_vr_d14_an_issue_layer_in_the_old_words_evaluates_as_the_new_words_do(
         results[name] = json.loads(out)
     assert results["old"] == results["new"]
     # ADR-092 decision: no stage modes. On the path the evaluation has no stage
-    # map to carry the mode; the issue layer still records it, in the new word.
+    # map to carry the mode; the issue layer still records it, in the new word. The
+    # issue sets assess, a stage the path keeps: a legacy stage would be left out.
     assert "stages" not in results["old"] and results["old"]["evidence_required"]
-    assert results["old"]["issue_overrides"]["applied"] == {"refine": "thorough"}
+    assert results["old"]["issue_overrides"]["applied"] == {"assess": "thorough"}
 
 
 # --- VR-D19: the advisory for a layer in the old words -------------------------

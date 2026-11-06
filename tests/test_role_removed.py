@@ -139,7 +139,10 @@ def test_trc_a2_the_shipped_rules_hold_no_role_rule_default_or_bias():
 
 
 def test_trc_a3_the_full_approach_no_longer_builds_in_the_claims_gate():
-    for policy in (_policy(), _load(VIEW)):
+    # The shipped default routes no 8.x approach since 9.0.0 (ADR-092), so the full
+    # approach is read on the frozen 7.0.0 preset and the 8.0.4 governance copy.
+    import compat_baseline as cb
+    for policy in (_policy(FROZEN), cb.policy_8_0_4()):
         result = evaluate_route(_assess(size="large"), policy)
         assert result["delivery_approach"] == "full"
         assert "verify.claims" not in result["gates"]
@@ -166,7 +169,11 @@ def _six_policy():
 
 
 def test_trc_a4_an_assessment_without_a_role_routes_as_an_engineers_did():
-    before, now = _six_policy(), _load(VIEW)
+    # The shipped default routes no 8.x approach since 9.0.0 (ADR-092), so the
+    # approaches are read on the 8.0.4 governance copy, the last release that
+    # routed them; the live view routes no document either.
+    import compat_baseline as cb
+    before, now = _six_policy(), cb.policy_8_0_4()
     for approach, case in REFERENCE.items():
         old = evaluate_route(dict(case, role="engineer"), before)
         new = evaluate_route(dict(case), now)
@@ -175,7 +182,7 @@ def test_trc_a4_an_assessment_without_a_role_routes_as_an_engineers_did():
         # 9.0.0 owes no document (ADR-091), so the documents are compared on the
         # frozen 7.0.0 preset. Documents a later 7.0.0 change added to the approach
         # (ADR-072) are not part of the role removal, so they are left out.
-        assert new["artifacts"] == [], approach
+        assert evaluate_route(dict(case), _load(VIEW))["artifacts"] == [], approach
         seven = evaluate_route(dict(case), _policy(FROZEN))
         added = ADDED_AFTER_ROLE_REMOVAL.get(approach, ())
         assert [a for a in seven["artifacts"] if a["kind"] not in added] \
@@ -216,7 +223,8 @@ def test_trc_b2_an_intent_document_brings_the_plan_block():
 
 
 def test_trc_b3_neither_rule_fires_without_its_document():
-    result = evaluate_route(_assess(size="small", risk="trivial"), _policy())
+    # The quick fix is an 8.x approach, read on the frozen 7.0.0 preset (ADR-092).
+    result = evaluate_route(_assess(size="small", risk="trivial"), _policy(FROZEN))
     assert result["delivery_approach"] == "quick-fix"
     assert not {"RP-ART-001", "RP-ART-002"} & set(_fired(result))
     assert result["gates"] == ["verify.correctness", "verify.governance",
@@ -399,7 +407,7 @@ def test_trc_c9_a_preset_fixture_that_records_a_role_is_read_without_it(tmp_path
     (root / "compass-fixtures" / "one.yml").write_text(
         "name: one\nassessment:\n  risk: contained\n  familiarity: brownfield-mapped\n"
         "  size: medium\n  goal: delivery\n  role: engineer\n  labels: []\n"
-        "expect:\n  approach: regular\n", encoding="utf-8")
+        "expect:\n  approach: delivery\n", encoding="utf-8")
     code, out, err = _run(root, "preset", "test", str(root), "--offline")
     assert code == 0, out + err
     assert "role" in out + err and "ignored" in out + err

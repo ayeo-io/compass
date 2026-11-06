@@ -8,7 +8,9 @@ configurations, and each must equal the 5.6.0 baseline:
   the 8.0.4 governance copy in place of the live default, because 9.0.0
   replaces the delivery approaches the live default routes (ADR-092).
 - B. An empty overlay: a `compass.yml` holding `schema: 1` and
-  `extends: compass:default@6` and nothing else.
+  `extends: compass:default@6` and nothing else. Resolution reads the live
+  preset whatever major `extends:` names, so contracts 1 and 2 read B as the
+  empty overlay over the 8.0.4 governance copy, as they read A (ADR-092).
 - C. A project that carries a copy of the 5.6.0 governance files, read through
   the legacy adapter.
 
@@ -42,9 +44,16 @@ BC = ("B", "C")
 ALL = BC  # A has its own files, and contracts 1 and 2 there read the 8.0.4 copy
 
 
+# The governance copy each configuration's routing is read over in contracts 1
+# and 2: B's empty overlay sits over the 8.0.4 copy (see the module docstring),
+# and C is a copy of its own.
+ROUTED_OVER = {"B": cb.GOVERNANCE_8_0_4, "C": None}
+
+
 @pytest.fixture(scope="module")
 def policies(tmp_path_factory):
-    return {k: cb.policy_under(k, tmp_path_factory.mktemp(f"policy-{k}"))
+    return {k: cb.policy_under(k, tmp_path_factory.mktemp(f"policy-{k}"),
+                               governance=ROUTED_OVER[k])
             for k in ALL}
 
 
@@ -73,7 +82,7 @@ def test_contract_1_routes_as_the_baseline_under(kind, policies):
 @pytest.mark.parametrize("kind", BC)
 def test_contract_1_under_the_configuration_can_fail(kind, tmp_path):
     header, rows = cb.load_routing()
-    planted = cb.policy_under(kind, tmp_path, fault="routing")
+    planted = cb.policy_under(kind, tmp_path, fault="routing", governance=ROUTED_OVER[kind])
     assert cb.routing_differences(planted, header, rows, first_only=True, layered=True), (
         f"a planted routing fault under {kind} went unseen")
 
@@ -93,7 +102,7 @@ def test_contract_2_owes_what_it_owed_under(kind, policies):
 def test_contract_2_under_the_configuration_can_fail(kind, tmp_path):
     _, rows = cb.load_routing()
     recorded = yaml.safe_load(cb.OWED.read_text(encoding="utf-8"))
-    planted = cb.policy_under(kind, tmp_path, fault="routing")
+    planted = cb.policy_under(kind, tmp_path, fault="routing", governance=ROUTED_OVER[kind])
     now = [dict(r, result=cb.legacy_spelling(cb.compact(r["assessment"], planted)))
            for r in rows if r["kind"] == "grid"]
     assert cb.owed_by_approach(now) != recorded["owed"]
@@ -198,8 +207,8 @@ def test_contract_4_configurations_cover_most_of_the_corpus():
                          ids=[f"{k}-{e['id']}" for e, k in CASES])
 def test_contract_4_exit_code_matches_the_baseline_under(projects, entry, kind):
     outcome = projects.run(entry, configuration=kind)
-    assert cc.differences(entry, outcome) == [], (
-        f"{entry['id']} under {kind}: {cc.differences(entry, outcome)}\n"
+    assert cc.differences(entry, outcome, kind) == [], (
+        f"{entry['id']} under {kind}: {cc.differences(entry, outcome, kind)}\n"
         f"stdout:\n{outcome.stdout}\nstderr:\n{outcome.stderr}")
 
 

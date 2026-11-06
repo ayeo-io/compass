@@ -98,12 +98,14 @@ def _show(value, limit=64):
     return text if len(text) <= limit else text[:limit - 3] + "..."
 
 
-def render_text(doc):
+def render_text(doc, warnings=()):
     lines = [f"compass issue configure: {doc['issue']} (generation {doc['generation']}, "
              f"proposed {doc['proposed']})",
              f"  verdict          : {doc['verdict']}"]
     for reason in doc["reasons"]:
         lines.append(f"    - {reason}")
+    for warning in warnings:
+        lines.append(f"    warning: {warning}")
     if doc["verdict"] == "refused":
         lines.append("    the proposal is written; a reassess refuses it until the "
                      "reasons are fixed")
@@ -141,7 +143,7 @@ def render_text(doc):
     return lines
 
 
-def _emit(args, doc):
+def _emit(args, doc, warnings=()):
     mark_handled()
     mode = resolve_mode(args)
     if mode == "json":
@@ -149,7 +151,16 @@ def _emit(args, doc):
     elif mode == "quiet":
         print(f"{doc['verdict']}: {doc['proposal']}")
     else:
-        print("\n".join(render_text(doc)))
+        print("\n".join(render_text(doc, warnings)))
+
+
+def _left_out(root, overlay):
+    """The `L-SETTING-REMOVED` line for each legacy stage the overlay sets that the
+    project's configuration does not hold; the merge leaves each one out (ADR-092)."""
+    from compass_pkg import removed_parts
+    below = effective.resolve_live(root).resolved
+    return [f"L-SETTING-REMOVED {key}: {removed_parts.setting_note(key)}"
+            for key in removed_parts.unheld_stages(overlay, below)]
 
 
 # --- the verb --------------------------------------------------------------------------------------
@@ -236,7 +247,7 @@ def run_configure(args):
                                base="pending proposal" if live and not args.from_file
                                else "config")
     effective.write_proposal(task_dir, manifest, overlay)
-    _emit(args, doc)
+    _emit(args, doc, _left_out(root, overlay))
     return 0 if doc["verdict"] == "accepted" else 1
 
 

@@ -14,6 +14,22 @@ Scenario ids: RWC-1 to RWC-3, in the delivery approach of issue
 from __future__ import annotations
 
 import json
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+
+@pytest.fixture(autouse=True)
+def _governance_8_0_4(project):
+    """The project's governance copy is the 8.0.4 one. The retro weighs a route by
+    the approach weights of the configuration in force, and the shipped default
+    declares only the spike and the path since 9.0.0 (ADR-092); the issues here
+    were re-assessed between 8.x approaches."""
+    import compat_baseline as cb
+    cb.add_governance_copy(project, source=cb.GOVERNANCE_8_0_4)
 
 
 def _task(slug, transitions):

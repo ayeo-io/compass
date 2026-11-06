@@ -284,10 +284,15 @@ def test_trc_e1_swarm_has_no_invented_ceiling():
     # The property under test: the unbounded shape must carry no invented
     # number.
     import yaml
-
-    shapes = yaml.safe_load(
-        (ROOT / "governance" / "routing-policy.yml").read_text()
-    )["route_shapes"]
+    # The shipped default declares no 8.x approach since 9.0.0 (ADR-092), so the
+    # shapes are read from the 8.0.4 governance copy, the last release that had them.
+    import sys as _sys
+    import tarfile
+    _sys.path.insert(0, str(ROOT / "tests"))
+    from compat_baseline import GOVERNANCE_8_0_4
+    with tarfile.open(GOVERNANCE_8_0_4) as tar:
+        _v8 = tar.extractfile("governance/routing-policy.yml").read().decode("utf-8")
+    shapes = yaml.safe_load(_v8)["route_shapes"]
 
     assert shapes["full"]["subtask_ceiling"] is None, (
         f"the unbounded shape carries an invented ceiling of "

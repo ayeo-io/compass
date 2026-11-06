@@ -426,13 +426,13 @@ def _cli_config(reviewers=None, extra_check=None):
     check = _judged(reviewers=reviewers)
     return {"schema": 1, "capabilities": {CAPABILITY: True},
             "checks": {CHECK: check, **(extra_check or {})},
-            "stages": {"plan": {"set": {"entry": {"add": [CHECK]}}}}}
+            "stages": {"specify": {"set": {"entry": {"add": [CHECK]}}}}}
 
 
 def _cli_layers(tmp_path, config):
     """A scratch project for `config` and its issue directory. Its checks and
-    stage lists sit in a git parent: since 9.0.0 a project layer's change to a
-    legacy stage such as plan is left out (ADR-092)."""
+    stage lists sit in a git parent. The issue is on the four-stage path
+    (ADR-092), whose specify stage holds what the plan entry list held."""
     from parent_fixtures import team_parent
     parent = {"schema": 1, **{key: config[key] for key in ("checks", "stages")}}
     project = {key: value for key, value in config.items() if key not in parent}
@@ -445,7 +445,7 @@ def _cli_layers(tmp_path, config):
 def _cli_project(tmp_path, reviewers=None, documents=True):
     root, task_dir = _cli_layers(tmp_path, _cli_config(reviewers))
     assert _evaluate_write(root)[0] == 0
-    _write_manifest(task_dir, current_phase="plan")
+    _write_manifest(task_dir, current_phase="specify")
     if documents:
         _documents(task_dir)
     return root, task_dir
@@ -544,7 +544,7 @@ def _tree(task_dir):
 
 @pytest.mark.parametrize("name, args, needle", [
     ("unknown check", dict(check="no-such-check"), "no such check"),
-    ("not judged", dict(check="dor-summary-filled"), "not a judged check"),
+    ("not judged", dict(check="dod-suite-green"), "not a judged check"),
     ("empty reason", dict(reason="  "), "reason"),
     ("empty reviewer", dict(reviewer=" "), "reviewer"),
 ])

@@ -269,11 +269,14 @@ def _u5_overlay(check_id: str, severity: str = "advisory", waiver: bool = False)
 
 def test_trc_047():
     import tempfile
-    # The default preset names the check by its new id, in the catalogue and in
-    # the entry list of the stage; `default@6` keeps the old id (TRC-049).
+    # `default@7` names the check by its new id, in the catalogue and in the entry
+    # list of the stage; `default@6` keeps the old id (TRC-049). The shipped default
+    # holds no Definition of Ready since 9.0.0 (ADR-092), under either id.
     for name in ("checks.yml", "stages.yml"):
-        text = (ROOT / "governance" / "presets" / "default" / name).read_text(encoding="utf-8")
+        text = (ROOT / "governance" / "presets" / "default@7" / name).read_text(encoding="utf-8")
         assert NEW_CHECK in text and OLD_CHECK not in text, name
+        live = (ROOT / "governance" / "presets" / "default" / name).read_text(encoding="utf-8")
+        assert NEW_CHECK not in live and OLD_CHECK not in live, name
     for check_id in (NEW_CHECK, OLD_CHECK):
         for waiver in (False, True):
             with tempfile.TemporaryDirectory() as raw:
@@ -289,8 +292,7 @@ def test_trc_047():
                 assert code == 0, shown + err
                 rows = [line for line in shown.splitlines()
                         if ".severity" in line and "dor-behav" in line]
-                assert len(rows) == 1 and NEW_CHECK in rows[0] and "blocking" in rows[0], rows
-                assert "advisory" not in rows[0], rows
+                assert rows == [], rows
                 assert OLD_CHECK not in shown, (check_id, waiver)
 
         # An issue's own `config:` names the id too.
@@ -305,11 +307,14 @@ def test_trc_047():
                                                encoding="utf-8")
             code, out, err = _run(project, "policy", "lint", "--issue", "sample")
             assert "unknown check" not in out + err, (check_id, out + err)
+            # The shipped default does not hold the check, so the issue's change is
+            # left out and named by the new id (ADR-092 decision 10).
+            assert f"L-SETTING-REMOVED [issue] checks.{NEW_CHECK}" in out, out
             code, shown, err = _run(project, "policy", "show", "--issue", "sample")
             assert code == 0, shown + err
             rows = [line for line in shown.splitlines()
                     if ".severity" in line and "dor-behav" in line]
-            assert len(rows) == 1 and NEW_CHECK in rows[0], rows
+            assert rows == [], rows
             assert OLD_CHECK not in shown, check_id
 
 
@@ -346,7 +351,9 @@ def test_trc_049():
         assert code == 0, out + err
         code, shown, err = _run(project, "policy", "show")
         assert code == 0, shown + err
-        assert OLD_CHECK in shown or NEW_CHECK in shown
+        # The live preset is resolved whatever major extends names, and it holds
+        # no Definition of Ready (ADR-092).
+        assert OLD_CHECK not in shown and NEW_CHECK not in shown
     # The frozen 6 files still name the old id, and their digests are unchanged.
     frozen = (ROOT / "governance" / "presets" / "default@6" / "checks.yml").read_text(
         encoding="utf-8")

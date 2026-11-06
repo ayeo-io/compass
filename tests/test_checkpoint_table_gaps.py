@@ -7,18 +7,22 @@ leaving the whole table out. And a misspelt route key, or a retired name
 beside its current one, was accepted silently (issue #330).
 
 Scenario id: CT-1 (issue `checkpoint-table-gaps`).
+
+The table is the 8.x one, read over the 8.0.4 governance copy. Since 9.0.0
+the shipped default's path issue takes its checkpoints from its evidence, not
+from this table (ADR-092 open question 7), and the default names only the
+spike and the path, so a regular approach and its retired name are absent.
 """
 from __future__ import annotations
 
-import copy
-import os
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
+sys.path.insert(0, str(ROOT / "tests"))
 
-from compass_pkg import core  # noqa: E402
+import compat_baseline as cb  # noqa: E402
 from compass_pkg.policy import checkpoint_table_errors  # noqa: E402
 from compass_pkg.routing import evaluate_route  # noqa: E402
 
@@ -29,8 +33,8 @@ EVERY = ["assess", "define", "refine", "plan"]
 
 
 def _policy():
-    return copy.deepcopy(core.load_yaml(
-        os.path.join(core.find_governance(), "routing-policy.yml")))
+    # A new copy on each call, so a test can change it.
+    return cb.policy_8_0_4()
 
 
 def test_ct_1_a_missing_route_waits_at_every_hand_off():

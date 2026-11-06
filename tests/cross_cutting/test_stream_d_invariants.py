@@ -263,10 +263,16 @@ def test_trc_d4_no_new_agent_persona_no_new_role():
 # ---------------------------------------------------------------------------
 def test_trc_d5_pipeline_phases_flex_by_route():
     """The five route shapes have different phase-weight maps;
-    none has been flattened to a one-size-fits-all shape (`TRC-D5`, `BR-014`)."""
-    policy = yaml.safe_load(
-        (ROOT / "governance" / "routing-policy.yml").read_text(encoding="utf-8")
-    )
+    none has been flattened to a one-size-fits-all shape (`TRC-D5`, `BR-014`).
+
+    The shapes are read from the 8.0.4 governance copy, the last release that
+    declared them. The shipped default runs one path of four stages with no
+    stage modes since 9.0.0 (ADR-092)."""
+    import tarfile
+    sys.path.insert(0, str(ROOT / "tests"))
+    from compat_baseline import GOVERNANCE_8_0_4
+    with tarfile.open(GOVERNANCE_8_0_4) as tar:
+        policy = yaml.safe_load(tar.extractfile("governance/routing-policy.yml").read())
     shapes = policy["route_shapes"]
     phase_maps = {name: shape["stages"] for name, shape in shapes.items()}
     # All five shapes present

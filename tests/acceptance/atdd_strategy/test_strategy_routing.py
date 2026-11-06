@@ -412,12 +412,15 @@ def test_trc_a23(tmp_path, major, applies):
 # --- `TRC-A24` -----------------------------------------------------------------------------
 
 def test_trc_a24(tmp_path):
-    """A shipping approach cannot suspend the strategy; the spike keeps `suspended`."""
+    """A shipping approach cannot suspend the strategy; the spike keeps `suspended`.
+
+    `delivery` is the shipped default's one shipping approach since 9.0.0
+    (ADR-092)."""
     import sys
     sys.path.insert(0, str(ROOT / "cli"))
     from compass_pkg import acceptance_strategy, policy_lint
     project = support.Project(tmp_path / "repo")
-    project.parent(approaches={"regular": {"set": {"acceptance_strategy": "suspended"}}})
+    project.parent(approaches={"delivery": {"set": {"acceptance_strategy": "suspended"}}})
     code, out, err = project.run("policy", "lint")
     assert code != 0, out + err
     assert "acceptance_strategy: {state: off, reason:" in out + err, out + err

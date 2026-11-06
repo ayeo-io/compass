@@ -145,8 +145,20 @@ def _route_shapes(text: str) -> dict:
             for name, shape in shapes.items()}
 
 
+def _routing_policy_8_0_4() -> str:
+    """The routing policy of the 8.0.4 governance copy, the last release that
+    declared the five approaches over the eight stages. The shipped default
+    declares the spike and the four-stage path since 9.0.0 (ADR-092), so the
+    8.x shapes this check pins are read from the copy."""
+    import tarfile
+    sys.path.insert(0, str(ROOT / "tests"))
+    from compat_baseline import GOVERNANCE_8_0_4
+    with tarfile.open(GOVERNANCE_8_0_4) as tar:
+        return tar.extractfile("governance/routing-policy.yml").read().decode("utf-8")
+
+
 def test_trc_002_the_routing_stage_list_is_unchanged():
-    now = _route_shapes(_text(ROOT / "governance" / "routing-policy.yml"))
+    now = _route_shapes(_routing_policy_8_0_4())
     assert sorted(now) == sorted(GATES_AT_A74E968), "an approach was added or removed"
     for name, shape in now.items():
         assert list(shape["stages"]) == STAGES_AT_A74E968, f"{name}: a stage moved"

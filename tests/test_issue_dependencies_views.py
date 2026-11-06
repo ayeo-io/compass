@@ -1,9 +1,7 @@
-"""What the views show for `depends_on`: the board card and panel, the issue page, and the
-owning doc's shape.
+"""The owning doc's shape for `depends_on`.
 
-Every test runs without a network. The project leaves the GitHub switches off and links no
-GitHub issue, and a `gh` shim on PATH fails the test if anything calls it (`assert_no_gh_call`).
-The fixture project, the CLI runner and the shim come from `test_issue_dependencies`.
+9.0.0 removed the board page, whose card and panel DBI-17 read (ADR-093), and the
+issue page (ADR-091). `compass flow` and `--json` are covered in test_issue_dependencies.py.
 """
 from __future__ import annotations
 
@@ -12,109 +10,8 @@ from pathlib import Path
 
 import yaml
 
-from test_issue_dependencies import Project, assert_no_gh_call, compass, dep
 
 ROOT = Path(__file__).resolve().parent.parent
-
-
-# --- reading the pages ------------------------------------------------------------
-
-def board_html(project):
-    out = project.root / "board.html"
-    done = compass(project.root, "board", "render", "--no-open", "--out", str(out))
-    assert done.returncode == 0, done
-    return out.read_text(encoding="utf-8")
-
-
-def card(html, slug):
-    """The markup of the card for `slug`."""
-    found = re.search(r'<a class="card[^"]*" data-approach="[^"]*" href="#issue-\d+">(?:(?!</a>).)*?'
-                      r'<span class="slug">%s</span>(?:(?!</a>).)*</a>' % re.escape(slug), html, re.S)
-    assert found, "no card for %s" % slug
-    return found.group(0)
-
-
-def panel(html, slug):
-    """The markup of the panel for `slug`."""
-    found = re.search(r'<section class="panel" id="issue-\d+">\s*<h2>%s</h2>.*?(?=\n<section class="panel"|\n</body>)'
-                      % re.escape(slug), html, re.S)
-    assert found, "no panel for %s" % slug
-    return found.group(0)
-
-
-def dependency_lines(markup):
-    """The text of each line in the panel's Dependencies part."""
-    part = re.search(r'<section class="part deps"><h3>Dependencies</h3>(.*?)</section>',
-                     markup, re.S)
-    if not part:
-        return None
-    return [re.sub(r"<[^>]+>", "", x).strip() for x in re.findall(r"<li[^>]*>(.*?)</li>",
-                                                                   part.group(1), re.S)]
-
-
-def blocked_tile(html):
-    return re.search(r"<li>blocked (\d+)</li>", html).group(1)
-
-
-# --- DBI-17 -----------------------------------------------------------------------
-
-def test_dbi_17_board_card_and_panel(tmp_path):
-    project = Project(tmp_path)
-    project.issue("b", "implement")
-    project.issue("a", "implement", depends=[dep("b", "done", "needs the parse cache")])
-    html = board_html(project)
-    a_card = card(html, "a")
-    assert '<span class="meta">waits for b</span>' in a_card
-    assert '<span class="flag">blocked: waits for b to reach done</span>' in a_card
-    assert " dashed" in a_card.split(">", 1)[0]
-    assert blocked_tile(html) == "1"
-    assert dependency_lines(panel(html, "a")) == [
-        "b - needs the parse cache - until done - in-progress - waiting"]
-    # b has no dependencies, so it has no Dependencies part and no "waits for" line.
-    assert dependency_lines(panel(html, "b")) is None
-    assert "waits for" not in card(html, "b")
-
-    # b is closed as completed: the wait is met.
-    manifest = project.manifest("b")
-    manifest["status"] = "done"
-    manifest["close_reason"] = "completed"
-    project.write("b", manifest)
-    html = board_html(project)
-    a_card = card(html, "a")
-    assert "waits for" not in a_card and "blocked" not in a_card
-    assert blocked_tile(html) == "0"
-    assert dependency_lines(panel(html, "a")) == [
-        "b - needs the parse cache - until done - done - met"]
-
-    # An issue at plan: the card names the wait, and nothing is blocked.
-    project.issue("b", "implement")
-    project.issue("a", "implement")
-    project.issue("p", "plan", depends=[dep("b", "done", "needs the parse cache")])
-    html = board_html(project)
-    p_card = card(html, "p")
-    assert '<span class="meta">waits for b</span>' in p_card
-    assert "blocked" not in p_card
-    assert blocked_tile(html) == "0"
-
-    # A dependency with no manifest is "not found", and a card does not claim to wait for it.
-    project.issue("a", "implement", depends=[dep("gone", "plan", "a later issue")])
-    html = board_html(project)
-    assert dependency_lines(panel(html, "a")) == ["gone - a later issue - until plan - not found"]
-    assert "waits for" not in card(html, "a")
-
-    # Several unmet dependencies are listed in the order they are recorded, and a manifest
-    # that does not parse reads "unreadable".
-    project.issue("c", "implement")
-    (project.dir("broken")).mkdir()
-    (project.dir("broken") / "manifest.yml").write_text("a: [unclosed\n", encoding="utf-8")
-    project.issue("a", "implement", depends=[dep("c"), dep("b"), dep("broken", "plan", "x")])
-    html = board_html(project)
-    assert '<span class="meta">waits for c, b</span>' in card(html, "a")
-    assert dependency_lines(panel(html, "a")) == [
-        "c - needs it - until done - in-progress - waiting",
-        "b - needs it - until done - in-progress - waiting",
-        "broken - x - until plan - unreadable"]
-    assert_no_gh_call(project.root)
 
 
 # --- DBI-20 -----------------------------------------------------------------------

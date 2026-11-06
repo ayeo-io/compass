@@ -49,7 +49,7 @@ The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 | `evidence` | Each evidence entry's id, type and path. A path under `docs/compass/` is a relative link; a path in the work folder is plain text, because that folder is untracked in many projects |
 | `follow-ups` | Each follow-up's id, status, summary, target issue and the check it defers |
 | `decisions-taken` | The decisions an agent took for the person with their state, then the reassessments with their reasons |
-| `header` | The issue, its approach, state (`done (completed)` for a closed issue), stage and gates, then the owner and the created and completed dates, then, while a dependency holds the issue at implement, a second `Blocked: waits for ...` line with the wait (see below), then the command `compass board render` |
+| `header` | The issue, its approach, state (`done (completed)` for a closed issue), stage and gates, then the owner and the created and completed dates, then, while a dependency holds the issue at implement, a second `Blocked: waits for ...` line with the wait (see below), then a line naming the board command, which 9.0.0 removed (ADR-093) |
 | `ask` | The Problem, Desired outcome, Success signals and Non-goals sections of `intent.md`. Without them, the issue line of `delivery-approach.md` and the scenario titles; without those, `No statement of the ask is recorded.` |
 | `decision-required` | The document that waits for a person's approval, with the command that approves it, or that nothing waits |
 | `acceptance` | `Acceptance: n of m scenarios passed`, then each scenario with its title and `passed` or `not yet passed` |

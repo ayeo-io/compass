@@ -455,11 +455,14 @@ def test_the_live_default_has_no_rendered_blocks_check():
 def test_the_github_page_switch_is_read_and_lint_names_it_when_on(value):
     report = _lint_project({"github_labels": {"domain": True, "page": value}})
     found = [f for f in report.findings if f.code == "L-SETTING-REMOVED"]
+    # The whole key went with the label sync (ADR-093). Lint names it once: by the
+    # page switch when that is on, so the ADR-091 note stays, and by the key otherwise.
     if value:
         assert len(found) == 1 and found[0].path == "github_labels.page", found
         assert "ADR-091" in found[0].message
     else:
-        assert found == []
+        assert len(found) == 1 and found[0].path == "github_labels", found
+        assert "ADR-093" in found[0].message
     assert not [f for f in report.findings if f.level == "error"], report.findings
 
 
@@ -506,7 +509,9 @@ def test_a_hint_to_a_removed_verb_says_the_replacement_went_too():
     line = hint_for(["issue", "dashboard", "render"])
     assert "'issue dashboard' is now 'issue render'" in line, line
     assert "removed in 9.0.0 (ADR-091)" in line, line
-    assert hint_for(["issue", "labels", "sync"]) == "'issue labels sync' is now 'issue github sync'."
+    # `issue github sync` went with the label sync (ADR-093).
+    assert hint_for(["issue", "labels", "sync"]) == (
+        "'issue labels sync' is now 'issue github sync', which was removed in 9.0.0 (ADR-093).")
 
 
 # --- the checks that read a removed document ------------------------------------------

@@ -198,9 +198,8 @@ def _result(done, root):
 
 def dbi5_outputs(root, cli_dir=CLI_DIR):
     """Every output the comparison reads, by capture file name, in the order
-    the commands run. The command that writes (the board page) runs after the ones that
-    only read. 9.0.0 renders no issue page or project index (ADR-091), so their
-    captures are gone."""
+    the commands run. 9.0.0 renders no issue page or project index (ADR-091) and
+    no board page (ADR-093), so their captures are gone."""
     root = Path(root)
     out = {}
     run = lambda *a: compass(root, *a, cli_dir=cli_dir, clock=FIXED_AT)  # noqa: E731
@@ -210,10 +209,6 @@ def dbi5_outputs(root, cli_dir=CLI_DIR):
         out[f"lint-{slug}.txt"] = _result(run("issue", "lint", "--issue", slug), root)
     out["flow.txt"] = _result(run("flow"), root)
     out["flow-json.txt"] = _result(run("flow", "--json"), root)
-    page = root / "board.html"
-    out["board-render.txt"] = _result(run("board", "render", "--no-open", "--out", str(page)),
-                                      root)
-    out["board-page.html"] = _masked(page.read_text(encoding="utf-8"), root)
     return out
 
 
@@ -235,7 +230,7 @@ def _capture(cli_dir, out_file):
     root = build_dbi5_project(Path(tempfile.mkdtemp(prefix="dbi5-")) / "project")
     outputs = {name: _Block(text) for name, text in dbi5_outputs(root, cli_dir).items()}
     assert_no_gh_call(root)
-    header = ("# What compass next, issue lint, flow, flow --json and board render printed\n"
+    header = ("# What compass next, issue lint, flow and flow --json printed\n"
               "# on the project that build_dbi5_project in\n"
               "# tests/test_issue_dependencies.py writes, captured from the code before\n"
               "# depends_on existed, under a fixed clock. The project's own folder reads\n"
@@ -798,10 +793,8 @@ def test_dbi_13_derived_block_never_written(tmp_path):
     before = {slug: project.bytes(slug) for slug in ("a", "b")}
     assert "blocked: waits for b to reach done" in next_line(project, "a")
     assert flow_rows(project)["a"]["blocked"] == "waits for b to reach done"
-    page = project.root / "board.html"
-    for args in (("board", "render", "--no-open", "--out", str(page)),):
-        done = compass(project.root, *args)
-        assert done.returncode == 0, done
+    done = compass(project.root, "flow")
+    assert done.returncode == 0, done
     hook(project, code_file(project))
     assert {slug: project.bytes(slug) for slug in ("a", "b")} == before
     assert "blocked" not in project.manifest("a")
@@ -813,9 +806,6 @@ def test_dbi_13_derived_block_never_written(tmp_path):
     assert flow_rows(project)["a"]["blocked"] == both
     done = compass(project.root, "flow")
     assert "BLOCKED: " + both in done.stdout, done
-    done = compass(project.root, "board", "render", "--no-open", "--out", str(page))
-    assert done.returncode == 0, done
-    assert "blocked: " + both in page.read_text(encoding="utf-8")
     assert_no_gh_call(project.root)
 
 

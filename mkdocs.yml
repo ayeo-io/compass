@@ -49,8 +49,7 @@ exclude_docs: |
   !/upgrade-6-0-0.md
   !/upgrade-7-0-0.md
   !/upgrade-8-0-0.md
-  !/github-labels.md
-  !/github-labels-walkthrough.md
+  !/github-links.md
   !/waivers-and-locks.md
   !/artifact-catalog.md
 
@@ -63,8 +62,7 @@ nav:
       - CLI reference: cli.md
       - Configuration: configuration.md
       - Waivers and locks: waivers-and-locks.md
-      - GitHub labels: github-labels.md
-      - GitHub labels walkthrough: github-labels-walkthrough.md
+      - GitHub links: github-links.md
       - Upgrading to 6.0.0: upgrade-6-0-0.md
       - Upgrading to 7.0.0: upgrade-7-0-0.md
       - Upgrading to 8.0.0: upgrade-8-0-0.md

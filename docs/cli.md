@@ -48,14 +48,11 @@ compass issue blocked set  flag an in-progress or in-review issue as blocked, wi
 compass issue blocked remove  clear the blocked flag
 compass issue depends add  record an issue this one waits for, with --reason and --until; build is blocked until it is met
 compass issue depends remove  stop waiting for an issue
-compass issue link set     link an issue to its GitHub issue (--github), to write its labels there (opt in), or to its pull request (--pr), whose merge commit becomes land_commit
-compass issue github sync  write an issue's labels to its linked GitHub issue now
+compass issue link set     link an issue to its GitHub issue (--github) or to its pull request (--pr), whose merge commit becomes land_commit
 compass acceptance start   open an honest record where there is no natural red
 compass acceptance record  close it with what was observed
 compass adr new            create the next numbered decision record
-compass flow               blockers, owed follow-ups, the periodic digest
-compass board render       write the delivery board as one page and open it (--no-open, --out, --worktrees)
-compass board refresh      rewrite that page in place, without opening a browser
+compass flow               every issue by state, what is blocked and stale (--json), and the periodic digest (--digest)
 compass readiness          measure whether the repository is fit for unattended agent work (--json, --fix-list)
 compass next               which stage of the path this issue reached, and the next command
 compass follow-up add      record a follow-up the issue owes
@@ -87,3 +84,35 @@ compass lesson decline     drop a pending proposal; retro will not propose it ag
 compass record sync        copy the delivery record to its own repository (ADR-031)
 compass record restore     bring the delivery record back into this project
 ```
+
+## `compass flow`
+
+`compass flow` prints every issue under `.compass/work/`, grouped by state:
+in progress, stale evidence, in review, ready, backlog, done in the last
+seven days, closed without delivery, a stored status Compass does not set,
+and the folders it cannot place, each with its reason. It is advisory: it
+changes no issue state and always exits 0 inside a Compass project. Outside
+one it refuses, as every other verb does. `--work-root` reads another folder
+of issues.
+
+- `compass flow --json` prints the same rows as data. The keys are additive
+  within a major version, and a test pins the full key set
+  (`tests/test_flow_board.py`). Every row has `depends_on`, a list with one
+  object for each entry of the issue's `depends_on`
+  (`docs/issue-dependencies.md`). 9.0.0 removed the `friction` key and the
+  summary's friction line, because nothing records friction any more
+  (ADR-093).
+- `compass flow --digest` prints a dated list of the backlog, oldest first,
+  and flags a queued issue that waited too long.
+
+`board()` in `cli/compass_pkg/flow.py` builds the rows once, from one read of
+each manifest through the parse cache (ADR-049). The approach, state, stage,
+gate count and documents of a row come from `issue_detail.detail`
+(`cli/compass_pkg/issue_detail.py`). The evidence check for an in-progress
+issue works out the hash of the files its test record was made on, which can
+write loose objects to the repository's object store. `git gc` removes them
+after its prune period.
+
+9.0.0 removed the HTML board page and the commands and the option that wrote
+it (ADR-093). A command line that names one fails to parse with a line naming
+ADR-093.

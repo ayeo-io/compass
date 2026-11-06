@@ -484,7 +484,7 @@ A record in the manifest that meets an item of the Definition of Done or the Def
 
 ### label
 
-A plain-word tag on an issue carrying classification and risk surface. Local-first (strings in the issue file). Compass writes them to the linked GitHub issue only when the project sets github_labels in compass.yml; with it off, no label leaves the issue file. Compass never reads a GitHub label back into the issue file. Domain labels never track workflow state. The status labels Compass writes do: status:<state>, and on close status:done with close:<reason>.
+A plain-word tag on an issue carrying classification and risk surface. Local-first (strings in the issue file). Compass writes no label to GitHub: 9.0.0 removed the label sync and the github_labels setting it read (ADR-093). Compass never reads a GitHub label back into the issue file. Domain labels never track workflow state.
 
 **GitHub:** Label
 
@@ -618,7 +618,7 @@ A named, versioned parent layer. `default` is the only preset Compass ships.
 
 ### project-index
 
-The README.md directly in the folder `docs/compass`, which listed every issue once, in a table for its state, until 9.0.0 removed the render (ADR-091). An older checkout can still hold one; nothing writes or reads it now. `compass board render` shows every issue.
+The README.md directly in the folder `docs/compass`, which listed every issue once, in a table for its state, until 9.0.0 removed the render (ADR-091). An older checkout can still hold one; nothing writes or reads it now. `compass flow` lists every issue.
 
 **Related:** `rendered-block`, `issue-page`
 

@@ -326,7 +326,7 @@ SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement"
                  "living_spec")
 #: The pieces of acceptance support code a project names under `project.acceptance_support`.
 ACCEPTANCE_SUPPORT = ("alias_helper", "driver_factory", "dsl_root", "layering_test")
-#: The three switches inside `github_labels`, all off by default.
+#: The three switches inside `github_labels`, which 9.0.0 removed and does not read.
 GITHUB_LABEL_SWITCHES = ("domain", "status", "page")
 RESERVED_KEYS = ("preset",)
 
@@ -650,18 +650,16 @@ TOP_DESCRIPTIONS = {
                   "key stays valid so a project that holds it keeps working, and `compass "
                   "policy lint` names it.",
     "preset_index": "Reserved for published presets. It has no behavior yet.",
-    "github_labels": "Whether Compass writes an issue's labels to its linked GitHub issue, "
-                     "through the switches `domain` and `status` (`page` is removed in 9.0.0). "
-                     "Both are off by default, and with both off no command calls GitHub.",
-    "github_labels.domain": "Whether Compass writes the issue's declared domain labels to its "
-                            "GitHub issue. The default is `false`.",
-    "github_labels.status": "Whether Compass writes `status:<state>` to the GitHub issue, and on "
-                            "a closed issue `status:done` and `close:<reason>`. The default is "
-                            "`false`.",
-    "github_labels.page": "Whether Compass keeps one comment on the GitHub issue equal to the "
-                          "issue's README, and writes the ask into an empty issue body once. "
-                          "The default is `false`, because it widens who reads the issue's "
-                          "documents to the GitHub issue's readers.",
+    "github_labels": "Removed in 9.0.0 (ADR-093) and not read: whether Compass wrote an "
+                     "issue's labels to its linked GitHub issue, through the switches `domain`, "
+                     "`status` and `page`. The key stays valid so a project that holds it keeps "
+                     "working, and `compass policy lint` names it.",
+    "github_labels.domain": "Removed in 9.0.0 (ADR-093) and not read: whether Compass wrote the "
+                            "issue's declared domain labels to its GitHub issue.",
+    "github_labels.status": "Removed in 9.0.0 (ADR-093) and not read: whether Compass wrote "
+                            "`status:<state>` and `close:<reason>` to the GitHub issue.",
+    "github_labels.page": "Removed in 9.0.0 (ADR-091) and not read: whether Compass kept one "
+                          "comment on the GitHub issue equal to the issue's README.",
     "preset": "Reserved key for a published preset's own data. It is not part of a layer's "
               "digest.",
     "acceptance_strategy": "Whether the four-layer acceptance strategy (`S17`) is on for the "

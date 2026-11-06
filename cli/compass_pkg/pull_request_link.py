@@ -16,23 +16,23 @@ fails the run, because a record written before the merge, or in a clone that
 has not fetched, is not wrong work.
 """
 # DEPENDENCY: standard library (json, re, subprocess) and compass_pkg.core,
-# check_results, status_words, github_labels (the `gh` runner and the target
+# check_results, status_words, issue_link (the `gh` runner and the target
 # patterns) and github_links (origin's repository and default branch).
-# Imported by github_labels.cmd_issue_link and check_cmd, inside functions.
+# Imported by issue_link.cmd_issue_link and check_cmd, inside functions.
 from __future__ import annotations
 
 import json
 import re
 import subprocess
 
-from compass_pkg import github_labels, status_words
+from compass_pkg import issue_link, status_words
 from compass_pkg.check_results import ADVISORY_FAILURE
 from compass_pkg.core import CompassError, find_upwards
 from compass_pkg.github_links import link_base
 
-_PR_URL = re.compile(rf"https://github\.com/({github_labels._OWNER}/{github_labels._NAME})"
-                     rf"/pull/({github_labels._NUMBER})/?")
-_BARE = re.compile(github_labels._NUMBER)
+_PR_URL = re.compile(rf"https://github\.com/({issue_link._OWNER}/{issue_link._NAME})"
+                     rf"/pull/({issue_link._NUMBER})/?")
+_BARE = re.compile(issue_link._NUMBER)
 _OID = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 #: Seconds one `git` call may take.
 _TIMEOUT = 15
@@ -42,9 +42,9 @@ def parse_pr(text, project_root):
     """`(repo, number)` from `owner/repo#number`, a pull request URL on github.com,
     or a bare number in origin's repository; None for anything else."""
     text = text or ""
-    for pattern in (github_labels._SHORT, _PR_URL):
+    for pattern in (issue_link._SHORT, _PR_URL):
         found = pattern.fullmatch(text)
-        if found and github_labels._repo_ok(found.group(1)):
+        if found and issue_link._repo_ok(found.group(1)):
             return found.group(1), int(found.group(2))
     if _BARE.fullmatch(text):
         repo = link_base(project_root).repo
@@ -65,10 +65,10 @@ def read_pr(text, project_root, verb):
             "is on github.com. Nothing was written.")
     repo, number = target
     try:
-        answer = github_labels._gh(["pr", "view", str(number), "--repo", repo,
-                                    "--json", "number,state,mergeCommit"])
+        answer = issue_link._gh(["pr", "view", str(number), "--repo", repo,
+                                  "--json", "number,state,mergeCommit"])
         data = json.loads(answer)
-    except (github_labels.SyncError, ValueError) as exc:
+    except (issue_link.SyncError, ValueError) as exc:
         raise CompassError(f"{verb}: cannot read pull request {repo}#{number}: {exc}. "
                            "Nothing was written.") from None
     merged = data.get("mergeCommit") if isinstance(data, dict) else None

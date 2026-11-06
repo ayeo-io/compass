@@ -36,7 +36,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg import github_labels  # noqa: E402
+from compass_pkg import issue_link  # noqa: E402
 
 #: The hook scripts the plugin runs. Only the owner changes the approval prompt
 #: hook: the pre-tool hook refuses an agent read or edit of it.
@@ -313,8 +313,8 @@ def test_trc_c1_gh_gets_only_the_variables_it_needs(monkeypatch):
     monkeypatch.setenv("HOME", "/home/someone")
     monkeypatch.setenv("GH_TOKEN", "a-token")
     monkeypatch.setenv(SECRET, "do-not-pass")
-    monkeypatch.setattr(github_labels.subprocess, "run", run)
-    github_labels._gh(["api", "user"])
+    monkeypatch.setattr(issue_link.subprocess, "run", run)
+    issue_link._gh(["api", "user"])
     assert seen["PATH"] == "/usr/bin"
     assert seen["HOME"] == "/home/someone"
     assert seen["GH_TOKEN"] == "a-token"
@@ -482,7 +482,6 @@ INHERITS_ENVIRONMENT = {
     ("cli/compass_pkg/ci_cmd.py", "_git_out"): (1, _GIT),
     ("cli/compass_pkg/ci_cmd.py", "_landed_before"): (1, _GIT),
     ("cli/compass_pkg/binding.py", "_git"): (1, _GIT),
-    ("cli/compass_pkg/board_trees.py", "_git"): (1, _GIT + "; it leaves out only GIT_ variables"),
     ("cli/compass_pkg/checks.py", "_git_out"): (1, _GIT),
     ("cli/compass_pkg/checks.py", "_check_command_passes"): (1, _PROJECT),
     ("cli/compass_pkg/decisions.py", "_git"): (1, _GIT),
@@ -530,7 +529,6 @@ def _is_binary(data):
 
 #: The binary files the plugin ships, each one in 8.0.4 when it passed the directory.
 BINARY_FILES = {
-    "assets/board-example.png": "the board image the README shows",
     "assets/compass-icon.png": "the plugin's icon",
     "governance/shipped-releases.tar.xz": "the governance files of each release, which "
                                           "`compass policy migrate` reads",

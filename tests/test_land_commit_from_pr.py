@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import json
 
-from test_github_label_sync import FakeGh, edit_manifest, make_issue, run  # noqa: F401
-from test_github_label_sync import gh  # noqa: F401  (fixture)
+from test_issue_link import FakeGh, edit_manifest, make_issue, run  # noqa: F401
+from test_issue_link import gh  # noqa: F401  (fixture)
 from test_quick_fix_verbs import _git, _manifest, repo  # noqa: F401  (fixture)
 
 SLUG = "sync-me"

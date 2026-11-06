@@ -2122,6 +2122,15 @@ _REMOVED_IN_9_0_0 = frozenset({
     "tests/test_intent_ingest.py", "tests/test_intent_interview.py",
     "tests/test_manifest_intent_source_schema.py", "tests/test_consult_doc.py",
     "tests/test_architect_lens.py",
+    # The HTML board, the GitHub label sync, their docs and their tests (ADR-093).
+    "cli/compass_pkg/board_cmd.py", "cli/compass_pkg/board_file.py",
+    "cli/compass_pkg/board_page.py", "cli/compass_pkg/board_trees.py",
+    "cli/compass_pkg/github_labels.py", "cli/compass_pkg/github_sync_record.py",
+    "docs/board.md", "docs/github-labels.md", "docs/github-labels-walkthrough.md",
+    "assets/board-example.png", "tests/test_board_commands.py", "tests/test_board_data.py",
+    "tests/test_board_file.py", "tests/test_board_page.py", "tests/test_board_speed.py",
+    "tests/test_board_worktrees.py", "tests/test_github_label_sync.py",
+    "tests/test_github_issue_page_docs.py",
 })
 # A sample decision record under `templates/architecture/decisions/` is a
 # decision record too.

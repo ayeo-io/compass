@@ -125,13 +125,16 @@ def test_a4_named_files_resolve():
                        r"|agents|commands|docs)/[\w./-]+\.md)\b")
     # An upgrade guide is history: it names a template as it shipped then, and
     # 9.0.0 deleted fourteen of them (ADR-091), then the five role templates and
-    # the roles guide with the role entry points (ADR-093).
+    # the roles guide with the role entry points, and the board and label pages
+    # with the board and the label sync (ADR-093).
     removed = {f"templates/{name}.md" for name in (
         "delivery-approach", "verification-note", "technical-design", "low-level-design",
         "distribution-map", "verification-report", "intent", "requirements-review",
         "threat-model", "rollback-plan", "bug-report", "review", "spike-conclusion",
         "incident", "positioning", "launch-readiness", "ui-contract",
-        "product-owner-review", "architecture-notes")} | {"docs/roles-guide.md"}
+        "product-owner-review", "architecture-notes")} | {
+        "docs/roles-guide.md", "docs/board.md", "docs/github-labels.md",
+        "docs/github-labels-walkthrough.md"}
     missing = []
     for p in _prose_files():
         history = p.relative_to(REPO_ROOT).as_posix().startswith("docs/upgrade-")

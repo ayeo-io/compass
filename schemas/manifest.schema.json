@@ -887,7 +887,7 @@
     },
     "github": {
       "type": "object",
-      "description": "The GitHub issue this issue is linked to. Set by `compass issue link set --github`. When the project sets `github_labels` in compass.yml, Compass writes the issue's labels there; the manifest stays the source of truth.",
+      "description": "The GitHub issue this issue is linked to. Set by `compass issue link set --github`. Compass writes nothing to the GitHub issue; before 9.0.0 the label sync wrote labels there (ADR-093).",
       "required": ["repo", "number"],
       "additionalProperties": false,
       "properties": {

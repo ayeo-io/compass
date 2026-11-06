@@ -537,14 +537,11 @@ def cmd_task_lint(args):
         errs += assessment_key_errors(task.get("assessment"))
     if je:
         errs += je
-    # Labels and the page on GitHub: a report beside the result. It never changes the exit
-    # code, so an unreachable GitHub cannot fail `compass ci`.
+    # Notes beside the result. They never change the exit code.
     notes = []
     if not args.file:
-        from compass_pkg import github_labels
         task_dir = os.path.dirname(os.path.abspath(path))
-        notes = github_labels.lint_notes(task, task_dir)
-        notes += _unmatched_document_notes(task_dir)
+        notes = _unmatched_document_notes(task_dir)
     if errs:
         print(f"compass issue lint: FAIL - {relative_to_project(path)}")
         for e in errs:

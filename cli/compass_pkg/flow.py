@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # =============================================================================
-# compass_pkg.flow - `compass flow` and the delivery board
+# compass_pkg.flow - `compass flow`: the text board, `--json` and `--digest`
 # =============================================================================
 #
 # DEPENDENCY: PyYAML, bundled at cli/vendor/yaml/ and pinned in
@@ -40,7 +40,7 @@ from compass_pkg.stable_ids import APPROACH_SPIKE, PATH_STAGE_IDS, STAGE_IDS, ST
 
 
 # --- command: flow ----------------------------------------------------------
-# Cross-issue flow view. Reads broadly; writes only the page `--html` names.
+# Cross-issue flow view. Reads broadly and writes nothing.
 # Never changes any manifest (`Inv-4`: Flow advises, never gates).
 
 # A queued issue older than this many days is flagged when it carries a
@@ -139,7 +139,7 @@ def queue_ageing(work_root, today=None):
 
 # --- the delivery board ------------------------------------------------------
 # One read of every manifest, shaped into the sections the board shows. Plain
-# data, so the text board, `--json` and the HTML page cannot disagree.
+# data, so the text board and `--json` cannot disagree.
 
 LANDED_WINDOW_DAYS = 7
 
@@ -264,9 +264,8 @@ def board(work_root, today=None, sources=None, parsed=None):
     cache = parse_cache.for_work_root(work_root)
     out = {"backlog": [], "ready": [], "in_progress": [], "stale": [],
            "in_review": [], "done_this_week": [], "closed": [], "other": [],
-           "unreadable": [], "friction": None, "counts": {}, "total": 0,
+           "unreadable": [], "counts": {}, "total": 0,
            "done_by_reason": {reason: 0 for reason in status_words.CLOSE_REASONS}}
-    categories = {}
     if sources is None:
         sources = _checkout_sources(work_root)
     # A slug is one issue however many trees hold it: count slugs, and do not
@@ -306,7 +305,7 @@ def board(work_root, today=None, sources=None, parsed=None):
             _unreadable(out, src, why)
             continue
         try:
-            _board_place(out, categories, src, m, today, now, guarded, evidence_state, reader)
+            _board_place(out, src, m, today, now, guarded, evidence_state, reader)
         except effective.MajorRefusal as exc:
             # A generation built by another major refuses its own issue, not the board.
             _unreadable(out, src, str(exc))
@@ -314,9 +313,6 @@ def board(work_root, today=None, sources=None, parsed=None):
             # One malformed manifest must not hide every other issue.
             _unreadable(out, src, "malformed manifest.yml (%s)" % type(exc).__name__)
     out["backlog"].sort(key=lambda r: (-(r["age_days"] or 0), r["slug"]))
-    if categories:
-        top = sorted(categories.items(), key=lambda kv: (-kv[1], kv[0]))[0]
-        out["friction"] = {"category": top[0], "count": top[1]}
     if parsed is None:
         # With `parsed`, this checkout was read and pruned by `read_checkout`.
         # This run reads only other trees, so judging which entries went
@@ -404,7 +400,7 @@ def _lane_of(row, recorded, held, stage, m):
     return STAGE_SHIP if stage == "done" else None
 
 
-def _board_place(out, categories, src, m, today, now, guarded, evidence_state, read=None):
+def _board_place(out, src, m, today, now, guarded, evidence_state, read=None):
     """Put one issue's row in its section. Raises on a field of the wrong
     type, which the caller reports as a malformed manifest."""
     from compass_pkg import issue_detail
@@ -459,7 +455,7 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state, r
         out["ready"].append(row)
     elif state == "done":
         row["unplaceable"] = problem
-        _board_place_done(out, categories, row, m, now)
+        _board_place_done(out, row, m, now)
     else:
         if not isinstance(m.get("gates") or [], list):
             raise TypeError("gates is not a list")
@@ -475,7 +471,7 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state, r
     out["counts"][state] = out["counts"].get(state, 0) + 1
 
 
-def _board_place_done(out, categories, row, m, now):
+def _board_place_done(out, row, m, now):
     """A closed issue: completed this week, or closed without delivery. A
     completed issue older than the window is counted and not listed."""
     reason = status_words.close_reason(m)
@@ -489,11 +485,6 @@ def _board_place_done(out, categories, row, m, now):
             row["close_reason"] = reason
             row["lane"] = None if row["unplaceable"] else "done"
             out["done_this_week"].append(row)
-            friction = m.get("friction")
-            for f in friction if isinstance(friction, list) else []:
-                if isinstance(f, dict) and f.get("category"):
-                    c = str(f["category"])
-                    categories[c] = categories.get(c, 0) + 1
     elif reason:
         row["close_reason"] = reason
         out["closed"].append(row)
@@ -547,13 +538,6 @@ def _board_row(key, r):
     return "%-40s approach=%s" % (r["slug"], r["delivery_approach"])
 
 
-def _friction_line(data):
-    f = data["friction"]
-    if not f:
-        return "Friction this week: none recorded."
-    return "Friction this week: %s (%d)." % (f["category"], f["count"])
-
-
 def _render_board(args, data):
     from compass_pkg.terminal import Report
     counts = data["counts"]
@@ -564,42 +548,12 @@ def _render_board(args, data):
         % (data["total"], len(counts), len(data["stale"]),
            len(data["done_this_week"])),
         ", ".join("%s %d" % (k, n) for k, n in sorted(counts.items()))
-        or "nothing to report",
-        _friction_line(data))
+        or "nothing to report")
     for key, heading, _ in _BOARD_SECTIONS:
         rows = data[key]
         rep.section(heading, rows, lambda r, k=key: _board_row(k, r))
-    rep.data(counts=counts, board={k: data[k] for k, _, _ in _BOARD_SECTIONS},
-             friction=data["friction"])
+    rep.data(counts=counts, board={k: data[k] for k, _, _ in _BOARD_SECTIONS})
     return rep.emit()
-
-
-def _check_html_target(target):
-    """Refuse a directory, and a path inside `.compass/` or `docs/compass/`,
-    which hold issue state. Checked before the board is read. One guard
-    serves every board file (`board_file.check_target`); only the command
-    name in its message differs."""
-    from compass_pkg import board_file
-    return board_file.check_target(target, "compass flow --html", _html_project_root())
-
-
-def _html_project_root():
-    try:
-        return os.path.dirname(find_compass_dir())
-    except CompassError:
-        return os.getcwd()
-
-
-def _write_board_html(work_root, target):
-    """Write the board page, the same page `compass board render` writes."""
-    from compass_pkg import board_cmd, board_file
-    path = _check_html_target(target)
-    page = board_cmd.build_page(_html_project_root(), work_root, False,
-                                datetime.datetime.now())
-    board_file.write_page_or_refuse("compass flow --html", path, page,
-                                    board_file.OUT_MODE)
-    print(f"compass flow: wrote the delivery board to {target}")
-    return 0
 
 
 def cmd_flow(args):
@@ -615,14 +569,6 @@ def cmd_flow(args):
         # `--work-root` still reads any folder of issues.
         work_root = os.path.join(find_compass_dir(), "work")
 
-    html_out = getattr(args, "html", None)
-    if html_out:
-        if do_digest:
-            raise CompassError("compass flow: --html writes the board, and "
-                               "--digest the digest; give one of them")
-        # The target is checked first, and the page is written even when
-        # there are no issues: it shows ten empty lanes and says so.
-        return _write_board_html(work_root, html_out)
     if not do_digest:
         if not os.path.isdir(work_root):
             print("compass flow: no issues found - work root does not exist.")

@@ -1110,22 +1110,6 @@ def _u4_dependency_lines(root):
     return _u4_block(text, "dependencies").splitlines()
 
 
-def _u4_board_words(root):
-    """`{dependency: word}` as the board panel words each entry of the waiting issue, from
-    `compass flow --json` through the panel's own function."""
-    import rendered_blocks_support as sup
-    from compass_pkg import board_page
-
-    code, out, err = sup.run(root, "flow", "--json")
-    assert code == 0, out + err
-    board = json.loads(out)["board"]
-    rows = {r["slug"]: r for lane in board.values() for r in lane}
-    unreadable = {r["slug"] for r in board.get("unreadable") or []}
-    assert "e" in unreadable, board.get("unreadable")
-    return {d["issue"]: board_page._dependency_word(d, unreadable)
-            for d in rows[sup.SLUG]["depends_on"]}, rows
-
-
 # --- U5: owning docs, public surface and this issue's checks ---
 
 U5_PRESET = ROOT / "governance" / "presets" / "default"

@@ -72,7 +72,7 @@ def cmd_follow_up_add(args):
 def cmd_backfill_pay(args):
     """`compass follow-up resolve`: set the named follow-up's status to
     `resolved` in the issue's manifest.yml. The function keeps its old name
-    because `record_triggers.RECORD_FURTHER` names it."""
+    because `record_triggers.RECORD_TRIGGERS` names it."""
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)
     bf_id = args.backfill_id

@@ -1,10 +1,11 @@
-"""The board data: the rows `flow.board()` builds for the text board, `--json`
-and the board page.
+"""The board data: the rows `flow.board()` builds for the text board of
+`compass flow` and its `--json`.
 
 The tests cover the why fields, the pinned `--json` keys, the stage the board
 shares with `compass next`, lane placement, unplaceable manifests and issues
-read from another tree (issue `compass-board`). They build small projects in temporary folders, or read
-the tracked archive sample, and call `board()` or run `compass flow`.
+read from another tree (issue `compass-board`). They build small projects in
+temporary folders, or read the tracked archive sample, and call `board()` or run
+`compass flow`. 9.0.0 removed the HTML board that also read these rows (ADR-093).
 """
 from __future__ import annotations
 
@@ -167,7 +168,8 @@ def test_swarm_and_the_other_retired_words_read_in_the_6_0_words(tmp_path):
 
 # --- the pinned --json keys ---------------------------------------------------
 
-PAYLOAD_KEYS = {"summary", "sections", "counts", "board", "friction", "title"}
+# 9.0.0 removed `friction`: nothing records friction any more (ADR-093).
+PAYLOAD_KEYS = {"summary", "sections", "counts", "board", "title"}
 SECTION_KEYS = {"in_progress", "stale", "in_review", "ready", "backlog",
                 "done_this_week", "closed", "other", "unreadable"}
 _WORK = {"slug", "delivery_approach", "state", "stage", "gates", "evidence"}
@@ -578,3 +580,67 @@ def test_trc_w11_a_refused_folder_is_never_read(tmp_path, monkeypatch):
         "slug": "escape", "note": "its folder leads out of the tree", "tree": "side",
         "manifest_path": ".compass/work/escape/manifest.yml", "also_in": 0, "depends_on": []}]
     assert data["total"] == 1
+
+
+# --- the text board and --json agree ---------------------------------------------
+# Kept from the board command tests when 9.0.0 removed the HTML board (ADR-093).
+
+_GATES_HALF = [{"id": "verify.correctness", "status": "pass"},
+               {"id": "verify.governance", "status": "pending"}]
+_ONE_SCENARIO = [{"id": "TRC-1", "intent": "INT-1", "title": "t", "tests": ["tests/t.py::t"]}]
+TEXT_SECTIONS = (("IN PROGRESS", "in-progress"), ("IN REVIEW", "in-review"),
+                 ("READY", "ready"), ("BACKLOG", "backlog"),
+                 ("DONE THIS WEEK", "done"))
+RETIRED = re.compile(r"\b(held|queued|parked|landed|abandoned|active|route)\b", re.I)
+
+
+def _days_ago(days):
+    when = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)
+    return when.isoformat()
+
+
+def _text_states(text):
+    states, current = {}, None
+    for line in text.splitlines():
+        heading = re.match(r"^  ([A-Z][A-Z ]+)\b.*\(\d+\)$", line)
+        if heading and not line.startswith("    "):
+            current = next((s for h, s in TEXT_SECTIONS if line.strip().startswith(h)), None)
+        elif line.startswith("    ") and current:
+            states[line.split()[0]] = current
+    return states
+
+
+def test_trc_a2_the_text_board_and_json_agree_on_state(tmp_path):
+    root = _project(tmp_path)
+    _write(root, "set-aside-one", status="backlog", **_assessed())
+    _write(root, "ready-one", scenarios=_ONE_SCENARIO,
+           **_assessed(stages=_stages(refine="skipped")))
+    _write(root, "going-one", current_phase="plan", **_assessed())
+    _write(root, "reviewing-one", current_phase="verify", gates=_GATES_HALF, **_assessed())
+    _write(root, "finished-one", status="done", close_reason="completed",
+           land_timestamp=_days_ago(2), **_assessed())
+    expected = {"set-aside-one": "backlog", "ready-one": "ready",
+                "going-one": "in-progress", "reviewing-one": "in-review",
+                "finished-one": "done"}
+    board = _flow_json(root)["board"]
+    json_states = {r["slug"]: r["state"] for rows in board.values() for r in rows}
+    text = _run(root, "flow")
+    assert text.returncode == 0, text.stdout + text.stderr
+    text_states = _text_states(text.stdout)
+    for slug, state in expected.items():
+        assert json_states[slug] == state, slug
+        assert text_states[slug] == state, (slug, text.stdout)
+
+
+def test_trc_b14_the_text_board_shows_no_retired_status_word(tmp_path):
+    root = _project(tmp_path)
+    _write(root, "was-one", status="queued", **_assessed())
+    _write(root, "was-two", status="parked", parked_reason="waiting on a decision",
+           **_assessed())
+    _write(root, "was-three", status="active", current_phase="plan", **_assessed())
+    _write(root, "was-four", status="landed", land_timestamp=_days_ago(1), **_assessed())
+    _write(root, "was-five", status="abandoned", **_assessed())
+    text = _run(root, "flow")
+    assert text.returncode == 0, text.stdout + text.stderr
+    assert not RETIRED.search(text.stdout), RETIRED.search(text.stdout).group(0)
+    assert "set aside: waiting on a decision" in text.stdout, text.stdout

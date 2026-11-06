@@ -1277,21 +1277,21 @@
     },
     "github_labels": {
       "additionalProperties": false,
-      "description": "Whether Compass writes an issue's labels to its linked GitHub issue, through the switches `domain` and `status` (`page` is removed in 9.0.0). Both are off by default, and with both off no command calls GitHub.",
+      "description": "Removed in 9.0.0 (ADR-093) and not read: whether Compass wrote an issue's labels to its linked GitHub issue, through the switches `domain`, `status` and `page`. The key stays valid so a project that holds it keeps working, and `compass policy lint` names it.",
       "properties": {
         "domain": {
           "default": false,
-          "description": "Whether Compass writes the issue's declared domain labels to its GitHub issue. The default is `false`.",
+          "description": "Removed in 9.0.0 (ADR-093) and not read: whether Compass wrote the issue's declared domain labels to its GitHub issue.",
           "type": "boolean"
         },
         "page": {
           "default": false,
-          "description": "Whether Compass keeps one comment on the GitHub issue equal to the issue's README, and writes the ask into an empty issue body once. The default is `false`, because it widens who reads the issue's documents to the GitHub issue's readers.",
+          "description": "Removed in 9.0.0 (ADR-091) and not read: whether Compass kept one comment on the GitHub issue equal to the issue's README.",
           "type": "boolean"
         },
         "status": {
           "default": false,
-          "description": "Whether Compass writes `status:<state>` to the GitHub issue, and on a closed issue `status:done` and `close:<reason>`. The default is `false`.",
+          "description": "Removed in 9.0.0 (ADR-093) and not read: whether Compass wrote `status:<state>` and `close:<reason>` to the GitHub issue.",
           "type": "boolean"
         }
       },

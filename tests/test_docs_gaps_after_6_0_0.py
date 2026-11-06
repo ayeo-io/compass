@@ -16,8 +16,9 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 CLI = ROOT / "cli" / "compass"
 PAGE = DOCS / "waivers-and-locks.md"
-THREE = ("github-labels.md", "github-labels-walkthrough.md",
-         "upgrade-7-0-0.md")
+# 9.0.0 removed the two GitHub label pages with the label sync (ADR-093);
+# github-links.md took over the link they described.
+THREE = ("github-links.md", "upgrade-7-0-0.md")
 
 
 def _config():

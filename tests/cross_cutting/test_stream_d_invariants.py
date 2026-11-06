@@ -74,8 +74,8 @@ def test_trc_d1_mental_model_bullets_unchanged():
 # terminology was added. The assertion's premise is unchanged - the
 # surface equals the known set, and deliberate changes update it here.
 EXPECTED_PUBLIC_SUBCOMMANDS = {
-    "approach", "check", "ci",    # 9.0.0 removed `retro` and `rework-scan`
-    "tdd-red", "tdd-green",       # (ADR-093)
+    "approach", "check", "ci",    # 9.0.0 removed `retro`, `rework-scan` and
+    "tdd-red", "tdd-green",       # `board` (ADR-093)
     "policy", "issue", "adr",
     "flow", "follow-up",
     "terminology",                # the CLI-voice slice: the glossary verb
@@ -113,9 +113,6 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # instead of a dozen, through the same code
                                   # each step already used. A GROUP, so a
                                   # later quick-fix verb has a home.
-    "board",                      # compass-board: `compass board render|refresh`,
-                                  # the delivery board as one page. A GROUP, so
-                                  # a later board verb has a home.
     "lesson",                     # project-lessons (ADR-029)
     "record",                     # delivery-record (ADR-031)
     "release",                    # intent-and-release-line (ADR-065): `compass

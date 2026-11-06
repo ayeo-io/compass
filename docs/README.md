@@ -24,9 +24,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [checkpoints.md](checkpoints.md) - checkpoint outcomes and the `checkpoint-approval` record: their shapes, the two commands that write them, the landing refusal, and where `compass issue diagnose` and the delivery record show them.
 - [release-line.md](release-line.md) - the release line each shipping issue records: the `release_note` key, the three commands that write it, the texts they refuse, when a landing refuses an issue with none, and where the line is shown.
 - [release-notes.md](release-notes.md) - `compass release notes --since <ref>`: which completed issues it lists against a git reference, the order, the two closing count lines, and what it never writes.
-- [board.md](board.md) - `compass board render` and `compass board refresh`: the delivery board as one page, where its file goes and what the commands refuse, what the lanes and cards show, how `--worktrees` reads other trees and what it writes to git's object store, and the release-note items.
-- [github-labels.md](github-labels.md) - the opt-in sync of an issue's domain labels, workflow state and page to its linked GitHub issue: the setting, the labels Compass owns, the page comment and the checks it passes before it is posted, when it writes, drift and the failure behaviour.
-- [github-labels-walkthrough.md](github-labels-walkthrough.md) - switch the labels on in `compass.yml`, link an issue and watch the labels change as work moves.
+- [github-links.md](github-links.md) - `compass issue link set`: an issue's link to its GitHub issue and its pull request, how `land_commit` follows the merge, how `gh` is run, and the limits.
 - [writing-specs-and-plans.md](writing-specs-and-plans.md) - a worked example of a spec and a plan.
 
 ## Running and maintaining Compass
@@ -84,7 +82,6 @@ same commit.
 | `cli/compass_pkg/stable_ids.py`, `cli/compass_pkg/gate_status.py`, `tests/test_stable_ids.py` | `architecture/decisions/ADR-040-stable-ids-live-in-one-module.md` |
 | `cli/compass_pkg/path_stages.py`, `cli/compass_pkg/path_readers.py`, `tests/test_path_stages.py`, `tests/test_path_checks.py` | `architecture/decisions/ADR-092-compass-runs-one-path-of-four-stages.md` |
 | `cli/compass_pkg/atomic_io.py` | `architecture/decisions/ADR-036-an-issue-runs-against-a-stored-generation.md` |
-| `cli/compass_pkg/board_cmd.py`, `cli/compass_pkg/board_page.py`, `cli/compass_pkg/board_file.py`, `cli/compass_pkg/board_trees.py` | `docs/board.md` |
 | `cli/compass_pkg/obligations.py` | `architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md` |
 | `cli/compass_pkg/classify.py`, `cli/compass_pkg/classify_lists.py`, `cli/compass_pkg/json_shape.py`, `scripts/bench-classifier.py` | `governance/routing-policy.md` |
 | `cli/compass_pkg/policy_lint.py`, `cli/compass_pkg/policy_effective.py`, `cli/compass_pkg/policy_cmd.py` | `docs/policy-lint.md` |
@@ -114,7 +111,7 @@ same commit.
 | `cli/compass_pkg/host_launch.py` | `evals/README.md` |
 | `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py` | `docs/delivery-record.md` |
 | `cli/compass_pkg/checkpoint_outcomes.py` | `docs/checkpoints.md` |
-| `cli/compass_pkg/github_labels.py`, `cli/compass_pkg/github_sync_record.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `tests/fake_gh.py` | `docs/github-labels.md` |
+| `cli/compass_pkg/issue_link.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `tests/fake_gh.py` | `docs/github-links.md` |
 | `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |
 | `cli/compass_pkg/decisions_taken.py` | `architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md` |
 | `cli/compass_pkg/rendered_blocks.py`, `cli/compass_pkg/issue_detail.py`, `cli/compass_pkg/project_scan.py`, `cli/compass_pkg/migrate_blocks.py`, `cli/compass_pkg/doc_paths.py` | `docs/rendered-blocks.md` |
@@ -125,7 +122,7 @@ same commit.
 | `cli/compass_pkg/migrate.py`, `cli/compass_pkg/migrate_kinds.py`, `cli/compass_pkg/migrate_copy_check.py` | `architecture/decisions/ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md`, `docs/upgrade-7-0-0.md` |
 | `cli/compass_pkg/parse_cache.py` | `architecture/decisions/ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md`, widened by `architecture/decisions/ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md` |
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |
-| `cli/compass_pkg/flow.py` | `docs/board.md` |
+| `cli/compass_pkg/flow.py` | `docs/cli.md` |
 | `cli/compass_pkg/next_cmd.py`, `cli/compass_pkg/render.py`, `cli/compass_pkg/statusline.py`, `bin/compass-statusline` | `docs/quickstart.md` |
 | `cli/compass_pkg/next_step.py`, `cli/compass_pkg/next_line.py`, `tests/test_next_step.py` | `docs/quickstart.md` (the table of next commands) |
 | `cli/compass`, `cli/compass_pkg/verb_help.py`, `cli/compass_pkg/lineage.py` | `README.md` |

@@ -213,7 +213,7 @@ _(none yet - the shipped default guardrails apply as-is)_
   `origin/HEAD`. It reports a `land_commit` that origin's default branch does
   not reach, which a squash merge causes, and names `compass issue link set
   --pr`, which moves `land_commit` to the merge commit. It is in no gate and no
-  configuration, and it never fails the run (`docs/github-labels.md`).
+  configuration, and it never fails the run (`docs/github-links.md`).
 - **`nfr-rows-resolved`** is a blocking check that reads the spec's
   Non-functional requirements table. It is unlocked, has `on_skipped:
   not-applicable`, and sits in no gate and no stage list, so no locked

@@ -200,7 +200,7 @@ copied governance and `.compass/config.yml`) are read in their old words until
   rendered from the issue's stage lists. The receipt shows where each rule,
   waiver, lock and check came from.
 - Compass can write an issue's domain labels and workflow state to its linked
-  GitHub issue (`docs/github-labels.md`). It is opt-in: the `github_labels` key
+  GitHub issue (9.0.0 removed this label sync, ADR-093). It is opt-in: the `github_labels` key
   in `compass.yml` has two switches, both off by default, and with both off no
   command calls GitHub. `compass issue link set` links an issue and
   `compass issue labels sync` writes its labels. The manifest schema gains an

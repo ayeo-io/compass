@@ -478,7 +478,7 @@ def s4_findings(readme, cli, index, docs_readme, upgrade):
     found = []
     start = readme[:readme.index("## What Compass changes")]
     for needle in ("compass.yml", "docs/configuration.md", "docs/upgrade-6-0-0.md",
-                   "docs/github-labels.md"):
+                   "docs/github-links.md"):
         if needle not in start:
             found.append(f"README 'Start here' does not name {needle}")
     for verb in S4_VERBS:

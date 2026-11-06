@@ -42,7 +42,7 @@ A reader calls `lifecycle.entries` and `lifecycle.judge` rather than reading the
 
 ## When the block counts
 
-The block counts only while the waiting issue is at the implement stage (at build, for an issue on the four-stage path), as the resolver of `compass next` gives it, and is not on hold and not done. An issue at an earlier stage is not blocked, but the board card still says what it waits for. The stored `blocked` flag keeps its own rule (in-progress or in-review only, ADR-045) and is not changed. Where both apply, the board shows the stored reason first.
+The block counts only while the waiting issue is at the implement stage (at build, for an issue on the four-stage path), as the resolver of `compass next` gives it, and is not on hold and not done. An issue at an earlier stage is not blocked, but its `compass flow --json` row still lists each dependency under `depends_on`. The stored `blocked` flag keeps its own rule (in-progress or in-review only, ADR-045) and is not changed. Where both apply, the board shows the stored reason first.
 
 ## What the hook reads
 
@@ -78,7 +78,7 @@ A dependency finished only in another worktree still blocks here, because this c
 - bring that issue's folder (`.compass/work/<slug>/`) into this checkout;
 - run `compass issue depends remove <slug>`.
 
-There is no override flag. `compass board render --worktrees` can show the newer copy, because the board only advises.
+There is no override flag.
 
 ## The verbs
 
@@ -94,8 +94,7 @@ Both re-render the waiting issue's page and the pages of the issues its manifest
 | Reader | Shows |
 |---|---|
 | `compass next` | At implement (build on the path), ` \| blocked: waits for b to reach done` after the usual parts. Only the dependency block, never a fault; lint is where faults show. |
-| The board card | The line "waits for b" for an open issue with an unmet dependency whose issue was read, and the blocked flag with the wait while the issue is at implement. |
-| The board panel | A Dependencies part: for each entry the slug, the reason, `until <value>`, the state, and one word - `met`, `waiting`, `not found` or `unreadable`. |
+| `compass flow` | `BLOCKED: <reason>` on an in-progress or in-review row, with the wait while the issue is at implement. |
 | `compass flow --json` | Every row holds `depends_on`: a list of objects with the keys `issue`, `reason`, `until`, `state`, `stage` and `met`. The list is empty for an issue with none. A dependency that was not read has `state` and `stage` null and `met` false. |
 | `ship-commit` | After a landing, "these issues were waiting for b:" and a line for each open issue that names it. |
 
@@ -110,4 +109,4 @@ The dependency functions are in `cli/compass_pkg/lifecycle.py`:
 - `lifecycle.checkout_reader` and `lifecycle.mapping_reader` are the readers: this checkout uncached, or manifests a caller already parsed;
 - `lifecycle.hook_lines` is what the hook's dependency reader prints.
 
-The verbs, the cycle walk, the lint lines and the `ship-commit` lines are in `cli/compass_pkg/issue_depends.py`. The board page is `board_page.py`; the board rows come from `flow.board`. The board reads the copies it already parsed, so a planted parse-cache entry can mislead it but never the hook or `compass next`.
+The verbs, the cycle walk, the lint lines and the `ship-commit` lines are in `cli/compass_pkg/issue_depends.py`. The board rows of `compass flow` come from `flow.board`. The board reads the copies it already parsed, so a planted parse-cache entry can mislead it but never the hook or `compass next`.

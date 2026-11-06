@@ -1,10 +1,10 @@
 """Every command that saves a manifest is in a trigger table or named as exempt.
 
-The table in `record_triggers` decides which commands move an issue's labels and which are
-refused on an issue whose generation was built by another major. A command that saves a
-manifest and is in no table would silently skip both, so a walk of the CLI's call graph
-names it. The test moved here from the rendered-blocks tests when 9.0.0 removed the
-after-command render (ADR-091); the table it guards stayed.
+The table in `record_triggers` decides which commands are refused on an issue whose
+generation was built by another major. A command that saves a manifest and is in no table
+would silently skip the refusal, so a walk of the CLI's call graph names it. The test moved
+here from the rendered-blocks tests when 9.0.0 removed the after-command render (ADR-091);
+the table it guards stayed, and kept every command when the label sync went (ADR-093).
 """
 from __future__ import annotations
 
@@ -85,10 +85,11 @@ def test_dcj_75_trigger_table_complete():
         "def cmd_planted(args):\n    save_manifest({}, 'x')\n    return 0\n"
         "def build(p):\n    p.set_defaults(func=cmd_planted)\n")
     assert uncovered(planted, covered) == ["cmd_planted"]
-    # The label sync wraps the command and receives its exit code; nothing else runs after it.
+    # Nothing runs after the command: it returns its own exit code (ADR-091, ADR-093).
     entry = "".join((ROOT / "cli" / "compass").read_text("utf-8").split())
-    assert "github_labels.after_command(a,args.func(a)or0)" in entry
+    assert "run_with_mode(args,lambdaa:args.func(a)or0)or0" in entry
     assert "render_after" not in entry and "github_page" not in entry
+    assert "after_command" not in entry
 
 
 def test_the_major_refusal_reads_the_same_table():
@@ -96,5 +97,19 @@ def test_the_major_refusal_reads_the_same_table():
     text = (ROOT / "cli" / "compass_pkg" / "command_guard.py").read_text("utf-8")
     assert "record_triggers.RECORD_TRIGGERS" in text
     assert set(record_triggers.ISSUE_FROM) == set(record_triggers.RECORD_TRIGGERS)
-    assert record_triggers.LABEL_TRIGGERS.keys() <= record_triggers.RECORD_TRIGGERS.keys()
+    # The label table was folded in when the label sync went (ADR-093); the refusal
+    # keeps every command it had.
+    assert set(record_triggers.RECORD_TRIGGERS) >= REFUSED_BEFORE_THE_FOLD
+    assert record_triggers.RECORD_TRIGGERS["cmd_route_evaluate"] == "write"
     assert callable(command_guard.before_command)
+
+
+#: The commands the major refusal covered when the label table was still separate.
+REFUSED_BEFORE_THE_FOLD = {
+    "cmd_route_evaluate", "cmd_task_set_status", "cmd_task_status_remove", "cmd_issue_link",
+    "cmd_land_commit", "cmd_quick_fix_finish", "cmd_scenario_add", "cmd_gate_pass",
+    "cmd_tdd_red", "cmd_tdd_green", "cmd_evidence_add", "cmd_acceptance_record",
+    "cmd_scenario_descope", "cmd_evidence_approve", "cmd_follow_up_add", "cmd_backfill_pay",
+    "cmd_decision_add", "cmd_decision_set", "cmd_issue_raised_by", "cmd_scenario_tests",
+    "cmd_evidence_review", "cmd_issue_blocked_set", "cmd_issue_blocked_remove",
+    "cmd_depends_add", "cmd_depends_remove", "cmd_changed_file_add", "cmd_quick_fix_start"}

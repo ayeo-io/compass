@@ -120,26 +120,20 @@ delete `.compass/cache/parents/`.
 Review
 [git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md).
 
-## Labels written to GitHub
+## Calls to GitHub
 
-When a project sets `github_labels` in `compass.yml`, Compass writes to the
-linked GitHub issue by running `gh`. Both switches (`domain` and `status`)
-are off by default, and with both off no command calls GitHub. A published
-preset cannot switch them on, because a parent may not carry a settings key.
-The `page` switch, which posted the issue page, was removed in 9.0.0
-(ADR-091) and is not read.
+Compass writes nothing to GitHub. 9.0.0 removed the label sync (ADR-093), so a
+project's `github_labels` setting is not read, and `compass policy lint` names
+it with `L-SETTING-REMOVED`.
 
-Compass runs `gh` with an argument list and no shell, with your own login. It
-reads no token and stores none. It checks the repository and issue number
-against a strict pattern before each call. A call that takes longer than 15
-seconds is abandoned.
-
-- **Labels.** With `domain` or `status` on, Compass sends label names and the
-  issue number. It sends no issue text, path or evidence.
-- **Read back.** Compass stores no text from GitHub.
+`compass issue link set --pr` reads one pull request with `gh pr view`: its
+number, state and merge commit. Compass runs `gh` with an argument list and no
+shell, with your own login. It reads no token and stores none. It checks the
+repository and number against a strict pattern before the call. A call that
+takes longer than 15 seconds is abandoned. Compass stores no text from GitHub.
 
 Review
-[github-labels.md](https://github.com/ayeo-io/compass/blob/main/docs/github-labels.md).
+[github-links.md](https://github.com/ayeo-io/compass/blob/main/docs/github-links.md).
 
 ## Dependencies
 

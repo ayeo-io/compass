@@ -50,10 +50,9 @@ command runs the path, and the `next:` line names each step.
 A spike runs assess, build (explore) and ship (conclude); `approaches/spike.md`
 describes it.
 
-Cross-issue: `/compass:status` (one issue or a flat list), `/compass:flow`
-(the managed cross-issue view - advisory, never gating), and
-`compass board render` (the same view as one page in the browser;
-`docs/board.md`). `/compass:init` is optional, and it is not what creates
+Cross-issue: `/compass:status` (one issue or a flat list) and `/compass:flow`
+(the managed cross-issue view - advisory, never gating; `compass flow` and
+`docs/cli.md`). `/compass:init` is optional, and it is not what creates
 the project: `/compass:go`, `/compass:quick-fix` and `/compass:assess` run
 `compass init` for you.
 

@@ -193,8 +193,8 @@ def test_trc_a4_an_assessment_without_a_role_routes_as_an_engineers_did():
 
 
 def test_trc_a5_the_board_and_flow_show_no_role():
-    from compass_pkg import board_page, flow
-    assert "role" not in board_page._DIMENSIONS
+    # 9.0.0 removed the board page (ADR-093); the text board and --json remain.
+    from compass_pkg import flow
     assert "role" not in flow._ASSESSMENT_DIMENSIONS
 
 

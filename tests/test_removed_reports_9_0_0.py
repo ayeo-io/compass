@@ -84,7 +84,7 @@ def test_follow_up_resolve_still_resolves_a_follow_up(tmp_path):
     [entry] = yaml.safe_load(path.read_text(encoding="utf-8"))["follow_ups"]
     assert entry["status"] == "resolved"
     from compass_pkg import follow_up_cmd, record_triggers
-    assert "cmd_backfill_pay" in record_triggers.RECORD_FURTHER
+    assert "cmd_backfill_pay" in record_triggers.RECORD_TRIGGERS
     assert callable(follow_up_cmd.cmd_backfill_pay)
 
 

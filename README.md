@@ -94,8 +94,8 @@ The shipped guardrails are active from the first command. Project settings,
 and a project's own changes to the shipped defaults, live in one file,
 `compass.yml` ([docs/configuration.md](docs/configuration.md)). Upgrading from
 6.x? Read [docs/upgrade-7-0-0.md](docs/upgrade-7-0-0.md); from 5.x, read
-[docs/upgrade-6-0-0.md](docs/upgrade-6-0-0.md) first. To mirror an issue's
-labels on its GitHub issue, see [docs/github-labels.md](docs/github-labels.md).
+[docs/upgrade-6-0-0.md](docs/upgrade-6-0-0.md) first. To link an issue to
+its GitHub issue and pull request, see [docs/github-links.md](docs/github-links.md).
 
 Compass complements your normal CI. It does not replace tests, linting,
 security scanning, builds or deployment checks.
@@ -170,10 +170,8 @@ Every issue leaves a reviewable record. Its documents are in
 `.compass/work/<issue>/`. Another session can resume from that record without
 the chat history, and a reviewer can open the evidence behind each gate.
 
-`compass board render` shows every issue on one page, with a lane for each
-stage. This example is an invented invoicing product:
-
-![The Compass board for an invented invoicing product: a backlog lane, one lane per stage from assess to ship, and a done lane, with cards such as sso-saml-login blocked in implement and four issues done this week](assets/board-example.png)
+`compass flow` lists every issue by state, with what is blocked and whose
+evidence is stale.
 
 ## One path, five roles
 
@@ -240,8 +238,9 @@ full account is in [docs/security.md](docs/security.md).
   `allow_project_commands` is true, your project's own guardrails declared
   with `check: command-passes` and the readiness commands in `compass.yml`;
   also git in your repository, and the CLI itself from the plugin's hooks.
-- **Writes** to the linked GitHub issue with `gh`, only when `github_labels`
-  is on in `compass.yml`: label names ([docs/security.md](docs/security.md)).
+- **Reads** a pull request with `gh` when you run `compass issue link set
+  --pr`: its number, state and merge commit. Compass writes nothing to GitHub
+  ([docs/security.md](docs/security.md)).
 - **Clones and installs** other frameworks only in the evaluation harness,
   `evals/harness.py`, which maintainers run by hand.
 

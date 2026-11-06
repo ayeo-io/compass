@@ -9,8 +9,8 @@ checked the other documents are gone. 9.0.0 runs every new delivery issue on
 one four-stage path (ADR-092), so the delivery approaches, the legacy stages
 the path does not keep, the caps rule set and the Definition of Ready checks
 are gone from what a project can configure. 9.0.0 keeps only what a reviewer
-of one change needs (ADR-093), so the reports across issues and the brief
-ingest are gone.
+of one change needs (ADR-093), so the reports across issues, the brief
+ingest, the HTML board and the GitHub label sync are gone.
 
 A command line that still names a removed verb or flag fails to parse as an
 unknown command, and `line_for` gives the one line the parse error adds.
@@ -104,6 +104,11 @@ COMMANDS = (
      "ADR-093"),
     (("rework-scan",), "compass rework-scan", "nothing replaces it", "ADR-093"),
     (("issue", "friction"), "compass issue friction", "nothing replaces it", "ADR-093"),
+    (("board",), "compass board", "compass flow lists every issue", "ADR-093"),
+    (("flow", "--html"), "compass flow --html",
+     "compass flow prints the issues; no page is written", "ADR-093"),
+    (("issue", "github", "sync"), "compass issue github sync",
+     "compass issue link set keeps the link; no label is written", "ADR-093"),
 )
 
 #: The ten agent names 9.0.0 removed with the `agents/` folder. The shipped
@@ -146,6 +151,8 @@ SETTINGS = {
     **{f"checks.{check}": ("a Definition of Ready check, which a path issue does not owe",
                            "ADR-092") for check in READY_CHECKS},
     "prices": ("the dollars per million tokens that priced an issue's usage", "ADR-093"),
+    "github_labels": ("whether Compass wrote an issue's labels to its linked GitHub issue",
+                      "ADR-093"),
 }
 
 #: The rule set and the rule effects whose only use was to pick an approach. No
@@ -634,16 +641,22 @@ def setting_findings(chain):
         if not drops_removed(layer.kind, layer.name) or not isinstance(layer.doc, dict):
             continue
         named = _named_checks(layer.doc)
-        out += [(layer, key, setting_note(key)) for key in SETTINGS
-                if _holds(layer.doc, key)
-                or (key.startswith("checks.") and key.split(".", 1)[1] in named)]
-        out += [(layer, key, setting_note(key)) for key in held_effects(layer.doc)]
-        out += [(layer, key, setting_note(key)) for key in _approach_effects(layer.doc)]
+        switched = []
         for path, (what, adr) in SWITCHES.items():
             key, switch = path.split(".", 1)
             held = layer.doc.get(key)
             if isinstance(held, dict) and held.get(switch) is True:
-                out.append((layer, path, _note(path, what, adr)))
+                switched.append((layer, path, _note(path, what, adr)))
+        # A key whose removed switch is on is named once, by that switch, so the
+        # older decision record's note stays where it was (`github_labels.page`).
+        under_switch = {path.split(".", 1)[0] for _layer, path, _note_text in switched}
+        out += [(layer, key, setting_note(key)) for key in SETTINGS
+                if key not in under_switch and (
+                    _holds(layer.doc, key)
+                    or (key.startswith("checks.") and key.split(".", 1)[1] in named))]
+        out += [(layer, key, setting_note(key)) for key in held_effects(layer.doc)]
+        out += [(layer, key, setting_note(key)) for key in _approach_effects(layer.doc)]
+        out += switched
         capabilities = layer.doc.get("capabilities")
         if isinstance(capabilities, dict):
             out += [(layer, f"capabilities.{name}", capability_note(name))

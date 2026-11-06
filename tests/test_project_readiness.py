@@ -1854,14 +1854,6 @@ def test_prc_30_manifest(tmp_path):
     _not_measured_manifests(tmp_path)
 
 
-def test_prc_30(tmp_path):
-    stale = _not_measured_manifests(tmp_path)
-    _register_approach(stale, FLOOR_SLUG)
-    # The board says the record was stale, not only that it is missing. Before 9.0.0 the
-    # delivery-approach record said so too (ADR-091 removed the render).
-    assert "Repository readiness: not measured (record stale" in _board_page(stale)
-
-
 def test_prc_36(tmp_path):
     marks, temp, env = _run_env(tmp_path)
     folder = tmp_path / "p"
@@ -1892,26 +1884,6 @@ def test_prc_36(tmp_path):
 # --- U4 readers, init and retro ---
 
 READ_SLUG = "read-issue"
-SAMPLE_SLUG = "ci-lints-every-issue"
-NOT_MEASURED_LINE = "Repository readiness: not measured"
-
-
-def _snapshot_tree(*folders):
-    """`{path: bytes}` of every file under the folders, to prove a read wrote nothing."""
-    found = {}
-    for folder in folders:
-        for path in sorted(Path(folder).rglob("*")):
-            if path.is_file():
-                found[str(path)] = path.read_bytes()
-    return found
-
-
-def _board_page(project):
-    page = Path(str(project) + "-board.html")
-    code, out, err = support.run_compass(project, "board", "render", "--no-open",
-                                         "--out", str(page))
-    assert code == 0, out + err
-    return page.read_text(encoding="utf-8")
 
 
 def _register_approach(project, slug):
@@ -1954,49 +1926,10 @@ def _measured_summary(project):
     return readiness_record.summary(str(project))
 
 
-def test_prc_31(tmp_path):
-    from archive import sample_root
-    sample = sample_root()
-    project = support.make_project(tmp_path / "p", {"schema": 1})
-    shutil.copytree(sample / ".compass" / "work" / SAMPLE_SLUG,
-                    Path(project) / ".compass" / "work" / SAMPLE_SLUG)
-    shutil.copytree(sample / "docs" / "compass" / "2026-08-12-ci-lints-every-issue",
-                    Path(project) / "docs" / "compass" / "2026-08-12-ci-lints-every-issue")
-    # The board lists a closed issue only in the week after it landed, so the
-    # copy lands now. This is the only change to the copied manifest.
-    path = Path(project) / ".compass" / "work" / SAMPLE_SLUG / "manifest.yml"
-    manifest = yaml.safe_load(path.read_text(encoding="utf-8"))
-    assert "readiness" not in manifest
-    manifest["land_timestamp"] = datetime.datetime.now(datetime.timezone.utc).strftime(
-        "%Y-%m-%dT%H:%M:%S+00:00")
-    path.write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
-    before = _snapshot_tree(Path(project) / ".compass" / "work", Path(project) / "docs")
-    page = _board_page(project)
-    assert NOT_MEASURED_LINE in page
-    after = _snapshot_tree(Path(project) / ".compass" / "work", Path(project) / "docs")
-    assert after == before
-    assert not any("generations" in path for path in after)
-
-
 def test_prc_32(tmp_path):
     project, document = _read_project(tmp_path / "p")
     summary = _measured_summary(project)
     assert (summary["score"], summary["signals"], summary["floor_met"]) == (9, 11, True)
-    task = Path(project) / ".compass" / "work" / READ_SLUG / "manifest.yml"
-    manifest = yaml.safe_load(task.read_text(encoding="utf-8"))
-    manifest["readiness"] = summary
-    task.write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
-    line = "Repository readiness: 9 of 11 signals, floor met"
-    # The board shows the line. Before 9.0.0 a readiness block in the delivery-approach
-    # record showed it too (ADR-091 removed the render).
-    assert line in _board_page(project)
-
-    # An issue whose record was never measured shows the not-measured words.
-    other, _other_document = _read_project(tmp_path / "q", readiness={
-        "status": "not-measured", "reason": "missing",
-        "detail": "no .compass/readiness.yml; run compass readiness"})
-    assert NOT_MEASURED_LINE in _board_page(other)
-
 
 
 def _bare_repository(folder, files=None):

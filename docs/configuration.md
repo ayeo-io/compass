@@ -97,7 +97,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `language` | The language the agent writes prose in (see `language` below) | a BCP 47 tag such as `en-US` | unset: no instruction |
 | `acceptance_strategy` | Whether the four-layer acceptance strategy (`S17`) is on for the project (see `acceptance_strategy` below) | `state`: `on` or `off`; `reason`: text, needed with `off` | unset: on |
 | `preset_index` | Reserved for published presets; no behavior yet | - | - |
-| `github_labels` | Whether Compass writes an issue's labels to its linked GitHub issue (see `docs/github-labels.md`) | `domain`, `status`: `true` or `false` each; `page` is removed | all `false`; no GitHub call |
+| `github_labels` | Removed in 9.0.0 and not read (see `github_labels` below) | - | - |
 
 ### `adoption`
 
@@ -216,21 +216,13 @@ own commands. See `docs/security.md`.
 
 ### `github_labels`
 
-Two switches, each `false` unless set to `true`. With both off, no command
-calls GitHub.
-
-- `domain`: write the issue's declared domain labels to its linked GitHub
-  issue.
-- `status`: write `status:<state>` and, on a closed issue, `status:done` and
-  `close:<reason>`.
-- `page` posted the issue page as a comment until 9.0.0 removed the issue page
-  (ADR-091). The switch stays valid and is not read; `compass policy lint`
-  names it with `L-SETTING-REMOVED` when it is `true`. Delete it from
-  `compass.yml`.
-
-Any other value, such as `"yes"`, reads as off. The setting is read from the
-project's own file only. See `docs/github-labels.md` for the labels, the
-limits and the failure behavior.
+9.0.0 removed the label sync (ADR-093). Compass writes no label to GitHub, and
+`compass issue github sync` is gone. The key, with its switches `domain`,
+`status` and `page`, stays valid, so a project that holds it keeps working, and
+nothing reads it. `compass policy lint` names it with `L-SETTING-REMOVED`:
+once, by `github_labels.page` (ADR-091) when that switch is `true`, and by
+`github_labels` otherwise. Delete it from `compass.yml`. `compass issue link
+set` still records the link (`docs/github-links.md`).
 
 ### `living_spec`
 

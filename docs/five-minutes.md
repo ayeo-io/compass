@@ -114,10 +114,8 @@ evaluate` transcript above came from a project whose `compass.yml` extends
 `outer-loop`. In one project the preview and the write owe the same
 evidence.
 
-To see every issue at once, with a lane for each stage, run
-`compass board render`. It writes one page and opens it in the browser;
-`compass board refresh` rewrites it after an issue moves to another stage. `docs/board.md`
-describes the page.
+To see every issue at once, grouped by state, run `compass flow`.
+`docs/cli.md` describes it.
 
 Correct the assessment if it is wrong: the evidence is only as good as the
 assessment. The session waits for your approval only at the checkpoints the

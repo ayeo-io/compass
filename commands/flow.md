@@ -1,6 +1,6 @@
 ---
 description: Cross-issue view - blockers, owed follow-ups, the digest
-argument-hint: "[--digest | --html <file>]"
+argument-hint: "[--digest]"
 allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Bash(compass *), Glob, Grep
 ---
 
@@ -23,9 +23,7 @@ dated digest file (see below).
 
 - Load the `flow-management` skill - it holds the triage heuristics, the
   blocker protocol, and the digest format.
-- This command reads broadly and writes only the digest, or the board page
-  `compass flow --html <file>` names (never inside `.compass/` or
-  `docs/compass/`). It never edits an
+- This command reads broadly and writes only the digest. It never edits an
   issue's artifacts - issue state is inferred from artifacts on disk, never
   set by a label.
 
@@ -52,13 +50,9 @@ dated digest file (see below).
    progress or in review with its approach, stage, gates passed and whether
    its newest test record still matches its files, and marks a blocked issue
    with its reason; sets stale evidence apart; lists ready issues; shows the
-   backlog with its age, what was done this week and the most common
-   friction. Add the health and owner the heuristics above
-   give. `compass flow --html <file>` writes the board page: the same page
-   `compass board render --out <file>` writes, with a lane for each stage and
-   a panel for each open issue that says why it has its delivery approach.
-   `compass board render` writes that page to one file per checkout and opens
-   it; `docs/board.md` describes it.
+   backlog with its age and what was done this week. Add the health and owner
+   the heuristics above give. `compass flow --json` gives the same rows as
+   data; `docs/cli.md` describes them.
 
 4. **Report blockers.** For every blocked or stalled issue, state what it
    is blocked on and who or what can unblock it. Anything needing a human

@@ -22,9 +22,13 @@ NEW_CHECK = "dor-behavior-is-gwt"
 
 
 def _project(tmp_path):
-    """The approval project, with its issue's manifest as 8.x stored it. The old
-    id names a Definition of Ready check, and only an issue assessed before the
-    four-stage path owes one (ADR-092 decision D6, no Definition of Ready)."""
+    """The approval project, with its issue's manifest as 8.x stored it and a
+    stored generation that holds the Definition of Ready of the frozen preset
+    `default@7`, as an 8.x generation does. The old id names a Definition of
+    Ready check. Only an issue assessed before the four-stage path owes one
+    (ADR-092 decision D6, no Definition of Ready), and only a configuration that
+    holds the check can approve it: the shipped default no longer does."""
+    from test_entry_exit_evaluation import _legacy_generation
     from test_next_stage import assessed_before_the_path
     root = ap.project(tmp_path)
     body = ap.manifest_of(root)
@@ -33,6 +37,7 @@ def _project(tmp_path):
     old.pop("evidence")
     body.update(old)
     ap.save_manifest(root, body)
+    _legacy_generation(root, Path(root) / ".compass" / "work" / ap.SLUG, ap.SLUG)
     return root
 
 

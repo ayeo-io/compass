@@ -125,12 +125,13 @@ SPIKE_8X_STAGES = {"assess": "lightweight", "define": "collapsed", "refine": "sk
                    "verify": "conclude", "ship": "graduate-or-discard"}
 
 
-def _legacy_generation(root, task_dir):
+def _legacy_generation(root, task_dir, slug=SLUG):
     """Commit the issue's next generation with the legacy catalogue of a stored 8.x
-    generation (`_legacy_catalogue`), so a command run on it reads those lists."""
+    generation (`_legacy_catalogue`), so a command run on it reads those lists.
+    Other test files call it for an issue of their own, named by `slug`."""
     from compass_pkg import effective, generation
     manifest = _manifest(task_dir)
-    resolution = effective.resolve_live(str(root), manifest, SLUG, str(task_dir), validate=True)
+    resolution = effective.resolve_live(str(root), manifest, slug, str(task_dir), validate=True)
     resolved = copy.deepcopy(resolution.resolved)
     _legacy_catalogue(resolved)
     generation.commit(str(task_dir), dataclasses.replace(resolution, resolved=resolved),

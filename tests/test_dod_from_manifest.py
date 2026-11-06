@@ -287,7 +287,11 @@ def test_dcj_31_cross_issue_follow_up_still_blocks(tmp_path):
 
 def test_dcj_32_the_stage_lists_read_records(tmp_path):
     # Only an issue assessed before the four-stage path owes a Definition of
-    # Ready (ADR-092 decision D6), so its manifest is the one 8.x wrote.
+    # Ready (ADR-092 decision D6), so its manifest is the one 8.x wrote. The
+    # shipped default holds no Definition of Ready, so the issue's stored
+    # generation holds the one of the frozen preset `default@7`, as an 8.x
+    # generation does.
+    from test_entry_exit_evaluation import _legacy_generation
     from test_next_stage import assessed_before_the_path
     root = sup.project(tmp_path, compass_yml=ON, assessment=SPEC)
     body = manifest(root)
@@ -295,6 +299,7 @@ def test_dcj_32_the_stage_lists_read_records(tmp_path):
     old = assessed_before_the_path(body["assessment"])
     old.pop("evidence")
     sup.base.write_manifest(root, dict(body, **old))
+    _legacy_generation(root, Path(root) / WORK, SLUG)
     assert manifest(root)["delivery_approach"] == "full"
     write_doc(root, "requirements-review", "# RR\n\n" + block("dor"))
     sup.base.edit(root, current_phase="plan")
@@ -311,16 +316,16 @@ def test_dcj_32_the_stage_lists_read_records(tmp_path):
 # --- DCJ-33 -----------------------------------------------------------------
 
 def test_dcj_33_the_check_lists_the_configured_items(tmp_path):
-    # The stage `verify` is locked, so removing an item needs a waiver on the entry. A git
-    # parent's waiver stands in for the issue layer: the issue layer's waiver needs an approval
-    # record that names it, and the check reads the same resolved list either way. Since 9.0.0
-    # a project layer's change to `verify`, a legacy stage, is left out (ADR-092), so the
-    # change sits in a git parent, which names the owner who may approve the waiver.
+    # The Definition of Done is the build exit list (ADR-092 decision 6). The stage `build`
+    # is locked, so removing an item needs a waiver on the entry. A git parent's waiver
+    # stands in for the issue layer: the issue layer's waiver needs an approval record that
+    # names it, and the check reads the same resolved list either way. The git parent names
+    # the owner who may approve the waiver.
     parent = {"schema": 1, "owner": "jed72",
               "checks": {"dod-perf-budget": {"statement": "Performance stays within budget.",
                                              "kind": "human", "severity": "blocking",
                                              "on_skipped": "not-applicable"}},
-              "stages": {"verify": {
+              "stages": {"build": {
                   "set": {"exit": {"add": ["dod-perf-budget"],
                                    "remove": ["dod-coverage-floor"]}},
                   "waiver": {"reason": "Coverage is judged elsewhere in this project.",

@@ -107,7 +107,12 @@ Writes: .compass/work/fix-token-message/ and docs/compass/2026-11-06-fix-token-m
 
 `outer-loop` is there because the four-layer acceptance strategy (`S17`)
 applies to a change a real client can observe: the scenario's test runs
-against the system from the outside.
+against the system from the outside. This project has no `compass.yml`, so
+it runs on the live default, which ships the strategy. The `approach
+evaluate` transcript above came from a project whose `compass.yml` extends
+`compass:default@6`, a major from before the strategy shipped, so it owes no
+`outer-loop`. In one project the preview and the write owe the same
+evidence.
 
 To see every issue at once, with a lane for each stage, run
 `compass board render`. It writes one page and opens it in the browser;

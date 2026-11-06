@@ -121,6 +121,28 @@ def test_start_takes_the_hotfix_setting_as_urgency(repo):
     assert "reproduce-first" in manifest["evidence_required"]
 
 
+def test_the_preview_owes_what_the_write_stores_where_s17_applies(repo):
+    # `governance/routing-policy.md` ("The path writer") says `approach evaluate
+    # --assessment` without `--write` shows what a write stores. Under
+    # `controlled`, where `S17` applies, that includes the strategy's tokens, its
+    # block and the build and ship checkpoints of its stage 2 and 3 reviews.
+    (repo / "compass.yml").write_text("schema: 1\nautonomy: controlled\n")
+    medium = "medium - several files and a design choice"
+    preview = _run(repo, "approach", "evaluate", "--json",
+                   "--assessment", "risk=trivial",
+                   "--assessment", "familiarity=brownfield-mapped",
+                   "--assessment", "size=medium")
+    assert preview.returncode == 0, preview.stdout + preview.stderr
+    shown = json.loads(preview.stdout)
+    assert _start(repo, SLUG, medium).returncode == 0
+    stored = _manifest(repo, SLUG)
+    assert "outer-loop" in stored["evidence_required"]
+    assert stored["checkpoints"] == ["assess", "specify", "build", "ship"]
+    for key in ("evidence_required", "checkpoints", "acceptance_strategy"):
+        assert shown[key] == stored[key], (key, shown[key], stored[key])
+    assert shown["gates"] == [g["id"] for g in stored["gates"]]
+
+
 def test_start_refuses_a_spike_and_says_why(repo):
     # A spike is not lighter or heavier than the path: it ships nothing, so the
     # refusal gives that reason. "computes to" is the phrase contract 4 pins.

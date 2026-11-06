@@ -17,9 +17,14 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 
 
+# The JSON view, because the four-stage default preset's text view is under
+# the 65,536-byte pipe buffer (59,090 bytes when this was written).
+SHOW = ["policy", "show", "--json"]
+
+
 def test_policy_show_exits_quietly_when_the_reader_closes_the_pipe():
     proc = subprocess.Popen(
-        [sys.executable, str(CLI), "policy", "show"],
+        [sys.executable, str(CLI), *SHOW],
         cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0,
     )
     # Unbuffered, so the read takes only the first line out of the pipe. A
@@ -34,7 +39,7 @@ def test_policy_show_exits_quietly_when_the_reader_closes_the_pipe():
     # A pipe buffer holds 65,536 bytes. Output that fits in it after the
     # first line is written without error even after the close, so the test
     # would pass without exercising the handler.
-    full = subprocess.run([sys.executable, str(CLI), "policy", "show"],
+    full = subprocess.run([sys.executable, str(CLI), *SHOW],
                           cwd=ROOT, capture_output=True, timeout=60)
     assert len(full.stdout) - len(first_line) > 65536, (
         "policy show output shrank below the pipe buffer")

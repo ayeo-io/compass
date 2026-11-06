@@ -23,7 +23,9 @@ what `conformance_lines` returns.
 # compass_pkg.classify (the grid, `scan` and its per-point callback, the
 # comparison rules, `where`, `plain` and `Refused`; only classify may import the
 # evaluator, so this module reaches what it owes through `Scan.obligations`),
-# compass_pkg.merge, compass_pkg.waivers (check), compass_pkg.layers (Layer),
+# compass_pkg.merge, compass_pkg.removed_parts (an issue layer without the
+# legacy stages the configuration lacks), compass_pkg.waivers (check),
+# compass_pkg.layers (Layer),
 # compass_pkg.legacy_views (the preset's lock summary, read lazily) and
 # compass_pkg.core (CompassError). Imported by compass_pkg.check_cmd and
 # compass_pkg.routing, which print its report.

@@ -608,8 +608,8 @@ CHECK_NAME_MAP = {"coherence-check-passes": "consistency-check-passes"}
 SHAPE_VALUE_MAP = dict(LEGACY_APPROACH_ALIASES)
 #: The route names in weight order; a test keeps them equal to route_shapes.
 ROUTE_NAMES = APPROACH_IDS
-#: The route names of the 8.x presets, which an issue assessed before 9.0.0
-#: records and a frozen preset or copied governance still declares.
+#: The route names of the 8.x presets, which an issue assessed under an 8.x
+#: preset records and a frozen preset or copied governance still declares.
 LEGACY_ROUTE_NAMES = LEGACY_APPROACH_IDS
 
 

@@ -73,6 +73,10 @@ default stands for it. For each project waiver:
 - If the new default no longer defines the entry, the waiver is affected, and
   the project's file does not resolve over the new default (it is refused
   with the merge errors).
+- If the waiver is on a key a 9.0.0 release removed, such as an approach
+  (ADR-092), it is `moot`: the merge leaves the key out of the project, so
+  the waiver excuses nothing and nothing is compared. It needs no
+  re-approval. `compass policy lint` names the key with `L-SETTING-REMOVED`.
 - Otherwise the waiver stays valid. A change anywhere else in the default
   affects no waiver.
 
@@ -220,12 +224,12 @@ the next reassess.
   },
   "refusal": {
     "code": "no-terminal",
-    "message": "there is no terminal to ask on, and these waivers need re-approval by an allowed approver: approaches.regular. Run the command on a terminal, or remove the waiver from compass.yml"
+    "message": "there is no terminal to ask on, and these waivers need re-approval by an allowed approver: gates.verify.security. Run the command on a terminal, or remove the waiver from compass.yml"
   },
   "classification": {
     "schema": 1,
     "result": "loosening",
-    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, labels none, documents none: approaches.subtask_ceiling is 1 in the parent and 2 in the child",
+    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, labels auth, documents none: gates.accepts (verify.clarity) is [\"artifact\", \"manual-review\"] in the parent and [\"artifact\", \"command-output\", \"manual-review\"] in the child",
     "scan": "full",
     "parent": "default@6 + project",
     "child": "default@7 + project",
@@ -249,9 +253,9 @@ the next reassess.
       ]
     },
     "counts": {
-      "equal": 4592,
+      "equal": 2328,
       "tighter": 0,
-      "looser": 16,
+      "looser": 2280,
       "mixed": 0
     },
     "first_looser": {
@@ -260,8 +264,10 @@ the next reassess.
         "familiarity": "greenfield",
         "size": "atomic",
         "goal": "delivery",
-        "urgency": "live-defect",
-        "labels": [],
+        "urgency": "none",
+        "labels": [
+          "auth"
+        ],
         "artifacts": []
       },
       "represents": {
@@ -282,19 +288,27 @@ the next reassess.
           null
         ],
         "urgency": [
-          "live-defect"
+          "none",
+          null
         ]
       },
       "outcome": "looser",
-      "summary": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, labels none, documents none: approaches.subtask_ceiling is 1 in the parent and 2 in the child",
+      "summary": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, labels auth, documents none: gates.accepts (verify.clarity) is [\"artifact\", \"manual-review\"] in the parent and [\"artifact\", \"command-output\", \"manual-review\"] in the child",
       "changes": [
         {
-          "fact": "ceilings",
-          "field": "approaches.subtask_ceiling",
-          "key": null,
+          "fact": "gate_accepts",
+          "field": "gates.accepts",
+          "key": "verify.clarity",
           "outcome": "looser",
-          "parent": 1,
-          "child": 2
+          "parent": [
+            "artifact",
+            "manual-review"
+          ],
+          "child": [
+            "artifact",
+            "command-output",
+            "manual-review"
+          ]
         }
       ]
     },
@@ -306,13 +320,13 @@ the next reassess.
       {
         "name": "grid",
         "replayed": 72,
-        "changed": 4,
+        "changed": 30,
         "skipped": null
       },
       {
         "name": "labels",
         "replayed": 4536,
-        "changed": 12,
+        "changed": 2250,
         "skipped": null
       },
       {
@@ -322,23 +336,37 @@ the next reassess.
         "skipped": "the project holds no archived issue"
       }
     ],
-    "changed": 16
+    "changed": 2280
   },
   "waivers": [
     {
-      "id": "project:approaches.regular",
-      "entry": "approaches.regular",
+      "id": "project:gates.verify.security",
+      "entry": "gates.verify.security",
       "status": "invalidated",
-      "reason": "Our work splits into more parallel subtasks than the default allows.",
+      "reason": "Our security reviews are written up by hand.",
       "approved_by": "jed72",
       "approved_on": "2026-10-05",
       "fields": [
         {
-          "field": "subtask_ceiling",
-          "old": 2,
-          "new": 3,
-          "project": 5,
-          "message": "approaches.regular.subtask_ceiling: the parent value changed from 2 to 3; the project value is 5"
+          "field": "accepts",
+          "old": [
+            "security-review",
+            "command-output",
+            "test-run"
+          ],
+          "new": [
+            "security-review",
+            "command-output",
+            "test-run",
+            "artifact"
+          ],
+          "project": [
+            "security-review",
+            "command-output",
+            "test-run",
+            "manual-review"
+          ],
+          "message": "gates.verify.security.accepts: the parent value changed from ['security-review', 'command-output', 'test-run'] to ['security-review', 'command-output', 'test-run', 'artifact']; the project value is ['security-review', 'command-output', 'test-run', 'manual-review']"
         }
       ]
     }
@@ -365,8 +393,8 @@ two documents, so its grid crosses them; the live default names none since
 | `waivers` | list | Every project waiver, below |
 
 Each waiver has these keys, in this order: `id` (such as
-`project:approaches.regular`), `entry`, `status` (`kept`, `invalidated` or
-`reapproved`), `reason` (the waiver's own), `approved_by`, `approved_on` (the
+`project:gates.verify.security`), `entry`, `status` (`kept`, `invalidated`,
+`moot` or `reapproved`), `reason` (the waiver's own), `approved_by`, `approved_on` (the
 values in the file after the run) and `fields`. Each entry of `fields` has
 `field` (null when the new default dropped the entry), `old` and `new` (the
 parent value in each default), `project` (the project's value) and `message`.

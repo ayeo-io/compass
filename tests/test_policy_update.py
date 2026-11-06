@@ -138,7 +138,7 @@ def _waiver(plan, waiver_id):
     return next(w for w in plan.waivers if w.id == waiver_id)
 
 
-CEILING_ID = "project:approaches.regular"
+CEILING_ID = "project:gates.verify.security"
 
 
 def test_trc_013_the_live_default_wins_for_its_own_major_beside_a_kept_folder(tmp_path):
@@ -197,8 +197,10 @@ def test_up_4_a_waiver_whose_waived_field_changed_is_affected(tmp_path, framewor
     waiver = _waiver(plan, CEILING_ID)
     assert waiver.status == "invalidated"
     [change] = waiver.invalidations
-    assert (change.entry, change.field) == ("approaches.regular", "subtask_ceiling")
-    assert (change.old, change.new, change.project) == (2, 3, 5)
+    assert (change.entry, change.field) == ("gates.verify.security", "accepts")
+    assert (change.old, change.new, change.project) == (
+        fixtures.SECURITY_ACCEPTS, fixtures.SECURITY_ACCEPTS_MOVED,
+        fixtures.SECURITY_ACCEPTS_PROJECT)
     assert waiver.allowed == ["jed72"]
 
 
@@ -258,9 +260,10 @@ def test_up_2_a_comment_that_names_another_major_is_left_alone():
 
 def test_up_6_a_re_approval_rewrites_the_approver_and_the_date_of_that_waiver_only():
     second = fixtures.PROJECT + (
-        "  hotfix:\n    set:\n      subtask_ceiling: 3\n" + fixtures.CEILING_WAIVER.replace(
+        "  verify.clarity:\n    set:\n      accepts: [manual-review]\n"
+        + fixtures.CEILING_WAIVER.replace(
             "jed72", "morgan").replace("2026-10-05", "2026-09-01"))
-    got = _rewrite(second, 7, [("approaches", "regular", "alex", datetime.date(2026, 10, 8))])
+    got = _rewrite(second, 7, [("gates", "verify.security", "alex", datetime.date(2026, 10, 8))])
     want = second.replace("@6", "@7").replace("approved_by: jed72", "approved_by: alex", 1) \
         .replace("approved_on: 2026-10-05", "approved_on: 2026-10-08")
     assert got == want
@@ -270,13 +273,13 @@ def test_up_6_a_re_approval_rewrites_the_approver_and_the_date_of_that_waiver_on
 def test_up_6_a_missing_approved_on_is_added_below_approved_by():
     text = fixtures.PROJECT.replace("approved_by: jed72\n      approved_on: 2026-10-05\n",
                                     "approved_by: LEGACY\n")
-    got = _rewrite(text, 7, [("approaches", "regular", "jed72", TODAY)])
+    got = _rewrite(text, 7, [("gates", "verify.security", "jed72", TODAY)])
     assert got.endswith("      approved_by: jed72\n      approved_on: 2026-10-08\n")
 
 
 def test_up_6_a_name_that_needs_quotes_is_quoted_and_a_trailing_comment_is_replaced():
     text = fixtures.PROJECT.replace("approved_on: 2026-10-05", "approved_on: 2026-10-05  # old")
-    got = _rewrite(text, 7, [("approaches", "regular", "Alex Q", TODAY)])
+    got = _rewrite(text, 7, [("gates", "verify.security", "Alex Q", TODAY)])
     assert 'approved_by: "Alex Q"\n' in got and "approved_on: 2026-10-08\n" in got
     assert "# old" not in got
 
@@ -287,12 +290,12 @@ def test_up_15_a_waiver_the_edit_cannot_reach_in_place_is_an_error():
         fixtures.CEILING_WAIVER,
         "    waiver: {reason: A reason., approved_by: jed72, approved_on: 2026-10-05}\n")
     with pytest.raises(CompassError) as caught:
-        _rewrite(flow, 7, [("approaches", "regular", "jed72", TODAY)])
+        _rewrite(flow, 7, [("gates", "verify.security", "jed72", TODAY)])
     assert "cannot be edited in place" in str(caught.value)
-    assert "approaches.regular" in str(caught.value)
+    assert "gates.verify.security" in str(caught.value)
     missing = fixtures.PROJECT
     with pytest.raises(CompassError) as caught:
-        _rewrite(missing, 7, [("approaches", "no-such-entry", "jed72", TODAY)])
+        _rewrite(missing, 7, [("gates", "no-such-entry", "jed72", TODAY)])
     assert "cannot be edited in place" in str(caught.value)
 
 
@@ -308,7 +311,7 @@ def test_up_15_an_edit_that_changes_more_than_the_integer_and_the_approvals_is_r
 
     monkeypatch.setattr(policy_update, "_set_approval", greedy)
     with pytest.raises(CompassError) as caught:
-        _rewrite(fixtures.PROJECT, 7, [("approaches", "regular", "jed72", TODAY)])
+        _rewrite(fixtures.PROJECT, 7, [("gates", "verify.security", "jed72", TODAY)])
     assert "more than" in str(caught.value)
 
 
@@ -375,7 +378,7 @@ def test_up_4_without_a_terminal_an_affected_waiver_refuses_and_is_listed(tmp_pa
     plan = plans()
     out, mine, term = _execute(plan, tmp_path, interactive=False)
     assert out.status == "refused" and out.refusal[0] == "no-terminal"
-    assert "approaches.regular" in out.refusal[1]
+    assert "gates.verify.security" in out.refusal[1]
     assert _file(mine) == plan.text and term.asked == [] and not out.written
 
 
@@ -386,7 +389,7 @@ def test_up_5_yes_never_re_approves_a_waiver_even_on_a_terminal(tmp_path, plans)
                                    interactive=interactive,
                                    term=Terminal("y", "jed72", "y"))
         assert out.status == "refused" and out.refusal[0] == "yes-cannot-reapprove"
-        assert "approaches.regular" in out.refusal[1]
+        assert "gates.verify.security" in out.refusal[1]
         assert term.asked == [] and _file(mine) == plan.text
 
 
@@ -605,7 +608,7 @@ def test_up_12_the_text_shows_the_classification_the_replay_and_the_waiver(
     assert code == 1
     assert out.startswith("compass policy update: compass:default@6 -> compass:default@7")
     assert "classification: loosening" in out and "replay: grid " in out
-    assert "approaches.regular" in out and "subtask_ceiling" in out
+    assert "gates.verify.security" in out and "accepts" in out
     assert "not applied (no-terminal)" in out
 
 
@@ -728,7 +731,7 @@ def test_up_2_crlf_line_endings_survive_a_move_byte_for_byte(tmp_path, plans):
 def test_up_2_rewrite_text_keeps_crlf_when_it_adds_an_approved_on_line():
     text = fixtures.PROJECT.replace("approved_by: jed72\n      approved_on: 2026-10-05\n",
                                     "approved_by: LEGACY\n").replace("\n", "\r\n")
-    got = _rewrite(text, 7, [("approaches", "regular", "jed72", TODAY)])
+    got = _rewrite(text, 7, [("gates", "verify.security", "jed72", TODAY)])
     assert got.endswith("      approved_by: jed72\r\n      approved_on: 2026-10-08\r\n")
     assert "\n" not in got.replace("\r\n", "")
 

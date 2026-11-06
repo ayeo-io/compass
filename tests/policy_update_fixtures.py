@@ -8,9 +8,11 @@ one is a copy of the live default with named changes, so
 the project layers here merge over a full default and the classifier and the
 replay run over it.
 
-A project waives one field: `approaches.regular.subtask_ceiling`, raised
-from 2 to 5 (a loosening the classifier sees). Each change below says
-whether it moves that field.
+A project waives one field: `gates.verify.security.accepts`, which it widens
+to also accept a manual review (a loosening the classifier sees). Each change
+below says whether it moves that field. The waiver is on a gate because a
+project file cannot change an approach since 9.0.0 (ADR-092): a waiver there
+is moot, which `APPROACH_PROJECT` shows.
 """
 from __future__ import annotations
 
@@ -23,8 +25,16 @@ ROOT = Path(__file__).resolve().parent.parent
 REAL_DEFAULT = ROOT / "governance" / "presets" / "default"
 KEPT_DEFAULT_6 = ROOT / "governance" / "presets" / "default@6"
 
+# The ways of evidence the security gate accepts in `default@6`, and in the second
+# default after the `ceiling` change.
+SECURITY_ACCEPTS = ["security-review", "command-output", "test-run"]
+SECURITY_ACCEPTS_MOVED = SECURITY_ACCEPTS + ["artifact"]
+# What the project widens the security gate to.
+SECURITY_ACCEPTS_PROJECT = SECURITY_ACCEPTS + ["manual-review"]
+
 # The changes a second default can carry. `ceiling` moves the waived field's
-# parent value (2 to 3) and loosens the hotfix ceiling (1 to 2); `unrelated`
+# parent value (`artifact` is added) and loosens the clarity gate (it also
+# accepts command output); `unrelated`
 # rewords one check, which no waiver reads; `drop-entry` removes a check a
 # waiver in another fixture sits on.
 CHANGES = ("ceiling", "unrelated", "drop-entry", "none")
@@ -67,8 +77,10 @@ def framework_root(base, change="ceiling", version="7.0.0"):
     if change == "ceiling":
         # The waived field, and one the project does not override, so the
         # move also changes what the project is held to.
-        _edit(new, "approaches", lambda a: (a["regular"].update(subtask_ceiling=3),
-                                            a["hotfix"].update(subtask_ceiling=2)))
+        _edit(new, "gates", lambda g: (
+            g["verify.security"].update(accepts=list(SECURITY_ACCEPTS_MOVED)),
+            g["verify.clarity"].update(accepts=g["verify.clarity"]["accepts"]
+                                       + ["command-output"])))
     elif change == "unrelated":
         _edit(new, "checks", lambda c: c["backfills-paid"].update(
             statement="Every follow-up on the issue is closed before it ships."))
@@ -80,6 +92,15 @@ def framework_root(base, change="ceiling", version="7.0.0"):
 
 
 CEILING_WAIVER = """\
+    waiver:
+      reason: Our security reviews are written up by hand.
+      approved_by: jed72
+      approved_on: 2026-10-05
+"""
+
+# The waiver on an approach that a project wrote before 9.0.0. The merge leaves
+# the key out, so `policy update` reports the waiver as moot.
+APPROACH_WAIVER = """\
     waiver:
       reason: Our work splits into more parallel subtasks than the default allows.
       approved_by: jed72
@@ -94,11 +115,22 @@ schema: 1
 extends: compass:default@6   # the shipped default
 owner: jed72
 
+gates:
+  verify.security:
+    set:
+      accepts: [security-review, command-output, test-run, manual-review]
+""" + CEILING_WAIVER
+
+APPROACH_PROJECT = """\
+schema: 1
+extends: compass:default@6
+owner: jed72
+
 approaches:
   regular:
     set:
       subtask_ceiling: 5
-""" + CEILING_WAIVER
+""" + APPROACH_WAIVER
 
 # A waiver on a check, for the fixture that drops that check.
 DROPPED_PROJECT = """\

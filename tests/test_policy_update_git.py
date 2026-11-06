@@ -29,13 +29,17 @@ from parent_fixtures import REAL_GIT, _git, make_remote  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 TODAY = datetime.date(2026, 10, 8)
 
-# The parent tightens the regular ceiling from 2 to 1. The project raises it to 5
-# and holds a waiver for that.
+# The parent narrows the ways of evidence the security gate accepts. The project
+# widens them and holds a waiver for that. The waiver is on a gate because a project
+# file cannot change an approach since 9.0.0 (ADR-092).
+ACCEPTS_V1 = ["security-review", "command-output"]
+ACCEPTS_MOVED = ["security-review"]
+ACCEPTS_PROJECT = ["security-review", "command-output", "test-run", "manual-review"]
 V1 = {"schema": 1, "owner": "platform-team",
-      "approaches": {"regular": {"set": {"subtask_ceiling": 1}}}}
-# The waived field's parent value moves from 1 to 2.
+      "gates": {"verify.security": {"set": {"accepts": ACCEPTS_V1}}}}
+# The waived field's parent value moves: the parent accepts only a security review.
 MOVED = {"schema": 1, "owner": "platform-team",
-         "approaches": {"regular": {"set": {"subtask_ceiling": 2}}}}
+         "gates": {"verify.security": {"set": {"accepts": ACCEPTS_MOVED}}}}
 # Only the owner changes: no waived field moves.
 OTHER = {**V1, "owner": "platform-team-two"}
 # The waived field moves, and a different person approves project waivers.
@@ -47,12 +51,12 @@ schema: 1
 extends: github:acme/bank@main#{sha}   # the team parent
 owner: jed72
 
-approaches:
-  regular:
+gates:
+  verify.security:
     set:
-      subtask_ceiling: 5
+      accepts: [security-review, command-output, test-run, manual-review]
     waiver:
-      reason: Our work splits into more parallel subtasks than the parent allows.
+      reason: Our security reviews are written up by hand.
       approved_by: jed72
       approved_on: 2026-10-05
 """
@@ -204,9 +208,10 @@ def test_pug_3_a_waiver_on_a_field_that_moved_is_affected(world):
     world.project()
     made = _update().plan(world.root)
     [waiver] = made.waivers
-    assert waiver.status == "invalidated" and waiver.entry == "approaches.regular"
+    assert waiver.status == "invalidated" and waiver.entry == "gates.verify.security"
     [change] = waiver.invalidations
-    assert (change.field, change.old, change.new, change.project) == ("subtask_ceiling", 1, 2, 5)
+    assert (change.field, change.old, change.new, change.project) == (
+        "accepts", ACCEPTS_V1, ACCEPTS_MOVED, ACCEPTS_PROJECT)
 
 
 def test_pug_3_a_change_elsewhere_in_the_parent_leaves_the_waiver_valid(world):
@@ -504,9 +509,9 @@ def test_pug_13_the_parent_lookup_is_one_function():
 # --- PUG-14 to PUG-16: the parent has parents of its own ---------------------------------
 
 BASE_V1 = {"schema": 1, "owner": "platform-team",
-           "approaches": {"regular": {"set": {"subtask_ceiling": 1}}}}
+           "gates": {"verify.security": {"set": {"accepts": ACCEPTS_V1}}}}
 BASE_V2 = {"schema": 1, "owner": "platform-team",
-           "approaches": {"regular": {"set": {"subtask_ceiling": 2}}}}
+           "gates": {"verify.security": {"set": {"accepts": ACCEPTS_MOVED}}}}
 
 
 def _bank(base_sha, base_ref="main", **more):
@@ -515,7 +520,7 @@ def _bank(base_sha, base_ref="main", **more):
 
 
 def _chained(world):
-    """`acme/base` holds the ceiling, and `acme/bank` (the project's parent) extends
+    """`acme/base` holds the security gate's list, and `acme/bank` (the project's parent) extends
     it. The first commit of each is pinned."""
     base_first = make_remote(world.base, repo="base", files={"compass.yml": _dump(BASE_V1)})
     world.repo.joinpath("compass.yml").write_text(_dump(_bank(base_first)), encoding="utf-8")
@@ -530,13 +535,13 @@ def test_pug_14_a_waiver_is_checked_against_the_whole_chain_not_the_nearest_pare
     (base_repo / "compass.yml").write_text(_dump(BASE_V2), encoding="utf-8")
     _git(base_repo, "commit", "--quiet", "-am", "base two")
     base_second = _git(base_repo, "rev-parse", "HEAD")
-    bank_second = world.advance(_bank(base_second))      # the nearest parent sets no ceiling
+    bank_second = world.advance(_bank(base_second))      # the nearest parent sets no list
     world.project(sha=bank_first)
     made = _update().plan(world.root)
     [waiver] = made.waivers
     assert waiver.status == "invalidated"
     [change] = waiver.invalidations
-    assert (change.field, change.old, change.new) == ("subtask_ceiling", 1, 2)
+    assert (change.field, change.old, change.new) == ("accepts", ACCEPTS_V1, ACCEPTS_MOVED)
     out, _ = _run(world, interactive=True, answers=("y", "jed72", "y"))
     assert out.status == "applied" and f"#{bank_second}" in world.text()
 

@@ -35,7 +35,7 @@ import textwrap
 from dataclasses import dataclass, field
 
 from compass_pkg import catalogue_check, layers, merge, policy_lint, replay, waivers
-from compass_pkg import parent_states, parents
+from compass_pkg import parent_states, parents, removed_parts
 from compass_pkg.atomic_io import StrictYamlError, atomic_write_text, load_yaml_strict
 from compass_pkg.core import FRAMEWORK_ROOT, CompassError
 
@@ -81,7 +81,8 @@ def available_defaults(framework_root=None):
 @dataclass
 class WaiverView:
     """One project waiver in a move. `status` is `kept` (no waived field's
-    parent value changed) or `invalidated`; a re-approval later sets
+    parent value changed), `invalidated`, or `moot` (the waiver is on a key a
+    release removed, which the merge leaves out); a re-approval later sets
     `reapproved`. `allowed` is who may approve it; `fault` says why nobody
     can."""
     id: str
@@ -261,6 +262,12 @@ def _views(found, invalidations, doc, above):
     out = []
     for waiver in found:
         allowed, fault = waivers.allowed_approvers(waiver, doc, above)
+        if removed_parts.removed_key(waiver.catalogue, waiver.entry):
+            # The merge leaves a removed key out of the project (ADR-092), so the
+            # waiver excuses nothing and nothing is compared.
+            out.append(WaiverView(waiver.id, waiver.catalogue, waiver.entry, waiver.body,
+                                  "moot", [], allowed, fault.message if fault else None))
+            continue
         moved = by_id.get(waiver.id, [])
         out.append(WaiverView(waiver.id, waiver.catalogue, waiver.entry, waiver.body,
                               "invalidated" if moved else "kept", moved, allowed,
@@ -861,6 +868,13 @@ def plan_lines(made):
         return lines + ["waivers: none"]
     lines.append("waivers:")
     for view in made.waivers:
+        if view.status == "moot":
+            key = removed_parts.removed_key(view.catalogue, view.entry_id)
+            adr = removed_parts.SETTINGS[key][1]
+            lines += _wrap(f"  {view.entry}: moot - ",
+                           f"'{key}' was removed in {removed_parts.RELEASE} ({adr}) and is "
+                           f"not read, so the waiver excuses nothing", "    ")
+            continue
         if view.status != "invalidated":
             lines.append(f"  {view.entry}: stays valid (no waived field's parent value "
                          f"changed)")

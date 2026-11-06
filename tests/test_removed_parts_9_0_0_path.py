@@ -287,3 +287,16 @@ def test_migrate_keeps_the_other_edits_beside_a_removed_one(tmp_path):
         ("rules", "floors"), ("gates", "G9"), ("vocabulary", "gates.G9")]
     assert [d["key"] for d in made.dropped if "ADR-092" in d["reason"]] == [
         "approaches.regular"]
+
+
+def test_update_reports_a_waiver_on_a_removed_key_as_moot(tmp_path):
+    import policy_update_fixtures as fixtures
+    from compass_pkg import policy_update
+    root = fixtures.project(tmp_path / "project", fixtures.APPROACH_PROJECT)
+    framework = fixtures.framework_root(tmp_path / "framework", "ceiling")
+    made = policy_update.plan(root, None, framework_root=framework)
+    [view] = [w for w in made.waivers if w.entry == "approaches.regular"]
+    assert view.status == "moot" and view.invalidations == [], view
+    assert view not in made.invalidated
+    lines = "\n".join(policy_update.plan_lines(made))
+    assert "approaches.regular: moot" in lines and "ADR-092" in lines, lines

@@ -1,7 +1,7 @@
 ---
 id: ADR-092
 title: Compass runs one path of four stages and assess selects the evidence
-status: proposed
+status: accepted
 date: 2026-11-05
 supersedes: ''
 superseded_by: ''

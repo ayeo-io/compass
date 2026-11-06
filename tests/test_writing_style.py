@@ -1081,8 +1081,6 @@ _register(Rule(
                    "names the Verify stage, not the verb."),
         Exemption("examples/README.md", "Verify is a short note",
                    "names the Verify stage, not the verb."),
-        Exemption("examples/README.md", "uncompressed* Verify gate",
-                   "names the Verify gate, not the verb."),
         Exemption(
             "examples/bdd-adapters/behave/docs/compass/"
             "2026-08-03-reset-password/acceptance-criteria.md",
@@ -1104,82 +1102,6 @@ _register(Rule(
             "2026-08-03-reset-password/acceptance-criteria.md",
             "Passes as acceptance (verify)",
             "the same coverage-ledger column header as the behave copy."),
-        Exemption(
-            "examples/feature-api-change/.compass/work/"
-            "rate-limit-search-endpoint/devlog.md",
-            "13:10 - Verify",
-            "a devlog entry heading naming the Verify stage, not the verb."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/acceptance-criteria.md",
-            "Passes as acceptance (verify)",
-            "the same coverage-ledger column header as the bdd-adapters "
-            "exemption above."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/delivery-approach.md",
-            "| Verify | Full - one gate",
-            "names the Verify stage in the per-stage weight table, not the "
-            "verb."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/delivery-approach.md",
-            "gate at Verify (the feature's",
-            "names the Verify stage, not the verb."),
-        Exemption(
-            "examples/hotfix-regression/.compass/work/"
-            "search-crash-on-empty-filter/devlog.md",
-            "10:40 - Verify",
-            "a devlog entry heading naming the Verify stage, not the verb."),
-        Exemption(
-            "examples/hotfix-regression/.compass/work/"
-            "search-crash-on-empty-filter/devlog.md",
-            "Full Verify - not compressed",
-            "names the Verify stage, not the verb."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/acceptance-criteria.md",
-            "Passes as acceptance (verify)",
-            "the same coverage-ledger column header as the bdd-adapters "
-            "exemption above."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
-            "reviewed the Verify gate",
-            "names the Verify gate, not the verb."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
-            "permitted Verify deferral",
-            "names the Verify stage, not the verb."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
-            "| Verify | Full |",
-            "names the Verify stage in the per-stage weight table, not the "
-            "verb."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
-            "full Verify gate - five review",
-            "names the Verify gate, not the verb."),
-        Exemption(
-            "examples/initiative-new-subsystem/.compass/work/"
-            "notifications-subsystem/devlog.md",
-            "14:50 - Verify",
-            "a devlog entry heading naming the Verify stage, not the verb."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/acceptance-criteria.md",
-            "Passes as acceptance (verify)",
-            "the same coverage-ledger column header as the bdd-adapters "
-            "exemption above."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/delivery-approach.md",
-            "| Verify | All gates, all dimensions",
-            "names the Verify stage in the per-stage weight table, not the "
-            "verb."),
         Exemption(
             "examples/quick-fix-typo/.compass/work/"
             "fix-timeout-error-message/devlog.md",
@@ -1990,24 +1912,6 @@ _register(Rule(
             "the machine-parsed scenario-id marker `compass bdd extract` "
             "reads; see the comment above."),
         Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/acceptance-criteria.md",
-            "<!-- traceability id:",
-            "the machine-parsed scenario-id marker `compass bdd extract` "
-            "reads; see the comment above."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/acceptance-criteria.md",
-            "<!-- traceability id:",
-            "the machine-parsed scenario-id marker `compass bdd extract` "
-            "reads; see the comment above."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/acceptance-criteria.md",
-            "<!-- traceability id:",
-            "the machine-parsed scenario-id marker `compass bdd extract` "
-            "reads; see the comment above."),
-        Exemption(
             "examples/quick-fix-typo/docs/compass/"
             "2026-05-04-fix-timeout-error-message/acceptance-criteria.md",
             "<!-- traceability id:",
@@ -2059,13 +1963,6 @@ _register(Rule(
             "examples/README.md", "evidence/green-TRC-001.json",
             "a literal filename example, inside backticks - the same "
             "reasoning as the CLI command exemption on this line."),
-        Exemption(
-            "examples/README.md", "evidence/red-TRC-001.json",
-            "a literal filename example, inside backticks - the third on "
-            "this page and the same reasoning as the two above. Added when "
-            "fixups/clarity-findings merged: that branch repaired the "
-            "nested backtick that had been hiding this one, so the quote "
-            "only exists here post-merge."),
         Exemption(
             "examples/quick-fix-typo/docs/compass/"
             "2026-05-04-fix-timeout-error-message/verification-note.md",
@@ -2420,120 +2317,13 @@ _register(Rule(
             "this repository does not ship, not a real path reference - "
             "the comment's point is that the ban ignores it."),
         # PBW-A8's reference sweep resolves every path against the repository
-        # root. Each of the five worked examples under examples/ narrates a
+        # root. Each worked example under examples/ narrates a
         # fictional application change, naming source and test files that
         # belong to the STORY's application, not to this repository - the same
         # way a textbook's code listing names a file that exists only in the
-        # chapter. None of the five examples ships the application source it
+        # chapter. No example ships the application source it
         # narrates; only the Compass documents (devlog, delivery-approach,
         # technical-design, and the rest) are real, tracked files.
-        Exemption(
-            "examples/feature-api-change/.compass/work/"
-            "rate-limit-search-endpoint/devlog.md",
-            "src/api/middleware/rate_limit.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/feature-api-change/.compass/work/"
-            "rate-limit-search-endpoint/devlog.md",
-            "src/api/routes/search.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/feature-api-change/.compass/work/"
-            "rate-limit-search-endpoint/devlog.md",
-            "src/api/config.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/technical-design.md",
-            "src/api/middleware/rate_limit.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/technical-design.md",
-            "src/api/routes/search.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/technical-design.md",
-            "src/api/config.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/hotfix-regression/.compass/work/"
-            "search-crash-on-empty-filter/devlog.md",
-            "src/api/search/filter_compiler.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
-            "tests/api/test_search.py",
-            "a path relative to this issue's own directory - it resolves "
-            "at examples/hotfix-regression/tests/api/test_search.py, "
-            "which is tracked; the sweep checks every path against the "
-            "repository root, the same gap the bdd-adapters exemptions "
-            "above name."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/verification-report.md",
-            "src/api/search/filter_compiler.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/distribution-map.md",
-            "src/notifications/dispatch.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/distribution-map.md",
-            "src/notifications/preferences.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/technical-design.md",
-            "src/notifications/dispatch.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/technical-design.md",
-            "src/notifications/store.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/technical-design.md",
-            "src/notifications/api.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/technical-design.md",
-            "src/notifications/preferences.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/verification-report.md",
-            "tests/notifications/test_dispatch.py",
-            "a path relative to this issue's own directory - it resolves "
-            "at examples/initiative-new-subsystem/tests/notifications/"
-            "test_dispatch.py, which is tracked."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/verification-report.md",
-            "tests/notifications/test_preferences.py",
-            "a path relative to this issue's own directory - it resolves "
-            "at examples/initiative-new-subsystem/tests/notifications/"
-            "test_preferences.py, which is tracked."),
         Exemption(
             "examples/quick-fix-typo/.compass/work/"
             "fix-timeout-error-message/devlog.md",
@@ -2859,25 +2649,6 @@ def _find_doubled_word(span: ProseSpan) -> list[Finding]:
 _register(Rule(
     "PBW-A9", "No sentence is left broken by an earlier find-and-replace",
     _find_doubled_word,
-    exemptions=(
-        # The doubled-word pattern matches any repeated \w+ token, including
-        # two adjacent numbers - a date immediately followed by a time whose
-        # hour repeats the day is not a doubled English word, and rewording a
-        # timestamp to dodge the pattern would be an edit for the sweep's own
-        # convenience rather than for clarity.
-        Exemption(
-            "examples/hotfix-regression/.compass/work/"
-            "search-crash-on-empty-filter/devlog.md",
-            "2026-05-11 11:",
-            "a date immediately followed by a time starting with the same "
-            "number, not a doubled word."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
-            "2026-05-11 11:",
-            "a date immediately followed by a time starting with the same "
-            "number, not a doubled word."),
-    ),
 ))
 
 

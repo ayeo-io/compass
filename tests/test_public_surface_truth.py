@@ -742,14 +742,21 @@ def test_d2_repairs_change_only_retired_names():
     `governance/strategies.md` (list_items 107 -> 108) gained the `S17`
     bullet on the stage reviews at the `build` and `ship` checkpoints.
 
-    A NEW structural change to any of the 47 still fails.
+    ADR-093 deleted the feature, hotfix and initiative examples
+    (`examples/feature-api-change/`, `examples/hotfix-regression/` and
+    `examples/initiative-new-subsystem/`), so their 17 entries left the
+    fixture, among them the distribution map named above. It re-baselined
+    `examples/README.md` (three `###` headings fewer), which lost the section
+    on each deleted example. The fixture holds 30 files now.
+
+    A NEW structural change to any of the 30 still fails.
     """
     import json
     snap = json.loads(
         (REPO_ROOT / "tests" / "fixtures" / "repaired-file-structure.json")
         .read_text(encoding="utf-8"))
-    assert len(snap) == 47, (
-        f"{len(snap)} files in the structure fixture, not 47 - it has been "
+    assert len(snap) == 30, (
+        f"{len(snap)} files in the structure fixture, not 30 - it has been "
         f"truncated, or an entry was added or removed without this count")
 
     drift = []

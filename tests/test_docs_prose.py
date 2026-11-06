@@ -70,9 +70,7 @@ def test_examples_carry_v2_names():
     the manual teaches vocabulary from the directory listing."""
     names = {p.name for p in (REPO_ROOT / "examples").iterdir()
              if p.is_dir()}
-    expected = {"quick-fix-typo", "feature-api-change",
-                "initiative-new-subsystem", "hotfix-regression",
-                "spike-technical-unknown", "bdd-adapters"}
+    expected = {"quick-fix-typo", "spike-technical-unknown", "bdd-adapters"}
     missing = expected - names
     assert not missing, f"missing v2-named examples: {sorted(missing)}"
     v1 = {"express-typo", "standard-api-change", "expedition-new-subsystem"}

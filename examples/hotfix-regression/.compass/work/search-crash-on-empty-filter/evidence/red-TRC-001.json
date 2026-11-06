@@ -1,7 +1,0 @@
-{
-  "command": "pytest tests/api/test_search.py::test_empty_filter_object_does_not_crash",
-  "exit_code": 1,
-  "passed": false,
-  "timestamp": "2026-05-11T09:08:33+00:00",
-  "log_excerpt": "tests/api/test_search.py F                                              [100%]\n\n=================================== FAILURES ===================================\n_______________ test_empty_filter_object_does_not_crash ________________________\n\n    def test_empty_filter_object_does_not_crash():\n        resp = client.search(query=\"report\", filter={})\n>       assert resp.status_code == 200\nE       assert 500 == 200\nE        +  where 500 = <Response [500]>.status_code\n\nsrc/api/search/filter_compiler.py:44: AttributeError: 'NoneType' object has no\n  attribute 'render' - raised compiling filter={} (reproduces the production 500)\n=========================== 1 failed in 0.19s ============================="
-}

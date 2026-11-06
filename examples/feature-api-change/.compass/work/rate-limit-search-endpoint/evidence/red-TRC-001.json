@@ -1,7 +1,0 @@
-{
-  "command": "pytest tests/api/test_rate_limit.py",
-  "exit_code": 1,
-  "passed": false,
-  "timestamp": "2026-04-23T14:02:11+00:00",
-  "log_excerpt": "tests/api/test_rate_limit.py FFFFF                                       [100%]\n\n=================================== FAILURES ===================================\n___________________________ test_under_limit_passes ___________________________\n>       from src.api.middleware.rate_limit import RateLimitMiddleware\nE       ModuleNotFoundError: No module named 'src.api.middleware.rate_limit'\n\n(the other four fail the same way - the middleware does not exist yet, which is\nthe point: five red scenarios before a line of implementation.)\n========================== 5 failed in 0.22s ============================="
-}

@@ -808,7 +808,7 @@ def test_the_shipped_example_manifests_are_written_in_the_current_words():
     from compass_pkg import core, word_map            # core binds the table reader
     assert core
     manifests = sorted((ROOT / "examples").rglob("manifest.yml"))
-    assert len(manifests) >= 9, manifests
+    assert len(manifests) >= 6, manifests
     old = {str(p.relative_to(ROOT)): word_map.old_words(
                yaml.safe_load(p.read_text(encoding="utf-8")))
            for p in manifests}

@@ -169,7 +169,7 @@ def _expected_shipped_locks():
     import yaml
     gates = yaml.safe_load((ROOT / "governance" / "presets" / "default"
                             / "gates.yml").read_text(encoding="utf-8"))["gates"]
-    expected = {"stages.assess": True, "stages.verify": True, "stages.ship": True,
+    expected = {"stages.assess": True, "stages.build": True, "stages.ship": True,
                 "approaches.spike": True, "rules.immovable_gates": True,
                 "gates.verify.correctness": True, "gates.verify.governance": True,
                 "gates.verify.traceability": True, "gates.spike.conclude": True,
@@ -854,7 +854,18 @@ def test_lk_6_the_preset_allows_a_project_that_adds_a_check_to_a_locked_gate():
         "gates": {"G1": {"set": {"checks": {"add": ["extra-check"]}}}}}
     result = _enforce_preset(project)
     assert result.ok, [r.message for r in result.refusals]
-    assert result.evaluated > 1000
+    # Every point of the grid is evaluated: each class of each dimension the rules
+    # read, crossed with every subset of the labels they read. The shipped default
+    # reads fewer dimension values since it routes no approach by size (ADR-092).
+    from compass_pkg import classify, merge
+    chain = _preset_chain(project)
+    before, _ = merge.apply({}, chain[0].doc, "parent", "default")
+    after, _ = merge.apply(before, chain[1].doc, "project", "project")
+    grid = classify.build_grid(before, after)
+    points = 2 ** len(grid.labels)
+    for _name, classes in grid.dimensions:
+        points *= len(classes)
+    assert result.evaluated == points >= 256
 
 
 def test_lk_6_the_preset_refuses_a_hard_check_loosened_and_a_locked_gate_emptied():

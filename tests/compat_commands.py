@@ -342,8 +342,10 @@ def _with_preset(root: Path, env: dict) -> None:
 def _with_failing_preset(root: Path, env: dict) -> None:
     _with_preset(root, env)
     fixture = root / "team-preset" / "compass-fixtures" / "example.yml"
+    # The scaffold's fixture expects `delivery`, the approach of every delivery
+    # assessment since 9.0.0 (ADR-092); a fixture that expects another fails.
     fixture.write_text(fixture.read_text(encoding="utf-8").replace(
-        "approach: quick-fix", "approach: full"), encoding="utf-8")
+        "approach: delivery", "approach: full"), encoding="utf-8")
 
 
 def _with_grouped_preset(root: Path, env: dict) -> None:

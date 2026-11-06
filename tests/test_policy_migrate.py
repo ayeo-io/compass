@@ -162,10 +162,10 @@ def _tighten_and_add(policy, guardrails):
     guardrails["defaults"].append({
         "id": "G9", "name": "Project gate", "statement": "The project's own gate.",
         "checks": ["scenarios-have-tests"], "checked_at": ["verify"]})
-    policy["route_shapes"]["regular"]["subtask_ceiling"] = 1
+    policy["route_shapes"]["delivery"]["subtask_ceiling"] = 0
     policy["routing_guardrails"]["floors"].append({
         "id": "RP-FLOOR-900", "when": {"risk": "critical"},
-        "force_minimum_route": "full", "rationale": "The project always runs critical work in full."})
+        "add_gate": "verify.clarity", "rationale": "The project reviews clarity on critical work."})
 
 
 def _drop_first_floor(policy, guardrails):
@@ -197,7 +197,7 @@ def test_PM_3_a_changed_copy_migrates_to_exactly_its_differing_entries(tmp_path)
     doc = yaml.safe_load(made.compass_yml)
     assert "approaches" not in doc
     assert [d["key"] for d in made.dropped if "L-SETTING-REMOVED" in d["reason"]] == [
-        "approaches.regular"]
+        "approaches.delivery"]
     assert list(doc["rules"]["floors"]["set"]["rules"]) == ["set"]
     assert list(doc["rules"]["floors"]["set"]["rules"]["set"]) == ["RP-FLOOR-900"]
 
@@ -427,11 +427,11 @@ TOP_KEYS = ["schema", "mode", "result", "base_release", "sources", "adopted", "o
 
 def _example_project(tmp_path):
     """The project the pinned example is for: a copy of release 5.3.0 with one
-    floor tightened, a mode and two keys of the old file that need a decision."""
+    gate rule tightened, a mode and two keys of the old file that need a decision."""
     root = _project(tmp_path)
     _copy_release(root, "v5.3.0", [
-        (0, "      never_skip: [refine, verify, ship]\n",
-         "      never_skip: [define, refine, verify, ship]\n")])
+        (0, "    - id: RP-REQUIRE-004\n      when: { labels_any: [auth, payments, personal-data, migrations] }\n",
+         "    - id: RP-REQUIRE-004\n      when: { labels_any: [auth, payments, personal-data, migrations, billing] }\n")])
     (root / ".compass" / "config.yml").write_text(
         "version: 1.0.0\nmode: advisory\nroles:\n  enabled: [engineer]\n", encoding="utf-8")
     return root
@@ -582,10 +582,12 @@ LOOSENINGS = {
     "a gate drops its check": (
         1, "    checks: [scenario-has-id-and-intent]\n    checked_at: [clarify, verify]",
         "    checks: []\n    checked_at: [clarify, verify]"),
+    # A floor that only raised the approach is moot on the four-stage path
+    # (ADR-092), so the deleted floor is one that adds a gate.
     "a floor is deleted": (
-        0, "    - id: RP-FLOOR-003\n      when: { labels_any: [auth, payments, personal-data, migrations] }\n"
-           "      force_minimum_route: expedition\n      rationale: \"Domain risk overrides size. "
-           "A one-line auth change is not small.\"\n\n", ""),
+        0, "    - id: RP-REQUIRE-004\n      when: { labels_any: [auth, payments, personal-data, migrations] }\n"
+           "      add_gate: verify.architecture\n      rationale: \"Irreversible-surface issues have "
+           "architecture checked before they ship.\"\n\n", ""),
 }
 
 
@@ -602,11 +604,29 @@ def test_PM_13_a_local_loosening_of_the_base_release_still_blocks(tmp_path, name
 
 def test_PM_13_a_local_tightening_of_an_older_release_is_one_entry_and_ready(tmp_path):
     root = _project(tmp_path)
+    # A floor that only raises the approach is moot on the four-stage path
+    # (ADR-092), so the tightening is a gate rule that fires on one more label.
+    _copy_release(root, "v5.6.0", [
+        (0, "    - id: RP-REQUIRE-004\n      when: { labels_any: [auth, payments, personal-data, migrations] }\n",
+         "    - id: RP-REQUIRE-004\n      when: { labels_any: [auth, payments, personal-data, migrations, billing] }\n")])
+    made = _plan(root)
+    assert made.result == "ready" and _ops(made) == [("rules", "floors", "set")]
+
+
+def test_PM_13_a_local_edit_to_a_floor_that_only_raised_the_approach_is_dropped(tmp_path):
+    """The four-stage path reads no configuration's approach (ADR-092), so an edit
+    to a floor whose effects only raised the approach or fixed its stages is left
+    out of the overlay and named as dropped, and the migration is ready."""
+    root = _project(tmp_path)
     _copy_release(root, "v5.6.0", [
         (0, "      never_skip: [refine, verify, ship]\n",
          "      never_skip: [define, refine, verify, ship]\n")])
     made = _plan(root)
-    assert made.result == "ready" and _ops(made) == [("rules", "floors", "set")]
+    assert made.result == "ready", made.blocked
+    assert made.ops == [] and made.blocked == []
+    assert "rules" not in yaml.safe_load(made.compass_yml)
+    assert [d["key"] for d in made.dropped if "L-SETTING-REMOVED" in d["reason"]] == [
+        "rules.floors.rules.RP-FLOOR-001"]
 
 
 def test_PM_13_the_release_with_the_fewest_entries_is_chosen_when_versions_do_not_match(tmp_path):
@@ -696,7 +716,9 @@ def test_PM_14_a_project_guardrail_becomes_a_project_check_and_gate(tmp_path):
     assert doc["checks"]["Q1-lint-passes"]["impl"] == "command-passes"
     assert doc["checks"]["Q1-lint-passes"]["params"] == {"command": "make lint"}
     assert doc["gates"]["Q1"]["checks"] == ["Q1-lint-passes"]
-    assert doc["gates"]["Q1"]["stage"] == "verify" and "locked" not in doc["gates"]["Q1"]
+    # The copy checks the guardrail at `verify`, which the shipped default shows as
+    # ship, the path stage it maps to (ADR-092).
+    assert doc["gates"]["Q1"]["stage"] == "ship" and "locked" not in doc["gates"]["Q1"]
 
 
 def test_PM_14_the_migrated_project_guardrail_survives_apply_and_lint(tmp_path):

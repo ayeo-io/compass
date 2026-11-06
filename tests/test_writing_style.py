@@ -1300,8 +1300,6 @@ _register(Rule(
                    "the same supply-chain stance",
                    "\"supply chain\" is the established compound noun, not "
                    "the verb \"supply\" the word table retires."),
-        Exemption("governance/guardrails.yml", "checked_at: [verify]",
-                   "an example YAML value inside a comment, not the verb."),
         Exemption("governance/guardrails.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"."),
@@ -1316,9 +1314,6 @@ _register(Rule(
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"; the preset copies the type text from "
                    "governance/guardrails.yml."),
-        Exemption("governance/presets/default/vocabulary.yml", "verify",
-                   "the display name of the verify stage, not the verb; the "
-                   "file holds display names only."),
         # The kept default@6 folder is a byte-identical copy of the live
         # default at the v6.1.0 tag, so it carries the same four lines and
         # the same reasons. The copy must not change, so each line is
@@ -1390,7 +1385,7 @@ _register(Rule(
                    "fired_guardrails.",
                    "RP-REQUIRE is an id prefix, not the verb."),
         Exemption("governance/routing-policy.yml",
-                   "four of the entries below carry RP-REQUIRE ids",
+                   "two of the entries below carry RP-REQUIRE ids",
                    "RP-REQUIRE is an id prefix, not the verb."),
         Exemption("governance/strategies-rationale.md",
                    "[RP-REQUIRE-003] requirement:",

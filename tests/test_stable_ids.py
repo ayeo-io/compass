@@ -74,20 +74,27 @@ def test_si_1_the_constants_equal_the_default_preset():
 
     approaches = _preset_ids("approaches.yml", "approaches")
     assert list(ids.APPROACH_IDS) == approaches
-    # `delivery` is the approach a four-stage path issue records (ADR-092). The
-    # preset does not declare it, because the path is fixed in code.
-    assert ids.APPROACH_DELIVERY not in approaches
+    # The preset declares the spike and `delivery`, the approach a four-stage path
+    # issue records (ADR-092). The five 8.x approaches keep their constants, which
+    # the frozen presets, stored generations and old manifests name.
+    assert ids.APPROACH_DELIVERY in approaches
+    frozen = list(yaml.safe_load((PRESET.parent / "default@7" / "approaches.yml")
+                                 .read_text(encoding="utf-8"))["approaches"])
+    assert list(ids.LEGACY_APPROACH_IDS) == frozen
     assert {v for k, v in vars(ids).items() if k.startswith("APPROACH_") and isinstance(v, str)} \
-        == set(approaches) | {ids.APPROACH_DELIVERY}
+        == set(approaches) | set(frozen)
 
     stages = _preset_ids("stages.yml", "stages")
-    assert list(ids.STAGE_IDS) == stages
+    # The preset declares the four path stages; the legacy ones keep their
+    # constants, which the frozen presets and old manifests name.
+    assert list(ids.PATH_STAGE_IDS) == stages
+    legacy = _preset_ids("../default@7/stages.yml", "stages")
+    assert list(ids.STAGE_IDS) == legacy
     assert ids.LEGACY_STAGE_IDS is ids.STAGE_IDS
-    # The path stages are fixed in code too; the preset still lists the legacy ones.
     assert {v for k, v in vars(ids).items() if k.startswith("STAGE_") and isinstance(v, str)} \
-        == set(stages) | set(ids.PATH_STAGE_IDS)
+        == set(legacy) | set(ids.PATH_STAGE_IDS)
     assert set(ids.SPIKE_STAGE_IDS) < set(ids.PATH_STAGE_IDS)
-    assert set(ids.LEGACY_TO_PATH) == set(stages)
+    assert set(ids.LEGACY_TO_PATH) == set(legacy)
     assert set(ids.LEGACY_TO_PATH.values()) == set(ids.PATH_STAGE_IDS)
 
     gates = _preset_ids("gates.yml", "gates")
@@ -100,7 +107,8 @@ def test_si_1_the_constants_equal_the_default_preset():
     aliases = ids.LEGACY_APPROACH_ALIASES
     assert aliases, "no legacy approach names"
     assert not set(aliases) & set(approaches), "a legacy name is also a current id"
-    assert set(aliases.values()) <= set(approaches), "a legacy name maps to an id the preset lacks"
+    assert not set(aliases) & set(frozen), "a legacy name is also an 8.x id"
+    assert set(aliases.values()) <= set(frozen), "a legacy name maps to an id the 8.x presets lack"
 
 
 # --- the scanner -------------------------------------------------------------
@@ -209,7 +217,7 @@ def scan_package():
     for kind, values in (("stage", (*ids.STAGE_IDS, *ids.PATH_STAGE_IDS)),
                          ("legacy", ids.LEGACY_APPROACH_ALIASES),
                          ("gate", ids.GATE_IDS),
-                         ("approach", (*ids.APPROACH_IDS, ids.APPROACH_DELIVERY))):
+                         ("approach", (*ids.APPROACH_IDS, *ids.LEGACY_APPROACH_IDS))):
         for value in values:
             kinds[value] = kind
     found = []
@@ -327,8 +335,11 @@ def test_si_7_the_rebuilt_values_equal_todays_values():
     from compass_pkg import core, policy
 
     assert core.ROUTE_NAMES is ids.APPROACH_IDS
-    assert core.ROUTE_NAMES == ("spike", "quick-fix", "regular", "hotfix", "full")
-    assert policy.CHECKPOINT_ROUTES == ("quick-fix", "regular", "full", "hotfix", "spike")
+    assert core.ROUTE_NAMES == ("spike", "delivery")
+    assert core.LEGACY_ROUTE_NAMES is ids.LEGACY_APPROACH_IDS
+    assert core.LEGACY_ROUTE_NAMES == ("spike", "quick-fix", "regular", "hotfix", "full")
+    assert policy.CHECKPOINT_ROUTES == ("quick-fix", "regular", "full", "hotfix", "spike",
+                                        "delivery")
     assert core.SHAPE_VALUE_MAP == {
         "express": "quick-fix", "standard": "regular", "expedition": "full",
         "feature": "regular", "initiative": "full"}

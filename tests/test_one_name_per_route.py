@@ -25,6 +25,10 @@ sys.path.insert(0, str(ROOT / "cli"))
 from compass_pkg import core, policy  # noqa: E402
 
 ROUTES = ("quick-fix", "regular", "full", "hotfix", "spike")
+# The shipped default's approaches since 9.0.0: the spike and the path (ADR-092).
+# The five names above are the 8.x approaches, which a frozen preset, a stored
+# generation and an old manifest still name.
+SHIPPED = ("delivery", "spike")
 OLD = {"express": "quick-fix", "standard": "regular", "expedition": "full",
        "feature": "regular", "initiative": "full"}
 
@@ -32,6 +36,15 @@ OLD = {"express": "quick-fix", "standard": "regular", "expedition": "full",
 def _policy():
     return yaml.safe_load((ROOT / "governance" / "routing-policy.yml")
                           .read_text(encoding="utf-8"))
+
+
+def _v8_policy():
+    """The routing policy of the 8.0.4 governance copy, keyed by the five 8.x names."""
+    import tarfile
+    sys.path.insert(0, str(ROOT / "tests"))
+    from compat_baseline import GOVERNANCE_8_0_4
+    with tarfile.open(GOVERNANCE_8_0_4) as tar:
+        return yaml.safe_load(tar.extractfile("governance/routing-policy.yml").read())
 
 
 def test_rn_1_every_old_name_maps_to_its_new_name():
@@ -49,21 +62,27 @@ def test_rn_1_an_old_manifest_reads_as_the_new_route():
 
 def test_rn_2_the_policy_keys_and_references_use_the_route_names():
     data = _policy()
-    assert tuple(sorted(data["route_shapes"])) == tuple(sorted(ROUTES))
+    assert tuple(sorted(data["route_shapes"])) == tuple(sorted(SHIPPED))
+    assert tuple(sorted(_v8_policy()["route_shapes"])) == tuple(sorted(ROUTES))
     text = (ROOT / "governance" / "routing-policy.yml").read_text(encoding="utf-8")
     for line in text.splitlines():
         if "force_minimum_route:" in line and not line.lstrip().startswith("#"):
-            assert line.split(":", 1)[1].strip() in ROUTES, line
+            assert line.split(":", 1)[1].strip() in SHIPPED, line
 
 
 def test_rn_3_every_list_of_routes_matches_route_shapes():
     shapes = set(_policy()["route_shapes"])
-    assert set(policy.CHECKPOINT_ROUTES) == shapes
+    v8 = set(_v8_policy()["route_shapes"])
+    # A checkpoint table may name the shipped default's approaches or the 8.x ones,
+    # which a frozen preset or a stored generation declares (ADR-092).
+    assert set(policy.CHECKPOINT_ROUTES) == shapes | v8
     schema = json.loads((ROOT / "schemas" / "routing-policy.schema.json")
                         .read_text(encoding="utf-8"))
-    current = schema["properties"]["route_shapes"]["anyOf"][0]["required"]
-    assert set(current) == shapes
+    options = schema["properties"]["route_shapes"]["anyOf"]
+    assert set(options[0]["required"]) == shapes
+    assert set(options[1]["required"]) == v8
     assert set(core.ROUTE_NAMES) == shapes
+    assert set(core.LEGACY_ROUTE_NAMES) == v8
     manifest = json.loads((ROOT / "schemas" / "manifest.schema.json")
                           .read_text(encoding="utf-8"))
     approach = manifest["properties"]["delivery_approach"]
@@ -142,12 +161,14 @@ def test_rn_1_an_old_keyed_policy_computes_the_same_approach_and_names_the_old_k
     old = yaml.safe_load(OLD_POLICY.read_text(encoding="utf-8"))
     for autonomy in ("controlled", "balanced", "autonomous"):
         for readings in ASSESSMENTS:
+            # The old-keyed copy is an 8.x policy, so it routes as the 8.0.4 copy.
             before = evaluate_route(readings, old, autonomy)
-            after = evaluate_route(readings, _policy(), autonomy)
+            after = evaluate_route(readings, _v8_policy(), autonomy)
             for key in ("delivery_approach", "stages", "checkpoints"):
                 assert before[key] == after[key], (readings, autonomy, key)
     result = evaluate_route(ASSESSMENTS[0], old)
     assert {"express", "standard", "expedition"} <= set(result["renamed_routes"])
+    assert evaluate_route(ASSESSMENTS[0], _v8_policy())["renamed_routes"] == []
     assert evaluate_route(ASSESSMENTS[0], _policy())["renamed_routes"] == []
 
 

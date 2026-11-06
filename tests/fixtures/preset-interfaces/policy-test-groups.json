@@ -37,8 +37,8 @@
       "mismatches": [
         {
           "field": "approach",
-          "expected": "full",
-          "actual": "quick-fix"
+          "expected": "spike",
+          "actual": "delivery"
         }
       ],
       "message": null,

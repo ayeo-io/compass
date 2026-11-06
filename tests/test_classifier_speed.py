@@ -39,6 +39,16 @@ def policy():
     return obligations.policy_adapter(_fixtures().preset())
 
 
+@pytest.fixture(scope="module")
+def policy_8x():
+    """The 8.0.4 governance copy, which keeps the five 8.x approaches and their
+    old names' targets. The shipped default declares only the spike and the
+    path (ADR-092), so the route renames are tested on this copy."""
+    sys.path.insert(0, str(ROOT / "tests"))
+    from compat_baseline import policy_8_0_4
+    return policy_8_0_4()
+
+
 # --- CS-1: the evaluator does not copy the policy ----------------------------------
 
 class _CopyLog:
@@ -109,21 +119,21 @@ def _old_names(policy):
     return out
 
 
-def test_cs_1_the_policy_the_evaluator_is_given_is_left_as_it_was(policy):
+def test_cs_1_the_policy_the_evaluator_is_given_is_left_as_it_was(policy_8x):
     from compass_pkg.routing import evaluate_route
-    old = _old_names(policy)
-    assert old != policy, "the old spelling must differ, or this proves nothing"
+    old = _old_names(policy_8x)
+    assert old != policy_8x, "the old spelling must differ, or this proves nothing"
     before = copy.deepcopy(old)
     got = evaluate_route(copy.deepcopy(ASSESSMENT), old, autonomy="balanced")
     assert old == before
     assert got["renamed_routes"], "the old names were read as the current ones"
 
 
-def test_cs_1_old_route_names_give_the_result_the_current_names_give(policy):
+def test_cs_1_old_route_names_give_the_result_the_current_names_give(policy_8x):
     """The result of an older policy is the current one's, except for the list
     of names it renamed."""
     from compass_pkg.routing import canonical_routes, evaluate_route
-    old = _old_names(policy)
+    old = _old_names(policy_8x)
     routes = set()
     for labels in ([], ["auth"], ["migrations"], ["auth", "payments"]):
         for risk in ("trivial", "contained", "cross-cutting", "critical"):
@@ -141,10 +151,10 @@ def test_cs_1_old_route_names_give_the_result_the_current_names_give(policy):
         "some assessment must fall to the default route, which is renamed too")
 
 
-def test_cs_1_two_names_for_one_route_are_still_refused(policy):
+def test_cs_1_two_names_for_one_route_are_still_refused(policy_8x):
     from compass_pkg.core import CompassError
     from compass_pkg.routing import evaluate_route
-    bad = copy.deepcopy(policy)
+    bad = copy.deepcopy(policy_8x)
     bad["route_shapes"]["standard"] = copy.deepcopy(bad["route_shapes"]["regular"])
     # The message says "approach", because "route" is a verb only (ADR-044).
     with pytest.raises(CompassError, match="names approach 'regular' twice"):
@@ -175,7 +185,7 @@ def test_cs_1_a_classification_adapts_each_configuration_once(monkeypatch):
     viewed = _counting(monkeypatch, routing, "canonical_view")
     parent, child = _bench().pair(4)
     got = classify.classify(parent, child)
-    assert got.grid.points == 1152
+    assert got.grid.points == 256
     assert adapted["calls"] == 2, adapted
     assert viewed["calls"] == 2, viewed
 
@@ -236,7 +246,7 @@ def test_cs_1_a_preparation_meant_for_other_inputs_is_not_reused():
     assert hasattr(obligations, "Preparation"), "obligations.Preparation does not exist"
     config = _fixtures().preset()
     other = copy.deepcopy(config)
-    del other["rules"]["floors"]["rules"]["RP-FLOOR-003"]   # the label floor
+    del other["rules"]["floors"]["rules"]["RP-REQUIRE-004"]   # the label rule
     assessment = {**ASSESSMENT, "risk": "contained", "size": "small", "labels": ["auth"]}
     preparation = obligations.Preparation()
     first = obligations.obligations(config, copy.deepcopy(assessment),
@@ -254,7 +264,7 @@ def test_cs_1_equal_facts_are_not_compared_field_by_field(monkeypatch):
     compared = _counting(monkeypatch, classify, "_compare")
     parent, child = _bench().pair(4)
     got = classify.classify(parent, child)
-    assert got.result == "equivalent" and got.grid.points == 1152
+    assert got.result == "equivalent" and got.grid.points == 256
     assert compared["calls"] == 0, compared
 
 
@@ -290,10 +300,12 @@ def test_cs_3_the_benchmark_pair_at_four_labels_keeps_its_grid_verdict_and_count
     parent, child = _bench().pair(4)
     got = classify.classify(parent, child)
     assert (got.result, got.scan, got.complete) == ("equivalent", "full", True)
-    assert got.grid.points == 1152 and got.grid.raw_points == 8640
+    # The shipped default reads fewer values since it routes no approach by size
+    # or urgency (ADR-092), so the grouped grid is 16 points times 16 label subsets.
+    assert got.grid.points == 256 and got.grid.raw_points == 8640
     assert got.grid.label_count == 4
-    assert got.counts == {"equal": 1152, "tighter": 0, "looser": 0, "mixed": 0}
-    assert len(calls) == 2 * 1152, "the evaluator runs once for each side at each point"
+    assert got.counts == {"equal": 256, "tighter": 0, "looser": 0, "mixed": 0}
+    assert len(calls) == 2 * 256, "the evaluator runs once for each side at each point"
 
 
 def test_cs_3_the_benchmark_records_cpu_seconds_beside_the_clock():
@@ -645,7 +657,11 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # `json_shape.shape_errors`, which `replay` shares, so `classify` stays under the
 # module line ceiling. It checks the output document and decides no verdict, so no
 # verdict moves and the version stays 14.
-VERDICT_SOURCE_PIN = "5538b735aea9b473"
+# Re-pinned for #351 step 11 (ADR-092): `obligations.EVALUATOR_APPROACHES` and
+# `policy.CHECKPOINT_ROUTES` name `delivery`, the shipped default's fallback onto
+# the four-stage path. A configuration that declares it was refused as a fault and
+# is now compared, so a verdict can differ and the version is now 15.
+VERDICT_SOURCE_PIN = "0107a0467e66bf35"
 
 
 def _verdict_source_digest():

@@ -27,10 +27,12 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from test_generation_store import (SLUG, _evaluate_write, _manifest, _project,  # noqa: E402
                                    _run, _write_manifest)
-from test_ready_and_done_data import DONE_IDS, READY_IDS, statements  # noqa: E402
+from test_ready_and_done_data import DONE_IDS, FROZEN, READY_IDS, statements  # noqa: E402
 
 CAPABILITY = "entry-exit-evaluation"
-READY = statements(READY_IDS)
+# The shipped default holds no Definition of Ready since 9.0.0 (ADR-092); the
+# frozen preset `default@7`, which a stored 8.x generation resolves to, keeps it.
+READY = statements(READY_IDS, FROZEN)
 DONE = statements(DONE_IDS)
 
 
@@ -97,15 +99,57 @@ def _assessed_before_the_path(task_dir):
                                            encoding="utf-8")
 
 
-def _view(root, monkeypatch, mutate=None):
+def _legacy_catalogue(resolved):
+    """Give `resolved` the eight legacy stages and the Definition of Ready of the
+    frozen preset `default@7`, as a stored 8.x generation holds them. The shipped
+    default declares the four path stages and no Definition of Ready since 9.0.0
+    (ADR-092), and the issues these tests judge were assessed before it. A stage
+    list or check the project's own layers added is kept."""
+    frozen = {name: yaml.safe_load((FROZEN / f"{name}.yml").read_text(encoding="utf-8"))[name]
+              for name in ("stages", "checks")}
+    own = resolved.get("stages") or {}
+    stages = copy.deepcopy(frozen["stages"])
+    added = {(side, c) for body in own.values() for side in ("entry", "exit")
+             for c in body.get(side) or [] if c not in DONE_IDS}
+    for side, check in sorted(added):
+        target = stages["plan" if side == "entry" else "verify"]
+        target[side] = list(target.get(side) or []) + [check]
+    resolved["stages"] = stages
+    for check_id in READY_IDS:
+        resolved["checks"].setdefault(check_id, copy.deepcopy(frozen["checks"][check_id]))
+
+
+#: The stage map a spike assessed before 9.0.0 recorded.
+SPIKE_8X_STAGES = {"assess": "lightweight", "define": "collapsed", "refine": "skipped",
+                   "plan": "collapsed", "breakdown": "skipped", "implement": "explore",
+                   "verify": "conclude", "ship": "graduate-or-discard"}
+
+
+def _legacy_generation(root, task_dir):
+    """Commit the issue's next generation with the legacy catalogue of a stored 8.x
+    generation (`_legacy_catalogue`), so a command run on it reads those lists."""
+    from compass_pkg import effective, generation
+    manifest = _manifest(task_dir)
+    resolution = effective.resolve_live(str(root), manifest, SLUG, str(task_dir), validate=True)
+    resolved = copy.deepcopy(resolution.resolved)
+    _legacy_catalogue(resolved)
+    generation.commit(str(task_dir), dataclasses.replace(resolution, resolved=resolved),
+                      manifest, force=True)
+
+
+def _view(root, monkeypatch, mutate=None, legacy=True):
     """The live view of the project at `root`, with its resolved configuration
-    changed by `mutate` (a function of the dict)."""
+    changed by `mutate` (a function of the dict). With `legacy`, the view holds
+    the legacy stages and lists of a stored 8.x generation (`_legacy_catalogue`)."""
     from compass_pkg import effective
     monkeypatch.chdir(root)
     view = effective.view_or_legacy(None)
-    if mutate:
+    if mutate or legacy:
         resolved = copy.deepcopy(view.resolved)
-        mutate(resolved)
+        if legacy:
+            _legacy_catalogue(resolved)
+        if mutate:
+            mutate(resolved)
         view = dataclasses.replace(view, resolved=resolved)
     return view
 
@@ -688,6 +732,13 @@ def test_ee_8_a_spike_check_counts_its_nothing_to_check_rows(tmp_path):
                               "labels": []})
     assert _evaluate_write(root)[0] == 0
     _write_manifest(task_dir, current_phase="ship")
+    # On the shipped default a spike owes no list: there is no Definition of
+    # Ready, and the Definition of Done holds only for a change that ships (ADR-092).
+    data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
+    assert not [r for r in data["checks"] if r["guardrail"].startswith("stage:")]
+    # A spike assessed before 9.0.0 still counts its Definition of Ready rows.
+    _legacy_generation(root, task_dir)
+    _write_manifest(task_dir, stages=SPIKE_8X_STAGES)
     data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
     listed = [r for r in data["checks"] if r["guardrail"].startswith("stage:")]
     assert data["nothing_to_check"] >= len(listed) >= 7
@@ -751,14 +802,15 @@ def test_ee_7_the_shipped_default_names_no_judged_or_evidence_check_in_a_list():
 
 
 def _judged_list_config():
-    """A git parent that adds an evidence check to the plan entry list. A project
-    layer's change to plan is left out since 9.0.0 (ADR-092)."""
+    """A git parent that adds an evidence check to the specify entry list. The
+    shipped default has no plan stage since 9.0.0 (ADR-092); an issue assessed
+    before it reads the check in its plan entry list (`_legacy_catalogue`)."""
     return {"schema": 1,
             "checks": {"design-reviewed": {
                 "statement": "A test run is on record.", "kind": "evidence",
                 "accepts": ["test-run"], "severity": "blocking",
                 "on_skipped": "fail"}},
-            "stages": {"plan": {"set": {"entry": {"add": ["design-reviewed"]}}}}}
+            "stages": {"specify": {"set": {"entry": {"add": ["design-reviewed"]}}}}}
 
 
 def test_ee_7_lint_warns_when_a_list_names_a_kind_this_version_does_not_evaluate(tmp_path):
@@ -797,6 +849,7 @@ def _committed(tmp_path, **changes):
     root, task_dir = _config_project(tmp_path, **changes)
     code, out, err = _evaluate_write(root)
     assert code == 0, out + err
+    _legacy_generation(root, task_dir)
     _assessed_before_the_path(task_dir)
     _write_manifest(task_dir, current_phase="plan")
     return root, task_dir
@@ -853,7 +906,9 @@ def test_ee_8_the_results_file_records_the_list_checks(tmp_path):
     root, task_dir = _committed(tmp_path)
     _write_review(task_dir)
     _run(root, "check", "--issue", SLUG)
-    results = yaml.safe_load((task_dir / "generations" / "1" / "results.yml")
+    # `_committed` stores the legacy catalogue as the issue's next generation.
+    number = str(_manifest(task_dir)["generation"])
+    results = yaml.safe_load((task_dir / "generations" / number / "results.yml")
                              .read_text(encoding="utf-8"))
     assert results["runs"]["dor-summary-filled"]["verdict"] == "pass"
 
@@ -864,7 +919,8 @@ def test_ee_8_a_spike_check_reports_the_ready_list_as_not_applicable(tmp_path):
                               "size": "small", "goal": "exploration", "role": "engineer",
                               "labels": []})
     assert _evaluate_write(root)[0] == 0
-    _write_manifest(task_dir, current_phase="ship")
+    _legacy_generation(root, task_dir)
+    _write_manifest(task_dir, current_phase="ship", stages=SPIKE_8X_STAGES)
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")
     data = json.loads(out)
     assert data["approach"] == "spike"
@@ -898,15 +954,15 @@ def test_ee_9_next_names_the_unmet_entry_checks_of_the_current_stage(tmp_path):
 
 
 def _project_check_parent(severity="blocking"):
-    """A git parent that adds a deterministic check to the plan entry list. Since
-    9.0.0 a project's own file cannot change a legacy stage such as plan, so the
-    change is left out of it (ADR-092); a git parent's change is still merged."""
+    """A git parent that adds a deterministic check to the specify entry list. The
+    shipped default has no plan stage since 9.0.0 (ADR-092); an issue assessed
+    before it reads the check in its plan entry list (`_legacy_catalogue`)."""
     return {"schema": 1,
             "checks": {"list-scenarios-have-tests": {
                 "statement": "Every scenario has a test.", "kind": "deterministic",
                 "impl": "scenarios-have-tests", "severity": severity,
                 "on_skipped": "fail"}},
-            "stages": {"plan": {"set": {"entry": {"add": ["list-scenarios-have-tests"]}}}}}
+            "stages": {"specify": {"set": {"entry": {"add": ["list-scenarios-have-tests"]}}}}}
 
 
 def _project_check_project(tmp_path, capability=True, severity="blocking"):
@@ -935,6 +991,7 @@ def test_ee_10_check_runs_a_deterministic_check_a_project_adds(tmp_path):
 def test_ee_10_an_issue_assessed_before_the_path_runs_it_beside_the_ready_list(tmp_path):
     root, task_dir = _project_check_project(tmp_path)
     assert _evaluate_write(root)[0] == 0
+    _legacy_generation(root, task_dir)
     _assessed_before_the_path(task_dir)
     _write_manifest(task_dir, current_phase="plan")
     _write_review(task_dir)
@@ -961,10 +1018,14 @@ def test_ee_11_dod_evidence_typed_still_runs_with_the_capability_on(tmp_path):
 def test_ee_12_every_done_check_carries_the_ships_condition():
     checks = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "checks.yml")
                             .read_text(encoding="utf-8"))["checks"]
+    frozen = yaml.safe_load((FROZEN / "checks.yml").read_text(encoding="utf-8"))["checks"]
     for check_id in DONE_IDS:
         assert checks[check_id].get("when") == {"ships": True}, check_id
+        assert frozen[check_id].get("when") == {"ships": True}, check_id
+    # The shipped default holds no Definition of Ready (ADR-092); the frozen one does.
     for check_id in READY_IDS:
-        assert "when" not in checks[check_id], check_id
+        assert check_id not in checks, check_id
+        assert "when" not in frozen[check_id], check_id
 
 
 def test_ee_12_the_help_text_and_the_owning_doc_describe_the_lists():

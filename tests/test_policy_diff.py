@@ -994,7 +994,7 @@ def test_pd_8_the_command_prints_the_documented_shape_and_no_path(looser_run):
     assert _key_tree(document["open"]["waivers"]) == _key_tree(example["open"]["waivers"])
     assert str(root) not in json.dumps(document)
     assert [s["name"] for s in document["replay"]["sets"]] == ["grid", "labels", "archive"]
-    assert document["replay"]["sets"][0]["replayed"] == 72
+    assert document["replay"]["sets"][0]["replayed"] == 16
     # The issue that holds the waiver already runs at the looser value, so only
     # the issue with no layer changes.
     assert [i["issue"] for i in document["open"]["issues"]] == ["plain-issue"]
@@ -1069,11 +1069,12 @@ def test_pd_9_the_command_prints_the_same_lines(looser_text):
     code, out, _ = looser_text
     assert out.splitlines()[0] == "compass policy diff: default@8 -> project"
     assert "classification: loosening" in out
-    # 72 closed points; the labels set crosses the 15 combinations of four
+    # 16 closed points; the labels set crosses the 15 combinations of four
     # labels. 9.0.0 removed the artifact rules (ADR-091), so the two
-    # documents they read no longer multiply the set (ADR-070).
-    assert "  grid: 72 replayed, 36 changed" in out
-    assert "  labels: 1080 replayed, 540 changed" in out
+    # documents they read no longer multiply the set (ADR-070), and it routes
+    # no approach by size or urgency (ADR-092), so fewer values are told apart.
+    assert "  grid: 16 replayed, 8 changed" in out
+    assert "  labels: 240 replayed, 120 changed" in out
     assert "  archive: 3 replayed, 3 changed" in out
     assert 'severity: "blocking" -> "advisory"' in out
     assert "--json lists every one" in out

@@ -136,9 +136,11 @@ def test_a_removed_key_with_a_bad_value_gives_only_the_removed_warning(tmp_path,
 
 # --- the merge -------------------------------------------------------------------------
 
-def _resolved_parent():
-    from compass_pkg import merge
-    parent = _parent()
+def _resolved_parent(folder=None):
+    """The resolved shipped default, or with `folder` the frozen preset of that name."""
+    from compass_pkg import merge, policy_lint
+    parent = _parent() if folder is None else policy_lint.load_parent(
+        directory=ROOT / "governance" / "presets" / folder)[0]
     return merge.apply({}, parent.doc, "parent", "default")[0]
 
 
@@ -165,8 +167,10 @@ def test_a_kept_reference_beside_a_removed_one_is_still_merged():
 
 
 def test_a_parent_or_issue_layer_still_merges_the_removed_parts():
+    # The shipped default no longer declares these parts (ADR-092); a frozen preset
+    # does, and a parent or an issue layer over it still changes them.
     from compass_pkg import merge
-    base = _resolved_parent()
+    base = _resolved_parent("default@7")
     parent = {"approaches": {"regular": {"set": {"gates": ["verify.correctness"]}}},
               "rules": {"caps": {"remove": True}}}
     config, _ = merge.apply(base, parent, "parent", "parent")
@@ -257,7 +261,7 @@ def _migrate_plan(tmp_path, edit):
 
 
 def _change_an_approach(policy, guardrails):
-    policy["route_shapes"]["regular"]["subtask_ceiling"] = 1
+    policy["route_shapes"]["delivery"]["subtask_ceiling"] = 0
 
 
 def _change_an_approach_and_add_a_gate(policy, guardrails):
@@ -273,11 +277,11 @@ def test_migrate_leaves_a_changed_approach_out_and_names_it(tmp_path):
     assert not [o for o in made.ops if o["catalogue"] == "approaches"], made.ops
     assert "approaches" not in (yaml.safe_load(made.compass_yml) or {})
     assert made.equivalence["result"] == "equivalent", made.equivalence
-    dropped = [d for d in made.dropped if d["key"] == "approaches.regular"]
+    dropped = [d for d in made.dropped if d["key"] == "approaches.delivery"]
     assert len(dropped) == 1, made.dropped
     assert "L-SETTING-REMOVED" in dropped[0]["reason"] and "ADR-092" in dropped[0]["reason"]
     text = "\n".join(policy_migrate.report_text(made, "dry-run"))
-    assert "dropped: approaches.regular (L-SETTING-REMOVED" in text, text
+    assert "dropped: approaches.delivery (L-SETTING-REMOVED" in text, text
 
 
 def test_migrate_keeps_the_other_edits_beside_a_removed_one(tmp_path):
@@ -286,7 +290,7 @@ def test_migrate_keeps_the_other_edits_beside_a_removed_one(tmp_path):
     assert [(o["catalogue"], o["id"]) for o in made.ops] == [
         ("rules", "floors"), ("gates", "G9"), ("vocabulary", "gates.G9")]
     assert [d["key"] for d in made.dropped if "ADR-092" in d["reason"]] == [
-        "approaches.regular"]
+        "approaches.delivery"]
 
 
 def test_update_reports_a_waiver_on_a_removed_key_as_moot(tmp_path):

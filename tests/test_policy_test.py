@@ -30,13 +30,15 @@ CLI = ROOT / "cli" / "compass"
 
 SMALL = {"risk": "contained", "familiarity": "brownfield-mapped", "size": "small",
          "goal": "delivery", "labels": []}
+# The shipped default routes every delivery assessment to `delivery`, the
+# four-stage path (ADR-092); its approach entry holds the three immovable gates.
 QUICK_FIX_GATES = ["G1", "G2", "G3", "G4", "verify.correctness", "verify.governance",
                    "verify.traceability"]
 PRESET = {"schema": 1, "owner": "acme-team"}
-# A preset that adds one gate to the quick fix approach: a fixture that expects
+# A preset that adds one gate to the delivery approach: a fixture that expects
 # the extra gate passes only when the fixtures run over the preset.
 ADDS_A_GATE = {"schema": 1, "owner": "acme-team", "approaches": {
-    "quick-fix": {"set": {"gates": {"add": ["verify.clarity"]}}}}}
+    "delivery": {"set": {"gates": {"add": ["verify.clarity"]}}}}}
 UNLOCK = {"schema": 1, "owner": "acme-team", "checks": {"suite-passed": {"unlock": True}}}
 UNKNOWN_IMPL = {"schema": 1, "owner": "acme-team", "checks": {"evil": {
     "name": "evil", "kind": "mechanical", "impl": "rm-rf", "blocking_when": "fail"}}}
@@ -66,7 +68,7 @@ def _fixture(expect, assessment=None, **extra):
             "expect": expect, **extra}
 
 
-GOOD = _fixture({"approach": "quick-fix"})
+GOOD = _fixture({"approach": "delivery"})
 
 
 def _preset(tmp_path, doc=None, fixtures=None, folder="preset"):
@@ -105,7 +107,7 @@ def test_pt_1_a_matching_fixture_is_reported_as_passing(tmp_path):
 
 def test_pt_2_the_fixtures_run_over_the_preset_and_not_the_default_alone(tmp_path):
     gates = sorted(QUICK_FIX_GATES + ["verify.clarity"])
-    fixture = _fixture({"approach": "quick-fix", "gates": gates})
+    fixture = _fixture({"approach": "delivery", "gates": gates})
     with_gate = _preset(tmp_path, ADDS_A_GATE, {"small": fixture}, folder="with")
     without = _preset(tmp_path, PRESET, {"small": fixture}, folder="without")
     assert _test(tmp_path, with_gate)[0] == 0
@@ -119,14 +121,14 @@ def test_pt_1_the_expected_stages_and_checks_are_compared(tmp_path):
     shipped = replay.resolve_ref("default@6", ROOT)
     owed = obligations.obligations(shipped.config, SMALL, capabilities=shipped.capabilities)
     checks = sorted({c for ids in owed.gate_checks.values() for c in ids})
-    fixture = _fixture({"approach": "quick-fix", "gates": QUICK_FIX_GATES, "checks": checks,
-                        "stages": {"implement": "thorough", "plan": "collapsed"}})
+    fixture = _fixture({"approach": "delivery", "gates": QUICK_FIX_GATES, "checks": checks,
+                        "stages": {"build": "thorough", "specify": "thorough"}})
     code, out, err = _test(tmp_path, _preset(tmp_path, fixtures={"all-four": fixture}))
     assert code == 0, (out, err)
 
 
 def test_pt_1_gates_and_checks_are_sets_and_their_order_in_the_file_does_not_matter(tmp_path):
-    fixture = _fixture({"approach": "quick-fix", "gates": list(reversed(QUICK_FIX_GATES))})
+    fixture = _fixture({"approach": "delivery", "gates": list(reversed(QUICK_FIX_GATES))})
     code, out, err = _test(tmp_path, _preset(tmp_path, fixtures={"reversed": fixture}))
     assert code == 0, (out, err)
 
@@ -134,9 +136,9 @@ def test_pt_1_gates_and_checks_are_sets_and_their_order_in_the_file_does_not_mat
 # --- PT-2: a difference fails and is named -------------------------------------------------
 
 DIFFERENCES = [
-    ("approach", {"approach": "full"}, "full", "quick-fix"),
+    ("approach", {"approach": "spike"}, "spike", "delivery"),
     ("gates", {"gates": ["G1"]}, ["G1"], QUICK_FIX_GATES),
-    ("stages.implement", {"stages": {"implement": "lightweight"}}, "lightweight",
+    ("stages.build", {"stages": {"build": "lightweight"}}, "lightweight",
      "thorough"),
     ("checks", {"checks": ["suite-passed"]}, ["suite-passed"], None),
 ]
@@ -163,7 +165,7 @@ def test_pt_2_a_difference_fails_the_fixture_and_names_the_field(
 
 
 def test_pt_2_one_failing_fixture_does_not_hide_a_passing_one(tmp_path):
-    preset = _preset(tmp_path, fixtures={"a-good": GOOD, "b-bad": _fixture({"approach": "full"})})
+    preset = _preset(tmp_path, fixtures={"a-good": GOOD, "b-bad": _fixture({"approach": "spike"})})
     code, report = _json(tmp_path, preset)
     assert code == 1
     assert [f["status"] for f in report["fixtures"]] == ["pass", "fail"]
@@ -232,10 +234,12 @@ def test_pt_3_the_text_report_shows_the_fixture_path_from_the_preset_folder(tmp_
 # --- PT-3: a preset's waiver is approved by the preset's own owner -----------------------
 
 def _loosening(waiver=None, owner="acme-team", **extra):
-    entry = {"set": {"gates": {"remove": ["verify.clarity"]}}}
+    # The architecture gate is owed on cross-cutting work; accepting a written
+    # review for it is a loosening there.
+    entry = {"set": {"accepts": {"add": ["manual-review"]}}}
     if waiver is not None:
         entry["waiver"] = waiver
-    doc = {"schema": 1, "approaches": {"regular": entry}, **extra}
+    doc = {"schema": 1, "gates": {"verify.architecture": entry}, **extra}
     if owner:
         doc["owner"] = owner
     return doc
@@ -287,26 +291,26 @@ def test_pt_3_the_owner_of_the_project_that_runs_the_test_is_not_consulted(tmp_p
 
 MALFORMED = {
     "unparseable": "assessment: [\n",
-    "unknown-key": _fixture({"approach": "quick-fix"}, bogus=1),
-    "no-assessment": {"expect": {"approach": "quick-fix"}},
+    "unknown-key": _fixture({"approach": "delivery"}, bogus=1),
+    "no-assessment": {"expect": {"approach": "delivery"}},
     "no-expect": {"assessment": SMALL},
     "empty-expect": _fixture({}),
-    "unknown-expect-key": _fixture({"approach": "quick-fix", "speed": "fast"}),
-    "rejected-value": _fixture({"approach": "quick-fix"}, assessment={**SMALL, "risk": "enormous"}),
+    "unknown-expect-key": _fixture({"approach": "delivery", "speed": "fast"}),
+    "rejected-value": _fixture({"approach": "delivery"}, assessment={**SMALL, "risk": "enormous"}),
     "not-a-mapping": "- just\n- a list\n",
-    "name-not-text": _fixture({"approach": "quick-fix"}, name=["a", "list"]),
-    "empty-stages": _fixture({"approach": "quick-fix", "stages": {}}),
+    "name-not-text": _fixture({"approach": "delivery"}, name=["a", "list"]),
+    "empty-stages": _fixture({"approach": "delivery", "stages": {}}),
     "stages-not-a-mapping": _fixture({"stages": ["implement"]}),
     "stage-mode-not-text": _fixture({"stages": {"implement": 1}}),
     "gates-not-a-list": _fixture({"gates": "G1"}),
     "gate-id-not-text": _fixture({"gates": [1]}),
     "checks-not-a-list": _fixture({"checks": "suite-passed"}),
     "approach-not-text": _fixture({"approach": 5}),
-    "assessment-key-unknown": _fixture({"approach": "quick-fix"},
+    "assessment-key-unknown": _fixture({"approach": "delivery"},
                                        assessment={**SMALL, "colour": "red"}),
-    "labels-not-a-list": _fixture({"approach": "quick-fix"},
+    "labels-not-a-list": _fixture({"approach": "delivery"},
                                   assessment={**SMALL, "labels": "auth"}),
-    "label-not-text": _fixture({"approach": "quick-fix"}, assessment={**SMALL, "labels": [1]}),
+    "label-not-text": _fixture({"approach": "delivery"}, assessment={**SMALL, "labels": [1]}),
 }
 
 
@@ -493,7 +497,7 @@ def test_pt_5_the_folder_defaults_to_the_working_folder(tmp_path):
 # --- PT-6: the --json report -------------------------------------------------------------------
 
 def test_pt_6_the_json_report_has_the_documented_keys_in_the_documented_order(tmp_path):
-    preset = _preset(tmp_path, fixtures={"a-good": GOOD, "b-bad": _fixture({"approach": "full"})})
+    preset = _preset(tmp_path, fixtures={"a-good": GOOD, "b-bad": _fixture({"approach": "spike"})})
     code, out, _ = _run(tmp_path, "preset", "test", str(preset), "--json")
     report = json.loads(out)
     assert list(report) == ["schema", "preset", "result", "lint", "fixtures_run", "totals",
@@ -749,7 +753,7 @@ def _extending(tmp_path):
     base = tmp_path / "remotes"
     sha = make_remote(base, repo="base", files={"compass.yml": yaml.safe_dump(ADDS_A_GATE)})
     doc = {"schema": 1, "owner": "acme-team", "extends": f"github:acme/base@1.0.0#{sha}"}
-    fixture = _fixture({"approach": "quick-fix",
+    fixture = _fixture({"approach": "delivery",
                         "gates": sorted(QUICK_FIX_GATES + ["verify.clarity"])})
     preset = _preset(tmp_path, doc, {"small": fixture})
     return preset, {"COMPASS_PARENT_REMOTE_BASE": str(base)}, sha

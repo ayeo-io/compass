@@ -13,6 +13,7 @@ emptiness is deliberate.
 """
 from __future__ import annotations
 import subprocess
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
@@ -55,6 +56,12 @@ REMOVED_GATES = {
     # `compass analyze` wrote, and 9.0.0 removes that command (ADR-091).
     "verify.analyze",
 }
+
+# Guardrails a release moved to another stage on purpose, each with its new
+# `checked_at` list, read on the four-stage path (ADR-092). `G1` is judged at
+# build, where the red and green records are made, and was judged at `verify`,
+# which the path shows as ship (ayeo-io/compass-delivery#351, plan section 2.3).
+MOVED_STAGES = {"G1": ["build", "ship"]}
 
 BASELINE_CHECKS = {
     "scenarios-have-tests",
@@ -211,14 +218,18 @@ def _check_renames() -> dict:
 
 
 def _current_stages(names):
-    """Stage names as the current spelling. A stage renamed since main is the
-    same stage, so a spelling change alone is not a change of when a guardrail
-    is checked."""
+    """Stage names as the current spelling, each shown as the path stage it maps
+    to (ADR-092). A stage renamed since main is the same stage, so a spelling
+    change alone is not a change of when a guardrail is checked. `specify` and
+    `build` are v1 names too, so only a v1 list is renamed."""
     import yaml
 
+    sys.path.insert(0, str(REPO_ROOT / "cli"))
+    from compass_pkg.path_stages import path_stage_of, rename_v1_stage_keys
     path = REPO_ROOT / "cli" / "migrate-map.yml"
     renames = (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("stage_keys") or {}
-    return [renames.get(n, n) for n in names]
+    shown = [path_stage_of(n) or n for n in rename_v1_stage_keys(list(names), renames)]
+    return sorted(set(shown))
 
 
 def _in_current_stages(value):
@@ -390,8 +401,10 @@ def test_guardrails_gains_no_mechanism_on_this_branch():
                 f"guardrails.yml changed the guardrail set: {sorted(b)} -> "
                 f"{sorted(a)}. The count is capped at five (ADR-002).")
             for gid in b:
+                moved = MOVED_STAGES.get(gid)
                 assert (_current_stages(b[gid]["checked_at"])
-                        == _current_stages(a[gid]["checked_at"])), (
+                        == _current_stages(a[gid]["checked_at"])
+                        or a[gid]["checked_at"] == sorted(moved or [None])), (
                     f"{gid} changed when it is checked: "
                     f"{b[gid]['checked_at']} -> {a[gid]['checked_at']}")
                 gained = set(a[gid]["checks"]) - _rename_checks(set(b[gid]["checks"]))

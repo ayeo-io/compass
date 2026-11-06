@@ -83,7 +83,8 @@ def test_trc_f3_a_project_ahead_of_the_framework_should_not_be_reported_as_drift
         "force_minimum_route": "expedition",
         "rationale": "a rule this project added for itself",
     })
-    d["routing_guardrails"]["caps"].append({
+    # 9.0.0 ships no caps (ADR-092); a project can still declare its own.
+    d["routing_guardrails"].setdefault("caps", []).append({
         "id": "PROJ-CAP-001", "when": {"risk": "critical"},
         "max_worktrees": 2, "rationale": "local coordination limit",
     })
@@ -169,13 +170,15 @@ def test_trc_f5_drift_detection_should_not_change_any_computed_route():
 
     The command now prints the path for a delivery assessment (ADR-092), so
     the approach is computed by the 8.x evaluator, `routing.evaluate_route`,
-    in process, on the policy the command reads in this checkout:
-    `governance/routing-policy.yml`. The twin below runs the command.
+    in process. The shipped default no longer declares the 8.x approaches the
+    fixtures name (ADR-092), so it runs on the 8.0.4 governance copy, which
+    routes as the shipped policy did before 9.0.0. The twin below runs the
+    command.
     """
     import compat_baseline as cb
     from compass_pkg import routing
 
-    policy = cb.shipped_policy()
+    policy = cb.policy_8_0_4()
     fixtures = sorted(FIXTURES.glob("*.yml"))
     assert fixtures, "no routing fixtures found - this guard would be empty"
     total_checks = 0
@@ -255,7 +258,9 @@ def test_trc_f5_drift_detection_should_not_change_what_the_command_prints():
     from compass_pkg import evidence_required as er
     from compass_pkg import routing
 
-    policy = cb.shipped_policy()
+    # The 8.0.4 copy says which fixture is a spike; the command reads the
+    # shipped policy, whose floors add the gates a delivery assessment owes.
+    old_policy, policy = cb.policy_8_0_4(), cb.shipped_policy()
     for path in sorted(FIXTURES.glob("*.yml")):
         fx = yaml.safe_load(path.read_text())
         expect = fx.get("expected") or {}
@@ -273,7 +278,7 @@ def test_trc_f5_drift_detection_should_not_change_what_the_command_prints():
             continue
         assert result.returncode == 0, f"{path.name}: {result.stderr}"
         got = json.loads(result.stdout)
-        old = routing.evaluate_route(_readings(fx), policy)
+        old = routing.evaluate_route(_readings(fx), old_policy)
         if old["delivery_approach"] == "spike":
             assert got["delivery_approach"] == "spike", path.name
             assert got["gates"] == old["gates"], path.name

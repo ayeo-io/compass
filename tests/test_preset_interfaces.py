@@ -43,7 +43,7 @@ def _grouped(tmp_path):
     """The preset the golden report was made from: one ungrouped fixture and
     two groups, one of them with a failing fixture."""
     preset = _preset(tmp_path, fixtures={"a-top": GOOD})
-    _group(preset, "meets/banking", {"one": GOOD, "two": _fixture({"approach": "full"})})
+    _group(preset, "meets/banking", {"one": GOOD, "two": _fixture({"approach": "spike"})})
     _group(preset, "meets/health", {"one": GOOD})
     return preset
 
@@ -185,11 +185,20 @@ def _ref(sha, owner="acme", repo="bank", ref="1.2.0"):
     return f"github:{owner}/{repo}@{ref}#{sha}"
 
 
-LOOSENS = {"approaches": {"regular": {
-    "set": {"stages": {"set": {"define": "light"}}},
-    "waiver": {"reason": "This team defines in the ticket.", "approved_by": "acme-team",
-               "approved_on": "2026-10-05"}}}}
-TIGHTENS = {"approaches": {"quick-fix": {"set": {"gates": {"add": ["verify.clarity"]}}}}}
+# The shipped default routes every delivery assessment to `delivery` (ADR-092). A
+# parent loosens it by letting a written review clear the architecture gate, which
+# cross-cutting and critical work owes, and tightens it by adding the clarity
+# review to trivial work. The two meet at no point but a labelled one, so a chain
+# of both still has a point that is only looser.
+LOOSENS = {"gates": {"verify.architecture": {
+    "set": {"accepts": {"add": ["manual-review"]}},
+    "waiver": {"reason": "This team reviews architecture in pairing.",
+               "approved_by": "acme-team", "approved_on": "2026-10-05"}}}}
+TIGHTENS = {"rules": {"team_floors": {
+    "kind": "floors", "hit": {"add_gate": "collect"},
+    "rules": {"TEAM-001": {"order": 1, "when": {"risk": "trivial"},
+                           "then": {"add_gate": "verify.clarity"},
+                           "rationale": "This team reviews clarity on trivial changes."}}}}}
 CAPABILITY_ON = {"capabilities": {"entry-exit-evaluation": True}}
 
 
@@ -228,7 +237,7 @@ def test_pi_3_a_loosening_parent_is_stored_as_loosening_though_its_waiver_excuse
     assert found["points"] > 0 and found["raw_points"] >= found["points"]
     assert found["complete"] is True
     assert found["first_looser"]["assessment"]
-    assert "define" in found["first_looser"]["summary"]
+    assert "verify.architecture" in found["first_looser"]["summary"]
 
 
 def test_pi_3_a_tightening_parent_is_stored_as_tightening_with_no_looser_point(

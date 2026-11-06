@@ -108,8 +108,17 @@ def test_fdg_2_the_immovable_list_and_never_skip_match_the_policy():
     claimed = re.findall(r"`([\w.]+)`", listed)
     policy = [g["gate"] for g in POLICY["immovable_gates"]]
     assert claimed == policy
+    # No shipped floor sets `never_skip` since 9.0.0 (ADR-092). The deep dive's
+    # cases still walk the 8.x routing, so a `never_skip` it quotes is held to
+    # the 8.0.4 governance copy, which keeps that floor.
+    import tarfile
+    sys.path.insert(0, str(ROOT / "tests"))
+    from compat_baseline import GOVERNANCE_8_0_4
+    with tarfile.open(GOVERNANCE_8_0_4) as tar:
+        v8 = yaml.safe_load(tar.extractfile("governance/routing-policy.yml").read())
+    assert not [f for f in POLICY["floors"] if f.get("never_skip")]
     for match in re.findall(r"never_skip: \[([^\]]*)\]", text):
-        floor = next(f for f in POLICY["floors"] if f.get("never_skip"))
+        floor = next(f for f in v8["routing_guardrails"]["floors"] if f.get("never_skip"))
         assert [s.strip() for s in match.split(",")] == floor["never_skip"]
 
 

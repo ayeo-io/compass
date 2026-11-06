@@ -131,8 +131,10 @@ def preset_config():
 @pytest.fixture(scope="module")
 def frozen_config():
     """The frozen 7.0.0 preset. The live default declares no document since 9.0.0
-    (ADR-091); a stored generation still declares its catalogue, approach maps and
-    document rules, so the facts they give are read from this preset."""
+    (ADR-091) and no approach but the spike and the path (ADR-092); a stored
+    generation still declares its catalogue, approach maps, stages, floors and
+    document rules, so the facts they give, and the replay of the 8.x routing
+    baseline, are read from this preset."""
     return _preset_config("default@7")
 
 
@@ -199,24 +201,24 @@ def _differences_between(today, adapted, assessments, first_only=False):
 
 # --- OB-1: the adapted preset routes the compatibility grid as today's policy ----
 
-def test_ob_1_the_adapted_preset_routes_the_whole_baseline_as_before(preset_config,
+def test_ob_1_the_adapted_preset_routes_the_whole_baseline_as_before(frozen_config,
                                                                     baseline):
     from compass_pkg import obligations
     header, rows = baseline
-    adapted = obligations.policy_adapter(preset_config)
+    adapted = obligations.policy_adapter(frozen_config)
     differences = _replay(adapted, header, rows)
     assert differences == [], "\n".join(differences[:10])
 
 
 def test_ob_1_the_only_spelling_the_replay_changes_is_the_two_the_catalogues_respell(
-        preset_config, baseline):
+        frozen_config, baseline):
     """Without the respelling, the adapted preset differs from the baseline in
     `required_artifacts` and `blocked_phases` and in nothing else, and each
     differing value is the baseline's value in the catalogues' spelling."""
     from compass_pkg import obligations
     from compat_baseline import compact
     _, rows = baseline
-    adapted = obligations.policy_adapter(preset_config)
+    adapted = obligations.policy_adapter(frozen_config)
     fields = set()
     for row in rows:
         if row["kind"] not in ("grid", "archive"):
@@ -230,10 +232,10 @@ def test_ob_1_the_only_spelling_the_replay_changes_is_the_two_the_catalogues_res
     assert fields == {"required_artifacts", "blocked_phases"}
 
 
-def test_ob_1_a_gate_dropped_from_the_preset_breaks_the_replay(preset_config, baseline):
+def test_ob_1_a_gate_dropped_from_the_preset_breaks_the_replay(frozen_config, baseline):
     from compass_pkg import obligations
     header, rows = baseline
-    config = copy.deepcopy(preset_config)
+    config = copy.deepcopy(frozen_config)
     regular = config["approaches"]["regular"]
     regular["gates"] = [g for g in regular["gates"] if g != "verify.regression"]
     adapted = obligations.policy_adapter(config)
@@ -241,19 +243,19 @@ def test_ob_1_a_gate_dropped_from_the_preset_breaks_the_replay(preset_config, ba
         "a dropped gate went unseen"
 
 
-def test_ob_1_a_floor_dropped_from_the_preset_breaks_the_replay(preset_config, baseline):
+def test_ob_1_a_floor_dropped_from_the_preset_breaks_the_replay(frozen_config, baseline):
     from compass_pkg import obligations
     header, rows = baseline
-    config = copy.deepcopy(preset_config)
+    config = copy.deepcopy(frozen_config)
     del config["rules"]["floors"]["rules"]["RP-FLOOR-001"]
     adapted = obligations.policy_adapter(config)
     assert _replay(adapted, header, rows, first_only=True)
 
 
-def test_ob_1_a_change_only_a_label_reaches_breaks_the_replay(preset_config, baseline):
+def test_ob_1_a_change_only_a_label_reaches_breaks_the_replay(frozen_config, baseline):
     from compass_pkg import obligations
     header, rows = baseline
-    config = copy.deepcopy(preset_config)
+    config = copy.deepcopy(frozen_config)
     config["rules"]["floors"]["rules"]["RP-FLOOR-003"]["when"] = {
         "labels_any": ["nothing-matches"]}
     adapted = obligations.policy_adapter(config)
@@ -262,27 +264,27 @@ def test_ob_1_a_change_only_a_label_reaches_breaks_the_replay(preset_config, bas
             if d.startswith("labels")]
 
 
-def test_ob_1_the_generated_fallback_shape_goes_back_to_the_default_route(preset_config):
-    strategies = _api("policy_adapter")(preset_config)["routing_strategies"]
+def test_ob_1_the_generated_fallback_shape_goes_back_to_the_default_route(frozen_config):
+    strategies = _api("policy_adapter")(frozen_config)["routing_strategies"]
     assert strategies["default_route"] == "regular"
     assert "RP-SHAPE-FALLBACK" not in [r["id"] for r in strategies["default_shapes"]]
     assert [r["id"] for r in strategies["default_shapes"]] == [
         f"RP-SHAPE-00{i}" for i in range(1, 6)]
 
 
-def test_ob_1_the_ranks_reach_the_evaluator(preset_config):
+def test_ob_1_the_ranks_reach_the_evaluator(frozen_config):
     from compass_pkg import obligations
-    ranks = obligations.policy_adapter(preset_config)["stage_mode_ranks"]
+    ranks = obligations.policy_adapter(frozen_config)["stage_mode_ranks"]
     assert ranks["ship"] == {"lightweight": 2, "thorough": 3, "thorough-with-follow-up": 4}
     assert "reproduce-first" not in ranks["define"]
     assert ranks["define"]["thorough"] == 3
 
 
 def test_ob_1_a_planted_rank_on_a_mode_a_floor_reaches_breaks_the_replay(
-        preset_config, baseline):
+        frozen_config, baseline):
     from compass_pkg import obligations
     header, rows = baseline
-    config = copy.deepcopy(preset_config)
+    config = copy.deepcopy(frozen_config)
     # `reproduce-first` carries no rank, and floor RP-FLOOR-002 names `define`.
     config["stages"]["define"]["modes"]["reproduce-first"] = {"rank": 2}
     adapted = obligations.policy_adapter(config)
@@ -291,7 +293,7 @@ def test_ob_1_a_planted_rank_on_a_mode_a_floor_reaches_breaks_the_replay(
 
 
 def test_ob_1_a_planted_rank_on_expedited_is_seen_when_a_floor_names_implement(
-        preset_config):
+        frozen_config):
     """The baseline's policy has no floor on `implement`, so a rank on `expedited`
     cannot show in the baseline. With one such floor added to both paths, it
     does. The policy is the 8.0.4 governance copy, which routes as the baseline
@@ -302,7 +304,7 @@ def test_ob_1_a_planted_rank_on_expedited_is_seen_when_a_floor_names_implement(
     today["routing_guardrails"]["floors"].append(
         {"id": "RP-PLANT", "when": {"urgency": "live-defect"},
          "require_phase": "implement"})
-    config = copy.deepcopy(preset_config)
+    config = copy.deepcopy(frozen_config)
     config["rules"]["floors"]["rules"]["RP-PLANT"] = {
         "order": 99, "when": {"urgency": "live-defect"},
         "then": {"require_phase": "implement"}}
@@ -406,8 +408,8 @@ def test_ob_3_the_facts_equal_the_evaluators_answers(preset_config):
         assert got.ceilings["max_worktrees"] == r["max_worktrees"]
 
 
-def test_ob_3_a_critical_change_owes_what_the_policy_says(preset_config):
-    got = _api("obligations")(preset_config, _assessment(risk="critical"))
+def test_ob_3_a_critical_change_owes_what_the_policy_says(frozen_config):
+    got = _api("obligations")(frozen_config, _assessment(risk="critical"))
     assert got.approach == "full"
     assert got.stage_mode["refine"] == "thorough"
     assert "verify.architecture" in got.gate_set
@@ -466,8 +468,8 @@ def test_ob_3_loop_ceilings_equal_the_lowest_matching_limit(preset_config):
     assert len(seen) > 1, "the ceilings never varied, so the replay saw one case"
 
 
-def test_ob_3_entry_exit_gate_and_check_facts(preset_config):
-    config = _with_entry_lists(preset_config)
+def test_ob_3_entry_exit_gate_and_check_facts(frozen_config):
+    config = _with_entry_lists(frozen_config)
     got = _api("obligations")(config, _assessment())
     assert got.entry["plan"] == ("design-reviewed",)
     assert got.exit["plan"] == ("plain-english",)
@@ -569,16 +571,16 @@ def test_ob_3_the_replays_spelling_follows_cores_tables_and_the_adapters_rule(
             == obligations._artifact_id(name) == legacy_adapter._artifact_id(name)
 
 
-def test_ob_3_the_same_refusal_from_two_layerings_has_the_same_reason(preset_config):
+def test_ob_3_the_same_refusal_from_two_layerings_has_the_same_reason(frozen_config):
     obligations = _api("obligations")
-    other = _layer(preset_config, {"schema": 1, "checks": {"extra": {
+    other = _layer(frozen_config, {"schema": 1, "checks": {"extra": {
         "statement": "x", "kind": "human", "severity": "advisory",
         "on_skipped": "pass"}}}, "parent")
     other = _layer(other, {"schema": 1, "checks": {"extra2": {
         "statement": "y", "kind": "human", "severity": "advisory",
         "on_skipped": "pass"}}}, "project")
     case = _assessment(goal="exploration", risk="critical")
-    one, two = obligations(preset_config, case), obligations(other, case)
+    one, two = obligations(frozen_config, case), obligations(other, case)
     assert isinstance(one, _api("Refused")) and one.reason == two.reason
     for word in ("test-parent", "test-project", ".yml", "/"):
         assert word not in one.reason.replace("and/or", "")
@@ -593,22 +595,22 @@ def test_ob_3_compared_leaves_out_the_outcomes(preset_config):
 
 # --- OB-4: a refusal is an outcome ------------------------------------------------
 
-def test_ob_4_a_spike_that_a_floor_would_deliver_is_refused(preset_config):
+def test_ob_4_a_spike_that_a_floor_would_deliver_is_refused(frozen_config):
     refused = _api("Refused")
     got = _api("obligations")(
-        preset_config, _assessment(goal="exploration", risk="critical"))
+        frozen_config, _assessment(goal="exploration", risk="critical"))
     assert isinstance(got, refused)
     assert got.reason.startswith("routing conflict - exploration cannot silently "
                                  "become delivery.")
     # Today's evaluator says the same through the same input.
-    adapted = _api("policy_adapter")(preset_config)
+    adapted = _api("policy_adapter")(frozen_config)
     with pytest.raises(CompassError) as exc:
         evaluate_route(_assessment(goal="exploration", risk="critical"), adapted)
     assert got.reason == str(exc.value)
 
 
-def test_ob_4_a_forbidden_approach_is_refused(preset_config):
-    config = _layer(preset_config, {"schema": 1, "rules": {"caps": {"set": {"rules": {
+def test_ob_4_a_forbidden_approach_is_refused(frozen_config):
+    config = _layer(frozen_config, {"schema": 1, "rules": {"caps": {"set": {"rules": {
         "set": {"RP-PLANT-CAP": {"order": 9, "when": {"risk": "cross-cutting"},
                                  "then": {"forbid_approach": "regular"}}}}}}}})
     got = _api("obligations")(config, _assessment(risk="cross-cutting"))
@@ -618,17 +620,17 @@ def test_ob_4_a_forbidden_approach_is_refused(preset_config):
                           _api("Refused"))
 
 
-def test_ob_4_two_refusals_with_one_reason_are_equal(preset_config):
+def test_ob_4_two_refusals_with_one_reason_are_equal(frozen_config):
     obligations = _api("obligations")
-    one = obligations(preset_config, _assessment(goal="exploration", risk="critical"))
-    two = obligations(preset_config, _assessment(goal="exploration", risk="critical",
+    one = obligations(frozen_config, _assessment(goal="exploration", risk="critical"))
+    two = obligations(frozen_config, _assessment(goal="exploration", risk="critical",
                                                  labels=["auth"]))
     other = _api("Refused")("another reason")
     assert one == _api("Refused")(one.reason)
     assert one != other and two != other
 
 
-def test_ob_4_the_refused_points_of_the_grid_are_the_baseline_errors(preset_config,
+def test_ob_4_the_refused_points_of_the_grid_are_the_baseline_errors(frozen_config,
                                                                     baseline):
     obligations = _api("obligations")
     _, rows = baseline
@@ -641,7 +643,7 @@ def test_ob_4_the_refused_points_of_the_grid_are_the_baseline_errors(preset_conf
     for row in grid_rows:
         readings = dict(row["assessment"])
         readings["size"] = SIZE_NOW.get(readings["size"], readings["size"])
-        got = obligations(preset_config, readings)
+        got = obligations(frozen_config, readings)
         if isinstance(got, _api("Refused")):
             refused[json_key(row["assessment"])] = got.reason
     assert refused == errors
@@ -652,12 +654,12 @@ def json_key(assessment):
     return json.dumps(assessment, sort_keys=True)
 
 
-def test_ob_4_a_fault_in_the_configuration_is_not_a_refusal(preset_config):
-    config = copy.deepcopy(preset_config)
+def test_ob_4_a_fault_in_the_configuration_is_not_a_refusal(frozen_config):
+    config = copy.deepcopy(frozen_config)
     config["stages"]["plan"]["entry"] = ["no-such-check"]
     with pytest.raises(CompassError, match="no-such-check"):
         _api("obligations")(config, _assessment())
-    config = copy.deepcopy(preset_config)
+    config = copy.deepcopy(frozen_config)
     config["approaches"]["regular"]["extends"] = "full"
     config["approaches"]["full"]["extends"] = "regular"
     with pytest.raises(CompassError, match="cycle"):
@@ -687,24 +689,24 @@ def _checks_config(preset_config):
     })
 
 
-def test_ob_6_a_check_that_requires_a_switch_is_active_only_with_it(preset_config):
-    config = _checks_config(preset_config)
+def test_ob_6_a_check_that_requires_a_switch_is_active_only_with_it(frozen_config):
+    config = _checks_config(frozen_config)
     obligations = _api("obligations")
     assert "needs-switch" not in obligations(config, _assessment()).entry["plan"]
     on = obligations(config, _assessment(), capabilities=("entry-exit-evaluation",))
     assert "needs-switch" in on.entry["plan"] and "needs-switch" in on.checks
 
 
-def test_ob_6_a_check_with_a_when_is_active_only_where_it_matches(preset_config):
-    config = _checks_config(preset_config)
+def test_ob_6_a_check_with_a_when_is_active_only_where_it_matches(frozen_config):
+    config = _checks_config(frozen_config)
     obligations = _api("obligations")
     assert "only-critical" not in obligations(config, _assessment()).entry["plan"]
     critical = obligations(config, _assessment(risk="critical"))
     assert "only-critical" in critical.entry["plan"]
 
 
-def test_ob_6_severity_is_advisory_where_blocking_when_does_not_match(preset_config):
-    config = _checks_config(preset_config)
+def test_ob_6_severity_is_advisory_where_blocking_when_does_not_match(frozen_config):
+    config = _checks_config(frozen_config)
     obligations = _api("obligations")
     low = obligations(config, _assessment(risk="contained"))
     high = obligations(config, _assessment(risk="cross-cutting"))
@@ -736,8 +738,8 @@ def test_ob_6_a_guardrail_gate_follows_applies_to_and_when(preset_config):
     assert "G5" in obligations(preset_config, _assessment(labels=["migrations"])).gate_set
 
 
-def test_ob_6_statement_is_compared_for_human_and_judged_checks_only(preset_config):
-    config = _with_entry_lists(preset_config)
+def test_ob_6_statement_is_compared_for_human_and_judged_checks_only(frozen_config):
+    config = _with_entry_lists(frozen_config)
     got = _api("obligations")(config, _assessment())
     assert "statement" in got.checks["design-reviewed"]
     assert "statement" in got.checks["plain-english"]
@@ -763,48 +765,48 @@ def _owed(config, assessment, layer=None, **kw):
 SMALL = dict(size="small", risk="trivial")
 
 
-def test_ob_5_the_issue_names_the_candidate(preset_config):
-    config, layer = _issue(preset_config, approach="regular")
-    assert _owed(preset_config, _assessment(**SMALL)).approach == "quick-fix"
+def test_ob_5_the_issue_names_the_candidate(frozen_config):
+    config, layer = _issue(frozen_config, approach="regular")
+    assert _owed(frozen_config, _assessment(**SMALL)).approach == "quick-fix"
     got = _owed(config, _assessment(**SMALL), layer)
     assert got.approach == "regular"
     assert got.stage_mode["plan"] == "thorough"
 
 
 def test_ob_5_without_an_issue_approach_the_first_matching_shape_is_the_candidate(
-        preset_config):
-    config, layer = _issue(preset_config, modes={"refine": "lightweight"})
+        frozen_config):
+    config, layer = _issue(frozen_config, modes={"refine": "lightweight"})
     assert _owed(config, _assessment(**SMALL), layer).approach == "quick-fix"
 
 
-def test_ob_5_the_issue_changes_a_base_mode(preset_config):
-    config, layer = _issue(preset_config, modes={"refine": "lightweight"})
+def test_ob_5_the_issue_changes_a_base_mode(frozen_config):
+    config, layer = _issue(frozen_config, modes={"refine": "lightweight"})
     got = _owed(config, _assessment(**SMALL), layer)
     assert got.stage_mode["refine"] == "lightweight"  # quick-fix has `collapsed`
     assert got.stage_mode["plan"] == "collapsed"     # the rest is untouched
 
 
-def test_ob_5_a_floor_lifts_a_mode_the_issue_lowered(preset_config):
+def test_ob_5_a_floor_lifts_a_mode_the_issue_lowered(frozen_config):
     """RP-FLOOR-002 names `define` for unmapped ground, so a lowered `define`
     is lifted back. The issue needs no waiver there: it has no effect."""
-    config, layer = _issue(preset_config, modes={"define": "collapsed"})
+    config, layer = _issue(frozen_config, modes={"define": "collapsed"})
     unmapped = _assessment(familiarity="brownfield-unmapped")
     assert _owed(config, unmapped, layer).stage_mode["define"] == "thorough"
     assert _owed(config, _assessment(), layer).stage_mode["define"] == "collapsed"
 
 
 def test_ob_5_a_floor_that_names_another_stage_leaves_the_override_standing(
-        preset_config):
-    config, layer = _issue(preset_config, modes={"refine": "skipped"})
+        frozen_config):
+    config, layer = _issue(frozen_config, modes={"refine": "skipped"})
     unmapped = _assessment(familiarity="brownfield-unmapped")
     assert _owed(config, unmapped, layer).stage_mode["refine"] == "skipped"
 
 
-def test_ob_5_an_override_on_an_approach_a_floor_replaced_is_ignored(preset_config):
+def test_ob_5_an_override_on_an_approach_a_floor_replaced_is_ignored(frozen_config):
     """Critical risk raises the approach to `full`, which has its own base
     modes. The override was on the candidate's and carries no waiver, so it is
     reported and dropped (WSM-2)."""
-    config, layer = _issue(preset_config, modes={"breakdown": "skipped"})
+    config, layer = _issue(frozen_config, modes={"breakdown": "skipped"})
     got = _owed(config, _assessment(risk="critical"), layer)
     assert got.approach == "full"
     assert got.stage_mode["breakdown"] == "multiagent"
@@ -825,14 +827,14 @@ def _waived(config, **modes):
     return config, layer
 
 
-def test_ob_5_a_waived_mode_holds_on_an_approach_a_floor_replaced(preset_config):
+def test_ob_5_a_waived_mode_holds_on_an_approach_a_floor_replaced(frozen_config):
     """WSM-1: the migrations floor raises the approach to `full`. A waived
     breakdown mode holds there, and nothing else the floor brings changes
     (governance decision 2026-10-17, a waived stage mode holds on a
     floor-raised approach)."""
     migrations = _assessment(labels=["migrations"])
-    config, plain = _issue(preset_config, modes={"breakdown": "skipped"})
-    _, layer = _waived(preset_config, breakdown="skipped")
+    config, plain = _issue(frozen_config, modes={"breakdown": "skipped"})
+    _, layer = _waived(frozen_config, breakdown="skipped")
     floor = _owed(config, migrations, plain)
     got = _owed(config, migrations, layer)
     assert got.approach == floor.approach == "full"
@@ -845,10 +847,10 @@ def test_ob_5_a_waived_mode_holds_on_an_approach_a_floor_replaced(preset_config)
     assert got.artifacts_owed == floor.artifacts_owed
 
 
-def test_ob_5_a_waiver_does_not_lower_a_stage_the_floor_names(preset_config):
+def test_ob_5_a_waiver_does_not_lower_a_stage_the_floor_names(frozen_config):
     """WSM-3: RP-FLOOR-001 names three stages for critical risk, `verify` among them.
     A waived lower mode there is lifted back to `thorough`."""
-    config, layer = _waived(preset_config, verify="lightweight", breakdown="skipped")
+    config, layer = _waived(frozen_config, verify="lightweight", breakdown="skipped")
     got = _owed(config, _assessment(risk="critical"), layer)
     assert got.approach == "full"
     assert got.stage_mode["verify"] == "thorough"
@@ -870,23 +872,23 @@ def test_ob_5_the_evaluator_applies_a_waived_stage_on_a_replaced_approach():
                                       "ignored": {"refine": "lighter"}}
 
 
-def test_ob_5_an_issue_can_set_a_stage_of_the_approach_it_names(preset_config):
-    config, layer = _issue(preset_config, modes={"breakdown": "skipped"},
+def test_ob_5_an_issue_can_set_a_stage_of_the_approach_it_names(frozen_config):
+    config, layer = _issue(frozen_config, modes={"breakdown": "skipped"},
                            approach="spike")
     got = _owed(config, _assessment(goal="exploration", **SMALL), layer)
     assert got.stage_mode["breakdown"] == "skipped"        # the spike has it
 
 
-def test_ob_5_an_issue_spike_that_a_floor_would_deliver_is_refused(preset_config):
-    config, layer = _issue(preset_config, approach="spike")
+def test_ob_5_an_issue_spike_that_a_floor_would_deliver_is_refused(frozen_config):
+    config, layer = _issue(frozen_config, approach="spike")
     got = _owed(config, _assessment(risk="critical"), layer)
     assert isinstance(got, _api("Refused"))
 
 
-def test_ob_5_an_issue_can_lower_the_subtask_ceiling_and_never_raise_it(preset_config):
+def test_ob_5_an_issue_can_lower_the_subtask_ceiling_and_never_raise_it(frozen_config):
     """Floors and caps win over the issue layer, so the issue's value is a
     minimum with the approach's own ceiling, as a loop ceiling is."""
-    config, layer = _issue(preset_config, ceilings={"subtask_ceiling": 4})
+    config, layer = _issue(frozen_config, ceilings={"subtask_ceiling": 4})
     assert _owed(config, _assessment(), layer).ceilings["subtask_ceiling"] == 2
     assert _owed(config, _assessment(**SMALL), layer).ceilings["subtask_ceiling"] == 1
     assert _owed(config, _assessment(risk="critical"), layer) \
@@ -894,7 +896,7 @@ def test_ob_5_an_issue_can_lower_the_subtask_ceiling_and_never_raise_it(preset_c
     # `full` has no ceiling at all, so the issue's value is the only one.
     assert _owed(config, _assessment(size="large"), layer) \
         .ceilings["subtask_ceiling"] == 4
-    config, layer = _issue(preset_config, ceilings={"subtask_ceiling": 1})
+    config, layer = _issue(frozen_config, ceilings={"subtask_ceiling": 1})
     assert _owed(config, _assessment(), layer).ceilings["subtask_ceiling"] == 1
 
 
@@ -925,17 +927,17 @@ def test_ob_5_an_empty_issue_layer_changes_nothing(preset_config):
     assert _owed(preset_config, assessment, {}) == _owed(preset_config, assessment)
 
 
-def test_ob_5_a_fault_in_the_issue_layer_raises(preset_config):
-    config, layer = _issue(preset_config, modes={"refine": "no-such-mode"})
+def test_ob_5_a_fault_in_the_issue_layer_raises(frozen_config):
+    config, layer = _issue(frozen_config, modes={"refine": "no-such-mode"})
     with pytest.raises(CompassError, match="no-such-mode"):
         _owed(config, _assessment(), layer)
-    config, layer = _issue(preset_config, approach="no-such-approach")
+    config, layer = _issue(frozen_config, approach="no-such-approach")
     with pytest.raises(CompassError, match="no-such-approach"):
         _owed(config, _assessment(), layer)
-    config, layer = _issue(preset_config, ceilings={"no_such_ceiling": 2})
+    config, layer = _issue(frozen_config, ceilings={"no_such_ceiling": 2})
     with pytest.raises(CompassError, match="no_such_ceiling"):
         _owed(config, _assessment(), layer)
-    config, layer = _issue(preset_config, ceilings={"review_rounds": 0})
+    config, layer = _issue(frozen_config, ceilings={"review_rounds": 0})
     with pytest.raises(CompassError, match="review_rounds"):
         _owed(config, _assessment(), layer)
 
@@ -969,18 +971,18 @@ def test_ob_5_an_issue_may_carry_the_keys_the_catalogue_spec_allows(preset_confi
     assert got == _owed(preset_config, _assessment())
 
 
-def test_ob_5_an_old_approach_name_is_read_as_the_current_one(preset_config):
+def test_ob_5_an_old_approach_name_is_read_as_the_current_one(frozen_config):
     from compass_pkg.core import canonical_shape
     assert canonical_shape("feature") == "regular"
-    config, layer = _issue(preset_config, approach="feature")
+    config, layer = _issue(frozen_config, approach="feature")
     assert _owed(config, _assessment(**SMALL), layer).approach == "regular"
 
 
 def test_ob_5_an_approach_nobody_defines_raises_even_where_a_floor_would_hide_it(
-        preset_config):
+        frozen_config):
     """At critical risk the evaluator alone raises the unknown approach to
     `full` and answers; the faulty layer must still be reported."""
-    config, layer = _issue(preset_config, approach="ghost")
+    config, layer = _issue(frozen_config, approach="ghost")
     assert "ghost" in _fault(lambda: _owed(config, _assessment(risk="critical"), layer))
     assert evaluate_route(_assessment(risk="critical"),
                           _api("policy_adapter")(config),
@@ -1001,8 +1003,8 @@ def test_ob_5_a_mode_ranked_equal_to_thorough_is_not_lifted():
     assert evaluate_route(READINGS, policy)["stages"]["refine"] == "equal"
 
 
-def test_ob_5_a_skipped_stage_still_lists_its_active_checks(preset_config):
-    config = _layer(_with_entry_lists(preset_config), {
+def test_ob_5_a_skipped_stage_still_lists_its_active_checks(frozen_config):
+    config = _layer(_with_entry_lists(frozen_config), {
         "schema": 1, "stages": {"refine": {"set": {"entry": ["design-reviewed"]}}}})
     config, layer = _issue(config, modes={"refine": "skipped"})
     got = _owed(config, _assessment(), layer)
@@ -1218,9 +1220,11 @@ def test_ob_8_the_command_answers_as_before():
     """The 8.x evaluator, called as `approach evaluate --assessment` called it
     with no issue, gives the same approach and no issue key. The command now
     prints the path for a delivery assessment (ADR-092); its twin follows."""
-    from compat_baseline import shipped_policy
+    # The 8.0.4 governance copy keeps the 8.x approaches; the shipped default
+    # routes every delivery assessment to the path since 9.0.0 (ADR-092).
+    from compat_baseline import policy_8_0_4
     answer = evaluate_route({"risk": "trivial", "familiarity": "greenfield",
-                             "size": "small"}, shipped_policy())
+                             "size": "small"}, policy_8_0_4())
     assert answer["delivery_approach"] == "quick-fix"
     assert "issue_overrides" not in answer
 
@@ -1312,8 +1316,9 @@ def test_ob_8_the_module_declares_its_dependencies_and_stays_small():
     # The design's target was 600; the readiness fact (one function and its
     # table rows) takes the cap to 620, and the word-limit fact (one field and
     # its row) to 625, the model-tier block (one import, one call and the
-    # dependency line) to 630, and the waived stages of the issue layer to 634.
-    assert len(text.splitlines()) < 634
+    # dependency line) to 630, the waived stages of the issue layer to 634, and
+    # the `delivery` approach of the path (ADR-092) to 636.
+    assert len(text.splitlines()) < 637
     core = (ROOT / "cli" / "compass_pkg" / "core.py").read_text(encoding="utf-8")
     assert len(core.splitlines()) <= 1200
 
@@ -1329,8 +1334,8 @@ def test_ob_4_an_assessment_outside_the_vocabulary_raises_and_is_not_a_refusal(
         _api("obligations")(preset_config, {"risk": "contained"})
 
 
-def test_ob_4_an_approach_with_no_entry_raises_and_is_not_a_refusal(preset_config):
-    config = copy.deepcopy(preset_config)
+def test_ob_4_an_approach_with_no_entry_raises_and_is_not_a_refusal(frozen_config):
+    config = copy.deepcopy(frozen_config)
     config["rules"]["default_shapes"]["rules"]["RP-SHAPE-005"]["then"][
         "lean_toward"] = "ghost"
     with pytest.raises(CompassError, match="ghost"):
@@ -1343,14 +1348,14 @@ def test_ob_4_the_evaluators_two_conflicts_are_the_ones_that_refuse():
     assert conflict is not None and issubclass(conflict, CompassError)
 
 
-def test_ob_6_a_capability_nobody_defines_raises(preset_config):
+def test_ob_6_a_capability_nobody_defines_raises(frozen_config):
     """A misspelt switch would turn nothing on and nobody would be told, so a
     switch the catalogue spec does not name is a fault, whether it is passed
     in or a check needs it."""
     with pytest.raises(CompassError, match="entry-exit-evalution"):
-        _api("obligations")(preset_config, _assessment(),
+        _api("obligations")(frozen_config, _assessment(),
                             capabilities=("entry-exit-evalution",))
-    config = _layer(preset_config, {"schema": 1, "checks": {"typo": {
+    config = _layer(frozen_config, {"schema": 1, "checks": {"typo": {
         "statement": "x", "kind": "deterministic", "impl": "suite-passed",
         "severity": "blocking", "on_skipped": "fail",
         "requires": ["artifact-freshnes"]}},
@@ -1384,8 +1389,8 @@ def _reordered(config):
     return config
 
 
-def test_ob_1_the_evaluator_reads_the_configurations_dimension_orders(preset_config):
-    config = _reordered(preset_config)
+def test_ob_1_the_evaluator_reads_the_configurations_dimension_orders(frozen_config):
+    config = _reordered(frozen_config)
     case = _assessment(size="medium")
     adapted = _api("policy_adapter")(config)
     assert adapted["dimension_orders"]["size"] == ["atomic", "small", "large",
@@ -1441,24 +1446,28 @@ def test_ob_1_the_built_in_hit_policies_are_the_adapters(preset_config):
 
 
 def test_ob_1_an_approach_the_evaluator_does_not_know_raises_and_is_not_refused(
-        preset_config):
-    config = copy.deepcopy(preset_config)
+        frozen_config):
+    config = copy.deepcopy(frozen_config)
     config["approaches"]["sixth"] = copy.deepcopy(config["approaches"]["regular"])
     config["approaches"]["sixth"]["weight"] = 9
     assert "sixth" in _fault(lambda: _api("obligations")(config, _assessment()))
     assert "sixth" in _fault(lambda: _api("policy_adapter")(config))
 
 
-def test_ob_1_a_changed_ships_on_a_shipped_approach_raises(preset_config):
+def test_ob_1_a_changed_ships_on_a_shipped_approach_raises(frozen_config):
     for name, ships in (("regular", False), ("spike", True)):
-        config = copy.deepcopy(preset_config)
+        config = copy.deepcopy(frozen_config)
         config["approaches"][name]["ships"] = ships
         message = _fault(lambda: _api("obligations")(config, _assessment()))
         assert name in message and "ships" in message
 
 
-def test_ob_1_the_five_approaches_are_the_ones_the_policy_ships(preset_config):
-    assert set(_api("EVALUATOR_APPROACHES")) == set(preset_config["approaches"])
+def test_ob_1_the_five_approaches_are_the_ones_the_policy_ships(preset_config, frozen_config):
+    # The evaluator knows the shipped default's two approaches (ADR-092) and the
+    # five of the 8.x presets, which a frozen preset or stored generation declares.
+    assert set(_api("EVALUATOR_APPROACHES")) == \
+        set(preset_config["approaches"]) | set(frozen_config["approaches"])
+    assert set(preset_config["approaches"]) == {"spike", "delivery"}
 
 
 def test_ob_8_no_planning_id_that_a_reader_cannot_open_is_cited():

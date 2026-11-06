@@ -218,8 +218,11 @@ def test_cl_1_the_shipped_policy_has_the_grid_the_decision_records():
     # The documents an artifact rule reads cross the grid as labels do (ADR-070). The
     # shipped default has no artifact rule since 9.0.0 (ADR-091), so none crosses it.
     assert grid.artifacts == ()
-    assert grid.closed_points == 72
-    assert grid.points == 1152
+    # The shipped default routes no approach by size or urgency since 9.0.0
+    # (ADR-092): each dimension the rules read splits into two classes, and
+    # urgency into one, so the grid holds 16 closed points.
+    assert grid.closed_points == 16
+    assert grid.points == 256                # 16 crossed with the 16 label subsets
     assert grid.raw_points == 8640           # 540 assessments with each optional one omitted too
 
 
@@ -546,22 +549,19 @@ def test_cl_3_every_field_the_classifier_emits_is_a_key_of_the_table():
     assert _api().NO_FIELD == ("evaluation.refused", "dimensions.values")
 
 
-def test_cl_3_adding_a_plan_exit_check_to_the_shipped_preset_is_tightening(preset_cache):
+def test_cl_3_adding_a_build_exit_check_to_the_shipped_preset_is_tightening(preset_cache):
     import classifier_fixtures
     parent = classifier_fixtures.preset()
     child = classifier_fixtures.layer(parent, {
         "checks": {"docs-read": {"statement": "x", "kind": "deterministic",
                                  "impl": "suite-passed", "severity": "blocking",
                                  "on_skipped": "fail"}},
-        "stages": {"plan": {"set": {"exit": ["docs-read"]}}}},
-        # A project layer's change to a legacy stage is left out since 9.0.0
-        # (ADR-092); a parent's is merged, so the classifier still sees it.
-        kind="parent")
+        "stages": {"build": {"set": {"exit": {"add": ["docs-read"]}}}}})
     got = _classify(parent, child, cache=preset_cache)
     assert got.result == "tightening", got.reason
-    assert got.grid.points == 1152 and got.grid.evaluated == 1152
+    assert got.grid.points == 256 and got.grid.evaluated == 256
     # A second run against the same parent reads the parent's scan.
-    assert len([k for k in preset_cache]) >= 1152
+    assert len([k for k in preset_cache]) >= 256
 
 
 # --- CL-4: the first difference, and early exit ------------------------------------

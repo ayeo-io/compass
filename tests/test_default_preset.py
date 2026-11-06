@@ -43,6 +43,19 @@ def _today():
     return _load(POLICY), _load(GUARDRAILS)
 
 
+def _v8():
+    """The two files of the 8.0.4 governance copy. They hold the five 8.x
+    approaches, the floors that raised a minimum approach and the caps, which the
+    shipped default no longer declares (ADR-092), so the conversions of an old
+    copied policy are tested on them."""
+    import tarfile
+    sys.path.insert(0, str(ROOT / "tests"))
+    from compat_baseline import GOVERNANCE_8_0_4
+    with tarfile.open(GOVERNANCE_8_0_4) as tar:
+        return tuple(yaml.safe_load(tar.extractfile(f"governance/{name}").read())
+                     for name in ("routing-policy.yml", "guardrails.yml"))
+
+
 def _preset():
     """The committed catalogue files as one layer document."""
     doc = {"schema": 1}
@@ -104,7 +117,7 @@ def test_dp_1_the_adapter_of_todays_files_equals_the_committed_preset():
 def test_dp_1_a_gate_removed_from_one_approach_breaks_the_match():
     policy, guardrails = _today()
     planted = copy.deepcopy(policy)
-    planted["route_shapes"]["regular"]["gates"].remove("verify.security")
+    planted["route_shapes"]["delivery"]["gates"].remove("verify.governance")
     assert legacy_adapter.adapt(planted, guardrails) != _adapter_part(_preset())
     # The same fault in the guardrails file is caught too.
     planted_g = copy.deepcopy(guardrails)
@@ -162,7 +175,9 @@ def _rebuild(preset, sidecar, types):
             "advisory_strategies": rules_of("advisory"),
         },
         "routing_guardrails": {
-            "floors": rules_of("floors"), "caps": rules_of("caps"),
+            "floors": rules_of("floors"),
+            # 9.0.0 ships no caps (ADR-092); a preset that declares them keeps them.
+            **({"caps": rules_of("caps")} if "caps" in preset["rules"] else {}),
             "loop_ceilings": rules_of("loop_ceilings"),
             "immovable_gates": rules_of("immovable_gates"),
         },
@@ -300,18 +315,17 @@ def _planted_rebuilds():
         return _rebuilt(preset, sidecar)
 
     def drop_floor_effects(p, s):
-        del p["rules"]["floors"]["rules"]["RP-FLOOR-002"]["then"]["require_phase"]
         del p["rules"]["floors"]["rules"]["RP-FLOOR-002"]["then"]["require_skill"]
 
-    def drop_caps(p, s):
-        p["rules"]["caps"]["rules"].clear()
+    def drop_require_gate(p, s):
+        del p["rules"]["floors"]["rules"]["RP-REQUIRE-003"]["then"]["add_gate"]
 
     def raise_loop_limits(p, s):
         for rule in p["rules"]["loop_ceilings"]["rules"].values():
             rule["then"]["limit"] += 1
 
     def null_ceiling(p, s):
-        p["approaches"]["regular"]["subtask_ceiling"] = None
+        p["approaches"]["delivery"]["subtask_ceiling"] = None
 
     def drop_biases(p, s):
         p["rules"]["biases"]["rules"].clear()
@@ -332,7 +346,7 @@ def _planted_rebuilds():
         s["guardrails"]["when_keys"] = {}
 
     return {fn.__name__: planted(fn) for fn in (
-        drop_floor_effects, drop_caps, raise_loop_limits, null_ceiling, drop_biases,
+        drop_floor_effects, drop_require_gate, raise_loop_limits, null_ceiling, drop_biases,
         last_checked_at, change_sidecar_value, drop_fallback_marker, change_row_order,
         lose_when_spelling)}
 
@@ -406,7 +420,7 @@ def test_dp_2_the_preset_checks_with_no_error_as_a_parent():
 
 def test_dp_2_the_check_can_fail_on_the_preset():
     layer = _preset()
-    layer["approaches"]["quick-fix"]["colour"] = "red"
+    layer["approaches"]["delivery"]["colour"] = "red"
     assert catalogue_check.check_layer(layer, "parent") != []
 
 
@@ -417,31 +431,26 @@ def test_dp_2_every_catalogue_is_filled_and_the_approach_catalogue_is_not_named_
         assert preset[name] or name == "artifacts", name
     assert preset["artifacts"] == {}
     assert not (PRESET / "routes.yml").exists()
-    assert set(preset["approaches"]) == {"spike", "quick-fix", "regular", "hotfix", "full"}
-    assert len(preset["stages"]) == 8
+    # One path of four stages and the spike (ADR-092). No floor raises a minimum
+    # approach any more, and no caps rule set is shipped.
+    assert set(preset["approaches"]) == {"spike", "delivery"}
+    assert list(preset["stages"]) == ["assess", "specify", "build", "ship"]
     floors = preset["rules"]["floors"]
     effects = {k for rule in floors["rules"].values() for k in rule["then"]}
-    assert "force_minimum_approach" in effects
-    assert "force_minimum_route" not in effects
-    assert floors["hit"]["force_minimum_approach"] == "max"
+    assert effects == {"require_skill", "add_gate"}
+    assert "force_minimum_approach" not in floors["hit"]
+    assert "caps" not in preset["rules"]
 
 
 # --- stage-mode ranks (`DP-3`) ------------------------------------------------
 
 # The architect's ruling: a rank only for the modes on the depth ladder.
+# The path stages declare only the modes an approach names (ADR-092).
 RULED_RANKS = {
     ("assess", "lightweight"): 2, ("assess", "thorough"): 3,
-    ("define", "collapsed"): 1, ("define", "lightweight"): 2, ("define", "thorough"): 3,
-    ("define", "reproduce-first"): None,
-    ("refine", "skipped"): 0, ("refine", "collapsed"): 1,
-    ("refine", "lightweight"): 2, ("refine", "thorough"): 3,
-    ("plan", "collapsed"): 1, ("plan", "thorough"): 3,
-    ("breakdown", "skipped"): 0, ("breakdown", "multiagent"): None,
-    ("implement", "explore"): None, ("implement", "thorough"): 3,
-    ("implement", "expedited"): None,
-    ("verify", "conclude"): None, ("verify", "lightweight"): 2, ("verify", "thorough"): 3,
-    ("ship", "graduate-or-discard"): None, ("ship", "lightweight"): 2,
-    ("ship", "thorough"): 3, ("ship", "thorough-with-follow-up"): 4,
+    ("specify", "thorough"): 3,
+    ("build", "thorough"): 3, ("build", "explore"): None,
+    ("ship", "thorough"): 3, ("ship", "graduate-or-discard"): None,
 }
 
 # The ruling of 6 October 2026 names the modes by the words they had then. A
@@ -462,28 +471,31 @@ def test_dp_3_every_mode_has_the_ruled_rank_or_none():
 def test_dp_3_stages_run_in_the_order_the_policy_lists_them():
     policy, _ = _today()
     stages = _preset()["stages"]
-    listed = list(policy["route_shapes"]["full"]["stages"])
+    listed = list(policy["route_shapes"]["delivery"]["stages"])
     assert sorted(stages, key=lambda s: stages[s]["order"]) == listed
     assert [stages[s]["order"] for s in listed] == list(range(1, len(listed) + 1))
 
 
 def test_dp_3_every_approach_uses_a_mode_its_stage_declares():
     preset = _preset()
+    from compass_pkg.stable_ids import SPIKE_STAGE_IDS
     for approach, entry in preset["approaches"].items():
-        assert set(entry["stages"]) == set(preset["stages"]), approach
+        # A spike explores in build and concludes in ship; it has no specify stage.
+        wanted = set(SPIKE_STAGE_IDS) if approach == "spike" else set(preset["stages"])
+        assert set(entry["stages"]) == wanted, approach
         for stage, mode in entry["stages"].items():
             assert mode in preset["stages"][stage]["modes"], (approach, stage, mode)
 
 
 def test_dp_3_the_ranks_reproduce_todays_lift_to_full():
     # Today's lift raises collapsed, skipped and lightweight to thorough and
-    # leaves every other mode alone; a rank below thorough is exactly those
-    # three.
+    # leaves every other mode alone; a rank below thorough is one of those
+    # three. The path stages declare only `lightweight` of them (ADR-092).
     stages = _preset()["stages"]
     lifted = {mode for entry in stages.values()
               for mode, body in entry["modes"].items()
               if body.get("rank") is not None and body["rank"] < 3}
-    assert lifted == {"collapsed", "skipped", "lightweight"}
+    assert lifted == {"lightweight"}
 
 
 # --- the lock set (`DP-4`) ----------------------------------------------------
@@ -502,7 +514,7 @@ def _assert_the_shipped_lock_set(preset):
     guardrail = {g["id"]: g for g in guardrails["defaults"]}
     spike = {g["id"]: g for g in guardrails["spike_guardrails"]}
     expected = {
-        "stages.assess": True, "stages.verify": True, "stages.ship": True,
+        "stages.assess": True, "stages.build": True, "stages.ship": True,
         "rules.immovable_gates": True,
         "gates.verify.correctness": True, "gates.verify.governance": True,
         "gates.verify.traceability": True,
@@ -526,11 +538,10 @@ def test_dp_4_the_locks_are_the_shipped_lock_set():
 
 def test_dp_4_floors_caps_ceilings_and_advisory_rules_are_not_locked():
     rules = _preset()["rules"]
-    for name in ("floors", "caps", "loop_ceilings", "advisory"):
+    for name in ("floors", "loop_ceilings", "advisory"):
         assert "locked" not in rules[name], name
     assert _preset()["approaches"]["spike"]["ships"] is False
-    for name in ("quick-fix", "regular", "hotfix", "full"):
-        assert _preset()["approaches"][name]["ships"] is True
+    assert _preset()["approaches"]["delivery"]["ships"] is True
 
 
 def test_dp_4_the_preset_file_summarises_the_locks():
@@ -586,7 +597,7 @@ def _with_old_names(policy):
 
 
 def test_dp_5_old_key_names_convert_to_the_same_preset():
-    policy, guardrails = _today()
+    policy, guardrails = _v8()
     old = _with_old_names(policy)
     assert old != policy
     assert legacy_adapter.adapt(old, guardrails) == legacy_adapter.adapt(policy, guardrails)
@@ -622,14 +633,14 @@ def _old_spellings(policy):
 
 
 def test_dp_5_old_dimension_and_stage_names_convert_to_the_same_preset():
-    policy, guardrails = _today()
+    policy, guardrails = _v8()
     old = _old_spellings(policy)
     assert old != policy
     assert legacy_adapter.adapt(old, guardrails) == legacy_adapter.adapt(policy, guardrails)
 
 
 def test_dp_5_old_when_keys_in_the_guardrails_file_convert_too():
-    policy, guardrails = _today()
+    policy, guardrails = _v8()
     new = copy.deepcopy(guardrails)
     new["defaults"][4]["applies_when"] = {
         "labels_any": ["auth", "payments", "personal-data", "migrations"]}
@@ -650,7 +661,7 @@ def _adapted(policy, guardrails):
 
 
 def test_dp_5_a_cap_with_forbid_route_and_no_worktree_limit_converts():
-    policy, guardrails = _today()
+    policy, guardrails = _v8()
     planted = copy.deepcopy(policy)
     planted["routing_guardrails"]["caps"].append(
         {"id": "RP-CAP-900", "forbid_route": "full", "rationale": "A planted cap."})
@@ -681,7 +692,7 @@ def test_dp_5_an_artifact_rule_with_a_gate_and_no_artifact_converts():
 
 
 def test_dp_5_a_shape_with_the_old_phases_block_reads_as_stages():
-    policy, guardrails = _today()
+    policy, guardrails = _v8()
     planted = copy.deepcopy(policy)
     shape = planted["route_shapes"]["regular"]
     shape["phases"] = shape.pop("stages")
@@ -691,7 +702,7 @@ def test_dp_5_a_shape_with_the_old_phases_block_reads_as_stages():
 
 
 def test_dp_5_a_shape_with_no_subtask_ceiling_gets_the_default_of_one():
-    policy, guardrails = _today()
+    policy, guardrails = _v8()
     planted = copy.deepcopy(policy)
     del planted["route_shapes"]["quick-fix"]["subtask_ceiling"]
     del planted["route_shapes"]["full"]["subtask_ceiling"]
@@ -886,10 +897,14 @@ def test_dp_3_the_rank_ruling_is_recorded_in_the_repository():
     assert RANK_RULING.is_file(), "the ranking ruling is not recorded"
     text = RANK_RULING.read_text(encoding="utf-8")
     assert "| `ship` | `full-plus-backfill` | 4 |" in text
+    # The ruling names the legacy stages. A path stage takes the rank the ruling
+    # gives the same mode on a legacy stage it shows (ADR-092).
+    from compass_pkg.stable_ids import LEGACY_TO_PATH
     for (stage, mode), rank in RULED_RANKS.items():
         shown = "none" if rank is None else str(rank)
         was = RULING_WORDS.get(mode, mode)
-        assert f"| `{stage}` | `{was}` | {shown} |" in text, (stage, mode)
+        legacy = [s for s, path in LEGACY_TO_PATH.items() if path == stage]
+        assert any(f"| `{s}` | `{was}` | {shown} |" in text for s in legacy), (stage, mode)
 
 
 # --- the sidecar holds spellings, never a changed value (`DP-1`) ---------------
@@ -932,10 +947,12 @@ def test_dp_1_every_sidecar_value_is_only_another_spelling_of_the_preset_value()
 
 def test_dp_1_each_gate_stage_is_the_first_stage_of_its_checked_at_list():
     from compass_pkg import core
+    from compass_pkg.path_stages import rename_v1_stage_keys
     renames = core._stage_key_renames()
     _, guardrails = _today()
     gates = _preset()["gates"]
     for group in ("defaults", "spike_guardrails"):
         for guardrail in guardrails[group]:
-            first = guardrail["checked_at"][0]
-            assert gates[guardrail["id"]]["stage"] == renames.get(first, first), guardrail["id"]
+            # `build` is a path stage too, so only a v1 list is renamed (ADR-092).
+            first = rename_v1_stage_keys(guardrail["checked_at"], renames)[0]
+            assert gates[guardrail["id"]]["stage"] == first, guardrail["id"]

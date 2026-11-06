@@ -623,14 +623,17 @@ def test_pug_17_a_cache_with_no_record_of_its_fetch_is_cannot_be_checked_not_edi
     assert "was edited" not in text
 
 
+# The shipped default declares the spike and `delivery` (ADR-092). The second
+# loosening lets a written review clear the architecture gate.
 @pytest.mark.parametrize("doc, code", [
     ({"schema": 1, "owner": "platform-team",
-      "approaches": {"regular": {"set": {"subtask_ceiling": 9}}}}, "C-LOOSENING"),
+      "approaches": {"delivery": {"set": {"subtask_ceiling": 9}}}}, "C-LOOSENING"),
     ({"schema": 1, "owner": "platform-team",
-      "approaches": {"regular": {"set": {"gates": ["verify.correctness", "verify.nonesuch"]}}}},
+      "approaches": {"delivery": {"set": {"gates": ["verify.correctness", "verify.nonesuch"]}}}},
      "M-REF-UNKNOWN"),
     ({"schema": 1, "owner": "platform-team",
-      "approaches": {"regular": {"set": {"gates": ["verify.clarity"]}}}}, "C-LOOSENING"),
+      "gates": {"verify.architecture": {"set": {"accepts": {"add": ["manual-review"]}}}}},
+     "C-LOOSENING"),
 ])
 def test_pug_18_a_new_commit_the_full_lint_refuses_is_refused_by_the_move(world, doc, code):
     world.advance(doc)

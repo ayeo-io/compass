@@ -172,9 +172,13 @@ def test_gv_2_no_tracked_file_cites_a_line_of_a_generated_view():
 
 
 def test_gv_2_the_scan_markers_and_layout_come_from_the_template():
-    """The vocabulary-scan marker and the key order are in the generated text."""
+    """A comment of the template and the key order are in the generated text. The
+    vocabulary-scan marker went with the hotfix shape whose mode it excused
+    (ADR-092), so the comment checked is one before a rule."""
     generated = _views_module().generate(ROOT)[VIEWS[0]]
-    assert "# vocabulary-scan: allow - machine enum value, see above" in generated
+    assert "# vocabulary-scan: allow - machine enum value" not in generated
+    assert ("      # A small, contained change on unmapped ground with none of the four\n"
+            in generated)
     assert generated.index("RP-LOOP-003") < generated.index("ceiling: review_rounds",
                                                               generated.index("RP-LOOP-003"))
     assert "    - id: RP-LOOP-003\n      ceiling: review_rounds\n      when:" in generated

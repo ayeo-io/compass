@@ -357,18 +357,18 @@ DOC = ROOT / "docs" / "entry-exit-evaluation.md"
 
 def _cli_project(tmp_path, open_check_in_done=False):
     """A project with an owner, a human check that lists `owner` and `maria`,
-    one that lists nobody, both in the `plan` entry list, and the box ticked.
+    one that lists nobody, both in the `specify` entry list, and the box ticked.
     With `open_check_in_done`, the one that lists nobody is an item of the
-    Definition of Done (the `verify` exit list) in place of the `plan` entry.
+    Definition of Done (the `build` exit list) in place of the `specify` entry.
 
-    The checks and lists sit in a git parent: since 9.0.0 a project layer's change
-    to a legacy stage such as `plan` or `verify` is left out (ADR-092)."""
+    The checks and lists sit in a git parent. The issue is on the four-stage path
+    (ADR-092), whose specify stage holds what the plan entry list held."""
     from parent_fixtures import team_parent
     human = {"kind": "human", "severity": "blocking", "on_skipped": "fail"}
-    stages = {"plan": {"set": {"entry": {"add": [SIGN_OFF, "open-check"]}}}}
+    stages = {"specify": {"set": {"entry": {"add": [SIGN_OFF, "open-check"]}}}}
     if open_check_in_done:
-        stages = {"plan": {"set": {"entry": {"add": [SIGN_OFF]}}},
-                  "verify": {"set": {"exit": {"add": ["open-check"]}}}}
+        stages = {"specify": {"set": {"entry": {"add": [SIGN_OFF]}}},
+                  "build": {"set": {"exit": {"add": ["open-check"]}}}}
     parent = {"schema": 1,
               "checks": {SIGN_OFF: dict(human, statement=STATEMENT,
                                         approvers=["owner", "maria"]),
@@ -380,7 +380,7 @@ def _cli_project(tmp_path, open_check_in_done=False):
     root, task_dir = _project(tmp_path / "project", compass_yml=config)
     team_parent(tmp_path, parent, root)
     assert _evaluate_write(root)[0] == 0
-    _write_manifest(task_dir, current_phase="plan")
+    _write_manifest(task_dir, current_phase="specify")
     (task_dir / "requirements-review.md").write_text(
         f"# R\n\n### Definition of Ready\n\n- [x] {STATEMENT}\n"
         f"- [x] Anyone may tick this.\n\nNext stage: x\n", encoding="utf-8")

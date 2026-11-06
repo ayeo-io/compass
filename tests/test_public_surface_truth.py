@@ -789,6 +789,10 @@ def test_d2_repairs_change_only_retired_names():
     gained the section "The fixed check set", on `governance/check-set.yml`
     and its reader.
 
+    One more was re-baselined by #357, step 3 (the tighten-only settings):
+    `governance/routing-policy.md` (list_items 64 -> 66) gained the
+    bullets on the two policy keys the settings add.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

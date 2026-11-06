@@ -44,8 +44,11 @@ def test_trc_a1():
     entry = text[text.index(re.search(r"^### .*\(`S17`\)$", text, re.M).group(0)):]
     entry = entry[:re.search(r"\n##+ ", entry).start()]
     assert STRATEGY in entry.lower(), entry[:200]
-    for needed in ("`validation`", "`refactor`", "quick-fix", "hotfix", "spike",
-                   "`acceptance_strategy`", "issue waiver"):
+    # Since 9.0.0 the entry routes by evidence row in place of the 8.x approaches:
+    # the light, defect and standard rows stand where quick-fix, hotfix and
+    # regular or full stood (ADR-092).
+    for needed in ("`validation`", "`refactor`", "light row", "defect row",
+                   "standard row", "spike", "`acceptance_strategy`", "issue waiver"):
         assert needed in entry, needed
     rationale = (ROOT / "governance" / "strategies-rationale.md").read_text(encoding="utf-8")
     assert re.search(r"^## .*\(`S17`\)$", rationale, re.M), "no S17 entry in the rationale"

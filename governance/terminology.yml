@@ -1509,5 +1509,3 @@ retired_in_output:
   - name: queued
     whole_word: true
     replacement: backlog
-  - name: assess, build and ship
-    replacement: assess, implement and ship

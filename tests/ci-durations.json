@@ -446,6 +446,7 @@
   "tests/test_voice_audition_standing.py": 0.05,
   "tests/test_voice_tells.py": 0.21,
   "tests/test_waived_stage_on_floor.py": 6.51,
+  "tests/test_waiver_records.py": 15.0,
   "tests/test_waivers.py": 0.14,
   "tests/test_well_architected_strategy.py": 0.32,
   "tests/test_workflow_pins.py": 0.01,

@@ -358,6 +358,19 @@ and is shown as `...`. The key `answer` holds the decision.
 }
 ```
 
+#### Approving a waiver: `--waiver`
+
+`compass evidence approve --waiver W-<n>` approves one waiver of the issue
+(`cli/compass_pkg/waiver_records.py`, ADR-094). It writes one
+`human-approval` record with `waiver: W-<n>`, the `waived_check` and the
+`waiver_reason` the waiver names, `approver`, `role`, `scope`,
+`decision: approved`, `timestamp`, `issue` and `generation`. The record names
+a subject, so it never clears guardrail `G5`. It refuses a withdrawn waiver,
+one already approved, one with no reason, one of a check the check set never
+waives, `--decision rejected` and a name that is not in `approvers.waiver`
+(else the project's owner). The waiver and what `compass check` shows are in
+`docs/waivers.md`.
+
 ### Approving in Claude Code, and delegated approvals
 
 In Claude Code a person answers a request by typing `/compass:approve [n]` or
@@ -366,7 +379,9 @@ In Claude Code a person answers a request by typing `/compass:approve [n]` or
 the answer through `approvals.record`, with `via: prompt`, the session id,
 the prompt id, the request number and its nonce. It records only one pending
 request of the session's issue that Compass has shown and that has not
-changed since, and blocks with the reason otherwise. A rejected check gets a
+changed since, and blocks with the reason otherwise. `/compass:approve waiver W-<n>`
+answers the pending request for that waiver, and only while the waiver names
+the check and reason the request showed. A rejected check gets a
 `rejected` record; a rejected document returns to draft and stays there while
 its file is unchanged; a rejected guardrail 5, checkpoint or decisions request
 writes no record.
@@ -392,8 +407,8 @@ or on how many are in force:
   checkout, which every worktree reads. `/compass:delegate` and `/compass:revoke`
   take the approver from the folder that holds it and need no current issue.
 
-`g5` is covered only with `--for g5`, after the person types back a code the
-hook shows them. The code is
+`g5` is covered only with `--for g5`, and a waiver only with `--for waivers`,
+after the person types back a code the hook shows them. The code is
 16 hex characters in four groups, such as `1a2b-3c4d-5e6f-7a8b`, typed with
 or without the hyphens. A `/compass:approve`, `/compass:reject` or
 `/compass:delegate` whose input has no prompt id is refused, and so is a

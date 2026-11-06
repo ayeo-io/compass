@@ -1338,6 +1338,17 @@ named gave the approval. Anyone who can edit `compass.yml` can write any name
 and date. Repository permissions and review of the pull request that changes
 `compass.yml` are the control.
 
+**A waiver of one check on one issue is approved like any other subject.** From
+9.0.0 a waiver in an issue's manifest (`compass waiver add`) excuses its one
+check on that issue only once a `human-approval` record names it. The record
+comes from a typed `/compass:approve`, a terminal, or an agent under a
+delegation the person typed with `--for waivers` and confirmed with its code.
+No default delegation covers a waiver. The check `human-approval-present` and
+the checks of guardrail `G5` are never waived. The same limits hold as for any
+approval: Compass checks the approver's name against `approvers.waiver`, or the
+owner, and does not authenticate the person, and anyone who can write
+`manifest.yml` can write a record. See `docs/waivers.md`.
+
 **Conformance is a statement about the configuration, not about the work.** A project that unlocks a framework entry is reported non-conformant on every
 `compass check` and `compass approach show`. The
 line states that the configuration departs from the framework's locks. It does

@@ -2,7 +2,7 @@
 """Record a person's approval: of a human check, a checkpoint or a set of
 decisions taken for the person.
 
-The verb takes exactly one of four forms:
+The verb takes exactly one of five forms:
 
 - `--check <id>` reads the check from the issue's effective view and registers
   a `human-approval` entry in the manifest's evidence, with `check: <id>`.
@@ -24,6 +24,10 @@ The verb takes exactly one of four forms:
   and the stage's `waited` outcome citing it (`checkpoint_outcomes`). No check
   reads the type, so the answer never clears guardrail `G5`, a human check or
   a waiver. `compass evidence add` refuses the type.
+- `--waiver W-<n>` approves one waiver of the issue (`waiver_records`): one
+  `human-approval` record with `waiver: W-<n>` and the check and reason the
+  waiver names. A delegated approval of a waiver needs a delegation typed with
+  `--for waivers`. The record never clears guardrail `G5`.
 
 A record holds the issue, the issue's generation and the time, which the verb
 stamps itself, so a person cannot record an approval for another issue or
@@ -67,16 +71,16 @@ def _terminal_attached():
 def _checks_for(args):
     """Refuse a call that has not one of the four forms (argparse also does)."""
     forms = [bool(args.check), bool(getattr(args, "guardrail", None)),
-             bool(args.decisions), bool(getattr(args, "checkpoint", None))]
+             bool(args.decisions), bool(getattr(args, "checkpoint", None)),
+             bool(getattr(args, "waiver", None))]
     if sum(forms) != 1:
-        raise CompassError("compass evidence approve: give exactly one of --check, "
-                           "--guardrail, --decisions or --checkpoint.")
+        raise CompassError(f"compass evidence approve: {approvals.ONE_FORM}.")
 
 
 def answer_of(args, provenance):
     """The `approvals.Answer` an argparse namespace of this verb gives."""
     _checks_for(args)
-    for form in ("check", "guardrail", "checkpoint"):
+    for form in ("check", "guardrail", "checkpoint", "waiver"):
         value = getattr(args, form, None)
         if value:
             return approvals.Answer(form, value, args.decision, args.approver, args.role,
@@ -259,6 +263,9 @@ def register(evidence_subs):
                       help="answer the hand-off of this checkpoint stage (assess, specify, "
                            "build or ship; on an issue assessed before 9.0.0, a legacy "
                            "stage such as define)")
+    form.add_argument("--waiver", metavar="W-N",
+                      help="approve this waiver of the issue (compass waiver add); records an "
+                           "approval only")
     issue_arg(p)
     p.add_argument("--approver", help="the approver's person id; required unless --delegated")
     p.add_argument("--role", help="the role the approver acts in; required unless --delegated")

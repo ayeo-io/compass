@@ -150,6 +150,11 @@ owes one when its own approach sets it. The line is the manifest's
 `compass quick-fix finish` or `compass acceptance record`; a landing refuses
 the issue without one (`docs/release-line.md`).
 
+A waiver excuses one check on one issue (the manifest's `waivers:`). Write it
+with `compass waiver add --check <id> --reason "..."`, ask with `compass
+evidence request --waiver W-<n>`, and stop: only a person, or an agent under a
+delegation typed `--for waivers`, approves it (`docs/waivers.md`).
+
 A new project has no `governance/` directory: the shipped default preset is in
 force, and `compass.yml` holds only what differs from it. An unmigrated 5.x
 project runs on its own copied `governance/` until `compass policy migrate`

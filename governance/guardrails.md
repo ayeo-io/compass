@@ -395,6 +395,13 @@ _(none yet - the shipped default guardrails apply as-is)_
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart
   and does not fail the run. `docs/generation-store.md` has the details.
+- **A waived check** is a check that failed on an issue whose approved waiver
+  excuses it (`compass waiver add`, approved with a `human-approval` record
+  that names the waiver; ADR-094). It is labelled WAIVED, with the waiver, its
+  reason, the approver and the record id, is counted apart and does not fail
+  the run. A waiver nobody approved changes nothing and is named in a notice.
+  `human-approval-present` and the rows of guardrail `G5` are never waived.
+  `docs/waivers.md` has the details.
 - **The pre-tool hook** enforces red-before-green in service of `G1`. It is
   approach-aware and does not block on a spike.
 - **The review at the `verify` stage**, run in the issue's own session (ADR-090), for the

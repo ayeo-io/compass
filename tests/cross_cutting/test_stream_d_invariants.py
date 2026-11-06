@@ -128,6 +128,8 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # layering record`, the only writers of the
                                   # strategy's two records. GROUPS, so a later
                                   # record verb has a home.
+    "waiver",                     # #357 (ADR-094): `compass waiver add|withdraw`,
+                                  # one check waived on one issue. A GROUP.
 }
 
 

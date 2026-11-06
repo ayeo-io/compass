@@ -97,6 +97,7 @@ same commit.
 | `cli/compass_pkg/preset_test.py`, `cli/compass_pkg/preset_init.py` | `docs/policy-test.md` |
 | `cli/compass_pkg/policy_update.py` | `docs/policy-update.md` |
 | `cli/compass_pkg/waivers.py` | `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md` |
+| `cli/compass_pkg/waiver_records.py`, `cli/compass_pkg/waiver_cmd.py`, `tests/test_waiver_records.py` | `docs/waivers.md` |
 | `cli/compass_pkg/layers.py`, `cli/compass_pkg/merge.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/locks.py` | `governance/guardrails.md` |
 | `cli/compass_pkg/check_set.py`, `governance/check-set.yml`, `tests/fixtures/check-set-digests.yml` | `governance/guardrails.md` |

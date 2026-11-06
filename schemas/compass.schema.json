@@ -236,11 +236,15 @@
       "description": "Lists of the people who may approve a waiver, by kind.",
       "properties": {
         "issue-waiver": {
-          "description": "The names that may approve a waiver in an issue. When absent, the owner approves.",
+          "description": "The names that may approve a waiver in an issue, read as `waiver` from 9.0.0 when that list is absent. When both are absent, the owner approves.",
           "type": "array"
         },
         "project-waiver": {
           "description": "The names that may approve a waiver in the project file. A parent writes the list; when it is absent, the owner approves.",
+          "type": "array"
+        },
+        "waiver": {
+          "description": "The names that may approve a waiver of one check on one issue (ADR-094). When absent, issue-waiver is read; when both are absent, the owner approves.",
           "type": "array"
         }
       },

@@ -2,7 +2,7 @@
 
 This page shows how to write a waiver, a lock, an unlock, an approver list and a layer in `compass.yml`. It is for the owner of a project that departs from the shipped default. The settings keys (adoption, autonomy and the rest) are in [configuration.md](configuration.md). This page covers the governance edits.
 
-A waiver is a recorded departure from the shipped default, with a reason and a named approver. The decision behind it is `ADR-039`, the architecture decision record that says who may approve a departure from the shipped default and what a lock protects. The finding codes that lint prints are in `docs/policy-lint.md`.
+From 9.0.0 a waiver of one check on one issue is written with `compass waiver add` and approved like any other subject; see [waivers.md](waivers.md). A waiver is a recorded departure from the shipped default, with a reason and a named approver. The decision behind it is `ADR-039`, the architecture decision record that says who may approve a departure from the shipped default and what a lock protects. The finding codes that lint prints are in `docs/policy-lint.md`.
 
 ## A first waiver
 

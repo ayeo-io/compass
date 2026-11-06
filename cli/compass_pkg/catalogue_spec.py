@@ -305,7 +305,7 @@ GOVERNANCE_DRIFT = ("advisory", "strict")
 # so a compass.yml that still holds the key loads, and `compass policy lint` names it.
 LIVING_SPEC = ("land", "refresh")
 # The approver lists a layer names (ADR-039); an unlock is the owner's.
-APPROVER_KINDS = ("issue-waiver", "project-waiver")
+APPROVER_KINDS = ("waiver", "issue-waiver", "project-waiver")
 
 # The classifier compares at most this many named set values (ADR-037).
 LABEL_CAP = 8
@@ -586,8 +586,12 @@ TOP_DESCRIPTIONS = {
     "owner": "The name of the person who owns the project's configuration. The owner approves "
              "waivers and unlocks unless a list of approvers says otherwise.",
     "approvers": "Lists of the people who may approve a waiver, by kind.",
-    "approvers.issue-waiver": "The names that may approve a waiver in an issue. When absent, "
-                              "the owner approves.",
+    "approvers.waiver": "The names that may approve a waiver of one check on one issue "
+                        "(ADR-094). When absent, issue-waiver is read; when both are "
+                        "absent, the owner approves.",
+    "approvers.issue-waiver": "The names that may approve a waiver in an issue, read as "
+                              "`waiver` from 9.0.0 when that list is absent. When both are "
+                              "absent, the owner approves.",
     "approvers.project-waiver": "The names that may approve a waiver in the project file. A "
                                 "parent writes the list; when it is absent, the owner approves.",
     "capabilities": "Named switches for new blocking behavior. Each is off in the shipped "

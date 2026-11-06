@@ -50,6 +50,8 @@ RECORD_TRIGGERS = {
     "cmd_depends_remove": None,
     "cmd_changed_file_add": None,
     "cmd_quick_fix_start": None,
+    "cmd_waiver_add": None,
+    "cmd_waiver_withdraw": None,
 }
 
 #: The argument that names the issue each command in `RECORD_TRIGGERS` changes, so the

@@ -461,7 +461,8 @@ def test_agf_12_docs_and_decision_entry_state_the_rule():
     schema = json.loads((ROOT / "schemas" / "manifest.schema.json").read_text())
     props = schema["properties"]["evidence"]["items"]["properties"]
     assert props["guardrail"]["type"] == "string"
-    assert props["waiver"]["type"] == "object"
+    # An issue layer waiver's approval names a map (ADR-039); a 9.0.0 waiver's, its id.
+    assert props["waiver"]["type"] == ["object", "string"]
     reference = (ROOT / "schemas" / "manifest.reference.yml").read_text(encoding="utf-8")
     assert re.search(r"^\s+guardrail:\s+#", reference, re.M)
     assert re.search(r"^\s+waiver:\s+#", reference, re.M)
@@ -527,7 +528,8 @@ def test_agf_16_guardrail_form_refuses_rejected(tmp_path):
 # The functions under cli/ that build a `human-approval` record holding a
 # decision. A new one must be added here, so its test is written with it.
 KNOWN_WRITERS = {("compass_pkg/approvals.py", "_record_check"),
-                 ("compass_pkg/approvals.py", "_record_guardrail")}
+                 ("compass_pkg/approvals.py", "_record_guardrail"),
+                 ("compass_pkg/approvals.py", "_record_waiver")}
 
 
 def _writers():
@@ -585,6 +587,21 @@ def test_agf_18_every_writer_names_a_subject(tmp_path):
     assert code == 0, out + err
     record = manifest_of(task_dir)["evidence"][-1]
     assert record["type"] == "human-approval" and subject_named(record)
+
+    # _record_waiver (ADR-094): the record names the waiver it approves.
+    import approval_support
+    (tmp_path / "waiver").mkdir()
+    wroot = approval_support.project(tmp_path / "waiver")
+    code, out, err = approval_support.run(wroot, "waiver", "add", "--check", "suite-passed",
+                                          "--reason", "x")
+    assert code == 0, out + err
+    code, out, err = approval_support.run(wroot, "evidence", "approve", "--waiver", "W-1",
+                                          "--approver", "jed72", "--role", "owner",
+                                          terminal=True)
+    assert code == 0, out + err
+    record = approval_support.manifest_of(wroot)["evidence"][-1]
+    assert record["type"] == "human-approval" and subject_named(record)
+    assert not approval_records.gives_g5(record)
 
     # `compass evidence add --type human-approval` is refused (`TRC-G2`), so it
     # is not a writer.

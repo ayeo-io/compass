@@ -737,8 +737,16 @@
             "description": "For human-approval: the guardrail this sign-off is for; only `G5` is read. `compass evidence approve --guardrail` writes it, with the value `G5`. A human-approval record whose guardrail is not exactly `G5` never clears `human-approval-present`."
           },
           "waiver": {
-            "type": "object",
-            "description": "For human-approval of a waiver: the waiver this approval is for, naming its scope and entry. The record was given for that waiver, so it never clears `human-approval-present`, the check of guardrail `G5`."
+            "type": ["object", "string"],
+            "description": "For human-approval of a waiver: the waiver this approval is for. From 9.0.0 the id of one of the issue's `waivers` (W-<n>); before, a map naming an issue layer waiver's scope and entry. The record was given for that waiver, so it never clears `human-approval-present`, the check of guardrail `G5`."
+          },
+          "waived_check": {
+            "type": "string",
+            "description": "For human-approval of a waiver: the check the waiver named when the person approved it. A waiver that names another check now is not approved."
+          },
+          "waiver_reason": {
+            "type": "string",
+            "description": "For human-approval of a waiver: the reason the waiver gave when the person approved it. A waiver whose reason changed is not approved."
           }
         }
       }
@@ -1197,6 +1205,23 @@
       "type": "object",
       "description": "Optional. The issue's own configuration layer (ADR-036, ADR-043): a person-written input. Editing it changes nothing until `compass approach evaluate --write` commits it into a new generation. Its keys are checked by `compass policy lint --issue`.",
       "additionalProperties": true
+    },
+    "waivers": {
+      "type": "array",
+      "description": "Optional. The issue's waivers (ADR-094): each excuses one check on this issue once a person approves it with a human-approval record that names it. Written by `compass waiver add` and `compass waiver withdraw`.",
+      "items": {
+        "type": "object",
+        "required": ["id", "check", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "pattern": "^W-[1-9][0-9]*$", "description": "The waiver's id, W-<n>, unique in the issue."},
+          "check": {"type": "string", "description": "The id of the one check the waiver excuses."},
+          "reason": {"type": "string", "minLength": 1, "description": "Why the check may be excused. A waiver with no reason excuses nothing."},
+          "requested_at": {"type": "string", "description": "ISO 8601: when the waiver was written."},
+          "requested_by": {"type": "string", "description": "Who asked for the waiver."},
+          "withdrawn_at": {"type": "string", "description": "ISO 8601: when an approved waiver was withdrawn. A withdrawn waiver excuses nothing."}
+        }
+      }
     },
     "status_reason": {
       "type": "string",

@@ -1,7 +1,7 @@
 # compass_pkg.approval_requests - `compass evidence request` and the request files
 """An agent asks a person for an approval with a request (ADR-068 decision 1).
 
-`compass evidence request` takes the four subject forms of `compass evidence
+`compass evidence request` takes the subject forms of `compass evidence
 approve`, runs the same refusals (`approvals.record` with `save=False`), and
 writes one request file:
 
@@ -10,6 +10,9 @@ writes one request file:
 A request holds facts the CLI derives - the issue, its generation and labels,
 the subject, a document's digest - and the agent's description of the scope.
 It also holds a single-use `nonce`, which the record that answers it copies.
+A request for a waiver also holds `waiver`: the check and the reason the
+waiver names when the request is written, which the person is shown and the
+prompt hook compares with the manifest before it records the approval.
 A request for the `specify`, `build` or `ship` checkpoint of a path issue, or the
 `refine`, `implement` or `verify` checkpoint of an issue assessed before 9.0.0,
 that the four-layer acceptance strategy applies to also holds `review`: the stage
@@ -150,6 +153,8 @@ def digest(request):
     # Covered only when present, so a request written before the field keeps its digest.
     if request.get("review"):
         shown["review"] = request["review"]
+    if request.get("waiver"):
+        shown["waiver"] = request["waiver"]
     return hashlib.sha256(json.dumps(shown, sort_keys=True, default=str)
                           .encode("utf-8")).hexdigest()
 
@@ -165,6 +170,9 @@ def subject_text(request):
         return f"document '{value}'"
     if form == "checkpoint":
         return f"the {value} checkpoint"
+    if form == "waiver":
+        check = (request.get("waiver") or {}).get("check")
+        return f"waiver {value} of check '{check}' on this issue only"
     return "the decisions taken for you"
 
 
@@ -215,8 +223,12 @@ def shown_text(request, issue_form=False):
         lines.append(f"  document digest {str(request['document_digest'])[:12]}")
     if request.get("scope"):
         lines.append(f"  the agent's description: \"{request['scope']}\"")
+    if request.get("waiver"):
+        lines.append(f"  the reason the waiver records: \"{request['waiver'].get('reason')}\"")
     lines += [f"  {line}" for line in review_lines(request)]
     flag = f" --issue {request.get('issue')}" if issue_form else ""
+    if request.get("form") == "waiver":
+        lines.append(f"  /compass:approve waiver {request.get('value')}{flag} also answers it.")
     lines.append(f"  Type /compass:approve {request['number']}{flag} or /compass:reject "
                  f"{request['number']} <reason>{flag}.")
     return "\n".join(lines)
@@ -282,6 +294,10 @@ def write(task_dir, form, value, scope):
                "document_digest": None,
                "requested_at": _now(),
                "nonce": secrets.token_hex(16)}
+    if form == "waiver":
+        from compass_pkg import waiver_records
+        held = waiver_records.find(task, value) or {}
+        request["waiver"] = {"check": held.get("check"), "reason": held.get("reason")}
     if form == "checkpoint":
         from compass_pkg import checkpoint_outcomes
         review = checkpoint_outcomes.review(task, task_dir, value)
@@ -297,7 +313,7 @@ def write(task_dir, form, value, scope):
 # --- the verb -------------------------------------------------------------------------
 
 def _form_of(args):
-    for form in ("check", "guardrail", "checkpoint"):
+    for form in ("check", "guardrail", "checkpoint", "waiver"):
         value = getattr(args, form, None)
         if value:
             return form, value
@@ -376,6 +392,8 @@ def register(evidence_subs):
     form.add_argument("--checkpoint", metavar="STAGE",
                       help="the hand-off of this checkpoint stage: a path stage, or a "
                            "legacy one on an issue assessed before 9.0.0")
+    form.add_argument("--waiver", metavar="W-N",
+                      help="the approval of this waiver of the issue (compass waiver add)")
     issue_arg(p)
     p.add_argument("--scope", default="",
                    help="what the approval covers, in your words; required with --check and "

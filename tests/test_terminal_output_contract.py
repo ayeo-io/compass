@@ -1058,6 +1058,10 @@ _TAIL_ARGV = {
     "tdd-red": ["tdd-red", "--scenario", "TRC-1", "--", "sh", "-c", "echo '1 failed'; exit 1"],
     "tdd-green": ["tdd-green", "--scenario", "TRC-1", "--", "true"],
     "layering record": ["layering", "record", "--", "true"],
+    # `waiver add` sorts before `waiver withdraw`, which removes the waiver it wrote.
+    "waiver add": ["waiver", "add", "--check", "suite-passed", "--reason",
+                   "the suite runs only in the nightly job"],
+    "waiver withdraw": ["waiver", "withdraw", "W-1"],
     # A path issue's follow-up must link to a GitHub issue (ADR-093).
     "follow-up add": ["follow-up", "add", "FU-9", "--github", "ayeo-io/compass#9",
                       "--summary", "settle this at ship"],

@@ -793,6 +793,10 @@ def test_d2_repairs_change_only_retired_names():
     `governance/routing-policy.md` (list_items 64 -> 66) gained the
     bullets on the two policy keys the settings add.
 
+    One more was re-baselined by #357, step 4 (waivers):
+    `governance/guardrails.md` (list_items 95 -> 96) gained the bullet "A
+    waived check", on the WAIVED row of `compass check`.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

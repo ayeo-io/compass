@@ -36,6 +36,9 @@ The forms:
   `decisions_taken.approve_set`.
 - `checkpoint` records a person's answer to a checkpoint hand-off: one
   `checkpoint-approval` record, and the stage's `waited` outcome citing it.
+- `waiver` approves one waiver of the issue (`waiver_records`): one
+  `human-approval` record with `waiver: W-<n>`, the check it excuses and the
+  reason. It records an approval only, and never clears guardrail `G5`.
 
 A record holds the issue, the issue's generation and the time, which the
 writer stamps itself. Callers hold `lock(task_dir)` around a record and any
@@ -89,9 +92,12 @@ EVIDENCE_ADD_REFUSALS = {
         "prove the layer rules hold. Nothing was written."),
 }
 
-#: The four subject forms, as `Answer.form` names them. 9.0.0 removed `artifact`, which
-#: approved a document, with the document statuses (ADR-091).
-FORMS = ("check", "guardrail", "checkpoint", "decisions")
+#: The subject forms, as `Answer.form` names them. 9.0.0 removed `artifact`, which
+#: approved a document, with the document statuses (ADR-091), and added `waiver`
+#: (ADR-094).
+FORMS = ("check", "guardrail", "checkpoint", "decisions", "waiver")
+#: What every refusal of a missing or doubled form says.
+ONE_FORM = "give exactly one of --check, --guardrail, --decisions, --checkpoint or --waiver"
 
 #: Held while an answer is recorded and the state that goes with it changes.
 LOCK = ".approval.lock"
@@ -152,13 +158,16 @@ def checked(answer):
     """The answer with its text normalised, or the refusal every path gives
     before reading the issue."""
     if answer.form not in FORMS:
-        raise CompassError(f"{VERB}: give exactly one of --check, --guardrail, "
-                           f"--decisions or --checkpoint.")
+        raise CompassError(f"{VERB}: {ONE_FORM}.")
     if answer.decision not in DECISIONS:
         raise CompassError(f"{VERB}: the decision must be one of {' or '.join(DECISIONS)}, "
                            f"not '{answer.decision}'.")
     if answer.form == "guardrail":
         _guardrail_form(answer)
+    if answer.form == "waiver" and answer.decision != approval_records.APPROVED:
+        raise CompassError(f"{VERB}: --waiver records an approval only, not --decision "
+                           f"{answer.decision}. A waiver nobody approves excuses nothing, "
+                           f"and `compass waiver withdraw` removes it. Nothing was written.")
     approver = None if answer.approver is None else approver_name(answer.approver)
     role, scope = text(answer.role), text(answer.scope)
     required = ((("--role", role), ("--scope", scope)) if answer.form in ("check", "guardrail")
@@ -192,7 +201,7 @@ def record(task_dir, answer, save=True):
     answer = checked(answer)
     writer = {"check": _record_check, "guardrail": _record_guardrail,
               "checkpoint": _record_checkpoint,
-              "decisions": _record_decisions}[answer.form]
+              "decisions": _record_decisions, "waiver": _record_waiver}[answer.form]
     return writer(task_dir, answer, save)
 
 
@@ -429,3 +438,47 @@ def _record_decisions(task_dir, answer, save):
     from compass_pkg import decisions_taken
     outcome, detail, data, ids = decisions_taken.approve_set(task_dir, answer, save)
     return Recorded(outcome, detail, data, ids)
+
+
+def _record_waiver(task_dir, answer, save):
+    """The approval of one waiver of the issue. The record copies the check and
+    the reason the waiver names now, so a waiver changed after it was approved
+    no longer reads as approved (`waiver_records.approval`)."""
+    from compass_pkg import waiver_records
+    waiver_id = answer.value
+    if not isinstance(waiver_id, str) or not waiver_records.ID.fullmatch(waiver_id):
+        raise CompassError(f"{VERB}: --waiver takes a waiver id such as W-1, not "
+                           f"'{waiver_id}'. Nothing was written.")
+    task, task_path = load_manifest(task_dir)
+    why = waiver_records.refusal(task, task_dir, waiver_id, answer.approver)
+    if why:
+        raise CompassError(f"{VERB}: {why}. Nothing was written.")
+    waiver = waiver_records.find(task, waiver_id)
+    taken = _taken(task)
+    number = 1
+    while f"EV-WAIVER-{waiver_id}-{number}" in taken:
+        number += 1
+    evidence_id = f"EV-WAIVER-{waiver_id}-{number}"
+    scope = answer.scope or f"waiver {waiver_id} of {waiver['check']}"
+    entry = {"id": evidence_id, "type": "human-approval",
+             waiver_records.SUBJECT: waiver_id,
+             waiver_records.CHECK: waiver["check"],
+             waiver_records.REASON: waiver["reason"],
+             "approver": answer.approver, "role": answer.role, "scope": scope,
+             "decision": approval_records.APPROVED, "timestamp": _stamp(),
+             "issue": _slug(task_dir), "generation": task.get("generation")}
+    entry.update(answer.provenance)
+    if save:
+        task.setdefault("evidence", []).append(entry)
+        save_manifest(task, task_path)
+    return Recorded(
+        f"{VERB}: waiver {waiver_id} of {waiver['check']} - approved by {answer.approver} "
+        f"recorded as {evidence_id}.",
+        [f"record     : {evidence_id} in manifest.yml evidence",
+         f"waives     : {waiver['check']} on issue {entry['issue']} only",
+         f"reason     : {waiver['reason']}"],
+        dict(waiver=waiver_id, check=waiver["check"], answer=entry["decision"],
+             evidence_id=evidence_id, approver=answer.approver, role=answer.role,
+             scope=scope, issue=entry["issue"], generation=entry["generation"],
+             at=entry["timestamp"]),
+        [evidence_id])

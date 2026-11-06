@@ -31,7 +31,10 @@ nothing recorded. For one of the four it refuses, writing nothing, when:
   `prompt_id`: it only ends delegations, and a person can always end one.
 
 `/compass:approve [n]` and `/compass:reject [n] <reason>` answer one pending,
-current, shown request of the session's issue. Compass shows a request at the
+current, shown request of the session's issue. `/compass:approve waiver W-<n>`
+answers the pending request for that waiver (ADR-094); the hook records it
+only while the waiver's check and reason are the ones the request showed.
+Compass shows a request at the
 end of the agent's turn (the Stop hook); the hook records a request only
 while its digest equals the one shown. Each refusal names its cause, and the
 block reason reaches the person only. A recorded answer goes through
@@ -204,10 +207,20 @@ def _session(event, env, command, entrypoint):
     # which worktree (`_answer`).
     issue, args = _split_issue_flag(
         command, " ".join(str(event.get("command_args") or "").split()))
-    if command == "approve" and (args and not args.isdigit() or issue and not args):
+    if command == "approve" and (args and not args.isdigit() and not _waiver_words(args)
+                                 or issue and not args):
         raise Refused(f"Compass: {_usage(command)} Nothing was written.")
     return Session(command, args, session_id, str(event.get("prompt_id") or ""), project,
                    "", "", "", "", "", entrypoint, compass_dir=compass_dir, issue=issue)
+
+
+def _waiver_words(args):
+    """The waiver id `/compass:approve waiver W-<n>` names, or None."""
+    from compass_pkg import waiver_records
+    words = args.split()
+    if len(words) == 2 and words[0] == "waiver" and waiver_records.ID.fullmatch(words[1]):
+        return words[1]
+    return None
 
 
 def _split_issue_flag(command, text):
@@ -415,8 +428,9 @@ def _pending(session):
 def _usage(command):
     if command == "approve":
         return ("/compass:approve takes a pending request number, `/compass:approve <n>`, "
-                "or the number and the issue, `/compass:approve <n> --issue <issue>`. "
-                "With no argument it answers the one request pending in any worktree.")
+                "or the number and the issue, `/compass:approve <n> --issue <issue>`, or a "
+                "waiver, `/compass:approve waiver W-<n>`. With no argument it answers the "
+                "one request pending in any worktree.")
     return ("/compass:reject takes an optional pending request number, then your reason: "
             "`/compass:reject <n> <reason>`, or with the issue "
             "`/compass:reject <n> <reason> --issue <issue>`.")
@@ -559,6 +573,47 @@ def _choose_across(session, number, candidates, listing):
     return None
 
 
+def _choose_waiver(session, waiver, candidates):
+    """`(issue folder, slug, request)` for the one pending request for this
+    waiver on the candidate issues, or a refusal. A waiver is approved only
+    through a request, so the person has been shown what it excuses."""
+    hits = []
+    for task_dir, slug in candidates:
+        pending, _ = _pending_in(task_dir, slug)
+        hits += [(task_dir, slug, r) for r in pending
+                 if r.get("form") == "waiver" and r.get("value") == waiver]
+    if len(hits) == 1:
+        return hits[0]
+    if hits:
+        lines = [f"Compass: waiver {waiver} has a pending request on more than one issue; "
+                 f"nothing was written. Choose one:"]
+        lines += [_row_text(t, s, r, False) for t, s, r in hits]
+        lines.append("Type " + " or ".join(f"/compass:approve waiver {waiver} --issue {s}"
+                                           for _, s, _ in hits) + ".")
+        raise Refused("\n".join(lines))
+    where = f"issue {session.issue}" if session.issue else "the current issue of any worktree"
+    raise Refused(f"Compass: no request for waiver {waiver} is pending on {where}. A waiver "
+                  f"is approved only through a request, so you see what it excuses: the "
+                  f"agent asks with `compass evidence request --waiver {waiver}`. Nothing "
+                  f"was written.")
+
+
+def _waiver_changed(session, request):
+    """Refuse a waiver request whose waiver no longer names the check and the
+    reason the request showed: the person approved what they were shown."""
+    from compass_pkg import waiver_records
+    task, _ = load_manifest(session.task_dir)
+    held = waiver_records.find(task, request.get("value")) or {}
+    shown = request.get("waiver") or {}
+    if (held.get("check"), held.get("reason")) != (shown.get("check"), shown.get("reason")):
+        approval_requests.close(session.task_dir, request, approval_requests.STALE,
+                                reason="the waiver changed after the request was written")
+        raise Refused(f"Compass: waiver {request.get('value')} no longer names the check and "
+                      f"reason request {request['number']} showed you. Nothing was written; "
+                      f"the request is closed, and the agent must ask again with compass "
+                      f"evidence request --waiver {request.get('value')}.")
+
+
 def _shown(session, request):
     """The request as Compass shows the person, with the `--issue` form when
     another worktree's current issue holds a request with the same number."""
@@ -620,7 +675,10 @@ def _answer(session, env):
     _refuse_used_prompt(session)
     listing = worktree_lookup.list_worktrees(session.project)
     _refuse_replayed(session, _every_issue_dir(listing))
-    if session.command == "approve":
+    waiver = _waiver_words(session.args) if session.command == "approve" else None
+    if waiver:
+        number, reason = None, ""
+    elif session.command == "approve":
         number = int(session.args) if session.args else None
         reason = ""
     else:
@@ -628,7 +686,8 @@ def _answer(session, env):
         if number is None and reason.startswith("EV-"):
             return _overrule(session, env, listing, reason)
     candidates = _candidates(session, env, listing)
-    chosen = _choose_across(session, number, candidates, listing)
+    chosen = (_choose_waiver(session, waiver, candidates) if waiver
+              else _choose_across(session, number, candidates, listing))
     if chosen is None:
         if session.command == "approve" and not session.issue:
             return _review(session, env, listing)
@@ -741,6 +800,8 @@ def _overrule(session, env, listing, text):
 
 def _approve(session, request, where=""):
     _current(session, request)
+    if request.get("form") == "waiver":
+        _waiver_changed(session, request)
     answer = approvals.Answer(request["form"], request.get("value"),
                               approval_records.APPROVED, session.approver, session.role,
                               request.get("scope") or "", provenance(session, request))

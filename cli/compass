@@ -77,7 +77,7 @@ from compass_pkg.policy_cmd import register_preset as register_preset_parser  # 
 from compass_pkg.approve_cmd import register as register_approve_parser  # noqa: E402
 from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
 from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
-from compass_pkg import isolation, issue_link, layering  # noqa: E402
+from compass_pkg import isolation, issue_link, layering, waiver_cmd  # noqa: E402
 from compass_pkg.command_guard import before_command  # noqa: E402
 from compass_pkg.effective import MajorRefusal  # noqa: E402
 
@@ -470,6 +470,7 @@ def build_parser():
     register_record_parser(sub)
     isolation.register(sub)
     layering.register(sub)
+    waiver_cmd.register(sub)
 
     pinit = sub.add_parser(
         "init",

@@ -35,7 +35,7 @@ import re as _re
 from compass_pkg.stable_ids import APPROACH_SPIKE
 from compass_pkg.core import CHECK_NAME_MAP, migrate_map_section
 from compass_pkg.landed_by import LANDED_BY_RELAXES, landed_by_holds, _check_landed_by_resolves
-from compass_pkg.check_results import ADVISORY_FAILURE
+from compass_pkg.check_results import ADVISORY_FAILURE, WAIVED
 from compass_pkg.checks import NOTHING_TO_CHECK, _check_backfills_paid, _check_changed_code_traces, _check_claim_traces, _check_evidence_identity_matches, _check_command_passes, _check_declared_tests_resolve, _check_dod_evidence_typed, _check_gate_evidence, _check_human_approval, _check_no_trusted_rerun, _check_scenario_has_id_and_intent, _check_scenarios_are_executable, _check_scenarios_have_tests, _check_spike_conclusion_present, _check_spike_no_production_changes, _check_suite_passed
 from compass_pkg.binding import _check_evidence_matches_tree
 from compass_pkg.core import FRAMEWORK_ROOT, exit_for_mode, find_governance, load_mode, load_manifest, load_yaml, mode_banner, reading_matches, resolve_issue_dir
@@ -195,7 +195,7 @@ CHECK_GUIDANCE = {
 }
 
 
-def summarise_counts(ran, failures, nothing_to_check=0, advisory=0):
+def summarise_counts(ran, failures, nothing_to_check=0, advisory=0, waived=0):
     """The one-line verdict `compass check` ends on.
 
     Three of the default checks can clear with nothing to check - no BDD
@@ -205,8 +205,12 @@ def summarise_counts(ran, failures, nothing_to_check=0, advisory=0):
     apart so the count never overstates.
 
     A check that failed and does not block (an advisory failure) is counted
-    apart too: it is not a pass, and it does not fail the run.
+    apart too: it is not a pass, and it does not fail the run. So is a check
+    an approved waiver excuses on this issue.
     """
+    if waived:
+        line = summarise_counts(ran - waived, failures, nothing_to_check, advisory)
+        return line[:-1] + f", {waived} waived (an approved waiver excuses it)."
     if advisory:
         tail = "%d failed as advisory (does not block)" % advisory
         if nothing_to_check:
@@ -261,6 +265,17 @@ class _CheckRun:
         self.nothing = 0
         self.refused = set()  # checks not run because their implementation major differs
         self.advisory = 0
+        self.waived = 0
+        # The checks an approved waiver excuses on this issue (ADR-094). An
+        # unreadable check set or project file excuses nothing: every check runs.
+        from compass_pkg import waiver_records
+        try:
+            self.excused = waiver_records.excused(task, task_dir)
+            self.never_gates = waiver_records.never_waived_gates()
+        except Exception as exc:                        # noqa: BLE001
+            self.excused, self.never_gates = {}, set()
+            if waiver_records.listed(task):
+                self.line(f"  waivers not read ({exc}), so every check runs as it is")
 
     def line(self, text):
         self.rows.append(("line", text))
@@ -277,6 +292,19 @@ class _CheckRun:
     def result(self, name, passed, detail):
         self.results.append((getattr(self, "current", "?"), name, passed, detail))
         self.rows.append(("result", (name, passed, detail)))
+
+    def waive(self, name, passed, detail):
+        """`(passed, detail)`, made `WAIVED` when the check failed and an
+        approved waiver of this issue excuses it. A check that was refused
+        (another implementation major), a row of a gate the set never waives,
+        a pass and an advisory finding are returned as they are."""
+        if passed or name not in self.excused or name in self.refused \
+                or getattr(self, "current", None) in self.never_gates:
+            return passed, detail
+        waiver, record = self.excused[name]
+        self.waived += 1
+        return WAIVED, (f"waived by {waiver['id']} ({waiver['reason']}), approved by "
+                        f"{record['approver']} in {record['id']} - {detail}")
 
 
 def _verbose_lines(run):
@@ -300,6 +328,8 @@ def _verbose_lines(run):
                 out.append("    NOTHING TO CHECK %s: %s" % (name, detail))
             elif passed is ADVISORY_FAILURE:
                 out.append("    ADVISORY %s: %s" % (name, detail))
+            elif passed is WAIVED:
+                out.append("    WAIVED %s: %s" % (name, detail))
             elif passed:
                 out.append("    PASS %s: %s" % (name, detail))
             else:
@@ -310,7 +340,7 @@ def _verbose_lines(run):
                     out.append("         why : %s" % g["why"])
                     out.append("         fix : %s" % g["fix"])
     out += ["-" * 60,
-            summarise_counts(run.ran, run.failures, run.nothing, run.advisory)]
+            summarise_counts(run.ran, run.failures, run.nothing, run.advisory, run.waived)]
     return out
 
 
@@ -365,14 +395,23 @@ def _summary_lines(run):
             advisory_rows.append((n, d))
     nothing += (", %d failed as advisory (does not block)" % len(advisory_rows)
                 if advisory_rows else "")
+    # A waived check failed and an approved waiver excuses it on this issue: it
+    # is not a pass and not a failure, so it is counted apart.
+    waived_rows, waived_seen = [], set()
+    for _g, n, p, d in run.results:
+        if p is WAIVED and n not in waived_seen:
+            waived_seen.add(n)
+            waived_rows.append((n, d))
+    nothing += (", %d waived (an approved waiver excuses it)" % len(waived_rows)
+                if waived_rows else "")
     if distinct_failed:
         verdict = "FAIL - %d of %d check(s) failed%s on '%s' (%s)" % (
             distinct_failed, distinct_ran - distinct_nothing, nothing,
             run.slug, approach)
     else:
         verdict = "PASS - %d check(s) passed%s on '%s' (%s)" % (
-            distinct_ran - distinct_nothing - len(advisory_rows), nothing,
-            run.slug, approach)
+            distinct_ran - distinct_nothing - len(advisory_rows) - len(waived_rows),
+            nothing, run.slug, approach)
     out = [_fit(verdict)]
 
     # Keep the adoption-mode banner in the default view. Without it, an
@@ -398,6 +437,15 @@ def _summary_lines(run):
             out.append(_fit("... and %d more advisory (%s) - run with --verbose"
                             % (len(advisory_rows) - MAX_ITEMS,
                                ", ".join(n for n, _ in advisory_rows[MAX_ITEMS:]))))
+
+    if waived_rows:
+        out.append("")
+        for name, detail in waived_rows[:MAX_ITEMS]:
+            out.append(_fit("%s: %s" % (name, detail), "WAIVED "))
+        if len(waived_rows) > MAX_ITEMS:
+            out.append(_fit("... and %d more waived (%s) - run with --verbose"
+                            % (len(waived_rows) - MAX_ITEMS,
+                               ", ".join(n for n, _ in waived_rows[MAX_ITEMS:]))))
 
     if not failed:
         return out
@@ -425,6 +473,7 @@ def _verdicts(results):
     for _, name, passed, _ in results:
         verdict = ("nothing-to-check" if passed is NOTHING_TO_CHECK
                    else "advisory" if passed is ADVISORY_FAILURE
+                   else "waived" if passed is WAIVED
                    else "pass" if passed else "fail")
         if name not in verdicts or verdict == "fail":
             verdicts[name] = verdict
@@ -468,6 +517,14 @@ def _emit_check(run, args):
     # other notices, and reports a `config:` the generation does not hold yet.
     # `config:` is an input: the line is a notice and never fails the run.
     header = _generation_lines(run)
+    # A waiver nobody approved changes nothing; it is named with the command that
+    # asks for its approval (ADR-094).
+    from compass_pkg import waiver_records
+    try:
+        header += waiver_records.notices(run.task, run.task_dir)
+    except Exception as exc:                            # noqa: BLE001
+        if waiver_records.listed(run.task):
+            header.append(f"waivers not read ({exc}), so every check runs as it is")
     run.rows[0:0] = [("line", "  " + line) for line in header]
     if run.failures and not getattr(args, "no_count", False):
         compass_dir = os.path.dirname(os.path.dirname(
@@ -490,6 +547,7 @@ def _emit_check(run, args):
             "ran": run.ran, "failed": run.failures,
             "nothing_to_check": run.nothing,
             "advisory": run.advisory,
+            **({"waived": run.waived} if run.waived else {}),
             "notices": [t.strip() for kind, t in run.rows
                         if kind in ("line", "note") and t.strip()],
             **({"generation": run.view.generation,
@@ -500,6 +558,7 @@ def _emit_check(run, args):
                                    "nothing-to-check"
                                    if p is NOTHING_TO_CHECK else
                                    "advisory" if p is ADVISORY_FAILURE else
+                                   "waived" if p is WAIVED else
                                    "pass" if p else "fail"),
                         "detail": d}
                        for g, n, p, d in run.results],
@@ -545,10 +604,11 @@ def _stage_list_pass(run, view, task, task_dir):
             run.guardrail(row.label, "%s checks of %s" % (row.side, row.stage))
         passed = {"pass": True, "fail": False, "nothing-to-check": NOTHING_TO_CHECK,
                   "advisory": ADVISORY_FAILURE}[row.status]
+        passed, detail = run.waive(row.check, passed, row.detail)
         failed += passed is False
         nothing += passed is NOTHING_TO_CHECK
         advisory += passed is ADVISORY_FAILURE
-        run.result(row.check, passed, row.detail)
+        run.result(row.check, passed, detail)
     return len(rows), failed, nothing, advisory
 
 
@@ -586,7 +646,7 @@ def _outside_gate_pass(run, task, task_dir, refused, checks=None):
         if check in refused:
             run.refused.add(check)
             verdict = (False, refused[check])
-        passed, detail = verdict
+        passed, detail = run.waive(check, *verdict)
         run.result(check, passed, detail)
         ran += 1
         if passed is ADVISORY_FAILURE:
@@ -771,6 +831,7 @@ def cmd_check(args):
                     passed, detail,
                     (guardrails.get("checks") or {}).get(check_name) or {},
                     matches, readings)
+                passed, detail = run.waive(check_name, passed, detail)
                 if passed is ADVISORY_FAILURE:
                     run.advisory += 1
                 elif not passed:
@@ -805,6 +866,7 @@ def cmd_check(args):
             except Exception as exc:                    # noqa: BLE001
                 passed, detail = False, f"check errored: {exc}"
         run.guardrail("", "outstanding follow-ups")
+        passed, detail = run.waive("backfills-paid", passed, detail)
         run.result("backfills-paid", passed, detail)
         run.nothing += passed is NOTHING_TO_CHECK
         if not passed:
@@ -931,6 +993,7 @@ def cmd_check(args):
             passed, detail = _judge(passed, detail,
                                     declared_checks.get(check_name) or {},
                                     matches, readings)
+            passed, detail = run.waive(check_name, passed, detail)
 
             if passed is ADVISORY_FAILURE:
                 advisory += 1
@@ -973,6 +1036,7 @@ def cmd_check(args):
         except Exception as exc:                        # noqa: BLE001
             passed, detail = False, f"check errored: {exc}"
     run.guardrail("", "outstanding follow-ups")
+    passed, detail = run.waive("backfills-paid", passed, detail)
     run.result("backfills-paid", passed, detail)
     nothing_to_check += passed is NOTHING_TO_CHECK
     if not passed:

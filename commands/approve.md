@@ -1,6 +1,6 @@
 ---
 description: Approve the request Compass showed you
-argument-hint: "[<n> [--issue <slug>]]"
+argument-hint: "[<n> | waiver W-<n>] [--issue <slug>]"
 disable-model-invocation: true
 ---
 
@@ -9,6 +9,10 @@ disable-model-invocation: true
 The person typed this command. Compass's prompt hook has already acted on it
 before you read this. The person can name the request's issue with `--issue
 <slug>`, and the hook finds the request in any worktree.
+
+`/compass:approve waiver W-<n>` answers the pending request for that waiver.
+A waiver excuses one check on one issue. The hook records the approval only
+while the waiver names the check and the reason the request showed.
 
 **When Compass's result is in your context** (a line that starts "Compass
 recorded"), the approval is recorded. Say in one line what was recorded, then

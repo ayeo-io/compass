@@ -15,6 +15,10 @@ delegation covers and when it ends, then go on.
 **When the hook blocked the command**, nothing reaches you; the person saw
 why.
 
+A delegation covers a waiver only when the person typed `--for waivers`, and
+it takes effect only after they type back the confirmation code, as for
+`g5`. A waiver excuses one check on one issue, so no default covers it.
+
 **When no Compass result is in your context**, the hook did not run: tell the
 person that no delegation was made. Never create, extend or revoke a
 delegation yourself.

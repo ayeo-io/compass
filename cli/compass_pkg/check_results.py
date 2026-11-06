@@ -42,3 +42,16 @@ class _AdvisoryFailure(int):
 
 
 ADVISORY_FAILURE = _AdvisoryFailure(1)
+
+
+class _Waived(int):
+    """A check that failed on an issue whose approved waiver excuses it
+    (`waiver_records`). Truthy like the others, so it does not fail the run;
+    the views ask whether a result `is WAIVED` and show the waiver, its reason
+    and its approval, never a pass."""
+
+    def __repr__(self):
+        return "WAIVED"
+
+
+WAIVED = _Waived(1)

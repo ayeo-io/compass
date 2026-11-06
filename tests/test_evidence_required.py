@@ -151,6 +151,40 @@ def test_a_label_outside_g5_adds_nothing(live):
     assert er.evaluate(_assess(labels=["docs"]), live) == er.evaluate(_assess(), live)
 
 
+# --- the tighten-only settings the policy carries -------------------------------
+
+def test_a_signoff_label_of_the_policy_owes_what_a_g5_label_owes(live):
+    policy = dict(live, signoff_labels=["billing", "auth"])
+    assert er.signoff_labels(policy) == er.G5_LABELS + ("billing",)
+    added = er.evaluate(_assess(size="atomic", risk="trivial", labels=["billing"]), policy)
+    shipped = er.evaluate(_assess(size="atomic", risk="trivial", labels=["auth"]), live)
+    assert added == shipped
+    with pytest.raises(RoutingConflict):
+        er.evaluate(_assess(goal="exploration", labels=["billing"]), policy)
+
+
+def test_the_policy_cannot_take_a_shipped_g5_label_away(live):
+    policy = dict(live, signoff_labels=[])
+    assert er.signoff_labels(policy) == er.G5_LABELS
+    assert er.evaluate(_assess(labels=["auth"]), policy) == er.evaluate(
+        _assess(labels=["auth"]), live)
+    with pytest.raises(CompassError, match="signoff_labels"):
+        er.evaluate(_assess(), dict(live, signoff_labels="billing"))
+
+
+def test_required_evidence_of_the_policy_adds_its_tokens_where_it_matches(live):
+    policy = dict(live, require_evidence=[
+        {"id": "RP-SETTING-1", "when": {"risk": "contained"}, "add": ["security"]},
+        {"id": "RP-SETTING-2", "when": {"size": "large"}, "add": ["clarity"]}])
+    out = er.evaluate(_assess(), policy)
+    assert out["evidence_required"] == EVERY_ISSUE + ["security", "outer-loop"]
+    assert "verify.security" in out["gates"]
+    assert out["rules_fired"] == ["RP-EVID-LIGHT", "RP-SETTING-1"]
+    assert er.evaluate(_assess(goal="exploration"), policy)["evidence_required"] == []
+    with pytest.raises(CompassError, match="require_evidence"):
+        er.evaluate(_assess(), dict(live, require_evidence=[{"id": "X", "add": ["nope"]}]))
+
+
 # --- the four-layer acceptance strategy -----------------------------------------
 
 @pytest.mark.parametrize("row", [{}, {"urgency": "live-defect"}, {"size": "medium"}])

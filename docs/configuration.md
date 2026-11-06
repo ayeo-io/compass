@@ -57,8 +57,9 @@ The state decides what Compass reads, and no state loses a setting silently:
 
 - **What counts as a settings key in the old file:** `mode`, `autonomy`,
   `allow_project_commands`, `enforcement`, `record`, `project`, `prices`,
-  `models`, `multiagent`, `preset_index`, `governance_drift`, `github_labels`, `language`
-  and `acceptance_strategy`. The three keys the multiagent scripts read
+  `models`, `multiagent`, `preset_index`, `governance_drift`, `github_labels`, `language`,
+  `acceptance_strategy`, `signoff_labels`, `require_evidence`, `agent_review`
+  and `project_checks`. The three keys the multiagent scripts read
   before 9.0.0, `worktree_root`, `max_worktrees` and `test_command`, also
   count when they are outside `multiagent:` and `project:`, because the
   scripts found them at any depth in the old file.
@@ -382,3 +383,106 @@ project with no `compass.yml`, no `extends:` or a git parent runs on the live
 default and gets it. The setting is the one way to turn the strategy off:
 `compass policy lint` refuses `acceptance_strategy: suspended` on an approach
 that ships.
+
+## Tighten-only settings
+
+Compass runs one fixed set of checks (ADR-094). Five settings of
+`compass.yml` can change what an issue owes, and each can only make it owe
+more. No value removes a check, lowers a severity or narrows when a check
+applies. Only the project's own `compass.yml` can hold them; a parent cannot.
+
+They are not read yet. `compass_pkg.tighten` applies them and
+`compass_pkg.settings_lint` checks them, but no command calls either until the
+resolver reads the check set. Until then the layer check of `compass
+policy lint` checks their shape, and they change nothing.
+
+| Setting | What it adds | Values | Default |
+|---|---|---|---|
+| `signoff_labels` | More labels that owe what a `G5` label owes | a list of label names | none: the four shipped labels |
+| `require_evidence` | More evidence a matching delivery issue owes | a list of `{when, add}` rules | none |
+| `agent_review` | The advisory judged check `agent-review` at `ship` | `on` or `true`; `off` or `false` | off |
+| `project_checks` | The project's own commands, each a blocking check | a list of `{id, name, command, stage, when}` | none |
+| `capabilities` | The evaluation of the Definition of Done items | `{entry-exit-evaluation: true}` | `false` |
+
+```yaml
+signoff_labels: [billing]
+require_evidence:
+  - when: {risk: [cross-cutting, critical]}
+    add: [reproduce-first]
+agent_review: on
+project_checks:
+  - id: arch-fitness
+    name: Architecture fitness
+    command: python3 scripts/arch-fitness.py
+    stage: build
+capabilities:
+  entry-exit-evaluation: true
+```
+
+### `signoff_labels`
+
+Each label owes what `auth`, `payments`, `personal-data` and `migrations`
+owe: the `G5` sign-off (`human-approval`), a person's approval of the
+scenarios (`scenario-approval`), the architecture review and the standard
+evidence row. The labels join the `when` of gate `G5`. An exploration issue
+with one of them is refused, as for a shipped label. A shipped label cannot be
+taken away.
+
+### `require_evidence`
+
+Each rule adds evidence tokens to a delivery issue whose assessment matches
+`when`:
+
+- `when` is a condition on the assessment, such as `risk: [critical]`,
+  `size: {at_least: medium}`, `labels_any: [billing]` or `any_of: [...]`.
+  Absent or empty, the rule applies to every delivery issue.
+- `add` is one or more tokens of the closed set: `scenarios`,
+  `red-before-green`, `suite-green`, `correctness`, `governance`,
+  `traceability`, `regression`, `security`, `clarity`, `architecture`,
+  `outer-loop`, `isolation`, `layering`, `definition-of-done`,
+  `reproduce-first`, `scenario-approval` and `human-approval`.
+
+The rules fire as `RP-SETTING-1`, `RP-SETTING-2` and so on, in file order. A
+spike owes none of them, because it ships nothing.
+
+### `agent_review`
+
+`on` adds the check set's optional judged check `agent-review` at the entry
+of `ship`, as advisory evidence (ADR-090 decision 7). See
+`docs/judged-checks.md`. Write `on` or `true`; YAML reads an unquoted `on` as
+`true`, and both are accepted. `off` and `false` are the default.
+
+### `project_checks`
+
+Each entry adds one blocking check and one guardrail, both under `id`, that
+run `command` from the project root through the `command-passes`
+implementation. Exit 0 passes.
+
+- `id` must not be the id of a shipped check or gate, nor `agent-review`.
+- `stage` is `build` or `ship`.
+- `when` is optional, in the form `require_evidence` uses.
+- `compass check` runs the command only when `allow_project_commands` is
+  `true` (see `docs/security.md`).
+
+### `capabilities`
+
+`entry-exit-evaluation: true` evaluates the Definition of Done items at the
+end of `build` (`docs/entry-exit-evaluation.md`). `false` is the default and
+changes nothing. Any other capability is refused, except
+`artifact-freshness`, which 9.0.0 removed and which lint names with
+`L-SETTING-REMOVED`.
+
+### The settings lint
+
+`compass_pkg.settings_lint.lint` reads `compass.yml` as a file of settings.
+It gives each finding a code:
+
+| Code | Level | When |
+|---|---|---|
+| `L-SETTING-UNKNOWN` | error | a key `compass.yml` cannot hold |
+| `L-SETTING-INVALID` | error | a malformed value, or a tighten-only value that would not only add, such as a token outside the closed set, an extra field such as `remove:` or `severity:`, a project check that reuses a shipped id, or an assessment value the check set does not declare |
+| `L-SETTING-REMOVED` | warning | a key 9.0.0 removed, read as if absent: the catalogs (`dimensions`, `stages`, `rules`, `checks`, `gates`, `vocabulary`, and the earlier `approaches`, `artifacts`, `readiness`), `extends: compass:...`, `preset`, `preset_index`, `approvers.project-waiver` and the removed settings above |
+| `L-PARENT-REMOVED` | error | `extends:` names a git parent, which could hold checks this file does not show |
+| `L-IMPL-UNKNOWN` | error | the integrity rule: a check, after the settings apply, names an implementation the CLI does not hold |
+
+The JSON Schema in `schemas/compass.schema.json` describes the same shapes.

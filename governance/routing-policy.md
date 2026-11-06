@@ -476,6 +476,21 @@ joins as that token, so `gates` stays derived from `evidence_required`. The
 function never reads the configuration's approaches, shapes, stage modes or
 caps. Familiarity does not change the evidence.
 
+The policy can also carry two of the tighten-only settings of `compass.yml`
+(ADR-094, `docs/configuration.md`). Each only adds:
+
+- `signoff_labels`: more labels that owe what a `G5` label owes. Each `G5`
+  clause of the rows and additions names them too, so such a label takes the
+  standard row, adds `architecture`, `scenario-approval` and `human-approval`,
+  and refuses exploration. A policy cannot take a shipped label away.
+- `require_evidence`: rules `{id, when, add}`. A delivery assessment that
+  matches `when` also owes the tokens in `add`, and the rule's id
+  (`RP-SETTING-<n>`) is recorded as fired. A spike owes none of them. A token
+  outside the closed set is refused.
+
+`compass_pkg.tighten` writes both from a resolved configuration. Until the
+resolver reads the check set, no command passes them.
+
 The rows reproduce the gate sets 8.0.4 owed: the light row is the old quick
 fix (3 gates), the defect row the old hotfix (5 gates) and the standard row
 the old regular and full approaches (6 gates). The `S17` routings are those

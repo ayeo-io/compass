@@ -323,7 +323,16 @@ LAYER_KEYS = ("schema", "extends", "owner", "approvers", "capabilities") + CATAL
 SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement",
                  "record", "project", "prices", "models", "multiagent", "governance_drift",
                  "preset_index", "github_labels", "language", "acceptance_strategy",
-                 "living_spec")
+                 "living_spec", "signoff_labels", "require_evidence", "agent_review",
+                 "project_checks")
+#: The tighten-only settings of `compass.yml` (ADR-094): each can only add to what
+#: the check set owes. `capabilities` is one of them, and stays a layer key above
+#: so the 8.x merge still reads it. `compass_pkg.tighten` applies them and
+#: `compass_pkg.settings_lint` refuses a value that is not one of these shapes.
+TIGHTEN_KEYS = ("signoff_labels", "require_evidence", "agent_review", "project_checks",
+                "capabilities")
+#: The stages a project check (`project_checks`) may run at.
+PROJECT_CHECK_STAGES = ("build", "ship")
 #: The pieces of acceptance support code a project names under `project.acceptance_support`.
 ACCEPTANCE_SUPPORT = ("alias_helper", "driver_factory", "dsl_root", "layering_test")
 #: The three switches inside `github_labels`, which 9.0.0 removed and does not read.
@@ -670,5 +679,40 @@ TOP_DESCRIPTIONS = {
                            "assess records. Unset means on; only the project's own file can hold "
                            "it.",
     "acceptance_strategy.state": "`on` or `off`.",
+    "signoff_labels": "More labels that owe what the four shipped `G5` labels owe: a person's "
+                      "sign-off (`human-approval`) and approved scenarios (`scenario-approval`). "
+                      "It only adds to `auth`, `payments`, `personal-data` and `migrations`.",
+    "signoff_labels.item": "One label name, as an assessment writes it.",
+    "require_evidence": "More evidence a delivery issue owes when its assessment matches. "
+                        "Each entry adds tokens and never removes one.",
+    "require_evidence.item": "One rule: the assessment it applies to (`when`) and the tokens it "
+                             "adds (`add`).",
+    "require_evidence.when": "A condition on the assessment, such as `risk: [critical]` or "
+                             "`labels_any: [billing]`. Absent or empty, the rule applies to "
+                             "every delivery issue.",
+    "require_evidence.add": "The evidence tokens the rule adds, from the closed set the "
+                            "evidence rows use.",
+    "require_evidence.token": "One token: `scenarios`, `red-before-green`, `suite-green`, "
+                              "`correctness`, `governance`, `traceability`, `regression`, "
+                              "`security`, `clarity`, `architecture`, `outer-loop`, `isolation`, "
+                              "`layering`, `definition-of-done`, `reproduce-first`, "
+                              "`scenario-approval` or `human-approval`.",
+    "agent_review": "Turns on the advisory judged check `agent-review` at the `ship` stage "
+                    "(ADR-090 decision 7). `on` or `true` turns it on, and `off` or `false` "
+                    "leaves the default, which is off.",
+    "agent_review.switch": "`true` turns the check on and `false` leaves it off.",
+    "agent_review.word": "`on` turns the check on and `off` leaves it off.",
+    "project_checks": "The project's own checks, each a command that must exit 0. "
+                      "`compass check` runs one only when `allow_project_commands` is `true`.",
+    "project_checks.item": "One project check: its `id`, `name`, `command`, `stage` and an "
+                           "optional `when`.",
+    "project_checks.id": "The check's id, which must not be the id of a shipped check or "
+                         "gate.",
+    "project_checks.name": "The check's display name.",
+    "project_checks.command": "The command `compass check` runs from the project root; exit "
+                              "0 passes.",
+    "project_checks.stage": "The stage the check is cleared at: `build` or `ship`.",
+    "project_checks.when": "A condition on the assessment under which the check applies. "
+                           "Absent, it applies to every issue that ships.",
     "acceptance_strategy.reason": "Why the project turned the strategy off. Required with `off`.",
 }

@@ -74,7 +74,7 @@ same commit.
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
 | `cli/compass_pkg/release_line.py` | `docs/release-line.md` |
 | `cli/compass_pkg/release_notes.py`, `cli/compass_pkg/shipped_issues.py` | `docs/release-notes.md` |
-| `cli/compass_pkg/project_settings.py` | `docs/configuration.md` |
+| `cli/compass_pkg/project_settings.py`, `cli/compass_pkg/tighten.py`, `cli/compass_pkg/settings_lint.py`, `tests/test_tighten.py`, `tests/test_settings_lint.py` | `docs/configuration.md` |
 | `cli/compass_pkg/catalogue_spec.py`, `cli/compass_pkg/catalogue_check.py`, `schemas/compass.schema.json` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/legacy_adapter.py`, `cli/compass_pkg/legacy_views.py`, `cli/compass_pkg/legacy_views_template.py`, `scripts/generate-legacy-views.py`, `governance/presets/default/`, `tests/fixtures/preset-digests.yml` | `governance/routing-policy.md` |
 | `cli/compass_pkg/vocabulary.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |

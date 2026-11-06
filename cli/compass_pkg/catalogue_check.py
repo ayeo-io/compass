@@ -20,7 +20,9 @@ What this does not check yet: whether an entry is complete enough to add
 """
 # DEPENDENCY: standard library (copy, datetime, re); compass_pkg.acceptance_strategy
 # (the routing names and the value check); compass_pkg.catalogue_spec;
-# compass_pkg.language; compass_pkg.removed_parts; compass_pkg.stable_ids; compass_pkg.vocabulary. It does not import compass_pkg.waivers: the list of
+# compass_pkg.language; compass_pkg.removed_parts; compass_pkg.settings_lint (inside
+# `_check_top_values` and `schema`, because it imports this module);
+# compass_pkg.stable_ids; compass_pkg.vocabulary. It does not import compass_pkg.waivers: the list of
 # modules that may is pinned, so the one date reader it needs is written here.
 from __future__ import annotations
 
@@ -145,6 +147,12 @@ def _check_top_values(doc):
         text = acceptance_strategy.problem(doc["acceptance_strategy"])
         if text:
             errors.append(f"acceptance_strategy: {text}")
+    # The shape of the four tighten-only settings that are not layer keys
+    # (ADR-094); `capabilities` is checked below, as it always was.
+    from compass_pkg import settings_lint
+    tighten = {k: doc[k] for k in spec.TIGHTEN_KEYS if k in doc and k != "capabilities"}
+    errors += [f"{path}: {message}"
+               for path, message in settings_lint.value_problems(tighten)]
     caps = doc.get("capabilities")
     if caps is not None:
         if not isinstance(caps, dict):
@@ -555,6 +563,8 @@ def schema():
                            "type": "string"}},
             "required": ["state"], "additionalProperties": False},
     }
+    from compass_pkg import settings_lint
+    properties.update(settings_lint.schema_properties())
     for catalogue in spec.CATALOGUES:
         properties[catalogue] = {
             "description": spec.CATALOGUE_DESCRIPTIONS[catalogue],

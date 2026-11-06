@@ -31,6 +31,22 @@
         "enforced"
       ]
     },
+    "agent_review": {
+      "description": "Turns on the advisory judged check `agent-review` at the `ship` stage (ADR-090 decision 7). `on` or `true` turns it on, and `off` or `false` leaves the default, which is off.",
+      "oneOf": [
+        {
+          "description": "`true` turns the check on and `false` leaves it off.",
+          "type": "boolean"
+        },
+        {
+          "description": "`on` turns the check on and `off` leaves it off.",
+          "enum": [
+            "on",
+            "off"
+          ]
+        }
+      ]
+    },
     "allow_project_commands": {
       "description": "Whether `compass check` may run commands that a project guardrail declares, read from the project's own file only. The default is `false`.",
       "type": "boolean"
@@ -1443,6 +1459,49 @@
       },
       "type": "object"
     },
+    "project_checks": {
+      "description": "The project's own checks, each a command that must exit 0. `compass check` runs one only when `allow_project_commands` is `true`.",
+      "items": {
+        "additionalProperties": false,
+        "description": "One project check: its `id`, `name`, `command`, `stage` and an optional `when`.",
+        "properties": {
+          "command": {
+            "description": "The command `compass check` runs from the project root; exit 0 passes.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "description": "The check's id, which must not be the id of a shipped check or gate.",
+            "pattern": "^[A-Za-z][A-Za-z0-9._-]*$",
+            "type": "string"
+          },
+          "name": {
+            "description": "The check's display name.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "stage": {
+            "description": "The stage the check is cleared at: `build` or `ship`.",
+            "enum": [
+              "build",
+              "ship"
+            ]
+          },
+          "when": {
+            "description": "A condition on the assessment under which the check applies. Absent, it applies to every issue that ships.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "command",
+          "stage"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
     "readiness": {
       "additionalProperties": false,
       "description": "The readiness signals of a frozen preset or a stored generation, each keyed by readiness signal id: binary facts that showed whether a repository was fit for unattended agent work. Since 9.0.0 (ADR-093) nothing measures the repository, the shipped default declares no signal, and the merge leaves out a project's `readiness:`, which `compass policy lint` names.",
@@ -1531,6 +1590,51 @@
       "description": "Where the delivery record is kept, with `remote`, `paths` and `names_key`. Without it no record is kept.",
       "type": "object"
     },
+    "require_evidence": {
+      "description": "More evidence a delivery issue owes when its assessment matches. Each entry adds tokens and never removes one.",
+      "items": {
+        "additionalProperties": false,
+        "description": "One rule: the assessment it applies to (`when`) and the tokens it adds (`add`).",
+        "properties": {
+          "add": {
+            "description": "The evidence tokens the rule adds, from the closed set the evidence rows use.",
+            "items": {
+              "description": "One token: `scenarios`, `red-before-green`, `suite-green`, `correctness`, `governance`, `traceability`, `regression`, `security`, `clarity`, `architecture`, `outer-loop`, `isolation`, `layering`, `definition-of-done`, `reproduce-first`, `scenario-approval` or `human-approval`.",
+              "enum": [
+                "scenarios",
+                "red-before-green",
+                "suite-green",
+                "correctness",
+                "governance",
+                "traceability",
+                "regression",
+                "security",
+                "clarity",
+                "architecture",
+                "outer-loop",
+                "isolation",
+                "layering",
+                "definition-of-done",
+                "reproduce-first",
+                "scenario-approval",
+                "human-approval"
+              ]
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "when": {
+            "description": "A condition on the assessment, such as `risk: [critical]` or `labels_any: [billing]`. Absent or empty, the rule applies to every delivery issue.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "add"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
     "rules": {
       "additionalProperties": false,
       "description": "The rule sets the evaluator reads to choose an approach and to raise its minimum, each keyed by rule set id. Since 9.0.0 (ADR-092) the merge leaves out a project's change to the `caps` rule set, and `compass policy lint` names it.",
@@ -1602,6 +1706,15 @@
     "schema": {
       "description": "The version of the file format. Its presence also marks `compass.yml` as Compass's file.",
       "type": "integer"
+    },
+    "signoff_labels": {
+      "description": "More labels that owe what the four shipped `G5` labels owe: a person's sign-off (`human-approval`) and approved scenarios (`scenario-approval`). It only adds to `auth`, `payments`, `personal-data` and `migrations`.",
+      "items": {
+        "description": "One label name, as an assessment writes it.",
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array"
     },
     "stages": {
       "additionalProperties": false,

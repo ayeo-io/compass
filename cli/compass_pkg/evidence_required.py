@@ -10,7 +10,9 @@ rows"), explains each row and addition.
 The rows are fixed in code. A row is picked by the first match; the additions
 then apply on top. The configuration adds only what a project can still set
 for a new issue: the gates of its floors (`add_gate`) and immovable gates, the
-skills its floors ask for (`require_skill`) and its advisory strategies. This
+skills its floors ask for (`require_skill`), its advisory strategies, and the
+two tighten-only settings the policy can carry (`signoff_labels`, read as more
+`G5` labels, and `require_evidence`, read as more tokens). This
 module never reads the configuration's approaches, shapes, stage modes or
 caps, so a frozen preset or copied governance that still declares them gives
 the same evidence as the live default.
@@ -33,6 +35,7 @@ from compass_pkg.stable_ids import (APPROACH_DELIVERY, APPROACH_SPIKE, GATE_G5,
                                     PATH_STAGE_IDS, SPIKE_STAGE_IDS)
 
 #: The labels of guardrail `G5`, the irreversible surfaces that owe a person's sign-off.
+#: A policy's `signoff_labels` adds to them and never takes one away (`signoff_labels`).
 G5_LABELS = ("auth", "payments", "personal-data", "migrations")
 
 #: Every token, in the order the manifest stores them.
@@ -99,6 +102,42 @@ _VOCABULARY_KEYS = {"blast_radius": "risk", "terrain": "familiarity",
                     "magnitude": "size", "intent": "goal"}
 
 
+def signoff_labels(policy):
+    """The labels that owe `G5` sign-off under `policy`: the four shipped ones,
+    then each label of the policy's `signoff_labels` that is not one of them.
+    The policy can only add a label, so a policy without the key owes what 8.x
+    owed."""
+    extra = (policy or {}).get("signoff_labels") or ()
+    if isinstance(extra, str) or not all(isinstance(label, str) for label in extra):
+        raise CompassError(f"signoff_labels {extra!r} is not a list of label names")
+    return G5_LABELS + tuple(dict.fromkeys(label for label in extra if label not in G5_LABELS))
+
+
+def _widened(node, labels):
+    """`node` with every `G5` clause (`labels_any` of the four shipped labels)
+    naming `labels` instead. Only a clause that names exactly the shipped
+    four changes, so another rule's own `labels_any` keeps its labels."""
+    if isinstance(node, dict):
+        return {k: (list(labels) if k == "labels_any" and v == list(G5_LABELS)
+                    else _widened(v, labels)) for k, v in node.items()}
+    if isinstance(node, (list, tuple)):
+        return type(node)(_widened(item, labels) for item in node)
+    return node
+
+
+def _required_evidence(policy):
+    """The policy's `require_evidence` entries, each `{id, when, add}`, with
+    every token checked against `TOKENS`. A token outside the closed set is a
+    fault in the settings and raises `CompassError`."""
+    entries = (policy or {}).get("require_evidence") or []
+    for entry in entries:
+        unknown = [t for t in entry.get("add") or () if t not in TOKENS]
+        if unknown:
+            raise CompassError(f"require_evidence {entry.get('id', '?')}: "
+                               f"{', '.join(map(str, unknown))} not one of {', '.join(TOKENS)}")
+    return entries
+
+
 def _matches(when, readings, orders):
     when = dict(when)
     unless = when.pop("not", ())
@@ -122,12 +161,13 @@ def _checked(assessment, policy):
     return readings
 
 
-def _refuse_exploration(readings, orders):
+def _refuse_exploration(readings, orders, labels=G5_LABELS):
     """A spike ships nothing, so it must not touch a surface that owes a person's
     sign-off. 8.x refused the same assessments, where its floors would have raised
     the spike to a delivery approach; turning one into the other is a choice a
     person makes by re-assessing (`approaches/spike.md`)."""
-    if _matches({"any_of": [_G5, {"risk": "critical"}]}, readings, orders):
+    if _matches({"any_of": [{"labels_any": list(labels)}, {"risk": "critical"}]},
+                readings, orders):
         raise RoutingConflict(
             "routing conflict - exploration cannot silently become delivery.\n"
             "  Intent is 'exploration' (a spike), but the assessment names critical "
@@ -146,6 +186,12 @@ def evaluate(assessment, policy, acceptance_state="on", expected_acceptance="non
     `expected_acceptance` what assess was told (`--expected-acceptance`); either
     can leave out the `S17` tokens, as `acceptance_strategy.block` decides.
 
+    Two keys of `policy` carry the tighten-only settings of `compass.yml`:
+    `signoff_labels` (more labels that owe what a `G5` label owes) and
+    `require_evidence` (`[{id, when, add}]`, tokens a matching delivery
+    assessment also owes). Each only adds; without them the result is the
+    shipped one.
+
     Returns a mapping with `delivery_approach`, `stages`, `evidence_required`,
     `gates`, `acceptance_routing`, `acceptance_applies`, `rules_fired`,
     `required_skills` and `applicable_strategies`. Raises `RoutingConflict` for
@@ -159,21 +205,32 @@ def evaluate(assessment, policy, acceptance_state="on", expected_acceptance="non
     readings = _checked(assessment, policy)
     orders = policy.get("dimension_orders")
     guard = policy.get("routing_guardrails") or {}
+    labels = signoff_labels(policy)
+    required = _required_evidence(policy)
+    # A label the settings add owes what a shipped `G5` label owes, so each `G5`
+    # clause of the rows and additions names it too.
+    rows, additions = ((ROWS, ADDITIONS) if labels == G5_LABELS
+                       else (_widened(ROWS, labels), _widened(ADDITIONS, labels)))
 
     rule, _, row_tokens, routing = next(
-        r for r in ROWS if _matches(r[1], readings, orders))
+        r for r in rows if _matches(r[1], readings, orders))
     spike = rule == "RP-EVID-SPIKE"
     if spike:
-        _refuse_exploration(readings, orders)
+        _refuse_exploration(readings, orders, labels)
     fired = [rule]
     owed = set(row_tokens)
     extra_gates = []
 
     if not spike:
-        for rule_id, when, token in ADDITIONS:
+        for rule_id, when, token in additions:
             if _matches(when, readings, orders):
                 owed.add(token)
                 fired.append(rule_id)
+        for entry in required:
+            if reading_matches(entry.get("when"), readings, orders):
+                owed.update(entry.get("add") or ())
+                if entry.get("id") and entry["id"] not in fired:
+                    fired.append(entry["id"])
         # A gate the configuration names that a token stands for joins as that
         # token, so `gates` stays derived from `evidence_required`. Any other gate
         # is kept as it is. A removed gate is owed by nothing (`routing.REMOVED_GATES`).

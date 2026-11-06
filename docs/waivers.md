@@ -27,6 +27,7 @@ waivers:
 `compass waiver add` refuses:
 
 - an empty reason;
+- a reason that holds a control character: an escape sequence, a direction override or a line break. The person is shown the reason, so it must be plain text on one line;
 - a check the check set never waives: `human-approval-present` and every check of guardrail `G5`, from `never_waived` in `governance/check-set.yml`;
 - a check the issue's policy does not hold;
 - a second waiver in force for the same check.
@@ -85,10 +86,12 @@ A waiver excuses its check only while all of these hold:
 - it has a reason and names a check;
 - it is not withdrawn;
 - its check is not in `never_waived`;
-- a `human-approval` record names it, for this issue, with the same check and reason, by an allowed approver, with `decision: approved` and the four fields `approver`, `role`, `scope` and `timestamp`;
+- a `human-approval` record names it, for this issue at its current generation, with the same check and reason, by an allowed approver, with `decision: approved` and the four fields `approver`, `role`, `scope` and `timestamp`;
 - no `approval-withdrawal` record withdraws that record.
 
-A waiver changed after its approval, or copied to another issue, excuses nothing.
+A waiver changed after its approval, or copied to another issue, excuses nothing. A reassessment that moves the issue to a new generation, for example because its risk rose, sets the approval aside: `compass check` names the waiver as not approved and says it needs a new approval at this generation.
+
+The request Compass shows the person holds the reason with every control, format and line-separator character removed, so a reason written by hand into the manifest cannot hide the line that names the check.
 
 ## Withdraw it
 

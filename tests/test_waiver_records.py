@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from approval_support import (OWNER, SLUG, event, manifest_of, project,  # noqa: E402
                               run, save_manifest, task_dir)
-from delegation_support import copy_issue, delegated  # noqa: E402
+from delegation_support import copy_issue, delegated, set_generation  # noqa: E402
 
 CHECK = "suite-passed"
 OTHER = "scenarios-have-tests"
@@ -182,6 +182,47 @@ def test_a_waiver_changed_after_its_approval_is_not_approved(tmp_path):
     save_manifest(root, body)
     statuses, _ = _statuses(root)
     assert statuses[OTHER] == "fail" and statuses[CHECK] == "fail"
+
+
+def test_an_approval_holds_only_at_the_generation_it_was_given_for(tmp_path):
+    """A reassessment can raise what the issue owes, such as a risk now
+    critical, so an approval from an earlier generation excuses nothing."""
+    root = project(tmp_path)
+    _approved_by_prompt(root)
+    assert _statuses(root)[0][CHECK] == "waived"
+    set_generation(task_dir(root), 2)
+    statuses, body = _statuses(root)
+    assert statuses[CHECK] == "fail"
+    assert any("W-1" in n and "generation" in n and "new approval" in n
+               for n in body["notices"]), body["notices"]
+
+
+def test_add_refuses_a_reason_with_control_characters(tmp_path):
+    root = project(tmp_path)
+    before = (task_dir(root) / "manifest.yml").read_bytes()
+    for reason in ("nightly CI\x1b[2K approved earlier", "nightly \u202eevil",
+                   "two\nlines"):
+        code, out, err = _add(root, reason=reason)
+        assert code != 0 and "control" in err, (reason, out + err)
+    assert (task_dir(root) / "manifest.yml").read_bytes() == before
+
+
+def test_the_shown_request_holds_no_control_characters(tmp_path):
+    from compass_pkg import approval_requests
+    root = project(tmp_path)
+    code, out, err = run(root, "evidence", "request", "--check", "dod-reviewed", "--issue",
+                         SLUG, "--scope", "scope\x1b[1A\x1b[2K x")
+    assert code == 0, out + err
+    # A reason written by hand, past `waiver add`, is cleaned too.
+    assert _add(root)[0] == 0
+    body = manifest_of(root)
+    body["waivers"][0]["reason"] = "nightly\x1b[1A\x1b[2K \u202eevil"
+    save_manifest(root, body)
+    _request(root)
+    shown = "\n".join(approval_requests.shown_text(r)
+                      for r in approval_requests.pending(str(task_dir(root))))
+    assert "\x1b" not in shown and "\u202e" not in shown, repr(shown)
+    assert "scope[1A[2K x" in shown and "nightly[1A[2K evil" in shown, repr(shown)
 
 
 def test_the_hook_refuses_a_waiver_changed_after_the_request_was_shown(tmp_path):

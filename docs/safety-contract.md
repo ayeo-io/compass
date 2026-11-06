@@ -85,7 +85,11 @@ evidence request`, the Stop hook shows the request in Compass's words, and a
 `UserPromptExpansion` hook records the typed command (ADR-068). At a
 terminal a person runs `compass evidence approve --guardrail` and the value `G5`,
 giving `--approver`, `--role` and `--scope`; on a host whose adapter
-has no person-only approval event, that is the only path.
+has no person-only approval event, that is the only path. The agent's words in
+a request, its scope and a waiver's reason, are shown with every control,
+format and line-separator character removed, so an escape sequence cannot
+move the cursor over, and a direction override cannot reorder, the line that
+names the subject.
 
 A person can also delegate approvals with `/compass:delegate [--agent <name>]
 [--until <time>] [--on <issues>] [--for <forms>] [--max <n>]` (ADR-069,
@@ -1340,7 +1344,8 @@ and date. Repository permissions and review of the pull request that changes
 
 **A waiver of one check on one issue is approved like any other subject.** From
 9.0.0 a waiver in an issue's manifest (`compass waiver add`) excuses its one
-check on that issue only once a `human-approval` record names it. The record
+check on that issue only once a `human-approval` record names it, given at
+the issue's current generation. The record
 comes from a typed `/compass:approve`, a terminal, or an agent under a
 delegation the person typed with `--for waivers` and confirmed with its code.
 No default delegation covers a waiver. The check `human-approval-present` and

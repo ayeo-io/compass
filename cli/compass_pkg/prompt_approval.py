@@ -519,7 +519,7 @@ def _form(session, number, slug):
 
 def _row_text(task_dir, slug, request, numbered):
     lead = f"  {request['number']} - " if numbered else "  "
-    scope = (f" (the agent's description: \"{request['scope']}\")"
+    scope = (f" (the agent's description: \"{approval_requests.clean(request['scope'])}\")"
              if request.get("scope") else "")
     return (f"{lead}issue {slug} ({_project_of(task_dir)}): "
             f"{approval_requests.subject_text(request)}{scope}")

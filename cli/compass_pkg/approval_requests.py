@@ -159,6 +159,15 @@ def digest(request):
                           .encode("utf-8")).hexdigest()
 
 
+def clean(text):
+    """Text an agent wrote, as the person is shown it: no control, format or
+    line-separator character, so an escape sequence cannot move the cursor
+    over, or a direction override reorder, the line that names the subject.
+    Unlike `approval_records.shown_text` it keeps the whole text."""
+    text = "" if text is None else str(text)
+    return approval_records.shown_text(text, limit=len(text))
+
+
 def subject_text(request):
     """The subject in words, as Compass shows it."""
     form, value = request.get("form"), request.get("value")
@@ -171,7 +180,7 @@ def subject_text(request):
     if form == "checkpoint":
         return f"the {value} checkpoint"
     if form == "waiver":
-        check = (request.get("waiver") or {}).get("check")
+        check = clean((request.get("waiver") or {}).get("check"))
         return f"waiver {value} of check '{check}' on this issue only"
     return "the decisions taken for you"
 
@@ -222,9 +231,10 @@ def shown_text(request, issue_form=False):
     if request.get("document_digest"):
         lines.append(f"  document digest {str(request['document_digest'])[:12]}")
     if request.get("scope"):
-        lines.append(f"  the agent's description: \"{request['scope']}\"")
+        lines.append(f"  the agent's description: \"{clean(request['scope'])}\"")
     if request.get("waiver"):
-        lines.append(f"  the reason the waiver records: \"{request['waiver'].get('reason')}\"")
+        lines.append(f"  the reason the waiver records: "
+                     f"\"{clean(request['waiver'].get('reason'))}\"")
     lines += [f"  {line}" for line in review_lines(request)]
     flag = f" --issue {request.get('issue')}" if issue_form else ""
     if request.get("form") == "waiver":

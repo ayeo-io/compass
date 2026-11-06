@@ -365,7 +365,8 @@ and is shown as `...`. The key `answer` holds the decision.
 `human-approval` record with `waiver: W-<n>`, the `waived_check` and the
 `waiver_reason` the waiver names, `approver`, `role`, `scope`,
 `decision: approved`, `timestamp`, `issue` and `generation`. The record names
-a subject, so it never clears guardrail `G5`. It refuses a withdrawn waiver,
+a subject, so it never clears guardrail `G5`, and it counts only at the
+generation it holds. It refuses a withdrawn waiver,
 one already approved, one with no reason, one of a check the check set never
 waives, `--decision rejected` and a name that is not in `approvers.waiver`
 (else the project's owner). The waiver and what `compass check` shows are in

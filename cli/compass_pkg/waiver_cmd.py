@@ -3,7 +3,7 @@
 
 - `compass waiver add --check <id> --reason "..."` writes one waiver to the
   issue's manifest, with the next free id `W-<n>`. It refuses an empty
-  reason, a check the check set never waives (`never_waived`), a check the
+  reason, a reason that holds a control character, a check the check set never waives (`never_waived`), a check the
   issue's policy does not hold, and a second waiver in force for the same
   check. A new waiver excuses nothing until a person approves it: the agent
   asks with `compass evidence request --waiver W-<n>` and stops.
@@ -19,8 +19,9 @@ more, so an agent may run both.
 from __future__ import annotations
 
 import os
+import unicodedata
 
-from compass_pkg import approval_requests, approvals, waiver_records
+from compass_pkg import approval_records, approval_requests, approvals, waiver_records
 from compass_pkg.core import (CompassError, issue_arg, load_manifest, now_iso,
                               resolve_issue_dir, save_manifest)
 from compass_pkg.terminal import say
@@ -30,6 +31,13 @@ ADD, WITHDRAW = "compass waiver add", "compass waiver withdraw"
 
 def _stamp():
     return now_iso().replace("+00:00", "Z")
+
+
+def _hidden(text):
+    """True when `text` holds a control, format or line-separator character.
+    Such a character, an escape sequence or a direction override, could move
+    the cursor or reorder the request the person is shown."""
+    return any(unicodedata.category(c) in approval_records.HIDDEN for c in str(text))
 
 
 def _refuse_add(task, task_dir, check, reason):
@@ -52,6 +60,11 @@ def _refuse_add(task, task_dir, check, reason):
 
 
 def cmd_waiver_add(args):
+    if _hidden(args.reason) or _hidden(args.check):
+        raise CompassError(f"{ADD}: the reason or the check holds a control character (an "
+                           f"escape sequence, a direction override or a line break). The "
+                           f"person is shown the reason, so it must be plain text on one "
+                           f"line. Nothing was written.")
     check = approvals.text(args.check)
     reason = approvals.text(args.reason)
     by = approvals.text(args.by) or "agent"

@@ -23,8 +23,10 @@ clears guardrail `G5` (`approval_records.gives_g5`).
 - its check is not one the check set never waives (`never_waived`): the check
   `human-approval-present` and every check of gate `G5`;
 - a `human-approval` record names it, holds `decision: approved` and the four
-  fields, is for this issue, names the same check and reason, is by an allowed
-  approver, and no `approval-withdrawal` record withdraws it.
+  fields, is for this issue at its current generation, names the same check
+  and reason, is by an allowed approver, and no `approval-withdrawal` record
+  withdraws it. A reassessment that moves the issue to a new generation asks
+  for a new approval.
 
 Who may approve: the names in `approvers.waiver` of `compass.yml`, else in
 `approvers.issue-waiver` (its 8.x name), else the project's `owner`. With no
@@ -194,6 +196,12 @@ def approval(task, task_dir, waiver):
             reason = f"{rid} was withdrawn by {withdrawn[rid]}"
         elif record.get("issue") != slug:
             reason = f"{rid} is for issue {record.get('issue')!r}, not {slug}"
+        elif record.get("generation") != (task or {}).get("generation"):
+            # A reassessment can raise what the issue owes, so an approval holds
+            # only at the generation it was given for, as a human check's does.
+            reason = (f"{rid} was given at generation {record.get('generation')!r} and the "
+                      f"issue is at generation {(task or {}).get('generation')!r}, so the "
+                      f"waiver needs a new approval at this generation")
         elif record.get(CHECK) != waiver.get("check") or \
                 record.get(REASON) != waiver.get("reason"):
             reason = (f"{rid} approved another check or reason than {wid} now names, so the "

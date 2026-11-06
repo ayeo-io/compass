@@ -121,6 +121,19 @@ def test_start_takes_the_hotfix_setting_as_urgency(repo):
     assert "reproduce-first" in manifest["evidence_required"]
 
 
+def test_start_refuses_a_spike_and_says_why(repo):
+    # A spike is not lighter or heavier than the path: it ships nothing, so the
+    # refusal gives that reason. "computes to" is the phrase contract 4 pins.
+    result = _start(repo, SLUG, "small - one file",
+                    "--goal", "exploration - we do not know yet what to build")
+    out = result.stdout + result.stderr
+    assert result.returncode == 1, out
+    assert "computes to spike, which cannot start as a quick fix" in out
+    assert "a spike explores and ships nothing" in out
+    assert "heavier" not in out
+    assert "/compass:assess" in out
+
+
 def test_start_refuses_an_urgency_with_no_reason(repo):
     result = _start(repo, SLUG, "small - one file", "--urgency", "live-defect")
     assert result.returncode != 0

@@ -341,8 +341,10 @@ def cmd_quick_fix_start(args):
     if not on_path:
         say(args,
            f"compass quick-fix start: computes to "
-           f"{display_shape(approach)}, heavier than a quick fix.",
-           detail=[f"issue: {slug}"] + chain_detail + [
+           f"{display_shape(approach)}, which cannot start as a quick fix.",
+           detail=[f"issue: {slug}",
+                   "why: a spike explores and ships nothing, so it is not on the path"]
+           + chain_detail + [
                    "the manifest keeps the assessment and the computed approach;",
                    "no approach record and no scenario were written"]
            + _quick_fix_blockers(readings, task, task_dir)

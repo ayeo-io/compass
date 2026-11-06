@@ -2109,6 +2109,9 @@ _REMOVED_IN_9_0_0 = frozenset({
     # The eval harness, which moved to sdd-bench, and what only it used (ADR-093).
     "evals/README.md", "evals/harness.py", "evals/judge.py", "evals/compare.py",
     "cli/compass_pkg/host_launch.py", "tests/test_eval_comparison_tasks.py",
+    # The autonomy and cost report's doc, renamed to docs/checkpoints.md when
+    # the cost figures went (ADR-093). ADR-063 names it and is not edited.
+    "docs/autonomy-and-cost.md",
 })
 # A sample decision record under `templates/architecture/decisions/` is a
 # decision record too.

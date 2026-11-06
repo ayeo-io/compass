@@ -30,6 +30,13 @@ from compass_pkg.stable_ids import (APPROACH_SPIKE, GATE_G5, STAGE_ASSESS, STAGE
 
 #: The keys only an issue assessed before the path holds.
 LEGACY_ONLY = ("stages", "subtask_ceiling", "max_worktrees", "orchestration")
+#: The keys of `LEGACY_ONLY` that no new assessment writes, the spike's included
+#: (ADR-092 decision 11). A spike keeps only its stage map.
+NOT_WRITTEN = ("subtask_ceiling", "max_worktrees", "orchestration")
+#: The fields of the 8.x evaluator's result that a path issue has no use for: the
+#: candidate approach the shapes picked, and the stages a document rule blocked.
+#: The path has no candidate approach and no stage a rule can block.
+NOT_SHOWN = ("candidate_route", "candidate_via", "blocked_phases")
 
 #: What each rule that `evidence_required` fires means, for the manifest's
 #: `policy_rules_fired` list and the screens that print it. A rule of the
@@ -181,7 +188,7 @@ def evaluate(readings, policy, autonomy, legacy, strategy):
 def shown(legacy, path):
     """The result `approach evaluate` prints, on the path: the legacy result with
     the path keys in place of the approach's and no key the path does not write."""
-    out = {k: v for k, v in legacy.items() if k not in LEGACY_ONLY}
+    out = {k: v for k, v in legacy.items() if k not in LEGACY_ONLY + NOT_SHOWN}
     out.update({k: v for k, v in path.items() if v is not None})
     return out
 

@@ -76,19 +76,6 @@ _PHASE_ORDER = list(STAGE_IDS)
 _SKIPPED_WEIGHTS = {"skipped", "collapsed"}
 
 
-def _next_active_phase(phases: dict) -> str | None:
-    """Return the slug of the next stage that actively runs on this delivery approach.
-
-    Skipped / collapsed stages are bypassed.  Returns None when every stage
-    has a skipped weight (degenerate delivery approach) or phases is empty.
-    """
-    for p in _PHASE_ORDER:
-        weight = (phases.get(p) or "").strip().lower()
-        if weight not in _SKIPPED_WEIGHTS:
-            return p
-    return None
-
-
 def _detect_collapsed_phases(phases: dict) -> list:
     """Return stage names (title-cased) that are collapsed on this delivery approach."""
     out = []

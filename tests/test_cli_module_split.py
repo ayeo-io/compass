@@ -276,6 +276,9 @@ def test_trc_f2_no_function_should_be_renamed_merged_or_split_by_this_task():
         # 9.0.0 removes `compass plan lint` (ADR-091): it scanned the technical design,
         # which no stage writes now.
         "_plan_lint_findings", "_plan_lint_scannable", "_plan_stage_weight", "cmd_plan_lint",
+        # `compass next` has read the stage from the records since d342005b, which
+        # left this reader of the stage weights with no caller; #351 removed it.
+        "_next_active_phase",
     }
     before -= DELIBERATELY_REMOVED
 

@@ -534,7 +534,7 @@ def build_parser():
     issue_arg(psct)
     psct.add_argument("--test", action="append",
                       help="test that exercises it, as path::name (repeatable; replaces the declared list)")
-    psct.add_argument("--reason", help="why the declared tests change (written to the devlog)")
+    psct.add_argument("--reason", help="why the declared tests change (added to an 8.x issue's devlog)")
     psct.set_defaults(func=cmd_scenario_tests, output_kind="hand-off")
 
     pcf = sub.add_parser("changed-file", help="issue changed-file tools")

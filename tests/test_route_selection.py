@@ -126,13 +126,14 @@ def test_hotfix_route_for_live_defect():
 
 def test_spike_route_for_exploration_intent(run_cli):
     """RP-SHAPE-001: intent=exploration on safe surface == spike. A spike keeps
-    its approach on the path, so the command still prints it."""
+    its approach on the path, so the command still prints it. Like a path issue
+    it has no subtask ceiling (ADR-092 decision 11)."""
     data = _evaluate_cli(run_cli, {"risk": "contained",
                                    "familiarity": "brownfield-mapped",
                                    "size": "small",
                                    "intent": "exploration"})
     assert data["delivery_approach"] == "spike"
-    assert data["subtask_ceiling"] == 1
+    assert "subtask_ceiling" not in data and "max_worktrees" not in data
 
 
 # --- floors: a matching reading raises the route or forces a phase ---------

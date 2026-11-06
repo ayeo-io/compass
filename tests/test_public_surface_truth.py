@@ -716,7 +716,10 @@ def test_d2_repairs_change_only_retired_names():
     Shipping the path in the default preset left the four 8.x shapes out of
     the `default_shapes` example in `governance/routing-policy.md`
     (list_items 71 -> 67) and added the table of the shipped default's two
-    checkpoint rows (table_rows 34 -> 38).
+    checkpoint rows (table_rows 34 -> 38). Removing the dead 8.x code added
+    one bullet to "The path writer" in `governance/routing-policy.md`
+    (list_items 67 -> 68): a path issue's output has no candidate approach,
+    no blocked stage and no subtask ceiling.
 
     The same issue deleted `approaches/quick-fix.md`, `approaches/regular.md`,
     `approaches/full.md` and `approaches/hotfix.md`, so their entries left the

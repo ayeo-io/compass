@@ -42,11 +42,10 @@ from compass_pkg.check_cmd import cmd_check
 from compass_pkg import candidate_client, project_settings, retired
 from compass_pkg.path_stages import is_path_issue
 from compass_pkg.stable_ids import (
-    APPROACH_DELIVERY, APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY,
-    STAGE_BREAKDOWN, STAGE_PLAN, STAGE_REFINE)
+    APPROACH_DELIVERY, APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY)
 from compass_pkg.core import (
     COMPASS_SCHEMA_VERSION, CompassError, WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
-    display_stage, docs_dir, find_governance, find_upwards, reading_matches,
+    docs_dir, find_governance, find_upwards, reading_matches,
     load_manifest, now_iso, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
 )
 from compass_pkg.init_cmd import ensure_initialised, resolve_project_root
@@ -68,18 +67,6 @@ from compass_pkg.terminal import say
 #: issue is still pending - that is heavier work than a quick fix earns.
 THREE_GATES = (GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE,
                GATE_VERIFY_TRACEABILITY)
-
-#: The fixed reason a collapsed or skipped stage carries on the quick-fix
-#: shape (stages: { refine: collapsed, plan: collapsed, breakdown: skipped,
-#: ... }). A stage this table does not name is refused rather than printed
-#: with no reason - a de-scope ledger entry with nothing to justify it is
-#: not a ledger.
-STAGE_DESCOPE_REASONS = {
-    STAGE_REFINE: "the one scenario states the whole change",
-    STAGE_PLAN: "no design decision on this size",
-    STAGE_BREAKDOWN: "one subtask",
-}
-
 
 def register(sub, issue_arg):
     """Add `compass quick-fix start|finish` to the top-level parser."""
@@ -180,29 +167,6 @@ def _split_optional(raw, dim):
     if raw is None:
         return None, None
     return _split_required(raw, dim)
-
-
-def _start_note(slug, intent_text, scenario_id, scenario_text, ledger, advice=()):
-    """The first lines of the quick fix's devlog. 9.0.0 writes no delivery-approach.md
-    (ADR-091): the manifest holds the approach, and the devlog holds what the manifest
-    has no key for - the intent sentence, the scenario, the advice and the reasons of
-    the de-scope ledger."""
-    lines = [f"# Devlog - {slug}", "", f"INT-1: {intent_text}",
-             f"{scenario_id}: {scenario_text}"]
-    if advice:
-        # Advisory strategies: they never block, so the record is the only
-        # place a session meets them.
-        lines += ["", "Advice:"]
-        for s in advice:
-            rationale = " ".join(str(s.get("rationale", "")).split()).rstrip(".")
-            lines.append(f"- {s.get('strategy', '?')}: {rationale} "
-                         f"({s.get('id', '?')})")
-    if ledger:
-        lines += ["", "De-scope ledger:"]
-        for stage, weight, reason in ledger:
-            lines.append(f"- {display_stage(stage)}: {weight} - {reason}")
-    lines.append("")
-    return "\n".join(lines) + "\n"
 
 
 _LABEL = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
@@ -372,7 +336,9 @@ def cmd_quick_fix_start(args):
     # the change owes, and `finish` refuses while any of it is owed (ADR-092).
     on_path = is_path_issue(task)
 
-    if approach != APPROACH_QUICK_FIX and not on_path:
+    # Every delivery assessment is written onto the path (ADR-092), so only a
+    # spike is refused here.
+    if not on_path:
         say(args,
            f"compass quick-fix start: computes to "
            f"{display_shape(approach)}, heavier than a quick fix.",
@@ -384,18 +350,6 @@ def cmd_quick_fix_start(args):
               'correct it: /compass:assess --reassess --reason "..."'],
            decision=True, approach=approach)
         return 1
-
-    ledger = []
-    for stage, weight in (task.get("stages") or {}).items():
-        if weight in ("collapsed", "skipped"):
-            reason = STAGE_DESCOPE_REASONS.get(stage)
-            if reason is None:
-                raise CompassError(
-                    f"compass quick-fix start: stage '{stage}' is {weight} "
-                    f"with no recorded reason - a collapsed or skipped "
-                    f"stage must say why it is safe, and this one is not "
-                    f"in the fixed table.")
-            ledger.append((stage, weight, reason))
 
     # The start record lives in the git directory, which a linked worktree
     # may not be allowed to write. It is written before the pointer moves,
@@ -424,35 +378,25 @@ def cmd_quick_fix_start(args):
     record(os.path.join(project_root, ".compass"),
            os.environ.get(SESSION_ENV, ""), slug)
 
-    if on_path:
-        # The path writes no devlog (ADR-092 decision 12): the acceptance
-        # criteria hold the intent and the scenario.
-        from compass_pkg.path_writer import criteria_text
-        doc_path_rel = docs_dir(task_dir) + "/acceptance-criteria.md"
-        doc_abs = os.path.join(project_root, *doc_path_rel.split("/"))
-        os.makedirs(os.path.dirname(doc_abs), exist_ok=True)
-        with open(doc_abs, "w", encoding="utf-8") as fh:
-            # A change that owes the Definition of Done resolves its requirement
-            # rows itself; `nfr-rows-resolved` names each one until it does.
-            fh.write(criteria_text(
-                slug, args.intent, args.scenario_id, args.scenario,
-                resolve_rows="definition-of-done" not in task["evidence_required"]))
-    else:
-        devlog_abs = os.path.join(task_dir, "devlog.md")
-        doc_path_rel = os.path.relpath(devlog_abs, project_root).replace(os.sep, "/")
-        with open(devlog_abs, "w", encoding="utf-8") as fh:
-            fh.write(_start_note(slug, args.intent, args.scenario_id, args.scenario, ledger,
-                                 advice))
+    # The path writes no devlog (ADR-092 decision 12): the acceptance
+    # criteria hold the intent and the scenario.
+    from compass_pkg.path_writer import criteria_text
+    doc_path_rel = docs_dir(task_dir) + "/acceptance-criteria.md"
+    doc_abs = os.path.join(project_root, *doc_path_rel.split("/"))
+    os.makedirs(os.path.dirname(doc_abs), exist_ok=True)
+    with open(doc_abs, "w", encoding="utf-8") as fh:
+        # A change that owes the Definition of Done resolves its requirement
+        # rows itself; `nfr-rows-resolved` names each one until it does.
+        fh.write(criteria_text(
+            slug, args.intent, args.scenario_id, args.scenario,
+            resolve_rows="definition-of-done" not in task["evidence_required"]))
     _quiet_run(cmd_scenario_add, task=slug, scenario_id=args.scenario_id,
               title=args.scenario, intent="INT-1", test=tests)
     from compass_pkg.decisions import settled
     decisions = settled(project_root)
-    # On the path the `next:` line that `announce` prints names the red; the
-    # advice the devlog held is printed instead.
-    steps = ([f"advice : {a.get('strategy', '?')} ({a.get('id', '?')})" for a in advice]
-             if on_path else
-             [f"next   : write the failing test, then `compass tdd-red "
-              f"--scenario {args.scenario_id} -- <test command>`"])
+    # The `next:` line that `announce` prints names the red, so the advice an
+    # 8.x devlog held is printed in its place.
+    steps = [f"advice : {a.get('strategy', '?')} ({a.get('id', '?')})" for a in advice]
     said = say(
         args,
         f"compass quick-fix start: '{slug}' recorded as "

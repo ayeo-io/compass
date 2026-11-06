@@ -77,6 +77,9 @@ def render(policy, autonomy, stages=None, source=None):
     shapes = policy.get("route_shapes") or {}
     columns = stages or _columns(shapes)
     stops = (policy.get("autonomy_checkpoints") or {}).get(autonomy) or {}
+    # The path writes no subtask ceiling (ADR-092 decision 11), so only a policy
+    # drawn on the legacy stages shows the column.
+    show_ceiling = not set(columns) <= set(PATH_STAGE_IDS)
     esc = html.escape
     rows = []
     for approach, shape in shapes.items():
@@ -101,10 +104,14 @@ def render(policy, autonomy, stages=None, source=None):
                    else esc(str(shape.get("subtask_ceiling", "not set"))))
         rows.append(f'<tr data-approach="{esc(approach)}"><th>{esc(approach)}</th>'
                     + "".join(cells)
-                    + f"<td>{gates}</td><td>{ceiling}</td><td>{documents}</td></tr>")
+                    + f"<td>{gates}</td>"
+                    + (f"<td>{ceiling}</td>" if show_ceiling else "")
+                    + f"<td>{documents}</td></tr>")
     header = ("<tr><th>Approach</th>"
               + "".join(f"<th>{s}</th>" for s in columns)
-              + "<th>Gates</th><th>Subtask ceiling</th><th>Documents</th></tr>")
+              + "<th>Gates</th>"
+              + ("<th>Subtask ceiling</th>" if show_ceiling else "")
+              + "<th>Documents</th></tr>")
     ways = "".join(f"<li><strong>{esc(name)}</strong>: {esc(text)}</li>"
                    for name, text in WAYS_BACK)
     return (

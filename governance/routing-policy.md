@@ -30,7 +30,9 @@ in a project to see that project's own policy and autonomy setting. In a
 project with a `compass.yml` it renders the effective configuration, the
 `compass.yml` over the shipped default preset, and the page says so. A project
 with no `compass.yml` gets the page from `governance/routing-policy.yml`, as
-before.
+before. A policy drawn on the eight legacy stages, such as a frozen preset or
+copied 8.x governance, also shows each approach's subtask ceiling; the four-stage
+path has none (ADR-092 decision 11).
 
 Assess applies this policy after scoring the three dimensions
 and composing a candidate delivery approach, before writing the approach to the
@@ -520,8 +522,10 @@ It writes no `stages:`, `subtask_ceiling:`, `max_worktrees:` or
   not for a project pinned before the strategy, not where the configuration
   does not declare it, and not on a re-assess of an issue assessed before it
   shipped. Where no block is stored, the `S17` tokens are not owed.
-- **A spike** writes the spike keys as before and no `evidence_required`, so
-  no reader takes it for a path issue.
+- **A spike** writes its stage map, its gate and its checkpoints, and no
+  `evidence_required`, so no reader takes it for a path issue. Like a path
+  issue, it writes no `subtask_ceiling:`, `max_worktrees:` or
+  `orchestration:` key, and removes them from a manifest that had them.
 - **A re-assess** of an issue assessed before the path (`--write --reason`)
   writes the path keys, removes `stages:` and logs the move in
   `reassessments` (`from_route: regular`, `to_route: delivery`).
@@ -534,13 +538,19 @@ It writes no `stages:`, `subtask_ceiling:`, `max_worktrees:` or
   same `S17` tokens the write stores. An assessment given on the command line
   (`--assessment`) is evaluated on the path too, as a new issue in the
   project would be.
+- The output of a path issue, in text and in `--json`, has none of the 8.x
+  evaluator's routing fields: no candidate approach (`candidate_route`,
+  `candidate_via`), no blocked stage (`blocked_phases`, "ship is blocked
+  until ...") and no subtask ceiling. The path has no candidate approach and
+  no stage a rule can block.
 - `--verbose` names the evidence row that matched (`evidence row :
   RP-EVID-STANDARD`) in place of the 8.x candidate approach. A guardrail code
   in a fired rule's line is in backticks, such as `` (`G5`, guardrail) ``.
 
-On a path issue, `compass quick-fix start` serves every size and writes
-`acceptance-criteria.md` with the intent and the one scenario in place of the
-devlog. Its Non-functional requirements rows hold a reason only when the change
+`compass quick-fix start` serves every delivery size and writes
+`acceptance-criteria.md` with the intent and the one scenario. It writes no
+devlog. It refuses only a spike, because every delivery assessment is written
+onto the path. Its Non-functional requirements rows hold a reason only when the change
 owes no `definition-of-done`; otherwise they are empty, `nfr-rows-resolved`
 names each one, and the next step is to resolve them. It takes the hotfix setting as `--urgency "live-defect - <reason>"`.
 `compass quick-fix finish` serves any delivery issue on the path. It refuses

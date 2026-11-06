@@ -209,9 +209,10 @@ def test_trc_c3_existing_json_verb_keeps_its_keys(tmp_path):
     ADR-006 makes backward compatibility non-negotiable within a major version,
     so this verb's existing keys are public surface. New keys may appear; none
     of these may be renamed or removed. The one exception is the 9.0.0 major:
-    on the four-stage path (ADR-092) an issue's evaluation has no stage modes
-    and no `subtask_ceiling`, so those two keys go, and the evidence owed is
-    added in their place.
+    on the four-stage path (ADR-092) an issue's evaluation has no stage modes,
+    no `subtask_ceiling`, no candidate approach (`candidate_route`,
+    `candidate_via`) and no blocked stage (`blocked_phases`), so those keys go,
+    and the evidence owed is added in their place.
     """
     import yaml
     proj = tmp_path / "p"
@@ -241,15 +242,17 @@ def test_trc_c3_existing_json_verb_keeps_its_keys(tmp_path):
     # version of this list guessed `final_route` and `phases`, which have
     # never existed - a compatibility assertion against invented names checks
     # nothing and would have failed for the wrong reason.
-    for key in ("candidate_route", "candidate_via", "delivery_approach",
-                "gates", "policy_rules_fired", "evidence_required"):
+    for key in ("delivery_approach", "gates", "policy_rules_fired",
+                "evidence_required"):
         assert key in doc, (
             "`approach evaluate --json` lost the key %r, which shipped before "
             "this change and is public surface (ADR-006). Keys present: %s"
             % (key, sorted(doc)))
-    # ADR-092 decisions: no stage modes and no `subtask_ceiling`. These two keys,
-    # and only these, go at the 9.0.0 major.
-    for key in ("stages", "subtask_ceiling"):
+    # ADR-092: the path has no stage modes, no `subtask_ceiling`, no candidate
+    # approach and no stage a rule can block. These keys, and only these, go at
+    # the 9.0.0 major.
+    for key in ("stages", "subtask_ceiling", "candidate_route", "candidate_via",
+                "blocked_phases"):
         assert key not in doc, (key, sorted(doc))
 
 

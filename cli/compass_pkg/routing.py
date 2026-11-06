@@ -857,7 +857,10 @@ def cmd_route_evaluate(args):
     _mode = resolve_mode(args)
     if readiness is not None:
         result["readiness"] = readiness
-    shown = result if path is None else path_writer.shown(result, path)
+    # A spike keeps its stage map but, like a path issue, no subtask ceiling
+    # (ADR-092 decision 11).
+    shown = (path_writer.shown(result, path) if path is not None else
+             {k: v for k, v in result.items() if k not in path_writer.NOT_WRITTEN})
     if _mode == "json":
         print(json.dumps(shown, indent=2))
     elif _mode != "verbose":
@@ -868,7 +871,6 @@ def cmd_route_evaluate(args):
         # all of it on the first screen - they need the approach, the rules
         # that produced it, and where it was written.
         _fired = [fired_rule_line(f) for f in shown["policy_rules_fired"]]
-        _ceiling = result["subtask_ceiling"]
         _concerns = []
         # Policy drift is a CONCERN, not provenance. The plain "which policy
         # file did I read" line is detail and lives under --verbose, but a
@@ -882,10 +884,10 @@ def cmd_route_evaluate(args):
                 "this project's policy is missing %d rule(s) or check(s) that "
                 "framework v%s ships - run `compass policy lint`"
                 % (_drift.count, _fw))
-        if result["blocked_phases"]:
-            _concerns += ["%s is blocked until %s" % (
-                              _display_blocked_phase(b["phase"]), b["until"])
-                          for b in result["blocked_phases"]]
+        # A path issue has no stage to block (`path_writer.shown` leaves the key out).
+        _concerns += ["%s is blocked until %s" % (
+                          _display_blocked_phase(b["phase"]), b["until"])
+                      for b in shown.get("blocked_phases") or []]
         if result["required_artifacts"]:
             _concerns.append("documents required: "
                              + ", ".join(result["required_artifacts"]))
@@ -901,12 +903,11 @@ def cmd_route_evaluate(args):
         _e = Emitter(mode=_mode,
                      evidence_out=getattr(args, "evidence_out", None))
         _e.hand_off(
-            outcome="%s - %d gate(s), %s"
+            outcome="%s - %d gate(s)%s"
                     % (display_shape(shown["delivery_approach"]),
                        len(shown["gates"]),
-                       "%d kinds of evidence owed" % len(path["evidence_required"]) if path
-                       else "unbounded parallel subtasks" if _ceiling is None
-                       else "up to %d parallel subtask(s)" % _ceiling),
+                       ", %d kinds of evidence owed" % len(path["evidence_required"])
+                       if path else ""),
             # Only if it is actually there. `delivery-approach.md` is written
             # by the assess command, not the evaluator, so do not point the
             # reader at it before it exists.
@@ -963,12 +964,7 @@ def cmd_route_evaluate(args):
                     print(f"        - {c}")
         else:
             print("  policy rules fired: none")
-        ceiling = result["subtask_ceiling"]
-        permits = ("unbounded by policy" if ceiling is None
-                   else f"up to {ceiling}")
         if not path:
-            print(f"  parallel subtasks: {permits} (a ceiling - breakdown sets "
-                  f"the orchestration once the distribution map exists)")
             print("  per-stage weight:")
             for p, w in result["stages"].items():
                 print(f"    {display_stage(p):<11}: {w}")
@@ -977,10 +973,9 @@ def cmd_route_evaluate(args):
             print(f"  required artifacts: {', '.join(result['required_artifacts'])}")
         if result["required_skills"]:
             print(f"  required skills : {', '.join(result['required_skills'])}")
-        if result["blocked_phases"]:
-            for b in result["blocked_phases"]:
-                print(f"  BLOCKED phase   : {_display_blocked_phase(b['phase'])} "
-                      f"until {b['until']}")
+        for b in shown.get("blocked_phases") or []:
+            print(f"  BLOCKED phase   : {_display_blocked_phase(b['phase'])} "
+                  f"until {b['until']}")
         if result.get("applicable_strategies"):
             print("  advisory strategies (soft - assessed, never gating):")
             for s in result["applicable_strategies"]:
@@ -1098,8 +1093,6 @@ def cmd_route_evaluate(args):
         # wrote stays as it is: nothing reads it but the path of an older spec.
         # make sure the evidence registry exists at the top level
         task.setdefault("evidence", [])
-        if path is None:
-            task["subtask_ceiling"] = result["subtask_ceiling"]
         # The repository's readiness when this issue was assessed. It is not a
         # generation outcome key, so a new measurement rewrites it here and
         # never forces a new generation (ADR-060).
@@ -1112,8 +1105,11 @@ def cmd_route_evaluate(args):
             path_writer.write(task, path)
         else:
             # A re-assess that turns a delivery issue into a spike takes it off
-            # the path, so no reader takes the spike for a path issue.
+            # the path, so no reader takes the spike for a path issue. A spike
+            # writes no subtask ceiling either (ADR-092 decision 11).
             task.pop("evidence_required", None)
+            for key in path_writer.NOT_WRITTEN:
+                task.pop(key, None)
         # The manifest is replaced inside the commit, after the generation's
         # files are whole (ADR-036). A configuration that does not resolve
         # raises here, before any file is written.

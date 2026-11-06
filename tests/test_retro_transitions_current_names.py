@@ -12,7 +12,10 @@ from __future__ import annotations
 
 import json
 
-from test_retro_weighs_current_route_names import _task
+from test_retro_weighs_current_route_names import _governance_8_0_4, _task  # noqa: F401
+
+# `_governance_8_0_4` is an autouse fixture: importing it gives this file the
+# 8.0.4 governance copy, whose approach weights the retro reads.
 
 
 def test_rt_1_one_transition_is_one_row_under_current_names(run_cli, make_task):

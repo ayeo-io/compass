@@ -8,7 +8,23 @@ and classifies the trend as up (assessment under-sizing) or down
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+import pytest
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+
+@pytest.fixture
+def governance_8_0_4(project):
+    """The project's governance copy is the 8.0.4 one. The retro weighs a route by
+    the approach weights of the configuration in force, and the shipped default
+    declares only the spike and the path since 9.0.0 (ADR-092); the issues the
+    aggregator tests read were re-assessed between 8.x approaches."""
+    import compat_baseline as cb
+    cb.add_governance_copy(project, source=cb.GOVERNANCE_8_0_4)
 
 
 def _readings_to_args(d):
@@ -146,7 +162,7 @@ def test_calibration_no_tasks(run_cli):
     assert "no issues" in r.stdout.lower(), r
 
 
-def test_calibration_aggregates_up_reframes(run_cli, make_task):
+def test_calibration_aggregates_up_reframes(run_cli, make_task, governance_8_0_4):
     """Three up re-assessments (express -> expedition, standard -> expedition,
     express -> standard) must report 'UNDER-sizing'."""
     make_task("t1", _task_with_reframes(
@@ -160,7 +176,7 @@ def test_calibration_aggregates_up_reframes(run_cli, make_task):
     assert "UNDER-sizing" in r.stdout, r
 
 
-def test_calibration_aggregates_down_reframes(run_cli, make_task):
+def test_calibration_aggregates_down_reframes(run_cli, make_task, governance_8_0_4):
     """Three down re-assessments report 'OVER-sizing'."""
     make_task("t1", _task_with_reframes(
         "t1", [("expedition", "express")], base_route="express"))

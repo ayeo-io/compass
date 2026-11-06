@@ -163,6 +163,12 @@ def test_scn_a5_calibration_counts_only_judgement(tmp_path):
          "date": "2026-08-02"},
     ]
     root = _project(tmp_path, _base(route="expedition", reassessments=reframes))
+    # The 8.0.4 governance copy: the retro weighs a route by the approach
+    # weights of the configuration in force, and the shipped default declares
+    # only the spike and the path since 9.0.0 (ADR-092).
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import compat_baseline as cb
+    cb.add_governance_copy(root, source=cb.GOVERNANCE_8_0_4)
     r = _run(root, "retro")
     out = r.stdout + r.stderr
     assert "policy-correction" in out or "1" in out, out

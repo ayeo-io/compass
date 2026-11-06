@@ -993,12 +993,6 @@ _register(Rule(
             "\"locally modified\" is the name of one of the four parent states "
             "- an identifier (section 4), not the verb the word table retires"),
         Exemption(
-            "docs/five-minutes.md", "## 5. Verify and ship",
-            "\"Verify\" here is the stage name, in the same heading form "
-            "as \"1. Assess the work\", \"2. Define acceptance\" and "
-            "\"4. Implement with evidence\" above it - an identifier "
-            "(section 4), not the verb the word table retires"),
-        Exemption(
             "docs/releasing.md", "## Supply-chain stance",
             "\"supply chain\" is the standard security term for this "
             "section's subject, not the verb \"supply\" the word table "
@@ -1019,48 +1013,6 @@ _register(Rule(
             ".github/workflows/compass.yml", "supply-chain stance",
             "the same standard security term as the docs/security.md "
             "exemption above."),
-        Exemption(
-            "docs/methodology.md", "| `/compass:verify` | Verify |",
-            "\"Verify\" is the stage name in the stage-mapping table's own "
-            "column, beside \"Assess\", \"Define\" and \"Plan\" - an "
-            "identifier (section 4), not the verb the word table retires"),
-        Exemption(
-            "docs/quickstart.md", "### Verify",
-            "\"Verify\" here is the stage name, in the same heading form as "
-            "the \"### Assess\", \"### Define\" and \"### Implement\" "
-            "headings in the same walkthrough - an identifier (section 4), "
-            "not the verb the word table retires"),
-        Exemption(
-            "docs/quickstart.md", "verify, ship -",
-            "\"verify\" here is one stage name in a list of stage names "
-            "(implement, verify, ship) - an identifier (section 4), not "
-            "the verb the word table retires"),
-        Exemption(
-            "docs/routing-deep-dive.md", "but verify also runs the",
-            "\"verify\" is the stage name here, matching \"feature\" and "
-            "the other lowercase reference-shape names beside it - an "
-            "identifier (section 4), not the verb the word table retires"),
-        Exemption(
-            "docs/routing-deep-dive.md", "[refine, verify, ship]",
-            "the literal `never_skip` policy value quoted from "
-            "the `RP-FLOOR-001` floor in governance/routing-policy.yml - an identifier (section "
-            "4), not the verb the word table retires"),
-        Exemption(
-            "docs/routing-deep-dive.md", "not skipped; verify and ship",
-            "\"verify\" is the stage name in a list of stage names, "
-            "matching \"ship\" beside it - an identifier (section 4), "
-            "not the verb the word table retires"),
-        Exemption(
-            "docs/routing-deep-dive.md", "*before* verify and never verify",
-            "\"verify\" is the stage name, twice - an identifier "
-            "(section 4), not the verb the word table retires"),
-        Exemption(
-            "docs/routing-deep-dive.md",
-            "**Verify** runs **at full weight",
-            "\"Verify\" is the stage name, bold as one item in the "
-            "stage-by-stage list beside \"Plan\", \"Breakdown\", "
-            "\"Implement\" and \"Ship\" - an identifier (section 4), "
-            "not the verb the word table retires"),
         Exemption(
             "skills/evidence-gates/review-dimensions.md",
             'as "verified"',

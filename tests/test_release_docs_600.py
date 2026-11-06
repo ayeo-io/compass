@@ -678,14 +678,20 @@ def test_trc_s7_quickstart_five_minutes_and_portability_match_the_code(tmp_path)
     assert line in five.splitlines() or line.strip() in five, line
     assert "<your project>/governance/routing-policy.yml" not in five
 
-    # A regular approach under `balanced` does not wait at assess.
+    # A delivery issue under `balanced` does not wait, and under `controlled`
+    # waits at assess and specify (ADR-092 open question 7). The quickstart
+    # states both, and the code gives both.
+    from compass_pkg.path_writer import checkpoints_for
     policy = yaml.safe_load(_read("governance/routing-policy.yml"))
-    balanced = policy["autonomy_checkpoints"]["balanced"]["regular"]
-    assert balanced == ["define", "plan"]
+    assert policy["autonomy_checkpoints"]["balanced"]["delivery"] == []
+    assert policy["autonomy_checkpoints"]["controlled"]["delivery"] == ["assess", "specify"]
+    light = ["scenarios", "red-before-green", "suite-green"]
+    assert checkpoints_for(light, "balanced", True) == []
+    assert checkpoints_for(light, "controlled", False) == ["assess", "specify"]
     quickstart = _flat(_read("docs/quickstart.md"))
     assert "presents the delivery approach and waits" not in quickstart
-    assert "a regular approach goes on and logs that it did not wait" in quickstart
-    assert "it waits at define and plan" in quickstart
+    assert "under `balanced` a delivery issue goes on and does not wait" in quickstart
+    assert "under `controlled` it waits at assess and specify" in quickstart
 
     # portability lists the skill directories there are.
     # A skill kept only as a redirect to its renamed successor ("Renamed to
@@ -779,48 +785,84 @@ def _case_3(text):
     return text[start:text.index("## Case 4 ")]
 
 
+# The assessment Case 3 walks through.
+CASE_3 = {"risk": "critical", "familiarity": "brownfield-mapped", "size": "small",
+          "goal": "delivery", "urgency": "none", "labels": "payments,migrations"}
+
+
+def _fired_rules(verbose):
+    """`(rule id, adds evidence)` for each rule the `policy rules fired:` block of
+    `approach evaluate --verbose` lists, in order. A rule adds evidence when an
+    `- evidence owed:` line follows its line."""
+    lines = verbose.split("policy rules fired:", 1)[1].splitlines()[1:]
+    fired = []
+    for line in lines:
+        if not line.startswith("    ") or line.strip().startswith("gate set"):
+            break
+        rule = re.search(r"\((`?[A-Z][A-Z0-9-]*`?), [a-z]+\)\s*$", line)
+        if rule:
+            fired.append([rule.group(1).strip("`"), False])
+        elif line.strip().startswith("- evidence owed:") and fired:
+            fired[-1][1] = True
+    return [tuple(f) for f in fired]
+
+
+def case_3_findings(case, verbose):
+    """What Case 3 says that the CLI's output for its assessment contradicts, or
+    leaves out: the evidence row, each rule that fires, and each rule that fires
+    but adds nothing, which the case must say adds nothing. An 8.x floor the path
+    removed must not be named."""
+    flat = _flat(case)
+    found = []
+    row = re.search(r"evidence row\s*:\s*(\S+)", verbose).group(1)
+    if row not in flat:
+        found.append(f"Case 3 does not name the evidence row {row}")
+    for rule, adds in _fired_rules(verbose):
+        if rule not in flat:
+            found.append(f"Case 3 does not name {rule}, which fires")
+        elif not adds and not re.search(rf"{re.escape(rule)}`?.{{0,200}}adds nothing", flat):
+            found.append(f"Case 3 must say {rule} fires but adds nothing")
+    for gone in ("RP-FLOOR-001", "RP-FLOOR-003", "RP-CAP-001", "Two floors fire"):
+        if gone in flat:
+            found.append(f"Case 3 names {gone}, which 9.0.0 does not fire")
+    return found
+
+
 def test_trc_s3_routing_deep_dive_matches_the_evaluator():
+    from compass_pkg.evidence_required import G5_LABELS
     import yaml
     text = _flat(_read("docs/routing-deep-dive.md"))
 
-    # The floor list names the labels the floor reads, and no others.
+    # The `G5` label list names the labels the rules read, and no others.
     policy = yaml.safe_load(_read("governance/routing-policy.yml"))
-    floor = next(r for r in policy["routing_guardrails"]["floors"] if r["id"] == "RP-FLOOR-003")
+    floor = next(r for r in policy["routing_guardrails"]["floors"] if r["id"] == "RP-REQUIRE-004")
     labels = floor["when"]["labels_any"]
-    listed = re.search(r"floor list \(([^)]*)\)", text)
-    assert listed, "the floor list sentence is gone"
+    assert list(G5_LABELS) == labels, (G5_LABELS, labels)
+    listed = re.search(r"not a `G5` label \(([^)]*)\)", text)
+    assert listed, "the `G5` label list sentence is gone"
     assert re.findall(r"`([a-z-]+)`", listed.group(1)) == labels, listed.group(1)
+    stated = re.search(r"The `G5` labels are ([^.]*)\.", text)
+    assert stated, "the sentence that names the `G5` labels is gone"
+    assert re.findall(r"`([a-z-]+)`", stated.group(1)) == labels, stated.group(1)
 
-    # The CSV quick fix has as many gates as the CLI gives a quick fix.
+    # The CSV export on an internal tool has the row and as many gates as the CLI gives.
     csv = _evaluate_verbose(risk="contained", familiarity="brownfield-mapped",
-                            size="small", goal="delivery", role="engineer")
+                            size="small", goal="delivery")
     gates = len(re.search(r"gate set\s+:\s+(.*)", csv).group(1).split(","))
+    row = re.search(r"evidence row\s*:\s*(\S+)", csv).group(1)
     words = {1: "one", 2: "two", 3: "three", 4: "four"}
     section = text[text.index('"Add a CSV export" - engineer'):]
     section = section[:section.index('"Add a CSV export" - product owner')]
     assert f"{words[gates]} gates" in section, (gates, section)
+    assert row in section, (row, section)
 
-    # Case 3 names every rule the approach evaluator says fires, and not a floor that
-    # does not. The deep dive still walks the 8.x approaches, and a new assessment is
-    # on the four-stage path (ADR-092), so the case is judged by the approach
-    # evaluator on the configuration this repository resolves to, as the CLI judged
-    # it before the path.
-    from compass_pkg import effective, routing
-    view = effective.view_or_legacy(None, start=str(ROOT))
-    policy = (view.evaluator_policy() if view is not None
-              else yaml.safe_load(_read("governance/routing-policy.yml")))
-    fired = [f["id"] for f in routing.evaluate_route(
-        {"risk": "critical", "familiarity": "brownfield-mapped", "size": "small",
-         "goal": "delivery", "urgency": "none", "labels": ["payments", "migrations"]},
-        routing.prepare_policy(policy))["policy_rules_fired"]
-        if f["id"].startswith("RP-")]
+    # Case 3 names the row and every rule the CLI says fires on the path, says
+    # which fires and adds nothing, and names no 8.x floor or cap.
     case = _case_3(_read("docs/routing-deep-dive.md"))
-    assert "RP-FLOOR-001" in fired and "RP-FLOOR-003" not in fired
-    for rule in fired:
-        assert rule in case, f"Case 3 does not name {rule}, which fires"
-    assert re.search(r"RP-FLOOR-003.{0,200}does not list it", _flat(case)), (
-        "Case 3 must say the label floor is not among the rules the CLI lists")
-    assert "Two floors fire" not in case
+    verbose = _evaluate_verbose(**CASE_3)
+    fired = _fired_rules(verbose)
+    assert ("RP-REQUIRE-003", True) in fired and ("RP-REQUIRE-004", False) in fired, fired
+    assert not case_3_findings(case, verbose), case_3_findings(case, verbose)
 
     # A routing change is a change to compass.yml, not to the generated file.
     assert "amending that file" not in text
@@ -830,10 +872,17 @@ def test_trc_s3_routing_deep_dive_matches_the_evaluator():
 
 
 def test_trc_s3_the_case_3_scan_would_report_the_old_text():
-    old = "## Case 3 - x\nTwo floors fire, and they reinforce each other.\n## Case 4 - y"
-    case = _case_3(old)
-    assert "Two floors fire" in case
-    assert "RP-FLOOR-001" not in case
+    verbose = _evaluate_verbose(**CASE_3)
+    old = ("## Case 3 - x\nRP-EVID-STANDARD. Two floors fire, and they reinforce each "
+           "other: RP-FLOOR-001 and RP-REQUIRE-003.\n## Case 4 - y")
+    found = case_3_findings(_case_3(old), verbose)
+    assert "Case 3 does not name RP-EVID-SIGNOFF, which fires" in found, found
+    assert "Case 3 names RP-FLOOR-001, which 9.0.0 does not fire" in found, found
+    assert "Case 3 names Two floors fire, which 9.0.0 does not fire" in found, found
+    silent = ("## Case 3 - x\nRP-EVID-STANDARD, RP-REQUIRE-003, RP-REQUIRE-004, "
+              "RP-EVID-SIGNOFF and G5 fire.\n## Case 4 - y")
+    assert case_3_findings(_case_3(silent), verbose) == [
+        "Case 3 must say RP-REQUIRE-004 fires but adds nothing"]
 
 
 # --- The governance prose describes the 6.0.0 model ---------------------------

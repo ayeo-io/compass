@@ -731,6 +731,17 @@ def test_d2_repairs_change_only_retired_names():
     stage to skip. The fixture holds 47 files now, and the count is checked
     exactly, so a truncated fixture still fails.
 
+    The narrative docs step of the same issue rewrote three more for the path:
+    `docs/quickstart.md` (three `###` headings fewer, fences 38 -> 32,
+    list_items 22 -> 25) walks one path issue through assess, specify, build
+    and ship in place of the per-stage commands, and shows a real rail;
+    `docs/routing-deep-dive.md` (three `###` headings fewer, fences 0 -> 14,
+    list_items 20 -> 47, table_rows 36 -> 37) shows the real `approach
+    evaluate --verbose` output of each case and the evidence row it matches,
+    in place of the per-stage weights of each approach; and
+    `governance/strategies.md` (list_items 107 -> 108) gained the `S17`
+    bullet on the stage reviews at the `build` and `ship` checkpoints.
+
     A NEW structural change to any of the 47 still fails.
     """
     import json

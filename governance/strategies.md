@@ -8,8 +8,8 @@ team can step off one with a recorded reason. A guardrail always beats a
 strategy.
 
 **A strategy can carry blocking checks that a recorded step-off makes
-advisory.** Most strategies carry none: each is assessed by the `reviewer`
-agent at `verify` under the review dimension tagged beneath its heading, and a
+advisory.** Most strategies carry none: each is assessed in the review at
+`ship` under the review dimension tagged beneath its heading, and a
 strategy not followed is a note and a conversation. A strategy that does carry
 checks keeps them outside every guardrail and every lock, so the guardrails
 keep their own checks. A project turns such a strategy off with its setting,
@@ -37,7 +37,7 @@ first two, and a project can refine any of them.
 ### BDD: behaviour as Given/When/Then (`S1`)
 
 **Acceptance criteria are Given/When/Then scenarios, and those same scenarios
-are the acceptance check at Verify.**
+are the acceptance check at ship.**
 
 - This is the shipped-on way to satisfy "acceptance defined before it is
   built" (`G2`).
@@ -131,17 +131,19 @@ candidate (the outer-loop green). Compass reads the records the project's own
 commands write; it never reads project code.
 
 - **Applicability.** Assess records whether the strategy applies, and why,
-  in the delivery-approach record: `compass approach evaluate --write
-  --expected-acceptance none|validation|refactor`. `compass check` decides
+  in the manifest's `acceptance_strategy` block: `compass approach evaluate
+  --write --expected-acceptance none|validation|refactor`. `compass check` decides
   from the records: the strategy applies unless the issue holds an acceptance
   of kind `validation` or `refactor` and no red record. A record line that
   disagrees with the records is advice from the check
   `acceptance-applicability-agrees`, which names the re-assess command.
-- **Routing per delivery approach.** On for regular and full. Existing DSL
-  only on quick-fix (no layering record, no stage review). Existing DSL only
-  on hotfix, which still needs the isolation proof. Suspended on a spike, as
-  strategy `S2` is. The preset holds the routing as
-  `approaches.<id>.acceptance_strategy`.
+- **Routing per evidence row.** On for the standard row. Existing DSL only
+  on the light row (no isolation proof, no layering record). Existing DSL only on the defect row, which still needs the
+  isolation proof. Suspended on a spike, as strategy `S2` is. Where the
+  strategy applies, assess adds its tokens to the evidence the change owes:
+  `outer-loop` on every row, `isolation` on the defect and standard rows,
+  and `layering` on the standard row (`cli/compass_pkg/evidence_required.py`).
+  An issue assessed before 9.0.0 keeps the routing of its approach.
 - **Project opt-out.** A project turns the strategy off with the setting
   `acceptance_strategy`, written `acceptance_strategy: {state: "off", reason:
   "<why>"}` in `compass.yml`, or `.compass/config.yml` without one. Assess records the opt-out and its reason,
@@ -156,8 +158,8 @@ commands write; it never reads project code.
   to it (ADR-006). Nor does it apply in a project whose `compass.yml` extends
   the shipped default at major 6 or 7: the strategy ships from major 8.
 - **The loop.** `compass tdd-red` and `compass tdd-green` record the loop
-  with `--loop outer|inner`: default outer on an in-scope quick fix, and
-  inner otherwise. `compass quick-fix finish` takes the same flag. On an
+  with `--loop outer|inner`. The `next:` line names the loop each step needs:
+  the outer loop first on an in-scope issue. `compass quick-fix finish` takes the same flag. On an
   in-scope issue the check
   `outer-loop-recorded` needs an outer-loop red and an outer-loop green on
   the tree as it is now (ADR-080), and `outer-loop-attempts-recorded` needs
@@ -172,8 +174,8 @@ commands write; it never reads project code.
   and the check `isolation-proven` needs every run to pass on the outer-loop
   green's candidate and the tree as it is now. `compass layering record` runs
   the project's own layering test, and `layering-test-passed` needs it to
-  pass. Regular and full need both; a hotfix needs the isolation proof; a
-  quick fix needs neither.
+  pass. The standard row needs both; the defect row needs the isolation
+  proof; the light row needs neither.
 - **Support code.** The project names the paths of its alias helper,
   driver factory, DSL root and layering test under
   `project.acceptance_support`. `compass readiness` reports each missing
@@ -181,6 +183,10 @@ commands write; it never reads project code.
   pieces as its own work. Until then the advisory check
   `acceptance-support-present` states the claim limit: the issue can claim
   that its scenarios pass, but not what a missing piece gives.
+- **The stage reviews.** On `controlled`, an in-scope issue waits at the
+  `build` checkpoint for the stage 2 review and at the `ship` checkpoint for
+  the stage 3 review, and the request lists the `atdd` skill's review
+  questions.
 - **Only the setting turns it off.** An approach that ships cannot set the
   strategy to `suspended`; `compass policy lint` refuses it.
 - Its checks are unlocked and sit outside every gate, as
@@ -204,7 +210,7 @@ govern the quality of what the guardrails act on.
 **Assume the reader has zero prior context.**
 
 Governs, each written to stand on its own: artifacts (intake, acceptance
-criteria, delivery-approach record, design, devlog, verification report), code
+criteria, design notes, an archived devlog or verification report), code
 comments, commit messages, pull-request bodies and review comments.
 
 - **Context before detail.** Say what the thing is and why it matters before
@@ -415,7 +421,7 @@ not a count. Any count a tool produces is a number that moves.*
 
 ### Well-architected alignment: name the pillars a design touches (`S15`)
 
-*Assessed under the `architecture` dimension, on the regular and full approaches.*
+*Assessed under the `architecture` dimension, where the change owes the `architecture` evidence.*
 
 **A technical design names the well-architected pillars the change touches,
 and says in a sentence or two what it does about each.**
@@ -438,7 +444,7 @@ and says in a sentence or two what it does about each.**
 
 ### Named patterns: prefer a well-understood pattern, and say why (`S16`)
 
-*Assessed under the `clarity` dimension, on the regular and full approaches.*
+*Assessed under the `clarity` dimension, where the change owes the `clarity` evidence.*
 
 **A technical design names the well-understood design patterns it uses, and
 where a real choice existed, the one it rejected and why.**
@@ -516,9 +522,10 @@ message must *say*; how you format the subject line is yours.
 
 ## How strategies are used
 
-- **`compass approach evaluate`** applies the routing strategies
-  (`routing-policy.md`) to compute a default delivery approach.
-- **The review at `verify`** assesses whether the work followed the
+- **`compass approach evaluate`** lists the advisory routing strategies
+  (`routing-policy.md`) that match the assessment, under
+  `applicable_strategies`.
+- **The review at `ship`** assesses whether the work followed the
   applicable strategies, and reports that as judgement, distinct from the
   evidence-backed guardrail checks.
 - **`/compass:consult`** is where strategy-versus-strategy tensions get resolved.

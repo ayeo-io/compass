@@ -84,15 +84,12 @@
     "table_rows": 13
   },
   "docs/quickstart.md": {
-    "fences": 38,
+    "fences": 32,
     "heading_levels": [
       1,
       2,
       2,
       2,
-      3,
-      3,
-      3,
       3,
       3,
       3,
@@ -113,11 +110,11 @@
       2,
       2
     ],
-    "list_items": 22,
+    "list_items": 25,
     "table_rows": 24
   },
   "docs/routing-deep-dive.md": {
-    "fences": 0,
+    "fences": 14,
     "heading_levels": [
       1,
       2,
@@ -130,7 +127,6 @@
       3,
       3,
       3,
-      3,
       2,
       3,
       3,
@@ -140,9 +136,7 @@
       3,
       3,
       3,
-      3,
       2,
-      3,
       3,
       3,
       3,
@@ -159,8 +153,8 @@
       2,
       2
     ],
-    "list_items": 20,
-    "table_rows": 36
+    "list_items": 47,
+    "table_rows": 37
   },
   "docs/safety-contract.md": {
     "fences": 0,
@@ -709,7 +703,7 @@
       3,
       2
     ],
-    "list_items": 107,
+    "list_items": 108,
     "table_rows": 0
   },
   "skills/adaptive-routing/SKILL.md": {

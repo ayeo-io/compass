@@ -138,7 +138,7 @@ def test_the_reader_documents_make_no_claim_the_code_contradicts():
     assert "The marker only ever means a real failure was observed" not in quickstart
     assert "refuses the edit" in quickstart and "red record" in quickstart
     assert "Most spec-driven development systems" not in readme
-    assert "Compass chooses the process for each change from its assessment" in readme
+    assert "Compass chooses the evidence each change owes from its assessment" in readme
 
 
 SHIPPED_TEXT = ("cli/compass_pkg", "hooks", "docs", "README.md", "agents", "skills",

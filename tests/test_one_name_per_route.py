@@ -231,5 +231,7 @@ def test_rn_6_the_settings_reference_names_the_current_approaches():
     # `compass init` stopped writing a commented settings file.
     doc = (ROOT / "docs" / "configuration.md").read_text(encoding="utf-8")
     block = doc[doc.index("### `autonomy`"):doc.index("### `project`")]
-    assert "regular" in block and "quick fix" in block, block
-    assert "feature" not in block and "initiative" not in block, block
+    # From 9.0.0 the approaches are `delivery` (the path) and `spike` (ADR-092).
+    assert "delivery issue" in block and "spike" in block, block
+    for old in ("regular", "quick fix", "full approach", "feature", "initiative"):
+        assert old not in block, (old, block)

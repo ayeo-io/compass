@@ -13,12 +13,12 @@ behaviors, read from different professional perspectives.
 | Product owner or manager | `/compass:intent` | the intent, in the Summary and Intent links of `acceptance-criteria.md` | Does the specification deliver the intended outcome? |
 | Product marketer | `/compass:position` | `positioning.md`, `launch-readiness.md` | Which claims does tested behavior support? |
 | Designer | `/compass:design` | `ui-contract.md` | Are interaction states and accessibility expectations specified? |
-| Engineer | `/compass:assess` | approach, design, code and tests | How will each scenario become tested software? |
-| QA | `/compass:verify` | the gate evidence, in the manifest | Is the behavior covered, and is the evidence enough? |
+| Engineer | `/compass:go` | the assessment, scenarios, code and tests | How will each scenario become tested software? |
+| QA | `/compass:ship` | the gate evidence, in the manifest | Is the behavior covered, and is the evidence enough? |
 
 A role is a perspective a session consults. It does not change the issue's
 assessment, and a document on disk adds no gate: Compass needs and checks
-only `acceptance-criteria.md` (ADR-091). The plan stage checks, from the
+only `acceptance-criteria.md` (ADR-091). The specify stage checks, from the
 product owner's perspective, that the spec matches the intent its Intent links
 name.
 
@@ -135,7 +135,7 @@ Use `/compass:consult` when a decision crosses roles, such as:
 - a coverage gap that changes the planned work.
 
 The consult records the decision and its trade-offs. A guardrail always
-beats a strategy. The delivery approach, or a human, settles a conflict
+beats a strategy. The evidence the change owes, or a human, settles a conflict
 between strategies.
 
 Reassess the issue when the decision changes its size, risk, goal or delivery

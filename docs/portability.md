@@ -9,15 +9,16 @@ reimplement the policy engine.
 | Layer | Responsibility | Representative files | Porting rule |
 |---|---|---|---|
 | Methodology | Defines the flow, roles, artifacts, guardrails and strategies. | `docs/`, `approaches/`, templates, governance Markdown | Reuse. |
-| Kit | Computes delivery approaches, checks state and writes mechanical evidence. | `cli/`, governance YAML, schemas, `manifest.yml` | Invoke. |
+| Kit | Computes the evidence each change owes, checks state and writes mechanical evidence. | `cli/`, governance YAML, schemas, `manifest.yml` | Invoke. |
 | Adapter | Maps Compass into a particular agent runtime. | commands, agents, skills, hooks, runtime instructions and install wiring | Rebuild. |
 
 The boundary follows the determinism model:
 
 - the adapter produces an assessment because assessment needs judgement;
-- the kit computes the delivery approach because that must be deterministic; and
-- the adapter orchestrates the resulting flow while calling the kit for
-  checks and state mutations.
+- the kit computes the evidence the change owes because that must be
+  deterministic; and
+- the adapter runs the path while calling the kit for checks and state
+  mutations.
 
 A port that independently implements routing or guardrails may resemble
 Compass, but it will drift from Compass policy.
@@ -26,13 +27,13 @@ Compass, but it will drift from Compass policy.
 
 ### The Claude Code adapter layer
 
-The shipped adapter is Claude Code: `commands/` are the stage interface,
+The shipped adapter is Claude Code: `commands/` are the path interface,
 `skills/` the loadable procedures, `hooks/`
 the pre-action enforcement, and `.claude-plugin/` the install wiring. A port
 rebuilds that layer and reuses everything under it.
 
 ```
-commands/        the stage interface (the /compass: namespace)
+commands/        the path interface (the /compass: namespace)
 skills/          adaptive-routing, atdd, bdd-specification, behavior-mapping,
                  compass-runtime, evidence-gates, flow-management,
                  governance-check, intent-interview,
@@ -44,7 +45,7 @@ bin/compass      the shim that puts the kit on PATH
 .claude-plugin/  the plugin manifest and marketplace entry
 ```
 
-Take care with `architect`: it advises across the pipeline and is not a
+Take care with `architect`: it advises across the path and is not a
 sixth role, so a one-to-one role mapping drops it or turns it into a role.
 
 A conforming adapter must satisfy the following requirements.
@@ -57,24 +58,28 @@ user does not type an explicit Compass command.
 Before the first delivery change it must:
 
 1. assess risk, familiarity and size, and any goal or urgency switch;
-2. record the assessment in the manifest;
-3. call `compass approach evaluate --write`; and
-4. present the human-readable approach for approval.
+2. record the assessment with `compass quick-fix start`, or in the manifest
+   and then with `compass approach evaluate --write`; and
+3. show the person the three lines of `compass approach show`: the
+   approach, the evidence the change owes and where the files go.
 
 Conversation and read-only exploration do not need an issue. A delivery
 change does.
 
 ### 2. Expose the delivery flow
 
-The adapter must expose the eight methodological stages, whether as eight
-commands or an equivalent interface:
+The adapter must expose the four stages of the path, whether as one command
+that runs them all, as the shipped `/compass:go` does, or an equivalent
+interface:
 
 ```text
-assess → define → refine → plan → breakdown → implement → verify → ship
+assess → specify → build → ship
 ```
 
-It must honour the stage weights and omissions computed by the delivery
-approach, and write the selected artifacts using Compass templates.
+It must collect the evidence the change owes, as `compass approach show`
+lists it, and follow the `next:` line each kit call prints. From 9.0.0 the
+stages have no modes, and the one document Compass needs is
+`acceptance-criteria.md` (ADR-091, ADR-092).
 
 ### 3. Call the kit
 
@@ -83,7 +88,8 @@ operations. At minimum:
 
 | Need | Kit command |
 |---|---|
-| Compute or update a delivery approach | `compass approach evaluate` |
+| Compute or update the evidence a change owes | `compass quick-fix start`, `compass approach evaluate` |
+| Name the next step | `compass next` |
 | Check an issue | `compass check` |
 | Record red and green tests | `compass tdd-red`, `compass tdd-green` |
 | Check governance and issue schemas | `compass policy lint`, `compass issue lint` |
@@ -95,7 +101,7 @@ rather than editing `manifest.yml` ad hoc.
 
 ### 4. Preserve the safety contract
 
-The adapter must call `compass check` at the verify stage and before ship,
+The adapter must call `compass check` at the ship stage and before the commit,
 honour its exit code and preserve required human approvals.
 
 **Getting the contract into a session.** Compass's rules of behaviour live in
@@ -109,8 +115,8 @@ copies drift apart.
 
 BDD and TDD are default strategies. When the runtime supports pre-action hooks,
 the adapter enforces red-before-green mechanically, with the hook made
-approach-aware so it does not block spikes. Without hooks, the adapter must
-make the check an explicit implementation step.
+aware of the spike so it does not block one. Without hooks, the adapter must
+make the check an explicit step of build.
 
 **A person-only approval event.** In Claude Code a person approves by
 typing `/compass:approve`; `hooks/prompt-approval.sh` records it on the
@@ -148,21 +154,20 @@ Nothing essential may live only in conversation. The adapter must maintain:
 ```text
 .compass/current-task
 .compass/work/<issue>/manifest.yml
-.compass/work/<issue>/devlog.md
 .compass/work/<issue>/evidence/
 docs/compass/<created>-<issue>/acceptance-criteria.md
 ```
 
-It adds the approach-selected product, requirements, design, delivery, quality and
-launch artifacts alongside them.
+From 9.0.0 Compass writes no `devlog.md` for a new issue; an archived issue
+keeps its own.
 
 A different session or runtime can resume by reading this state.
 
 ### 7. Give safe delivery orchestration
 
 The adapter must support solo delivery. From 9.0.0 that is all it needs:
-each issue runs in one session, and the session builds the units of a
-distribution map one after another (ADR-090). No adapter needs isolated
+each issue runs in one session, and the session builds its scenarios one
+after another (ADR-090). No adapter needs isolated
 workspaces or an integration owner.
 
 ## Conformance mapping
@@ -220,7 +225,7 @@ A port normally keeps these unchanged:
 
 - methodology and conceptual documentation;
 - governance prose and machine-readable policy;
-- approach definitions and rubric;
+- the path, the spike and the rubric;
 - artifact templates;
 - CLI, schemas and vendored dependencies;
 - issue directory layout; and
@@ -250,9 +255,9 @@ portable contract itself.
 
 A port is conforming when the same assessed issue and policy produce:
 
-- the same computed approach;
+- the same computed approach and evidence;
 - a schema-compatible `manifest.yml`;
-- the same required artifact and gate set;
+- the same gate set;
 - equivalent typed evidence and approval records;
 - the same `compass check` verdict; and
 - an issue that another Compass runtime can resume without translation.
@@ -271,13 +276,12 @@ the guide defines their required fields and keeps unmeasured results visible.
 
 1. Complete the conformance mapping.
 2. Wire the target runtime to the unchanged kit CLI.
-3. Implement assessment and the eight stage commands.
+3. Implement assessment and the four stages of the path.
 4. Add role entry points.
 5. Add persistence and resumption.
 6. Add the strongest enforcement the runtime supports.
-7. Add safe parallelism, or declare an orchestration cap.
-8. Run cross-runtime conformance tests.
-9. Document install, security and known limitations.
+7. Run cross-runtime conformance tests.
+8. Document install, security and known limitations.
 
 The methodology is the long-lived asset, the kit is its deterministic
 mechanism, and the adapter is how a particular runtime reaches both.

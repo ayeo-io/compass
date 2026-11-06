@@ -1,8 +1,10 @@
 # The CLI
 
-A person runs the pipeline with the slash commands, and each slash command
-calls the CLI. `/compass:assess` runs `compass approach evaluate`,
-`/compass:verify` runs `compass check`. The CLI does the checks as a program,
+A person runs the path with the slash commands, and each slash command
+calls the CLI. `/compass:assess` runs `compass quick-fix start` or `compass
+approach evaluate`, and `/compass:ship` runs `compass check`. Each verb that
+writes a record of the issue ends with a `next:` line, which names the one
+command to run next. The CLI does the checks as a program,
 so a check is more than an instruction to the agent.
 
 Every verb describes itself: `compass <verb> --help` says what it does and
@@ -11,9 +13,9 @@ detail.
 
 ```text
 compass init               make this directory a Compass project - create .compass/ (--readiness: then measure and list the absent signals; /compass:init passes it)
-compass approach evaluate  the assessment -> the delivery approach, deterministically
-compass approach show      the three-line decision view: approach, gates, files
-compass approach render    every delivery approach as one HTML table
+compass approach evaluate  the assessment -> the evidence the change owes, deterministically
+compass approach show      the three-line decision view: approach, evidence, files
+compass approach render    the path, the spike and the evidence rows as one HTML table
 compass bdd extract        acceptance criteria -> a runnable .feature
 compass bdd verify         record which scenarios the runner actually ran
 compass check              run the guardrail checks against the manifest and evidence
@@ -50,7 +52,7 @@ compass issue status set   backlog, or done with --close-reason completed | not-
 compass issue status remove  end a backlog hold; the state then follows the records
 compass issue blocked set  flag an in-progress or in-review issue as blocked, with a reason
 compass issue blocked remove  clear the blocked flag
-compass issue depends add  record an issue this one waits for, with --reason and --until; implement is blocked until it is met
+compass issue depends add  record an issue this one waits for, with --reason and --until; build is blocked until it is met
 compass issue depends remove  stop waiting for an issue
 compass issue link set     link an issue to its GitHub issue (--github), to write its labels there (opt in), or to its pull request (--pr), whose merge commit becomes land_commit
 compass issue github sync  write an issue's labels to its linked GitHub issue now
@@ -62,7 +64,7 @@ compass flow               blockers, owed follow-ups, the periodic digest
 compass board render       write the delivery board as one page and open it (--no-open, --out, --worktrees)
 compass board refresh      rewrite that page in place, without opening a browser
 compass readiness          measure whether the repository is fit for unattended agent work (--json, --fix-list)
-compass next               which stage this issue reached, and what comes next
+compass next               which stage of the path this issue reached, and the next command
 compass follow-up add      record a follow-up the issue owes
 compass follow-up resolve  settle an owed follow-up
 compass ship-commit        commit exactly the files the issue recorded (--release-note: the issue's release line)
@@ -77,8 +79,8 @@ compass evidence request   ask a person for an approval; the request names the f
 compass evidence approve   record a person's approval of a human check, the sign-off on an irreversible change (--guardrail), the decisions agents took (--decisions) or a checkpoint hand-off (--checkpoint)
 compass evidence review    record a judgment against a judged check
 compass terminology        what a term means here, from the frozen vocabulary
-compass quick-fix start    assess, evaluate and record a quick fix in one call
-compass quick-fix finish   trace, check, gate and ship a quick fix in one call
+compass quick-fix start    assess and record a change of any size, with its first scenario, in one call
+compass quick-fix finish   trace, check and gate a change in one call; refuses while other evidence is owed
 compass decision record    write a settled product decision; the decider comes from git
 compass decision list      each decision's date, slug and outcome, newest first
 compass decision show      print one decision

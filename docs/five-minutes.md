@@ -1,7 +1,7 @@
 # Compass in five minutes
 
-This walkthrough takes one small change from assessment to a reviewable,
-checked result.
+This walkthrough takes one small change through the four stages of the path,
+assess, specify, build and ship, to a reviewable, checked result.
 
 ## Before you start
 
@@ -29,8 +29,11 @@ directory for the issue's documents.
 Start with a real, contained change:
 
 ```text
-/compass:assess "Fix the misspelt invalid-token message"
+/compass:go "Fix the misspelt invalid-token message"
 ```
+
+`/compass:go` runs all four stages in one session. The steps below show what
+it does at each one.
 
 Compass scores three dimensions:
 
@@ -40,13 +43,15 @@ Compass scores three dimensions:
 | Familiarity | Is the affected code understood? |
 | Size | How much delivery work is involved? |
 
-Two optional switches, `goal` and `urgency`, can move the approach towards a
-reference shape (spike or hotfix). Domain labels, such as `auth`, can raise the
-floor: the lightest approach the policy allows. Neither is scored.
+Two optional switches change what the change owes: `goal: exploration`
+makes the issue a spike, which explores and ships nothing, and `urgency:
+live-defect` is the hotfix setting, which asks for a reproduction first.
+Domain labels, such as `auth`, add evidence: a person approves the scenarios
+and signs off before the change ships. Neither is scored.
 
 Judgment goes into the assessment. Everything after it is deterministic: the
 same assessment and configuration produce the same
-approach, every time.
+evidence, every time.
 
 For a contained typo, Compass asks for the evidence every change owes and no
 more. It writes the manifest to `.compass/work/<issue>/` and the issue's
@@ -63,7 +68,8 @@ assessment:
 ```
 
 Those three dimensions and the switches are the only judgment in the routing. Everything after
-them - the evidence the change owes and the gates - is computed. Run
+them - the evidence the change owes and the gates - is computed. The
+`delivery` approach is the path; the only other approach is the spike. Run
 `compass approach evaluate --verbose` against that assessment and it prints:
 
 ```text
@@ -87,98 +93,83 @@ line reads `generation N of this issue (parent ...)`.
 See the decision:
 
 ```bash
-compass approach show --issue <issue>
+compass approach show --issue fix-token-message
 ```
 
-It prints the approach, the gates and where the issue's files go. `compass
-check` shows each scenario's red, green and evidence, and `compass next` names
-the next action. Compass writes no issue page: the manifest and the evidence
-are the record.
+It prints three lines: the approach and whether the session stops for you,
+the evidence the change owes, and where the issue's files go.
+
+```text
+Approach: delivery (risk contained, familiarity brownfield-mapped, size atomic) - does not stop to wait for you
+Evidence: scenarios, red-before-green, suite-green, correctness, governance, traceability, outer-loop
+Writes: .compass/work/fix-token-message/ and docs/compass/2026-11-06-fix-token-message/
+```
+
+`outer-loop` is there because the four-layer acceptance strategy (`S17`)
+applies to a change a real client can observe: the scenario's test runs
+against the system from the outside.
 
 To see every issue at once, with a lane for each stage, run
 `compass board render`. It writes one page and opens it in the browser;
 `compass board refresh` rewrites it after an issue moves to another stage. `docs/board.md`
 describes the page.
 
-Correct the assessment if it is wrong: a good delivery approach depends on
-a good assessment. The session waits for your approval only at the
-checkpoints the project's `autonomy` setting lists, which the first line of
-`compass approach show` names. Regenerate the dashboard after a
-stage changes the issue.
+Correct the assessment if it is wrong: the evidence is only as good as the
+assessment. The session waits for your approval only at the checkpoints the
+project's `autonomy` setting lists, which the first line of `compass approach
+show` names.
 
-## 2. Define acceptance
+## 2. Specify the scenario
 
-Run:
-
-```text
-/compass:define
-```
-
-For this change, one Gherkin scenario is enough:
+For this change, one Gherkin scenario is enough. `/compass:go` writes it into
+`acceptance-criteria.md` when it records the assessment:
 
 ```gherkin
-Scenario: The invalid-token message is spelled correctly
-  Given a request contains an invalid token
-  When authentication rejects the request
-  Then the response says "invalid token"
+Scenario: TRC-001
+  Given a request has an invalid token
+  When authentication rejects it
+  Then the response says invalid token
 ```
 
 The scenario is the shared specification. It tells the engineer what to test,
-QA what to check, and reviewers what the change is meant to achieve.
+QA what to check, and reviewers what the change is meant to achieve. Larger
+work gets more scenarios, added with `compass scenario add`, and each one
+names the test that proves it.
 
-## 3. Plan only what is useful
+## 3. Build with evidence
 
-Run:
-
-```text
-/compass:plan
-```
-
-On a quick fix, planning can collapse to a short note naming the file and test
-surface. Larger or riskier work can produce an intent document, high-level design,
-low-level design, ADRs, delivery plan or test strategy.
-
-Compass selects those documents because they help this issue. They are not a
-fixed checklist.
-
-## 4. Implement with evidence
-
-Run:
+Every `compass` call that writes a record ends with a `next:` line, and
+`compass next` prints it at any time. After the assessment it says:
 
 ```text
-/compass:implement
+next: compass tdd-red --loop outer --scenario TRC-001 -- <acceptance test command>
 ```
 
-Compass uses TDD by default where it adds value:
+Compass uses TDD on every change on the path:
 
 1. record a failing test with `compass tdd-red`;
 2. make the smallest useful change; and
 3. record the passing test with `compass tdd-green`.
 
 The commands run the test and write evidence beneath the issue directory.
-Compass does not treat “the tests pass” in chat as evidence.
+Compass does not treat "the tests pass" in chat as evidence. Until a failing
+test is on record, the pre-tool hook refuses an edit to the code.
 
-## 5. Verify and ship
+## 4. Ship
 
-Run:
-
-```text
-/compass:verify
-```
-
-The verify stage checks the acceptance criteria, test evidence, traceability
-and any approach-specific gates. Run `compass check` and resolve anything
-still open.
-
-Then run:
+`/compass:ship` reviews the change and passes each gate with recorded
+evidence. For a small change, `compass quick-fix finish` does this in one
+call: it runs the suite, runs `compass check` and passes the gates.
 
 ```text
-/compass:ship
+compass quick-fix finish: 'fix-token-message' checked, not committed.
+  gates : verify.correctness, verify.governance, verify.traceability -> pass
+  evidence : EV-T-TRC-001-outer, EV-CHECK-1
 ```
 
-Compass checks the issue record again before completing the delivery workflow.
-Your normal CI is still responsible for tests, linting, security scanning, builds and
-deployment checks.
+When you ask for a commit, `compass ship-commit` commits the files the issue
+recorded as changed, and nothing else. Your normal CI is still responsible for tests, linting,
+security scanning, builds and deployment checks.
 
 ## What you should now have
 
@@ -187,7 +178,7 @@ A small issue typically leaves:
 ```text
 .compass/work/<issue>/
 ├── manifest.yml
-├── devlog.md
+├── generations/
 └── evidence/
 
 docs/compass/<date>-<issue>/
@@ -202,11 +193,11 @@ runtime can resume from these files without the original chat.
 ## The mental model in five points
 
 1. **Assess the work, do not choose a process.** Three dimensions are judgment;
-   the approach is computed from them.
-2. **The approach decides the process weight.** Which stages run at what weight,
-   which artifacts are needed, which gates apply.
-3. **Guardrails are hard; strategies are defaults.** An approach can reduce
-   process weight but never removes a guardrail.
+   the evidence is computed from them.
+2. **One path, adaptive evidence.** Every change runs assess, specify, build
+   and ship. The assessment decides which evidence each stage judges.
+3. **Guardrails are hard; strategies are defaults.** A small change owes less
+   evidence but never loses a guardrail.
 4. **Evidence, not assertion.** A gate clears with a record a reader can open.
 5. **If it is not on disk, it did not happen.** The manifest and its artifacts
    stay after the conversation ends.
@@ -220,7 +211,8 @@ means.
 
 ## Next
 
-- Read the [methodology](methodology.md) to understand adaptive routing.
+- Read the [methodology](methodology.md) to understand the path and how
+  assess selects the evidence.
 - Read the [roles guide](roles-guide.md) if product, design, marketing or QA
   will contribute.
 - Read the [safety contract](safety-contract.md) before relying on Compass

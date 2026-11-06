@@ -6,6 +6,10 @@ someone who was not in the conversation, has not read the review, and cannot ask
 you a follow-up question. This page shows what that looks like in the four
 places it matters most.
 
+Compass needs and checks one document, `acceptance-criteria.md` (ADR-091). A
+plan is a design note a team keeps beside it, written during specify and
+read during build; Compass does not read it. The same rule applies to both.
+
 It is aimed at whoever is writing or reviewing an artifact, human or agent. Read
 it once; come back to the examples when something you wrote gets a puzzled
 response.
@@ -52,7 +56,8 @@ the better one could only describe this change.
 
 ## Example 2 - a design decision
 
-Design decisions live in the plan's Design decisions, ADR-style. A
+Design decisions live in the plan's Design decisions, ADR-style, or in an ADR
+when they bind later issues. A
 decision with no alternative considered is usually not a decision yet - it is a
 preference that has not been tested.
 
@@ -116,7 +121,8 @@ spec can be scanned without opening a single scenario body.
 
 ## Example 4 - a plan work unit
 
-The plan's work units are what the implement stage runs. A unit that reads
+The plan's work units are what the build stage runs, one after another in the
+same session. A unit that reads
 clearly to the planner and vaguely to the builder is the most expensive kind of
 plan defect, because the ambiguity is discovered after the work starts.
 
@@ -289,8 +295,9 @@ after regression testing across five versions and five
 trials found identical quality scores whether the loop ran or not, at roughly 25
 minutes of overhead per run. Compass has not repeated that measurement, and
 takes their published result at face value. Compass already has two
-review moments that earn their cost: **the requirements review**, which QAs the spec against
-governance and records an ambiguity ledger, and the **reviewer** agent at Verify.
+review moments that earn their cost: **the self-review at specify**, which
+checks the scenarios for placeholders, untestable outcomes and missing failure
+modes, and **the review at ship**, which passes the gates with evidence.
 The four-scan self-review in the `bdd-specification` skill gets the ergonomic
 benefit without the process weight, because the author fixes their own cheap mistakes
 rather than routing them through a critic.
@@ -311,7 +318,7 @@ without having to name someone to imagine.
 
 **No plan made of small steps, each with the exact commands to run.** Some frameworks make
 the plan a sequence of small steps each with the literal command to run. Compass
-does not, because the implement stage already sequences small units through `compass tdd-red`
+does not, because the build stage already sequences small units through `compass tdd-red`
 and `compass tdd-green`, and duplicating that in the plan inflates it
 while it goes out of date as soon as the code changes. The useful part of that idea -
 that a plan should contain no unfinished promises - is kept as the author's

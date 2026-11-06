@@ -113,19 +113,20 @@ than these two reads as `enforced`.
 
 ### `autonomy`
 
-How often a session stops to wait for a person at a stage hand-off: confirming
-the approach, and approving the acceptance criteria, the requirements review
-and the technical design. The routing policy's `autonomy_checkpoints:` table
-says which hand-offs wait for each value and delivery approach. `compass approach show`
-shows the answer for an issue. No value changes a gate, evidence, the pre-tool
-hook or `compass check`.
+How often a session stops to wait for a person at a checkpoint, the end of a
+stage of the path: confirming the assessment, approving the scenarios, and
+the stage 2 and 3 reviews of the four-layer acceptance strategy (`S17`).
+Assess writes the checkpoints of each issue to its manifest, and `compass
+approach show` shows the answer for an issue. No value changes a gate,
+evidence, the pre-tool hook or `compass check`.
 
-- `controlled`: wait at every hand-off the table lists. That is all four on the
-  regular or full approach, assess and define on a hotfix, and assess on a
-  quick fix or spike.
-- `balanced`: a quick fix does not stop. The regular approach waits at define
-  and plan. The full approach waits at all four.
-- `autonomous`: never wait. Every hand-off is shown and logged instead. From
+- `controlled`: a delivery issue waits at assess and specify, and also at
+  build and ship where `S17` applies. A spike waits at assess.
+- `balanced`: a delivery issue does not stop, except at specify when its
+  scenarios owe a person's approval (a `G5` label or critical risk).
+- `autonomous`: never wait, except at specify when the scenarios owe a
+  person's approval, as under `balanced`. Every other hand-off is shown and
+  logged instead. From
   7.0.0 an issue on `autonomous` must meet the readiness floor:
   `compass approach evaluate --write` refuses it, with exit 2, while the
   repository is below the floor, has no fresh readiness record, or the CI
@@ -138,7 +139,7 @@ changed how often a session stops would give no sign.
 
 ### `project`
 
-- `name`: shown in artifact headers and the devlog.
+- `name`: the project's name. `/compass:init` asks for it; no check reads it.
 - `test_command`: the command `compass tdd-red` and `compass tdd-green` run
   when none is given. Left empty, `tdd-red` and `tdd-green` need the command
   after `--`, and refuse without it.
@@ -371,7 +372,7 @@ with a message that names the key, the file and the accepted values, and
 assessed refuse a bad value there. `compass check` on an assessed issue reads
 the configuration stored with the issue, so it does not refuse it. The
 setting needs no
-owner's approval: the delivery-approach record and `compass retro
+owner's approval: the manifest's `acceptance_strategy` block and `compass retro
 --acceptance` show the choice. It takes effect for an issue at its next
 `compass approach evaluate --write`; until then `compass check` reports the
 changed setting as advice. The setting is read from `compass.yml`, or

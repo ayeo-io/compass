@@ -76,13 +76,14 @@ def _one(pattern, text, where):
 BASE = {"familiarity": "brownfield-mapped", "goal": "delivery",
         "role": "engineer"}
 
-#: (case heading, claim pattern, assessment the case scores)
+#: (case heading, claim pattern, assessment the case scores). From 9.0.0 every
+#: gate is passed at ship (ADR-092), so each delivery case states its count there.
 GATE_CLAIMS = [
-    ("## Case 1 - A typo fix", r"(\w+) (?:light )?gates? at verify",
-     dict(BASE, risk="trivial", size="atomic", labels="[]")),
-    ("## Case 2 - A normal-sized new feature", r"(\w+) gates? at verify",
-     dict(BASE, risk="contained", size="standard", labels="[]")),
-    ("## Case 5 - A production hotfix", r"runs (\w+) gates, not the base",
+    ("## Case 1 - A typo fix", r"(\w+) gates, all passed at ship",
+     dict(BASE, risk="trivial", size="atomic", labels="[auth]")),
+    ("## Case 2 - A normal-sized new feature", r"(\w+) gates, all passed at ship",
+     dict(BASE, risk="contained", size="medium", labels="[]")),
+    ("## Case 5 - A production hotfix", r"passes (\w+) gates with typed evidence",
      dict(BASE, risk="cross-cutting", size="small", urgency="live-defect",
           labels="[]")),
     ("## Case 6", r"The (\w+) gate is",

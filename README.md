@@ -18,21 +18,22 @@ A typo fix should not need an architecture pack. A payments rewrite should
 not begin with an unstructured prompt.
 
 Compass assesses each piece of work, new or existing, by **risk, familiarity
-and size**. A deterministic policy then composes the delivery approach: which
-stages run at what depth, which documents are worth writing, which checks run,
-and where a person decides. Five guardrails apply to all work that ships code,
+and size**. Every change that ships then runs the same four stages: assess, specify,
+build and ship. A deterministic policy selects the evidence the change owes
+before it ships: which scenarios and tests, which reviews, and where a person
+decides. Five guardrails apply to all work that ships code,
 whatever the assessment. They are defaults: a project can add its own, report
 failures without blocking while it tries Compass, or loosen one with the
 owner's recorded waiver. A person's sign-off for irreversible work cannot be
 loosened ([safety contract](docs/safety-contract.md)).
 
 <p align="center">
-  <img src="assets/compass-explainer.svg" alt="Three sliders for risk, familiarity and size feed a policy. As the work changes from a typo fix to a payments rewrite, the eight stage bars grow from a quick fix to the full approach, dots mark the stages where a person decides, and five guardrail lines stay the same." width="960">
+  <img src="assets/compass-explainer.svg" alt="Three sliders for risk, familiarity and size feed a policy. As the work changes from a typo fix to a live defect to a payments rewrite, the evidence each of the four stages judges grows from the light row to the standard row, dots mark the stages where a person decides, and five guardrail lines stay the same." width="960">
 </p>
 
-Judgment goes into the assessment. Everything after it is computed from three
-inputs: the assessment, the project's resolved configuration and the documents
-the issue has on disk. The same three inputs give the same approach, every
+Judgment goes into the assessment. Everything after it is computed from two
+inputs: the assessment and the project's resolved configuration. The same
+two inputs give the same evidence, every
 time ([safety contract](docs/safety-contract.md#1-routing-is-deterministic-after-assessment)).
 
 ## Install
@@ -71,10 +72,13 @@ Describe the work:
 /compass:go "Add rate limiting to the public API"
 ```
 
-`/compass:go` assesses the change, shows the plan in three lines and starts.
-`/compass:assess` does the assessment alone. When the approach reaches a stage
-that waits for a person, the session stops and shows a request. You answer
-in the same session:
+`/compass:go` assesses the change, shows the plan in three lines and runs the
+path: it writes the scenarios, records a failing test before the code and a
+passing one after it, and checks the result with `/compass:ship`. Each step
+prints a `next:` line with the one command to run next. `/compass:assess`
+does the assessment alone. When the path reaches a checkpoint that waits for
+a person, the session stops and shows a request. You answer in the same
+session:
 
 ```text
 /compass:approve
@@ -83,7 +87,7 @@ in the same session:
 
 `/compass:status` reports what is blocked, moving and done. `/compass:resume
 <issue>` picks an issue up in a later session, from its record on disk.
-To write the specs and plans an issue asks for, read
+To write the scenarios an issue asks for, read
 [docs/writing-specs-and-plans.md](docs/writing-specs-and-plans.md).
 
 The shipped guardrails are active from the first command. Project settings,
@@ -98,21 +102,21 @@ security scanning, builds or deployment checks.
 
 ## What Compass changes
 
-Compass chooses the process for each change from its assessment of risk,
-familiarity and size.
+Compass chooses the evidence each change owes from its assessment of risk,
+familiarity and size. Every change owes scenarios, a failing test before each
+passing one, a green suite and three reviews. The rest depends on the work:
 
-| Work | Typical Compass response |
+| Work | Evidence Compass adds |
 |---|---|
-| **Quick fix** | One clear criterion, a focused change and evidence that it works. |
-| **Regular** | Behavioral specification in Gherkin, proportionate technical design and review. |
-| **Full** | Intent document, acceptance criteria, a thorough requirements review and technical design, and a distribution map for parallel work. |
-| **Hotfix** | Reproduce first, fix safely, then do the follow-up work skipped for speed. |
-| **Spike** | Time-boxed exploration. Record the learning; ship nothing directly. |
+| **Small, low risk** | Nothing more. One clear scenario, a focused change and evidence that it works. |
+| **Larger or riskier** | The regression, security and clarity reviews and the Definition of Done. Cross-cutting or critical risk adds the architecture review. |
+| **Live defect** | The setting `urgency: live-defect`: reproduce first, fix safely, then do the follow-up work skipped for speed. |
+| **`auth`, `payments`, `personal-data` or `migrations`** | A person approves the scenarios before the code, and signs off before the change ships. |
+| **Spike** | Time-boxed exploration, off the path. Record the learning; ship nothing directly. |
 
-These are reference shapes, not fixed levels. A one-file authentication change
-can get more protection than a large throwaway prototype, because risk and
-size are different things. Optional switches for goal and urgency pick the
-spike, and the hotfix for a small live defect.
+A one-file authentication change can owe more than a large throwaway
+prototype, because risk and size are different things. `compass approach
+show` prints the evidence an issue owes on one line.
 
 ## Rigor without ritual
 
@@ -128,8 +132,8 @@ Compass keeps two kinds of rule apart:
   bureaucracy: BDD, TDD, decision records, architecture models and other
   practices that apply when they add value.
 
-An approach can reduce the amount of process. It cannot remove a guardrail
-from work that ships code
+A small change owes less evidence. No assessment removes a guardrail from
+work that ships code
 ([safety contract](docs/safety-contract.md#2-a-declared-guardrail-cannot-silently-become-advice)).
 
 ## A person stays in control
@@ -156,8 +160,8 @@ from work that ships code
 - **Decisions an agent takes for you are listed.** On `balanced` and
   `controlled`, the next checkpoint waits for you to confirm or change them.
 - **Each acceptance test stage ends with a review.** On `controlled`, an issue
-  the four-layer acceptance strategy applies to also waits at `implement` and
-  `verify`, and the request lists the `atdd` skill's review questions.
+  the four-layer acceptance strategy applies to also waits at build and
+  ship, and the request lists the `atdd` skill's review questions.
 
 ## Resumable and auditable
 
@@ -171,13 +175,13 @@ stage. This example is an invented invoicing product:
 
 ![The Compass board for an invented invoicing product: a backlog lane, one lane per stage from assess to ship, and a done lane, with cards such as sso-saml-login blocked in implement and four issues done this week](assets/board-example.png)
 
-## One pipeline, five roles
+## One path, five roles
 
 ```text
-assess → define → refine → plan → breakdown → implement → verify → ship
+assess → specify → build → ship
 ```
 
-The stages stay the same while their depth adapts. Engineer, product owner,
+The stages stay the same while the evidence they judge adapts. Engineer, product owner,
 designer, product marketer and QA each enter the same issue through their own
 command; a product owner starts before the spec, with `/compass:intent`. A role is a
 perspective a session consults. A document a role writes, such as
@@ -192,14 +196,14 @@ Compass runs on Claude Code today, but its core is split on purpose:
 - **Kit:** the runtime-neutral Python CLI, schemas and policy engine.
 - **Adapter:** the commands, skills and hooks for Claude Code.
 
-The slash commands are the pipeline; they call the CLI, which does the work
+The slash commands run the path; they call the CLI, which does the work
 ([docs/cli.md](docs/cli.md)). A future runtime adapter calls the same kit
 rather than reimplementing the rules ([docs/portability.md](docs/portability.md)).
 
 ## What the repository contains
 
 ```
-commands/     the stage interface, under the /compass: namespace
+commands/     the path and role entry points, under the /compass: namespace
 skills/       loadable procedures - adaptive-routing, bdd-specification,
               tdd-discipline, intent-interview and the rest
 hooks/        pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,
@@ -207,7 +211,7 @@ hooks/        pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,
 cli/compass   the kit: routing, checks and the manifest
 bin/compass   the shim that puts the kit on your PATH
 governance/   guardrails, strategies, routing policy, frozen vocabulary
-approaches/   the reference shapes, and the documents each one writes
+approaches/   the path, the spike, and how assess selects the evidence
 architecture/ Compass's own invariants and decision records
 .claude-plugin/  the plugin manifest and marketplace entry
 ```

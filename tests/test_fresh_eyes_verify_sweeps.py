@@ -372,6 +372,7 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
         # isolation-and-layering (#328, ADR-086): `isolation record`, `layering record`
         "isolation", "layering",
+        "waiver",  # one-check waivers (#357, ADR-094 decision 8): `waiver add|withdraw`
     }
     line = next(l for l in result.stdout.splitlines() if l.strip().startswith("{"))
     verbs = set(line.strip().strip("{}").split(","))

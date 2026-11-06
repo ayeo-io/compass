@@ -329,6 +329,9 @@ EXPECTED_SUBCOMMANDS = {
     # record`, the two strategy records only their commands write. GROUPS, so a
     # later record verb has a home.
     "isolation", "layering",
+    # one-check waivers (#357, ADR-094 decision 8): `waiver add` and
+    # `waiver withdraw`, the one route by which an issue owes less.
+    "waiver",
 }
 
 

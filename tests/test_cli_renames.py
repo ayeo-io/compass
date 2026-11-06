@@ -467,6 +467,7 @@ EXCEPTIONS = {
     "lesson accept": "turns a pending proposal into a lesson",
     "lesson decline": "drops a pending proposal",
     "record restore": "restores a record from its sync",
+    "waiver withdraw": "removes an unapproved waiver but only marks an approved one withdrawn, so `remove` would misdescribe it; ADR-094 decision 8 names this verb",
 }
 
 

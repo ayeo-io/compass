@@ -323,6 +323,7 @@ EXPECTED_SUBCOMMANDS = {
     "release",                    # notes - the release lines since a git reference (ADR-065)
     "isolation",                  # record - the isolation proof (#328, ADR-086)
     "layering",                   # record - the layering record (#328, ADR-086)
+    "waiver",                     # add|withdraw - one-check waivers (#357, ADR-094 decision 8)
 }
 
 

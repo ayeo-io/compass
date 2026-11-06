@@ -332,7 +332,7 @@ SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement"
 TIGHTEN_KEYS = ("signoff_labels", "require_evidence", "agent_review", "project_checks",
                 "capabilities")
 #: The stages a project check (`project_checks`) may run at.
-PROJECT_CHECK_STAGES = ("build", "ship")
+PROJECT_CHECK_STAGES = (stable_ids.STAGE_BUILD, stable_ids.STAGE_SHIP)
 #: The pieces of acceptance support code a project names under `project.acceptance_support`.
 ACCEPTANCE_SUPPORT = ("alias_helper", "driver_factory", "dsl_root", "layering_test")
 #: The three switches inside `github_labels`, which 9.0.0 removed and does not read.

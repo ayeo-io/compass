@@ -1112,6 +1112,14 @@ _register(Rule(
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"; the preset copies the type text from "
                    "governance/guardrails.yml."),
+        # The fixed check set (ADR-094) is built from the live preset, so it
+        # carries the same check and type text and the same reasons.
+        Exemption("governance/check-set.yml", "compass bdd verify",
+                   "compass bdd verify is a CLI verb, not the plain verb; the "
+                   "check set copies the check text from the preset."),
+        Exemption("governance/check-set.yml", "attempts: <int>",
+                   "attempts: <int> names the evidence field, not the verb "
+                   "\"attempt\"; the check set copies the text from the preset."),
         # The kept default@6 folder is a byte-identical copy of the live
         # default at the v6.1.0 tag, so it carries the same four lines and
         # the same reasons. The copy must not change, so each line is

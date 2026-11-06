@@ -54,11 +54,6 @@ def contract_problems(root: Path) -> list[str]:
     adapters_dir = root / "adapters"
     if adapters_dir.is_dir():
         for d in sorted(p.name for p in adapters_dir.iterdir() if p.is_dir()):
-            # Git does not delete an ignored `__pycache__`, so a checkout that
-            # pulled an adapter's removal (ADR-093 removed adapters/codex/)
-            # keeps a folder that holds only that cache. It is not an adapter.
-            if {c.name for c in (adapters_dir / d).iterdir()} == {"__pycache__"}:
-                continue
             if d not in adapters:
                 problems.append(f"adapters/{d}/ has no column in the contract")
     if "claude-code" not in adapters:
@@ -123,14 +118,6 @@ def test_an_adapter_directory_without_a_column_fails(tmp_path):
     assert contract_problems(root) == []
     (root / "adapters" / "unlisted").mkdir(parents=True)
     assert any("adapters/unlisted/ has no column" in p for p in contract_problems(root))
-
-
-def test_a_folder_left_with_only_a_python_cache_is_not_an_adapter(tmp_path):
-    root = _copy(tmp_path)
-    (root / "adapters" / "removed" / "__pycache__").mkdir(parents=True)
-    assert contract_problems(root) == []
-    (root / "adapters" / "removed" / "runtime.py").touch()
-    assert any("adapters/removed/ has no column" in p for p in contract_problems(root))
 
 
 @pytest.mark.parametrize("cell, says", [

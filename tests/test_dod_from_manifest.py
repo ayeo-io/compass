@@ -38,7 +38,8 @@ SPEC = {"risk": "critical", "familiarity": "brownfield-mapped", "size": "large",
 def _issue(tmp_path, layer=None, gates_passed=False, **project):
     """The issue, with a verification report. With `gates_passed`, every gate has
     passed on typed evidence: a path issue's Definition of Done is the build
-    exit list, judged once every gate has passed (ADR-092), report or not."""
+    exit list, judged once every gate has passed (ADR-092), report or not.
+    `project` can name a git `parent` document."""
     root = sup.project(tmp_path, compass_yml=layer or LAYER, **project)
     write_doc(root, "verification-report", "# VR\n\n" + block("dod"))
     if gates_passed:
@@ -310,22 +311,24 @@ def test_dcj_32_the_stage_lists_read_records(tmp_path):
 # --- DCJ-33 -----------------------------------------------------------------
 
 def test_dcj_33_the_check_lists_the_configured_items(tmp_path):
-    # The stage `verify` is locked, so removing an item needs a waiver on the entry. A project
-    # waiver stands in for the issue layer: the issue layer's waiver needs an approval record
-    # that names it, and the check reads the same resolved list either way.
-    layer = {**LAYER,
-             "checks": {**LAYER["checks"],
-                        "dod-perf-budget": {"statement": "Performance stays within budget.",
-                                            "kind": "human", "severity": "blocking",
-                                            "on_skipped": "not-applicable"}},
-             "stages": {"verify": {
-                 "set": {"exit": {"add": ["dod-perf-budget"], "remove": ["dod-coverage-floor"]}},
-                 "waiver": {"reason": "Coverage is judged elsewhere in this project.",
-                            "approved_by": "jed72", "approved_on": "2026-10-09"}}}}
+    # The stage `verify` is locked, so removing an item needs a waiver on the entry. A git
+    # parent's waiver stands in for the issue layer: the issue layer's waiver needs an approval
+    # record that names it, and the check reads the same resolved list either way. Since 9.0.0
+    # a project layer's change to `verify`, a legacy stage, is left out (ADR-092), so the
+    # change sits in a git parent, which names the owner who may approve the waiver.
+    parent = {"schema": 1, "owner": "jed72",
+              "checks": {"dod-perf-budget": {"statement": "Performance stays within budget.",
+                                             "kind": "human", "severity": "blocking",
+                                             "on_skipped": "not-applicable"}},
+              "stages": {"verify": {
+                  "set": {"exit": {"add": ["dod-perf-budget"],
+                                   "remove": ["dod-coverage-floor"]}},
+                  "waiver": {"reason": "Coverage is judged elsewhere in this project.",
+                             "approved_by": "jed72", "approved_on": "2026-10-09"}}}}
     for capability in (True, False):
         folder = tmp_path / ("on" if capability else "off")
-        root = _issue(folder, layer={**layer, "capabilities": {"entry-exit-evaluation": capability}},
-                      gates_passed=True)
+        root = _issue(folder, layer={**LAYER, "capabilities": {"entry-exit-evaluation": capability}},
+                      gates_passed=True, parent=parent)
         _, report = _report(root)
         detail = _row(report, "dod-evidence-typed")["detail"]
         listed = [i for i in ITEMS + ["dod-perf-budget"] if f"{i} is open" in detail]

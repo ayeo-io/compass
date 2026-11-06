@@ -118,9 +118,11 @@ def add_entry(root, kind, status="draft", path=True, **more):
     return entry
 
 
-def project(tmp_path, compass_yml=None, assessment=None, evaluate=True):
+def project(tmp_path, compass_yml=None, assessment=None, evaluate=True, parent=None):
     """A git repository holding one regular issue at generation 1, with the
-    documents of the shipped regular approach written (not registered)."""
+    documents of the shipped regular approach written (not registered). With
+    `parent`, `compass.yml` also extends a git parent that holds that document
+    (`parent_fixtures.team_parent`)."""
     root = Path(tmp_path) / "repo"
     root.mkdir(parents=True)
     git(root, "init", "-q")
@@ -139,6 +141,9 @@ def project(tmp_path, compass_yml=None, assessment=None, evaluate=True):
         (root / "compass.yml").write_text(
             compass_yml if isinstance(compass_yml, str) else yaml.safe_dump(compass_yml),
             encoding="utf-8")
+    if parent is not None:
+        from parent_fixtures import team_parent
+        team_parent(tmp_path, parent, root)
     if evaluate:
         code, out, err = run(root, "approach", "evaluate", "--issue", SLUG, "--write")
         assert code == 0, out + err

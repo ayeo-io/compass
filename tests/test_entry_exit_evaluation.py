@@ -120,6 +120,18 @@ def _by_check(rows):
     return {row.check: row for row in rows}
 
 
+def _team_project(tmp_path, parent_doc, project_doc):
+    """A scratch project whose `compass.yml` is `project_doc` and extends a git
+    parent that holds `parent_doc`, fetched into its cache. A test that changes
+    a legacy stage such as plan uses it: a project layer's change to one is left
+    out since 9.0.0 (ADR-092), a git parent's is merged."""
+    from parent_fixtures import team_parent
+    (tmp_path / "project").mkdir()
+    root, task_dir = _project(tmp_path / "project", compass_yml=project_doc)
+    team_parent(tmp_path, parent_doc, root)
+    return root, task_dir
+
+
 # --- EE-1: the capability off changes nothing ---------------------------------------
 
 def test_ee_1_with_the_capability_off_no_reader_shows_a_list(tmp_path):
@@ -166,9 +178,7 @@ def test_ee_1_a_project_check_that_requires_the_capability_waits_for_it(tmp_path
 
 
 def test_ee_1_check_runs_a_project_deterministic_check_with_the_capability_off(tmp_path):
-    config = _project_check_config()
-    del config["capabilities"]
-    root, task_dir = _project(tmp_path, compass_yml=config)
+    root, task_dir = _project_check_project(tmp_path, capability=False)
     assert _evaluate_write(root)[0] == 0
     _write_manifest(task_dir, current_phase="plan")
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")
@@ -587,11 +597,8 @@ def test_ee_7_a_blocking_when_that_does_not_match_makes_a_list_failure_advisory(
 
 
 def test_ee_7_an_advisory_list_failure_is_shown_counted_and_recorded_as_advisory(tmp_path):
-    root, task_dir = _config_project(tmp_path, capability=False)
-    config = _project_check_config()
-    del config["capabilities"]
-    config["checks"]["list-scenarios-have-tests"]["severity"] = "advisory"
-    (root / "compass.yml").write_text(yaml.safe_dump(config), encoding="utf-8")
+    root, task_dir = _project_check_project(tmp_path, capability=False,
+                                                 severity="advisory")
     assert _evaluate_write(root)[0] == 0
     _write_manifest(task_dir, current_phase="plan")
     data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
@@ -744,6 +751,8 @@ def test_ee_7_the_shipped_default_names_no_judged_or_evidence_check_in_a_list():
 
 
 def _judged_list_config():
+    """A git parent that adds an evidence check to the plan entry list. A project
+    layer's change to plan is left out since 9.0.0 (ADR-092)."""
     return {"schema": 1,
             "checks": {"design-reviewed": {
                 "statement": "A test run is on record.", "kind": "evidence",
@@ -753,7 +762,7 @@ def _judged_list_config():
 
 
 def test_ee_7_lint_warns_when_a_list_names_a_kind_this_version_does_not_evaluate(tmp_path):
-    root, task_dir = _project(tmp_path, compass_yml=_judged_list_config())
+    root, task_dir = _team_project(tmp_path, _judged_list_config(), {"schema": 1})
     code, out, err = _run(root, "policy", "lint", "--json")
     assert code == 0, out + err
     found = [f for f in json.loads(out)["findings"] if f["code"] == "M-LIST-KIND-UNEVALUATED"]
@@ -770,7 +779,7 @@ def test_ee_7_lint_is_quiet_for_the_shipped_default(tmp_path):
 
 
 def test_ee_7_an_evidence_check_a_project_adds_fails_with_the_capability_off(tmp_path, monkeypatch):
-    root, task_dir = _project(tmp_path, compass_yml=_judged_list_config())
+    root, task_dir = _team_project(tmp_path, _judged_list_config(), {"schema": 1})
     body = _manifest(task_dir)
     body.update({"delivery_approach": "regular", "current_phase": "plan",
                  "stages": {"refine": "light", "plan": "full"}})
@@ -888,17 +897,28 @@ def test_ee_9_next_names_the_unmet_entry_checks_of_the_current_stage(tmp_path):
 
 
 
-def _project_check_config():
-    return {"schema": 1, "capabilities": {CAPABILITY: True},
+def _project_check_parent(severity="blocking"):
+    """A git parent that adds a deterministic check to the plan entry list. Since
+    9.0.0 a project's own file cannot change a legacy stage such as plan, so the
+    change is left out of it (ADR-092); a git parent's change is still merged."""
+    return {"schema": 1,
             "checks": {"list-scenarios-have-tests": {
                 "statement": "Every scenario has a test.", "kind": "deterministic",
-                "impl": "scenarios-have-tests", "severity": "blocking",
+                "impl": "scenarios-have-tests", "severity": severity,
                 "on_skipped": "fail"}},
             "stages": {"plan": {"set": {"entry": {"add": ["list-scenarios-have-tests"]}}}}}
 
 
+def _project_check_project(tmp_path, capability=True, severity="blocking"):
+    """A scratch project that extends `_project_check_parent`, and its issue directory."""
+    config = {"schema": 1}
+    if capability:
+        config["capabilities"] = {CAPABILITY: True}
+    return _team_project(tmp_path, _project_check_parent(severity), config)
+
+
 def test_ee_10_check_runs_a_deterministic_check_a_project_adds(tmp_path):
-    root, task_dir = _project(tmp_path, compass_yml=_project_check_config())
+    root, task_dir = _project_check_project(tmp_path)
     assert _evaluate_write(root)[0] == 0
     _write_manifest(task_dir, current_phase="plan")
     _write_review(task_dir)
@@ -913,7 +933,7 @@ def test_ee_10_check_runs_a_deterministic_check_a_project_adds(tmp_path):
 
 
 def test_ee_10_an_issue_assessed_before_the_path_runs_it_beside_the_ready_list(tmp_path):
-    root, task_dir = _project(tmp_path, compass_yml=_project_check_config())
+    root, task_dir = _project_check_project(tmp_path)
     assert _evaluate_write(root)[0] == 0
     _assessed_before_the_path(task_dir)
     _write_manifest(task_dir, current_phase="plan")

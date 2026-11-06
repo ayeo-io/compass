@@ -429,8 +429,21 @@ def _cli_config(reviewers=None, extra_check=None):
             "stages": {"plan": {"set": {"entry": {"add": [CHECK]}}}}}
 
 
+def _cli_layers(tmp_path, config):
+    """A scratch project for `config` and its issue directory. Its checks and
+    stage lists sit in a git parent: since 9.0.0 a project layer's change to a
+    legacy stage such as plan is left out (ADR-092)."""
+    from parent_fixtures import team_parent
+    parent = {"schema": 1, **{key: config[key] for key in ("checks", "stages")}}
+    project = {key: value for key, value in config.items() if key not in parent}
+    (tmp_path / "project").mkdir()
+    root, task_dir = _project(tmp_path / "project", compass_yml=dict(project, schema=1))
+    team_parent(tmp_path, parent, root)
+    return root, task_dir
+
+
 def _cli_project(tmp_path, reviewers=None, documents=True):
-    root, task_dir = _project(tmp_path, compass_yml=_cli_config(reviewers))
+    root, task_dir = _cli_layers(tmp_path, _cli_config(reviewers))
     assert _evaluate_write(root)[0] == 0
     _write_manifest(task_dir, current_phase="plan")
     if documents:
@@ -556,7 +569,7 @@ def test_jc_8_an_input_that_cannot_be_found_is_named(tmp_path):
 def test_jc_8_a_check_with_no_inputs_cannot_be_reviewed(tmp_path):
     config = _cli_config()
     config["checks"][CHECK]["inputs"] = []
-    root, task_dir = _project(tmp_path, compass_yml=config)
+    root, task_dir = _cli_layers(tmp_path, config)
     assert _evaluate_write(root)[0] == 0
     code, out, err = _review(root, reviewer="agent")
     assert code == 2 and "declares no inputs" in err
@@ -810,7 +823,7 @@ def test_jc_12_an_advisory_judged_check_with_no_record_reports_the_advisory_stat
 
 
 def test_jc_12_policy_lint_does_not_warn_about_a_judged_check_in_a_list(tmp_path):
-    root, task_dir = _project(tmp_path, compass_yml=_cli_config())
+    root, task_dir = _cli_layers(tmp_path, _cli_config())
     code, out, err = _run(root, "policy", "lint", "--json")
     assert code == 0, out + err
     assert not [f for f in json.loads(out)["findings"]

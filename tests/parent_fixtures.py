@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import yaml
@@ -58,6 +59,33 @@ def fake_git(tmp_path):
     script.write_text(f"#!/bin/sh\necho \"$@\" >> {log}\nexit 1\n", encoding="utf-8")
     script.chmod(0o755)
     return bin_dir, log
+
+
+def team_parent(tmp_path, parent_doc, project_root):
+    """Publish `parent_doc` as the git parent `acme/team`, make the project at
+    `project_root` extend it, and fetch it into the project's cache with
+    `compass policy lint`. Later commands read the cached parent without the
+    mirror. Returns the `extends:` reference.
+
+    A test that changes a legacy stage (such as plan), an approach, the caps
+    rules or a `dor-*` check uses it: since 9.0.0 a project layer's change to one
+    of them is left out (ADR-092), and a git parent's change is still merged."""
+    base = Path(tmp_path) / "remotes"
+    sha = make_remote(base, repo="team", files={"compass.yml": yaml.safe_dump(parent_doc)})
+    ref = f"github:acme/team@1.0.0#{sha}"
+    path = Path(project_root) / "compass.yml"
+    doc = yaml.safe_load(path.read_text(encoding="utf-8")) if path.is_file() else {"schema": 1}
+    path.write_text(yaml.safe_dump(dict(doc, extends=ref)), encoding="utf-8")
+    cli = Path(__file__).resolve().parent.parent / "cli" / "compass"
+    env = {"PATH": os.environ.get("PATH", REAL_GIT), "HOME": str(project_root),
+           "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1",
+           "PYTHONDONTWRITEBYTECODE": "1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+           "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1",
+           "COMPASS_PARENT_REMOTE_BASE": str(base)}
+    done = subprocess.run([sys.executable, str(cli), "policy", "lint"], cwd=project_root,
+                          env=env, capture_output=True, text=True, timeout=180)
+    assert done.returncode == 0, done.stdout + done.stderr
+    return ref
 
 
 ISSUE = {

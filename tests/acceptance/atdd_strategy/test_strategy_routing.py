@@ -417,7 +417,7 @@ def test_trc_a24(tmp_path):
     sys.path.insert(0, str(ROOT / "cli"))
     from compass_pkg import acceptance_strategy, policy_lint
     project = support.Project(tmp_path / "repo")
-    project.setting(None, approaches={"regular": {"set": {"acceptance_strategy": "suspended"}}})
+    project.parent(approaches={"regular": {"set": {"acceptance_strategy": "suspended"}}})
     code, out, err = project.run("policy", "lint")
     assert code != 0, out + err
     assert "acceptance_strategy: {state: off, reason:" in out + err, out + err

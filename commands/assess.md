@@ -6,16 +6,16 @@ allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Edit(./.compass/**)
 
 # /compass:assess
 
-Assessing never skips. You score risk, familiarity and size, and
-`compass approach evaluate` computes the evidence the change owes from the
-configuration in force. You do not pick a process.
+Assessing never skips. You score risk, familiarity and size; `compass
+approach evaluate` computes the evidence the change owes. You do not pick a
+process.
 
 **Issue:** $ARGUMENTS
 
 ## A change you can state
 
-Every delivery change starts with one call, whatever its size. It is also
-the start of `/compass:go` and `/compass:quick-fix`.
+Every delivery change starts with this call, as `/compass:go` and
+`/compass:quick-fix` do.
 
 ```
 compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
@@ -25,10 +25,12 @@ compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
   [--labels <tag,...>] [--urgency "live-defect - <reason>"]
 ```
 
-`--labels auth`, `payments`, `personal-data` or `migrations` make the
-change need a person's sign-off. `--urgency "live-defect - <reason>"` marks
-a production defect: its reproduction's red comes first. When unsure of a
-value, choose the larger. `start` runs `compass init` first: tell the user
+Risk is `trivial`, `contained`, `cross-cutting` or `critical`; familiarity
+`greenfield`, `brownfield-mapped` or `brownfield-unmapped`; size `atomic`,
+`small`, `medium`, `large` or `product`. When unsure, choose the larger.
+`--labels auth`, `payments`, `personal-data` or `migrations` need a
+person's sign-off. `--urgency` marks a production defect: its
+reproduction's red comes first. `start` runs `compass init`: tell the user
 about a `created:` line, and read any listed settled decisions that touch
 the change.
 
@@ -40,21 +42,22 @@ compass quick-fix finish -m "<commit message>" --no-commit -- <test command>
 ```
 
 While evidence is owed, `finish` refuses and prints one `next:` line per
-owed item: run them, as `/compass:go` does. Leave out `--no-commit` only if
-the user asked for a commit.
+owed item: run them, as `/compass:go` does. Drop `--no-commit` only if the
+user asked for a commit.
 
 ## The spike
 
-If you cannot state what will be true afterwards, run the same `start`
-with `--goal "exploration - <the question>"`. It computes a spike and
-stops. Follow `${CLAUDE_PLUGIN_ROOT}/approaches/assess-procedure.md` for the
-pointer and the `.spike` marker. A spike concludes with a recorded finding
-and ships nothing.
+If you cannot state what will be true afterwards, run `start` with
+`--goal "exploration - <the question>"`. It computes a spike and stops.
+Follow `${CLAUDE_PLUGIN_ROOT}/approaches/assess-procedure.md` for the
+pointer and the `.spike` marker. A spike records a finding and ships
+nothing.
 
 ## Re-assess
 
-When the ratings were wrong or the change grew, run
-`compass approach evaluate --write --reason "..." --justify DIM="..."`
-after reading `approaches/assess-procedure.md`. It logs the change in
-`reassessments:`; `--reset-config` drops `config:`. A re-assess of an
-issue assessed before the path moves it onto the path.
+When the ratings were wrong or the change grew, read that procedure, then
+run `compass approach evaluate --write --reason "..." --justify DIM="..."`.
+It logs the change in
+`reassessments:` and commits the next generation with any
+`compass issue configure` proposal (`--reset-config` drops `config:`). It
+moves an issue assessed before the path onto the path.

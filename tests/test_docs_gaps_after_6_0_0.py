@@ -142,26 +142,24 @@ def test_trc_009_no_template_cites_the_strategies_file_as_a_project_path():
     assert hits == []
 
 
-def _orchestration_line():
-    for line in (ROOT / "templates" / "manifest.yml").read_text(
-            encoding="utf-8").splitlines():
-        if line.startswith("orchestration:"):
-            return line
-    raise AssertionError("no orchestration line")
+def _template_lines():
+    return (ROOT / "templates" / "manifest.yml").read_text(encoding="utf-8").splitlines()
 
 
-def test_trc_010_manifest_template_names_breakdown_as_orchestration_recorder():
-    line = _orchestration_line()
-    assert "#" in line
-    comment = line.split("#", 1)[1].lower()
-    assert "breakdown" in comment
-    assert "evaluator" not in comment
+def test_trc_010_manifest_template_has_no_orchestration_line():
+    # The breakdown stage recorded `orchestration:`. The four-stage path has no
+    # breakdown stage and Compass no longer writes `orchestration` (ADR-092
+    # decision 11), so the template holds no such line and names no breakdown.
+    assert not [line for line in _template_lines() if line.startswith("orchestration:")]
+    assert not [line for line in _template_lines() if "breakdown" in line.lower()]
 
 
-def test_trc_011_manifest_template_parses_with_null_orchestration():
+def test_trc_011_manifest_template_parses_without_orchestration():
+    # ADR-092 decision 11: a new manifest has no `orchestration` key. An archived
+    # one keeps it (`schemas/manifest.schema.json`), so the template still parses.
     data = yaml.safe_load(
         (ROOT / "templates" / "manifest.yml").read_text(encoding="utf-8"))
-    assert "orchestration" in data
-    assert data["orchestration"] is None
+    assert isinstance(data, dict)
+    assert "orchestration" not in data
 
 

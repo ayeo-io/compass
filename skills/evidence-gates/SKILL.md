@@ -146,8 +146,7 @@ nothing, and the flag is refused on a completed or closed issue
 
 ## The kinds of evidence
 
-A vocabulary - commit, acceptance, and the rest - in
-`skills/evidence-gates/evidence-kinds.md`.
+A vocabulary - commit, acceptance, and the rest - in `skills/evidence-gates/evidence-kinds.md`.
 
 ## How the two halves of the ship review split
 

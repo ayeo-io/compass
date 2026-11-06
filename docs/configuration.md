@@ -237,7 +237,7 @@ valid, so a project that holds it keeps working, and nothing reads it.
 9.0.0 runs every new delivery issue on one four-stage path (ADR-092). A
 project's `compass.yml` can no longer change these parts of the governance:
 
-- `approaches`, the whole catalogue;
+- `approaches`, the whole catalog;
 - a legacy stage the path does not keep, under `stages`: `define`, `refine`,
   `plan`, `breakdown`, `implement` or `verify`;
 - the caps rule set, `rules.caps`;

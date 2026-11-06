@@ -26,8 +26,9 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 # The plan-authoring skill went with the plan stage (ADR-092). Its rules moved
-# to the governance-check skill, "Writing the design down".
-PLAN_SKILL = ROOT / "skills" / "governance-check" / "SKILL.md"
+# to the governance-check skill, "Writing the design down", which keeps them in
+# a file beside SKILL.md so the skill stays under its line ceiling.
+PLAN_SKILL = ROOT / "skills" / "governance-check" / "writing-the-design.md"
 WRITING_GUIDE = ROOT / "docs" / "writing-specs-and-plans.md"
 
 
@@ -71,7 +72,7 @@ FIVE_SECTIONS = {
 
 def test_trc_c4_selection_rules_scale_by_route():
     assert PLAN_SKILL.is_file(), (
-        "skills/governance-check/SKILL.md does not exist; the selection rules "
+        "skills/governance-check/writing-the-design.md does not exist; the selection rules "
         "have no home a human writing a design by hand would find"
     )
     text = PLAN_SKILL.read_text(encoding="utf-8")

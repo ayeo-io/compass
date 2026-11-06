@@ -235,8 +235,11 @@ def test_trc_a3_a_moved_program_reads_stdin_only_where_it_did():
 #: The commands that write only issue state and documents. The rest write code or
 #: project files: define (a hotfix's reproduction test), go, implement, quick-fix,
 #: resume and ship (living documents anywhere in the project).
-ISSUE_STATE_ONLY = ("assess", "breakdown", "consult", "design", "flow", "init", "intent",
-                    "plan", "position", "refine", "status", "verify")
+# The `breakdown`, `plan`, `refine` and `verify` commands also wrote issue state only;
+# ADR-092 decision 7 deleted them with the stages they ran.
+ISSUE_STATE_ONLY = ("assess", "consult", "design", "flow", "init", "intent",
+                    "position", "status")
+DELETED_STAGE_COMMANDS = ("breakdown", "plan", "refine", "verify")
 SCOPES = ("./.compass/**", "./docs/**")
 
 
@@ -265,6 +268,8 @@ def test_trc_b1_no_command_pre_approves_every_shell_command():
 
 def test_trc_b2_issue_state_commands_scope_their_writes():
     found = []
+    for name in DELETED_STAGE_COMMANDS:
+        assert not (ROOT / "commands" / f"{name}.md").exists(), name
     for name in ISSUE_STATE_ONLY:
         tools = _allowed(ROOT / "commands" / f"{name}.md")
         assert tools is not None, name

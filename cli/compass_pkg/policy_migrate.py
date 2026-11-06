@@ -333,13 +333,14 @@ def _without_removed(made, overlay, ops):
     file cannot change those entries, so the merge would leave them out anyway."""
     kept_ops = []
     for op in ops:
-        key = removed_parts.removed_key(op["catalogue"], op["id"])  # us-english-scan: allow - reads the stored key
+        name = op["catalogue"]  # us-english-scan: allow - reads the stored key
+        key = removed_parts.removed_key(name, op["id"])
         if key is None:
             kept_ops.append(op)
             continue
-        overlay[op["catalogue"]].pop(op["id"])  # us-english-scan: allow - reads the stored key
-        if not overlay[op["catalogue"]]:
-            del overlay[op["catalogue"]]
+        overlay[name].pop(op["id"])
+        if not overlay[name]:
+            del overlay[name]
         made.dropped.append({"key": f"{op['catalogue']}.{op['id']}",  # us-english-scan: allow - reads the stored key
                              "reason": f"L-SETTING-REMOVED: {removed_parts.setting_note(key)}"})
     return removed_parts.without_removed(overlay), kept_ops

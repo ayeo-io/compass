@@ -1126,9 +1126,11 @@ RETIRED_PROSE = {
         r"|\bcan be light on the (?:regular|quick)\b",
     "a depth word printed as the value of a mismatch":
         r"[\"']?\b(?:expected|actual)[\"']?\s*:\s*[\"'`]?(?:full|light)\b",
+    # "The build stage" alone is no longer retired: build is a stage of the
+    # four-stage path (ADR-092 decision 1). The old word still shows where it is
+    # paired with `verify`, which the path does not keep.
     "the run stage named by its old word":
-        r"\bthe `?build`? stage\b|`build` stage\b"
-        r"|`?\bbuild\b`? (?:or|and) `?verify\b`? stages?\b"
+        r"`?\bbuild\b`? (?:or|and) `?verify\b`? stages?\b"
         r"|`?\bverify\b`? (?:or|and) `?build\b`? stages?\b",
     "a verb under the name it had before it was renamed":
         r"\bpolicy effective\b|\bsubtask update\b|\bissue set-status\b|\bapproach summary\b"
@@ -1205,7 +1207,6 @@ def test_vr_g9_shipped_prose_uses_no_retired_word_in_its_retired_meaning():
     "A stage runs `light` or `full`.",
     "The requirements review is a light to full pass.",
     "The requirements review is a `light`-to-`full` pass.",
-    "The slow stage is the `build` stage.",
     "Teams run the build and verify stages in turn.",
     "Teams run the `build` or `verify` stage.",
     "    expected: light",
@@ -1240,6 +1241,9 @@ def test_vr_g9_a_planted_retired_use_is_reported(tmp_path, line):
     "compass run   run the implement or verify stage of one issue unattended",
     "Compass fails the build if the page goes stale, and the light path is short.",
     '"mismatches": [{"field": "stages.implement", "expected": "lightweight", "actual": "thorough"}],',
+    # The path's build stage (ADR-092 decision 1).
+    "The slow stage is the `build` stage.",
+    "One no-pass sends the work back to the build stage.",
     # Ordinary English that shares a word with a retired use.
     "Your CI build stage must run the suite.",
     "Agents can build or verify a claim.",

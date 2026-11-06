@@ -96,9 +96,13 @@ def test_rn_5_the_retro_needs_no_translation():
 
 def test_rn_6_the_approach_documents_carry_the_route_names():
     approaches = ROOT / "approaches"
-    for name in ("quick-fix", "regular", "full", "hotfix", "spike"):
+    # ADR-092 decision 1: one path replaces the quick-fix, regular, full and
+    # hotfix approaches, so `path.md` and `spike.md` are the approach documents
+    # and the four files are gone.
+    for name in ("path", "spike"):
         assert (approaches / f"{name}.md").is_file(), name
-    for gone in ("feature.md", "initiative.md"):
+    for gone in ("quick-fix.md", "regular.md", "full.md", "hotfix.md",
+                 "feature.md", "initiative.md"):
         assert not (approaches / gone).exists(), gone
     import subprocess
     found = subprocess.run(

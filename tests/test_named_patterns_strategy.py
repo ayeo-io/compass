@@ -33,5 +33,6 @@ def test_np_1_the_rationale_and_the_texts_point_to_it():
     assert "(`S16`)" in rationale
     # The plan-authoring skill went with the plan stage (ADR-092); its
     # design rules moved to governance-check, "Writing the design down".
-    for rel in ("commands/ship.md", "skills/governance-check/SKILL.md"):
+    for rel in ("commands/ship.md", "skills/governance-check/SKILL.md",
+                "skills/governance-check/writing-the-design.md"):
         assert "S16" in (ROOT / rel).read_text(encoding="utf-8"), rel

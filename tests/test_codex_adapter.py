@@ -87,8 +87,13 @@ def test_shared_entry_and_plugin():
     assert context.returncode == 0, context.stderr
     paths = json.loads(context.stdout)
     assert Path(paths["root"]) == ROOT
-    for stage in ("assess", "define", "refine", "plan", "breakdown", "implement", "verify", "ship"):
-        assert Path(paths["commands"][stage]) == ROOT / "commands" / (stage + ".md")
+    # ADR-092 decision 7: `/compass:go` runs the four-stage path, so the commands
+    # an adapter reaches are assess, go, its short form quick-fix, and ship. The
+    # six stage commands from `define` to `verify` are deleted.
+    for name in ("assess", "go", "quick-fix", "ship"):
+        assert Path(paths["commands"][name]) == ROOT / "commands" / (name + ".md")
+    for gone in ("define", "refine", "plan", "breakdown", "implement", "verify"):
+        assert gone not in paths["commands"], gone
     for role in ("engineer", "product-owner", "designer", "product-marketer", "qa"):
         assert Path(paths["roles"][role]).is_file()
     hook_config = json.loads((ROOT / plugin["hooks"][2:]).read_text())

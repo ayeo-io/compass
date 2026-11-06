@@ -43,7 +43,7 @@ written so that nobody has to work out the process again.
    run `compass quick-fix finish -m "<message>" --no-commit -- <test
    command>`. It traces the changed files, runs the check and passes the
    three gates, even for an issue another session started. Do not pass
-   those gates by hand.
+   the gates by hand.
 
 ## When the records do not answer the question
 

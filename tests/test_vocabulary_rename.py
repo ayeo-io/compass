@@ -304,8 +304,8 @@ def test_trc_a2():
 
     design = (COMMANDS / "design.md").read_text(encoding="utf-8")
     # The engineering design rules moved from the plan stage to the
-    # governance-check skill, "Writing the design down".
-    plan = (REPO_ROOT / "skills" / "governance-check" / "SKILL.md").read_text(
+    # governance-check skill, "Writing the design down", in the file beside it.
+    plan = (REPO_ROOT / "skills" / "governance-check" / "writing-the-design.md").read_text(
         encoding="utf-8")
 
     assert "ui-contract.md" in design, (

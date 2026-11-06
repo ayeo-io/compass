@@ -394,12 +394,17 @@ KEPT_TEMPLATE_KINDS = {"acceptance-criteria", "positioning", "launch-readiness",
 def _shipped_catalogue():
     """The frozen entries of the kinds that still ship a template. The coverage
     block went with rendered blocks (ADR-091), so the acceptance criteria hold no
-    Coverage ledger heading."""
+    Coverage ledger heading. The define stage went with the four-stage path
+    (ADR-092), so the UI contract hands off to specify; the frozen entry still
+    names define, as 8.x wrote it."""
     import copy
     kept = {k: copy.deepcopy(v) for k, v in _preset().items() if k in KEPT_TEMPLATE_KINDS}
     sections = kept["acceptance-criteria"]["sections"]
     for depth, listed in sections.items():
         sections[depth] = [h for h in listed if h != "Coverage ledger"]
+    for depth, listed in kept["ui-contract"]["sections"].items():
+        kept["ui-contract"]["sections"][depth] = [
+            "Handoff to specify" if h == "Handoff to define" else h for h in listed]
     return kept
 
 

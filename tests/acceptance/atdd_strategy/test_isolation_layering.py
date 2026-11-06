@@ -33,6 +33,10 @@ import yaml
 from tests.acceptance.atdd_strategy import support
 from tests.acceptance.atdd_strategy.support import ROOT
 
+# `approval_support` holds the hook input a person's typed approval sends.
+if str(ROOT / "tests") not in sys.path:
+    sys.path.insert(0, str(ROOT / "tests"))
+
 ISOLATION = "isolation-proven"
 LAYERING = "layering-test-passed"
 PROOF = "evidence/isolation-proof.json"
@@ -785,12 +789,76 @@ def test_trc_a18(tmp_path):
     assert _row(document, ISOLATION)["status"] == "advisory"
 
 
+def _waive(issue, check):
+    """`compass waiver add` on one of the strategy's checks, with the reason."""
+    issue.must("waiver", "add", "--check", check, "--reason", WAIVER_REASON,
+               "--issue", issue.slug)
+
+
+def _owner_approves(project, issue, waiver):
+    """An agent asks with `compass evidence request --waiver`; the Stop hook shows
+    the request, and the owner types `/compass:approve waiver <id>` in Claude Code."""
+    from approval_support import event
+    from compass_pkg import approval_requests, prompt_approval
+    issue.must("evidence", "request", "--waiver", waiver, "--issue", issue.slug)
+    approval_requests.stop_message(str(project.root / ".compass"),
+                                   {"COMPASS_ISSUE": issue.slug})
+    done = prompt_approval.handle(
+        event(project.root, command="compass:approve", args=f"waiver {waiver}"),
+        {}, plugin_root=str(ROOT))
+    assert not done.block, done.message
+
+
+def _statuses(document):
+    return {name: _row(document, name)["status"] for name in (ISOLATION, LAYERING)}
+
+
+def test_trc_a20(tmp_path):
+    """One issue steps off the strategy with a recorded reason. 9.0.0 has no issue
+    layer (ADR-094), so the step-off is one waiver per strategy check, each made
+    with `compass waiver add` and approved by the project's owner. A check is
+    excused only once its own waiver is approved."""
+    project = _project(tmp_path, owner=OWNER)
+    issue = _issue(project)
+    issue.must("issue", "use", issue.slug)
+    for name in (ISOLATION, LAYERING):
+        _waive(issue, name)
+    waivers = {w["check"]: w["id"] for w in issue.manifest()["waivers"]}
+    assert set(waivers) == {ISOLATION, LAYERING}, waivers
+
+    # Before any approval: both checks still fail, and a notice names the request.
+    code, document = issue.check()
+    assert code == 1, document if isinstance(document, str) else document["checks"]
+    assert _statuses(document) == {ISOLATION: "fail", LAYERING: "fail"}, document["checks"]
+    for waiver in waivers.values():
+        assert any(waiver in n and f"compass evidence request --waiver {waiver}" in n
+                   for n in document["notices"]), document["notices"]
+
+    # One approval excuses its one check, and only that check.
+    _owner_approves(project, issue, waivers[ISOLATION])
+    code, document = issue.check()
+    assert code == 1, document["checks"]
+    assert _statuses(document) == {ISOLATION: "waived", LAYERING: "fail"}, document["checks"]
+
+    # Both approved: the issue has stepped off the strategy, and check passes.
+    _owner_approves(project, issue, waivers[LAYERING])
+    code, document = issue.check()
+    assert code == 0, support.findings(document)
+    assert _statuses(document) == {ISOLATION: "waived", LAYERING: "waived"}
+    assert document["waived"] == 2, document
+    approvals = {e["waiver"]: e["id"] for e in issue.manifest()["evidence"]
+                 if e.get("type") == "human-approval" and e.get("waiver")}
+    for name, waiver in waivers.items():
+        detail = _row(document, name)["detail"]
+        for part in (waiver, WAIVER_REASON, OWNER, approvals[waiver]):
+            assert part in detail, (part, detail)
+
+
 @pytest.mark.parametrize("approval", ["approved by the project's owner", "with no approval"])
-def test_trc_a20(tmp_path, approval):
+def test_trc_a20_a_config_waiver_is_not_read(tmp_path, approval):
     """A waiver written in one issue's `config:` is not read: 9.0.0 has no issue
     layer (ADR-094), so with or without an approval the checks keep their severity
-    and the notice names the waiver as not approved. One issue steps off the
-    strategy with `compass waiver add` instead."""
+    and the notice names the waiver as not approved."""
     project = _project(tmp_path, owner=OWNER)
     issue = _issue(project)
     body = issue.manifest()

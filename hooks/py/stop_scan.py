@@ -108,9 +108,12 @@ def gate_state(task_dir, slug, task):
     # without any check failing, and a grep for the old heading then stops
     # matching with no error. On a path issue (ADR-092) the hotfix is the
     # setting `urgency: live-defect`; an older issue names the hotfix approach.
+    # A path issue's follow-up links to a GitHub issue that tracks the work and
+    # need not be resolved before the issue closes (ADR-093), so only an older
+    # issue is warned about an outstanding one.
     if not is_hotfix(task):
         return
-    outstanding = [
+    outstanding = [] if is_path_issue(task) else [
         f for f in (task.get("follow_ups") or [])
         if isinstance(f, dict) and str(f.get("status", "")) in ("outstanding", "owed")
     ]

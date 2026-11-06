@@ -99,14 +99,31 @@ for it. One of four records meets an item, and a command writes each:
 |---|---|---|
 | `evidence[].meets: [item]` on an entry of an accepted type | `compass gate pass ... --meets ITEM`, `compass evidence add ... --meets ITEM` | `met by EV-id` |
 | a `human-approval` record with `check: item` | `compass evidence approve --check ITEM` | `ticked by <approver>` |
-| `follow_ups[].defers: item` | `compass follow-up add FU-id --defers ITEM --summary TEXT` | `carried to ship, FU-id`, then `met, FU-id resolved` once `compass follow-up resolve` resolves it |
+| `follow_ups[].defers: item` with `github: {repo, number}`, on a path issue | `compass follow-up add FU-id --defers ITEM --github owner/repo#N --summary TEXT` | `carried to a GitHub issue, FU-id`, whether or not it is resolved |
+| `follow_ups[].defers: item`, on an issue assessed before 9.0.0 | `compass follow-up add FU-id --defers ITEM --summary TEXT` | `carried to ship, FU-id`, then `met, FU-id resolved` once `compass follow-up resolve` resolves it |
 | a `page_ticks` entry | `compass issue migrate`, from a tick on an archived page | `ticked on the page before 7.0.0` |
 
 An item with none of them is open. `--meets` and `--defers` refuse, with exit 2
 and no change, an item the issue does not list, and `--meets` refuses evidence
-of a type the lists do not accept. `compass follow-up add` also takes
-`--target SLUG`, which blocks that issue's `dod-evidence-typed` while the
-follow-up is outstanding.
+of a type the lists do not accept.
+
+A path issue has one follow-up rule (ADR-093): an open Definition of Done item
+is met only by a follow-up that links to a GitHub issue. So on a path issue:
+
+- `compass follow-up add` refuses, with exit 2 and no change, a follow-up with
+  no `--github`, and a `--defers` item that is not in the build exit list;
+- `--github` takes `owner/repo#N` or the issue's URL, parsed as `compass issue
+  link set` parses a target; nothing is written to GitHub;
+- a follow-up with no `github` field meets nothing, and the open item's hint
+  names it;
+- the check that every follow-up is resolved has nothing to check, because
+  the linked issue tracks the work.
+
+An issue assessed before 9.0.0 keeps every older rule: an outstanding
+follow-up fails `compass check` until `compass follow-up resolve` resolves it,
+and a `target_task` entry that an older `--target` wrote blocks that issue's
+`dod-evidence-typed` while it is outstanding. `--target` was removed in 9.0.0
+and fails to parse with a line naming ADR-093.
 
 `compass evidence approve --check` accepts an item whose check lists no
 `approvers`. The approver must be a name in an `approvers:` list of the project

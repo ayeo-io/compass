@@ -94,8 +94,11 @@ def _record_all(root, skip=()):
                              role="maintainer", scope="lint"))
     for fu, item in (("FU-3", "dod-living-docs-updated"), ("FU-4", "dod-follow-ups-settled")):
         if item not in skip:
-            _ok(run(root, "follow-up", "add", fu, "--defers", item, "--summary",
-                    f"Settle {item} at ship", "--issue", SLUG))
+            # A path issue's follow-up meets the item only when it links to a
+            # GitHub issue (ADR-093).
+            _ok(run(root, "follow-up", "add", fu, "--defers", item, "--github",
+                    "ayeo-io/compass#9", "--summary", f"Settle {item} at ship",
+                    "--issue", SLUG))
 
 
 def _dod_block(root, kind="dod", doc="verification-report"):

@@ -6,10 +6,11 @@ allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 # /compass:ship
 
 Ship is the last stage of the path. This session reviews the change, passes
-each gate with recorded evidence, settles every owed follow-up and, when the
-person asks, commits. Evidence is recorded command output and artifacts a
-reader can open, never assertion: "it works" passes no gate. An issue with an
-unsettled follow-up is an open issue, and ship refuses to close it.
+each gate with recorded evidence, links every owed follow-up to an issue and,
+when the person asks, commits. Evidence is recorded command output and
+artifacts a reader can open, never assertion: "it works" passes no gate. An
+open Definition of Done item must link to an issue, or ship refuses to close
+the issue.
 
 ## Setup
 
@@ -88,14 +89,18 @@ instead of the procedure below.
    - **Defect follow-up** (`urgency: live-defect`): the reproduction test is
      a real Given/When/Then scenario in `acceptance-criteria.md` *and*
      `manifest.yml`'s `scenarios:`, traceable to the defect, with its root
-     cause stated. Mark the matching `follow_ups:` entry `paid` -
-     `compass check` fails at ship while any is owed.
+     cause stated. Work the fix still owes goes to a GitHub issue, linked
+     with `compass follow-up add FU-<id> --github owner/repo#N --summary
+     "..."`.
    - **Marketer claims gate** (when `manifest.yml` holds `claims:`): every
      claim in `claims:` traces to a passing scenario id.
      `compass check`'s `claim-traces-to-scenario` check is the mechanical
      check behind it.
-   - A Definition of Done item you cannot meet now is carried with
-     `compass follow-up add FU-<id> --defers <item> --summary "..."`.
+   - A Definition of Done item you cannot meet now is carried to a GitHub
+     issue with `compass follow-up add FU-<id> --defers <item> --github
+     owner/repo#N --summary "..."`. A follow-up with no `--github` meets no
+     item, and the command refuses it. The linked follow-up need not be
+     resolved before ship: the GitHub issue tracks the work.
 7. **Update living docs.** Update READMEs, architecture notes, and any docs
    the change touched, so they match the code. If `manifest.yml` holds
    `claims:`, draft the release notes from them, so every line is already a
@@ -184,8 +189,8 @@ compass issue checkpoint add ship --outcome skipped --by verifier
 
 `compass check` judges the Definition of Done. Each item is met by a record
 (`compass gate pass ... --meets <item>` or `compass evidence add ... --meets
-<item>`), by a person's approval, or by a follow-up that defers it
-(`--defers`). A person ticks the item that needs a person by typing
+<item>`), by a person's approval, or by a follow-up that defers it and links
+to a GitHub issue (`--defers <item> --github owner/repo#N`). A person ticks the item that needs a person by typing
 `/compass:approve` after you ask with `compass evidence request --check
 <item>`, or with `compass evidence approve --check <item>` at a terminal. A
 `human-approval` record comes only from an approval; `compass evidence add`
@@ -200,18 +205,20 @@ every unchecked box must carry one of:
   `manifest.yml`'s evidence registry with an accepted type (`test-run`,
   `command-output`, `manual-review`, `artifact`, etc.).
 - `- [ ] (follow-up: FU-<id>) <description>` - passes if `FU-<id>` is in
-  `manifest.yml`'s `follow_ups:` with `status: outstanding`. The follow-up
-  can carry an optional `target_task: <slug>` field; when set, the named
-  issue's ship check fails until this entry is paid
-  (`compass follow-up resolve --issue <slug> <FU-id>`).
+  `manifest.yml`'s `follow_ups:` with `status: outstanding`. An outstanding
+  follow-up fails `compass check` until it is resolved
+  (`compass follow-up resolve --issue <slug> <FU-id>`). An older follow-up
+  can carry a `target_task: <slug>` field; when set, the named issue's ship
+  check fails until this entry is resolved.
 - `- [x] <description>` - a human-ticked box passes unconditionally.
 - `- [ ] <bare description>` - **fails**. A narrative note (e.g. "USER TO
   APPLY") never clears an item - evidence, not assertion.
 
-Cross-issue blocking: if another issue's `follow_ups:` has `target_task`
-pointing at the issue being shipped, and that follow-up is still
-`status: outstanding`, `compass check` fails at ship even if this issue's
-own items are clean. Pay the other issue's follow-up first.
+Cross-issue blocking: if an issue assessed before 9.0.0 has a `follow_ups:`
+entry whose `target_task` points at the issue being shipped, and that
+follow-up is still `status: outstanding`, `compass check` fails at ship even
+if this issue's own items are clean. Resolve the other issue's follow-up
+first. Nothing writes `target_task` since 9.0.0.
 
 ## Commit
 
@@ -268,11 +275,13 @@ See `skills/compass-runtime/writing-voice.md`.
 - `compass check` passes, its output recorded and linked;
 - every required *judgment* dimension passed with evidence;
 - every gate in `manifest.yml` is `pass` with a resolving evidence pointer;
-- every item of the Definition of Done is met on the record or deferred;
+- every item of the Definition of Done is met on the record, or deferred to a
+  follow-up that links to a GitHub issue;
 - living docs are updated;
-- **every owed follow-up is settled** - no unsettled defect follow-up, no
-  unbacked marketing claim, no de-scoped work left owed.
+- **every owed follow-up links to the GitHub issue that tracks it** - no
+  unlinked defect follow-up, no unbacked marketing claim, no de-scoped work
+  left with no issue.
 
-If a follow-up cannot be completed now, the issue stays open and
-`/compass:status` keeps flagging it. A deferred follow-up must be settled
-before the issue closes.
+On an issue assessed before 9.0.0, a follow-up that cannot be completed now
+keeps the issue open, and `/compass:status` keeps flagging it. A deferred
+follow-up must be resolved before that issue closes.

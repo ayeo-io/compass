@@ -35,6 +35,7 @@ import re as _re
 from compass_pkg.stable_ids import GATE_VERIFY_CORRECTNESS
 from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, find_governance, load_yaml, manifest_path, normalize_spine
 from compass_pkg.spec_location import spec_path
+from compass_pkg.path_stages import is_path_issue
 from compass_pkg import approval_records, status_words
 from compass_pkg.tdd import _read_config, settings_hint
 from compass_pkg.check_results import NOTHING_TO_CHECK  # re-exported: callers still import it from here
@@ -651,23 +652,21 @@ def _check_dod_evidence_typed(task, task_dir):
     - an evidence entry of an accepted type with `meets: [item]`
       (`compass gate pass --meets`, `compass evidence add --meets`);
     - a person's approval for the item (`compass evidence approve --check`);
-    - a follow-up that defers it (`compass follow-up add --defers`), which holds
-      while it is outstanding and the item reads met once it is resolved;
+    - a follow-up that defers it (`--defers`): on a path issue only one linked to a
+      GitHub issue (2.2.0, ADR-093); on an older one it holds until it is resolved;
     - a tick `compass issue migrate` carried from an archived page.
 
     An item with none of these is open and fails the check: evidence, not
     assertion (`G4`). The page is never read - an agent can write a tick on a
     page, but it cannot write a record that the command refused.
 
-    Cross-issue half: scan sibling manifest.yml files for follow-ups with
-    target_task equal to this issue's slug and status: outstanding - any such
-    entry blocks shipping this issue.
+    Cross-issue half: an outstanding follow-up of a sibling issue whose target_task is this
+    issue blocks shipping it (an archive record; nothing writes target_task since 9.0.0).
 
     A path issue (ADR-092) is judged by `dod_due.path_verdict`. An issue assessed
     before 9.0.0 keeps the rules below.
     """
     from compass_pkg import dod_due
-    from compass_pkg.path_stages import is_path_issue
     report = artifact_path(task_dir, "verification-report.md")
     # The directory name is the true slug; the manifest passed in may hold a template placeholder.
     this_slug = os.path.basename(task_dir) or task.get("task") or ""
@@ -709,7 +708,7 @@ def _check_dod_evidence_typed(task, task_dir):
         return False, "cannot read the issue's configuration to find its Definition of Done: %s" % exc
     # An issue read without a configuration is judged by the shipped default's list.
     rows = item_records.items(task, task_dir, view, "dod")
-    problems = ["%s is open - %s" % (row.check, item_records.open_hint(row.check))
+    problems = ["%s is open - %s" % (row.check, item_records.open_hint(row.check, task))
                 for row in rows if row.state == item_records.OPEN]
     if not no_report and _closed_without_a_list(task, report):
         # An archived issue whose page never held a Definition of Done has no record to
@@ -864,6 +863,9 @@ def _judge_g5_approval(task, approved):
 
 
 def _check_backfills_paid(task, task_dir):
+    # 1.1.0: a path issue's follow-ups link to GitHub issues, which track the work (ADR-093).
+    if is_path_issue(task):
+        return NOTHING_TO_CHECK, "a path issue's follow-ups link to the GitHub issues that track them"
     bfs = task.get("follow_ups") or []
     unpaid = [b.get("id", "?") for b in bfs if b.get("status") != "resolved"]
     if unpaid:

@@ -415,8 +415,12 @@ def _live_defect(task):
     return task
 
 
-def test_the_stop_hook_warns_of_a_live_defect_follow_up_on_a_path_issue(tmp_path):
-    assert "OUTSTANDING FOLLOW-UP" in _stop(tmp_path, _live_defect(_path_task()))
+def test_the_stop_hook_warns_of_a_path_hotfix_reproduction_but_not_its_follow_up(tmp_path):
+    # A path issue's follow-up links to a GitHub issue and need not be resolved
+    # (ADR-093), so only the reproduction warning stays on a path hotfix.
+    warned = _stop(tmp_path, _live_defect(_path_task()))
+    assert "no promoted reproduction scenario" in warned or "never promoted" in warned, warned
+    assert "OUTSTANDING FOLLOW-UP" not in warned, warned
 
 
 def test_the_stop_hook_does_not_warn_without_the_live_defect_setting(tmp_path):

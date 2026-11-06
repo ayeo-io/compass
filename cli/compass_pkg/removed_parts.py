@@ -10,8 +10,8 @@ one four-stage path (ADR-092), so the delivery approaches, the legacy stages
 the path does not keep, the caps rule set and the Definition of Ready checks
 are gone from what a project can configure. 9.0.0 keeps only what a reviewer
 of one change needs (ADR-093), so the reports across issues, the brief
-ingest, the HTML board, the GitHub label sync and the readiness measure are
-gone.
+ingest, the HTML board, the GitHub label sync, the readiness measure and the
+follow-up that blocks another issue (`follow-up add --target`) are gone.
 
 A command line that still names a removed verb or flag fails to parse as an
 unknown command, and `line_for` gives the one line the parse error adds.
@@ -115,6 +115,8 @@ COMMANDS = (
      "ADR-093"),
     (("init", "--readiness"), "compass init --readiness",
      "compass init sets up the project; nothing measures it", "ADR-093"),
+    (("follow-up", "add", "--target"), "compass follow-up add --target",
+     "link the follow-up to a GitHub issue with --github", "ADR-093"),
 )
 
 #: The ten agent names 9.0.0 removed with the `agents/` folder. The shipped

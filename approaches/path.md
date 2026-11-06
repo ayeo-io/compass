@@ -90,13 +90,14 @@ The hotfix keeps its follow-up. Before the issue closes:
 
 - The reproduction is a real Given/When/Then scenario in
   `acceptance-criteria.md` that names the defect.
-- Each follow-up the fix owes is recorded with `compass follow-up add`, and
-  none is left outstanding. Name the root cause, and file the missing
-  scenario that would have caught the defect as a follow-up issue where one
-  is owed.
+- Each follow-up the fix owes is recorded with `compass follow-up add FU-<id>
+  --github owner/repo#N --summary "..."`, linked to the GitHub issue that
+  tracks it. A linked follow-up need not be resolved before the issue closes.
+  Name the root cause, and file the missing scenario that would have caught
+  the defect as a follow-up issue where one is owed.
 
-The stop hook warns on an issue that carries `urgency: live-defect` while
-either is missing.
+The stop hook warns on an issue that carries `urgency: live-defect` while the
+reproduction scenario is missing.
 
 ## The spike
 

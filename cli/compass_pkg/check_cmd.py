@@ -130,9 +130,9 @@ CHECK_GUIDANCE = {
         "fix": "Only a `human-approval` record given for guardrail `G5` counts: one that names no check, waiver, checkpoint, artifact or decisions, and whose `guardrail` is absent or exactly `G5`. In Claude Code the person types `/compass:approve` for the request Compass shows them; an agent under a delegation that covers g5 records it with `--delegated --as <agent>`; elsewhere a person runs `compass evidence approve --guardrail G5` with `--approver <name> --role <role> --scope <text>` in a terminal. Each stamps the issue, its generation and the time.",
     },
     "backfills-paid": {
-        "why": "Work deferred for speed - a Hotfix follow-up or a de-scoped artifact - must be done before an issue closes. Otherwise the audit trail has a hole.",
-        "do": 'Settle each owed follow-up: `compass follow-up resolve FU-<id>`.',
-        "fix": "Complete each unpaid follow-up (writing the deferred artifact, promoting the reproduction scenario, etc.) and set its `status: paid` in manifest.yml.",
+        "why": "On an issue assessed before 9.0.0, work deferred for speed - a Hotfix follow-up or a de-scoped artifact - must be done before the issue closes. Otherwise the audit trail has a hole. A path issue's follow-ups link to GitHub issues instead, so this check has nothing to check there.",
+        "do": 'Settle each owed follow-up: `compass follow-up resolve --issue <slug> FU-<id>`.',
+        "fix": "Complete each outstanding follow-up (writing the deferred artifact, promoting the reproduction scenario, etc.), then run `compass follow-up resolve --issue <slug> FU-<id>`.",
     },
     "nfr-rows-resolved": {
         "why": "A non-functional concern with neither a scenario nor a reason has not been decided, and a cited scenario whose Then states no number cannot be measured, so nobody can tell whether the build meets it.",
@@ -180,15 +180,16 @@ CHECK_GUIDANCE = {
         "fix": "Empty `changed_files:` in this Spike's manifest.yml. If the finding is worth keeping, run `/compass:assess` to start a new delivery issue that owns the code under a real delivery approach.",
     },
     "dod-evidence-typed": {
-        "why": "The evidence-not-assertion guardrail: the Definition of Done is a typed gate. Every item must be met by a record in the manifest - evidence, a person's approval or a filed follow-up. A tick on a page and a narrative note in devlog.md do not count.",
-        "do": 'Record each open item: `--meets`, `--defers` or `evidence approve --check`.',
+        "why": "The evidence-not-assertion guardrail: the Definition of Done is a typed gate. Every item must be met by a record in the manifest - evidence, a person's approval or a follow-up that links to an issue. A tick on a page and a narrative note in devlog.md do not count.",
+        "do": 'Record each open item: `--meets`, `--defers ... --github` or `evidence approve --check`.',
         "fix": (
             "For each open item: (a) `compass gate pass <gate> --evidence EV-<id> --meets <item>` "
             "or `compass evidence add EV-<id> --type <type> --path <file> --meets <item>`, "
             "where the type is one a Definition of Done accepts; or (b) "
-            "`compass follow-up add FU-<id> --defers <item> --summary \"...\"` to carry it "
-            "to ship; or (c) `compass evidence approve --check <item>`, which a person "
-            "runs at a terminal when the item needs a person."
+            "`compass follow-up add FU-<id> --defers <item> --github owner/repo#N "
+            "--summary \"...\"` to carry it to a GitHub issue (an issue assessed before "
+            "9.0.0 can omit `--github`); or (c) `compass evidence approve --check <item>`, "
+            "which a person runs at a terminal when the item needs a person."
         ),
     },
 }
@@ -805,6 +806,7 @@ def cmd_check(args):
                 passed, detail = False, f"check errored: {exc}"
         run.guardrail("", "outstanding follow-ups")
         run.result("backfills-paid", passed, detail)
+        run.nothing += passed is NOTHING_TO_CHECK
         if not passed:
             failures += 1
 
@@ -972,6 +974,7 @@ def cmd_check(args):
             passed, detail = False, f"check errored: {exc}"
     run.guardrail("", "outstanding follow-ups")
     run.result("backfills-paid", passed, detail)
+    nothing_to_check += passed is NOTHING_TO_CHECK
     if not passed:
         failures += 1
 

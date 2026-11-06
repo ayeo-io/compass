@@ -21,9 +21,11 @@
 #   3. a hotfix with an outstanding follow-up
 #        => the manifest names a hotfix (on a path issue, the assessment's
 #           `urgency: live-defect`; on an issue assessed before 9.0.0, the
-#           hotfix approach) and its `follow_ups:` still holds an
-#           outstanding entry, or acceptance-criteria.md still lacks the
-#           promoted reproduction scenario.
+#           hotfix approach) and acceptance-criteria.md still lacks the
+#           promoted reproduction scenario, or, on an issue assessed before
+#           9.0.0, its `follow_ups:` still holds an outstanding entry. A
+#           path issue's follow-up links to a GitHub issue and need not be
+#           resolved (ADR-093).
 #   4. a scope-bloat phrase in the devlog with no re-assessment after it.
 #
 # A closed issue is not checked: its warnings are about work that is over,

@@ -11,7 +11,7 @@ implementations:
     version: 1.0.0
   backfills-paid:
     verdict_digest: 62ed50f7712aa0d5df96f6e1235080bf0b4d3902d30cb7eb4e49bc5f253f2f65
-    version: 1.0.0
+    version: 1.1.0
   changed-code-traces-to-scenario:
     verdict_digest: 394197b1855fd37b7bf458182823a4835d1dc90e0af00f64e027e8677570660b
     version: 1.0.0
@@ -26,7 +26,7 @@ implementations:
     version: 1.0.0
   dod-evidence-typed:
     verdict_digest: ed4b25b3f2949cc152fe8e7808fbd7dfb9879d29b051d68943830149194b7b3d
-    version: 2.1.0
+    version: 2.2.0
   evidence-identity-matches:
     verdict_digest: a19eb720d6c5908a4e1d1dd236c92d2bd8a22a6ec55faa6e8a35a3a048b90a87
     version: 1.0.0

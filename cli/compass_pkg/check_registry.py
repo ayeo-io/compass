@@ -103,13 +103,19 @@ _ENTRIES = (
     # 2.1.0: an issue created from 2026-11-04 is judged once every gate has passed, with
     # no verification report; older issues keep the report rule, so the corpus verdicts
     # hold (ADR-091).
-    _entry("dod-evidence-typed", _check_dod_evidence_typed, version="2.1.0"),
+    # 2.2.0: on a path issue a follow-up meets an item only when it links to a GitHub
+    # issue; an issue assessed before 9.0.0 keeps every follow-up rule, so the corpus
+    # verdicts hold (ADR-093).
+    _entry("dod-evidence-typed", _check_dod_evidence_typed, version="2.2.0"),
     # 1.1.0: counts only an approval given for guardrail `G5`, with the earlier rule as
     # the floor of a landed issue; the corpus verdicts hold, so the major stays (ADR-066).
     # 1.2.0: a record an `approval-withdrawal` names no longer counts while the issue is
     # in flight; the landed floor and the corpus verdicts hold (ADR-069 decision 6).
     _entry("human-approval-present", _check_human_approval, version="1.2.0"),
-    _entry("backfills-paid", _check_backfills_paid),
+    # 1.1.0: a path issue has nothing to check, because its follow-ups link to GitHub
+    # issues; an issue assessed before 9.0.0 keeps the rule, so the corpus verdicts
+    # hold (ADR-093).
+    _entry("backfills-paid", _check_backfills_paid, version="1.1.0"),
     _entry("spike-conclusion-present", _check_spike_conclusion_present),
     _entry("spike-no-production-changes", _check_spike_no_production_changes),
     _entry("no-trusted-rerun", _check_no_trusted_rerun),

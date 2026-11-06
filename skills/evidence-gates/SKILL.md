@@ -57,7 +57,9 @@ is assertion.
 An item of the Definition of Done is met by a record in the manifest, never by a
 tick on the page: `compass gate pass ... --meets <item>` or `compass evidence
 add ... --meets <item>` records evidence, `compass follow-up add FU-<id>
---defers <item> --summary "..."` carries the item to ship, and a person ticks
+--defers <item> --github owner/repo#N --summary "..."` carries the item to the
+GitHub issue that tracks it (on a path issue a follow-up with no `--github`
+meets nothing), and a person ticks
 an item by typing `/compass:approve` for a `compass evidence request --check
 <item>`, or with `compass evidence approve --check <item>` at a terminal. `dod-evidence-typed`
 fails an item with no record. `compass check` lists each item's state.

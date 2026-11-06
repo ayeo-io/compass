@@ -55,8 +55,10 @@ checks:
     impl: gate-evidence-present, severity: blocking, on_skipped: fail, locked: true}
   human-approval-present: {statement: An approval record exists for an irreversible change., kind: deterministic,
     impl: human-approval-present, severity: blocking, on_skipped: fail, locked: hard}
-  backfills-paid: {statement: The issue manifest's follow-ups list is empty or every item is resolved.,
-    kind: deterministic, impl: backfills-paid, severity: blocking, on_skipped: fail}
+  backfills-paid: {statement: 'On an issue assessed before 9.0.0, the manifest''s follow-ups list is
+      empty or every item is resolved. A path issue has nothing to check: each of its follow-ups links
+      to a GitHub issue, which tracks the work.', kind: deterministic, impl: backfills-paid, severity: blocking,
+    on_skipped: fail}
   nfr-rows-resolved: {statement: 'Every concern row of the spec''s Non-functional requirements table
       (performance, capacity, compatibility, security, privacy, operability, accessibility, and any row
       added) names scenario ids the manifest holds or a reason the concern does not apply. At thorough
@@ -101,9 +103,10 @@ checks:
   dod-evidence-typed: {statement: 'Every item of the issue''s Definition of Done (its build exit list)
       is met by a record in the manifest: evidence recorded with `--meets`, a person''s approval
       recorded with `compass evidence approve --check`, or a follow-up recorded with `compass follow-up
-      add --defers`. An item with no record fails. A tick on a page counts for nothing. Cross-issue:
-      when another issue has a follow-up with target_task pointing at this issue, that follow-up must
-      be resolved before this issue ships. On an issue created from 2026-11-04
+      add --defers`. On a path issue a follow-up meets the item only when it links to a GitHub issue
+      (`--github owner/repo#N`), and need not be resolved. An item with no record fails. A tick on a
+      page counts for nothing. Cross-issue: when an issue assessed before 9.0.0 has a follow-up with
+      target_task pointing at this issue, that follow-up must be resolved before this issue ships. On an issue created from 2026-11-04
       it is judged once every gate has passed; on an older issue it declines to check, rather
       than passing, when no verification report is written yet.
 
@@ -160,5 +163,5 @@ checks:
         is in play., kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
   dod-living-docs-updated: {statement: (carried to ship) Living docs updated to match reality., kind: human, severity: blocking,
       on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
-  dod-follow-ups-settled: {statement: '(carried to ship) Every outstanding follow-up settled - no unsettled hotfix follow-up, no
-        unbacked marketing claim.', kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
+  dod-follow-ups-settled: {statement: '(carried to ship) Every follow-up is settled or links to the GitHub issue that
+        tracks it - no unsettled, unlinked hotfix follow-up, no unbacked marketing claim.', kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}

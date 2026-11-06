@@ -14,8 +14,11 @@ each:
   `meets: [<check>]`;
 - **ticked by a person**: the newest `human-approval` record for the check is
   `approved`;
-- **carried to a follow-up**: a follow-up with `defers: <check>`; it is met once
-  it is resolved;
+- **carried to a follow-up**: a follow-up with `defers: <check>`. On a path
+  issue (ADR-092) it meets the item only when it links to a GitHub issue
+  (`github: {repo, number}`), outstanding or resolved, because the linked issue
+  tracks the work (ADR-093). On an issue assessed before 9.0.0 it carries the
+  item to ship while it is outstanding, and meets it once it is resolved;
 - **ticked on the page before 7.0.0**: an entry of `page_ticks`, written only by
   `compass issue migrate`.
 
@@ -28,7 +31,9 @@ renderers, the stage lists and `dod-evidence-typed` can all use it.
 # DEPENDENCY: standard library (dataclasses); compass_pkg.path_stages,
 # compass_pkg.stable_ids. The accepted
 # evidence types are read from compass_pkg.checks inside `items`, because checks
-# imports the masking module and this one is imported by the renderers.
+# imports the masking module and this one is imported by the renderers. The
+# GitHub target pattern is read from compass_pkg.issue_link inside `linked_issue`
+# for the same reason.
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -47,10 +52,11 @@ TITLES = {"dod": "Definition of Done", "dor": "Definition of Ready",
 EMPTY = {"plan-exit": "No exit checks are configured for the plan stage.",
          "breakdown-exit": "No exit checks are configured for the breakdown stage."}
 
-MET_EVIDENCE, TICKED, CARRIED, MET_CARRIED, PAGE_TICK, OPEN = (
-    "met-evidence", "ticked", "carried", "met-carried", "page-tick", "open")
-#: The states that count as met.
-MET = (MET_EVIDENCE, TICKED, MET_CARRIED, PAGE_TICK)
+MET_EVIDENCE, TICKED, CARRIED, MET_CARRIED, PAGE_TICK, LINKED, OPEN = (
+    "met-evidence", "ticked", "carried", "met-carried", "page-tick", "linked", "open")
+#: The states that count as met. `LINKED` is a path issue's follow-up that names a
+#: GitHub issue.
+MET = (MET_EVIDENCE, TICKED, MET_CARRIED, PAGE_TICK, LINKED)
 
 
 @dataclass(frozen=True)
@@ -126,6 +132,12 @@ def state_of(task, check_id, accepted):
               and e.get("decision") in ("approved", "rejected")]
     if claims and claims[-1].get("decision") == "approved":
         return TICKED, (str(claims[-1].get("approver") or "a person"),)
+    if is_path_issue(task):
+        # The one follow-up rule of a path issue (ADR-093): only a follow-up that
+        # links to a GitHub issue meets the item, whatever its status.
+        linked = tuple(str(f.get("id")) for f in _dicts(task.get("follow_ups"))
+                       if f.get("defers") == check_id and linked_issue(f) is not None)
+        return (LINKED, linked) if linked else (OPEN, ())
     deferred = [f for f in _dicts(task.get("follow_ups")) if f.get("defers") == check_id]
     resolved = tuple(str(f.get("id")) for f in deferred if f.get("status") == "resolved")
     if resolved:
@@ -136,6 +148,20 @@ def state_of(task, check_id, accepted):
     if deferred:
         return CARRIED, tuple(str(f.get("id")) for f in deferred)
     return OPEN, ()
+
+
+def linked_issue(follow_up):
+    """`(repo, number)` of the GitHub issue a follow-up links to, or None. The
+    value must be one `compass issue link set` would accept, so a field edited by
+    hand into another shape links nothing."""
+    from compass_pkg.issue_link import parse_target
+    value = follow_up.get("github") if isinstance(follow_up, dict) else None
+    if not isinstance(value, dict):
+        return None
+    repo, number = value.get("repo"), value.get("number")
+    if not isinstance(repo, str) or not isinstance(number, int) or isinstance(number, bool):
+        return None
+    return (repo, number) if parse_target("%s#%d" % (repo, number)) == (repo, number) else None
 
 
 def items(task, task_dir, view, which):
@@ -173,8 +199,24 @@ def evidence_type_problem(evidence_type, command):
             % (command, evidence_type, ", ".join(sorted(accepted))))
 
 
-def open_hint(check_id):
-    """What a reader does to record an item that has no record."""
+#: The command a path issue's open item names when it is carried to a follow-up.
+LINKED_FOLLOW_UP = ('`compass follow-up add FU-<id> --defers %s --github owner/repo#N '
+                    '--summary "..."`')
+
+
+def open_hint(check_id, task=None):
+    """What a reader does to record an item that has no record. On a path issue a
+    follow-up meets the item only with `--github`, and a follow-up that defers it
+    without a link is named, so the reader knows why it does not count."""
+    if task is not None and is_path_issue(task):
+        unlinked = [str(f.get("id")) for f in _dicts(task.get("follow_ups"))
+                    if f.get("defers") == check_id and linked_issue(f) is None]
+        note = ("; follow-up %s defers it but links to no GitHub issue, so it meets "
+                "nothing" % ", ".join(unlinked)) if unlinked else ""
+        return ("record it with `compass evidence add ... --meets %s` or "
+                "`compass gate pass ... --meets %s`, " % (check_id, check_id)
+                + LINKED_FOLLOW_UP % check_id
+                + ", or a person's `compass evidence approve --check %s`%s" % (check_id, note))
     return ("record it with `compass evidence add ... --meets %s` or "
             "`compass gate pass ... --meets %s`, `compass follow-up add ... --defers %s`, "
             "or a person's `compass evidence approve --check %s`"

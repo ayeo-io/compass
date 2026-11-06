@@ -153,6 +153,11 @@
     },
     {
       "catalogue": "checks",
+      "id": "backfills-paid",
+      "operation": "set"
+    },
+    {
+      "catalogue": "checks",
       "id": "borrowed-documents-answered",
       "operation": "remove"
     },

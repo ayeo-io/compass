@@ -43,8 +43,10 @@ Compass will not clear a required mechanical gate with narrative assurance.
 Evidence is registered by id and type, and each gate declares which evidence
 types it accepts.
 
-Follow-ups are recorded explicitly and must be resolved before Compass
-completes the shipping workflow.
+Follow-ups are recorded explicitly. On a path issue each one links to the
+GitHub issue that tracks the work, and an open Definition of Done item is met
+only by such a follow-up. On an issue assessed before 9.0.0 each one must be
+resolved before Compass completes the shipping workflow.
 
 ### 4. A spike cannot silently become delivery
 

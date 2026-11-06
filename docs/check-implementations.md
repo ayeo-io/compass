@@ -89,7 +89,7 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `restored` | pass | an in-scope issue with a green, in a project that names every piece of support code, each one present |
 | `suspended` | nothing-to-check | a block whose routing is suspended on an approach that ships, in a project with no support code |
 
-### `backfills-paid` (version 1.0.0)  <!-- vocabulary-scan: allow - the check's identifier, not prose -->
+### `backfills-paid` (version 1.1.0)  <!-- vocabulary-scan: allow - the check's identifier, not prose -->
 
 | Case | Verdict | What the input exercises |
 |---|---|---|
@@ -124,7 +124,7 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a declared test id that names a test not on disk |
 | `restored` | pass | the same input put right |
 
-### `dod-evidence-typed` (version 2.1.0)
+### `dod-evidence-typed` (version 2.2.0)
 
 | Case | Verdict | What the input exercises |
 |---|---|---|

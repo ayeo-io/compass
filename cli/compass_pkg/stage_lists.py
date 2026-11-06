@@ -18,7 +18,8 @@ How a check is judged:
 
 - `human`: a record in the manifest, read by `item_records`: evidence that meets
   the check (`--meets`), a person's approval (`compass evidence approve
-  --check`), or a follow-up that defers it (`--defers`). A tick on a page counts
+  --check`), or a follow-up that defers it (`--defers`; on a path issue only one
+  that links to a GitHub issue with `--github`). A tick on a page counts
   for nothing; the page is never read. A check that lists `approvers:` needs a
   current approval by one of them, which `compass_pkg.approval_records` judges,
   and a deferral does not excuse it. A check whose document the routed approach
@@ -153,7 +154,7 @@ def _tick(check_id, check, stage, side, documents, task, owes):
         return approval_records.judge(check_id, check, task, documents.task_dir)
     recorded, ids = item_records.state_of(task, check_id, item_records.accepted_types())
     if recorded == item_records.OPEN:
-        return "fail", f"not recorded: {item_records.open_hint(check_id)}"
+        return "fail", f"not recorded: {item_records.open_hint(check_id, task)}"
     shown = ", ".join(ids)
     return "pass", {
         item_records.MET_EVIDENCE: f"met by {shown}",
@@ -161,6 +162,7 @@ def _tick(check_id, check, stage, side, documents, task, owes):
         item_records.CARRIED: f"carried to ship, {shown}",
         item_records.MET_CARRIED: f"met, {shown} resolved",
         item_records.PAGE_TICK: f"ticked on the page before 7.0.0 ({shown})",
+        item_records.LINKED: f"carried to a GitHub issue, {shown}",
     }[recorded]
 
 

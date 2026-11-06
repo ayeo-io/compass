@@ -930,7 +930,7 @@
     },
     "follow_ups": {
       "type": "array",
-      "description": "Work this issue deferred and still owes (e.g. a hotfix's). `compass check` fails while any is unresolved. The v2 states are outstanding/resolved; the 1.x spellings (owed/paid) stay schema-legal so an unmigrated manifest still lints - readers normalize them.",
+      "description": "Work this issue deferred and still owes (e.g. a hotfix's). On an issue assessed before 9.0.0 `compass check` fails while any is unresolved; on a path issue each links to a GitHub issue instead. The v2 states are outstanding/resolved; the 1.x spellings (owed/paid) stay schema-legal so an unmigrated manifest still lints - readers normalize them.",
       "items": {
         "type": "object",
         "required": [
@@ -951,7 +951,17 @@
           },
           "defers": {
             "type": "string",
-            "description": "The Definition of Done or Ready item (a check id) this follow-up carries to ship. The item reads met once the follow-up is resolved."
+            "description": "The Definition of Done or Ready item (a check id) this follow-up carries. On an issue assessed with 9.0.0 or later (ADR-092) it meets the item when the follow-up links to a GitHub issue (`github`). On an issue assessed before 9.0.0 the item reads met once the follow-up is resolved."
+          },
+          "github": {
+            "type": "object",
+            "description": "The GitHub issue that tracks the work. `compass follow-up add --github` writes it; it is required on a path issue (ADR-093).",
+            "required": ["repo", "number"],
+            "additionalProperties": false,
+            "properties": {
+              "repo": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/(?!-)(?!\\.{1,2}$)[A-Za-z0-9._-]{1,100}$", "description": "The repository, as owner/repo."},
+              "number": {"type": "integer", "minimum": 1, "maximum": 999999999, "description": "The issue number in that repository."}
+            }
           },
           "status": {
             "enum": [
@@ -963,7 +973,7 @@
           },
           "target_task": {
             "type": "string",
-            "description": "Cross-issue follow-up: the issue whose ship is blocked until this is resolved."
+            "description": "Cross-issue follow-up: the issue whose ship is blocked until this is resolved. Nothing writes it since 9.0.0 (ADR-093); it stays valid so an archived manifest still reads."
           },
           "paid_at": {
             "type": "string",

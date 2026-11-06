@@ -85,7 +85,9 @@ claim.**
 
 The check `dod-evidence-typed` applies it to the Definition of Done. On an
 issue created from 2026-11-04 each item needs a record in the manifest: evidence
-with `--meets`, a person's approval or a follow-up that defers it. On an older
+with `--meets`, a person's approval or a follow-up that defers it. On a path
+issue that follow-up must link to a GitHub issue (`--github`), and the
+check that every follow-up is resolved has nothing to check (ADR-093). On an older
 issue it reads the checklists of `verification-report.md`, where an unticked
 box needs an `(evidence: EV-<id>)` or `(follow-up: FU-<id>)` tag that resolves,
 in the Definition of Done and the section of every other exit list (`<Stage>

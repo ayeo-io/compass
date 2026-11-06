@@ -124,7 +124,8 @@ follow_ups:       # (optional) list of maps - work still outstanding:
   - id:          #   (required in entry) string
     description: #   (optional) string
     summary:     #   (optional) string - what is owed (compass follow-up add --summary)
-    defers:      #   (optional) string - the Definition of Done or Ready item it carries to ship
+    defers:      #   (optional) string - the Definition of Done or Ready item it carries
+    github:      #   (optional; required on a path issue) map {repo: owner/repo, number: N} - the GitHub issue that tracks it (compass follow-up add --github)
     status:      #   (required in entry) [outstanding, resolved]
 
 page_ticks:      # (optional) list of maps - items ticked on a page before 7.0.0 (compass issue migrate writes it):

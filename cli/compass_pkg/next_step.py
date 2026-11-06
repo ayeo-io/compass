@@ -25,7 +25,7 @@ bottom, and the first that matches gives the command:
 | a review gate pending | `compass gate pass <gate> --evidence <EV-id>` (on a path issue, not one of the three immovable gates) |
 | `human-approval` owed | `compass evidence request --check human-approval-present` |
 | a listed checkpoint with no outcome | `compass evidence request --checkpoint <stage>` |
-| a path issue, only the three immovable gates pending | `compass quick-fix finish -m "<commit message>" --no-commit -- <test command>` |
+| a path issue, only the three immovable gates pending | `compass quick-fix finish -m "<commit message>" --no-commit -- <test command>`, with `--candidate ... --client ...` where its green is an in-scope outer-loop green |
 | every gate passes | `compass check, then git add <the traced files>, then compass ship-commit -m "<message>"` |
 
 What is owed comes from `evidence_required` on a path issue. An issue assessed
@@ -42,7 +42,7 @@ quick-fix finish` refuses on while it is owed.
 """
 # DEPENDENCY: standard library (os, shlex); compass_pkg.next_line, path_stages, red_first,
 # stable_ids and status_words, and inside functions the readers of
-# acceptance_strategy, checkpoint_outcomes, checks, effective, gate_status and
+# acceptance_strategy, checkpoint_outcomes, checks, effective, gate_status, tdd, tdd_green and
 # item_records, and core, next_cmd and terminal for `announce`. It must not
 # import next_cmd at load time: next_cmd imports it.
 from __future__ import annotations
@@ -116,8 +116,22 @@ def _first_match(task, task_dir, done):
     if stage:
         return f"compass evidence request --checkpoint {stage}, then stop for /compass:approve"
     if on_path and _pending_gate(task):
-        return FINISH
+        return _finish(task_dir)
     return _ship_commit(task)
+
+
+def _finish(task_dir):
+    """`compass quick-fix finish`, with `--candidate` and `--client` where it needs
+    them: `finish` records its green on the loop `tdd.default_loop` picks, and an
+    outer-loop green on an issue `S17` applies to is refused without both
+    (ADR-085, `candidate_client.named`)."""
+    from compass_pkg.tdd import default_loop
+    from compass_pkg.tdd_green import strategy_applies
+    if default_loop(task_dir) == "outer" and strategy_applies(task_dir):
+        return FINISH.replace(
+            " --no-commit ",
+            f" --no-commit --candidate <build id>|local --client {'|'.join(_CLIENTS)} ")
+    return FINISH
 
 
 def _ship_commit(task):

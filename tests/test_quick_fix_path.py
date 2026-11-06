@@ -223,6 +223,32 @@ def test_finish_no_commit_ends_with_the_next_command(repo):
     assert last.endswith(', then compass ship-commit -m "<message>"'), last
 
 
+def test_the_finish_next_line_names_the_candidate_and_client_it_needs(repo):
+    # A light-row change where `S17` applies records its green on the outer loop,
+    # and `finish` refuses an outer-loop green with no candidate and client
+    # (ADR-085). The `next:` line that sends the session to `finish` must name
+    # both, so the command run as printed is not refused.
+    import shlex
+    _base_greeting(repo)
+    assert _start(repo).returncode == 0
+    _red(repo, SLUG, "--loop", "outer")
+    _write_greeting(repo, "Hello, %s!")
+    green = _run(repo, "tdd-green", "--issue", SLUG, "--loop", "outer",
+                 "--scenario", "TRC-001", *NAMED, *GREET_CMD)
+    assert green.returncode == 0, green.stdout + green.stderr
+    line = _next_lines(green)[-1][len("next: "):]
+    assert line.startswith("compass quick-fix finish "), line
+    assert "--candidate <build id>|local" in line and "--client api|web|cli" in line, line
+
+    filled = (line.replace('"<commit message>"', '"Say hello properly"')
+              .replace("<build id>|local", "local").replace("api|web|cli", "cli")
+              .replace("<test command>", " ".join(GREET_CMD[1:])))
+    argv = shlex.split(filled)[1:]          # drop the leading `compass`
+    finish = _run(repo, *argv[:2], "--issue", SLUG, *argv[2:])
+    assert finish.returncode != 2, finish.stdout + finish.stderr
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+
+
 # --- the whole path, by the `next:` lines alone --------------------------------------
 
 LAYERING_TEST = "tests/test_layering.py"

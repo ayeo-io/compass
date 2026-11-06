@@ -35,6 +35,12 @@ def _api():
     return policy_lint
 
 
+def _view_api():
+    """The effective view (`policy show`), split out of `policy_lint`."""
+    from compass_pkg import policy_effective
+    return policy_effective
+
+
 # --- helpers ---------------------------------------------------------------------
 
 def _env(home):
@@ -818,7 +824,7 @@ def test_pl_9_a_legacy_fault_is_a_finding_with_the_legacy_layer(tmp_path):
 
 def _effective(project=None, issue=None, parent=None, **kwargs):
     parent = parent or _layer(_parent_doc(), "parent")
-    return _api().resolve_effective(
+    return _view_api().resolve_effective(
         parent, None if project is None else _layer({"schema": 1, **project}),
         None if issue is None else _layer(issue, "issue"), **kwargs)
 
@@ -925,7 +931,7 @@ def test_pl_10_the_text_has_one_line_per_field_with_source_operation_and_waiver(
     eff = _effective(project={"owner": "owner-1", "checks": {"tests-pass": {
         "set": {"severity": "advisory"},
         "waiver": fx.project_waiver(approved_by="owner-1")}}})
-    lines = _api().effective_text(eff)
+    lines = _view_api().effective_text(eff)
     line = next(l for l in lines if l.startswith("checks.tests-pass.severity "))
     assert "advisory" in line and "project (set, waiver by owner-1, 2026-10-05)" in line
     assert sum(1 for l in lines if l.startswith("checks.")) == sum(
@@ -1073,7 +1079,7 @@ def test_pl_11_a_waiver_is_an_object_with_the_pinned_keys():
     eff = _effective(project={"owner": "owner-1", "checks": {"tests-pass": {
         "set": {"severity": "advisory"},
         "waiver": fx.project_waiver(approved_by="owner-1")}}})
-    document = _api().effective_json(eff)
+    document = _view_api().effective_json(eff)
     field = next(f for f in document["fields"] if f["path"] == "checks.tests-pass.severity")
     assert list(field["waiver"]) == WAIVER_KEYS
     assert field["waiver"]["approved_on"] == "2026-10-05"

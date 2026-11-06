@@ -1128,8 +1128,11 @@ def test_lk_9_only_check_lint_and_the_summary_import_the_module():
     hits = [name for name, text in _python_sources()
             if name != "cli/compass_pkg/locks.py" and IMPORTS_LOCKS.search(text)]
     # effective.py stores the conformance status in each generation it commits.
+    # policy_effective.py is the lint's effective view (`policy show`), which
+    # shows each lock.
     assert hits == ["cli/compass_pkg/check_cmd.py", "cli/compass_pkg/effective.py",
-                    "cli/compass_pkg/policy_lint.py", "cli/compass_pkg/routing.py"], hits
+                    "cli/compass_pkg/policy_effective.py", "cli/compass_pkg/policy_lint.py",
+                    "cli/compass_pkg/routing.py"], hits
 
 
 def test_lk_9_no_command_exposes_the_module_and_the_aggregate_does_not_name_it():

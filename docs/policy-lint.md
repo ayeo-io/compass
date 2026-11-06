@@ -6,7 +6,8 @@ command checks or shows, in what order, and the exact shape of the JSON each
 one prints. From 6.0.0 the finding codes and both JSON shapes are a public
 contract: a change to a key, its order or a code is a breaking change.
 
-The code is `cli/compass_pkg/policy_lint.py` (the checks and the views) and
+The code is `cli/compass_pkg/policy_lint.py` (the checks and the lint view),
+`cli/compass_pkg/policy_effective.py` (the effective view) and
 `cli/compass_pkg/policy_cmd.py` (the two commands). The decisions behind it
 are ADR-035 (the merge grammar), ADR-037 (classification), ADR-039 (waivers
 and locks), ADR-042 (the shipped preset) and ADR-043 (one project file).

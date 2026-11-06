@@ -936,7 +936,7 @@ PACKAGE = ROOT / "cli" / "compass_pkg"
 READERS = ("checks", "check_cmd", "routing", "manifest", "calibration", "flow",
            "quick_fix_cmd", "loop_ceilings", "lessons", "review_rules", "approach_diagram")
 RESOLVER_MODULES = {"merge", "obligations", "classify", "waivers", "policy_lint",
-                    "generation"}
+                    "policy_effective", "generation"}
 
 
 def _imported(path, whole=None):
@@ -986,13 +986,13 @@ def test_gs_15_check_and_evaluate_create_no_generation_files(tmp_path):
 
 
 def test_gs_15_effective_for_reads_the_same_live_configuration_as_lint_resolves(tmp_path, monkeypatch):
-    from compass_pkg import effective, policy_lint
+    from compass_pkg import effective, policy_effective, policy_lint
     root, task_dir = _project(tmp_path, compass_yml={"schema": 1, "checks": {"extra": _new_check()}})
     monkeypatch.chdir(root)
     view = effective.effective_for(str(task_dir))
     loaded = policy_lint.load_layers(str(root), manifest=_manifest(task_dir))
-    eff = policy_lint.resolve_effective(loaded.parent, loaded.project, loaded.issue,
-                                        meta=loaded.meta, slug=SLUG)
+    eff = policy_effective.resolve_effective(loaded.parent, loaded.project, loaded.issue,
+                                             meta=loaded.meta, slug=SLUG)
     paths = {r.path for r in eff.rows
              if r.path.startswith("checks.") and not r.path.endswith(".locked")}
     held = {f"checks.{c}.{f}" for c, body in view.config["checks"].items() for f in body}

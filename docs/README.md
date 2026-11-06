@@ -90,7 +90,7 @@ same commit.
 | `cli/compass_pkg/board_cmd.py`, `cli/compass_pkg/board_page.py`, `cli/compass_pkg/board_file.py`, `cli/compass_pkg/board_trees.py` | `docs/board.md` |
 | `cli/compass_pkg/obligations.py` | `architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md` |
 | `cli/compass_pkg/classify.py`, `cli/compass_pkg/classify_lists.py`, `cli/compass_pkg/json_shape.py`, `scripts/bench-classifier.py` | `governance/routing-policy.md` |
-| `cli/compass_pkg/policy_lint.py`, `cli/compass_pkg/policy_cmd.py` | `docs/policy-lint.md` |
+| `cli/compass_pkg/policy_lint.py`, `cli/compass_pkg/policy_effective.py`, `cli/compass_pkg/policy_cmd.py` | `docs/policy-lint.md` |
 | `cli/compass_pkg/generation.py`, `cli/compass_pkg/effective.py`, `cli/compass_pkg/impl_versions.py`, `scripts/bench-evaluate.py` | `docs/generation-store.md` |
 | `scripts/impl-coverage.py`, `tests/fixtures/impls/versions.lock.yml` | `docs/check-implementations.md` |
 | `cli/compass_pkg/issue_depends.py` | `docs/issue-dependencies.md` |

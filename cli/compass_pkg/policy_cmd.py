@@ -14,14 +14,15 @@ either fails. `compass ci` calls the legacy function in `governance`
 directly, so its behaviour does not move.
 """
 # DEPENDENCY: standard library (os, sys); compass_pkg.classify, config_words, core, governance,
-# layers, parents, policy_lint, policy_migrate, policy_migrate_undo, policy_update, project_settings,
+# layers, parents, policy_effective, policy_lint, policy_migrate, policy_migrate_undo, policy_update, project_settings,
 # replay, terminal.
 from __future__ import annotations
 
 import os
 import sys
 
-from compass_pkg import classify, config_words, governance, layers, parents, policy_lint, policy_migrate
+from compass_pkg import classify, config_words, governance, layers, parents, policy_lint
+from compass_pkg import policy_effective, policy_migrate
 from compass_pkg import policy_migrate_undo, policy_update, preset_init, preset_test, project_settings, replay
 from compass_pkg.effective import GOVERNANCE_COPY_NOTICE, has_governance_copy
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
@@ -143,12 +144,12 @@ def run_policy_effective(args):
         first = loaded.findings[0]
         raise CompassError(f"nothing can be resolved: {first.code} [{first.layer}] "
                            f"{first.path}: {first.message}")
-    effective = policy_lint.resolve_effective(
+    effective = policy_effective.resolve_effective(
         loaded.parent, loaded.project, loaded.issue, meta=loaded.meta, slug=slug,
         git_parents=loaded.git_parents)
     notice = GOVERNANCE_COPY_NOTICE if has_governance_copy(root) else None
-    _emit(args, policy_lint.effective_json(effective),
-          policy_lint.effective_text(effective, notice=notice))
+    _emit(args, policy_effective.effective_json(effective),
+          policy_effective.effective_text(effective, notice=notice))
     return 0
 
 

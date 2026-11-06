@@ -700,9 +700,11 @@ def test_wv_8_only_locks_lint_the_replay_and_update_import_it_and_the_entry_scri
         if pattern.search(path.read_text(encoding="utf-8")):
             users.append(path.name)
     # locks.py routes an unlock through `check` (ADR-039); the layered lint
-    # and the replay (policy diff) read waivers to report them, and
-    # `policy update` re-checks them across a move. None adds a waiver command.
-    assert users == ["locks.py", "policy_lint.py", "policy_update.py", "replay.py"], users
+    # with its effective view (policy show) and the replay (policy diff) read
+    # waivers to report them, and `policy update` re-checks them across a
+    # move. None adds a waiver command.
+    assert users == ["locks.py", "policy_effective.py", "policy_lint.py", "policy_update.py",
+                     "replay.py"], users
     for name in ("cli/compass", "cli/compass_pkg/_all.py"):
         assert "waivers" not in (ROOT / name).read_text(encoding="utf-8"), name
     core = (ROOT / "cli" / "compass_pkg" / "core.py").read_text(encoding="utf-8")

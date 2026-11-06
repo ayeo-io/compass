@@ -306,7 +306,7 @@ rather than routing them through a critic.
 [outcome]" - **ADR-004** rejects it as a spec format. The reason is that a user
 story embeds one role's perspective into the artifact, so each role ends up
 wanting their own version and the versions drift. Compass has one
-`acceptance-criteria.md` that all five roles read. User stories are
+`acceptance-criteria.md` that every reader of the change reads. User stories are
 fine *upstream* of Compass, in a brief or a ticket; they are not the spec.
 
 **No single-audience declaration.** A common convention is to write "assume the

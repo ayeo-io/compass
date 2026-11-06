@@ -42,7 +42,7 @@ token" names a required outcome, not a call-path.
 The ubiquitous language is not optional. When "user," "subscriber," and
 "account" are used interchangeably in scenarios, they carry different
 implications to different readers. Pick the domain term and use it
-consistently - the spec is the contract between all five roles.
+consistently - the spec is the contract between everyone who reads the change.
 
 ### What stays refused
 

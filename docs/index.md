@@ -3,8 +3,8 @@
 Compass is adaptive spec-driven development for Claude Code. You describe
 the work; Compass scores the risk, familiarity and size of each piece of
 work, new or existing, and a deterministic CLI computes how much process it
-needs from that assessment, the project's configuration and the issue's
-documents. Five guardrails apply to all work that ships code, whatever the
+needs from that assessment and the project's configuration. Five
+guardrails apply to all work that ships code, whatever the
 assessment: a recorded passing test run, acceptance criteria before code,
 code traced to a criterion, typed evidence rather than a written claim, and a
 person's approval for a change labelled `auth`, `payments`, `personal-data`

@@ -23,7 +23,7 @@ The archive must stay readable. The main checkout's local archive holds 622 issu
 
 ## Decision
 
-1. **One path.** A delivery issue runs assess, specify, build and ship. The four stages are fixed in code (`stable_ids.PATH_STAGE_IDS`). The stages have no modes. A new manifest writes no `stages:` map.
+1. **One path.** A delivery issue runs assess, specify, build and ship. The four stages are fixed in code (`stable_ids.PATH_STAGE_IDS`). The stages have no modes. A new delivery manifest writes no `stages:` map. A spike is not on the path: it keeps its `stages:` map of assess, build and ship (`stable_ids.SPIKE_STAGE_IDS`).
 2. **The approach key stays.** `delivery_approach` keeps its name, with the values `delivery` and `spike` for a new issue. The readers that only test whether it is set (the route probe hook, `compass next`, the stop hook) do not change.
 3. **Assess selects the evidence.** Assess computes `evidence_required`, the list of evidence the change needs before it ships, and stores it in the manifest. `gates`, the `acceptance_strategy` block and `checkpoints` are derived from it, so every check keeps reading the keys it reads now.
    - The tokens are a closed set: `scenarios`, `red-before-green`, `suite-green`, `correctness`, `governance`, `traceability`, `regression`, `security`, `clarity`, `architecture`, `outer-loop`, `isolation`, `layering`, `definition-of-done`, `reproduce-first`, `scenario-approval` and `human-approval`. Each one names the record that meets it.
@@ -36,8 +36,12 @@ The archive must stay readable. The main checkout's local archive holds 622 issu
 6. **No Definition of Ready.** The seven `dor-*` checks and `plan.entry` leave the shipped default. The Definition of Done is the build exit list (`build.exit`).
 7. **Six stage commands go.** `/compass:define`, `/compass:refine`, `/compass:plan`, `/compass:breakdown`, `/compass:implement` and `/compass:verify` are deleted. `/compass:go` runs the path, and `/compass:quick-fix` is its short form. The agent-review rules in `commands/verify.md` (ADR-090 decision 7) move to `commands/ship.md`.
 8. **The next command.** Every verb that writes a record of the issue prints `next: <command>` as its last line in text mode. One new module of the CLI package, `next_step`, decides the command from the records, so the verbs and `compass next` cannot disagree.
-9. **Old issues.** A manifest without `evidence_required` keeps every rule it had. A legacy stage it shows is mapped onto the path: `define`, `refine` and `plan` to `specify`; `breakdown` and `implement` to `build`; `verify` and `ship` to `ship`.
-10. **Old configuration.** The approaches, shapes, stage modes, caps and lists of removed stages in a frozen preset or a stored generation stay valid and are not read for a new assessment. A project layer that sets one gets a warning (`L-SETTING-REMOVED`), and the merge drops it.
+9. **Old issues.** A manifest without `evidence_required` keeps every rule it had. A legacy stage it shows is mapped onto the path: `define`, `refine` and `plan` to `specify`; `breakdown` and `implement` to `build`; `verify` and `ship` to `ship`. A legacy stage that a project layer, a git parent or a copy of the governance files names, such as a gate's `stage` or a guardrail's `checked_at`, is read at its path stage through the same mapping (`stable_ids.LEGACY_TO_PATH`), and lint names it with the warning `L-STAGE-MAPPED`.
+10. **Old configuration.** The approaches, shapes, stage modes, caps and lists of removed stages in a frozen preset or a stored generation stay valid and are not read for a new assessment. Only the shipped default's shapes (`RP-SHAPE-001` and the fallback) are read, to choose between `delivery` and `spike`. A layer that sets a removed key gets a warning (`L-SETTING-REMOVED`), and the merge drops the key:
+   - a project layer and a git parent (a shared `compass.yml` named `github:...`) drop a legacy stage, a `dor-*` check, an 8.x approach, the caps rule set and `RP-FLOOR-002`'s `require_phase`;
+   - they also drop a rule effect that forces or forbids an approach or fixes its stages (`force_minimum_approach`, `forbid_approach`, `never_skip`), with its hit policy, and keep any other effect of the same rule, such as `add_gate`;
+   - an issue layer drops a legacy stage, a `dor-*` check or an 8.x approach pick only where the configuration below it does not hold it, so an old issue's stored generation keeps its own;
+   - the shipped preset and a frozen preset are not changed.
 11. **Not written.** Compass no longer writes `subtask_ceiling`, `max_worktrees`, `orchestration`, the breakdown mode or the caps rule set `RP-CAP-001`.
 12. **No devlog.** Compass writes no `devlog.md` for a new issue. An archived one stays, and the readers that read it now still read it.
 
@@ -63,6 +67,9 @@ What breaks for a user:
 - Under `controlled`, assess and specify are always checkpoints, and build and ship are checkpoints where `S17` applies. Under `balanced`, the 8.x waits at define and plan on medium work go.
 - A project `compass.yml` that sets `approaches:`, a legacy stage, the caps rule set or a Definition of Ready check gets an `L-SETTING-REMOVED` warning, and the merge drops the key. An `autonomy_checkpoints` table may name the path stages and the legacy stages; nothing in it is dropped, and an old issue still waits only at the legacy hand-offs.
 - An issue writes no `devlog.md`, and no Definition of Ready is owed.
+- `extends: compass:default@6` or `@7` loads the live preset, not the frozen major, and `compass policy lint` warns with `L-EXTENDS-FROZEN-MAJOR`.
+- `compass approach evaluate` on a path issue, in text and `--json`, shows no stage block and no candidate approach: the keys `candidate_route`, `candidate_via` and `blocked_phases` are left out (`path_writer.NOT_SHOWN`). The path has no stage a rule can block, and nothing enforced the block there. A spike keeps the 8.x result.
+- `compass issue configure` accepts a proposal whose only change is a dropped key, with the warning, and changes nothing. Contract 4 lists `issue-configure-refused-proposal-exits-1` as an intended 9.0.0 change (exit 1 to 0, refused to accepted) in `tests/compat_commands.py` `EXIT_CHANGED_IN_9_0_0`. The contract 4 corpus does not change, and over the copied 5.6.0 governance the proposal is still refused as recorded.
 
 What old issues keep:
 
@@ -72,26 +79,39 @@ What old issues keep:
 - Their checkpoints. `CHECKPOINT_STAGES` holds the path stages and the legacy ones, so an old outcome for `define` still reads and an old request still closes.
 - A way onto the path. `compass approach evaluate --write --reason` on an old issue writes the path keys and logs the old approach in `reassessments`.
 
+### As built
+
+These decisions were taken while #351 was built. Decisions 1, 9 and 10 above hold them.
+
+- Decision 1 as accepted said no new manifest writes `stages:`. A spike still writes its own three-stage map, because it is not on the path.
+- Decision 10 as accepted named only a project layer. The build applies the same drop to a git parent, so a team parent written for 8.x does not stop every project that extends it (commit 491922f4), and to an issue layer, where the configuration below does not hold the key (commits 4758e9ef and 37a8f29e). It also drops a project rule effect that forces an approach (commit 491922f4).
+- A legacy stage reference in a layer is mapped with `L-STAGE-MAPPED`, not dropped: a gate at `verify` is checked at `ship`, later but still before the change lands (commit 4758e9ef). `compass migrate` (#359) rewrites these references.
+- A frozen major in `extends:` resolves to the live preset with `L-EXTENDS-FROZEN-MAJOR` (commit 4758e9ef). Contracts 1 and 2 under configuration B read the `v8.0.4` governance copy, as configuration A does.
+- The classifier knows the approach `delivery`, and an `autonomy_checkpoints` table may name it and the path stages. `CLASSIFIER_VERSION` is 15 (commit 322bc6ce).
+- Path output drops the stage block and the candidate approach (commits aba40bcb and c366b244).
+- `compass issue raised-by --found-at` and `compass quick-fix start --found-at` take `specify`, `build` and `ship`, with `review`, `ci` and `after-landing`. `assess` is not a place, as it was not before 9.0.0, because it writes no part of the parent's change. The 8.x values `define`, `plan`, `implement` and `verify` stay valid and are stored as given, and `compass retro --lineage` counts each at its path stage.
+
 ## Open questions
 
-Each question has the default this change builds.
+Questions 1 to 16 are answered as #351 built them. Question 17 is still open.
 
-1. **Does the path apply under a pinned frozen preset (`default@6`, `default@7`, a copied 5.6.0 governance)?** Default: yes, as ADR-090 and ADR-091 did for removed parts. The configuration still adds its `add_gate` floors and project guardrails.
-2. **What value names the one path?** Default: `delivery`, matching `goal: delivery`. Not `standard`, which is a retired alias of regular.
-3. **Does the path keep the 8.x evidence for each assessment?** Default: yes, with two deliberate changes: no Definition of Ready, and `scenario-approval` for a `G5` label or critical risk.
-4. **Where does the Definition of Done list live?** Default: the build exit list (`build.exit`). `item_records.LISTS["dod"]` reads `build.exit` and falls back to `verify.exit` for an old configuration.
-5. **Do the gate ids lose the `verify.` prefix?** Default: no. Every archived manifest, evidence record and contract names them.
-6. **Does #351 add the scenario sign-off, or #355?** Default: #351 adds the `scenario-approval` token and lists the `specify` checkpoint for it under every autonomy value. #355 adds the PR approval and the scenario digest freeze.
-7. **Which checkpoints does each autonomy value list?** Default: `controlled` lists assess and specify, plus build and ship where `S17` applies (the stage 2 and 3 reviews). `balanced` and `autonomous` list nothing, except specify where `scenario-approval` is required.
-8. **Does `devlog.md` stay?** Default: no new writes. `compass quick-fix start` writes `acceptance-criteria.md` with the one scenario and the intent. The delegation audit line moves with #355, so #351 leaves `delegations.py` as it is.
-9. **What happens to `compass approach render` (the approach diagram)?** Default: keep the verb. It draws the path, the spike and the evidence rows, and `docs/approach-diagram.html` is derived again.
-10. **Does `--json` output gain the next command?** Default: only `compass next --json`, as a `next` field.
-11. **Do `skills/plan-authoring/` and `skills/flow-management/` stay?** Default: delete `plan-authoring` with the plan stage, and update `flow-management`.
-12. **Freeze `default@8` or pack a fixture for the contracts?** Default: pack the `v8.0.4` governance as a test fixture. #351 does not raise the preset version; the 9.0.0 release does.
-13. **New verb names for start and finish?** Default: no. `compass quick-fix start` and `finish` serve every size; a rename can come with the release.
-14. **How does a person turn on the hotfix setting?** Default: `--urgency "live-defect - <reason>"` on `compass quick-fix start`, and the existing `--assessment urgency=live-defect` on `compass approach evaluate`.
-15. **Does a re-assess move an old issue onto the path?** Default: yes, and the re-assessment log records the old approach.
-16. **What do `depends_on` `until` values accept?** Default: the path stages and the legacy names, each judged through the stage mapping.
+1. **Does the path apply under a pinned frozen preset (`default@6`, `default@7`, a copied 5.6.0 governance)?** Built: yes, as ADR-090 and ADR-091 did for removed parts. `extends:` with a frozen major loads the live preset and lint warns with `L-EXTENDS-FROZEN-MAJOR`. The configuration still adds its `add_gate` floors and project guardrails.
+2. **What value names the one path?** Built: `delivery`, matching `goal: delivery`. Not `standard`, which is a retired alias of regular.
+3. **Does the path keep the 8.x evidence for each assessment?** Built: yes, with two deliberate changes: no Definition of Ready, and `scenario-approval` for a `G5` label or critical risk.
+4. **Where does the Definition of Done list live?** Built: the build exit list (`build.exit`). `item_records.LISTS["dod"]` reads `build.exit` and falls back to `verify.exit` for an old configuration.
+5. **Do the gate ids lose the `verify.` prefix?** Built: no. Every archived manifest, evidence record and contract names them.
+6. **Does #351 add the scenario sign-off, or #355?** Built: #351 adds the `scenario-approval` token and lists the `specify` checkpoint for it under every autonomy value. #355 adds the PR approval and the scenario digest freeze.
+7. **Which checkpoints does each autonomy value list?** Built: `controlled` lists assess and specify, plus build and ship where `S17` applies (the stage 2 and 3 reviews). `balanced` and `autonomous` list nothing, except specify where `scenario-approval` is required.
+8. **Does `devlog.md` stay?** Built: no new writes. `compass quick-fix start` writes `acceptance-criteria.md` with the one scenario and the intent. The delegation audit line moves with #355, so #351 leaves `delegations.py` as it is.
+9. **What happens to `compass approach render` (the approach diagram)?** Built: keep the verb. It draws the path, the spike and the evidence rows, and `docs/approach-diagram.html` is derived again.
+10. **Does `--json` output gain the next command?** Built: only `compass next --json`, as a `next` field.
+11. **Do `skills/plan-authoring/` and `skills/flow-management/` stay?** Built: delete `plan-authoring` with the plan stage, and update `flow-management`.
+12. **Freeze `default@8` or pack a fixture for the contracts?** Built: pack the `v8.0.4` governance as a test fixture. #351 does not raise the preset version; the 9.0.0 release does.
+13. **New verb names for start and finish?** Built: no. `compass quick-fix start` and `finish` serve every size; a rename can come with the release.
+14. **How does a person turn on the hotfix setting?** Built: `--urgency "live-defect - <reason>"` on `compass quick-fix start`, and the existing `--assessment urgency=live-defect` on `compass approach evaluate`.
+15. **Does a re-assess move an old issue onto the path?** Built: yes, and the re-assessment log records the old approach.
+16. **What do `depends_on` `until` values accept?** Built: the path stages and the legacy names, each judged through the stage mapping.
+17. **Does `compass issue configure` refuse a proposal whose only change is a dropped key?** Built: no. It is accepted with `L-SETTING-REMOVED` and changes nothing, and contract 4 lists `issue-configure-refused-proposal-exits-1` as an intended change. Open: the owner reviews this entry, because it changes the outcome of a contract entry. The other answer refuses such a proposal with exit 1 and a new reason, and removes the entry from `EXIT_CHANGED_IN_9_0_0`.
 
 ## References
 

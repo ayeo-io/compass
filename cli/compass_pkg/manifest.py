@@ -31,8 +31,8 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import (checkpoint_outcomes, gate_status, issue_usage,
-                         release_line, ship_commit_reason, status_words)
+from compass_pkg import (checkpoint_outcomes, gate_status, release_line,
+                         ship_commit_reason, status_words)
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
@@ -349,7 +349,7 @@ def cmd_land_commit(args):
         status_words.close(head_task, status_words.COMPLETED)
         head_task["land_timestamp"] = now_iso()
         head_task["land_commit"] = head_id
-        issue_usage.save_landed(head_task, head_task_dir, head_task_path)
+        save_manifest(head_task, head_task_path)
         print(
             f"compass ship-commit: every file '{head_slug}' changed is "
             f"already committed - landed at HEAD {head_id[:8]}, no new "
@@ -583,7 +583,7 @@ def cmd_land_commit(args):
                         # The commit this issue landed in. A green is checked
                         # against its tree after HEAD has moved on.
                         task["land_commit"] = head_after
-                        issue_usage.save_landed(task, task_dir, task_path)
+                        save_manifest(task, task_path)
                         landed_note = "\n  issue marked done."
         except CompassError:
             pass  # status update is best-effort; the commit already succeeded

@@ -660,7 +660,7 @@ def prepare_manifest_write(task, path):
     return word_map.prepare(task, path, raw, COMPASS_SCHEMA_VERSION)
 
 
-MANIFEST_LOCK = ".manifest.lock"  # held while a manifest is written (session_record.py)
+MANIFEST_LOCK = ".manifest.lock"  # held while a manifest is written (manifest_store.save)
 def save_manifest(task, path):
     """Replace the manifest atomically, keeping changes saved since it was loaded."""
     manifest_store.save(task, path, MANIFEST_LOCK, prepare_manifest_write, normalize_spine)

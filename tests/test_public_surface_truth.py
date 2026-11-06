@@ -762,6 +762,16 @@ def test_d2_repairs_change_only_retired_names():
     `architecture/ownership.md` (one `###` heading fewer, list_items 15 -> 12),
     which lost the "Role Pipeline" section that named `commands/consult.md`.
 
+    The same issue removed `compass retro` and `compass rework-scan` (ADR-093),
+    which re-baselined three files: `architecture/ownership.md` (two `###`
+    headings fewer) lost the two rules on what those commands must not do,
+    `architecture/relations.md` (list_items 4 -> 3, table_rows 34 -> 33) lost
+    the row and the rule that named them, and
+    `skills/flow-management/SKILL.md` (one `##` heading fewer, list_items
+    19 -> 18) lost its "Calibration" section. Removing the pre-tool hook's
+    session record re-baselined `docs/safety-contract.md` (one `###` heading
+    fewer, list_items 136 -> 128), which lost the section on that record.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

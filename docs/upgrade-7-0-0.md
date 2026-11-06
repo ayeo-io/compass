@@ -213,7 +213,7 @@ The dry run lists each move, rename, registration, re-point, pointer removal and
 
 ## Checkpoint outcomes and usage
 
-Compass now records what happened at each stage hand-off and what each issue cost. The decision is `architecture/decisions/ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md`, and `docs/autonomy-and-cost.md` owns the facts.
+Compass now records what happened at each stage hand-off and what each issue cost. The decision is `architecture/decisions/ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md`, and `docs/checkpoints.md` owns the facts that 9.0.0 kept.
 
 ### What changes
 

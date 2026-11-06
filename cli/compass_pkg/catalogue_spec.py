@@ -632,8 +632,9 @@ TOP_DESCRIPTIONS = {
     "project.acceptance_support.layering_test": "The path of the layering test, which checks "
                                                 "that each test layer calls only the layer "
                                                 "below it.",
-    "prices": "Dollars per million tokens for each model name, used to price the usage of a "
-              "quick fix. Without it no cost is recorded.",
+    "prices": "Removed in 9.0.0 (ADR-093) and not read: the dollars per million tokens for "
+              "each model name, which priced an issue's usage. The key stays valid so a "
+              "project that holds it keeps working, and `compass policy lint` names it.",
     "models": "Removed in 9.0.0 (ADR-090) and not read: the model and effort of each tier "
               "`strong`, `standard` and `fast`, which a stage command passed to its agent. "
               "The key stays valid so a project that holds it keeps working, and `compass "

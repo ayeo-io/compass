@@ -88,7 +88,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `project` | The project's name, commands and declarations | `name`, `test_command`, `test_micro_command`, `bdd_run_command`, `lint_command`, `format_check_command`, `build_command`, `typecheck_command`, `secret_scan`, `structured_logging` | none |
 | `enforcement` | Extra paths the pre-tool hook guards | `code_globs`: a list of patterns | none |
 | `record` | Where the delivery record is kept | `remote`, `paths`, `names_key` | no record |
-| `prices` | Dollars per million tokens, to price a quick fix's usage | a mapping from model name | no cost recorded |
+| `prices` | Removed in 9.0.0 and not read (see `prices` below) | - | - |
 | `models` | Removed in 9.0.0 and not read (see `models` below) | - | - |
 | `multiagent` | Removed in 9.0.0 and not read (see `multiagent` below) | - | - |
 | `allow_project_commands` | Lets `compass check` and `compass readiness` run commands the project declares | `true`, `false` | `false` |
@@ -189,6 +189,13 @@ valid, so a project that holds it keeps working, and nothing reads it.
 `max_worktrees` (ADR-090). The key stays valid, so a project that holds it
 keeps working, and nothing reads it. `compass policy lint` names it with
 `L-SETTING-REMOVED`. Delete it from `compass.yml`.
+
+### `prices`
+
+9.0.0 removed the usage record and the cost per change that `prices` priced
+(ADR-093). The key stays valid, so a project that holds it keeps working, and
+nothing reads it. `compass policy lint` names it with `L-SETTING-REMOVED`.
+Delete it from `compass.yml`.
 
 ### `record`
 

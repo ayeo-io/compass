@@ -46,8 +46,6 @@
       3,
       3,
       3,
-      3,
-      3,
       2
     ],
     "list_items": 12,
@@ -61,8 +59,8 @@
       2,
       2
     ],
-    "list_items": 4,
-    "table_rows": 34
+    "list_items": 3,
+    "table_rows": 33
   },
   "architecture/system-context.md": {
     "fences": 0,
@@ -176,11 +174,10 @@
       3,
       3,
       3,
-      3,
       2,
       2
     ],
-    "list_items": 136,
+    "list_items": 128,
     "table_rows": 35
   },
   "examples/README.md": {
@@ -463,10 +460,9 @@
       2,
       2,
       2,
-      2,
       2
     ],
-    "list_items": 19,
+    "list_items": 18,
     "table_rows": 0
   },
   "templates/acceptance-criteria.md": {

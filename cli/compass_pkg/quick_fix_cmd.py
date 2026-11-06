@@ -39,14 +39,14 @@ import textwrap
 
 from compass_pkg.binding import ids_for
 from compass_pkg.check_cmd import cmd_check
-from compass_pkg import candidate_client, project_settings, retired
+from compass_pkg import candidate_client, retired
 from compass_pkg.path_stages import is_path_issue
 from compass_pkg.stable_ids import (
     APPROACH_DELIVERY, APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY)
 from compass_pkg.core import (
     COMPASS_SCHEMA_VERSION, CompassError, WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
     docs_dir, find_governance, find_upwards, reading_matches,
-    load_manifest, now_iso, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
+    load_manifest, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
 )
 from compass_pkg.init_cmd import ensure_initialised, resolve_project_root
 from compass_pkg.manifest import (
@@ -304,14 +304,9 @@ def cmd_quick_fix_start(args):
         "created": created,
         "assessment": dict(readings),
         "justifications": dict(reasons),
-        # Where the assess stage ends; finish reads the session's tokens
-        # per stage from here (#375).
-        "started_at": now_iso(),
         # A new issue's hand-offs are recorded (checkpoint_outcomes.py).
         "checkpoint_outcomes": [],
     }
-    if os.environ.get("CLAUDE_CODE_SESSION_ID"):
-        start_record["usage"] = {"session": os.environ["CLAUDE_CODE_SESSION_ID"]}
     if raised_by:
         start_record["raised_by"] = {"issue": raised_by, "found_at": found_at}
     save_manifest(start_record, manifest_path(task_dir))
@@ -694,43 +689,6 @@ def _commit_lines(files, slug):
     return lines
 
 
-def _record_usage(task_dir, finish_started_at):
-    """Write the stage boundaries finish knows and the tokens the session
-    spent in each stage. Never fails the finish: whatever goes wrong is
-    recorded as one of the fixed reasons in `session_usage.REASONS`."""
-    from compass_pkg import session_usage
-    path = manifest_path(task_dir)
-    task, _ = load_manifest(task_dir)
-    task["finish_started_at"] = finish_started_at
-    task["committed_at"] = now_iso()
-    work = os.path.dirname(task_dir)
-    others = []
-    for name in sorted(os.listdir(work)):
-        other = manifest_path(os.path.join(work, name))
-        if os.path.join(work, name) != task_dir and os.path.isfile(other):
-            try:
-                others.append(load_yaml(other) or {})
-            except Exception:                              # noqa: BLE001
-                continue
-    project_root = os.path.dirname(os.path.dirname(work))
-    previous = task.get("usage") if isinstance(task.get("usage"), dict) else {}
-    try:
-        prices = project_settings.settings(project_root).get("prices") or {}
-        task["usage"] = session_usage.stage_usage(
-            task_dir, task, others, prices=prices if isinstance(prices, dict) else {})
-    except project_settings.SettingsConflict:
-        raise
-    except Exception:                                    # noqa: BLE001
-        task["usage"] = {"recorded": False, "reason": "unreadable",
-                         **({"session": previous["session"]}
-                            if isinstance(previous.get("session"), str) else {})}
-    # The sessions the pre-tool hook recorded stay; the rest of the block is
-    # the quick fix's own, as before.
-    if isinstance(previous.get("sessions"), list) and previous["sessions"]:
-        task["usage"]["sessions"] = list(previous["sessions"])
-    save_manifest(task, path)
-
-
 def _owed_refusal(args, slug, owed):
     """Exit 1 before anything is written, with one `next:` line per owed item.
     `--json` names them as `owed`, so its document keeps one shape."""
@@ -747,7 +705,6 @@ def _owed_refusal(args, slug, owed):
 
 
 def cmd_quick_fix_finish(args):
-    finish_started_at = now_iso()
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     task, _ = load_manifest(task_dir)
     slug = task.get("issue")
@@ -978,8 +935,6 @@ def cmd_quick_fix_finish(args):
 
         detail = [f"gates    : {', '.join(THREE_GATES)} -> pass",
                   f"evidence : {', '.join(evidence_ids)}"]
-
-        _record_usage(task_dir, finish_started_at)
 
         # A commit is the user's to ask for. With --no-commit the gates and
         # records are complete and the change is left in the working tree.

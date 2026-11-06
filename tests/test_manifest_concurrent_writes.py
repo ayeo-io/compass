@@ -23,7 +23,7 @@ CLI_DIR = HERE.parent / "cli"
 sys.path.insert(0, str(CLI_DIR))
 import compass_pkg  # noqa: E402,F401  (puts the bundled PyYAML first)
 import yaml  # noqa: E402
-from compass_pkg import atomic_io, core, manifest_store, session_record  # noqa: E402
+from compass_pkg import atomic_io, core, manifest_store  # noqa: E402
 
 MANIFEST = """\
 schema_version: '3.0'
@@ -97,9 +97,9 @@ def test_trc_a1_two_writers_keep_both_changes(task_dir):
     assert body["follow_ups"] == [{"id": "FU-1", "summary": "set by the second writer"}]
 
 
-def test_trc_a2_hook_session_kept(task_dir):
+def test_trc_a2_another_writers_change_kept(task_dir):
     task, path = core.load_manifest(task_dir)
-    session_record.record(task_dir, "session-from-the-hook", via="env")
+    other_writer(task_dir, lambda t: t.update(usage={"sessions": ["session-from-the-hook"]}))
     assert on_disk(task_dir)["usage"]["sessions"] == ["session-from-the-hook"]
     task["release_note"] = "Set by the command."
     core.save_manifest(task, path)
@@ -250,11 +250,11 @@ def test_trc_a6_a_position_both_changed_without_an_id_is_refused(task_dir):
 
 def test_trc_a7_saves_after_a_merged_save_keep_this_writers_changes(task_dir):
     task, path = core.load_manifest(task_dir)
-    session_record.record(task_dir, "session-from-the-hook", via="env")
+    other_writer(task_dir, lambda t: t.update(usage={"sessions": ["session-from-the-hook"]}))
     task["gates"][0]["status"] = "pass"
     task["release_note"] = "draft"
     task["evidence"].append({"id": "EV-2", "type": "test-run", "path": "a"})
-    core.save_manifest(task, path)                      # merges the hook's write
+    core.save_manifest(task, path)                      # merges the other writer's save
     task["gates"][0]["status"] = "fail"
     del task["release_note"]
     task["evidence"][1]["path"] = "b"
@@ -272,7 +272,7 @@ MANIFEST_EV1 = {"id": "EV-1", "type": "test-run", "path": "evidence/one.txt"}
 def test_trc_a8_a_copy_of_a_loaded_manifest_merges(task_dir):
     import copy
     task, path = core.load_manifest(task_dir)
-    session_record.record(task_dir, "session-from-the-hook", via="env")
+    other_writer(task_dir, lambda t: t.update(usage={"sessions": ["session-from-the-hook"]}))
     task = copy.deepcopy(task)
     task["release_note"] = "Set on a copy."
     core.save_manifest(task, path)

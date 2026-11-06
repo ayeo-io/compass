@@ -49,8 +49,7 @@ def _paragraphs(text):
 # Paragraphs that name the old file correctly without `compass.yml`: the
 # eval judge guards that one file by name, and the state-file rule is about
 # where `init` writes, not where a setting is read.
-ALLOWED = {"docs/autonomy-and-cost.md": "another protected file",
-           "docs/safety-contract.md": "records_signed_since"}
+ALLOWED = {"docs/safety-contract.md": "records_signed_since"}
 
 
 def _names_only_the_old_file(text, allowed=None):

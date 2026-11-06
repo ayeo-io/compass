@@ -1411,7 +1411,7 @@
       "type": "string"
     },
     "prices": {
-      "description": "Dollars per million tokens for each model name, used to price the usage of a quick fix. Without it no cost is recorded.",
+      "description": "Removed in 9.0.0 (ADR-093) and not read: the dollars per million tokens for each model name, which priced an issue's usage. The key stays valid so a project that holds it keeps working, and `compass policy lint` names it.",
       "type": "object"
     },
     "project": {

@@ -145,6 +145,7 @@ SETTINGS = {
                    "ADR-092"),
     **{f"checks.{check}": ("a Definition of Ready check, which a path issue does not owe",
                            "ADR-092") for check in READY_CHECKS},
+    "prices": ("the dollars per million tokens that priced an issue's usage", "ADR-093"),
 }
 
 #: The rule set and the rule effects whose only use was to pick an approach. No

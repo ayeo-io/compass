@@ -88,9 +88,6 @@ only in the cases below, and each one starts only when you ask for it.
   tdd-red`, `compass tdd-green` and `compass quick-fix finish`, your
   project's own guardrails declared with `check: command-passes`, git in your
   repository, and the CLI itself from the plugin's hooks.
-- **Reads** the current Claude Code session's own transcript when a quick fix
-  finishes, keeping only token counts, model names and times
-  (`docs/autonomy-and-cost.md`).
 - **Clones and installs** other frameworks only in the evaluation harness,
   `evals/harness.py`, which maintainers run by hand to compare conditions.
 

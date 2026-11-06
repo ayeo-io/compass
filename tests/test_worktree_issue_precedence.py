@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 from pathlib import Path
 
@@ -343,17 +342,19 @@ def test_session_with_no_compass_project_is_never_foreign(tmp_path):
     assert r.returncode == 2 and "no-red-on-record" in r.stderr, r.stderr
 
 
-def test_session_is_recorded_on_the_worktree_issue(tmp_path):
-    """Scenario id: `TRC-011` in worktree-issue-from-edited-path/acceptance-criteria.md"""
+def test_an_edit_in_the_worktree_writes_no_manifest(tmp_path):
+    """Scenario id: `TRC-011` in worktree-issue-from-edited-path/acceptance-criteria.md
+
+    The worktree's pointer issue judges the edit. Before 9.0.0 the hook also
+    recorded the session on that issue; it now writes no manifest (ADR-093)."""
     main = _setup(tmp_path)
     wt = _linked(main)
     _wt_issues(wt, [("alpha", False), ("beta", True)], "beta")
+    manifests = sorted((wt / ".compass" / "work").glob("*/manifest.yml"))
+    before = {p: p.read_bytes() for p in manifests}
     r = _hook(main, wt / "src" / "app.py", issue="alpha", session="S1")
     assert r.returncode == 0, r.stderr
-    beta = (wt / ".compass" / "work" / "beta" / "manifest.yml").read_text()
-    alpha = (wt / ".compass" / "work" / "alpha" / "manifest.yml").read_text()
-    assert re.search(r"-\s+['\"]?S1['\"]?\s*$", beta, re.M), beta
-    assert "S1" not in alpha, alpha
+    assert {p: p.read_bytes() for p in manifests} == before
 
 
 # --- group B: the session table ------------------------------------------------

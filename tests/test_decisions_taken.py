@@ -286,29 +286,6 @@ def test_asw_32_later_decision_waits_at_next_checkpoint(tmp_path):
     assert _decisions(root)["D-5"]["status"] == "open"
 
 
-# --- ASW-33 ---------------------------------------------------------------------
-
-def _second_issue(root, slug, entries, **more):
-    folder = root / ".compass" / "work" / slug
-    folder.mkdir(parents=True)
-    body = dict(manifest(root), issue=slug, decisions_taken=entries, **more)
-    body.pop("artifacts", None)
-    write_manifest(root, body, slug)
-
-
-def test_asw_33_the_report_counts_decision_shares(tmp_path):
-    from compass_pkg import decisions_taken
-    root = project(tmp_path, evaluate=False)
-    edit(root, decisions_taken=[_entry("A-1", "confirmed"), _entry("A-2", "confirmed")])
-    _second_issue(root, "second", [_entry("B-1", "reopened", reason="changed")])
-    _second_issue(root, "third", [_entry("C-1", "open")], status="done",
-                  close_reason="completed")
-    got = decisions_taken.report(str(root / ".compass" / "work"))
-    assert (got["total"], got["confirmed"], got["changed"], got["never_confirmed"]) == (4, 2, 1, 1)
-    assert got["open_in_flight"] == 0
-    assert got["share"] == {"confirmed": 50, "changed": 25, "never_confirmed": 25}
-
-
 # --- D205: a ledger entry now decided by a person ---------------------------------
 
 def test_d205_ledger_entry_decided_by_a_person_is_reported_not_confirmed(tmp_path):

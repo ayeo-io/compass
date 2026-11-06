@@ -161,7 +161,6 @@ SERIAL_TESTS = {
     "tests/test_project_readiness.py::test_prc_37",
     "tests/test_readiness_override_assess.py::test_roa_9_policy_commands_load_compass_yml_in_this_repository",
     "tests/test_issue_dependencies.py::test_dbi_12_hook_cost_budget",
-    "tests/test_issue_usage.py::test_arc_10_hook_budget",
     "tests/test_approval_guard_refusal_text.py::test_trc_032_a_long_command_is_judged_within_two_seconds",
     "tests/test_approval_guard_refusal_text.py::test_trc_053_a_very_long_or_deeply_nested_command_is_judged_within_two_seconds",
     "tests/test_session_start_language.py::test_trc_066",

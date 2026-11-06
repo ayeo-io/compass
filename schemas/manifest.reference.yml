@@ -99,17 +99,17 @@ failure_modes_descoped: # (optional) list of maps - failure modes no scenario co
     reason:      #   (required in entry) string - why no scenario covers it
     recorded:    #   (required in entry) string - ISO date it was recorded
 
-started_at:      # (optional) string - ISO time `compass quick-fix start` ran; where the assess stage ends
-finish_started_at: # (optional) string - ISO time `compass quick-fix finish` began; where implement ends
-committed_at:    # (optional) string - ISO time `quick-fix finish` recorded usage, just before its commit
-usage:           # (optional) map - tokens from the issue's Claude Code transcripts. Numbers only, no text or path. A quick fix's block (quick-fix finish): session, source, skipped_lines, stages{assess, implement, ...: requests, subagent_requests, input, output, cache_write, cache_read, cost_usd, shared?}; or recorded: false with a fixed reason. Any other approach's block (ship-commit):
-  sessions:      #   (optional) list of strings - the session ids that worked on the issue, each once; the pre-tool hook appends them
+started_at:      # (optional) string - ISO time `compass quick-fix start` ran; not written since 9.0.0 (ADR-093)
+finish_started_at: # (optional) string - ISO time `compass quick-fix finish` began; not written since 9.0.0
+committed_at:    # (optional) string - ISO time `quick-fix finish` recorded usage; not written since 9.0.0
+usage:           # (optional) map - tokens from the issue's Claude Code transcripts; not written since 9.0.0 (ADR-093), still valid. Numbers only, no text or path. An older quick fix's block: session, source, skipped_lines, stages{assess, implement, ...: requests, subagent_requests, input, output, cache_write, cache_read, cost_usd, shared?}; or recorded: false with a fixed reason. An older block of any other approach:
+  sessions:      #   (optional) list of strings - the session ids that worked on the issue, each once
   source:        #   string - claude-code
   skipped_lines: #   integer - transcript lines that were not JSON
   total:         #   map - every request in the issue's span: requests, subagent_requests, input, output, cache_write, cache_read, cost_usd, shared?
   unattributed:  #   map - the same keys, for requests after the last stage end; the stages and unattributed add up to total
   stages:        #   map of stage -> the same keys, or {measured: false, reason: no-window}
-  recorded:      #   (only when nothing is counted) false, with reason: a word in session_usage.REASONS
+  recorded:      #   (only when nothing is counted) false, with a reason word
                  #     (not-claude-code, bad-session-id, no-transcript, unreadable, too-large, ...); sessions are kept
 changed_files:   # (optional until implement) list of maps:
   - path:        #   (required in entry) string - the production file path

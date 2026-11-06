@@ -114,24 +114,24 @@
     },
     "started_at": {
       "type": "string",
-      "description": "Optional. ISO 8601 time `compass quick-fix start` ran: where the assess stage ends for the tokens-per-stage record (#375)."
+      "description": "Optional. ISO 8601 time `compass quick-fix start` ran, where the assess stage ended for the tokens-per-stage record (#375). 9.0.0 writes it no more and still reads it as valid (ADR-093)."
     },
     "finish_started_at": {
       "type": "string",
-      "description": "Optional. ISO 8601 time `compass quick-fix finish` began: where the implement stage ends."
+      "description": "Optional. ISO 8601 time `compass quick-fix finish` began, where the implement stage ended. 9.0.0 writes it no more and still reads it as valid (ADR-093)."
     },
     "committed_at": {
       "type": "string",
-      "description": "Optional. ISO 8601 time `compass quick-fix finish` recorded usage, just before its commit: where the verify stage ends."
+      "description": "Optional. ISO 8601 time `compass quick-fix finish` recorded usage, just before its commit, where the verify stage ended. 9.0.0 writes it no more and still reads it as valid (ADR-093)."
     },
     "usage": {
       "type": "object",
-      "description": "Optional. Tokens the issue's sessions spent, read from their Claude Code transcripts. A quick fix's block is written by `compass quick-fix finish` (cli/compass_pkg/session_usage.py): `session`, `source`, `skipped_lines`, and either `stages` (`assess` and `implement` each with requests, subagent_requests, input, output, cache_write, cache_read, cost_usd and optionally shared; `verify` and `ship` as `measured: false` with a reason) or `recorded: false` with a fixed `reason`. Every other approach's block is written by `compass ship-commit` (cli/compass_pkg/issue_usage.py) for an issue that holds checkpoint_outcomes: `sessions`, `source`, `skipped_lines`, `total`, `unattributed` and `stages`, each count block holding the same keys, or `recorded: false` with a fixed `reason`. The reasons are the words in session_usage.REASONS. Numbers only; no transcript text or path.",
+      "description": "Optional. Tokens the issue's sessions spent, read from their Claude Code transcripts. 9.0.0 writes it no more and still reads it as valid (ADR-093). An older quick fix's block holds `session`, `source`, `skipped_lines`, and either `stages` (`assess` and `implement` each with requests, subagent_requests, input, output, cache_write, cache_read, cost_usd and optionally shared; `verify` and `ship` as `measured: false` with a reason) or `recorded: false` with a fixed `reason`. An older issue of any other approach that held checkpoint_outcomes holds `sessions`, `source`, `skipped_lines`, `total`, `unattributed` and `stages`, each count block holding the same keys, or `recorded: false` with a fixed `reason`. Numbers only; no transcript text or path.",
       "properties": {
         "sessions": {
           "type": "array",
           "items": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
-          "description": "The session ids that worked on the issue, each once. The pre-tool hook appends a session the first time it judges a tool call for the issue; `compass ship-commit` adds the session that runs it."
+          "description": "The session ids that worked on the issue, each once. Before 9.0.0 the pre-tool hook appended a session the first time it judged a tool call for the issue, and `compass ship-commit` added the session that ran it."
         },
         "total": {
           "type": "object",

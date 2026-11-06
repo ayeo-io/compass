@@ -380,38 +380,6 @@ def test_bs7_lenient_still_answers_for_a_file_it_cannot_read(tmp_path):
     assert lenient(root) == {}
 
 
-def _usage_in(tmp_path, old):
-    """What `_record_usage` writes into a manifest when the project's old
-    settings file is `old`."""
-    from compass_pkg import quick_fix_cmd
-    root = tmp_path / "qf"
-    task = root / ".compass" / "work" / "x"
-    task.mkdir(parents=True)
-    (task / "manifest.yml").write_text("issue: x\n")
-    (root / ".compass" / "config.yml").write_text(old)
-    quick_fix_cmd._record_usage(str(task), "2026-10-07T00:00:00+00:00")
-    return core.load_yaml(str(task / "manifest.yml")).get("usage")
-
-
-def test_bs7_an_unparseable_settings_file_still_records_usage_as_unreadable(
-        tmp_path):
-    usage = _usage_in(tmp_path, "prices: [unclosed\n")
-    assert usage["recorded"] is False and usage["reason"] == "unreadable"
-
-
-def test_bs7_the_usage_record_does_not_hide_a_conflict(tmp_path):
-    root = tmp_path / "qf2"
-    task = root / ".compass" / "work" / "x"
-    task.mkdir(parents=True)
-    (task / "manifest.yml").write_text("issue: x\n")
-    (root / ".compass" / "config.yml").write_text("prices: {}\n")
-    (root / "compass.yml").write_text(SCHEMA)
-    from compass_pkg import quick_fix_cmd
-    with pytest.raises(CompassError) as caught:
-        quick_fix_cmd._record_usage(str(task), "2026-10-07T00:00:00+00:00")
-    assert "settings-conflict" in str(caught.value)
-
-
 def test_bs1_a_script_key_under_two_headings_is_named_once(tmp_path):
     old = ("legacy:\n  worktree_root: ../a\nswarm:\n  worktree_root: ../b\n")
     root = _project(tmp_path, SCHEMA, old)

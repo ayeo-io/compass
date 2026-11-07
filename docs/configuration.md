@@ -40,7 +40,7 @@ that holds `.compass` or `.git`), and reads the `owner` and `approvers` of
 
 | Project | Gets | Reads |
 |---|---|---|
-| New (no `.compass/`) | `compass init`, run by any entry point, creates `.compass/state.yml` and `.compass/work/`. `/compass:init` then writes a minimal `compass.yml` (`schema`, `extends`, `owner`, `project.name`, `project.test_command`) and copies nothing. | `compass.yml`, over the shipped default |
+| New (no `.compass/`) | `compass init`, run by any entry point, creates `.compass/state.yml` and `.compass/work/`. `/compass:init` then writes a minimal `compass.yml` (`schema`, `owner`, `project.name`, `project.test_command`) and copies nothing. | `compass.yml`, over the check set |
 | From 5.x with a `.compass/config.yml` or copied governance | Nothing changes until it runs `compass policy migrate` on 8.x. `/compass:init` stops and says so in place of writing a fresh file; the upgrade guide names the 9.0.0 settings. | The old files, as 5.x did |
 | This repository | A hand-written `compass.yml` that holds settings keys and the owner, and `.compass/state.yml`. It also holds a `readiness:` override and two readiness commands, which 9.0.0 no longer reads (see `readiness` below). | `compass.yml` |
 

@@ -20,10 +20,9 @@ force from install, and `/compass:assess` computes delivery approaches against
 them from the first issue. You do not have to run this command before the
 first issue.
 
-`/compass:init` copies nothing. A new project's `compass.yml` extends the
-shipped default (`extends: compass:default@8`) and holds only what differs from
-it, so "the shipped defaults and nothing project-specific yet" is a complete,
-valid configuration. 5.x versions of this command copied `governance/` into
+`/compass:init` copies nothing. Compass runs one fixed set of checks (ADR-094),
+so a new project's `compass.yml` holds only its settings, and "the shipped
+defaults and nothing project-specific yet" is a complete, valid configuration. 5.x versions of this command copied `governance/` into
 a project. `compass policy migrate` on 8.x converts such a copy; 9.0.0 removed
 that command (ADR-094).
 
@@ -35,8 +34,8 @@ it is exempt from assessment.
 1. **Check what the project already has.** Look for these, in order:
    - A `compass.yml` with a top-level `schema:` key. Compass already has its
      configuration. Stop and report that. Offer `compass policy lint` and
-     `compass policy show`, which show every resolved field and the layer
-     it came from. Do not overwrite the file.
+     `compass policy show`, which show the check set, its digest and the
+     settings that tighten it. Do not overwrite the file.
    - A `compass.yml` with no `schema:` key. Compass does not read it, so it is
      another tool's file. Stop and report that. Do not overwrite it and do not
      write a second file beside it. Tell the person to move it to another name
@@ -60,7 +59,6 @@ it is exempt from assessment.
 
    ```yaml
    schema: 1
-   extends: compass:default@8
    owner: <the person who approves waivers>
    project:
      name: <the project's name>

@@ -44,8 +44,9 @@ def test_idr_1_init_writes_a_minimal_compass_yml_that_lints(tmp_path):
     blocks = [b for b in _yaml_blocks(_init_text()) if "schema:" in b]
     assert blocks, "commands/init.md shows no minimal compass.yml"
     doc = yaml.safe_load(blocks[0])
-    assert set(doc) >= {"schema", "extends", "owner"}, doc
-    assert doc["extends"].startswith("compass:default@"), doc
+    assert set(doc) >= {"schema", "owner"}, doc
+    # `extends:` is a removed setting since 9.0.0 (ADR-094): one check set ships.
+    assert "extends" not in doc, doc
 
     project = tmp_path / "fresh"
     project.mkdir()
@@ -53,6 +54,7 @@ def test_idr_1_init_writes_a_minimal_compass_yml_that_lints(tmp_path):
     (project / "compass.yml").write_text(blocks[0], encoding="utf-8")
     run = _compass(project, "policy", "lint")
     assert run.returncode == 0, run.stdout + run.stderr
+    assert "L-SETTING-REMOVED" not in run.stdout + run.stderr, run.stdout
 
 
 def _step(text, number):
@@ -214,21 +216,13 @@ def test_trc_028_a_bad_answer_is_linted_and_asked_again():
     assert re.search(r"no\s+tag\s+that\s+lint\s+has\s+not\s+passed", step), step
 
 
-def test_init_names_the_shipped_default_preset():
-    """Issue 244: a new project extends the default that ships now, and the
-    major comes from the shipped preset folder, not from a pinned number."""
-    preset = yaml.safe_load(
-        (ROOT / "governance" / "presets" / "default" / "preset.yml")
-        .read_text(encoding="utf-8"))
-    major = str(preset["version"]).split(".")[0]
-    names = re.findall(r"extends: (compass:default@\d+)", _init_text())
-    assert names == [f"compass:default@{major}"] * 2, names
+def test_init_names_no_shipped_preset():
+    """Issue 244 had a new project extend the default that shipped then. 9.0.0
+    ships one check set and no preset (ADR-094), so `extends:` is a removed
+    setting and init writes none."""
+    assert not re.findall(r"extends:|compass:default@\d+", _init_text())
 
 
-def test_trc_029_the_question_leaves_the_extends_line_alone():
-    text = _init_text()
-    _, question = _question(text)
+def test_trc_029_the_question_adds_no_extends_line():
+    _, question = _question(_init_text())
     assert "extends:" not in question, question
-    lines = re.findall(r"extends: (compass:default@\d+)", text)
-    assert len(lines) == 2 and lines[0] == lines[1], (
-        "both extends lines in init.md must name the same preset", lines)

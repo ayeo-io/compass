@@ -129,14 +129,12 @@ def test_trc_002_the_repository_map_names_every_agent_and_hook():
 
 @pytest.mark.parametrize("rel", FRONT_PAGE)
 def test_trc_003_versions_match_the_code(rel):
-    """Scenario `TRC-003`: the Python floor and the shipped default's major
-    version the page states are the ones the code uses. The default has its
-    own version, which can lag the CLI's: CLI 8.0.0 ships default 7."""
+    """Scenario `TRC-003`: the Python floor the page states is the one the code
+    uses. 9.0.0 ships one check set and no default preset (ADR-094), so a page
+    names no `compass:default@<major>` to extend."""
     text = (ROOT / rel).read_text(encoding="utf-8")
-    preset = yaml.safe_load((PRESET / "preset.yml").read_text(encoding="utf-8"))
-    major = str(preset["version"]).split(".")[0]
-    for found in re.findall(r"compass:default@(\d+)", text):
-        assert found == major, f"{rel} names compass:default@{found}; this is {major}"
+    found = re.findall(r"compass:default@\d+", text)
+    assert not found, f"{rel} names {found}; 9.0.0 ships no default preset to extend"
     floor = re.search(r"Python (3\.\d+) or later",
                       (ROOT / "hooks" / "session-start.sh").read_text(encoding="utf-8"))
     for stated in re.findall(r"needs Python ([0-9.]+)", text):

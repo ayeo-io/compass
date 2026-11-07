@@ -608,6 +608,11 @@ that do not are named in the last item below.
   manifest `compass quick-fix start` writes, overwrites the file.
 - The release-line write does not go through `save_manifest`. It holds the
   same lock, reads the file again inside it and replaces the file atomically.
+- Every manifest write, the release-line write and `compass migrate` included,
+  writes its YAML with `manifest_store.dump`. It writes no anchor or alias: a
+  value held under two keys, such as the assessment's `labels` list, is
+  written in full under each. A manifest written before can still hold
+  `&id001` and `*id001`, and every reader reads it as before.
 
 ## Deliberate limits
 

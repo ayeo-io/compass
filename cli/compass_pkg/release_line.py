@@ -20,17 +20,15 @@ and the landing refusal agree:
 
 The owning doc is `docs/release-line.md`.
 """
-# DEPENDENCY: standard library (copy, os); the bundled PyYAML; compass_pkg.atomic_io,
-# core, effective, manifest (title_problem), path_stages, refusals, stable_ids,
+# DEPENDENCY: standard library (copy, os); compass_pkg.atomic_io, core, effective,
+# manifest (title_problem), manifest_store (dump), path_stages, refusals, stable_ids,
 # status_words.
 from __future__ import annotations
 
 import copy
 import os
 
-import yaml
-
-from compass_pkg import atomic_io, status_words
+from compass_pkg import atomic_io, manifest_store, status_words
 from compass_pkg.core import (MANIFEST_LOCK, CompassError, load_manifest, load_yaml,
                               prepare_manifest_write)
 
@@ -177,8 +175,7 @@ def write(task_dir, text, verb):
         old = current.get(KEY)
         current[KEY] = text
         prepared = prepare_manifest_write(current, path)
-        atomic_io.atomic_write_text(path, yaml.safe_dump(prepared, sort_keys=False,
-                                                         default_flow_style=False))
+        atomic_io.atomic_write_text(path, manifest_store.dump(prepared))
     return old
 
 

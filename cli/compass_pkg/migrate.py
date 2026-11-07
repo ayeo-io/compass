@@ -13,7 +13,7 @@ import re
 
 import yaml
 
-from compass_pkg import migrate_kinds, retired
+from compass_pkg import manifest_store, migrate_kinds, retired
 from compass_pkg.core import COMPASS_SCHEMA_VERSION, CompassError, docs_dir, manifest_path, normalize_spine, prepare_manifest_write
 
 # v1 filename -> v2 filename, applied inside each issue directory.
@@ -245,8 +245,7 @@ def _write_manifest(path, data):
     """Serialise first, then replace atomically: a dump that raises must not
     leave an empty manifest behind."""
     data = prepare_manifest_write(data, path)
-    body = yaml.safe_dump(data, sort_keys=False,
-                          default_flow_style=False, allow_unicode=True)
+    body = manifest_store.dump(data, allow_unicode=True)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:
         fh.write(body)
@@ -696,7 +695,7 @@ def _stale_names(task_dir, moving=None):
 
 def _write_manifest_data(manifest, data):
     data = prepare_manifest_write(data, manifest)
-    body = yaml.safe_dump(data, sort_keys=False, default_flow_style=False, allow_unicode=True)
+    body = manifest_store.dump(data, allow_unicode=True)
     tmp = manifest + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:
         fh.write(body)
@@ -1120,8 +1119,7 @@ def migrate_issue_dir(task_dir, problems=None, totals=None):
             # would leave manifest.yml empty and the issue with no record at
             # all. os.replace is atomic on every platform Compass supports.
             migrated = prepare_manifest_write(migrated, manifest)
-            body = yaml.safe_dump(migrated, sort_keys=False,
-                                  default_flow_style=False, allow_unicode=True)
+            body = manifest_store.dump(migrated, allow_unicode=True)
             tmp = manifest + ".tmp"
             with open(tmp, "w", encoding="utf-8") as fh:
                 fh.write(body)

@@ -163,11 +163,11 @@ def test_trc_b1_reader_sees_whole_manifest(task_dir, monkeypatch):
     path = os.path.join(task_dir, "manifest.yml")
     size = os.path.getsize(path)
     seen = []
-    real_dump = yaml.safe_dump
+    real_dump = manifest_store.dump
 
     def dump_with_a_reader(*args, **kwargs):
-        # Every manifest save calls safe_dump. A second process reads the
-        # file at that moment, while the save is under way.
+        # Every manifest save calls `manifest_store.dump`. A second process
+        # reads the file at that moment, while the save is under way.
         done = subprocess.run([sys.executable, "-c", READER, path, str(CLI_DIR)],
                               capture_output=True, text=True, timeout=60)
         seen.append(done.stdout.strip() or done.stderr)
@@ -175,7 +175,7 @@ def test_trc_b1_reader_sees_whole_manifest(task_dir, monkeypatch):
 
     task, _ = core.load_manifest(task_dir)
     task["release_note"] = "A new line."
-    monkeypatch.setattr(yaml, "safe_dump", dump_with_a_reader)
+    monkeypatch.setattr(manifest_store, "dump", dump_with_a_reader)
     core.save_manifest(task, path)
     monkeypatch.undo()
     assert seen, "the save did not dump the manifest"

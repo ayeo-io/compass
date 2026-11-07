@@ -4,7 +4,7 @@ lists `approvers:` has a current approval.
 
 An approval names its subject (ADR-066). A `human-approval` record that holds
 any key of `SUBJECT_KEYS` was given for that check, waiver, checkpoint,
-document or set of decisions. A record that holds none of them, and whose
+document, set of decisions or change at ship (`ship`, #355). A record that holds none of them, and whose
 `guardrail` key is absent or exactly `G5`, was given for guardrail `G5`:
 `gives_g5` says so, and `human-approval-present`, the check of `G5`, counts
 only such a record. `compass evidence approve --guardrail` writes one, given
@@ -75,7 +75,7 @@ DECISIONS = (APPROVED, REJECTED)
 #: subject, so it is not the sign-off of guardrail `G5`. A deny-list, because
 #: earlier sign-offs hold extra keys such as `path` or `conditions`. A writer
 #: that adds a subject key adds it here (ADR-066).
-SUBJECT_KEYS = ("check", "waiver", "checkpoint", "artifact", "decisions")
+SUBJECT_KEYS = ("check", "waiver", "checkpoint", "artifact", "decisions", "ship")
 
 #: The only guardrail with a sign-off, and the only value of `guardrail` read.
 G5 = GATE_G5

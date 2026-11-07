@@ -34,6 +34,8 @@ nothing recorded. For one of the four it refuses, writing nothing, when:
 current, shown request of the session's issue. `/compass:approve waiver W-<n>`
 answers the pending request for that waiver (ADR-094); the hook records it
 only while the waiver's check and reason are the ones the request showed.
+A request for the ship approval (`compass evidence request --ship`, #355) is
+answered with `/compass:approve <n>` like any other.
 Compass shows a request at the
 end of the agent's turn (the Stop hook); the hook records a request only
 while its digest equals the one shown. Each refusal names its cause, and the

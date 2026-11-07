@@ -248,6 +248,23 @@ first. Nothing writes `target_task` since 9.0.0.
   commit `gh pr view` reports. `compass check` reports, as advice, a
   `land_commit` that origin's default branch does not reach.
 
+## The ship approval
+
+An issue whose `evidence_required` lists `ship-approval` needs one person's
+approval of the change at ship. A review approval of the merged pull request
+by a person other than its author gives it. Where there is none (no GitHub,
+or the author is the only person), ask for the typed ship approval:
+
+```
+compass evidence request --ship
+```
+
+Then stop. The person types `/compass:approve`, or runs `compass evidence
+approve --ship --approver <name> --role <role>` at a terminal. An agent
+records it only under a delegation the person typed with `--for ship` and
+confirmed with its code. A `G5` sign-off is not a ship approval. The check
+never refuses `ship-commit`.
+
 ## Project lessons
 
 This step never blocks shipping. If the person corrected something during

@@ -2,7 +2,7 @@
 """Record a person's approval: of a human check, a checkpoint or a set of
 decisions taken for the person.
 
-The verb takes exactly one of five forms:
+The verb takes exactly one of six forms:
 
 - `--check <id>` reads the check from the issue's effective view and registers
   a `human-approval` entry in the manifest's evidence, with `check: <id>`.
@@ -28,6 +28,11 @@ The verb takes exactly one of five forms:
   `human-approval` record with `waiver: W-<n>` and the check and reason the
   waiver names. A delegated approval of a waiver needs a delegation typed with
   `--for waivers`. The record never clears guardrail `G5`.
+- `--ship` approves the change of the issue at ship (#355): one
+  `human-approval` record with `ship: <slug>`, the issue's generation and
+  the `HEAD` commit, which `ship-approval-present` reads. A delegated ship
+  approval needs a delegation typed with `--for ship`. The record never
+  clears guardrail `G5`, and a `G5` sign-off is not a ship approval.
 
 A record holds the issue, the issue's generation and the time, which the verb
 stamps itself, so a person cannot record an approval for another issue or
@@ -72,7 +77,7 @@ def _checks_for(args):
     """Refuse a call that has not one of the four forms (argparse also does)."""
     forms = [bool(args.check), bool(getattr(args, "guardrail", None)),
              bool(args.decisions), bool(getattr(args, "checkpoint", None)),
-             bool(getattr(args, "waiver", None))]
+             bool(getattr(args, "waiver", None)), bool(getattr(args, "ship", False))]
     if sum(forms) != 1:
         raise CompassError(f"compass evidence approve: {approvals.ONE_FORM}.")
 
@@ -85,6 +90,9 @@ def answer_of(args, provenance):
         if value:
             return approvals.Answer(form, value, args.decision, args.approver, args.role,
                                     args.scope or "", provenance)
+    if getattr(args, "ship", False):
+        return approvals.Answer("ship", None, args.decision, args.approver, args.role,
+                                args.scope or "", provenance)
     return approvals.Answer("decisions", None, args.decision, args.approver, args.role,
                             args.scope or "", provenance)
 
@@ -266,6 +274,9 @@ def register(evidence_subs):
     form.add_argument("--waiver", metavar="W-N",
                       help="approve this waiver of the issue (compass waiver add); records an "
                            "approval only")
+    form.add_argument("--ship", action="store_true",
+                      help="approve the change of the issue at ship, when no review of its "
+                           "merged pull request does; records an approval only")
     issue_arg(p)
     p.add_argument("--approver", help="the approver's person id; required unless --delegated")
     p.add_argument("--role", help="the role the approver acts in; required unless --delegated")

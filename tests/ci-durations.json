@@ -442,6 +442,7 @@
   "tests/test_settings_prose.py": 0.01,
   "tests/test_shallow_clone_safe.py": 2.44,
   "tests/test_ship_approval_check.py": 9.0,
+  "tests/test_ship_approval_typed.py": 12.0,
   "tests/test_ship_commit_after_a_merge.py": 6.25,
   "tests/test_ship_commit_committed_deletion.py": 0.87,
   "tests/test_ship_commit_derives.py": 3.92,

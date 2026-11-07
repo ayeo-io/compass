@@ -19,15 +19,17 @@ It is typed with flags, each optional and in any order (`parse_flags`):
 - the issues it covers (`--on`), each at the generation it had when the
   delegation was made; with none, every issue at any generation;
 - the forms it covers: `checks`, `documents`, `checkpoints`, `decisions`,
-  `check:<id>`, and `g5` and `waivers` only when typed (default: the first
-  four). A waiver lowers what an issue owes, so no default covers it;
+  `check:<id>`, and `g5`, `waivers` and `ship` only when typed (default: the
+  first four). A waiver lowers what an issue owes, and the ship approval is
+  the one approval of a change a person gives at ship (#355), so no default
+  covers either;
 - optionally `max_uses`.
 
 A file with no `format` is a 7.0.0 file. It is read by the 7.0.0 rules: a
 missing `until` or `issues` grants nothing, and `labels` is read but never
 written. No limit is put on how many are in force.
 
-A delegation that covers `g5` or `waivers` takes effect
+A delegation that covers `g5`, `waivers` or `ship` takes effect
 only when the person types back a code the hook showed them in its block
 message (`confirm`), because a prompt suggestion accepted with Tab lets the
 model word the first command (measured on Claude Code 2.1.300; the owner's
@@ -76,7 +78,7 @@ CODE_BYTES = 8
 DEFAULT_FORMS = ("checks", "documents", "checkpoints", "decisions")
 #: The forms a delegation covers only when the person types them, and only after
 #: the person types back the confirmation code: each lowers what an issue owes.
-TYPED_ONLY = ("g5", "waivers")
+TYPED_ONLY = ("g5", "waivers", "ship")
 FORMS = TYPED_ONLY + DEFAULT_FORMS
 #: The words of the old positional form, which `parse_flags` refuses.
 KEYWORDS = ("until", "on", "for", "labels", "max")
@@ -88,11 +90,13 @@ FLAG_FORM = ("/compass:delegate [--agent <name>] [--until <time>] [--on <issues>
              "[--for <forms>] [--max <n>]")
 #: The form word that covers each subject form of an approval.
 COVERS = {"guardrail": "g5", "check": "checks", "artifact": "documents",
-          "checkpoint": "checkpoints", "decisions": "decisions", "waiver": "waivers"}
+          "checkpoint": "checkpoints", "decisions": "decisions", "waiver": "waivers",
+          "ship": "ship"}
 WORDS = {"g5": "the guardrail 5 sign-off", "checks": "human checks",
          "documents": "documents", "checkpoints": "checkpoints",
          "decisions": "decisions taken for you",
-         "waivers": "waivers, each excusing one check on one issue"}
+         "waivers": "waivers, each excusing one check on one issue",
+         "ship": "the ship approval of a change"}
 VERB = "compass evidence approve"
 
 
@@ -290,7 +294,7 @@ def parse(args, session, now):
     for form in forms:
         if form not in FORMS and not re.fullmatch(r"check:[\w.-]+", form):
             raise _refused(f"'{form}' is not a form a delegation covers; use g5, waivers, "
-                           f"checks, documents, checkpoints, decisions or check:<id>.")
+                           f"ship, checks, documents, checkpoints, decisions or check:<id>.")
     issues = _issues_named(found["on"].split(","), session) if "on" in found else {}
     cap = None
     if "max" in found:
@@ -362,6 +366,10 @@ def _confirmation(body):
                f"{_until_words(body)}")
     else:
         g5 += "; not a waiver"
+    if "ship" in body["forms"]:
+        g5 += f"; {who} may give the ship approval of a change, {_until_words(body)}"
+    else:
+        g5 += "; not the ship approval"
     extra = ""
     if body.get("labels"):
         extra += f"; only issues labeled {', '.join(body['labels'])}"
@@ -453,6 +461,9 @@ def _typed_only_words(body):
                      "release tag")
     if "waivers" in body["forms"]:
         parts.append("approve a waiver, which excuses one check on one issue")
+    if "ship" in body["forms"]:
+        parts.append("give the ship approval of a change, which stands in for a person's "
+                     "review of its pull request")
     return " and ".join(parts)
 
 
@@ -712,6 +723,8 @@ def _subject(record):
         return f"human check '{record['check']}'"
     if isinstance(record.get("waiver"), str):
         return f"waiver {record['waiver']} of '{record.get('waived_check')}'"
+    if isinstance(record.get("ship"), str):
+        return f"the ship approval of issue {record['ship']}"
     return "guardrail 5 sign-off"
 
 
@@ -939,8 +952,8 @@ def mark_reviewed(session, entry, held):
 def overrule(session, args, where=""):
     """`/compass:reject <record id> <reason>`: overrule one approval made under
     a delegation. A check gets a `rejected` record, a document returns to
-    draft, and a guardrail 5 sign-off or a waiver's approval gets an
-    `approval-withdrawal` record, so the waiver excuses nothing. None of these reverses anything the agent already did."""
+    draft, and a guardrail 5 sign-off, a waiver's approval or a ship approval
+    gets an `approval-withdrawal` record, so it no longer counts. None of these reverses anything the agent already did."""
     from compass_pkg import approval_records
     from compass_pkg.core import save_manifest
     from compass_pkg.prompt_approval import HookResult
@@ -959,7 +972,8 @@ def overrule(session, args, where=""):
     stamp = _iso(_now())
     record.update(reviewed_by=session.approver, reviewed_at=stamp)
     withdrawn = record.get("type") == "human-approval" and (
-        approval_records.gives_g5(record) or isinstance(record.get("waiver"), str))
+        approval_records.gives_g5(record) or isinstance(record.get("waiver"), str)
+        or isinstance(record.get("ship"), str))
     if withdrawn:
         taken = {r.get("id") for r in evidence}
         number = 1

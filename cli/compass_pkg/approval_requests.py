@@ -182,6 +182,8 @@ def subject_text(request):
     if form == "waiver":
         check = clean((request.get("waiver") or {}).get("check"))
         return f"waiver {value} of check '{check}' on this issue only"
+    if form == "ship":
+        return f"the ship approval of the change of issue {request.get('issue')}"
     return "the decisions taken for you"
 
 
@@ -327,6 +329,8 @@ def _form_of(args):
         value = getattr(args, form, None)
         if value:
             return form, value
+    if getattr(args, "ship", False):
+        return "ship", None
     return "decisions", None
 
 
@@ -334,7 +338,7 @@ def _terminal_command(request):
     """The exact `compass evidence approve` command for a person's terminal."""
     form, value = request["form"], request["value"]
     words = ["evidence", "approve", "--issue", request["issue"]]
-    words += ["--decisions"] if form == "decisions" else [f"--{form}", value]
+    words += [f"--{form}"] if form in ("decisions", "ship") else [f"--{form}", value]
     words += ["--approver", "<you>", "--role", "<role>"]
     if request.get("scope"):
         words += ["--scope", request["scope"]]
@@ -404,6 +408,9 @@ def register(evidence_subs):
                            "legacy one on an issue assessed before 9.0.0")
     form.add_argument("--waiver", metavar="W-N",
                       help="the approval of this waiver of the issue (compass waiver add)")
+    form.add_argument("--ship", action="store_true",
+                      help="the ship approval of the change of the issue, when no review of "
+                           "its merged pull request gives it")
     issue_arg(p)
     p.add_argument("--scope", default="",
                    help="what the approval covers, in your words; required with --check and "

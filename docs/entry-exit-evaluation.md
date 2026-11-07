@@ -307,8 +307,8 @@ one. ADR-063 owns the decision.
 
 `human-approval-present`, the check of guardrail `G5`, counts only a
 `human-approval` record given for guardrail `G5` (ADR-066). A record names
-its subject: one that holds a `check`, `waiver`, `checkpoint`, `artifact` or
-`decisions` key, whatever the value, was given for that subject and is set
+its subject: one that holds a `check`, `waiver`, `checkpoint`, `artifact`,
+`decisions` or `ship` key, whatever the value, was given for that subject and is set
 aside. So is one whose `guardrail` is anything but the exact string `G5`. A
 record with none of these keys counts, which is the form every earlier
 sign-off uses. `approval_records.SUBJECT_KEYS` holds the keys and
@@ -376,6 +376,32 @@ waives, `--decision rejected` and a name that is not in `approvers.waiver`
 (else the project's owner). The waiver and what `compass check` shows are in
 `docs/waivers.md`.
 
+#### The typed ship approval: `--ship`
+
+`compass evidence approve --ship` approves the change of the issue at ship
+(#355). It is for an issue that owes the token `ship-approval` and whose
+merged pull request has no approving review by a person other than its
+author, such as a project not on GitHub or with one person. It writes one
+`human-approval` record with `ship: <slug>`, `head` (the `HEAD` commit when
+recorded, or none outside git), `approver`, `role`, `scope`,
+`decision: approved`, `timestamp`, `issue` and `generation`.
+`ship-approval-present` (`cli/compass_pkg/ship_approval.py`) counts it at the
+generation it holds while no `approval-withdrawal` names it.
+
+- `ship` is a subject key, so the record never clears guardrail `G5`. A `G5`
+  sign-off is given before code and is not a ship approval (VD-029).
+- **Who may approve.** A name in any `approvers:` list of `compass.yml`, else
+  the project's owner; any person who is not an agent when the project
+  declares neither.
+- **When it refuses.** An issue whose `evidence_required` does not list
+  `ship-approval`, a second approval while one stands, `--decision
+  rejected`, the approver `agent` and no terminal.
+- **The other paths.** The agent asks with `compass evidence request --ship`
+  and the person types `/compass:approve <n>`. An agent records it under a
+  delegation only when the person typed `--for ship` and the code.
+  `/compass:reject <record id>` withdraws a delegated one with an
+  `approval-withdrawal` record.
+
 ### Approving in Claude Code, and delegated approvals
 
 In Claude Code a person answers a request by typing `/compass:approve [n]` or
@@ -412,8 +438,8 @@ or on how many are in force:
   checkout, which every worktree reads. `/compass:delegate` and `/compass:revoke`
   take the approver from the folder that holds it and need no current issue.
 
-`g5` is covered only with `--for g5`, and a waiver only with `--for waivers`,
-after the person types back a code the hook shows them. The code is
+`g5` is covered only with `--for g5`, a waiver only with `--for waivers`, and
+the ship approval only with `--for ship`, after the person types back a code the hook shows them. The code is
 16 hex characters in four groups, such as `1a2b-3c4d-5e6f-7a8b`, typed with
 or without the hyphens. A `/compass:approve`, `/compass:reject` or
 `/compass:delegate` whose input has no prompt id is refused, and so is a

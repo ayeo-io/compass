@@ -151,8 +151,9 @@ work that ships code
   agents of this session approve for you on every issue, until
   `/compass:revoke` ends it. Flags set its bounds: `--agent` names one agent,
   in any session; `--until`, `--on`, `--for` and `--max` narrow it. `--for
-  g5`, which covers irreversible work, and `--for waivers` each need a code
-  that you type back. Compass lists each delegation with no end time at each new
+  g5`, which covers irreversible work, `--for waivers` and `--for ship`,
+  which covers the ship approval of a change, each need a code that you
+  type back. Compass lists each delegation with no end time at each new
   session start. Every delegated approval is on record, and you can overrule
   one; overruling a guardrail 5 sign-off does not undo work already landed.
 - **Autonomy is a setting, not a promise.** `autonomy: controlled | balanced

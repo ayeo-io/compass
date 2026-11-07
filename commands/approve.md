@@ -14,6 +14,11 @@ before you read this. The person can name the request's issue with `--issue
 A waiver excuses one check on one issue. The hook records the approval only
 while the waiver names the check and the reason the request showed.
 
+A request for the ship approval (`compass evidence request --ship`) is
+answered with `/compass:approve <n>`. It approves the change of the issue at
+ship, where no person other than the author approved its merged pull
+request. A `G5` sign-off is not a ship approval.
+
 **When Compass's result is in your context** (a line that starts "Compass
 recorded"), the approval is recorded. Say in one line what was recorded, then
 go on with the work that waited for it.

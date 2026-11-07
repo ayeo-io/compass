@@ -39,6 +39,11 @@ The forms:
 - `waiver` approves one waiver of the issue (`waiver_records`): one
   `human-approval` record with `waiver: W-<n>`, the check it excuses and the
   reason. It records an approval only, and never clears guardrail `G5`.
+- `ship` approves the change of an issue that owes the ship approval
+  (`ship_approval`, #355): one `human-approval` record with `ship: <slug>`,
+  the issue's generation and the `HEAD` commit when it was recorded. It
+  records an approval only. It never clears guardrail `G5`, and a `G5`
+  sign-off is not a ship approval (VD-029).
 
 A record holds the issue, the issue's generation and the time, which the
 writer stamps itself. Callers hold `lock(task_dir)` around a record and any
@@ -94,10 +99,11 @@ EVIDENCE_ADD_REFUSALS = {
 
 #: The subject forms, as `Answer.form` names them. 9.0.0 removed `artifact`, which
 #: approved a document, with the document statuses (ADR-091), and added `waiver`
-#: (ADR-094).
-FORMS = ("check", "guardrail", "checkpoint", "decisions", "waiver")
+#: (ADR-094), and 9.0.0 added `ship`, the typed ship approval (#355).
+FORMS = ("check", "guardrail", "checkpoint", "decisions", "waiver", "ship")
 #: What every refusal of a missing or doubled form says.
-ONE_FORM = "give exactly one of --check, --guardrail, --decisions, --checkpoint or --waiver"
+ONE_FORM = ("give exactly one of --check, --guardrail, --decisions, --checkpoint, --waiver "
+            "or --ship")
 
 #: Held while an answer is recorded and the state that goes with it changes.
 LOCK = ".approval.lock"
@@ -168,6 +174,10 @@ def checked(answer):
         raise CompassError(f"{VERB}: --waiver records an approval only, not --decision "
                            f"{answer.decision}. A waiver nobody approves excuses nothing, "
                            f"and `compass waiver withdraw` removes it. Nothing was written.")
+    if answer.form == "ship" and answer.decision != approval_records.APPROVED:
+        raise CompassError(f"{VERB}: --ship records an approval only, not --decision "
+                           f"{answer.decision}. To hold the change back, say so to the "
+                           f"agent. Nothing was written.")
     approver = None if answer.approver is None else approver_name(answer.approver)
     role, scope = text(answer.role), text(answer.scope)
     required = ((("--role", role), ("--scope", scope)) if answer.form in ("check", "guardrail")
@@ -201,7 +211,8 @@ def record(task_dir, answer, save=True):
     answer = checked(answer)
     writer = {"check": _record_check, "guardrail": _record_guardrail,
               "checkpoint": _record_checkpoint,
-              "decisions": _record_decisions, "waiver": _record_waiver}[answer.form]
+              "decisions": _record_decisions, "waiver": _record_waiver,
+              "ship": _record_ship}[answer.form]
     return writer(task_dir, answer, save)
 
 
@@ -354,15 +365,16 @@ def _record_guardrail(task_dir, answer, save):
         [evidence_id])
 
 
-def _checkpoint_approver(task_dir, approver):
-    """Refuse a name that may not answer a checkpoint: a name in any
-    `approvers:` list of the project file, else its owner. Returns the line to
-    print when the project declares neither, so any person may answer."""
+def _checkpoint_approver(task_dir, approver, subject="answer a checkpoint"):
+    """Refuse a name that may not answer a checkpoint (or give the ship
+    approval): a name in any `approvers:` list of the project file, else its
+    owner. Returns the line to print when the project declares neither, so any
+    person may answer."""
     from compass_pkg import decisions_taken
     declared, owner = decisions_taken.project_approvers(task_dir)
     if not declared and not owner:
         return (f"{VERB}: this project declares no approvers or owner, so any person may "
-                f"answer a checkpoint.")
+                f"{subject}.")
     allowed = declared or [approval_records.OWNER]
     if approval_records.approver_listed(allowed, approver, owner):
         return None
@@ -482,3 +494,73 @@ def _record_waiver(task_dir, answer, save):
              scope=scope, issue=entry["issue"], generation=entry["generation"],
              at=entry["timestamp"]),
         [evidence_id])
+
+
+def _head(task_dir):
+    """The project's `HEAD` commit, or None outside a git repository. The record
+    holds it for a reader: no check compares it."""
+    import subprocess
+
+    from compass_pkg import project_settings
+    try:
+        done = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
+                              timeout=10, cwd=project_settings.find_project_root(task_dir))
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if done.returncode != 0:
+        return None
+    return done.stdout.strip() or None
+
+
+def _record_ship(task_dir, answer, save):
+    """The typed ship approval (#355): a person approves the change of this
+    issue at ship. The record names the issue under `ship`, a subject key, so
+    it never clears guardrail `G5`; `ship-approval-present` reads it with the
+    issue's generation. It refuses an issue that does not owe the ship
+    approval, and a second approval while one stands."""
+    from compass_pkg import ship_approval
+    task, task_path = load_manifest(task_dir)
+    slug = _slug(task_dir)
+    if not ship_approval.owed(task):
+        raise CompassError(f"{VERB}: issue {slug} does not owe the ship approval: its "
+                           f"`evidence_required` does not list `{ship_approval.TOKEN}`. "
+                           f"Nothing was written.")
+    note = (None if answer.approver is None
+            else _checkpoint_approver(task_dir, answer.approver, "give the ship approval"))
+    evidence = [e for e in task.get("evidence") or [] if isinstance(e, dict)]
+    withdrawn = {e.get("withdraws") for e in evidence
+                 if e.get("type") == approval_records.WITHDRAWAL}
+    standing = [e.get("id") for e in evidence
+                if e.get("type") == "human-approval" and e.get(ship_approval.SHIP) == slug
+                and e.get("generation") == task.get("generation")
+                and e.get("decision") == approval_records.APPROVED
+                and e.get("id") not in withdrawn]
+    if standing:
+        raise CompassError(f"{VERB}: the change of issue {slug} is already approved at ship "
+                           f"({standing[0]}). Nothing was written.")
+    taken = _taken(task)
+    number = 1
+    while f"EV-SHIP-APPROVAL-{number}" in taken:
+        number += 1
+    evidence_id = f"EV-SHIP-APPROVAL-{number}"
+    scope = answer.scope or f"the change of issue {slug} at ship"
+    entry = {"id": evidence_id, "type": "human-approval", ship_approval.SHIP: slug,
+             "head": _head(task_dir) if save else None,
+             "approver": answer.approver, "role": answer.role, "scope": scope,
+             "decision": approval_records.APPROVED, "timestamp": _stamp(),
+             "issue": slug, "generation": task.get("generation")}
+    entry.update(answer.provenance)
+    if save:
+        task.setdefault("evidence", []).append(entry)
+        save_manifest(task, task_path)
+    return Recorded(
+        f"{VERB}: the change of issue {slug} - approved at ship by {answer.approver}, "
+        f"recorded as {evidence_id}.",
+        [f"record     : {evidence_id} in manifest.yml evidence",
+         f"issue      : {slug}",
+         f"generation : {approval_records.shown(entry['generation'])}",
+         f"head       : {entry['head'] or 'none'}"],
+        dict(ship=slug, answer=entry["decision"], evidence_id=evidence_id,
+             approver=answer.approver, role=answer.role, scope=scope, issue=slug,
+             generation=entry["generation"], head=entry["head"], at=entry["timestamp"]),
+        [evidence_id], note)

@@ -536,7 +536,8 @@ def test_agf_16_guardrail_form_refuses_rejected(tmp_path):
 # decision. A new one must be added here, so its test is written with it.
 KNOWN_WRITERS = {("compass_pkg/approvals.py", "_record_check"),
                  ("compass_pkg/approvals.py", "_record_guardrail"),
-                 ("compass_pkg/approvals.py", "_record_waiver")}
+                 ("compass_pkg/approvals.py", "_record_waiver"),
+                 ("compass_pkg/approvals.py", "_record_ship")}
 
 
 def _writers():
@@ -564,7 +565,7 @@ def _writers():
 def test_agf_18_every_writer_names_a_subject(tmp_path):
     from compass_pkg import approval_records, approve_cmd
     assert approval_records.SUBJECT_KEYS == (
-        "check", "waiver", "checkpoint", "artifact", "decisions")
+        "check", "waiver", "checkpoint", "artifact", "decisions", "ship")
     assert checks.approval_records is approval_records
     from compass_pkg import approvals
     assert approve_cmd.approval_records is approval_records
@@ -609,6 +610,21 @@ def test_agf_18_every_writer_names_a_subject(tmp_path):
     record = approval_support.manifest_of(wroot)["evidence"][-1]
     assert record["type"] == "human-approval" and subject_named(record)
     assert not approval_records.gives_g5(record)
+
+    # _record_ship (#355): the typed ship approval names the issue under `ship`.
+    (tmp_path / "ship").mkdir()
+    sroot = approval_support.project(tmp_path / "ship")
+    body = approval_support.manifest_of(sroot)
+    owed = list(body.get("evidence_required") or [])
+    body["evidence_required"] = owed + [t for t in ["ship-approval"] if t not in owed]
+    approval_support.save_manifest(sroot, body)
+    code, out, err = approval_support.run(sroot, "evidence", "approve", "--ship",
+                                          "--approver", "jed72", "--role", "owner",
+                                          terminal=True)
+    assert code == 0, out + err
+    record = approval_support.manifest_of(sroot)["evidence"][-1]
+    assert record["type"] == "human-approval" and record["ship"] == approval_support.SLUG
+    assert subject_named(record) and not approval_records.gives_g5(record)
 
     # `compass evidence add --type human-approval` is refused (`TRC-G2`), so it
     # is not a writer.

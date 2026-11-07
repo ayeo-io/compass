@@ -24,8 +24,6 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg.governance import governance_drift  # noqa: E402
-
 
 def loop_ceilings(task):
     # Imported when called, so each test fails on its own behaviour while
@@ -95,7 +93,9 @@ def test_lc_a_shipped_ceilings_resolve_by_risk(repo):
     assert narrow["review_rounds"] == (2, "RP-LOOP-003")
 
 
-def test_lc_a_a_policy_without_the_rules_gives_no_ceiling_and_drift(repo):
+def test_lc_a_a_policy_without_the_rules_gives_no_ceiling(repo):
+    # 9.0.0 removed the drift report (ADR-098), which also named the missing
+    # rules; the ceilings themselves are still absent.
     gov = repo / "governance"
     gov.mkdir()
     shutil.copy(ROOT / "governance" / "guardrails.yml", gov)
@@ -109,9 +109,3 @@ def test_lc_a_a_policy_without_the_rules_gives_no_ceiling_and_drift(repo):
         assert loop_ceilings(_task(repo)) == {}
     finally:
         os.chdir(old)
-    missing = " ".join(str(r) for r in
-                       governance_drift(str(gov),
-                                        str(ROOT / "governance")).missing_rules)
-    for rid in ("RP-LOOP-001", "RP-LOOP-002", "RP-LOOP-003", "RP-LOOP-004",
-                "RP-LOOP-005"):
-        assert rid in missing, missing

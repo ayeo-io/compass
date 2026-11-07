@@ -8,12 +8,13 @@ between, migrate to or test a preset against. It also removed `--offline`
 has no config layer and the classifier went).
 
 - `policy lint` lints `compass.yml` as a file of settings (`settings_lint`)
-  for a project with a `compass.yml` Compass reads, and runs the legacy lint,
-  unchanged, for any other project. In the framework's own repository it runs
-  the legacy lint of `governance/` and then the settings lint, and fails if
-  either fails. `--file` lints one `compass.yml` as settings. `compass ci`
-  calls the legacy function in `governance` directly, so its behavior does
-  not move.
+  for a project with a `compass.yml` Compass reads, the framework's own
+  repository included. For any other project it runs the structural lint of
+  the governance copy (`governance.legacy_structure`). 9.0.0 removed the drift
+  report that compared a copy with the framework's, and the framework mode
+  that linted the frozen views as well (ADR-098). `--file` lints one
+  `compass.yml` as settings. `compass ci` calls the structural lint in
+  `governance` directly.
 - `policy show` prints the check set, its sha256, the sha256 of `compass.yml`
   and the tighten-only settings it applies. With `--issue` it adds the
   issue's `policy:` block and its waivers.
@@ -33,7 +34,7 @@ import re
 from compass_pkg import check_set, effective, governance, project_settings
 from compass_pkg import settings_lint, tighten
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
-from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
+from compass_pkg.core import (CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
 from compass_pkg.terminal import mark_handled, resolve_mode
 
@@ -47,12 +48,6 @@ def _emit(args, document, lines):
         print(json.dumps(document, indent=2, default=str))
     else:
         print("\n".join(lines))
-
-
-def _is_framework_root(root):
-    """True in the framework's own repository, whose governance/ files are
-    frozen copies of the 8.x default and whose compass.yml is a settings file."""
-    return os.path.realpath(root) == os.path.realpath(FRAMEWORK_ROOT)
 
 
 # --- the legacy lint, for a project with its own governance copy -----------------------
@@ -72,38 +67,14 @@ def _legacy_finding(code, level, path, message):
             "group": "legacy", "message": message, "detail": None}
 
 
-def legacy_json(errors, drift=None, strict=False):
+def legacy_json(errors):
     """The `--json` document for a project with no `compass.yml`, from the
-    legacy lint's error lines and its drift report (`governance.DriftReport`).
-    The drift is only looked at when the structure is clean, as the printed
-    lint does. Drift is a warning, and an error when the project makes it
-    strict. The keys are the 8.x ones, so a script that reads `result` and
-    `counts` keeps working."""
-    level = "error" if strict else "warning"
+    structural lint's error lines. The keys are the 8.x ones, so a script that
+    reads `result` and `counts` keeps working."""
     out = []
     for text in errors:
         path, message = _legacy_split(text)
         out.append(_legacy_finding("LEGACY-STRUCTURE", "error", path, message))
-    if not errors and drift is not None and not drift.same_dir:
-        if not drift.comparable:
-            out.append(_legacy_finding("LEGACY-DRIFT-UNCOMPARED", "warning", "",
-                                       f"could not compare against the framework's "
-                                       f"governance: {drift.reason}"))
-        else:
-            out += [_legacy_finding("LEGACY-WAIVER", "error", "", text)
-                    for text in drift.waiver_errors]
-            out += [_legacy_finding("LEGACY-WAIVED", "info", rule_id,
-                                    f"waived by this project, a recorded decision and not "
-                                    f"drift: {reason}")
-                    for rule_id, reason in drift.waived]
-            out += [_legacy_finding("LEGACY-DRIFT", level, f"{name}:{rule_id}",
-                                    f"project governance is missing the {kind} {rule_id} "
-                                    f"the framework ships")
-                    for name, rule_id, kind in drift.missing_rules]
-            out += [_legacy_finding("LEGACY-DRIFT", level, f"{name}:{check}",
-                                    f"project governance is missing the check {check} the "
-                                    f"framework ships")
-                    for name, check in drift.missing_checks]
     out.sort(key=lambda f: (f["path"], f["code"], f["message"]))
     failed = any(f["level"] == "error" for f in out)
     return {
@@ -119,10 +90,8 @@ def legacy_json(errors, drift=None, strict=False):
 
 
 def _legacy_report():
-    gov = find_governance()
-    errors, _ = governance.legacy_structure(gov)
-    return legacy_json(errors, governance.governance_drift(gov),
-                       governance._drift_is_strict())
+    errors, _ = governance.legacy_structure(find_governance())
+    return legacy_json(errors)
 
 
 # --- the settings lint -----------------------------------------------------------------
@@ -165,10 +134,10 @@ def _ok(findings):
     return not any(f.level == "error" for f in findings)
 
 
-def _lint_json(findings, mode="settings"):
+def _lint_json(findings):
     return {
         "schema": JSON_SCHEMA_VERSION,
-        "mode": mode,
+        "mode": "settings",
         "result": "pass" if _ok(findings) else "fail",
         "layers": [{"name": "project", "kind": "project"}],
         "stopped_after": None,
@@ -196,48 +165,11 @@ def _lint_text(findings):
     return lines
 
 
-def _lint_framework(args, root):
-    """The no-argument lint in the framework's repository: the legacy lint of
-    governance/, then the settings lint of compass.yml. It fails when either
-    fails, so CI (`scripts/validate.sh`) reports a file a write would refuse."""
-    # A policy that is not valid YAML raises CompassError in the legacy check; it
-    # is a structure error of the lint, not a crash, and the settings lint is
-    # skipped.
-    try:
-        governance.legacy_structure(find_governance())
-    except CompassError as exc:
-        errors = [str(exc)]
-        if resolve_mode(args) == "json":
-            _emit(args, legacy_json(errors), [])
-        else:
-            print("compass policy lint: FAIL")
-            for error in errors:
-                print(f"  - {error}")
-        return 1
-    findings = settings_findings(os.path.join(root, project_settings.COMPASS_YML), root)
-    if resolve_mode(args) == "json":
-        legacy = _legacy_report()
-        mine = _lint_json(findings, mode="framework")
-        both = dict(mine, layers=legacy["layers"] + mine["layers"],
-                    findings=legacy["findings"] + mine["findings"],
-                    counts={k: legacy["counts"][k] + mine["counts"][k] for k in mine["counts"]},
-                    result=("pass" if legacy["result"] == "pass" and _ok(findings)
-                            else "fail"))
-        _emit(args, both, [])
-        legacy_ok = legacy["result"] == "pass"
-    else:
-        legacy_ok = governance.cmd_policy_lint(args) == 0
-        print("\n".join(_lint_text(findings)))
-    return 0 if legacy_ok and _ok(findings) else 1
-
-
 def run_policy_lint(args):
     root = project_settings.find_project_root(os.getcwd())
     file = getattr(args, "file", None)
     if file:
         findings = settings_findings(file, root)
-    elif _is_framework_root(root):
-        return _lint_framework(args, root)
     elif project_settings.compass_yml_counts(root):
         findings = settings_findings(os.path.join(root, project_settings.COMPASS_YML), root)
     else:

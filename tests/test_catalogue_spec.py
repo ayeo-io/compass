@@ -82,8 +82,14 @@ def test_cs_5_the_schema_holds_the_settings_and_their_enumerations():
 
 # --- every documented setting is a settings key ---------------------------------------
 
-def test_governance_drift_is_accepted_as_a_setting():
-    assert settings_lint.lint({"schema": 1, "governance_drift": "strict"}) == []
+def test_governance_drift_is_a_removed_setting():
+    # 9.0.0 removed the drift report (ADR-098). The key stays a settings key, so
+    # an old settings file that holds it is still a settings conflict, and lint
+    # names it as removed.
+    found = settings_lint.lint({"schema": 1, "governance_drift": "strict"})
+    assert [(f.code, f.level, f.path) for f in found] == [
+        ("L-SETTING-REMOVED", "warning", "governance_drift")]
+    assert "ADR-098" in found[0].message
     assert "governance_drift" in catalogue_spec.SETTINGS_KEYS
 
 

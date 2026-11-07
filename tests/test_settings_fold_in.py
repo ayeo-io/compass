@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg import core, governance, project_settings, record  # noqa: E402
+from compass_pkg import core, project_settings, record  # noqa: E402
 from compass_pkg import red_first  # noqa: E402
 from compass_pkg.project_commands import _project_commands_allowed  # noqa: E402
 from compass_pkg.tdd import _read_config  # noqa: E402
@@ -89,12 +89,6 @@ def test_sr1_adoption_mode(root, kind):
 def test_sr1_autonomy(root, kind):
     _write(root, kind)
     assert core.load_autonomy() == "autonomous"
-
-
-@pytest.mark.parametrize("kind", FILES)
-def test_sr1_drift_strictness(root, kind):
-    _write(root, kind)
-    assert governance._drift_is_strict() is True
 
 
 @pytest.mark.parametrize("kind", FILES)
@@ -159,7 +153,6 @@ def test_sr2_missing_file_defaults(root):
     work = str(root / ".compass" / "work")
     assert core.load_mode() == "enforced"
     assert core.load_autonomy() == "balanced"
-    assert governance._drift_is_strict() is False
     assert record.settings(root) is None
     assert _read_config(work) == {}
     assert _project_commands_allowed(work) is False
@@ -173,7 +166,6 @@ def test_sr2_broken_file_per_reader(root, kind):
     assert core.load_mode() == "enforced"
     with pytest.raises(core.CompassError):
         core.load_autonomy()
-    assert governance._drift_is_strict() is False
     with pytest.raises(core.CompassError):
         record.settings(root)
     assert _read_config(work) == {}

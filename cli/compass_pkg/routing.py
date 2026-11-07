@@ -30,7 +30,6 @@ import yaml
 import re as _re
 import fnmatch
 from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, COMPASS_SCHEMA_VERSION, CompassError, canonical_shape, display_shape, display_stage, find_governance, load_manifest, load_yaml, reading_matches, resolve_issue_dir, shape_stages
-from compass_pkg.governance import governance_drift
 from compass_pkg import retired, word_map
 from compass_pkg.stable_ids import (APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE,
                                     ARTIFACT_DEPTHS, DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH,
@@ -772,11 +771,6 @@ def cmd_route_evaluate(args):
         # every value as new.
         if missing and getattr(args, "migration", None) is None:
             raise CompassError(justifications.refusal(missing))
-    # The drift report compares a project's copy of the policy with the
-    # framework's. A configuration resolved over such a copy still gets it.
-    drift_gov = gov
-    if view is not None and view.from_governance_copy():
-        drift_gov = find_governance()
     # The issue's own layer applies before the floors, caps and document rules, as
     # `obligations` applies it for the classifier.
     for dim in retired.DIMENSIONS:      # a 6.x manifest's role, which a 7.0.0 policy drops
@@ -844,18 +838,6 @@ def cmd_route_evaluate(args):
         # that produced it, and where it was written.
         _fired = [fired_rule_line(f) for f in shown["policy_rules_fired"]]
         _concerns = []
-        # Policy drift is a CONCERN, not provenance. The plain "which policy
-        # file did I read" line is detail and lives under --verbose, but a
-        # project running a policy that is missing rules the framework ships
-        # gets a lighter approach than it should - and a reader has no way to
-        # tell that from a genuinely light one. It belongs on the first screen.
-        _drift = governance_drift(drift_gov) if drift_gov else None
-        if _drift is not None and _drift.drifted:
-            _fw = _drift.framework_versions.get("routing-policy.yml", "unknown")
-            _concerns.append(
-                "this project's policy is missing %d rule(s) or check(s) that "
-                "framework v%s ships - run `compass policy lint`"
-                % (_drift.count, _fw))
         # A path issue has no stage to block (`path_writer.shown` leaves the key out).
         _concerns += ["%s is blocked until %s" % (
                           _display_blocked_phase(b["phase"]), b["until"])
@@ -894,16 +876,6 @@ def cmd_route_evaluate(args):
         # stale-governance one.
         _policy_file = os.path.join(gov, "routing-policy.yml") if gov else None
         print(f"  policy          : {policy_line(view, _policy_file, policy)}")
-        drift = governance_drift(drift_gov) if drift_gov else None
-        if drift is None:
-            pass
-        elif drift.drifted:
-            fw = drift.framework_versions.get("routing-policy.yml", "unknown")
-            print(f"  POLICY DRIFT    : this policy is missing {drift.count} "
-                  f"rule(s)/check(s) that framework v{fw} ships - "
-                  f"run `compass policy lint` for the list")
-        elif not drift.comparable:
-            print(f"  policy drift    : not compared ({drift.reason})")
         print(f"  assessment      : {json.dumps(readings)}")
         if path:
             # The path has no candidate approach to raise: the evidence row that

@@ -188,7 +188,7 @@ def test_trc_b3_loading_the_cli_by_file_path_should_still_work():
         importlib.machinery.SourceFileLoader("compass_cli_probe", str(CLI)))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    for name in ("governance_drift", "reading_matches", "CHECK_FNS"):
+    for name in ("legacy_structure", "reading_matches", "CHECK_FNS"):
         assert hasattr(mod, name), (
             f"{name} is no longer reachable from a path-loaded cli/compass; "
             f"the entry point must re-export what it moved")
@@ -289,6 +289,10 @@ def test_trc_f2_no_function_should_be_renamed_merged_or_split_by_this_task():
         "cmd_rework_scan", "_find_signals_yml", "_load_signals", "_read_tasks_from_root",
         "_parse_created_date", "_is_drop_migration", "_matches_migration_glob",
         "_emit_markdown_report",
+        # 9.0.0 removes the drift report (ADR-098): the comparison of a governance
+        # copy with the framework's, its printer, its two helpers and the reader
+        # of `governance_drift`. The structural lint of a copy stays.
+        "governance_drift", "_print_drift", "_drift_is_strict", "_dig", "_rule_ids",
     }
     before -= DELIBERATELY_REMOVED
 

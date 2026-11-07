@@ -1213,11 +1213,6 @@ _register(Rule(
             "an absorbed-into marker quoting the merge-base sentence "
             "verbatim, per PBW-F7 - not a new use of the retired word."),
         Exemption(
-            "tests/test_governance_drift.py",
-            "that considered RP-REQUIRE-003 and rejected it",
-            "the same rule-id false match as the RP-REQUIRE exemptions "
-            "above - RP-REQUIRE is an id prefix, not the verb."),
-        Exemption(
             "tests/test_plugin_doc_drift.py",
             "/ `compass tdd-green` write typed test-run evidence the verify gates accept.",
             "names the verify stage's gates, an identifier-adjacent use "

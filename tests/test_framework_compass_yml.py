@@ -14,7 +14,8 @@ on project commands, declares the readiness commands and holds one readiness
 override, so the repository met the readiness floor while it ran autonomous;
 any other catalogue key or readiness entry still fails here. 9.0.0 removed the
 readiness floor and stopped reading the override and the readiness commands
-(ADR-093). The file keeps them until the owner deletes them, and lint names
+(ADR-093), and 9.0.0 removed the drift report that read `governance_drift`
+(ADR-098). The file keeps them until the owner deletes them, and lint names
 each with the warning `L-SETTING-REMOVED`; the tests below hold both.
 
 Scenario ids: IDR-5 and IDR-6, in the acceptance criteria of the issue
@@ -179,10 +180,12 @@ def _lint(file=None):
 
 
 #: The settings this repository's file still holds that 9.0.0 no longer reads
-#: (ADR-093), and `extends:` (ADR-094; its pin below @8 still keeps `S17` off
-#: until #359). Lint names each once with `L-SETTING-REMOVED`, until the owner
+#: (ADR-093), `extends:` (ADR-094; its pin below @8 still keeps `S17` off
+#: until #359) and `governance_drift` (ADR-098, which removed the drift
+#: report). Lint names each once with `L-SETTING-REMOVED`, until the owner
 #: deletes them from `compass.yml`.
-REMOVED_SETTINGS = {"extends", "readiness", "project.build_command", "project.lint_command"}
+REMOVED_SETTINGS = {"extends", "readiness", "project.build_command", "project.lint_command",
+                    "governance_drift"}
 
 
 def _removed_warnings(result):

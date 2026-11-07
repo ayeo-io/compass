@@ -72,6 +72,7 @@ REASONS = {
     "ADR-092": "Compass runs every delivery issue on one four-stage path",
     "ADR-093": "Compass keeps only what a reviewer of one change needs",
     "ADR-094": "Compass runs one fixed set of checks",
+    "ADR-098": "Compass ends the 8.x legacy readers",
 }
 
 #: Each removed command line, as tokens, what replaces it, and the decision
@@ -189,7 +190,7 @@ READY_CHECKS = ("dor-summary-filled", "dor-problem-traces-up", "dor-behavior-is-
                 "dor-approach-still-fits")
 
 #: Each removed `compass.yml` key: what it set, and the decision record that
-#: removed it. A key with a dot is one entry of a catalogue, `<catalogue>.<id>`.
+#: removed it. `governance_drift` went with the drift report (ADR-098). A key with a dot is one entry of a catalogue, `<catalogue>.<id>`.
 SETTINGS = {
     "models": ("the model and effort of each tier", "ADR-090"),
     "multiagent": ("where multiagent worktrees go and how many are allowed", "ADR-090"),
@@ -209,6 +210,8 @@ SETTINGS = {
                       "ADR-093"),
     "readiness": ("the readiness signals compass readiness measured and the floor an "
                   "autonomous issue had to meet", "ADR-093"),
+    "governance_drift": ("whether compass policy lint failed when a governance copy "
+                         "lacked a rule or check the framework ships", "ADR-098"),
 }
 
 #: The rule set and the rule effects whose only use was to pick an approach. No
@@ -279,7 +282,7 @@ REPLACEMENTS = {
     "preset": ((), True),
     "preset_index": ((), True),
     "approvers.project-waiver": ((), True),
-    # The keys of ADR-090 to ADR-093 (`SETTINGS`).
+    # The keys of ADR-090 to ADR-093 and ADR-098 (`SETTINGS`).
     "models": ((), True),
     "multiagent": ((), True),
     "living_spec": ((), True),
@@ -291,6 +294,7 @@ REPLACEMENTS = {
     "prices": ((), True),
     "github_labels": ((), True),
     "readiness": ((), True),
+    "governance_drift": ((), True),
     # `SWITCHES`, `SETTING_FIELDS`, `EFFECTS` and `CAPABILITIES`.
     "github_labels.page": ((), True),
     **{f"project.{field}": ((), True) for field in (

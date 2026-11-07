@@ -334,18 +334,6 @@ def test_ef_3_a_guardrail_missing_from_a_governance_copy_is_reported_with_or_wit
     assert "ABSENT" not in plain, plain
 
 
-def test_ef_3_policy_drift_is_reported_by_evaluate_with_or_without_a_generation(tmp_path):
-    root, task_dir = _project(tmp_path)
-    folder = _copy_governance(root)
-    _edit_policy(folder, lambda body: body["routing_guardrails"]["floors"].pop())
-    code, before, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--verbose")
-    assert "POLICY DRIFT" in before, before + err
-    code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
-    assert code == 0, out + err
-    code, after, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--verbose")
-    assert "POLICY DRIFT" in after, after + err
-
-
 # --- EF-9: the verdict header and the pending change ------------------------------------------
 
 def test_ef_9_check_names_the_generation_and_the_parent_version(tmp_path):

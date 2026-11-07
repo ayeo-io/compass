@@ -96,7 +96,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `models` | Removed in 9.0.0 and not read (see `models` below) | - | - |
 | `multiagent` | Removed in 9.0.0 and not read (see `multiagent` below) | - | - |
 | `allow_project_commands` | Lets `compass check` run commands the project declares | `true`, `false` | `false` |
-| `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
+| `governance_drift` | Removed in 9.0.0 and not read (see `governance_drift` below) | - | - |
 | `living_spec` | Removed in 9.0.0 and not read (see `living_spec` below) | - | - |
 | `language` | The language the agent writes prose in (see `language` below) | a BCP 47 tag such as `en-US` | unset: no instruction |
 | `acceptance_strategy` | Whether the four-layer acceptance strategy (`S17`) is on for the project (see `acceptance_strategy` below) | `state`: `on` or `off`; `reason`: text, needed with `off` | unset: on |
@@ -265,6 +265,14 @@ not checked. `compass policy lint` names it with
 (`default@6`, `default@7`) and an issue's stored generation keep the catalog
 they were written with, and lint still reads it. A
 `.compass/readiness.yml` left in a checkout is not read.
+
+### `governance_drift`
+
+9.0.0 removed the drift report, which compared a project's copy of the
+governance files with the framework's, and this setting, which made the report
+fail `compass policy lint` (ADR-098). The key stays valid, so a project that
+holds it keeps working, and nothing reads it. `compass policy lint` names it
+with `L-SETTING-REMOVED`. Delete it from `compass.yml`.
 
 ### `living_spec`
 
@@ -572,6 +580,7 @@ or when this table differs from `REPLACEMENTS`.
 | `prices` | removed | rewrites it |
 | `github_labels` | removed | rewrites it |
 | `readiness` | removed | rewrites it |
+| `governance_drift` | removed | rewrites it |
 | `github_labels.page` | removed | rewrites it |
 | `project.<id>`: `build_command`, `lint_command`, `format_check_command`, `typecheck_command`, `secret_scan`, `structured_logging` | removed | rewrites it |
 | `rules.floors.rules.RP-FLOOR-002.then.require_phase` | removed | rewrites it |

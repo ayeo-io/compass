@@ -204,8 +204,7 @@ def _evaluate_lines(text):
 def _legacy_view(root, slug):
     """The default view `approach evaluate --issue` printed before the path, rebuilt
     from the 8.x evaluator over the project's configuration and rendered by the
-    same `Emitter`. It leaves out the policy drift concern, which the path view
-    still prints."""
+    same `Emitter`."""
     sys.path.insert(0, str(ROOT / "cli"))
     from compass_pkg import effective, routing
     from compass_pkg.core import display_shape, load_yaml, normalize_spine
@@ -270,24 +269,11 @@ def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(
         # path's: the one delivery approach and the evidence owed.
         assert re.match(r"delivery - \d+ gate\(s\), \d+ kinds of evidence owed\n",
                         after.stdout), after.stdout
-        # 7.0.0 ships a check (`artifacts-approved`) and two evidence types
-        # (`artifact-approval`, ADR-050, and `checkpoint-approval`, ADR-063)
-        # that the 5.6.0 governance copy lacks, so the drift report adds one
-        # concern line. Nothing else moves. The two section checks 7.0.0 adds
-        # (ADR-064) raise the count by 2, the evidence type `approval-withdrawal`
-        # (ADR-069) by 1, the design-size check (ADR-067) by 1, and the two
-        # artifact rules that replace the role rules (ADR-070) by 2 more, and the
-        # four-layer acceptance strategy's advisory check (8.0.0 preset) by 1, and its
-        # outer-loop check (ADR-080) by 1, its support-code check by 1, its
-        # `attempts` check (ADR-084) by 1, and its isolation and layering checks and
-        # their evidence types `isolation-proof` and `layering` (ADR-086) by 4. 9.0.0
-        # removes `rendered-blocks-current`, `artifacts-approved`, `contracts-declared`
-        # and the design-size check (ADR-091), which lowers it by 4. Its default
-        # declares no artifact rule (ADR-091 decision 3), so `RP-ART-001` and
-        # `RP-ART-002` go from the drift report, which lowers it by 2 more.
-        drift = "this project's policy is missing 12 rule(s) or check(s)"
+        # 9.0.0 removed the drift report (ADR-098), so no concern line says the
+        # 5.6.0 governance copy lacks what the framework ships.
         _, path_choices = _evaluate_lines(after.stdout)
-        assert len([c for c in path_choices if drift in c]) == 1, (slug, path_choices)
+        assert not [c for c in path_choices if "policy is missing" in c], (
+            slug, path_choices)
         gates, choices = _evaluate_lines(legacy)
         # 9.0.0 drops the removed gate `verify.analyze` (ADR-091), which the copied
         # 5.6.0 rules `RP-REQUIRE-001` and `RP-REQUIRE-002` add; a rule that only adds it
@@ -298,8 +284,8 @@ def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(
                        if "RP-REQUIRE-001" not in c and "RP-REQUIRE-002" not in c]
         # With those two lines gone, the output lists one more fired rule, `RP-REQUIRE-005`,
         # which the copied 5.6.0 rules fire for this issue too.
-        new_choices = [c for c in choices if drift not in c
-                       and not (slug == "add-farewell" and "RP-REQUIRE-005" in c)]
+        new_choices = [c for c in choices
+                       if not (slug == "add-farewell" and "RP-REQUIRE-005" in c)]
         assert (gates, new_choices) == ((count, rest), old_choices), (
             slug, sorted(set(new_choices) - set(old_choices)), sorted(set(old_choices) - set(new_choices)))
         lint = _cli(CLI, root, "issue", "lint", "--issue", slug)

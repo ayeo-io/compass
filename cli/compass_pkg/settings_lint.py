@@ -42,8 +42,7 @@ CODES = ("L-SETTING-UNKNOWN", "L-SETTING-INVALID", "L-SETTING-REMOVED", "L-PAREN
 
 #: The settings that do not touch the check set.
 PLAIN_KEYS = ("schema", "owner", "approvers", "autonomy", "adoption", "allow_project_commands",
-              "enforcement", "record", "project", "language", "governance_drift",
-              "acceptance_strategy")
+              "enforcement", "record", "project", "language", "acceptance_strategy")
 #: Every key `compass.yml` can hold and have read.
 KEYS = PLAIN_KEYS + spec.TIGHTEN_KEYS
 
@@ -509,8 +508,6 @@ def schema():
                                    "type": "string"} for k in spec.ACCEPTANCE_SUPPORT},
                 "additionalProperties": False}}},
         "language": {"description": top["language"], "type": "string"},
-        "governance_drift": {"description": top["governance_drift"],
-                             "enum": list(spec.GOVERNANCE_DRIFT)},
         "acceptance_strategy": {
             "description": top["acceptance_strategy"], "type": "object",
             "properties": {

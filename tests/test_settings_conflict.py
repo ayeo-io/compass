@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg import core, governance, project_settings, record  # noqa: E402
+from compass_pkg import core, project_settings, record  # noqa: E402
 from compass_pkg import tdd  # noqa: E402
 
 # Looked up by name so a reader without these yet fails a test by assertion,
@@ -362,7 +362,6 @@ def test_bs7_a_missing_check_set_is_an_error_naming_the_file_not_a_traceback(box
 @pytest.mark.parametrize("reader", [
     lambda root: core.load_mode(),
     lambda root: tdd._read_config(root),
-    lambda root: governance._drift_is_strict(),
     lambda root: record.settings(root),
     lambda root: core.load_autonomy(),
 ])

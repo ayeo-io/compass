@@ -177,8 +177,6 @@ FIELDS = {
 
 AUTONOMY = ("controlled", "balanced", "autonomous")
 ADOPTION = ("advisory", "enforced")
-# `governance_drift`: any value other than `strict` reads as `advisory`.
-GOVERNANCE_DRIFT = ("advisory", "strict")
 # The approver lists a layer names (ADR-039); an unlock is the owner's.
 APPROVER_KINDS = ("waiver", "issue-waiver", "project-waiver")
 
@@ -247,9 +245,6 @@ TOP_DESCRIPTIONS = {
     "adoption": "Whether a failed check blocks: `enforced` makes `compass check` and "
                 "`compass ci` exit non-zero, and `advisory` reports the failure and exits 0. "
                 "The shipped default is `enforced`.",
-    "governance_drift": "Whether drift from the shipped governance fails: `strict` fails "
-                        "`compass policy lint` and `advisory` only reports it. "
-                        "The default is `advisory`.",
     "allow_project_commands": "Whether `compass check` may run commands that a project "
                               "guardrail declares, read from the project's own file only. "
                               "The default is `false`.",

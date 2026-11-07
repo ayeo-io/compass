@@ -12,30 +12,26 @@ settings, and `policy show` names the check set, its digest and the settings
 that tighten it.
 
 The code is `cli/compass_pkg/policy_cmd.py` (the two commands and the JSON
-report of the legacy lint, until #359) and `cli/compass_pkg/settings_lint.py`
-(the settings lint and the schema of `compass.yml`).
+report of the legacy lint), `cli/compass_pkg/governance.py` (the legacy lint)
+and `cli/compass_pkg/settings_lint.py` (the settings lint and the schema of
+`compass.yml`).
 
 ## What `compass policy lint` runs
 
 | Project | What it runs |
 |---|---|
-| No `compass.yml`, or a `compass.yml` that Compass does not read | The legacy lint of the project's governance files, with the output it always had |
-| The framework's own repository, with no arguments | The legacy lint of `governance/`, then the settings lint of its `compass.yml` |
-| A root `compass.yml` that Compass reads | The settings lint |
+| No `compass.yml`, or a `compass.yml` that Compass does not read | The legacy lint of the project's governance files |
+| A root `compass.yml` that Compass reads, the framework's own repository included | The settings lint |
 | `--file PATH` | The settings lint of that one file |
 
 A `compass.yml` is read when it is the only settings file, or when it has a
-top-level `schema:` key. `compass ci` calls the legacy lint directly, so its
-output and exit code do not change.
+top-level `schema:` key. `compass ci` calls the legacy lint directly.
 
-In the framework's own repository the command fails if either lint fails. The
-text output is the legacy lint's lines, then the settings lint's. With
-`--json` it prints one document whose `mode` is `framework`: `layers` lists the
-`legacy` layer and then `project`, and `findings`, `counts` and `result` cover
-both. If `governance/routing-policy.yml` is not valid YAML, the legacy lint
-reports it as a structure error, the settings lint does not run, and the exit
-code is 1. `scripts/validate.sh` runs this lint, so CI fails on a `compass.yml`
-a commit would refuse.
+9.0.0 removed the drift report, which compared a governance copy with the
+framework's, and the `governance_drift` setting that made it fail (ADR-098).
+It also removed the framework mode, which linted the framework's frozen
+`governance/` files before its `compass.yml`. `scripts/validate.sh` runs this
+lint, so CI fails on a `compass.yml` a commit would refuse.
 
 Every command that resolves a policy (`compass check` on an issue with no
 stored generation, `compass approach evaluate`, assess) runs the same settings
@@ -52,20 +48,19 @@ check set:
 | `L-SETTING-INVALID` | error | A value of the wrong shape, a tighten-only setting that would not add to what an issue owes (a token outside the closed set, a project check that reuses a shipped id, a stage other than `build` or `ship`, a capability other than `entry-exit-evaluation`), or an assessment value the check set does not declare |
 | `L-IMPL-UNKNOWN` | error | After the tighten-only settings are applied, a check names an implementation the CLI does not hold (safety-contract guarantee 2) |
 | `L-PARENT-REMOVED` | error | `extends:` names a git parent. A team parent can hold checks this file does not show, so every command that resolves a policy refuses with exit 2 until it is deleted. Move the team's checks into the tighten-only settings, or stay on 8.x until the 9.0.0 upgrade command (#359) |
-| `L-SETTING-REMOVED` | warning | A key 9.0.0 removed. It is not read. The catalog keys `dimensions`, `stages`, `rules`, `checks`, `gates` and `vocabulary`, with every entry operation inside them, `extends: compass:default@<n>`, `preset`, `preset_index` and `approvers.project-waiver` (ADR-094); and the keys of ADR-090 to ADR-093 (`models`, `multiagent`, `living_spec`, `artifacts`, `approaches`, `prices`, `github_labels`, `readiness` and the readiness-only fields of `project`). The message ends with what replaces the key, "Replacement: `<setting>`." or "Removed: nothing replaces it.", then "`compass migrate` rewrites it." when `compass migrate` handles the key. An `extends:` that pins the default below `@8` is still read for one thing: it keeps the acceptance strategy `S17` off, so its replacement is `acceptance_strategy: {state: off, reason: ...}` |
+| `L-SETTING-REMOVED` | warning | A key 9.0.0 removed. It is not read. The catalog keys `dimensions`, `stages`, `rules`, `checks`, `gates` and `vocabulary`, with every entry operation inside them, `extends: compass:default@<n>`, `preset`, `preset_index` and `approvers.project-waiver` (ADR-094); and the keys of ADR-090 to ADR-093 (`models`, `multiagent`, `living_spec`, `artifacts`, `approaches`, `prices`, `github_labels`, `readiness` and the readiness-only fields of `project`); and `governance_drift` (ADR-098). The message ends with what replaces the key, "Replacement: `<setting>`." or "Removed: nothing replaces it.", then "`compass migrate` rewrites it." when `compass migrate` handles the key. An `extends:` that pins the default below `@8` is still read for one thing: it keeps the acceptance strategy `S17` off, so its replacement is `acceptance_strategy: {state: off, reason: ...}` |
 
 ## The legacy lint
 
-A project with no `compass.yml` and its own copy of the governance files is
-linted as before, until #359:
+A project with no `compass.yml` and its own copy of the governance files gets
+the structural lint of that copy:
 
 | Code | Level | Meaning |
 |---|---|---|
 | `LEGACY-STRUCTURE` | error | A structural fault in the copied governance files |
-| `LEGACY-WAIVER` | error | A malformed `waived:` entry |
-| `LEGACY-WAIVED` | info | A rule the project waived: a recorded decision, not drift (JSON only) |
-| `LEGACY-DRIFT` | warning, or error with `governance_drift: strict` | The copied governance lacks a rule or check the framework ships |
-| `LEGACY-DRIFT-UNCOMPARED` | warning | The copy could not be compared with the framework's |
+
+A `waived:` entry in the copy is not read: it only kept a rule out of the
+drift report.
 
 ## Options and exit codes
 
@@ -109,7 +104,7 @@ starts `  - warning CODE`.
 | Key | Type | Meaning |
 |---|---|---|
 | `schema` | integer | The version of this shape. It is 1 |
-| `mode` | `settings`, `legacy` or `framework` | Which lint ran. `framework` is both, in the framework's own repository |
+| `mode` | `settings` or `legacy` | Which lint ran |
 | `result` | `pass` or `fail` | `fail` when `counts.errors` is above 0 |
 | `layers` | list | `project` for the settings lint; `legacy` for the legacy lint |
 | `stopped_after` | string or null | The legacy lint's stop, or null |

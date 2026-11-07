@@ -100,12 +100,11 @@ def test_a_description_names_every_value_its_enumeration_allows():
     assert not bad, "\n".join(bad)
 
 
-def test_the_schema_allows_governance_drift_with_the_values_the_docs_give():
-    # A project's compass.yml can hold this setting, and the settings lint
-    # accepts it, so the schema must too.
+def test_the_schema_leaves_out_governance_drift():
+    # 9.0.0 removed the drift report and its setting (ADR-098). The schema holds
+    # no removed key, so an editor marks it, and the settings lint warns.
     schema = json.loads(SCHEMA_FILE.read_text(encoding="utf-8"))
-    node = schema["properties"]["governance_drift"]
-    assert node["enum"] == ["advisory", "strict"]
-    assert "advisory" in node["description"] and "strict" in node["description"]
-    assert "governance_drift" in schema["properties"]
-    assert settings_lint.lint({"schema": 1, "governance_drift": "strict"}) == []
+    assert "governance_drift" not in schema["properties"]
+    assert schema["additionalProperties"] is False
+    found = settings_lint.lint({"schema": 1, "governance_drift": "strict"})
+    assert [f.code for f in found] == ["L-SETTING-REMOVED"]

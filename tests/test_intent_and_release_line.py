@@ -123,6 +123,13 @@ def manifest(root, slug=SLUG):
     return yaml.safe_load(manifest_file(root, slug).read_text(encoding="utf-8"))
 
 
+def _land_commit(root, task, slug=SLUG):
+    """The stored `land_commit`, or the commit git names when the record was
+    committed with the code (#356)."""
+    from compass_pkg import landing
+    return landing.land_commit(task, str(manifest_file(root, slug).parent))
+
+
 def write_manifest(root, body, slug=SLUG):
     manifest_file(root, slug).write_text(yaml.safe_dump(body, sort_keys=False),
                                          encoding="utf-8")
@@ -545,7 +552,7 @@ def test_irl_9_ship_commit_stores_release_line(tmp_path):
     landed = manifest(root)
     assert landed.get("land_timestamp") and landed.get("status") == "done", landed
     assert landed["release_note"] == BOARD, landed
-    assert landed["land_commit"]
+    assert _land_commit(root, landed)
     assert_no_gh_call(root)
 
 
@@ -742,7 +749,7 @@ def test_irl_24_landed_issue_not_refused_or_rewritten(tmp_path):
     # A completed issue at a generation that declares the field, with no line: every
     # issue landed before this change looks like this.
     set_keys(root, release_note=ABSENT)
-    first_land = manifest(root)["land_commit"]
+    first_land = _land_commit(root, manifest(root))
 
     # A review fix on top of the landing, its green re-recorded, nothing staged.
     (root / "src" / "new.py").write_text("y = 2\n")
@@ -756,7 +763,7 @@ def test_irl_24_landed_issue_not_refused_or_rewritten(tmp_path):
     assert "landed at HEAD" in done.stdout, done.stdout
     assert "release line" not in output and "release-line" not in output, output
     landed = manifest(root)
-    assert landed["land_commit"] != first_land and "release_note" not in landed, landed
+    assert _land_commit(root, landed) != first_land and "release_note" not in landed, landed
 
     # Landing it again at HEAD with --release-note is refused: a landed record is not
     # rewritten, and nothing moves.

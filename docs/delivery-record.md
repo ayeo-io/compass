@@ -27,7 +27,28 @@ Each issue's folder (`.compass/work/<slug>/`) is its record. The record mode dec
 */approval-requests/pending/
 ```
 
-In committed mode it also adds `delegations/`, `cache/`, `private/`, `current-task` and `interruptions.log` to `.compass/.gitignore`. A ship commit can hold both ignore files. Nothing stages the record yet: `compass ship-commit` lands as before in both modes.
+In committed mode it also adds `delegations/`, `cache/`, `private/`, `current-task` and `interruptions.log` to `.compass/.gitignore`. A ship commit can hold both ignore files. Exclude `.compass/work/` from formatters: a formatter that rewrites a record file changes a digest `trail.md` states.
+
+## The landing in each mode
+
+`compass ship-commit --issue <slug>` (and `compass quick-fix finish`, which calls it) stages the record itself. The agent never stages `.compass/` by hand.
+
+In committed mode, when every gate of the issue has passed:
+
+1. The refusals and the scope check run as before, and the staged code is checked against the newest green before anything is written.
+2. One manifest save writes status `completed`, `land_timestamp` and `landed_with_record: true`, with the release line as before. It writes no `land_commit`: the manifest cannot hold the id of the commit that holds it. `landing.land_commit` reads that commit from git (`docs/github-links.md`).
+3. It writes `trail.md`.
+4. It completes `.compass/work/.gitignore` and stages the issue folder, the documents folder and that ignore file, each by its path. `git add` skips the files the ignore file names. A folder git ignores as a whole is not staged.
+5. Right before each commit try, when a pre-commit step changed a file `trail.md` names, it writes `trail.md` again and stages it, and says so.
+6. It commits. After the commit it compares each sum line of the committed `trail.md` with the file in the commit. A git hook that staged a change during the commit gets one line per file: "a git hook changed <path> during the commit; `trail.md` no longer matches it". The exit code does not change.
+7. When no commit is made, the manifest and `trail.md` are put back and the record paths it staged are unstaged.
+8. When a check after the commit fails (a hook put a path outside the scope in the commit, or changed an issue file after the green), the working manifest is put back as it was before the landing and `trail.md` is written again. The output says the commit holds a record that says the issue landed, and that `git reset --soft HEAD^` removes an unpushed commit. The exit code stays 2.
+
+With nothing staged (every file the issue changed is committed already), committed mode commits the record alone, with the `-m` message: "landed at HEAD <id>; the record was committed as <new id>". That commit holds the same code as HEAD.
+
+In committed mode the scope of a ship commit holds the issue folder, the documents folder and both ignore files. In kept-out mode it holds neither the issue folder nor the ignore files, so a record path staged by hand is refused, and nothing under `.compass/` but `.compass/current-task` can ship. Kept-out mode lands as before: `land_commit` is written after the commit, then `trail.md`, so the trail names the commit.
+
+When git ignores the issue folder and no setting chose the mode, ship prints one line that names the ignore rule. `record.commit: false` keeps the record out without the line.
 
 ## The trail
 
@@ -54,7 +75,7 @@ The `-` makes the macOS `sha256sum` read the standard input; `shasum -a 256 -c` 
 - `compass trail --check` writes nothing. It exits 1 and names the first line that differs when the file is missing or out of date, and 0 when it matches. A command that writes the manifest after `trail.md` makes it out of date. `compass check` prints `Trail: up to date`, or that it is out of date, on an issue that has the file.
 - A spike ships no code, so `compass trail` refuses it and writes nothing.
 - The trail only reads records. It writes no approval, and the requester is never shown as one.
-- `compass ship-commit` does not write the trail yet.
+- `compass ship-commit` writes the trail at each landing, before the commit in committed mode and after the `land_commit` write in kept-out mode.
 
 ## Setting it up
 
@@ -111,4 +132,6 @@ One record repository serves one project. The clone lives in the user's cache fo
 | `cli/compass_pkg/record_mode.py` | The record mode, the ignore lines and the helper that appends them. |
 | `cli/compass_pkg/trail.py` | `compass trail`: writes and checks `trail.md`. |
 | `cli/compass_pkg/init_cmd.py` | `compass init` writes the ignore files. |
-| `cli/compass_pkg/manifest.py` | `ship-commit` runs the sync after a landing. |
+| `cli/compass_pkg/manifest.py` | `ship-commit`: the landing in each mode, the scope check, and the sync after a landing. |
+| `cli/compass_pkg/committed_landing.py` | A committed landing: writes, stages and checks the record, and puts it back when no commit is made. |
+| `cli/compass_pkg/quick_fix_cmd.py` | `quick-fix finish` lands through `ship-commit` and names no `.compass/` path to stage. |

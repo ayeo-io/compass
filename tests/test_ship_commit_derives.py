@@ -14,6 +14,9 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "cli"))
+from compass_pkg import landing  # noqa: E402
+
 
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", *args], cwd=str(cwd),
@@ -76,8 +79,10 @@ def _task(slug: str, *, gates_pass: bool = True, topology: str = "solo",
 def _open_issue(repo: Path, slug: str, *, gates_pass: bool = True,
                  topology: str = "solo", scenarios=None, changed_files=None,
                  file_name: str = "feature.txt") -> Path:
-    """Stage a fresh issue's manifest and its one declared file - the
-    minimum ship-commit needs to have something of the issue's own to land."""
+    """Write a fresh issue's manifest and stage its one declared file - the
+    minimum ship-commit needs to have something of the issue's own to land.
+    The manifest is not staged by hand: in committed mode `ship-commit`
+    stages the record itself, and in kept-out mode it stays out (#356)."""
     task_dir = repo / ".compass" / "work" / slug
     task_dir.mkdir(parents=True)
     if changed_files is None:
@@ -88,8 +93,7 @@ def _open_issue(repo: Path, slug: str, *, gates_pass: bool = True,
         yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
     (repo / file_name).write_text("issue work\n", encoding="utf-8")
     (repo / ".compass" / "current-task").write_text(slug, encoding="utf-8")
-    _git(repo, "add", "--", file_name, f".compass/work/{slug}/manifest.yml",
-         ".compass/current-task")
+    _git(repo, "add", "--", file_name, ".compass/current-task")
     return task_dir
 
 
@@ -120,7 +124,12 @@ def test_ship_commit_lands_the_issue_in_one_commit(cli_path, tmp_path):
 
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
     assert _completed(manifest), manifest
-    assert manifest["land_commit"] == _head(repo), manifest
+    # No `compass.yml`, so the record is committed with the code (#356): the
+    # manifest names no commit, and git gives the one that holds it.
+    assert manifest["landed_with_record"] is True and "land_commit" not in manifest, manifest
+    assert landing.land_commit(manifest, str(task_dir)) == _head(repo), manifest
+    assert f".compass/work/{slug}/manifest.yml" in _git(
+        repo, "show", "--name-only", "--format=", "HEAD").stdout
     assert _log_subjects(repo, since=h0) == ["land it"]
 
 
@@ -166,10 +175,15 @@ def _commit_issue_at_head(repo: Path, slug: str, *, gates_pass: bool = True,
 def test_ship_commit_lands_work_already_committed_at_head(cli_path, tmp_path):
     """DPR-7's last line: when every file the issue changed is already
     committed and nothing is staged, ship-commit lands the issue at HEAD -
-    no new commit, HEAD itself recorded as land_commit."""
+    no new commit, HEAD itself recorded as land_commit. That is the kept-out
+    record mode; a committed record commits the record alone
+    (`test_ship_commit_commits_the_record.py`)."""
     repo = tmp_path / "repo"
     repo.mkdir()
     _init_repo(repo)
+    (repo / "compass.yml").write_text("record:\n  commit: false\n", encoding="utf-8")
+    _git(repo, "add", "compass.yml")
+    _git(repo, "commit", "-q", "-m", "keep the record out")
     slug = "already-committed"
     task_dir = _commit_issue_at_head(repo, slug)
     head = _head(repo)

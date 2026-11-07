@@ -12,8 +12,13 @@ Scenario id: RB-1 (issue `review-fix-rebinds-land-commit`).
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "cli"))
+from compass_pkg import landing  # noqa: E402
 from test_quick_fix_verbs import (GREET_CMD, _finish, _git, _ready_to_finish,  # noqa: F401
                                   _run, repo)
 
@@ -32,8 +37,11 @@ def _review_fix(repo):
 
 
 def _land_commit(repo):
-    manifest = repo / ".compass" / "work" / "fix-greeting" / "manifest.yml"
-    return yaml.safe_load(manifest.read_text())["land_commit"]
+    """The stored `land_commit`, or the commit git names when the record was
+    committed with the code (#356)."""
+    task_dir = repo / ".compass" / "work" / "fix-greeting"
+    return landing.land_commit(yaml.safe_load((task_dir / "manifest.yml").read_text()),
+                               str(task_dir))
 
 
 def test_rb_1_a_new_green_and_ship_commit_rebind_the_landing(repo):

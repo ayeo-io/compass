@@ -6,9 +6,10 @@ in `trail.md` passes on a machine without Compass.
 
 The test builds a git repository, takes one quick fix through the CLI (start
 with a request link and a requester, a real failing pytest run, the fix, a
-passing run, `quick-fix finish`), writes the trail with `compass trail`, and
-commits the issue record. `compass ship-commit` does not stage the record
-until step 6, so the test commits it with git. It then clones the repository
+passing run, `quick-fix finish`). The project has no `compass.yml`, so the
+record mode is committed, and `finish` lands through `compass ship-commit`,
+which writes `trail.md` and commits the issue record with the fix (step 6).
+The test does not commit anything by hand. It then clones the repository
 from a `file://` path, so nothing reaches the network, and runs the check in
 the clone with `PATH=/usr/bin:/bin:/sbin`, where neither the `compass`
 launcher nor its package is reachable.
@@ -102,13 +103,23 @@ def landed(tmp_path_factory):
     (root / "src" / "f.py").write_text("def f():\n    return 2\n")
     where = ["--candidate", "local", "--client", "cli"]
     _ok(root, "tdd-green", "--issue", SLUG, *loop, *where, "--", *_pytest())
+    # No `compass.yml`, so the record mode is committed: `finish` lands through
+    # `ship-commit`, which writes `trail.md` and commits the record with the fix.
     _ok(root, "quick-fix", "finish", "--issue", SLUG, "-m", "Fix f",
         "--release-note", "f returns 2", "--loop", "outer", *where, "--", *_pytest())
-    _ok(root, "trail", "--issue", SLUG)
-    # Step 6 makes `ship-commit` stage the record; until then git does.
-    _git(root, "add", "--", f".compass/work/{SLUG}")
-    _git(root, "commit", "-q", "-m", "Record the trail of fix-f")
     return root
+
+
+def test_the_land_commit_holds_the_fix_and_its_record(landed):
+    """The trail is checked at the land commit, which is HEAD: it holds the
+    fix, the trail and the files the trail names, and no per-checkout file."""
+    held = _git(landed, "show", "--name-only", "--format=", "HEAD").splitlines()
+    assert "src/f.py" in held and TRAIL in held, held
+    assert f".compass/work/{SLUG}/manifest.yml" in held, held
+    assert not [p for p in held if "/generations/" in p or p.endswith(".lock")
+                or p.endswith("/.tdd-state.json")], held
+    assert _git(landed, "status", "--porcelain", "--", ".compass/work") == ""
+    assert _compass(landed, "trail", "--check", "--issue", SLUG).returncode == 0
 
 
 @pytest.fixture

@@ -984,8 +984,10 @@ def cmd_quick_fix_finish(args):
                 committed=False,
             ))
 
-        stage_paths = sorted(set(production_paths) | set(artifact_paths)
-                             | {f".compass/work/{slug}"})
+        # The issue folder is not named: in committed mode `ship-commit`
+        # stages the record itself, and in kept-out mode nothing under
+        # `.compass/` is staged (#356).
+        stage_paths = sorted(set(production_paths) | set(artifact_paths))
         ship_out, ship_code = _quiet_run(cmd_land_commit, task=slug,
                                          message=args.message,
                                          files=stage_paths, release_note=note)

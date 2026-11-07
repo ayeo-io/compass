@@ -710,7 +710,9 @@ def test_vr_c12_ship_commit_records_done_with_the_completed_reason(cli_path, tmp
     assert done.returncode == 0, done.stdout + done.stderr
     saved = _saved(task_dir)
     assert saved["status"] == "done" and saved["close_reason"] == "completed"
-    assert saved["land_timestamp"] and saved["land_commit"]
+    # The record is committed with the code (#356), so git names the land commit.
+    from compass_pkg import landing
+    assert saved["land_timestamp"] and landing.land_commit(saved, str(task_dir))
     assert "blocked" not in saved
 
 

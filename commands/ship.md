@@ -232,6 +232,13 @@ first. Nothing writes `target_task` since 9.0.0.
   one: give it once, with `--release-note "<text written for a user>"`
   (`docs/release-line.md`). For a long message, `-F <file>` reads it from a
   file; never use `git commit` in its place.
+- **The issue record.** When the project commits its record (the record
+  mode is committed: no `record.commit: false` and no `record.remote` in
+  `compass.yml`, and git does not ignore `.compass/work/`), `ship-commit`
+  writes the landing and `trail.md` into the issue folder and stages that
+  folder and the issue's documents folder itself, so they ship in the same
+  commit as the code. Never stage `.compass/` yourself. In kept-out mode
+  nothing under `.compass/` is staged (`docs/delivery-record.md`).
 - **Message rules:** the message follows the cold-reader strategy: say
   what changed and why, for someone who was not in the conversation; no
   `Co-Authored-By:` trailer for any agent and no "Generated with"
@@ -239,8 +246,9 @@ first. Nothing writes `target_task` since 9.0.0.
 - **After a review fix.** If review of the pull request changes the
   issue's own files after `ship-commit` committed it, commit the fix, re-run
   `compass tdd-green`, then run `compass ship-commit --issue <slug> -m
-  <message>` with nothing staged. It moves `land_commit` to HEAD, and
-  refuses while the newest green does not name HEAD's files.
+  <message>` with nothing staged. It moves `land_commit` to HEAD, or, when
+  the record is committed, commits the record alone; it refuses while the
+  newest green does not name HEAD's files.
 - **Record the pull request.** When the pull request opens, run
   `compass issue link set --pr <n>` to record it on the issue. Run it again
   after the merge: a squash merge leaves the commit `ship-commit` made off

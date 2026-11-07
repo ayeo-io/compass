@@ -678,6 +678,25 @@ commit then differs from what the green tested, the commit stands but
 the issue is not marked done, and `ship-commit` names the files and
 exits non-zero.
 
+When the record is committed with the code (the committed record mode,
+`docs/delivery-record.md`), `ship-commit` writes the landing and
+`trail.md` before the commit and stages the issue record itself. So the
+commit holds a record that says the issue landed. When a check after the
+commit fails, the working copy is put back to not landed, and the output
+says the commit still holds the landed record; `git reset --soft HEAD^`
+removes an unpushed commit. Three limits follow:
+
+- `trail.md` is generated, but nothing stops a hand edit of its prose. The
+  sum lines are what `sha256sum -c` checks; a changed statement with
+  unchanged sum lines passes. `compass trail --check` reports the edit.
+- A formatter or git hook that rewrites a record file during the commit
+  makes a sum line fail at that commit. `ship-commit` names each such file
+  and does not change its exit code. A pre-commit step that rewrites a
+  record file before the commit is handled: `trail.md` is written again.
+- A shallow clone that does not hold the land commit cannot name it: the
+  land commit of a committed record is read from git history, and
+  `compass check` reports the landed comparison as not in this clone.
+
 When `git commit` leaves HEAD where it was, `ship-commit` stops with the
 lines git printed, in git's own words, then says HEAD did not advance and
 the land did not happen. It adds that a pre-commit hook may be the cause

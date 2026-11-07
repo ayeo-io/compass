@@ -27,6 +27,8 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 SLUG = "land-scope"
+sys.path.insert(0, str(ROOT / "cli"))
+from compass_pkg import landing  # noqa: E402
 
 
 def _git(repo, *args, check=True):
@@ -102,9 +104,11 @@ def _committed_files(repo, commit="HEAD"):
 
 
 def _land_commit(repo):
-    manifest = yaml.safe_load(
-        (repo / ".compass" / "work" / SLUG / "manifest.yml").read_text())
-    return manifest["land_commit"]
+    """The stored `land_commit`, or the commit git names when the record was
+    committed with the code (#356)."""
+    task_dir = repo / ".compass" / "work" / SLUG
+    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
+    return landing.land_commit(manifest, str(task_dir))
 
 
 def test_scn_b1_unrelated_dirty_file_is_not_swept_into_the_land_commit(repo):

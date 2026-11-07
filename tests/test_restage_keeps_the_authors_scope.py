@@ -30,6 +30,8 @@ import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
+sys.path.insert(0, str(ROOT / "cli"))
+from compass_pkg import landing  # noqa: E402
 
 
 def _git(args, cwd):
@@ -38,11 +40,12 @@ def _git(args, cwd):
 
 
 def _land_commit(root):
-    """The commit ship-commit made, by the `land_commit` the manifest
-    records, the commit the checks below judge."""
-    manifest = yaml.safe_load(
-        (root / ".compass" / "work" / "demo" / "manifest.yml").read_text())
-    return manifest["land_commit"]
+    """The commit ship-commit made, the commit the checks below judge: the
+    stored `land_commit`, or, when the record was committed with the code,
+    the commit git names (#356)."""
+    task_dir = root / ".compass" / "work" / "demo"
+    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
+    return landing.land_commit(manifest, str(task_dir))
 
 
 def _repo(tmp_path):

@@ -31,7 +31,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import (checkpoint_outcomes, gate_status, release_line,
+from compass_pkg import (checkpoint_outcomes, committed_landing, gate_status, release_line,
                          ship_commit_reason, status_words)
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
@@ -75,6 +75,11 @@ FRAMEWORK_OWNED_PATHS = frozenset({
     ".compass/work/.gitignore",
 })
 
+#: The paths of `FRAMEWORK_OWNED_PATHS` that belong to a committed record.
+#: In kept-out mode (`record_mode`) they are out of scope, as the issue's own
+#: folder is: nothing under `.compass/` but the pointer ships there.
+RECORD_OWNED_PATHS = frozenset({".compass/.gitignore", ".compass/work/.gitignore"})
+
 
 def _unmet_gates(task):
     """The ids of the issue's gates that have not passed. A gate a release removed
@@ -111,12 +116,15 @@ def _docs_prefix(task, slug):
     return docs_dir_for(task.get("created"), slug).rstrip("/") + "/"
 
 
-def _out_of_scope(staged, owned, artifact_dir, docs_prefix=None):
-    prefixes = tuple(p for p in (artifact_dir, docs_prefix) if p)
+def _out_of_scope(staged, owned, artifact_dir, docs_prefix=None, committed=True):
+    """The staged paths outside the scope. With `committed` False (kept-out
+    mode), the issue folder and `RECORD_OWNED_PATHS` are outside it too."""
+    named = FRAMEWORK_OWNED_PATHS if committed else FRAMEWORK_OWNED_PATHS - RECORD_OWNED_PATHS
+    prefixes = tuple(p for p in ((artifact_dir if committed else None), docs_prefix) if p)
     return sorted(
         p for p in staged
         if p not in owned
-        and p not in FRAMEWORK_OWNED_PATHS
+        and p not in named
         and not p.startswith(prefixes)
     )
 
@@ -325,6 +333,7 @@ def cmd_land_commit(args):
         # a commit a git hook widened, refused once, must not land when
         # shipped again. `tip_scope.tip_own_paths` passes over a spec-only
         # commit and a merge of the base branch.
+        head_committed = committed_landing.is_committed(head_task_dir)
         if _git(["rev-parse", "--verify", "-q", "HEAD^1"], cwd).returncode == 0:
             added, base_note = tip_own_paths(cwd)
             head_owned, head_artifacts = _land_scope(head_task, head_slug)
@@ -350,6 +359,8 @@ def cmd_land_commit(args):
 
         head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
         release_line.store(head_task_dir, note, "compass ship-commit", head_task)
+        if head_committed:
+            return _land_record_at_head(cwd, msg, head_task_dir, head_slug, head_id)
         status_words.close(head_task, status_words.COMPLETED)
         head_task["land_timestamp"] = now_iso()
         head_task["land_commit"] = head_id
@@ -382,6 +393,10 @@ def cmd_land_commit(args):
         docs_prefix = _docs_prefix(_scope_task, slug)
     except (CompassError, OSError, KeyError):
         pass
+    # In committed mode the record ships in this commit, so its paths are in
+    # scope and `ship-commit` stages them itself (#356); in kept-out mode
+    # nothing under `.compass/` but the pointer is.
+    committed = slug is not None and committed_landing.is_committed(_scope_dir)
     if slug is not None:
         _refuse_open_definition_of_done(_scope_task, _scope_dir, slug)  # before anything is staged
 
@@ -392,6 +407,11 @@ def cmd_land_commit(args):
         have judged a copy that is no longer the one committed."""
         if slug is None:
             return
+        # A pre-commit step that rewrote a record file changed a digest
+        # `trail.md` states: write it again, so the commit holds a match.
+        if record is not None and record.refresh():
+            print("compass ship-commit: a pre-commit step changed a file `trail.md` "
+                  "names, so `trail.md` was written again.")
         tree = _git(["write-tree"], cwd)
         if tree.returncode != 0 or not tree.stdout.strip():
             raise CompassError(
@@ -404,7 +424,7 @@ def cmd_land_commit(args):
         # what is staged now.
         now = [n for n in _git(["diff", "--cached", "--name-only", "-z"],
                                cwd).stdout.split("\0") if n]
-        stray_now = (_out_of_scope(now, owned, artifact_dir, docs_prefix)
+        stray_now = (_out_of_scope(now, owned, artifact_dir, docs_prefix, committed)
                      if owned else [])
         if stray_now:
             raise CompassError(
@@ -424,7 +444,7 @@ def cmd_land_commit(args):
     # a new mechanism no-ops for projects that have not adopted it). The
     # re-stage below is still scoped in that case - it re-stages what was
     # staged, never the whole tree.
-    stray = (_out_of_scope(staged_now, owned, artifact_dir, docs_prefix)
+    stray = (_out_of_scope(staged_now, owned, artifact_dir, docs_prefix, committed)
              if owned else [])
     if stray:
         raise CompassError(
@@ -442,6 +462,19 @@ def cmd_land_commit(args):
         )
 
     head_before = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
+
+    # Committed mode: when every gate has passed, the landing is written into
+    # the record before the commit, and the record is staged, so the commit
+    # holds the record that says it landed (#356). The staged code is judged
+    # first, so a refusal leaves the manifest as it was.
+    record = None
+    # An issue landed before is not judged again after the commit, as in
+    # kept-out mode: its green was judged when it landed.
+    was_completed = slug is not None and status_words.is_completed(_scope_task)
+    if committed and getattr(args, "task", None) and not _unmet_gates(_scope_task):
+        _judge_index()
+        record = committed_landing.Record(cwd, _scope_dir)
+        record.land()
 
     def _disk_hashes():
         """The disk content, as git would store it, of each staged path and
@@ -481,8 +514,10 @@ def cmd_land_commit(args):
         for path in sorted(now):
             if now[path] != since.get(path):
                 _git(["--literal-pathspecs", "add", "--", path], cwd)
-        if os.path.isdir(os.path.join(cwd, artifact_dir)):
-            _git(["--literal-pathspecs", "add", "--", artifact_dir], cwd)
+        if record is not None:
+            # Only a committed record is staged; in kept-out mode nothing
+            # under `.compass/` is.
+            record.stage()
 
     before_hooks = _disk_hashes()
 
@@ -498,27 +533,34 @@ def cmd_land_commit(args):
                            cwd=cwd, capture_output=True, text=True)
             _restage_owned(before_hooks)  # what the hooks rewrote, scoped
 
-    # First try at the commit.
-    _judge_index()
-    before_commit = _disk_hashes()
-    last_commit = _git(["commit", "-m", msg], cwd)
-    head_after = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
+    try:
+        # First try at the commit.
+        _judge_index()
+        before_commit = _disk_hashes()
+        last_commit = _git(["commit", "-m", msg], cwd)
+        head_after = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
 
-    retried = False
-    if head_after == head_before:
-        # (b) the commit no-op'd - a hook likely auto-fixed and aborted. Stage
-        # whatever it rewrote and retry exactly once, within the issue's scope.
-        _restage_owned(before_commit)
-        retried = True
-        if _git(["diff", "--cached", "--quiet"], cwd).returncode != 0:
-            _judge_index()
-            last_commit = _git(["commit", "-m", msg], cwd)
-            head_after = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
+        retried = False
+        if head_after == head_before:
+            # (b) the commit no-op'd - a hook likely auto-fixed and aborted. Stage
+            # whatever it rewrote and retry exactly once, within the issue's scope.
+            _restage_owned(before_commit)
+            retried = True
+            if _git(["diff", "--cached", "--quiet"], cwd).returncode != 0:
+                _judge_index()
+                last_commit = _git(["commit", "-m", msg], cwd)
+                head_after = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
 
-    # (c) ALWAYS check that HEAD advanced - the land's evidence is the moved HEAD.
-    if head_after == head_before:
-        raise CompassError(ship_commit_reason.failure_message(
-            cwd, last_commit, retried))
+        # (c) ALWAYS check that HEAD advanced - the land's evidence is the moved HEAD.
+        if head_after == head_before:
+            raise CompassError(ship_commit_reason.failure_message(
+                cwd, last_commit, retried))
+    except CompassError:
+        # No commit holds the landed record, so the working copy must not
+        # say landed either.
+        if record is not None:
+            record.take_back()
+        raise
 
     # Success. Mark the issue landed only now that HEAD is confirmed advanced -
     # AND only if its gates actually cleared.
@@ -549,7 +591,7 @@ def cmd_land_commit(args):
                             [n for n in _git(
                                 ["show", "--name-only", "-z", "--format=",
                                  head_after], cwd).stdout.split("\0") if n],
-                            owned, artifact_dir, docs_prefix)):
+                            owned, artifact_dir, docs_prefix, committed)):
                         # A git hook can stage a file during the commit
                         # itself, after the last scope check.
                         print(
@@ -560,10 +602,12 @@ def cmd_land_commit(args):
                             f"issue's declared scope in the commit:\n    "
                             + "\n    ".join(stray_after)
                             + "\n  Move them out of this commit, then ship "
-                            "again.")
+                            "again." + _unland(record))
                         return 2
                     elif (stale := _stale_paths(task, task_dir, cwd,
-                                                head_after)):
+                                                head_after,
+                                                judge_landed=record is not None
+                                                and not was_completed)):
                         # A git hook can stage a file during the commit
                         # itself, after the last check.
                         _, changed = stale
@@ -579,8 +623,13 @@ def cmd_land_commit(args):
                             "committed files, then `compass ship-commit "
                             f"--issue {os.path.basename(str(task_dir))}` - "
                             "or, on a quick fix, re-run `compass quick-fix "
-                            "finish`.")
+                            "finish`." + _unland(record))
                         return 2
+                    elif record is not None:
+                        # The landing is in the commit already (#356).
+                        landed_note = "\n  issue marked done."
+                        for line in committed_landing.warnings(record.changed_in(head_after)):
+                            print(line)
                     else:
                         status_words.close(task, status_words.COMPLETED)
                         task["land_timestamp"] = now_iso()
@@ -588,6 +637,9 @@ def cmd_land_commit(args):
                         # against its tree after HEAD has moved on.
                         task["land_commit"] = head_after
                         save_manifest(task, task_path)
+                        # Kept-out mode: the trail is written after the
+                        # `land_commit` write, so it names the commit.
+                        committed_landing.write_trail(task_dir)
                         landed_note = "\n  issue marked done."
         except CompassError:
             pass  # status update is best-effort; the commit already succeeded
@@ -628,6 +680,45 @@ def cmd_land_commit(args):
           f"HEAD {head_before[:8]} -> {head_after[:8]}" + landed_note)
     if "issue marked done" in landed_note:
         _print_waiting(task_dir)
+    return 0
+
+
+def _unland(record):
+    """Put the working manifest back after a commit that holds the landed
+    record failed a check, and the text that says so; '' in kept-out mode."""
+    if record is None:
+        return ""
+    record.unland()
+    return ("\n  The commit holds a record that says the issue landed; the "
+            "working copy no longer does. If the commit is not pushed, "
+            "`git reset --soft HEAD^` removes it.")
+
+
+def _land_record_at_head(cwd, msg, task_dir, slug, head_id):
+    """Committed mode, nothing staged: every file the issue changed is
+    committed already. Commit the record alone, so the record that says the
+    issue landed is in a commit; that commit holds the same code as HEAD."""
+    record = committed_landing.Record(cwd, task_dir)
+    record.land()
+    done = _git(["commit", "-m", msg], cwd)
+    new_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
+    retried = False
+    if new_id == head_id:
+        # A hook rewrote a record file and stopped the commit: stage the record
+        # again, write `trail.md` again if it no longer matches, and try once more.
+        retried = True
+        record.stage()
+        record.refresh()
+        done = _git(["commit", "-m", msg], cwd)
+        new_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
+    if new_id == head_id:
+        record.take_back()
+        raise CompassError(ship_commit_reason.failure_message(cwd, done, retried))
+    print(f"compass ship-commit: every file '{slug}' changed is already committed - "
+          f"landed at HEAD {head_id[:8]}; the record was committed as {new_id[:8]}.")
+    for line in committed_landing.warnings(record.changed_in(new_id)):
+        print(line)
+    _print_waiting(task_dir)
     return 0
 
 

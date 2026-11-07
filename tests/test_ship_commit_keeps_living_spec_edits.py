@@ -13,8 +13,8 @@ from __future__ import annotations
 import subprocess
 
 from test_ship_commit_after_a_merge import (  # noqa: F401
-    SLUG, _cli, _git, _green, _issue_commit, _manifest, _ship, _side_branch,
-    repo)
+    SLUG, _cli, _git, _green, _issue_commit, _land_commit, _manifest, _ship,
+    _side_branch, repo)
 
 SPEC = "docs/system-spec.md"
 
@@ -42,7 +42,7 @@ def test_a_hand_edit_of_the_living_spec_in_the_issues_own_commit_is_refused(
     combined = result.stdout + result.stderr
     assert result.returncode != 0, combined
     assert SPEC in combined, combined
-    assert not _manifest(repo).get("land_commit")
+    assert not _land_commit(repo)
 
 
 def test_a_hand_edit_below_a_merge_of_the_base_is_refused(repo):
@@ -78,7 +78,7 @@ def test_a_hand_edit_brought_in_by_a_merge_judged_in_full_is_refused(repo):
     combined = result.stdout + result.stderr
     assert result.returncode != 0, combined
     assert SPEC in combined, combined
-    assert not _manifest(repo).get("land_commit")
+    assert not _land_commit(repo)
 
 
 def test_a_spec_only_commit_still_lands(repo):
@@ -88,7 +88,7 @@ def test_a_spec_only_commit_still_lands(repo):
     result = _ship(repo)
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert _manifest(repo).get("land_commit")
+    assert _land_commit(repo)
 
 
 def test_a_conflict_resolution_of_the_living_spec_still_lands(repo):
@@ -109,4 +109,4 @@ def test_a_conflict_resolution_of_the_living_spec_still_lands(repo):
     result = _ship(repo)
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert _manifest(repo).get("land_commit")
+    assert _land_commit(repo)

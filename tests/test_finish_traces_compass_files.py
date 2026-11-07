@@ -26,8 +26,10 @@ def test_ft_1_a_tracked_compass_file_lands_with_one_finish(repo):
     assert result.returncode == 0, result.stdout + result.stderr
     committed = _git(repo, "show", "--name-only", "--format=", "HEAD")
     assert ".compass/config.yml" in committed, committed
+    # The record is committed with the fix (#356): the issue's own folder and
+    # the ignore file that keeps its per-checkout files out. Nothing else.
     assert ".compass/work/" not in committed.replace(
-        ".compass/work/fix-greeting/", ""), committed
+        ".compass/work/fix-greeting/", "").replace(".compass/work/.gitignore", ""), committed
 
 
 def test_ft_1_tracked_issue_state_stays_out(repo):

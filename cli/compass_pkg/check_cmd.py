@@ -576,6 +576,14 @@ def _emit_check(run, args):
         text, changed = frozen
         at = len(header) + len(policy)
         run.rows.insert(at, ("line" if changed else "note", "  " + text))
+    # An issue with a `trail.md` says whether it is out of date (#356). A line,
+    # not a row, so no verdict moves; no archived issue has the file.
+    from compass_pkg import trail
+    stale = trail.check_line(run.task, run.task_dir)
+    if stale:
+        text, out_of_date = stale
+        at = len(header) + len(policy) + (1 if frozen else 0)
+        run.rows.insert(at, ("line" if out_of_date else "note", "  " + text))
     if run.failures and not getattr(args, "no_count", False):
         compass_dir = os.path.dirname(os.path.dirname(
             os.path.normpath(run.task_dir)))

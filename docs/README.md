@@ -20,7 +20,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [refusal-codes.md](refusal-codes.md) - every reason the pre-tool hook can refuse with, generated.
 - [artifact-catalog.md](artifact-catalog.md) - the artifact catalog: the fields of a kind, the skeleton, the word limits, the documents that repeat, the documents per work unit and the table of shipped kinds.
 - `artifact-catalogue.md` - the old name of the artifact catalog page, kept until 9.0.0 so a link to it opens the new page.
-- [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.
+- [delivery-record.md](delivery-record.md) - the record mode, `trail.md` and `compass trail`, and `compass record`: the delivery record kept in its own repository.
 - [checkpoints.md](checkpoints.md) - checkpoint outcomes and the `checkpoint-approval` record: their shapes, the two commands that write them, the landing refusal, and where `compass issue diagnose` and the delivery record show them.
 - [release-line.md](release-line.md) - the release line each shipping issue records: the `release_note` key, the three commands that write it, the texts they refuse, when a landing refuses an issue with none, and where the line is shown.
 - [release-notes.md](release-notes.md) - `compass release notes --since <ref>`: which completed issues it lists against a git reference, the order, the two closing count lines, and what it never writes.
@@ -91,7 +91,7 @@ same commit.
 | `cli/compass_pkg/tdd.py`, `cli/compass_pkg/scenario_freeze.py`, `cli/compass_pkg/tdd_green.py`, `cli/compass_pkg/green_attempts.py`, `cli/compass_pkg/evidence_identity.py`, `cli/compass_pkg/evidence_sums.py` | `skills/evidence-gates/SKILL.md` |
 | `cli/compass_pkg/loop_ceilings.py` | `governance/routing-policy.md` |
 | `cli/compass_pkg/evidence_required.py`, `cli/compass_pkg/path_writer.py`, `tests/fixtures/compat/v8.0.4-governance.tgz`, `tests/test_path_writer.py`, `tests/test_quick_fix_path.py` | `governance/routing-policy.md` |
-| `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/record_mode.py`, `tests/test_record_mode.py` | `docs/delivery-record.md` |
+| `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/record_mode.py`, `cli/compass_pkg/trail.py`, `tests/test_record_mode.py` | `docs/delivery-record.md` |
 | `cli/compass_pkg/checkpoint_outcomes.py` | `docs/checkpoints.md` |
 | `cli/compass_pkg/issue_link.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `cli/compass_pkg/landing.py`, `tests/fake_gh.py` | `docs/github-links.md` |
 | `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |

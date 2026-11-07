@@ -506,6 +506,8 @@
   "tests/test_token_figures_stay_internal.py": 0.73,
   "tests/test_trace_checks_scenario_ids.py": 22.58,
   "tests/test_trace_rot_detection.py": 6.07,
+  "tests/test_trail_sections.py": 7.0,
+  "tests/test_trail_sha256sum.py": 8.0,
   "tests/test_tree_id_sees_a_same_second_edit.py": 0.19,
   "tests/test_triage_decisions_recorded.py": 0.01,
   "tests/test_trusted_rerun_command_aware.py": 1.27,

@@ -99,7 +99,7 @@ bound to a scenario writes `test`, the scenario's first declared test, which
 four-layer acceptance strategy applies, `outer-loop-attempts-recorded` fails
 an outer-loop green with no `attempts` or with one that is not a whole number
 of 1 or more. A green run again keeps the time of its first run in `first_timestamp` (ADR-088).
-Each record holds `file_sha256` and `file_modes`, the SHA-256 and git mode of each changed file and declared test; `evidence/SHA256SUMS` lists them and each record file for `sha256sum -c` (ADR-089).
+Each record holds `file_sha256` and `file_modes`, the SHA-256 and git mode of each changed file and declared test; `evidence/SHA256SUMS` lists them and each record file for `sha256sum -c` (ADR-089); `trail.md` writes its lines in the same form (`evidence_sums.sum_line`, `docs/delivery-record.md`).
 
 For the outer loop, a pytest setup error that names a missing module of the
 project is an import red, as a collection error is, and the record lists

@@ -63,6 +63,10 @@ def _line(digest, path):
     return "%s%s  %s\n" % (flag, digest, name)
 
 
+#: The public name of the sum line, which `trail.md` writes in the same form.
+sum_line = _line
+
+
 def _read(path):
     """`{path: digest}` from an existing sums file, or {}."""
     try:

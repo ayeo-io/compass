@@ -77,6 +77,7 @@ compass lesson remove      delete one lesson
 compass lesson decline     drop a pending proposal; its text stays in the file as a record
 compass record sync        copy the delivery record to its own repository (ADR-031)
 compass record restore     bring the delivery record back into this project
+compass trail              write the issue's trail.md, which a reviewer checks with sha256sum -c; --check exits 1 when it is out of date
 ```
 
 ## `compass flow`

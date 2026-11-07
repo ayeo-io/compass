@@ -539,6 +539,10 @@ run. On a path issue with a scenario freeze it also prints `Scenarios: frozen
 at the first red (sha256 <12 characters>)`, a notice and not a row, with "the
 spec has changed since" when the spec's digest differs from the frozen one
 (`scenario_freeze.check_line`, ADR-095); the default view shows it only then.
+On an issue that has a `trail.md` it prints `Trail: up to date`, or a line that
+says the file is out of date and names `compass trail`, when the file differs
+from what `compass trail` would write (`trail.check_line`, ADR-096). It is a
+line, not a row, and the default view shows it only when the file is out of date.
 Each generation commit writes the manifest's `policy:` block
 (`docs/generation-store.md`). `tests/test_check_set_content.py` checks the
 content of the set: the catalogue names, the stage-mode ranks, the references

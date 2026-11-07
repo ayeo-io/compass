@@ -29,6 +29,33 @@ Each issue's folder (`.compass/work/<slug>/`) is its record. The record mode dec
 
 In committed mode it also adds `delegations/`, `cache/`, `private/`, `current-task` and `interruptions.log` to `.compass/.gitignore`. A ship commit can hold both ignore files. Nothing stages the record yet: `compass ship-commit` lands as before in both modes.
 
+## The trail
+
+`compass trail --issue <slug>` writes `.compass/work/<slug>/trail.md`, one file a reviewer checks with `sha256sum -c` and without Compass (#356, ADR-096). It has six sections, in this order:
+
+1. Who asked: the request link and the requester. The session records the requester as a claim; Compass does not check it.
+2. What was agreed: the scenarios, the freeze at the first red, and the scenario sign-off where the issue owes one.
+3. Red, for each scenario: each red record, or "no red on record".
+4. Green: each green record, then the files as the newest green tested them.
+5. Who approved, and by what authority: each approval record, each withdrawal and waiver, and when the ship approval is due if it is not on record.
+6. What shipped: the landing, the pull request and the release line.
+
+Under each statement are lines in `sha256sum` format, `<64 hex>  <path>`, with each path relative to the repository root. A statement with no evidence says so and has no sum line. From the repository root:
+
+```
+grep -E '^[0-9a-f]{64}  ' .compass/work/<slug>/trail.md | sha256sum -c -
+```
+
+The `-` makes the macOS `sha256sum` read the standard input; `shasum -a 256 -c` reads the same lines. Plain `sha256sum -c .compass/work/<slug>/trail.md` passes too, with a warning about the prose lines.
+
+- Section 4 names each code and test file with the digest from the newest green record's `file_sha256`, not from the disk, so the check proves the committed code is the code that was tested. That line holds at the commit that holds this version of `trail.md`; a later change to the same file makes it fail at a later commit.
+- The same record gives the same bytes. The file holds no time of its own writing, and a landing whose record is committed with the code (`landed_with_record`) names how to find its commit in git, not a commit id.
+- Not hashed: `trail.md` itself, the red-time digests of the tests (they stay in the hashed red record), the files `.compass/work/.gitignore` keeps out, a delegation's `sha256` (a digest of canonical JSON, shown as text) and commit ids (git checks them).
+- `compass trail --check` writes nothing. It exits 1 and names the first line that differs when the file is missing or out of date, and 0 when it matches. A command that writes the manifest after `trail.md` makes it out of date. `compass check` prints `Trail: up to date`, or that it is out of date, on an issue that has the file.
+- A spike ships no code, so `compass trail` refuses it and writes nothing.
+- The trail only reads records. It writes no approval, and the requester is never shown as one.
+- `compass ship-commit` does not write the trail yet.
+
 ## Setting it up
 
 Name the repository and the paths it holds in `compass.yml` at the project root, or in `.compass/config.yml` for a project that has no `compass.yml` (the CLI reads one file, `compass.yml` first):
@@ -82,5 +109,6 @@ One record repository serves one project. The clone lives in the user's cache fo
 |---|---|
 | `cli/compass_pkg/record.py` | `sync`, `restore`, and the settings. |
 | `cli/compass_pkg/record_mode.py` | The record mode, the ignore lines and the helper that appends them. |
+| `cli/compass_pkg/trail.py` | `compass trail`: writes and checks `trail.md`. |
 | `cli/compass_pkg/init_cmd.py` | `compass init` writes the ignore files. |
 | `cli/compass_pkg/manifest.py` | `ship-commit` runs the sync after a landing. |

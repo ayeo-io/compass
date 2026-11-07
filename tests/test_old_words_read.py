@@ -306,7 +306,7 @@ def test_vr_d9_every_manifest_writer_goes_through_the_one_write_path():
     write old words with no backup and no notice."""
     package = ROOT / "cli" / "compass_pkg"
     needs = {"core.py": "def save_manifest", "generation.py": "atomic_write_text(path",
-             "migrate.py": "safe_dump(migrated"}
+             "migrate.py": "manifest_store.dump(migrated"}
     for name, marker in needs.items():
         text = (package / name).read_text(encoding="utf-8")
         assert marker in text, f"{name} no longer has {marker}"

@@ -840,6 +840,9 @@ def test_d2_repairs_change_only_retired_names():
     it gained the section "A deleted check", with the three settings and
     waivers that make `compass check` refuse.
 
+    The fix that writes manifests with no YAML anchors (024f2497) added one
+    bullet to `docs/safety-contract.md` (list_items 133 -> 134).
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

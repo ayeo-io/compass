@@ -5,7 +5,7 @@
   },
   "code, session ../x": {
     "exit": 2,
-    "stderr": "Blocked: edit to <root>/src/app.py (tool: Edit)\nWhy: the acceptance-before-code guardrail blocks this: define: thorough is set but manifest.yml has no scenarios.\nFix: add the scenarios to acceptance-criteria.md and manifest.yml (compass scenario add), or run /compass:assess --reassess if this is exploratory. [no-acceptance-criteria]\n"
+    "stderr": "Blocked: edit to <root>/src/app.py (tool: Edit)\nWhy: the acceptance-before-code guardrail blocks this: define: thorough is set but manifest.yml has no scenarios.\nFix: add the first scenario to acceptance-criteria.md with compass scenario add TRC-001 --issue a --intent \"<one sentence>\", or run /compass:assess --reassess if this is exploratory. [no-acceptance-criteria]\n"
   },
   "document, session None": {
     "exit": 0,
@@ -13,6 +13,6 @@
   },
   "code, session None": {
     "exit": 2,
-    "stderr": "Blocked: edit to <root>/src/app.py (tool: Edit)\nWhy: the acceptance-before-code guardrail blocks this: define: thorough is set but manifest.yml has no scenarios.\nFix: add the scenarios to acceptance-criteria.md and manifest.yml (compass scenario add), or run /compass:assess --reassess if this is exploratory. [no-acceptance-criteria]\n"
+    "stderr": "Blocked: edit to <root>/src/app.py (tool: Edit)\nWhy: the acceptance-before-code guardrail blocks this: define: thorough is set but manifest.yml has no scenarios.\nFix: add the first scenario to acceptance-criteria.md with compass scenario add TRC-001 --issue a --intent \"<one sentence>\", or run /compass:assess --reassess if this is exploratory. [no-acceptance-criteria]\n"
   }
 }

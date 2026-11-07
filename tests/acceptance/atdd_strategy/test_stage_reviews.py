@@ -370,7 +370,10 @@ def test_trc_d9(tmp_path):
     assert code == 2, out + err
     flat = " ".join(err.split())
     assert "ship is listed in checkpoints with no outcome recorded" in flat, err
-    assert "compass evidence approve --checkpoint ship" in flat, err
+    # Commit 1608539a (ADR-097 decision 5): the fix line asks the person
+    # for an answer and stops; it no longer tells an agent to approve.
+    assert "compass evidence request --checkpoint ship --issue " + SLUG in flat, err
+    assert "/compass:approve" in flat, err
     assert "land_timestamp" not in issue.manifest()
 
 

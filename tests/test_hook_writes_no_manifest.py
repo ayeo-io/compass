@@ -29,7 +29,11 @@ import compass_pkg  # noqa: E402,F401 - puts the bundled PyYAML first
 import test_issue_dependencies as dbi  # noqa: E402
 
 HOOK = ROOT / "hooks" / "pre-tool.sh"
-#: The hook's judgements captured when it still recorded sessions.
+#: The hook's judgements captured when it still recorded sessions. The
+#: exit codes and the "Why:" lines are as captured. The "Fix:" line of the
+#: no-acceptance-criteria refusal was re-captured after commits 1608539a
+#: and 3556530d (ADR-097 decision 5): each refusal fix line now names the
+#: exact command, here `compass scenario add`.
 BASE = HERE / "fixtures" / "autonomy-ratio-and-cost" / "base-hook-judgements.json"
 LOCK = ".manifest.lock"
 

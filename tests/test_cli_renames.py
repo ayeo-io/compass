@@ -180,7 +180,10 @@ RETIRED_SPELLINGS = [
     r"compass approach summary", r"compass approach diagram",
     r"compass policy effective", r"compass policy review-rules",
     r"compass issue set-status", r"compass issue refresh-spec",
-    r"compass issue migrate-config", r"compass migrate(?![\w-])",
+    # `compass migrate` is not here: #359 gives the name to the 9.0.0 upgrade
+    # verb (plan open question 18). The 6.x verb of that name is `compass issue
+    # migrate`, and its alias ended at 7.0.0.
+    r"compass issue migrate-config",
     r"compass issue subtask update",
     r"compass issue dashboard",
     r"compass issue artifact(?![\w-]| set)",
@@ -317,7 +320,9 @@ def test_vr_e4_group_help_lists_new_verbs_and_no_alias(tmp_path):
     p = _project(tmp_path / "p")
     top = _choices([], p)
     assert {"review-rule"} <= top and "spec" not in top
-    assert "migrate" not in top
+    # #359: the top-level `migrate` is the 9.0.0 upgrade verb, not the 6.x
+    # spelling of `issue migrate`, whose alias ended at 7.0.0.
+    assert "migrate" in top
     assert {"show", "render", "evaluate"} == _choices(["approach"], p)
     issue = _choices(["issue"], p)
     assert {"status", "migrate"} <= issue
@@ -441,6 +446,7 @@ EXCEPTIONS = {
     "tdd-green": "the green step, paired with tdd-red",
     "ship-commit": "the commit step inside shipping; named in the contract and the ship command",
     "terminology": "prints the vocabulary; a noun that is its own command",
+    "migrate": "moves a whole 8.x project to 9.0.0, so it belongs to no group; the #359 plan names it (open question 18)",
     "trail": "writes or checks the issue's trail.md; a noun that is its own command, which ADR-096 decision 19 names (#356)",
     "release notes": "prints the release lines since a ref; the spelling the requirement that added it names",
     "approach evaluate": "applies the routing policy; the determinism boundary is named by this verb in the contract",

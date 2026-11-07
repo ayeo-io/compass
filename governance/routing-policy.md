@@ -497,6 +497,11 @@ A delivery assessment writes these keys:
 
 It writes no `stages:`, `subtask_ceiling:`, `max_worktrees:` or
 `orchestration:` key, and removes them from a manifest that had them.
+`compass migrate` (#359) runs the same write on an 8.x issue and passes
+`keep`, so the keys removed go under the manifest's `legacy:` key instead
+(`docs/upgrade-9-0-0.md`). `compass approach evaluate --write` passes none.
+It does not ask for a justification of an assessed value, because it writes
+the assessment the issue already holds.
 
 - **The checkpoints.** `controlled` lists `assess` and `specify`, and `build`
   and `ship` where `S17` applies (they end its stage 2 and 3 reviews).

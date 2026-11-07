@@ -134,6 +134,9 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # verb, not a group: it is a noun that is its
                                   # own command. `compass record commit` (#356)
                                   # is under the `record` group, not top level.
+    "migrate",                    # #359: `compass migrate [--apply]` moves an
+                                  # 8.x project's open issues to 9.0.0. A verb,
+                                  # not a group: one run moves the project.
 }
 
 

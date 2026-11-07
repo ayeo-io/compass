@@ -766,7 +766,11 @@ def cmd_route_evaluate(args):
         from compass_pkg import justifications
         recorded_reasons, missing = justifications.merge(
             task, readings, justifications.parse(getattr(args, "justify", None)), view)
-        if missing:
+        # `compass migrate` (#359) writes the assessment the 8.x issue already
+        # holds: no value is new or changed by a person, so none owes a line. An
+        # 8.x manifest written before `evaluated_assessment` would otherwise read
+        # every value as new.
+        if missing and getattr(args, "migration", None) is None:
             raise CompassError(justifications.refusal(missing))
     # The drift report compares a project's copy of the policy with the
     # framework's. A configuration resolved over such a copy still gets it.
@@ -1055,17 +1059,21 @@ def cmd_route_evaluate(args):
         # wrote stays as it is: nothing reads it but the path of an older spec.
         # make sure the evidence registry exists at the top level
         task.setdefault("evidence", [])
-        # Assess never records an orchestration: breakdown owns it, once the
-        # distribution map says whether independent subtasks exist.
-        task.pop("orchestration", None)
+        # Assess never records an orchestration: `path_writer.write` and the
+        # spike branch below each take it out. `compass migrate` (#359) passes a
+        # `migration` that keeps each key taken out under `legacy:`.
+        migration = getattr(args, "migration", None)
+        kept = None if migration is None else migration.kept
         if path is not None:
-            path_writer.write(task, path)
+            path_writer.write(task, path, keep=kept)
         else:
             # A re-assess that turns a delivery issue into a spike takes it off
             # the path, so no reader takes the spike for a path issue. A spike
             # writes no subtask ceiling either (ADR-092 decision 11).
             task.pop("evidence_required", None)
             for key in path_writer.NOT_WRITTEN:
+                if kept is not None and key in task:
+                    kept[key] = task[key]
                 task.pop(key, None)
         # The manifest is replaced inside the commit, after the generation's
         # files are whole (ADR-036). A configuration that does not resolve
@@ -1094,6 +1102,12 @@ def cmd_route_evaluate(args):
             # both are the same number when nothing was committed.
             if reframed or unchanged:
                 mapping["reassessments"][-1]["generation"] = {"from": old, "to": new}
+        # `compass migrate` adds the 8.x records it keeps, in the same write. Its
+        # dry run stops here, so nothing is written (#359).
+        if migration is not None:
+            migration.before_commit(task)
+            if not migration.apply:
+                return 0
         # The accepted-type comments are written in the same replace, under the lock.
         committed = effective.commit_generation(
             task_dir, task, None, annotate_gate_accepts_text, stamp=stamp,

@@ -289,6 +289,8 @@
   "tests/test_migrate_artifact_status.py": 7.62,
   "tests/test_migrate_config.py": 48.71,
   "tests/test_migrate_copy_check_project.py": 0.15,
+  "tests/test_migrate_issue.py": 22.0,
+  "tests/test_migrate_keeps_evidence.py": 11.0,
   "tests/test_migrate_keeps_mapping.py": 0.43,
   "tests/test_migrate_keeps_one_unit_map.py": 0.53,
   "tests/test_migrate_map_parsed_once.py": 0.04,

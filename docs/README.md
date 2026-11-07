@@ -35,6 +35,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 9.0.0, and why there is no supported rollback.
 - [upgrade-7-0-0.md](upgrade-7-0-0.md) - what 7.0.0 changes and what to do about it, one section per change.
 - [upgrade-8-0-0.md](upgrade-8-0-0.md) - what 8.0.0 changes about delegation, and what breaks: the flag form, `--issue` on a delegated approval and the common store.
+- [upgrade-9-0-0.md](upgrade-9-0-0.md) - how to move an 8.x project to 9.0.0 and keep its evidence: `compass migrate` on the open issues.
 - [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it, and the five tighten-only settings that add to the check set.
 - [waivers.md](waivers.md) - a waiver of one check on one issue: how to ask for one, how a person approves it and what `compass check` then shows.
 - [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show`: the settings lint of `compass.yml`, the legacy lint of a governance copy, the finding codes and both JSON shapes.
@@ -104,6 +105,7 @@ same commit.
 | `cli/compass_pkg/ship_approval.py` | `governance/guardrails.md` |
 | `cli/compass_pkg/request_link.py` | `governance/guardrails.md` (the check), `docs/github-links.md` (the flags) |
 | `cli/compass_pkg/migrate.py`, `cli/compass_pkg/migrate_kinds.py`, `cli/compass_pkg/migrate_copy_check.py` | `architecture/decisions/ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md`, `docs/upgrade-7-0-0.md` |
+| `cli/compass_pkg/migrate_9.py`, `tests/migrate_9_helpers.py`, `tests/test_migrate_issue.py`, `tests/test_migrate_keeps_evidence.py` | `docs/upgrade-9-0-0.md` |
 | `cli/compass_pkg/parse_cache.py` | `architecture/decisions/ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md`, widened by `architecture/decisions/ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md` |
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |
 | `cli/compass_pkg/flow.py` | `docs/cli.md` |

@@ -1431,6 +1431,10 @@
       },
       "description": "Optional. The repository's readiness when the issue was last assessed, from the per-checkout readiness record (ADR-060). `measured` holds the score, the number of readiness signals, floor_met, the absent signal ids and measured_at; `not-measured` holds a reason of missing, stale or unreadable and a detail. Written by `compass approach evaluate --write` from 7.0.0 to 8.x; it is not part of the generation. Since 9.0.0 (ADR-093) nothing writes or reads it, and it stays valid so an older manifest still loads. Absent on an issue assessed before 7.0.0 or from 9.0.0."
     },
+    "legacy": {
+      "type": "object",
+      "description": "The 8.x record of an issue `compass migrate` moved onto the four-stage path (#359): the keys the path writer drops (`stages`, `subtask_ceiling`, `orchestration`, `max_worktrees`), the records no 9.0.0 reader of a path issue uses (`subtasks`, `models`, `page_ticks`, `readiness`), each document entry other than the acceptance criteria (`documents`), the status fields of the acceptance-criteria entry by its id (`artifact_status`), and each legacy stage value rewritten to its path stage, by where it was (`stage_values`). No check and no path reader reads it."
+    },
     "models": {
       "type": "object",
       "description": "Written before 9.0.0 and not read from 9.0.0 (ADR-090): the model tier of each seat whose stage ran, from the routing policy's model_rules.",

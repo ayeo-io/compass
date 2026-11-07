@@ -193,9 +193,14 @@ def shown(legacy, path):
     return out
 
 
-def write(task, path):
+def write(task, path, keep=None):
     """Put the path keys in the manifest and take out the keys of the legacy
-    stages. The gates keep the state of any gate the issue already held."""
+    stages. The gates keep the state of any gate the issue already held.
+
+    With `keep`, a mapping, each key of `LEGACY_ONLY` the manifest held is
+    copied into it before it is taken out, so `compass migrate` can keep the
+    8.x record under `legacy:` (#359). `approach evaluate --write` passes
+    none, so what it writes does not change."""
     for key in ("delivery_approach", "evidence_required", "checkpoints",
                 "policy_rules_fired"):
         task[key] = path[key]
@@ -205,6 +210,8 @@ def write(task, path):
     task["gates"] = [existing.get(gid, {"id": gid, "status": "pending", "evidence": []})
                      for gid in path["gates"]]
     for key in LEGACY_ONLY:
+        if keep is not None and key in task:
+            keep[key] = task[key]
         task.pop(key, None)
 
 

@@ -284,6 +284,24 @@ REFUSALS: dict[str, dict[str, str]] = {
         "why": "it starts with #, so the release notes would print it as a heading.",
         "fix": "run {verb} again with --release-note \"<plain text>\".",
     },
+    # The project refusals of `compass migrate` (migrate_9._refuse_project, #359).
+    # 9.0.0 reads neither a copied governance folder nor a git parent, so the
+    # project moves on 8.x first, or by an edit of compass.yml.
+    "governance-copy-removed": {
+        "what": "{verb} in this project",
+        "why": "governance/ holds copies of the two governance files and there is no "
+               "compass.yml. Compass 9.0.0 does not read copied governance.",
+        "fix": "on Compass 8.x, run compass policy migrate to write compass.yml, then run "
+               "compass migrate again. docs/upgrade-9-0-0.md lists the steps.",
+    },
+    "git-parent-removed": {
+        "what": "{verb} in this project",
+        "why": "compass.yml extends the git parent {parent}, and Compass 9.0.0 removed "
+               "git parents.",
+        "fix": "move the checks the parent adds into compass.yml (signoff_labels, "
+               "require_evidence, agent_review, project_checks), delete extends:, then "
+               "run compass migrate again.",
+    },
     # A Bash command too long for the pre-tool hook to scan before Claude Code
     # stops it (hooks/pre-tool.sh holds the limit). The refusal never quotes the
     # command: it can hold a secret.

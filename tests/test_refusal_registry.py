@@ -106,6 +106,11 @@ FIXTURES = {
     "names-deleted-check": dict(slug="a" * 40,
                                 named=" ".join(f"word{i}" for i in range(20)),
                                 fix=" ".join(f"step{i}" for i in range(20))),
+    # `compass migrate` (#359). A long git parent, so the 60-word cap is checked
+    # where it is tightest.
+    "governance-copy-removed": dict(verb="compass migrate"),
+    "git-parent-removed": dict(verb="compass migrate",
+                               parent="github:" + "o" * 39 + "/" + "p" * 60 + "@v1.2.3"),
     # Six-digit size, as the longest form of the length refusal.
     "bash-command-too-long": dict(size="240000", limit="98304"),
     # The longest form of the complexity refusal: a count and its limit.

@@ -44,6 +44,10 @@ NO_COMMAND = {
     "config-invalid": "an edit of the file clears it; compass policy lint does not "
                       "check every fault the reader finds",
     "delegation-protected": "only the person can create or revoke a delegation",
+    # #359: `compass policy migrate` runs only on Compass 8.x, and an edit of
+    # compass.yml clears a git parent; `compass migrate` comes after either.
+    "git-parent-removed": "an edit of compass.yml clears it",
+    "governance-copy-removed": "only Compass 8.x clears it, with compass policy migrate",
     "pr-review-protected": "only another person can approve the pull request",
     "python-missing": "installing Python clears it",
     "reader-failed": "repairing the install clears it",

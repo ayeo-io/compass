@@ -378,6 +378,7 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         "isolation", "layering",
         "waiver",  # one-check waivers (#357, ADR-094 decision 8): `waiver add|withdraw`
         "trail",  # the issue record ships with the code (#356, ADR-096 decision 19)
+        "migrate",  # #359: `compass migrate` moves an 8.x project's open issues to 9.0.0
     }
     line = next(l for l in result.stdout.splitlines() if l.strip().startswith("{"))
     verbs = set(line.strip().strip("{}").split(","))

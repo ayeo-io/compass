@@ -5,8 +5,10 @@ of `compass ship-commit` and `compass quick-fix finish` (`checkpoint-no-outcome`
 `release-line-missing` and `release-line-heading`, which `docs/release-line.md`
 describes, and `definition-of-done-open`, which only `compass ship-commit`
 gives), the refusal of `compass tdd-red` before the scenario sign-off
-(`scenarios-not-approved`), and the refusal of `compass check` when a setting or
-an open waiver names a deleted check (`names-deleted-check`), generated from `cli/compass_pkg/refusals.py` by
+(`scenarios-not-approved`), the refusal of `compass check` when a setting or
+an open waiver names a deleted check (`names-deleted-check`), and the project
+refusals of `compass migrate` (`governance-copy-removed` and
+`git-parent-removed`), generated from `cli/compass_pkg/refusals.py` by
 `compass _refusal --list`. Do not hand-edit the list below - regenerate it after any change to the registry, and
 `tests/test_refusal_registry.py` fails the build if it is out of date.
 
@@ -108,6 +110,18 @@ reason code and are not in the generated list.
 **Blocked:** {target} (tool: {tool})
 **Why:** a delegation is a person's decision, and its folder holds the check for its confirmation code.
 **Fix:** do not read or write these files; the person types /compass:delegate or /compass:revoke.
+
+### `git-parent-removed`
+
+**Blocked:** {verb} in this project
+**Why:** compass.yml extends the git parent {parent}, and Compass 9.0.0 removed git parents.
+**Fix:** move the checks the parent adds into compass.yml (signoff_labels, require_evidence, agent_review, project_checks), delete extends:, then run compass migrate again.
+
+### `governance-copy-removed`
+
+**Blocked:** {verb} in this project
+**Why:** governance/ holds copies of the two governance files and there is no compass.yml. Compass 9.0.0 does not read copied governance.
+**Fix:** on Compass 8.x, run compass policy migrate to write compass.yml, then run compass migrate again. docs/upgrade-9-0-0.md lists the steps.
 
 ### `names-deleted-check`
 

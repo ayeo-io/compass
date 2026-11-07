@@ -12,12 +12,14 @@ can only add to the set, with the tighten-only settings of its `compass.yml`
 can omit a shipped guardrail, and `compass check` reports the omission. That
 project keeps running on its copy until #359.
 
-**This document explains; `guardrails.yml` enforces.** The companion
-`governance/guardrails.yml` is the machine-readable authority for *how each
+**This document explains; the check set enforces.** The check set,
+`governance/check-set.yml`, is the machine-readable authority for *how each
 guardrail is checked* - it names the mechanical check behind every guardrail,
 and `compass check` runs those checks against an issue's `manifest.yml` and
 `evidence/`. Where this prose and that file could be read to differ on a
-mechanical detail, `guardrails.yml` wins.
+mechanical detail, the check set wins. `governance/guardrails.yml` is the
+frozen 8.x view, read only for a project that copied the governance files
+(see "The fixed check set" below).
 
 ---
 
@@ -190,8 +192,8 @@ _(none yet - the shipped default guardrails apply as-is)_
 
 ## How guardrails are enforced
 
-- **`compass check`** runs the checks each guardrail names in `guardrails.yml`
-  against the issue's `manifest.yml` and `evidence/`, and reports pass or fail
+- **`compass check`** runs the checks each guardrail names in the issue's
+  policy (the check set, or the issue's stored generation) against the issue's `manifest.yml` and `evidence/`, and reports pass or fail
   with specifics. It also fails an issue whose `assessment:` holds a key
   `schemas/manifest.schema.json` does not allow, which the release's `issue
   lint` would refuse. A check with nothing to inspect, such as a BDD check
@@ -211,9 +213,9 @@ _(none yet - the shipped default guardrails apply as-is)_
   --pr`, which moves `land_commit` to the merge commit. It is in no gate and no
   configuration, and it never fails the run (`docs/github-links.md`).
 - **`nfr-rows-resolved`** is a blocking check that reads the spec's
-  Non-functional requirements table. It is unlocked, has `on_skipped:
-  not-applicable`, and sits in no gate and no stage list, so no locked
-  guardrail changes and an issue waiver can make it advisory. `compass check`
+  Non-functional requirements table. It has `on_skipped: not-applicable`
+  and sits in no gate and no stage list, so no guardrail changes and an
+  approved waiver can excuse it on one issue. `compass check`
   runs it after the gate loop through `outside_gate.judged`. ADR-064 holds the
   decision.
   - A row for each of seven concerns (performance, capacity, compatibility,
@@ -242,9 +244,9 @@ _(none yet - the shipped default guardrails apply as-is)_
   9.0.0 no longer keeps. A stored generation that still declares one reports it
   as nothing to check.
 - **`acceptance-applicability-agrees`** is the advisory check of the four-layer
-  acceptance strategy (`S17`, in `strategies.md`). It is unlocked, declares
-  `severity: advisory` and `on_skipped: not-applicable`, and sits in no gate,
-  no lock and not in the spike's checks. `compass check` runs it after the
+  acceptance strategy (`S17`, in `strategies.md`). It declares
+  `severity: advisory` and `on_skipped: not-applicable`, and sits in no gate
+  and not in the spike's checks. `compass check` runs it after the
   design-size check, through `outside_gate.judged`, and labels its row "four-layer
   acceptance strategy (`S17`)". The rules it applies are in
   `cli/compass_pkg/acceptance_strategy.py`.
@@ -271,9 +273,9 @@ _(none yet - the shipped default guardrails apply as-is)_
     issue reads the configuration stored with the issue and does not refuse
     it.
 - **`outer-loop-recorded`** is the outer-loop check of the four-layer
-  acceptance strategy (`S17`, ADR-080). It is unlocked, declares `severity:
-  blocking` and `on_skipped: not-applicable`, and sits in no gate, no lock and
-  not in the spike's checks. `compass check` runs it after
+  acceptance strategy (`S17`, ADR-080). It declares `severity: blocking` and
+  `on_skipped: not-applicable`, and sits in no gate and not in the spike's
+  checks. `compass check` runs it after
   `acceptance-applicability-agrees` and labels its row the same way. The
   rules it applies are in `cli/compass_pkg/outer_loop.py`.
   - It reads the `loop` field that `compass tdd-red --loop outer|inner` and
@@ -304,9 +306,9 @@ _(none yet - the shipped default guardrails apply as-is)_
     holds the rules.
   - It judges the issue, not each scenario. `suite-passed` does not change.
 - **`acceptance-support-present`** is the support-code check of the
-  four-layer acceptance strategy (`S17`). It is unlocked, declares `severity:
-  advisory` and `on_skipped: not-applicable`, and sits in no gate, no lock and
-  not in the spike's checks. `compass check` runs it after
+  four-layer acceptance strategy (`S17`). It declares `severity: advisory`
+  and `on_skipped: not-applicable`, and sits in no gate and not in the
+  spike's checks. `compass check` runs it after
   `outer-loop-recorded` and labels its row the same way. The rules it applies
   are in `cli/compass_pkg/support_code.py`.
   - It asks `acceptance_strategy.in_scope` whether the strategy applies, and
@@ -327,9 +329,9 @@ _(none yet - the shipped default guardrails apply as-is)_
     work.
   - The advice never makes `compass check` exit 1.
 - **`outer-loop-attempts-recorded`** is the `attempts` check of the four-layer
-  acceptance strategy (`S17`, ADR-084). It is unlocked, declares `severity:
-  blocking` and `on_skipped: not-applicable`, and sits in no gate, no lock and
-  not in the spike's checks. `compass check` runs it after
+  acceptance strategy (`S17`, ADR-084). It declares `severity: blocking` and
+  `on_skipped: not-applicable`, and sits in no gate and not in the spike's
+  checks. `compass check` runs it after
   `outer-loop-recorded` and labels its row the same way. The rules it applies
   are in `cli/compass_pkg/outer_loop.py`.
   - On an in-scope issue it fails each registered outer-loop green with no
@@ -338,12 +340,12 @@ _(none yet - the shipped default guardrails apply as-is)_
   - It declines with "not required: the strategy does not apply" when
     `acceptance_strategy.in_scope` says so, and when no outer-loop green is
     registered, which `outer-loop-recorded` reports.
-  - An inner-loop green needs no `attempts`. `no-trusted-rerun` is locked and
-    does not change: it still passes a record with no `attempts`.
+  - An inner-loop green needs no `attempts`. `no-trusted-rerun` does not
+    change: it still passes a record with no `attempts`.
 - **`isolation-proven`** is the isolation check of the four-layer acceptance
-  strategy (`S17`, ADR-086). It is unlocked, declares `severity: blocking`
-  and `on_skipped: not-applicable`, and sits in no gate, no lock and not in
-  the spike's checks. `compass check` runs it after
+  strategy (`S17`, ADR-086). It declares `severity: blocking` and
+  `on_skipped: not-applicable`, and sits in no gate and not in the spike's
+  checks. `compass check` runs it after
   `outer-loop-attempts-recorded` and labels its row the same way. The rules
   it applies are in `cli/compass_pkg/isolation.py`.
   - It reads the `isolation-proof` record that `compass isolation record`
@@ -363,9 +365,9 @@ _(none yet - the shipped default guardrails apply as-is)_
     the routing `existing-dsl` (a small, contained change). The row lists a record the
     issue holds, with its result, and the result judges nothing.
 - **`layering-test-passed`** is the layering check of the four-layer
-  acceptance strategy (`S17`, ADR-086). It is unlocked, declares `severity:
-  blocking` and `on_skipped: not-applicable`, and sits in no gate, no lock and
-  not in the spike's checks. `compass check` runs it after `isolation-proven`
+  acceptance strategy (`S17`, ADR-086). It declares `severity: blocking` and
+  `on_skipped: not-applicable`, and sits in no gate and not in the spike's
+  checks. `compass check` runs it after `isolation-proven`
   and labels its row the same way. The rules it applies are in
   `cli/compass_pkg/layering.py`.
   - It reads the `layering` record that `compass layering record` writes from
@@ -381,10 +383,11 @@ _(none yet - the shipped default guardrails apply as-is)_
   - It declines with "not required" when the strategy does not apply and on
     the routings `existing-dsl` and `existing-dsl-isolation` (a small, contained
     change and a live defect), and lists a record the issue holds, with its result.
-  - A project waiver, or an issue waiver approved by the project's owner, can
-    make it or `isolation-proven` advisory. `compass check` names each issue
-    waiver of one of the strategy's checks, with its reason and whether it is
-    approved.
+  - An approved waiver can excuse it or `isolation-proven` on one issue, as
+    for any check (see "A waived check" below). On an issue assessed before
+    9.0.0, `compass check` also names each 8.x waiver of one of the
+    strategy's checks that the issue's `config:` holds, with its reason and
+    whether the issue's generation approved it.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart
@@ -401,19 +404,23 @@ _(none yet - the shipped default guardrails apply as-is)_
 - **The review at the `verify` stage**, run in the issue's own session (ADR-090), for the
   parts that remain judgement. Each is recorded with its evidence (`compass evidence add`).
 - **`compass approach evaluate`** at Assess applies the routing rules
-  deterministically - see `routing-policy.md` and `routing-policy.yml`.
+  deterministically - see `routing-policy.md` and the `rules:` of the check
+  set.
 
 A guardrail with no way to produce evidence is not a guardrail yet - it is a
 strategy that has not been made checkable. If you cannot give it a named check
-in `guardrails.yml`, it belongs in `strategies.md`.
+in the check set, it belongs in `strategies.md`.
 
 **The integrity rule - a declared check must be implemented.**
 
-- `compass policy lint` rejects a guardrail referencing a check the CLI does
-  not implement.
+- `compass policy lint` rejects a check, in the check set with the
+  project's tighten-only settings applied, that names an implementation the
+  CLI does not hold.
 - `compass check` fails, rather than warns, if it meets one at run time.
-- Adding a project guardrail with a new check means adding that check's
-  implementation to the CLI (`CHECK_FNS`) in the same change.
+- A project adds a check of its own only as a `project_checks` setting, which
+  runs the implementation `command-passes`. A new kind of check means adding
+  its implementation to the CLI (`CHECK_FNS`) and the check to the check set
+  in the same change.
 
 Why it is enforced rather than warned about:
 `governance/strategies-rationale.md`, under "The integrity rule".

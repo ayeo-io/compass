@@ -483,6 +483,7 @@ INHERITS_ENVIRONMENT = {
     ("cli/compass_pkg/ci_cmd.py", "_landed_before"): (1, _GIT),
     ("cli/compass_pkg/approvals.py", "_head"): (1, _GIT),
     ("cli/compass_pkg/binding.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/record_mode.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/checks.py", "_git_out"): (1, _GIT),
     ("cli/compass_pkg/checks.py", "_check_command_passes"): (1, _PROJECT),
     ("cli/compass_pkg/decisions.py", "_git"): (1, _GIT),

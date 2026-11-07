@@ -326,6 +326,7 @@ EXPECTED_SUBCOMMANDS = {
     "waiver",                     # add|withdraw - one-check waivers (#357, ADR-094 decision 8)
     "trail",                      # write or --check the issue's trail.md (#356, ADR-096);
                                   # `record commit` (#356) is a sub-verb of `record`
+    "migrate",                    # move an 8.x project to 9.0.0 (#359, ADR-098)
 }
 
 

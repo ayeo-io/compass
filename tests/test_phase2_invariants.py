@@ -166,6 +166,9 @@ EXPECTED_SUBCOMMANDS = {
     # no guardrail or gate. `compass record commit` (#356) is a sub-verb of
     # the existing `record` group, so it adds no top-level verb.
     "trail",
+    # #359 (ADR-098): `compass migrate` moves an 8.x project to 9.0.0. It adds
+    # no guardrail, gate or check.
+    "migrate",
 }
 # Role left the assessment at 7.0.0 (ADR-070); nothing took its place.
 EXPECTED_READING_KEYS = {

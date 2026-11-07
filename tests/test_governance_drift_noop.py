@@ -220,6 +220,9 @@ EXPECTED_SUBCOMMANDS = {
     # "board" (compass-board, ADR-046): ADR-093 removed the delivery board page.
     # "readiness" (ADR-061): ADR-093 removed the readiness measure.
     "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
+    # #359 (ADR-098): `compass migrate` moves an 8.x project to 9.0.0; it adds
+    # no guardrail, gate or check.
+    "migrate",
     # isolation-and-layering (#328, ADR-086): `isolation record` and `layering
     # record`, the two strategy records only their commands write. GROUPS, so a
     # later record verb has a home.

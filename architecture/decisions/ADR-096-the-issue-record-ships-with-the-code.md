@@ -91,7 +91,7 @@ No archived issue may change its `compass check` verdict. None of the 622 archiv
    | 5. Who approved, and by what authority | each approval record: approver, role, time, record id, and how it was given (terminal, `/compass:approve`, a delegation, or a pull request review) | `manifest.yml` |
    | 6. What shipped | the landing, the pull request, the merge commit and the release line | `manifest.yml`, `evidence/SHA256SUMS` |
 
-   A sum line is `<64 hex>  <path>`, with the path relative to the repository root. A statement with no evidence says so and has no sum line. From the repository root, `grep -E '^[0-9a-f]{64}  ' <trail> | sha256sum -c` checks it, and plain `sha256sum -c <trail>` passes with a warning about the prose lines. `shasum -a 256 -c` reads the same lines.
+   A sum line is `<64 hex>  <path>`, with the path relative to the repository root. A statement with no evidence says so and has no sum line. From the repository root, `grep -E '^[0-9a-f]{64}  ' <trail> | sha256sum -c -` checks it. The `-` is needed: the macOS `sha256sum` reads the standard input only with it. Plain `sha256sum -c <trail>` passes with a warning about the prose lines, and `shasum -a 256 -c` reads the same lines.
 
    `compass ship-commit`, `compass issue link set --pr`, `compass record commit` and `compass trail` write it. `compass trail --check` writes nothing and exits 1 when the file differs from what `compass trail` would write. `compass check` prints one line, not a row, when the file is out of date.
 
@@ -124,6 +124,28 @@ Method: for each case, a scratch git project with the case's `compass.yml`, a pa
 In every case the `complete` marker's digest of `resolved.yml` equalled `policy.resolved`.
 
 The two differences have one cause. `effective.resolve_live` passes the project's `autonomy` to `check_set.resolved`, and `resolved.yml` holds it, but the `policy:` block does not record it. With the recorded value the rebuild matches. So question 6 goes to the rebuild, and the block gains `autonomy` (decision 5). The generation folder is not committed.
+
+## As built
+
+#356 was built in ten steps on `v9`, from commit 4e2a80dc (this record) to commit ee2cdecc. The decisions above hold. Each point says how the build differs from, or adds to, the first text of this record.
+
+- **Decision 1** is built in the `record_mode` module (commit 84058748). `record.settings` accepts `record: {commit: false}` with no remote, and `compass policy lint` refuses a `record.commit` that is not a boolean. When a git ignore rule keeps the issue folder out, the reason names the rule; nothing is force-added and nothing refuses.
+- **Decision 2** is built in a new module, `committed_landing` (commit 824a4391). The commit also stages `.compass/work/.gitignore`. When no commit is made, the manifest and `trail.md` are put back and the record paths are unstaged. In kept-out mode the scope check of a ship commit refuses the issue folder and both ignore files, so a record path staged by hand is refused. `compass quick-fix finish` no longer names `.compass/work/<slug>` to stage.
+- **Decision 3** is built in the `landing` module (commits 913b8df0 and bb417fd7). It reads the manifest's file name with `core.manifest_path`, as every other reader does, so a project that still holds the retired `task.yml` is read too. `landing` runs `git` with the person's environment, like every other git read of the CLI.
+- **Decision 4**: `compass init` and `compass quick-fix start` write `.compass/work/.gitignore` in every project and keep a person's own lines. `session_lease` adds its ignore lines with the same helper.
+- **Decision 5** is built as written (commit 688794be). The rebuild looks for the check set in the shipped file, then in `governance/check-sets/<id>@<version>.yml`, and checks its `sha256sum`. The folder is written to disk, not kept in memory, because `results.yml`, `compass ci` and `compass record restore` read it. `provenance.yml` names `restored_from: policy`. The `policy:` block gains `autonomy` at each generation commit, and the schema keeps it optional (VD-032). A refusal names why the rebuild failed.
+- **Decision 6** adds one exception (commit 2e61d7c7, VD-033). `compass quick-fix finish` runs `compass check` and refused on any failing check, so a missing request stopped every landing through `finish`. It now lands when `request-recorded` is the only failing check, and adds a `request` line that names the `compass issue link set` command. Any other failing check still refuses. The check stays blocking, so `compass check` and `compass ci` exit 1 until the request is recorded or a person approves a waiver.
+- **Decision 6** also keeps the check set at `compass-checks@9.0.0`; `tests/fixtures/check-set-digests.yml` is repinned. `governance/guardrails.yml` is frozen byte for byte (ADR-094), so the tests that compare the check set with it leave `request-recorded` out by name, as they do for `ship-approval-present`.
+- **Decision 7**: `--github` alone gives `request.link` only when none is held. Fixtures that model a complete issue now record a request (commit a6686a9b).
+- **Decision 8** is built in the `trail` module (commit 9b289f1a), with two changes (VD-034):
+  - The header prints `sha256sum -c -`. On this Mac, `/sbin/sha256sum` prints its usage and reads nothing when it is given `-c` and no file; GNU `sha256sum` and `shasum -a 256` accept `-` too. Decision 8 above now says so.
+  - Section 6 names no commit id for a landing whose record is committed with the code. It says the issue landed with this record in the commit that added this `land_timestamp`, and gives the `git log -G` command that finds it. A stored `land_commit` is named as it is. So the same record gives the same bytes, and `compass trail --check` stays true after the commit and after a squash merge.
+
+  A spike gets no trail. `compass trail` has its own `--help` text, and the verb lists of the guards name it (commit 6a5f791e).
+- **Decision 9** is built as written (commit ee2cdecc). `compass issue link set --pr` writes `trail.md` again in both modes. On a manifest with `landed_with_record: true` and no stored `land_commit`, it does not write `land_commit`, because a stored value would win over the one `landing` reads from git. An issue with a stored `land_commit` still has it moved, as before. `compass next` names `compass record commit` while a landed committed issue's folder holds a change git has not committed. After the merge, section 4 of the trail names the recorded merge commit as the commit to check the code lines at.
+- **Decision 19**: `governance/terminology.yml` gains `trail`, `request-link`, `record-mode` and `landed-with-record`, at version `2.0.0-pre29`.
+- The archive comparison over 622 issue folders shows no verdict that moves after steps 3 and 8 (commits 913b8df0 and 688794be).
+- This repository stays kept out (VD-031). Its `compass.yml` and `CLAUDE.md` are unchanged.
 
 ## Limits
 

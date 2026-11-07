@@ -787,3 +787,50 @@ def test_ef_11_the_obligations_header_names_every_module_that_imports_it():
     sentence = next(line for line in header.splitlines() if "import this module" in line)
     assert [m for m in importers if f"compass_pkg.{m}" not in sentence] == [], (
         importers, sentence)
+
+
+# --- a governance copy with a malformed field value is refused ------------------------
+#
+# A project with its own copy of the governance files and no compass.yml is resolved
+# from the copy (until #359). A field value of the wrong type or outside its closed
+# set is refused by name, as the 8.x layer check refused it, so a broken copy never
+# resolves silently.
+
+def _copy_8_0_4(tmp_path):
+    import compat_baseline as cb
+    root = tmp_path / "copy"
+    (root / ".compass" / "work").mkdir(parents=True)
+    cb.add_governance_copy(root, source=cb.GOVERNANCE_8_0_4)
+    return root
+
+
+def test_a_governance_copy_with_a_wrong_type_field_is_refused_by_path(tmp_path):
+    from compass_pkg import effective
+    from compass_pkg.core import CompassError
+    root = _copy_8_0_4(tmp_path)
+    effective.resolve_live(str(root))              # the copy as shipped resolves
+    path = root / "governance" / "guardrails.yml"
+    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    doc["checks"]["scenarios-are-executable"]["blocking_when"] = 7
+    path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    with pytest.raises(CompassError) as raised:
+        effective.resolve_live(str(root))
+    assert str(raised.value) == ("legacy: checks.scenarios-are-executable.blocking_when: "
+                                 "expected map, found 7")
+
+
+@pytest.mark.parametrize("catalogue, field, value", [
+    ("checks", "severity", "sometimes"),
+    ("checks", "kind", "magic"),
+])
+def test_a_governance_copy_with_a_value_outside_its_set_is_refused_by_path(
+        catalogue, field, value):
+    from compass_pkg import effective
+    from compass_pkg.core import CompassError
+    entry = {"statement": "x", "kind": "deterministic", "severity": "blocking",
+             "on_skipped": "fail", field: value}
+    with pytest.raises(CompassError) as raised:
+        effective._legacy_config({catalogue: {"c-1": entry}})
+    message = str(raised.value)
+    assert message.startswith(f"legacy: {catalogue}.c-1.{field}: '{value}' is not one of "), \
+        message

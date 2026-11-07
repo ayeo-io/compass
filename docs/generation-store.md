@@ -281,7 +281,9 @@ whole configuration, so each entry is added as it stands and nothing merges
 not declare is read at the path stage that shows it. The
 provenance names the layer `legacy` and the operation `add`, as 8.x stored it.
 An entry that is not a mapping, names a field its catalogue lacks, or misses a
-required field is refused, with every fault named. The adapter also
+required field is refused, with every fault named, and so is a field value of
+the wrong type or outside its field's closed set (`legacy: <path>: expected map,
+found 7`). Nothing is resolved from such a copy. The adapter also
 converts the `project:` guardrails of such a copy: each becomes a guardrail gate
 with its own checks and its stage from `checked_at`, and a `command-passes`
 check becomes a check named for the guardrail id and name (`PG-E-command-and-suite`)

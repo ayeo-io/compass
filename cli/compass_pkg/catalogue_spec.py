@@ -30,6 +30,13 @@ ID_PATTERN = r"^[A-Za-z][A-Za-z0-9._-]*$"
 
 SEVERITIES = ("advisory", "blocking")            # ascending strictness
 ON_SKIPPED = ("pass", "not-applicable", "fail")  # ascending strictness
+# The closed sets of the other enumerated fields. The reader of a governance copy
+# refuses a value outside them (`effective._legacy_value_problems`).
+DIMENSION_TYPES = ("ordered-enum", "enum", "set")
+TIGHTER = ("higher", "lower")
+CHECK_KINDS = ("deterministic", "evidence", "judged", "human")
+GATE_KINDS = ("review", "guardrail")
+LOCKS = (True, "hard")
 
 # The shipped order of the two ordered dimensions, for a `when:` clause
 # that uses `at_least:` before any configuration is loaded.

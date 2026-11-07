@@ -298,6 +298,116 @@ _CHANGES = ("set", "replace", "remove", "unlock")
 _IGNORED = ("locked", "waiver")
 
 
+def _legacy_enums():
+    """The closed set of each enumerated field, by catalogue and field."""
+    from compass_pkg import acceptance_strategy
+    return {
+        ("checks", "kind"): spec.CHECK_KINDS, ("checks", "severity"): spec.SEVERITIES,
+        ("checks", "on_skipped"): spec.ON_SKIPPED, ("checks", "locked"): spec.LOCKS,
+        ("gates", "kind"): spec.GATE_KINDS, ("gates", "locked"): spec.LOCKS,
+        ("dimensions", "type"): spec.DIMENSION_TYPES, ("dimensions", "tighter"): spec.TIGHTER,
+        ("approaches", "acceptance_strategy"): tuple(acceptance_strategy.ROUTINGS),
+    }
+
+
+def _is_type(value, expected):
+    if expected == "string":
+        return isinstance(value, str)
+    if expected == "list":
+        return isinstance(value, list)
+    if expected == "map":
+        return isinstance(value, dict)
+    if expected == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if expected == "boolean":
+        return isinstance(value, bool)
+    if expected == "integer-or-null":
+        return value is None or (isinstance(value, int) and not isinstance(value, bool))
+    if expected == "boolean-or-hard":
+        return value is True or value == "hard"
+    return True
+
+
+def _when_problems(path, when, ordered):
+    """`at_least:` compares by order, so it needs an ordered dimension and a
+    threshold among its values; a misspelt threshold would match nothing."""
+    out = []
+    for key, value in when.items():
+        if key == "any_of" and isinstance(value, list):
+            for i, clause in enumerate(value):
+                if isinstance(clause, dict):
+                    out += _when_problems(f"{path}.any_of[{i}]", clause, ordered)
+        elif isinstance(value, dict) and "at_least" in value:
+            if key not in ordered:
+                out.append(f"{path}.{key}: at_least needs an ordered dimension, "
+                           f"and {key} is not one")
+            elif value["at_least"] not in ordered[key]:
+                out.append(f"{path}.{key}: at_least '{value['at_least']}' is not a "
+                           f"value of {key} ({', '.join(ordered[key])})")
+    return out
+
+
+def _legacy_value_problems(doc):
+    """Every malformed field value in an adapted copy, as text naming its key
+    path: a value of the wrong type, a value outside the closed set of its field,
+    an incomplete dimension, and an `at_least:` that cannot match. These are the
+    value checks the 8.x layer check ran on a copy before anything merged; the
+    entry checks are `_legacy_entry_problems`."""
+    enums = _legacy_enums()
+    ordered = {name: list(values) for name, values in spec.SHIPPED_ORDERS.items()}
+    for name, entry in ((doc.get("dimensions") or {}).items()
+                        if isinstance(doc.get("dimensions"), dict) else ()):
+        if isinstance(entry, dict) and entry.get("type") == "ordered-enum" \
+                and isinstance(entry.get("values"), list):
+            ordered[name] = list(entry["values"])
+    out = []
+    for catalogue in spec.CATALOGUES:
+        entries = doc.get(catalogue)
+        if not isinstance(entries, dict):
+            continue
+        fields = spec.FIELDS[catalogue]
+        for entry_id, entry in entries.items():
+            if not isinstance(entry, dict):
+                continue
+            path = f"{catalogue}.{entry_id}"
+            values = {k: v for k, v in entry.items() if k in fields}
+            for key, value in values.items():
+                expected = fields[key]["type"]
+                list_op = expected == "list" and isinstance(value, dict) \
+                    and set(value) <= {"add", "remove"}
+                map_op = expected == "map" and isinstance(value, dict)
+                if not (list_op or map_op or _is_type(value, expected)):
+                    out.append(f"{path}.{key}: expected {expected.replace('-', ' ')}, "
+                               f"found {value!r}")
+                    continue
+                allowed = enums.get((catalogue, key))
+                if allowed is not None and value not in allowed:
+                    out.append(f"{path}.{key}: '{value}' is not one of "
+                               f"{', '.join(str(a) for a in allowed)}")
+            if catalogue == "dimensions" and values.get("type") in spec.DIMENSION_TYPES:
+                kind = values["type"]
+                if kind in ("ordered-enum", "enum") and not isinstance(values.get("values"), list):
+                    out.append(f"{path}.values: an {kind} lists its values")
+                if kind == "ordered-enum" and values.get("tighter") not in spec.TIGHTER:
+                    out.append(f"{path}.tighter: an ordered-enum says which way is "
+                               f"stricter: {', '.join(spec.TIGHTER)}")
+                if kind == "set" and not isinstance(values.get("open"), bool):
+                    out.append(f"{path}.open: a set says whether it is open (true or false)")
+            elif catalogue == "dimensions" and any(k in values
+                                                   for k in ("values", "tighter", "open")):
+                out.append(f"{path}.type: a dimension names its type: "
+                           f"{', '.join(spec.DIMENSION_TYPES)}")
+            for key in ("when", "blocking_when"):
+                if isinstance(values.get(key), dict):
+                    out += _when_problems(f"{path}.{key}", values[key], ordered)
+            if catalogue == "rules" and isinstance(values.get("rules"), dict):
+                for rule_id, rule in values["rules"].items():
+                    if isinstance(rule, dict) and isinstance(rule.get("when"), dict):
+                        out += _when_problems(f"{path}.rules.{rule_id}.when",
+                                              rule["when"], ordered)
+    return out
+
+
 def _legacy_entry_problems(catalogue, entry_id, entry):
     """What stops one adapted entry being added as it stands, as text that
     names its key path. These are the faults the 8.x merge refused in a full
@@ -341,6 +451,10 @@ def _legacy_config(doc):
                                f"project's own compass.yml, never in a parent (ADR-043)")
     for where, key in _non_text_keys(mapped):
         raise CompassError(f"legacy: {where}: {_non_text_key_message(key)} (L-KEY-NOT-TEXT)")
+    # A malformed value is refused before anything is added, as 8.x refused it.
+    problems = _legacy_value_problems(mapped)
+    if problems:
+        raise CompassError("legacy: " + "; ".join(problems))
     # Two spellings of one check that disagree are refused, as the merge refused them.
     errors = [f"{code} {path}: {message}"
               for code, path, message in word_map.one_check_conflicts(mapped)]

@@ -46,7 +46,7 @@ The refused calls of a heavy run, from the base sdd-bench runs at `1776a1dc`, pe
 | Refusal | Per run |
 |---|---|
 | Chained commands ("contains multiple operations") | 6.0 |
-| "requires approval" | 3.4 |
+| `requires approval` | 3.4 |
 | A variable that cannot be checked | 2.5 |
 | Bash denied | 1.5 |
 | Pre-tool hook refusal | 1.2 |
@@ -97,7 +97,7 @@ ADR-091 removed every required document except the acceptance criteria, and with
    Each rendered refusal stays under the 60-word cap of `tests/test_refusal_registry.py`.
 
 6. **The guarded paths that only protected a deleted document are removed.** Nothing in 9.0.0 writes these files:
-   - `docs/compass/README.md` leaves `manifest.FRAMEWORK_OWNED_PATHS`, so a ship commit that stages it is refused as out of scope;
+   - the issue index (`README.md` in the `docs/compass/` folder) leaves `manifest.FRAMEWORK_OWNED_PATHS`, so a ship commit that stages it is refused as out of scope;
    - the living spec (`docs/system-spec.md`, `docs/system-spec-archive.md`) and the index leave the files that `compass quick-fix finish` does not trace (`start_state.py`);
    - the stop hook no longer warns about a failing gate decision in `verification-report.md` (`hooks/py/stop_scan.py`).
 
@@ -123,7 +123,7 @@ Most of the 63-72% in the issue is the system prompt and tools of Claude Code, w
 | Alternative | Why considered | Why rejected |
 |---|---|---|
 | One screen is 24 lines | The height of macOS Terminal and of the VT100 | It holds about 200 words, too few for the approval and staging rules or the guardrail list |
-| Count the lessons cap toward the 600 words | A project's lessons load on every session too | The project writes them, and it would leave 450 words for Compass |
+| Count the lessons cap in the 600 words | A project's lessons load on every session too | The project writes them, and it would leave 450 words for Compass |
 | Keep the two limits as targets that warn | Other size targets warn (`size-caps-as-targets`) | The issue says "stay under", and a target that warns does not stop a change that goes over |
 | A separate sdd-bench run for this change | `docs/releasing.md` asks for a run before the contract or a refusal changes | The saving is below the run-to-run noise, and #361 measures the release candidate before anything merges |
 | Remove the `delivery-approach.md` fallback now | It reads a document 9.0.0 does not write | It changes contract 5, which needs a new corpus |
@@ -138,7 +138,7 @@ What changes for a user:
 - Every request of a session carries about 230 fewer tokens.
 - The contract asks for one `compass` command per Bash call.
 - Each refusal names a command that clears it and that the CLI accepts, or says what clears it when no command can.
-- A ship commit that stages `docs/compass/README.md` is refused, and a hand edit of the living spec during a quick fix is traced. Each is a visible refusal or trace that names the file. A branch made before 9.0.0 that changed those files and merges after the upgrade meets one of them.
+- A ship commit that stages the issue index (`README.md` in the `docs/compass/` folder) is refused, and a hand edit of the living spec during a quick fix is traced. Each is a visible refusal or trace that names the file. A branch made before 9.0.0 that changed those files and merges after the upgrade meets one of them.
 
 What stays:
 
@@ -151,7 +151,7 @@ What stays:
 Each question has the decision this change builds. The owner confirms questions 1, 2, 3, 4 and 7 when accepting this record, because each changes what the issue accepts or what a user sees.
 
 1. **What is one screen?** Decided: 40 lines of at most 80 columns (decision 2).
-2. **What counts toward the 600 words?** Decided: the contract, the description of each skill and command a model can invoke, and one word for each name. The lessons block and the language line are not counted (decision 1).
+2. **What counts in the 600 words?** Decided: the contract, the description of each skill and command a model can invoke, and one word for each name. The lessons block and the language line are not counted (decision 1).
 3. **Does the #361 run meet the releasing rule for this change?** Decided: yes (decision 8).
 4. **Are the two limits hard?** Decided: yes. The 600-word and 40-line limits fail the build. The other size targets stay warnings.
 5. **Does the alias skill go?** Decided: yes, in 9.0.0. The `old_names` row stays for #359.

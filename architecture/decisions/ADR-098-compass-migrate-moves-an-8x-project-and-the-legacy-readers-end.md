@@ -90,7 +90,7 @@ The measurement covers `compass check` only. The hook, `compass next`, `compass 
      | `page_ticks` | `page_ticks` | only an 8.x issue's item records read it |
      | `readiness` | `readiness` | removed (ADR-093) |
      | each `artifacts:` entry whose kind is not `acceptance-criteria` | `documents` | 9.0.0 keeps one issue document (ADR-091) |
-     | each field of the `acceptance-criteria` entry other than `id`, `kind`, `path`, `reason` and `status` | `artifact_status`, by the entry's id | a path issue does not read the artifact status; the entry keeps `status` because the manifest schema requires it, and keeps the rest so the spec is still found |
+     | each field of the `acceptance-criteria` entry other than `id`, `kind`, `path`, `reason` and `status` | `artifact_status`, by the entry's id | a path issue does not read the artifact status; the entry keeps `status` because the manifest schema needs it, and keeps the rest so the spec is still found |
 
    - keeps `scenarios`, `evidence`, `gates` with their states, `checkpoint_outcomes`, `delegations_used`, `waivers`, `changed_files`, the `land_*` fields, `github`, `follow_ups`, `friction`, `reassessments`, `depends_on` and `raised_by` where they are;
    - rewrites a legacy stage value in `depends_on[].until` and `raised_by.found_at` to its path stage, and keeps the old value in `legacy.stage_values`;
@@ -188,7 +188,7 @@ What shipped:
 - **Decision 2** is built as written, with four details (VD-038):
   - `compass migrate` asks for no justification of an assessed value, because it writes the assessment the issue already holds. `routing.cmd_route_evaluate` skips that refusal only when `compass migrate` calls it.
   - The `reassessments:` entry is of kind `policy-correction`: the assessment was right and the policy under it moved, so the entry does not read as a misread assessment.
-  - The acceptance-criteria entry keeps `status`, because the manifest schema requires it on every `artifacts:` entry. Decision 2's table now says so.
+  - The acceptance-criteria entry keeps `status`, because the manifest schema needs it on every `artifacts:` entry. Decision 2's table now says so.
   - A spike keeps its approach and stage map, and an issue that holds `legacy:` is left as it is ("already moved by compass migrate").
 
   A dry run over a copy of this repository's archive lists the 15 open assessed issues. No agent ran `--apply` on this repository (open question 7).

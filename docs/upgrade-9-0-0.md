@@ -232,7 +232,7 @@ Each command line below exits 2 with the parse error, and the error adds one lin
 | `policy lint --exhaustive` | an issue has no config layer; the classifier was removed | ADR-094 |
 <!-- /compass:upgrade-commands-table -->
 
-These parts also stopped working in 9.0.0. Each fails as any unknown name or flag does, with no line that names the replacement:
+These parts also changed in 9.0.0. A removed flag or old name fails as any unknown one does, with no line that names the replacement:
 
 - `quick-fix start --role`. Role is not an assessment dimension (ADR-070), so argparse refuses the flag.
 - `--justify role=` on `approach evaluate --write`. It is refused as a dimension that needs no justification.

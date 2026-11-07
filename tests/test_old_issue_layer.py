@@ -70,7 +70,9 @@ def _view_8_0_4(tmp_path, issue_doc, project_doc=None):
     copy_root = tmp_path / "copy-8-0-4"
     (copy_root / ".compass").mkdir(parents=True, exist_ok=True)
     cb.add_governance_copy(copy_root, source=cb.GOVERNANCE_8_0_4)
-    parent = effective._legacy_parent(str(copy_root))[0]
+    # The copy in catalogue form, read as the 8.x parent layer it was.
+    doc = effective._legacy_parent(str(copy_root))[0]
+    parent = layers.Layer("legacy", "parent", doc, layers.layer_digest(doc, "parent"))
     project = layers.Layer("project", "project", project_doc or {"schema": 1}, "p")
     issue = layers.Layer("issue", "issue", issue_doc, "i")
     resolved = merge.resolve([parent, project, issue])[0]

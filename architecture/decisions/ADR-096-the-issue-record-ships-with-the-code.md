@@ -149,7 +149,7 @@ What this change does not do:
 |---|---|---|
 | Commit the generation folders too | No rebuild is needed | The issue keeps them out, and the measurement shows the rebuild is exact |
 | Keep writing `land_commit` after the commit | No new module | The manifest stays changed and not committed after every landing, and the squash-merge defect stays |
-| Refuse `quick-fix start` without a request | The issue says "require" | It breaks the frozen contract 4 entry `quick-fix-start-valid`, and #345 rules out a stop in the session |
+| Refuse `quick-fix start` without a request | The issue asks for a request link at Assess | It breaks the frozen contract 4 entry `quick-fix-start-valid`, and #345 rules out a stop in the session |
 | Refuse a landing without a request | The rule would hold at ship | About 25 to 45 test files that land a path issue would change, and the issue does not ask for it |
 | Read the requester from the GitHub issue author with `gh` | A checked identity | It needs the network at assess, and many requests are not GitHub issues |
 | Write `trail.md` after every manifest save | Always up to date | It adds a write to every command; `compass check` says when it is out of date |

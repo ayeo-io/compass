@@ -79,14 +79,14 @@ ADR-091 removed every required document except the acceptance criteria, and with
    |---|---|
    | `bad-current-task` | `compass issue use <slug>`, with `compass flow` to list the issues |
    | `checkpoint-no-outcome` | `compass evidence request --checkpoint {stage} --issue {slug}`, then stop; the person answers with `/compass:approve` |
-   | `config-invalid` | for `compass.yml`, `compass policy lint` names each fault |
    | `definition-of-done-open` | `compass follow-up add` with `--defers`, or `compass evidence add` with `--meets`, for each open item |
    | `no-acceptance-criteria`, `no-scenario` | `compass scenario add TRC-001 --issue {slug} --intent "<one sentence>"` |
    | `release-line-heading` | the verb that refused, run again with `--release-note "<plain text>"` |
-   | `release-line-missing` | `--release-note` added to `compass ship-commit` or `compass quick-fix finish` |
+   | `release-line-missing` | the verb that refused, run again with `--release-note`; a landing names `compass ship-commit` or `compass quick-fix finish` |
    | `approval-request-protected`, `delegation-caller-mismatch` | `compass evidence request` with its subject flag and `--issue` |
+   | `no-red-on-record` | `compass acceptance start` with the `--kind` it needs |
 
-   Eleven codes have no single command that clears them, for example `python-missing` (install Python) and `pr-review-protected` (another person approves the pull request). Each of them names what clears it instead.
+   Twelve codes have no single command that clears them, for example `python-missing` (install Python) and `pr-review-protected` (another person approves the pull request). Each of them names what clears it instead. `config-invalid` is one of them: its Why line names the fault, and `compass policy lint` passes a `compass.yml` whose `enforcement.code_globs` is a string, which the hook refuses.
 
    A new test, `test_refusal_fix_commands`, holds the rule:
    - It fills the placeholders of each fix line with fixed samples and parses each `compass <verb>` command it names with the CLI's own parser. The parse must succeed. This test would have found `--id`.

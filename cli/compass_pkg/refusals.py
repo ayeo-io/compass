@@ -79,8 +79,10 @@ REFUSALS: dict[str, dict[str, str]] = {
         "why": "'.compass/current-task' names '{slug}', which is not one "
                "path segment - a slug names a directory directly under "
                ".compass/work/.",
-        "fix": "fix .compass/current-task to name a real issue slug, then "
-               "retry.",
+        # Never a hand edit of the pointer: the hook records each session's
+        # issue, and `compass issue use` is the one way to move it.
+        "fix": "run compass issue use <slug> with a real issue slug, then "
+               "retry. To list the issues, run compass flow.",
     },
     "bad-session-issue": {
         "what": "this edit",
@@ -138,10 +140,9 @@ REFUSALS: dict[str, dict[str, str]] = {
         "what": "edit to {target} (tool: {tool})",
         "why": "the acceptance-before-code guardrail blocks this: define: "
                "thorough is set but manifest.yml has no scenarios.",
-        "fix": "add the scenarios to acceptance-criteria.md and manifest.yml "
-               "(compass scenario add), or run /compass:assess --reassess "
-               "if this is "
-               "exploratory.",
+        "fix": "add the first scenario with compass scenario add TRC-001 --issue "
+               "{slug} --intent \"<one sentence>\", or run /compass:assess "
+               "--reassess if this is exploratory.",
     },
     # The same guardrail on a path issue (ADR-092), which has no stage modes, so
     # the reason cannot name `define: thorough`.
@@ -150,8 +151,9 @@ REFUSALS: dict[str, dict[str, str]] = {
         "why": "the acceptance-before-code guardrail blocks this: the issue is on the "
                "four-stage path, which owes scenarios before code, and manifest.yml has "
                "none.",
-        "fix": "add the first scenario with compass scenario add <slug> --id TRC-001 "
-               "--intent ..., or run /compass:assess --reassess if this is exploratory.",
+        "fix": "add the first scenario with compass scenario add TRC-001 --issue "
+               "{slug} --intent \"<one sentence>\", or run /compass:assess "
+               "--reassess if this is exploratory.",
     },
     "red-unsigned": {
         "what": "this edit",
@@ -187,15 +189,18 @@ REFUSALS: dict[str, dict[str, str]] = {
         "why": "no failing test is recorded for issue '{slug}' in "
                "{project}.",
         "fix": "run compass tdd-red --scenario <id> -- <failing test "
-               "command>, or compass acceptance start if none fits, "
-               "then retry.",
+               "command>, or compass acceptance start --kind <kind> if none "
+               "fits.",
     },
     # The approval guards (approval_guard.py, ADR-068 decision 10, ADR-069).
     "approval-request-protected": {
         "what": "{target} (tool: {tool})",
         "why": "an approval binds to the request a person was shown.",
+        # One subject flag as the example: a longer list would push a long
+        # target over the 60-word cap (tests/test_approval_guard_refusal_text.py).
         "fix": "do not read, change or run these files. Ask with compass "
-               "evidence request; the person answers with /compass:approve.",
+               "evidence request --checkpoint <stage>; the person answers with "
+               "/compass:approve.",
     },
     "delegation-protected": {
         "what": "{target} (tool: {tool})",
@@ -209,8 +214,9 @@ REFUSALS: dict[str, dict[str, str]] = {
         "why": "Claude Code reports this call as {caller}, and a delegated "
                "approval must name exactly the agent that makes it. A word "
                "the shell could build is refused too.",
-        "fix": "run it from the agent the delegation names, with --as set to "
-               "that agent's full name, or ask with compass evidence request.",
+        "fix": "run it as the named agent, with --as set to its full name, or "
+               "ask with compass evidence request --checkpoint <stage> --issue "
+               "<slug>.",
     },
     # An agent's approving review of a pull request (approval_guard._review_approval,
     # #355): a review approval by another person is the ship approval.
@@ -234,9 +240,11 @@ REFUSALS: dict[str, dict[str, str]] = {
         "what": "landing of issue '{slug}'",
         "why": "{stages} {is} listed in checkpoints with no outcome recorded, so "
                "nothing shows a person answered {it}.",
-        "fix": "the person who answers runs compass evidence approve "
-               "--checkpoint {stage} --approver <you> --role <role>, for each "
-               "stage named, then ship again.",
+        # An agent approves only under a delegation, so the fix asks and stops,
+        # as `scenarios-not-approved` does.
+        "fix": "for each stage named, run compass evidence request --checkpoint "
+               "{stage} --issue {slug} and stop; the person answers with "
+               "/compass:approve. Then ship again.",
     },
     # `compass tdd-red` on a path issue that owes `scenario-approval`, before the
     # `specify` checkpoint has a person's answer (scenario_freeze.refusal, ADR-095).
@@ -253,8 +261,12 @@ REFUSALS: dict[str, dict[str, str]] = {
     "definition-of-done-open": {
         "what": "landing of issue '{slug}'",
         "why": "the check dod-evidence-typed failed: {detail}",
-        "fix": "record each open item with --meets, --defers or compass evidence "
-               "approve --check, then ship again.",
+        # The detail names the person's command for an item only a person can
+        # meet. An agent never runs `evidence approve` here without a delegation.
+        "fix": "for each open item, run compass follow-up add FU-<n> --issue {slug} "
+               "--defers <item> --github <owner/repo#N> --summary \"<why>\", or "
+               "compass evidence add EV-<n> --issue {slug} --type <type> --path "
+               "<file> --meets <item>. Then ship again.",
     },
     # The release-line refusals (release_line.py, ADR-065): a landing of an issue
     # that owes a line and has none, and a line the release notes would print as a
@@ -263,16 +275,14 @@ REFUSALS: dict[str, dict[str, str]] = {
         "what": "landing of issue '{slug}'",
         "why": "issue '{slug}' has no release line, and its approach owes one: a "
                "sentence for users that the release notes list.",
-        "fix": "give it with --release-note \"<text written for a user>\", then "
-               "run the command again.",
+        # A landing refusal does not know its verb (manifest.LANDING_REFUSALS),
+        # so there `verb` names both verbs that land (release_line.LANDING_VERBS).
+        "fix": "run {verb} again with --release-note \"<a sentence for users>\".",
     },
     "release-line-heading": {
         "what": "the release line of issue '{slug}'",
-        "why": "it starts with #, and compass release notes prints the line under a "
-               "heading such as ### <slug> (completed <date>), where it would read as a "
-               "heading of its own.",
-        "fix": "write the release line as plain text that does not start with #, "
-               "then run the command again.",
+        "why": "it starts with #, so the release notes would print it as a heading.",
+        "fix": "run {verb} again with --release-note \"<plain text>\".",
     },
     # A Bash command too long for the pre-tool hook to scan before Claude Code
     # stops it (hooks/pre-tool.sh holds the limit). The refusal never quotes the
@@ -309,12 +319,17 @@ def codes() -> list[str]:
 
 MAX_PARAM_WORDS = 20
 
+#: A lower cap for a code whose fix line is long, so the refusal stays under
+#: 60 words. The detail of `definition-of-done-open` starts with the open
+#: item's name, which is what the reader needs from it.
+PARAM_WORDS = {"definition-of-done-open": 12}
 
-def _cap(value) -> str:
+
+def _cap(value, limit=MAX_PARAM_WORDS) -> str:
     words = str(value).split()
-    if len(words) <= MAX_PARAM_WORDS:
+    if len(words) <= limit:
         return str(value)
-    return " ".join(words[:MAX_PARAM_WORDS]) + " ..."
+    return " ".join(words[:limit]) + " ..."
 
 
 def render(code: str, **params) -> str:
@@ -333,7 +348,8 @@ def render(code: str, **params) -> str:
     # A parameter is text from the environment - an exception message, a
     # path. Cutting each to a fixed word count keeps a refusal short
     # enough to read, however long the text it quotes.
-    params = {k: _cap(v) for k, v in params.items()}
+    limit = PARAM_WORDS.get(code, MAX_PARAM_WORDS)
+    params = {k: _cap(v, limit) for k, v in params.items()}
     what = entry["what"].format(**params)
     why = entry["why"].format(**params)
     fix = entry["fix"].format(**params)

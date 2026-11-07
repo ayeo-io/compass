@@ -41,10 +41,12 @@ lose one another's change; the release line does not change that.
 Before anything is written, a given line is stripped of leading and trailing space and
 refused when:
 
-- it is blank: the `release-line-missing` refusal, the same text a landing gives;
+- it is blank: the `release-line-missing` refusal, the code a landing gives, naming
+  the writer to run again;
 - it starts with `#`: the `release-line-heading` refusal, because `compass release notes`
   prints the line under a heading such as `### <slug> (completed <date>)`, where it
-  would read as a heading of its own;
+  would read as a heading of its own. The refusal names the writer to run again with
+  `--release-note`;
 - the scenario title rules refuse it, with the reason
   `compass scenario add` gives: a path that does not exist, a duration attached to
   a user's experience, or an outside user's experience.
@@ -62,7 +64,8 @@ manifest; every reader prints the line on one line.
 runs at every landing, `compass ship-commit` and `compass quick-fix finish`, before
 anything is staged or written. `ship-commit` judges a copy of the manifest with the
 given `--release-note` applied, and `quick-fix finish` judges it before it runs the test
-command.
+command. The refusal does not know which landing runs it, so its fix line
+names both (`release_line.LANDING_VERBS`).
 
 The refusal judges an issue only when all four of these hold, and declines otherwise:
 

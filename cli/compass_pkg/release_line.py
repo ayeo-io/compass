@@ -85,9 +85,15 @@ def owes(task, task_dir):
     return isinstance(body, dict) and body.get("release_line") is True
 
 
-def missing_text(slug):
+#: The verbs a landing refusal names: it runs at both landings and does not know
+#: which one called it (`manifest.LANDING_REFUSALS`).
+LANDING_VERBS = "compass ship-commit or compass quick-fix finish"
+
+
+def missing_text(slug, verb=LANDING_VERBS):
+    """The `release-line-missing` refusal. `verb` is the command to run again."""
     from compass_pkg import refusals
-    return refusals.render("release-line-missing", slug=slug)
+    return refusals.render("release-line-missing", slug=slug, verb=verb)
 
 
 def landing_refusal(task, task_dir):
@@ -119,10 +125,10 @@ def text_problem(task_dir, text, verb):
     title is refused with the reason `compass scenario add` gives, because the
     release notes and the board print the line as public copy."""
     if not text:
-        return missing_text(_slug(task_dir))
+        return missing_text(_slug(task_dir), verb)
     if text.startswith("#"):
         from compass_pkg import refusals
-        return refusals.render("release-line-heading", slug=_slug(task_dir))
+        return refusals.render("release-line-heading", slug=_slug(task_dir), verb=verb)
     from compass_pkg.manifest import title_problem
     problem = title_problem(_project_root(task_dir), text)
     if problem:

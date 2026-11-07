@@ -57,10 +57,10 @@ if [ -f "$TASK_DIR/manifest.yml" ]; then
   fi
   rm -f "$G2_ERR"
   if [ "${G2_VERDICT:-}" = "block" ]; then
-    compass_block no-acceptance-criteria "target=$TARGET" "tool=${TOOL:-?}"
+    compass_block no-acceptance-criteria "slug=$TASK_SLUG" "target=$TARGET" "tool=${TOOL:-?}"
   fi
   if [ "${G2_VERDICT:-}" = "block-path" ]; then
-    compass_block no-scenario "target=$TARGET" "tool=${TOOL:-?}"
+    compass_block no-scenario "slug=$TASK_SLUG" "target=$TARGET" "tool=${TOOL:-?}"
   fi
 fi
 

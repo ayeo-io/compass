@@ -386,7 +386,7 @@ def test_the_hook_keeps_the_define_thorough_rule_for_an_old_issue(tmp_path):
 
 def test_the_path_refusal_names_compass_scenario_add():
     from compass_pkg.refusals import render
-    text = " ".join(render("no-scenario", target="src/app.py", tool="Edit").split())
+    text = " ".join(render("no-scenario", slug="demo", target="src/app.py", tool="Edit").split())
     assert "compass scenario add" in text, text
     assert "define: thorough" not in text, text
 

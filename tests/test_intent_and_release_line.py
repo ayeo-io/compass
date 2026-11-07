@@ -321,7 +321,7 @@ def _named(heading):
 
 #: The texts of the release-line refusals, as a reader sees them.
 MISSING = "has no release line"
-FLAG = '--release-note "<text written for a user>"'
+FLAG = '--release-note "<a sentence for users>"'
 
 
 def register(root, kind, status="approved", slug=SLUG, text=None):
@@ -635,8 +635,7 @@ def test_irl_13_release_line_title_rules(tmp_path, command, text):
 
 # --- IRL-26 ---------------------------------------------------------------------------
 
-HEADINGS = ("compass release notes prints the line under a heading such as ### <slug> "
-            "(completed <date>), where it would read as a heading of its own")
+HEADINGS = "it starts with #, so the release notes would print it as a heading"
 
 
 def test_irl_26_heading_mark_refused_and_the_line_stored_trimmed(tmp_path):

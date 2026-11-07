@@ -62,7 +62,7 @@ A request for the `specify` checkpoint of a path issue holds `spec` and `spec_sh
 
 ## The landing refusal
 
-`compass ship-commit` runs an ordered list of landing refusals before it stages, renders, commits, derives or syncs anything. A refusal leaves every file as it was. The first entry refuses a judged issue that lists a checkpoint with no outcome, with the code `checkpoint-no-outcome`. It names each stage and the command that records it. `compass quick-fix finish` runs the same list with its other preconditions, unless `--no-commit` is given.
+`compass ship-commit` runs an ordered list of landing refusals before it stages, renders, commits, derives or syncs anything. A refusal leaves every file as it was. The first entry refuses a judged issue that lists a checkpoint with no outcome, with the code `checkpoint-no-outcome`. It names each stage and the command that asks the person for an answer, `compass evidence request --checkpoint <stage>`, then stops: an agent does not approve. `compass quick-fix finish` runs the same list with its other preconditions, unless `--no-commit` is given.
 
 A later refusal is one more function appended to `manifest.LANDING_REFUSALS`, with its code in `refusals.py`. It is not a branch in the command.
 

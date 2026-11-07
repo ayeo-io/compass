@@ -641,9 +641,9 @@ def test_arc_5_landing_refuses_a_checkpoint_with_no_outcome(tmp_path, monkeypatc
         f"compass: Blocked: landing of issue '{SLUG}'",
         "Why: specify is listed in checkpoints with no outcome recorded, so nothing shows "
         "a person answered it.",
-        "Fix: the person who answers runs compass evidence approve --checkpoint specify "
-        "--approver <you> --role <role>, for each stage named, then ship again. "
-        "[checkpoint-no-outcome]"], done.stderr
+        "Fix: for each stage named, run compass evidence request --checkpoint specify "
+        f"--issue {SLUG} and stop; the person answers with /compass:approve. Then ship "
+        "again. [checkpoint-no-outcome]"], done.stderr
     assert git(root, "rev-parse", "HEAD") == head
     assert "land_timestamp" not in manifest(root)
     assert _tree(root) == before

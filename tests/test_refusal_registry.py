@@ -63,8 +63,9 @@ FIXTURES = {
     "working-directory-gone": dict(target="src/app.py", tool="Edit"),
     "pointer-moved": dict(slug="why", previous="ex"),
     "no-delivery-approach": dict(slug="demo"),
-    "no-acceptance-criteria": dict(target="src/app.py", tool="Edit"),
-    "no-scenario": dict(target="src/app.py", tool="Edit"),
+    # A 40-character slug, so the 60-word cap is checked where it is tightest.
+    "no-acceptance-criteria": dict(slug="a" * 40, target="src/app.py", tool="Edit"),
+    "no-scenario": dict(slug="a" * 40, target="src/app.py", tool="Edit"),
     "red-unsigned": dict(slug="demo", since_date="2026-09-01"),
     "red-marker-no-record": dict(slug="demo"),
     # The longest form: a 40-character slug and a guard of 20 words, the most
@@ -92,13 +93,14 @@ FIXTURES = {
     # A 40-character slug, named three times, so the 60-word cap is checked where it
     # is tightest.
     "scenarios-not-approved": dict(slug="a" * 40),
-    # A 40-character slug and a detail of 20 words, the most the registry keeps of a
-    # long parameter, so the 60-word cap is checked where it is tightest.
+    # A 40-character slug and a detail of 20 words, more than the 12 the registry keeps
+    # of a parameter for this code, so the 60-word cap is checked where it is tightest.
     "definition-of-done-open": dict(slug="a" * 40,
                                     detail=" ".join(f"word{i}" for i in range(20))),
     # A 40-character slug, named twice, so the 60-word cap is checked where it is tightest.
-    "release-line-missing": dict(slug="a" * 40),
-    "release-line-heading": dict(slug="a" * 40),
+    "release-line-missing": dict(slug="a" * 40,
+                                 verb="compass ship-commit or compass quick-fix finish"),
+    "release-line-heading": dict(slug="a" * 40, verb="compass quick-fix finish"),
     # Six-digit size, as the longest form of the length refusal.
     "bash-command-too-long": dict(size="240000", limit="98304"),
     # The longest form of the complexity refusal: a count and its limit.
@@ -448,5 +450,5 @@ def test_sh5_the_registry_and_its_doc_hold_no_fixed_settings_file():
 def test_vr_a2_the_acceptance_refusal_names_the_current_depth_word():
     """Every manifest written now says `thorough`; the refusal must not say
     the retired `full`."""
-    text = " ".join(render("no-acceptance-criteria", target="src/app.py", tool="Edit").split())
+    text = " ".join(render("no-acceptance-criteria", slug="demo", target="src/app.py", tool="Edit").split())
     assert "define: thorough is set" in text and "define: full" not in text, text

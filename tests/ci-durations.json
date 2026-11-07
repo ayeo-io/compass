@@ -381,6 +381,7 @@
   "tests/test_red_waits_for_scenario_approval.py": 6.13,
   "tests/test_redact.py": 0.01,
   "tests/test_refusal_names_the_light_path.py": 0.63,
+  "tests/test_refusal_fix_commands.py": 1.94,
   "tests/test_refusal_registry.py": 0.66,
   "tests/test_regression_baseline_strategy.py": 0.96,
   "tests/test_release_8_0_0.py": 0.19,

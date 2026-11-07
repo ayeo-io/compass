@@ -18,14 +18,12 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from test_generation_store import SLUG, _project, _run  # noqa: E402
 
+#: A project check is the one way `compass.yml` adds a check and a guardrail
+#: since 9.0.0 (ADR-094). Its command passes, so its row is the same either way.
 PROJECT = {
     "schema": 1,
-    "checks": {"project-rule": {
-        "statement": "A project rule.", "kind": "deterministic", "impl": "suite-passed",
-        "severity": "blocking", "on_skipped": "fail"}},
-    "gates": {"P1": {
-        "kind": "guardrail", "name": "Project rule", "statement": "A project rule.",
-        "stage": "verify", "applies_to": {"ships": True}, "checks": ["project-rule"]}},
+    "project_checks": [{
+        "id": "project-rule", "name": "Project rule", "command": "true", "stage": "ship"}],
 }
 
 
@@ -35,7 +33,7 @@ def test_overlay_deleted_check_runs_offline(tmp_path):
     assert code == 0, out + err
     code, before, err = _run(root, "check", "--issue", SLUG, "--json")
     before = json.loads(before)
-    assert "P1" in {c["guardrail"] for c in before["checks"]}, before
+    assert "project-rule" in {c["guardrail"] for c in before["checks"]}, before
     (root / "compass.yml").unlink()
     code, after, err = _run(root, "check", "--issue", SLUG, "--json")
     after = json.loads(after)

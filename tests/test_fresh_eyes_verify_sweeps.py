@@ -362,7 +362,7 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         "approach", "bdd", "check", "ci", "tdd-red",
         "tdd-green", "policy", "issue", "acceptance", "adr",
         "flow", "next", "follow-up", "ship-commit", "gate",
-        "scenario", "changed-file", "evidence", "review-rule", "preset", "terminology",
+        "scenario", "changed-file", "evidence", "review-rule", "terminology",
         "init", "quick-fix",
         "decision",  # decisions-ledger (ADR-027): the settled-decisions ledger
         "lesson",  # project-lessons (ADR-029): lessons for later sessions

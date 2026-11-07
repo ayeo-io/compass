@@ -150,7 +150,7 @@ def build_parser():
                           "judgment). A judgment entry says assessment misread "
                           "the work; a policy correction does not. configuration "
                           "is the kind 8.x wrote for a change to the issue's "
-                          "config: layer, which 9.0.0 does not read. A reassess "
+                          "config: layer, which this release does not read. A reassess "
                           "that changes nothing but is given a --reason is "
                           "recorded as unchanged by the CLI (not a choice).")
     pre.add_argument("--expected-acceptance", dest="expected_acceptance",

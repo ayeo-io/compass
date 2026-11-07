@@ -1,4 +1,5 @@
 # Node ids collected from tests/test_compat_configurations.py at commit a3c30fddaf9b70ca80bbdef9b656467a96ebe20a
+# Four ids added by #357 step 6 (ADR-094): the policy migrate, test and update entries now run under B and C, because a removed verb fails to parse the same way under every configuration.
 tests/test_compat_configurations.py::test_the_spelling_map_changes_only_the_three_known_names
 tests/test_compat_configurations.py::test_contract_1_routes_as_the_baseline_under[B]
 tests/test_compat_configurations.py::test_contract_1_routes_as_the_baseline_under[C]
@@ -167,6 +168,8 @@ tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_basel
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[C-issue-migrate-config-already-pinned]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[B-issue-migrate-config-no-issue]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[C-issue-migrate-config-no-issue]
+tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[B-policy-migrate-nothing]
+tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[C-policy-migrate-nothing]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[B-policy-lint-git-parent-no-sha]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[C-policy-lint-git-parent-no-sha]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[B-policy-lint-git-parent-uncached-offline]
@@ -175,6 +178,7 @@ tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_basel
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[C-policy-test-passes]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[B-policy-test-fails]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[C-policy-test-fails]
+tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[B-policy-test-no-preset]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[C-policy-test-no-preset]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[B-policy-init-preset-writes]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[C-policy-init-preset-writes]
@@ -188,6 +192,7 @@ tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_basel
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[C-policy-update-json-nothing-to-do]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[B-policy-update-major-not-kept]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[C-policy-update-major-not-kept]
+tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[B-policy-update-no-project-file]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[C-policy-update-no-project-file]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[B-retro-plain]
 tests/test_compat_configurations.py::test_contract_4_exit_code_matches_the_baseline_under[C-retro-plain]

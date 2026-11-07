@@ -268,7 +268,8 @@ Three more rules keep an older file or issue working:
 - An issue's `config:` that sets a legacy stage or a Definition of Ready
   check, or picks an 8.x approach (`approach:`), that its configuration does
   not hold was merged without it in 8.x, and named with `L-SETTING-REMOVED` on
-  the issue layer by `compass policy lint --issue`, which 9.0.0 removed. Over a stored generation that
+  the issue layer by the issue mode of the 8.x `compass policy lint`, which
+  9.0.0 removed. Over a stored generation that
   holds it, it is kept. 9.0.0 reads no new issue layer (ADR-094): the manifest's
   `config:` is not read, and `compass issue lint` warns about one that the
   issue's stored generation was not committed with.

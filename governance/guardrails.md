@@ -541,8 +541,9 @@ decides the rules. `compass policy lint` reports a refused change as
   weight of an approach: the field table decides at that point. Naming `full`
   over `regular` is incomparable on the subtask ceiling, and a spike issue
   that picks `full` loses `spike.conclude` and is refused by a lock. Since 9.0.0
-  only `compass policy lint --issue` reads an issue's `config:`: a reassess does
-  not read it (ADR-094).
+  no command enforces an issue's `config:`: a reassess does not read it, and
+  `compass issue lint` warns about one that the issue's stored generation was
+  not committed with (ADR-094).
 - **More than eight named labels is still refused, but only the labels a locked
   entry can read are counted.** The scan keeps a label only where it can reach
   a fact a lock protects, and drops the labels that only these read:

@@ -138,6 +138,7 @@
   "tests/test_contract_facts.py": 3.19,
   "tests/test_contribution_guide.py": 0.01,
   "tests/test_conventional_comments_strategy.py": 0.01,
+  "tests/test_cost_claim_needs_bench_result.py": 1.61,
   "tests/test_coverage_flag_autoload.py": 0.01,
   "tests/test_created_date_backdated.py": 0.01,
   "tests/test_cucumber_adapter_dependencies.py": 0.01,

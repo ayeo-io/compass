@@ -29,6 +29,11 @@ ADR-006 is the other half of this: backward compatibility is non-negotiable
 it, and a breaking change happens once, at a major version, with the reason
 recorded.
 
+Before the release notes name a cost or token ratio, `sdd-bench-9-0-0.md` in
+`docs/` must record a pass; the GitHub release body, the repository
+description and the ayeo.io page are not scanned by any test, so check them
+by hand.
+
 ### What changed at 8.0.0
 
 8.0.0 is a major release because of one change: delegation works across git

@@ -517,6 +517,67 @@ changes nothing. Any other capability is refused, except
 `artifact-freshness`, which 9.0.0 removed and which lint names with
 `L-SETTING-REMOVED`.
 
+### Removed settings and their replacements
+
+`compass policy lint` names each removed key with what replaces it. One
+table, `removed_parts.REPLACEMENTS`, holds the replacement of every removed
+key, and the lint message and the `replacement` field of `--json` both come
+from it (ADR-098 decision 7). The message ends with one of:
+
+- "Replacement: `<setting>`." when a setting replaces the key;
+- "Removed: nothing replaces it." when nothing does.
+
+It then adds "`compass migrate` rewrites it." when `compass migrate` changes
+the key for you. Otherwise, edit `compass.yml` by hand.
+
+`extends:` has a row for each pin of the shipped default:
+
+- `extends@6` is a pin at `@6` or below, and `extends@7` a pin at `@7`. The
+  pin keeps the acceptance strategy `S17` off, so `acceptance_strategy: off`
+  replaces it.
+- `extends@8` is a pin at `@8` or later, or no pin. Nothing replaces it.
+- `extends` is any other value.
+
+A key with `*` is an effect of any rule that picked a delivery approach.
+`tests/test_lint_names_replacements.py` fails when a removed key has no row,
+or when this table differs from `REPLACEMENTS`.
+
+<!-- compass:replacements-table -->
+| Removed key | Replacement | `compass migrate` |
+|---|---|---|
+| `dimensions` | removed | no |
+| `stages` | removed | no |
+| `rules` | `require_evidence` | rewrites it |
+| `checks` | `project_checks` | rewrites it |
+| `gates` | `signoff_labels` or `project_checks` | rewrites it |
+| `vocabulary` | removed | no |
+| `extends` | removed | no |
+| `extends@6` | `acceptance_strategy: {state: off, reason: ...}` | rewrites it |
+| `extends@7` | `acceptance_strategy: {state: off, reason: ...}` | rewrites it |
+| `extends@8` | removed | rewrites it |
+| `preset` | removed | rewrites it |
+| `preset_index` | removed | rewrites it |
+| `approvers.project-waiver` | removed | rewrites it |
+| `models` | removed | rewrites it |
+| `multiagent` | removed | rewrites it |
+| `living_spec` | removed | rewrites it |
+| `artifacts` | removed | rewrites it |
+| `approaches` | removed | rewrites it |
+| `stages.<id>`: `define`, `refine`, `plan`, `breakdown`, `implement`, `verify` | removed | no |
+| `rules.caps` | removed | no |
+| `checks.<id>`: `dor-summary-filled`, `dor-problem-traces-up`, `dor-behavior-is-gwt`, `dor-traceability-ids`, `dor-affected-surface-named`, `dor-no-open-questions`, `dor-approach-still-fits` | removed | no |
+| `prices` | removed | rewrites it |
+| `github_labels` | removed | rewrites it |
+| `readiness` | removed | rewrites it |
+| `github_labels.page` | removed | rewrites it |
+| `project.<id>`: `build_command`, `lint_command`, `format_check_command`, `typecheck_command`, `secret_scan`, `structured_logging` | removed | rewrites it |
+| `rules.floors.rules.RP-FLOOR-002.then.require_phase` | removed | rewrites it |
+| `capabilities.artifact-freshness` | removed | no |
+| `rules.*.force_minimum_approach` | removed | rewrites it |
+| `rules.*.forbid_approach` | removed | rewrites it |
+| `rules.*.never_skip` | removed | rewrites it |
+<!-- /compass:replacements-table -->
+
 ### The settings lint
 
 `compass_pkg.settings_lint.lint` reads `compass.yml` as a file of settings.
@@ -526,7 +587,7 @@ It gives each finding a code:
 |---|---|---|
 | `L-SETTING-UNKNOWN` | error | a key `compass.yml` cannot hold |
 | `L-SETTING-INVALID` | error | a malformed value, or a tighten-only value that would not only add, such as a token outside the closed set, an extra field such as `remove:` or `severity:`, a project check that reuses a shipped id, or an assessment value the check set does not declare |
-| `L-SETTING-REMOVED` | warning | a key 9.0.0 removed, read as if absent: the catalogs (`dimensions`, `stages`, `rules`, `checks`, `gates`, `vocabulary`, and the earlier `approaches`, `artifacts`, `readiness`), `extends: compass:...`, `preset`, `preset_index`, `approvers.project-waiver` and the removed settings above |
+| `L-SETTING-REMOVED` | warning | a key 9.0.0 removed, read as if absent: the catalogs (`dimensions`, `stages`, `rules`, `checks`, `gates`, `vocabulary`, and the earlier `approaches`, `artifacts`, `readiness`), `extends: compass:...`, `preset`, `preset_index`, `approvers.project-waiver` and the removed settings above. The message names what replaces the key (see "Removed settings and their replacements" below) |
 | `L-PARENT-REMOVED` | error | `extends:` names a git parent, which could hold checks this file does not show. Every command that resolves a policy refuses with exit 2 and says what to do: move the team's checks into the five settings above, or stay on 8.x until the 9.0.0 upgrade command (#359) |
 | `L-IMPL-UNKNOWN` | error | the integrity rule: a check, after the settings apply, names an implementation the CLI does not hold |
 

@@ -22,19 +22,22 @@ with the layers: `compass policy diff`, `policy update`, `policy migrate`
 A command line that still names a removed verb or flag fails to parse as an
 unknown command, and `line_for` gives the one line the parse error adds.
 Each removed `compass.yml` key and capability stays valid and is not read;
-`compass policy lint` names it through `setting_findings`. Since ADR-094 no
+`compass policy lint` names it through `setting_findings`, with what replaces
+it from `REPLACEMENTS` (ADR-098). Since ADR-094 no
 layer merges, so a removed catalogue key is not read at all.
 `with_mapped_stages` reads a gate that a project's governance copy places at a
 legacy stage at the path stage that shows it. Each entry
 names the decision record that removed it.
 """
-# DEPENDENCY: standard library (copy); compass_pkg.stable_ids (constants only). Imported by
+# DEPENDENCY: standard library (copy, fnmatch, re); compass_pkg.stable_ids (constants only). Imported by
 # compass_pkg.aliases (the parse error), compass_pkg.effective (the git parent scheme and
 # the legacy stage mapping of a governance copy), compass_pkg.settings_lint (the removed
 # settings) and compass_pkg.decisions_taken (the removed agent names).
 from __future__ import annotations
 
 import copy
+import fnmatch
+import re
 
 from compass_pkg.stable_ids import (LEGACY_TO_PATH, STAGE_BREAKDOWN, STAGE_DEFINE,
                                     STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_VERIFY)
@@ -248,6 +251,105 @@ CAPABILITIES: dict = {
 }
 
 
+#: The `extends:` value `compass migrate` replaces with `acceptance_strategy: off`.
+#: A pin of the shipped default below @8 keeps `S17` off (ADR-094 open question 7),
+#: so the setting that keeps it off replaces the pin (ADR-098 decision 7).
+STRATEGY_OFF = "acceptance_strategy: {state: off, reason: ...}"
+
+#: What replaces each removed `compass.yml` key, keyed as `compass policy lint`
+#: names it: `(settings, migrated)`. `settings` is the tuple of settings that
+#: replace the key, empty when nothing does. `migrated` is True when `compass
+#: migrate` rewrites the key (ADR-098 decision 6). The `extends` rows are keyed
+#: by the major the value pins (`extends_row`); a key with `*` names a rule
+#: path (`replacement_of`). Every key of `settings_lint.REMOVED`, `SETTINGS`,
+#: `SETTING_FIELDS`, `SWITCHES`, `EFFECTS` and `CAPABILITIES` has a row, and
+#: `tests/test_lint_names_replacements.py` fails on a missing one.
+REPLACEMENTS = {
+    # The catalogs and keys of ADR-094 (`settings_lint.REMOVED`).
+    "dimensions": ((), False),
+    "stages": ((), False),
+    "rules": (("require_evidence",), True),
+    "checks": (("project_checks",), True),
+    "gates": (("signoff_labels", "project_checks"), True),
+    "vocabulary": ((), False),
+    "extends": ((), False),
+    "extends@6": ((STRATEGY_OFF,), True),
+    "extends@7": ((STRATEGY_OFF,), True),
+    "extends@8": ((), True),
+    "preset": ((), True),
+    "preset_index": ((), True),
+    "approvers.project-waiver": ((), True),
+    # The keys of ADR-090 to ADR-093 (`SETTINGS`).
+    "models": ((), True),
+    "multiagent": ((), True),
+    "living_spec": ((), True),
+    "artifacts": ((), True),
+    "approaches": ((), True),
+    **{f"stages.{stage}": ((), False) for stage in LEGACY_STAGES},
+    "rules.caps": ((), False),
+    **{f"checks.{check}": ((), False) for check in READY_CHECKS},
+    "prices": ((), True),
+    "github_labels": ((), True),
+    "readiness": ((), True),
+    # `SWITCHES`, `SETTING_FIELDS`, `EFFECTS` and `CAPABILITIES`.
+    "github_labels.page": ((), True),
+    **{f"project.{field}": ((), True) for field in (
+        "build_command", "lint_command", "format_check_command", "typecheck_command",
+        "secret_scan", "structured_logging")},
+    "rules.floors.rules.RP-FLOOR-002.then.require_phase": ((), True),
+    "capabilities.artifact-freshness": ((), False),
+    # An approach effect of any rule, or of a rule set's hit policy (VD-008).
+    **{f"rules.*.{effect}": ((), True) for effect in APPROACH_EFFECTS},
+}
+
+
+def extends_row(value):
+    """The `REPLACEMENTS` key for an `extends:` of `value`: `extends@6` for a pin
+    of the shipped default at @6 or below, `extends@7` for @7, `extends@8` for @8
+    or later or no pin, and `extends` for any other value."""
+    ref = value.get("from") if isinstance(value, dict) else value
+    found = re.fullmatch(r"compass:default(?:@(\d+))?", ref) if isinstance(ref, str) else None
+    if not found:
+        return "extends"
+    major = int(found.group(1)) if found.group(1) else None
+    if major is None or major >= 8:
+        return "extends@8"
+    return "extends@7" if major == 7 else "extends@6"
+
+
+def replacement_of(path, value=None):
+    """`(settings, migrated)` from `REPLACEMENTS` for the removed key at `path`.
+    `value` is the key's value, which picks the `extends` row."""
+    key = extends_row(value) if path == "extends" else path
+    if key in REPLACEMENTS:
+        return REPLACEMENTS[key]
+    for pattern, row in REPLACEMENTS.items():
+        if "*" in pattern and fnmatch.fnmatchcase(path, pattern):
+            return row
+    raise KeyError(f"no REPLACEMENTS row for the removed key '{path}'")
+
+
+def replacement_text(path, value=None):
+    """The settings that replace the key at `path`, as `--json` gives them, or
+    None when nothing replaces it."""
+    settings, _ = replacement_of(path, value)
+    return " or ".join(settings) if settings else None
+
+
+def removed_message(key, what, adr, reason=None, value=None):
+    """The `L-SETTING-REMOVED` message for the removed key `key`: what it set,
+    why it went, and what replaces it (ADR-098 decision 7)."""
+    settings, migrated = replacement_of(key, value)
+    text = f"'{key}' ({what}) was removed in {RELEASE} ({adr}): {reason or REASONS[adr]}."
+    if settings:
+        text += " Replacement: " + " or ".join(f"`{s}`" for s in settings) + "."
+    else:
+        text += " Removed: nothing replaces it."
+    if migrated:
+        text += " `compass migrate` rewrites it."
+    return text
+
+
 def _matches(argv, tokens):
     words = [t for t in tokens if not t.startswith("--")]
     flags = [t for t in tokens if t.startswith("--")]
@@ -275,8 +377,7 @@ def line_for(argv):
 
 
 def _note(key, what, adr):
-    return (f"'{key}' ({what}) was removed in {RELEASE} ({adr}) and is not "
-            f"read; delete it from compass.yml")
+    return removed_message(key, what, adr)
 
 
 #: Each removed switch inside a settings key, as `key.switch`: what it turned on, and

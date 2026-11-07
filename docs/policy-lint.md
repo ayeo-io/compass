@@ -52,7 +52,7 @@ check set:
 | `L-SETTING-INVALID` | error | A value of the wrong shape, a tighten-only setting that would not add to what an issue owes (a token outside the closed set, a project check that reuses a shipped id, a stage other than `build` or `ship`, a capability other than `entry-exit-evaluation`), or an assessment value the check set does not declare |
 | `L-IMPL-UNKNOWN` | error | After the tighten-only settings are applied, a check names an implementation the CLI does not hold (safety-contract guarantee 2) |
 | `L-PARENT-REMOVED` | error | `extends:` names a git parent. A team parent can hold checks this file does not show, so every command that resolves a policy refuses with exit 2 until it is deleted. Move the team's checks into the tighten-only settings, or stay on 8.x until the 9.0.0 upgrade command (#359) |
-| `L-SETTING-REMOVED` | warning | A key 9.0.0 removed. It is not read; delete it. The catalog keys `dimensions`, `stages`, `rules`, `checks`, `gates` and `vocabulary`, with every entry operation inside them, `extends: compass:default@<n>`, `preset`, `preset_index` and `approvers.project-waiver` (ADR-094); and the keys of ADR-090 to ADR-093 (`models`, `multiagent`, `living_spec`, `artifacts`, `approaches`, `prices`, `github_labels`, `readiness` and the readiness-only fields of `project`). An `extends:` that pins the default below `@8` is still read for one thing: it keeps the acceptance strategy `S17` off until #359 writes `acceptance_strategy: off` in its place |
+| `L-SETTING-REMOVED` | warning | A key 9.0.0 removed. It is not read. The catalog keys `dimensions`, `stages`, `rules`, `checks`, `gates` and `vocabulary`, with every entry operation inside them, `extends: compass:default@<n>`, `preset`, `preset_index` and `approvers.project-waiver` (ADR-094); and the keys of ADR-090 to ADR-093 (`models`, `multiagent`, `living_spec`, `artifacts`, `approaches`, `prices`, `github_labels`, `readiness` and the readiness-only fields of `project`). The message ends with what replaces the key, "Replacement: `<setting>`." or "Removed: nothing replaces it.", then "`compass migrate` rewrites it." when `compass migrate` handles the key. An `extends:` that pins the default below `@8` is still read for one thing: it keeps the acceptance strategy `S17` off, so its replacement is `acceptance_strategy: {state: off, reason: ...}` |
 
 ## The legacy lint
 
@@ -117,7 +117,11 @@ starts `  - warning CODE`.
 | `findings` | list | Every finding, errors first, in file order |
 
 Each finding has the keys `code`, `level`, `layer`, `path`, `group`
-(`settings` or `legacy`), `message` and `detail` (null), in that order.
+(`settings` or `legacy`), `message` and `detail` (null), in that order. An
+`L-SETTING-REMOVED` finding also has `replacement`, last: the settings that
+replace the key, joined with "or", or null when nothing replaces it. One
+table, `removed_parts.REPLACEMENTS`, gives the message and `replacement` for
+every removed key, so the two cannot disagree (ADR-098 decision 7).
 
 ## `compass policy show`
 

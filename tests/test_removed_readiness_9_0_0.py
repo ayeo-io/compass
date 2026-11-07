@@ -127,7 +127,10 @@ def test_a_project_readiness_block_and_commands_are_named_once_each(tmp_path):
     assert sorted(found) == sorted(["readiness"] + [f"project.{f}" for f in READINESS_FIELDS])
     for message in found.values():
         assert "removed in 9.0.0 (ADR-093)" in message, message
-        assert "delete it from compass.yml" in message, message
+        # Nothing replaces a readiness key, and `compass migrate` deletes it
+        # (ADR-098 decisions 6 and 7).
+        assert message.endswith("Removed: nothing replaces it. `compass migrate` "
+                                "rewrites it."), message
     assert "project.test_micro_command" not in found
 
 

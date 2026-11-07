@@ -80,6 +80,9 @@ class Finding:
     level: str          # "error" or "warning"
     path: str
     message: str
+    #: What replaces a removed key (`L-SETTING-REMOVED` only), from
+    #: `removed_parts.REPLACEMENTS`; None when nothing does.
+    replacement: str | None = None
 
 
 def _error(code, path, message):
@@ -336,26 +339,24 @@ def _removed_findings(doc):
                               f"show, so nothing is resolved until it is deleted. "
                               f"{removed_parts.GIT_PARENT_FIX}"))
             continue
+        reason = REASON
         if key == "extends" and _pinned_below(held):
             # ADR-094 open question 7: the pin keeps the owner decision of
-            # 2026-10-30 until #359 writes `acceptance_strategy: off` in its place.
-            out.append(_warning(
-                "L-SETTING-REMOVED", key,
-                f"'{key}' ({what}) was removed in {removed_parts.RELEASE} ({ADR}): {REASON}; "
-                f"the check set is read whatever it names, and only its pin below @8 is "
-                f"read, to keep the acceptance strategy `S17` off until the 9.0.0 upgrade "
-                f"command (#359) writes acceptance_strategy: off in its place"))
-            continue
-        out.append(_warning("L-SETTING-REMOVED", key,
-                            f"'{key}' ({what}) was removed in {removed_parts.RELEASE} ({ADR}): "
-                            f"{REASON}; it is not read; delete it from compass.yml"))
+            # 2026-10-30 until `compass migrate` writes `acceptance_strategy: off`
+            # in its place (ADR-098 decision 6).
+            reason = (f"{REASON}; only its pin below @8 is read, and it keeps the "
+                      f"acceptance strategy `S17` off")
+        out.append(Finding("L-SETTING-REMOVED", "warning", key,
+                           removed_parts.removed_message(key, what, ADR, reason, held),
+                           removed_parts.replacement_text(key, held)))
     named = {f.path for f in out}
     # The 9.0.0 removals of earlier decision records, unless a whole key above
     # already names the key that holds them.
     project = types.SimpleNamespace(kind="project", name="project", doc=doc)
     for _layer, path, message in removed_parts.setting_findings([project]):
         if path.split(".", 1)[0] not in named:
-            out.append(_warning("L-SETTING-REMOVED", path, message))
+            out.append(Finding("L-SETTING-REMOVED", "warning", path, message,
+                               removed_parts.replacement_text(path)))
     return out
 
 

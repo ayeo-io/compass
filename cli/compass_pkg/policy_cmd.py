@@ -174,10 +174,18 @@ def _lint_json(findings, mode="settings"):
         "stopped_after": None,
         "counts": {"errors": sum(f.level == "error" for f in findings),
                    "warnings": sum(f.level == "warning" for f in findings)},
-        "findings": [{"code": f.code, "level": f.level, "layer": "project", "path": f.path,
-                      "group": "settings", "message": f.message, "detail": None}
-                     for f in findings],
+        "findings": [_finding_json(f) for f in findings],
     }
+
+
+def _finding_json(f):
+    """One finding of `--json`. An `L-SETTING-REMOVED` finding also names what
+    replaces its key, or null when nothing does (ADR-098 decision 7)."""
+    out = {"code": f.code, "level": f.level, "layer": "project", "path": f.path,
+           "group": "settings", "message": f.message, "detail": None}
+    if f.code == "L-SETTING-REMOVED":
+        out["replacement"] = f.replacement
+    return out
 
 
 def _lint_text(findings):

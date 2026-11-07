@@ -52,7 +52,7 @@ Design decision. Numbered within one technical-design.md: what was chosen, what 
 
 ### `EV-`
 
-Evidence id. Identifies one typed record in the issue's evidence registry that clears a quality gate. One record can clear several gates. The accepted types are fixed by guardrails.yml; a gate that needs a mechanical type cannot be cleared with a written note.
+Evidence id. Identifies one typed record in the issue's evidence registry that clears a quality gate. One record can clear several gates. The accepted types are fixed by the check set; a gate that needs a mechanical type cannot be cleared with a written note.
 
 **Refers to:** One typed evidence record.
 
@@ -120,11 +120,11 @@ The retired spelling of RP-. Kept in archived records, which keep the id that fi
 
 ### `RP-`
 
-Routing policy rule. One rule in routing-policy.yml that biases or constrains the computed delivery approach. RP-SHAPE and RP-ADV are soft - they bias the candidate. RP-FLOOR, RP-CAP, RP-GATE and RP-ART are hard - they constrain the result. RP-ART is an artifact rule: it reads the documents on disk, such as positioning.md or intent.md. RP-REQUIRE attaches a gate without raising a minimum. A routing rule constrains which delivery approach an issue ends up with; a guardrail is one of the five hard rules cleared with evidence.
+Routing policy rule. One rule in the check set's `rules:` that biases or constrains the computed delivery approach. RP-SHAPE and RP-ADV are soft - they bias the candidate. RP-FLOOR, RP-CAP, RP-GATE and RP-ART are hard - they constrain the result. RP-ART is an artifact rule: it reads the documents on disk, such as positioning.md or intent.md. RP-REQUIRE attaches a gate without raising a minimum. RP-SETTING is a `require_evidence` setting of the project's `compass.yml`, numbered in file order. A routing rule constrains which delivery approach an issue ends up with; a guardrail is one of the five hard rules cleared with evidence.
 
 **Refers to:** One rule in the routing policy.
 
-**Appears in:** `routing-policy.yml`, `delivery-approach.md`, `manifest.yml policy_rules_fired[].id`
+**Appears in:** `governance/check-set.yml`, `delivery-approach.md`, `manifest.yml policy_rules_fired[].id`
 
 **Related:** `routing-policy`, `delivery-approach`, `guardrail`
 
@@ -252,9 +252,9 @@ The build an outer-loop green ran against: a deployed build, named by its build 
 
 ### capability
 
-A named switch for new blocking behavior, off in the shipped default.
+A named switch for new blocking behavior, off in the shipped default. `capabilities: {entry-exit-evaluation: true}` is one of the tighten-only settings.
 
-**Related:** `lock`
+**Related:** `tighten-only-setting`
 
 ### catalog
 
@@ -262,13 +262,19 @@ One of the nine maps of configuration entries keyed by id: `dimensions`, `stages
 
 **Also:** catalogue <!-- us-english-scan: allow - old term, read until 9.0.0 -->
 
-**Related:** `layer`, `overlay`, `generation`
+**Related:** `check-set`, `generation`
 
 ### check
 
 One test that Compass runs against an issue's work and reports as pass, fail or skipped. A guardrail is made of checks, a gate is cleared by evidence, and an obligation is anything the configuration asks for, such as a check, a gate, an artifact or a stage mode.
 
 **Related:** `guardrail`, `quality-gate`, `evidence`, `obligation`
+
+### check-set
+
+The one fixed set of checks, gates and evidence types that every project runs since 9.0.0 (ADR-094): `governance/check-set.yml`, with `id: compass-checks` and the version of the release that last changed it, such as `compass-checks@9.0.0`. One file has one `sha256sum`, so a change names its rules by one id, one version and one digest. A project can add to the set only through the tighten-only settings of `compass.yml`, and a waiver can excuse one check on one issue.
+
+**Related:** `tighten-only-setting`, `policy-digest`, `generation`, `waiver`, `catalog`
 
 ### checkpoint-outcome
 
@@ -278,7 +284,7 @@ What happened at one checkpoint stage hand-off, recorded in the manifest's `chec
 
 ### classifier
 
-The component that compares two configurations by their obligations.
+The component that compared two configurations by their obligations, to tell a layer that tightened from one that loosened. 9.0.0 removed it with the layers (ADR-094): a tighten-only setting can only add, so nothing needs comparing.
 
 **Related:** `obligation`, `lock`
 
@@ -404,9 +410,9 @@ The strategy numbered `S17`. A change to behavior a real client can observe is a
 
 ### generation
 
-A stored, numbered copy of the resolved configuration that an issue runs against, so the issue keeps the rules it started with.
+A stored, numbered copy of the resolved policy that an issue runs against, so the issue keeps the rules it started with. Since 9.0.0 the policy is the check set with the project's tighten-only settings, and the manifest's `policy:` block names the generation in force.
 
-**Related:** `catalog`, `layer`
+**Related:** `catalog`, `check-set`, `policy-digest`
 
 ### guardrail
 
@@ -496,9 +502,9 @@ The deterministic consequence of a label, declared in policy: security/payments/
 
 ### layer
 
-One source of configuration: the shipped preset, a team parent, the project file or the issue. Layers merge in order, and each states only what it changes.
+One source of configuration in 8.x: the shipped preset, a team parent, the project file or the issue. Layers merged in order, and each stated only what it changed. 9.0.0 removed the layers (ADR-094): every project runs the check set, and `compass.yml` holds settings. The provenance of a stored 8.x generation still names the layer that wrote each field.
 
-**Related:** `catalog`, `overlay`, `preset`, `project-file`
+**Related:** `check-set`, `overlay`, `preset`, `project-file`
 
 ### layering-record
 
@@ -514,9 +520,9 @@ Low-level design: the signatures, contracts, file plan and tests of one work uni
 
 ### lock
 
-A mark on an entry that refuses a change from a lower layer that would loosen it, or that the classifier cannot compare. Tightening stays allowed.
+A mark on an 8.x entry that refused a change from a lower layer that would loosen it, or that the classifier could not compare. 9.0.0 removed locks and unlocks (ADR-094): nothing sits above the check set. Its `never_waived` list names the two entries no waiver can excuse, the two hard locks of 8.x.
 
-**Related:** `waiver`, `classifier`
+**Related:** `waiver`, `classifier`, `check-set`
 
 ### manifest
 
@@ -544,7 +550,7 @@ The file names and patterns in an issue's documents folder that are documents of
 
 Anything the configuration asks for at an assessment: a stage mode, a check on an entry or exit list, a gate, an artifact, a checkpoint or a ceiling.
 
-**Related:** `classifier`, `stage-mode`
+**Related:** `check-set`, `stage-mode`
 
 ### operability
 
@@ -560,7 +566,7 @@ The acceptance loop of the four-layer acceptance strategy: the scenarios fail be
 
 ### overlay
 
-A layer file that states only its differences from its parent, so it holds the changes and not a copy of the parent.
+A layer file that stated only its differences from its parent, so it held the changes and not a copy of the parent. 9.0.0 removed the layers and their overlays (ADR-094).
 
 **Related:** `layer`, `preset`
 
@@ -578,7 +584,7 @@ The four stages a delivery issue runs, in order: assess, specify, build and ship
 
 ### pin
 
-The `#<sha>` suffix on a git `extends:`, which names the parent commit a project runs against.
+The `#<sha>` suffix on a git `extends:`, which named the parent commit a project ran against. 9.0.0 removed git parents (ADR-094): an `extends:` that names one is refused with `L-PARENT-REMOVED`.
 
 **Related:** `layer`, `preset`
 
@@ -587,6 +593,12 @@ The `#<sha>` suffix on a git `extends:`, which names the parent commit a project
 The machine key `plan` in an archived issue's stages block: the engineering design stage of the eight stages before 9.0.0. 9.0.0 removed the stage, its command /compass:plan and the `plan-authoring` skill (ADR-092); an archived issue keeps the key, and Compass reads it as the specify stage of the path. The stage wrote technical-design.md until 9.0.0 removed that document (ADR-091).
 
 **Related:** `path`, `technical-design`, `design`
+
+### policy-digest
+
+The manifest's `policy:` block, written at each generation commit: the check set's id and version, the `sha256sum` of the check set file and of `compass.yml`, the tighten-only settings applied, and the digest of the generation's `resolved.yml`. A reviewer reads in it the rules a change ran under without the generation folder. `compass check` prints it as the `Policy:` line.
+
+**Related:** `check-set`, `generation`, `manifest`
 
 ### postmortem
 
@@ -604,15 +616,15 @@ The unit of landing code. Small, trunk-based PRs preferred.
 
 ### preset
 
-A named, versioned parent layer. `default` is the only preset Compass ships.
+A named, versioned parent layer. Until 9.0.0 Compass shipped one, `default`, which a project named with `extends:`. 9.0.0 removed the live preset (ADR-094): the check set replaces it, and `extends:` is a removed setting. The frozen `default@6` and `default@7` stay as data that old issues read.
 
-**Related:** `layer`, `overlay`
+**Related:** `layer`, `overlay`, `check-set`
 
 ### project-file
 
 `compass.yml` at the project root, the one file a person edits.
 
-**Related:** `layer`, `settings-key`
+**Related:** `settings-key`, `tighten-only-setting`
 
 ### project-index
 
@@ -706,7 +718,7 @@ How the change reaches users safely: feature flags, canary or incremental rollou
 
 ### router
 
-The agent that runs assess: reads the four assessment dimensions, hands them to the CLI, and records the delivery approach in the manifest. It assesses; it does not choose a process. Named for what it does - Anthropic's platform docs call this shape "Routing", classifying input and directing it to a specialized path - and for the file it runs, routing-policy.yml. The approach is computed from the assessment by `compass approach evaluate`, which is the determinism boundary.
+The agent that runs assess: reads the four assessment dimensions, hands them to the CLI, and records the delivery approach in the manifest. It assesses; it does not choose a process. Named for what it does - Anthropic's platform docs call this shape "Routing", classifying input and directing it to a specialized path - and for the routing rules it runs, the `rules:` of the check set. The approach is computed from the assessment by `compass approach evaluate`, which is the determinism boundary.
 
 **Related:** `assess`, `assessment`, `delivery-approach`
 
@@ -730,9 +742,9 @@ The headings of an artifact's document, in order, for each depth the document ca
 
 ### settings-key
 
-A top-level key of `compass.yml` that configures the CLI instead of the process.
+A top-level key of `compass.yml`. Most configure the CLI and leave the check set as it is; the five tighten-only settings add to it.
 
-**Related:** `project-file`
+**Related:** `project-file`, `tighten-only-setting`
 
 ### ship
 
@@ -822,9 +834,15 @@ The detached Git worktree of HEAD that a readiness measurement created in the sy
 
 ### test-layer
 
-One of the four layers of the four-layer acceptance strategy: specification, domain-specific language, protocol driver or system under test. The word `layer` alone names a configuration source.
+One of the four layers of the four-layer acceptance strategy: specification, domain-specific language, protocol driver or system under test. The word `layer` alone named an 8.x configuration source.
 
 **Related:** `four-layer-acceptance-strategy`, `layer`, `layering-record`
+
+### tighten-only-setting
+
+One of the five keys of `compass.yml` that can only add to the check set: `signoff_labels`, `require_evidence`, `agent_review`, `project_checks` and `capabilities`. No setting can remove an entry, lower a severity or narrow when a check applies. `compass policy lint` refuses an unknown key or a value outside the closed sets.
+
+**Related:** `check-set`, `project-file`, `settings-key`, `capability`
 
 ### traceability
 
@@ -846,9 +864,9 @@ A document kind that no delivery approach, rule or `every_approach` flag names, 
 
 ### waiver
 
-A recorded departure from a parent's value, with a reason and an approver.
+An excuse of one check on one issue, with a reason and a person's approval (ADR-094). `compass waiver add` records it in the manifest, and it excuses nothing until a `human-approval` record names it. No waiver can excuse `human-approval-present` or guardrail `G5`. In 8.x a waiver was a recorded departure from a parent's value, written in a layer; such a waiver is not read now.
 
-**Related:** `lock`
+**Related:** `check-set`, `lock`
 
 ### word_ceiling
 

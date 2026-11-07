@@ -5,10 +5,14 @@ make sure the project exists before it writes into it.
 
 The split this verb keeps:
 
-  compass init      creates .compass/ and its state file. Nothing else. Safe
-                    to run twice, which is what lets the entry-point commands
-                    call it unconditionally rather than each testing for the
-                    directory.
+  compass init      creates .compass/, its state file and the ignore lines
+                    of the record (#356): `.compass/work/.gitignore` in every
+                    project, and the per-machine lines of `.compass/.gitignore`
+                    when the record is committed (`record_mode`). Nothing
+                    else. Safe to run twice, which is what lets the
+                    entry-point commands call it unconditionally rather than
+                    each testing for the directory. A second run only adds an
+                    ignore line that is missing; it keeps the person's own.
   /compass:init     the slash command - writes a minimal compass.yml. It
                     copies nothing.
 
@@ -25,7 +29,8 @@ particular not core.find_compass_dir(), which raises when there is no
 import datetime
 import os
 
-from compass_pkg import project_settings
+from compass_pkg import project_settings, record_mode
+from compass_pkg.core import CompassError
 from compass_pkg.terminal import say
 
 # State the CLI writes, not settings a person edits (ADR-043). Written on
@@ -81,7 +86,36 @@ def resolve_project_root():
         search = parent
 
 
-def ensure_initialised(project_root, by="compass init"):
+def write_ignore_files(project_root):
+    """Write the record's ignore lines. Returns the files it changed.
+
+    `.compass/work/.gitignore` is written in every project: in kept-out mode
+    the project ignores the folder anyway, and a later switch to committed
+    mode needs no second step. The lines of `.compass/.gitignore` are added
+    only in committed mode, because a project that keeps its record out may
+    track that file and must not see it change. A project whose settings
+    cannot be read gets no committed-mode lines: `compass policy lint`
+    names the fault, and init must not fail on it."""
+    compass_dir = os.path.join(project_root, ".compass")
+    changed = []
+    work_ignore = os.path.join(compass_dir, "work", ".gitignore")
+    if record_mode.add_ignore_lines(work_ignore, record_mode.WORK_IGNORE_LINES,
+                                    record_mode.WORK_IGNORE_HEADER):
+        changed.append(work_ignore)
+    try:
+        committed = record_mode.mode(project_root).mode == record_mode.COMMITTED
+    except CompassError:
+        committed = False
+    if committed:
+        compass_ignore = os.path.join(compass_dir, ".gitignore")
+        if record_mode.add_ignore_lines(compass_ignore,
+                                        record_mode.COMPASS_IGNORE_LINES,
+                                        record_mode.COMPASS_IGNORE_HEADER):
+            changed.append(compass_ignore)
+    return changed
+
+
+def ensure_initialised(project_root, by="compass init", changed=None):
     """Create .compass/ if it is not there. Returns (created, compass_dir).
 
     Idempotent on purpose. Every entry-point command calls this without
@@ -91,6 +125,9 @@ def ensure_initialised(project_root, by="compass init"):
     `by` names what did the initialising - the verb itself, or the entry-point
     command that called it. It is written into the state file so the hook's
     first refusal can explain where Compass came from.
+
+    `changed`, when given, is a list that receives each ignore file this run
+    wrote to (`write_ignore_files`).
     """
     compass_dir = os.path.join(project_root, ".compass")
     work_dir = os.path.join(compass_dir, "work")
@@ -107,6 +144,9 @@ def ensure_initialised(project_root, by="compass init"):
     if not os.path.exists(state) and not os.path.exists(old_config):
         with open(state, "w", encoding="utf-8") as fh:
             fh.write(STATE_TEMPLATE.format(by=by, at=stamp))
+    written = write_ignore_files(project_root)
+    if changed is not None:
+        changed.extend(written)
 
     return created, compass_dir
 
@@ -120,8 +160,10 @@ def _state_path(root, compass_dir):
 
 def cmd_init(args):
     root = resolve_project_root()
+    changed = []
     created, compass_dir = ensure_initialised(
-        root, by=getattr(args, "by", None) or "compass init")
+        root, by=getattr(args, "by", None) or "compass init", changed=changed)
+    ignores = ["ignore   : %s" % path for path in changed]
 
     if created:
         return say(
@@ -130,12 +172,21 @@ def cmd_init(args):
             detail=[
                 "state    : %s" % _state_path(root, compass_dir),
                 "work     : %s" % os.path.join(compass_dir, "work"),
+                *ignores,
                 "settings : defaults in force. /compass:init writes a compass.yml.",
             ],
             decision=True,
             created=True, path=compass_dir, project_root=root,
         )
 
+    if changed:
+        return say(
+            args,
+            "compass init: %s is already a Compass project - added the missing "
+            "ignore lines." % root,
+            detail=["state    : %s" % _state_path(root, compass_dir), *ignores],
+            created=False, path=compass_dir, project_root=root,
+        )
     return say(
         args,
         "compass init: %s is already a Compass project - nothing changed." % root,

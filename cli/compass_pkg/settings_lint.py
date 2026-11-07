@@ -374,6 +374,10 @@ def _plain_problems(doc):
         text = acceptance_strategy.problem(doc["acceptance_strategy"])
         if text:
             out.append(("acceptance_strategy", text))
+    record = doc.get("record")
+    if isinstance(record, dict) and "commit" in record \
+            and not isinstance(record["commit"], bool):
+        out.append(("record.commit", f"'{record['commit']}' is not true or false"))
     approvers = doc.get("approvers")
     if approvers is not None:
         if not isinstance(approvers, dict):
@@ -490,7 +494,8 @@ def schema():
         "allow_project_commands": {"description": top["allow_project_commands"],
                                    "type": "boolean"},
         "enforcement": {"description": top["enforcement"], "type": "object"},
-        "record": {"description": top["record"], "type": "object"},
+        "record": {"description": top["record"], "type": "object", "properties": {
+            "commit": {"description": top["record.commit"], "type": "boolean"}}},
         "project": {"description": top["project"], "type": "object", "properties": {
             "acceptance_support": {
                 "description": top["project.acceptance_support"], "type": "object",

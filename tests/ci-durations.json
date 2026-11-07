@@ -366,6 +366,7 @@
   "tests/test_reassessment_schema.py": 7.27,
   "tests/test_receiving_code_review_skill.py": 0.01,
   "tests/test_record_keeping_integrity.py": 43.77,
+  "tests/test_record_mode.py": 3.0,
   "tests/test_record_prune_hint.py": 5.19,
   "tests/test_record_remote.py": 0.01,
   "tests/test_record_restore_refuses_redacted.py": 1.65,

@@ -177,7 +177,13 @@
       "type": "array"
     },
     "record": {
-      "description": "Where the delivery record is kept, with `remote`, `paths` and `names_key`. Without it no record is kept.",
+      "description": "Where the delivery record is kept, with `remote`, `paths` and `names_key`, and whether each issue's record is committed with its code (`commit`). Without `remote` no record repository is kept.",
+      "properties": {
+        "commit": {
+          "description": "`true` commits each issue's record with its code and `false` keeps it out of the project's git history. Unset, the record is committed unless `remote` is set.",
+          "type": "boolean"
+        }
+      },
       "type": "object"
     },
     "require_evidence": {

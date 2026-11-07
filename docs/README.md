@@ -68,7 +68,7 @@ same commit.
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
 | `cli/compass_pkg/release_line.py` | `docs/release-line.md` |
 | `cli/compass_pkg/release_notes.py`, `cli/compass_pkg/shipped_issues.py` | `docs/release-notes.md` |
-| `cli/compass_pkg/project_settings.py`, `cli/compass_pkg/tighten.py`, `cli/compass_pkg/settings_lint.py`, `cli/compass_pkg/catalogue_spec.py`, `schemas/compass.schema.json`, `tests/test_tighten.py`, `tests/test_settings_lint.py` | `docs/configuration.md` |
+| `cli/compass_pkg/project_settings.py`, `cli/compass_pkg/tighten.py`, `cli/compass_pkg/settings_lint.py`, `cli/compass_pkg/catalogue_spec.py`, `schemas/compass.schema.json`, `tests/test_tighten.py`, `tests/test_settings_lint.py`, `cli/compass_pkg/init_cmd.py` | `docs/configuration.md` |
 | `cli/compass_pkg/legacy_adapter.py`, `governance/presets/default@6/`, `governance/presets/default@7/`, `tests/fixtures/preset-digests.yml` | `governance/routing-policy.md` |
 | `cli/compass_pkg/stable_ids.py`, `cli/compass_pkg/gate_status.py`, `tests/test_stable_ids.py` | `architecture/decisions/ADR-040-stable-ids-live-in-one-module.md` |
 | `cli/compass_pkg/path_stages.py`, `cli/compass_pkg/path_readers.py`, `tests/test_path_stages.py`, `tests/test_path_checks.py` | `architecture/decisions/ADR-092-compass-runs-one-path-of-four-stages.md` |
@@ -91,7 +91,7 @@ same commit.
 | `cli/compass_pkg/tdd.py`, `cli/compass_pkg/scenario_freeze.py`, `cli/compass_pkg/tdd_green.py`, `cli/compass_pkg/green_attempts.py`, `cli/compass_pkg/evidence_identity.py`, `cli/compass_pkg/evidence_sums.py` | `skills/evidence-gates/SKILL.md` |
 | `cli/compass_pkg/loop_ceilings.py` | `governance/routing-policy.md` |
 | `cli/compass_pkg/evidence_required.py`, `cli/compass_pkg/path_writer.py`, `tests/fixtures/compat/v8.0.4-governance.tgz`, `tests/test_path_writer.py`, `tests/test_quick_fix_path.py` | `governance/routing-policy.md` |
-| `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py` | `docs/delivery-record.md` |
+| `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/record_mode.py`, `tests/test_record_mode.py` | `docs/delivery-record.md` |
 | `cli/compass_pkg/checkpoint_outcomes.py` | `docs/checkpoints.md` |
 | `cli/compass_pkg/issue_link.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `tests/fake_gh.py` | `docs/github-links.md` |
 | `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |

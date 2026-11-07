@@ -255,8 +255,12 @@ TOP_DESCRIPTIONS = {
                               "The default is `false`.",
     "enforcement": "Extra paths the pre-tool hook guards. Holds `code_globs`, a list of path "
                    "patterns the hook treats as code.",
-    "record": "Where the delivery record is kept, with `remote`, `paths` and `names_key`. "
-              "Without it no record is kept.",
+    "record": "Where the delivery record is kept, with `remote`, `paths` and `names_key`, "
+              "and whether each issue's record is committed with its code (`commit`). "
+              "Without `remote` no record repository is kept.",
+    "record.commit": "`true` commits each issue's record with its code and `false` keeps it "
+                     "out of the project's git history. Unset, the record is committed unless "
+                     "`remote` is set.",
     "project": "The project's name, its commands (`test_command`, `test_micro_command`, "
                "`bdd_run_command` and `layering_command`, which `compass layering record` "
                "runs when given no command), and the paths of its acceptance support code "

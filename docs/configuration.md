@@ -29,8 +29,9 @@ that holds `.compass` or `.git`), and reads the `owner` and `approvers` of
 - **The state file in `.compass/`** holds what the CLI writes, not what a
   person edits: `initialized` (what created the project, and when) and
   `records_signed_since`. Do not edit it. `compass init` writes this file and
-  no other, so a new project has `.compass/state.yml` and no
-  `.compass/config.yml`. A project created before ADR-043 keeps both values in
+  no other settings or state file, so a new project has `.compass/state.yml`
+  and no `.compass/config.yml`. It also writes the ignore lines of the record
+  (see `record` below). A project created before ADR-043 keeps both values in
   `.compass/config.yml`, and the CLI and the hook read them there. `init` adds
   nothing to such a project, and `compass policy migrate` on 8.x moves them to
   the state file.
@@ -39,7 +40,7 @@ that holds `.compass` or `.git`), and reads the `owner` and `approvers` of
 
 | Project | Gets | Reads |
 |---|---|---|
-| New (no `.compass/`) | `compass init`, run by any entry point, creates `.compass/state.yml` and `.compass/work/`. `/compass:init` then writes a minimal `compass.yml` (`schema`, `owner`, `project.name`, `project.test_command`) and copies nothing. | `compass.yml`, over the check set |
+| New (no `.compass/`) | `compass init`, run by any entry point, creates `.compass/state.yml`, `.compass/work/` and `.compass/work/.gitignore`. `/compass:init` then writes a minimal `compass.yml` (`schema`, `owner`, `project.name`, `project.test_command`) and copies nothing. | `compass.yml`, over the check set |
 | From 5.x with a `.compass/config.yml` or copied governance | Nothing changes until it runs `compass policy migrate` on 8.x. `/compass:init` stops and says so in place of writing a fresh file; the upgrade guide names the 9.0.0 settings. | The old files, as 5.x did |
 | This repository | A hand-written `compass.yml` that holds settings keys and the owner, and `.compass/state.yml`. It also holds a `readiness:` override and two readiness commands, which 9.0.0 no longer reads (see `readiness` below). | `compass.yml` |
 
@@ -90,7 +91,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `autonomy` | How often a session stops for a person | `controlled`, `balanced`, `autonomous` | `balanced` |
 | `project` | The project's name and commands | `name`, `test_command`, `test_micro_command`, `bdd_run_command`; six readiness keys that 9.0.0 no longer reads (see `project` below) | none |
 | `enforcement` | Extra paths the pre-tool hook guards | `code_globs`: a list of patterns | none |
-| `record` | Where the delivery record is kept | `remote`, `paths`, `names_key` | no record |
+| `record` | Where the delivery record is kept, and whether each issue's record is committed with its code | `remote`, `paths`, `names_key`, `commit` | no record repository; the record is committed |
 | `prices` | Removed in 9.0.0 and not read (see `prices` below) | - | - |
 | `models` | Removed in 9.0.0 and not read (see `models` below) | - | - |
 | `multiagent` | Removed in 9.0.0 and not read (see `multiagent` below) | - | - |
@@ -195,6 +196,46 @@ Delete it from `compass.yml`.
 `compass record sync` copies into it. `names_key` is an optional path inside
 the project to a file of names that must not reach the record. See
 `docs/delivery-record.md`.
+
+`commit` sets the record mode: whether each issue's folder
+(`.compass/work/<slug>/`) is committed with its code or kept out of the
+project's git history. It must be `true` or `false`; `compass policy lint`
+refuses any other value. `record: {commit: false}` is valid with no `remote`.
+`record_mode.mode` decides, in this order:
+
+| Condition | Mode | Reason given |
+|---|---|---|
+| `commit: false` | kept out | "record.commit is false" |
+| `remote` set, `commit` not set | kept out | "the record is synced to <remote>; set record.commit to choose" |
+| `commit: true`, or neither set | committed, unless a row below applies | none |
+| not inside a git work tree | kept out | "not a git repository" |
+| git ignores the issue folder | kept out | "<path> is ignored by <file>:<line>:<pattern>" |
+
+A project's own ignore rule wins: Compass does not force-add an ignored
+folder and does not refuse the landing. `compass record sync` runs whenever
+`remote` is set, in either mode. This repository names a `remote` and no
+`commit`, so its record is kept out.
+
+`compass init` writes `.compass/work/.gitignore` in every project. It holds
+the files of an issue folder that belong to one checkout:
+
+```
+# Written by Compass. Each issue folder is the record that ships with the code;
+# these files are per-checkout state and stay out (#356).
+*/generations/
+*/.*.lock
+*/.red
+*/.acceptance
+*/start-state.json
+*/evidence/.tdd-state.json
+*/approval-requests/pending/
+```
+
+In committed mode only, it also adds `delegations/`, `cache/`, `private/`,
+`current-task` and `interruptions.log` to `.compass/.gitignore`. A kept-out
+project can track that file, so it does not change there. Each run adds only
+the lines that are missing and keeps the person's own lines, so running
+`compass init` twice adds nothing.
 
 ### `allow_project_commands`
 

@@ -1,6 +1,33 @@
 # The delivery record
 
-Compass keeps each issue's records out of the project's git history, so a public repository does not publish working notes. `compass record` keeps them in a second repository instead, so they survive the machine they were made on (ADR-031).
+Each issue's folder (`.compass/work/<slug>/`) is its record. The record mode decides whether that folder is committed with the code or kept out of the project's git history (#356). A project that keeps its record out can use `compass record` to keep it in a second repository instead, so it survives the machine it was made on (ADR-031).
+
+## The record mode
+
+`record.commit` in `compass.yml` sets the mode; `record_mode.mode` decides it:
+
+- `record.commit: false` keeps the record out.
+- A project that names `record.remote` and does not set `record.commit` keeps the record out: it chose a separate record store, so an upgrade does not start committing its records.
+- Otherwise the record is committed: `record.commit: true`, or neither key set.
+- A committed record is kept out after all when the project is not a git work tree, or when git ignores the issue folder. The reason names the ignore rule. Compass does not force-add the folder and does not refuse the landing.
+
+`record: {commit: false}` is valid with no `remote`. `docs/configuration.md` gives the full table and the reasons.
+
+`compass init` writes `.compass/work/.gitignore` in every project, so a committed record leaves out the files that belong to one checkout:
+
+```
+# Written by Compass. Each issue folder is the record that ships with the code;
+# these files are per-checkout state and stay out (#356).
+*/generations/
+*/.*.lock
+*/.red
+*/.acceptance
+*/start-state.json
+*/evidence/.tdd-state.json
+*/approval-requests/pending/
+```
+
+In committed mode it also adds `delegations/`, `cache/`, `private/`, `current-task` and `interruptions.log` to `.compass/.gitignore`. A ship commit can hold both ignore files. Nothing stages the record yet: `compass ship-commit` lands as before in both modes.
 
 ## Setting it up
 
@@ -54,4 +81,6 @@ One record repository serves one project. The clone lives in the user's cache fo
 | File | Role |
 |---|---|
 | `cli/compass_pkg/record.py` | `sync`, `restore`, and the settings. |
+| `cli/compass_pkg/record_mode.py` | The record mode, the ignore lines and the helper that appends them. |
+| `cli/compass_pkg/init_cmd.py` | `compass init` writes the ignore files. |
 | `cli/compass_pkg/manifest.py` | `ship-commit` runs the sync after a landing. |

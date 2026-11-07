@@ -42,7 +42,9 @@ _NO_LFS = (("filter.lfs.process", ""), ("filter.lfs.smudge", "cat"),
 
 def settings(project_root):
     """`(remote, paths)` from the project's settings, or None when the
-    project names no record."""
+    project names no record repository. A `record:` that holds only
+    `commit` (the record mode, `record_mode`) names none: a project can
+    write `record: {commit: false}` with no remote."""
     try:
         config = project_settings.settings(project_root)
     except Exception as exc:                            # noqa: BLE001
@@ -50,6 +52,9 @@ def settings(project_root):
                            f"be read: {exc}")
     record = config.get("record")
     if not record:
+        return None
+    if isinstance(record, dict) and "remote" not in record \
+            and "paths" not in record:
         return None
     remote = record.get("remote") if isinstance(record, dict) else None
     paths = record.get("paths") if isinstance(record, dict) else None

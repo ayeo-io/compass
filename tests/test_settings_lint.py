@@ -110,6 +110,8 @@ def test_an_unknown_key_is_refused(base, doc, path):
      "capabilities.entry-exit-evaluation"),
     ({"autonomy": "sometimes"}, "autonomy"),
     ({"owner": ""}, "owner"),
+    ({"record": {"commit": "no"}}, "record.commit"),
+    ({"record": {"commit": 0}}, "record.commit"),
 ])
 def test_a_value_that_is_malformed_or_does_not_only_add_is_refused(base, doc, path):
     found = settings_lint.lint(doc, base)

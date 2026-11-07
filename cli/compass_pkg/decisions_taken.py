@@ -444,6 +444,8 @@ def approve_set(task_dir, answer, save=True):
         task.setdefault("evidence", []).append(record)
         for entry in entries:
             entry["status"] = CONFIRMED
+        from compass_pkg import approvals
+        approvals.keep_authority(task, answer)
         save_manifest(task, path)
     return ("compass evidence approve: %d decision(s) confirmed by %s, recorded as %s."
             % (len(ids), answer.approver, evidence_id),

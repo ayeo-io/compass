@@ -238,7 +238,7 @@ def _delegated(args):
             answer = approvals.checked(approvals.Answer(
                 draft.form, draft.value, approval_records.APPROVED,
                 delegation["delegated_by"], delegation.get("role") or "owner", draft.scope,
-                provenance))
+                provenance, delegations.copy_of(delegation)))
             done = approvals.record(task_dir, answer)
             delegations.record_use(task_dir, delegation, agent, done, done.outcome,
                                    store_compass)

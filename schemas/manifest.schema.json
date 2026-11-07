@@ -905,6 +905,33 @@
         "number": {"type": "integer", "minimum": 1, "maximum": 999999999, "description": "The issue number in that repository."}
       }
     },
+    "delegations_used": {
+      "type": "object",
+      "description": "A copy of each delegation that authorized a record of this issue, keyed by its id, written in the same save as the record (`delegations.keep_copy`). A second use of the same delegation adds nothing; a delegation whose kept fields changed is added again as `<id>@2`, `<id>@3` and so on. The copy leaves out the nonce, the use count, the index of other issues' records and the session ids.",
+      "propertyNames": {"pattern": "^DL-[0-9]+(@[0-9]+)?$"},
+      "additionalProperties": {
+        "type": "object",
+        "required": ["delegated_by", "forms", "sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "format": {"type": "integer", "description": "The delegation file's format; absent on a 7.0.0 file."},
+          "delegated_by": {"type": "string", "description": "The person who typed the delegation."},
+          "role": {"type": "string"},
+          "approver_source": {"type": "string"},
+          "created_at": {"type": "string"},
+          "agent": {"type": "string", "description": "The one agent it covers."},
+          "covers_session": {"const": true, "description": "It covers the agents of the session it was typed in. The session id is left out."},
+          "until": {"type": "string", "description": "When it ends; absent when it lasts until revoked."},
+          "issues": {"type": "object", "description": "The issues it covers, each at its generation; absent when it covers every issue."},
+          "forms": {"type": "array", "items": {"type": "string"}},
+          "labels": {"type": "array", "items": {"type": "string"}, "description": "The labels a 7.0.0 file was limited to."},
+          "max_uses": {"type": "integer", "minimum": 1},
+          "created_via": {"type": "string"},
+          "prompt_id": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "The sha256 of the other fields of the copy, as JSON with sorted keys and no spaces (`delegations.copy_sha256`)."}
+        }
+      }
+    },
     "pull_request": {
       "type": "object",
       "description": "The pull request that carries the issue. Set by `compass issue link set --pr`, which reads it with `gh pr view`. Once the pull request is merged and the issue has landed, the same command writes the merge commit to `land_commit`.",

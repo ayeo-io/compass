@@ -148,6 +148,7 @@
   "tests/test_declared_test_ids_resolve.py": 0.01,
   "tests/test_delegate_flags.py": 6.0,
   "tests/test_delegation.py": 32.19,
+  "tests/test_delegation_copied_to_record.py": 5.0,
   "tests/test_delegation_docs.py": 3.0,
   "tests/test_delegation_limits.py": 10.0,
   "tests/test_delegation_review.py": 30.0,

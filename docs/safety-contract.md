@@ -150,9 +150,13 @@ limit on how long a delegation lasts or on how many are in force:
   `--agent`. Session ids appear in the issue's records. Neither limit is
   closed: a process that can do either can already act as the person.
 
-The record names the person, the agent and the delegation. The person sees a
-summary of delegated approvals, from any worktree, until they mark them
-reviewed. `/compass:approve` with nothing pending marks reviewed only the
+The record names the person, the agent and the delegation. The manifest
+keeps a copy of each delegation used (`delegations_used:`), written in the same
+save as the record, so the issue record shows the authority after the
+delegation file is gone. The copy holds no nonce and no session id.
+
+The person sees a summary of delegated approvals, from any worktree, until
+they mark them reviewed. `/compass:approve` with nothing pending marks reviewed only the
 approvals that the session's last summary showed. `/compass:reject <record id>`
 overrules one; for the sign-off it writes an `approval-withdrawal` record, which
 never reverses an action already taken and never fails a landed issue.

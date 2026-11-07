@@ -155,6 +155,10 @@ with `compass waiver add --check <id> --reason "..."`, ask with `compass
 evidence request --waiver W-<n>`, and stop: only a person, or an agent under a
 delegation typed `--for waivers`, approves it (`docs/waivers.md`).
 
+An approval under a delegation copies that delegation into the manifest's
+`delegations_used:`, in the same save as the record. Compass writes it; do not
+edit it (`docs/entry-exit-evaluation.md`).
+
 A new project has no `governance/` directory: the fixed check set
 (`governance/check-set.yml` in the plugin) is in force, and `compass.yml` holds
 the project's settings, which can only add to it. An unmigrated 5.x project runs

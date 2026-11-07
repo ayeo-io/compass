@@ -167,8 +167,13 @@ def test_f4_delegated_g5_recorded(tmp_path):
     ok, detail = checks._check_human_approval(manifest_of(root), str(task_dir(root)))
     assert ok and f"by {OWNER} via {ARCHITECT} under DL-1" in detail, detail
     assert _delegations(root)["DL-1"]["uses"] == 1
-    devlog = (task_dir(root) / "devlog.md").read_text(encoding="utf-8")
-    assert rec["id"] in devlog and ARCHITECT in devlog and "DL-1" in devlog
+    # The authority is copied into the record in the same save; the devlog gets
+    # no line (ADR-095 decision 12).
+    copy = manifest_of(root)["delegations_used"]["DL-1"]
+    assert copy["agent"] == ARCHITECT and copy["delegated_by"] == OWNER
+    assert copy["forms"] == ["g5", "checks", "documents"]
+    devlog = task_dir(root) / "devlog.md"
+    assert not devlog.is_file() or "DL-1" not in devlog.read_text(encoding="utf-8")
 
 
 # --- an agent with no delegation cannot approve (`TRC-F5`) -----------------------------------

@@ -119,6 +119,9 @@ class Answer:
     role: str
     scope: str = ""
     provenance: dict = field(default_factory=dict)
+    # For an answer under a delegation: `(id, copy)` from `delegations.copy_of`,
+    # which each writer keeps in the manifest in the same save as the record.
+    authority: tuple | None = None
 
 
 @dataclass
@@ -189,7 +192,16 @@ def checked(answer):
             raise CompassError(f"{VERB}: {flag} must not be empty; a record says in what role "
                                f"and for what the person approved.")
     return Answer(answer.form, answer.value, answer.decision, approver, role, scope,
-                  dict(answer.provenance))
+                  dict(answer.provenance), answer.authority)
+
+
+def keep_authority(task, answer):
+    """Copy the delegation that authorized `answer`, if any, into the manifest
+    dict (`delegations.keep_copy`). Each writer calls it just before the save
+    that writes the record, so the record and its authority land together."""
+    if answer.authority is not None:
+        from compass_pkg import delegations
+        delegations.keep_copy(task, answer.authority)
 
 
 def _guardrail_form(answer):
@@ -318,6 +330,7 @@ def _record_check(task_dir, answer, save):
     entry.update(answer.provenance)
     if save:
         task.setdefault("evidence", []).append(entry)
+        keep_authority(task, answer)
         save_manifest(task, task_path)
     return Recorded(
         f"{VERB}: {check_id} - {answer.decision} by {answer.approver} recorded as "
@@ -351,6 +364,7 @@ def _record_guardrail(task_dir, answer, save):
     entry.update(answer.provenance)
     if save:
         task.setdefault("evidence", []).append(entry)
+        keep_authority(task, answer)
         save_manifest(task, task_path)
     return Recorded(
         f"{VERB}: guardrail `G5` - signed off by {answer.approver} recorded as "
@@ -434,6 +448,7 @@ def _record_checkpoint(task_dir, answer, save):
         checkpoint_outcomes.set_outcome(task, {
             "stage": stage, "outcome": checkpoint_outcomes.WAITED, "by": answer.approver,
             "at": stamp, "evidence": evidence_id})
+        keep_authority(task, answer)
         save_manifest(task, task_path)
     return Recorded(
         f"{VERB}: the {stage} checkpoint - answered by {answer.approver}, recorded as "
@@ -482,6 +497,7 @@ def _record_waiver(task_dir, answer, save):
     entry.update(answer.provenance)
     if save:
         task.setdefault("evidence", []).append(entry)
+        keep_authority(task, answer)
         save_manifest(task, task_path)
     return Recorded(
         f"{VERB}: waiver {waiver_id} of {waiver['check']} - approved by {answer.approver} "

@@ -455,7 +455,16 @@ compass evidence approve (--check ID | --guardrail G5 | --artifact KIND | --deci
 
 It needs no terminal and no `--approver` or `--role`: the record names the
 person who delegated as `approver`, with `approved_by_agent`, `delegation` and
-`via: delegation`, and a line goes to the issue's devlog. The command must be
+`via: delegation`. In the same save, the manifest's `delegations_used:` gets
+a copy of the delegation under its id (`delegations.copy_of`, `keep_copy`;
+ADR-095 decision 12). The copy keeps who delegated, to whom, until when, for
+which issues and forms, and how it was typed, with the `sha256` of those
+fields. It leaves out the nonce, the use count, the index of other issues'
+records and the session ids: `covers_session` is kept as `true`. A second use
+of the same delegation adds nothing. A delegation whose kept fields changed,
+such as a `DL-1` typed again after the folder was cleared, is added again as
+`DL-1@2`. A revocation does not change the copy. The issue's devlog gets no
+line. The command must be
 a plain command that the pre-tool hook reads. The hook writes a call ticket into
 the common store (`cli/compass_pkg/delegation_tickets.py`): the session and the
 caller that Claude Code reported, and a digest of the words after `evidence

@@ -46,7 +46,10 @@ or a delegation waiting for its code, already holds is refused.
 The named agent approves with `compass evidence approve <form> --delegated
 --as <agent>` (`authorise`, then `record_use`). The record's `approver` is the
 person who delegated; it also holds `approved_by_agent`, `delegation` and
-`via: delegation`. Each use writes a line to the issue's devlog.
+`via: delegation`. Each use counts on the delegation file, and the
+manifest's `delegations_used:` gets a copy of the delegation in the same save
+as the record (`copy_of`, `keep_copy`; ADR-095 decision 12), so the issue
+record shows the authority without the delegation folder.
 `/compass:revoke` ends delegations early (`handle_revoke`). A delegation never
 covers delegation: the agent cannot create, extend or revoke one, or reject an
 approval.
@@ -586,11 +589,72 @@ def authorise(task_dir, form, value, agent, session_id="", compass_dir=None):
     raise CompassError(f"{VERB}: {'; '.join(reasons)}. {ASK_PERSON}")
 
 
+#: The fields of a delegation that its copy in an issue's manifest keeps. Left
+#: out: the `nonce`; the use count and the index of records, which name other
+#: issues' folders; the session ids (`session_id`, and the value of
+#: `covers_session`, which the copy keeps as `true`), because a session id
+#: lets a process resume that session; `requested_prompt_id`; and the
+#: revocation, which comes after the use and does not change what was
+#: delegated. `format` and `labels` are kept because they decide how a 7.0.0
+#: file was read.
+COPIED = ("format", "delegated_by", "role", "approver_source", "created_at", "agent",
+          "covers_session", "until", "issues", "forms", "labels", "max_uses",
+          "created_via", "prompt_id")
+#: The manifest key that holds the copies. It is not named after the delegation
+#: folder, so the pre-tool hook's rule on that word does not refuse a read of
+#: the issue folder.
+USED_KEY = "delegations_used"
+
+
+def copy_sha256(copy):
+    """The sha256 of a copy's fields, `sha256` itself left out, as canonical
+    JSON: sorted keys, no spaces, UTF-8."""
+    body = {k: v for k, v in copy.items() if k != "sha256"}
+    text = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def copy_of(delegation):
+    """`(id, copy)`: the copy of `delegation` that an issue's manifest keeps,
+    with the fields of `COPIED` and their `sha256`. Values pass through JSON,
+    so a date read from YAML is kept as the text it is digested as."""
+    kept = {k: delegation[k] for k in COPIED if delegation.get(k) is not None}
+    if kept.get("covers_session"):
+        kept["covers_session"] = True
+    kept = json.loads(json.dumps(kept, default=str))
+    kept["sha256"] = copy_sha256(kept)
+    return str(delegation["id"]), kept
+
+
+def keep_copy(task, authority):
+    """Add the copy `authority` (`copy_of`) to the manifest dict and return
+    the key it is under. A copy with the same `sha256` already kept under the
+    id, or under `<id>@<n>`, is not added again; a copy whose fields differ is
+    added under the next free `<id>@<n>`, starting at 2."""
+    delegation_id, copy = authority
+    used = task.get(USED_KEY)
+    if used is None:
+        used = task[USED_KEY] = {}
+    if not isinstance(used, dict):
+        raise CompassError(f"{VERB}: the manifest's {USED_KEY} is not a mapping, so the "
+                           f"delegation used cannot be added to it. Nothing was written.")
+    key, number = delegation_id, 1
+    while key in used:
+        if isinstance(used[key], dict) and used[key].get("sha256") == copy["sha256"]:
+            return key
+        number += 1
+        key = f"{delegation_id}@{number}"
+    used[key] = dict(copy)
+    return key
+
+
 def record_use(task_dir, delegation, agent, done, subject, compass_dir=None):
-    """Count the use on the delegation, index the record in the delegation file
-    (`records`: the issue, its folder, the record ids and the time, so a summary
-    reads only the folders that hold a record) and write the devlog's audit
-    line. `compass_dir` is the common store's `.compass/` folder."""
+    """Count the use on the delegation and index the record in the delegation
+    file (`records`: the issue, its folder, the record ids and the time, so a
+    summary reads only the folders that hold a record). The issue's copy of
+    the delegation is written with the record itself (`keep_copy`), so nothing
+    is written to the issue folder here. `compass_dir` is the common store's
+    `.compass/` folder."""
     compass_dir = compass_dir or os.path.dirname(os.path.dirname(task_dir))
     path = os.path.join(folder(compass_dir), f"{delegation['id']}.yml")
     body = load_yaml(path)
@@ -599,11 +663,6 @@ def record_use(task_dir, delegation, agent, done, subject, compass_dir=None):
         {"issue": os.path.basename(os.path.normpath(task_dir)), "folder": str(task_dir),
          "ids": list(done.evidence_ids), "at": _iso(_now())})
     _write(path, body)
-    line = (f"- {_iso(_now())} - {', '.join(done.evidence_ids)} recorded by {agent} under "
-            f"{delegation['id']} for {delegation.get('delegated_by')}: {subject}.\n")
-    devlog = os.path.join(task_dir, "devlog.md")
-    with open(devlog, "a", encoding="utf-8") as fh:
-        fh.write(line)
 
 
 # --- the person's review of delegated approvals ----------------------------------------------

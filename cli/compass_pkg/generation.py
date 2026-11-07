@@ -16,7 +16,10 @@ reads that file; a commit leaves one it finds in place.
 
 This module owns those files, the order a commit writes them in, and the
 states a folder can be in. It does not resolve configuration: `effective`
-hands it a `Resolution`, and it stores that.
+hands it a `Resolution`, and it stores that. The same holds for a folder that
+is missing on a fresh clone: `effective` rebuilds the `Resolution` from the
+manifest's `policy:` block, and `restore` writes it only when the digest of
+`resolved.yml` equals the one the block records (#356).
 
 The manifest's `generation: n` names the generation in force. Absent means
 the issue predates 6.0.0 and reads live governance. `0` means the issue was
@@ -29,7 +32,7 @@ that was whole. The next commit writes the folder again: it removes the files
 a commit writes, complete or not, and refuses a folder that holds anything
 else.
 """
-# DEPENDENCY: standard library (dataclasses, datetime, os, re);
+# DEPENDENCY: standard library (dataclasses, datetime, os, re, shutil, tempfile);
 # PyYAML (bundled); compass_pkg.atomic_io, compass_pkg.core (CompassError,
 # load_manifest_mapping and manifest_path, only).
 from __future__ import annotations
@@ -37,6 +40,8 @@ from __future__ import annotations
 import datetime
 import os
 import re
+import shutil
+import tempfile
 from dataclasses import dataclass, field
 
 import yaml
@@ -340,6 +345,56 @@ def states(task_dir, manifest=None):
                                   is_whole(task_dir, n)[1] if marked else
                                   "some files and no complete marker"))
     return sorted(found, key=lambda g: g.number)
+
+
+# --- the rebuild of a missing folder (#356) ------------------------------------------------
+
+def rebuilt_digest(task_dir, n, resolution):
+    """The digest generation n's `resolved.yml` would have if `resolution` were
+    stored as it, the value its marker and the manifest's `policy.resolved`
+    hold."""
+    return digest(_documents(task_dir, n, resolution, [], None)["resolved.yml"])
+
+
+def restore(task_dir, n, resolution, expected):
+    """Write generation n's folder from `resolution`, rebuilt by `effective`
+    from the manifest's `policy:` block, when the folder is missing and the
+    rebuilt `resolved.yml` has the digest `expected`. Returns True when the
+    folder is there afterwards, written by this call or by another process
+    under the same lock. A folder that exists is never changed: a partial one
+    stays broken.
+
+    The folder is written to disk, not kept in memory, because every reader of
+    a generation reads its files: `results.yml` is rewritten after each check
+    run, and `compass ci` and `record restore` read the folder. `provenance.yml`
+    names `restored_from: policy` and the time. `records.yml` holds no record:
+    the records a lower generation carried forward are not in the manifest."""
+    task_dir = os.fspath(task_dir)
+    folder = gen_dir(task_dir, n)
+    documents = _documents(task_dir, n, resolution, [], None)
+    if digest(documents["resolved.yml"]) != expected:
+        return False
+    documents["provenance.yml"].update(restored_from="policy", restored_at=_now())
+    with locked(os.path.join(task_dir, LOCK)):
+        if os.path.lexists(folder):
+            return os.path.isdir(folder)
+        _refuse_links(task_dir, n)
+        parent = os.path.join(task_dir, DIRECTORY)
+        os.makedirs(parent, exist_ok=True)
+        # Written beside the folder and renamed into place, so an interrupted
+        # rebuild leaves a hidden folder no reader counts, never a partial one.
+        staging = tempfile.mkdtemp(prefix=f".{n}.restoring-", dir=parent)
+        try:
+            for name in FILES:
+                atomic_write_text(os.path.join(staging, name), _dump(documents[name]))
+            marker = {"schema": SCHEMA, "written": _now(),
+                      "files": {name: digest(documents[name]) for name in FILES}}
+            atomic_write_text(os.path.join(staging, MARKER), _dump(marker))
+            os.rename(staging, folder)
+        finally:
+            if os.path.isdir(staging):
+                shutil.rmtree(staging)
+    return True
 
 
 # --- the commit ---------------------------------------------------------------------------

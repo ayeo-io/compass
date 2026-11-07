@@ -10,6 +10,7 @@ project and read the files back:
 - assess (`approach evaluate --write`) writes the block, and a re-assess writes
   it again, for a new generation and for one that did not move;
 - the two `*_sha256` values equal what `sha256sum` prints for the two files;
+- `autonomy` names the autonomy the generation was resolved with;
 - `resolved` equals the digest the generation's `complete` marker holds;
 - a manifest written before 9.0.0, with no block, still checks and lints.
 """
@@ -96,7 +97,18 @@ def test_assess_writes_the_block_with_the_digests_of_both_files(tmp_path):
     assert block["check_set_sha256"] == _sha256sum(CHECK_SET)
     assert block["settings_sha256"] == _sha256sum(root / "compass.yml")
     assert block["tightened"] == {"signoff_labels": ["billing"]}
+    assert block["autonomy"] == "balanced"
     assert block["resolved"] == _marker_digest(task_dir, manifest["generation"])
+
+
+def test_the_block_names_the_autonomy_of_compass_yml(tmp_path):
+    root, task_dir = _project(tmp_path, "schema: 1\nautonomy: controlled\n")
+    _assess(root)
+    block = _manifest(task_dir)["policy"]
+    assert block["autonomy"] == "controlled"
+    resolved = yaml.safe_load((task_dir / "generations" / "1" / "resolved.yml")
+                              .read_text(encoding="utf-8"))
+    assert resolved["autonomy"] == block["autonomy"]
 
 
 def test_without_a_compass_yml_the_settings_digest_is_null(tmp_path):
@@ -169,3 +181,5 @@ def test_the_schema_accepts_the_block_and_its_absence():
     assert "policy" not in schema.get("required", [])
     assert set(node["required"]) == {"check_set", "check_set_sha256", "settings_sha256",
                                      "tightened", "resolved"}
+    # Optional: a block written on v9 before #356 step 8 has no autonomy.
+    assert node["properties"]["autonomy"]["enum"] == ["controlled", "balanced", "autonomous"]

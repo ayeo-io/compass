@@ -517,6 +517,12 @@ and one digest, such as `compass-checks@9.0.0`.
   the set in the shape `generations/<n>/resolved.yml` holds. The file is
   parsed once while it is unchanged, because every resolution reads it and
   `compass flow` resolves every issue on the board.
+- `held` finds a check set by its `<id>@<version>` and sha256: the shipped
+  file, or an earlier release's copy at
+  `governance/check-sets/<id>@<version>.yml`. The rebuild of a missing
+  generation folder reads it (`docs/generation-store.md`). No release has
+  copied an earlier set yet; the first release that changes the set keeps the
+  ones before it there.
 - The set holds no `locked:` field, because no layer sits above it.
   `never_waived` names the three entries no waiver can excuse: the checks
   `human-approval-present` and `ship-approval-present`, and the guardrail `G5`.

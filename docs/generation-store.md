@@ -32,7 +32,7 @@ that reads the governance files.
 | `generation: n` | The generation the issue runs against. The manifest names it, and it is the authority. |
 | `generation: 0` | The issue was assessed under 6.x and has no generation yet. A command that needs its configuration refuses and names `compass approach evaluate --write`. |
 | no `generation` key | The issue predates 6.0.0. It reads live governance as 5.6.0 did, and `compass approach evaluate --write` gives it generation 1. |
-| `policy:` | The policy the generation in force was committed under (ADR-094): `check_set` (`compass-checks@9.0.0`), `check_set_sha256` and `settings_sha256` (the sha256 of the check set file and of `compass.yml`, lowercase hex as `sha256sum` prints it; `settings_sha256` is null without a `compass.yml`), `tightened` (the tighten-only settings applied, as written) and `resolved` (the digest the generation's `complete` marker holds for `resolved.yml`). Each generation commit writes it, and a reassess that commits nothing writes it for the generation in force. A project that runs its own copy of the governance files names `check_set: legacy` with a null `check_set_sha256`. A manifest written before 9.0.0 has none and stays valid. #356 keeps the generation folders out of the commit, so this block is the copy a reviewer reads. |
+| `policy:` | The policy the generation in force was committed under (ADR-094): `check_set` (`compass-checks@9.0.0`), `check_set_sha256` and `settings_sha256` (the sha256 of the check set file and of `compass.yml`, lowercase hex as `sha256sum` prints it; `settings_sha256` is null without a `compass.yml`), `tightened` (the tighten-only settings applied, as written), `autonomy` (the autonomy `resolved.yml` holds, from `compass.yml`, else `balanced`) and `resolved` (the digest the generation's `complete` marker holds for `resolved.yml`). Each generation commit writes it, and a reassess that commits nothing writes it for the generation in force. A project that runs its own copy of the governance files names `check_set: legacy` with a null `check_set_sha256`. A manifest written before 9.0.0 has none and stays valid. #356 keeps the generation folders out of the commit, so this block is the copy a reviewer reads, and the source a missing folder is rebuilt from (see "A missing folder"). A block written on v9 before `autonomy` was recorded has none, and stays valid. |
 | `config:` | The issue's own configuration layer in 8.x. It stays valid in the schema and is not written or read since 9.0.0 (ADR-094): a generation committed with it keeps its effect, and a new or changed `config:` changes nothing. `compass check` names one the generation in force was not committed with, and `compass issue lint` warns about it. |
 
 `templates/manifest.yml` ships `generation: 0`.
@@ -248,11 +248,70 @@ the only evidence of compatibility.
 | `complete-unreferenced` | A matching marker above the current number | prints the line |
 | `broken` | The manifest names a number whose folder, marker or files do not match | fails the run |
 
+A missing folder is rebuilt from the manifest's `policy:` block before it is
+judged broken (see "A missing folder"). Only when that fails is it `broken`;
+`compass ci` then adds the reason to the line.
+
 `compass check` refuses an issue whose generation is broken. A reader never
 takes a leftover folder as the generation in force: only the manifest names
 it. After a crash before the manifest replace, the next `compass approach
 evaluate --write` writes the leftover folder again; after the replace, the new
 generation is in force and the next one says "no change".
+
+## A missing folder
+
+#356 keeps the generation folders out of the commit, so a fresh clone of a
+committed issue has the manifest and no `generations/<n>/`. Every reader in
+`effective` (`effective_for`, `require_whole`, `stored_documents`,
+`record_check_results`, `stored_versions`, `generation_report`,
+`migrate_generation`, and the reassess before it commits) first calls
+`effective.restore_from_policy`. It acts only when the manifest names generation
+n, the folder `generations/<n>/` does not exist at all, and the manifest holds
+a `policy:` block:
+
+1. It finds the check set `policy.check_set` names whose file has the sha256
+   `policy.check_set_sha256` (`check_set.held`): the shipped file, or an
+   earlier release's copy at `governance/check-sets/<id>@<version>.yml`. No
+   release has copied one yet.
+2. It resolves that check set with `policy.autonomy` and applies
+   `policy.tightened` with `tighten.apply`, the function that applies
+   `compass.yml`. It does not read `compass.yml`, so a settings change made
+   since does not stop the rebuild. A block with no `autonomy` is tried with
+   each of `controlled`, `balanced` and `autonomous`.
+3. It uses the result only when the digest of the rebuilt `resolved.yml`
+   equals `policy.resolved`.
+4. `generation.restore` writes the folder under the generation lock: into a
+   hidden folder beside it, then renamed into place, so an interrupted rebuild
+   never leaves a partial folder.
+
+The rebuilt folder holds:
+
+- `resolved.yml` with the same bytes as the original;
+- `provenance.yml` with no field history and `restored_from: policy` and
+  `restored_at`;
+- `versions.yml` with the installed resolver, CLI and implementation versions,
+  the check set as the parent, and a `project` entry without a `git_blob`;
+- `records.yml` with no record, because the records a lower generation
+  carried forward are not in the manifest.
+
+The folder is written to disk, not kept in memory, because every reader of a
+generation reads its files: `compass check` rewrites `results.yml` after each
+run, and `compass ci` and `compass record restore` read the folder. In a
+project that commits its issue record, the folder is ignored, so it shows in no
+`git status`. The manifest is not changed.
+
+When the check set is not held, its sha256 differs, `tightened` cannot be
+applied, or no digest matches, nothing is written and the issue stays broken:
+the refusal says "its folder is missing" and adds why the rebuild failed, with
+both digests when they differ. A folder that exists but is not whole is never
+rebuilt, and neither is one in a manifest with no `policy:` block (written
+before 9.0.0). `compass issue migrate --config` drops the two `restored_`
+keys from the provenance it carries into the next generation.
+
+`autonomy` is in the block because it is the one input of `resolved.yml` that
+`tightened` does not hold. The #356 measurement of 13 issue shapes found that
+the rebuild gives the same digest in every case once the autonomy is known
+(ADR-096 decision 5).
 
 ## Reading
 

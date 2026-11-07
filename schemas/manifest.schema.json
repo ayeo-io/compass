@@ -1271,6 +1271,7 @@
         "check_set_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "The sha256 of the check set file, lowercase hex as `sha256sum` prints it; null for `legacy`."},
         "settings_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "The sha256 of `compass.yml` at the commit, lowercase hex as `sha256sum` prints it; null when the project has none that Compass reads."},
         "tightened": {"type": "object", "description": "The tighten-only settings of `compass.yml` that were applied, as written: `signoff_labels`, `require_evidence`, `agent_review`, `project_checks` and `capabilities`."},
+        "autonomy": {"enum": ["controlled", "balanced", "autonomous"], "description": "The autonomy the generation was resolved with, from `compass.yml` (`balanced` without one). With the check set and `tightened`, it rebuilds a missing generation folder (#356). A block written before it was recorded has none; a rebuild then tries each value."},
         "resolved": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "The digest of the generation's `resolved.yml`, equal to the one its `complete` marker holds."}
       }
     },

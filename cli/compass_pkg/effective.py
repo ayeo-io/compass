@@ -21,8 +21,12 @@ has those files read through the legacy adapter in place of the check set, so
 what an issue is stored against is what ran before (until #359).
 
 Each generation commit also writes the manifest's `policy:` block: the check
-set's id, version and sha256, the sha256 of `compass.yml`, the tightenings and
-the digest of the stored `resolved.yml` (`policy_block`).
+set's id, version and sha256, the sha256 of `compass.yml`, the tightenings, the
+autonomy and the digest of the stored `resolved.yml` (`policy_block`). When the
+folder of the generation the manifest names is missing, as on a fresh clone of
+an issue committed without its generation folders (#356), every reader here
+rebuilds it from that block first (`restore_from_policy`), and uses it only
+when the rebuilt `resolved.yml` has the digest the block records.
 
 This module also builds the `generation.Resolution` a commit stores, and is
 the one place the existing modules reach the store through
@@ -676,19 +680,10 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
         # one copy per resolution, which `compass flow` does for every issue.
         resolved = tighten.apply(base, tightened, loaded) if tightened else base
         history = {}
-        parent = {"ref": f"compass:checks@{loaded['version'].split('.')[0]}",
-                  "version": loaded["version"], "digest": digest(loaded),
-                  "sha256": check_set.sha256(), "source": "shipped"}
+        parent = _shipped_parent(loaded, check_set.sha256())
     project_path = os.path.join(root, project_settings.COMPASS_YML)
-    versions = {
-        "resolver": generation.RESOLVER_VERSION,
-        "cli": COMPASS_VERSION,
-        "parents": [parent],
-        "project": ({"path": project_settings.COMPASS_YML, "digest": digest(tightened),
-                     "git_blob": _git_blob(project_path)} if doc is not None else None),
-        "issue_overlay_digest": None,
-        "implementations": _implementations(resolved.get("checks")),
-    }
+    versions = _versions(parent, tightened, _git_blob(project_path) if doc is not None
+                         else None, doc is not None, resolved)
     return generation.Resolution(
         resolved=resolved,
         provenance={"fields": history, "waivers": {}, "classification": {}},
@@ -696,6 +691,26 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
         records=[],
         validate=(lambda: _gates_before_write(resolved)) if legacy else None,
         details={"tightened": tightened, "legacy": bool(legacy)})
+
+
+def _shipped_parent(loaded, sha256):
+    """The `parents` entry of `versions.yml` for a resolution from a check set."""
+    return {"ref": f"compass:checks@{loaded['version'].split('.')[0]}",
+            "version": loaded["version"], "digest": digest(loaded),
+            "sha256": sha256, "source": "shipped"}
+
+
+def _versions(parent, tightened, git_blob, has_settings, resolved):
+    """The body of `versions.yml`: what a resolution was resolved with."""
+    return {
+        "resolver": generation.RESOLVER_VERSION,
+        "cli": COMPASS_VERSION,
+        "parents": [parent],
+        "project": ({"path": project_settings.COMPASS_YML, "digest": digest(tightened),
+                     "git_blob": git_blob} if has_settings else None),
+        "issue_overlay_digest": None,
+        "implementations": _implementations(resolved.get("checks")),
+    }
 
 
 def file_sha256(path):
@@ -707,9 +722,11 @@ def policy_block(root, resolution, resolved_digest):
     """The manifest's `policy:` block for a generation committed from
     `resolution` (ADR-094): the check set and its sha256, the sha256 of
     `compass.yml` (None without one), the tighten-only settings applied as
-    written, and the digest of the generation's `resolved.yml`. A project that
-    runs its own copy of the governance files names `legacy` and no check set
-    digest."""
+    written, the autonomy, and the digest of the generation's `resolved.yml`.
+    A project that runs its own copy of the governance files names `legacy` and
+    no check set digest. The autonomy is the one input of `resolved.yml` that
+    is not in `compass.yml`'s tightenings, so without it a missing folder could
+    not be rebuilt (`restore_from_policy`, ADR-096 decision 5)."""
     details = resolution.details or {}
     legacy = details.get("legacy")
     settings_path = os.path.join(root, project_settings.COMPASS_YML)
@@ -719,8 +736,93 @@ def policy_block(root, resolution, resolved_digest):
         "settings_sha256": (file_sha256(settings_path)
                             if project_settings.compass_yml_counts(root) else None),
         "tightened": dict(details.get("tightened") or {}),
+        "autonomy": resolution.resolved.get("autonomy"),
         "resolved": resolved_digest,
     }
+
+
+# --- the rebuild of a missing generation folder (#356) ----------------------------------
+
+def _policy_resolution(block, autonomy):
+    """The `generation.Resolution` the manifest's `policy:` block describes,
+    resolved with `autonomy`, or `(None, reason)`. It reads the check set the
+    block names, never the project's `compass.yml`: a settings change made
+    since must not stop the rebuild, and the digest check catches any other
+    difference."""
+    name = block.get("check_set")
+    if name == "legacy":
+        return None, ("the issue was resolved from the project's own copy of the "
+                      "governance files, which a rebuild does not read")
+    loaded, reason = check_set.held(name, block.get("check_set_sha256"))
+    if loaded is None:
+        return None, f"{reason}. Run that release, or restore the folder"
+    tightened = block.get("tightened") or {}
+    if not isinstance(tightened, dict):
+        return None, "policy.tightened is not a mapping"
+    try:
+        base = check_set.resolved(loaded, autonomy=autonomy)
+        resolved = tighten.apply(base, tightened, loaded) if tightened else base
+    except CompassError as exc:
+        return None, f"policy.tightened cannot be applied: {exc}"
+    versions = _versions(_shipped_parent(loaded, block.get("check_set_sha256")), tightened,
+                         None, block.get("settings_sha256") is not None, resolved)
+    return generation.Resolution(
+        resolved=resolved, provenance={"fields": {}, "waivers": {}, "classification": {}},
+        versions=versions, records=[]), ""
+
+
+def restore_from_policy(task_dir, manifest=None):
+    """Rebuild the folder of the generation the manifest names when it is
+    missing and the manifest holds a `policy:` block (#356, ADR-096). Returns
+    "" when there is nothing to do or the folder was written, else why it could
+    not be rebuilt; the caller's `generation.load` then refuses the issue as
+    broken, with that reason.
+
+    The block's check set and `tightened` settings are resolved with the
+    recorded `autonomy`. A block written before the autonomy was recorded is
+    tried with each of the three values. A result is used only when the digest
+    of its `resolved.yml` equals `policy.resolved`, so a rebuild is the stored
+    configuration or nothing. A folder that exists is never rebuilt, even when
+    it is not whole."""
+    task_dir = os.fspath(task_dir)
+    if manifest is None:
+        manifest, _ = load_manifest(task_dir)
+    held = generation.number(manifest)
+    if not held or os.path.lexists(generation.gen_dir(task_dir, held)):
+        return ""
+    block = manifest.get("policy")
+    if not isinstance(block, dict):
+        return ""
+    recorded = block.get("autonomy")
+    if recorded is not None and recorded not in AUTONOMY_VALUES:
+        return f"policy.autonomy '{recorded}' is not one of {', '.join(AUTONOMY_VALUES)}"
+    expected = block.get("resolved")
+    found = []
+    for autonomy in (recorded,) if recorded is not None else AUTONOMY_VALUES:
+        resolution, reason = _policy_resolution(block, autonomy)
+        if resolution is None:
+            return reason
+        got = generation.rebuilt_digest(task_dir, held, resolution)
+        if got == expected:
+            generation.restore(task_dir, held, resolution, expected)
+            return ""
+        found.append(f"{got} with autonomy {autonomy}")
+    return (f"the rebuilt resolved.yml has the digest {'; '.join(found)}, and "
+            f"policy.resolved is {expected}")
+
+
+def _load(task_dir, held, manifest=None, *, any_major=False):
+    """`generation.load`, after a missing folder is rebuilt from `policy:`
+    where it can be. A refusal names why the rebuild failed, if one was tried."""
+    task_dir = os.fspath(task_dir)
+    why = restore_from_policy(task_dir, manifest)
+    try:
+        return generation.load(task_dir, held, any_major=any_major)
+    except CompassError as exc:
+        if why:
+            raise CompassError(f"{exc}. It could not be rebuilt from the manifest's "
+                               f"policy: block: {why}") from None
+        raise
 
 
 def _live_view(task_dir, manifest, slug, start=None):
@@ -749,7 +851,7 @@ def effective_for(task_dir=None, manifest=None):
         raise CompassError(
             f"issue {slug} is at generation 0: it was assessed but has no stored "
             f"configuration yet; run `{generation.FIX_ZERO} --issue {slug}`")
-    stored = generation.load(task_dir, held, any_major=status_words.is_closed(manifest))
+    stored = _load(task_dir, held, manifest, any_major=status_words.is_closed(manifest))
     return EffectiveView("generation", slug, held, stored["resolved"], stored["versions"],
                          stored["provenance"])
 
@@ -806,6 +908,7 @@ def commit_generation(task_dir, manifest, invalidated=None, render=None, *, stam
     root = project_settings.find_project_root(task_dir)
     if resolution is None:
         resolution = resolve_live(root, manifest, slug, task_dir)
+    _refuse_unrebuilt(task_dir)
     caller_stamp = stamp
 
     def stamp_policy(mapping, old, new):
@@ -835,8 +938,17 @@ def reassess_resolution(task_dir, manifest):
     task_dir = os.fspath(task_dir)
     resolution = resolve_live(project_settings.find_project_root(task_dir), manifest,
                               os.path.basename(os.path.normpath(task_dir)), task_dir)
+    _refuse_unrebuilt(task_dir)
     generation.preflight(task_dir, resolution, manifest)
     return resolution
+
+
+def _refuse_unrebuilt(task_dir):
+    """Before a commit reads the generation in force from disk: rebuild its
+    missing folder, or refuse with the reason it could not be rebuilt."""
+    manifest, _ = load_manifest(task_dir)
+    if restore_from_policy(task_dir, manifest):
+        _load(task_dir, generation.number(manifest), manifest, any_major=True)
 
 
 # --- the stored copy ------------------------------------------------------------------
@@ -859,8 +971,8 @@ def stored_documents(task_dir, manifest):
     """The four documents of the generation the manifest names, or None when
     it names none yet. A generation that is not whole raises `CompassError`."""
     held = generation.number(manifest)
-    return generation.load(os.fspath(task_dir), held,
-                           any_major=status_words.is_closed(manifest)) if held else None
+    return _load(task_dir, held, manifest,
+                 any_major=status_words.is_closed(manifest)) if held else None
 
 
 def require_whole(task_dir):
@@ -871,7 +983,7 @@ def require_whole(task_dir):
     manifest, _ = load_manifest(task_dir)
     held = generation.number(manifest)
     if held:
-        generation.load(os.fspath(task_dir), held, any_major=status_words.is_closed(manifest))
+        _load(task_dir, held, manifest, any_major=status_words.is_closed(manifest))
 
 
 def _verdict_rank(verdict):
@@ -892,7 +1004,7 @@ def record_check_results(task_dir, verdicts, manifest=None):
     held = generation.number(manifest)
     if not held:
         return None
-    checks = generation.load(task_dir, held)["resolved"].get("checks") or {}
+    checks = _load(task_dir, held, manifest)["resolved"].get("checks") or {}
     at = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     runs = {}
     for name, verdict in sorted(verdicts.items()):
@@ -926,12 +1038,15 @@ def generation_report(task_dir):
         return [f"  generation 0: no stored configuration yet; run "
                 f"{generation.FIX_ZERO} --issue {os.path.basename(task_dir)}"], False
     lines, broken = [], False
+    why = restore_from_policy(task_dir, manifest)
     for found in generation.states(task_dir, manifest):
         if found.state == "superseded":
             continue
         broken = broken or found.state == "broken"
+        detail = found.detail + (f"; it could not be rebuilt from policy: ({why})"
+                                 if why and found.number == held else "")
         lines.append(f"  generation {found.number} ({found.state})"
-                     + (f": {found.detail}" if found.detail else ""))
+                     + (f": {detail}" if detail else ""))
     return lines, broken
 
 
@@ -945,7 +1060,7 @@ def stored_versions(task_dir, manifest):
     held = generation.number(manifest)
     if not held:
         return None, {}
-    return held, generation.load(os.fspath(task_dir), held)["versions"]
+    return held, _load(task_dir, held, manifest)["versions"]
 
 
 def _installed_implementations(checks):
@@ -989,7 +1104,9 @@ def _pin(stored):
     return generation.Resolution(
         resolved=_moved_check_fields({k: v for k, v in stored["resolved"].items()
                                       if k not in ("schema", "issue", "generation")}),
-        provenance={k: v for k, v in stored["provenance"].items() if k != "schema"},
+        # A pinned generation is not itself rebuilt, so the rebuild's note goes.
+        provenance={k: v for k, v in stored["provenance"].items()
+                    if k not in ("schema", "restored_from", "restored_at")},
         versions=versions,
         records=[r for r in stored["records"].get("records", [])
                  if r.get("status") == "valid"])
@@ -1029,7 +1146,7 @@ def migrate_generation(task_dir, *, closed_ok=False):
     held = generation.number(manifest)
     invalidated = {}
     if held:
-        stored = generation.load(task_dir, held, any_major=True)
+        stored = _load(task_dir, held, manifest, any_major=True)
         resolution = _pin(stored)
         if stored["versions"].get("schema") == generation.SCHEMA and all(
                 stored["versions"].get(k) == resolution.versions[k]

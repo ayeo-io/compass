@@ -11,6 +11,9 @@ digest: `compass-checks@9.0.0` and the digest `sha256` gives.
 - `sha256` is the lowercase hex digest of the file's bytes, as `sha256sum`
   prints it.
 - `ref` is `<id>@<version>`.
+- `held` finds a check set by its ref and sha256: the shipped file, or an
+  earlier release's copy under `governance/check-sets/<ref>.yml`. The
+  rebuild of a missing generation folder reads it (`effective`, #356).
 - `resolved` returns the set in the shape `generations/<n>/resolved.yml`
   holds, so every reader of `EffectiveView` and every stored generation reads
   it the same way.
@@ -36,6 +39,10 @@ from compass_pkg.atomic_io import load_yaml_strict
 from compass_pkg.core import FRAMEWORK_ROOT, CompassError
 
 PATH = os.path.join("governance", "check-set.yml")
+#: Where a later release keeps each earlier released check set, as `<ref>.yml`, so
+#: an issue assessed under it can still be rebuilt (#356 plan, open question 7).
+#: No release has copied one yet.
+EARLIER = os.path.join("governance", "check-sets")
 ID = "compass-checks"
 
 #: The catalogues of the set, in the order `resolved.yml` holds them. The 8.x
@@ -141,6 +148,22 @@ def ref(doc=None):
     """`<id>@<version>`, the name a change gives its rules."""
     doc = doc if doc is not None else load()
     return f"{doc['id']}@{doc['version']}"
+
+
+def held(name, digest, root=None):
+    """`(check set, "")` for the check set named `name` (`<id>@<version>`) whose
+    file has the sha256 `digest`, or `(None, reason)` when this Compass does not
+    hold it. It looks at the shipped file, then at
+    `governance/check-sets/<name>.yml`, both under `root` (the framework's root
+    by default). The returned mapping is shared: a caller must not change it."""
+    root = root or FRAMEWORK_ROOT
+    for file in (path(root), os.path.join(root, EARLIER, f"{name}.yml")):
+        if not os.path.isfile(file) or sha256(file) != digest:
+            continue
+        doc = shared(file)
+        if ref(doc) == name:
+            return doc, ""
+    return None, f"this Compass does not hold {name} (sha256 {str(digest)[:12]})"
 
 
 def resolved(doc=None, autonomy="balanced"):

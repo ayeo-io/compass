@@ -8,14 +8,10 @@ description: What counts as gate evidence, and how to clear a gate. Load at ship
 **The evidence-not-assertion guardrail** says a guardrail clears with artifacts
 and command output, never a claim. "The tests pass" is not a
 gate-passing statement on any delivery issue; the *recorded test run* is. This skill
-covers what counts as evidence, the checklists for each review dimension, and -
-just as important - the line between what is *checked* and what is *assessed*.
+covers what counts as evidence, the review-dimension checklists, and the line
+between what is *checked* and what is *assessed*.
 
 ## Guardrails are checked; strategies are assessed
-
-This is the distinction the whole gate model rests on. The two kinds of
-governance are checked two different ways, and conflating them is the failure
-mode the evidence-not-assertion guardrail exists to prevent.
 
 - **Guardrails are *checkable*.** They are cleared with evidence - a test ran, a
   scan passed, a human approved, the artifact exists. A guardrail clears or it
@@ -31,10 +27,8 @@ mode the evidence-not-assertion guardrail exists to prevent.
   (`S17`): its checks sit outside every gate, and a recorded step-off makes
   them advisory.
 
-Naming them differently is what stops a judgment call being presented as a
-hard gate, and stops a hard gate being waved through on an opinion. When you
-report the `governance` dimension, the guardrail findings and the strategy
-assessment go in clearly separated - evidence on one side, judgment on the other.
+In the `governance` dimension, report the guardrail findings (evidence) and
+the strategy assessment (judgment) separately.
 
 ## Evidence vs. assertion
 
@@ -89,9 +83,9 @@ client before the command runs, `compass evidence add` refuses to register
 one, and `outer-loop-recorded` fails one registered another way. A unit-test
 green names neither: `compass tdd-green --loop inner` refuses the flags, and
 `compass quick-fix finish`, which chooses its own loop, does not write them
-on the inner loop. Like the red, `compass tdd-green --loop outer` takes
-`--scenario` more than once, or `--every-scenario`: one run writes one green
-per scenario, sharing a `run_id`, and every scenario needs its red first.
+on the inner loop. With `--loop outer`, `compass tdd-red` and `compass
+tdd-green` take `--scenario` more than once, or `--every-scenario`: one run
+writes one record per scenario, sharing a `run_id`. A green needs its red first.
 `compass quick-fix finish` reuses a green already on record only when it is of
 the same loop and names the same candidate and client.
 
@@ -111,9 +105,7 @@ For the outer loop, a pytest setup error that names a missing module of the
 project is an import red, as a collection error is, and the record lists
 `missing_modules`. A missing module outside the project is refused. Exit 4 is
 never a red: the refusal quotes pytest's first error line, and names the fix
-when `conftest.py` imports the driver at module level. With `--loop outer`,
-`--scenario` can repeat and `--every-scenario` binds one run to every
-scenario: one record per scenario, sharing a `run_id`. A red that ends stage 1
+when `conftest.py` imports the driver at module level. A red that ends stage 1
 writes `before_implement: true`, no `.red` marker and moves no document
 (ADR-081). On a path issue that is an outer-loop red while specify is not
 done. On an issue assessed before the path, it is an outer-loop red on an
@@ -124,26 +116,23 @@ Only `compass isolation record` and `compass layering record` write the isolatio
 ## The scenario sign-off and the freeze
 
 On a path issue that owes `scenario-approval`, `compass tdd-red` refuses
-(`scenarios-not-approved`) until the `specify` checkpoint has a person's
-answer, before the test runs, so no red record and no `.red` marker are
-written (ADR-095). On a path delivery issue each red record holds
-`spec_sha256`, the `sha256sum` digest of the spec file's bytes (null with no
-file), inside its `content_digest`. The first red of the issue writes
-`scenario_freeze` into the manifest: `at`, `red` (the record, relative to the
-issue folder), `spec`, `spec_sha256` and `scenarios`, the manifest's scenario
-ids at that moment. Nothing rewrites it. `compass check` prints `Scenarios:
-frozen at the first red (sha256 <12 characters>)` as a notice, not a row, and
-adds "the spec has changed since" when the digest now differs; the default
-view shows the notice only then. An issue assessed before the path writes
-neither. The `scenario_freeze` module holds the digest, the write and the line.
+(`scenarios-not-approved`) before the test runs, with no record or `.red`
+marker, until the `specify` checkpoint has a person's answer (ADR-095). On a
+path delivery issue each red's `content_digest` holds `spec_sha256`, the
+`sha256sum` of the spec file (null with no file). The first red writes the
+manifest's `scenario_freeze`, never rewritten: `at`, `red` (relative to the
+issue folder), `spec`, `spec_sha256` and the scenario ids (`scenarios`).
+`compass check` prints `Scenarios: frozen at the first red (sha256 <12
+characters>)` as a notice, not a row, adding "the spec has changed since" when
+the digest differs; the default view shows it only then. An issue assessed
+before the path writes neither (module `scenario_freeze`).
 
 ## Records that move no document
 
 `compass tdd-red` and `compass acceptance record` are the first records of the
-build stage. Since 9.0.0 no record moves a document's status: no document
-has one (ADR-091). An `artifact-approval` record an older release wrote, or a
-`--decisions` approval, is accepted by no gate, and the sign-off check of `G5`
-never reads it.
+build stage. Since 9.0.0 no document has a status for a record to move
+(ADR-091). No gate accepts an `artifact-approval` record from an older release
+or a `--decisions` approval, and the `G5` sign-off check never reads one.
 
 `compass acceptance record --release-note "<text>"` also stores the issue's
 release line in `release_note`, once the command passes. A failed run stores
@@ -156,9 +145,8 @@ nothing, and the flag is refused on a completed or closed issue
 - **Current** - it is from this change, this run, not a remembered earlier one.
 - **Complete** - it shows the whole relevant output, not a hand-picked green
   line. A run with skipped tests is not a green run; show the skips.
-- **Honest about gaps** - where evidence is missing or a scenario could not be
-  run, that absence is itself reported. A gap surfaced is a finding; a gap
-  hidden is a lie the gate cannot catch.
+- **Honest about gaps** - missing evidence, or a scenario that could not be
+  run, is reported. A hidden gap is one the gate cannot catch.
 
 ## The kinds of evidence
 
@@ -170,16 +158,12 @@ A vocabulary - commit, acceptance, and the rest - in `skills/evidence-gates/evid
   acceptance suite, runs the TDD suite, runs regression, and **writes each
   capture to an evidence file and registers it** with `compass evidence add`.
   It establishes what is true.
-  **Link, do not paste.** A report that reproduces its evidence stops being
-  something a person reads - it becomes a transcript with a summary at the top.
-  The record belongs in `evidence/`; the report cites it and states what it
-  shows.
+  **Link, do not paste:** the record belongs in `evidence/`; the report cites
+  it and states what it shows.
 - The **Reviewer** does the judgment half: applies the review dimensions to
   that evidence and the change, and renders pass / no-pass. It decides whether
-  what is true is good enough.
-
-Judgment rests on evidence. The Reviewer never passes a gate without the
-Verifier's artifacts in hand.
+  what is true is good enough, and never passes a gate without the Verifier's
+  artifacts in hand.
 
 ## The review-dimension checklists
 

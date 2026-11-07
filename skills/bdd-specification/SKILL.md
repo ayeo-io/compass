@@ -176,10 +176,9 @@ decision add` for one you resolved yourself). Before the review is done:
 - each scenario has an id, an intent and a declared test (`G2`), which
   `compass next` checks before it names a build step;
 - the non-engineering roles in play have reviewed, and on a change that
-  owes `scenario-approval` the person has approved the scenarios: run
+  owes `scenario-approval` the person has approved the finished spec: run
   `compass evidence request --checkpoint specify` and stop until they type
-  `/compass:approve`. `compass tdd-red` refuses until then, and the approval
-  records the spec's digest, so finish the spec before you ask.
+  `/compass:approve`. `compass tdd-red` refuses until then.
 
 The path has no Definition of Ready (ADR-092): the records above are what
 end specify. The requirements review:

@@ -9,14 +9,12 @@ The rules of behavior are in `compass-contract.md`, and the SessionStart hook
 puts them in every session before you read this. They are not repeated here,
 so the two cannot disagree.
 
-What this file carries is the mapping a session needs once it is already
-following the contract - what runs each stage, what each writes,
-which skill it loads, and where the result lands on disk.
+This file carries the mapping: what runs each stage, what each writes, which
+skill it loads, and where the result lands on disk.
 
-If anything here conflicts with `docs/methodology.md`, the methodology doc
-wins. First Compass session? `docs/five-minutes.md` has the mental model and a
-worked example; `docs/safety-contract.md` says what Compass guarantees and
-what it explicitly does not.
+If this file conflicts with `docs/methodology.md`, the methodology doc wins.
+First session: `docs/five-minutes.md` has the mental model and a worked example;
+`docs/safety-contract.md` says what Compass guarantees and what it does not.
 
 ## The stages and their commands
 
@@ -56,12 +54,11 @@ Cross-issue: `/compass:status` (one issue or a flat list) and `/compass:flow`
 the project: `/compass:go`, `/compass:quick-fix` and `/compass:assess` run
 `compass init` for you.
 
-A command spelling that a release held and 6.0.0 renamed worked through an
-alias in 6.x. The aliases were removed at 7.0.0, so the old spelling now exits 2
-with the parser's usual error. That error names no new spelling, except for
-two removed verbs that add one line. `docs/upgrade-7-0-0.md` names them and lists
-each removed spelling beside its new one. `governance/terminology.yml` names each retired word beside the
-one that replaced it, and `docs/glossary.md` says the same in prose; the
+6.0.0 renamed some command spellings. The aliases were removed at 7.0.0, so an
+old spelling now exits 2 with the parser's usual error, which names no new
+spelling except for two removed verbs that add one line. `docs/upgrade-7-0-0.md`
+lists each removed spelling beside its new one; `governance/terminology.yml`
+and `docs/glossary.md` name each retired word beside its replacement; the
 current verbs are whatever `compass --help` lists.
 
 **The binding decides the filename.** `compass tdd-red --scenario <id>` and
@@ -150,19 +147,16 @@ owes one when its own approach sets it. The line is the manifest's
 `compass quick-fix finish` or `compass acceptance record`; a landing refuses
 the issue without one (`docs/release-line.md`).
 
-On a delivery issue the first `compass tdd-red` writes the manifest's
-`scenario_freeze`: the spec's path and digest and the scenario ids the code
-is written against. Where the issue owes `scenario-approval`, the red waits
-for a person's answer at specify (`docs/checkpoints.md`).
+The first `compass tdd-red` of a delivery issue writes the manifest's
+`scenario_freeze` (the spec's path and digest and the scenario ids); where
+the issue owes `scenario-approval`, it waits for a person's answer at specify
+(`docs/checkpoints.md`). An approval under a delegation copies that
+delegation into the manifest's `delegations_used:` in the same save.
 
 A waiver excuses one check on one issue (the manifest's `waivers:`). Write it
 with `compass waiver add --check <id> --reason "..."`, ask with `compass
 evidence request --waiver W-<n>`, and stop: only a person, or an agent under a
 delegation typed `--for waivers`, approves it (`docs/waivers.md`).
-
-An approval under a delegation copies that delegation into the manifest's
-`delegations_used:`, in the same save as the record. Compass writes it; do not
-edit it (`docs/entry-exit-evaluation.md`).
 
 A new project has no `governance/` directory: the fixed check set
 (`governance/check-set.yml` in the plugin) is in force, and `compass.yml` holds

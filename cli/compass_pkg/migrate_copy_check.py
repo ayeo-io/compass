@@ -5,9 +5,6 @@ It judges each issue folder under `.compass/work` and `docs/compass`. A folder i
 restorable when the HEAD commit holds every file in it the migrate can change, with
 the bytes on disk. Without `--i-have-a-copy`, a root that holds a folder git cannot
 restore stops the run with one refusal that names a copy command for each such root.
-
-`unrestorable_files` gives the same judgement one file at a time. No command
-calls it since 9.0.0 removed `compass policy migrate --words` (ADR-094).
 """
 # DEPENDENCY: standard library; compass_pkg.core. compass_pkg.migrate is imported
 # inside `changeable_files`, because migrate imports this module.

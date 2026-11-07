@@ -709,8 +709,6 @@ RETIRED_NAME_ALLOW = (
      "the archive migration's table of retired stage names"),
     ("core.py", 'v1=key == "phase"',
      "a friction record under the retired key is a v1 record, so its stage is renamed"),
-    ("obligations.py", '[b["phase"] for b in result["blocked_phases"]]',
-     "a blocked-phase record has a phase field that is not a friction key"),
     ("pytest_report.py", '"__pycache__", "build", "dist"',
      "build is a directory name to skip, not a stage"),
     ("routing.py", '{"phase": rr["block_phase"]',

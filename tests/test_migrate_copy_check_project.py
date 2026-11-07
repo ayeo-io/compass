@@ -1,11 +1,11 @@
-"""Both copy check entry points pass the project root to their shared
-judgement, for the issue `fix-copy-check-project`.
+"""The copy check passes the project root to its judgement, for the issue
+`fix-copy-check-project`.
 
-The copy check's two public entry points, `unrestorable_folders` (used by
-`compass issue migrate --apply`) and `unrestorable_files` (used by
-`compass policy migrate --words`), share one judgement. Each must pass the
-project root to it, so a root whose real path is outside the project's
-repository is refused ("outside") and one inside is judged file by file.
+`unrestorable_folders` (used by `compass issue migrate --apply`) must pass
+the project root to the judgement, so a root whose real path is outside the
+project's repository is refused ("outside") and one inside is judged file by
+file. Its one-file partner `unrestorable_files` went with `compass policy
+migrate --words` in 9.0.0 (ADR-094).
 """
 from __future__ import annotations
 
@@ -39,15 +39,6 @@ def _project(tmp_path):
     _git(project, "commit", "-q", "-m", "start")
     (project / "local.yml").write_text("uncommitted: true\n")
     return project
-
-
-def test_unrestorable_files_judges_each_file_in_the_project(tmp_path, monkeypatch):
-    monkeypatch.delenv("GIT_DIR", raising=False)
-    project = _project(tmp_path)
-    paths = [str(project / "compass.yml"), str(project / "local.yml")]
-    found = check.unrestorable_files(str(project), paths)
-    assert found.state == "judged", found
-    assert found.unrestorable == [str(project / "local.yml")], found
 
 
 def test_unrestorable_folders_judges_a_root_inside_the_repository(tmp_path, monkeypatch):

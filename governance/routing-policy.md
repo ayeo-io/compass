@@ -299,7 +299,7 @@ on its copy until #359.
 - **No setting loosens a routing rule.** A `rules:` key in `compass.yml` is a
   removed setting and is not read. One check on one issue can be excused by a
   waiver that a person approves (`docs/waivers.md`).
-- **A project adds evidence, not routes.** `require_evidence` adds evidence
+- **A project adds evidence and labels; it does not change which approach an issue takes.** `require_evidence` adds evidence
   tokens for the assessments that match, and `signoff_labels` adds labels that
   owe what a `G5` label owes.
 

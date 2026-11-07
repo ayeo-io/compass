@@ -396,6 +396,32 @@ The guard refuses these calls:
   block message to the transcript (measured on 2.1.301), and the block
   message is where the person sees the code that confirms a g5 delegation.
   The hook reads a Grep's path with or without `jq`.
+- an approving review of a pull request (`pr-review-protected`). A review
+  approval by another person on the merged pull request is the ship approval,
+  and the agent runs `gh` with the person's login. The hook refuses:
+  - `gh pr review` with `--approve`, `--approve=...` or `-a`, also when `-a`
+    is joined to other short options (`-ab text`);
+  - `gh api` on a path that names `pulls/<n>/reviews` (with a review id or
+    `events` after it, or none) when the method is not `GET` or `HEAD`. The
+    method is the value of `-X`, `-XPOST`, `--method` or `--method=`, in any
+    argument order. With no method, a field (`-f`, `-F`, `--field`,
+    `--raw-field`) or `--input` makes it a `POST`, as `gh` sends it. A field
+    `event=APPROVE` is refused with any method;
+  - `gh api` with a GraphQL mutation `addPullRequestReview` or
+    `submitPullRequestReview`, whatever the event.
+
+  The hook reads each command of a chain (`&&`, `||`, `;`, `|`, a new line)
+  and, to eight levels, each quoted word that names a review, so `bash -c`,
+  `sh -c`, `eval` and a quoted command piped into `sh` are read too. A `gh`
+  given as a path (`/usr/local/bin/gh`) or after `command` or a `VAR=` word
+  counts. Allowed: `gh pr view`, `gh pr review --comment` and
+  `--request-changes`, a `gh api` read of the reviews (no method, or `GET`,
+  with `--jq` or `--paginate`), a write to another path, and the message of a
+  simple `git commit` or `gh pr create` that names a refused form. A quoted
+  word that holds a refused form in a command that is not simple, such as
+  `grep 'gh pr review -a' docs`, is refused as a known cost. The hook starts
+  the guard for a Bash command that names `gh` and then `review`, in any
+  letter case;
 
 The Bash checks match words, so they stop the agent's ordinary use and not a
 deliberate workaround. These limits remain. Most of them let a call reach the
@@ -458,6 +484,12 @@ folder link) states where the guard is exact:
   code (ayeo-io/compass#599) are the control that holds then;
 - brace expansion in a glob, in Bash or in a Grep glob, such as
   `{d,x}eleg*/*`, `deleg{ations,x}/*` and `**/{DL-*,x}.yml`;
+- an approving review of a pull request sent in a way that names no review:
+  a path or a field held in a variable or a file (`gh api "$P" -X POST`,
+  `--input body.json` on a GraphQL call, `-F query=@q.graphql`), a `gh` alias
+  or extension, and another HTTP client such as `curl` with the person's
+  token. GitHub records such a review under the person's account, and
+  Compass cannot tell it from the person's own review;
 - patterns that only zsh reads, such as `.compass/(deleg\|x)ations/*` and
   `.compass/deleg*/DL-<->.yml`;
 - a case-sensitive glob, such as `.compass/*/[A-Z]*` or the Grep glob

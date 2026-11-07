@@ -212,6 +212,15 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "run it from the agent the delegation names, with --as set to "
                "that agent's full name, or ask with compass evidence request.",
     },
+    # An agent's approving review of a pull request (approval_guard._review_approval,
+    # #355): a review approval by another person is the ship approval.
+    "pr-review-protected": {
+        "what": "{target} (tool: {tool})",
+        "why": "an approving review of a pull request is a person's approval of the "
+               "change, and the agent runs gh with that person's login.",
+        "fix": "ask a person to review and approve the pull request; a comment review "
+               "and a read of the reviews are allowed.",
+    },
     "transcript-protected": {
         "what": "{target} (tool: {tool})",
         "why": "the transcript holds what Compass showed only to the person.",

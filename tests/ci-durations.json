@@ -46,6 +46,7 @@
   "tests/test_approval_guard_hardening.py": 46.42,
   "tests/test_approval_guard_memory_folder.py": 6.01,
   "tests/test_approval_guard_message_text.py": 15.76,
+  "tests/test_approval_guard_pr_review.py": 8.84,
   "tests/test_approval_guard_prefilter.py": 4.79,
   "tests/test_approval_guard_refusal_text.py": 1.08,
   "tests/test_approval_guard_request_paths.py": 7.18,

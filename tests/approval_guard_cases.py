@@ -55,9 +55,10 @@ REQ = "approval-request-protected"
 DEL = "delegation-protected"
 TRN = "transcript-protected"
 CALLER = "delegation-caller-mismatch"
+PRR = "pr-review-protected"
 
 THINGS = ("request-folder", "prompt-hook-script", "transcript",
-          "delegation-folder", "memory-folder")
+          "delegation-folder", "memory-folder", "pr-review")
 EXEMPT_COMMANDS = ("git commit", "gh", "cat", "ls", "wc", "stat")
 MIN_PER_THING, MIN_PER_EXEMPT = 25, 3
 PLACEHOLDERS = ("{request}", "{requests_dir}", "{script}", "{transcript}",
@@ -706,6 +707,68 @@ _QUOTE = tuple(Case(f"QTE-{n:02d}", thing, code, "Bash", command, {}, exempt, "T
 ], 1))
 
 REFUSED = REFUSED + _SUPERSEDED + _GATE + _QUOTE
+
+# --- an agent's approving review of a pull request (#355) ----------------------------------------
+# A review approval by another person on the merged pull request is the ship approval, so the
+# agent must not give one with the person's `gh` login: `gh pr review --approve` in any spelling,
+# and a `gh api` write to a pull request's reviews or a review mutation in GraphQL.
+_PR_REVIEW = tuple(Case(f"PRR-{n:02d}", "pr-review", PRR, "Bash", command, {}, None, None)
+                   for n, command in enumerate([
+    # gh pr review, each spelling of the approve flag
+    "gh pr review 42 --approve",
+    "gh pr review --approve",
+    "gh pr review 42 -a",
+    "gh pr review 42 --approve=true",
+    'gh pr review 42 -a -b "Looks good"',
+    'gh pr review 42 -ab "Looks good"',
+    'gh pr review https://github.com/o/r/pull/42 --approve --body "ok"',
+    "gh pr review -R o/r 42 --approve",
+    "gh pr -R o/r review 42 -a",
+    "'gh' pr review 42 --approve",
+    "g\\h pr review 42 -a",
+    "/usr/local/bin/gh pr review 42 --approve",
+    "GH_TOKEN=x gh pr review 42 --approve",
+    "command gh pr review 42 --approve",
+    # chained after another command
+    "gh pr view 42 && gh pr review 42 --approve",
+    "gh pr view 42; gh pr review 42 -a",
+    "gh pr checks 42\ngh pr review 42 --approve",
+    "gh pr checks 42 || gh pr review 42 --approve",
+    "gh pr checks 42&&gh pr review 42 -a",
+    'gh pr review 42 --comment -b "ok" && gh pr review 42 --approve',
+    # inside a shell that runs a quoted command
+    'bash -c "gh pr review 42 --approve"',
+    "sh -c 'gh pr review 42 -a'",
+    'eval "gh pr review 42 --approve"',
+    'echo "gh pr review 42 --approve" | sh',
+    "bash -c \"bash -c 'gh pr review 42 --approve'\"",
+    # gh api: a write to a pull request's reviews, in any argument order
+    "gh api repos/o/r/pulls/42/reviews -f event=APPROVE",
+    "gh api repos/o/r/pulls/42/reviews -X POST -f event=APPROVE",
+    "gh api -X POST repos/o/r/pulls/42/reviews -f body=ok",
+    "gh api --method POST /repos/o/r/pulls/42/reviews -f event=COMMENT",
+    "gh api --method=POST repos/o/r/pulls/42/reviews",
+    "gh api -XPOST repos/o/r/pulls/42/reviews",
+    "gh api -X post repos/o/r/pulls/42/reviews",
+    "gh api repos/o/r/pulls/42/reviews/9/events -f event=APPROVE",
+    "gh api -X POST 'repos/{owner}/{repo}/pulls/42/reviews/9/events' -F event=APPROVE",
+    "gh api -X PUT repos/o/r/pulls/42/reviews/9 -f body=x",
+    "gh api repos/o/r/pulls/42/reviews --input review.json",
+    "gh api repos/o/r/pulls/42/reviews --input - <<'EOF'\n{\"event\": \"APPROVE\"}\nEOF",
+    "gh api https://api.github.com/repos/o/r/pulls/42/reviews --field event=APPROVE",
+    "gh api repos/o/r/pulls/42/reviews --raw-field=event=APPROVE",
+    "gh api repos/o/r/pulls/42/reviews -Fevent=APPROVE",
+    "gh api -X GET repos/o/r/pulls/42/reviews -f event=APPROVE",
+    "bash -c 'gh api -X POST repos/o/r/pulls/42/reviews -f event=APPROVE'",
+    "gh pr view 42 && gh api -X POST repos/o/r/pulls/42/reviews",
+    # gh api graphql: the mutations that create or submit a review
+    "gh api graphql -f query='mutation { addPullRequestReview(input: {pullRequestId: \"P\", "
+    "event: APPROVE}) { clientMutationId } }'",
+    "gh api graphql -f query='mutation { submitPullRequestReview(input: "
+    "{pullRequestReviewId: \"R\", event: APPROVE}) { clientMutationId } }'",
+], 1))
+
+REFUSED = REFUSED + _PR_REVIEW
 # The label of a command that no longer has an exemption names no exemption.
 REFUSED = tuple(c if c.exempt in EXEMPT_COMMANDS else replace(c, exempt=None) for c in REFUSED)
 
@@ -784,6 +847,30 @@ _ok("TRC-068", [
     'gh pr create --title "Name approval-requests" --body "About prompt-approval.sh"',
     'gh pr comment 5 -b "The .compass/delegations folder"',
 ])
+# A read of a pull request or its reviews, a review that does not approve, a write that is not
+# to a review, and a message that names the refused forms pass (#355).
+_ok(None, [
+    "gh pr view 42",
+    "gh pr view 42 --comments",
+    'gh pr review 42 --comment -b "Looks good"',
+    'gh pr review 42 --request-changes -b "Fix the test"',
+    'gh pr review 42 -c -b "do not --approve yet"',
+    'gh pr review 42 --comment --body "use -a to approve"',
+    "gh api repos/o/r/pulls/42/reviews",
+    "gh api repos/o/r/pulls/42/reviews --paginate --jq '.[] | {id, state}'",
+    "gh api -X GET repos/o/r/pulls/42/reviews -f per_page=100",
+    "gh api --method GET repos/o/r/pulls/42/reviews/9",
+    "gh api --paginate repos/o/r/pulls/42/reviews --jq '.[] | {id, state, submitted_at, "
+    "commit_id, html_url, user: {login: .user.login, type: .user.type}}'",
+    "gh api user --jq .login",
+    "gh api -X POST repos/o/r/issues/42/comments -f body=x",
+    "gh api repos/o/r/pulls/42/comments -f body=x",
+    "gh api graphql -f query='query { viewer { login } }'",
+    'git commit -m "Refuse gh pr review --approve in the hook"',
+    'git commit -m "Refuse gh api -X POST repos/o/r/pulls/1/reviews"',
+    'gh pr create --title "Refuse an agent\'s review approval" --body "gh pr review -a is refused"',
+    "gh pr merge 42 --squash",
+], thing="pr-review")
 _ok_tools = _tools("OK", "memory-folder", None, [
     ("Write", {"file_path": "{memory}/x.md"}, "TRC-017"),
     ("Edit", {"file_path": "{memory}/MEMORY.md"}, "TRC-017"),

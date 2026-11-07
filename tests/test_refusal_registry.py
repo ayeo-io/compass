@@ -83,6 +83,7 @@ FIXTURES = {
     "delegation-protected": dict(target=".compass/delegations/DL-1.yml", tool="Write"),
     "delegation-caller-mismatch": dict(named="compass:architect", caller="compass:builder"),
     "transcript-protected": dict(target="/Users/x/.claude/projects/-p/s.jsonl", tool="Read"),
+    "pr-review-protected": dict(target="gh api POST repos/o/r/pulls/42/reviews", tool="Bash"),
     # The longest form: a 40-character slug and all six checkpoint stages
     # with no outcome, so the 60-word cap is checked where it is tightest.
     "checkpoint-no-outcome": {"slug": "a" * 40,

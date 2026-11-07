@@ -137,6 +137,12 @@ reason code and are not in the generated list.
 **Why:** another session moved .compass/current-task in this session's own project from this session's issue '{previous}' to '{slug}', so this edit would count against the wrong issue.
 **Fix:** in this session, run `compass issue use {previous}` to carry on, or `compass issue use {slug}` to switch, then retry.
 
+### `pr-review-protected`
+
+**Blocked:** {target} (tool: {tool})
+**Why:** an approving review of a pull request is a person's approval of the change, and the agent runs gh with that person's login.
+**Fix:** ask a person to review and approve the pull request; a comment review and a read of the reviews are allowed.
+
 ### `python-missing`
 
 **Blocked:** edit to {target} (tool: {tool})

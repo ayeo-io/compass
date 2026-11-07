@@ -158,6 +158,14 @@ def _state_path(root, compass_dir):
             or os.path.join(compass_dir, "state.yml"))
 
 
+def _settings_line(root):
+    """What the commands read for settings. A new project has no `.compass/`,
+    so the only settings file it can hold is `compass.yml`."""
+    if project_settings.settings_source(root) is not None:
+        return f"settings : {project_settings.COMPASS_YML}, read over the shipped check set."
+    return "settings : defaults in force. /compass:init writes a compass.yml."
+
+
 def cmd_init(args):
     root = resolve_project_root()
     changed = []
@@ -173,7 +181,7 @@ def cmd_init(args):
                 "state    : %s" % _state_path(root, compass_dir),
                 "work     : %s" % os.path.join(compass_dir, "work"),
                 *ignores,
-                "settings : defaults in force. /compass:init writes a compass.yml.",
+                _settings_line(root),
             ],
             decision=True,
             created=True, path=compass_dir, project_root=root,

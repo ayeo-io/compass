@@ -190,3 +190,30 @@ def test_ioi_d1_a_command_that_needs_an_issue_says_so(tmp_path):
         f"reader cannot tell an empty project from a broken one:\n{out}")
     assert "no .compass/ directory found" not in out, (
         "the project init just created is not being seen")
+
+
+def _settings_line(out):
+    lines = [ln.strip() for ln in out.splitlines() if ln.strip().startswith("settings")]
+    assert len(lines) == 1, out
+    return lines[0]
+
+
+def test_init_with_no_settings_file_says_the_defaults_are_in_force(tmp_path):
+    root = (tmp_path / "fresh").resolve()
+    root.mkdir()
+    run = _init(root)
+    assert run.returncode == 0, run.stdout + run.stderr
+    assert _settings_line(run.stdout) == (
+        "settings : defaults in force. /compass:init writes a compass.yml.")
+
+
+def test_init_names_the_compass_yml_it_reads(tmp_path):
+    """A project that has its `compass.yml` is not told that defaults are in
+    force, or that `/compass:init` writes one."""
+    root = (tmp_path / "fresh").resolve()
+    root.mkdir()
+    (root / "compass.yml").write_text("schema: 1\nowner: sam-rivera\n")
+    run = _init(root)
+    assert run.returncode == 0, run.stdout + run.stderr
+    assert _settings_line(run.stdout) == (
+        "settings : compass.yml, read over the shipped check set.")

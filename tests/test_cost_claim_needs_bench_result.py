@@ -3,7 +3,7 @@
 The 9.0.0 positioning names a target: Compass costs at most one and a half
 times what the same agent costs on its own. That is a target, not a measured
 fact, until #361 [Run the pre-registered sdd-bench measurement on the 9.0.0
-release candidate] records a passing run in `docs/sdd-bench-9-0-0.md`. Until
+release candidate] records a passing run in `sdd-bench-9-0-0.md` in `docs/`. Until
 then no shipped text may state a cost, token or spend ratio. After a pass,
 every paragraph that states one must link that record, so a reader can see
 the measurement behind the number.
@@ -24,7 +24,8 @@ lines when it discusses the rule itself. As with the other allow markers
 that closes the comment does not count as a reason. The real-tree test
 prints every allowed sentence, so a reviewer sees each one.
 
-Plan: `docs/analysis/360-plan.md`, section 9 (not committed).
+#360 [Rewrite the README for 9.0.0 and test it with a first-time reader] adds
+this rule.
 """
 from __future__ import annotations
 

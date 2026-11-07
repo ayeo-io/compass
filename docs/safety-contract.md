@@ -746,6 +746,11 @@ scenario names it. And an issue started before the record moved into the
 git directory kept a digest record beside its manifest, which is
 committed with the issue's records.
 
+9.0.0 derives no living spec and writes no project index (ADR-091), so
+`finish` traces a change to the living spec like any other file, and
+`ship-commit` refuses a staged project index, the `README.md` of the
+`docs/compass/` folder, as out of scope.
+
 Read the file list `finish` prints before you push.
 
 ### Compass enforces nothing in a project that has not opted in

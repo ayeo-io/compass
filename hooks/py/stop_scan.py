@@ -8,7 +8,6 @@ import sys
 import compass_pkg                      # noqa: F401 - puts vendor on sys.path
 from compass_pkg import parse_cache, status_words
 from compass_pkg.path_stages import is_path_issue
-from compass_pkg.core import artifact_path
 from compass_pkg.spec_location import spec_path
 
 work_dir = sys.argv[1]
@@ -52,30 +51,21 @@ PHRASES = (
 )
 
 
-# The separator between "FAIL" and the phrase after it is matched as "one or
-# more non-alphanumeric characters" rather than a literal dash. Reports
-# written before this repo swapped em dashes for hyphens are still on disk in
-# projects using Compass, and both spellings must be recognised.
-FAILING = re.compile(
-    r"Overall:.*\bRED\b|Overall:.*FAIL|FAIL[^0-9A-Za-z]+(issue|task) does not advance",  # vocabulary-scan: allow - matches the retired wording in older reports too
-    re.IGNORECASE)
-PASSING = re.compile(r"Overall:.*PASS", re.IGNORECASE)
 REPRODUCTION = re.compile(r"reproduc|regression|defect|incident", re.IGNORECASE)
 LINE_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}")
 
 
 def gate_state(task_dir, slug, task):
-    # ASKED, NOT GUESSED. Each of these three may sit beside the manifest or
-    # under `docs/compass/<created>-<slug>/`, and only the issue's artifact
+    # ASKED, NOT GUESSED. The acceptance criteria may sit beside the manifest
+    # or under `docs/compass/<created>-<slug>/`, and only the issue's artifact
     # registry knows which. The resolver - the same one `compass check` uses -
     # falls back to the retired filename and to the flat filename, so older
-    # archives still resolve. A kind with no document resolves to where it
-    # WOULD be, so the isfile tests below read it as "nothing written".
+    # archives still resolve. With no document it resolves to where the file
+    # WOULD be, so the isfile test below reads it as "nothing written".
     try:
         spec = spec_path(task_dir)
-        vreport = artifact_path(task_dir, "verification-report.md")
     except Exception:                                       # noqa: BLE001
-        spec = vreport = ""
+        spec = ""
 
     # 1. no delivery approach on in-progress work. The manifest's key is the
     # record (ADR-091). A folder with nothing in it may be an empty scaffold;
@@ -90,20 +80,10 @@ def gate_state(task_dir, slug, task):
                  "issue has artifacts - work started without an assessment. Run /compass:assess.")
         return
 
-    # 2. a stage whose gate is not cleared. An unresolved red: implementation
-    # never closed.
+    # 2. an unresolved red: implementation never closed.
     if os.path.isfile(os.path.join(task_dir, ".red")):
         emit("W", slug, ".red marker still present - a failing test is on record "
              "and was never paid off green. implementation is mid-gate.")
-
-    # The verify stage entered but not cleared.
-    if os.path.isfile(vreport):
-        if any_line(FAILING, vreport):
-            emit("W", slug, "verification-report.md records a FAILING gate decision "
-                 "- test-and-review did not pass. The issue is mid-gate.")
-        elif not any_line(PASSING, vreport):
-            emit("W", slug, "verification-report.md exists but its gate decision is "
-                 "blank - test-and-review was entered and not completed.")
 
     # 3. a hotfix with an outstanding follow-up. Both facts come from
     # manifest.yml: the template can rename a heading in the prose record

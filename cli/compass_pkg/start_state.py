@@ -23,19 +23,10 @@ _GENERATED_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache",
 
 
 def _is_generated(path):
-    """True for caches, for the living spec files and for the project index. Before 9.0.0
-    ship-commit derived the living spec at landing, after the green, and every command that
-    changed a record rendered the project index; a checkout made then can still hold either.
-    So tracing either would always name an older version than the one that lands."""
-    from compass_pkg.shipped_issues import LIVING_SPEC_FILES
+    """True for the caches above and for compiled Python files."""
     parts = path.split("/")
     return (any(p in _GENERATED_DIRS for p in parts[:-1])
-            or path.endswith((".pyc", ".pyo"))
-            or path in LIVING_SPEC_FILES or path == INDEX_REL)
-
-
-#: The project index before 9.0.0 (ADR-091), which a checkout made then can still hold.
-INDEX_REL = "docs/compass/README.md"
+            or path.endswith((".pyc", ".pyo")))
 
 
 def _git_changed_paths(root):

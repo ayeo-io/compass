@@ -195,15 +195,21 @@ def test_trc_d2_the_hook_still_blocks_with_no_record_anywhere(tmp_path):
 
 # --- `TRC-D3` ------------------------------------------------------------------
 
-def test_trc_d3_the_stop_hook_reads_relocated_documents(tmp_path):
-    project = _project(tmp_path, gate_decision="FAIL")
+@pytest.mark.parametrize("register", [True, False])
+def test_trc_d3_the_stop_hook_finds_the_approach_and_ignores_the_report(tmp_path, register):
+    """The stop hook reads the delivery approach from the manifest, so it does not
+    warn that the record is missing, whether or not the documents are registered.
+    It no longer reads `verification-report.md`: 9.0.0 writes none, so a failing
+    gate decision in an old report draws no warning (#358)."""
+    project = _project(tmp_path, register=register, gate_decision="FAIL")
     out = _stop(project).stderr
-    assert "FAILING gate decision" in out, (
-        "the stop hook did not warn about a failing gate decision in a "
-        f"verification report registered under docs/compass/:\n{out}")
-    assert "no delivery-approach.md" not in out and "without triage" not in out, (
-        "the stop hook says the delivery-approach record is missing, though "
-        f"it is registered and on disk:\n{out}")
+    assert "delivery approach is MISSING" not in out, (
+        "the stop hook says the delivery approach is missing, though the "
+        f"manifest names it:\n{out}")
+    assert "verification-report.md" not in out, (
+        f"the stop hook still reads the verification report:\n{out}")
+    assert ".red marker still present" in out, (
+        f"the stop hook did not run its check on the issue:\n{out}")
 
 
 def test_trc_d3_the_stop_hook_still_reports_a_missing_record(tmp_path):
@@ -213,21 +219,6 @@ def test_trc_d3_the_stop_hook_still_reports_a_missing_record(tmp_path):
     assert "delivery approach" in out, (
         "an issue directory with no delivery-approach record anywhere drew no "
         f"warning:\n{out}")
-
-
-def test_trc_d3_the_stop_hook_reads_the_registry_not_the_directory(tmp_path):
-    """Proof that the pass above comes from the registry rather than from luck.
-
-    Same documents on disk, registry silent. The hook must not find the
-    verification report - otherwise it is scanning `docs/compass/` for
-    filenames, which finds another issue's report as readily as this one's and
-    makes a half-finished migration read as a finished one.
-    """
-    project = _project(tmp_path, register=False, gate_decision="FAIL")
-    out = _stop(project).stderr
-    assert "FAILING gate decision" not in out, (
-        "the stop hook found a verification report the manifest does not "
-        f"register, so it is not reading the registry:\n{out}")
 
 
 # --- 9.0.0: the manifest is the delivery-approach record (ADR-091) ------------------

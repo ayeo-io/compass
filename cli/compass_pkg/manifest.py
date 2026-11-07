@@ -66,9 +66,6 @@ def _git(args, cwd):
 # same tree, which is precisely the collision this scope check exists to stop.
 FRAMEWORK_OWNED_PATHS = frozenset({
     ".compass/current-task",
-    # The project index, which every landing re-rendered before 9.0.0 (ADR-051, ADR-091). A
-    # checkout made then can still hold it. Not under an issue's folder.
-    "docs/compass/README.md",
     # The ignore files `compass init` writes (`record_mode`, #356). A ship
     # commit can hold them, so a clone skips the same per-checkout files.
     ".compass/.gitignore",

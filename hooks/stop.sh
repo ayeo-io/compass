@@ -11,13 +11,9 @@
 #        => an issue directory exists but its manifest names no
 #           delivery_approach (ADR-091). Work with no delivery approach has
 #           no computed process, so the hook warns.
-#   2. a stage whose gate is not cleared
+#   2. an unresolved red
 #        => a still-present .red marker means implementation is unfinished (a
-#           failing test is on record and was never taken green). The verify stage
-#           cannot have passed cleanly.
-#        => on an issue from before 9.0.0, a verification-report.md whose
-#           gate decision is RED / blank means the verify stage was entered
-#           and not cleared.
+#           failing test is on record and was never taken green).
 #   3. a hotfix with an outstanding follow-up
 #        => the manifest names a hotfix (on a path issue, the assessment's
 #           `urgency: live-defect`; on an issue assessed before 9.0.0, the

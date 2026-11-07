@@ -568,6 +568,7 @@ def _record_ship(task_dir, answer, save):
     entry.update(answer.provenance)
     if save:
         task.setdefault("evidence", []).append(entry)
+        keep_authority(task, answer)
         save_manifest(task, task_path)
     return Recorded(
         f"{VERB}: the change of issue {slug} - approved at ship by {answer.approver}, "

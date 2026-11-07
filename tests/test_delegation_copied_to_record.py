@@ -194,3 +194,22 @@ def test_an_old_manifest_without_the_key_keeps_its_check_verdict(tmp_path):
     after = run(root, "check", "--json", "--issue", SLUG)
     assert after[0] == before[0]
     assert json.loads(after[1]) == json.loads(before[1])
+
+
+def test_a_delegated_ship_approval_copies_the_delegation(tmp_path):
+    """The typed ship approval is a writer too; its delegation needs the
+    typed-back code."""
+    import re
+
+    from test_ship_approval_typed import AGENT, _hook, _owing
+    root = _owing(tmp_path)
+    first = _hook(root, f"--agent {AGENT} --for ship", command="compass:delegate")
+    code_text = re.search(r"/compass:delegate confirm (\S+)", first.message).group(1)
+    assert not _hook(root, f"confirm {code_text}", command="compass:delegate").block
+    code, out, err = delegated(root, AGENT, "--ship", "--issue", SLUG)
+    assert code == 0, out + err
+    manifest = manifest_of(root)
+    assert manifest["evidence"][-1]["delegation"] == "DL-1"
+    copy = manifest["delegations_used"]["DL-1"]
+    assert copy["forms"] == ["ship"] and copy["agent"] == AGENT
+    assert "requested_prompt_id" not in copy and copy["sha256"] == _digest(copy)

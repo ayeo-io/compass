@@ -39,7 +39,7 @@ from compass_pkg.stable_ids import (APPROACH_DELIVERY, APPROACH_SPIKE, GATE_G5,
 G5_LABELS = ("auth", "payments", "personal-data", "migrations")
 
 #: Every token, in the order the manifest stores them.
-TOKENS = ("scenarios", "red-before-green", "suite-green",
+TOKENS = ("request", "scenarios", "red-before-green", "suite-green",
           "correctness", "governance", "traceability",
           "regression", "security", "clarity", "architecture",
           "outer-loop", "isolation", "layering",
@@ -55,10 +55,12 @@ GATE_OF_TOKEN = {"correctness": "verify.correctness", "governance": "verify.gove
 TOKEN_OF_GATE = {gate: token for token, gate in GATE_OF_TOKEN.items()}
 SPIKE_GATE = "spike.conclude"
 
-#: What every delivery issue owes. `ship-approval` is a person's approval at ship,
-#: read by the check `ship-approval-present` outside every gate (#355); it meets no
-#: gate, so the gate sets of 8.0.4 do not move.
-EVERY_ISSUE = ("scenarios", "red-before-green", "suite-green",
+#: What every delivery issue owes. `request` is the request link and the requester,
+#: read by the check `request-recorded` outside every gate (#356). `ship-approval`
+#: is a person's approval at ship, read by the check `ship-approval-present`
+#: outside every gate (#355). Neither meets a gate, so the gate sets of 8.0.4 do
+#: not move.
+EVERY_ISSUE = ("request", "scenarios", "red-before-green", "suite-green",
                "correctness", "governance", "traceability", "ship-approval")
 
 #: The `S17` tokens, each with the routings that owe it. `outer-loop` is owed

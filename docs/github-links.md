@@ -1,8 +1,8 @@
 # GitHub links
 
-An issue can record the GitHub issue it is linked to and the pull request that carries it. This page is the reference: the command, the pull request and the landing commit, the ship approval read from the merged pull request, how `gh` is run, and the limits.
+An issue can record the GitHub issue it is linked to, the request it answers and who asked, and the pull request that carries it. This page is the reference: the command, the request link, the pull request and the landing commit, the ship approval read from the merged pull request, how `gh` is run, and the limits.
 
-The code is `cli/compass_pkg/issue_link.py` (the link and the `gh` runner), `cli/compass_pkg/pull_request_link.py` (the pull request, its reviews and `land_commit`), `cli/compass_pkg/landing.py` (the land commit every reader uses), `cli/compass_pkg/ship_approval.py` (which reviews count) and `cli/compass_pkg/github_links.py` (origin's repository and default branch). The tests use a fake `gh` on `PATH`, `tests/fake_gh.py`.
+The code is `cli/compass_pkg/issue_link.py` (the link and the `gh` runner), `cli/compass_pkg/request_link.py` (the request link and the requester), `cli/compass_pkg/pull_request_link.py` (the pull request, its reviews and `land_commit`), `cli/compass_pkg/landing.py` (the land commit every reader uses), `cli/compass_pkg/ship_approval.py` (which reviews count) and `cli/compass_pkg/github_links.py` (origin's repository and default branch). The tests use a fake `gh` on `PATH`, `tests/fake_gh.py`.
 
 ## The link
 
@@ -15,7 +15,25 @@ compass issue link set --github https://github.com/acme/widgets/issues/42
 
 - The target is checked against a strict pattern before it is stored. A repository name cannot start with a dash, and `.` or `..` is not a repository name. A target that fails the check is refused, and nothing is written.
 - Linking writes nothing to GitHub and calls no `gh` command.
-- `--github` and `--pr` can be given together, and at least one is needed.
+- `--github`, `--pr`, `--request` and `--requester` can be given together, and at least one is needed.
+
+## The request link and the requester
+
+Every delivery issue owes the token `request`: who asked for the change and a link to the request (#356). `--request` and `--requester` write the manifest's `request` record, with the time the session recorded it:
+
+```sh
+compass issue link set --request https://github.com/acme/widgets/issues/42 --requester "Dana Smith"
+compass issue link set --request acme/widgets#42 --requester "Dana Smith"
+```
+
+- `--request` takes an `https://` URL with no white space, at most 2,000 characters, or `owner/repo#number`. `owner/repo#number` and a GitHub issue URL also write `github`, as `--github` does. `--github` and `--request` that name two different GitHub issues are refused.
+- `--github` alone also counts as the link: when no `request.link` is held, the GitHub issue's URL is written there.
+- `--requester` is free text on one line, at most 100 characters, with no control character. It is a claim the session records, not an approval. Compass does not check it, and no approval rule reads it.
+- Each flag can be given alone. A part already recorded stays when the other is given.
+- A value that fails a check is refused, and nothing is written. Neither flag calls `gh`.
+- `compass quick-fix start` takes the same two flags, so assess records both in its one call. It does not refuse without them.
+
+The check `request-recorded` fails until both parts are recorded, and `compass next` asks for them first (`governance/guardrails.md`). It is not a stop: no command refuses on it. A change with no request to link is excused by a waiver that a person approves (`docs/waivers.md`).
 
 9.0.0 removed the label sync (ADR-093). Compass no longer writes labels to the linked GitHub issue, and `compass issue github sync` fails to parse with a line naming ADR-093. A project `compass.yml` that still sets `github_labels` gets an `L-SETTING-REMOVED` warning from `compass policy lint`, and the key is not read.
 

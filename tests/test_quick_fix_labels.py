@@ -49,7 +49,7 @@ def _manifest(root, slug):
 
 
 #: The evidence every change owes, and the light row's outer loop (ADR-092).
-LIGHT = ["scenarios", "red-before-green", "suite-green", "correctness", "governance",
+LIGHT = ["request", "scenarios", "red-before-green", "suite-green", "correctness", "governance",
          "traceability", "outer-loop", "ship-approval"]
 
 

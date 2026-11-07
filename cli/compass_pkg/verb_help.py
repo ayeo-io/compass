@@ -82,7 +82,7 @@ VERB_DESCRIPTIONS = {
     'issue status remove':
         "End a backlog hold by deleting the stored status. The state then follows the issue's records. Refuses an issue with no hold and writes nothing.",
     'issue link set':
-        "Link an issue to its GitHub issue with --github, as owner/repo#number or the issue's URL on github.com, and store it as the manifest's github field. The target is checked against a strict pattern before it is stored, so nothing that could be read as an option or a shell command reaches gh. Linking writes nothing to GitHub.",
+        "Link an issue to its GitHub issue with --github, as owner/repo#number or the issue's URL on github.com, and store it as the manifest's github field. The target is checked against a strict pattern before it is stored, so nothing that could be read as an option or a shell command reaches gh. --request (an https:// URL, or owner/repo#number, which also writes github) and --requester (free text of at most 100 characters, recorded as a claim, not an approval) write the manifest's request record, which the check request-recorded reads; neither calls gh. Linking writes nothing to GitHub.",
     'issue blocked set':
         "Flag an in-progress or in-review issue as blocked, with --reason saying what it waits for. The flag records the reason and the time, the state does not change, and the flow board shows the issue as blocked. Refuses any other state, names the two that allow it and writes nothing.",
     'issue blocked remove':
@@ -104,7 +104,7 @@ VERB_DESCRIPTIONS = {
     'decision check':
         "Compare governance/decisions/ with a base ref: fails, naming the file, when an entry that exists at the ref was changed or removed. New entries pass. A ref git cannot resolve fails rather than checking nothing. compass ci --since runs the same check.",
     'quick-fix start':
-        "Assess and record a change in one call. Refuses before writing anything if a dimension has no reason or an unknown value. It then records the assessment and any --labels and writes the one scenario. It serves every size; a spike (--goal exploration) stops and names /compass:assess.",
+        "Assess and record a change in one call. Refuses before writing anything if a dimension has no reason or an unknown value. It then records the assessment, any --labels, --request and --requester, and writes the one scenario. It serves every size; a spike (--goal exploration) stops and names /compass:assess.",
     'quick-fix finish':
         "Trace, check, gate and land a change in one call, after checking every precondition: changed paths trace to the scenario, compass check's output becomes evidence, the three immovable gates pass, and compass ship-commit lands it. Refuses, with no gate passed and nothing committed, if check fails, other evidence is owed (a next: line for each), no green is bound, or a path is untraced while several scenarios exist.",
     'issue diagnose':

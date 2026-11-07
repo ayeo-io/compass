@@ -22,7 +22,7 @@ from compass_pkg.core import load_yaml, reading_matches
 #: The checks that sit in no gate, in the order `compass check` reports them. 9.0.0
 #: removes `artifacts-approved`, `contracts-declared` and `design-within-word-ceiling`
 #: (ADR-091); a stored configuration that declares one reports it as nothing to check.
-CHECKS = ("artifacts-approved", "nfr-rows-resolved", "contracts-declared",
+CHECKS = ("request-recorded", "artifacts-approved", "nfr-rows-resolved", "contracts-declared",
           "design-within-word-ceiling", "acceptance-applicability-agrees",
           "outer-loop-recorded", "acceptance-support-present", "outer-loop-attempts-recorded",
           "isolation-proven", "layering-test-passed", "ship-approval-present")
@@ -40,6 +40,7 @@ ADVISORY_CHECKS = ("acceptance-applicability-agrees", "acceptance-support-presen
 
 #: The label each check's row is reported under, where a gate row names its guardrail.
 LABELS = {
+    "request-recorded": "request",
     "artifacts-approved": "approved documents",
     "nfr-rows-resolved": "non-functional requirements",
     "contracts-declared": "data and interfaces",

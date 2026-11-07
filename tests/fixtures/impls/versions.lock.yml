@@ -60,6 +60,9 @@ implementations:
   outer-loop-recorded:
     verdict_digest: 7e8e64e96ca3605804ee13912e9a8a629e0bec8fe96cc4439e7d115ab46d9b21
     version: 1.0.0
+  request-recorded:
+    verdict_digest: 55b2011d4592a7d64fc69205208d45d7910815ee982825cbc24491784a67b573
+    version: 1.0.0
   scenario-has-id-and-intent:
     verdict_digest: 6ad20aed1f0071aa85c61afe4e62b17c0984bd98a763244787490bf78ae2c2fd
     version: 1.0.0

@@ -390,6 +390,26 @@ _(none yet - the shipped default guardrails apply as-is)_
     9.0.0, `compass check` also names each 8.x waiver of one of the
     strategy's checks that the issue's `config:` holds, with its reason and
     whether the issue's generation approved it.
+- **`request-recorded`** is the check of the token `request`, which every
+  delivery row owes and a spike does not (#356). It declares `severity:
+  blocking` and `on_skipped: not-applicable` and sits in no gate and not in
+  the spike's checks. `compass check` runs it first of the checks outside
+  every gate and adds no row for an issue whose stored `evidence_required`
+  does not list the token, so an issue assessed before the token gains none.
+  The rules it applies are in `cli/compass_pkg/request_link.py`.
+  - It passes when the manifest's `request` record holds a link and a
+    requester. A linked GitHub issue (`github`) gives the link when
+    `request.link` is missing. The pass names the requester as a claim the
+    session recorded: no approval rule reads it.
+  - It fails otherwise, names the missing part and the command `compass issue
+    link set --issue <slug> --request <url> --requester <name>`. `compass
+    next` asks for the request before anything else.
+  - It is not a stop. No command refuses on it: `compass quick-fix start`
+    takes the two flags and does not need them, and `compass quick-fix
+    finish` lands an issue whose only failing check is this one. `compass
+    check` and `compass ci` still fail on it.
+  - A change with no request to link is excused by a waiver of the check that
+    a person approves (see "A waived check" below).
 - **`ship-approval-present`** is the check of the token `ship-approval`, which
   every delivery row owes and a spike does not (#355). It declares `severity:
   blocking` and `on_skipped: not-applicable`, sits in no gate and not in the
@@ -523,7 +543,8 @@ Each generation commit writes the manifest's `policy:` block
 (`docs/generation-store.md`). `tests/test_check_set_content.py` checks the
 content of the set: the catalogue names, the stage-mode ranks, the references
 and the checks and evidence types of the frozen `governance/guardrails.yml`,
-less those added after it froze (`ship-approval-present` and `pr-approval`).
+less those added after it froze (`ship-approval-present`, `request-recorded`
+and `pr-approval`).
 
 `acceptance_strategy.pinned_below` still reads `extends: compass:default@6` or
 `@7`, which is otherwise a removed setting: such a pin keeps `S17` off until

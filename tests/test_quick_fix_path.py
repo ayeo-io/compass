@@ -24,7 +24,7 @@ from test_quick_fix_verbs import (  # noqa: F401  (`repo` is a fixture)
     _write_greeting, repo)
 
 SLUG = "greet-path"
-STANDARD = ["scenarios", "red-before-green", "suite-green", "correctness", "governance",
+STANDARD = ["request", "scenarios", "red-before-green", "suite-green", "correctness", "governance",
             "traceability", "regression", "security", "clarity", "outer-loop", "isolation",
             "layering", "definition-of-done", "ship-approval"]
 INTENT = "A greeting says hello to the person it names."
@@ -33,12 +33,17 @@ SCENARIO = ("Given the greeting template, when it is read, then it says "
 TEST_ID = "tests/test_greeting.py::test_greeting_says_hello"
 
 
-def _start(root, slug=SLUG, size="atomic - one file, one obvious change", *extra):
+#: Assess records who asked and the link to the request (#356).
+REQUEST = ("--request", "https://example.com/requests/greet", "--requester", "Test fixture")
+
+
+def _start(root, slug=SLUG, size="atomic - one file, one obvious change", *extra,
+           request=True):
     return _run(root, "quick-fix", "start", slug,
                 "--risk", "trivial - a one-line text change",
                 "--familiarity", "brownfield-mapped - the file and its test already exist",
                 "--size", size, "--intent", INTENT, "--scenario", SCENARIO,
-                "--test", TEST_ID, *extra)
+                "--test", TEST_ID, *extra, *(REQUEST if request else ()))
 
 
 def _red(root, slug=SLUG, *extra):
@@ -354,6 +359,10 @@ def _step(root, command, done):
         done["finished"] = True
         return _run(root, "quick-fix", "finish", "--issue", SLUG, "-m", "Say hello properly",
                     *RELEASE_NOTE, "--", *test)
+    if command.startswith("compass issue link set ") and "--request <url>" in command:
+        linked = _run(root, "issue", "link", "set", "--issue", SLUG, *REQUEST)
+        assert linked.returncode == 0, linked.stdout + linked.stderr
+        return _run(root, "next", "--issue", SLUG)
     raise AssertionError(f"no step is known for the next: line {command!r}")
 
 
@@ -361,7 +370,8 @@ def test_a_medium_change_reaches_the_commit_by_the_next_lines_alone(repo):
     _base_greeting(repo)
     head = _git(repo, "rev-parse", "HEAD")
 
-    result = _start(repo, SLUG, "medium - several files and a design choice")
+    # Started with no request, so the first next: line asks for it (#356).
+    result = _start(repo, SLUG, "medium - several files and a design choice", request=False)
     done, walked = {"dod": 0, "finished": False}, []
     for _ in range(40):
         assert result.returncode == 0, (walked, result.stdout + result.stderr)
@@ -380,6 +390,8 @@ def test_a_medium_change_reaches_the_commit_by_the_next_lines_alone(repo):
     assert all(g["status"] == "pass" for g in manifest["gates"])
     # The order the `next:` lines gave, one kind of step each.
     kinds = [c.split(" -- ")[0].split(" --")[0] for c in walked]
+    assert kinds[0] == "compass issue link set"
+    kinds = kinds[1:]
     assert kinds[0].startswith("fill the Non-functional requirements rows")
     assert kinds[1] == ("write the layering test at <layering test path> and git add it, "
                         "then compass tdd-red")

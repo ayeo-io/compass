@@ -12,6 +12,7 @@ bottom, and the first that matches gives the command:
 | landed, `ship-approval` owed, none on record | `compass issue link set --pr <n> --issue <slug>` after the merge, or `compass evidence request --ship` (only the second once the merge is recorded) |
 | closed | none |
 | a spike with no conclusion | `compass evidence add EV-SPIKE --type spike-conclusion ...` |
+| `request` owed, the link or the requester not recorded, no waiver in force | `compass issue link set --issue <slug> --request <url> --requester <name>` |
 | assessed, no scenario | `compass scenario add TRC-001 ...` |
 | a scenario with no test | `compass scenario tests set <id> --test <path::name>` |
 | `nfr-rows-resolved` fails (a path issue) | `fill the Non-functional requirements rows of <spec>: ...` |
@@ -43,9 +44,9 @@ quick-fix finish` refuses on while it is owed.
 """
 # DEPENDENCY: standard library (os, shlex); compass_pkg.next_line, path_stages, red_first,
 # stable_ids and status_words, and inside functions the readers of
-# acceptance_strategy, checkpoint_outcomes, checks, effective, gate_status, ship_approval, tdd,
-# tdd_green and item_records, and core, next_cmd and terminal for `announce`. It must not
-# import next_cmd at load time: next_cmd imports it.
+# acceptance_strategy, checkpoint_outcomes, checks, effective, gate_status, request_link,
+# ship_approval, tdd, tdd_green, waiver_records and item_records, and core, next_cmd and
+# terminal for `announce`. It must not import next_cmd at load time: next_cmd imports it.
 from __future__ import annotations
 
 import os
@@ -104,6 +105,11 @@ def _first_match(task, task_dir, done):
         if spike:
             return spike
     else:
+        # The request comes first, so assess asks for it (#356). A waiver a person
+        # approved excuses it, and then `next` stops asking.
+        if _request_missing(task, task_dir):
+            from compass_pkg import request_link
+            return request_link.command(task_dir)
         for row in (_specify, _build, _ship):
             command = row(task, task_dir)
             if command:
@@ -483,6 +489,19 @@ def _open_dod_item(task, task_dir):
         if item.state == item_records.OPEN:
             return item.check
     return None
+
+
+def _request_missing(task, task_dir):
+    """True when the issue owes `request`, does not hold both parts, and no
+    approved waiver excuses `request-recorded`."""
+    from compass_pkg import request_link
+    if not request_link.owed(task) or all(request_link.recorded(task)):
+        return False
+    if task_dir:
+        from compass_pkg import waiver_records
+        if request_link.CHECK in waiver_records.excused(task, task_dir):
+            return False
+    return True
 
 
 def _human_approval(task, task_dir):

@@ -791,3 +791,42 @@ def _(root):
 @case("ship-approval-present", "not-owed")
 def _(root):
     return _issue(root, _shipped(evidence_required=["scenarios"]))
+
+
+# --- request-recorded (#356) --------------------------------------------------------------
+
+_REQUEST = {"link": "https://github.com/acme/widgets/issues/42", "requester": "Dana Smith",
+            "recorded_at": "2026-11-07T10:00:00Z"}
+
+
+def _requested(**changes):
+    body = {"status": "active", "generation": 1,
+            "evidence_required": ["request", "scenarios"], "evidence": []}
+    body.update(changes)
+    return body
+
+
+@case("request-recorded", "broken")
+def _(root):
+    return _issue(root, _requested())
+
+
+@case("request-recorded", "restored")
+def _(root):
+    return _issue(root, _requested(request=dict(_REQUEST)))
+
+
+@case("request-recorded", "no-requester")
+def _(root):
+    return _issue(root, _requested(request={"link": _REQUEST["link"]}))
+
+
+@case("request-recorded", "github-link")
+def _(root):
+    return _issue(root, _requested(github={"repo": "acme/widgets", "number": 42},
+                                   request={"requester": "Dana Smith"}))
+
+
+@case("request-recorded", "not-owed")
+def _(root):
+    return _issue(root, _requested(evidence_required=["scenarios"]))

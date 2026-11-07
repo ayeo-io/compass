@@ -91,24 +91,24 @@
 
   <g>
     <text class="appr" x="510" y="156">
-      the light row: 8 pieces of evidence
+      the light row: 9 pieces of evidence
       <animate attributeName="opacity" values="1;1;0;0;0;0;1" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </text>
     <text class="appr" x="510" y="156" opacity="0">
-      the defect row: 13 pieces of evidence
+      the defect row: 14 pieces of evidence
       <animate attributeName="opacity" values="0;0;1;1;0;0;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </text>
     <text class="appr" x="510" y="156" opacity="0">
-      the standard row: 17 pieces of evidence
+      the standard row: 18 pieces of evidence
       <animate attributeName="opacity" values="0;0;0;0;1;1;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </text>
   </g>
 
   <g>
     <line x1="505" y1="330" x2="925" y2="330" stroke="#444a55" stroke-width="1.5"/>
-    <rect x="530" y="317" width="60" height="13" fill="#58c4dd" rx="2">
-      <animate attributeName="height" values="13;13;13;13;13;13;13" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
-      <animate attributeName="y" values="317;317;317;317;317;317;317" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
+    <rect x="530" y="304" width="60" height="26" fill="#58c4dd" rx="2">
+      <animate attributeName="height" values="26;26;26;26;26;26;26" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
+      <animate attributeName="y" values="304;304;304;304;304;304;304" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
     </rect>
     <text class="stage" x="560" y="350">assess</text>
     <rect x="630" y="317" width="60" height="13" fill="#58c4dd" rx="2">

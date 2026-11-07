@@ -110,6 +110,10 @@ def register(sub, issue_arg):
                     help="the issue this was found in")
     st.add_argument("--found-at", metavar="WHERE",
                     help="where: a stage, review, ci or after-landing")
+    st.add_argument("--request", metavar="URL",
+                    help="link to the request (https URL or owner/repo#N)")
+    st.add_argument("--requester", metavar="NAME",
+                    help="who asked (a claim, at most 100 characters)")
     st.set_defaults(func=cmd_quick_fix_start, output_kind="hand-off")
 
     fi = subs.add_parser(
@@ -132,16 +136,20 @@ def register(sub, issue_arg):
     fi.set_defaults(func=cmd_quick_fix_finish, output_kind="hand-off")
 
 
-def _quiet_run(fn, mode="quiet", **kwargs):
+def _quiet_run(fn, mode="quiet", answers=None, **kwargs):
     """Call an existing verb's handler in-process, its own printed output
     captured rather than shown - so reusing the handler (never
-    re-implementing its record) does not turn one hand-off into a dozen."""
+    re-implementing its record) does not turn one hand-off into a dozen.
+    A dict passed as `answers` receives the handler's arguments afterwards,
+    with what the handler set on them, such as `compass check`'s counts."""
     base = {"_mode": mode, "evidence_out": None, "json": False}
     base.update(kwargs)
     ns = argparse.Namespace(**base)
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         code = fn(ns)
+    if answers is not None:
+        answers.update(vars(ns))
     return buf.getvalue(), (code or 0)
 
 
@@ -241,6 +249,13 @@ def cmd_quick_fix_start(args):
     if urgency_v is not None:
         readings["urgency"], reasons["urgency"] = urgency_v, urgency_r
     readings["labels"] = _split_labels(args.labels)
+    # The request link is optional and never refused for being absent: the check
+    # `request-recorded` and the `next:` line ask for it (#356). A malformed one is
+    # refused here, before anything is written.
+    from compass_pkg import request_link
+    request_url, request_target, requester = request_link.parse(
+        getattr(args, "request", None), getattr(args, "requester", None),
+        "compass quick-fix start")
 
     # Before writing anything: the evaluator runs on the values in memory,
     # so an unknown value is refused with the dimension named (QFO-3), the
@@ -306,6 +321,9 @@ def cmd_quick_fix_start(args):
     }
     if raised_by:
         start_record["raised_by"] = {"issue": raised_by, "found_at": found_at}
+    if request_target is not None:
+        start_record["github"] = {"repo": request_target[0], "number": request_target[1]}
+    request_link.record(start_record, request_url, requester)
     save_manifest(start_record, manifest_path(task_dir))
     chain_line = lineage.hint(os.path.join(project_root, ".compass"), slug)
     chain_detail = [chain_line] if chain_line else []
@@ -885,9 +903,16 @@ def cmd_quick_fix_finish(args):
     with _at_project_root(project_root):
         evidence_path_rel = "evidence/check-output.txt"
         evidence_path_abs = os.path.join(task_dir, evidence_path_rel)
+        counts = {}
         check_out, check_code = _quiet_run(
-            cmd_check, mode="summary", task=slug, evidence_out=evidence_path_abs)
-        if check_code != 0:
+            cmd_check, mode="summary", answers=counts, task=slug,
+            evidence_out=evidence_path_abs)
+        # The request link is not a stop (#356, VD-033): when the only failure
+        # is `request-recorded`, the gates pass and `compass check` keeps
+        # failing on it until the request is recorded or a person waives it.
+        request_only = (check_code != 0 and counts.get("request_failures")
+                        and counts.get("failed_checks") == counts["request_failures"])
+        if check_code != 0 and not request_only:
             raise CompassError(
                 f"compass quick-fix finish: `compass check` failed - no gate "
                 f"passed and nothing was committed. Full output: "
@@ -932,6 +957,12 @@ def cmd_quick_fix_finish(args):
 
         detail = [f"gates    : {', '.join(THREE_GATES)} -> pass",
                   f"evidence : {', '.join(evidence_ids)}"]
+        if request_only:
+            from compass_pkg import request_link
+            # The command has a line of its own, so the output layer never cuts it.
+            detail += [f"request  : not recorded, so `compass check` fails on "
+                       f"{request_link.CHECK} until you run",
+                       f"`{request_link.command(task_dir)}`"]
 
         # A commit is the user's to ask for. With --no-commit the gates and
         # records are complete and the change is left in the working tree.

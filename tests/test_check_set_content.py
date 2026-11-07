@@ -466,6 +466,7 @@ EXPECTED_ON_SKIPPED = {
     "isolation-proven": "not-applicable",
     "layering-test-passed": "not-applicable",
     "ship-approval-present": "not-applicable",
+    "request-recorded": "not-applicable",
     "declared-tests-resolve": "pass",
 }
 

@@ -595,6 +595,7 @@
       "type": "array",
       "items": {
         "enum": [
+          "request",
           "scenarios",
           "red-before-green",
           "suite-green",
@@ -920,6 +921,16 @@
       "properties": {
         "repo": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/(?!-)(?!\\.{1,2}$)[A-Za-z0-9._-]{1,100}$", "description": "The repository, as owner/repo."},
         "number": {"type": "integer", "minimum": 1, "maximum": 999999999, "description": "The issue number in that repository."}
+      }
+    },
+    "request": {
+      "type": "object",
+      "description": "Who asked for the issue and the link to the request (#356). Written by `compass issue link set --request --requester` or `compass quick-fix start` with the same flags; a `--github` link gives `link` when none is held. The requester is a claim the session records, not an approval. The check `request-recorded` reads it.",
+      "additionalProperties": false,
+      "properties": {
+        "link": {"type": "string", "pattern": "^https://[^\\s]+$", "maxLength": 2000, "description": "An https URL of the request, such as the GitHub issue."},
+        "requester": {"type": "string", "minLength": 1, "maxLength": 100, "description": "Who asked for the change, as free text on one line."},
+        "recorded_at": {"type": "string", "description": "When the session recorded the request."}
       }
     },
     "delegations_used": {

@@ -479,13 +479,13 @@ Each rule adds evidence tokens to a delivery issue whose assessment matches
 - `when` is a condition on the assessment, such as `risk: [critical]`,
   `size: {at_least: medium}`, `labels_any: [billing]` or `any_of: [...]`.
   Absent or empty, the rule applies to every delivery issue.
-- `add` is one or more tokens of the closed set: `scenarios`,
+- `add` is one or more tokens of the closed set: `request`, `scenarios`,
   `red-before-green`, `suite-green`, `correctness`, `governance`,
   `traceability`, `regression`, `security`, `clarity`, `architecture`,
   `outer-loop`, `isolation`, `layering`, `definition-of-done`,
   `reproduce-first`, `scenario-approval`, `human-approval` and
-  `ship-approval`. Every delivery issue already owes `ship-approval`, so a
-  rule that adds it changes nothing.
+  `ship-approval`. Every delivery issue already owes `request` and
+  `ship-approval`, so a rule that adds either changes nothing.
 
 The rules fire as `RP-SETTING-1`, `RP-SETTING-2` and so on, in file order. A
 spike owes none of them, because it ships nothing.

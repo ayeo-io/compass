@@ -24,6 +24,8 @@ waivers:
     requested_by: agent
 ```
 
+A change with no request to link, such as a typo the maintainer saw, is excused the same way: a waiver of `request-recorded` with the reason, which a person approves (#356).
+
 `compass waiver add` refuses:
 
 - an empty reason;

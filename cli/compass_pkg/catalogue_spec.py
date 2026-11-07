@@ -300,7 +300,8 @@ TOP_DESCRIPTIONS = {
                              "every delivery issue.",
     "require_evidence.add": "The evidence tokens the rule adds, from the closed set the "
                             "evidence rows use.",
-    "require_evidence.token": "One token: `scenarios`, `red-before-green`, `suite-green`, "
+    "require_evidence.token": "One token: `request`, `scenarios`, `red-before-green`, "
+                              "`suite-green`, "
                               "`correctness`, `governance`, `traceability`, `regression`, "
                               "`security`, `clarity`, `architecture`, `outer-loop`, `isolation`, "
                               "`layering`, `definition-of-done`, `reproduce-first`, "

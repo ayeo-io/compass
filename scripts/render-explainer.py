@@ -59,9 +59,10 @@ ROW_NAMES = {"RP-EVID-LIGHT": "the light row", "RP-EVID-DEFECT": "the defect row
              "RP-EVID-STANDARD": "the standard row"}
 
 # The stage of the path that judges each evidence token, as the table in
-# `approaches/path.md` places it. Assess judges no token; it is drawn as one
-# item, the assessment it records.
+# `approaches/path.md` places it. Assess judges the request link (#356) and is
+# drawn with one more item, the assessment it records.
 STAGE_OF_TOKEN = {
+    "request": "assess",
     "scenarios": "specify", "scenario-approval": "specify",
     "red-before-green": "build", "outer-loop": "build", "isolation": "build",
     "layering": "build", "definition-of-done": "build", "reproduce-first": "build",
@@ -167,7 +168,7 @@ def scenes(policy):
             raise SystemExit(f"render-explainer: no stage for evidence {unknown}")
         items = {stage: sum(1 for t in owed if STAGE_OF_TOKEN[t] == stage)
                  for stage in STAGE_IDS}
-        items[STAGE_IDS[0]] = 1
+        items[STAGE_IDS[0]] += 1
         stops = set(checkpoints_for(owed, AUTONOMY, result["acceptance_applies"]))
         if PERSON_AT_SHIP in owed:
             stops.add("ship")

@@ -423,11 +423,11 @@ The rows, first match wins:
 | `RP-EVID-DEFECT` | urgency `live-defect`, size atomic or small, risk not critical, no `G5` label | every-issue tokens, `regression`, `security`, `definition-of-done` | `existing-dsl-isolation` |
 | `RP-EVID-STANDARD` | any other delivery assessment | every-issue tokens, `regression`, `security`, `clarity`, `definition-of-done` | `on` |
 
-The every-issue tokens are `scenarios`, `red-before-green`, `suite-green`,
-`correctness`, `governance`, `traceability` and `ship-approval`. The
-`ship-approval` token meets no gate: the check `ship-approval-present`, outside
-every gate, reads it (`governance/guardrails.md`). The additions to a delivery
-row:
+The every-issue tokens are `request`, `scenarios`, `red-before-green`,
+`suite-green`, `correctness`, `governance`, `traceability` and `ship-approval`.
+The `request` and `ship-approval` tokens meet no gate: the checks
+`request-recorded` and `ship-approval-present`, outside every gate, read them
+(`governance/guardrails.md`). The additions to a delivery row:
 
 | Rule | When | Adds |
 |---|---|---|

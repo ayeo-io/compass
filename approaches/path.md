@@ -48,7 +48,8 @@ assessment and the configuration in force. The first row that matches
 wins, and the additions apply on top of it:
 
 - **The light row** (`RP-EVID-LIGHT`): an atomic or small change with
-  trivial or contained risk, no hotfix setting and no `G5` label. It owes the evidence every delivery issue owes: scenarios,
+  trivial or contained risk, no hotfix setting and no `G5` label. It owes the evidence every delivery issue owes: `request`,
+  who asked for the change and a link to the request (#356), scenarios,
   a red before each green, a green suite, the three gates that no
   configuration removes (`verify.correctness`, `verify.governance`,
   `verify.traceability`), and `ship-approval`, a person's approval of the

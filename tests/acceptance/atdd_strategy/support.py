@@ -121,7 +121,16 @@ class Issue:
             argv += ["--expected-acceptance", expected]
         if reason is not None:
             argv += ["--reason", reason]
-        return self.run(*argv)
+        result = self.run(*argv)
+        # Assess records who asked and the link to the request (#356), so the
+        # check `request-recorded` passes and the rows these tests compare are
+        # the ones they are about. Only this release's CLI has the flags.
+        if result[0] == 0 and self.project.cli == CLI:
+            code, out, err = self.run("issue", "link", "set", "--issue", self.slug,
+                                      "--request", f"https://example.com/requests/{self.slug}",
+                                      "--requester", "Test fixture")
+            assert code == 0, out + err
+        return result
 
     def must(self, *argv):
         code, out, err = self.run(*argv)

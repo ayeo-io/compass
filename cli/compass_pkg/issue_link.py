@@ -2,9 +2,11 @@
 """Stores the GitHub issue and pull request an issue is linked to, and runs `gh`.
 
 `compass issue link set --github owner/repo#number` writes the manifest's
-`github: {repo, number}` field. `--pr` records the pull request that carries the
-issue, and after the merge the approving reviews that are the ship approval
-(`pull_request_link`). Linking writes nothing to GitHub.
+`github: {repo, number}` field. `--request` and `--requester` record who asked
+for the issue and where (`request_link`, #356); neither calls `gh`. `--pr`
+records the pull request that carries the issue, and after the merge the
+approving reviews that are the ship approval (`pull_request_link`). Linking
+writes nothing to GitHub.
 
 A target is checked against a strict pattern before it is stored, so nothing
 that could be read as an option or a shell command reaches `gh`. `gh` is called
@@ -12,7 +14,7 @@ with an argument list and no shell, with the person's own credentials. Compass
 stores and reads no token.
 """
 # DEPENDENCY: standard library (os, re, subprocess) and compass_pkg.core,
-# compass_pkg.project_settings and compass_pkg.terminal. Imported by the entry point (the
+# compass_pkg.project_settings, compass_pkg.request_link and compass_pkg.terminal. Imported by the entry point (the
 # `link set` parser) and by pull_request_link, which uses the `gh` runner and the
 # target patterns.
 from __future__ import annotations
@@ -82,11 +84,16 @@ def _project_root(task_dir):
 
 
 def cmd_issue_link(args):
+    from compass_pkg import request_link
     verb = "compass issue link set"
     pr_text = getattr(args, "pr", None)
-    if args.github is None and pr_text is None:
+    request_text = getattr(args, "request", None)
+    requester_text = getattr(args, "requester", None)
+    if (args.github is None and pr_text is None and request_text is None
+            and requester_text is None):
         raise CompassError(f"{verb}: name a GitHub issue with --github, a pull request "
-                           "with --pr, or both. Nothing was written.")
+                           "with --pr, or the request with --request and --requester. "
+                           "Nothing was written.")
     target = None
     if args.github is not None:
         target = parse_target(args.github)
@@ -94,6 +101,13 @@ def cmd_issue_link(args):
             raise CompassError(
                 f"{verb}: '{args.github}' is not a GitHub issue; use owner/repo#number "
                 "or https://github.com/owner/repo/issues/number. Nothing was written.")
+    link, request_target, requester = request_link.parse(request_text, requester_text, verb)
+    if target is not None and request_target is not None and target != request_target:
+        raise CompassError(
+            f"{verb}: --github names {target[0]}#{target[1]} and --request names "
+            f"{request_target[0]}#{request_target[1]}; name one GitHub issue. "
+            "Nothing was written.")
+    target = target or request_target
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     task, path = load_manifest(task_dir)
     pr = None
@@ -108,11 +122,25 @@ def cmd_issue_link(args):
         task["github"] = {"repo": repo, "number": number}
         lines.append(f"{task.get('issue')} -> {repo}#{number}.")
         fields.update(repo=repo, number=number)
+        if link is None:
+            request_link.link_from_github(task, target)
+    held = request_link.record(task, link, requester)
+    if held is not None:
+        lines.append(_request_line(task.get("issue"), held))
+        fields.update(request=held)
     if pr is not None:
         lines += pull_request_link.apply(task, task.get("issue"), pr)
         fields.update(pull_request=task["pull_request"], land_commit=landing.land_commit(task, task_dir))
     save_manifest(task, path)
     return say(args, f"{verb}: {lines[0]}", detail=lines[1:] or None, **fields)
+
+
+def _request_line(issue, held):
+    """The line that reports the request record, naming a part still missing."""
+    parts = [f"requested by {held['requester']} (recorded as a claim)"
+             if held.get("requester") else "no requester yet (--requester)",
+             held["link"] if held.get("link") else "no request link yet (--request)"]
+    return f"{issue} request: {'; '.join(parts)}."
 
 
 # --- gh ----------------------------------------------------------------------------
@@ -177,5 +205,11 @@ def register(pts, issue_arg):
                              "merged, its approving reviews are recorded as the ship "
                              "approval, and once the issue has also landed, land_commit "
                              "moves to its merge commit")
+    linker.add_argument("--request", metavar="URL",
+                        help="the request this issue answers: an https:// URL, or "
+                             "owner/repo#number, which also links the GitHub issue")
+    linker.add_argument("--requester", metavar="NAME",
+                        help="who asked for it, as free text of at most 100 characters; "
+                             "recorded as a claim, not an approval")
     issue_arg(linker)
     linker.set_defaults(func=cmd_issue_link, output_kind="hand-off")

@@ -425,6 +425,7 @@ matches (`cli/compass_pkg/next_step.py`):
 
 | The records show | `next:` |
 |---|---|
+| `request` owed, the link or the requester not recorded | `compass issue link set --issue <slug> --request <url> --requester <name>` |
 | no scenario | `compass scenario add TRC-001 --intent <intent id> --test <path::name>` |
 | a scenario with no test | `compass scenario tests set <id> --test <path::name>` |
 | a path issue's spec fails `nfr-rows-resolved` | fill the Non-functional requirements rows of the spec named |
@@ -443,7 +444,11 @@ matches (`cli/compass_pkg/next_step.py`):
 | every gate passes | `compass check`, then `git add -- <the traced files>`, then `compass ship-commit -m "<message>"` |
 | landed, `ship-approval` owed, none on record | `compass issue link set --pr <n> --issue <slug>` after the merge, or `compass evidence request --ship`, then stop for `/compass:approve`; only the second once the merge is recorded |
 
-What a path issue owes comes from its `evidence_required` list. The
+What a path issue owes comes from its `evidence_required` list. The request
+comes first, so assess records who asked and the link to the request
+(`compass quick-fix start --request <url> --requester <name>` does it in the
+same call). It is not a stop: the check `request-recorded` fails until both are
+recorded, and a waiver a person approves excuses it and ends the row. The
 requirement rows and the layering test come before the red because the spec
 and the staged test files are part of the tree the outer-loop green, the
 isolation proof and the layering record are bound to;

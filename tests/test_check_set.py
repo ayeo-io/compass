@@ -197,4 +197,4 @@ def test_resolved_is_a_copy(checks):
 def test_the_gates_checks_and_evidence_types_are_counted():
     checks = check_set.resolved()
     assert (len(checks["gates"]), len(checks["checks"]), len(checks["evidence_types"])) == \
-        (16, 33, 17)
+        (16, 34, 17)

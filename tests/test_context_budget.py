@@ -113,8 +113,12 @@ CONTRACT_TARGET = 2900
 # 2026-11-02 for --candidate and --client (ADR-085), and tdd-green also for
 # --every-scenario: an in-scope outer-loop green without them is refused, so
 # they must be learnable from --help.
+# quick-fix start rose by about 210 characters on 2026-11-07 for --request and
+# --requester (#356): assess records who asked and the link in the same call,
+# and `request-recorded` fails until it does, so the flags must be learnable
+# from --help. Their help is the shortest that still names the two forms.
 HELP_BUDGETS = {
-    ("quick-fix", "start"): 2900,
+    ("quick-fix", "start"): 3110,
     ("quick-fix", "finish"): 1920,
     ("tdd-red",): 1570,
     ("tdd-green",): 1640,
@@ -128,7 +132,8 @@ COMMON = {"-h", "--help", "--quiet", "--summary", "--verbose", "--json",
 OPTIONS = {
     ("quick-fix", "start"): {"--risk", "--familiarity", "--size", "--goal",
                              "--role", "--intent", "--scenario",
-                             "--scenario-id", "--test", "--labels"} | COMMON,
+                             "--scenario-id", "--test", "--labels",
+                             "--request", "--requester"} | COMMON,
     ("quick-fix", "finish"): {"-m", "--message", "--no-commit", "--issue",
                               "--release-note", "--candidate", "--client"} | COMMON,
     ("tdd-red",): {"--scenario", "--issue", "--verified-by"} | COMMON,

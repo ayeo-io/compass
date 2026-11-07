@@ -691,7 +691,10 @@ def quick_fix(root, slug, name):
                "--intent", "The greeting says hello.",
                "--scenario", "Given the greeting, when it is read, then it says hello.",
                "--scenario-id", "QF-1",
-               "--test", f"tests/test_{name}.py::test_{name}_says_hello")
+               "--test", f"tests/test_{name}.py::test_{name}_says_hello",
+               # Assess records who asked (#356), so `compass check` passes once landed.
+               "--request", f"https://example.com/requests/{slug}",
+               "--requester", "Test fixture")
     assert done.returncode == 0, done
     done = run(root, "tdd-red", "--issue", slug, "--scenario", "QF-1", *greet_command(name))
     assert done.returncode == 0, done

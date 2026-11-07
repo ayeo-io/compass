@@ -42,6 +42,16 @@ assessment:
   urgency: "{{none | live-defect}}"          # optional; omit if none
   labels: []                                 # domain labels: [auth, payments, …]
 
+# --- the request (#356) ------------------------------------------------------
+# Who asked for the change and the link to the request. `compass issue link set
+# --request <url> --requester <name>` writes it, or `compass quick-fix start`
+# with the same flags. The requester is a claim the session records, not an
+# approval. The check `request-recorded` fails until both are recorded.
+# request:
+#   link: "https://github.com/{{OWNER}}/{{REPO}}/issues/{{N}}"
+#   requester: "{{who asked}}"
+#   recorded_at: "{{ISO-8601 time}}"
+
 generation: 0                # 0 = assessed, no stored configuration yet; the evaluator
                              # (--write) commits generation 1. Absent = a pre-6.0.0 issue.
 delivery_approach: null      # filled by the evaluator (--write): delivery or spike

@@ -103,6 +103,17 @@ def _next(root: Path, *extra, **env):
 # --- the table, one row at a time --------------------------------------------------------
 
 ROWS = {
+    # The request is asked for first, before the scenario (#356).
+    "request owed, not recorded": (
+        dict(evidence=["request"] + LIGHT, scenarios=[SCENARIO], reds=["TRC-001"]),
+        f"compass issue link set --issue {SLUG} --request <url> --requester <name>"),
+    "request owed, only the requester recorded": (
+        dict(evidence=["request"] + LIGHT, raw={"request": {"requester": "Dana Smith"}}),
+        f"compass issue link set --issue {SLUG} --request <url> --requester <name>"),
+    "request recorded": (
+        dict(evidence=["request"] + LIGHT,
+             raw={"request": {"link": "https://example.com/r/1", "requester": "Dana Smith"}}),
+        "compass scenario add TRC-001 --intent <intent id> --test <path::name>"),
     "assessed, no scenario": (
         dict(), "compass scenario add TRC-001 --intent <intent id> --test <path::name>"),
     "a scenario with no test": (

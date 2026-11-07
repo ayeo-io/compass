@@ -333,6 +333,8 @@ checks:
   ship-approval-present: {statement: 'A person approved the change at ship: a review approval on the
       merged pull request, or a typed approval', kind: deterministic, impl: ship-approval-present, severity: blocking,
     on_skipped: not-applicable}
+  request-recorded: {statement: The issue names who asked for it and links the request, kind: deterministic,
+    impl: request-recorded, severity: blocking, on_skipped: not-applicable}
   spike-conclusion-present: {statement: A spike has a `spike-conclusion` evidence entry with a recorded
       decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue., kind: deterministic,
     impl: spike-conclusion-present, severity: blocking, on_skipped: fail}
@@ -710,6 +712,9 @@ names:
     aliases: []
   checks.ship-approval-present:
     name: Ship approval present
+    aliases: []
+  checks.request-recorded:
+    name: Request recorded
     aliases: []
   checks.spike-conclusion-present:
     name: Spike conclusion present

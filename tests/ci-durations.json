@@ -408,6 +408,8 @@
   "tests/test_reply_shape_instructions.py": 0.01,
   "tests/test_repository_address.py": 0.02,
   "tests/test_repository_autonomy.py": 0.01,
+  "tests/test_request_link.py": 18.16,
+  "tests/test_request_recorded_check.py": 5.08,
   "tests/test_rerun_sees_every_file.py": 1.7,
   "tests/test_restage_keeps_the_authors_scope.py": 1.36,
   "tests/test_resumed_quick_fix_lands.py": 20.98,

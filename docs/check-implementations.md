@@ -218,6 +218,16 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `restored` | pass | an in-scope issue with an outer-loop red and an outer-loop green that names its candidate and client |
 | `suspended` | nothing-to-check | a block whose routing is suspended on an approach that ships, with inner-loop records |
 
+### `request-recorded` (version 1.0.0)
+
+| Case | Verdict | What the input exercises |
+|---|---|---|
+| `broken` | fail | the input the mutation proof breaks: an issue that owes `request` with no request on record |
+| `github-link` | pass | an issue that owes `request` with a requester and a linked GitHub issue, which gives the link |
+| `no-requester` | fail | an issue that owes `request` with a request link and no requester |
+| `not-owed` | nothing-to-check | an issue whose `evidence_required` does not list `request` |
+| `restored` | pass | the same issue with a request link and a requester on record |
+
 ### `scenario-has-id-and-intent` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |

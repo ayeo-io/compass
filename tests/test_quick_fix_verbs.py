@@ -29,7 +29,7 @@ CLI = ROOT / "cli" / "compass"
 GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
 
 #: What a trivial, atomic change owes on the path: the light row (ADR-092).
-LIGHT = ["scenarios", "red-before-green", "suite-green", "correctness", "governance",
+LIGHT = ["request", "scenarios", "red-before-green", "suite-green", "correctness", "governance",
          "traceability", "outer-loop", "ship-approval"]
 
 
@@ -106,6 +106,11 @@ def _start(root, slug, **over):
         args += ["--goal", over["goal"]]
     if "role" in over:
         args += ["--role", over["role"]]
+    # Assess records who asked and the link to the request (#356), so the check
+    # `request-recorded` passes once the change lands. `request=False` leaves it out.
+    if over.get("request", True):
+        args += ["--request", "https://example.com/requests/" + slug,
+                 "--requester", "Test fixture"]
     return _run(root, *args)
 
 
@@ -158,12 +163,12 @@ def _base_greeting(root):
     _git(root, "commit", "-q", "-m", "greeting")
 
 
-def _ready_to_finish(root, slug, scenario_id="TRC-001"):
+def _ready_to_finish(root, slug, scenario_id="TRC-001", request=True):
     """A started quick fix with a red on record and the fix written, not yet
     finished - `finish` records the green itself. The state every QFO-5
     refusal test starts from before it breaks exactly one condition."""
     _base_greeting(root)
-    start = _start(root, slug, scenario_id=scenario_id)
+    start = _start(root, slug, scenario_id=scenario_id, request=request)
     assert start.returncode == 0, start.stderr
 
     red = _run(root, "tdd-red", "--issue", slug, "--scenario", scenario_id,

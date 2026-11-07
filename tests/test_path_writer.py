@@ -25,7 +25,8 @@ sys.path.insert(0, str(ROOT / "cli"))
 
 from compass_pkg import evidence_required as er  # noqa: E402
 
-EVERY_ISSUE = ["scenarios", "red-before-green", "suite-green",
+#: `request` (#356) is first in the manifest's order, so it starts every delivery list.
+EVERY_ISSUE = ["request", "scenarios", "red-before-green", "suite-green",
                "correctness", "governance", "traceability"]
 #: The ship approval every delivery row owes (#355); it is last in the manifest's order.
 SHIP = ["ship-approval"]
@@ -303,6 +304,10 @@ def _verb_lines(root):
 def test_each_verb_that_writes_a_record_ends_with_the_next_command(tmp_path):
     root = _greeting_project(tmp_path)
     _evaluate(root)
+    # The request comes first (#356); once recorded, the next line moves on.
+    linked = _run(root, "issue", "link", "set", "--issue", "demo", "--request",
+                  "https://example.com/requests/demo", "--requester", "Test fixture")
+    assert linked.returncode == 0, linked.stdout + linked.stderr
     added, red, green = _verb_lines(root)
     # The light row owes the outer loop, so the next command after the first
     # scenario and its inner red is the outer-loop red.

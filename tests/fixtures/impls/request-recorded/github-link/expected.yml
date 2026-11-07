@@ -1,0 +1,2 @@
+verdict: pass
+input: an issue that owes `request` with a requester and a linked GitHub issue, which gives the link

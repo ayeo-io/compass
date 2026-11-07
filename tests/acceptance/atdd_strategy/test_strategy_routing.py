@@ -99,6 +99,11 @@ def test_trc_a3(tmp_path, kind):
     ship = [r for r in got["rows"] if r[0] == "ship-approval-present"]
     assert ship == [["ship-approval-present", "nothing-to-check"]], ship
     got["rows"].remove(ship[0])
+    # Since #356 a path issue owes the request link, which 8.0.4 did not check. Assess
+    # records it, so the row passes.
+    request = [r for r in got["rows"] if r[0] == "request-recorded"]
+    assert request == [["request-recorded", "pass"]], request
+    got["rows"].remove(request[0])
     assert got == expected
 
 

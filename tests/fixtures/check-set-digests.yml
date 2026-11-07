@@ -6,4 +6,5 @@
 # 9.0.0 is not released, so the version stays and the pin moves when the file
 # changes before the release. Repinned for #355 step 2: the check
 # ship-approval-present, the evidence type pr-approval and the never_waived entry.
-compass-checks@9.0.0: b579f80930901a9f0aa776af0c246e2a69ce8e0309d2415447d7bf9809df8c43
+# Repinned for #356 step 2: the check request-recorded and its display name.
+compass-checks@9.0.0: 59a833c6efcf00adfc00ce6ae50803ab271da6ea103f7fd5c48fdd84da00b522

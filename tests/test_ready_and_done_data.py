@@ -190,6 +190,7 @@ def test_rd_3_the_checks_are_inactive_blocking_and_say_what_a_skipped_stage_retu
 #: cannot name a check added after it was frozen, so each is listed here.
 ADDED_AFTER_THE_VIEWS_FROZE = {
     "ship-approval-present",  # #355, ADR-095: read by the check set only
+    "request-recorded",  # #356: read by the check set only
 }
 
 

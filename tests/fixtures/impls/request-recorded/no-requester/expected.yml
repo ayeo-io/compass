@@ -1,0 +1,2 @@
+verdict: fail
+input: an issue that owes `request` with a request link and no requester

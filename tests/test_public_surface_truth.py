@@ -815,6 +815,11 @@ def test_d2_repairs_change_only_retired_names():
     24 -> 25): the `next:` table gained the row of a landed issue that owes
     the ship approval.
 
+    #356 step 2 (the request link) re-baselined two more:
+    `governance/guardrails.md` (list_items 83 -> 88) gained the bullet on the
+    check `request-recorded` and its four sub-bullets, and `docs/quickstart.md`
+    (table_rows 25 -> 26) gained the `next:` row that asks for the request.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

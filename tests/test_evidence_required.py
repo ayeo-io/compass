@@ -21,7 +21,8 @@ from compass_pkg import evidence_required as er
 from compass_pkg.core import CompassError
 from compass_pkg.routing import RoutingConflict, evaluate_route
 
-EVERY_ISSUE = ["scenarios", "red-before-green", "suite-green",
+#: `request` (#356) is first in the manifest's order, so it starts every delivery list.
+EVERY_ISSUE = ["request", "scenarios", "red-before-green", "suite-green",
                "correctness", "governance", "traceability"]
 #: The ship approval every delivery row owes (#355). It is the last token in the
 #: manifest's order, so it ends every delivery list.

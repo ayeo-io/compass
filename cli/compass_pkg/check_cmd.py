@@ -169,6 +169,11 @@ CHECK_GUIDANCE = {
         "do": "Record a passing run of the project's layering test on the current tree.",
         "fix": "Run `compass layering record [--test-path <path>] -- <layering test command>`, or set `project.layering_command`, and fix each breach the test names.",
     },
+    "request-recorded": {
+        "why": "A reviewer must see who asked for the change and where the request is, to judge whether the change answers it.",
+        "do": "Run `compass issue link set --request <url> --requester <name>`.",
+        "fix": "Run `compass issue link set --issue <slug> --request <url> --requester <name>`, with the link to the request and who asked. A change with no request to link needs a waiver that a person approves: `compass waiver add`, then `compass evidence request --waiver <W-id>`.",
+    },
     "ship-approval-present": {
         "why": "Every change gets one person's approval at ship. Compass reads it from the merged pull request's review, or a person types it; a sign-off of guardrail `G5` is given before code and does not count.",
         "do": "Run `compass issue link set --pr <n>` once merged, or `compass evidence request --ship`.",
@@ -671,7 +676,7 @@ def _outside_gate_pass(run, task, task_dir, refused, checks=None):
     configuration that does not declare a check adds no row for it, so an issue
     stored before the check existed gains it at its next `compass approach
     evaluate --write`."""
-    from compass_pkg import acceptance_strategy, ship_approval
+    from compass_pkg import acceptance_strategy, request_link, ship_approval
 
     ran = failed = nothing = advisory = 0
     for check in outside_gate.CHECKS if checks is None else checks:
@@ -686,6 +691,9 @@ def _outside_gate_pass(run, task, task_dir, refused, checks=None):
         # Only an issue whose stored `evidence_required` lists the token owes the ship
         # approval, so an issue assessed before the token gains no row (#355).
         if check == ship_approval.CHECK and not ship_approval.owed(task):
+            continue
+        # The same for the request link (#356).
+        if check == request_link.CHECK and not request_link.owed(task):
             continue
         verdict = outside_gate.judged(check, CHECK_FNS.get(check) or _removed_fn(check),
                                       task, task_dir, _judge)
@@ -1097,4 +1105,14 @@ def cmd_check(args):
     # The exit code is 0 in advisory mode whatever failed. A caller that
     # reports a summary (compass ci) reads the real count from here.
     args.failed_checks = failures
+    args.request_failures = _request_failures(run)
     return exit_for_mode(failures, mode)
+
+
+def _request_failures(run):
+    """How many of the run's failures are `request-recorded`. `compass quick-fix
+    finish` lands when they are the only ones, because the request link is not
+    a stop (#356, VD-033); `compass check` and `compass ci` still fail on it."""
+    from compass_pkg import request_link
+    return sum(1 for _, name, passed, _ in run.results
+               if name == request_link.CHECK and passed is False)

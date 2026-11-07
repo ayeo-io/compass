@@ -324,8 +324,8 @@ grep -E '^[0-9a-f]{64}  ' .compass/work/add-rate-limiting/trail.md | sha256sum -
 
 A project whose `compass.yml` sets
 `record.commit: false`, or names a `record.remote` and does not set
-`record.commit`, keeps the record out of the commit
-([delivery record](delivery-record.md)).
+`record.commit`, keeps the record out of the commit. `docs/delivery-record.md` in the
+repository describes both modes.
 
 Every delivery issue also owes `ship-approval`: one person's approval of the
 change at ship (ADR-095). It does not hold up the commit. After the pull

@@ -25,12 +25,14 @@ without 8.x first: a copied governance folder with no `compass.yml`, and an
 at a prompt: the issue is listed with the `compass issue link set` command,
 and `--request` and `--requester` with `--issue` record it in the same run.
 
-The settings half of the verb (`compass.yml`) is a later step of #359.
+The settings half, `compass_pkg.migrate_settings`, rewrites `compass.yml`
+first, so a converted issue reads the new settings. `--settings-only` and
+`--issues-only` run one half; `--issue` runs the issues half only.
 The owning doc is `docs/upgrade-9-0-0.md`.
 """
 # DEPENDENCY: standard library (contextlib, copy, io, os, argparse); compass_pkg.core,
-# effective, next_cmd, path_stages, refusals, request_link, routing, stable_ids,
-# status_words, terminal, trail (imported in functions where `routing` would
+# effective, migrate_settings, next_cmd, path_stages, refusals, request_link, routing,
+# stable_ids, status_words, terminal, trail (imported in functions where `routing` would
 # otherwise load at import time).
 from __future__ import annotations
 
@@ -314,16 +316,32 @@ def _row_line(row):
     return line
 
 
+def _halves(args):
+    """`(settings, issues)`: which halves this run does."""
+    settings_only = bool(getattr(args, "settings_only", False))
+    issues_only = bool(getattr(args, "issues_only", False))
+    if getattr(args, "task", None):
+        if settings_only:
+            raise CompassError(f"{VERB}: --issue names one issue, and --settings-only "
+                               f"runs no issue; give one of them. Nothing was written.")
+        issues_only = True
+    return not issues_only, not settings_only
+
+
 def cmd_migrate(args):
+    from compass_pkg import migrate_settings
     from compass_pkg.project_settings import find_project_root
     from compass_pkg.terminal import Report
     apply = bool(getattr(args, "apply", False))
     request = _request_flags(args)
+    do_settings, do_issues = _halves(args)
     compass_dir = find_compass_dir()
     root = find_project_root(os.path.dirname(compass_dir))
     _refuse_project(root)
+    settings = migrate_settings.migrate(root, compass_dir, apply) if do_settings else None
     rows = []
-    for task_dir in _issue_dirs(os.path.join(compass_dir, "work"), getattr(args, "task", None)):
+    for task_dir in (_issue_dirs(os.path.join(compass_dir, "work"), getattr(args, "task", None))
+                     if do_issues else ()):
         if not os.path.isdir(task_dir):
             raise CompassError(f"{VERB}: no issue directory for slug "
                                f"'{os.path.basename(task_dir)}'")
@@ -343,31 +361,62 @@ def cmd_migrate(args):
         by_stage.items(), key=lambda kv: PATH_STAGE_IDS.index(kv[0])
         if kv[0] in PATH_STAGE_IDS else len(PATH_STAGE_IDS)))
     report = Report(args)
-    report.summary(
-        f"{VERB}: {verb} {len(converted)} issue(s)" + (f" ({stages})." if stages else "."),
-        f"Left {len(rows) - len(converted) - len(refused)} as they are; refused {len(refused)}."
-        + ("" if apply else " Dry run: nothing was written."),
-        f"{len(needs)} issue(s) need a request link." if needs else None)
+    if settings is not None:
+        report.summary(_settings_summary(settings))
+    if do_issues:
+        report.summary(
+            f"{VERB}: {verb} {len(converted)} issue(s)" + (f" ({stages})." if stages else "."),
+            f"Left {len(rows) - len(converted) - len(refused)} as they are; "
+            f"refused {len(refused)}.")
+    report.summary(None if apply else "Dry run: nothing was written.",
+                   f"{len(needs)} issue(s) need a request link." if needs else None)
+    if settings is not None:
+        report.section("settings", settings["changes"], lambda line: line)
+        report.section("settings not carried over", settings["dropped"], lambda line: line)
+        report.section("settings left for you to edit", settings["left"],
+                       lambda r: f"{r['key']}: left as it is - {r['edit']}")
+        report.section("settings refused, nothing written", settings["refused"],
+                       lambda line: line)
+        report.section("diff", settings["diff"], lambda line: line)
     report.section("issues", converted, _row_line)
     report.section("refused", refused, _row_line)
     report.section("needs a request link", needs,
                    lambda r: request_link.command(r["issue"]))
     report.section("left as they are", [r for r in rows if r["result"] == "left"], _row_line)
-    report.data(apply=apply, issues=rows)
+    report.data(apply=apply, settings=settings, issues=rows)
     report.emit()
-    if refused:
+    if refused or (settings and settings["result"] == "refused"):
         return 2
-    return 1 if converted and not apply else 0
+    changing = converted or (settings and settings["result"] == "would change")
+    return 1 if changing and not apply else 0
+
+
+def _settings_summary(result):
+    name = result["file"]
+    return {
+        "nothing": f"{VERB}: {name} holds no key 9.0.0 removed.",
+        "would change": f"{VERB}: would rewrite {name} ({len(result['changes'])} change(s)).",
+        "changed": f"{VERB}: rewrote {name} ({len(result['changes'])} change(s)).",
+        "refused": f"{VERB}: refused to rewrite {name}; nothing was written to it.",
+        "left": f"{VERB}: left {name} as it is.",
+    }[result["result"]] + (f" {len(result['left'])} key(s) left for you to edit."
+                           if result["left"] else "")
 
 
 def register(sub):
     """Add `compass migrate`."""
-    p = sub.add_parser("migrate", help="move an 8.x project's open issues to 9.0.0 "
-                                       "(dry run unless --apply)")
+    p = sub.add_parser("migrate", help="move an 8.x project's compass.yml and open "
+                                       "issues to 9.0.0 (dry run unless --apply)")
     p.add_argument("--apply", action="store_true",
                    help="write the changes the dry run lists")
     p.add_argument("--issue", dest="task", metavar="SLUG",
-                   help="only this issue (default: every issue under .compass/work)")
+                   help="only this issue (default: every issue under .compass/work); "
+                        "compass.yml is left as it is")
+    half = p.add_mutually_exclusive_group()
+    half.add_argument("--settings-only", action="store_true",
+                      help="rewrite compass.yml only, and no issue")
+    half.add_argument("--issues-only", action="store_true",
+                      help="move the issues only, and leave compass.yml as it is")
     p.add_argument("--request", metavar="URL",
                    help="with --issue: the request the issue answers, an https:// URL "
                         "or owner/repo#number")

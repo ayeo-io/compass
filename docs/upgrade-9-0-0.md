@@ -4,17 +4,47 @@ This page says how to move a project from Compass 8.x to 9.0.0 and keep its evid
 
 ## 2. Run `compass migrate`
 
-`compass migrate` moves each open issue that 8.x assessed onto the 9.0.0 four-stage path: assess, specify, build and ship (ADR-092). Run it from the project root:
+`compass migrate` rewrites `compass.yml` for 9.0.0, then moves each open issue that 8.x assessed onto the 9.0.0 four-stage path: assess, specify, build and ship (ADR-092). Run it from the project root:
 
 ```
-compass migrate             # a dry run: lists what it would change, writes nothing
-compass migrate --apply     # writes the changes the dry run listed
+compass migrate                   # a dry run: lists what it would change, writes nothing
+compass migrate --apply           # writes the changes the dry run listed
+compass migrate --settings-only   # compass.yml only
+compass migrate --issues-only     # the issues only
 compass migrate --issue <slug> --apply
 ```
 
-The dry run exits 0 when there is nothing to do, 1 when there is, and 2 when it refuses. `cli/compass_pkg/migrate_9.py` holds the command.
+`--issue` moves one issue and leaves `compass.yml` as it is. The dry run exits 0 when there is nothing to do, 1 when there is, and 2 when it refuses. `cli/compass_pkg/migrate_9.py` holds the command and the issues half; `cli/compass_pkg/migrate_settings.py` holds the settings half.
 
-### What it changes
+### What it changes in `compass.yml`
+
+9.0.0 does not read a removed key (ADR-094), so deleting one changes no verdict. `compass migrate` deletes each removed key that `removed_parts.REPLACEMENTS` marks as rewritten (the table in `docs/configuration.md`), and writes the setting that carries what the key asked for, where one does:
+
+| In `compass.yml` | `compass migrate` writes |
+|---|---|
+| `extends: compass:default@6` or `@7` | deletes the line and adds `acceptance_strategy: {state: off, reason: ...}`, so the acceptance strategy `S17` stays off as the pin kept it. A file that already sets `acceptance_strategy` keeps its value. |
+| `extends: compass:default@8` or later | deletes the line |
+| the labels `gates.G5` adds to `when.labels_any` | `signoff_labels:` with those labels |
+| a rule whose effect is `add_gate`, for a gate that has an evidence token | a `require_evidence:` entry with the rule's `when` and the token |
+| a check with `impl: command-passes` and the guardrail gate that lists it | a `project_checks:` entry with the gate's name and `when`, and the check's command. The gate's stage maps to its path stage; a specify stage runs at build, the earliest stage a project check runs at. |
+| the agent review block (`checks.agent-review` and its `stages.ship` entry) | `agent_review: on`, unless the file sets `agent_review` |
+| `approvers.issue-waiver`, with no `approvers.waiver` | renamed `approvers.waiver` |
+| `approvers.project-waiver`, the removed `project.*` fields and every other key the table marks | deleted |
+
+Each part of a deleted key that no setting carries, such as an `add_gate` of `verify.analyze` or a rule that forces an approach, is listed under "settings not carried over".
+
+A key the table marks as not rewritten, such as `dimensions` or a legacy stage under `stages:`, is left in the file and listed under "settings left for you to edit" with the edit. A rewritten key that holds one is left whole: `rules:` with a `caps` rule set is left, and the line says to delete `rules.caps` and run `compass migrate` again.
+
+How the file is written:
+
+- It is a line edit, not a YAML dump, so the file's comments stay. A deleted key goes with its indented lines and the comment block directly above it. A key one level down, such as `project.build_command`, goes the same way.
+- The new settings go at the end, under one comment line that names `compass migrate`.
+- The dry run prints the diff.
+- Before it writes, the edited text must parse to the settings the change list names, and `compass policy lint` must find no error and no removed key except the ones left for you. If either fails, nothing is written to `compass.yml`, the run exits 2, and the output names the lines to edit.
+
+`compass migrate` rewrites `compass.yml` only. A project with only `.compass/config.yml` keeps that file, because 9.0.0 still reads it (ADR-098 open question 5).
+
+### What it changes in an issue
 
 For each open issue that holds a `delivery_approach` and no `evidence_required`:
 
@@ -81,7 +111,8 @@ It refuses one issue, and lists it under "refused", when the issue has a 1.x man
 
 ### What to do
 
-1. Copy `.compass/work` and `docs/compass` outside the project.
-2. Run `compass migrate` and read the list.
+1. Copy `compass.yml`, `.compass/work` and `docs/compass` outside the project.
+2. Run `compass migrate` and read the list and the diff.
 3. Run `compass migrate --apply`.
-4. Run each `compass issue link set` command the report lists.
+4. Make each edit listed under "settings left for you to edit", then run `compass migrate` again.
+5. Run each `compass issue link set` command the report lists.

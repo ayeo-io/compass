@@ -36,7 +36,7 @@ compass review-rule list   the review rules that apply to the changed files
 compass issue lint         structurally validate an issue manifest
 compass issue diagnose     explain one run from its own records: stages, timeline, deviations
 compass issue use          make an issue the current one, for this session
-compass migrate            move an 8.x project's open issues onto the 9.0.0 path (dry run unless --apply); docs/upgrade-9-0-0.md
+compass migrate            move an 8.x project's compass.yml and open issues to 9.0.0 (dry run unless --apply; --settings-only, --issues-only); docs/upgrade-9-0-0.md
 compass issue migrate      bring older issue directories up to the current schema, and settle the artifact status of done issues; --config pins an issue's configuration to the installed check versions
 compass issue status set   backlog, or done with --close-reason completed | not-planned | duplicate
 compass issue status remove  end a backlog hold; the state then follows the records

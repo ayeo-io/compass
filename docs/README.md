@@ -105,7 +105,7 @@ same commit.
 | `cli/compass_pkg/ship_approval.py` | `governance/guardrails.md` |
 | `cli/compass_pkg/request_link.py` | `governance/guardrails.md` (the check), `docs/github-links.md` (the flags) |
 | `cli/compass_pkg/migrate.py`, `cli/compass_pkg/migrate_kinds.py`, `cli/compass_pkg/migrate_copy_check.py` | `architecture/decisions/ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md`, `docs/upgrade-7-0-0.md` |
-| `cli/compass_pkg/migrate_9.py`, `tests/migrate_9_helpers.py`, `tests/test_migrate_issue.py`, `tests/test_migrate_keeps_evidence.py` | `docs/upgrade-9-0-0.md` |
+| `cli/compass_pkg/migrate_9.py`, `cli/compass_pkg/migrate_settings.py`, `tests/migrate_9_helpers.py`, `tests/test_migrate_issue.py`, `tests/test_migrate_keeps_evidence.py`, `tests/test_migrate_settings.py` | `docs/upgrade-9-0-0.md` |
 | `cli/compass_pkg/parse_cache.py` | `architecture/decisions/ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md`, widened by `architecture/decisions/ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md` |
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |
 | `cli/compass_pkg/flow.py` | `docs/cli.md` |

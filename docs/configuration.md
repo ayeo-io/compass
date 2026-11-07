@@ -541,6 +541,18 @@ from it (ADR-098 decision 7). The message ends with one of:
 It then adds "`compass migrate` rewrites it." when `compass migrate` changes
 the key for you. Otherwise, edit `compass.yml` by hand.
 
+`compass migrate` reads the same table (`cli/compass_pkg/migrate_settings.py`):
+
+- It deletes each key marked "rewrites it", and writes the setting that
+  replaces it where the key held something a setting carries.
+- It leaves each key marked "no" in the file, and names the edit.
+- It leaves whole a rewritten key that holds a key marked "no", such as
+  `rules:` with `rules.caps`.
+
+It edits `compass.yml` line by line, so comments stay, and it writes nothing
+unless this lint passes on the result. `docs/upgrade-9-0-0.md` lists each
+conversion. `tests/test_migrate_settings.py` walks every row of the table.
+
 `extends:` has a row for each pin of the shipped default:
 
 - `extends@6` is a pin at `@6` or below, and `extends@7` a pin at `@7`. The

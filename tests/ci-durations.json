@@ -297,6 +297,7 @@
   "tests/test_migrate_rendered_blocks.py": 351.37,
   "tests/test_migrate_repoints_every_path.py": 21.34,
   "tests/test_migrate_review_entries.py": 8.92,
+  "tests/test_migrate_settings.py": 9.0,
   "tests/test_migrate_to_docs_compass.py": 20.47,
   "tests/test_migrate_verb.py": 3.14,
   "tests/test_modes.py": 4.69,

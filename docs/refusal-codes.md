@@ -23,7 +23,7 @@ reason code and are not in the generated list.
 
 | Cause | Message |
 |---|---|
-| `compass.yml` cannot be read | `compass.yml` cannot be read: {the loader's reason}. Fix that file, or set `COMPASS_APPROVER` before starting Claude Code. |
+| `compass.yml` cannot be read, or has a settings lint error | `compass.yml` cannot be read: {the loader's reason, or the first lint error}. Fix that file, or set `COMPASS_APPROVER` before starting Claude Code. |
 | `owner` is not text | `owner` in `compass.yml` is {a number, a boolean, a list or a mapping}, not text. Quote it, for example `owner: "123"`, or set `COMPASS_APPROVER`. |
 | `owner` is set only in `.compass/config.yml` | `owner` is set only in `.compass/config.yml`. Add `owner: <your id>` to `compass.yml`, or set `COMPASS_APPROVER`. |
 | `compass.yml` is above the project root | `compass.yml` is in {the folder where it is}, but `.compass` is in {the project root}. Copy it there, or set `COMPASS_APPROVER`. |

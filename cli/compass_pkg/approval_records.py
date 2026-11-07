@@ -33,6 +33,7 @@ same limit as every `human-approval` record. `compass evidence approve`
 writes a record; anyone who can write `manifest.yml` can also add one.
 """
 # DEPENDENCY: standard library (dataclasses, os); compass_pkg.project_settings (the project's owner);
+# compass_pkg.settings_lint (a compass.yml the lint refuses names no owner);
 # compass_pkg.stable_ids (the id of guardrail `G5`).
 # It imports no command module, so the stage-list evaluator and the
 # `compass evidence approve` command can both use it.
@@ -217,6 +218,9 @@ def owner_and_cause(task_dir):
         except Exception as exc:                       # noqa: BLE001
             detail = shown_text(str(exc).replace(path + ": ", "").replace(path, ""))
             return OwnerLookup(None, CAUSE_UNREADABLE, detail, root)
+        refused = _refused_setting(loaded)
+        if refused:
+            return OwnerLookup(None, CAUSE_UNREADABLE, shown_text(refused), root)
     value = loaded.get("owner") if loaded else None
     if _text(value):
         return OwnerLookup(_text(value), None, root=root)
@@ -232,6 +236,19 @@ def owner_and_cause(task_dir):
                  else CAUSE_MISSING)
         return OwnerLookup(None, cause, root=root)
     return OwnerLookup(None, CAUSE_NO_OWNER, root=root)
+
+
+def _refused_setting(loaded):
+    """The first error the settings lint finds in `compass.yml`, as
+    `path: message`, or None. Every resolution refuses a file with a lint
+    error (VD-020), so its owner is not read either, as 8.x refused the owner
+    of a project layer its loader refused. An owner that is not text is left
+    to its own cause, which names the fix."""
+    from compass_pkg import settings_lint
+    for finding in settings_lint.lint(loaded or {}):
+        if finding.level == "error" and finding.path != "owner":
+            return f"{finding.path}: {finding.message}"
+    return None
 
 
 def project_owner(task_dir):

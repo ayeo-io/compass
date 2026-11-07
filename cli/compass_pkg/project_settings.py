@@ -105,7 +105,7 @@ def _load(path, strict):
     except (OSError, ValueError, yaml.YAMLError) as exc:
         raise CompassError(f"cannot read {path}: {exc}") from exc
     if not isinstance(data, dict):
-        raise CompassError(f"{path}: expected a mapping of settings")
+        raise CompassError(f"{path}: expected a mapping, found {type(data).__name__}")
     return data
 
 

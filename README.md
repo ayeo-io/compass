@@ -23,8 +23,9 @@ on record:
 - **Did each test fail, then pass?** The failing run, then the passing run,
   of each scenario. Compass refuses code edits until a failing run is on
   record ([safety contract](docs/safety-contract.md)).
-- **Who approved?** The person who approved what needed approval, and the
-  review that approved the merged pull request.
+- **Who approved?** One person approves each change at ship. Compass reads
+  that approval from the merged pull request: an approving review by someone
+  other than its author. Without one, the person types `/compass:approve`.
 - **What shipped?** The commit and the pull request.
 
 Each change leaves one plain file, `trail.md`, with a SHA-256 digest for each

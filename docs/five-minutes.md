@@ -73,7 +73,7 @@ them - the evidence the change owes and the gates - is computed. The
 `compass approach evaluate --verbose` against that assessment and it prints:
 
 ```text
-  policy          : this project's effective configuration (compass.yml over the shipped default)
+  policy          : this project's effective configuration (the check set, tightened by compass.yml)
   assessment      : {"risk": "contained", "familiarity": "brownfield-mapped", "size": "atomic", "goal": "delivery"}
   evidence row    : RP-EVID-LIGHT
   FINAL APPROACH  : delivery

@@ -106,7 +106,7 @@ def policy_line(view, policy_file=None, policy=None):
                 f"(parent {view.parent_version() or 'unknown'})")
     if view is None:
         return "this project's governance files"
-    return "this project's effective configuration (compass.yml over the shipped default)"
+    return "this project's effective configuration (the check set, tightened by compass.yml)"
 
 
 def canonical_routes(policy):

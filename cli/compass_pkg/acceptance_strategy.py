@@ -403,8 +403,9 @@ def waiver_lines(task, view):
         if not isinstance(waiver, dict):
             continue
         state = ("approved" if f"checks.{check}" in approved else
-                 f"not approved, so {check} keeps its severity; run `compass policy lint "
-                 f"--issue {(task or {}).get('issue')}` to see why")
+                 f"not approved, so {check} keeps its severity; 9.0.0 does not read "
+                 f"an issue's config: waiver, so ask for one with `compass waiver add` "
+                 f"(ADR-094)")
         lines.append(f"waiver of {check}: {waiver.get('reason') or 'no reason recorded'}"
                      f" - {state}")
     return lines

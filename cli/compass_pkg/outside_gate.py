@@ -2,8 +2,8 @@
 """One way to run a check that sits in no gate (ADR-050, ADR-064).
 
 Most checks run because a guardrail lists them. A few are listed by no gate,
-so a locked guardrail does not change when they are added and an issue waiver
-can make them advisory. `compass check` runs each of them after the gate
+so adding one changes no gate, and a waiver a person approves can excuse one on
+one issue. `compass check` runs each of them after the gate
 loop, in the order of `CHECKS`, through `judged`.
 
 A check runs only when the configuration the issue is judged by declares it:

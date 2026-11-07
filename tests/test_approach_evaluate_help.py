@@ -2,7 +2,7 @@
 
 The help said the command applies governance/routing-policy.yml. The code
 applies the issue's stored generation, or with --write the project's
-resolved configuration (compass.yml over the shipped default).
+resolved configuration (the check set, tightened by compass.yml).
 
 Scenario id: `TRC-001` in
 approach-evaluate-help-names-config/acceptance-criteria.md.

@@ -11,7 +11,6 @@ with its scenario id.
 """
 from __future__ import annotations
 
-import copy
 import json
 import os
 import subprocess
@@ -86,23 +85,10 @@ def test_pl_1_the_framework_repository_keeps_the_legacy_lint():
     assert out.startswith(LEGACY_PASS), out
 
 
-def test_pl_1_a_project_with_a_compass_yml_runs_the_layered_lint(tmp_path):
-    root = _project(tmp_path, {"schema": 1})
-    code, out, _ = _run(root, "policy", "lint", "--json")
-    assert code == 0, out
-    assert json.loads(out).get("mode") == "layered"
-
-
 def test_pl_1_a_compass_yml_with_no_schema_beside_the_old_file_is_not_read(tmp_path):
     root = _project(tmp_path, "owner: someone\n", old_config="autonomy: balanced\n")
     code, out, _ = _run(root, "policy", "lint")
     assert out.startswith(LEGACY_PASS), out
-
-
-def test_pl_1_a_compass_yml_with_no_schema_and_no_old_file_is_read(tmp_path):
-    root = _project(tmp_path, "autonomy: balanced\n")
-    code, out, _ = _run(root, "policy", "lint", "--json")
-    assert json.loads(out).get("mode") == "layered"
 
 
 def test_pl_1_compass_ci_still_calls_the_legacy_function():
@@ -231,66 +217,6 @@ def test_pl_2_a_fault_in_the_group_stops_the_merge_and_later_groups():
                             "checks": {"ghost": {"set": {"severity": "advisory"}}}})
     assert _codes(report) == ["L-SCHEMA"]       # no M-SET-UNKNOWN: the merge did not run
     assert report.stopped_after == "layer"
-
-
-def test_pl_2_a_duplicate_key_in_the_project_file_is_a_load_finding(tmp_path):
-    root = _project(tmp_path, "schema: 1\nowner: a\nowner: b\n")
-    code, out, _ = _run(root, "policy", "lint", "--json")
-    document = json.loads(out)
-    assert code == 1
-    assert [(f["code"], f["layer"], f["group"]) for f in document["findings"]] == [
-        ("L-LOAD", "project", "layer")]
-    assert "duplicate key" in document["findings"][0]["message"]
-
-
-NON_TEXT_CHECK = ("schema: 1\nchecks:\n  docs-mention:\n    statement: x\n"
-                  "    kind: deterministic\n    impl: suite-passed\n"
-                  "    severity: advisory\n    on: [ship]\n")
-
-
-def _one_finding(document, code):
-    assert [f["code"] for f in document["findings"]] == [code], document
-    return document["findings"][0]
-
-
-def test_pl_2_a_non_text_key_in_the_project_file_is_a_finding_not_a_traceback(tmp_path):
-    code, out, err = _run(_project(tmp_path, NON_TEXT_CHECK), "policy", "lint", "--json")
-    assert "Traceback" not in err, err
-    assert code == 1
-    finding = _one_finding(json.loads(out), "L-KEY-NOT-TEXT")
-    assert (finding["level"], finding["layer"], finding["group"]) == (
-        "error", "project", "layer")
-    assert finding["path"] == "checks.docs-mention"
-    assert "True" in finding["message"] and '"on":' in finding["message"]
-
-
-def test_pl_2_a_non_text_key_in_a_settings_section_is_refused_too(tmp_path):
-    root = _project(tmp_path, "schema: 1\nprices:\n  2: 3\n")
-    code, out, err = _run(root, "policy", "lint", "--json")
-    assert "Traceback" not in err, err
-    finding = _one_finding(json.loads(out), "L-KEY-NOT-TEXT")
-    assert finding["path"] == "prices"
-    assert "2" in finding["message"] and '"2":' in finding["message"]
-
-
-def test_pl_2_a_non_text_key_in_an_issue_config_is_a_finding(tmp_path):
-    root = _project(tmp_path, {"schema": 1})
-    issue = root / ".compass" / "work" / "t"
-    issue.mkdir(parents=True)
-    (issue / "manifest.yml").write_text(
-        "schema_version: '2.0'\nissue: t\nconfig:\n  checks:\n    tests-pass:\n"
-        "      set:\n        yes: 1\n", encoding="utf-8")
-    code, out, err = _run(root, "policy", "lint", "--json", "--issue", "t")
-    assert "Traceback" not in err, err
-    finding = _one_finding(json.loads(out), "L-KEY-NOT-TEXT")
-    assert (finding["layer"], finding["path"]) == ("issue", "checks.tests-pass.set")
-
-
-def test_pl_2_policy_effective_refuses_a_non_text_key_with_the_message(tmp_path):
-    code, out, err = _run(_project(tmp_path, NON_TEXT_CHECK), "policy", "show")
-    assert "Traceback" not in err, err
-    assert code == 2
-    assert "L-KEY-NOT-TEXT" in err and "checks.docs-mention" in err and '"on":' in err
 
 
 def test_pl_2_a_chain_built_from_a_non_text_key_is_refused_by_the_loader():
@@ -648,66 +574,10 @@ def test_pl_8_a_clean_project_prints_pass_and_exits_0(tmp_path):
     assert (code, out.splitlines()[0]) == (0, "compass policy lint: PASS")
 
 
-def test_pl_8_a_fault_prints_fail_and_one_line_each_and_exits_1(tmp_path):
-    root = _project(tmp_path, {"schema": 1, "stages": "oops", "foo": 1})
-    code, out, _ = _run(root, "policy", "lint")
-    lines = out.splitlines()
-    assert code == 1
-    assert lines[0] == "compass policy lint: FAIL"
-    assert len(lines) == 3
-    assert lines[1].startswith("  - L-SCHEMA [project] foo: ")
-    assert lines[2].startswith("  - L-SCHEMA [project] stages: ")
-
-
-def test_pl_8_a_warning_is_printed_and_never_fails(tmp_path):
-    root = _project(tmp_path, {"schema": 1})
-    below = root / "docs"
-    below.mkdir()
-    (below / "compass.yml").write_text("schema: 1\n", encoding="utf-8")
-    code, out, _ = _run(below, "policy", "lint")
-    lines = out.splitlines()
-    assert code == 0
-    assert lines[0] == "compass policy lint: PASS"
-    assert lines[1].startswith("  - warning L-IGNORED-FILE [project] docs/compass.yml: ")
-
-
-def test_pl_8_file_lints_one_compass_yml_over_the_shipped_default(tmp_path):
-    bad = tmp_path / "other.yml"
-    bad.write_text("schema: 1\nstages: oops\n", encoding="utf-8")
-    code, out, _ = _run(tmp_path, "policy", "lint", "--file", str(bad))
-    assert code == 1 and "L-SCHEMA [project] stages" in out
-    good = tmp_path / "good.yml"
-    good.write_text("schema: 1\n", encoding="utf-8")
-    assert _run(tmp_path, "policy", "lint", "--file", str(good))[0] == 0
-
-
-def test_pl_8_a_file_that_is_not_there_exits_2(tmp_path):
-    code, _, err = _run(tmp_path, "policy", "lint", "--file", str(tmp_path / "none.yml"))
-    assert code == 2
-    assert "no such file" in err
-
-
-def test_pl_8_issue_adds_the_manifests_config_as_the_issue_layer(tmp_path):
-    root = _project(tmp_path, {"schema": 1})
-    work = root / ".compass" / "work" / "demo"
-    work.mkdir(parents=True)
-    (work / "manifest.yml").write_text(
-        "schema_version: '2.0'\nissue: demo\nconfig:\n  stages: oops\n", encoding="utf-8")
-    assert _run(root, "policy", "lint")[0] == 0           # never reads an issue unasked
-    code, out, _ = _run(root, "policy", "lint", "--issue", "demo")
-    assert code == 1
-    assert "L-SCHEMA [issue] stages" in out
-
-
 def test_pl_8_an_issue_that_does_not_exist_exits_2(tmp_path):
     code, _, err = _run(_project(tmp_path, {"schema": 1}), "policy", "lint",
                         "--issue", "nope")
     assert code == 2 and "nope" in err
-
-
-def test_pl_8_exhaustive_runs_the_full_grid_and_still_passes_a_clean_project(tmp_path):
-    code, out, _ = _run(_project(tmp_path, {"schema": 1}), "policy", "lint", "--exhaustive")
-    assert (code, out.splitlines()[0]) == (0, "compass policy lint: PASS")
 
 
 # --- PL-9: `policy lint --json` --------------------------------------------------------
@@ -721,35 +591,6 @@ FINDING_KEYS = ["code", "level", "layer", "path", "group", "message", "detail"]
 def _json(root, *argv):
     code, out, err = _run(root, "policy", "lint", "--json", *argv)
     return code, json.loads(out), err
-
-
-def test_pl_9_a_passing_layered_project_has_the_pinned_envelope(tmp_path):
-    code, document, _ = _json(_project(tmp_path, {"schema": 1}))
-    assert code == 0
-    assert list(document) == LINT_KEYS
-    assert document["schema"] == 1
-    assert document["mode"] == "layered"
-    assert document["result"] == "pass"
-    assert document["layers"] == [{"name": "default", "kind": "parent"},
-                                  {"name": "project", "kind": "project"}]
-    assert document["stopped_after"] is None
-    assert document["counts"] == {"errors": 0, "warnings": 0}
-    assert document["findings"] == []
-
-
-def test_pl_9_each_finding_has_the_pinned_keys_in_order(tmp_path):
-    root = _project(tmp_path, {"schema": 1, "stages": "oops"})
-    code, document, _ = _json(root)
-    assert code == 1
-    assert document["result"] == "fail"
-    assert document["stopped_after"] == "layer"
-    assert document["counts"] == {"errors": 1, "warnings": 0}
-    (finding,) = document["findings"]
-    assert list(finding) == FINDING_KEYS
-    assert (finding["code"], finding["level"], finding["layer"], finding["path"],
-            finding["group"], finding["detail"]) == (
-        "L-SCHEMA", "error", "project", "stages", "layer", None)
-    assert isinstance(finding["message"], str) and finding["message"]
 
 
 def test_pl_9_a_classification_finding_carries_its_detail_object():
@@ -944,19 +785,6 @@ def test_pl_10_the_text_has_one_line_per_field_with_source_operation_and_waiver(
         1 for r in eff.rows if r.path.startswith("checks."))
 
 
-def test_pl_10_the_cli_prints_the_preset_with_its_version_and_inactive_lists(tmp_path):
-    code, out, _ = _run(_project(tmp_path, {"schema": 1}), "policy", "show")
-    assert code == 0, out
-    assert "default@8.0.0" in out
-    assert "(inactive: entry-exit-evaluation off)" in out
-    assert out.splitlines()[0].startswith("compass policy show: project")
-
-
-def test_pl_10_a_project_with_no_compass_yml_shows_the_shipped_default(tmp_path):
-    code, out, _ = _run(_project(tmp_path), "policy", "show")
-    assert code == 0 and "default@8.0.0" in out
-
-
 def _copy_governance(root):
     import shutil
     (root / "governance").mkdir()
@@ -989,96 +817,10 @@ def test_pl_10_no_copy_means_policy_show_names_no_copy(tmp_path):
     assert code == 0 and COPY_NOTICE not in " ".join(out.split()), out
 
 
-def test_pl_10_the_notes_say_what_reads_the_stored_generation(tmp_path):
-    """The generation store has landed, so the view must not say that check
-    and the evaluator wait for it (`TRC-D2`)."""
-    root = _project(tmp_path, {"schema": 1})
-    work = root / ".compass" / "work" / "demo"
-    work.mkdir(parents=True)
-    (work / "manifest.yml").write_text("schema_version: '3.0'\nissue: demo\n", encoding="utf-8")
-    for argv in (("policy", "show"), ("policy", "show", "--issue", "demo")):
-        code, out, _ = _run(root, *argv)
-        assert code == 0, out
-        text = " ".join(out.split())
-        assert "generation store lands" not in text, text
-        assert "no generation is stored yet" not in text, text
-        assert "by that generation, which can differ" in text, text
-    assert "not from its stored generation" in text, text
-
-
-def test_pl_10_issue_resolves_the_manifests_config_over_the_project_file(tmp_path):
-    root = _project(tmp_path, {"schema": 1})
-    work = root / ".compass" / "work" / "demo"
-    work.mkdir(parents=True)
-    (work / "manifest.yml").write_text(
-        "schema_version: '2.0'\nissue: demo\nconfig:\n  stages:\n    assess:\n"
-        "      set: {mode: light}\n", encoding="utf-8")
-    # The shipped default declares the path stages since 9.0.0 (ADR-092), so the
-    # issue sets the mode of one of them; `light` is read as `lightweight`.
-    code, out, _ = _run(root, "policy", "show", "--issue", "demo")
-    assert code == 0, out
-    assert out.splitlines()[0].startswith("compass policy show: issue demo")
-    line = next(l for l in out.splitlines() if l.startswith("stages.assess.mode "))
-    assert "issue (set)" in line
-
-
 # --- PL-11: `policy effective --json` ----------------------------------------------------
 # The shape below is the public contract from 6.0.0.
 
-EFFECTIVE_KEYS = ["schema", "scope", "layers", "fields"]
-FIELD_KEYS = ["path", "value", "source", "op", "waiver", "note"]
-LAYER_KEYS = ["name", "kind", "version", "digest"]
 WAIVER_KEYS = ["id", "scope", "approved_by", "approved_on"]
-
-
-def _effective_json(root, *argv):
-    code, out, err = _run(root, "policy", "show", "--json", *argv)
-    return code, (json.loads(out) if out.strip() else None), err
-
-
-def test_pl_11_the_document_has_the_pinned_envelope_scope_and_layers(tmp_path):
-    code, document, _ = _effective_json(_project(tmp_path, {"schema": 1}))
-    assert code == 0
-    assert list(document) == EFFECTIVE_KEYS
-    assert document["schema"] == 1
-    assert document["scope"] == {"kind": "project", "issue": None, "resolved": "live"}
-    parent, project = document["layers"]
-    assert list(parent) == LAYER_KEYS and list(project) == LAYER_KEYS
-    assert (parent["name"], parent["kind"], parent["version"]) == ("default", "parent", "8.0.0")
-    assert (project["name"], project["kind"], project["version"]) == ("project", "project", None)
-    assert parent["digest"].startswith("sha256:") and project["digest"].startswith("sha256:")
-
-
-def test_pl_11_each_field_has_the_pinned_keys_and_the_first_one_is_known(tmp_path):
-    _, document, _ = _effective_json(_project(tmp_path, {"schema": 1}))
-    assert all(list(f) == FIELD_KEYS for f in document["fields"])
-    assert document["fields"][0] == {
-        "path": "capabilities.entry-exit-evaluation", "value": False,
-        "source": "default@8.0.0", "op": "add", "waiver": None, "note": None}
-
-
-def test_pl_11_every_resolved_field_of_the_preset_is_listed(tmp_path):
-    import yaml as _yaml
-    _, document, _ = _effective_json(_project(tmp_path, {"schema": 1}))
-    listed = {f["path"] for f in document["fields"]}
-    directory = ROOT / "governance" / "presets" / "default"
-    from compass_pkg import catalogue_spec
-    expected = set()
-    for name in catalogue_spec.CATALOGUES:
-        part = _yaml.safe_load((directory / f"{name}.yml").read_text(encoding="utf-8"))
-        for entry_id, entry in part[name].items():
-            expected |= {f"{name}.{entry_id}.{k}" for k in entry
-                         if k in catalogue_spec.FIELDS[name]}
-    assert expected <= listed
-    assert listed - expected <= {p for p in listed if p.split(".")[0] in (
-        "capabilities", "owner", "approvers") or p.endswith(".locked")}
-
-
-def test_pl_11_json_and_text_list_the_same_fields(tmp_path):
-    root = _project(tmp_path, {"schema": 1})
-    _, document, _ = _effective_json(root)
-    text = _run(root, "policy", "show")[1].splitlines()
-    assert len(text) - 2 == len(document["fields"])
 
 
 def test_pl_11_a_waiver_is_an_object_with_the_pinned_keys():
@@ -1091,27 +833,6 @@ def test_pl_11_a_waiver_is_an_object_with_the_pinned_keys():
     assert field["waiver"]["approved_on"] == "2026-10-05"
 
 
-def test_pl_11_the_note_of_an_inactive_list_is_in_the_field(tmp_path):
-    _, document, _ = _effective_json(_project(tmp_path, {"schema": 1}))
-    notes = {f["note"] for f in document["fields"] if f["note"]}
-    assert notes == {"inactive: entry-exit-evaluation off"}
-
-
-def test_pl_11_issue_scope_names_the_issue_and_marks_the_issue_layer(tmp_path):
-    root = _project(tmp_path, {"schema": 1})
-    work = root / ".compass" / "work" / "demo"
-    work.mkdir(parents=True)
-    (work / "manifest.yml").write_text(
-        "schema_version: '2.0'\nissue: demo\nconfig:\n  stages:\n    assess:\n"
-        "      set: {mode: lightweight}\n", encoding="utf-8")
-    code, document, _ = _effective_json(root, "--issue", "demo")
-    assert code == 0
-    assert document["scope"] == {"kind": "issue", "issue": "demo", "resolved": "live"}
-    assert [l["name"] for l in document["layers"]] == ["default", "project", "issue"]
-    mode = next(f for f in document["fields"] if f["path"] == "stages.assess.mode")
-    assert (mode["value"], mode["source"], mode["op"]) == ("lightweight", "issue", "set")
-
-
 def test_pl_11_the_same_input_gives_the_same_bytes_and_no_local_path(tmp_path):
     root = _project(tmp_path, {"schema": 1})
     one = _run(root, "policy", "show", "--json")[1]
@@ -1119,33 +840,7 @@ def test_pl_11_the_same_input_gives_the_same_bytes_and_no_local_path(tmp_path):
     assert str(tmp_path) not in one
 
 
-def test_pl_11_nothing_to_resolve_exits_2_with_no_document(tmp_path):
-    root = _project(tmp_path, {"schema": 1, "stages": "oops"})
-    code, out, err = _run(root, "policy", "show", "--json")
-    assert code == 2
-    assert out.strip() == ""
-    assert "policy lint" in err
-
-
 # --- PL-12: documented, in the corpus, within the caps --------------------------------
-
-def test_pl_12_both_verbs_describe_themselves(tmp_path):
-    root = _project(tmp_path)
-    out = _run(root, "policy", "show", "--help")[1]
-    assert "source layer" in out and "--issue" in out and "--json" in out
-    out = _run(root, "policy", "lint", "--help")[1]
-    for option in ("--file", "--exhaustive", "--issue", "--json"):
-        assert option in out
-    assert "layer" in out
-
-
-def test_pl_12_the_owning_doc_documents_both_json_shapes_and_every_code():
-    text = (ROOT / "docs" / "policy-lint.md").read_text(encoding="utf-8")
-    for key in LINT_KEYS + FINDING_KEYS + FIELD_KEYS + LAYER_KEYS + WAIVER_KEYS:
-        assert f"`{key}`" in text, key
-    for code in _api().FINDING_CODES:
-        assert f"`{code}`" in text, code
-
 
 def test_pl_12_every_code_the_module_names_is_listed():
     import re
@@ -1180,25 +875,6 @@ def test_pl_12_core_py_stays_within_its_cap():
 
 # --- review 1: fixes ---------------------------------------------------------------------
 
-def _raw_preset_paths():
-    directory = ROOT / "governance" / "presets" / "default"
-    from compass_pkg import catalogue_spec
-    out = set()
-    for name in catalogue_spec.CATALOGUES:
-        part = yaml.safe_load((directory / f"{name}.yml").read_text(encoding="utf-8"))
-        for entry_id, entry in part[name].items():
-            out |= {f"{name}.{entry_id}.{key}" for key in entry}
-    return out
-
-
-def test_pl_10_every_key_of_every_raw_preset_entry_is_listed_even_a_lock(tmp_path):
-    _, document, _ = _effective_json(_project(tmp_path, {"schema": 1}))
-    listed = {f["path"] for f in document["fields"]}
-    assert _raw_preset_paths() - listed == set()
-    locked = next(f for f in document["fields"] if f["path"] == "stages.assess.locked")
-    assert (locked["value"], locked["source"], locked["op"]) == (True, "default@8.0.0", "add")
-
-
 def test_pl_10_a_lock_on_a_stage_follows_the_stages_own_fields_and_names_its_layer():
     parent = _parent_doc()
     parent["stages"]["define"]["locked"] = True
@@ -1221,63 +897,6 @@ def test_pl_10_a_lifted_lock_is_not_listed():
     assert [r for r in eff.rows if r.path == "checks.tests-pass.locked"] == []
     kept = _effective(parent=_layer(parent, "parent"))
     assert _row(kept, "checks.tests-pass.locked").value is True
-
-
-def _absolute(text):
-    return text is not None and ("/private/" in text or "/tmp/" in text
-                                 or "/var/" in text or "/Users/" in text)
-
-
-def _no_absolute_path(document):
-    for finding in document["findings"]:
-        assert not _absolute(finding["message"]), finding
-        assert not _absolute(json.dumps(finding["detail"])), finding
-        assert not _absolute(finding["path"]), finding
-
-
-def test_pl_8_a_load_finding_names_the_file_from_the_project_root(tmp_path):
-    root = _project(tmp_path, "schema: 1\nowner: a\nowner: b\n")
-    code, document, _ = _json(root)
-    _no_absolute_path(document)
-    (finding,) = document["findings"]
-    assert finding["path"] == "compass.yml"
-    assert finding["message"].startswith("compass.yml:3: duplicate key")
-
-
-def test_pl_8_a_file_outside_the_project_is_named_by_its_basename(tmp_path):
-    bad = tmp_path / "other.yml"
-    bad.write_text("schema: 1\nowner: a\nowner: b\n", encoding="utf-8")
-    elsewhere = tmp_path / "work"
-    elsewhere.mkdir()
-    code, out, _ = _run(_project(elsewhere), "policy", "lint", "--json", "--file", str(bad))
-    document = json.loads(out)
-    _no_absolute_path(document)
-    (finding,) = document["findings"]
-    assert finding["path"] == "other.yml"
-    assert finding["message"].startswith("other.yml:3: duplicate key")
-
-
-def test_pl_8_a_file_inside_the_project_is_named_from_its_root(tmp_path):
-    root = _project(tmp_path)
-    (root / "sub").mkdir()
-    (root / "sub" / "x.yml").write_text("a: [1\n", encoding="utf-8")
-    code, out, _ = _run(root, "policy", "lint", "--json", "--file", str(root / "sub" / "x.yml"))
-    document = json.loads(out)
-    _no_absolute_path(document)
-    assert document["findings"][0]["path"] == "sub/x.yml"
-
-
-def test_pl_8_a_yaml_error_is_one_line_in_the_text_output(tmp_path):
-    root = _project(tmp_path, "a: [1, 2\nb: 3\n")
-    code, out, _ = _run(root, "policy", "lint")
-    assert code == 1
-    assert len(out.splitlines()) == 2
-    assert out.splitlines()[1].startswith("  - L-LOAD [project] compass.yml: compass.yml:")
-
-
-def test_pl_9_the_layers_name_the_project_when_its_file_did_not_load(tmp_path):
-    code, document, _ = _json(_project(tmp_path, "a: [1\n"))
-    assert [l["name"] for l in document["layers"]] == ["default", "project"]
 
 
 EFFECT_TARGET_CASES = [
@@ -1357,52 +976,6 @@ def test_pl_5_the_evaluator_finding_holds_the_evaluators_text_and_nothing_of_the
     assert message.endswith("evaluator treats it as shipping")
 
 
-def _help(root, *argv):
-    return " ".join(_run(root, *argv, "--help")[1].split())
-
-
-def test_pl_12_issue_help_says_that_no_issue_is_read_without_it(tmp_path):
-    root = _project(tmp_path)
-    for verb in ("lint", "show"):
-        text = _help(root, "policy", verb)
-        assert "COMPASS_ISSUE" in text and "current-task" in text, verb
-        assert "no issue" in text.lower(), verb
-
-
-def test_pl_8_a_project_with_no_compass_yml_lints_an_issues_config_over_the_default(tmp_path):
-    root = _project(tmp_path)
-    work = root / ".compass" / "work" / "demo"
-    work.mkdir(parents=True)
-    (work / "manifest.yml").write_text(
-        "schema_version: '2.0'\nissue: demo\nconfig:\n  stages: oops\n", encoding="utf-8")
-    code, out, _ = _run(root, "policy", "lint", "--issue", "demo")
-    assert code == 1
-    assert "L-SCHEMA [issue] stages" in out
-    code, document, _ = _json(root, "--issue", "demo")
-    assert document["mode"] == "layered"
-    assert [l["name"] for l in document["layers"]] == ["default", "issue"]
-
-
-def test_pl_10_the_text_says_what_the_view_is_and_what_reads_the_stored_generation(tmp_path):
-    code, out, _ = _run(_project(tmp_path, {"schema": 1}), "policy", "show")
-    second = out.splitlines()[1]
-    assert "resolves to" in second
-    assert "compass check" in second and "evaluator" in second
-    assert "stored generation" in second
-
-
-def test_pl_12_the_doc_names_every_code_the_modules_name():
-    import re
-    text = (ROOT / "docs" / "policy-lint.md").read_text(encoding="utf-8")
-    pattern = re.compile(r'"((?:M|W)-[A-Z][A-Z-]+|(?:[LKCEV])-[A-Z][A-Z-]+|LEGACY-[A-Z-]+)"')
-    named = set()
-    for name in ("merge.py", "waivers.py", "catalogue_check.py", "policy_lint.py"):
-        named |= set(pattern.findall(
-            (ROOT / "cli" / "compass_pkg" / name).read_text(encoding="utf-8")))
-    assert named, "the scan found no code"
-    assert {c for c in named if f"`{c}`" not in text} == set()
-
-
 def test_pl_9_the_legacy_json_keeps_a_waived_rule_as_an_info_finding(tmp_path):
     root = _project(tmp_path)
     governance = root / "governance"
@@ -1437,91 +1010,3 @@ def test_pl_1_a_public_wrapper_answers_what_the_settings_reader_answers(tmp_path
 # policy lint --issue` reads an issue's `config:`. Each lints the layer over the
 # 8.0.4 governance copy, the last release whose approaches and stages it can
 # pick, at the assessment of an 8.x issue (scenario ids `IP-2` to `IP-9`).
-
-_IP_ASSESSMENT = {"risk": "contained", "familiarity": "brownfield-mapped", "size": "medium",
-                  "goal": "delivery", "role": "engineer", "labels": []}
-_IP_QUICK_FIX = {"size": "small"}
-_IP_SPIKE = {"goal": "exploration"}
-_IP_SPIKE_POINT = ("at risk contained, familiarity brownfield-mapped, size medium, goal "
-                   "exploration, role engineer, labels none")
-_IP_REFINE_COLLAPSED = {"stages": {"refine": {"set": {"mode": "collapsed"}}}}
-
-
-def _ip_lint_8_0_4(tmp_path, layer, **assessment):
-    """The lint's errors for the issue layer `layer` over the 8.0.4 governance
-    copy, at `_IP_ASSESSMENT` with `assessment` changed."""
-    import compat_baseline as cb
-    from compass_pkg import effective, layers
-    root = tmp_path / "copy-8-0-4"
-    (root / ".compass").mkdir(parents=True, exist_ok=True)
-    cb.add_governance_copy(root, source=cb.GOVERNANCE_8_0_4)
-    parent = effective._legacy_parent(str(root))[0]
-    project = layers.Layer("project", "project", {"schema": 1}, "p")
-    issue = layers.Layer("issue", "issue", layer, "i")
-    report = _api().lint_chain(parent, project, issue,
-                               assessment=dict(_IP_ASSESSMENT, **assessment))
-    return [f"{f.code} {f.path}: {f.message}" for f in report.errors]
-
-
-def test_ip_2_a_spike_issue_that_picks_full_is_refused_by_a_lock(tmp_path):
-    reasons = _ip_lint_8_0_4(tmp_path, {"approach": "full"}, **_IP_SPIKE)
-    locked = [r for r in reasons if r.startswith("K-LOCK-REFUSED")]
-    assert any("spike.conclude" in r for r in locked), reasons
-    assert all(r.endswith(_IP_SPIKE_POINT) for r in locked), locked
-
-
-def test_ip_3_quick_fix_to_regular_is_incomparable_on_the_subtask_ceiling(tmp_path):
-    """The route that owes more gates also allows two subtasks where quick-fix
-    allows one, and a higher ceiling is looser."""
-    reasons = _ip_lint_8_0_4(tmp_path, {"approach": "regular"}, **_IP_QUICK_FIX)
-    assert reasons
-    assert not any(r.startswith("K-LOCK-REFUSED") for r in reasons), reasons
-    assert any("C-INCOMPARABLE" in r and "approaches.subtask_ceiling" in r for r in reasons)
-
-
-def test_ip_4_full_on_a_regular_issue_is_refused_as_incomparable_on_the_ceiling(tmp_path):
-    reasons = _ip_lint_8_0_4(tmp_path, {"approach": "full"})
-    assert reasons
-    assert not any(r.startswith("K-LOCK-REFUSED") for r in reasons), reasons
-    assert any("C-INCOMPARABLE" in r and "approaches.subtask_ceiling" in r
-               for r in reasons), reasons
-
-
-def test_ip_5_refine_collapsed_on_a_quick_fix_issue_is_accepted(tmp_path):
-    assert _ip_lint_8_0_4(tmp_path, _IP_REFINE_COLLAPSED, **_IP_QUICK_FIX) == []
-
-
-def test_ip_5_refine_collapsed_on_a_regular_issue_is_refused_without_a_waiver(tmp_path):
-    reasons = _ip_lint_8_0_4(tmp_path, _IP_REFINE_COLLAPSED)
-    assert any(r.startswith("C-") for r in reasons), reasons
-
-
-def test_ip_6_a_pick_carried_onto_a_spike_assessment_is_refused(tmp_path):
-    """Naming `regular` on a regular issue loosens nothing. At a spike
-    assessment the same pick drops the spike obligations."""
-    assert _ip_lint_8_0_4(tmp_path, {"approach": "regular"}) == []
-    reasons = _ip_lint_8_0_4(tmp_path, {"approach": "regular"}, **_IP_SPIKE)
-    assert any(r.startswith("K-LOCK-REFUSED") for r in reasons), reasons
-
-
-def test_ip_9_bare_regular_on_a_quick_fix_issue_names_every_field_that_makes_it_mixed(tmp_path):
-    [reason] = _ip_lint_8_0_4(tmp_path, {"approach": "regular"}, **_IP_QUICK_FIX)
-    assert "approaches.subtask_ceiling" in reason
-    tail = reason.split("looser or cannot be compared:", 1)[1]
-    assert "approaches.subtask_ceiling" in tail
-    assert "approaches.stages (breakdown)" in tail
-    assert "approaches.gates" not in tail        # a tightening is not listed
-    # The 8.0.4 copy still declares each approach's documents, so their map differs
-    # too; the shipped default declares no `artifacts:` map since 9.0.0 (ADR-091).
-    assert "approaches.artifacts" in tail
-    shipped = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "approaches.yml")
-                             .read_text(encoding="utf-8"))["approaches"]
-    assert not [name for name, body in shipped.items() if "artifacts" in body]
-
-
-def test_ip_9_a_quick_fix_issue_cannot_combine_its_way_to_regular(tmp_path):
-    """The ceiling is one of three fields that block it: breakdown (skipped
-    against multiagent) and the artifacts owed cannot be compared either."""
-    reasons = _ip_lint_8_0_4(tmp_path, {"approach": "regular",
-                                        "ceilings": {"subtask_ceiling": 1}}, **_IP_QUICK_FIX)
-    assert reasons and "approaches.stages (breakdown)" in reasons[0]

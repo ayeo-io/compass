@@ -962,11 +962,9 @@ def test_lk_7_the_text_wraps_inside_the_width():
 #
 # The receipt also reported it; 9.0.0 removed the receipt (ADR-091).
 
-import json as _json
 import subprocess
 import textwrap
 
-import yaml
 
 CLI = ROOT / "cli" / "compass"
 GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
@@ -1018,14 +1016,6 @@ def _outputs(root):
     return got
 
 
-def _without_conformance(text):
-    """The lines that are not the report, with a blank line after it folded into
-    the one before."""
-    kept = [line for line in text.splitlines()
-            if not any(mark in line for mark in MARKERS)]
-    return [line for i, line in enumerate(kept) if line or not (i and not kept[i - 1])]
-
-
 def test_lk_8_with_no_project_file_both_commands_print_no_conformance(project):
     for name, (code, out) in _outputs(project).items():
         assert not any(mark in out for mark in MARKERS), name
@@ -1041,49 +1031,6 @@ def test_lk_8_a_project_file_that_unlocks_nothing_changes_nothing(project, conte
     before = _outputs(project)
     (project / "compass.yml").write_text(content)
     assert _outputs(project) == before
-
-
-def test_lk_8_an_unlock_prints_the_line_on_every_run_of_both_commands(project):
-    before = _outputs(project)
-    (project / "compass.yml").write_text(UNLOCK_FILE)
-    for _ in range(2):
-        after = _outputs(project)
-        for name in COMMANDS:
-            code, out = after[name]
-            assert code == before[name][0], name
-            assert ("Conformance: non-conformant - this project unlocks framework "
-                    "entries: checks.suite-passed") in out, name
-            assert _without_conformance(out) == before[name][1].splitlines(), name
-
-
-def test_lk_8_the_summary_prints_its_three_lines_and_then_the_conformance_line(project):
-    (project / "compass.yml").write_text(UNLOCK_FILE)
-    lines = _run(project, "approach", "show").stdout.splitlines()
-    # A path issue's middle line names the evidence owed in place of the gates
-    # (ADR-092 decision 3).
-    assert lines[0].startswith("Approach:") and lines[1].startswith("Evidence:")
-    assert lines[2].startswith("Writes:") and lines[3].startswith("Conformance:")
-    assert len(lines) == 4
-
-
-def test_lk_8_check_lists_the_line_in_its_json_notices_and_on_a_spike(project):
-    (project / "compass.yml").write_text(UNLOCK_FILE)
-    document = _json.loads(_run(project, "check", "--json").stdout)
-    assert any(n.startswith("Conformance: non-conformant") for n in document["notices"])
-    manifest = project / ".compass" / "work" / "greeting" / "manifest.yml"
-    body = yaml.safe_load(manifest.read_text())
-    body["delivery_approach"] = "spike"
-    manifest.write_text(yaml.safe_dump(body))
-    spike = _run(project, "check")
-    assert "Conformance: non-conformant" in spike.stdout, spike.stdout + spike.stderr
-
-
-def test_lk_8_a_refused_unlock_is_reported_and_does_not_say_non_conformant(project):
-    (project / "compass.yml").write_text(
-        UNLOCK_FILE.replace("approved_by: owner-1", "approved_by: alice"))
-    for name, (code, out) in _outputs(project).items():
-        assert "Unlock refused for checks.suite-passed" in out, name
-        assert "non-conformant" not in out, name
 
 
 def test_lk_8_conformance_lines_never_raises_and_says_when_it_cannot_read(tmp_path):
@@ -1132,12 +1079,12 @@ IMPORTS_LOCKS = re.compile(
 def test_lk_9_only_check_lint_and_the_summary_import_the_module():
     hits = [name for name, text in _python_sources()
             if name != "cli/compass_pkg/locks.py" and IMPORTS_LOCKS.search(text)]
-    # effective.py stores the conformance status in each generation it commits.
-    # policy_effective.py is the lint's effective view (`policy show`), which
-    # shows each lock.
-    assert hits == ["cli/compass_pkg/check_cmd.py", "cli/compass_pkg/effective.py",
-                    "cli/compass_pkg/policy_effective.py", "cli/compass_pkg/policy_lint.py",
-                    "cli/compass_pkg/routing.py"], hits
+    # Since 9.0.0 no command resolves a lock (ADR-094): compass check prints no
+    # conformance line and a generation stores no conformance status. Only the
+    # 8.x layered lint and its effective view still import the module, and
+    # step 8 of #357 deletes all three.
+    assert hits == ["cli/compass_pkg/policy_effective.py",
+                    "cli/compass_pkg/policy_lint.py"], hits
 
 
 def test_lk_9_no_command_exposes_the_module_and_the_aggregate_does_not_name_it():
@@ -1183,31 +1130,6 @@ def test_lk_1_an_entry_a_layer_locks_and_unlocks_at_once_stays_locked():
     project = _layer({"owner": "owner-1", "checks": {
         "mine": {"locked": True, "unlock": True, "waiver": _waiver()}}})
     assert set(locks.lock_set([project])) == {"checks.mine"}
-
-
-def test_lk_8_the_check_summary_shows_the_conformance_line_before_other_notices(tmp_path):
-    """The summary shows three notices. Four earlier ones must not push the
-    conformance line out of view."""
-    import argparse
-    import io
-    from contextlib import redirect_stdout
-    from compass_pkg import check_cmd
-    root = tmp_path / "proj"
-    task_dir = root / ".compass" / "work" / "greeting"
-    task_dir.mkdir(parents=True)
-    (root / "compass.yml").write_text(UNLOCK_FILE)
-    run = check_cmd._CheckRun(str(task_dir), {"delivery_approach": "quick-fix"}, "enforced")
-    for number in range(4):
-        run.line(f"  an earlier notice {number}")
-    args = argparse.Namespace(json=False, no_count=True, evidence_out=None)
-    out = io.StringIO()
-    with redirect_stdout(out):
-        check_cmd._emit_check(run, args)
-    shown = out.getvalue().splitlines()
-    assert any("Conformance: non-conformant" in line for line in shown), out.getvalue()
-    where = [i for i, line in enumerate(shown) if "Conformance: non-conformant" in line]
-    earlier = [i for i, line in enumerate(shown) if "earlier notice" in line]
-    assert earlier and where[0] < earlier[0], out.getvalue()
 
 
 # --- LK-5 (review): a change to a dimension's vocabulary ---------------------------
@@ -1311,37 +1233,6 @@ def test_lk_6_an_issue_layers_locked_adds_no_lock():
     parent = _layer({"checks": {"a": {"locked": True}}}, "parent", "base")
     issue = _layer({"checks": {"b": {"locked": True}}}, "issue")
     assert set(locks.lock_set([parent, issue])) == {"checks.a"}
-
-
-def _write_unlock(project, entry_block):
-    (project / "compass.yml").write_text(
-        "schema: 1\nowner: owner-1\n" + entry_block)
-
-
-HARD_UNLOCK = textwrap.dedent("""\
-    gates:
-      G5:
-        unlock: true
-        waiver: {reason: "Needed.", approved_by: owner-1, approved_on: 2026-10-01}
-    """)
-MISSING_UNLOCK = HARD_UNLOCK.replace("gates:\n  G5:", "gates:\n  no-such-gate:")
-
-
-@pytest.mark.parametrize("block,entry,words", [
-    (HARD_UNLOCK, "gates.G5", "hard lock"),
-    (MISSING_UNLOCK, "gates.no-such-gate", "not locked"),
-], ids=["a-hard-lock", "an-entry-that-does-not-exist"])
-def test_lk_7_the_commands_report_a_refused_unlock_not_a_non_conformant_project(
-        project, block, entry, words):
-    _write_unlock(project, block)
-    for name, (code, out) in _outputs(project).items():
-        assert f"Unlock refused for {entry}" in out and words in out, name
-        assert "non-conformant" not in out, name
-
-
-def test_lk_7_a_real_unlock_of_a_shipped_soft_lock_is_still_reported(project):
-    (project / "compass.yml").write_text(UNLOCK_FILE)
-    assert "non-conformant" in _run(project, "check").stdout
 
 
 def test_lk_7_the_hard_set_is_read_from_the_preset_summary_not_written_in_the_module():

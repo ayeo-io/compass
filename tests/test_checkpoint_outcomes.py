@@ -546,23 +546,18 @@ def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
     assert _entry_text("governance/presets/default/preset.yml", "hard", 2) \
         == base["governance/presets/default/preset.yml#locks.hard"]
 
-    # An issue waiver whose approval names the checkpoint answer is refused with
-    # W-APPROVAL-TYPE by the configuration lint, as a waiver naming any record that
-    # is not a human-approval is. The write does not read the issue's `config:`
-    # (ADR-094), so it takes nothing into effect, and compass check still fails the
-    # sign-off.
+    # An 8.x issue waiver whose approval names the checkpoint answer takes nothing
+    # into effect: the write does not read the issue's `config:` (ADR-094), and
+    # compass check still fails the sign-off. A 9.0.0 waiver is approved only by a
+    # human-approval record that names it, and never covers the sign-off
+    # (`never_waived`; tests/test_waiver_records.py).
     body["config"] = {"checks": {"backfills-paid": {
         "set": {"severity": "advisory"},
         "waiver": {"reason": "A one-line fix.", "approved_by": record["id"]}}}}
     write_manifest(root, body)
-    fault = f"W-APPROVAL-TYPE issue:checks.backfills-paid: {record['id']} is a " \
-            f"checkpoint-approval record, not a human-approval"
     done = run(root, "approach", "evaluate", "--issue", SLUG, "--write", "--reason", "waive")
     assert done.returncode == 0, done
     assert "W-APPROVAL-TYPE" not in done.stdout + done.stderr, done
-    done = run(root, "policy", "lint", "--issue", SLUG)
-    assert done.returncode != 0, done
-    assert "W-APPROVAL-TYPE" in done.stdout and fault.split(": ", 1)[1] in done.stdout, done
     assert _check_lines(root, "human-approval-present", "design-review") == without
     assert_no_gh_call(root)
 

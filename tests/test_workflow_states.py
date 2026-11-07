@@ -467,15 +467,15 @@ OPEN_FOR_CONFIG = [(None, {}),("active", {}), ("queued", {}), ("backlog", {})]
 
 def _stored_issue(tmp_path, monkeypatch, status, extra):
     sys.path.insert(0, str(ROOT / "tests"))
-    from test_generation_store import _commit, _new_check, _project, _write_manifest
+    from test_generation_store import _commit, _project, _write_manifest
     import yaml
     root, task_dir = _project(tmp_path)
     monkeypatch.chdir(root)
     _commit(root, task_dir)
     # A configuration unlike the stored one, so a later commit has a change
-    # to refuse.
+    # to refuse: a tighten-only setting (ADR-094).
     (root / "compass.yml").write_text(
-        yaml.safe_dump({"schema": 1, "checks": {"extra": _new_check()}}), encoding="utf-8")
+        yaml.safe_dump({"schema": 1, "signoff_labels": ["billing"]}), encoding="utf-8")
     changes = dict(extra, status=status) if status else dict(extra)
     _write_manifest(task_dir, **changes)
     return root, task_dir, _commit

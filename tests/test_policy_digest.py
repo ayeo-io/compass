@@ -143,6 +143,8 @@ def test_compass_check_names_the_policy(tmp_path):
     _, out, err = _run(root, "check", "--issue", SLUG, "--verbose")
     assert f"Policy: compass-checks@9.0.0 (sha256 {_sha256sum(CHECK_SET)})" in out, out + err
     assert "Tightened: signoff_labels" in out
+    # No lock exists to unlock, so the 8.x conformance line is gone (ADR-094).
+    assert "conformant" not in out + err
 
 
 def test_a_manifest_without_the_block_still_checks_and_lints(tmp_path):

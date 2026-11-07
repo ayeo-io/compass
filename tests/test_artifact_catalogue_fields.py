@@ -116,21 +116,12 @@ def _scratch(tmp_path, layer=None):
     return root
 
 
-def _show(root):
-    """`compass policy show --json` as `{path: value}`."""
-    code, out, err = _cli(root, "policy", "show", "--json")
-    assert code == 0, out + err
-    return {row["path"]: row["value"] for row in json.loads(out)["fields"]}
-
-
-def _catalogue_of(root):
-    """The artifacts catalogue as `policy show --json` reports it."""
-    found = {}
-    for path, value in _show(root).items():
-        parts = path.split(".")
-        if parts[0] == "artifacts" and len(parts) == 3:
-            found.setdefault(parts[1], {})[parts[2]] = value
-    return found
+def _live(root):
+    """The configuration the project at `root` resolves to now: the check set
+    with its settings applied (ADR-094). `compass policy show` lists no fields
+    since 9.0.0, so the resolved mapping is read directly."""
+    from compass_pkg import effective
+    return effective.resolve_live(str(root)).resolved
 
 
 def _lint(root):
@@ -158,13 +149,12 @@ def test_acf_1(tmp_path):
     from compass_pkg import artifact_kinds
 
     root = _scratch(tmp_path)
-    shown = _show(root)
-    assert _catalogue_of(root) == {}
+    live = _live(root)
+    assert not live.get("artifacts")
     catalogue = _frozen_doc()["artifacts"]
     # The frozen catalogue names the legacy stages its own preset declares; the
     # shipped default shows the four path stages since 9.0.0 (ADR-092).
-    assert {p.split(".")[1] for p in shown if p.startswith("stages.")} == {
-        "assess", "specify", "build", "ship"}
+    assert set(live["stages"]) == {"assess", "specify", "build", "ship"}
     stages = set(_frozen_doc()["stages"])
     assert set(SHIPPED_KINDS) <= set(catalogue)
     for kind, entry in catalogue.items():

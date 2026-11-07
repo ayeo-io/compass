@@ -358,27 +358,32 @@ def test_trc_a23(tmp_path, major, applies):
 def test_trc_a24(tmp_path):
     """A shipping approach cannot suspend the strategy; the spike keeps `suspended`.
 
-    `delivery` is the shipped default's one shipping approach since 9.0.0
-    (ADR-092). Lint refuses a resolved `delivery` that suspends it. A git
-    parent can no longer set one: its `approaches` is left out with
-    `L-SETTING-REMOVED` (VD-006 of #351), so the strategy stays on."""
+    `delivery` is the check set's one shipping approach since 9.0.0 (ADR-092).
+    Lint refuses a resolved `delivery` that suspends it. No configuration can
+    set one: `approaches:` in `compass.yml` is a removed setting, left out
+    with `L-SETTING-REMOVED`, and git parents were removed (ADR-094), so the
+    strategy stays on."""
     import sys
     sys.path.insert(0, str(ROOT / "cli"))
-    from compass_pkg import acceptance_strategy, merge, policy_lint
-    shipped, _ = policy_lint.load_parent()
-    assert acceptance_strategy.approach_routing(shipped.doc, "spike") == "suspended"
-    config, _ = merge.apply({}, shipped.doc, "parent", "default")
+    from compass_pkg import acceptance_strategy, check_set
+    assert acceptance_strategy.approach_routing(check_set.load(), "spike") == "suspended"
+    config = check_set.resolved()
     assert acceptance_strategy.suspended_findings(config) == []
     config["approaches"]["delivery"]["acceptance_strategy"] = "suspended"
     found = acceptance_strategy.suspended_findings(config)
     assert [path for path, _ in found] == ["approaches.delivery.acceptance_strategy"], found
     assert "acceptance_strategy: {state: off, reason:" in found[0][1], found
     project = support.Project(tmp_path / "repo")
-    project.parent(approaches={"delivery": {"set": {"acceptance_strategy": "suspended"}}})
+    (project.root / "compass.yml").write_text(
+        "schema: 1\napproaches:\n  delivery:\n    set: {acceptance_strategy: suspended}\n",
+        encoding="utf-8")
     code, out, err = project.run("policy", "lint")
     assert code == 0, out + err
-    assert "L-SETTING-REMOVED [github:acme/team" in out + err, out + err
+    assert "L-SETTING-REMOVED [project] approaches" in out + err, out + err
     assert "M-ACCEPTANCE-SUSPENDED" not in out + err, out + err
+    from compass_pkg import effective
+    resolved = effective.resolve_live(str(project.root)).resolved
+    assert acceptance_strategy.suspended_findings(resolved) == []
 
 
 def test_trc_a3_a_quick_fix_started_as_validation_costs_nothing(tmp_path):

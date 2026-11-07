@@ -904,10 +904,14 @@ def test_trc_s2_the_scan_reports_the_old_text():
 
 
 def test_trc_s2_a_locked_guardrail_cannot_be_removed_in_compass_yml(tmp_path):
-    """The claim the guardrails page now makes: `compass policy lint` refuses a
-    `compass.yml` that removes a check from a locked guardrail."""
+    """`compass.yml` cannot remove a check from a guardrail. Since 9.0.0 it holds
+    settings only (ADR-094): a `gates:` block is a removed setting that the lint
+    names and nothing reads, so the guardrail keeps every check, and a key that
+    is not a setting is refused."""
     import subprocess
     import sys
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import effective
     (tmp_path / ".compass").mkdir()
     (tmp_path / "compass.yml").write_text(
         "schema: 1\nextends: compass:default@6\nowner: me\n"
@@ -916,10 +920,13 @@ def test_trc_s2_a_locked_guardrail_cannot_be_removed_in_compass_yml(tmp_path):
     cli = [sys.executable, str(ROOT / "cli" / "compass")]
     lint = subprocess.run(cli + ["policy", "lint"], cwd=tmp_path, capture_output=True,
                           text=True, timeout=60)
-    assert lint.returncode != 0 and "K-LOCK-REFUSED" in lint.stdout, lint.stdout
+    assert "L-SETTING-REMOVED [project] gates:" in lint.stdout, lint.stdout
+    resolved = effective.resolve_live(str(tmp_path)).resolved
+    assert "scenario-has-id-and-intent" in resolved["gates"]["G2"]["checks"]
     (tmp_path / "compass.yml").write_text(
         "schema: 1\nextends: compass:default@6\nowner: me\nstrategies:\n  - id: X\n",
         encoding="utf-8")
     lint = subprocess.run(cli + ["policy", "lint"], cwd=tmp_path, capture_output=True,
                           text=True, timeout=60)
-    assert "L-SCHEMA" in lint.stdout and "strategies" in lint.stdout, lint.stdout
+    assert lint.returncode == 1, lint.stdout
+    assert "L-SETTING-UNKNOWN [project] strategies" in lint.stdout, lint.stdout

@@ -553,13 +553,24 @@ OLD_PROJECT_STAGE = ("schema: 1\nstages:\n  review:\n    order: 9\n"
                      "    modes: {full: {rank: 3}, expedited: {}, explore: {}}\n")
 
 
-def test_vr_d10_policy_show_reads_a_project_stage_mode_full_as_thorough(tmp_path):
-    root, _ = _project(tmp_path, compass_yml=OLD_PROJECT_STAGE)
-    code, out, err = _cli(root, "policy", "show", "--json")
+def test_vr_d10_a_stored_stage_mode_full_is_read_as_thorough(tmp_path):
+    """Since 9.0.0 `stages:` in `compass.yml` is a removed setting (ADR-094), so a
+    stage in the old words reaches an issue only from a generation stored before
+    the rename; it is read in the new words."""
+    import stored_generation
+    from compass_pkg import effective
+    root, task_dir = _project(tmp_path, compass_yml="schema: 1\n")
+    code, out, err = _cli(root, "approach", "evaluate", "--issue", "t", "--write")
     assert code == 0, (out, err)
-    row = next(r for r in json.loads(out)["fields"] if r["path"] == "stages.review.modes")
-    assert sorted(row["value"]) == ["expedited", "explore", "thorough"], row
-    assert row["source"] == "project" and row["op"] == "add"
+    review = yaml.safe_load(OLD_PROJECT_STAGE)["stages"]["review"]
+
+    def add(resolved):
+        resolved["stages"]["review"] = review
+
+    stored_generation.commit(root, task_dir, add)
+    modes = effective.effective_for(str(task_dir))
+    assert sorted(modes.config["stages"]["review"]["modes"]) == [
+        "expedited", "explore", "thorough"], modes.config["stages"]["review"]
 
 
 # --- VR-D11, VR-D15: ranking reads both sides in the new words ------------------
@@ -686,9 +697,10 @@ def test_vr_d19_policy_lint_advises_and_keeps_its_exit_status(tmp_path):
     new = _cli(new_root, "policy", "lint")
     assert old[0] == new[0] == 0, (old, new)
     assert old[1] == new[1], "the report on standard output is the same"
-    assert "stages.ship.set.modes" in old[2] and "thorough" in old[2], old[2]
-    assert "9.0.0" in old[2] and "project" in old[2], old[2]
-    assert new[2] == "", "a layer in the new words gets no advisory"
+    # Since 9.0.0 `stages:` is a removed setting (ADR-094) and is not read, so its
+    # words need no advisory: the lint warns about the key in either spelling.
+    assert "L-SETTING-REMOVED [project] stages:" in old[1], old[1]
+    assert old[2] == new[2] == "", (old[2], new[2])
 
 
 def test_vr_d19_the_advisory_names_the_layer_and_a_git_parent_by_its_sha():
@@ -710,9 +722,13 @@ def test_vr_d19_the_advisory_names_the_layer_and_a_git_parent_by_its_sha():
 def test_vr_d19_compass_check_prints_no_such_advisory(tmp_path):
     root, _ = _project(tmp_path, compass_yml=OLD_PROJECT)
     code, out, err = _cli(root, "check", "--issue", "t")
-    assert "7.0.0" not in out + err, (out, err)
-    assert "8.0.0" not in out + err, (out, err)
-    assert "9.0.0" not in out + err, (out, err)
+    # The `Policy:` line names the check set, `compass-checks@9.0.0` (ADR-094);
+    # it is not an advisory about old words.
+    text = "\n".join(line for line in (out + err).splitlines()
+                     if not line.strip().startswith("Policy: compass-checks@"))
+    assert "7.0.0" not in text, (out, err)
+    assert "8.0.0" not in text, (out, err)
+    assert "9.0.0" not in text, (out, err)
 
 
 # --- VR-D21: the backup, from the shipped rows ----------------------------------

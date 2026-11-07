@@ -175,23 +175,19 @@ example above; `at` and `definition_digest` vary and are shown as `...`.
 
 Before 9.0.0 a reviewer agent reviewed every change at verify. 9.0.0 runs each
 issue in one session (ADR-090), so no agent review is required. A project that
-wants one turns it on as advisory evidence by putting this block in its own
-`compass.yml`:
+wants one turns it on as advisory evidence with one tighten-only setting in its
+own `compass.yml` (ADR-094):
 
 ```yaml
-checks:
-  agent-review:
-    statement: An agent that did not write the change reviewed it against the acceptance criteria.
-    kind: judged
-    reviewers: [agent]
-    inputs: [acceptance-criteria]
-    severity: advisory
-    on_skipped: not-applicable
-stages:
-  ship:
-    set:
-      entry: {add: [agent-review]}
+agent_review: on
 ```
+
+The setting adds the check set's optional entry: the judged check
+`agent-review`, whose statement is "An agent that did not write the change
+reviewed it against the acceptance criteria.", with `reviewers: [agent]`, `inputs:
+[acceptance-criteria]`, `severity: advisory` and `on_skipped: not-applicable`,
+listed at the `ship` entry. Since 9.0.0 a `checks:` or `stages:` block in
+`compass.yml` is a removed setting and is not read.
 
 The reviewing agent records its verdict with `compass evidence review
 agent-review --verdict pass|fail --reason TEXT --reviewer agent`, which writes a

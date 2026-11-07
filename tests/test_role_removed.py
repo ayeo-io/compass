@@ -360,18 +360,15 @@ def _copied_governance(root, edit=None):
 def test_trc_c8_a_project_rule_that_reads_role_is_refused(tmp_path):
     root = tmp_path / "proj"
     (root / ".compass").mkdir(parents=True)
-    # The effect is `add_gate`: a rule whose only effect forces an approach is
-    # left out since 9.0.0 (VD-008 of #351), and its condition would not be read.
+    # Since 9.0.0 a project adds a rule with the tighten-only setting
+    # `require_evidence` (ADR-094); its `when:` reads the assessment only.
     (root / "compass.yml").write_text(
-        "schema: 1\nextends: compass:default@6\nrules:\n  extra:\n    kind: floors\n"
-        "    hit: {add_gate: collect}\n    rules:\n      X-1:\n"
-        "        order: 1\n        when: {role: designer}\n"
-        "        then: {add_gate: verify.architecture}\n        rationale: probe\n",
-        encoding="utf-8")
+        "schema: 1\nrequire_evidence:\n  - when: {role: designer}\n"
+        "    add: [architecture]\n", encoding="utf-8")
     code, out, err = _run(root, "policy", "lint")
     assert code == 1, out + err
-    assert "M-WHEN-RETIRED" in out + err
-    assert "artifacts_any" in out + err and "label" in out + err
+    assert "L-SETTING-INVALID [project] require_evidence[0].when.role" in out, out + err
+    assert "labels" in out, out
 
 
 def test_trc_c8_a_project_that_declares_its_own_role_dimension_may_read_it(tmp_path):
@@ -436,12 +433,15 @@ def test_trc_c8_a_check_that_reads_documents_is_refused(tmp_path):
     not, so a check or gate condition on `artifacts_any` would never match there."""
     root = tmp_path / "proj"
     (root / ".compass").mkdir(parents=True)
+    # Since 9.0.0 a project adds a check with the tighten-only setting
+    # `project_checks` (ADR-094).
     (root / "compass.yml").write_text(
-        "schema: 1\nextends: compass:default@6\nchecks:\n  backfills-paid:\n"
-        "    set:\n      when: {artifacts_any: [positioning]}\n", encoding="utf-8")
+        "schema: 1\nproject_checks:\n  - {id: notes, name: Notes, command: 'true', "
+        "stage: ship, when: {artifacts_any: [positioning]}}\n", encoding="utf-8")
     code, out, err = _run(root, "policy", "lint")
     assert code == 1, out + err
-    assert "M-WHEN-DOCUMENTS" in out + err
+    assert "L-SETTING-INVALID [project] project_checks[0].when.artifacts_any" in out, (
+        out + err)
 
 
 def _old_evaluator(root, slug="t"):

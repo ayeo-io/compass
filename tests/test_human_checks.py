@@ -361,9 +361,11 @@ def _cli_project(tmp_path, open_check_in_done=False):
     With `open_check_in_done`, the one that lists nobody is an item of the
     Definition of Done (the `build` exit list) in place of the `specify` entry.
 
-    The checks and lists sit in a git parent. The issue is on the four-stage path
-    (ADR-092), whose specify stage holds what the plan entry list held."""
-    from parent_fixtures import team_parent
+    The checks and lists sit in the issue's stored generation: since 9.0.0
+    `compass.yml` cannot add a check (ADR-094), and a generation stored before
+    9.0.0 can hold one. The issue is on the four-stage path (ADR-092), whose
+    specify stage holds what the plan entry list held."""
+    import stored_generation
     human = {"kind": "human", "severity": "blocking", "on_skipped": "fail"}
     stages = {"specify": {"set": {"entry": {"add": [SIGN_OFF, "open-check"]}}}}
     if open_check_in_done:
@@ -378,8 +380,16 @@ def _cli_project(tmp_path, open_check_in_done=False):
     config = {"schema": 1, "owner": "jed72", "capabilities": {"entry-exit-evaluation": True}}
     (tmp_path / "project").mkdir()
     root, task_dir = _project(tmp_path / "project", compass_yml=config)
-    team_parent(tmp_path, parent, root)
     assert _evaluate_write(root)[0] == 0
+
+    def add(resolved):
+        resolved["checks"].update(parent["checks"])
+        for stage, operation in parent["stages"].items():
+            for side, lists in operation["set"].items():
+                body = resolved["stages"][stage]
+                body[side] = list(body.get(side) or []) + lists["add"]
+
+    stored_generation.commit(root, task_dir, add, in_place=True)
     _write_manifest(task_dir, current_phase="specify")
     (task_dir / "requirements-review.md").write_text(
         f"# R\n\n### Definition of Ready\n\n- [x] {STATEMENT}\n"

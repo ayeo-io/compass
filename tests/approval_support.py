@@ -2,8 +2,10 @@
 
 `project(tmp_path)` copies one template project, built once per test run:
 
-- `compass.yml` names the owner `jed72` and a human check `dod-reviewed`
-  that lists `owner`. The check's own `approvers` list decides who may
+- `compass.yml` names the owner `jed72`, and the issue's stored generation
+  holds a human check `dod-reviewed` that lists `owner` (since 9.0.0
+  `compass.yml` cannot add a check, ADR-094; a generation stored before
+  9.0.0 can hold one). The check's own `approvers` list decides who may
   approve it, so no stage needs to list it;
 - issue `feature` is labelled payments and migrations, at generation 1,
   with the `requirements-review.md` box of the check ticked;
@@ -64,8 +66,7 @@ def run(root, *argv, terminal=False, **extra_env):
 
 def _build(root):
     human = {"kind": "human", "severity": "blocking", "on_skipped": "fail"}
-    config = {"schema": 1, "owner": OWNER, "capabilities": {"entry-exit-evaluation": True},
-              "checks": {CHECK: dict(human, statement=STATEMENT, approvers=["owner"])}}
+    config = {"schema": 1, "owner": OWNER, "capabilities": {"entry-exit-evaluation": True}}
     task_dir = root / ".compass" / "work" / SLUG
     task_dir.mkdir(parents=True)
     (root / "compass.yml").write_text(yaml.safe_dump(config), encoding="utf-8")
@@ -81,6 +82,13 @@ def _build(root):
                          *[f"--justify={d}=test" for d in
                            ("risk", "familiarity", "size", "goal", "role")])
     assert code == 0, out + err
+    sys.path.insert(0, str(ROOT / "tests"))
+    import stored_generation
+    stored_generation.commit(
+        root, task_dir,
+        lambda resolved: resolved["checks"].update(
+            {CHECK: dict(human, statement=STATEMENT, approvers=["owner"])}),
+        in_place=True)
     body = manifest_of(root)
     assert body["generation"] == 1, body
     body["current_phase"] = "plan"

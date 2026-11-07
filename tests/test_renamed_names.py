@@ -227,6 +227,20 @@ def _u5_skill_rules(prefix: str, *, floor: bool, advisory: bool) -> str:
     return out
 
 
+def _stored_view(tmp: Path, mutate):
+    """The view of an issue whose stored generation was changed by `mutate`, as a
+    generation stored before a rename holds the old word. Since 9.0.0
+    `compass.yml` holds no catalog (ADR-094), so a stored generation is where an
+    old check id or skill name is still read."""
+    import stored_generation
+    from compass_pkg import effective
+    from test_generation_store import _evaluate_write, _project
+    root, task_dir = _project(tmp, compass_yml={"schema": 1})
+    assert _evaluate_write(root)[0] == 0
+    stored_generation.commit(root, task_dir, mutate)
+    return effective.effective_for(str(task_dir), None)
+
+
 def test_trc_046():
     import tempfile
     variants = {
@@ -234,16 +248,29 @@ def test_trc_046():
         "strategy entry": _u5_skill_rules("compass:", floor=False, advisory=True),
         "bare names": _u5_skill_rules("", floor=True, advisory=True),
     }
+    # Since 9.0.0 `rules:` in `compass.yml` is a removed setting (ADR-094): the
+    # file is read without it, whatever word it uses.
     for place, text in variants.items():
         with tempfile.TemporaryDirectory() as raw:
             project = _u5_project(Path(raw), text)
             code, out, err = _run(project, "policy", "lint")
             assert code == 0, (place, out + err)
+            assert "L-SETTING-REMOVED [project] rules:" in out, (place, out)
             code, shown, err = _run(project, "policy", "show", "--json")
             assert code == 0, (place, shown + err)
             assert OLD_SKILL not in shown, (place, shown)
-            assert NEW_SKILL in shown, place
     assert (ROOT / "skills" / NEW_SKILL / "SKILL.md").is_file()
+
+    # A stored generation that names the old skill is read with the new name.
+    for prefix in ("compass:", ""):
+        def old_skill(resolved, prefix=prefix):
+            resolved["rules"]["floors"]["rules"]["RP-FLOOR-002"]["then"] = {
+                "require_skill": f"{prefix}{OLD_SKILL}"}
+        with tempfile.TemporaryDirectory() as raw:
+            config = _stored_view(Path(raw), old_skill).config
+        assert config["rules"]["floors"]["rules"]["RP-FLOOR-002"]["then"] == {
+            "require_skill": NEW_SKILL}, prefix
+        assert OLD_SKILL not in str(config), prefix
 
     # A project preset that extends the default: a parent that names the old skill.
     from compass_pkg import word_map
@@ -282,38 +309,22 @@ def test_trc_047():
                 code, out, err = _run(project, "policy", "lint")
                 assert code == 0, (check_id, waiver, out + err)
                 assert "unknown check" not in out + err
-                # A project's change to a Definition of Ready check is left out since
-                # 9.0.0 (ADR-092). Lint names it by its new id, so the old id was read
-                # as the new one.
-                assert f"L-SETTING-REMOVED [project] checks.{NEW_CHECK}" in out, out
+                # `checks:` in `compass.yml` is a removed setting since 9.0.0
+                # (ADR-094), named once by its key; nothing under it is read.
+                assert "L-SETTING-REMOVED [project] checks:" in out, out
                 code, shown, err = _run(project, "policy", "show")
                 assert code == 0, shown + err
-                rows = [line for line in shown.splitlines()
-                        if ".severity" in line and "dor-behav" in line]
-                assert rows == [], rows
                 assert OLD_CHECK not in shown, (check_id, waiver)
 
-        # An issue's own `config:` names the id too.
+        # A stored generation that holds the check under either id is read with the
+        # new one. An issue's own `config:` is not read since 9.0.0 (ADR-094).
+        def holds(resolved, check_id=check_id):
+            resolved["checks"][check_id] = {"statement": "Behavior is written as GWT.",
+                                            "kind": "human", "severity": "advisory",
+                                            "on_skipped": "fail"}
         with tempfile.TemporaryDirectory() as raw:
-            project = _u5_project(Path(raw), "schema: 1\nextends: compass:default@7\n")
-            work = project / ".compass" / "work" / "sample"
-            work.mkdir(parents=True)
-            (project / ".compass" / "config.yml").write_text("version: 1.0.0\n", encoding="utf-8")
-            manifest = yaml.safe_load(BASE_MANIFEST)
-            manifest["config"] = {"checks": {check_id: {"set": {"severity": "advisory"}}}}
-            (work / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False),
-                                               encoding="utf-8")
-            code, out, err = _run(project, "policy", "lint", "--issue", "sample")
-            assert "unknown check" not in out + err, (check_id, out + err)
-            # The shipped default does not hold the check, so the issue's change is
-            # left out and named by the new id (ADR-092 decision 10).
-            assert f"L-SETTING-REMOVED [issue] checks.{NEW_CHECK}" in out, out
-            code, shown, err = _run(project, "policy", "show", "--issue", "sample")
-            assert code == 0, shown + err
-            rows = [line for line in shown.splitlines()
-                    if ".severity" in line and "dor-behav" in line]
-            assert rows == [], rows
-            assert OLD_CHECK not in shown, check_id
+            config = _stored_view(Path(raw), holds).config
+        assert NEW_CHECK in config["checks"] and OLD_CHECK not in config["checks"], check_id
 
 
 def test_trc_048():
@@ -321,23 +332,30 @@ def test_trc_048():
     text = ("schema: 1\nextends: compass:default@7\nchecks:\n"
             f"  {NEW_CHECK}:\n    set: {{severity: advisory}}\n"
             f"  {OLD_CHECK}:\n    set: {{severity: blocking}}\n")
+    # `checks:` in `compass.yml` is a removed setting since 9.0.0 (ADR-094), so the
+    # two ids in it are not read and conflict with nothing.
     with tempfile.TemporaryDirectory() as raw:
         project = _u5_project(Path(raw), text)
         code, out, err = _run(project, "policy", "lint")
-        # A finding on standard output (exit 1), not a read error (exit 2).
-        assert code == 1, (code, out + err)
-        assert "FAIL" in out and "M-ONE-CHECK" in out, out
-        assert NEW_CHECK in out and OLD_CHECK in out, out
-        assert "one check" in out, out
-        code, shown, err = _run(project, "policy", "show")
-        assert code != 0 and "one check" in shown + err, shown + err
+        assert code == 0, (code, out + err)
+        assert "L-SETTING-REMOVED [project] checks:" in out, out
+
+    # The word map, which reads a stored generation, keeps both ids when their
+    # bodies differ, and names the conflict, so the new id never hides it.
+    from compass_pkg import word_map
+    layer = yaml.safe_load(text)
+    mapped, _ = word_map.map_layer(layer)
+    assert {NEW_CHECK, OLD_CHECK} <= set(mapped["checks"]), mapped
+    conflicts = word_map.one_check_conflicts(mapped)
+    assert [(code, path) for code, path, _ in conflicts] == [
+        ("M-ONE-CHECK", f"checks.{OLD_CHECK}")], conflicts
+    assert "one check" in conflicts[0][2]
 
     # The same value under both ids is not a conflict.
-    same = text.replace("severity: blocking", "severity: advisory")
-    with tempfile.TemporaryDirectory() as raw:
-        project = _u5_project(Path(raw), same)
-        code, out, err = _run(project, "policy", "lint")
-        assert code == 0, out + err
+    same = yaml.safe_load(text.replace("severity: blocking", "severity: advisory"))
+    mapped, _ = word_map.map_layer(same)
+    assert word_map.one_check_conflicts(mapped) == []
+    assert NEW_CHECK in mapped["checks"] and OLD_CHECK not in mapped["checks"]
 
 
 def test_trc_049():

@@ -29,7 +29,6 @@ sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
 import compass_pkg  # noqa: E402,F401 - puts the bundled PyYAML first
-import yaml  # noqa: E402
 
 import test_checkpoint_outcomes as projects  # noqa: E402
 
@@ -113,11 +112,13 @@ def test_lint_does_not_judge_the_impl_of_a_removed_check():
     assert [f.code for f in report.findings] == ["L-SETTING-REMOVED"], report.findings
 
 
+# The settings lint names a removed catalog once, by its key, not once per entry
+# (ADR-094).
 @pytest.mark.parametrize("body,key", [
     ("approaches: 5\n", "approaches"),
-    ("stages:\n  plan: {modes: 7}\n", "stages.plan"),
-    ("rules:\n  caps: {kind: not-a-kind}\n", "rules.caps"),
-    ("checks:\n  dor-no-open-questions: {kind: not-a-kind}\n", "checks.dor-no-open-questions"),
+    ("stages:\n  plan: {modes: 7}\n", "stages"),
+    ("rules:\n  caps: {kind: not-a-kind}\n", "rules"),
+    ("checks:\n  dor-no-open-questions: {kind: not-a-kind}\n", "checks"),
 ])
 def test_a_removed_key_with_a_bad_value_gives_only_the_removed_warning(tmp_path, body, key):
     """Nothing reads a removed key, so a value the old schema refused must not make the
@@ -212,8 +213,9 @@ def test_evaluate_write_and_check_run_on_an_old_project_file(tmp_path):
     lint = projects.run(root, "policy", "lint")
     out = lint.stdout + lint.stderr
     assert lint.returncode == 0, out
-    for key in ("approaches", "stages.plan", "rules.caps", "checks.dor-no-open-questions"):
-        assert f"L-SETTING-REMOVED [project] {key}" in out, (key, out)
+    # The settings lint names each removed catalog once, by its key (ADR-094).
+    for key in ("approaches", "stages", "rules", "checks"):
+        assert f"L-SETTING-REMOVED [project] {key}:" in out, (key, out)
 
 
 @pytest.mark.parametrize("frozen", ["compass:default@6", "compass:default@7"])
@@ -373,56 +375,6 @@ def test_an_old_issue_keeps_an_approach_its_configuration_declares():
 
 
 # --- a git parent ----------------------------------------------------------------------
-
-#: A team's shared `compass.yml` written for 8.x: it changes the legacy verify stage
-#: and the regular approach, which the live default no longer declares.
-OLD_TEAM_PARENT = {"schema": 1,
-                   "stages": {"verify": {"set": {"exit": {"add": ["backfills-paid"]}}}},
-                   "approaches": {"regular": {"set": {"gates": ["verify.correctness"]}}}}
-
-
-def _team_project(tmp_path, parent_doc):
-    """A project with one issue that extends the git parent `parent_doc`, fetched into
-    its cache, and the `compass policy lint --json` report of it."""
-    import json
-
-    from parent_fixtures import team_parent
-    root = projects.project(tmp_path, compass_yml=projects.BALANCED)
-    team_parent(tmp_path, parent_doc, root)
-    lint = projects.run(root, "policy", "lint", "--json")
-    assert lint.returncode == 0, lint.stdout + lint.stderr
-    return root, json.loads(lint.stdout)["findings"]
-
-
-def test_a_git_parent_that_sets_removed_keys_resolves_and_lint_names_each(tmp_path):
-    """A team parent written for 8.x must not stop every project that extends it
-    (VD-006): the merge leaves each removed key out, as for a project layer, and lint
-    names each one on the git parent's layer."""
-    root, findings = _team_project(tmp_path, OLD_TEAM_PARENT)
-    removed = sorted((f["layer"].split("@", 1)[0], f["path"], f["level"])
-                     for f in findings if f["code"] == "L-SETTING-REMOVED")
-    assert removed == [("github:acme/team", "approaches", "warning"),
-                       ("github:acme/team", "stages.verify", "warning")], findings
-    assert not [f for f in findings if f["level"] == "error"], findings
-    done = projects.run(root, "check", "--issue", projects.SLUG)
-    out = done.stdout + done.stderr
-    assert done.returncode in (0, 1), out
-    assert "M-SET-UNKNOWN" not in out and "nothing can be resolved" not in out, out
-
-
-def test_a_git_parent_gate_at_a_legacy_stage_is_read_at_its_path_stage(tmp_path):
-    import json
-    parent = {"schema": 1, "gates": {"team.review": {
-        "kind": "review", "stage": "verify", "accepts": ["test-run"]}}}
-    root, findings = _team_project(tmp_path, parent)
-    mapped = [(f["layer"].split("@", 1)[0], f["path"], f["level"])
-              for f in findings if f["code"] == "L-STAGE-MAPPED"]
-    assert mapped == [("github:acme/team", "gates.team.review.stage", "warning")], findings
-    show = projects.run(root, "policy", "show", "--json")
-    assert show.returncode == 0, show.stdout + show.stderr
-    rows = {row["path"]: row["value"] for row in json.loads(show.stdout)["fields"]}
-    assert rows["gates.team.review.stage"] == "ship", rows
-
 
 def test_the_shipped_preset_is_not_read_as_a_git_parent():
     """Only a project layer and a git parent drop what 9.0.0 removed; the shipped

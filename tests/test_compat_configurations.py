@@ -79,7 +79,32 @@ def test_contract_1_routes_as_the_baseline_under(kind, policies):
     assert differences == [], "\n".join(differences[:10])
 
 
-@pytest.mark.parametrize("kind", BC)
+# Configuration B cannot fail contracts 1 and 2, so it has no can-fail partner
+# for them. Since 9.0.0 (ADR-094) B's `compass.yml` holds settings only: a
+# catalogue key or `extends:` is a removed setting, read as if absent, and no
+# tighten-only setting changes what `evaluate_route` reads over the 8.0.4 copy
+# (`require_evidence` and `signoff_labels` are read by the evidence evaluator,
+# the others do not reach the routing policy, and contract 1 runs every autonomy
+# itself). A fault planted in B therefore has nothing to change, and a can-fail
+# case for B would fail for that reason, not because the contract is blind. So
+# B is checked to give configuration A's results, with the planted tightening
+# applied (`compat_baseline.PLANTED_OVERLAY`). C keeps its can-fail partner: its
+# fault is planted in the governance copy it routes over. Decision: VD-021 of
+# #357.
+
+def _routes(policy, rows):
+    return [cb.compact(row["assessment"], policy) for row in rows
+            if row["kind"] in ("grid", "archive")]
+
+
+def test_contract_1_under_b_routes_as_a_even_with_a_tightening(tmp_path):
+    _, rows = cb.load_routing()
+    planted = cb.policy_under("B", tmp_path, fault="routing", governance=ROUTED_OVER["B"])
+    assert planted.get("require_evidence"), "the planted tightening was not applied"
+    assert _routes(planted, rows) == _routes(cb.policy_8_0_4(), rows)
+
+
+@pytest.mark.parametrize("kind", ["C"])
 def test_contract_1_under_the_configuration_can_fail(kind, tmp_path):
     header, rows = cb.load_routing()
     planted = cb.policy_under(kind, tmp_path, fault="routing", governance=ROUTED_OVER[kind])
@@ -98,7 +123,20 @@ def test_contract_2_owes_what_it_owed_under(kind, policies):
     assert cb.owed_by_approach(now) == recorded["owed"]
 
 
-@pytest.mark.parametrize("kind", BC)
+def test_contract_2_under_b_owes_as_a_even_with_a_tightening(tmp_path):
+    """Contract 2 under B gives A's result; see the note above contract 1."""
+    _, rows = cb.load_routing()
+    planted = cb.policy_under("B", tmp_path, fault="routing", governance=ROUTED_OVER["B"])
+    a = cb.policy_8_0_4()
+    grid = [r for r in rows if r["kind"] == "grid"]
+    under_b = [dict(r, result=cb.legacy_spelling(cb.compact(r["assessment"], planted)))
+               for r in grid]
+    under_a = [dict(r, result=cb.legacy_spelling(cb.compact(r["assessment"], a)))
+               for r in grid]
+    assert cb.owed_by_approach(under_b) == cb.owed_by_approach(under_a)
+
+
+@pytest.mark.parametrize("kind", ["C"])
 def test_contract_2_under_the_configuration_can_fail(kind, tmp_path):
     _, rows = cb.load_routing()
     recorded = yaml.safe_load(cb.OWED.read_text(encoding="utf-8"))

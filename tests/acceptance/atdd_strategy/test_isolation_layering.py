@@ -770,7 +770,10 @@ def _approval(scope, entry):
 
 
 def test_trc_a18(tmp_path):
-    """A project makes one of the strategy's checks advisory."""
+    """A project cannot make one of the strategy's checks advisory. Since 9.0.0
+    `compass.yml` can only tighten the check set (ADR-094): its `checks:` block
+    is a removed setting that the lint names and nothing reads, so the check
+    still fails. One issue steps off with a waiver instead (`TRC-A20`)."""
     project = support.Project(tmp_path / "repo")
     support.stage_one_suite(project.root)
     project.setting(None, owner=OWNER,
@@ -779,14 +782,15 @@ def test_trc_a18(tmp_path):
                         "reason": WAIVER_REASON, "approved_by": OWNER,
                         "approved_on": "2026-10-29"})})
     code, out, err = project.run("policy", "lint")
-    assert "K-LOCK-REFUSED" not in out + err, out + err
+    assert code == 0, out + err
+    assert "L-SETTING-REMOVED [project] checks:" in out, out + err
     issue = _issue(project)
     _must_layering(issue)
     code, out, err = issue.run("check", "--issue", issue.slug)
-    assert "Conformance: non-conformant" not in out + err, out + err
+    assert "Conformance:" not in out + err, out + err
     code, document = _rendered_check(issue)
-    assert code == 0, support.findings(document)
-    assert _row(document, ISOLATION)["status"] == "advisory"
+    assert code == 1, support.findings(document)
+    assert _row(document, ISOLATION)["status"] == "fail"
 
 
 def _waive(issue, check):

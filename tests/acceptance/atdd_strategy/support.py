@@ -82,21 +82,6 @@ class Project:
                            text=True, timeout=300, stdin=subprocess.DEVNULL)
         return r.returncode, r.stdout, r.stderr
 
-    def parent(self, **doc):
-        """Publish `doc` as the git parent `acme/team` in a local mirror and make
-        `compass.yml` extend it. A change to an approach must sit in a parent:
-        since 9.0.0 a project layer's change to one is left out (ADR-092)."""
-        sys.path.insert(0, str(ROOT / "tests"))
-        from parent_fixtures import make_remote
-        base = self.root.parent / "remotes"
-        sha = make_remote(base, repo="team",
-                          files={"compass.yml": yaml.safe_dump({"schema": 1, **doc})})
-        path = self.root / "compass.yml"
-        config = yaml.safe_load(path.read_text(encoding="utf-8")) if path.is_file() else {}
-        config = {"schema": 1, **(config or {}), "extends": f"github:acme/team@1.0.0#{sha}"}
-        path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
-        self.extra_env["COMPASS_PARENT_REMOTE_BASE"] = str(base)
-
     def setting(self, value, where="compass.yml", **more):
         """Write the strategy setting into `compass.yml` or `.compass/config.yml`.
         `value` None writes the file without the key."""

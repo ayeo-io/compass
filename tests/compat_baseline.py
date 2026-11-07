@@ -574,9 +574,11 @@ EMPTY_OVERLAY = "schema: 1\nextends: compass:default@6\n"
 #   routing: a valid configuration that routes differently from 5.6.0;
 #   broken:  a configuration Compass cannot read.
 # A project file holds settings only since 9.0.0 (ADR-094): a catalogue key is a
-# removed setting, read as if absent. So the planted routing fault is the
-# tighten-only setting that adds the architecture evidence to every assessment,
-# and the broken file holds a setting with a value no reader accepts.
+# removed setting, read as if absent. So the planted change is the tighten-only
+# setting that adds the architecture evidence to every assessment, and the broken
+# file holds a setting with a value no reader accepts. The tightening does not
+# reach `evaluate_route`, so contracts 1 and 2 under B check that B still gives
+# A's results with it (`test_compat_configurations.py`).
 PLANTED_OVERLAY = EMPTY_OVERLAY + (
     "require_evidence:\n  - when: {}\n    add: [architecture]\n")
 BROKEN_OVERLAY = EMPTY_OVERLAY + "autonomy: sometimes\n"

@@ -343,19 +343,20 @@ def test_bs7_compass_check_fails_with_the_conflict(box):
     assert "settings-conflict" in result.stdout + result.stderr
 
 
-def test_bs7_a_missing_preset_is_an_error_naming_the_file_not_a_traceback(box):
+def test_bs7_a_missing_check_set_is_an_error_naming_the_file_not_a_traceback(box):
     framework, base = box
     project = make_project(base, compass_yml=SCHEMA)
     shutil.copytree(ROOT / "governance", Path(project) / "governance")
-    # The framework copy ships no preset, and this issue needs the effective view.
-    assert not (framework / "governance" / "presets").exists()
+    # The framework copy ships no check set (ADR-094), and this issue needs the
+    # effective view.
+    assert not (framework / "governance" / "check-set.yml").exists()
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", COMPASS_ISSUE=ch.SLUG)
     result = subprocess.run([sys.executable, str(framework / "cli" / "compass"),
                              "check"], cwd=project, env=env,
                             capture_output=True, text=True, timeout=120)
     assert result.returncode == 2, result.stdout + result.stderr
     assert "Traceback" not in result.stderr
-    assert "preset.yml" in result.stderr, result.stderr
+    assert "check-set.yml" in result.stderr, result.stderr
 
 
 @pytest.mark.parametrize("reader", [

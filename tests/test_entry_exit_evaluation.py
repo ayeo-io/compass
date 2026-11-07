@@ -29,6 +29,8 @@ from test_generation_store import (SLUG, _evaluate_write, _manifest, _project,  
                                    _run, _write_manifest)
 from test_ready_and_done_data import DONE_IDS, FROZEN, READY_IDS, statements  # noqa: E402
 
+import stored_generation  # noqa: E402
+
 CAPABILITY = "entry-exit-evaluation"
 # The shipped default holds no Definition of Ready since 9.0.0 (ADR-092); the
 # frozen preset `default@7`, which a stored 8.x generation resolves to, keeps it.
@@ -165,13 +167,35 @@ def _by_check(rows):
     return {row.check: row for row in rows}
 
 
-def _team_project(tmp_path, parent_doc, project_doc):
-    """A scratch project whose `compass.yml` is `project_doc` and extends a git
-    parent that holds `parent_doc`, fetched into its cache."""
-    from parent_fixtures import team_parent
+def _add(resolved, added):
+    """Add to `resolved` the checks of `added` and the ids of its stage lists,
+    as `{"checks": {...}, "stages": {stage: {"entry": [...]}}}`."""
+    resolved["checks"].update(copy.deepcopy(added.get("checks") or {}))
+    for stage, lists in (added.get("stages") or {}).items():
+        body = resolved["stages"].setdefault(stage, {})
+        for side, ids in lists.items():
+            body[side] = list(body.get(side) or []) + [i for i in ids
+                                                      if i not in (body.get(side) or [])]
+
+
+def _stored_project(tmp_path, added, project_doc, legacy=False):
+    """A scratch project whose `compass.yml` is `project_doc`, with its issue
+    evaluated and a stored generation that adds `added` (`_add`). Since 9.0.0 a
+    project cannot add a check through `compass.yml` (ADR-094); a generation
+    stored before 9.0.0 can hold one, so the tests store it. With `legacy`, the
+    generation also holds the legacy catalogue of an 8.x issue
+    (`_legacy_catalogue`)."""
     (tmp_path / "project").mkdir()
     root, task_dir = _project(tmp_path / "project", compass_yml=project_doc)
-    team_parent(tmp_path, parent_doc, root)
+    code, out, err = _evaluate_write(root)
+    assert code == 0, out + err
+
+    def mutate(resolved):
+        _add(resolved, added)
+        if legacy:
+            _legacy_catalogue(resolved)
+
+    stored_generation.commit(root, task_dir, mutate)
     return root, task_dir
 
 
@@ -222,7 +246,6 @@ def test_ee_1_a_project_check_that_requires_the_capability_waits_for_it(tmp_path
 
 def test_ee_1_check_runs_a_project_deterministic_check_with_the_capability_off(tmp_path):
     root, task_dir = _project_check_project(tmp_path, capability=False)
-    assert _evaluate_write(root)[0] == 0
     _write_manifest(task_dir, current_phase="plan")
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")
     # A path issue reads the plan entry list at specify, the path stage that
@@ -301,17 +324,16 @@ def test_ee_2_the_stage_lists_and_the_obligations_read_ships_alike(
         == set(owed.entry["plan"])
 
 
-def test_ee_2_a_project_check_can_use_ships_in_its_when_and_lint_accepts_it(tmp_path, monkeypatch):
-    config = {"schema": 1,
-              "checks": {"shipping-only": {
-                  "statement": "Release notes written.", "kind": "human",
-                  "severity": "blocking", "on_skipped": "fail", "when": {"ships": True}}},
-              "stages": {"ship": {"set": {"entry": {"add": ["shipping-only"]}}}}}
-    root, task_dir = _project(tmp_path, compass_yml=config)
-    code, out, err = _run(root, "policy", "lint", "--json")
-    assert code == 0, out + err
-    assert not json.loads(out)["counts"]["errors"], out
-    view = _view(root, monkeypatch)
+def test_ee_2_a_stored_check_can_use_ships_in_its_when(tmp_path, monkeypatch):
+    """A check a stored generation holds can read `ships` in its `when`. A
+    project check of 9.0.0 needs no such clause: its gate applies only to an
+    approach that ships (`tighten`)."""
+    added = {"checks": {"shipping-only": {
+                 "statement": "Release notes written.", "kind": "human",
+                 "severity": "blocking", "on_skipped": "fail", "when": {"ships": True}}},
+             "stages": {"ship": {"entry": ["shipping-only"]}}}
+    root, task_dir = _project(tmp_path, compass_yml={"schema": 1})
+    view = _view(root, monkeypatch, lambda resolved: _add(resolved, added))
     for approach, assessment, listed in (
             ("regular", {"risk": "contained", "familiarity": "greenfield",
                          "size": "medium", "goal": "delivery"}, True),
@@ -328,11 +350,16 @@ def test_ee_2_ships_is_not_a_dimension(tmp_path):
     from compass_pkg.core import CompassError
     with pytest.raises(CompassError, match="ships"):
         obligations.assessment_vocabulary({"ships": {"type": "enum", "values": ["yes", "no"]}})
+    # Since 9.0.0 `compass.yml` cannot declare a dimension at all (ADR-094): the key
+    # is a removed setting, read as if absent, so the check set's dimensions stand.
     config = {"schema": 1, "dimensions": {"ships": {
         "type": "enum", "values": ["yes", "no"]}}}
     root, task_dir = _project(tmp_path, compass_yml=config)
     code, out, err = _run(root, "policy", "lint", "--json")
-    assert code != 0 and "ships" in out
+    found = json.loads(out)["findings"]
+    assert [(f["code"], f["path"]) for f in found] == [("L-SETTING-REMOVED", "dimensions")]
+    from compass_pkg import effective
+    assert "ships" not in effective.resolve_live(str(root)).resolved["dimensions"]
 
 
 def test_ee_2_the_classifier_sees_the_ships_condition_come_and_go(tmp_path, monkeypatch):
@@ -642,14 +669,14 @@ def test_ee_7_a_blocking_when_that_does_not_match_makes_a_list_failure_advisory(
 def test_ee_7_an_advisory_list_failure_is_shown_counted_and_recorded_as_advisory(tmp_path):
     root, task_dir = _project_check_project(tmp_path, capability=False,
                                                  severity="advisory")
-    assert _evaluate_write(root)[0] == 0
     _write_manifest(task_dir, current_phase="plan")
     data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
     row = [r for r in data["checks"] if r["name"] == "list-scenarios-have-tests"][0]
     # The plan entry list is read at specify on a path issue (ADR-092).
     assert row["status"] == "advisory" and row["guardrail"] == "stage:specify:entry"
     assert data["advisory"] >= 1
-    results = yaml.safe_load((task_dir / "generations" / "1" / "results.yml")
+    held = _manifest(task_dir)["generation"]
+    results = yaml.safe_load((task_dir / "generations" / str(held) / "results.yml")
                              .read_text(encoding="utf-8"))
     assert results["runs"]["list-scenarios-have-tests"]["verdict"] == "advisory"
     text = _run(root, "check", "--issue", SLUG, "--verbose")[1]
@@ -776,15 +803,19 @@ def test_ee_2_obligations_read_ships_in_blocking_when_and_in_a_gate_condition(
 
 
 def test_ee_2_check_reads_ships_in_a_gate_check_blocking_when(tmp_path):
-    config = {"schema": 1,
-              "checks": {"extra-tests": {
-                  "statement": "Every scenario has a test.", "kind": "deterministic",
-                  "impl": "scenarios-have-tests", "severity": "blocking",
-                  "blocking_when": {"ships": True}, "on_skipped": "fail"}},
-              "gates": {"G1": {"set": {"checks": {"add": ["extra-tests"]}}}}}
-    root, task_dir = _project(tmp_path, compass_yml=config)
+    root, task_dir = _project(tmp_path, compass_yml={"schema": 1})
     code, out, err = _evaluate_write(root)
     assert code == 0, out + err
+
+    def add(resolved):
+        resolved["checks"]["extra-tests"] = {
+            "statement": "Every scenario has a test.", "kind": "deterministic",
+            "impl": "scenarios-have-tests", "severity": "blocking",
+            "blocking_when": {"ships": True}, "on_skipped": "fail"}
+        resolved["gates"]["G1"]["checks"] = list(resolved["gates"]["G1"]["checks"]) + [
+            "extra-tests"]
+
+    stored_generation.commit(root, task_dir, add)
     data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
     row = [r for r in data["checks"] if r["name"] == "extra-tests"][0]
     assert row["status"] == "fail", row
@@ -801,24 +832,14 @@ def test_ee_7_the_shipped_default_names_no_judged_or_evidence_check_in_a_list():
 
 
 def _judged_list_config():
-    """A git parent that adds an evidence check to the specify entry list. The
-    shipped default has no plan stage since 9.0.0 (ADR-092); an issue assessed
-    before it reads the check in its plan entry list (`_legacy_catalogue`)."""
-    return {"schema": 1,
-            "checks": {"design-reviewed": {
+    """An evidence check in the specify entry list, as `_add` takes it. The
+    check set has no plan stage since 9.0.0 (ADR-092); an issue assessed before
+    it reads the check in its plan entry list (`_legacy_catalogue`)."""
+    return {"checks": {"design-reviewed": {
                 "statement": "A test run is on record.", "kind": "evidence",
                 "accepts": ["test-run"], "severity": "blocking",
                 "on_skipped": "fail"}},
-            "stages": {"specify": {"set": {"entry": {"add": ["design-reviewed"]}}}}}
-
-
-def test_ee_7_lint_warns_when_a_list_names_a_kind_this_version_does_not_evaluate(tmp_path):
-    root, task_dir = _team_project(tmp_path, _judged_list_config(), {"schema": 1})
-    code, out, err = _run(root, "policy", "lint", "--json")
-    assert code == 0, out + err
-    found = [f for f in json.loads(out)["findings"] if f["code"] == "M-LIST-KIND-UNEVALUATED"]
-    assert len(found) == 1 and found[0]["level"] == "warning"
-    assert "design-reviewed" in found[0]["message"] and "evidence" in found[0]["message"]
+            "stages": {"specify": {"entry": ["design-reviewed"]}}}
 
 
 def test_ee_7_lint_is_quiet_for_the_shipped_default(tmp_path):
@@ -830,13 +851,14 @@ def test_ee_7_lint_is_quiet_for_the_shipped_default(tmp_path):
 
 
 def test_ee_7_an_evidence_check_a_project_adds_fails_with_the_capability_off(tmp_path, monkeypatch):
-    root, task_dir = _team_project(tmp_path, _judged_list_config(), {"schema": 1})
+    root, task_dir = _project(tmp_path, compass_yml={"schema": 1})
     body = _manifest(task_dir)
     body.update({"delivery_approach": "regular", "current_phase": "plan",
                  "stages": {"refine": "light", "plan": "full"}})
     (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
                                            encoding="utf-8")
-    rows = _by_check(_rows(_view(root, monkeypatch), task_dir))
+    view = _view(root, monkeypatch, lambda resolved: _add(resolved, _judged_list_config()))
+    rows = _by_check(_rows(view, task_dir))
     assert rows["design-reviewed"].status == "fail"
 
 
@@ -952,29 +974,28 @@ def test_ee_9_next_names_the_unmet_entry_checks_of_the_current_stage(tmp_path):
 
 
 
-def _project_check_parent(severity="blocking"):
-    """A git parent that adds a deterministic check to the specify entry list. The
-    shipped default has no plan stage since 9.0.0 (ADR-092); an issue assessed
-    before it reads the check in its plan entry list (`_legacy_catalogue`)."""
-    return {"schema": 1,
-            "checks": {"list-scenarios-have-tests": {
+def _project_check_added(severity="blocking"):
+    """A deterministic check in the specify entry list, as `_add` takes it. The
+    check set has no plan stage since 9.0.0 (ADR-092); an issue assessed before
+    it reads the check in its plan entry list (`_legacy_catalogue`)."""
+    return {"checks": {"list-scenarios-have-tests": {
                 "statement": "Every scenario has a test.", "kind": "deterministic",
                 "impl": "scenarios-have-tests", "severity": severity,
                 "on_skipped": "fail"}},
-            "stages": {"specify": {"set": {"entry": {"add": ["list-scenarios-have-tests"]}}}}}
+            "stages": {"specify": {"entry": ["list-scenarios-have-tests"]}}}
 
 
-def _project_check_project(tmp_path, capability=True, severity="blocking"):
-    """A scratch project that extends `_project_check_parent`, and its issue directory."""
+def _project_check_project(tmp_path, capability=True, severity="blocking", legacy=False):
+    """A scratch project whose stored generation adds `_project_check_added`, and
+    its issue directory."""
     config = {"schema": 1}
     if capability:
         config["capabilities"] = {CAPABILITY: True}
-    return _team_project(tmp_path, _project_check_parent(severity), config)
+    return _stored_project(tmp_path, _project_check_added(severity), config, legacy=legacy)
 
 
 def test_ee_10_check_runs_a_deterministic_check_a_project_adds(tmp_path):
     root, task_dir = _project_check_project(tmp_path)
-    assert _evaluate_write(root)[0] == 0
     _write_manifest(task_dir, current_phase="plan")
     _write_review(task_dir)
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")
@@ -988,9 +1009,7 @@ def test_ee_10_check_runs_a_deterministic_check_a_project_adds(tmp_path):
 
 
 def test_ee_10_an_issue_assessed_before_the_path_runs_it_beside_the_ready_list(tmp_path):
-    root, task_dir = _project_check_project(tmp_path)
-    assert _evaluate_write(root)[0] == 0
-    _legacy_generation(root, task_dir)
+    root, task_dir = _project_check_project(tmp_path, legacy=True)
     _assessed_before_the_path(task_dir)
     _write_manifest(task_dir, current_phase="plan")
     _write_review(task_dir)

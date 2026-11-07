@@ -138,7 +138,7 @@ def _ids(pairs):
 NEW_SPELLINGS = [
     (["approach", "show"], 0, "Approach:  (risk contained"),
     (["approach", "render"], 0, "<!doctype html>"),
-    (["policy", "show"], 0, "capabilities.entry-exit-evaluation"),
+    (["policy", "show"], 0, "Policy: compass-checks@"),
     (["review-rule", "list", "--changed-files", "cli/compass"], 0, "RR-001"),
     (["issue", "migrate"], 0, "nothing to do"),
     (["issue", "migrate", "--config"], 0, "committed generation 1"),

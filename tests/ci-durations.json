@@ -164,7 +164,6 @@
   "tests/test_g5_trigger.py": 6.67,
   "tests/test_g5_without_configuration.py": 40.14,
   "tests/test_gate_evidence_report.py": 4.08,
-  "tests/test_generation_pin.py": 3.57,
   "tests/test_generation_recovery.py": 979.42,
   "tests/test_generation_resume.py": 19.82,
   "tests/test_generation_store.py": 180.44,

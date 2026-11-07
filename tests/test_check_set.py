@@ -172,14 +172,21 @@ def test_never_waived_is_the_hard_lock_of_the_default():
 
 def test_the_optional_agent_review_is_the_block_the_guide_gives_and_does_not_run(checks):
     """ADR-090 decision 7: the shipped set runs no judged check. The block a project
-    turned the agent review on with is held under `optional`, for the
-    `agent_review` setting, and `resolved` leaves it out."""
+    turned the agent review on with in 8.x is held under `optional`, for the
+    `agent_review` setting the guide gives, and `resolved` leaves it out."""
     text = (ROOT / "docs" / "judged-checks.md").read_text(encoding="utf-8")
-    section = text.split("## An agent review", 1)[1]
+    section = text.split("## An agent review", 1)[1].split("\n## ", 1)[0]
     block = yaml.safe_load(section.split("```yaml", 1)[1].split("```", 1)[0])
+    assert block == {"agent_review": True}
     held = check_set.load()["optional"]["agent_review"]
-    assert held["checks"] == block["checks"]
-    assert held["stages"]["ship"]["entry"] == block["stages"]["ship"]["set"]["entry"]["add"]
+    body = held["checks"]["agent-review"]
+    flat = " ".join(section.split())
+    assert body["statement"] in flat
+    for key in ("reviewers", "inputs"):
+        assert f"`{key}: [{', '.join(body[key])}]`" in flat, key
+    for key in ("severity", "on_skipped"):
+        assert f"`{key}: {body[key]}`" in flat, key
+    assert held["stages"]["ship"]["entry"] == ["agent-review"]
     assert "agent-review" not in checks["checks"]
     assert not any(c.get("kind") == "judged" for c in checks["checks"].values())
     assert "entry" not in checks["stages"]["ship"]

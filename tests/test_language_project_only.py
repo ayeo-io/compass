@@ -22,7 +22,6 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from compass_pkg import layers  # noqa: E402
 from compass_pkg.atomic_io import load_yaml_strict  # noqa: E402
-from parent_fixtures import make_remote  # noqa: E402
 from test_framework_compass_yml import disallowed_keys  # noqa: E402
 
 REAL_GIT = "/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin"
@@ -48,20 +47,18 @@ def test_trc_011(tmp_path):
         assert "language" in str(exc) and PARENT_RULE in str(exc), str(exc)
     else:
         raise AssertionError("a local parent holding language was accepted")
-    # A git parent in the chain: the lint and `policy show` refuse it.
-    base = tmp_path / "remotes"
-    sha = make_remote(base, files={"compass.yml": yaml.safe_dump(
-        {"schema": 1, "language": "en-US"})})
+    # A git parent can no longer hold it: 9.0.0 removed git parents (ADR-094),
+    # so the lint and `policy show` refuse the `extends:` before any parent is
+    # read, and name the code and the fix.
     root = tmp_path / "project"
     (root / ".compass").mkdir(parents=True)
     (root / "compass.yml").write_text(
-        yaml.safe_dump({"schema": 1, "extends": f"github:acme/bank@1.2.0#{sha}"}),
+        yaml.safe_dump({"schema": 1, "extends": f"github:acme/bank@1.2.0#{'a' * 40}"}),
         encoding="utf-8")
-    env = {"COMPASS_PARENT_REMOTE_BASE": str(base)}
-    code, out = _run(root, "policy", "lint", extra_env=env)
-    assert code != 0 and "language" in out and "never in a parent" in out, out
-    code, out = _run(root, "policy", "show", extra_env=env)
-    assert code != 0 and "language" in out and "never in a parent" in out, out
+    code, out = _run(root, "policy", "lint")
+    assert code == 1 and "L-PARENT-REMOVED [project] extends" in out, out
+    code, out = _run(root, "policy", "show")
+    assert code == 2 and "L-PARENT-REMOVED" in out and "delete extends:" in out, out
 
 
 def _top_level_language(preset_dir):

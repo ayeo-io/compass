@@ -19,7 +19,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 
-ADVISORY = "the old word is read until 9.0.0"
 SIZE_NOTICE = "compass: size standard is now medium; the old word is read until 9.0.0."
 
 SCANNED_ROOTS = ("cli/", "docs/", "governance/", "skills/", "commands/", "agents/")
@@ -93,22 +92,6 @@ def _cli(root, *args):
     env["COMPASS_OFFLINE"] = "1"
     return subprocess.run([sys.executable, str(CLI), *args], cwd=str(root),
                           capture_output=True, text=True, env=env, timeout=120)
-
-
-def test_the_lint_advisory_says_8_0_0(tmp_path):
-    """Scenario id: `TRC-015` in release-7-0-0-prep/acceptance-criteria.md."""
-    (tmp_path / ".compass").mkdir()
-    (tmp_path / "compass.yml").write_text(
-        "schema: 1\nextends: compass:default@6\n\n"
-        "rules:\n  extra:\n    kind: advisory\n    hit: {strategy: collect}\n"
-        "    rules:\n      X-1:\n        order: 1\n        when: {size: standard}\n"
-        "        then: {strategy: regression-baseline}\n        rationale: probe\n",
-        encoding="utf-8")
-    subprocess.run(["git", "init", "--quiet", "-b", "main"], cwd=tmp_path, check=True)
-    result = _cli(tmp_path, "policy", "lint")
-    lines = [line for line in result.stderr.splitlines() if line.startswith("advisory:")]
-    assert lines, result.stdout + result.stderr
-    assert all(line.endswith(ADVISORY) for line in lines), lines
 
 
 def test_the_size_notice_says_8_0_0():

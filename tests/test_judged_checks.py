@@ -430,21 +430,32 @@ def _cli_config(reviewers=None, extra_check=None):
 
 
 def _cli_layers(tmp_path, config):
-    """A scratch project for `config` and its issue directory. Its checks and
-    stage lists sit in a git parent. The issue is on the four-stage path
-    (ADR-092), whose specify stage holds what the plan entry list held."""
-    from parent_fixtures import team_parent
-    parent = {"schema": 1, **{key: config[key] for key in ("checks", "stages")}}
-    project = {key: value for key, value in config.items() if key not in parent}
+    """A scratch project for `config` and its issue directory, evaluated. Its
+    settings sit in `compass.yml`; its checks and stage lists sit in a stored
+    generation, because since 9.0.0 `compass.yml` cannot add a check (ADR-094)
+    and a generation stored before 9.0.0 can hold one. The issue is on the
+    four-stage path (ADR-092), whose specify stage holds what the plan entry
+    list held."""
+    import stored_generation
+    catalogue = {key: config[key] for key in ("checks", "stages")}
+    project = {key: value for key, value in config.items() if key not in catalogue}
     (tmp_path / "project").mkdir()
     root, task_dir = _project(tmp_path / "project", compass_yml=dict(project, schema=1))
-    team_parent(tmp_path, parent, root)
+    assert _evaluate_write(root)[0] == 0
+
+    def add(resolved):
+        resolved["checks"].update(copy.deepcopy(catalogue["checks"]))
+        for stage, operation in catalogue["stages"].items():
+            body = resolved["stages"][stage]
+            for side, lists in operation["set"].items():
+                body[side] = list(body.get(side) or []) + lists["add"]
+
+    stored_generation.commit(root, task_dir, add, in_place=True)
     return root, task_dir
 
 
 def _cli_project(tmp_path, reviewers=None, documents=True):
     root, task_dir = _cli_layers(tmp_path, _cli_config(reviewers))
-    assert _evaluate_write(root)[0] == 0
     _write_manifest(task_dir, current_phase="specify")
     if documents:
         _documents(task_dir)
@@ -570,7 +581,6 @@ def test_jc_8_a_check_with_no_inputs_cannot_be_reviewed(tmp_path):
     config = _cli_config()
     config["checks"][CHECK]["inputs"] = []
     root, task_dir = _cli_layers(tmp_path, config)
-    assert _evaluate_write(root)[0] == 0
     code, out, err = _review(root, reviewer="agent")
     assert code == 2 and "declares no inputs" in err
 
@@ -823,10 +833,10 @@ def test_jc_12_an_advisory_judged_check_with_no_record_reports_the_advisory_stat
 
 
 def test_jc_12_policy_lint_does_not_warn_about_a_judged_check_in_a_list(tmp_path):
-    root, task_dir = _cli_layers(tmp_path, _cli_config())
+    """`agent_review: on` lists the judged check `agent-review` at the ship
+    entry (ADR-094); the lint accepts it and warns about nothing."""
+    root, task_dir = _project(tmp_path, compass_yml={"schema": 1, "agent_review": "on"})
     code, out, err = _run(root, "policy", "lint", "--json")
     assert code == 0, out + err
-    assert not [f for f in json.loads(out)["findings"]
-                if f["code"] == "M-LIST-KIND-UNEVALUATED"]
-    assert "judged" in __import__("compass_pkg.policy_lint", fromlist=["x"]).EVALUATED_LIST_KINDS
+    assert json.loads(out)["findings"] == []
 

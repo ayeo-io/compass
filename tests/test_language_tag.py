@@ -220,7 +220,7 @@ def test_trc_010(tmp_path):
     both = _project(tmp_path, "schema: 1\n", old="language: de\n", name="both")
     # The lint reads compass.yml only; the commands that read the settings
     # name the conflict, as they do for any key left in the old file.
-    code, out = _run(both, "approach", "evaluate", "--offline", "--assessment", "risk=low",
+    code, out = _run(both, "approach", "evaluate", "--assessment", "risk=low",
                      "--assessment", "familiarity=high", "--assessment", "size=small",
                      "--assessment", "goal=deliver")
     assert code != 0, out
@@ -234,7 +234,7 @@ def test_trc_067(tmp_path):
     code, out = _lint(bad)
     assert code == 1 and SENTENCE_START in out, out
     sentence = _sentence(out)
-    code, out = _run(bad, "approach", "evaluate", "--offline", "--assessment", "risk=low",
+    code, out = _run(bad, "approach", "evaluate", "--assessment", "risk=low",
                      "--assessment", "familiarity=high", "--assessment", "size=small",
                      "--assessment", "goal=deliver")
     assert code == 2 and sentence in out, out

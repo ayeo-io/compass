@@ -22,25 +22,28 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
+import stored_generation  # noqa: E402
 from test_generation_store import SLUG, _project, _run, _write_manifest  # noqa: E402
 
 CHECK_ID = "arch-rule"
 NOTHING = {"impl": "claim-traces-to-scenario", "params": None}
 
 
-def _compass_yml(severity="blocking", on_skipped="fail", impl="scenarios-have-tests",
-                 params=None, blocking_when=None):
+def _added(severity="blocking", on_skipped="fail", impl="scenarios-have-tests",
+           params=None, blocking_when=None, applies_to=None):
+    """The check and the guardrail gate a stored generation adds: `(checks,
+    gates)`. Since 9.0.0 `compass.yml` cannot add a check (ADR-094), so the
+    tests store them in a generation, as an 8.x project layer could have."""
     check = {"statement": "A project rule.", "kind": "deterministic", "impl": impl,
              "severity": severity, "on_skipped": on_skipped}
     if params is not None:
         check["params"] = params
     if blocking_when is not None:
         check["blocking_when"] = blocking_when
-    return {"schema": 1, "allow_project_commands": True,
-            "checks": {CHECK_ID: check},
-            "gates": {"P1": {"kind": "guardrail", "name": "Project rule",
-                             "statement": "A project rule.", "stage": "verify",
-                             "applies_to": {"ships": True}, "checks": [CHECK_ID]}}}
+    return ({CHECK_ID: check},
+            {"P1": {"kind": "guardrail", "name": "Project rule",
+                    "statement": "A project rule.", "stage": "verify",
+                    "applies_to": applies_to or {"ships": True}, "checks": [CHECK_ID]}})
 
 
 def _committed(tmp_path, **kwargs):
@@ -48,9 +51,17 @@ def _committed(tmp_path, **kwargs):
     runs `scenarios-have-tests`, which fails on the scratch issue (it has no
     scenarios). It is not `command-passes`, because the shipped gate that runs
     project commands would run the same command a second time."""
-    root, task_dir = _project(tmp_path, compass_yml=_compass_yml(**kwargs))
+    root, task_dir = _project(tmp_path, compass_yml={"schema": 1,
+                                                     "allow_project_commands": True})
     code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
     assert code == 0, out + err
+    checks, gates = _added(**kwargs)
+
+    def add(resolved):
+        resolved["checks"].update(checks)
+        resolved["gates"].update(gates)
+
+    stored_generation.commit(root, task_dir, add)
     return root, task_dir
 
 
@@ -240,7 +251,8 @@ def test_cs_8_the_summary_line_counts_an_advisory_failure_apart():
 def test_cs_8_results_file_records_an_advisory_verdict(tmp_path):
     root, task_dir = _committed(tmp_path, severity="advisory")
     _report(root)
-    results = yaml.safe_load((task_dir / "generations" / "1" / "results.yml")
+    held = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))["generation"]
+    results = yaml.safe_load((task_dir / "generations" / str(held) / "results.yml")
                              .read_text(encoding="utf-8"))
     assert results["runs"][CHECK_ID]["verdict"] == "advisory"
 
@@ -280,11 +292,7 @@ def test_cs_10_the_landed_by_relaxation_does_not_apply_on_skipped(tmp_path):
 # --- CS-11: a spike's guardrail check ----------------------------------------------------------
 
 def _spike_report(tmp_path, severity):
-    compass_yml = _compass_yml(severity=severity)
-    compass_yml["gates"]["P1"]["applies_to"] = {"ships": False}
-    root, task_dir = _project(tmp_path, compass_yml=compass_yml)
-    code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
-    assert code == 0, out + err
+    root, task_dir = _committed(tmp_path, severity=severity, applies_to={"ships": False})
     _write_manifest(task_dir, delivery_approach="spike")
     return _report(root)[1]
 

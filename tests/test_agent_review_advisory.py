@@ -3,9 +3,10 @@
 9.0.0 removed the reviewer agent as required evidence (ADR-090, and decision 6
 of ayeo-io/compass-delivery#345). The shipped default declares no judged check,
 so nothing changes for a project that does nothing. A project turns the review
-on by putting the `compass.yml` block that `docs/judged-checks.md` gives under
-"An agent review" into its own file: the judged check `agent-review`, advisory,
-listed at the `ship` entry. Then:
+on with the tighten-only setting `agent_review: on` in `compass.yml`, as
+`docs/judged-checks.md` gives it under "An agent review" (ADR-094). It adds the
+check set's optional entry: the judged check `agent-review`, advisory, listed at
+the `ship` entry. Then:
 
 - with no review record it shows as advisory and does not fail `compass check`;
 - `compass evidence review agent-review --reviewer agent` writes the record, a
@@ -29,7 +30,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from test_generation_store import (SLUG, _evaluate_write, _project, _run,  # noqa: E402
                                    _write_manifest)
 
-PRESET = ROOT / "governance" / "presets" / "default"
+CHECK_SET = ROOT / "governance" / "check-set.yml"
 DOC = ROOT / "docs" / "judged-checks.md"
 CHECK = "agent-review"
 CRITERIA = "# Criteria\n\nGiven a, when b, then c.\n"
@@ -37,7 +38,7 @@ CRITERIA = "# Criteria\n\nGiven a, when b, then c.\n"
 
 def _documented_block():
     """The `compass.yml` block the owning doc gives, parsed, so the test runs
-    exactly what a reader copies."""
+    exactly what a reader copies: `agent_review: on`."""
     text = DOC.read_text(encoding="utf-8")
     assert "## An agent review" in text, "docs/judged-checks.md has no agent review section"
     section = text.split("## An agent review", 1)[1].split("\n## ", 1)[0]
@@ -68,9 +69,10 @@ def _review(root, reviewer, verdict="pass"):
 
 
 def test_the_documented_block_declares_the_agent_review_as_advisory():
-    block = _documented_block()
+    assert _documented_block() == {"agent_review": True}
+    block = yaml.safe_load(CHECK_SET.read_text(encoding="utf-8"))["optional"]["agent_review"]
     body = block["checks"][CHECK]
-    assert block["stages"] == {"ship": {"set": {"entry": {"add": [CHECK]}}}}
+    assert block["stages"] == {"ship": {"entry": [CHECK]}}
     assert body["kind"] == "judged"
     assert body["severity"] == "advisory"
     assert body["reviewers"] == ["agent"]
@@ -79,8 +81,10 @@ def test_the_documented_block_declares_the_agent_review_as_advisory():
 
 
 def test_the_shipped_default_has_no_agent_review():
-    checks = yaml.safe_load((PRESET / "checks.yml").read_text(encoding="utf-8"))["checks"]
-    assert CHECK not in checks
+    from compass_pkg import check_set
+    resolved = check_set.resolved()
+    assert CHECK not in resolved["checks"]
+    assert CHECK not in (resolved["stages"]["ship"].get("entry") or [])
 
 
 def test_a_project_that_does_not_turn_it_on_runs_no_agent_review(tmp_path):

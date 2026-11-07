@@ -72,17 +72,17 @@ Nothing else is touched, so one scenario's record cannot overwrite another's.
 This session runs every stage; Compass starts no stage agent (ADR-090).
 
 - **Assess** - load the `adaptive-routing` skill.
-- **Specify** - load `bdd-specification`; on brownfield work whose
-  behavior is not yet written down, also load `behavior-mapping`. When the
+- **Specify** - load `atdd`; on brownfield work whose behavior is not yet
+  written down, follow its behavior mapping section first. When the
   change needs a design a reviewer can argue with, load `governance-check`
   (how to write the design down and check it against the governance in
   force).
 - **Build** - load `tdd-discipline`; build the units in turn.
 - **Ship** - load `evidence-gates`, and `receiving-code-review`
   when answering a review's comments.
-- **A change to behavior a real client can observe** - also load `atdd`:
-  stage 1 at specify, stage 2 at build and stage 3 at ship. Each ends at
-  that stage's checkpoint, whose request lists the stage's review questions.
+- **A change to behavior a real client can observe** - use the four layers
+  of `atdd`: stage 1 at specify, stage 2 at build and stage 3 at ship. Each
+  ends at that stage's checkpoint, whose request lists its review questions.
   No stage or gate moves. Not for a refactor.
 - **An unexpected test failure while building** - load `systematic-debugging`,
   and after three failed fixes re-assess rather than try a fourth.

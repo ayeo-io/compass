@@ -37,7 +37,7 @@ The computation, in order:
    `refactor`.
 4. **Add what the configuration adds.** Each floor that matches adds its gate
    (`add_gate`) or asks for a skill (`require_skill`, such as
-   `behavior-mapping` from `RP-FLOOR-002`). Each immovable gate and project
+   `atdd` from `RP-FLOOR-002`). Each immovable gate and project
    guardrail is added. The advisory strategies are listed.
 
 The function never reads a configuration's approaches, shapes, stage modes

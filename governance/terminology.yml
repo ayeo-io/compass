@@ -1272,7 +1272,7 @@ banned:
     context: "As the weight of process a delivery approach carries. Agile teams already own this word for a meeting - a standup is a ceremony - so 'pay back the ceremony borrowed for speed' reads as a missed meeting. Ordinary use about an actual ceremony is fine."
   - term: "distillation"
     replacement: behaviour mapping
-    context: "As reverse-engineering existing behaviour into scenarios. To anyone working near AI, distillation means training a smaller model from a larger one, so the wrong reading arrives first. The skill is `behaviour-mapping`, which also matches the `brownfield-mapped` familiarity value it serves."
+    context: "As reverse-engineering existing behaviour into scenarios. To anyone working near AI, distillation means training a smaller model from a larger one, so the wrong reading arrives first. The `atdd` skill teaches it, and the word also matches the `brownfield-mapped` familiarity value it serves."
   - term: "coherence check"
     replacement: consistency check
     context: "As what `compass analyze` did across artifacts before 9.0.0 removed it. Plain English; `coherent` about an argument is fine."

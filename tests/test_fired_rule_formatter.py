@@ -82,7 +82,7 @@ def test_fr_1_a_floor_on_the_path_keeps_only_the_effects_the_path_has(tmp_path):
     manifest = yaml.safe_load(
         (root / ".compass" / "work" / "unmapped" / "manifest.yml").read_text())
     floor = next(f for f in manifest["policy_rules_fired"] if f["id"] == "RP-FLOOR-002")
-    assert floor["changed"] == ["skill 'behavior-mapping' required"], floor
+    assert floor["changed"] == ["skill 'atdd' required"], floor
     verbose = _cli(root, "approach", "evaluate", "--issue", "unmapped", "--verbose")
     assert "forced to thorough" not in verbose, verbose
 

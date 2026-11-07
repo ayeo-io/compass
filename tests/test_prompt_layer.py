@@ -55,12 +55,26 @@ def _description_words(path):
 MERGES = [
     ("traceability", "evidence-gates"),
     ("role-translation", "intent-interview"),
+    ("bdd-specification", "atdd"),
+    ("behavior-mapping", "atdd"),
 ]
 
 #: The merges whose content still lives in the host. 9.0.0 deleted
 #: `role-translation.md` with the role entry points (ADR-093), so that merge
 #: has no content left to find.
 MERGED_CONTENT = [m for m in MERGES if m[0] != "role-translation"]
+
+
+def _merged_part(host_dir, absorbed):
+    """The file that holds an absorbed skill's text: beside the host's
+    SKILL.md, or in its `references/` folder. `bdd-specification` has no file
+    of its own: its text is the scenario sections of `skills/atdd/SKILL.md`, which
+    `test_readable_specs_and_flow.py`, `test_failure_modes.py` and
+    `test_context_budget.py` pin, and two references."""
+    if absorbed == "bdd-specification":
+        return host_dir / "references" / "requirements-review.md"
+    beside = host_dir / f"{absorbed}.md"
+    return beside if beside.is_file() else host_dir / "references" / f"{absorbed}.md"
 
 
 @pytest.mark.parametrize("absorbed,host", MERGES)
@@ -81,15 +95,15 @@ def test_trc_f3_nothing_it_taught_was_deleted(absorbed, host):
     directory is gone - which is why that assertion is not on its own.
     """
     host_dir = ROOT / "skills" / host
-    part = host_dir / f"{absorbed}.md"
+    part = _merged_part(host_dir, absorbed)
     assert part.is_file(), (
-        f"skills/{absorbed}/ was removed but skills/{host}/{absorbed}.md does "
+        f"skills/{absorbed}/ was removed but {part.relative_to(ROOT)} does "
         f"not exist, so its content was deleted rather than merged")
     assert _words(part) > 300, (
-        f"skills/{host}/{absorbed}.md is only {_words(part)} words - too short "
+        f"{part.relative_to(ROOT)} is only {_words(part)} words - too short "
         f"to be what the {absorbed} skill taught")
     skill_md = (host_dir / "SKILL.md").read_text(encoding="utf-8")
-    assert f"{absorbed}.md" in skill_md, (
+    assert part.name in skill_md, (
         f"skills/{host}/SKILL.md does not mention {absorbed}.md, so the merged "
         f"content is on disk and unreachable - which is deletion with extra "
         f"steps")
@@ -117,13 +131,15 @@ def test_trc_f3_the_merge_removes_resident_cost():
     # ...") is not a skill of its own, so the count leaves it out. `atdd`
     # joined later (issue atdd-skill): the four-layer acceptance tests.
     # `worktree-multiagent` left in 9.0.0 (ADR-090), and `plan-authoring`
-    # left with the plan stage (ADR-092).
+    # left with the plan stage (ADR-092). `bdd-specification` and
+    # `behavior-mapping` merged into `atdd` (#360).
     real = sorted(p.parent.name for p in skills
                   if "\ndescription: Renamed to " not in
                   p.read_text(encoding="utf-8"))
-    assert len(real) == 12, (
-        f"expected 12 skills - 15, less the two merges and quick-fix, plus "
-        f"atdd, less worktree-multiagent and plan-authoring - found "
+    assert len(real) == 10, (
+        f"expected 10 skills - 15, less the two merges and quick-fix, plus "
+        f"atdd, less worktree-multiagent and plan-authoring, less the two "
+        f"merged into atdd - found "
         f"{len(real)}: " + ", ".join(real))
 
 

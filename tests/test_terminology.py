@@ -674,7 +674,7 @@ TERM_SURFACE_EXEMPT = {
     # replaced was only needed while the agents were still called *-lens. <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
     # A file that merely CITES the record carries a line-level
     # `vocabulary-scan: allow` marker instead - see
-    # skills/bdd-specification/refinement-chain.md. A file-wide entry would
+    # skills/atdd/references/refinement-chain.md. A file-wide entry would
     # also excuse a future prose use of the word in that file, silently, and
     # the marker is greppable where a path prefix is not.
     "lens": ("architecture/decisions/ADR-004-one-spec-many-lenses.md",),

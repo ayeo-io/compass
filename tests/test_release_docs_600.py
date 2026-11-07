@@ -662,8 +662,9 @@ def test_trc_s7_quickstart_five_minutes_and_portability_match_the_code(tmp_path)
                   (p / "SKILL.md").read_text(encoding="utf-8"))
     # 14 since `atdd` joined (issue atdd-skill). 13 since 9.0.0 removed
     # `worktree-multiagent` (ADR-090). 12 since the plan stage and
-    # `plan-authoring` went with the path (ADR-092).
-    assert len(real) == 12
+    # `plan-authoring` went with the path (ADR-092). 10 since `bdd-specification`
+    # and `behavior-mapping` merged into `atdd` (#360).
+    assert len(real) == 10
     assert skills_listed(_read("docs/portability.md")) == real
 
 

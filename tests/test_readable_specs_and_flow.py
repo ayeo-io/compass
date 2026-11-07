@@ -33,7 +33,9 @@ sys.path.insert(0, str(ROOT / "tests"))
 from archive import archive_root, checkable_root  # noqa: E402
 
 SPEC_TEMPLATE = "templates/acceptance-criteria.md"
-BDD_SKILL = "skills/bdd-specification/SKILL.md"
+# `bdd-specification` merged into `atdd` in 9.0.0 (#360); the scenario
+# sections kept their headings.
+BDD_SKILL = "skills/atdd/SKILL.md"
 SPEC_AUTHOR = "agents/spec-author.md"
 
 
@@ -576,8 +578,13 @@ def test_trc_f2_placeholder_scan_covers_summary_fields():
 
 def test_trc_f3_rationale_for_no_subagent_loop():
     """The reason there is no subagent critic is recorded, so it is a decision
-    on the record rather than an omission someone later 'fixes'."""
-    body = _self_review()
+    on the record rather than an omission someone later 'fixes'. The
+    rationale moved to a reference of the `atdd` skill in 9.0.0 (#360), which
+    the self-review section names."""
+    reference = "skills/atdd/references/requirements-review.md"
+    assert reference in _self_review(), (
+        "The self-review does not name the file that holds the rationale")
+    body = _self_review() + "\n" + _read(reference)
     low = body.lower()
 
     assert re.search(r"25\s*(minutes|min)", low), (

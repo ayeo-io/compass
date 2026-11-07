@@ -123,7 +123,7 @@ rules:
           - size: [medium, large, product]
           - risk: [cross-cutting, critical]
           - labels_any: [auth, payments, personal-data, migrations]
-        then: {require_skill: behavior-mapping}
+        then: {require_skill: atdd}
         rationale: You cannot safely change behaviour you have not first written down.
       RP-REQUIRE-003:
         order: 2
@@ -214,7 +214,7 @@ rules:
           familiarity: brownfield-unmapped
           size: [atomic, small]
           risk: [trivial, contained]
-        then: {strategy: behavior-mapping}
+        then: {strategy: atdd}
         rationale: 'Unmapped ground on a small change - before editing, write a test that pins what the
           code does now where the change touches it, so the change cannot break behaviour nobody wrote
           down. Advice, not a floor: a larger, riskier or domain-labelled unmapped change meets RP-FLOOR-002.'

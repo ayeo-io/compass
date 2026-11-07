@@ -175,7 +175,7 @@ def test_ua_2_quick_fix_start_takes_it_and_records_the_advice(repo):
     lines = r.stdout.splitlines()
     advice = [ln for ln in lines if ln.strip().startswith("advice :")]
     assert advice, r.stdout
-    assert "behavior-mapping" in advice[0] and "RP-ADV-002" in advice[0], advice
+    assert "atdd" in advice[0] and "RP-ADV-002" in advice[0], advice
     assert any("acceptance-criteria.md" in ln for ln in lines if "record :" in ln), r.stdout
     from compass_pkg import path_stages
     import yaml

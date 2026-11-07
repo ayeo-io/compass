@@ -60,8 +60,8 @@ why and how to clear it.
 
 ### Specify
 
-- Load `bdd-specification`. On `brownfield-unmapped` code, load
-  `behavior-mapping` and pin what the code does now before the change.
+- Load `atdd`. On `brownfield-unmapped` code, first pin what the code does
+  now (its behavior mapping section).
 - When the labels include `public-api`, or the change touches a service in
   `architecture/relations.md` or a `lens_trigger_tag` in
   `architecture/invariants.yml`, take the architect's perspective first, and

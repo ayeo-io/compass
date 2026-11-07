@@ -12,7 +12,16 @@ a compatibility contract or a stored generation still needs each (VD-040):
   archive sample through `compass issue migrate`);
 - `check_id` and `skill`: a stored generation and a copied 5.x governance are
   read through `word_map.map_layer`; 73 archived generations hold the old
-  check id and skill name;
+  check id and skill name. 9.0.0 merged `behavior-mapping` and
+  `bdd-specification` into `atdd` (#360): `bdd-specification` maps to `atdd`
+  until 10.0.0, one major later, as a rename asks (ADR-024). Neither
+  spelling of `behavior-mapping` maps to `atdd`, and the British row keeps
+  its 7.0.0 target: a closed archived issue loads no skill, and `compass
+  migrate` writes a new generation from the check set, which names `atdd`,
+  for every open 8.x issue. So no session that needs the skill reads a
+  stored generation that names either spelling. Contract 1 records the
+  8.0.4 and 5.6.0 copies as they routed, so the skill name each holds stays
+  (VD-042);
 - `state_key` and `refusal_code`: contract 5 builds its project with
   `initialised` in the settings (`project_settings.state` reads it) and
   reads its recorded refusal code through `current`;
@@ -20,8 +29,9 @@ a compatibility contract or a stored generation still needs each (VD-040):
   accepted vocabulary decision (ADR-041) defines; the glossary marks it
   (`terminology_cmd`). #359 step 12 decides the words.
 
-Each row still says `removed_in: 9.0.0`, so `removal_problems` lists it until
-the owner answers the contract questions of ADR-098 and the row goes.
+Every row but `bdd-specification` says `removed_in: 9.0.0`, so
+`removal_problems` lists it until the owner answers the contract questions of
+ADR-098 and the row goes.
 
 `cli/aliases.yml` stays empty: these are values and keys, not CLI spellings.
 
@@ -46,14 +56,15 @@ LABELS = {
 }
 
 
-def _row(new):
-    return {"new": new, "removed_in": "9.0.0"}
+def _row(new, removed_in="9.0.0"):
+    return {"new": new, "removed_in": removed_in}
 
 
 _FALLBACK = {
     "reassessment_kind": {"judgement": _row("judgment")},  # us-english-scan: allow - old name read until 9.0.0
     "check_id": {"dor-behaviour-is-gwt": _row("dor-behavior-is-gwt")},  # us-english-scan: allow - old name read until 9.0.0
-    "skill": {"behaviour-mapping": _row("behavior-mapping")},  # us-english-scan: allow - old name read until 9.0.0
+    "skill": {"behaviour-mapping": _row("behavior-mapping"),  # us-english-scan: allow - old name read until 9.0.0
+              "bdd-specification": _row("atdd", "10.0.0")},
     "refusal_code": {"not-initialised": _row("not-initialized")},  # us-english-scan: allow - old name read until 9.0.0
     "state_key": {"initialised": _row("initialized")},  # us-english-scan: allow - old name read until 9.0.0
     "term": {"catalogue": _row("catalog")},  # us-english-scan: allow - old name read until 9.0.0
@@ -102,13 +113,13 @@ def current(kind, value):
     return value
 
 
-def _notice(kind, old, new):
+def _notice(kind, old, new, removed_in="9.0.0"):
     key = (kind, old)
     if key in _SEEN:
         return
     _SEEN.add(key)
     print(f"compass: {LABELS.get(kind, kind)} {old} is now {new}; "
-          f"the old word is read until 9.0.0.", file=sys.stderr)
+          f"the old word is read until {removed_in}.", file=sys.stderr)
 
 
 def pick(mapping, kind, new, default=None):
@@ -118,7 +129,7 @@ def pick(mapping, kind, new, default=None):
         return mapping[new]
     for row in rows(kind):
         if row["new"] == new and row["old"] in mapping:
-            _notice(kind, row["old"], new)
+            _notice(kind, row["old"], new, row["removed_in"])
             return mapping[row["old"]]
     return default
 

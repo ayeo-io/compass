@@ -136,8 +136,13 @@ config_keys:
 # {new, removed_in}. A typed old name in this table is no longer read
 # (ADR-098); the rows left are read from stored files only, and
 # `cli/compass_pkg/old_names.py` says which reader keeps each. Every row ends
-# at 9.0.0: `old_names.removal_problems` lists each row once the package
-# version is 9.0.0 or later. `cli/aliases.yml` stays empty: these are values
+# at 9.0.0, except `bdd-specification`, which 9.0.0 merged into `atdd` and
+# which ends at 10.0.0: `old_names.removal_problems` lists each row once the
+# package version reaches its `removed_in`. `behavior-mapping`, also merged
+# into `atdd`, is not mapped to it under either spelling: closed archived
+# issues load no skill, and `compass migrate` writes each open 8.x issue a
+# new generation from the check set, which names `atdd`. Contract 1 records
+# the 8.0.4 and 5.6.0 copies as they routed, so the name each holds stays. `cli/aliases.yml` stays empty: these are values
 # and keys, not CLI spellings.
 old_names:
   reassessment_kind:
@@ -146,6 +151,7 @@ old_names:
     dor-behaviour-is-gwt: {new: dor-behavior-is-gwt, removed_in: 9.0.0}
   skill:
     behaviour-mapping: {new: behavior-mapping, removed_in: 9.0.0}
+    bdd-specification: {new: atdd, removed_in: 10.0.0}
   refusal_code:
     not-initialised: {new: not-initialized, removed_in: 9.0.0}
   state_key:

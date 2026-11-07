@@ -40,7 +40,9 @@ SKILLS = ROOT / "skills"
 ATDD = SKILLS / "atdd" / "SKILL.md"
 STAGE_REVIEWS = SKILLS / "atdd" / "references" / "stage-reviews.md"
 FIXTURES = ROOT / "tests" / "fixtures" / "atdd-strategy"
-CHAIN_SKILLS = ("atdd", "bdd-specification", "tdd-discipline")
+# `bdd-specification` merged into `atdd` in 9.0.0 (#360), so two skills
+# describe the chain.
+CHAIN_SKILLS = ("atdd", "tdd-discipline")
 
 sys.path.insert(0, str(ROOT / "tests"))
 import test_terminology as terminology  # noqa: E402
@@ -103,7 +105,10 @@ def test_trc_002_the_map_loads_atdd_at_specify_build_and_ship():
     runtime = _section(_text(SKILLS / "compass-runtime" / "SKILL.md"),
                        "Which skill, per stage")
     bullets = [_flat(b) for b in re.split(r"\n(?=- )", runtime)]
-    [atdd] = [b for b in bullets if "`atdd`" in b]
+    # The specify bullet names `atdd` too, for its scenario and behavior
+    # mapping sections (#360); the bullet for the four layers is the one
+    # that names the three stages.
+    [atdd] = [b for b in bullets if "`atdd`" in b and "stage 1 at specify" in b]
     for stage in ("stage 1 at specify", "stage 2 at build",
                   "stage 3 at ship"):
         assert stage in atdd, f"the map does not load atdd for {stage}"
@@ -206,7 +211,7 @@ def test_trc_004_the_pilot_spec_extracts_to_its_feature(tmp_path):
 # --- Scenario `TRC-005` ---
 
 @pytest.mark.parametrize("skill", CHAIN_SKILLS)
-def test_trc_005_three_skills_describe_one_chain(skill):
+def test_trc_005_the_skills_describe_one_chain(skill):
     text = _flat(_text(SKILLS / skill / "SKILL.md"))
     assert "scenario, dsl, driver, unit tests" in text, (
         f"{skill} does not describe the chain in order")

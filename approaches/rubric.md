@@ -41,7 +41,7 @@ be `critical`.
 |---|---|
 | `greenfield` | Net-new code with no existing behavior to preserve. |
 | `brownfield-mapped` | Existing code, and its current behavior is already captured in scenarios (or trivially readable). |
-| `brownfield-unmapped` | Existing code whose behavior is *not* written down. A floor forces `behavior-mapping` here - you cannot safely change what you have not first described. On an atomic or small change with trivial or contained risk and no domain label it is advice instead (`RP-ADV-002`). |
+| `brownfield-unmapped` | Existing code whose behavior is *not* written down. A floor forces behavior mapping (the `atdd` skill) here - you cannot safely change what you have not first described. On an atomic or small change with trivial or contained risk and no domain label it is advice instead (`RP-ADV-002`). |
 
 ### Size - *how much work is this, honestly?*
 
@@ -110,7 +110,7 @@ adds what the labels and the risk add, adds each `add_gate` floor and
 project guardrail, and writes the result to the manifest. Same assessment
 plus same configuration gives the same evidence, every time. Familiarity
 does not change the evidence: `brownfield-unmapped` asks for the
-`behavior-mapping` skill instead (`RP-FLOOR-002`, or `RP-ADV-002` as advice
+`atdd` skill's behavior mapping instead (`RP-FLOOR-002`, or `RP-ADV-002` as advice
 on a small change).
 
 `approaches/composition-reference.md` has the detail, for tuning the

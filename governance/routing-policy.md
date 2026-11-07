@@ -105,8 +105,8 @@ The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
 
 - **floors** - `RP-FLOOR-002` brownfield-unmapped familiarity at medium size
   or more, with cross-cutting or critical risk, or with one of the four domain
-  labels → the `behavior-mapping` skill is required (below that, `RP-ADV-002`
-  gives the skill as advice); `RP-REQUIRE-003` cross-cutting or critical risk
+  labels → the `atdd` skill is required, for its behavior mapping (below
+  that, `RP-ADV-002` gives the skill as advice); `RP-REQUIRE-003` cross-cutting or critical risk
   and `RP-REQUIRE-004` one of the four domain labels → the gate
   `verify.architecture`. `RP-FLOOR-001` and `RP-FLOOR-003`, whose only effect
   was a minimum approach, are gone since 9.0.0 (ADR-092).
@@ -448,7 +448,7 @@ when the project turns the strategy off, or when assess is told
 
 The configuration adds only what a project can still set for a new issue:
 the gate of each floor that matches (`add_gate`) and each immovable gate, the
-skill a floor asks for (`require_skill`, such as `behavior-mapping` from
+skill a floor asks for (`require_skill`, such as `atdd` from
 `RP-FLOOR-002`) and the advisory strategies. A gate that a token stands for
 joins as that token, so `gates` stays derived from `evidence_required`. The
 function never reads the configuration's approaches, shapes, stage modes or

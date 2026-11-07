@@ -251,9 +251,9 @@ def test_contract_states_id_and_header_rule():
     in every project, where the plugin's `skills/` folder is not on disk."""
     text = _contract_flat()
     assert "**Settle edge cases before scenarios**" in text
-    assert "(`bdd-specification` skill)" in text
-    assert "skills/bdd-specification/SKILL.md" not in text
-    skill = _flat((ROOT / "skills" / "bdd-specification" / "SKILL.md")
+    assert "(`atdd` skill)" in text
+    assert "skills/atdd/SKILL.md" not in text
+    skill = _flat((ROOT / "skills" / "atdd" / "SKILL.md")
                   .read_text(encoding="utf-8"))
     assert "id or header field" in skill
     assert "missing, empty and whitespace cases" in skill
@@ -297,8 +297,8 @@ def test_contract_target_warns_and_does_not_fail():
 def test_rule_four_pointer_keeps_heading():
     text = _contract_flat()
     assert "**Settle edge cases before scenarios**" in text
-    assert "(`bdd-specification` skill)" in text
-    body = (ROOT / "skills" / "bdd-specification" / "SKILL.md").read_text(
+    assert "(`atdd` skill)" in text
+    body = (ROOT / "skills" / "atdd" / "SKILL.md").read_text(
         encoding="utf-8")
     assert "Reproduce a reported bug on current code" in _flat(body)
     assert len(body.splitlines()) <= 200

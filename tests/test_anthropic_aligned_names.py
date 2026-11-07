@@ -53,6 +53,9 @@ RENAMED_SKILLS = {
     # British name went in 9.0.0 (#358), so the check follows it here.
     "blueprint-distillation": "behavior-mapping",
     "worktree-swarm": "worktree-multiagent",
+    # Both merged into `atdd` in 9.0.0 (#360).
+    "bdd-specification": "atdd",
+    "behavior-mapping": "atdd",
 }
 # Retired command name -> replacement. The stub was removed at 4.0.0; the
 # mapping stays so this file can still assert nothing points at the old name.
@@ -118,8 +121,9 @@ def test_the_retired_command_name_no_longer_resolves():
 def test_the_renamed_skills_exist_under_their_new_names():
     """`TRC-C6`."""
     for old, new in RENAMED_SKILLS.items():
-        # worktree-multiagent itself was removed in 9.0.0 (ADR-090).
-        if new != "worktree-multiagent":
+        # worktree-multiagent itself was removed in 9.0.0 (ADR-090), and
+        # behavior-mapping merged into atdd (#360).
+        if new not in ("worktree-multiagent", "behavior-mapping"):
             assert (SKILLS / new / "SKILL.md").is_file(), f"{new} missing"
         assert not (SKILLS / old).exists(), f"{old} still present"
 
@@ -144,6 +148,15 @@ def test_no_live_surface_points_at_a_retired_name():
         # The upgrade table names the removed command beside its replacement,
         # because a reader whose script broke has to find their spelling here.
         REPO_ROOT / "docs" / "releasing.md": {"roundtable"},
+        # The 7.0.0 guide records the rename to `behavior-mapping`, and the
+        # 9.0.0 guide tells a project that names either merged skill in its
+        # own text to name `atdd` instead.
+        REPO_ROOT / "docs" / "upgrade-7-0-0.md": {"behavior-mapping"},
+        REPO_ROOT / "docs" / "upgrade-9-0-0.md": {"bdd-specification", "behavior-mapping"},
+        # The skill that absorbed both says which skills it replaced, and its
+        # behavior mapping procedure is the reference file of that name.
+        REPO_ROOT / "skills" / "atdd" / "SKILL.md": {"bdd-specification",
+                                                     "behavior-mapping"},
         # Generated from governance/terminology.yml. Hand-editing a derived
         # page is how a derivation silently stops matching its source -
         # terminology.yml records the check that compares this page with its

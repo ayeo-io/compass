@@ -179,6 +179,10 @@ It refuses one issue, and lists it under "refused", when the issue has a 1.x man
 | `/compass:intent`, `/compass:position`, `/compass:design`, `/compass:consult` | nothing: the four role entry points have no replacement | ADR-093 |
 <!-- /compass:upgrade-slash-table -->
 
+## Merged skills
+
+`compass:bdd-specification` and `compass:behavior-mapping` are now `compass:atdd`. The `atdd` skill holds the scenario rules, behavior mapping and the four-layer acceptance tests. A project that names either old skill in its `CLAUDE.md` or its lessons must change the name by hand. The check set's rules `RP-FLOOR-002` and `RP-ADV-002` name `atdd`.
+
 ## Removed verbs and flags
 
 ### What breaks

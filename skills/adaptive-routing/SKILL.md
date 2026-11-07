@@ -57,7 +57,7 @@ treat a project without a `compass.yml` as missing a prerequisite.
   behavior is not written down as scenarios. It does not change the
   evidence. At medium size or more, with cross-cutting or critical risk, or
   with a domain label, it triggers a floor (`RP-FLOOR-002`):
-  `behavior-mapping` must run at specify. Do not skip it. On
+  behavior mapping (the `atdd` skill) must run at specify. Do not skip it. On
   an atomic or small change with trivial or contained risk and no domain
   label, the skill is advice (`RP-ADV-002`).
 - "Trivially readable" greenfield or brownfield can be treated as mapped, but

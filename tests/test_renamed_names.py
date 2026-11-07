@@ -162,7 +162,11 @@ def test_trc_044():
 # --- The skill and the check id ----------------------------------------------
 
 OLD_SKILL = "behav" + "iour-mapping"
-NEW_SKILL = "behavior-mapping"
+# `behavior-mapping` merged into `atdd` in 9.0.0 (#360), so neither old name
+# is a skill folder. The British row keeps its 7.0.0 target, because contract
+# 1 records the 5.6.0 copy as it routed (VD-042).
+NEW_SKILL = "atdd"
+MERGED_SKILL = "behavior-mapping"
 OLD_CHECK = "dor-behav" + "iour-is-gwt"
 NEW_CHECK = "dor-behavior-is-gwt"
 
@@ -174,6 +178,7 @@ def test_trc_045():
     # words on every request. `old_names.py` still maps a project's old name
     # to the new one until #359.
     assert not (ROOT / "skills" / OLD_SKILL).exists()
+    assert not (ROOT / "skills" / MERGED_SKILL).exists()
 
     # The stage map, the approaches and the check set name the new skill.
     # The define command and the 8.x approach files went with the path
@@ -184,6 +189,7 @@ def test_trc_045():
     for rel in named:
         text = (ROOT / rel).read_text(encoding="utf-8")
         assert NEW_SKILL in text and OLD_SKILL not in text, rel
+        assert MERGED_SKILL not in text and "bdd-specification" not in text, rel
     # The view generated from the 7.0.0 preset, frozen since 9.0.0 (ADR-094).
     assert OLD_SKILL not in (ROOT / "governance/routing-policy.yml").read_text(encoding="utf-8")
     for folder in ("commands", "agents", "approaches"):
@@ -255,7 +261,8 @@ def test_trc_046():
             assert OLD_SKILL not in shown, (place, shown)
     assert (ROOT / "skills" / NEW_SKILL / "SKILL.md").is_file()
 
-    # A stored generation that names the old skill is read with the new name.
+    # A stored generation that names the old skill is read with its 7.0.0
+    # name, which contract 1 records (VD-042).
     for prefix in ("compass:", ""):
         def old_skill(resolved, prefix=prefix):
             resolved["rules"]["floors"]["rules"]["RP-FLOOR-002"]["then"] = {
@@ -263,7 +270,7 @@ def test_trc_046():
         with tempfile.TemporaryDirectory() as raw:
             config = _stored_view(Path(raw), old_skill).config
         assert config["rules"]["floors"]["rules"]["RP-FLOOR-002"]["then"] == {
-            "require_skill": NEW_SKILL}, prefix
+            "require_skill": MERGED_SKILL}, prefix
         assert OLD_SKILL not in str(config), prefix
 
     # A project preset that extends the default: a parent that names the old skill.
@@ -271,8 +278,22 @@ def test_trc_046():
     layer = {"rules": {"floors": {"set": {"rules": {"set": {"R-1": {
         "then": {"require_skill": f"compass:{OLD_SKILL}"}}}}}}}}
     mapped, changes = word_map.map_layer(layer)
-    assert NEW_SKILL in str(mapped) and OLD_SKILL not in str(mapped), mapped
-    assert changes and changes[0][1:] == (f"compass:{OLD_SKILL}", NEW_SKILL), changes
+    assert MERGED_SKILL in str(mapped) and OLD_SKILL not in str(mapped), mapped
+    assert changes and changes[0][1:] == (f"compass:{OLD_SKILL}", MERGED_SKILL), changes
+
+    # `bdd-specification`, merged into `atdd` (#360), maps to it until 10.0.0.
+    layer = {"rules": {"advisory": {"rules": {"RP-ADV-002": {
+        "then": {"strategy": "bdd-specification"}}}}}}
+    mapped, changes = word_map.map_layer(layer)
+    assert mapped["rules"]["advisory"]["rules"]["RP-ADV-002"]["then"] == {
+        "strategy": NEW_SKILL}, mapped
+    assert changes and changes[0][1:] == ("bdd-specification", NEW_SKILL), changes
+    # `behavior-mapping` has no row (VD-042): a stored generation keeps the
+    # name, as contract 1 records the 8.0.4 copy.
+    layer = {"rules": {"advisory": {"rules": {"RP-ADV-002": {
+        "then": {"strategy": MERGED_SKILL}}}}}}
+    mapped, changes = word_map.map_layer(layer)
+    assert mapped == layer and changes == [], (mapped, changes)
 
 
 def _u5_overlay(check_id: str, severity: str = "advisory", waiver: bool = False) -> str:
@@ -549,17 +570,23 @@ def test_trc_056():
     from compass_pkg import aliases, core, old_names
 
     found = old_names.rows()
-    assert len(found) == 6, found
+    assert len(found) == 7, found
     assert {r["kind"] for r in found} == {
         "reassessment_kind", "check_id", "skill", "refusal_code", "state_key", "term"}, found
-    assert {r["removed_in"] for r in found} == {"9.0.0"}, found
+    # `bdd-specification`, merged into `atdd` (#360), is read until 10.0.0;
+    # every other row ends at 9.0.0. `behavior-mapping` has no row (VD-042).
+    assert {(r["old"], r["removed_in"]) for r in found
+            if r["removed_in"] != "9.0.0"} == {("bdd-specification", "10.0.0")}, found
+    assert not any(r["old"] == MERGED_SKILL for r in found), found
     assert aliases.load_table()["aliases"] == []
 
-    # The table ends at 9.0.0: a planted version lists every row, 8.x none.
+    # The table ends at 9.0.0 but for `bdd-specification`: a planted version
+    # lists each row that ends at or before it, 8.x none.
     assert len(old_names.removal_problems("9.0.0")) == 6
     assert old_names.removal_problems("8.0.0") == []
     assert old_names.removal_problems("8.1.0") == []
     assert len(old_names.removal_problems("9.1.0")) == 6
+    assert len(old_names.removal_problems("10.0.0")) == 7
     assert old_names.removal_problems("7.0.0") == []
     assert old_names.removal_problems("7.10.0") == []    # tuples, not strings
 
@@ -579,7 +606,7 @@ def test_trc_056_the_table_check_fails_for_a_row_that_is_missing(monkeypatch):
     planted = {k: dict(v) for k, v in old_names._FALLBACK.items()}
     planted["term"] = {}
     monkeypatch.setattr(old_names, "_READ", lambda name, fallback: planted)
-    assert len(old_names.rows()) == 5
+    assert len(old_names.rows()) == 6
     assert old_names.removal_problems("9.0.0") and len(old_names.removal_problems("9.0.0")) == 5
 
 
@@ -615,18 +642,31 @@ DELETED_IN_9_0_0 = {
 }
 
 
+#: The row the reader added when 9.0.0 merged `bdd-specification` into `atdd`
+#: (#360). The 7.0.0 guide does not list it: it is a record of 7.0.0.
+SKILL_ROWS_SINCE_9_0_0 = {("skill", "bdd-specification", NEW_SKILL, "10.0.0")}
+
+
+def _comparable(guide_rows: set) -> set:
+    """The guide's rows the reader must still hold as written."""
+    return guide_rows - DELETED_IN_9_0_0
+
+
 def test_trc_070():
     text = GUIDE.read_text(encoding="utf-8")
     guide, reader = _guide_rows(text), _reader_rows()
-    assert guide - DELETED_IN_9_0_0 == reader, (sorted(guide - reader), sorted(reader - guide))
+    assert SKILL_ROWS_SINCE_9_0_0 <= reader
+    reader = reader - SKILL_ROWS_SINCE_9_0_0
+    assert _comparable(guide) == reader, (sorted(_comparable(guide) - reader),
+                                          sorted(reader - _comparable(guide)))
     assert DELETED_IN_9_0_0 <= guide and not DELETED_IN_9_0_0 & reader
     assert len(guide) == 11
 
     # The comparison fails for a planted extra row, a missing row and a changed new name.
     extra = text.replace("## Renamed names\n", "## Renamed names\n\n| term | `frob` | `frab` | 9.0.0 |\n", 1)
-    assert _guide_rows(extra) - DELETED_IN_9_0_0 != reader
+    assert _comparable(_guide_rows(extra)) != reader
     gone = "\n".join(ln for ln in text.splitlines() if "| `catalogue` |" not in ln)
-    assert _guide_rows(gone) - DELETED_IN_9_0_0 != reader
+    assert _comparable(_guide_rows(gone)) != reader
     first = sorted(reader)[0]
     changed = text.replace(f"`{first[1]}` | `{first[2]}`", f"`{first[1]}` | `{first[2]}x`", 1)
-    assert _guide_rows(changed) - DELETED_IN_9_0_0 != reader
+    assert _comparable(_guide_rows(changed)) != reader

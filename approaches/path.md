@@ -24,8 +24,8 @@ The gate ids keep their `verify.` prefix, because every archived manifest
 and evidence record names them. They are passed at Ship.
 
 On brownfield code whose behavior is not written down
-(`familiarity: brownfield-unmapped`), specify starts with the
-`behavior-mapping` skill: it writes the baseline scenarios before any new
+(`familiarity: brownfield-unmapped`), specify starts with behavior mapping,
+from the `atdd` skill: it writes the baseline scenarios before any new
 one. A floor asks for it (`RP-FLOOR-002`), or gives it as advice on a small
 change (`RP-ADV-002`).
 

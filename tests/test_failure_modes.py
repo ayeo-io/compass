@@ -40,7 +40,7 @@ def _descoped(root: Path) -> list:
 
 def test_specify_asks_the_author_with_two_worked_examples():
     """FM-A. The skill holds the two worked examples."""
-    text = (ROOT / "skills" / "bdd-specification" / "SKILL.md").read_text(encoding="utf-8")
+    text = (ROOT / "skills" / "atdd" / "SKILL.md").read_text(encoding="utf-8")
     assert "input classes and failure modes" in text
     assert "compass scenario descope" in text
     assert len(re.findall(r"^\s*-?\s*\*\*Worked example", text, re.M)) >= 2

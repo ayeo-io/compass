@@ -1,9 +1,12 @@
-"""bdd-specification teaches the example-first refinement chain (TRC-D1).
+"""The `atdd` skill teaches the example-first refinement chain (TRC-D1).
 User stories remain refused as a per-role spec format (TRC-D2).
+
+`bdd-specification` merged into `atdd` in 9.0.0 (#360): the chain is in
+`skills/atdd/references/refinement-chain.md`, which `SKILL.md` names.
 
 Serves: INT-8 (D1), INT-8+INT-11 (D2)
 Spec:
-  - skills/bdd-specification/SKILL.md must have a refinement-chain section
+  - skills/atdd/SKILL.md and its references must have a refinement-chain section
   - the chain: vague idea → concrete examples → acceptance criteria → at least one executable specification each
   - recommends specs that start with "should" and a ubiquitous language
   - must refuse user stories as a per-role spec format (TRC-D2)
@@ -12,21 +15,28 @@ Spec:
 from __future__ import annotations
 from pathlib import Path
 
-SKILL_MD = Path(__file__).parent.parent / "skills" / "bdd-specification" / "SKILL.md"
+SKILL_MD = Path(__file__).parent.parent / "skills" / "atdd" / "SKILL.md"
 
 def _skill_text(skill_name):
-    """Reads every file in the skill's directory. Long skills are split into
-    parts that load on demand, so a guard that reads only SKILL.md reports
-    moved content as missing."""
+    """Reads every file in the skill's directory and its `references/`. Long
+    skills are split into parts that load on demand, so a guard that reads
+    only SKILL.md reports moved content as missing."""
     import pathlib as _p
     d = _p.Path(__file__).parent.parent / "skills" / skill_name
     return "\n".join(sorted(
-        p.read_text(encoding="utf-8") for p in d.glob("*.md")))
+        p.read_text(encoding="utf-8")
+        for p in [*d.glob("*.md"), *d.glob("references/*.md")]))
 
+
+
+def test_skill_names_the_refinement_chain_file():
+    """The chain is in a reference, so SKILL.md must name it or a session
+    never reads it."""
+    assert "references/refinement-chain.md" in SKILL_MD.read_text(encoding="utf-8")
 
 
 def _read_skill() -> str:
-    return _skill_text("bdd-specification")
+    return _skill_text("atdd")
 
 
 # --- `TRC-D1` tests ---
@@ -36,7 +46,7 @@ def test_bdd_spec_has_refinement_chain_section():
     text = _read_skill()
     text_lower = text.lower()
     assert "refinement" in text_lower or "example-first" in text_lower or "refine" in text_lower, (
-        "skills/bdd-specification/SKILL.md must contain an example-first refinement chain section. "
+        "skills/atdd/ must contain an example-first refinement chain section. "
         f"Headings: {[l for l in text.splitlines() if l.startswith('#')]}"
     )
 
@@ -73,7 +83,7 @@ def test_bdd_spec_recommends_should_prefix():
     text = _read_skill()
     text_lower = text.lower()
     assert '"should"' in text_lower or "'should'" in text_lower or "start with" in text_lower or "prefix" in text_lower, (
-        "The bdd-specification skill should recommend using 'should' as a scenario prefix/convention. "
+        "The atdd skill should recommend using 'should' as a scenario prefix/convention. "
         "Look for mentions of 'should' as a naming convention."
     )
 
@@ -83,7 +93,7 @@ def test_bdd_spec_mentions_ubiquitous_language():
     text = _read_skill()
     text_lower = text.lower()
     assert "ubiquitous" in text_lower or "ubiquitous language" in text_lower, (
-        "The bdd-specification skill should mention ubiquitous language as a discipline."
+        "The atdd skill should mention ubiquitous language as a discipline."
     )
 
 
@@ -94,7 +104,7 @@ def test_bdd_spec_refuses_user_stories_as_spec_format():
     text = _read_skill()
     text_lower = text.lower()
     assert "user stor" in text_lower, (
-        "bdd-specification/SKILL.md must mention user stories (to refuse them as a per-role spec format). "
+        "skills/atdd/ must mention user stories (to refuse them as a per-role spec format). "
         "The refusal should be explicit."
     )
     # The skill must contain a refusal - words like "refused", "not", "reject"
@@ -109,7 +119,7 @@ def test_bdd_spec_refuses_user_stories_as_spec_format():
 
     context_lower = " ".join(user_story_context).lower()
     assert any(word in context_lower for word in ["refus", "not a", "stays", "remain", "adr-004", "reject"]), (
-        "The mention of user stories in bdd-specification must be in the context of refusing them. "
+        "The mention of user stories in skills/atdd/ must be in the context of refusing them. "
         f"Context found: {user_story_context}"
     )
 
@@ -120,5 +130,5 @@ def test_bdd_spec_shared_artifact_stays_bdd():
     text = _read_skill()
     text_lower = text.lower()
     assert "acceptance-criteria.md" in text_lower, (
-        "bdd-specification must confirm acceptance-criteria.md stays as the shared BDD artifact."
+        "skills/atdd/ must confirm acceptance-criteria.md stays as the shared BDD artifact."
     )

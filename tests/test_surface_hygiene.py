@@ -20,7 +20,8 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
-BDD_SKILL = SKILLS / "bdd-specification" / "SKILL.md"
+# `bdd-specification` merged into `atdd` in 9.0.0 (#360).
+BDD_SKILL = SKILLS / "atdd" / "SKILL.md"
 # The refine command went with the four-stage path (ADR-092): the specify stage
 # of the go command now states the split from its side.
 PATH_CMD = ROOT / "commands" / "go.md"
@@ -124,7 +125,7 @@ def test_trc_d3_bdd_skill_documents_the_split():
 
     for scan in FOUR_SCANS:
         assert scan in text, (
-            f"the bdd-specification skill does not name the {scan!r} scan"
+            f"the atdd skill does not name the {scan!r} scan"
         )
 
     # it must say what the requirements review does that the self-review does not
@@ -187,10 +188,11 @@ def test_trc_f7_skill_count_unchanged_on_net():
 
     # No skill appears or disappears without an edit to this list.
     expected = {
-        "adaptive-routing", "bdd-specification", "behavior-mapping",
-        # The stub under the old British name of behavior-mapping went in
-        # 9.0.0 (#358): its description cost words on every request, and
-        # cli/compass_pkg/old_names.py still maps the old name until #359.
+        "adaptive-routing",
+        # `bdd-specification` and `behavior-mapping` merged into `atdd` in
+        # 9.0.0 (#360): their text is its scenario and behavior mapping
+        # sections and references, and cli/compass_pkg/old_names.py maps
+        # both old names to it.
         "compass-runtime", "evidence-gates", "flow-management",
         "governance-check",
         "tdd-discipline",

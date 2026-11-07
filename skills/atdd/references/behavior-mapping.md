@@ -1,16 +1,6 @@
----
-name: behavior-mapping
-description: Capturing existing behavior as scenarios before changing it. Load at specify on brownfield work.
----
+# Behavior mapping in full
 
-# Behavior mapping
-
-The rule behind this skill is simple: **you cannot safely change behavior you
-have not first written down.** On `brownfield-unmapped` familiarity the routing
-policy makes this a floor (`RP-FLOOR-002`) - behavior mapping runs at
-specify, before any new scenario, before any change. On an atomic or small change with trivial or
-contained risk and no domain label it is advice (`RP-ADV-002`): pin what the code does now where
-the change touches it with a test. This skill is how you do it well.
+The procedure behind the section "Behavior mapping" of `skills/atdd/SKILL.md`. That section holds the rule, the two rules of the check set that fire it (`RP-FLOOR-002` and `RP-ADV-002`), and how baseline and target scenarios stay apart.
 
 ## What behavior mapping produces
 
@@ -45,7 +35,7 @@ These go into `acceptance-criteria.md` marked as baseline scenarios. They become
    you the truth. A characterization test that documents a bug is still
    correct behavior mapping - it captures reality.
 5. **Write the baseline scenarios.** One behavior per scenario, same quality
-   bar as any BDD scenario (see `bdd-specification`). Name them as the current
+   bar as any BDD scenario (see `skills/atdd/SKILL.md`). Name them as the current
    outcome. Mark them baseline.
 6. **Flag the surprises.** Behavior mapping almost always uncovers behavior nobody
    knew about - undocumented edge cases, latent bugs, dead branches. Record each
@@ -53,19 +43,6 @@ These go into `acceptance-criteria.md` marked as baseline scenarios. They become
    must preserve, or a bug to
    fix as part of this change? That decision is made deliberately, not by
    accident of what the new code happens to do.
-
-## Behavior-mapped vs. desired - keep them separate
-
-The most important discipline here. `acceptance-criteria.md` will end up holding two
-kinds of scenario:
-
-- **Baseline** - what the code does now. The regression baseline.
-- **Target** - what the change will make it do. The new acceptance criteria.
-
-Keep them labeled and distinct. When the change ships, some baseline scenarios
-are *intentionally* superseded by target scenarios - that is a recorded
-decision, not a silent overwrite. The baseline you are *not* changing must still
-pass at ship; that is the proof you preserved what you meant to.
 
 ## When the behavior is genuinely a mess
 

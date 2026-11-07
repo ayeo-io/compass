@@ -23,7 +23,7 @@ failing test, `compass tdd-green -- <cmd>` a passing one, and `compass check`
 runs the checks. **If it is not on disk, it did not happen.** The acceptance
 criteria go to `docs/compass/<created>-<slug>/`; the manifest and evidence live
 in `.compass/work/<slug>/`. **Settle edge cases before scenarios**
-(`bdd-specification` skill).
+(`atdd` skill).
 
 **Approvals.** Approve only under a delegation naming you, with `compass
 evidence approve --delegated --as <you> --issue <slug>`, as a plain Bash

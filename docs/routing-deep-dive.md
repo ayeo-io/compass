@@ -449,7 +449,7 @@ the one gate `spike.conclude` and ships nothing.
 
 A spike keeps its stage map, so the output shows a weight for each of its
 three stages. Below the gate set the CLI prints the advisory strategy
-`RP-ADV-002` (`behavior-mapping`): on unmapped ground, pin what the code
+`RP-ADV-002` (`atdd`): on unmapped ground, pin what the code
 does now before changing it. Assess records the **question** ("what is dropping ~2% of jobs
 under load?") and a **timebox**. Build becomes **exploration**: the engineer
 instruments and reproduces freely, and the TDD strategy is suspended (`S2`).

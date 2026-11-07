@@ -298,7 +298,7 @@ takes their published result at face value. Compass already has two
 review moments that earn their cost: **the self-review at specify**, which
 checks the scenarios for placeholders, untestable outcomes and missing failure
 modes, and **the review at ship**, which passes the gates with evidence.
-The four-scan self-review in the `bdd-specification` skill gets the ergonomic
+The four-scan self-review in the `atdd` skill gets the ergonomic
 benefit without the process weight, because the author fixes their own cheap mistakes
 rather than routing them through a critic.
 
@@ -330,7 +330,7 @@ self-review in the `governance-check` skill.
 
 - `governance/strategies.md` - the cold-reader strategy (`S7`) and the
   persistence-over-conversation strategy (`S4`), which `S7` extends.
-- `skills/bdd-specification/SKILL.md` - the Summary section, the four-scan
+- `skills/atdd/SKILL.md` - the Summary section, the four-scan
   self-review, and what makes a scenario runnable.
 - `skills/governance-check/SKILL.md` - the strategies walk, where a reviewer
   judges an unfinished plan.

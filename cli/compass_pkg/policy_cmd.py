@@ -64,19 +64,35 @@ def _legacy_report():
 
 # --- the settings lint -----------------------------------------------------------------
 
-def _read(path):
-    """The parsed file at `path`. A file that cannot be read is one finding."""
+def _shown(path, root):
+    """`path` as a person sees it: from the project root when it is inside,
+    otherwise the file's own name. An absolute path is machine-specific, so
+    it never reaches a finding."""
+    absolute, base = os.path.abspath(path), os.path.abspath(root)
+    inside = absolute.startswith(base + os.sep)
+    return (os.path.relpath(absolute, base) if inside
+            else os.path.basename(absolute)).replace(os.sep, "/")
+
+
+def _read(path, root):
+    """The parsed file at `path`. A file that is not there is an input that
+    cannot be read (exit 2); a file that does not parse is one finding, on one
+    line, that names the file from the project root."""
+    if not os.path.isfile(path):
+        raise CompassError(f"no such file: {_shown(path, root)}")
     try:
         return load_yaml_strict(path), []
     except (StrictYamlError, OSError) as exc:
-        return None, [settings_lint.Finding("L-SETTING-INVALID", "error", "(top level)",
-                                            f"{path} cannot be read: {exc}")]
+        shown = _shown(path, root)
+        message = " ".join(str(exc).replace(os.path.abspath(path), shown).split())
+        return None, [settings_lint.Finding("L-SETTING-INVALID", "error", shown,
+                                            f"cannot be read: {message}")]
 
 
-def settings_findings(path):
+def settings_findings(path, root=None):
     """Every finding of the settings lint for the `compass.yml` at `path`, over
-    the check set."""
-    doc, findings = _read(path)
+    the check set. `root`, the project root, names the file in a finding."""
+    doc, findings = _read(path, root or os.path.dirname(os.path.abspath(path)))
     if findings:
         return findings
     return settings_lint.lint(doc, check_set.resolved())
@@ -127,7 +143,7 @@ def _lint_framework(args, root):
             for error in errors:
                 print(f"  - {error}")
         return 1
-    findings = settings_findings(os.path.join(root, project_settings.COMPASS_YML))
+    findings = settings_findings(os.path.join(root, project_settings.COMPASS_YML), root)
     if resolve_mode(args) == "json":
         legacy = policy_lint.lint_json(_legacy_report())
         mine = _lint_json(findings, mode="framework")
@@ -148,11 +164,11 @@ def run_policy_lint(args):
     root = project_settings.find_project_root(os.getcwd())
     file = getattr(args, "file", None)
     if file:
-        findings = settings_findings(file)
+        findings = settings_findings(file, root)
     elif _is_framework_root(root):
         return _lint_framework(args, root)
     elif project_settings.compass_yml_counts(root):
-        findings = settings_findings(os.path.join(root, project_settings.COMPASS_YML))
+        findings = settings_findings(os.path.join(root, project_settings.COMPASS_YML), root)
     else:
         if resolve_mode(args) != "json":
             return governance.cmd_policy_lint(args)

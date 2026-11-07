@@ -26,11 +26,11 @@ To see every delivery approach at once - its stage weights, the stages that
 wait for a person, its gates and its documents - open
 `docs/approach-diagram.html`. `compass approach render` generates it from
 the policy, and a test fails when the committed copy is out of date. Run it
-in a project to see that project's own policy and autonomy setting. In a
-project with a `compass.yml` it renders the effective configuration, the
-`compass.yml` over the shipped default preset, and the page says so. A project
-with no `compass.yml` gets the page from `governance/routing-policy.yml`, as
-before. A policy drawn on the eight legacy stages, such as a frozen preset or
+in a project to see that project's own policy and autonomy setting. It renders
+the effective configuration, the check set `governance/check-set.yml` with the
+settings of `compass.yml` (ADR-094), and the page says so. Only a project with
+its own copy of the governance files and no `compass.yml` gets the page from
+its `governance/routing-policy.yml`, as before. A policy drawn on the eight legacy stages, such as a frozen preset or
 copied 8.x governance, also shows each approach's subtask ceiling; the four-stage
 path has none (ADR-092 decision 11).
 

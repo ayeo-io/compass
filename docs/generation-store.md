@@ -61,13 +61,13 @@ generation recorded (see "Implementation versions" below).
 
 ## A commit
 
-`compass approach evaluate --write` commits. It checks each layer alone and
-merges them, which stops a layer that does not load or merge. Then, holding an
-exclusive lock on `.compass/work/<slug>/.generation.lock`, it compares the
-result with the generation in force. When something changed and a write
-follows, it runs the layered lint first, because the lint includes the
-classifier and is slow on a project layer. If the lint reports an error,
-nothing is written. Then:
+`compass approach evaluate --write` commits. It resolves the configuration
+first, which runs the settings lint of `compass.yml` and stops a file the lint
+refuses. Then, holding an exclusive lock on
+`.compass/work/<slug>/.generation.lock`, it compares the result with the
+generation in force. When something changed and a write follows, a project's
+own governance copy is checked once more (every check a gate names is declared).
+If that check fails, nothing is written. Then:
 
 1. It writes `resolved.yml`, `provenance.yml`, `versions.yml` and `records.yml`
    into `generations/<n+1>/`, each atomically.
@@ -279,7 +279,11 @@ with its own checks and its stage from `checked_at`, and a `command-passes`
 check becomes a check named for the guardrail id and name (`PG-E-command-and-suite`)
 that carries the guardrail's `params`. A guardrail that omits a default the
 framework ships is still reported as absent by `compass check` and
-`compass approach evaluate --verbose`, with or without a generation.
+`compass approach evaluate --verbose`, with or without a generation. Before a
+generation is written from such a copy, the commit refuses a gate that names a
+check the copy does not declare, such as the 5.x `coverage-floor` example, and
+writes nothing: no implementation runs that check, and the generation would
+keep it.
 
 `EffectiveView.evaluator_policy()` returns the routing policy in the shape
 `evaluate_route` takes, built by `obligations.policy_adapter` from the resolved

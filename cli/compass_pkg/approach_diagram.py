@@ -63,8 +63,9 @@ td.skipped, td.collapsed { color: #555; }
 
 
 LEGACY_SOURCE = "governance/routing-policy.yml"
-LAYERED_SOURCE = ("the effective configuration: <code>compass.yml</code> over the "
-                  "shipped default preset")
+LAYERED_SOURCE = ("the effective configuration: the check set "
+                  "<code>governance/check-set.yml</code> with the settings of "
+                  "<code>compass.yml</code>")
 
 
 def render(policy, autonomy, stages=None, source=None):
@@ -141,8 +142,9 @@ def render(policy, autonomy, stages=None, source=None):
 
 
 def cmd_approach_diagram(args):
-    # A project with a `compass.yml` is drawn from its effective configuration;
-    # any other project from the governance files, as before.
+    # A project is drawn from its effective configuration, the check set with
+    # its settings (ADR-094); a project with its own copy of the governance
+    # files and no `compass.yml` from that copy, as before.
     from compass_pkg import effective
     view = effective.view_or_legacy()
     autonomy = args.autonomy or (view.autonomy if view is not None else load_autonomy())

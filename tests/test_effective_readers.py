@@ -32,10 +32,17 @@ def _shipped(name):
 
 # --- EF-1: the reader helper ---------------------------------------------------------------
 
-def test_ef_1_no_generation_and_no_compass_yml_reads_the_governance_files(tmp_path, monkeypatch):
-    from compass_pkg import effective
+def test_ef_1_no_generation_and_no_compass_yml_reads_the_check_set(tmp_path, monkeypatch):
+    """Since 9.0.0 every project reads the check set (ADR-094). Only a project
+    with its own copy of the governance files and no `compass.yml` reads the
+    files, which `view_or_legacy` says with None."""
+    from compass_pkg import check_set, effective
     root, task_dir = _project(tmp_path)
     monkeypatch.chdir(root)
+    for view in (effective.view_or_legacy(str(task_dir)), effective.view_or_legacy(None)):
+        assert view is not None and view.source == "live"
+        assert view.config["checks"] == check_set.resolved()["checks"]
+    _copy_governance(root)
     assert effective.view_or_legacy(str(task_dir)) is None
     assert effective.view_or_legacy(None) is None
 
@@ -184,15 +191,12 @@ def test_ef_3_an_issue_with_no_generation_still_reads_the_edited_files(tmp_path)
 
 # --- EF-4: a command check from the generation ------------------------------------------------
 
+#: A project check (ADR-094): one `command-passes` check and one guardrail gate,
+#: both under the entry's id.
 COMMAND_PROJECT = {
     "schema": 1, "allow_project_commands": True,
-    "checks": {"arch-rule": {
-        "statement": "A project rule.", "kind": "deterministic", "impl": "command-passes",
-        "severity": "blocking", "on_skipped": "fail",
-        "params": {"command": "touch ran.flag"}}},
-    "gates": {"P1": {
-        "kind": "guardrail", "name": "Project rule", "statement": "A project rule.",
-        "stage": "verify", "applies_to": {"ships": True}, "checks": ["arch-rule"]}},
+    "project_checks": [{"id": "arch-rule", "name": "Project rule",
+                        "command": "touch ran.flag", "stage": "ship"}],
 }
 
 
@@ -204,7 +208,7 @@ def test_ef_4_a_check_with_its_own_id_runs_its_command_from_the_generation(tmp_p
     (root / ".compass" / "config.yml").write_text("allow_project_commands: true\n",
                                                   encoding="utf-8")
     _, report, _ = _check_json(root)
-    rows = [c for c in report["checks"] if c["guardrail"] == "P1"]
+    rows = [c for c in report["checks"] if c["guardrail"] == "arch-rule"]
     assert [c["name"] for c in rows] == ["arch-rule"], report
     assert rows[0]["status"] == "pass", rows
     assert (root / "ran.flag").exists()
@@ -450,13 +454,31 @@ def test_ef_5_an_issue_with_no_generation_reads_the_widened_file(tmp_path):
     assert code == 0, out + err
 
 
-def test_ef_5_the_accepts_comments_come_from_the_configuration_committed(tmp_path):
-    changed = {"schema": 1, "gates": {"verify.security": {"set": {"accepts": ["security-review"]}}}}
-    root, task_dir = _project(tmp_path, compass_yml=changed)
+def test_ef_5_the_accepts_comments_come_from_the_configuration_committed(tmp_path, monkeypatch):
+    """The commit writes each gate's `# accepts` comment from the configuration it
+    stores, not from the governance files. Since 9.0.0 `compass.yml` cannot change
+    what a gate accepts (ADR-094), so the commit is given a resolution that does,
+    as a generation stored before 9.0.0 could."""
+    import dataclasses
+
+    from compass_pkg import effective
+    from compass_pkg.manifest import annotate_gate_accepts_text
+    root, task_dir = _project(tmp_path, compass_yml={"schema": 1})
     code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
     assert code == 0, out + err
+    monkeypatch.chdir(root)
+    manifest = _manifest(task_dir)
+    resolution = effective.resolve_live(str(root), manifest, SLUG, str(task_dir))
+    resolved = dict(resolution.resolved)
+    resolved["gates"] = dict(resolved["gates"])
+    resolved["gates"]["verify.security"] = dict(resolved["gates"]["verify.security"],
+                                                accepts=["security-review"])
+    done = effective.commit_generation(
+        str(task_dir), manifest, render=annotate_gate_accepts_text,
+        resolution=dataclasses.replace(resolution, resolved=resolved))
+    assert done.committed, done.message
     manifest_text = (task_dir / "manifest.yml").read_text(encoding="utf-8")
-    stored = yaml.safe_load((task_dir / "generations" / "1" / "resolved.yml")
+    stored = yaml.safe_load((task_dir / "generations" / str(done.number) / "resolved.yml")
                             .read_text(encoding="utf-8"))
     assert stored["gates"]["verify.security"]["accepts"] == ["security-review"]
     comments = [l.strip() for l in manifest_text.splitlines() if "# accepts" in l]
@@ -563,16 +585,13 @@ def test_ef_7_the_ceiling_in_force_is_the_one_the_generation_stored(tmp_path, mo
 
 # --- EF-8: readers with no issue ------------------------------------------------------------------
 
+#: Two tighten-only settings (ADR-094): a project check, which adds the guardrail
+#: gate `PX`, and evidence owed for the label `zzz-label`.
 LAYERED = {
     "schema": 1,
-    "checks": {"p-rule": {"statement": "A rule.", "kind": "deterministic",
-                          "impl": "suite-passed", "severity": "blocking", "on_skipped": "fail"}},
-    "gates": {"PX": {"kind": "guardrail", "name": "Project rule", "statement": "A rule.",
-                     "stage": "verify", "applies_to": {"ships": True}, "checks": ["p-rule"]}},
-    "rules": {"floors": {"set": {"rules": {"set": {"RP-PROJECT-FLOOR": {
-        "order": 99, "when": {"labels_any": ["zzz-label"]},
-        # Not an approach: a project rule that forces one is left out (ADR-092).
-        "then": {"add_gate": "verify.architecture"}, "rationale": "A project floor."}}}}}},
+    "project_checks": [{"id": "PX", "name": "Project rule", "command": "true",
+                        "stage": "ship"}],
+    "require_evidence": [{"when": {"labels_any": ["zzz-label"]}, "add": ["architecture"]}],
 }
 
 

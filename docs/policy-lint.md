@@ -162,6 +162,14 @@ parent.
 }
 ```
 
+| Key | Type | Meaning |
+|---|---|---|
+| `check_set` | string | The check set's id and version, such as `compass-checks@9.0.0` |
+| `check_set_sha256` | string | The sha256 of the check set's file, as `sha256sum` prints it |
+| `settings_sha256` | string or null | The sha256 of `compass.yml`, or null without one |
+| `tightened` | object | The tighten-only settings `compass.yml` applies, as written |
+| `issue` | object | Only with `--issue`: the issue, its generation, its `policy` and its `waivers` |
+
 `issue` is present only with `--issue`. Its `policy` is the manifest's
 `policy:` block, or null.
 

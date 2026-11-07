@@ -401,6 +401,26 @@ def _refuse_lint_errors(doc, base):
             f"error(s) in all; run `compass policy lint` to see them)")
 
 
+def _gates_before_write(resolved):
+    """The check `generation.commit` runs before it writes a generation read
+    from a project's own copy of the governance files: every check a gate
+    names is one the copy declares. A project guardrail can name a check no
+    implementation runs, such as the `coverage-floor` example of 5.x; no
+    generation may store it, because `compass check` would read that gate from
+    the generation from then on. 8.x ran the layer lint here, which refused
+    it. A check the copy declares under a name 9.0.0 removed is accepted, as
+    8.x accepted it: `compass check` reports it as nothing to check."""
+    checks = resolved.get("checks") or {}
+    unknown = [f"gates.{gate_id}.checks: '{check}'"
+               for gate_id, gate in (resolved.get("gates") or {}).items()
+               if isinstance(gate, dict)
+               for check in gate.get("checks") or () if check not in checks]
+    if unknown:
+        raise CompassError(
+            "nothing was written: the governance copy names a check it does not "
+            "declare, which no implementation runs: " + "; ".join(unknown))
+
+
 def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, fetch=False):
     """The `generation.Resolution` of the project now: the check set with the
     tighten-only settings of `compass.yml` applied, or, for a project with no
@@ -408,7 +428,9 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
     issue's `config:` is not read (ADR-094); `manifest` and `task_dir` are
     accepted for the callers and not read. A file that cannot be read, a
     `compass.yml` the settings lint refuses and a git parent in `extends:`
-    raise `CompassError` at once, so the result's `validate` is None.
+    raise `CompassError` at once. A governance copy is checked only before a
+    generation is written (the result's `validate`, `_gates_before_write`),
+    so a read of it still reports each check it cannot run.
     `validate` and `fetch` are accepted and not read: the lint always runs,
     and nothing is fetched."""
     root = os.path.abspath(root)
@@ -453,7 +475,7 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
         provenance={"fields": history, "waivers": {}, "classification": {}},
         versions=versions,
         records=[],
-        validate=None,
+        validate=(lambda: _gates_before_write(resolved)) if legacy else None,
         details={"tightened": tightened, "legacy": bool(legacy)})
 
 

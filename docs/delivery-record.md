@@ -72,7 +72,7 @@ In kept-out mode `issue link set --pr` moves `land_commit` to the merge commit a
 
 `compass trail --issue <slug>` writes `.compass/work/<slug>/trail.md`, one file a reviewer checks with `sha256sum -c` and without Compass (#356, ADR-096). It has six sections, in this order:
 
-1. Who asked: the request link and the requester. The session records the requester as a claim; Compass does not check it.
+1. Who asked: the request link and the requester, when they were recorded, and the command that recorded them, read from `request.recorded_by` (`compass quick-fix start`, `compass issue link set` or `compass migrate`). A record written before that key existed names no command. The session records the requester as a claim; Compass does not check it.
 2. What was agreed: the scenarios, the freeze at the first red, and the scenario sign-off where the issue owes one.
 3. Red, for each scenario: each red record, or "no red on record".
 4. Green: each green record, then the files as the newest green tested them.

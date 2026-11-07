@@ -930,7 +930,8 @@
       "properties": {
         "link": {"type": "string", "pattern": "^https://[^\\s]+$", "maxLength": 2000, "description": "An https URL of the request, such as the GitHub issue."},
         "requester": {"type": "string", "minLength": 1, "maxLength": 100, "description": "Who asked for the change, as free text on one line."},
-        "recorded_at": {"type": "string", "description": "When the session recorded the request."}
+        "recorded_at": {"type": "string", "description": "When the session recorded the request."},
+        "recorded_by": {"type": "string", "enum": ["compass quick-fix start", "compass issue link set", "compass migrate"], "description": "The command that last wrote the record. `trail.md` names it; a record written before the key existed has none."}
       }
     },
     "delegations_used": {

@@ -127,8 +127,8 @@ def cmd_issue_link(args):
         lines.append(f"{task.get('issue')} -> {repo}#{number}.")
         fields.update(repo=repo, number=number)
         if link is None:
-            request_link.link_from_github(task, target)
-    held = request_link.record(task, link, requester)
+            request_link.link_from_github(task, target, by=verb)
+    held = request_link.record(task, link, requester, by=verb)
     if held is not None:
         lines.append(_request_line(task.get("issue"), held))
         fields.update(request=held)

@@ -19,7 +19,7 @@ compass issue link set --github https://github.com/acme/widgets/issues/42
 
 ## The request link and the requester
 
-Every delivery issue owes the token `request`: who asked for the change and a link to the request (#356). `--request` and `--requester` write the manifest's `request` record, with the time the session recorded it:
+Every delivery issue owes the token `request`: who asked for the change and a link to the request (#356). `--request` and `--requester` write the manifest's `request` record, with the time the session recorded it (`recorded_at`) and the command that wrote it (`recorded_by`: `compass issue link set`, `compass quick-fix start` or `compass migrate`):
 
 ```sh
 compass issue link set --request https://github.com/acme/widgets/issues/42 --requester "Dana Smith"

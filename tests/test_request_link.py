@@ -13,6 +13,7 @@ refuses for a missing request (contract 4 entry `quick-fix-start-valid`).
 from __future__ import annotations
 
 import json
+import sys
 import re
 
 import pytest
@@ -210,6 +211,9 @@ def test_quick_fix_start_refuses_a_bad_request_before_writing(repo, gh):
 def test_the_schema_holds_the_record_and_the_token():
     schema = json.loads((ROOT / "schemas" / "manifest.schema.json").read_text())
     request = schema["properties"]["request"]
-    assert set(request["properties"]) == {"link", "requester", "recorded_at"}
+    assert set(request["properties"]) == {"link", "requester", "recorded_at", "recorded_by"}
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import request_link
+    assert request["properties"]["recorded_by"]["enum"] == list(request_link.RECORDED_BY)
     assert request["properties"]["requester"]["maxLength"] == 100
     assert schema["properties"]["evidence_required"]["items"]["enum"][0] == "request"

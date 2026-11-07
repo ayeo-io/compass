@@ -11,9 +11,12 @@ holds the record:
       link: https://github.com/acme/widgets/issues/42
       requester: Dana Smith
       recorded_at: 2026-11-07T10:00:00Z
+      recorded_by: compass issue link set
 
 `compass issue link set --request <url> --requester <name>` writes it, and
-`compass quick-fix start` takes the same two flags. A GitHub issue named with
+`compass quick-fix start` takes the same two flags. `recorded_by` names the
+command that last wrote the record, so `trail.md` says how the request was
+recorded; a record written before the key existed has none. A GitHub issue named with
 `--github` also counts as the link: its URL is written to `request.link` when
 none is recorded.
 
@@ -45,6 +48,8 @@ KEY = "request"
 #: The longest link and requester Compass stores.
 LINK_MAX = 2000
 REQUESTER_MAX = 100
+#: The commands that write the record, as `recorded_by` names them.
+RECORDED_BY = ("compass quick-fix start", "compass issue link set", "compass migrate")
 #: A request link: an https URL with no white space.
 _HTTPS = re.compile(r"https://[^\s/?#]+[^\s]*")
 
@@ -100,10 +105,11 @@ def parse(request, requester, verb):
     return link, target, who
 
 
-def record(task, link=None, requester=None):
+def record(task, link=None, requester=None, *, by):
     """Write the parts given into the manifest's `request` record, keeping a
-    part already recorded that is not given. Return the record, or None when
-    nothing was given."""
+    part already recorded that is not given. `by` is the command that writes
+    it, one of `RECORDED_BY`. Return the record, or None when nothing was
+    given."""
     if link is None and requester is None:
         return None
     held = task.get(KEY) if isinstance(task.get(KEY), dict) else {}
@@ -113,15 +119,16 @@ def record(task, link=None, requester=None):
     if requester is not None:
         held["requester"] = requester
     held["recorded_at"] = now_iso()
+    held["recorded_by"] = by
     task[KEY] = held
     return held
 
 
-def link_from_github(task, target):
+def link_from_github(task, target, *, by):
     """After `--github`, the issue's URL as `request.link` when no link is held."""
     held = task.get(KEY) if isinstance(task.get(KEY), dict) else {}
     if not held.get("link"):
-        record(task, link=issue_url(*target))
+        record(task, link=issue_url(*target), by=by)
 
 
 def recorded(task):

@@ -137,12 +137,12 @@ class Migration:
         github = task.get("github")
         if isinstance(github, dict) and isinstance(github.get("repo"), str) \
                 and isinstance(github.get("number"), int):
-            request_link.link_from_github(task, (github["repo"], github["number"]))
+            request_link.link_from_github(task, (github["repo"], github["number"]), by=VERB)
         if self.request is not None:
             link, target, requester = self.request
             if target is not None and not task.get("github"):
                 task["github"] = {"repo": target[0], "number": target[1]}
-            request_link.record(task, link, requester)
+            request_link.record(task, link, requester, by=VERB)
         self.task = copy.deepcopy(task)
 
 

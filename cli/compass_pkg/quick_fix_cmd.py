@@ -312,7 +312,7 @@ def cmd_quick_fix_start(args):
         start_record["raised_by"] = {"issue": raised_by, "found_at": found_at}
     if request_target is not None:
         start_record["github"] = {"repo": request_target[0], "number": request_target[1]}
-    request_link.record(start_record, request_url, requester)
+    request_link.record(start_record, request_url, requester, by="compass quick-fix start")
     save_manifest(start_record, manifest_path(task_dir))
     chain_line = lineage.hint(os.path.join(project_root, ".compass"), slug)
     chain_detail = [chain_line] if chain_line else []

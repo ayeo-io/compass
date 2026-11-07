@@ -222,10 +222,12 @@ def _who_asked(w):
     link, requester = request_link.recorded(w.task)
     held = w.task.get(request_link.KEY) if isinstance(w.task.get(request_link.KEY), dict) else {}
     when = held.get("recorded_at")
+    # Only a command that writes the record is named; an older record names none.
+    by = held.get("recorded_by") if held.get("recorded_by") in request_link.RECORDED_BY else None
     if link and requester:
         w.say(f"{_text(requester)} asked at {_text(link, request_link.LINK_MAX)}, recorded "
-              f"{_text(when or 'at an unknown time')} with `compass issue link set`. Compass "
-              f"does not check who the requester is.")
+              f"{_text(when or 'at an unknown time')}" + (f" with `{by}`" if by else "")
+              + ". Compass does not check who the requester is.")
     else:
         missing = " and ".join(p for p, v in (("no request link", link),
                                                ("no requester", requester)) if not v)

@@ -144,6 +144,38 @@ def test_who_asked_names_the_requester_as_a_claim_and_hashes_the_manifest(tmp_pa
     assert _sums(body) == [f".compass/work/{SLUG}/manifest.yml"]
 
 
+def test_who_asked_names_quick_fix_start_when_it_recorded_the_request(tmp_path):
+    root = _issue(tmp_path, "--request", REQUEST, "--requester", "Dana Smith")
+    assert manifest(root)["request"]["recorded_by"] == "compass quick-fix start"
+    body = section(trail(root), 1)
+    assert " with `compass quick-fix start`. Compass does not check" in body, body
+    assert "issue link set" not in body, body
+
+
+def test_who_asked_names_issue_link_set_when_it_recorded_the_request(tmp_path):
+    root = _issue(tmp_path)
+    _ok(root, "issue", "link", "set", "--issue", SLUG, "--request", REQUEST,
+        "--requester", "Dana Smith")
+    assert manifest(root)["request"]["recorded_by"] == "compass issue link set"
+    body = section(trail(root), 1)
+    assert " with `compass issue link set`. Compass does not check" in body, body
+
+
+def test_who_asked_names_no_command_when_the_record_names_none(tmp_path):
+    """A request recorded before `recorded_by` existed names no command, rather
+    than a command that may not have written it."""
+    root = _issue(tmp_path, "--request", REQUEST, "--requester", "Dana Smith")
+    body = manifest(root)
+    body["request"] = {"link": REQUEST, "requester": "Dana Smith",
+                       "recorded_at": "2026-11-07T10:00:00Z"}
+    write_manifest(root, body)
+    text = section(trail(root), 1)
+    assert (f"Dana Smith asked at {REQUEST}, recorded 2026-11-07T10:00:00Z. "
+            "Compass does not check") in text, text
+    # The trail is written from the record alone, so a second write is the same.
+    assert trail(root) == trail(root)
+
+
 def test_who_asked_says_what_is_missing(tmp_path):
     root = _issue(tmp_path, "--request", REQUEST)
     body = section(trail(root), 1)

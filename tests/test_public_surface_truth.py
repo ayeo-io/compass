@@ -820,6 +820,10 @@ def test_d2_repairs_change_only_retired_names():
     check `request-recorded` and its four sub-bullets, and `docs/quickstart.md`
     (table_rows 25 -> 26) gained the `next:` row that asks for the request.
 
+    #356 step 8 (the rebuild of a missing generation) re-baselined
+    `governance/guardrails.md` (list_items 88 -> 89): it gained the bullet on
+    `held`, which finds a check set by its `<id>@<version>` and sha256.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

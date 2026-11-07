@@ -80,7 +80,7 @@ def _build(root):
                                            encoding="utf-8")
     code, out, err = run(root, "approach", "evaluate", "--issue", SLUG, "--write",
                          *[f"--justify={d}=test" for d in
-                           ("risk", "familiarity", "size", "goal", "role")])
+                           ("risk", "familiarity", "size", "goal")])
     assert code == 0, out + err
     sys.path.insert(0, str(ROOT / "tests"))
     import stored_generation

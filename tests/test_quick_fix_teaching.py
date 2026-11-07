@@ -49,7 +49,7 @@ def test_qfo_6_the_command_names_start_with_its_fixed_flags():
     command must teach the exact set, not a paraphrase."""
     text = _text(COMMAND)
     assert "compass quick-fix start" in text
-    for flag in ("--risk", "--familiarity", "--size", "--goal", "--role",
+    for flag in ("--risk", "--familiarity", "--size", "--goal",
                  "--intent", "--scenario", "--scenario-id", "--test"):
         assert flag in text, f"commands/quick-fix.md does not name {flag}"
 

@@ -77,7 +77,7 @@ of `exploration` changes the approach ("I cannot state this well enough to
 deliver it yet"): that is a spike, not a small change, so run
 `/compass:assess`. `--urgency "live-defect - <reason>"` marks a defect in
 production: the scenario is the reproduction, and its red comes first.
-`--role` is ignored. `--test` can repeat. The scenario id is `TRC-001` unless
+`--test` can repeat. The scenario id is `TRC-001` unless
 you pass `--scenario-id`.
 
 Pass `--labels` with the domains touched, comma-separated. Only `auth`,

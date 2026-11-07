@@ -439,7 +439,7 @@ def _shown_everywhere(root, task_dir, tmp_path, text):
 
 # --- group D: the delivery-approach record on every approach -----------------------
 
-DIMENSIONS = ("risk", "familiarity", "size", "goal", "role", "urgency")
+DIMENSIONS = ("risk", "familiarity", "size", "goal", "urgency")
 
 
 def _justify_all(assessment, *skip):

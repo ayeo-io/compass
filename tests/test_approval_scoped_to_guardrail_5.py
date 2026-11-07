@@ -123,7 +123,7 @@ def _project(tmp_path, evidence=()):
                                     encoding="utf-8")
     code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write",
                           *[f"--justify={dim}=test" for dim in
-                            ("risk", "familiarity", "size", "goal", "role")])
+                            ("risk", "familiarity", "size", "goal")])
     assert code == 0, out + err
     body = _manifest(root)
     assert body["generation"] == 1

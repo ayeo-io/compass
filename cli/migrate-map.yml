@@ -75,17 +75,6 @@ values:
 friction_keys:
   phase: stage
 
-# Old route names -> the names the display layer prints. Manifests record
-# the route names themselves; an old name is read through the map above.
-shape_display:
-  express: quick fix
-  standard: regular
-  expedition: full
-  feature: regular
-  initiative: full
-  hotfix: hotfix
-  spike: spike
-
 # v1 artifact filenames -> v2, applied inside each issue directory.
 # The migration module consumes this section; the copy it keeps in code
 # is only the fallback for a tree with no framework install.
@@ -142,13 +131,14 @@ manifest_keys:
 config_keys:
   swarm: multiagent
 
-# Old typed names that 7.0.0 still reads (language-key-and-us-english). One
-# table of kind -> old word -> {new, removed_in}. Every row ends at 9.0.0:
-# `old_names.removal_problems` lists each row once the package version is 9.0.0
-# or later. A stored value (`reassessment_kind`, `check_id`) is also read by
-# `word_map` as a value section; the other kinds have a small reader of their
-# own that takes the old word from this table. `cli/aliases.yml` stays empty:
-# these are values and keys, not CLI spellings.
+# Old names that a stored record or a compatibility contract still needs
+# (language-key-and-us-english). One table of kind -> old word ->
+# {new, removed_in}. A typed old name in this table is no longer read
+# (ADR-098); the rows left are read from stored files only, and
+# `cli/compass_pkg/old_names.py` says which reader keeps each. Every row ends
+# at 9.0.0: `old_names.removal_problems` lists each row once the package
+# version is 9.0.0 or later. `cli/aliases.yml` stays empty: these are values
+# and keys, not CLI spellings.
 old_names:
   reassessment_kind:
     judgement: {new: judgment, removed_in: 9.0.0}
@@ -160,13 +150,5 @@ old_names:
     not-initialised: {new: not-initialized, removed_in: 9.0.0}
   state_key:
     initialised: {new: initialized, removed_in: 9.0.0}
-  readiness_key:
-    catalogue_digest: {new: catalog_digest, removed_in: 9.0.0}
-  json_key:
-    behaviour: {new: behavior, removed_in: 9.0.0}
-    behaviours: {new: behaviors, removed_in: 9.0.0}
-  spec_heading:
-    Current Behaviour: {new: Current Behavior, removed_in: 9.0.0}
-    Archived Behaviour: {new: Archived Behavior, removed_in: 9.0.0}
   term:
     catalogue: {new: catalog, removed_in: 9.0.0}

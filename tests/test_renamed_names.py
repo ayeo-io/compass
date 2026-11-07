@@ -1,10 +1,12 @@
-"""The old typed names that 7.0.0 still reads (issue language-key-and-us-english).
+"""The old names that 7.0.0 read (issue language-key-and-us-english).
 
 One reader-side table in `cli/migrate-map.yml` (`old_names:`), each row ending at
-8.0.0, read through `cli/compass_pkg/old_names.py`. The sections below test, in
-order: the table and the `--kind` argument; the skill and the check id; the
-state key, the refusal code and the readiness key; the JSON keys, the headings
-and the term; the end of the table at 8.0.0; and the upgrade guide table.
+9.0.0, read through `cli/compass_pkg/old_names.py`. 9.0.0 deletes the typed
+old names and the rows nothing reads (ADR-098); the rows a stored record or a
+compatibility contract needs stay (VD-040). The sections below test, in order:
+the table and the `--kind` argument; the skill and the check id; the state key
+and the refusal code; the headings and the term; the end of the table at 9.0.0;
+and the upgrade guide table.
 """
 from __future__ import annotations
 
@@ -86,10 +88,12 @@ def _reassess(project: Path, *kind_args):
 
 
 def test_trc_043():
+    """9.0.0 reads no typed old kind (ADR-098): `--kind` with the old word is
+    refused as any unknown kind is, and records nothing."""
     import tempfile
-    notice = f"compass: kind {OLD_KIND} is now {NEW_KIND}; the old word is read until 9.0.0."
+    notice = f"compass: kind {OLD_KIND} is now {NEW_KIND}"
     cases = [
-        (["--kind", NEW_KIND], True), (["--kind", OLD_KIND], True),
+        (["--kind", NEW_KIND], True), (["--kind", OLD_KIND], False),
         (["--kind", NEW_KIND.upper()], False), (["--kind", "judg" + "emnt"], False),
         ([], True),
     ]
@@ -103,7 +107,7 @@ def test_trc_043():
         if accepted:
             assert code == 0, (args, out + err)
             assert [e["kind"] for e in entries] == [NEW_KIND], (args, entries)
-            assert err.count(notice) == (1 if args[-1:] == [OLD_KIND] else 0), (args, err)
+            assert notice not in err, (args, err)
         else:
             assert code != 0 and entries == [], (args, out + err)
             for choice in (NEW_KIND, "policy-correction", "scope-change", "configuration"):
@@ -391,17 +395,16 @@ def test_trc_050():
 
     import compat_hook
 
-    outputs = {}
-    for code in (_U6_NEW_CODE, _U6_OLD_CODE):
-        code_run = _run(ROOT, "_refusal", code, "detail=no work")
-        assert code_run[0] == 0, code_run
-        outputs[code] = code_run[1]
-        assert len(code_run[1].strip().splitlines()) == 3, code_run[1]
-    assert outputs[_U6_NEW_CODE] == outputs[_U6_OLD_CODE]
-    assert outputs[_U6_NEW_CODE].rstrip().endswith(f"[{_U6_NEW_CODE}]")
-    assert _U6_OLD_CODE not in outputs[_U6_OLD_CODE]
-    assert _U6_OLD_CODE in _run(ROOT, "_refusal", _U6_OLD_CODE, "detail=x")[2]
-    assert _U6_OLD_CODE not in _run(ROOT, "_refusal", _U6_NEW_CODE, "detail=x")[2]
+    # 9.0.0 reads no typed old refusal code (ADR-098): the old code is refused
+    # as any unknown code is. The new code renders the three lines.
+    code_run = _run(ROOT, "_refusal", _U6_NEW_CODE, "detail=no work")
+    assert code_run[0] == 0, code_run
+    assert len(code_run[1].strip().splitlines()) == 3, code_run[1]
+    assert code_run[1].rstrip().endswith(f"[{_U6_NEW_CODE}]")
+    assert _U6_OLD_CODE not in code_run[1] + code_run[2]
+    old_run = _run(ROOT, "_refusal", _U6_OLD_CODE, "detail=no work")
+    assert old_run[0] != 0 and old_run[1] == "", old_run
+    assert f"no such refusal code: '{_U6_OLD_CODE}'" in old_run[2], old_run
 
     base = Path(tempfile.mkdtemp(prefix="u6hook-"))
     try:
@@ -421,7 +424,7 @@ def test_trc_050():
     assert f"### `{_U6_NEW_CODE}`" in page
     assert f"### `{_U6_OLD_CODE}`" not in page
     section = page.split(f"### `{_U6_NEW_CODE}`", 1)[1].split("###", 1)[0]
-    assert f"`{_U6_OLD_CODE}` is read until 9.0.0" in section
+    assert _U6_OLD_CODE not in section
 
 
 def _u6_state_project(tmp: Path, name: str, body: str) -> Path:
@@ -463,26 +466,18 @@ OLD_BEHAVIOR = "behav" + "iour"
 NEW_BEHAVIOR = "behav" + "ior"
 
 
-def test_trc_053():
-    from compass_pkg import old_names
-
-    # The old JSON keys end at 9.0.0: the table lists them, and at 9.0.0 the
-    # table reports each one as a problem. The session report that emitted
-    # them was removed with `compass retro` (ADR-093).
-    problems = old_names.removal_problems("9.0.0")
-    assert any(f"json_key '{OLD_BEHAVIOR}'" in p for p in problems), problems
-    assert any(f"json_key '{OLD_BEHAVIOR}s'" in p for p in problems), problems
-
-
-# --- The JSON keys, the headings and the term --------------------------------
+# --- The headings and the term ------------------------------------------------
 
 def test_trc_054():
     # 9.0.0 derives no living spec (ADR-091). A spec an older revision holds can
-    # still use the headings 6.1.0 wrote, and `compass release notes` reads it there.
+    # still use the headings 6.1.0 wrote, and `compass release notes` reads it
+    # there: the reader finds an issue by its own heading, not by the section's,
+    # so 9.0.0 deletes the unread heading rows of the table (ADR-098).
     from compass_pkg import old_names, shipped_issues
 
-    pairs = [(row["new"], row["old"]) for row in old_names.rows("spec_heading")]
-    assert [new for new, _ in pairs] == ["Current Behavior", "Archived Behavior"]
+    assert old_names.rows("spec_heading") == []
+    pairs = [("Current Behavior", "Current " + OLD_BEHAVIOR.capitalize()),
+             ("Archived Behavior", "Archived " + OLD_BEHAVIOR.capitalize())]
     fresh = "## Current Behavior\n\n### old (completed 2026-05-25)\n\n- `SCN-NEW` new way\n"
     stale = fresh
     for new, old in pairs:
@@ -554,16 +549,17 @@ def test_trc_056():
     from compass_pkg import aliases, core, old_names
 
     found = old_names.rows()
-    assert len(found) == 11, found
-    assert len({r["kind"] for r in found}) == 9, found
+    assert len(found) == 6, found
+    assert {r["kind"] for r in found} == {
+        "reassessment_kind", "check_id", "skill", "refusal_code", "state_key", "term"}, found
     assert {r["removed_in"] for r in found} == {"9.0.0"}, found
     assert aliases.load_table()["aliases"] == []
 
     # The table ends at 9.0.0: a planted version lists every row, 8.x none.
-    assert len(old_names.removal_problems("9.0.0")) == 11
+    assert len(old_names.removal_problems("9.0.0")) == 6
     assert old_names.removal_problems("8.0.0") == []
     assert old_names.removal_problems("8.1.0") == []
-    assert len(old_names.removal_problems("9.1.0")) == 11
+    assert len(old_names.removal_problems("9.1.0")) == 6
     assert old_names.removal_problems("7.0.0") == []
     assert old_names.removal_problems("7.10.0") == []    # tuples, not strings
 
@@ -583,8 +579,8 @@ def test_trc_056_the_table_check_fails_for_a_row_that_is_missing(monkeypatch):
     planted = {k: dict(v) for k, v in old_names._FALLBACK.items()}
     planted["term"] = {}
     monkeypatch.setattr(old_names, "_READ", lambda name, fallback: planted)
-    assert len(old_names.rows()) == 10
-    assert old_names.removal_problems("9.0.0") and len(old_names.removal_problems("9.0.0")) == 10
+    assert len(old_names.rows()) == 5
+    assert old_names.removal_problems("9.0.0") and len(old_names.removal_problems("9.0.0")) == 5
 
 
 # --- The upgrade guide table is the reader table ------------------------------
@@ -608,17 +604,29 @@ def _reader_rows() -> set:
             for r in old_names.rows()}
 
 
+# The rows of the 7.0.0 guide that 9.0.0 deletes because nothing reads them
+# (ADR-098). The guide keeps them: it says what 7.0.0 read until 9.0.0.
+DELETED_IN_9_0_0 = {
+    ("readiness key", "catalog" + "ue_digest", "catalog_digest", "9.0.0"),
+    ("JSON key", OLD_BEHAVIOR, NEW_BEHAVIOR, "9.0.0"),
+    ("JSON key", OLD_BEHAVIOR + "s", NEW_BEHAVIOR + "s", "9.0.0"),
+    ("heading", "Current " + OLD_BEHAVIOR.capitalize(), "Current Behavior", "9.0.0"),
+    ("heading", "Archived " + OLD_BEHAVIOR.capitalize(), "Archived Behavior", "9.0.0"),
+}
+
+
 def test_trc_070():
     text = GUIDE.read_text(encoding="utf-8")
     guide, reader = _guide_rows(text), _reader_rows()
-    assert guide == reader, (sorted(guide - reader), sorted(reader - guide))
+    assert guide - DELETED_IN_9_0_0 == reader, (sorted(guide - reader), sorted(reader - guide))
+    assert DELETED_IN_9_0_0 <= guide and not DELETED_IN_9_0_0 & reader
     assert len(guide) == 11
 
     # The comparison fails for a planted extra row, a missing row and a changed new name.
     extra = text.replace("## Renamed names\n", "## Renamed names\n\n| term | `frob` | `frab` | 9.0.0 |\n", 1)
-    assert _guide_rows(extra) != reader
+    assert _guide_rows(extra) - DELETED_IN_9_0_0 != reader
     gone = "\n".join(ln for ln in text.splitlines() if "| `catalogue` |" not in ln)
-    assert _guide_rows(gone) != reader
+    assert _guide_rows(gone) - DELETED_IN_9_0_0 != reader
     first = sorted(reader)[0]
     changed = text.replace(f"`{first[1]}` | `{first[2]}`", f"`{first[1]}` | `{first[2]}x`", 1)
-    assert _guide_rows(changed) != reader
+    assert _guide_rows(changed) - DELETED_IN_9_0_0 != reader

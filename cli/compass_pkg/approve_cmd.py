@@ -49,14 +49,14 @@ refuses the approver `agent`. Nothing else guards the record: anyone who can
 write `manifest.yml` can add one by hand.
 """
 # DEPENDENCY: standard library (os, sys); compass_pkg.approval_records, approvals,
-# core, old_names, terminal.
+# core, terminal.
 from __future__ import annotations
 
 import os
 import re
 import sys
 
-from compass_pkg import approval_records, approvals, launcher, old_names
+from compass_pkg import approval_records, approvals, launcher
 from compass_pkg.core import CompassError, issue_arg, resolve_issue_dir
 from compass_pkg.terminal import say
 
@@ -261,7 +261,7 @@ def register(evidence_subs):
         # and a prefix such as `--deleg` must not reach the delegated path unseen.
         allow_abbrev=False)
     form = p.add_mutually_exclusive_group(required=True)
-    form.add_argument("--check", type=old_names.check_type, help="id of the human check")
+    form.add_argument("--check", help="id of the human check")
     form.add_argument("--guardrail", metavar=approval_records.G5,
                       help="sign off guardrail `G5`, the only guardrail with a sign-off; "
                            "needs --scope and records an approval only")

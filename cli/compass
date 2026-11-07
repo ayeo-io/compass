@@ -59,7 +59,6 @@ import fnmatch
 import re as _re
 
 from compass_pkg import core as _core  # noqa: F401
-from compass_pkg import old_names  # noqa: E402
 from compass_pkg._all import *  # noqa: F401,F403
 from compass_pkg.status_cmd import register as register_status_parser  # noqa: E402
 from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # noqa: E402
@@ -134,13 +133,13 @@ def build_parser():
                      help="with --write: the reason for an assessed value, "
                           "recorded under the manifest's justifications key "
                           "(repeatable). A new or changed value of risk, "
-                          "familiarity, size, goal, role or urgency needs one.")
+                          "familiarity, size, goal or urgency needs one.")
     pre.add_argument("--reason",
                      help="when --write detects a re-assessment, record this as "
                           "the reason in the reassessments: log. A "
                           "reassess that changes nothing records it too, as "
                           "an unchanged entry")
-    pre.add_argument("--kind", type=old_names.kind_type,
+    pre.add_argument("--kind",
                      choices=["judgment", "policy-correction",
                               "scope-change", "configuration"],
                      help="what kind of re-assessment this is (default: "

@@ -104,8 +104,6 @@ def _start(root, slug, **over):
     ]
     if "goal" in over:
         args += ["--goal", over["goal"]]
-    if "role" in over:
-        args += ["--role", over["role"]]
     # Assess records who asked and the link to the request (#356), so the check
     # `request-recorded` passes once the change lands. `request=False` leaves it out.
     if over.get("request", True):

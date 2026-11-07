@@ -178,7 +178,7 @@ class Adapter:
                         claims=[], follow_ups=[], reassessments=[])
         (self.issue_dir / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False))
         argv = ["approach", "evaluate", "--issue", self.slug, "--write"]
-        for key in ("risk", "familiarity", "size", "goal", "role"):
+        for key in ("risk", "familiarity", "size", "goal"):
             argv += ["--justify", f"{key}=The fixed local fixture declares {assessment[key]}."]
         self.cli(*argv)
         self.cli("issue", "use", self.slug)

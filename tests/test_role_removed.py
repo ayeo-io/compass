@@ -2,8 +2,9 @@
 
 The two blocking role rules became artifact rules keyed on the documents the
 CLI finds on disk, the full approach stopped building in the claims gate, and
-6.x records, configurations and CLI calls keep working. ADR-070 records the
-decision; docs/upgrade-7-0-0.md tells an adopter what changes. Since 9.0.0 no
+6.x records and configurations keep working. ADR-070 records the decision;
+docs/upgrade-7-0-0.md tells an adopter what changes. 9.0.0 deletes the role
+flags (ADR-098), so the tests of those calls check the refusal. Since 9.0.0 no
 command reads the documents on disk (ADR-091), so the tests of that reading
 moved to tests/test_removed_parts_9_0_0_documents.py, inverted.
 
@@ -285,17 +286,22 @@ def test_trc_c2_a_stored_6x_configuration_keeps_its_role_rules():
     assert "plan" in _blocks(owed)
 
 
-def test_trc_c3_a_role_justification_is_accepted_and_not_recorded(tmp_path):
+def test_trc_c3_a_role_justification_is_refused_from_9_0_0(tmp_path):
+    """9.0.0 deletes the role flags (ADR-098): `--justify role=` gets the
+    refusal of any dimension that needs no justification, and nothing is written."""
     root, _ = _project(tmp_path)
+    before = (root / ".compass/work/t/manifest.yml").read_bytes()
     code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write",
                           *ALL_REASONS, "--justify", "role=an engineer")
-    assert code == 0, err
-    assert NOT_READ in err and "7.0.0" in err
-    data = _load(root / ".compass/work/t/manifest.yml")
-    assert "role" not in data["justifications"]
+    assert code != 0, out + err
+    assert "--justify names role, which is not a dimension that needs one" in err, err
+    assert NOT_READ not in err
+    assert (root / ".compass/work/t/manifest.yml").read_bytes() == before
 
 
-def test_trc_c4_a_quick_fix_given_a_role_is_accepted_and_records_none(tmp_path):
+def test_trc_c4_a_quick_fix_given_a_role_is_refused_from_9_0_0(tmp_path):
+    """9.0.0 deletes `quick-fix start --role` (ADR-098): argparse refuses it as
+    an unknown flag, and no issue is written."""
     root = tmp_path / "proj"
     (root / ".compass" / "work").mkdir(parents=True)
     (root / "compass.yml").write_text(
@@ -307,11 +313,9 @@ def test_trc_c4_a_quick_fix_given_a_role_is_accepted_and_records_none(tmp_path):
                           "--intent", "The typo is gone",
                           "--scenario", "Given the page When it loads Then the word is spelt right",
                           "--test", "tests/test_x.py::test_y")
-    assert code == 0, out + err
-    assert NOT_READ in err
-    data = _load(root / ".compass/work/qf/manifest.yml")
-    assert "role" not in data["assessment"]
-    assert "role" not in (data.get("justifications") or {})
+    assert code == 2, out + err
+    assert "unrecognized arguments: --role" in err, err
+    assert not (root / ".compass/work/qf").exists()
 
 
 def test_trc_c5_issue_migrate_reports_a_recorded_role_as_no_longer_read(tmp_path):

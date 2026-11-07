@@ -34,12 +34,11 @@ import json
 import os
 import re
 import subprocess
-import sys
 import textwrap
 
 from compass_pkg.binding import ids_for
 from compass_pkg.check_cmd import cmd_check
-from compass_pkg import candidate_client, landing, retired
+from compass_pkg import candidate_client, landing
 from compass_pkg.path_stages import is_path_issue
 from compass_pkg.stable_ids import (
     APPROACH_DELIVERY, APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY)
@@ -89,8 +88,6 @@ def register(sub, issue_arg):
     st.add_argument("--urgency", default=None, metavar="VALUE - REASON",
                     help="urgency value and its reason; 'live-defect - <reason>' is the "
                          "hotfix setting")
-    st.add_argument("--role", default=None, metavar="VALUE - REASON",
-                    help="ignored from 7.0.0 (ADR-070)")
     st.add_argument("--labels", default="", metavar="TAG[,TAG...]",
                     help="domain tags the change touches, comma-separated - "
                          "auth, payments, personal-data or migrations bring "
@@ -170,7 +167,7 @@ def _split_required(raw, dim):
 
 
 def _split_optional(raw, dim):
-    """`(None, None)` for a goal or role left out (it records no value), else
+    """`(None, None)` for a goal or urgency left out (it records no value), else
     'VALUE - reason', which must carry its reason."""
     if raw is None:
         return None, None
@@ -240,7 +237,6 @@ def cmd_quick_fix_start(args):
     size_v = read_size("size", size_v)      # the retired `standard` reads as `medium`
     goal_v, goal_r = _split_optional(args.goal, "goal")
     urgency_v, urgency_r = _split_optional(getattr(args, "urgency", None), "urgency")
-    role_v, role_r = _split_optional(args.role, "role")
 
     readings = {"risk": risk_v, "familiarity": fam_v, "size": size_v}
     reasons = {"risk": risk_r, "familiarity": fam_r, "size": size_r}
@@ -269,13 +265,6 @@ def cmd_quick_fix_start(args):
         from compass_pkg.core import load_autonomy
         policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
         autonomy = load_autonomy()
-    if role_v is not None:
-        # Role is read only where the policy still declares it: copied 6.x
-        # governance. Anywhere else it is accepted and ignored (ADR-070).
-        if "role" in (policy.get("assessment_vocabulary") or {}):
-            readings["role"], reasons["role"] = role_v, role_r
-        else:
-            sys.stderr.write(retired.notice("quick-fix start --role") + "\n")
     advice = (evaluate_route(readings, policy, autonomy)
               .get("applicable_strategies") or [])
 

@@ -414,6 +414,9 @@ def _path_project(tmp: Path, slug=PATH_SLUG) -> Path:
     assert m["evidence_required"] and "stages" not in m, m
     m["scenarios"] = [{"id": "TRC-001", "title": "TRC-001", "intent": "INT-1",
                        "tests": ["tests/t.py"]}]
+    # Assess records who asked for the work (#356), so `next` moves past it.
+    m["request"] = {"link": "https://example.com/acme/issues/1", "requester": "Dana Smith",
+                    "recorded_at": "2026-11-05T10:00:00Z"}
     (task / "manifest.yml").write_text(yaml.safe_dump(m, sort_keys=False))
     return root
 

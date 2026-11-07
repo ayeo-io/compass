@@ -131,6 +131,13 @@ def test_next_names_the_request_the_refusal_names(tmp_path):
     root = _issue(tmp_path, assessment=CRITICAL)
     # With no spec file there are no requirement rows to fill first.
     _spec(root).unlink()
+    # The request link is the first row `next` names, so assess asks for it
+    # (#356); a real project records it there, before any red.
+    first = run(root, "next", "--issue", SLUG)
+    assert "compass issue link set --issue feature --request" in first.stdout, first.stdout
+    linked = run(root, "issue", "link", "set", "--issue", SLUG, "--request",
+                 "https://example.com/acme/issues/1", "--requester", "Dana Smith")
+    assert linked.returncode == 0, linked.stdout + linked.stderr
     done = run(root, "next", "--issue", SLUG)
     assert "compass evidence request --checkpoint specify" in done.stdout, done.stdout
 

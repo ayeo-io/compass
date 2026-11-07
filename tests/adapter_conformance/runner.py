@@ -19,6 +19,11 @@ ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DATE = date.today().isoformat()
 LOCAL_CASES = {"route", "quick-fix", "feature-records", "local-handoff", "policy-and-evidence",
                "hook-payloads", "approval-scope", "git-isolation"}
+# A real project records who asked for the work and links the request at
+# assess (#356, the `request-recorded` check), so the reference issues do too
+# and every check passes. The link is a fixed local URL: nothing calls GitHub.
+REQUEST_LINK = "https://example.com/reference/issues/1"
+REQUESTER = "Reference Fixture"
 
 
 def compare(expected, actual, path="observation"):
@@ -138,7 +143,8 @@ class Adapter:
                  "--size", "atomic - one function returns the expected text",
                  "--intent", "The greeting says Hello",
                  "--scenario", "Given a greeting, when it is called, then it says Hello",
-                 "--scenario-id", "CONF-1", "--test", self.node)
+                 "--scenario-id", "CONF-1", "--test", self.node,
+                 "--request", REQUEST_LINK, "--requester", REQUESTER)
 
     # The fixture's one test is its scenario's acceptance test, so its red and green
     # are the outer loop of the four-layer acceptance strategy (ADR-080). A quick fix
@@ -182,6 +188,8 @@ class Adapter:
         self.cli("scenario", "add", "CONF-1", "--issue", self.slug,
                  "--title", "Trim and uppercase names", "--intent", "INT-1", "--test", self.node)
         self.cli("changed-file", "add", self.source, "--issue", self.slug, "--scenario", "CONF-1")
+        self.cli("issue", "link", "set", "--issue", self.slug,
+                 "--request", REQUEST_LINK, "--requester", REQUESTER)
         docs = self.project / "docs/compass" / f"{FIXTURE_DATE}-{self.slug}"
         docs.mkdir(parents=True, exist_ok=True)
         spec = ("# Reference feature\n\n## Summary\n\nGoal: trim and uppercase names.\n"

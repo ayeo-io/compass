@@ -399,8 +399,11 @@ def test_sh4_init_writes_no_old_settings_file_in_a_new_project(tmp_path):
     proj.mkdir()
     subprocess.run(["git", "init", "-q"], cwd=proj, check=True)
     _init(proj)
+    # No `config.yml`. The `.gitignore` is the per-machine ignore list a new
+    # project gets when its issue record is committed with the code (#356).
     assert sorted(p.name for p in (proj / ".compass").iterdir()) == \
-        ["state.yml", "work"]
+        [".gitignore", "state.yml", "work"]
+    assert not (proj / ".compass" / "config.yml").exists()
     assert _hook_says_initialised_by(proj, "compass init")[0]
 
 

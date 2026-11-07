@@ -334,9 +334,29 @@ def _with_git_parent_uncached(root: Path, env: dict) -> None:
         encoding="utf-8")
 
 
+#: A team preset as `compass preset init` scaffolded it before 9.0.0 removed the
+#: verb (ADR-094): a `compass.yml` and one fixture. The entries run in these
+#: states name a removed verb, so the files are written here, not by the CLI.
+_PRESET_YML = "schema: 1\nowner: \"acme-team\"\n"
+_PRESET_FIXTURE = """\
+name: Small contained work
+assessment:
+  risk: contained
+  familiarity: brownfield-mapped
+  size: small
+  goal: delivery
+  labels: []
+expect:
+  approach: delivery
+"""
+
+
 def _with_preset(root: Path, env: dict) -> None:
     _initialised(root, env)
-    _must(root, env, "preset", "init", "team-preset", "--owner", "acme-team")
+    fixtures = root / "team-preset" / "compass-fixtures"
+    fixtures.mkdir(parents=True)
+    (root / "team-preset" / "compass.yml").write_text(_PRESET_YML, encoding="utf-8")
+    (fixtures / "example.yml").write_text(_PRESET_FIXTURE, encoding="utf-8")
 
 
 def _with_failing_preset(root: Path, env: dict) -> None:
@@ -400,34 +420,17 @@ def configuration_applies(state: str, kind: str) -> bool:
     return True
 
 
-#: The two entries whose answer differs under configuration B on purpose.
-#: Configuration B is an empty overlay: a `compass.yml` holding `schema: 1` and
-#: `extends: compass:default@6`. `policy test` then finds a project preset with
-#: no fixtures (exit 1, where a project with no `compass.yml` gives exit 2),
-#: and `policy update` finds a project that already extends the shipped default
-#: (exit 0, where a project with no `compass.yml` gives exit 2). Both answers
-#: are about the configuration found, so the no-configuration baseline does not
-#: apply. Configuration C and every other entry are still compared.
-_DIFFER_UNDER_B = frozenset({"policy-test-no-preset",
-                             "policy-update-no-project-file"})
-
-
 def entry_applies(entry: dict, kind: str) -> bool:
     """Whether `entry` is a fair question under configuration `kind`. The
     state must not already hold a settings file or governance of its own, and
-    the command must not be about the configuration itself:
-    `policy migrate` migrates the very files B and C add, and `terminology`
-    reads `governance/terminology.yml`, which a two-file governance copy lacks
-    (the 5.6.0 CLI refuses it the same way in such a project). Two entries are
-    also left out under B alone: see `_DIFFER_UNDER_B`."""
+    `terminology` reads `governance/terminology.yml`, which a two-file
+    governance copy lacks (the 5.6.0 CLI refuses it the same way in such a
+    project). An entry whose command 9.0.0 removed is a fair question under
+    every configuration: it fails to parse the same way whatever the project
+    holds."""
     if not configuration_applies(entry["project"], kind):
         return False
-    argv = entry["argv"]
-    if argv[:2] == ["policy", "migrate"]:
-        return False
-    if kind == "B" and entry["id"] in _DIFFER_UNDER_B:
-        return False
-    if kind == "C" and argv[:1] == ["terminology"]:
+    if kind == "C" and entry["argv"][:1] == ["terminology"]:
         return False
     return True
 
@@ -510,6 +513,21 @@ REMOVED_IN_9_0_0 = {
     **{entry_id: "'compass approach evaluate --reset-config' was removed in 9.0.0 (ADR-094)"
        for entry_id in ("approach-evaluate-reset-config-needs-write",
                         "approach-evaluate-write-reset-config")},
+    **{entry_id: "'compass policy diff' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("policy-diff-identical", "policy-diff-identical-exit-code",
+                        "policy-diff-bad-reference", "policy-diff-differs-exit-code")},
+    **{entry_id: "'compass policy update' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("policy-update-nothing-to-do", "policy-update-json-nothing-to-do",
+                        "policy-update-major-not-kept", "policy-update-no-extends",
+                        "policy-update-no-project-file")},
+    **{entry_id: "'compass preset test' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("policy-test-passes", "policy-test-fails", "policy-test-no-preset",
+                        "policy-test-groups")},
+    **{entry_id: "'compass preset init' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("policy-init-preset-writes", "policy-init-preset-refused")},
+    **{entry_id: "'compass policy migrate' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("policy-migrate-copied", "policy-migrate-nothing",
+                        "policy-migrate-refused")},
 }
 
 

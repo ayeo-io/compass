@@ -501,7 +501,6 @@ INHERITS_ENVIRONMENT = {
     ("cli/compass_pkg/quick_fix_cmd.py", "_commit_files"): (1, _GIT),
     ("cli/compass_pkg/record.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/release_notes.py", "_git"): (1, _GIT),
-    ("cli/compass_pkg/replay.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/ship_commit_reason.py", "_pre_commit_hook_can_run"): (1, _GIT),
     ("cli/compass_pkg/start_state.py", "_git_changed_paths"): (1, _GIT),
     ("cli/compass_pkg/start_state.py", "_record_path"): (1, _GIT),
@@ -527,8 +526,9 @@ def _is_binary(data):
 #: The binary files the plugin ships, each one in 8.0.4 when it passed the directory.
 BINARY_FILES = {
     "assets/compass-icon.png": "the plugin's icon",
-    "governance/shipped-releases.tar.xz": "the governance files of each release, which "
-                                          "`compass policy migrate` reads",
+    "governance/shipped-releases.tar.xz": "the governance files of each release, kept "
+                                          "frozen after 9.0.0 removed `compass policy "
+                                          "migrate`, which read them",
 }
 
 #: The launchers in `bin/`. ayeo-io/compass-delivery#312 decides whether `bin/`

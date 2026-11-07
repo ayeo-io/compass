@@ -425,7 +425,7 @@ def _u6_state_project(tmp: Path, name: str, body: str) -> Path:
 
 
 def test_trc_051(tmp_path):
-    from compass_pkg import init_cmd, policy_migrate, project_settings
+    from compass_pkg import init_cmd, project_settings
 
     held = "  by: someone\n  at: '2026-01-01'\n"
     value = {"by": "someone", "at": "2026-01-01"}
@@ -451,13 +451,6 @@ def test_trc_051(tmp_path):
     text = (fresh / ".compass" / "state.yml").read_text(encoding="utf-8")
     assert f"{_U6_NEW_STATE}:" in text and f"{_U6_OLD_STATE}:" not in text
     assert project_settings.state(str(fresh))[_U6_NEW_STATE]["by"] == "compass init"
-
-    # The next write, `compass policy migrate`, holds the new key only.
-    migrate = _u6_state_project(tmp_path / "migrate", "config.yml",
-                                f"mode: advisory\n{_U6_OLD_STATE}:\n{held}")
-    made = policy_migrate.plan(str(migrate))
-    assert list(made.state) == [_U6_NEW_STATE]
-    assert made.state[_U6_NEW_STATE] == value
 
 
 OLD_BEHAVIOR = "behav" + "iour"

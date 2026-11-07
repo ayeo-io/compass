@@ -32,13 +32,7 @@ compass waiver add         waive one check on one issue, with a reason; it excus
 compass waiver withdraw    remove an unapproved waiver, or mark an approved one withdrawn
 compass policy lint        structurally validate the governance YAML, and warn (L-SETTING-REMOVED) on each key 9.0.0 removed, such as approaches or a legacy stage
 compass policy show        every resolved configuration field, with its source layer
-compass preset init        scaffold a team preset repository
-compass preset test        run a preset's fixtures and check its locks
 compass review-rule list   the review rules that apply to the changed files
-compass policy diff        compare two configurations: what one accepts that the other does not
-compass policy migrate     turn copied governance and the old settings file into a compass.yml
-compass policy migrate --words  rewrite compass.yml and policy-test fixtures in the 6.0.0 words
-compass policy update      move the project to another shipped default major, re-approving waivers
 compass issue lint         structurally validate an issue manifest
 compass issue diagnose     explain one run from its own records: stages, timeline, deviations
 compass issue use          make an issue the current one, for this session

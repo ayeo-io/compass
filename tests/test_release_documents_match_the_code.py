@@ -17,15 +17,13 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # Every command that can reach the network through a git parent, as a reader
 # types it after `compass`.
-FETCHING = ("policy lint", "policy show", "policy diff", "policy update",
-            "preset test", "approach evaluate --write")
+FETCHING = ("policy lint", "policy show", "approach evaluate --write")
 
 # The modules that pass a fetch decision to the code that resolves a git
 # parent, and the commands each one serves.
 FETCH_MODULES = {
     "effective.py": "approach evaluate --write (the generation it commits)",
-    "policy_cmd.py": "policy lint, policy show, policy diff, preset test",
-    "policy_update.py": "policy update",
+    "policy_cmd.py": "policy lint, policy show",
 }
 
 
@@ -86,21 +84,17 @@ def test_the_fetch_list_names_every_command_that_fetches():
         for command in FETCHING:
             assert command in text, f"{name} does not list `compass {command}`: {text}"
         assert "compass check" in text, name
-    # `issue configure` went with the issue layer (ADR-094).
-    assert "issue configure" not in security, security
+    # `issue configure` went with the issue layer, and the verbs that compared,
+    # moved and tested configurations went with the layers (ADR-094).
+    for removed in ("issue configure", "policy diff", "policy update", "preset test"):
+        assert removed not in security, (removed, security)
+        assert removed not in readme, (removed, readme)
     table = _text("docs", "git-parents.md").split("## When Compass fetches", 1)[1]
     table = _flat(table.split("\n\n", 2)[1])
-    for command in ("policy lint", "policy update", "policy diff", "preset test",
-                    "approach evaluate --write"):
+    for command in ("policy lint", "approach evaluate --write"):
         assert command in table, f"docs/git-parents.md does not list {command}"
-
-
-def test_the_fetch_lists_say_that_policy_update_always_asks_the_remote():
-    for name, text in (("README.md", _text("README.md")),
-                       ("docs/security.md", _text("docs", "security.md"))):
-        flat = _flat(text)
-        assert ("policy update always asks the remote which commit its ref names, "
-                "unless COMPASS_OFFLINE=1 is set") in flat, name
+    for removed in ("policy update", "policy diff", "preset test"):
+        assert removed not in table, f"docs/git-parents.md still lists {removed}"
 
 
 def test_the_release_notes_say_what_happens_to_a_5x_user_who_does_nothing():

@@ -260,12 +260,11 @@ than the release: v6.1.0 ships `version: 6.0.0`, and `default@6` holds that
 same file. The copy is frozen, so do not edit it. A project on v6.0.1, which shipped different
 `default@6.0.0` values, has its waivers re-checked against the v6.1.0 values,
 because no record stores what an approval saw. The live default wins for
-its own major. `compass policy update` reads both folders to tell which waived
-fields moved, and exits 2 for a project on a major that is not kept. The live preset takes the new major's version at the first change to it after
+its own major. The live preset takes the new major's version at the first change to it after
 the previous major ships, not at the release: from then on the live preset and the
 kept copy no longer share a pin. Pin the
 new preset with `python3 scripts/generate-legacy-views.py --pin`; the old
-pins stay. `tests/test_policy_update.py` fails when a kept folder does not
+pins stay. `tests/test_kept_presets.py` fails when a kept folder does not
 match its pinned digest or when an earlier pinned major is not kept.
 
 ### What changed at 5.0.0
@@ -443,14 +442,9 @@ with the version hidden.
 
 10. **Tag and publish.** The release-script run, the out-of-tree smoke
    test, and the seven-locations version bump are the gate; tagging is
-   the consequence. After pushing the tag, run
-   `python3 scripts/generate-shipped-releases.py` and land the updated
-   `governance/shipped-releases.yml` and `governance/shipped-releases.tar.xz`
-   through a pull request. `compass policy migrate` reads this table to
-   recognize a project's copied governance, and `test_PM_12` fails wherever
-   tags are fetched until the table lists the new tag.
-   `python3 scripts/generate-shipped-releases.py --check` exits 0 once it
-   does.
+   the consequence. `governance/shipped-releases.tar.xz` is frozen: 9.0.0
+   removed `compass policy migrate`, which read it (ADR-094), so a release
+   adds nothing to it.
 
 11. **Publish the plugin copy.** Users and the plugin directory install
    Compass from the `plugin` branch, which `.claude-plugin/marketplace.json`

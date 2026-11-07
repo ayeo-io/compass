@@ -985,18 +985,6 @@ def test_vr_c22_duplicate_of_refuses_itself_an_unknown_issue_and_another_reason(
     assert _saved(task)["close_reason"] == "duplicate"
 
 
-def test_vr_c16_the_policy_diff_examines_every_issue_that_is_not_closed():
-    sys.path.insert(0, str(ROOT / "tests"))
-    from test_policy_diff import _advisory, _diff, _issue
-    archive = [_issue("a-done", status="done"), _issue("b-landed", status="landed"),
-               _issue("c-backlog", status="backlog"), _issue("d-queued", status="queued"),
-               _issue("e-flight", status="in-progress"), _issue("f-abandoned", status="abandoned")]
-    document = _diff(_advisory, archive=archive, open=True)["open"]
-    assert [i["issue"] for i in document["issues"]] == ["c-backlog", "d-queued", "e-flight"]
-    assert [i["status"] for i in document["issues"]] == ["backlog", "queued", "in-progress"]
-    assert document["examined"] == 3
-
-
 # --- VR-G9: no retired word in its retired meaning in shipped prose -----------
 # Each pattern names a field, so `full` as a delivery approach, the machine
 # names `landed_by`, `land_commit`, `land_timestamp` and `landed-by-resolves`,
@@ -1217,7 +1205,6 @@ def test_vr_g9_an_allowed_use_is_not_reported(tmp_path, line):
 
 
 @pytest.mark.parametrize("argv,retired", [
-    (["policy", "diff", "--help"], "active, queued or parked"),
     (["issue", "migrate", "--help"], "A landed issue is refused"),
 ])
 def test_vr_g9_help_text_names_no_retired_state(argv, retired):

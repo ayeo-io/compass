@@ -745,11 +745,6 @@ def test_dp_5_only_the_adapter_and_the_view_generator_read_the_preset():
                     "cli/compass_pkg/legacy_adapter.py",
                     "cli/compass_pkg/legacy_views.py",
                     "cli/compass_pkg/legacy_views_template.py",
-                    # `compass policy migrate` converts a project's copy with the
-                    # adapter, the bridge ADR-042 keeps for projects that still
-                    # carry copies. It reads no preset file.
-                    "cli/compass_pkg/policy_migrate.py",
-                    "cli/compass_pkg/replay.py",
                     "scripts/generate-legacy-views.py"], hits
     assert "presets/default" not in (ROOT / "cli" / "compass_pkg" / "effective.py").read_text(
         encoding="utf-8")

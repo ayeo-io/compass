@@ -193,7 +193,7 @@ so the refusal opens no file. It raises `MajorRefusal`, which `main` prints as
     stale implementation major. It does not pin an issue refused for its
     resolver or schema major, and prints a line that names the issue and
     `compass issue migrate --config --issue <slug>`;
-  - `compass policy lint`, `compass policy update`, `--help` and `--version`,
+  - `compass policy lint`, `--help` and `--version`,
     which read no issue's generation.
 
 Deliberate limits:

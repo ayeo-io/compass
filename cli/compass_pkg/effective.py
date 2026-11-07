@@ -250,7 +250,8 @@ def _legacy_parent(root):
 GOVERNANCE_COPY_NOTICE = (
     "  This unmigrated 5.x project has no compass.yml and runs on its own copy of "
     "governance/. The rows below are the shipped default, not what compass approach "
-    "evaluate reads. Run compass policy migrate to convert the copy.")
+    "evaluate reads. Run compass policy migrate on 8.x to convert the copy; the "
+    "upgrade guide names the 9.0.0 settings.")
 
 
 def has_governance_copy(root):

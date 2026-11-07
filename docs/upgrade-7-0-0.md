@@ -470,7 +470,7 @@ The assessment no longer reads a role. The claims gate and the intent-fidelity b
 - **A landing refuses an artifact rule the approach does not hold.** When a document is on disk whose artifact rule adds a gate or asks for a document and the last evaluation did not fire it, such as a `positioning.md` written after assess, `compass ship-commit` and `compass quick-fix finish` refuse with `artifact-rule-not-applied` and name the `compass approach evaluate --issue <slug> --write` that applies it.
 - **Assess drafts the intent before it writes the approach**, so RP-ART-002 fires on a regular or full issue (`approaches/assess-procedure.md`, step 3).
 - **`compass issue migrate` lists each recorded `assessment.role` as no longer read**, in the dry run and on `--apply`, and leaves the field in place.
-- **`compass preset test` reads a fixture that records a role without it**, and notes that it did.
+- **The preset test reads a fixture that records a role without it**, and notes that it did. 9.0.0 removed the preset test (ADR-094).
 - **The classifier crosses the documents a condition names, as it crosses labels.** The grid JSON of `compass policy diff --json` and `compass policy migrate --json` gains `artifacts`. The cap of eight named labels is unchanged, and a grid names at most four documents.
 - **The bias ids move.** The role bias RP-BIAS-002 is gone, so the bias that was RP-BIAS-003 is now RP-BIAS-002. Biases change no approach; a `compass.yml` that edited one of the two ids edits a different bias text now.
 
@@ -558,7 +558,7 @@ Nothing. A command that is now refused needs a failing test on record, as an Edi
 
 ## Rewriting your configuration in the 6.0.0 words
 
-6.0.0 renamed Compass's vocabulary and kept reading the old words in a project's own `compass.yml`, a team preset and its policy-test fixtures, with a lint advisory. `compass policy migrate --words` rewrites those files in the new words. `docs/policy-migrate.md` owns the command.
+6.0.0 renamed Compass's vocabulary and kept reading the old words in a project's own `compass.yml`, a team preset and its policy-test fixtures, with a lint advisory. `compass policy migrate --words` rewrites those files in the new words. 9.0.0 removed the command and its page (ADR-094); this section records 7.0.0.
 
 ### What breaks
 
@@ -566,7 +566,7 @@ Nothing. The command is new, and it writes only when you pass `--apply`.
 
 ### What changes
 
-- **`compass policy migrate --words [DIR]` rewrites `compass.yml` and the fixtures under `compass-fixtures/`.** It uses the word mapping `compass policy lint` and `compass preset test` read the files through, so a word changes only in the field that holds it: `light` as a stage mode becomes `lightweight`, and `full` as an approach name stays. Comments, order and quoting stay.
+- **`compass policy migrate --words [DIR]` rewrites `compass.yml` and the fixtures under `compass-fixtures/`.** It uses the word mapping `compass policy lint` and the preset test read the files through, so a word changes only in the field that holds it: `light` as a stage mode becomes `lightweight`, and `full` as an approach name stays. Comments, order and quoting stay.
 - **A dry run comes first.** Without `--apply` it prints a diff and writes nothing.
 - **`--apply` refuses a write git cannot undo.** It refuses when a file it would write is uncommitted, or the project is in no git repository, unless you pass `--i-have-a-copy`. It writes every file or none, and never outside the project.
 - **A condition that reads `role` is listed, not rewritten.** The command names it with the `M-WHEN-RETIRED` message from `compass policy lint`, and exits 1 until you change it.
@@ -576,7 +576,7 @@ Nothing. The command is new, and it writes only when you pass `--apply`.
 1. Commit your configuration, then run `compass policy migrate --words` and read the diff.
 2. Run `compass policy migrate --words --apply`.
 3. If it lists a hand edit, key the rule on a document with `artifacts_any`, or on a label, as the section "Role is not an assessment dimension" says.
-4. For a team preset in another repository, run the same two commands there, then `compass preset test`.
+4. For a team preset in another repository, run the same two commands there, then the preset test.
 
 ### New keys and verbs
 
@@ -619,7 +619,7 @@ Guardrail 5 (`G5`, "a human signs off on the irreversible") asks for a person's 
 
 ## A copied `waived:` entry migrates to a `LEGACY` waiver
 
-`compass policy migrate` keeps the reason a 5.x project recorded under `routing_guardrails.waived:` in its copied routing policy. `docs/policy-migrate.md` describes the rule, under "Waiver stubs, lock refusals and the lint".
+`compass policy migrate` keeps the reason a 5.x project recorded under `routing_guardrails.waived:` in its copied routing policy. 9.0.0 removed the command and its page (ADR-094); this section records 7.0.0.
 
 ### What changes
 
@@ -704,7 +704,7 @@ A project that names `compass:behaviour-mapping` or `dor-behaviour-is-gwt` keeps
 
 ## `compass policy migrate --undo` goes back to the old files
 
-`compass policy migrate --undo` puts a migrated project back as it was before `compass policy migrate --apply`. `docs/policy-migrate.md` owns the facts, under "Going back with `--undo`". The decision is `governance/decisions/2026-10-19-the-migration-marker-records-what-an-undo-needs.md`.
+`compass policy migrate --undo` puts a migrated project back as it was before `compass policy migrate --apply`. 9.0.0 removed the command and its page (ADR-094). The decision is `governance/decisions/2026-10-19-the-migration-marker-records-what-an-undo-needs.md`.
 
 ### What changes
 

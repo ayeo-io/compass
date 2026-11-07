@@ -257,61 +257,6 @@ def test_an_old_issue_gets_no_path_checkpoint_from_the_table():
         "assess", "define", "plan"]
 
 
-# --- compass policy migrate and compass policy update ----------------------------------
-
-def _migrate_plan(tmp_path, edit):
-    import test_policy_migrate as migrate
-    root = migrate._project(tmp_path)
-    migrate._copy_governance(root, edit)
-    return migrate._plan(root)
-
-
-def _change_an_approach(policy, guardrails):
-    policy["route_shapes"]["delivery"]["subtask_ceiling"] = 0
-
-
-def _change_an_approach_and_add_a_gate(policy, guardrails):
-    import test_policy_migrate as migrate
-    migrate._tighten_and_add(policy, guardrails)
-
-
-def test_migrate_leaves_a_changed_approach_out_and_names_it(tmp_path):
-    from compass_pkg import policy_migrate
-    made = _migrate_plan(tmp_path, _change_an_approach)
-    assert made.result == "ready", made.blocked
-    assert made.blocked == []
-    assert not [o for o in made.ops if o["catalogue"] == "approaches"], made.ops
-    assert "approaches" not in (yaml.safe_load(made.compass_yml) or {})
-    assert made.equivalence["result"] == "equivalent", made.equivalence
-    dropped = [d for d in made.dropped if d["key"] == "approaches.delivery"]
-    assert len(dropped) == 1, made.dropped
-    assert "L-SETTING-REMOVED" in dropped[0]["reason"] and "ADR-092" in dropped[0]["reason"]
-    text = "\n".join(policy_migrate.report_text(made, "dry-run"))
-    assert "dropped: approaches.delivery (L-SETTING-REMOVED" in text, text
-
-
-def test_migrate_keeps_the_other_edits_beside_a_removed_one(tmp_path):
-    made = _migrate_plan(tmp_path, _change_an_approach_and_add_a_gate)
-    assert made.result == "ready", made.blocked
-    assert [(o["catalogue"], o["id"]) for o in made.ops] == [
-        ("rules", "floors"), ("gates", "G9"), ("vocabulary", "gates.G9")]
-    assert [d["key"] for d in made.dropped if "ADR-092" in d["reason"]] == [
-        "approaches.delivery"]
-
-
-def test_update_reports_a_waiver_on_a_removed_key_as_moot(tmp_path):
-    import policy_update_fixtures as fixtures
-    from compass_pkg import policy_update
-    root = fixtures.project(tmp_path / "project", fixtures.APPROACH_PROJECT)
-    framework = fixtures.framework_root(tmp_path / "framework", "ceiling")
-    made = policy_update.plan(root, None, framework_root=framework)
-    [view] = [w for w in made.waivers if w.entry == "approaches.regular"]
-    assert view.status == "moot" and view.invalidations == [], view
-    assert view not in made.invalidated
-    lines = "\n".join(policy_update.plan_lines(made))
-    assert "approaches.regular: moot" in lines and "ADR-092" in lines, lines
-
-
 # --- an issue layer that sets a legacy stage (ADR-092 decision 10) ----------------------
 
 def test_an_issue_layer_drops_a_legacy_stage_the_shipped_default_does_not_hold():

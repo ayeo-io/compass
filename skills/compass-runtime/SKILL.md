@@ -110,11 +110,11 @@ this way. To move work between worktrees, commit it: the branch is durable.
 ## Where state lives
 
 ```
-compass.yml                     The one file a person edits: settings, and the project's edits to the shipped default (written by /compass:init or compass policy migrate)
+compass.yml                     The one file a person edits: settings, and the project's edits to the shipped default (written by /compass:init)
 .compass/
 ├── state.yml                   What the CLI wrote: what initialized the project, and when
-├── config.yml                  Projects from 5.x only: read until the project moves its settings with compass policy migrate; no 6.0.0 command writes it
-├── legacy/, migration.yml      Written by compass policy migrate: the superseded files, and the digests of them
+├── config.yml                  Projects from 5.x only: read until the project moves its settings with compass policy migrate on 8.x; no 6.0.0 command writes it
+├── legacy/, migration.yml      Written by compass policy migrate on 8.x: the superseded files, and the digests of them
 ├── current-task                One-line pointer to the active issue
 ├── work/
 │   └── <issue-slug>/            One directory per issue: its machine state
@@ -157,7 +157,7 @@ delegation typed `--for waivers`, approves it (`docs/waivers.md`).
 
 A new project has no `governance/` directory: the shipped default preset is in
 force, and `compass.yml` holds only what differs from it. An unmigrated 5.x
-project runs on its own copied `governance/` until `compass policy migrate`
+project runs on its own copied `governance/` until `compass policy migrate` on 8.x
 converts it. `compass policy show` shows what is in force for a project with a
 `compass.yml` or none, but it does not read that copy.
 

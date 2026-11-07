@@ -208,10 +208,7 @@ advisory: project: stages.implement.set.modes reads 'full' as 'thorough'; the ol
 ```
 
 An advisory is not a finding. It changes no exit status and no count, it is
-not in the `--json` document. `compass preset test` prints the same lines.
-`compass check` prints none.
-`compass policy migrate --words` rewrites the layer and its fixtures in the
-new words, so the advisory goes (`docs/policy-migrate.md`).
+not in the `--json` document. `compass check` prints none.
 
 ## `compass policy lint --json`
 
@@ -276,7 +273,8 @@ waiver. A stage list that a capability switch has not turned on is marked
 In an unmigrated 5.x project (no `compass.yml`, a copied `governance/`), the
 rows are the shipped default, not the copy that `compass approach evaluate`
 reads. The text view then adds a notice under its header line that names the
-copy and points to `compass policy migrate`. `--json` is unchanged.
+copy and points to `compass policy migrate` on 8.x and the upgrade guide.
+`--json` is unchanged.
 
 ```
 stages.plan.entry   [dor-summary-filled, ...]   default@6.0.0 (add)  (inactive: entry-exit-evaluation off)
@@ -365,7 +363,5 @@ input gives the same bytes. `tests/test_policy_lint.py` pins each key list.
 ## What this page does not cover
 
 - The per-issue generation store: the effective view reads the live project file, never a stored generation. [generation-store.md](generation-store.md) says what reads a generation.
-- `compass policy diff`, which has its own page: [policy-diff.md](policy-diff.md).
-- `compass policy migrate`, which has its own page: [policy-migrate.md](policy-migrate.md).
-- `compass policy update`, which has its own page: [policy-update.md](policy-update.md).
+- `compass policy diff`, `policy update` and `policy migrate`, which 9.0.0 removed (ADR-094). A command line that names one fails to parse with one line that says what replaces it.
 - The settings-conflict refusal (`compass check` and the pre-tool hook own it).

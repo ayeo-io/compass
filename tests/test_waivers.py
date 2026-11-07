@@ -700,11 +700,10 @@ def test_wv_8_only_locks_lint_the_replay_and_update_import_it_and_the_entry_scri
         if pattern.search(path.read_text(encoding="utf-8")):
             users.append(path.name)
     # locks.py routes an unlock through `check` (ADR-039); the layered lint
-    # with its effective view (policy show) and the replay (policy diff) read
-    # waivers to report them, and `policy update` re-checks them across a
-    # move. None adds a waiver command.
-    assert users == ["locks.py", "policy_effective.py", "policy_lint.py", "policy_update.py",
-                     "replay.py"], users
+    # with its effective view (policy show) reads waivers to report them. The
+    # replay (policy diff) and `policy update` read them too until 9.0.0
+    # removed both (ADR-094). None adds a waiver command.
+    assert users == ["locks.py", "policy_effective.py", "policy_lint.py"], users
     for name in ("cli/compass", "cli/compass_pkg/_all.py"):
         assert "waivers" not in (ROOT / name).read_text(encoding="utf-8"), name
     core = (ROOT / "cli" / "compass_pkg" / "core.py").read_text(encoding="utf-8")
@@ -803,3 +802,44 @@ def test_wv_3_the_derived_record_must_belong_to_this_waiver():
         "W-APPROVAL-UNCHECKED"]
     assert _codes(_issue_check([fx.approval()], described={"fields": DESCRIBED["fields"]})) == [
         "W-APPROVAL-UNCHECKED"]
+
+
+# --- the re-check of a waiver across a move of the parent ------------------------
+# Moved from the tests of `compass policy update`, which 9.0.0 removed (ADR-094).
+# `recheck_move` stays in `waivers` until the layer modules go.
+
+def _move_configs():
+    import classifier_fixtures
+    old = classifier_fixtures.base()
+    return old, copy.deepcopy(old)
+
+
+def _moved_waivers(old, new):
+    layer = fx.severity_layer(fx.project_waiver(), check="tests-pass")
+    found, faults = _api().find(layer, "project")
+    assert not faults
+    return _api().recheck_move(found, old, fx.resolve(old, layer), new)
+
+
+def test_up_9_a_move_keeps_a_waiver_whose_waived_field_did_not_change():
+    old, new = _move_configs()
+    new["checks"]["tests-pass"]["statement"] = "Changed wording, not the waived field."
+    assert _moved_waivers(old, new) == []
+
+
+def test_up_4_a_move_invalidates_a_waiver_whose_waived_field_changed():
+    old, new = _move_configs()
+    new["checks"]["tests-pass"]["severity"] = "advisory"
+    got = _moved_waivers(old, new)
+    assert [(i.waiver_id, i.entry, i.field) for i in got] == [
+        ("project:checks.tests-pass", "checks.tests-pass", "severity")]
+    assert got[0].old == "blocking" and got[0].new == "advisory"
+    assert got[0].project == "advisory"
+
+
+def test_up_10_a_move_invalidates_a_waiver_on_an_entry_the_new_parent_dropped():
+    old, new = _move_configs()
+    del new["checks"]["tests-pass"]
+    got = _moved_waivers(old, new)
+    assert [i.waiver_id for i in got] == ["project:checks.tests-pass"]
+    assert got[0].field is None and "no longer defines" in got[0].reason

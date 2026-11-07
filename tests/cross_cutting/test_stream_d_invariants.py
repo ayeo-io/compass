@@ -81,7 +81,6 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
     "terminology",                # the CLI-voice slice: the glossary verb
     "review-rule",                # `review-rule list`; 9.0.0 removed `spec sync`
                                   # (ADR-091)
-    "preset",                     # `preset init` and `preset test`
     "next",                       # cross-issue-architectural-integrity; 9.0.0
                                   # removed its partner `analyze` and the
                                   # placeholder scan `plan lint` (ADR-091)

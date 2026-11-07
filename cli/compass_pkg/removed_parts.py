@@ -15,6 +15,9 @@ follow-up that blocks another issue (`follow-up add --target`) are gone.
 9.0.0 runs one fixed set of checks (ADR-094), so an issue has no
 configuration layer of its own: `compass issue configure` and `approach
 evaluate --reset-config` are gone, and a manifest's `config:` is not read.
+The verbs that compared, moved, migrated or tested configurations are gone
+with the layers: `compass policy diff`, `policy update`, `policy migrate`
+(with `--words` and `--undo`), `preset init` and `preset test`.
 
 A command line that still names a removed verb or flag fails to parse as an
 unknown command, and `line_for` gives the one line the parse error adds.
@@ -125,6 +128,26 @@ COMMANDS = (
      "the issue layer was removed; record a waiver with compass waiver add", "ADR-094"),
     (("approach", "evaluate", "--reset-config"), "compass approach evaluate --reset-config",
      "an issue has no config layer", "ADR-094"),
+    (("policy", "diff"), "compass policy diff",
+     "one check set ships; compass policy show prints it with its digest", "ADR-094"),
+    (("policy", "update"), "compass policy update",
+     "one check set ships with each release; nothing to move between", "ADR-094"),
+    (("preset", "init"), "compass preset init",
+     "presets were removed; a project sets tighten-only settings in compass.yml", "ADR-094"),
+    (("preset", "test"), "compass preset test",
+     "presets were removed; a project sets tighten-only settings in compass.yml", "ADR-094"),
+    (("preset",), "compass preset",
+     "presets were removed; a project sets tighten-only settings in compass.yml", "ADR-094"),
+    # The two flags come before the verb, so each gets its own line.
+    (("policy", "migrate", "--words"), "compass policy migrate --words",
+     "compass.yml is read as settings only; the upgrade guide names the 9.0.0 settings",
+     "ADR-094"),
+    (("policy", "migrate", "--undo"), "compass policy migrate --undo",
+     "run it on 8.x before upgrading; the upgrade guide names the 9.0.0 settings",
+     "ADR-094"),
+    (("policy", "migrate"), "compass policy migrate",
+     "run compass policy migrate on 8.x; the upgrade guide names the 9.0.0 settings",
+     "ADR-094"),
 )
 
 #: The ten agent names 9.0.0 removed with the `agents/` folder. The shipped

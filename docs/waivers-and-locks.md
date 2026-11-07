@@ -64,7 +64,7 @@ A waiver is written inside the entry it excuses, under the `waiver` key. A proje
 - `approved_by` - a name from the list that may approve, or the `owner`.
 - `approved_on` - the date of the approval. It must not be later than today.
 
-Compass works out which fields the waiver covers. There is no `covers` field to write. A waiver stays valid until the parent value of a waived field changes. Then `compass policy update` asks for a new approval.
+Compass works out which fields the waiver covers. There is no `covers` field to write. A waiver stays valid until the parent value of a waived field changes. Then it needs a new approval.
 
 ## Issue waivers
 
@@ -95,7 +95,6 @@ Only the project layer can write `unlock`. The project `owner` must approve it, 
 |---|---|
 | `compass policy lint` | Check the layers, the locks and the waivers. Add `--file PATH` to check one file. |
 | `compass policy show` | Print every resolved field, the layer that wrote it and the waiver that excuses it. |
-| `compass policy update` | Move the project to a newer shipped major, and re-approve each waiver the move affects. |
 
 ## Limit of the approval check
 

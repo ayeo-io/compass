@@ -8,14 +8,13 @@ read, a role flag is accepted and ignored, and a stored generation keeps the
 rules it was assessed under. The messages that say so are built here, so every
 command says it the same way.
 
-`RULES` must equal the `retired_rules` table in `governance/legacy-views.yml`,
-which `compass policy migrate` reads; a test holds the two equal.
+`RULES` must equal the `retired_rules` table in `governance/legacy-views.yml`;
+a test holds the two equal.
 """
 # DEPENDENCY: standard library; compass_pkg.classify, read lazily by
 # `condition_findings`. Imported by compass_pkg.routing,
-# compass_pkg.justifications, compass_pkg.quick_fix_cmd, compass_pkg.preset_test,
-# compass_pkg.policy_lint, compass_pkg.merge, compass_pkg.migrate and
-# compass_pkg.policy_migrate.
+# compass_pkg.justifications, compass_pkg.quick_fix_cmd, compass_pkg.policy_lint,
+# compass_pkg.merge and compass_pkg.migrate.
 from __future__ import annotations
 
 #: The assessment dimensions the shipped default no longer declares.
@@ -52,14 +51,6 @@ def merge_hint(path):
         return (f"; {RELEASE} removed this rule set" + (
             f": {moved}, in rules.{target}" if target else ""))
     return ""
-
-
-def rule_line(rule_id):
-    """A sentence about one retired rule id, for `policy migrate`."""
-    new = RULES.get(rule_id)
-    if new:
-        return f"{rule_id} was retired at {RELEASE}; {new} replaces it"
-    return f"{rule_id} was retired at {RELEASE}, with no replacement"
 
 
 def condition_findings(config):

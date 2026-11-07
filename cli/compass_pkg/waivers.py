@@ -32,7 +32,7 @@ from compass_pkg.core import COMPASS_VERSION, CompassError
 OPERATIONS = ("set", "replace", "remove")
 LEGACY = "LEGACY"
 UNAPPROVED = "UNAPPROVED"
-# From 7.0.0 `compass policy migrate` writes a LEGACY waiver for each rule a
+# From 7.0.0 to 8.x `compass policy migrate` wrote a LEGACY waiver for each rule a
 # project recorded under `waived:`, so lint reads the shape, with a warning,
 # for the whole 7.x and 8.x lines. From 9.0.0 it is an error. Decision:
 # governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md.

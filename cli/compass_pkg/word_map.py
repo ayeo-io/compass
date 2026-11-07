@@ -463,8 +463,8 @@ def map_policy(policy, rows=None):
 
 
 def advisory_lines(layer):
-    """One advisory line per change the mapping made to `layer`, for the lint
-    and the preset test. It names the layer, the path and the new word."""
+    """One advisory line per change the mapping made to `layer`, for the lint.
+    It names the layer, the path and the new word."""
     return [f"advisory: {layer.name}: {path} reads '{old}' as '{new}'; "
             f"the old word is read until 9.0.0"
             for path, old, new in getattr(layer, "changes", ())]

@@ -150,7 +150,7 @@ GROUPS = [
             "docs/upgrade-7-0-0.md", "docs/configuration.md",
             "docs/safety-contract.md", "docs/policy-lint.md",
             "docs/refusal-codes.md", "docs/glossary.md",
-            "docs/policy-migrate.md", "docs/routing-deep-dive.md",
+            "docs/routing-deep-dive.md",
         ],
         "kind": "text",
         "live": True,

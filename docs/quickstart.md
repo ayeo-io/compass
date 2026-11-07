@@ -122,10 +122,10 @@ record the project's own rules, run it once from the project root:
    what differs from the shipped defaults, and the defaults are real, in-force
    content from the moment you install Compass. The team adds its own edits
    whenever it is ready. See `docs/configuration.md`.
-2. **Migrates an older project instead.** A project that has a
-   `.compass/config.yml` or copied `governance/` files from a 5.x version gets
-   `compass policy migrate`: a dry run first, and `--apply` only when you say
-   yes. See `docs/policy-migrate.md`.
+2. **Stops on an older project.** A project that has a
+   `.compass/config.yml` or copied `governance/` files from a 5.x version must
+   run `compass policy migrate` on 8.x first. The upgrade guide names the
+   9.0.0 settings.
 3. **Creates `.compass/work/`** - where every issue's state will live. Note
    that `.compass/work/` **is committed**. It is the audit trail, not temporary files.
 

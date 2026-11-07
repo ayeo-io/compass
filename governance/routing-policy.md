@@ -99,7 +99,7 @@ a rule that names a document does not fire, and a document on disk adds no
 gate and blocks no stage. A frozen preset or a stored generation can still
 hold such a rule; it is read and does not fire. A stored 6.x
 generation keeps its `role_rules` until the issue is re-assessed, and a
-project's copied 6.x governance keeps them until `compass policy migrate` runs.
+project's copied 6.x governance keeps them until `compass policy migrate` on 8.x runs.
 
 The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
 
@@ -292,7 +292,7 @@ A 6.0.0 project does not edit this file or `routing-policy.yml`, which is
 generated (see "The default preset" below). Routing changes go in the
 project's `compass.yml`; `compass policy lint` checks them and
 `compass policy show` prints the result. A project that copied these files
-under 5.x edits its copy until `compass policy migrate` converts it.
+under 5.x edits its copy until `compass policy migrate` on 8.x converts it.
 
 - **Loosening a routing rule weakens the framework for everyone,
   quietly.** It needs a waiver that the project's owner approves, and it should
@@ -345,7 +345,7 @@ the locked spike entry, which ships nothing, reads `suspended`. The classifier d
 turns the whole strategy off with no approval. `compass approach evaluate
 --write` stores the issue's applicability from it, as the strategy's entry in
 `governance/strategies.md` says. The 7.0.0 preset is kept, byte for byte as v8.0.4 shipped it, in
-`governance/presets/default@7/` for `compass policy update`; resolution reads
+`governance/presets/default@7/` as data; resolution reads
 only the live preset, whatever major a project's `extends:` names. So the pin
 decides instead: a project whose `compass.yml` extends `compass:default@6` or
 `@7` stores no applicability at assess and gets no row from the strategy's

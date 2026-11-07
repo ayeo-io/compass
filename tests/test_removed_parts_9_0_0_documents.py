@@ -144,12 +144,19 @@ CRITICAL = {"risk": "critical", "familiarity": "brownfield-mapped", "size": "med
             "goal": "delivery", "labels": []}
 
 
-def _route_on_default_6(assessment):
-    from compass_pkg import replay
+def _default_6_policy():
+    """The frozen `default@6` preset, resolved and in the evaluator's form."""
+    from compass_pkg import merge, policy_lint
     from compass_pkg.obligations import policy_adapter
+    parent, _ = policy_lint.load_parent(
+        directory=str(ROOT / "governance" / "presets" / "default@6"))
+    config, _ = merge.apply({}, parent.doc, "parent", "default", {})
+    return policy_adapter(config)
+
+
+def _route_on_default_6(assessment):
     from compass_pkg.routing import evaluate_route
-    policy = policy_adapter(replay._default_ref("default@6").config)
-    return evaluate_route(dict(assessment), policy)
+    return evaluate_route(dict(assessment), _default_6_policy())
 
 
 @pytest.mark.parametrize("assessment,kept", [(G5_LABEL, "RP-REQUIRE-004"),
@@ -167,9 +174,7 @@ def test_an_issue_routed_on_default_6_gets_no_verify_analyze(assessment, kept):
 
 def test_a_rule_that_adds_a_removed_gate_and_does_more_still_fires():
     from compass_pkg.routing import evaluate_route
-    from compass_pkg import replay
-    from compass_pkg.obligations import policy_adapter
-    policy = policy_adapter(replay._default_ref("default@6").config)
+    policy = _default_6_policy()
     for floor in policy["routing_guardrails"]["floors"]:
         if floor.get("id") == "RP-REQUIRE-002":
             floor["require_skill"] = "threat-modeling"

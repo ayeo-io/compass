@@ -1,10 +1,11 @@
-"""`/compass:init` writes a minimal `compass.yml` and migrates an older project.
+"""`/compass:init` writes a minimal `compass.yml` and stops on an older project.
 
 `compass init` (the verb every entry point runs) writes the state file in
 `.compass/` and no settings file. `/compass:init` is the step that writes
-`compass.yml`, and it runs `compass policy migrate` instead when the project
-already has a `.compass/config.yml` or copied governance, so a project never
-holds both settings files (ADR-043).
+`compass.yml`. When the project already has a `.compass/config.yml` or copied
+governance it stops instead, so a project never holds both settings files
+(ADR-043): 9.0.0 removed `compass policy migrate` (ADR-094), so such a project
+runs it on 8.x first.
 
 Scenario ids: IDR-1 to IDR-4, in the acceptance criteria of the issue
 `init-docs-release`.
@@ -74,15 +75,14 @@ def _migrate_step_problems(text):
     if not re.search(r"schema:.*(?:not|no).*overwrite|no `schema:`.*(?:migrate|refus|do not)",
                      one, flags=re.S | re.I):
         problems.append("step 1 does not refuse a compass.yml with no schema key")
-    dry = two.find("compass policy migrate`")
-    apply_ = two.find("compass policy migrate --apply")
-    ask = re.search(r"Apply this migration\?|go-ahead|says yes", two)
-    if dry < 0 or apply_ < 0 or dry > apply_:
-        problems.append("step 2 does not run the dry run before --apply")
-    if not re.search(r"dry run", two, flags=re.I):
-        problems.append("step 2 does not call the first run a dry run")
-    if not ask or ask.start() > apply_:
-        problems.append("step 2 does not ask for approval before --apply")
+    # 9.0.0 removed `compass policy migrate` (ADR-094): step 2 stops, names the
+    # 8.x command and the upgrade guide, and changes nothing.
+    if "`compass policy migrate` on Compass 8.x" not in two:
+        problems.append("step 2 does not send the project to compass policy migrate on 8.x")
+    if "upgrade guide" not in two:
+        problems.append("step 2 does not name the upgrade guide")
+    if "Change nothing" not in two:
+        problems.append("step 2 does not say to change nothing")
     if not re.search(r"Never write a fresh `compass.yml` beside", two):
         problems.append("step 2 does not forbid writing beside an older file")
     return problems
@@ -100,22 +100,16 @@ def test_idr_2_the_check_fails_on_a_step_2_that_applies_straight_away():
         "straight away.\n\n"))
     assert planted != text
     problems = _migrate_step_problems(planted)
-    assert any("dry run" in p for p in problems), problems
-    assert any("approval" in p for p in problems), problems
+    assert any("8.x" in p for p in problems), problems
+    assert any("change nothing" in p for p in problems), problems
     assert any("beside" in p for p in problems), problems
-
-
-def test_idr_2_step_2_asks_for_an_owner_after_migrating():
-    two = _step(_init_text(), 2)
-    assert re.search(r"owner", two), (
-        "a migrated project has no owner, and a waiver needs one")
 
 
 def test_idr_3_init_copies_no_governance_into_a_new_project():
     text = _init_text()
     assert "Copy `governance/` into the project" not in text
     assert "strategies-rationale.md" not in text, (
-        "copying governance is what policy migrate converts, not what init does")
+        "copying governance is what policy migrate converted on 8.x, not what init does")
     assert "Copies nothing" in text or "copies nothing" in text
 
 

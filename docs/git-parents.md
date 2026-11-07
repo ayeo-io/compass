@@ -46,13 +46,11 @@ repository starts with it, because git fetches a full sha only. Two matches are
 sha that names a tree or a file instead of a commit is also `L-PARENT-FORM`.
 
 There is no lock file. The sha in `compass.yml` is the pin, and a git commit sha already
-identifies its content. `compass policy update` moves the pin: it resolves the ref to the
-commit it names now (`git ls-remote`), fetches it, re-checks the project's waivers across
-the old and new commit and rewrites the `#<sha>`. See [policy-update.md](policy-update.md).
-A person writes the first sha.
+identifies its content. A person writes the sha and moves it. `compass policy update`,
+which moved the pin, was removed in 9.0.0 (ADR-094).
 
 The ref label is not checked against the content. Nothing tests that the pinned commit is
-reachable from the ref. `compass policy update` reads only where the ref points now.
+reachable from the ref.
 
 ## Where it is fetched from
 
@@ -70,9 +68,6 @@ sha is refused.
 |---|---|
 | `compass check`, and any reader of an issue's stored generation | Never. It reads the cache, and an uncached pin is `L-PARENT-NOT-CACHED` |
 | `compass policy lint`, `compass policy show` | Yes |
-| `compass policy update` | Yes, always for the ref (`git ls-remote`), and for the current pin and the new commit when they are not cached. With `COMPASS_OFFLINE=1` it asks nothing and reports `offline` |
-| `compass policy diff`, when a reference is a git parent | Yes, and it prints one line on stderr (`compass policy diff: fetching <ref> into .compass/cache/parents/`) before each fetch. It also adds `cache/` to `.compass/.gitignore` if the file does not list it. These are the only files `policy diff` writes |
-| `compass preset test` | Yes, for a git parent the preset names that is not cached. With `--offline` it fetches nothing |
 | `compass approach evaluate --write` (assess and reassess) | Yes |
 | any of the above with `--offline`, or with `COMPASS_OFFLINE=1` in the environment | Never |
 

@@ -336,8 +336,8 @@ def test_ir_14_migrate_config_repairs_the_issue(committed, change):
 
 # `readiness` was one of these until 9.0.0 removed it (ADR-093); `policy lint`
 # reads the project's configuration with no issue in the same way.
-@pytest.mark.parametrize("argv", [("--version",), ("--help",), ("policy", "lint"),
-                                  ("policy", "update")])
+# `policy update` was one too until 9.0.0 removed it (ADR-094).
+@pytest.mark.parametrize("argv", [("--version",), ("--help",), ("policy", "lint")])
 def test_ir_14_the_commands_that_need_no_issue_still_run(committed, argv):
     root, task_dir = committed
     (root / ".compass" / "current-task").write_text(SLUG + "\n", encoding="utf-8")

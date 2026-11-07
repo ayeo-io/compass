@@ -310,13 +310,6 @@ def test_acf_33(tmp_path):
     assert {verdict({"schema": 1, "artifacts": adds}), verdict(owed), verdict(removed),
             verdict(changed)} <= {"equivalent", "tightening", "loosening", "incomparable"}
 
-    # A project file's kind is left out by the merge since 9.0.0 (ADR-091), so
-    # `policy diff` names no added kind.
-    root = _scratch(tmp_path, {"schema": 1, "artifacts": adds})
-    code, out, err = _cli(root, "policy", "diff", "default@8", "project")
-    assert code == 0, out + err
-    assert "adds artifact kind" not in out, out
-
 
 # --- group B: the skeleton, the templates and the generated documents --------------
 

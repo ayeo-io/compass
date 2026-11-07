@@ -14,7 +14,6 @@ import io
 import os
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 import yaml
@@ -191,32 +190,6 @@ def test_vr_d13_a_parent_rule_keyed_on_size_standard_is_still_a_tightening(rows)
             **GATE_BY_SIZE["gates"]["G-STD"], "when": {"size": "medium"}}}}))
     assert old_words.result == new_words.result
     assert old_words.result != "equivalent", old_words.result
-
-
-# --- VR-D16: a policy-test fixture in old words -------------------------------
-
-def test_vr_d16_a_fixture_with_size_standard_and_old_modes_passes(rows, tmp_path):
-    from compass_pkg import preset_test
-    folder = tmp_path / "preset"
-    (folder / "compass-fixtures").mkdir(parents=True)
-    (folder / "compass-fixtures" / "std.yml").write_text(yaml.safe_dump({
-        "name": "standard size",
-        "assessment": {"size": "standard", "risk": "contained",
-                       "familiarity": "greenfield"},
-        "expect": {"stages": {"define": "full", "verify": "light"}}}),
-        encoding="utf-8")
-    seen = {}
-
-    def evaluate(config, capabilities, assessment):
-        seen.update(assessment)
-        return "runs", SimpleNamespace(
-            approach="regular", gate_set=(), gate_checks={},
-            stage_mode={"define": "thorough", "verify": "lightweight"})
-
-    config = {"dimensions": {"size": {}, "risk": {}, "familiarity": {}}}
-    result = preset_test._run_fixture(str(folder), "std.yml", config, (), evaluate)
-    assert result.status == "pass", (result.status, result.message, result.mismatches)
-    assert seen["size"] == "medium"
 
 
 # --- VR-D17: digests are of the raw text; stored generations read mapped ------
@@ -732,23 +705,6 @@ def test_vr_d19_the_advisory_names_the_layer_and_a_git_parent_by_its_sha():
     assert lines and all("github:acme/team@1.0.0#abc1234" in line for line in lines), lines
     assert any("stages.review.modes" in line and "lightweight" in line
                and "9.0.0" in line for line in lines), lines
-
-
-def test_vr_d19_preset_test_advises_and_keeps_its_exit_status(tmp_path):
-    results = {}
-    for name, text in (("old", OLD_PROJECT),
-                       ("new", OLD_PROJECT.replace("full", "thorough"))):
-        folder = tmp_path / name
-        (folder / "compass-fixtures").mkdir(parents=True)
-        (folder / "compass.yml").write_text(text, encoding="utf-8")
-        (folder / "compass-fixtures" / "one.yml").write_text(yaml.safe_dump({
-            "name": "one", "assessment": {"risk": "contained", "familiarity": "greenfield",
-                                          "size": "small"},
-            "expect": {"approach": "regular"}}), encoding="utf-8")
-        results[name] = _cli(tmp_path, "preset", "test", str(folder))
-    assert results["old"][0] == results["new"][0], results
-    assert "9.0.0" in results["old"][2] and "thorough" in results["old"][2], results["old"]
-    assert results["new"][2] == ""
 
 
 def test_vr_d19_compass_check_prints_no_such_advisory(tmp_path):

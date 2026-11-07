@@ -28,7 +28,7 @@ the issue.
 - If this issue is itself a sweep, rename, or cleanup touching many files,
   check it the way `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S9`
   describes (an unmigrated 5.x project runs on its own copied `governance/`
-  until `compass policy migrate`): a fresh agent that has not seen the
+  until `compass policy migrate` on 8.x): a fresh agent that has not seen the
   change, not its author.
 - A guard offered as part of the change is accepted on a demonstrated failure
   rather than a passing test - `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md`
@@ -68,7 +68,7 @@ instead of the procedure below.
    `regression`, `security`, `clarity`, `claims`. The `governance` dimension
    checks the work against the governance in force (`compass policy show`;
    an unmigrated 5.x project runs on its own copied `governance/` until
-   `compass policy migrate`): the guardrails (hard, evidence-backed - `compass check` is the mechanical
+   `compass policy migrate` on 8.x): the guardrails (hard, evidence-backed - `compass check` is the mechanical
    part) and the applicable strategies (assessed as judgment, reported
    separately). How to do the review is below.
 4. **Pass the gates.** As each gate is cleared, register the evidence, then

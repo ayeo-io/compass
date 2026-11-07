@@ -14,11 +14,12 @@ follows the same file.
   can also hold the project's edits to the shipped governance (see
   `docs/policy-lint.md`; for waivers, locks and approvers see
   [waivers-and-locks.md](waivers-and-locks.md)). `/compass:init` writes a minimal one for a new
-  project, and `compass policy migrate` writes one for an existing project.
+  project. `compass policy migrate` on 8.x wrote one for an existing project;
+  9.0.0 removed that command (ADR-094).
 - **`.compass/config.yml`** holds the same settings for a project from 5.x that
   has not moved. The CLI reads it when `compass.yml` is absent, or present
-  without `schema:`, until 9.0.0. `compass policy migrate` moves its settings
-  into `compass.yml`, and 9.0.0 stops reading it. In this file
+  without `schema:`, until 9.0.0. `compass policy migrate` on 8.x moves its
+  settings into `compass.yml`, and 9.0.0 stops reading it. In this file
   the adoption setting is called `mode`; in `compass.yml` it is called
   `adoption`. No 6.0.0 command writes this file.
 - **The state file in `.compass/`** holds what the CLI writes, not what a
@@ -27,16 +28,16 @@ follows the same file.
   no other, so a new project has `.compass/state.yml` and no
   `.compass/config.yml`. A project created before ADR-043 keeps both values in
   `.compass/config.yml`, and the CLI and the hook read them there. `init` adds
-  nothing to such a project, and `compass policy migrate` moves them to the
-  state file.
+  nothing to such a project, and `compass policy migrate` on 8.x moves them to
+  the state file.
 
 ### What a new project and an existing project get
 
 | Project | Gets | Reads |
 |---|---|---|
 | New (no `.compass/`) | `compass init`, run by any entry point, creates `.compass/state.yml` and `.compass/work/`. `/compass:init` then writes a minimal `compass.yml` (`schema`, `extends`, `owner`, `project.name`, `project.test_command`) and copies nothing. | `compass.yml`, over the shipped default |
-| From 5.x with a `.compass/config.yml` or copied governance | Nothing changes until it runs `compass policy migrate`. `/compass:init` runs that command (a dry run, then `--apply` on a yes) in place of writing a fresh file. | The old files, as 5.x did |
-| This repository | A hand-written `compass.yml` that holds settings keys and the owner, and `.compass/state.yml`. It also holds a `readiness:` override and two readiness commands, which 9.0.0 no longer reads (see `readiness` below). `compass policy migrate` refuses here, because the repository's governance files are generated from the shipped default. | `compass.yml` |
+| From 5.x with a `.compass/config.yml` or copied governance | Nothing changes until it runs `compass policy migrate` on 8.x. `/compass:init` stops and says so in place of writing a fresh file; the upgrade guide names the 9.0.0 settings. | The old files, as 5.x did |
+| This repository | A hand-written `compass.yml` that holds settings keys and the owner, and `.compass/state.yml`. It also holds a `readiness:` override and two readiness commands, which 9.0.0 no longer reads (see `readiness` below). | `compass.yml` |
 
 A missing file means every default below. A file the CLI cannot read, or a
 duplicate key in `compass.yml`, is a broken file. Each command then does what
@@ -69,16 +70,13 @@ The state decides what Compass reads, and no state loses a setting silently:
   fails. The text names the keys, up to five and then "and N more".
 - **The way out.** Move those keys into `compass.yml` (write `mode` as
   `adoption`) and delete them from `.compass/config.yml`. The text names no
-  migration command, because `compass policy migrate` refuses a project that
-  already has a `compass.yml` Compass reads.
+  migration command: 9.0.0 has none (ADR-094).
 - **A broken file.** A file that cannot be parsed is refused and named, in
   either position, as for a lone file. A `compass.yml` that cannot be parsed
   counts as Compass's file, so Compass does not read the old file in its place.
 - **The marker.** Every `compass.yml` that Compass creates carries `schema:`.
-  `compass init` writes no `compass.yml`. `/compass:init` and
-  `compass policy migrate` write a project's first one. `compass policy update`
-  rewrites it, and `compass preset init` writes one inside the new preset
-  folder it scaffolds.
+  `compass init` writes no `compass.yml`. `/compass:init` writes a project's
+  first one, as `compass policy migrate` did on 8.x.
 
 ## Settings
 
@@ -221,7 +219,7 @@ stays valid, so a file that holds it keeps working. The merge leaves it out,
 and its value is not checked. `compass policy lint` names it with
 `L-SETTING-REMOVED`. Delete it from `compass.yml`. A frozen preset
 (`default@6`, `default@7`) and an issue's stored generation keep the catalog
-they were written with, and lint and `compass policy diff` still read it. A
+they were written with, and lint still reads it. A
 `.compass/readiness.yml` left in a checkout is not read.
 
 ### `living_spec`

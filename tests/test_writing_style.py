@@ -2133,6 +2133,23 @@ _REMOVED_IN_9_0_0 = frozenset({
     # phrases are a constant in hooks/py/stop_scan.py now.
     "governance/signals.yml", "schemas/signals.schema.json",
     "tests/test_signals_design_smell.py",
+    # `compass policy diff`, `policy update`, `policy migrate`, `preset init`
+    # and `preset test`, their docs and their tests (ADR-094). ADR-094 names the
+    # docs and is not edited.
+    "cli/compass_pkg/replay.py", "cli/compass_pkg/policy_update.py",
+    "cli/compass_pkg/preset_init.py", "cli/compass_pkg/preset_test.py",
+    "cli/compass_pkg/policy_migrate.py", "cli/compass_pkg/policy_migrate_undo.py",
+    "cli/compass_pkg/config_words.py", "cli/compass_pkg/shipped_releases.py",
+    "scripts/generate-shipped-releases.py", "governance/shipped-releases.yml",
+    "docs/policy-diff.md", "docs/policy-update.md", "docs/policy-test.md",
+    "docs/policy-migrate.md", "tests/test_policy_diff.py", "tests/test_policy_update.py",
+    "tests/test_policy_update_git.py", "tests/test_policy_test.py",
+    "tests/test_preset_group.py", "tests/policy_update_fixtures.py",
+    "tests/test_policy_migrate.py", "tests/test_shipped_releases.py",
+    "tests/fixtures/policy-diff-json-example.json",
+    "tests/fixtures/policy-update-json-example.json",
+    "tests/fixtures/policy-migrate-example.json",
+    "tests/fixtures/preset-interfaces/policy-test-groups.json",
 })
 #: Paths 9.0.0 removed that this repository's `compass.yml` still names, keyed by
 #: the path. An agent may not edit `compass.yml`; the owner deletes its readiness
@@ -3254,14 +3271,14 @@ _GROWING_REACH = {
     # 15 with the check-verdict baseline beside it, which is plain JSON;
     # 61 with the 46 check-corpus case labels, which hold a verdict and one line;
     # 62 with tests/fixtures/classifier-json-example.json, plain JSON;
-    # 63 with tests/fixtures/policy-diff-json-example.json, plain JSON;
-    # 64 with tests/fixtures/policy-migrate-example.json, plain JSON;
-    # 65 with tests/fixtures/policy-update-json-example.json, plain JSON;
+    # 63 with the JSON example of `compass policy diff`, plain JSON;
+    # 64 with the JSON example of `compass policy migrate`, plain JSON;
+    # 65 with the JSON example of `compass policy update`, plain JSON;
     # 66 with the JSON example of `compass issue configure`, plain JSON;
     # 67 with its refused example, plain JSON;
     # 68 with tests/fixtures/scenario-tests-json-example.json, plain JSON;
     # 69 with tests/fixtures/evidence-review-example.json, plain JSON;
-    # 70 with tests/fixtures/preset-interfaces/policy-test-groups.json, plain JSON;
+    # 70 with the JSON example of grouped `compass preset test` fixtures, plain JSON;
     # 71 with tests/fixtures/evidence-approve-example.json, plain JSON;
     # 72 with tests/fixtures/compat/v5.6.0-governance.tgz, the packed 5.6.0 governance files;
     # 73 with the check-corpus case label for the recorded case of dod-evidence-typed, which
@@ -3319,7 +3336,9 @@ _GROWING_REACH = {
     # tests/fixtures/autonomy-ratio-and-cost-views/.
     # 120 when 9.0.0 removed `compass issue configure` and its two plain JSON
     # examples (ADR-094).
-    "PBW-C4": (lambda path: path.startswith("tests/"), 120),
+    # 116 when 9.0.0 removed `policy diff`, `policy migrate`, `policy update` and
+    # `preset test` and their four plain JSON examples (ADR-094).
+    "PBW-C4": (lambda path: path.startswith("tests/"), 116),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

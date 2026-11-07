@@ -1,17 +1,20 @@
-"""The interfaces a later team-layer release relies on (issue `preset-interfaces`).
+"""Two interfaces a team layer relies on, kept after 9.0.0 removed the preset verbs.
 
-Four interfaces: fixture groups in `compass policy test`, the classification of
-a git parent chain against the shipped default stored in `versions.yml`, a git
-parent as an argument of `compass policy diff`, and the map form of `extends:`
-with the reserved `preset:` key. These tests run the CLI in a temporary folder
-and, for a git parent, point `COMPASS_PARENT_REMOTE_BASE` at a local
-repository, so nothing reaches the network.
+The classification of a git parent chain against the shipped default, stored in
+`versions.yml` (PI-3), and the map form of `extends:` with the reserved
+`preset:` key (PI-5). `compass preset test` and `compass policy diff`, which
+PI-1, PI-2 and PI-4 covered, were removed in 9.0.0 (ADR-094). These tests run
+the CLI in a temporary folder and, for a git parent, point
+`COMPASS_PARENT_REMOTE_BASE` at a local repository, so nothing reaches the
+network.
 
-Scenario ids: `PI-1` to `PI-6`. Each test name starts with its scenario id.
+Scenario ids: `PI-3`, `PI-5` and `PI-6`. Each test name starts with its scenario id.
 """
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -19,186 +22,44 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
-from parent_fixtures import REAL_GIT, fake_git, make_remote  # noqa: E402,F401
-from test_policy_test import (GOOD, PRESET, _fixture, _json, _preset, _run,  # noqa: E402
-                              _test)
-
-GOLDEN = ROOT / "tests" / "fixtures" / "preset-interfaces"
+from parent_fixtures import REAL_GIT, make_remote  # noqa: E402
 
 
-def _group(preset, group, fixtures):
-    """Write `fixtures` (a name mapped to a mapping or text) into the folder
-    `compass-fixtures/<group>/` of `preset`."""
-    folder = Path(preset) / "compass-fixtures" / group
-    folder.mkdir(parents=True, exist_ok=True)
-    for name, body in fixtures.items():
-        text = body if isinstance(body, str) else yaml.safe_dump(body)
-        (folder / f"{name}.yml").write_text(text, encoding="utf-8")
-    return folder
+def _env(home, extra=None):
+    env = {"PATH": os.environ.get("PATH", REAL_GIT), "HOME": str(home), "LANG": "C.UTF-8",
+           "LC_ALL": "C.UTF-8", "NO_COLOR": "1", "COLUMNS": "100",
+           "PYTHONDONTWRITEBYTECODE": "1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+           "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1"}
+    env.update(extra or {})
+    return env
 
 
-def _grouped(tmp_path):
-    """The preset the golden report was made from: one ungrouped fixture and
-    two groups, one of them with a failing fixture."""
-    preset = _preset(tmp_path, fixtures={"a-top": GOOD})
-    _group(preset, "meets/banking", {"one": GOOD, "two": _fixture({"approach": "spike"})})
-    _group(preset, "meets/health", {"one": GOOD})
-    return preset
+def _run(cwd, *argv, env=None):
+    done = subprocess.run([sys.executable, str(CLI), *argv], cwd=cwd, env=_env(cwd, env),
+                          capture_output=True, text=True, timeout=180)
+    return done.returncode, done.stdout, done.stderr
 
-
-# --- PI-1: a folder inside compass-fixtures/ is a group ----------------------------------------
-
-def test_pi_1_a_fixture_in_a_folder_carries_the_folder_as_its_group(tmp_path):
-    code, report = _json(tmp_path, _grouped(tmp_path))
-    assert code == 1
-    assert [(f["file"], f["group"]) for f in report["fixtures"]] == [
-        ("a-top.yml", None), ("one.yml", "meets/banking"), ("two.yml", "meets/banking"),
-        ("one.yml", "meets/health")]
-    assert report["problems"] == []
-    assert report["totals"] == {"fixtures": 4, "passed": 3, "failed": 1}
-
-
-def test_pi_1_the_text_report_shows_the_path_of_a_grouped_fixture(tmp_path):
-    _, out, _ = _test(tmp_path, _grouped(tmp_path))
-    assert "(compass-fixtures/meets/banking/two.yml)" in out
-    assert "(compass-fixtures/a-top.yml)" in out
-
-
-def test_pi_1_the_report_counts_each_group(tmp_path):
-    _, report = _json(tmp_path, _grouped(tmp_path))
-    assert report["groups"] == [
-        {"group": "meets/banking", "fixtures": 2, "passed": 1, "failed": 1, "result": "fail"},
-        {"group": "meets/health", "fixtures": 1, "passed": 1, "failed": 0, "result": "pass"}]
-
-
-def test_pi_1_a_preset_without_groups_reports_an_empty_list(tmp_path):
-    code, report = _json(tmp_path, _preset(tmp_path))
-    assert code == 0
-    assert report["groups"] == []
-    assert report["fixtures"][0]["group"] is None
-
-
-def test_pi_1_a_folder_that_holds_fixtures_and_folders_is_a_group_of_its_own(tmp_path):
-    preset = _preset(tmp_path, fixtures={"a-top": GOOD})
-    _group(preset, "meets", {"x": GOOD})
-    _group(preset, "meets/banking", {"y": GOOD})
-    code, report = _json(tmp_path, preset)
-    assert code == 0, report["problems"]
-    assert [g["group"] for g in report["groups"]] == ["meets", "meets/banking"]
-
-
-def test_pi_1_a_run_with_every_group_passing_exits_zero(tmp_path):
-    preset = _preset(tmp_path)
-    _group(preset, "meets/banking", {"one": GOOD})
-    code, out, err = _test(tmp_path, preset)
-    assert code == 0, (out, err)
-    assert "meets/banking" in out
-
-
-def test_pi_1_a_failing_fixture_in_a_group_fails_the_run_and_names_the_group(tmp_path):
-    code, out, _ = _test(tmp_path, _grouped(tmp_path))
-    assert code == 1
-    assert "group meets/banking: 2 run, 1 passed, 1 failed" in out
-    assert "group meets/health: 1 run, 1 passed, 0 failed" in out
-
-
-def test_pi_1_a_group_folder_with_nothing_in_it_is_a_problem(tmp_path):
-    preset = _preset(tmp_path)
-    (preset / "compass-fixtures" / "meets" / "empty").mkdir(parents=True)
-    code, report = _json(tmp_path, preset)
-    assert code == 1
-    assert any("compass-fixtures/meets/empty" in p and "no fixture" in p
-               for p in report["problems"]), report["problems"]
-
-
-def test_pi_1_a_yaml_file_in_a_group_is_a_problem_as_it_is_at_the_top(tmp_path):
-    preset = _preset(tmp_path)
-    folder = _group(preset, "meets/banking", {"one": GOOD})
-    (folder / "two.yaml").write_text(yaml.safe_dump(GOOD), encoding="utf-8")
-    code, report = _json(tmp_path, preset)
-    assert code == 1
-    assert any("meets/banking/two.yaml" in p for p in report["problems"]), report["problems"]
-
-
-def test_pi_1_a_hidden_folder_is_ignored(tmp_path):
-    preset = _preset(tmp_path)
-    hidden = preset / "compass-fixtures" / ".cache"
-    hidden.mkdir()
-    (hidden / "x.yml").write_text("not: a fixture", encoding="utf-8")
-    code, report = _json(tmp_path, preset)
-    assert code == 0, report["problems"]
-    assert report["groups"] == []
-
-
-def test_pi_1_a_linked_folder_is_not_followed(tmp_path):
-    preset = _preset(tmp_path)
-    outside = tmp_path / "outside"
-    outside.mkdir()
-    (outside / "x.yml").write_text(yaml.safe_dump(GOOD), encoding="utf-8")
-    (preset / "compass-fixtures" / "linked").symlink_to(outside, target_is_directory=True)
-    code, report = _json(tmp_path, preset)
-    assert code == 1
-    assert any("linked" in p and "link" in p for p in report["problems"]), report["problems"]
-    assert report["totals"]["fixtures"] == 1
-
-
-def test_pi_1_a_malformed_fixture_in_a_group_is_an_error_in_that_group(tmp_path):
-    preset = _preset(tmp_path)
-    _group(preset, "meets/banking", {"bad": "assessment: 1\n"})
-    _, report = _json(tmp_path, preset)
-    assert report["fixtures"][-1]["status"] == "error"
-    assert report["groups"] == [{"group": "meets/banking", "fixtures": 1, "passed": 0,
-                                 "failed": 1, "result": "fail"}]
-
-
-def test_pi_1_a_lint_failure_runs_no_group_and_lists_none(tmp_path):
-    preset = _preset(tmp_path, {**PRESET, "autonomy": "balanced"})
-    _group(preset, "meets/banking", {"one": GOOD})
-    _, report = _json(tmp_path, preset)
-    assert report["fixtures_run"] is False
-    assert report["groups"] == []
-
-
-# --- PI-2: the key order is pinned by a fixture ------------------------------------------------
-
-def test_pi_2_the_json_report_with_groups_equals_the_pinned_fixture(tmp_path):
-    _, out, _ = _run(tmp_path, "preset", "test", str(_grouped(tmp_path)), "--json")
-    golden = json.loads((GOLDEN / "policy-test-groups.json").read_text(encoding="utf-8"))
-    assert json.dumps(json.loads(out), indent=1) == json.dumps(golden, indent=1)
-
-
-def test_pi_2_groups_come_last_at_the_top_and_group_comes_last_on_a_fixture(tmp_path):
-    _, report = _json(tmp_path, _grouped(tmp_path))
-    assert list(report) == ["schema", "preset", "result", "lint", "fixtures_run", "totals",
-                            "fixtures", "problems", "groups"]
-    assert list(report["fixtures"][0]) == ["file", "name", "status", "mismatches", "message",
-                                           "group"]
-    assert list(report["groups"][0]) == ["group", "fixtures", "passed", "failed",
-                                           "result"]
-
-
-# --- PI-3: the chain is classified against the shipped default and stored ---------------------
 
 def _ref(sha, owner="acme", repo="bank", ref="1.2.0"):
     return f"github:{owner}/{repo}@{ref}#{sha}"
 
 
-# The shipped default routes every delivery assessment to `delivery` (ADR-092). A
-# parent loosens it by letting a written review clear the architecture gate, which
-# cross-cutting and critical work owes, and tightens it by adding the clarity
-# review to trivial work. The two meet at no point but a labelled one, so a chain
-# of both still has a point that is only looser.
 LOOSENS = {"gates": {"verify.architecture": {
     "set": {"accepts": {"add": ["manual-review"]}},
     "waiver": {"reason": "This team reviews architecture in pairing.",
                "approved_by": "acme-team", "approved_on": "2026-10-05"}}}}
+
+
 TIGHTENS = {"rules": {"team_floors": {
     "kind": "floors", "hit": {"add_gate": "collect"},
     "rules": {"TEAM-001": {"order": 1, "when": {"risk": "trivial"},
                            "then": {"add_gate": "verify.clarity"},
                            "rationale": "This team reviews clarity on trivial changes."}}}}}
+
+
 CAPABILITY_ON = {"capabilities": {"entry-exit-evaluation": True}}
 
 
@@ -295,8 +156,6 @@ def test_pi_3_reading_the_live_configuration_does_not_run_the_classifier(
     assert "classification" not in resolution.versions["parents"][1]
 
 
-# --- PI-4: a git parent is an argument of policy diff ------------------------------------------
-
 def _diff_project(tmp_path):
     root = tmp_path / "project"
     (root / ".compass").mkdir(parents=True)
@@ -309,153 +168,6 @@ def _remote(tmp_path, doc, repo="bank", owner="acme"):
     sha = make_remote(base, owner=owner, repo=repo, files={"compass.yml": yaml.safe_dump(doc)})
     return base, sha
 
-
-def _diff(root, *argv, env=None):
-    code, out, err = _run(root, "policy", "diff", *argv, "--json", env=env)
-    return code, (json.loads(out) if out.strip().startswith("{") else None), out, err
-
-
-def test_pi_4_a_git_parent_is_compared_with_the_shipped_default(tmp_path):
-    base, sha = _remote(tmp_path, _parent(TIGHTENS))
-    root = _diff_project(tmp_path)
-    ref = _ref(sha)
-    code, doc, out, err = _diff(root, "default@8", ref, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
-    assert code == 0, (out, err)
-    assert doc["a"]["ref"] == "default@8"
-    assert doc["b"]["ref"] == ref
-    assert doc["b"]["kind"] == "parent"
-    assert doc["classification"]["result"] == "tightening"
-    assert doc["differs"] is True
-    assert (root / ".compass" / "cache" / "parents" / "acme" / "bank" / sha
-            / "compass.yml").is_file()
-
-
-def test_pi_4_a_loosening_parent_is_shown_not_refused(tmp_path):
-    base, sha = _remote(tmp_path, _parent(LOOSENS))
-    code, doc, out, err = _diff(_diff_project(tmp_path), "default@8", _ref(sha),
-                                env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
-    assert code == 0, (out, err)
-    assert doc["classification"]["result"] == "loosening"
-
-
-def test_pi_4_one_argument_compares_the_project_with_the_parent(tmp_path):
-    base, sha = _remote(tmp_path, _parent(TIGHTENS))
-    code, doc, out, err = _diff(_diff_project(tmp_path), _ref(sha),
-                                env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
-    assert code == 0, (out, err)
-    assert (doc["a"]["ref"], doc["b"]["kind"]) == ("project", "parent")
-
-
-def test_pi_4_the_parent_may_be_the_first_argument(tmp_path):
-    base, sha = _remote(tmp_path, _parent(TIGHTENS))
-    code, doc, out, err = _diff(_diff_project(tmp_path), _ref(sha), "default@8",
-                                env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
-    assert code == 0, (out, err)
-    assert doc["classification"]["result"] == "loosening"
-
-
-def test_pi_4_a_parent_that_extends_another_is_read_with_its_chain(tmp_path):
-    base = tmp_path / "remotes"
-    far = make_remote(base, repo="far", files={"compass.yml": yaml.safe_dump(_parent(TIGHTENS))})
-    near_doc = _parent({}, extends=_ref(far, repo="far"))
-    near = make_remote(base, repo="near", files={"compass.yml": yaml.safe_dump(near_doc)})
-    code, doc, out, err = _diff(_diff_project(tmp_path), "default@8", _ref(near, repo="near"),
-                                env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
-    assert code == 0, (out, err)
-    assert doc["classification"]["result"] == "tightening"
-
-
-def test_pi_4_offline_with_the_parent_uncached_is_refused_and_runs_no_git(tmp_path):
-    bin_dir, log = fake_git(tmp_path)
-    root = _diff_project(tmp_path)
-    code, _, out, err = _diff(root, "default@8", _ref("9" * 40), "--offline",
-                              env={"PATH": f"{bin_dir}:{REAL_GIT}"})
-    assert code == 2
-    assert "L-PARENT-NOT-CACHED" in out + err
-    assert not log.exists()
-
-
-def test_pi_4_an_uncached_parent_is_fetched_and_one_stderr_line_says_so(tmp_path):
-    base, sha = _remote(tmp_path, _parent(TIGHTENS))
-    root = _diff_project(tmp_path)
-    env = {"COMPASS_PARENT_REMOTE_BASE": str(base)}
-    code, _, out, err = _diff(root, "default@8", _ref(sha), env=env)
-    assert code == 0, (out, err)
-    lines = [line for line in err.splitlines() if line.strip()]
-    assert lines == [f"compass policy diff: fetching {_ref(sha)} into .compass/cache/parents/"]
-    code, _, out, err = _diff(root, "default@8", _ref(sha), env=env)
-    assert code == 0 and err.strip() == "", err
-
-
-def test_pi_4_offline_never_fetches_and_writes_no_cache(tmp_path):
-    base, sha = _remote(tmp_path, _parent(TIGHTENS))
-    root = _diff_project(tmp_path)
-    env = {"COMPASS_PARENT_REMOTE_BASE": str(base)}
-    code, _, out, err = _diff(root, "default@8", _ref(sha), "--offline", env=env)
-    assert code == 2 and "fetching" not in err
-    assert not (root / ".compass" / "cache" / "parents").exists()
-    code, _, out, err = _diff(root, "default@8", _ref(sha), env={**env, "COMPASS_OFFLINE": "1"})
-    assert code == 2 and "fetching" not in err
-    assert not (root / ".compass" / "cache" / "parents").exists()
-
-
-def test_pi_4_a_command_line_reference_error_does_not_repeat_the_extends_prefix(tmp_path):
-    code, _, out, err = _diff(_diff_project(tmp_path), "default@8", "github:acme/bank@1.2.0")
-    assert code == 2
-    assert "extends:" not in out + err
-    assert "L-PARENT-NO-SHA" in out + err
-
-
-def test_pi_4_a_parent_that_turns_a_capability_on_is_compared_with_it_on(tmp_path):
-    base, sha = _remote(tmp_path, _parent(CAPABILITY_ON))
-    code, doc, out, err = _diff(_diff_project(tmp_path), "default@8", _ref(sha),
-                                env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
-    assert code == 0, (out, err)
-    assert doc["b"]["capabilities"] == ["entry-exit-evaluation"]
-    assert doc["a"]["capabilities"] == []
-    assert doc["classification"]["result"] == "tightening"
-
-
-def test_pi_4_a_cached_parent_is_read_offline(tmp_path):
-    base, sha = _remote(tmp_path, _parent(TIGHTENS))
-    root = _diff_project(tmp_path)
-    env = {"COMPASS_PARENT_REMOTE_BASE": str(base)}
-    assert _diff(root, "default@8", _ref(sha), env=env)[0] == 0
-    code, doc, out, err = _diff(root, "default@8", _ref(sha), "--offline", env=env)
-    assert code == 0, (out, err)
-    assert doc["b"]["kind"] == "parent"
-
-
-@pytest.mark.parametrize("bad,code_wanted", [
-    ("github:acme/bank@1.2.0", "L-PARENT-NO-SHA"),
-    ("github:acme/bank@1.2.0#xyz", "L-PARENT-FORM"),
-])
-def test_pi_4_a_bad_spelling_is_refused_with_its_lint_code(tmp_path, bad, code_wanted):
-    bin_dir, log = fake_git(tmp_path)
-    code, _, out, err = _diff(_diff_project(tmp_path), "default@8", bad,
-                              env={"PATH": f"{bin_dir}:{REAL_GIT}"})
-    assert code == 2
-    assert code_wanted in out + err
-    assert not log.exists()
-
-
-def test_pi_4_a_parent_with_a_settings_key_is_refused_before_it_is_compared(tmp_path):
-    base, sha = _remote(tmp_path, _parent({"autonomy": "balanced"}))
-    code, _, out, err = _diff(_diff_project(tmp_path), "default@8", _ref(sha),
-                              env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
-    assert code == 2
-    assert "autonomy" in out + err and "Traceback" not in err
-
-
-def test_pi_4_the_report_names_the_parent_without_a_machine_path(tmp_path):
-    base, sha = _remote(tmp_path, _parent(TIGHTENS))
-    root = _diff_project(tmp_path)
-    _, _, out, _ = _diff(root, "default@8", _ref(sha),
-                         env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
-    assert str(tmp_path) not in out
-
-
-# --- PI-5: the extends map form and the reserved preset key -----------------------------------
 
 def _lint_file(root, doc, *extra, env=None):
     path = root / "compass.yml"
@@ -586,174 +298,6 @@ def test_pi_5_the_preset_key_must_be_a_mapping(tmp_path):
     assert "L-SCHEMA" in _codes(report)
 
 
-def test_pi_5_policy_test_passes_a_preset_that_carries_the_preset_key(tmp_path):
-    preset = _preset(tmp_path, {**PRESET, "preset": PRESET_BLOCK})
-    code, out, err = _test(tmp_path, preset)
-    assert code == 0, (out, err)
-
-
-def test_pi_5_the_preset_index_key_stays_a_settings_key_a_parent_may_not_carry(tmp_path):
-    preset = _preset(tmp_path, {**PRESET, "preset_index": "github:acme/index"})
-    code, report = _json(tmp_path, preset)
-    assert code == 1
-    assert "L-SETTINGS-KEY" in [f["code"] for f in report["lint"]["findings"]]
-
-
-def test_pi_5_two_files_that_differ_only_in_the_preset_block_do_not_differ(tmp_path):
-    root = _diff_project(tmp_path)
-    (root / "a.yml").write_text(yaml.safe_dump({"schema": 1}), encoding="utf-8")
-    (root / "b.yml").write_text(yaml.safe_dump({"schema": 1, "preset": PRESET_BLOCK}),
-                                encoding="utf-8")
-    code, doc, out, err = _diff(root, "a.yml", "b.yml")
-    assert code == 0, (out, err)
-    assert doc["differs"] is False
-    assert doc["a"]["digest"] == doc["b"]["digest"]
-
-
-# --- PI-6: the owning docs, help and contract corpus state the interfaces ----------------------
-
-def _doc(*parts):
-    return " ".join((ROOT.joinpath(*parts)).read_text(encoding="utf-8").split())
-
-
-def test_pi_6_policy_test_doc_states_groups_the_group_key_and_the_counts():
-    text = _doc("docs", "policy-test.md")
-    for needle in ("`groups`", "`group`", "compass-fixtures/meets/banking/", "does not follow",
-                   "tests/fixtures/preset-interfaces/policy-test-groups.json"):
-        assert needle in text, needle
-    assert "are not read yet" not in text
-    assert "A later release reads fixtures in folders" not in text
-
-
-def test_pi_6_policy_diff_doc_lists_the_git_parent_reference_and_its_kind():
-    text = _doc("docs", "policy-diff.md")
-    for needle in ("github:<owner>/<repo>@<ref>#<sha>", "`parent`", "--offline"):
-        assert needle in text, needle
-
-
-def test_pi_6_git_parents_doc_states_the_stored_classification_and_the_map_form():
-    text = _doc("docs", "git-parents.md")
-    for needle in ("classification", "before any waiver", "`first_looser`", "`raw_points`",
-                   "approved_by", "`preset`", "classify_chain"):
-        assert needle in text, needle
-
-
-def test_pi_6_generation_store_doc_names_the_classification_in_versions_yml():
-    assert "and the `classification` of the chain through it" in _doc("docs",
-                                                                       "generation-store.md")
-
-
-def test_pi_6_the_new_module_has_an_owning_doc_row():
-    readme = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
-    row = next(line for line in readme.splitlines() if "chain_class.py" in line)
-    assert row.rstrip().endswith("`docs/git-parents.md` |")
-
-
-def test_pi_6_help_says_a_folder_is_a_group_and_diff_takes_a_git_parent():
-    source = (ROOT / "cli" / "compass_pkg" / "verb_help.py").read_text(encoding="utf-8")
-    assert "A folder inside compass-fixtures/ is a fixture group" in source
-    assert "github:<owner>/<repo>@<ref>#<sha>" in source
-    code, out, _ = _run(ROOT, "policy", "diff", "--help")
-    assert code == 0 and "github:<owner>/<repo>@<ref>#<sha>" in " ".join(out.split())
-
-
-CORPUS = ROOT / "tests" / "fixtures" / "compat" / "contract-4-commands.yml"
-
-
-def test_pi_6_the_contract_corpus_holds_a_grouped_test_and_a_git_parent_diff_with_reasons():
-    text = CORPUS.read_text(encoding="utf-8")
-    entries = {e["id"]: e for e in yaml.safe_load(text)["entries"]}
-    assert "policy-diff-git-parent-offline-uncached" not in entries, "5.6.0 also exited 2"
-    for entry_id in ("policy-test-groups",):
-        assert entry_id in entries, entry_id
-        line = text.index(f"- id: {entry_id}\n")
-        before = text[:line].rstrip("\n").splitlines()
-        assert before[-1].startswith("#") or any(
-            "Added on purpose by preset-interfaces" in b for b in before[-4:]), entry_id
-
-
-# --- review round: links, group names, capabilities, the date, the cost ------------------------
-
-def _link_cases(tmp_path):
-    outside = tmp_path / "outside"
-    outside.mkdir()
-    (outside / "secret.yml").write_text("SECRET-CONTENT: 1\n", encoding="utf-8")
-    (outside / "folder").mkdir()
-    (outside / "folder" / "x.yml").write_text(yaml.safe_dump(GOOD), encoding="utf-8")
-    return outside
-
-
-@pytest.mark.parametrize("where", ["", "meets"])
-@pytest.mark.parametrize("kind", ["file", "folder", "broken", "file-not-yml"])
-def test_pi_1_every_link_is_a_problem_and_nothing_outside_is_read_or_printed(
-        tmp_path, where, kind):
-    preset = _preset(tmp_path)
-    folder = _group(preset, "meets", {"one": GOOD}) if where else preset / "compass-fixtures"
-    outside = _link_cases(tmp_path)
-    target = {"file": outside / "secret.yml", "folder": outside / "folder",
-              "broken": outside / "nowhere.yml", "file-not-yml": outside / "secret.yml"}[kind]
-    name = "linked.txt" if kind == "file-not-yml" else "linked.yml" if kind != "folder" \
-        else "linked"
-    (folder / name).symlink_to(target, target_is_directory=kind == "folder")
-    code, out, err = _run(tmp_path, "preset", "test", str(preset), "--json")
-    report = json.loads(out)
-    assert code == 1, out
-    shown = f"compass-fixtures/{where + '/' if where else ''}{name}"
-    assert any(shown in p and "link" in p for p in report["problems"]), report["problems"]
-    assert "SECRET-CONTENT" not in out + err and "outside" not in out
-    assert all(f["name"] != "x" for f in report["fixtures"])
-    assert report["totals"]["fixtures"] == (2 if where else 1)
-
-
-@pytest.mark.parametrize("name", ["Banking", "bank_ing", "-bank", "bank ing", "ba.nk"])
-def test_pi_1_a_group_folder_with_a_bad_name_is_a_problem_and_is_not_read(tmp_path, name):
-    preset = _preset(tmp_path)
-    _group(preset, name, {"one": GOOD})
-    code, report = _json(tmp_path, preset)
-    assert code == 1
-    assert any(name in p and "lower-case" in p for p in report["problems"]), report["problems"]
-    assert report["groups"] == [] and report["totals"]["fixtures"] == 1
-
-
-def test_pi_1_a_group_may_be_three_folders_deep_and_no_more(tmp_path):
-    preset = _preset(tmp_path)
-    _group(preset, "a/b/c", {"one": GOOD})
-    code, report = _json(tmp_path, preset)
-    assert code == 0, report["problems"]
-    assert [g["group"] for g in report["groups"]] == ["a/b/c"]
-    _group(preset, "a/b/c/d", {"two": GOOD})
-    code, report = _json(tmp_path, preset)
-    assert code == 1
-    assert any("a/b/c/d" in p and "3 folders deep" in p for p in report["problems"])
-    assert report["totals"]["fixtures"] == 2
-
-
-def test_pi_1_the_wrong_spellings_are_problems_inside_a_group_too(tmp_path):
-    preset = _preset(tmp_path)
-    folder = _group(preset, "meets", {"one": GOOD})
-    for name in ("two.YML", "three.Yml", "four.yaml", "five.YAML"):
-        (folder / name).write_text(yaml.safe_dump(GOOD), encoding="utf-8")
-    code, report = _json(tmp_path, preset)
-    assert code == 1
-    for name in ("two.YML", "three.Yml", "four.yaml", "five.YAML"):
-        assert any(f"compass-fixtures/meets/{name}" in p for p in report["problems"]), name
-    assert report["totals"]["fixtures"] == 2
-
-
-def test_pi_1_each_group_has_a_pass_or_fail_result(tmp_path):
-    _, report = _json(tmp_path, _grouped(tmp_path))
-    assert {g["group"]: g["result"] for g in report["groups"]} == {
-        "meets/banking": "fail", "meets/health": "pass"}
-
-
-def test_pi_1_a_message_over_several_lines_stays_indented_beside_the_group_lines(tmp_path):
-    preset = _preset(tmp_path)
-    _group(preset, "meets", {"bad": "a: 1\n b: [\n"})
-    _, out, _ = _test(tmp_path, preset)
-    assert "group meets: 1 run, 0 passed, 1 failed" in out
-    assert "Traceback" not in out
-
-
 def test_pi_3_a_parent_that_turns_a_capability_on_is_classified_with_it_on(
         tmp_path, monkeypatch):
     stored = _commit_stored(tmp_path, monkeypatch, [_parent(CAPABILITY_ON)])
@@ -817,21 +361,6 @@ def test_pi_5_the_schema_marks_approved_on_as_a_date():
     assert option["properties"]["approved_on"]["format"] == "date"
 
 
-def test_pi_6_the_docs_state_the_fetch_of_diff_the_form_code_the_cost_and_the_deferral():
-    git = _doc("docs", "git-parents.md")
-    assert "`compass policy diff`" in git.split("## When Compass fetches")[1].split("##")[0]
-    assert "`from` that is not text is `L-PARENT-FORM`" in git
-    assert "about 0.6 seconds" in git
-    assert "`preset.version`" in git and "not read yet" in git
-    assert "`approved_by` and `approved_on` are read from the project's own `compass.yml`" in git
-    assert "It writes nothing" not in _doc("docs", "policy-diff.md")
-    assert "writes nothing" not in _doc("docs", "policy-diff.md").split("## Options")[1][:400]
-    assert "`compass policy diff`" in _doc("docs", "security.md")
-    source = (ROOT / "cli" / "compass_pkg" / "verb_help.py").read_text(encoding="utf-8")
-    line = next(l for l in source.splitlines() if l.strip().startswith('"Compare two conf'))
-    assert "It writes nothing" not in line and "cache" in line
-
-
 def test_pi_6_no_merge_conflict_marker_is_left_in_the_tracked_sources():
     import subprocess
     files = subprocess.run(["git", "ls-files", "cli", "docs", "schemas", "tests"], cwd=ROOT,
@@ -847,30 +376,18 @@ def test_pi_6_no_merge_conflict_marker_is_left_in_the_tracked_sources():
     assert left == []
 
 
-def test_pi_1_a_group_folder_holding_only_a_file_that_is_not_a_fixture_is_a_problem(tmp_path):
-    preset = _preset(tmp_path)
-    folder = preset / "compass-fixtures" / "meets" / "notes"
-    folder.mkdir(parents=True)
-    (folder / "README.md").write_text("Notes, not a fixture.\n", encoding="utf-8")
-    code, report = _json(tmp_path, preset)
-    assert code == 1
-    assert any("compass-fixtures/meets/notes" in p and "no fixture" in p
-               for p in report["problems"]), report["problems"]
-    assert all(g["group"] != "meets/notes" for g in report["groups"])
+# Moved from the tests of `compass policy update`, which 9.0.0 removed: the
+# spelling of `extends: compass:default@<n>` is still read by
+# `acceptance_strategy.pinned_below` and the resolver.
 
-
-def test_pi_6_policy_diff_docs_and_help_name_both_files_it_writes_in_the_cache_area():
-    diff = " ".join(_doc("docs", "policy-diff.md").split())
-    git = " ".join(_doc("docs", "git-parents.md").split())
-    source = (ROOT / "cli" / "compass_pkg" / "verb_help.py").read_text(encoding="utf-8")
-    line = next(l for l in source.splitlines() if l.strip().startswith('"Compare two conf'))
-    assert ".compass/.gitignore" in diff
-    assert "This is the only file `policy diff` writes" not in git
-    assert "`.compass/.gitignore`" in git.split("`compass policy diff`, when a reference")[1][:500]
-    assert ".compass/.gitignore" in line
-
-
-def test_pi_6_the_policy_test_doc_does_not_say_a_group_has_any_depth():
-    text = " ".join(_doc("docs", "policy-test.md").split())
-    assert "at any depth" not in text
-    assert "at most 3 folders deep" in text
+def test_up_9_extends_is_read_and_written_by_one_pair_of_functions():
+    from compass_pkg import layers
+    from compass_pkg.core import CompassError
+    parse, write = layers.parse_extends, layers.default_extends
+    assert parse("compass:default@6") == ("default", 6)
+    assert write(7) == "compass:default@7"
+    assert parse(write(12)) == ("default", 12)
+    for bad in ("compass:default@6.0.0", "compass:default", "default@6", "compass:default@x",
+                "github:a/b@main#abc", None, 6):
+        with pytest.raises(CompassError):
+            parse(bad)

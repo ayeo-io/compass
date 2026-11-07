@@ -993,9 +993,9 @@ def test_cl_7_only_classify_effective_and_the_replay_import_the_obligations_modu
         text = path.read_text(encoding="utf-8")
         if any("obligations" in m.group(0) for m in pattern.finditer(text)):
             users.append(path.name)
-    # Amended 2026-10-07 (ADR-037): `effective` may import it too, and the
-    # replay (policy diff) runs the same function to list what a change moves.
-    assert users == ["classify.py", "effective.py", "replay.py"]
+    # Amended 2026-10-07 (ADR-037): `effective` may import it too. The replay
+    # (policy diff) also did until 9.0.0 removed it (ADR-094).
+    assert users == ["classify.py", "effective.py"]
 
 
 def test_cl_7_the_entry_script_and_the_aggregate_do_not_name_the_classifier():

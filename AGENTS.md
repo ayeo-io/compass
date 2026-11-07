@@ -255,7 +255,7 @@ All issue state is files, not conversation:
   force beneath it (`docs/configuration.md`). `compass policy show` prints the
   configuration in force. A project from 5.x may still hold a
   `.compass/config.yml` or a copied `governance/` directory; it keeps running
-  on them until `compass policy migrate` (`docs/upgrade-6-0-0.md`);
+  on them until `compass policy migrate` on 8.x (`docs/upgrade-6-0-0.md`);
 - each issue's documents in `docs/compass/<created>-<issue-slug>/`;
 - each issue's machine state in `.compass/work/<issue-slug>/`: `manifest.yml`
   (the manifest), `evidence/` (the CLI's test and gate records) and the

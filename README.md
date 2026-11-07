@@ -220,12 +220,10 @@ full account is in [docs/security.md](docs/security.md).
 
 - **Fetches** a git parent when the project's `extends:` names one. It runs
   `git` for the one pinned commit and reads its `compass.yml` as data.
-  Only `compass policy lint`, `compass policy show`, `compass policy diff`,
-  `compass policy update`, `compass preset test` and `compass approach
+  Only `compass policy lint`, `compass policy show` and `compass approach
   evaluate --write` fetch, and only a commit that is not cached yet; never
-  `compass check`. `compass policy update` always asks the remote which
-  commit its ref names, unless `COMPASS_OFFLINE=1` is set.
-  `--offline` or `COMPASS_OFFLINE=1` stops the others fetching;
+  `compass check`.
+  `--offline` or `COMPASS_OFFLINE=1` stops them fetching;
   `COMPASS_PARENT_REMOTE_BASE` names a mirror in place of `https://github.com`
   ([docs/git-parents.md](docs/git-parents.md)).
 - **Sends** your delivery record to a git repository you configure, with

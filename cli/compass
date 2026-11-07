@@ -73,7 +73,6 @@ from compass_pkg.impl_versions import register as register_migrate_config_parser
 from compass_pkg.record import register as register_record_parser  # noqa: E402
 from compass_pkg.review_rules import register as register_review_rules_parser  # noqa: E402
 from compass_pkg.policy_cmd import register as register_policy_parser  # noqa: E402
-from compass_pkg.policy_cmd import register_preset as register_preset_parser  # noqa: E402
 from compass_pkg.approve_cmd import register as register_approve_parser  # noqa: E402
 from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
 from compass_pkg import isolation, issue_link, layering, waiver_cmd  # noqa: E402
@@ -256,7 +255,6 @@ def build_parser():
     pl = sub.add_parser("policy", help="governance policy tools")
     pls = pl.add_subparsers(dest="subcmd", required=True)
     register_policy_parser(pls)
-    register_preset_parser(sub)
     register_review_rules_parser(sub)
 
     pt = sub.add_parser("issue", help="issue manifest tools")

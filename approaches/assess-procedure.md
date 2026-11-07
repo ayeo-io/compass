@@ -19,7 +19,7 @@ guardrails, strategies, and routing policy apply as-is, so `/compass:init` is
 optional and not a prerequisite. If a project has run `/compass:init`, its
 `compass.yml` extends those defaults - read `compass policy show` for
 what is in force. An unmigrated 5.x project runs on its own copied
-`governance/` until `compass policy migrate` converts it.
+`governance/` until `compass policy migrate` on 8.x converts it.
 
 The issue is the one `/compass:assess` was given.
 

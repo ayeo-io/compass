@@ -186,17 +186,31 @@ def _empty_overlay(project):
 
 
 def _migrated(project):
-    """Configuration D: `compass policy migrate --apply` ran on a 5.6.0
-    `.compass/config.yml`."""
-    import subprocess
-    import sys
+    """Configuration D: the files `compass policy migrate --apply` wrote on 8.x
+    for a 5.6.0 `.compass/config.yml`. 9.0.0 removed that command (ADR-094), so
+    the files are written here as 8.0.4 wrote them: the old file copied to
+    `.compass/legacy/`, the settings moved into a `compass.yml` that extends the
+    shipped default, and the state moved to the state file."""
+    import shutil
 
-    cli = compat_hook.ROOT / "cli" / "compass"
-    done = subprocess.run(
-        [sys.executable, str(cli), "policy", "migrate", "--apply"],
-        cwd=project, capture_output=True, text=True, timeout=120,
-        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
-    assert done.returncode in (0, 1), done.stdout + done.stderr
+    import yaml
+
+    old = project / ".compass" / "config.yml"
+    if old.exists():
+        legacy = project / ".compass" / "legacy"
+        legacy.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(old, legacy / "config.yml")
+    move_settings(project)
+    path = project / "compass.yml"
+    if not path.exists():
+        return
+    try:
+        data = yaml.safe_load(path.read_text())
+    except yaml.YAMLError:
+        return
+    if isinstance(data, dict):
+        data = {"schema": data.pop("schema", 1), "extends": "compass:default@8", **data}
+        path.write_text(yaml.safe_dump(data, sort_keys=False))
 
 
 #: Configuration A (the 5.6.0 file as recorded) and C (the settings moved into

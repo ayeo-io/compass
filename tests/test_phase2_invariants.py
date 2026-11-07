@@ -134,7 +134,7 @@ EXPECTED_SUBCOMMANDS = {
     "tdd-green", "policy", "issue", "adr", "flow",  # `rework-scan` and `intent` (ADR-093)
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
-    "review-rule", "preset",  # `review-rule list`, `preset init|test`; 9.0.0 removed `spec` and `plan`
+    "review-rule",  # `review-rule list`; 9.0.0 removed `preset`, `spec` and `plan`
     # `init` creates `.compass/config.yml` and `.compass/work/`, and is safe
     # to run twice. It exists because no other command owns initialisation,
     # and the five entry points call it directly.

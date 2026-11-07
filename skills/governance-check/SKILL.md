@@ -11,7 +11,7 @@ against one document - it is three distinct walks against three
 distinct sources, and each has its own standard of proof. The prose is in
 `${CLAUDE_PLUGIN_ROOT}/governance/`; the rules in force are what
 `compass policy show` prints. An unmigrated 5.x project runs on its own copied
-`governance/` until `compass policy migrate`.
+`governance/` until `compass policy migrate` on 8.x.
 
 - `guardrails.md` - **hard, checkable, blocking.** A guardrail is cleared with
   evidence; a failed guardrail stops the work. A guardrail beats a strategy.

@@ -9,9 +9,8 @@ The split this verb keeps:
                     to run twice, which is what lets the entry-point commands
                     call it unconditionally rather than each testing for the
                     directory.
-  /compass:init     the slash command - writes a minimal compass.yml, or runs
-                    `compass policy migrate` on a project with a
-                    .compass/config.yml or copied governance. It copies nothing.
+  /compass:init     the slash command - writes a minimal compass.yml. It
+                    copies nothing.
 
 Auto-initialisation must never write configuration. Being initialised for you
 is small and reversible; having a compass.yml written into your repository
@@ -31,8 +30,8 @@ from compass_pkg.terminal import say
 
 # State the CLI writes, not settings a person edits (ADR-043). Written on
 # creation only - never over an existing file. Settings live in `compass.yml`
-# at the project root, which only `/compass:init` or `compass policy migrate`
-# creates. A project that has run neither uses the shipped defaults, which are
+# at the project root, which only `/compass:init` or a person creates. A
+# project without one uses the shipped defaults, which are
 # in force: that is a complete, valid state.
 STATE_TEMPLATE = """\
 # Compass - state the CLI wrote. Do not edit. Settings go in compass.yml; see

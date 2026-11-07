@@ -103,7 +103,7 @@ stale, contradictory strategies is its own kind of mess. So:
 
 The framework ships these with sane, active defaults. A project that does
 nothing runs on them as they are. A project that copied them under 5.x runs on
-its copy until `compass policy migrate` turns the copy into a `compass.yml`
+its copy until `compass policy migrate` on 8.x turns the copy into a `compass.yml`
 overlay. A new project's `/compass:init` copies nothing. Editing is accretion,
 not a precondition.
 
@@ -112,7 +112,7 @@ not a precondition.
 A 6.0.0 project does not copy these files. It edits `compass.yml`, and the
 shipped default stays in force beneath it. The rest of this section is about a
 5.x project that copied `governance/` into its root. That copy keeps working
-until `compass policy migrate` converts it (`docs/upgrade-6-0-0.md`).
+until `compass policy migrate` on 8.x converts it (`docs/upgrade-6-0-0.md`).
 
 **A copy replaces the shipped defaults. It is not added to them.**
 

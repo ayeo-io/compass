@@ -311,7 +311,7 @@ EXPECTED_SUBCOMMANDS = {
     "tdd-green", "policy", "issue", "adr", "flow",  # and `plan`, `rework-scan`, `intent`
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
-    "review-rule", "preset",  # `review-rule list`, `preset init|test`; 9.0.0 removed `spec`
+    "review-rule",  # `review-rule list`; 9.0.0 removed `preset`, `spec`
     "init",                       # creates .compass/ - safe to run twice
     "acceptance",                 # the acceptance verb group
     "quick-fix",                  # start|finish - the quick-fix verb group

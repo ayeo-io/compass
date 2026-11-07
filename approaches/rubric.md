@@ -3,7 +3,7 @@
 Assess runs at the start of every issue. It reads three scored dimensions,
 two switches and any domain labels. `compass approach evaluate` then applies
 the configuration in force (`compass policy show`; an unmigrated 5.x project
-runs on its own copied `governance/` until `compass policy migrate`) and
+runs on its own copied `governance/` until `compass policy migrate` on 8.x) and
 records the evidence the change owes in the manifest. This file is the
 rubric. The `adaptive-routing` skill is the procedural companion; this is
 the reference.

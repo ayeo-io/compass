@@ -280,8 +280,8 @@ def test_trc_c2_a_stored_6x_configuration_keeps_its_role_rules():
     assert "verify.claims" in marketer["gates"]
     # A stored generation is a resolved configuration in catalogue form, which
     # holds the 6.x `role-rules` set.
-    from compass_pkg import legacy_adapter, shipped_releases
-    policy_text, guardrails_text = shipped_releases.texts("v6.0.1")
+    from compass_pkg import legacy_adapter
+    policy_text, guardrails_text = _six_0_1_texts()
     stored = legacy_adapter.adapt(yaml.safe_load(policy_text),
                                   yaml.safe_load(guardrails_text))
     owed = obligations.obligations(stored, _assess(role="product-owner"))
@@ -330,9 +330,22 @@ def test_trc_c5_issue_migrate_reports_a_recorded_role_as_no_longer_read(tmp_path
     assert _load(task_dir / "manifest.yml")["assessment"]["role"] == "designer"
 
 
+# The two governance files v6.0.1 shipped, as members of the frozen archive
+# `governance/shipped-releases.tar.xz`. A member is named by the file's version
+# and the first 12 characters of its content digest.
+SIX_0_1_MEMBERS = ("routing-policy/2.20.0-f5a495aa015e.yml",
+                   "guardrails/1.26.0-1f7c189f989d.yml")
+
+
+def _six_0_1_texts():
+    import tarfile
+    with tarfile.open(ROOT / "governance" / "shipped-releases.tar.xz", "r:xz") as archive:
+        return tuple(archive.extractfile(name).read().decode("utf-8")
+                     for name in SIX_0_1_MEMBERS)
+
+
 def _copied_governance(root, edit=None):
-    from compass_pkg import shipped_releases
-    policy, guardrails = shipped_releases.texts("v6.0.1")
+    policy, guardrails = _six_0_1_texts()
     gov = root / "governance"
     gov.mkdir(parents=True, exist_ok=True)
     if edit:
@@ -342,32 +355,6 @@ def _copied_governance(root, edit=None):
     (root / ".compass").mkdir(exist_ok=True)
     (root / ".compass" / "config.yml").write_text("version: 1.0.0\nmode: enforced\n",
                                                  encoding="utf-8")
-
-
-def test_trc_c6_policy_migrate_drops_unedited_role_rules_without_a_waiver(tmp_path):
-    root = tmp_path / "proj"
-    root.mkdir()
-    _copied_governance(root)
-    code, out, err = _run(root, "policy", "migrate", "--json")
-    assert code == 0, out + err
-    report = json.loads(out)
-    assert report["result"] == "ready", report
-    text = json.dumps(report.get("compass_yml") or report)
-    assert "role" not in json.dumps(report.get("overlay") or {}), report.get("overlay")
-    assert "RP-ROLE" not in json.dumps(report.get("waivers") or {})
-    assert "RP-ROLE" not in text or "retired" in text
-
-
-def test_trc_c7_policy_migrate_names_the_replacement_of_an_edited_role_rule(tmp_path):
-    root = tmp_path / "proj"
-    root.mkdir()
-    _copied_governance(root, edit=lambda text: text.replace(
-        "A launch claim with no backing scenario must not ship.",
-        "A launch claim with no backing scenario must never ship."))
-    code, out, err = _run(root, "policy", "migrate")
-    assert code == 1, out + err
-    assert "RP-ROLE-001" in out + err and "RP-ART-001" in out + err, out + err
-    assert "7.0.0" in out + err
 
 
 def test_trc_c8_a_project_rule_that_reads_role_is_refused(tmp_path):
@@ -399,20 +386,6 @@ def test_trc_c8_a_project_that_declares_its_own_role_dimension_may_read_it(tmp_p
         encoding="utf-8")
     code, out, err = _run(root, "policy", "lint")
     assert "M-WHEN-RETIRED" not in out + err, out + err
-
-
-def test_trc_c9_a_preset_fixture_that_records_a_role_is_read_without_it(tmp_path):
-    root = tmp_path / "preset"
-    (root / "compass-fixtures").mkdir(parents=True)
-    (root / "compass.yml").write_text("schema: 1\nextends: compass:default@6\n",
-                                      encoding="utf-8")
-    (root / "compass-fixtures" / "one.yml").write_text(
-        "name: one\nassessment:\n  risk: contained\n  familiarity: brownfield-mapped\n"
-        "  size: medium\n  goal: delivery\n  role: engineer\n  labels: []\n"
-        "expect:\n  approach: delivery\n", encoding="utf-8")
-    code, out, err = _run(root, "preset", "test", str(root), "--offline")
-    assert code == 0, out + err
-    assert "role" in out + err and "ignored" in out + err
 
 
 def test_trc_c7_the_retired_rules_table_names_each_replacement():

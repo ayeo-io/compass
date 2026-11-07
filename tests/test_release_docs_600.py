@@ -43,13 +43,14 @@ def test_idr_8_configuration_md_says_what_writes_compass_yml_and_how_to_move():
 
 
 def test_idr_8_the_settings_conflict_way_out_is_not_a_command_that_refuses():
-    """`policy migrate` refuses while a `compass.yml` holds the project's
-    settings, so the doc must not send a conflicted project to it."""
+    """`policy migrate` refused while a `compass.yml` held the project's
+    settings, and 9.0.0 removed it (ADR-094), so the doc must not send a
+    conflicted project to a migration command."""
     text = _read("docs/configuration.md")
     way_out = text[text.index("**The way out.**"):]
     way_out = way_out[:way_out.index("\n- **")]
     assert "delete them from `.compass/config.yml`" in way_out
-    assert "refuses" in way_out
+    assert "names no" in way_out and "migration command" in way_out
 
 
 def test_idr_8_security_md_places_the_project_command_setting_beside_its_checks():
@@ -469,8 +470,9 @@ def test_trc_s11_the_scan_reports_a_badge_for_a_missing_workflow():
 
 # --- The front pages route a reader to compass.yml and the upgrade page -------
 
-# 6.0.0 verbs the README command list had left out.
-S4_VERBS = ("approach show", "approach render", "policy migrate", "policy update",
+# 6.0.0 verbs the README command list had left out. `policy migrate` and
+# `policy update` were two until 9.0.0 removed them (ADR-094).
+S4_VERBS = ("approach show", "approach render",
             "evidence approve", "evidence review", "issue blocked remove")
 
 
@@ -543,8 +545,6 @@ def _scratch_issue(tmp_path, slug="scratch-issue"):
 S8_OLD_TEXT = (
     ("docs/configuration.md", "the hooks detect npm, Make and pytest conventions",
      "says the hooks detect a test command"),
-    ("docs/policy-migrate.md", "change nothing in `compass check` or the evaluator yet",
-     "says editing compass.yml changes nothing yet"),
     ("docs/generation-store.md", "It refuses a landed issue", "uses the retired word 'landed'"),
     ("docs/releasing.md", "A landed issue keeps the configuration it landed under",
      "uses the retired word 'landed'"),
@@ -555,7 +555,6 @@ S8_OLD_TEXT = (
 
 S8_NEW_TEXT = (
     ("docs/configuration.md", "`tdd-red` and `tdd-green` need the command after `--`"),
-    ("docs/policy-migrate.md", "an issue with no stored generation is judged by it at once"),
     ("docs/generation-store.md", "It refuses a closed issue"),
     ("docs/releasing.md", "A closed issue keeps the configuration it closed under"),
     ("docs/entry-exit-evaluation.md", "A closed issue has every list due"),
@@ -603,19 +602,6 @@ def test_trc_s8_configuration_upgrade_migrate_and_ci_pages_match_the_code(tmp_pa
     # issue migrate --apply needs --i-have-a-copy when .compass/work is not tracked.
     apply_ = _cli(tmp_path, "issue", "migrate", "--apply")
     assert apply_.returncode == 2 and "--i-have-a-copy" in apply_.stdout + apply_.stderr
-
-
-def test_trc_s8_the_migrate_closing_note_says_compass_yml_is_read_at_once(tmp_path):
-    import shutil
-    import subprocess
-    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    (tmp_path / "governance").mkdir()
-    for name in ("guardrails.yml", "routing-policy.yml"):
-        shutil.copy(ROOT / "governance" / name, tmp_path / "governance" / name)
-    assert _cli(tmp_path, "init").returncode == 0
-    dry = _cli(tmp_path, "policy", "migrate")
-    assert dry.returncode == 0, dry.stdout + dry.stderr
-    assert "an issue with no stored generation is judged by it at once" in dry.stdout
 
 
 # --- The quickstart, five-minutes and portability pages match the code --------

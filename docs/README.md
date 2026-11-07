@@ -39,15 +39,11 @@ the table does not exist, and when a doc in this folder is not listed.
 - [waivers-and-locks.md](waivers-and-locks.md) - how an owner writes a waiver, a lock, an unlock, an approver list and a layer in `compass.yml`.
 - [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show` on a layered project: the order of the checks, the finding codes and both JSON shapes.
 - [check-implementations.md](check-implementations.md) - the version and fixture corpus of each check implementation, the build rule and what a major difference does.
-- [policy-diff.md](policy-diff.md) - `compass policy diff`: the references, the sets it replays, `--open`, the exit codes and the JSON shape.
 - [generation-store.md](generation-store.md) - the stored generation of an issue's configuration: its files, the commit order, the states and what reads it.
 - [entry-exit-evaluation.md](entry-exit-evaluation.md) - the capability that evaluates each stage's entry and exit lists: when a list is due, how each kind of check is judged, what `on_skipped` does and where results show.
 - [judged-checks.md](judged-checks.md) - a check of kind `judged`, its review record and `compass evidence review`: what a judged check needs to pass, the four failure causes, how a changed input re-owes the review and the JSON shape.
 - [issue-dependencies.md](issue-dependencies.md) - `depends_on` and `compass issue depends add|remove`: the entry shape, the nine `until` values, when the block counts at implement, what the hook reads and what it costs, the fail-safe cases, the worktree rule and what each reader shows.
-- [policy-migrate.md](policy-migrate.md) - `compass policy migrate`: how copied governance and the old settings file become a `compass.yml` overlay over the release the copy came from, what it keeps, when it refuses, its exit codes and its JSON shape; and `--words`, which rewrites a project's configuration in the 6.0.0 words.
 - [git-parents.md](git-parents.md) - a git parent in `extends:`: the pinned spelling, the fetch and cache, what Compass refuses and what an issue records.
-- [policy-test.md](policy-test.md) - `compass preset test` and `compass preset init`: the preset folder and fixture format, what the test checks, the exit codes and the JSON shape of both reports.
-- [policy-update.md](policy-update.md) - `compass policy update`: the major bump, the waiver re-check, the terminal re-approval, the exit codes and the JSON shape.
 - [security.md](security.md) - what Compass adds to a repository, and how to review it.
 - [portability.md](portability.md) - the adapter boundary, for running Compass outside Claude Code.
 
@@ -89,11 +85,7 @@ same commit.
 | `cli/compass_pkg/stage_lists.py`, `cli/compass_pkg/item_records.py`, `cli/compass_pkg/follow_up_cmd.py`, `cli/compass_pkg/doc_sections.py`, `cli/compass_pkg/approval_records.py`, `cli/compass_pkg/approvals.py`, `cli/compass_pkg/approval_requests.py`, `cli/compass_pkg/prompt_approval.py`, `cli/compass_pkg/delegations.py`, `cli/compass_pkg/delegation_tickets.py`, `cli/compass_pkg/worktree_lookup.py`, `cli/compass_pkg/approve_cmd.py`, `tests/test_human_checks.py`, `tests/fixtures/evidence-approve-example.json` | `docs/entry-exit-evaluation.md` |
 | `cli/compass_pkg/artifact_kinds.py`, `cli/compass_pkg/justifications.py`, `templates/*.md` | `docs/artifact-catalog.md` |
 | `cli/compass_pkg/review_records.py`, `cli/compass_pkg/review_cmd.py`, `tests/fixtures/evidence-review-example.json` | `docs/judged-checks.md` |
-| `cli/compass_pkg/replay.py` | `docs/policy-diff.md` |
-| `cli/compass_pkg/policy_migrate.py`, `cli/compass_pkg/policy_migrate_undo.py`, `cli/compass_pkg/config_words.py`, `cli/compass_pkg/shipped_releases.py`, `scripts/generate-shipped-releases.py`, `governance/shipped-releases.yml`, `governance/shipped-releases.tar.xz` | `docs/policy-migrate.md` |
 | `cli/compass_pkg/parents.py`, `cli/compass_pkg/parent_states.py`, `cli/compass_pkg/chain_class.py` | `docs/git-parents.md` |
-| `cli/compass_pkg/preset_test.py`, `cli/compass_pkg/preset_init.py` | `docs/policy-test.md` |
-| `cli/compass_pkg/policy_update.py` | `docs/policy-update.md` |
 | `cli/compass_pkg/waivers.py` | `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md` |
 | `cli/compass_pkg/waiver_records.py`, `cli/compass_pkg/waiver_cmd.py`, `tests/test_waiver_records.py` | `docs/waivers.md` |
 | `cli/compass_pkg/layers.py`, `cli/compass_pkg/merge.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |

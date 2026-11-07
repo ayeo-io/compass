@@ -9,6 +9,9 @@ These are static content-assertion tests. Invisible triggering is prompt-only
     assessed issue is active (TRC-F3 guard).
   - Assert the rule is additive (the existing "Never skip assessment" text
     still present and untouched).
+  - #358 removed the sentence "Explicitly typing any Compass command always
+    works" from the contract; `test_explicit_invocation_still_works` now
+    checks the typed command is still named and not displaced.
 
 Manual-verification note (behaviour at runtime, `TRC-C1` / `TRC-C3`):
   These tests check the static content that produces the agent behaviour.
@@ -93,13 +96,21 @@ class TestCLAUDEMdInvisibleTriggering:
         )
 
     def test_explicit_invocation_still_works(self):
-        """compass-contract.md must state that explicit invocation always
-        works (TRC-C2)."""
+        """The intent rule adds to the typed command and does not replace it
+        (TRC-C2). #358 cut the sentence "Explicitly typing any Compass command
+        always works" from the contract, because it describes Claude Code
+        rather than a rule. What it protected is checked here instead: the
+        contract still tells the agent to run `/compass:assess` itself, and
+        the trigger applies "even if they never typed the command", so a
+        typed command is not displaced."""
         content = CONTRACT.read_text(encoding="utf-8")
-        assert "typing any Compass command\nalways works" in content, (
-            "compass-contract.md must clarify that explicit invocation still works "
-            "(TRC-C2 / BR-011 additive-not-replacement). "
-            "Add the clarifying phrase per plan.md §DD-6."
+        assert "Run `/compass:assess` before a tool\ncall changes a file." in content, (
+            "compass-contract.md must still name /compass:assess as the command "
+            "to run (TRC-C2 / BR-011 additive-not-replacement)."
+        )
+        assert "even if they never typed the command" in content, (
+            "The intent trigger must add to the typed command, not replace it "
+            "(TRC-C2 / BR-011 additive-not-replacement)."
         )
 
     def test_existing_never_skip_frame_preserved(self):

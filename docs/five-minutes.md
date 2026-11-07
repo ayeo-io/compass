@@ -77,10 +77,10 @@ them - the evidence the change owes and the gates - is computed. The
   assessment      : {"risk": "contained", "familiarity": "brownfield-mapped", "size": "atomic", "goal": "delivery"}
   evidence row    : RP-EVID-LIGHT
   FINAL APPROACH  : delivery
-  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval
+  evidence owed   : request, scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval
   policy rules fired:
     A small change with low risk owes the evidence every change owes (RP-EVID-LIGHT, evidence)
-        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval
+        - evidence owed: request, scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval
   gate set        : verify.correctness, verify.governance, verify.traceability
 ```
 
@@ -102,9 +102,14 @@ the evidence the change owes, and where the issue's files go.
 
 ```text
 Approach: delivery (risk contained, familiarity brownfield-mapped, size atomic) - does not stop to wait for you
-Evidence: scenarios, red-before-green, suite-green, correctness, governance, traceability, outer-loop, ship-approval
-Writes: .compass/work/fix-token-message/ and docs/compass/2026-11-06-fix-token-message/
+Evidence: request, scenarios, red-before-green, suite-green, correctness, governance, traceability, outer-loop, ship-approval
+Writes: .compass/work/fix-token-message/ and docs/compass/2026-11-07-fix-token-message/
 ```
+
+`request` comes first: who asked for the change, and a link to the request.
+`/compass:go` passes them to `compass quick-fix start` as `--request <url>
+--requester <name>`. Without them the check `request-recorded` fails, but
+nothing stops; `compass next` names the command that records them.
 
 `outer-loop` is there because the four-layer acceptance strategy (`S17`)
 applies to a change a real client can observe: the scenario's test runs
@@ -174,15 +179,29 @@ compass quick-fix finish: 'fix-token-message' checked, not committed.
 ```
 
 When you ask for a commit, `compass ship-commit` commits the files the issue
-recorded as changed, and nothing else. Your normal CI is still responsible for tests, linting,
-security scanning, builds and deployment checks.
+recorded as changed, and nothing else. Unless the project keeps the record
+out, the same commit holds the issue's record: the manifest, the evidence,
+the acceptance criteria and `trail.md`. `ship-commit` stages the record
+itself. `trail.md` says who asked, what was agreed, the red, the green, who
+approved and what shipped. Each statement names its files with their
+`sha256sum` digests, so a reviewer checks them from the repository root
+without Compass:
+
+```bash
+grep -E '^[0-9a-f]{64}  ' .compass/work/fix-token-message/trail.md | sha256sum -c -
+```
+
+Your normal CI is still responsible for tests, linting, security scanning,
+builds and deployment checks.
 
 `ship-approval` is one person's approval of the change. After the merge,
 `compass issue link set --pr <n>` reads it from the pull request: a review
 that approves it, by a person who is not its author. With no such review, a
 person types `/compass:approve` after `compass evidence request --ship`.
 `compass next` names the step while the approval is owed. No landing waits
-for it.
+for it. When the record ships with the code, the merge fields come after
+that commit: `compass record commit` commits them alone, and the `next:`
+line names it.
 
 ## What you should now have
 
@@ -191,7 +210,8 @@ A small issue typically leaves:
 ```text
 .compass/work/<issue>/
 ├── manifest.yml
-├── generations/
+├── trail.md
+├── generations/     not committed; a fresh clone rebuilds it from the manifest
 └── evidence/
 
 docs/compass/<date>-<issue>/

@@ -516,6 +516,12 @@ The deterministic consequence of a label, declared in policy: security/payments/
 
 **Related:** `label`, `quality-gate`
 
+### landed-with-record
+
+The manifest key `landed_with_record: true`, written by `compass ship-commit` in committed mode in the same save as the landing, before the commit (ADR-096). Such a manifest holds no `land_commit`: the land commit is read from git as the newest commit that added the manifest's `land_timestamp` line, so after a squash merge it names the squash commit. `compass record commit` commits the fields the merge adds later.
+
+**Related:** `record-mode`, `trail`, `ship`
+
 ### layer
 
 One source of configuration in 8.x: the shipped preset, a team parent, the project file or the issue. Layers merged in order, and each stated only what it changed. 9.0.0 removed the layers (ADR-094): every project runs the check set, and `compass.yml` holds settings. The provenance of a stored 8.x generation still names the layer that wrote each field.
@@ -696,11 +702,23 @@ The one-screen summary of an issue that `compass issue receipt` printed until 9.
 
 **Related:** `evidence`, `quality-gate`
 
+### record-mode
+
+Whether an issue's record ships in the same commit as its code (ADR-096). Committed is the default: `compass ship-commit` stages the issue folder, the documents folder and `.compass/work/.gitignore` itself. Kept out applies when `record.commit` is false, when `record.remote` is set and `record.commit` is not, when git ignores the issue folder, or outside a git repository; then nothing under `.compass/` is staged, and `compass record sync` can copy the record elsewhere. The ignore file keeps generations, lock files and markers out in either mode.
+
+**Related:** `manifest`, `trail`, `landed-with-record`
+
 ### rendered-block
 
 The lines between `<!-- compass:render KIND -->` and `<!-- /compass:render -->` in an issue's document, which `compass issue render` wrote from the manifest and the evidence until 9.0.0 removed it (ADR-091). A document written before then can still hold them, so every digest of a document and every reader of its text leaves the lines inside a block out. Nothing writes or checks a block now.
 
 **Related:** `issue-page`, `verification-note`, `project-index`, `item-record`
+
+### request-link
+
+The manifest's `request:` record: a link to what asked for the change (an `https://` URL, or `owner/repo#N`, which also links the GitHub issue) and the requester, free text the session records as a claim, not an approval (ADR-096). `--request` and `--requester` on `compass quick-fix start` or `compass issue link set` write it. A delivery issue owes the token `request`, and the check `request-recorded` fails until both parts are on record, but nothing refuses for it.
+
+**Related:** `evidence-required`, `issue`, `trail`
 
 ### required-when
 
@@ -883,6 +901,12 @@ One of the five keys of `compass.yml` that can only add to the check set: `signo
 The chain that makes a change accountable: code traces to a TRC- id, which traces to an INT- id. Maintained as the work happens, not reconstructed at the end. It is one of the five guardrails, and the thing the `TRC-` prefix is named after.
 
 **Related:** `scenario`, `intent`, `acceptance-criteria`
+
+### trail
+
+The file `.compass/work/<slug>/trail.md` beside the manifest (ADR-096). It states in order who asked, what was agreed, the red of each scenario, the green, who approved and by what authority, and what shipped. Under each statement are lines in `sha256sum` format with paths from the repository root, so a reviewer checks the named files with `sha256sum -c` and no Compass. `compass trail` writes it in full from the records, as do `compass ship-commit`, `compass issue link set --pr` and `compass record commit`; `compass trail --check` says when it is out of date. It proves the files match their digests, not that its prose is true.
+
+**Related:** `manifest`, `evidence`, `request-link`, `record-mode`
 
 ### verification-note
 

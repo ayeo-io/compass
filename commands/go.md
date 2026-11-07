@@ -14,7 +14,7 @@ command to use.
 
 ## 1. Set up
 
-Run `compass init`. If it creates `.compass/`, tell the person in one line.
+Run `compass init`. If it creates `.compass/`, say so in one line.
 
 ## 2. Assess
 
@@ -25,16 +25,18 @@ compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
   --familiarity "<VALUE> - <reason>" --size "<VALUE> - <reason>" \
   --intent "<what will be true afterwards>" \
   --scenario "Given ... When ... Then ..." --test <test node id> \
+  --request <url> --requester "<name>" \
   [--labels <tag,...>] [--urgency "live-defect - <reason>"]
 ```
 
 - risk: `trivial`, `contained`, `cross-cutting` or `critical`
 - familiarity: `greenfield`, `brownfield-mapped` or `brownfield-unmapped`
 - size: `atomic`, `small`, `medium`, `large` or `product`
+- `--request` links what asked for the change; `--requester` names who asked
 - `--labels auth`, `payments`, `personal-data` or `migrations` when the
   change touches one; those make the change need a person's sign-off
-- `--urgency "live-defect - <reason>"` for a defect in production: the first
-  scenario is the reproduction, and its red comes first
+- `--urgency "live-defect - <reason>"` for a defect in production: the
+  reproduction's red comes first
 
 When unsure, rate the size up. If you cannot state what will be true
 afterwards, that is exploration: run `/compass:assess`, which starts a spike.

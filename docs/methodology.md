@@ -87,7 +87,7 @@ The kit picks one evidence row, first match wins, then adds evidence on top
 
 | Row | When | What it owes |
 |---|---|---|
-| Light | Atomic or small, trivial or contained risk, no hotfix setting, no `G5` label | Scenarios, a red before each green, a green suite, the correctness, governance and traceability reviews, and a person's approval at ship. |
+| Light | Atomic or small, trivial or contained risk, no hotfix setting, no `G5` label | The request link and who asked, scenarios, a red before each green, a green suite, the correctness, governance and traceability reviews, and a person's approval at ship. |
 | Defect | Atomic or small, under the hotfix setting, not critical, no `G5` label | The light row, plus the regression and security reviews and the Definition of Done. |
 | Standard | Every other delivery assessment | The light row, plus the regression, security and clarity reviews and the Definition of Done. |
 
@@ -104,6 +104,12 @@ On top of the row:
 
 A spike (`goal: exploration`) is not on the path. It explores, concludes,
 and ships nothing.
+
+The request link (`request`, ADR-096) comes first on every delivery issue: a
+link to what asked for the change, and who asked, as the session records it.
+Assess records it with `--request` and `--requester`. The check
+`request-recorded` fails until both are on record, and nothing refuses for
+it.
 
 The approval at ship (`ship-approval`, ADR-095) is read from the merged pull
 request: a review that approves it, by a person who is not its author. With
@@ -186,6 +192,22 @@ reassessments and the evidence registry. `compass next` names the next
 action. From 9.0.0 Compass writes no `devlog.md`; an archived issue keeps
 its own. An approval an agent records under a delegation copies the
 delegation into the manifest's `delegations_used:`.
+
+Beside the manifest, `trail.md` states in order who asked, what was agreed,
+the red and green of each scenario, who approved and by what authority, and
+what shipped (ADR-096). Under each statement are `sha256sum` lines for the
+files it rests on, with paths from the repository root, so a reviewer checks
+them with `sha256sum -c` and no Compass. `compass trail` writes it, and
+`compass ship-commit` writes it at the landing.
+
+The record mode decides where the record goes. By default it is committed:
+`compass ship-commit` stages the issue folder and the documents folder with
+the code, and `.compass/work/.gitignore` keeps out the per-checkout files,
+such as generations, lock files and markers. A fresh clone rebuilds a
+missing generation from the manifest's `policy:` block. A project that sets
+`record.commit: false`, or names a `record.remote` and does not set
+`record.commit`, keeps the record out of its commits, and `compass record
+sync` can copy it to another repository (`docs/delivery-record.md`).
 
 The one document Compass needs and checks is `acceptance-criteria.md`, written
 to `docs/compass/<created>-<issue>/` (ADR-091). Its Summary and Intent links

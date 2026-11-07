@@ -105,8 +105,9 @@ security scanning, builds or deployment checks.
 ## What Compass changes
 
 Compass chooses the evidence each change owes from its assessment of risk,
-familiarity and size. Every change owes scenarios, a failing test before each
-passing one, a green suite, three reviews and one person's approval at ship
+familiarity and size. Every change owes a link to the request and who asked,
+scenarios, a failing test before each passing one, a green suite, three
+reviews and one person's approval at ship
 ([safety contract](docs/safety-contract.md)). The rest depends on the work:
 
 | Work | Evidence Compass adds |
@@ -180,6 +181,15 @@ Every issue leaves a reviewable record. Its documents are in
 `docs/compass/<created>-<issue>/`; its manifest, evidence and markers are in
 `.compass/work/<issue>/`. Another session can resume from that record without
 the chat history, and a reviewer can open the evidence behind each gate.
+
+By default the record ships in the same commit as the code: `compass
+ship-commit` stages it, and leaves out the per-checkout files such as
+generations and lock files. Each landed issue has a `trail.md`: who asked,
+what was agreed, the red and green of each scenario, who approved and what
+shipped, with a `sha256sum` line for each file it names. A reviewer checks
+it with `sha256sum -c`, without Compass. A project that sets
+`record.commit: false`, or names a `record:` remote and does not set
+`record.commit`, keeps the record out of its commits ([docs/delivery-record.md](docs/delivery-record.md)).
 
 `compass flow` lists every issue by state, with what is blocked and whose
 evidence is stale.

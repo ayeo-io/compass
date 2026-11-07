@@ -24,10 +24,10 @@ command runs the path, and the `next:` line names each step.
 
 | Stage | What runs it | What it writes |
 |---|---|---|
-| Assess | `compass quick-fix start`, or `/compass:assess` for the full procedure, `--reassess` and the spike | the assessment, `evidence_required`, the pending gates, the `S17` block and the checkpoints |
+| Assess | `compass quick-fix start`, or `/compass:assess` for the full procedure, `--reassess` and the spike | the assessment, the request link (`--request`, `--requester`), `evidence_required`, the pending gates, the `S17` block and the checkpoints |
 | Specify | the `next:` line: `compass scenario add`, `compass scenario tests set` | the scenarios in `acceptance-criteria.md`, the test each one declares, and the `specify` checkpoint's outcome where `scenario-approval` is owed |
 | Build | the `next:` line: `compass tdd-red`, then the code, then `compass tdd-green` | the red and green records (named by binding), and the outer-loop, isolation and layering records where `S17` applies |
-| Ship | the `next:` line: `compass evidence add`, `compass gate pass`, `compass check`; `/compass:ship` or `compass quick-fix finish` for the commit | the gate evidence and the Definition of Done items as records, the sign-offs, the commit, and after the merge the ship approval: `compass issue link set --pr <n>` reads the pull request's approving review, else `compass evidence request --ship` and stop |
+| Ship | the `next:` line: `compass evidence add`, `compass gate pass`, `compass check`; `/compass:ship` or `compass quick-fix finish` for the commit | the gate evidence and the Definition of Done items as records, the sign-offs, the commit (which holds the issue's record and `trail.md` unless the record mode is kept out; never stage `.compass/` yourself), and after the merge the ship approval: `compass issue link set --pr <n>` reads the pull request's approving review, else `compass evidence request --ship` and stop; `compass record commit` commits the merge fields of a committed record |
 
 - `/compass:go` runs the whole path in one session: it assesses with
   `compass quick-fix start`, shows `compass approach show`, then follows
@@ -45,8 +45,7 @@ command runs the path, and the `next:` line names each step.
   with the same `next: <command>` line. Run that command. When you are not
   sure what comes next, run `compass next`.
 
-A spike runs assess, build (explore) and ship (conclude); `approaches/spike.md`
-describes it.
+A spike runs assess, build (explore) and ship (conclude): `approaches/spike.md`.
 
 Cross-issue: `/compass:status` (one issue or a flat list) and `/compass:flow`
 (the managed cross-issue view - advisory, never gating; `compass flow` and
@@ -113,9 +112,10 @@ compass.yml                     The one file a person edits: settings, and the t
 ├── config.yml                  Projects from 5.x only: read until the project moves its settings with compass policy migrate on 8.x; no 6.0.0 command writes it
 ├── legacy/, migration.yml      Written by compass policy migrate on 8.x: the superseded files, and the digests of them
 ├── current-task                One-line pointer to the active issue
-├── work/
+├── work/                       .gitignore: generations, locks and markers stay out of the commit
 │   └── <issue-slug>/            One directory per issue: its machine state
 │       ├── manifest.yml         The manifest
+│       ├── trail.md             Who asked, what was agreed, red, green, approvals, what shipped, with sha256sum lines
 │       ├── generations/<n>/     The configuration the issue runs against (written by compass approach evaluate --write)
 │       ├── evidence/            red/green records + typed gate evidence
 │       ├── .red, .spike, ...    The markers the hook reads

@@ -126,7 +126,9 @@ record the project's own rules, run it once from the project root:
    run `compass policy migrate` on Compass 8.x first, because 9.0.0 removed
    that command. The upgrade guide names the 9.0.0 settings.
 3. **Creates `.compass/work/`** - where every issue's state will live. Note
-   that `.compass/work/` **is committed**. It is the audit trail, not temporary files.
+   that `.compass/work/` **is committed** by default, with the code it
+   records. It is the audit trail, not temporary files. Its `.gitignore`
+   keeps the per-checkout files out: generations, lock files and markers.
 
 `compass init`, which every entry point runs for you, writes only a state file
 in `.compass/` and no settings file.
@@ -166,14 +168,16 @@ compass quick-fix start add-rate-limiting \
   --labels public-api \
   --intent "A client over the request limit gets a 429 response" \
   --scenario "Given a client has sent 100 requests this minute, When it sends one more, Then the response is 429" \
-  --test tests/test_limiter.py::test_over_limit
+  --test tests/test_limiter.py::test_over_limit \
+  --request https://github.com/acme/api/issues/42 --requester "Dana Smith"
 ```
 
 `compass quick-fix start` serves every size, not only a small fix. It writes
 `.compass/work/add-rate-limiting/manifest.yml` and the acceptance criteria at
 `docs/compass/<date>-add-rate-limiting/acceptance-criteria.md`, with the one
-scenario as `TRC-001`. It also writes a `.compass/current-task` pointer, so
-the CLI and the hooks know which issue is active.
+scenario as `TRC-001`, and the request link: who asked and where. It also
+writes a `.compass/current-task` pointer, so the CLI and the hooks know which
+issue is active.
 
 Then the CLI computes the rest. It applies the project's policy (the fixed
 check set, with the tighten-only settings of `compass.yml`) to the
@@ -188,8 +192,8 @@ you the three lines of `compass approach show` before it edits any file:
 
 ```text
 Approach: delivery (risk cross-cutting, familiarity brownfield-mapped, size medium) - does not stop to wait for you
-Evidence: scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, architecture, outer-loop, isolation, layering, definition-of-done, ship-approval
-Writes: .compass/work/add-rate-limiting/ and docs/compass/2026-11-06-add-rate-limiting/
+Evidence: request, scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, architecture, outer-loop, isolation, layering, definition-of-done, ship-approval
+Writes: .compass/work/add-rate-limiting/ and docs/compass/2026-11-07-add-rate-limiting/
 ```
 
 The same assessment and resolved configuration give this exact evidence on
@@ -306,7 +310,22 @@ not close while anything fails.
 The session commits only when you ask. Until then it passes `--no-commit`,
 and the last line names the traced files to stage. Then
 `compass ship-commit --issue add-rate-limiting -m "<message>" --release-note "<release line>"`
-commits on the current branch and closes the issue.
+commits on the current branch and closes the issue. By default the same
+commit holds the issue's record: `ship-commit` stages
+`.compass/work/add-rate-limiting/` and the documents folder itself, and
+writes `trail.md` there first. `trail.md` says who asked, what was agreed,
+the red and green of each scenario, who approved and what shipped, with a
+`sha256sum` line for each file it names, so a reviewer checks it from the
+repository root without Compass:
+
+```bash
+grep -E '^[0-9a-f]{64}  ' .compass/work/add-rate-limiting/trail.md | sha256sum -c -
+```
+
+A project whose `compass.yml` sets
+`record.commit: false`, or names a `record.remote` and does not set
+`record.commit`, keeps the record out of the commit
+([delivery record](delivery-record.md)).
 
 Every delivery issue also owes `ship-approval`: one person's approval of the
 change at ship (ADR-095). It does not hold up the commit. After the pull
@@ -317,7 +336,9 @@ or no GitHub, the session asks with `compass evidence request --ship` and
 stops, and you type `/compass:approve`. `compass check` fails the
 `ship-approval-present` row only when the pull request merged with neither.
 An agent cannot approve the pull request for you: the pre-tool hook refuses
-`gh pr review --approve`.
+`gh pr review --approve`. When the record ships with the code, the merge
+fields come after the landing commit: `compass record commit --issue
+add-rate-limiting` commits them alone, and the `next:` line names it.
 
 That is the whole path, from start to end. The manifest, the evidence and
 `acceptance-criteria.md` are on disk, readable by anyone who picks the issue

@@ -351,8 +351,9 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
     # one four-stage path (ADR-092). 114 since ADR-094 added check-set,
     # tighten-only-setting and policy-digest; the retired layer terms stay.
     # 118 since ADR-095 added ship-approval, pr-approval, scenario-freeze and
-    # delegation-copy.
-    assert len(terminology["terms"]) == 118, (
+    # delegation-copy. 122 since ADR-096 added trail, request-link,
+    # record-mode and landed-with-record.
+    assert len(terminology["terms"]) == 122, (
         "governance/terminology.yml gained or lost a term without this count "
         "moving. A vocabulary change is a decision (ADR-012); make it one."
     )

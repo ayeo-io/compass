@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre28
+version: 2.0.0-pre29
 
 terms:
 
@@ -40,6 +40,51 @@ terms:
       contains.
     github: none
     related: [issue, evidence, scenario, acceptance-criteria]
+  trail:
+    means: >
+      The file `.compass/work/<slug>/trail.md` beside the manifest (ADR-096).
+      It states in order who asked, what was agreed, the red of each
+      scenario, the green, who approved and by what authority, and what
+      shipped. Under each statement are lines in `sha256sum` format with
+      paths from the repository root, so a reviewer checks the named files
+      with `sha256sum -c` and no Compass. `compass trail` writes it in full
+      from the records, as do `compass ship-commit`, `compass issue link set
+      --pr` and `compass record commit`; `compass trail --check` says when it
+      is out of date. It proves the files match their digests, not that its
+      prose is true.
+    related: [manifest, evidence, request-link, record-mode]
+  request-link:
+    means: >
+      The manifest's `request:` record: a link to what asked for the change
+      (an `https://` URL, or `owner/repo#N`, which also links the GitHub
+      issue) and the requester, free text the session records as a claim,
+      not an approval (ADR-096). `--request` and `--requester` on `compass
+      quick-fix start` or `compass issue link set` write it. A delivery issue
+      owes the token `request`, and the check `request-recorded` fails until
+      both parts are on record, but nothing refuses for it.
+    related: [evidence-required, issue, trail]
+  record-mode:
+    means: >
+      Whether an issue's record ships in the same commit as its code
+      (ADR-096). Committed is the default: `compass ship-commit` stages the
+      issue folder, the documents folder and `.compass/work/.gitignore`
+      itself. Kept out applies when `record.commit` is false, when
+      `record.remote` is set and `record.commit` is not, when git ignores
+      the issue folder, or outside a git repository; then nothing under
+      `.compass/` is staged, and `compass record sync` can copy the record
+      elsewhere. The ignore file keeps generations, lock files and markers
+      out in either mode.
+    related: [manifest, trail, landed-with-record]
+  landed-with-record:
+    means: >
+      The manifest key `landed_with_record: true`, written by `compass
+      ship-commit` in committed mode in the same save as the landing, before
+      the commit (ADR-096). Such a manifest holds no `land_commit`: the land
+      commit is read from git as the newest commit that added the
+      manifest's `land_timestamp` line, so after a squash merge it names the
+      squash commit. `compass record commit` commits the fields the merge
+      adds later.
+    related: [record-mode, trail, ship]
 
   # --- Work hierarchy (GitHub-aligned) --------------------------------------
   epic:

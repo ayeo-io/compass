@@ -22,6 +22,7 @@ compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
   --familiarity "<VALUE> - <reason>" --size "<VALUE> - <reason>" \
   --intent "<what will be true afterwards>" \
   --scenario "Given ... When ... Then ..." --test <test node id> \
+  --request <url> --requester "<name>" \
   [--labels <tag,...>] [--urgency "live-defect - <reason>"]
 ```
 
@@ -30,9 +31,13 @@ Risk is `trivial`, `contained`, `cross-cutting` or `critical`; familiarity
 `small`, `medium`, `large` or `product`. When unsure, choose the larger.
 `--labels auth`, `payments`, `personal-data` or `migrations` need a
 person's sign-off. `--urgency` marks a production defect: its
-reproduction's red comes first. `start` runs `compass init`: tell the user
-about a `created:` line, and read any listed settled decisions that touch
-the change.
+reproduction's red comes first. `--request` links what asked for the
+change (an `https://` URL or `owner/repo#N`), and `--requester` names who
+asked. Pass both when the request is known. Without them the check
+`request-recorded` fails, but nothing stops: `compass issue link set
+--request <url> --requester <name>` records them later. `start` runs
+`compass init`: tell the user about a `created:` line, and read any listed
+settled decisions that touch the change.
 
 Show the three lines of `compass approach show --issue <slug>`. Then:
 

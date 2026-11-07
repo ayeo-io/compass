@@ -831,6 +831,10 @@ def test_d2_repairs_change_only_retired_names():
     `docs/quickstart.md` (table_rows 26 -> 27): the `next:` table gained the
     row that names `compass record commit` after the merge.
 
+    #356 step 9 (the words) re-baselined `docs/quickstart.md` (fences
+    26 -> 28): the `sha256sum -c -` command a reviewer runs over `trail.md`
+    is a fenced block, because a path named inline must exist in the tree.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

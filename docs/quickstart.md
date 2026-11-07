@@ -117,22 +117,22 @@ record the project's own rules, run it once from the project root:
 `init` is exempt from assessment - it changes no application code. It:
 
 1. **Writes a minimal `compass.yml`** at the project root: `schema`, an `owner`
-   who approves waivers, and `project.name` and `project.test_command`. It copies no `governance/` files. The file holds only
-   what differs from the shipped defaults, and the defaults are real, in-force
-   content from the moment you install Compass. The team adds its own edits
+   who approves waivers, and `project.name` and `project.test_command`. It copies no `governance/` files. The
+   fixed check set is in force from the moment you install Compass, and a
+   setting in `compass.yml` can only add to it. The team adds its settings
    whenever it is ready. See `docs/configuration.md`.
 2. **Stops on an older project.** A project that has a
    `.compass/config.yml` or copied `governance/` files from a 5.x version must
-   run `compass policy migrate` on 8.x first. The upgrade guide names the
-   9.0.0 settings.
+   run `compass policy migrate` on Compass 8.x first, because 9.0.0 removed
+   that command. The upgrade guide names the 9.0.0 settings.
 3. **Creates `.compass/work/`** - where every issue's state will live. Note
    that `.compass/work/` **is committed**. It is the audit trail, not temporary files.
 
 `compass init`, which every entry point runs for you, writes only a state file
 in `.compass/` and no settings file.
 
-Until `/compass:init` is run, the framework's shipped defaults apply as-is.
-`/compass:init` adds to them; it is not a gate.
+Until `/compass:init` is run, the check set applies as it ships.
+`/compass:init` writes the settings file; it is not a gate.
 
 ---
 
@@ -175,9 +175,9 @@ compass quick-fix start add-rate-limiting \
 scenario as `TRC-001`. It also writes a `.compass/current-task` pointer, so
 the CLI and the hooks know which issue is active.
 
-Then the CLI computes the rest. It applies the project's resolved
-configuration (the shipped default, an optional git parent, `compass.yml` and
-the issue's own `config:`) to the assessment, picks the first evidence row
+Then the CLI computes the rest. It applies the project's policy (the fixed
+check set, with the tighten-only settings of `compass.yml`) to the
+assessment, picks the first evidence row
 that matches and adds what the risk and labels add. It writes
 `delivery_approach: delivery`, `evidence_required` (the evidence the change
 owes before it ships) and the `gates` derived from it into `manifest.yml`.
@@ -290,13 +290,13 @@ issue; `regression`, `security` and `clarity` on the standard row; and
 `architecture` because risk is cross-cutting. Each one passes its gate with
 evidence attached, and that evidence is **typed** - a `{type, path}` record,
 such as `test-run`, `command-output`, `human-approval` or `artifact`, and
-`guardrails.yml` says which types each gate accepts, so a mechanical gate
+the check set says which types each gate accepts, so a mechanical gate
 cannot be cleared with a written note.
 
 `compass quick-fix finish` runs the suite, records it and passes the three
 gates every issue owes. While anything else is owed, it refuses with exit 1
 before it writes anything, and prints one `next:` line for each owed item.
-`compass check` runs the `governance/guardrails.yml` checks against
+`compass check` runs the checks of the issue's policy against
 `manifest.yml` and `evidence/` - every scenario lists a test, the recorded
 suite passed, every changed file traces to a scenario, every `pass` gate has
 resolving evidence. Under the default `adoption: enforced`, the issue does

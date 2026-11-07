@@ -52,10 +52,10 @@ A path issue is one whose manifest records `evidence_required` (ADR-092). It
 runs assess, specify, build and ship, and has no stage modes, so none of its
 lists is skipped. `stage_lists.path_lists` gives it its lists:
 
-- A configuration that declares the four path stages, as the shipped default
-  does since 9.0.0 (ADR-092), is read at those stages as it stands. The build
-  exit list is the Definition of Done, and the ship entry list holds a check
-  such as a project's `agent-review`.
+- A configuration that declares the four path stages, as the check set does
+  since 9.0.0 (ADR-092, ADR-094), is read at those stages as it stands. The
+  build exit list is the Definition of Done, and the ship entry list holds a
+  check such as the `agent-review` that `agent_review: on` turns on.
 - A configuration that still declares the legacy stages, as a frozen preset
   or a stored generation does, has each list moved to the path stage that shows its
   stage: define, refine and plan to specify, breakdown and implement to
@@ -556,11 +556,12 @@ has nothing to check for the Definition of Ready.
 
 A `when` on a check reads the assessment. Evaluation adds one derived key,
 `ships`, whether the approach the issue was given ships. Each Definition of
-Done check in the shipped default says `when: {ships: true}`, so a spike, which
-does not ship, owes none of them and a delivery owes all seven. A project can
-use `ships` in the `when` or `blocking_when` of its own checks and in the
-`when` of a guardrail gate. The key adds no field to the
-configuration, so the classifier compares it as it compares any `when`.
+Done check in the check set says `when: {ships: true}`, so a spike, which
+does not ship, owes none of them and a delivery owes all seven. The key adds
+no field to the configuration. Since 9.0.0 a project adds a check only as a
+`project_checks` setting, whose `when` takes the keys of the assessment,
+`labels_any` and `any_of`, and not `ships` (`docs/configuration.md`). A
+stored generation whose own checks use `ships` is read as before.
 
 ## Where results show
 

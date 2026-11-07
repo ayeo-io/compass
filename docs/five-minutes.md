@@ -84,11 +84,12 @@ them - the evidence the change owes and the gates - is computed. The
   gate set        : verify.correctness, verify.governance, verify.traceability
 ```
 
-The first line shows what the project runs against. The text above is the line
-for a project with a `compass.yml`. A project without one has not changed the
-shipped default, and the line names the shipped `routing-policy.yml` and its
-version instead. Run against an issue that already has a stored generation, the
-line reads `generation N of this issue (parent ...)`.
+The first line shows what the project runs against: the fixed check set,
+with the settings of `compass.yml` when the project has one. Run against an
+issue that already has a stored generation, the line reads `generation N of
+this issue (parent ...)`. Only a project that copied the governance files
+under 5.x, and has no `compass.yml`, reads its copy; the line then says
+`this project's governance files`.
 
 See the decision:
 
@@ -108,9 +109,11 @@ Writes: .compass/work/fix-token-message/ and docs/compass/2026-11-06-fix-token-m
 `outer-loop` is there because the four-layer acceptance strategy (`S17`)
 applies to a change a real client can observe: the scenario's test runs
 against the system from the outside. This project has no `compass.yml`, so
-it runs on the live default, which ships the strategy. The `approach
-evaluate` transcript above came from a project whose `compass.yml` extends
-`compass:default@6`, a major from before the strategy shipped, so it owes no
+it runs the check set, which holds the strategy. The `approach evaluate`
+transcript above came from a project whose `compass.yml` still says
+`extends: compass:default@6`. That is a removed setting, but it keeps a
+project that pinned a major from before the strategy shipped out of `S17`
+until the 9.0.0 upgrade command rewrites the file, so it owes no
 `outer-loop`. In one project the preview and the write owe the same
 evidence.
 

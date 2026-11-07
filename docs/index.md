@@ -3,14 +3,15 @@
 Compass is adaptive spec-driven development for Claude Code. You describe
 the work; Compass scores the risk, familiarity and size of each piece of
 work, new or existing, and a deterministic CLI computes how much process it
-needs from that assessment and the project's configuration. Five
+needs from that assessment and the project's policy: one fixed check set,
+with the settings of `compass.yml`. Five
 guardrails apply to all work that ships code, whatever the
 assessment: a recorded passing test run, acceptance criteria before code,
 code traced to a criterion, typed evidence rather than a written claim, and a
 person's approval for a change labelled `auth`, `payments`, `personal-data`
-or `migrations`. They are defaults: a project can add its own, report
-failures without blocking while it tries Compass, or loosen one with the
-owner's recorded waiver. The person's approval cannot be loosened. The
+or `migrations`. A project can add checks of its own, report failures
+without blocking while it tries Compass, or excuse one check on one issue
+with a waiver a person approves. The person's approval cannot be waived. The
 [safety contract](safety-contract.md) states what each guarantee covers and
 where it stops.
 
@@ -19,7 +20,7 @@ where it stops.
 - [Five minutes](five-minutes.md) - one small change, from assessment to a reviewable result.
 - [Quickstart](quickstart.md) - from an empty machine to a finished first issue.
 - [Install check](install-smoke-test.md) - confirm an install works.
-- [Configuration](configuration.md) - project settings live in one file, `compass.yml`; `compass policy show` prints the configuration in force.
+- [Configuration](configuration.md) - project settings live in one file, `compass.yml`; a setting can only add to the check set, and `compass policy show` prints the check set and its digest.
 - [Upgrading to 7.0.0](upgrade-7-0-0.md) - coming from 6.x: each change, what breaks and what to do.
 - [Upgrading to 8.0.0](upgrade-8-0-0.md) - coming from 7.x: the delegation change, what breaks and what to do.
 - [Upgrading to 6.0.0](upgrade-6-0-0.md) - coming from 5.x: the renamed words and commands, and what reads the old form until 9.0.0.

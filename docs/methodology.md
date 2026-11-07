@@ -38,13 +38,12 @@ Assessment is judgement. The assessor must explain uncertain or consequential
 choices, and a human can correct them before work proceeds.
 
 Routing is mechanism. Once the assessment exists, the kit selects the
-evidence the change owes from fixed evidence rows, then applies the resolved
-configuration - the shipped routing policy, an optional git parent, the
-project's `compass.yml` and the issue's own `config:` - including its floors
-and immovable gates.
+evidence the change owes from fixed evidence rows, then applies the
+project's policy - the fixed check set, with the tighten-only settings of the
+project's `compass.yml` - including its floors and immovable gates.
 
 > Judgement goes into the assessment. Everything after it is deterministic:
-> the same assessment and configuration produce the same evidence,
+> the same assessment and policy produce the same evidence,
 > every time ([safety contract](safety-contract.md#1-routing-is-deterministic-after-assessment)).
 
 The kit writes the result to the manifest, and `compass approach show` prints
@@ -119,7 +118,7 @@ enforced adoption, and the [safety contract](safety-contract.md) lists what it
 cannot see:
 
 1. Delivery code is tested before it ships. Stated exactly as
-   `governance/guardrails.yml` states it, because a reader who finds two
+   the check set (`governance/check-set.yml`) states it, because a reader who finds two
    wordings has no way to know which is current: **no code reaches main unless
    it traces to a declared test and a green test run is on record.**
 2. Acceptance is defined before implementation.

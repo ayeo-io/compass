@@ -110,7 +110,7 @@ this way. To move work between worktrees, commit it: the branch is durable.
 ## Where state lives
 
 ```
-compass.yml                     The one file a person edits: settings, and the project's edits to the shipped default (written by /compass:init)
+compass.yml                     The one file a person edits: settings, and the tighten-only settings that add to the check set (written by /compass:init)
 .compass/
 ├── state.yml                   What the CLI wrote: what initialized the project, and when
 ├── config.yml                  Projects from 5.x only: read until the project moves its settings with compass policy migrate on 8.x; no 6.0.0 command writes it
@@ -155,11 +155,13 @@ with `compass waiver add --check <id> --reason "..."`, ask with `compass
 evidence request --waiver W-<n>`, and stop: only a person, or an agent under a
 delegation typed `--for waivers`, approves it (`docs/waivers.md`).
 
-A new project has no `governance/` directory: the shipped default preset is in
-force, and `compass.yml` holds only what differs from it. An unmigrated 5.x
-project runs on its own copied `governance/` until `compass policy migrate` on 8.x
-converts it. `compass policy show` shows what is in force for a project with a
-`compass.yml` or none, but it does not read that copy.
+A new project has no `governance/` directory: the fixed check set
+(`governance/check-set.yml` in the plugin) is in force, and `compass.yml` holds
+the project's settings, which can only add to it. An unmigrated 5.x project runs
+on its own copied `governance/` until `compass policy migrate` on 8.x
+converts it. `compass policy show` prints the check set, its digest and the
+settings applied for a project with a `compass.yml` or none, but it does not
+read that copy.
 
 ## Project lessons
 

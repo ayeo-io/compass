@@ -101,16 +101,17 @@ manifest, and a team can keep its own notes.
 
    The guardrail *checks* are mechanism, not judgment - so a portable
    runtime must run them via the kit-layer CLI rather than reimplement
-   them: `compass check` runs the `governance/guardrails.yml` checks against
+   them: `compass check` runs the checks of the fixed check set
+   (`governance/check-set.yml`) against
    the issue's manifest and `evidence/`, and `compass tdd-red` /
    `compass tdd-green` run a test, assert fail/pass, and write the evidence
    records the checks read. Gate evidence in the manifest is **typed** - a
-   `{type, path}` record, not a bare path - and `guardrails.yml` declares
+   `{type, path}` record, not a bare path - and the check set declares
    which evidence types each gate accepts, so a mechanical gate cannot be
    cleared with a written note; `compass check` enforces that. The runtime's
    job is to *call* these at the right stages, not to re-derive what they do.
-   The shipped guardrails and strategies apply with no setup; a project adds
-   its own governance later.
+   The shipped guardrails and strategies apply with no setup; a project can
+   later add to them with the tighten-only settings of `compass.yml`.
 
    **Artifacts are written for a cold reader.** Every artifact a runtime
    emits is read later by someone who was not in the conversation, so it
@@ -251,9 +252,9 @@ such as D272.
 All issue state is files, not conversation:
 
 - `compass.yml` at the project root - the one file a person edits: the
-  project's settings and its changes to the shipped default, which stays in
-  force beneath it (`docs/configuration.md`). `compass policy show` prints the
-  configuration in force. A project from 5.x may still hold a
+  project's settings, which can only add to the fixed check set
+  (`docs/configuration.md`). `compass policy show` prints the check set, its
+  digest and the settings applied. A project from 5.x may still hold a
   `.compass/config.yml` or a copied `governance/` directory; it keeps running
   on them until `compass policy migrate` on 8.x (`docs/upgrade-6-0-0.md`);
 - each issue's documents in `docs/compass/<created>-<issue-slug>/`;

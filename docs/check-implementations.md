@@ -34,7 +34,7 @@ implementation and computes the verdict; a test fails when a label differs from 
 
 ## The section check
 
-`nfr-rows-resolved` (`cli/compass_pkg/section_checks.py`, version 1.0.0) is blocking, unlocked,
+`nfr-rows-resolved` (`cli/compass_pkg/section_checks.py`, version 1.0.0) is blocking,
 `on_skipped: not-applicable` and in no gate. `cli/compass_pkg/outside_gate.py` runs it after the gate loop.
 9.0.0 removed its sibling `contracts-declared`, `artifacts-approved` and the design-size check with the
 documents they read (ADR-091). `governance/guardrails.md` holds the rules; this page holds what the corpus pins.

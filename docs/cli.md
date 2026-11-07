@@ -30,8 +30,8 @@ compass isolation record   run the suite in parallel and each scenario's tests t
 compass layering record    run the project's layering test and record the run
 compass waiver add         waive one check on one issue, with a reason; it excuses nothing until a person approves it
 compass waiver withdraw    remove an unapproved waiver, or mark an approved one withdrawn
-compass policy lint        structurally validate the governance YAML, and warn (L-SETTING-REMOVED) on each key 9.0.0 removed, such as approaches or a legacy stage
-compass policy show        every resolved configuration field, with its source layer
+compass policy lint        lint compass.yml as settings, or the governance copy of a project without one, and warn (L-SETTING-REMOVED) on each key 9.0.0 removed, such as approaches or extends
+compass policy show        the check set, its digest and the tighten-only settings applied (--issue adds the issue's policy: block and waivers)
 compass review-rule list   the review rules that apply to the changed files
 compass issue lint         structurally validate an issue manifest
 compass issue diagnose     explain one run from its own records: stages, timeline, deviations

@@ -76,8 +76,9 @@ If that check fails, nothing is written. Then:
    computed outcome fields. This is the commit point.
 
 A crash before step 3 leaves the manifest naming generation n, which is still
-whole. If the resolved configuration, the issue overlay and the computed
-outcome all equal generation n, nothing is committed and the command says
+whole. If the resolved configuration, the digest of the issue overlay (null
+since 9.0.0, which reads no issue layer) and the computed outcome all equal
+generation n, nothing is committed and the command says
 "no change"; the manifest is still replaced, as before. The manifest on disk
 must still name the generation the command read, or the commit refuses.
 
@@ -101,9 +102,10 @@ The commit refuses, writing nothing, when:
   cleared before it is written.
 - the issue is closed and the result would be a new generation. A closed issue
   keeps the configuration it closed under. "No change" is still allowed.
-- the layered lint rejects the configuration. The message names the file, the
-  first error and `compass policy lint`, which shows the rest. `approach
-  evaluate` without `--write` still works on such a project.
+- the settings lint rejects `compass.yml`. Then nothing resolves, so the
+  refusal comes before the commit: the message names the file, the first
+  error and `compass policy lint`, which shows the rest. Every command that
+  resolves a policy refuses such a file the same way.
 
 It overwrites a leftover folder when the folder holds only files a commit
 writes: an incomplete one, one whose marker does not match its files, and a
@@ -299,8 +301,8 @@ keep it.
 `evaluate_route` takes, built by `obligations.policy_adapter` from the resolved
 configuration, with the two tighten-only settings the evidence evaluator reads,
 `signoff_labels` and `require_evidence` (`tighten.with_settings`). `effective`
-and `classify` are the only modules that may import `obligations` (ADR-037);
-readers call the view.
+is the only module that may import `obligations` (ADR-037); readers call the
+view.
 
 ### What a reader calls
 
@@ -313,7 +315,7 @@ framework's own repository included, reads the check set. A generation of 0, or 
 | Call on the view | Returns | Used by |
 |---|---|---|
 | `evaluator_policy()`, `autonomy` | the routing policy and the autonomy value | `routing`, `quick_fix_cmd`, `flow`, `calibration`, `approach_diagram` |
-| `evaluator_issue()` | the issue's own layer as the evaluator takes it: the approach it names, the stage modes it sets, the stages among them that an issue waiver in the provenance covers (`waived_stages`) and its subtask ceiling, or None | `routing` |
+| `evaluator_issue()` | the 8.x issue layer a stored generation holds, as the evaluator takes it (a live view holds none since 9.0.0): the approach it names, the stage modes it sets, the stages among them that an issue waiver in the provenance covers (`waived_stages`) and its subtask ceiling, or None | `routing` |
 | `guardrail_gates()` | the guardrails in the legacy shape: `defaults`, `spike_guardrails`, `checks` (each check's `severity`, `on_skipped` and `blocking_when`) and `impl` (the implementation each check runs) | `check_cmd` |
 | `gate_requirements()` | the evidence types each gate accepts, and the known types | `checks`, `manifest` |
 | `command_checks()` | the checks that run a command the project wrote | `checks` |

@@ -76,6 +76,7 @@ active.
 
 A person can override an assessment value per issue: re-run the evaluation
 with the new value and its reason, and the evidence follows. A person
-cannot override a floor or an immovable gate per issue - changing one is a
-reviewed change to the project's `compass.yml` (`docs/configuration.md`),
-and a loosening needs a waiver that the project's owner approves.
+cannot override a floor or an immovable gate per issue. A project can add a
+floor with a reviewed change to its `compass.yml` (a tighten-only setting,
+`docs/configuration.md`), never remove one. Excusing one check on one issue
+needs a waiver a person approves (`docs/waivers.md`).

@@ -35,10 +35,11 @@ the table does not exist, and when a doc in this folder is not listed.
 - [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 9.0.0, and why there is no supported rollback.
 - [upgrade-7-0-0.md](upgrade-7-0-0.md) - what 7.0.0 changes and what to do about it, one section per change.
 - [upgrade-8-0-0.md](upgrade-8-0-0.md) - what 8.0.0 changes about delegation, and what breaks: the flag form, `--issue` on a delegated approval and the common store.
-- [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it.
+- [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it, and the five tighten-only settings that add to the check set.
+- [waivers.md](waivers.md) - a waiver of one check on one issue: how to ask for one, how a person approves it and what `compass check` then shows.
 - [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show`: the settings lint of `compass.yml`, the legacy lint of a governance copy, the finding codes and both JSON shapes.
 - [check-implementations.md](check-implementations.md) - the version and fixture corpus of each check implementation, the build rule and what a major difference does.
-- [generation-store.md](generation-store.md) - the stored generation of an issue's configuration: its files, the commit order, the states and what reads it.
+- [generation-store.md](generation-store.md) - the stored generation of an issue's policy: its files, the manifest's `policy:` block, the commit order, the states and what reads it.
 - [entry-exit-evaluation.md](entry-exit-evaluation.md) - the capability that evaluates each stage's entry and exit lists: when a list is due, how each kind of check is judged, what `on_skipped` does and where results show.
 - [judged-checks.md](judged-checks.md) - a check of kind `judged`, its review record and `compass evidence review`: what a judged check needs to pass, the four failure causes, how a changed input re-owes the review and the JSON shape.
 - [issue-dependencies.md](issue-dependencies.md) - `depends_on` and `compass issue depends add|remove`: the entry shape, the nine `until` values, when the block counts at implement, what the hook reads and what it costs, the fail-safe cases, the worktree rule and what each reader shows.

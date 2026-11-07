@@ -23,8 +23,8 @@ components. Relations are ordered by the calling component.
 
 | From | To | Transport | Purpose | Criticality |
 |---|---|---|---|---|
-| `cli/compass` | `governance/routing-policy.yml` | file read | `compass approach evaluate` applies routing policy at assess | high |
-| `cli/compass` | `governance/guardrails.yml` | file read | `compass check` runs gate assertions against this schema | high |
+| `cli/compass` | `governance/check-set.yml` | file read | `compass approach evaluate` applies the routing rules of the check set at assess | high |
+| `cli/compass` | `governance/guardrails.yml`, `governance/routing-policy.yml` | file read | frozen 8.x views, read only for a project with its own copy of the governance files and no `compass.yml` | low |
 | `cli/compass` | `governance/strategies.md` | file read | strategy documentation consulted by CLI subcommands | medium |
 | `cli/compass` | `architecture/` | file read | `frame_load_architecture` reads all `*.md` files and `decisions/ADR-*.md` into `architecture-loaded.yml` | medium |
 | `cli/compass` | `.compass/work/` | file read/write | every subcommand (assess, check, tdd-red, tdd-green) reads and writes issue manifests under this directory | high |
@@ -75,5 +75,5 @@ or cross boundary rules encoded in the ADRs.
 | Issue manifest schema (`manifest.yml`) | `cli/compass` (validated inline), `schemas/manifest.schema.json` | `schema_version: '2.0'`; fields: assessment, delivery_approach, orchestration, stages, evidence, gates, scenarios, changed_files, claims, follow_ups, reassessments |
 | Architecture load record | `cli/compass` (`frame_load_architecture`) | `schema_version: '1.0'`; fields: artifacts (path, sha256, type), adrs (id, path, title, status), loaded_at |
 | ADR frontmatter | `architecture/decisions/ADR-*.md` | Required fields: id, title, status, date, supersedes, superseded_by. Status: accepted \| proposed \| superseded. |
-| Routing policy schema | `governance/routing-policy.yml` | Consumed by `compass approach evaluate`; schema validated by `tests/test_policy_integrity.py` |
-| Guardrails schema | `governance/guardrails.yml` | Consumed by `compass check`; checks gate evidence types |
+| Check set schema | `governance/check-set.yml` | Consumed by `compass approach evaluate` and `compass check` through `cli/compass_pkg/check_set.py`, which checks its shape; content checked by `tests/test_check_set_content.py` |
+| Project settings schema | `compass.yml`, `schemas/compass.schema.json` | The settings and the five tighten-only settings; checked by `compass policy lint` (`cli/compass_pkg/settings_lint.py`) |

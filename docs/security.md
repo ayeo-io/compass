@@ -125,25 +125,23 @@ test tools from `.github/requirements/`, which lists each package at an exact
 version; the cucumber-js adapter installs from its lockfile with `npm ci`. The
 workflows in `ci/` that you copy pin their actions the same way.
 
-## Project guardrails are executable code
+## Project checks are executable code
 
-A project guardrail can use `command-passes` - a shipped check **whose
+A project check (`project_checks` in `compass.yml`, see
+`docs/configuration.md`) uses `command-passes` - a shipped check **whose
 parameter is the command**, not a setting that selects one. `compass check`
-runs that string with `subprocess.run(..., shell=True)` from the project root. Its `command:` form still runs a shell; the `script:`
-form does not - it runs a file directly, so a value cannot add a
-pipeline or a substitution. That difference is the reason to prefer the script
-form, and it is the only reason.
-
-The command form runs from the project root with the Compass process's
-permissions.
+runs that string with `subprocess.run(..., shell=True)` from the project
+root, with the Compass process's permissions.
 
 ```yaml
-checks: [command-passes]
-params:
-  command: "python3 scripts/architecture-fitness.py"
+project_checks:
+  - id: arch-fitness
+    name: Architecture fitness
+    command: "python3 scripts/architecture-fitness.py"
+    stage: build
 ```
 
-Treat governance files that declare `command-passes` **as code, not as configuration** - anything a shell can do, a project guardrail can do. It matters because
+Treat a `compass.yml` that declares a project check **as code, not as configuration** - anything a shell can do, a project check can do. It matters because
 continuous integration normally runs on a pull request **before** it is
 approved, so a contribution's command runs before anyone has read it. The
 explicit opt-in that closes this gap is
@@ -158,17 +156,19 @@ allow_project_commands: true
 ```
 
 This prevents accidental execution; it is not a security boundary because a
-repository change can edit both the command and the setting. Since 6.0.0 a
-project can declare a `command-passes` check in `compass.yml`, the same file
-that holds `allow_project_commands`, so the setting is in the same file as the checks it
-authorises and one change can add both. Before, the setting lived apart from
-the governance files that held the checks. That separation was never a
-control. The control is the trust decision, which runs first and reads nothing
-from the project. A parent (data that `extends:` names), a preset and an issue's
-own layer cannot set the key; lint refuses it there. A parent is data and is
-never executed.
+repository change can edit both the command and the setting. A project check
+is in `compass.yml`, the same file that holds `allow_project_commands`, so
+one change can add both. That was so from 6.0.0; before, the setting lived
+apart from the governance files that held the checks. That separation was
+never a control. The control is the trust decision, which runs first and
+reads nothing from the project.
 
-Prefer the non-shell script form:
+### The script form, for an 8.x project guardrail
+
+A project check takes only `command`, which still runs a shell. An 8.x
+project guardrail, kept in an issue's stored generation or in a project's
+copy of the governance files, can also use the script form, which runs a
+file directly, so a value cannot add a pipeline or a substitution:
 
 ```yaml
 checks: [command-passes]

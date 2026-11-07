@@ -44,7 +44,8 @@ Logical surface: **pipeline**
 The router reads the assessment (risk, familiarity and size, with the optional
 goal and urgency) recorded in `manifest.yml.assessment` and deterministically
 computes the delivery approach, the evidence required and the gate set by running
-`governance/routing-policy.yml` through `compass approach evaluate`. No human judgement enters after the assessment
+the routing rules of the check set (`governance/check-set.yml`, ADR-094) through
+`compass approach evaluate`. No human judgement enters after the assessment
 is recorded; the delivery approach is a pure function of the assessment.
 
 Logical surface: **router**
@@ -55,7 +56,9 @@ Guardrails are the five hard, checkable, blocking rules that no delivery
 approach, agent, or convenience can cross: `G1` (tested before it lands), `G2`
 (acceptance defined before built), `G3` (traceability holds), `G4` (evidence
 not assertion), `G5` (human signs off on the irreversible). They are encoded
-in `governance/guardrails.yml` and checked mechanically by `compass check`.
+in the fixed check set, `governance/check-set.yml`, and checked mechanically by
+`compass check`. A project can only add to the set, through the tighten-only
+settings of `compass.yml`.
 
 Logical surface: **guardrails**
 
@@ -76,8 +79,8 @@ Logical surface: **strategies**
 
 | Dependency | What Compass reads / writes | Criticality |
 |---|---|---|
-| `governance/routing-policy.yml` | The evaluator reads this at assess to compute the delivery approach | high |
-| `governance/guardrails.yml` | `compass check` reads this to run gate assertions | high |
+| `governance/check-set.yml` | The evaluator reads its rules at assess to compute the delivery approach, and `compass check` runs its gates and checks | high |
+| `compass.yml` | The project's settings; the five tighten-only settings add to the check set | high |
 | `governance/strategies.md` | Consulted by agents when deciding TDD/BDD application | medium |
 | `.compass/work/<issue>/devlog.md` | `hooks/stop.sh` scans it for the scope-bloat phrases in `hooks/py/stop_scan.py` | medium |
 | `.compass/work/<issue>/manifest.yml` | The manifest; written by the assess stage, read by every stage | high |
@@ -100,12 +103,14 @@ Logical surface: **strategies**
    changed_files, evidence, follow_ups, reassessments. No mechanism may write into
    `manifest.yml.assessment`.
 
-3. **A dropped or weakened guardrail is reported, not hidden.** A project's
-   `governance/guardrails.yml` can omit a default `G1`–`G5` entry;
-   `compass policy lint` and `compass check` name what is missing rather than
-   counting it as passing (`docs/safety-contract.md` guarantee 2). Adopters
-   declare architecture checks as project guardrails using the generic
-   `command-passes` check (see ADR-009); the `verify.architecture` gate is
+3. **A dropped or weakened guardrail is reported, not hidden.** No setting
+   can drop or weaken a guardrail of the check set. Only a project that kept
+   its own copy of `governance/guardrails.yml` from 5.x, and has no
+   `compass.yml`, can omit a default `G1`–`G5` entry; `compass policy lint`
+   and `compass check` name what is missing rather than counting it as
+   passing (`docs/safety-contract.md` guarantee 2). Adopters declare
+   architecture checks as `project_checks` in `compass.yml`, which run the
+   generic `command-passes` check (see ADR-009); the `verify.architecture` gate is
    added by `RP-REQUIRE-003` and `RP-REQUIRE-004` when risk or labels
    warrant it.
 

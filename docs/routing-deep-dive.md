@@ -43,8 +43,10 @@ Every issue, every time, assess runs the same four steps:
      risk;
    - `G5` adds `human-approval` for a `G5` label.
 
-   The configuration in force then adds the gate of each floor that matches
-   (`add_gate`) and each gate it holds immovable, and the skill a floor asks for
+   The policy in force then adds the gate of each floor of the check set that
+   matches (`add_gate`), the evidence of each `require_evidence` setting of
+   `compass.yml` that matches (`RP-SETTING-<n>`), and each gate it holds
+   immovable, and the skill a floor asks for
    (`require_skill`). Where the four-layer acceptance strategy (`S17`)
    applies to the issue, the row's routing adds `outer-loop`, `isolation` or
    `layering`. Every rule that fires is recorded with its rationale. Which
@@ -55,7 +57,8 @@ Every issue, every time, assess runs the same four steps:
    it, the checkpoints and the rules that fired into `manifest.yml`.
    `compass approach show` prints the result in three lines.
 
-The `G5` labels are `auth`, `payments`, `personal-data` and `migrations`.
+The `G5` labels are `auth`, `payments`, `personal-data` and `migrations`,
+and any label a project adds with `signoff_labels`.
 The every-issue evidence is `scenarios`, `red-before-green`, `suite-green`
 and three review gates. The immovable gates (`verify.correctness`,
 `verify.governance`, `verify.traceability`) are those three: no
@@ -136,10 +139,11 @@ The manifest's `policy_rules_fired` list records the four rules, each with
 its rationale. The engineer sees *why* a typo fix owes a person's sign-off.
 They can discuss it, but they cannot have the evidence silently reduced. The
 rows and additions are fixed in code, and the `G5` sign-off is a guardrail.
-A project that thinks a rule it sets is too blunt, such as a floor that adds
-a gate, changes its `compass.yml` (`docs/configuration.md`). That is a
-logged and reviewed change, not a per-issue override or an edit mid-issue,
-and a loosening needs a waiver that the project's owner approves.
+A project cannot remove a rule: every project runs one fixed check set, and
+a setting in `compass.yml` can only add to it (`docs/configuration.md`). To
+excuse one check on one issue, the session asks for a waiver, which a person
+must approve (`docs/waivers.md`). That is a recorded and reviewed act, not
+an edit mid-issue.
 
 ---
 
@@ -256,7 +260,8 @@ order:
 `governance-check` checks an engineering strategy in
 `governance/strategies.md` (migrations are reversible or come with a
 written, tested rollback) - the evidence row does not waive it. If the team
-has made that a project guardrail, it is checked as a guardrail and blocks.
+has made that a project check (`project_checks` in `compass.yml`), it is
+checked as a check and blocks.
 
 ### Record
 
@@ -595,8 +600,9 @@ the rule behind each item, that a person can read and a later session can
 resume from. That is the deliverable. Assess does not just classify the
 issue: it explains the classification and records every rule that fired.
 The adaptivity is real, and it is *bounded*: by the three-dimension rubric,
-by the evidence rows fixed in code, and by the configuration in force (the
-shipped default plus the project's `compass.yml`, which `compass policy
-show` prints). A routing change is a change to `compass.yml`
-(`docs/configuration.md`), reviewed like any other change. That is what
+by the evidence rows fixed in code, and by the policy in force (the fixed
+check set with the tighten-only settings of the project's `compass.yml`,
+which `compass policy show` prints with its digest). A project that owes
+more changes `compass.yml` (`docs/configuration.md`), reviewed like any other
+change. That is what
 keeps "adaptive" from becoming arbitrary.

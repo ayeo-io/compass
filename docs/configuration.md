@@ -99,7 +99,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `living_spec` | Removed in 9.0.0 and not read (see `living_spec` below) | - | - |
 | `language` | The language the agent writes prose in (see `language` below) | a BCP 47 tag such as `en-US` | unset: no instruction |
 | `acceptance_strategy` | Whether the four-layer acceptance strategy (`S17`) is on for the project (see `acceptance_strategy` below) | `state`: `on` or `off`; `reason`: text, needed with `off` | unset: on |
-| `preset_index` | Reserved for published presets; no behavior yet | - | - |
+| `preset_index` | Removed in 9.0.0 and not read (ADR-094); `compass policy lint` names it with `L-SETTING-REMOVED` | - | - |
 | `github_labels` | Removed in 9.0.0 and not read (see `github_labels` below) | - | - |
 
 ### `adoption`
@@ -147,7 +147,7 @@ changed how often a session stops would give no sign.
 - `lint_command`, `format_check_command`, `build_command`, `typecheck_command`,
   `secret_scan` and `structured_logging`: removed in 9.0.0 (ADR-093) and not
   read. Only the `readiness` verb read them, and it is gone. Each stays valid,
-  so a project that holds one keeps working, and the merge keeps it.
+  so a project that holds one keeps working, and nothing reads it.
   `compass policy lint` names each with `L-SETTING-REMOVED`. Delete them from
   `compass.yml`.
 
@@ -198,10 +198,9 @@ the project to a file of names that must not reach the record. See
 
 ### `allow_project_commands`
 
-Project guardrails can declare a command. `compass check` runs one only when
-the contribution is trusted and this setting is `true`. The setting is read
-from the project's own file only, so a published preset cannot authorize its
-own commands. See `docs/security.md`.
+A project check (`project_checks`, below) declares a command. `compass check`
+runs one only when this setting is `true`. The setting is read from the
+project's own `compass.yml` only. See `docs/security.md`.
 
 ### `github_labels`
 
@@ -218,9 +217,9 @@ set` still records the link (`docs/github-links.md`).
 9.0.0 removed the `readiness` verb, the `--readiness` flag of `compass init`,
 the readiness floor and the session-start readiness line (ADR-093). Nothing measures the
 repository, and the shipped default declares an empty `readiness:` catalog,
-as ADR-091 did for `artifacts:`. A project's `readiness:`, and a git parent's,
-stays valid, so a file that holds it keeps working. The merge leaves it out,
-and its value is not checked. `compass policy lint` names it with
+as ADR-091 did for `artifacts:`. A project's `readiness:` stays valid, so a
+file that holds it keeps working. It is read as if absent, and its value is
+not checked. `compass policy lint` names it with
 `L-SETTING-REMOVED`. Delete it from `compass.yml`. A frozen preset
 (`default@6`, `default@7`) and an issue's stored generation keep the catalog
 they were written with, and lint still reads it. A
@@ -292,8 +291,7 @@ language: en-US
 Unset means no instruction: Compass says nothing about language, and the
 agent follows the repository's existing prose. When it is set, the session-start
 hook adds one line that names the language. The setting does not apply to code identifiers.
-A preset cannot carry the key. The setting is read from the project's own
-settings file: `compass.yml`, or `.compass/config.yml` when `compass.yml` is
+The setting is read from the project's own settings file: `compass.yml`, or `.compass/config.yml` when `compass.yml` is
 absent or has no `schema:`. A malformed value adds no line to a session.
 `compass policy lint` refuses a malformed `language` key in `compass.yml`; it
 does not check `.compass/config.yml`.
@@ -381,7 +379,7 @@ owner's approval: the manifest's `acceptance_strategy` block shows the choice. I
 changed setting as advice. The setting is read from `compass.yml`, or
 `.compass/config.yml` when `compass.yml` is absent or has no `schema:`.
 
-The strategy ships in the default preset from major 8. A project whose
+The check set holds the strategy, as the shipped default did from major 8. A project whose
 `compass.yml` extends `compass:default@6` or `compass:default@7` does not get
 it: assess stores no applicability and `compass check` adds no row for it. A
 project with no `compass.yml` or no `extends:` runs on the check set and gets
@@ -393,7 +391,7 @@ suspend it on an approach that ships.
 Compass runs one fixed set of checks (ADR-094). Five settings of
 `compass.yml` can change what an issue owes, and each can only make it owe
 more. No value removes a check, lowers a severity or narrows when a check
-applies. Only the project's own `compass.yml` can hold them; a parent cannot.
+applies. Only the project's own `compass.yml` can hold them.
 
 The resolver (`effective.resolve_live`) applies them to the check set with
 `compass_pkg.tighten`, and `compass policy lint` and every generation commit

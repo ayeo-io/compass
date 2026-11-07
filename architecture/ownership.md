@@ -44,15 +44,15 @@ exclusively, and what it must not do.
 - The Definition of Ready (before build) and the Definition of Done (before
   ship).
 
-### Router (governance/routing-policy.yml + `compass approach evaluate`)
+### Router (the `rules:` of governance/check-set.yml + `compass approach evaluate`)
 
 **Must own:**
 - The deterministic computation of the delivery approach, the evidence required and
   the gate set from the assessment.
 - The routing rule logic (floors, caps, immovable gates).
-- The `routing-policy.yml` schema and its validation.
+- The shape of the routing rules in the check set, and its validation.
 
-### Guardrails (governance/guardrails.yml + `compass check`)
+### Guardrails (governance/check-set.yml + `compass check`)
 
 **Must own:**
 - The five hard guardrail definitions (`G1`–`G5`) and their check logic.
@@ -122,7 +122,7 @@ the review is not needed:
 | Caller component | Callee component | Risk |
 |---|---|---|
 | Any role perspective | `acceptance-criteria.md` | A role perspective must not write scenarios; annotation only |
-| `compass approach evaluate` | `governance/routing-policy.yml` | Schema changes need a routing-policy ADR |
-| `compass check` | `governance/guardrails.yml` | Adding a check needs a guardrail-count check |
+| `compass approach evaluate` | the `rules:` of `governance/check-set.yml` | A change to the rules' shape needs a routing-policy ADR |
+| `compass check` | `governance/check-set.yml` | Adding a check needs a guardrail-count check and a new check set version |
 | `hooks/pre-tool.sh` | `.compass/work/<issue>/.red` | Any change to the marker protocol needs updating both sides |
 | `frame_load_architecture` | `architecture/decisions/ADR-*.md` | ADR parsing logic change needs `tests/test_frame_loads_architecture.py` (`TRC-X1`) to stay green |

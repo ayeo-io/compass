@@ -22,17 +22,18 @@ and size**. Every change that ships then runs the same four stages: assess, spec
 build and ship. A deterministic policy selects the evidence the change owes
 before it ships: which scenarios and tests, which reviews, and where a person
 decides. Five guardrails apply to all work that ships code,
-whatever the assessment. They are defaults: a project can add its own, report
-failures without blocking while it tries Compass, or loosen one with the
-owner's recorded waiver. A person's sign-off for irreversible work cannot be
-loosened ([safety contract](docs/safety-contract.md)).
+whatever the assessment. Every project runs one fixed check set: a project
+can add checks of its own, report failures without blocking while it tries
+Compass, or excuse one check on one issue with a waiver a person approves. A
+person's sign-off for irreversible work cannot be waived ([safety contract](docs/safety-contract.md)).
 
 <p align="center">
   <img src="assets/compass-explainer.svg" alt="Three sliders for risk, familiarity and size feed a policy. As the work changes from a typo fix to a live defect to a payments rewrite, the evidence each of the four stages judges grows from the light row to the standard row, dots mark the stages where a person decides, and five guardrail lines stay the same." width="960">
 </p>
 
 Judgment goes into the assessment. Everything after it is computed from two
-inputs: the assessment and the project's resolved configuration. The same
+inputs: the assessment and the project's policy, the check set with the
+settings of `compass.yml`. The same
 two inputs give the same evidence, every
 time ([safety contract](docs/safety-contract.md#1-routing-is-deterministic-after-assessment)).
 
@@ -90,9 +91,10 @@ session:
 To write the scenarios an issue asks for, read
 [docs/writing-specs-and-plans.md](docs/writing-specs-and-plans.md).
 
-The shipped guardrails are active from the first command. Project settings,
-and a project's own changes to the shipped defaults, live in one file,
-`compass.yml` ([docs/configuration.md](docs/configuration.md)). Upgrading from
+The shipped guardrails are active from the first command. Project settings
+live in one file, `compass.yml` ([docs/configuration.md](docs/configuration.md)).
+A setting there can only add to the check set; to excuse one check on one
+issue, see [docs/waivers.md](docs/waivers.md). Upgrading from
 6.x? Read [docs/upgrade-7-0-0.md](docs/upgrade-7-0-0.md); from 5.x, read
 [docs/upgrade-6-0-0.md](docs/upgrade-6-0-0.md) first. To link an issue to
 its GitHub issue and pull request, see [docs/github-links.md](docs/github-links.md).
@@ -149,7 +151,8 @@ work that ships code
   agents of this session approve for you on every issue, until
   `/compass:revoke` ends it. Flags set its bounds: `--agent` names one agent,
   in any session; `--until`, `--on`, `--for` and `--max` narrow it. `--for
-  g5`, which covers irreversible work, needs a code that you type back. Compass lists each delegation with no end time at each new
+  g5`, which covers irreversible work, and `--for waivers` each need a code
+  that you type back. Compass lists each delegation with no end time at each new
   session start. Every delegated approval is on record, and you can overrule
   one; overruling a guardrail 5 sign-off does not undo work already landed.
 - **Autonomy is a setting, not a promise.** `autonomy: controlled | balanced
@@ -229,8 +232,8 @@ full account is in [docs/security.md](docs/security.md).
   credentials.
 - **Runs** commands on your machine: the test command you give `compass
   tdd-red`, `compass tdd-green` and `compass quick-fix finish`, and, when
-  `allow_project_commands` is true, your project's own guardrails declared
-  with `check: command-passes` in `compass.yml`;
+  `allow_project_commands` is true, your project's own checks declared
+  under `project_checks` in `compass.yml`;
   also git in your repository, and the CLI itself from the plugin's hooks.
 - **Reads** a pull request with `gh` when you run `compass issue link set
   --pr`: its number, state and merge commit. Compass writes nothing to GitHub

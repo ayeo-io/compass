@@ -25,9 +25,10 @@ distinct sources, and each has its own standard of proof. The prose is in
 Read the governance fresh before you start: a cached memory of an earlier
 read is not the current file.
 
-**Record which governance you read.** Write the layers that
-`compass policy show` names (for example `default@6.0.0, project`) and the
-issue's `generation:` from `manifest.yml` into the check. An unmigrated 5.x project has no layers line: record the `version:` of its
+**Record which governance you read.** Write the `Policy:` line that
+`compass policy show` prints (for example `compass-checks@9.0.0` and its
+sha256) and the issue's `generation:` from `manifest.yml` into the check. An
+unmigrated 5.x project has no `Policy:` line: record the `version:` of its
 copied `guardrails.yml` and `routing-policy.yml` instead. A check that names
 nothing cannot be told apart from one run against wording that has since
 changed, and the prose files carry no version of their own to compare.
@@ -37,8 +38,8 @@ changed, and the prose files carry no version of their own to compare.
 Run `compass policy show` to see the rules in force, then read the reasons in
 `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md`, `strategies.md` and
 `routing-policy.md`. A new project has no `governance/` directory (an
-unmigrated 5.x project keeps its copied one): the shipped default preset is in force, and `compass.yml` holds only what the
-project changed. The shipped defaults alone are a complete governance state: "the shipped default
+unmigrated 5.x project keeps its copied one): the fixed check set is in force, and `compass.yml` holds the
+project's settings, which can only add to it. The check set alone is a complete governance state: "the shipped default
 guardrails, the shipped default strategies, and zero project additions" is a
 fully legitimate thing to check against. Do not treat an un-extended project
 as a reason to stop.
@@ -141,10 +142,11 @@ Confirm the design is consistent with the issue's `evidence_required` list
    matters, raise it.
    That asymmetry is the whole point of the split.
 7. If a guardrail itself seems wrong, that is an amendment conversation
-   (a reviewed change to the project's `compass.yml`, checked by
-   `compass policy lint`, with the reason in the commit message; the five
-   shipped guardrails are locked, and a loosening needs a waiver that the
-   project's owner approves) - never a quiet override mid-issue. If a
+   (a reviewed change to Compass's check set, or a tighten-only setting in
+   the project's `compass.yml`, checked by `compass policy lint`, with the
+   reason in the commit message; no setting can loosen a guardrail, and
+   excusing one check on one issue needs a waiver a person approves,
+   `docs/waivers.md`) - never a quiet override mid-issue. If a
    strategy keeps getting overridden the same way, that is a curation signal -
    fix the strategy or write down the thing overriding it.
 
@@ -172,8 +174,8 @@ the optional sections and how many to use, the diagrams, the named patterns
   deadline; inconvenience is not a counter-argument.
 - **Checking the stale file** - reviewing against a remembered copy of the
   governance, so the check runs against wording that has since changed.
-  Recording the layers and the generation makes this visible.
-- **Floor erosion** - reading a project guardrail floor as a target to *hit*
+  Recording the `Policy:` line and the generation makes this visible.
+- **Floor erosion** - reading a floor or a project check as a target to *hit*
   rather than a minimum to *clear*. Floors only ratchet up.
 - **Silent evidence assumption** - a design that assumes less evidence than
   the issue owes, unnoticed.

@@ -185,15 +185,24 @@ def test_rd_3_the_checks_are_inactive_blocking_and_say_what_a_skipped_stage_retu
     assert humans == set(DONE_IDS)
 
 
+#: Deterministic checks the check set gained after the two views were frozen
+#: (ADR-094 keeps them byte for byte for the legacy readers until #359). A view
+#: cannot name a check added after it was frozen, so each is listed here.
+ADDED_AFTER_THE_VIEWS_FROZE = {
+    "ship-approval-present",  # #355, ADR-095: read by the check set only
+}
+
+
 def test_rd_4_the_views_do_not_name_the_human_checks():
     """The two views, frozen since 9.0.0 (ADR-094), name the deterministic checks
-    of the check set and no item of the Definitions of Ready and Done, and no gate
-    of the set lists one."""
+    of the check set as it was when they froze and no item of the Definitions of
+    Ready and Done, and no gate of the set lists one."""
     from compass_pkg import check_set
     checks = check_set.resolved()
     deterministic = {n for n, c in checks["checks"].items() if c["kind"] == "deterministic"}
+    assert ADDED_AFTER_THE_VIEWS_FROZE <= deterministic
     guardrails = yaml.safe_load((ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8"))
-    assert set(guardrails["checks"]) == deterministic
+    assert set(guardrails["checks"]) == deterministic - ADDED_AFTER_THE_VIEWS_FROZE
     for rel in ("governance/routing-policy.yml", "governance/guardrails.yml"):
         text = (ROOT / rel).read_text(encoding="utf-8")
         for check_id in READY_IDS + DONE_IDS:

@@ -306,6 +306,10 @@ def test_si_5_the_allow_list_is_honest():
 # Everything else that names a stage as an id uses a constant. The count is exact,
 # so adding one or removing one fails until this table changes.
 STAGE_LEDGER = {
+    "approval_records.py": (1, 'the record subject key "ship" names the ship approval (#355), not the pipeline stage'),
+    "approval_requests.py": (3, 'the request form "ship" names the ship approval (#355), not the pipeline stage'),
+    "approvals.py": (3, 'the approval form "ship" names the ship approval (#355), not the pipeline stage'),
+    "delegations.py": (8, 'the delegated form and record key "ship" name the ship approval (#355), not the pipeline stage'),
     "core.py": (2, 'the v1 "specify" and "build" keys in the fallback rename table are retired names'),
     "lessons.py": (2, 'a lesson source named "verify" is not a pipeline stage'),
     "migrate.py": (2, 'the v1 "specify" and "build" keys in the fallback rename table are retired names'),

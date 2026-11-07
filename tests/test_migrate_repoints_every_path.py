@@ -435,6 +435,15 @@ EXCLUDED = {
     "policy.check_set": "the check set's id and version, such as compass-checks@9.0.0, "
                         "not a path",
     "policy.check_set_sha256": "a digest of the check set file, not a path",
+    "scenario_freeze.red": "the first red record under the issue's `evidence/`, "
+                           "which the migration never moves (migrate.py keeps "
+                           "machine state in place); and only a 9.0.0 path issue "
+                           "has the field, never a 1.x tree the migration reads",
+    "scenario_freeze.spec": "the spec a 9.0.0 path issue's code was written against, "
+                            "already under docs/compass when frozen; no 1.x tree "
+                            "has the field, and the frozen value is a record "
+                            "nothing rewrites",
+    "scenario_freeze.spec_sha256": "a digest of the spec file, not a path",
     "intent_source.snapshot": "a bare file name in the issue's own folder under "
                               "`.compass/work`, resolved against that folder when "
                               "read; it has no folder part to repoint",

@@ -62,10 +62,17 @@ def test_ni_1_verbose_labels_nothing_to_check_apart(tmp_path):
 def test_ni_1_the_failing_verdicts_count_only_checks_that_inspected_something(tmp_path):
     root = _fresh_quick_fix(tmp_path)
     data = _json(root)
-    inspected = data["ran"] - data["nothing_to_check"]
+    # The text views count each check once; a check listed under two
+    # guardrails has a row under each in the JSON document.
+    def named(*states):
+        return {c["name"] for c in data["checks"] if not states or c["status"] in states}
+    nothing = len(named("nothing-to-check"))
+    inspected = len(named()) - nothing
+    failed = len(named("fail", "refused"))
+    assert failed and nothing, data
     code, verbose = _cli(root, "check", "--issue", "g-fix", "--verbose")
-    assert (f"compass check: FAIL - {data['failed']} of {inspected} check(s) "
-            f"failed, {data['nothing_to_check']} had nothing to check.") in verbose
+    assert (f"compass check: FAIL - {failed} of {inspected} check(s) "
+            f"failed, {nothing} had nothing to check.") in verbose
     _code, default = _cli(root, "check", "--issue", "g-fix")
     first = default.splitlines()[0]
     assert "had nothing to check" in first, first

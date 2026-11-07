@@ -549,6 +549,11 @@ On an issue that has a `trail.md` it prints `Trail: up to date`, or a line that
 says the file is out of date and names `compass trail`, when the file differs
 from what `compass trail` would write (`trail.check_line`, ADR-096). It is a
 line, not a row, and the default view shows it only when the file is out of date.
+Some checks are listed under more than one guardrail, such as
+`scenario-has-id-and-intent` under `G2` and `G3`. `--verbose` prints a row under
+each, and both the default view and the `--verbose` footer count each check once,
+so the two give the same numbers. The `--json` document keeps one entry per row,
+and its `ran`, `failed` and `nothing_to_check` count rows.
 Each generation commit writes the manifest's `policy:` block
 (`docs/generation-store.md`). `tests/test_check_set_content.py` checks the
 content of the set: the catalogue names, the stage-mode ranks, the references

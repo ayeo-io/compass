@@ -351,9 +351,27 @@ def _verbose_lines(run):
                 if g and name not in run.refused:
                     out.append("         why : %s" % g["why"])
                     out.append("         fix : %s" % g["fix"])
-    out += ["-" * 60,
-            summarise_counts(run.ran, run.failures, run.nothing, run.advisory, run.waived)]
+    counts = _distinct_counts(run)
+    if counts[0] < len(run.results):
+        out.append("A check listed under more than one guardrail has a row under each, "
+                   "and is counted once.")
+    out += ["-" * 60, summarise_counts(*counts)]
     return out
+
+
+def _distinct_counts(run):
+    """`(ran, failed, nothing to check, advisory, waived)`, each counting a
+    check once. A check listed under more than one guardrail has a row under
+    each, and the default view counts it once, so the --verbose footer does
+    too. A run with no result rows keeps the counts it set."""
+    if not run.results:
+        return run.ran, run.failures, run.nothing, run.advisory, run.waived
+    def named(test):
+        return len({n for _g, n, p, _d in run.results if test(p)})
+    # The same sets `_summary_lines` counts.
+    return (named(lambda p: True), named(lambda p: not p),
+            named(lambda p: p is NOTHING_TO_CHECK), named(lambda p: p is ADVISORY_FAILURE),
+            named(lambda p: p is WAIVED))
 
 
 def _summary_lines(run):

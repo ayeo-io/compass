@@ -103,3 +103,46 @@ def test_trc_d2c_the_sentinel_is_truthy():
     assert NOTHING_TO_CHECK is not True, (
         "NOTHING_TO_CHECK is literally True, so the summary cannot tell a empty "
         "clearance from a verified one")
+
+
+# ---------------------------------------------------------------------------
+# The default view and --verbose give the same counts
+# ---------------------------------------------------------------------------
+
+def _run_with_a_check_under_two_guardrails():
+    """A run where `changed-code-traces-to-scenario` and
+    `scenario-has-id-and-intent` are each listed under two guardrails, as the
+    shipped check set lists them under `G1`/`G2` and `G3`."""
+    from types import SimpleNamespace
+
+    from compass_pkg.check_results import ADVISORY_FAILURE, NOTHING_TO_CHECK
+    results = [
+        ("G1", "suite-passed", True, "green"),
+        ("G1", "changed-code-traces-to-scenario", True, "traced"),
+        ("G1", "scenarios-are-executable", NOTHING_TO_CHECK, "no runner"),
+        ("G2", "scenario-has-id-and-intent", True, "ids"),
+        ("G3", "changed-code-traces-to-scenario", True, "traced"),
+        ("G3", "scenario-has-id-and-intent", True, "ids"),
+        ("", "acceptance-support-present", ADVISORY_FAILURE, "missing support"),
+    ]
+    rows = []
+    for g, n, p, d in results:
+        rows += [("guardrail", (g, g, None)), ("result", (n, p, d))]
+    return SimpleNamespace(
+        slug="the-issue", approach="delivery", mode_banner="[mode: enforced]",
+        rows=rows, results=results, ran=len(results), failures=0, nothing=1,
+        advisory=1, waived=0, refused=set())
+
+
+def test_the_verbose_footer_counts_each_check_once():
+    """A check listed under two guardrails has two rows in --verbose, and is
+    one check. Both views count it once, so they give the same numbers."""
+    from compass_pkg.check_cmd import _summary_lines, _verbose_lines
+    run = _run_with_a_check_under_two_guardrails()
+    summary = _summary_lines(run)[0]
+    footer = _verbose_lines(run)[-1]
+    assert summary.startswith("PASS - 3 check(s) passed, 1 had nothing to check, "
+                              "1 failed as advisory"), summary
+    assert footer.startswith("compass check: PASS - 3 check(s) passed, "), footer
+    assert "1 failed as advisory (does not block)" in footer, footer
+    assert "1 had nothing to check" in footer, footer

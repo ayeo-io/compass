@@ -101,12 +101,14 @@ The archive must stay readable. The main checkout holds 616 manifests. 162 hold 
     |---|---|
     | `policy diff` | one check set ships; compass policy show prints it with its digest |
     | `policy update` | one check set ships with each release; nothing to move between |
-    | `preset init`, `preset test` | presets were removed; a project sets tighten-only settings in compass.yml |
+    | `preset`, `preset init`, `preset test` | presets were removed; a project sets tighten-only settings in compass.yml |
     | `issue configure` | the issue layer was removed; record a waiver with compass waiver add |
     | `approach evaluate --reset-config` | an issue has no config layer |
     | `approach evaluate --offline`, `policy lint --offline`, `policy show --offline` | git parents were removed; nothing is fetched |
     | `policy lint --issue`, `policy lint --exhaustive` | an issue has no config layer; the classifier was removed |
-    | `policy migrate`, with `--words` and `--undo` | run compass policy migrate on 8.x, then compass migrate |
+    | `policy migrate` | run compass policy migrate on 8.x; the upgrade guide names the 9.0.0 settings |
+    | `policy migrate --words` | compass.yml is read as settings only; the upgrade guide names the 9.0.0 settings |
+    | `policy migrate --undo` | run it on 8.x before upgrading; the upgrade guide names the 9.0.0 settings |
 
     The contract 4 corpus (`tests/fixtures/compat/contract-4-commands.yml`) and its digest do not change. Its entries for the removed verbs move to `REMOVED_IN_9_0_0` in `tests/compat_commands.py`. `policy-effective-shipped` and `policy-lint-git-parent-no-sha` move to `PHRASE_CHANGED_IN_9_0_0`, and `evidence-review-recorded` moves to `EXIT_CHANGED_IN_9_0_0` (exit 0 to 2), because no judged check named `design-review` can be added through `compass.yml`.
 13. **The data old issues read stays.** These stay unchanged:
@@ -164,9 +166,45 @@ For the owner:
 
 Superseded in part, when this record is accepted: ADR-010 (layers over defaults), ADR-033 (the classifier and lock mechanisms, and project catalogue additions), ADR-035 (`extends:`, floors over the issue layer, locks and waivers), ADR-037 (the classifier), ADR-039 (locks, unlocks and waivers in entries), ADR-042 (the preset directory and the generated views), ADR-043 (git parent pins) and ADR-073 (the list-parameter classification). Their `superseded_by` fields, and this record's `supersedes`, are set when the owner accepts it.
 
+### As built
+
+These decisions were taken while #357 was built. The decisions above hold them; each point says how the build differs from, or adds to, the first text of this record (commit d87b532f). Every point keeps the rule that a setting can only add to what an issue owes.
+
+- Decisions 1 to 3 are built as written: `governance/check-set.yml` is `compass-checks@9.0.0`, with 16 gates, 32 checks (25 deterministic, 7 human), 16 evidence types, `never_waived` and the optional agent review (commit 4c6c38a4). The `check_set` module has `load`, `sha256`, `ref`, `resolved` and `shared`. Decision 3 did not say how often the file is parsed. Every resolution reads it, and `compass flow` resolves every issue, so a board of 345 issues took 9.0 s, not 0.54 s. `load` now parses the file once per path, modification time and size and returns a copy, and the board takes 0.43 s (commit c845d6f3).
+- Decision 4 did not settle four details (commit 9e539e50):
+  - a reassess that commits nothing still writes the `policy:` block, for the generation in force;
+  - `compass issue migrate --config` writes no block, because it keeps a configuration the check set did not resolve;
+  - a project read from its own governance copy writes `check_set: legacy` and a null `check_set_sha256`;
+  - the `Policy:` line of `compass check` shows the full sha256, taken from the manifest's block for an issue with a stored generation. An issue committed before 9.0.0 has no block and gets no line. `versions.yml` `project.digest` is the digest of the tighten-only settings applied.
+- Decision 7 named one function that applies the settings. It is `tighten.apply`, in a module of its own, `cli/compass_pkg/tighten.py`, and the lint is `cli/compass_pkg/settings_lint.py` (commit f4aca9cf). The shapes the record did not give:
+  - a label in `signoff_labels` owes all that a `G5` label owes: the standard evidence row, `architecture`, `scenario-approval` and `human-approval`. Exploration on such a label is refused;
+  - a `require_evidence` rule does not reach a spike, which ships nothing, and fires as `RP-SETTING-<n>` in file order;
+  - `agent_review: off` and `capabilities: {entry-exit-evaluation: false}` are accepted and change nothing. YAML reads an unquoted `on` as `true`, so `true` and `false` are accepted too;
+  - a project check uses one id for its check and its guardrail. The id must not be a shipped check or gate id or `agent-review`. It takes `command` only, not the 8.x `script` and `args`;
+  - the integrity rule reports `L-IMPL-UNKNOWN`. The superset test is `tests/test_tighten.py`, on the contract 1 grid under 32 subsets of the labels.
+- Decision 8 is built in two new modules, `waiver_records.py` and `waiver_cmd.py`, not by rewriting `waivers.py` (commit 4db666ce). It adds five rules (commits 4db666ce and 8e2bdf22):
+  - a delegation typed `--for waivers` needs the confirmation code typed back, as `--for g5` does, because a waiver lowers what an issue owes;
+  - `/compass:approve waiver W-<n>` answers a pending request and never approves without one. It refuses when the waiver's check or reason changed after the request was written;
+  - the approval record copies the waiver's check and reason (`waived_check`, `waiver_reason`) and the issue, so a waiver edited after its approval, or copied to another issue, excuses nothing;
+  - an approval holds only at the generation it was given for. A reassessment can raise what the issue owes, so a waiver approved before it needs a new approval;
+  - `compass waiver add` refuses a reason that holds a control, format or line-separator character, and a second waiver in force for the same check. The approvers are `approvers.waiver`, then `approvers.issue-waiver`, then the `owner`.
+- Decision 9 said `layers.py` and `waivers.py` would be cut. Both are deleted whole, because nothing calls what the plan kept: `effective` reads `project_settings.COMPASS_YML` and `atomic_io.digest`, and `waiver_records.py` holds the approver list and the approval check (commit fa72a599). Further changes in the same commit:
+  - `at_least` moves to `catalogue_spec.py`, not to `core.py`, which is at its 1,200-line bound;
+  - `catalogue_spec` keeps the closed sets the governance copy check reads (`CHECK_KINDS`, `GATE_KINDS`, `LOCKS`, `DIMENSION_TYPES`, `TIGHTER`), and `SEVERITIES` and `ON_SKIPPED`. `OBLIGATION_FIELDS` goes: no code reads it;
+  - functions left with no caller go too, among them `retired.merge_hint`, `acceptance_strategy.suspended_findings`, `word_map.advisory_lines`, the generator half of `legacy_adapter` and the `removed_parts` functions that worked inside a layer;
+  - the build deleted 26 CLI modules (11,497 lines), with `policy migrate` and the view generator, and 38 test files and 4 test helpers (22,656 lines). `docs/waivers-and-locks.md` is deleted, and `docs/waivers.md` is the page for the 9.0.0 waiver;
+  - no frozen `default@8` folder is made, and the `default@8.0.0` pin leaves `tests/fixtures/preset-digests.yml`. The one archived generation that names `compass:default@8` reads its own `resolved.yml`.
+- Decision 10 did not give the JSON shapes. `compass policy show --json` gives `check_set`, `check_set_sha256`, `settings_sha256`, `tightened` and, with `--issue`, `issue`. `compass policy lint --json` keeps the 8.x top-level keys with `mode: settings`, so a script that reads `result` and `counts` keeps working. The legacy lint's JSON moves into `policy_cmd.legacy_json`, unchanged in shape. `schemas/compass.schema.json` is generated by `settings_lint.schema()` and lists the settings keys only, with `additionalProperties: false`, so an editor marks a removed key (commit fa72a599). `compass policy lint --file` on a file that is not there exits 2 (commit 963059b5).
+- Decision 11 did not say when the settings lint runs. Every resolution runs it, and a `compass.yml` with a lint error resolves nothing (exit 2), as 8.x refused a project layer that did not pass its check (commit 9e539e50). No owner is read from such a file either: `approval_records.owner_and_cause` gives the lint's first error as the reason the file cannot be read, so approvals and waivers need `COMPASS_APPROVER` until the file is fixed (commit d0cc60d6).
+- Decision 13 kept `legacy_adapter.adapt` for a governance copy, and the build reads the copy without the 8.x merge. `effective._legacy_config` adds each entry as it stands and keeps every refusal the merge made for such an entry. A gate at a legacy stage is mapped by `removed_parts.with_mapped_stages`, and the provenance names the layer `legacy` (commit 616c1063). That commit dropped the 8.x value checks of the copy. Commit 61b9b2da restores them in `effective._legacy_value_problems`: a value of the wrong type, a value outside its field's closed set, an incomplete dimension and an `at_least:` that cannot match are refused again. A commit from a copy also refuses a gate that names a check the copy does not declare (commit 963059b5). `EffectiveView.pending_config` compares the raw `config:` with the overlay digest an 8.x generation stored.
+- `/compass:init` writes `schema`, `owner` and `project`, and no `extends:` line (commit c4a580ec). A project that already extends `compass:default@6` or `@7` keeps `S17` off through `pinned_below`.
+- With `compass issue configure` gone, no command adopts a complete generation folder the manifest does not name. The next reassess writes such a folder again when it holds only files a commit writes, and refuses a folder that holds any other file (commit 18c346b3).
+- Configuration B of contracts 1 and 2 has no can-fail case. No setting B can hold reaches `evaluate_route`, so a planted fault there cannot be seen. Two tests apply a tightening to B and assert that B routes and owes as configuration A on every row; a setting that started to reach the routing would fail them. Configuration C keeps its can-fail cases, and contracts 3, 4 and 5 under B keep theirs (commits 5f3acd5a and 30a291cb).
+- The archive comparison over 622 issue folders shows no verdict that moves, and contract 3 passes, after the resolver switch (commit 9e539e50) and after the governance copy change (commit 61b9b2da).
+
 ## Open questions
 
-Each question has the default this change builds.
+Each question has the default this change builds, and #357 built each default as written. The owner decides questions 6, 7, 9, 10, 12 and 19 when accepting this record, because each changes what a user or a pinned contract sees.
 
 1. **Where does the check set live?** Default: one file in `governance/`, so one name, one version and one `sha256sum` name the rules.
 2. **How is it versioned?** Default: `version` is the release that last changed it, from `9.0.0`; owing less is a major. A digest fixture pins the bytes, and an agent repins it in the change that edits the set.

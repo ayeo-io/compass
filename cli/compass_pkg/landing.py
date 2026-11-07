@@ -20,6 +20,8 @@ landed manifest without the key (every archived issue, and the tracked
 example `examples/quick-fix-typo`) keeps the verdict it had.
 """
 
+# DEPENDENCY: standard library (os, subprocess), the bundled PyYAML and
+# compass_pkg (core.manifest_path, status_words).
 from __future__ import annotations
 
 import os
@@ -28,6 +30,7 @@ import subprocess
 import yaml
 
 from compass_pkg import status_words
+from compass_pkg.core import manifest_path
 
 # Characters that carry a meaning in a POSIX extended regular expression,
 # which `git log -G` uses.
@@ -60,7 +63,8 @@ def _commit_that_added(task_dir, stamp):
     """The newest commit, from HEAD, that added `land_timestamp: <stamp>` to
     the manifest in `task_dir` and whose copy of the manifest still holds it."""
     pattern = "^land_timestamp: .?%s.?$" % _ere_escape(stamp)
-    listed = _git(["log", "--format=%H", "-G", pattern, "--", "manifest.yml"], task_dir)
+    name = os.path.basename(manifest_path(task_dir))
+    listed = _git(["log", "--format=%H", "-G", pattern, "--", name], task_dir)
     if listed is None or listed.returncode != 0:
         return None
     shallow = _shallow_commits(task_dir)
@@ -69,13 +73,13 @@ def _commit_that_added(task_dir, stamp):
         # so a match there does not say which commit added the line.
         if commit in shallow:
             return None
-        if _holds_stamp(task_dir, commit, stamp):
+        if _holds_stamp(task_dir, name, commit, stamp):
             return commit
     return None
 
 
-def _holds_stamp(task_dir, commit, stamp):
-    shown = _git(["show", "%s:./manifest.yml" % commit], task_dir)
+def _holds_stamp(task_dir, name, commit, stamp):
+    shown = _git(["show", "%s:./%s" % (commit, name)], task_dir)
     if shown is None or shown.returncode != 0:
         return False
     try:

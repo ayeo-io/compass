@@ -70,7 +70,7 @@ def _landed_before(slug, cwd, ref, ref_time):
     """
     try:
         task_dir = resolve_issue_dir(slug)
-        manifest = load_yaml(os.path.join(task_dir, "manifest.yml"))
+        manifest = load_yaml(manifest_path(task_dir))
     except Exception:
         return False
     if not isinstance(manifest, dict):

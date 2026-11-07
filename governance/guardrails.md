@@ -467,7 +467,9 @@ and one digest, such as `compass-checks@9.0.0`.
 
 - `cli/compass_pkg/check_set.py` reads the file. `load` checks its shape,
   `sha256` gives the digest as `sha256sum` prints it, and `resolved` returns
-  the set in the shape `generations/<n>/resolved.yml` holds.
+  the set in the shape `generations/<n>/resolved.yml` holds. The file is
+  parsed once while it is unchanged, because every resolution reads it and
+  `compass flow` resolves every issue on the board.
 - The set holds no `locked:` field, because no layer sits above it.
   `never_waived` names the two entries no waiver can excuse: the check
   `human-approval-present` and the guardrail `G5`.

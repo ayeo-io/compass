@@ -192,6 +192,27 @@ def test_the_optional_agent_review_is_the_block_the_guide_gives_and_does_not_run
     assert "entry" not in checks["stages"]["ship"]
 
 
+def test_the_file_is_parsed_once_while_it_is_unchanged(tmp_path, monkeypatch):
+    """Every resolution reads the check set, and `compass flow` resolves each
+    issue on the board, so a parse per call made the board ten times slower.
+    The file is parsed once per version of its bytes; each call gets a copy."""
+    file = tmp_path / "check-set.yml"
+    shutil.copy(check_set.path(), file)
+    parsed = []
+    real = check_set.load_yaml_strict
+    monkeypatch.setattr(check_set, "load_yaml_strict",
+                        lambda path: parsed.append(path) or real(path))
+    first = check_set.load(str(file))
+    first["gates"].clear()
+    assert check_set.load(str(file))["gates"], "a caller's change reached the next caller"
+    assert len(parsed) == 1, parsed
+    text = file.read_text(encoding="utf-8")
+    file.write_text(text.replace("id: compass-checks", "id: other", 1), encoding="utf-8")
+    with pytest.raises(CompassError, match="id must be 'compass-checks'"):
+        check_set.load(str(file))
+    assert len(parsed) == 2, parsed
+
+
 def test_resolved_is_a_copy(checks):
     first = check_set.resolved()
     first["gates"].clear()

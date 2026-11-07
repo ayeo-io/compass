@@ -5,7 +5,9 @@ The file holds every check, gate and evidence type Compass runs. One file has
 one `sha256sum`, so a change can name its rules by one id, one version and one
 digest: `compass-checks@9.0.0` and the digest `sha256` gives.
 
-- `load` reads the file and checks its shape.
+- `load` reads the file and checks its shape, once while the file is
+  unchanged, and returns a copy; `shared` returns the mapping itself, for a
+  reader that does not change it.
 - `sha256` is the lowercase hex digest of the file's bytes, as `sha256sum`
   prints it.
 - `ref` is `<id>@<version>`.
@@ -101,17 +103,38 @@ def _locked(node, where):
     return []
 
 
+#: The parsed and checked set, keyed by path, modification time and size.
+#: Every resolution reads the set, and `compass flow` resolves every issue on
+#: the board, so a parse per call made the board about ten times slower.
+_LOADED = {}
+
+
 def load(file=None):
-    """The check set as a mapping. Raises `CompassError` when the file is missing,
-    does not parse or does not have the shape of a check set."""
+    """The check set as a mapping, a copy the caller can change. Raises
+    `CompassError` when the file is missing, does not parse or does not have
+    the shape of a check set. The file is parsed once while it is unchanged."""
+    return copy.deepcopy(shared(file))
+
+
+def shared(file=None):
+    """The mapping `load` copies, for a reader that only reads it, such as
+    `effective.resolve_live` for every issue on the board. A caller must not
+    change it: the next caller would read the change."""
     file = file or path()
-    if not os.path.isfile(file):
+    try:
+        stat = os.stat(file)
+    except OSError:
+        stat = None
+    if stat is None or not os.path.isfile(file):
         raise CompassError(f"the check set {file} is missing")
-    doc = load_yaml_strict(file)
-    problems = _problems(doc)
-    if problems:
-        raise CompassError(f"the check set {file} is not valid: " + "; ".join(problems))
-    return doc
+    key = (os.path.abspath(file), stat.st_mtime_ns, stat.st_size)
+    if key not in _LOADED:
+        doc = load_yaml_strict(file)
+        problems = _problems(doc)
+        if problems:
+            raise CompassError(f"the check set {file} is not valid: " + "; ".join(problems))
+        _LOADED[key] = doc
+    return _LOADED[key]
 
 
 def ref(doc=None):
@@ -126,8 +149,8 @@ def resolved(doc=None, autonomy="balanced"):
     No issue names an approach, and no lock exists to be unlocked, so `approach`
     is None and `conformance` is always conformant. The mapping is a copy: a
     caller can change it."""
-    doc = copy.deepcopy(doc if doc is not None else load())
-    out = {
+    doc = doc if doc is not None else shared()
+    return copy.deepcopy({
         "capabilities": dict(doc["capabilities"]),
         "approach": None,
         "autonomy": autonomy,
@@ -135,5 +158,4 @@ def resolved(doc=None, autonomy="balanced"):
         **{name: doc[name] for name in CATALOGUES},
         "vocabulary": doc["names"],
         "evidence_types": doc["evidence_types"],
-    }
-    return out
+    })

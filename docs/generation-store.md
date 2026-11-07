@@ -270,7 +270,9 @@ names a git parent is refused with exit 2 (`L-PARENT-REMOVED`). The resolver
 version is `1.1.0`: the stored shape did not change, so a generation that names
 `1.0.0` still loads. Every resolution runs the settings lint first: a
 `compass.yml` with a lint error resolves nothing, so no command reads it and no
-commit stores it (exit 2).
+commit stores it (exit 2). The check set is parsed once per process while the
+file is unchanged, and a resolution copies it once: `compass flow` resolves
+every issue on the board.
 
 A project with no `compass.yml` and its own `governance/` copies is resolved
 through the legacy adapter in place of the check set, until #359. The adapter also

@@ -450,12 +450,15 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
                   "digest": _legacy_digest(legacy_doc), "source": "legacy"}
         tightened = {}
     else:
-        loaded = check_set.load()
+        # Read, not changed: `resolved` and `tighten.apply` copy what they return.
+        loaded = check_set.shared()
         base = check_set.resolved(loaded, autonomy=autonomy)
         if doc is not None:
             _refuse_lint_errors(doc, base)
         tightened = tighten.settings_of(doc)
-        resolved = tighten.apply(base, tightened, loaded)
+        # `base` is already a copy, so with nothing to apply it is the result:
+        # one copy per resolution, which `compass flow` does for every issue.
+        resolved = tighten.apply(base, tightened, loaded) if tightened else base
         history = {}
         parent = {"ref": f"compass:checks@{loaded['version'].split('.')[0]}",
                   "version": loaded["version"], "digest": digest(loaded),

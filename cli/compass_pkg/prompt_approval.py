@@ -616,6 +616,20 @@ def _waiver_changed(session, request):
                       f"evidence request --waiver {request.get('value')}.")
 
 
+def _spec_changed(session, request):
+    """Refuse a `specify` request whose spec no longer has the digest the request
+    showed: the person approved the scenarios they were shown (ADR-095)."""
+    from compass_pkg import scenario_freeze
+    if scenario_freeze.spec_digest(session.task_dir)[1] == request.get("spec_sha256"):
+        return
+    approval_requests.close(session.task_dir, request, approval_requests.STALE,
+                            reason="the spec changed after the request was written")
+    raise Refused(f"Compass: the spec changed after request {request['number']} showed it "
+                  f"to you. Nothing was written; the request is closed, and the agent must "
+                  f"ask again with compass evidence request --checkpoint "
+                  f"{request.get('value')}.")
+
+
 def _shown(session, request):
     """The request as Compass shows the person, with the `--issue` form when
     another worktree's current issue holds a request with the same number."""
@@ -804,6 +818,8 @@ def _approve(session, request, where=""):
     _current(session, request)
     if request.get("form") == "waiver":
         _waiver_changed(session, request)
+    if request.get("form") == "checkpoint" and "spec_sha256" in request:
+        _spec_changed(session, request)
     answer = approvals.Answer(request["form"], request.get("value"),
                               approval_records.APPROVED, session.approver, session.role,
                               request.get("scope") or "", provenance(session, request))

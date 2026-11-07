@@ -548,7 +548,8 @@ def _emit_check(run, args):
 
     # The policy the issue is judged by is named on every run, ahead of the other
     # notices so the summary view, which shows only a few, always shows it.
-    run.rows[0:0] = [("line", "  " + line) for line in _policy_lines(run)]
+    policy = _policy_lines(run)
+    run.rows[0:0] = [("line", "  " + line) for line in policy]
     # An issue with a generation says which one it was judged by, ahead of the
     # other notices, and reports a `config:` the generation does not hold yet.
     # `config:` is an input: the line is a notice and never fails the run.
@@ -562,6 +563,14 @@ def _emit_check(run, args):
         if waiver_records.listed(run.task):
             header.append(f"waivers not read ({exc}), so every check runs as it is")
     run.rows[0:0] = [("line", "  " + line) for line in header]
+    # The scenario freeze is a notice, not a row, so no verdict moves (ADR-095). The
+    # default view shows it only when the spec changed since the first red.
+    from compass_pkg import scenario_freeze
+    frozen = scenario_freeze.check_line(run.task, run.task_dir)
+    if frozen:
+        text, changed = frozen
+        at = len(header) + len(policy)
+        run.rows.insert(at, ("line" if changed else "note", "  " + text))
     if run.failures and not getattr(args, "no_count", False):
         compass_dir = os.path.dirname(os.path.dirname(
             os.path.normpath(run.task_dir)))

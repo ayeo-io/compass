@@ -178,7 +178,7 @@ def owed_commands(task, task_dir, cleared_gates=()):
     itself. An empty list means nothing else is owed. A checkpoint is not listed:
     `compass ship-commit` judges it, as it judges every issue."""
     out = []
-    if _owed(task, task_dir, "scenario-approval") and not specify_handed_off(task):
+    if _owed(task, task_dir, "scenario-approval") and not _signed_off(task):
         out.append("compass evidence request --checkpoint specify, "
                    "then stop for /compass:approve")
     ids = [s["id"] for s in needing_tests(task)]
@@ -222,7 +222,7 @@ def _specify(task, task_dir):
     requirements = _open_requirements(task, task_dir)
     if requirements:
         return requirements
-    if _owed(task, task_dir, "scenario-approval") and not specify_handed_off(task):
+    if _owed(task, task_dir, "scenario-approval") and not _signed_off(task):
         return ("compass evidence request --checkpoint specify, "
                 "then stop for /compass:approve")
     return None
@@ -360,6 +360,14 @@ def greens(task):
     registers one."""
     return {e["scenario"] for e in _dicts(task.get("evidence"))
             if e.get("type") == "test-run" and isinstance(e.get("scenario"), str)}
+
+
+def _signed_off(task):
+    """True when a person answered the `specify` checkpoint. `compass tdd-red`
+    refuses until then where `scenario-approval` is owed, so the row that asks
+    for the answer reads the same rule (`scenario_freeze.refusal`)."""
+    from compass_pkg import scenario_freeze
+    return scenario_freeze.signed_off(task)
 
 
 def specify_handed_off(task):

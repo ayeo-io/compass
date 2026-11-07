@@ -428,6 +428,17 @@ def _unbound_scenarios(task_dir, scenarios, broken):
 
 def cmd_tdd_red(args):
     task_dir = resolve_issue_dir(args.task)
+    from compass_pkg import scenario_freeze
+    try:
+        task = load_manifest(task_dir)[0]
+    except (CompassError, OSError, ValueError):
+        task = {}   # no manifest: nothing owes a sign-off, and no red is frozen
+    # The `.red` marker unlocks code edits, so scenarios that owe a person's
+    # approval must have it before the test runs: a refusal here writes no
+    # record and no marker (ADR-095 decision 9).
+    refused = scenario_freeze.refusal(task, task_dir)
+    if refused:
+        raise CompassError(refused)
     loop = _loop(args, task_dir)
     scenarios = _red_scenarios(args, task_dir, loop)
     several = len(scenarios) > 1 or bool(getattr(args, "every_scenario", False))
@@ -542,6 +553,8 @@ def cmd_tdd_red(args):
     if several:
         payload.update(run_id=uuid.uuid4().hex[:16], scenarios_in_run=list(scenarios))
     _bind_to_tree(payload, tree_ids)
+    # The spec this red was written against, inside the record's digest (ADR-095).
+    payload.update(scenario_freeze.red_payload(task, task_dir))
     # The binding and the loop decide the path, so one scenario's red cannot
     # overwrite another's, nor an inner red the outer one (ADR-082). One run
     # bound to several scenarios writes one record per scenario (plan Q14).
@@ -549,6 +562,7 @@ def cmd_tdd_red(args):
                                 dict(payload, scenario=one)) for one in scenarios or [None]]
     ev_path = ev_paths[0]
     payload.pop("_full_log", None)
+    frozen = scenario_freeze.freeze(task_dir, ev_path) if task else None
     marker = os.path.join(task_dir, ".red")
     if before_implement:
         unlocked = ["stage 1  : a red before implement writes no .red marker, so code "
@@ -567,6 +581,9 @@ def cmd_tdd_red(args):
                f"compass tdd-red: failing test recorded (exit {code}){bound}.",
                detail=judged + [f"evidence : {p}" for p in ev_paths]
                       + [x for x in [_scenario_line(task_dir, s) for s in scenarios] if x]
+                      + ([f"frozen   : the scenarios, at this first red (sha256 "
+                          f"{scenario_freeze.short(frozen['spec_sha256'])})"]
+                         if frozen else [])
                       + unlocked,
                scenario=scenario, exit_code=code, evidence=ev_path,
                marker=None if before_implement else marker)

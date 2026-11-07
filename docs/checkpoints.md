@@ -52,7 +52,13 @@ Both commands refuse an issue that is not judged (see below) and write nothing.
 
 ### The `checkpoint-approval` record
 
-A `checkpoint-approval` record is a person's answer to one hand-off. It holds `id`, `type`, `checkpoint`, `approver`, `role`, `scope`, `decision: approved`, `timestamp`, `issue` and `generation`, and no `check` key. It is a separate evidence type so that it never meets guardrail `G5` or a human check: `human-approval-present`, the human-check reader and the waiver check read other types and do not see it.
+A `checkpoint-approval` record is a person's answer to one hand-off. It holds `id`, `type`, `checkpoint`, `approver`, `role`, `scope`, `decision: approved`, `timestamp`, `issue` and `generation`, and no `check` key. On a path issue the record for `specify` also holds `spec`, the spec's path relative to the project, and `spec_sha256`, the `sha256sum` digest of its bytes, so the record names the scenarios the person approved ([ADR-095](../architecture/decisions/ADR-095-compass-reads-the-ship-approval-from-the-merged-pull-request.md)). It is a separate evidence type so that it never meets guardrail `G5` or a human check: `human-approval-present`, the human-check reader and the waiver check read other types and do not see it.
+
+## The scenario sign-off before code
+
+On a path issue that owes `scenario-approval` (a `G5` label, a `signoff_labels` label or critical risk), `compass tdd-red` refuses while the `specify` checkpoint has no `waited` outcome, with the code `scenarios-not-approved`. A `skipped` outcome does not count. It refuses before the test runs, so it writes no red record and no `.red` marker, and code edits stay refused. The fix names `compass evidence request --checkpoint specify`; the person answers with `/compass:approve`. The landing refusal below stays. An issue that does not owe `scenario-approval` is not refused, and `controlled` autonomy still waits at specify on every change, because that wait is the project's choice and not this rule (`scenario_freeze.refusal`).
+
+A request for the `specify` checkpoint of a path issue holds `spec` and `spec_sha256`, and Compass shows the person the first 12 characters of the digest. The prompt hook refuses to record the answer, and closes the request as stale, when the spec's digest changed after the request was written.
 
 ## The landing refusal
 

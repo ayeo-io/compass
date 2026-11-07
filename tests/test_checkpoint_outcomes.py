@@ -395,7 +395,10 @@ def test_arc_1_person_answers_a_checkpoint(tmp_path):
     assert {k: v for k, v in record.items() if k not in ("id", "timestamp")} == {
         "type": "checkpoint-approval", "checkpoint": "specify", "approver": "jed72",
         "role": "product-owner", "scope": "the specify hand-off", "decision": "approved",
-        "issue": SLUG, "generation": before["generation"], "via": "terminal"}, record
+        "issue": SLUG, "generation": before["generation"], "via": "terminal",
+        # The spec the person approved (ADR-095): this issue has no spec file, so
+        # the path is the one Compass looked for and the digest is null.
+        "spec": f".compass/work/{SLUG}/acceptance-criteria.md", "spec_sha256": None}, record
     assert "check" not in record
     _utc(record["timestamp"])
     assert not [e for e in after["evidence"] if e.get("type") == "human-approval"]

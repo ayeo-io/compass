@@ -178,7 +178,8 @@ decision add` for one you resolved yourself). Before the review is done:
 - the non-engineering roles in play have reviewed, and on a change that
   owes `scenario-approval` the person has approved the scenarios: run
   `compass evidence request --checkpoint specify` and stop until they type
-  `/compass:approve`.
+  `/compass:approve`. `compass tdd-red` refuses until then, and the approval
+  records the spec's digest, so finish the spec before you ask.
 
 The path has no Definition of Ready (ADR-092): the records above are what
 end specify. The requirements review:

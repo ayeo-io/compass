@@ -89,6 +89,9 @@ FIXTURES = {
     "checkpoint-no-outcome": {"slug": "a" * 40,
                               "stages": "assess, define, refine, plan, implement and verify",
                               "stage": "assess", "is": "are", "it": "them"},
+    # A 40-character slug, named three times, so the 60-word cap is checked where it
+    # is tightest.
+    "scenarios-not-approved": dict(slug="a" * 40),
     # A 40-character slug and a detail of 20 words, the most the registry keeps of a
     # long parameter, so the 60-word cap is checked where it is tightest.
     "definition-of-done-open": dict(slug="a" * 40,

@@ -161,6 +161,19 @@
         "then": {"required": ["evidence"]}
       }
     },
+    "scenario_freeze": {
+      "type": "object",
+      "description": "Optional. What the code of a path delivery issue was written against: the first `compass tdd-red` of the issue writes it, and nothing rewrites it. `compass check` prints a notice, not a row, when the spec's digest has changed since. An issue assessed before 9.0.0 has none.",
+      "additionalProperties": false,
+      "required": ["at", "red", "spec", "spec_sha256", "scenarios"],
+      "properties": {
+        "at": {"type": "string", "description": "When the first red was recorded."},
+        "red": {"type": "string", "description": "The first red record, relative to the issue folder."},
+        "spec": {"type": "string", "description": "The spec's path, relative to the project."},
+        "spec_sha256": {"type": ["string", "null"], "description": "The `sha256sum` digest of the spec file's bytes at the first red, or null when there was no spec file."},
+        "scenarios": {"type": "array", "items": {"type": "string"}, "description": "The manifest's scenario ids at the first red."}
+      }
+    },
     "acceptance_strategy": {
       "type": "object",
       "description": "Optional. Whether the four-layer acceptance strategy (`S17`) applies to the issue, stored by the first `compass approach evaluate --write` when the configuration it commits declares the strategy; a reassessment replaces it and never adds it. Absent: the issue was assessed before the strategy shipped, and the strategy never applies to it.",

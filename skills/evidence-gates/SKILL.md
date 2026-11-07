@@ -121,6 +121,22 @@ approach that runs refine, before plan is handed off and with no technical
 design, distribution map or subtask registered. A runner that is not pytest is read from the JUnit report its adapter writes to `COMPASS_JUNIT_REPORT` (ADR-087).
 Only `compass isolation record` and `compass layering record` write the isolation and layering records (ADR-086).
 
+## The scenario sign-off and the freeze
+
+On a path issue that owes `scenario-approval`, `compass tdd-red` refuses
+(`scenarios-not-approved`) until the `specify` checkpoint has a person's
+answer, before the test runs, so no red record and no `.red` marker are
+written (ADR-095). On a path delivery issue each red record holds
+`spec_sha256`, the `sha256sum` digest of the spec file's bytes (null with no
+file), inside its `content_digest`. The first red of the issue writes
+`scenario_freeze` into the manifest: `at`, `red` (the record, relative to the
+issue folder), `spec`, `spec_sha256` and `scenarios`, the manifest's scenario
+ids at that moment. Nothing rewrites it. `compass check` prints `Scenarios:
+frozen at the first red (sha256 <12 characters>)` as a notice, not a row, and
+adds "the spec has changed since" when the digest now differs; the default
+view shows the notice only then. An issue assessed before the path writes
+neither. The `scenario_freeze` module holds the digest, the write and the line.
+
 ## Records that move no document
 
 `compass tdd-red` and `compass acceptance record` are the first records of the

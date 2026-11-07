@@ -150,6 +150,11 @@ owes one when its own approach sets it. The line is the manifest's
 `compass quick-fix finish` or `compass acceptance record`; a landing refuses
 the issue without one (`docs/release-line.md`).
 
+On a delivery issue the first `compass tdd-red` writes the manifest's
+`scenario_freeze`: the spec's path and digest and the scenario ids the code
+is written against. Where the issue owes `scenario-approval`, the red waits
+for a person's answer at specify (`docs/checkpoints.md`).
+
 A waiver excuses one check on one issue (the manifest's `waivers:`). Write it
 with `compass waiver add --check <id> --reason "..."`, ask with `compass
 evidence request --waiver W-<n>`, and stop: only a person, or an agent under a

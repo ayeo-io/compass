@@ -238,6 +238,16 @@ REFUSALS: dict[str, dict[str, str]] = {
                "--checkpoint {stage} --approver <you> --role <role>, for each "
                "stage named, then ship again.",
     },
+    # `compass tdd-red` on a path issue that owes `scenario-approval`, before the
+    # `specify` checkpoint has a person's answer (scenario_freeze.refusal, ADR-095).
+    # It refuses before the test runs, because the `.red` marker unlocks code edits.
+    "scenarios-not-approved": {
+        "what": "red for issue '{slug}'",
+        "why": "the scenarios of {slug} need a person's approval before code, and "
+               "the specify checkpoint has no answer from a person.",
+        "fix": "run compass evidence request --checkpoint specify --issue {slug} and "
+               "stop; the person answers with /compass:approve. Then run the red again.",
+    },
     # The landing check of `compass ship-commit` (manifest._refuse_open_definition_of_done,
     # ADR-091): `dod-evidence-typed` failed, so the Definition of Done has an open item.
     "definition-of-done-open": {

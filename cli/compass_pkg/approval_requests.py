@@ -13,6 +13,9 @@ It also holds a single-use `nonce`, which the record that answers it copies.
 A request for a waiver also holds `waiver`: the check and the reason the
 waiver names when the request is written, which the person is shown and the
 prompt hook compares with the manifest before it records the approval.
+A request for the `specify` checkpoint of a path issue also holds `spec` and
+`spec_sha256`: the spec's path and the digest of its bytes, which the prompt hook
+compares with the file before it records the approval (ADR-095).
 A request for the `specify`, `build` or `ship` checkpoint of a path issue, or the
 `refine`, `implement` or `verify` checkpoint of an issue assessed before 9.0.0,
 that the four-layer acceptance strategy applies to also holds `review`: the stage
@@ -155,6 +158,8 @@ def digest(request):
         shown["review"] = request["review"]
     if request.get("waiver"):
         shown["waiver"] = request["waiver"]
+    if "spec_sha256" in request:
+        shown.update(spec=request.get("spec"), spec_sha256=request.get("spec_sha256"))
     return hashlib.sha256(json.dumps(shown, sort_keys=True, default=str)
                           .encode("utf-8")).hexdigest()
 
@@ -232,6 +237,9 @@ def shown_text(request, issue_form=False):
              f"labels: {labels}"]
     if request.get("document_digest"):
         lines.append(f"  document digest {str(request['document_digest'])[:12]}")
+    if "spec_sha256" in request:
+        lines.append(f"  the spec {clean(request.get('spec'))}, sha256 "
+                     f"{str(request.get('spec_sha256') or 'none: no file')[:12]}")
     if request.get("scope"):
         lines.append(f"  the agent's description: \"{clean(request['scope'])}\"")
     if request.get("waiver"):
@@ -315,6 +323,10 @@ def write(task_dir, form, value, scope):
         review = checkpoint_outcomes.review(task, task_dir, value)
         if review:
             request["review"] = review
+        # The spec the person is asked to approve; the prompt hook refuses to
+        # record when it changed after the request was shown (ADR-095).
+        from compass_pkg import scenario_freeze
+        request.update(scenario_freeze.fields(task, task_dir, value))
     for old in pending(task_dir):
         if same_subject(old, request):
             close(task_dir, old, REPLACED, replaced_by=request["number"])

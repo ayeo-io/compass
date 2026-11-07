@@ -4,7 +4,8 @@ Every reason code the pre-tool hook can refuse with, and the landing refusals
 of `compass ship-commit` and `compass quick-fix finish` (`checkpoint-no-outcome`,
 `release-line-missing` and `release-line-heading`, which `docs/release-line.md`
 describes, and `definition-of-done-open`, which only `compass ship-commit`
-gives), generated from `cli/compass_pkg/refusals.py` by
+gives), and the refusal of `compass tdd-red` before the scenario sign-off
+(`scenarios-not-approved`), generated from `cli/compass_pkg/refusals.py` by
 `compass _refusal --list`. Do not hand-edit the list below - regenerate it after any change to the registry, and
 `tests/test_refusal_registry.py` fails the build if it is out of date.
 
@@ -178,6 +179,12 @@ reason code and are not in the generated list.
 **Blocked:** landing of issue '{slug}'
 **Why:** issue '{slug}' has no release line, and its approach owes one: a sentence for users that the release notes list.
 **Fix:** give it with --release-note "<text written for a user>", then run the command again.
+
+### `scenarios-not-approved`
+
+**Blocked:** red for issue '{slug}'
+**Why:** the scenarios of {slug} need a person's approval before code, and the specify checkpoint has no answer from a person.
+**Fix:** run compass evidence request --checkpoint specify --issue {slug} and stop; the person answers with /compass:approve. Then run the red again.
 
 ### `settings-conflict`
 

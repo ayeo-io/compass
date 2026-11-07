@@ -279,6 +279,13 @@ one. ADR-063 owns the decision.
   `evidence` the record's id. The entry replaces a `skipped` outcome an agent
   recorded with `compass issue checkpoint add`. A second answer for the same
   stage writes a new record and the outcome then cites it; both records stay.
+- **The spec it approved.** On a path issue the `specify` record also holds
+  `spec`, the spec's path relative to the project, and `spec_sha256`, the
+  `sha256sum` digest of its bytes. A request for `specify` holds the same two
+  keys, and the person is shown the digest. The prompt hook refuses to record
+  the answer, and closes the request as stale, when the spec changed after the
+  request was written. Until the answer is recorded, `compass tdd-red` refuses
+  on an issue that owes `scenario-approval` (`docs/checkpoints.md`, ADR-095).
 - **Who may answer.** A name in any `approvers:` list of the project file, with
   `owner` read as the project's owner; when the file declares no `approvers:`,
   only its `owner`. When the project declares neither, any name that is not an

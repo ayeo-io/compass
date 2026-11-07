@@ -513,7 +513,11 @@ settings of `compass.yml` applied, for every project but one with its own copy
 of the governance files and no `compass.yml`. That is every new generation and
 every issue with no `generation:` key, the framework's own repository included.
 `compass check` prints `Policy: compass-checks@9.0.0 (sha256 <hex>)` on every
-run, and each generation commit writes the manifest's `policy:` block
+run. On a path issue with a scenario freeze it also prints `Scenarios: frozen
+at the first red (sha256 <12 characters>)`, a notice and not a row, with "the
+spec has changed since" when the spec's digest differs from the frozen one
+(`scenario_freeze.check_line`, ADR-095); the default view shows it only then.
+Each generation commit writes the manifest's `policy:` block
 (`docs/generation-store.md`). `tests/test_check_set_content.py` checks the
 content of the set: the catalogue names, the stage-mode ranks, the references
 and the checks and evidence types of the frozen `governance/guardrails.yml`,

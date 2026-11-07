@@ -449,6 +449,9 @@ def _record_checkpoint(task_dir, answer, save):
              "scope": answer.scope or f"the {stage} hand-off",
              "decision": approval_records.APPROVED, "timestamp": stamp,
              "issue": _slug(task_dir), "generation": task.get("generation")}
+    # The specify answer of a path issue names the spec it approved (ADR-095).
+    from compass_pkg import scenario_freeze
+    entry.update(scenario_freeze.fields(task, task_dir, stage))
     entry.update(answer.provenance)
     if save:
         task.setdefault("evidence", []).append(entry)

@@ -136,6 +136,7 @@ Rules:
 | [ADR-094](ADR-094-compass-runs-one-fixed-check-set.md) | Compass runs one fixed check set | proposed | supersedes in part, when accepted, ADR-010 (layers), ADR-033 (the classifier and locks), ADR-035 (`extends:`, floors and locks), ADR-037 (the classifier), ADR-039 (locks and entry waivers), ADR-042 (the preset directory), ADR-043 (git parent pins) and ADR-073; with ADR-036, ADR-038, ADR-090, ADR-091, ADR-092 and ADR-093 |
 | [ADR-095](ADR-095-compass-reads-the-ship-approval-from-the-merged-pull-request.md) | Compass reads the ship approval from the merged pull request | proposed | with ADR-066, ADR-069, ADR-077, ADR-089, ADR-092 and ADR-094 |
 | [ADR-096](ADR-096-the-issue-record-ships-with-the-code.md) | The issue record ships with the code | proposed | with ADR-089, ADR-094 and ADR-095 |
+| [ADR-097](ADR-097-resident-text-stays-under-600-words-and-each-refusal-names-its-fix.md) | Resident text stays under 600 words and each refusal names its fix | proposed | with ADR-091, ADR-093 and ADR-094 |
 
 ## Principle → ADR mapping
 

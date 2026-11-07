@@ -441,6 +441,7 @@ EXCEPTIONS = {
     "tdd-green": "the green step, paired with tdd-red",
     "ship-commit": "the commit step inside shipping; named in the contract and the ship command",
     "terminology": "prints the vocabulary; a noun that is its own command",
+    "trail": "writes or checks the issue's trail.md; a noun that is its own command, which ADR-096 decision 19 names (#356)",
     "release notes": "prints the release lines since a ref; the spelling the requirement that added it names",
     "approach evaluate": "applies the routing policy; the determinism boundary is named by this verb in the contract",
     "bdd extract": "turns acceptance criteria into a feature file; a verb of the bdd group",

@@ -376,6 +376,7 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         # isolation-and-layering (#328, ADR-086): `isolation record`, `layering record`
         "isolation", "layering",
         "waiver",  # one-check waivers (#357, ADR-094 decision 8): `waiver add|withdraw`
+        "trail",  # the issue record ships with the code (#356, ADR-096 decision 19)
     }
     line = next(l for l in result.stdout.splitlines() if l.strip().startswith("{"))
     verbs = set(line.strip().strip("{}").split(","))

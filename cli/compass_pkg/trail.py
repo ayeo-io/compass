@@ -573,7 +573,14 @@ def cmd_trail(args):
 def register(sub):
     """Add `compass trail`."""
     p = sub.add_parser("trail", help="write the issue's trail.md, which a reviewer checks "
-                                     "with sha256sum -c", allow_abbrev=False)
+                                     "with sha256sum -c", allow_abbrev=False,
+                       description="Write .compass/work/<slug>/trail.md from the issue's "
+                                   "records: who asked, what was agreed, the red and green "
+                                   "of each scenario, who approved and what shipped. Each "
+                                   "statement carries sum lines, so a reviewer runs "
+                                   "sha256sum -c without Compass. With --check, write "
+                                   "nothing and exit 1 when the file is missing or out "
+                                   "of date.")
     issue_arg(p)
     p.add_argument("--check", action="store_true",
                    help="write nothing; exit 1 when trail.md differs from what "

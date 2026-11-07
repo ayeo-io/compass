@@ -278,7 +278,7 @@ def test_each_approval_names_who_when_and_by_what_authority(tmp_path):
     root = _issue(tmp_path, "--request", REQUEST, "--requester", "Dana Smith")
     _approvals(root)
     body = section(trail(root), 5)
-    assert ("- EV-APPROVAL-G5-1: the guardrail G5 sign-off, approved by jed72 (owner) at "
+    assert ("- EV-APPROVAL-G5-1: the guardrail `G5` sign-off, approved by jed72 (owner) at "
             "2026-11-07T09:00:00Z, typed at a terminal.") in body
     assert ("- EV-CHECKPOINT-specify-1: the specify checkpoint, approved by jed72 (owner) at "
             "2026-11-07T09:10:00Z, typed in Claude Code (`/compass:approve`) for request 2."

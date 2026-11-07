@@ -329,7 +329,7 @@ def _subject(record):
     if record.get("check"):
         return f"check {_text(record['check'])}"
     if approval_records.gives_g5(record):
-        return "the guardrail G5 sign-off"
+        return "the guardrail `G5` sign-off"
     return _text(approval_records.subject_of(record))
 
 

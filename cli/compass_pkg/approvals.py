@@ -84,6 +84,13 @@ EVIDENCE_ADD_REFUSALS = {
         "compass evidence request; an agent the person delegated to runs compass "
         "evidence approve --delegated --as <agent>; at a terminal the person runs "
         "compass evidence approve. Nothing was written."),
+    # A copy of GitHub's record of another person's review (#355): only the read
+    # of the merged pull request writes it, so an agent cannot add one by hand.
+    "pr-approval": (
+        "compass evidence add: a pr-approval record is copied from the merged pull "
+        "request's reviews by compass issue link set --pr <n> after the merge. Without "
+        "a review, a person approves the change at ship with /compass:approve after "
+        "compass evidence request --ship. Nothing was written."),
     # The records of the four-layer acceptance strategy (ADR-086): each is the run of
     # the project's own commands, so a file added by hand is a claim, not a record.
     "isolation-proof": (

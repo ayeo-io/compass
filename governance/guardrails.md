@@ -401,7 +401,11 @@ _(none yet - the shipped default guardrails apply as-is)_
     and its generation that no `approval-withdrawal` names. A sign-off of
     guardrail `G5` does not count: it is given at specify, before code exists.
     The pass names the approver, the time and the record, and says when the
-    review approved an earlier commit than the merged head.
+    review approved an earlier commit than the merged head. `compass issue
+    link set --pr <n>` writes the `pr-approval` records after the merge: one
+    per reviewer whose latest review before the merge approved it, from a
+    person's account other than the author's (`docs/github-links.md`). The
+    check reads the records and never calls `gh`.
   - It fails only when the manifest records the pull request as merged
     (`pull_request.merged_at`) and no approval is on record.
   - Otherwise it has nothing to check and names the next command: `compass

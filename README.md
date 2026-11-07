@@ -237,8 +237,9 @@ full account is in [docs/security.md](docs/security.md).
   under `project_checks` in `compass.yml`;
   also git in your repository, and the CLI itself from the plugin's hooks.
 - **Reads** a pull request with `gh` when you run `compass issue link set
-  --pr`: its number, state and merge commit. Compass writes nothing to GitHub
-  ([docs/security.md](docs/security.md)).
+  --pr`: its number, state, author, head and merge commit, and after the
+  merge its reviews and the login `gh` reads as. Compass writes nothing to
+  GitHub ([docs/security.md](docs/security.md)).
 
 ## Read next
 

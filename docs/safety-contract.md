@@ -1365,6 +1365,19 @@ Compass cannot prevent a person, automation or agent from changing the
 repository outside its adapter and commands. Repository permissions, branch
 protection, review policy and CI remain essential.
 
+**A ship approval read from GitHub is a copy, read once.** `compass issue link
+set --pr <n>` copies each counting review approval of the merged pull request
+into a `pr-approval` record: the reviewer, the review id and URL, and the
+commits (`docs/github-links.md`). It counts a review only when GitHub names a
+`User` account other than the pull request's author. An agent cannot add the
+record with `compass evidence add`, and the pre-tool hook refuses an agent's
+approving review. The same limits hold as for a delegation (ADR-069): a
+process that runs as the same operating system user can edit `manifest.yml`,
+or put another program named `gh` on `PATH` before Compass runs it. `compass
+check` does not read GitHub again, so a review dismissed after the read still
+counts. A reader checks a record against GitHub by its review id, with `gh api
+repos/<repo>/pulls/<n>/reviews/<review_id>`.
+
 ### A check's compatibility within a major version is shown on its corpus only
 
 Each built-in check implementation carries a version, and a fixture corpus of

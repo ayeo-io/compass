@@ -3,7 +3,8 @@
 
 `compass issue link set --github owner/repo#number` writes the manifest's
 `github: {repo, number}` field. `--pr` records the pull request that carries the
-issue (`pull_request_link`). Linking writes nothing to GitHub.
+issue, and after the merge the approving reviews that are the ship approval
+(`pull_request_link`). Linking writes nothing to GitHub.
 
 A target is checked against a strict pattern before it is stored, so nothing
 that could be read as an option or a shell command reaches `gh`. `gh` is called
@@ -107,7 +108,7 @@ def cmd_issue_link(args):
         lines.append(f"{task.get('issue')} -> {repo}#{number}.")
         fields.update(repo=repo, number=number)
     if pr is not None:
-        lines += pull_request_link.apply(task, task.get("issue"), *pr)
+        lines += pull_request_link.apply(task, task.get("issue"), pr)
         fields.update(pull_request=task["pull_request"], land_commit=task.get("land_commit"))
     save_manifest(task, path)
     return say(args, f"{verb}: {lines[0]}", detail=lines[1:] or None, **fields)
@@ -172,7 +173,8 @@ def register(pts, issue_arg):
     linker.add_argument("--pr", metavar="PR",
                         help="the pull request that carries the issue: owner/repo#number, "
                              "its URL, or a number in origin's repository. Once it is "
-                             "merged and the issue has landed, land_commit moves to its "
-                             "merge commit")
+                             "merged, its approving reviews are recorded as the ship "
+                             "approval, and once the issue has also landed, land_commit "
+                             "moves to its merge commit")
     issue_arg(linker)
     linker.set_defaults(func=cmd_issue_link, output_kind="hand-off")

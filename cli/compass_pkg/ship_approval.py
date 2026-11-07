@@ -28,8 +28,12 @@ nothing to check and names the command that records the approval. It never
 refuses a landing: `ship-commit` lands the issue before a pull request
 merges, so a refusal there would stop every project that uses pull requests.
 `compass check` never calls `gh`; it reads what the manifest holds.
+
+`select` and `record_for` are the rules `compass issue link set --pr` uses
+to pick, from the merged pull request's reviews, the ones that count, and to
+write each as a `pr-approval` record (`docs/github-links.md`).
 """
-# DEPENDENCY: standard library (os); compass_pkg.approval_records (`not_withdrawn`,
+# DEPENDENCY: standard library (os, datetime); compass_pkg.approval_records (`not_withdrawn`,
 # `provenance`), check_results and status_words. It imports no command module,
 # so the check registry can import it.
 from __future__ import annotations
@@ -154,3 +158,108 @@ def _check_ship_approval_present(task, task_dir):
                                   f"{_how(task_dir, task)}")
     return NOTHING_TO_CHECK, (f"due at ship; read from the merged pull request{note}: "
                               f"{_how(task_dir, task)}")
+
+
+# --- reading the approval from the merged pull request -------------------------
+#
+# `compass issue link set --pr <n>` (pull_request_link) reads the pull request's
+# reviews with `gh` after the merge and calls `select` with them. The rules are
+# GitHub's own idea of a reviewer's state at the merge, narrowed to a person
+# other than the author, so neither the agent that opened the pull request with
+# the person's login nor a bot can give the approval.
+
+#: The review states that change a reviewer's state. A `COMMENTED` review does
+#: not, as on GitHub, and a `PENDING` review was never submitted.
+_STATE_CHANGING = ("APPROVED", "CHANGES_REQUESTED", "DISMISSED")
+#: The account type of a person on GitHub. A GitHub App reviews as `Bot`.
+PERSON = "User"
+
+
+def _when(text):
+    """A GitHub timestamp as a datetime, or None when it is not one."""
+    from datetime import datetime
+    if not isinstance(text, str) or not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def reviewer_login(review):
+    """The reviewer's GitHub login, or None."""
+    user = review.get("user") if isinstance(review, dict) else None
+    login = user.get("login") if isinstance(user, dict) else None
+    return login if isinstance(login, str) and login else None
+
+
+def select(reviews, author, merged_at):
+    """`(counting, set_aside)` from a pull request's reviews.
+
+    `reviews` are the entries `gh api .../pulls/<n>/reviews` gives: `id`,
+    `state`, `submitted_at`, `commit_id`, `html_url` and `user: {login, type}`.
+    A reviewer counts when their latest state-changing review submitted at or
+    before `merged_at` is `APPROVED`, their account is a `User`, and they are
+    not `author` (compared without letter case, as GitHub compares logins).
+    `counting` holds that review per counting reviewer, oldest first.
+    `set_aside` holds `(review, reason)` for each other reviewer who approved
+    at some time, so the person sees why the approval did not count. A review
+    with no login, no id or no readable time is ignored."""
+    merged = _when(merged_at)
+    by_reviewer = {}
+    for review in reviews or []:
+        if not isinstance(review, dict) or review.get("state") not in _STATE_CHANGING:
+            continue
+        login, when = reviewer_login(review), _when(review.get("submitted_at"))
+        if login is None or when is None or review.get("id") in (None, ""):
+            continue
+        by_reviewer.setdefault(login.casefold(), []).append((when, review))
+    counting, set_aside = [], []
+    for history in by_reviewer.values():
+        history.sort(key=lambda pair: pair[0])
+        approvals = [r for _w, r in history if r["state"] == "APPROVED"]
+        if not approvals:
+            continue
+        before = [r for w, r in history if merged is not None and w <= merged]
+        latest = before[-1] if before else None
+        user = latest["user"] if latest else approvals[-1]["user"]
+        if (author or "").casefold() == reviewer_login(approvals[-1]).casefold():
+            set_aside.append((approvals[-1], "the pull request's author"))
+        elif user.get("type") != PERSON:
+            set_aside.append((approvals[-1],
+                              f"account type {user.get('type') or 'unknown'}, not {PERSON}"))
+        elif latest is None:
+            set_aside.append((approvals[-1], "given after the merge"))
+        elif latest["state"] != "APPROVED":
+            set_aside.append((approvals[-1], "a later review is "
+                              + latest["state"].lower().replace("_", " ")))
+        else:
+            counting.append(latest)
+    counting.sort(key=lambda r: _when(r["submitted_at"]))
+    return counting, set_aside
+
+
+def record_for(review, pr, issue, generation, read_at, read_as):
+    """The `pr-approval` evidence record of one counting review. `pr` holds the
+    pull request's `repo`, `number`, `author`, `head_commit`, `merge_commit` and
+    `merged_at`. The id is given by the caller."""
+    record = {
+        "type": PR_APPROVAL,
+        "pull_request": {"repo": pr["repo"], "number": pr["number"]},
+        "review_id": review["id"],
+        "url": review.get("html_url"),
+        "approver": reviewer_login(review),
+        "pr_author": pr.get("author"),
+        "decision": approval_records.APPROVED,
+        "timestamp": review["submitted_at"],
+        "reviewed_commit": review.get("commit_id"),
+        "head_commit": pr.get("head_commit"),
+        "merge_commit": pr.get("merge_commit"),
+        "merged_at": pr.get("merged_at"),
+        "read_at": read_at,
+        "read_as": read_as,
+        "via": "github",
+        "issue": issue,
+        "generation": generation,
+    }
+    return {k: v for k, v in record.items() if v is not None}

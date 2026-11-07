@@ -97,10 +97,15 @@ project's `github_labels` setting is not read, and `compass policy lint` names
 it with `L-SETTING-REMOVED`.
 
 `compass issue link set --pr` reads one pull request with `gh pr view`: its
-number, state and merge commit. Compass runs `gh` with an argument list and no
-shell, with your own login. It reads no token and stores none. It checks the
-repository and number against a strict pattern before the call. A call that
-takes longer than 15 seconds is abandoned. Compass stores no text from GitHub.
+number, state, author, head commit, merge commit, merge time and URL. After
+the merge it also reads the pull request's reviews with `gh api` and the
+login `gh` reads as with `gh api user`, to record the ship approval. Compass
+runs `gh` with an argument list and no shell, with your own login. It reads
+no token and stores none. It checks the repository and number against a
+strict pattern before the call. A call that takes longer than 15 seconds is
+abandoned. Of a review Compass reads its id, state, time, commit, URL and
+the reviewer's login and account type, and never its text. It stores no other
+text from GitHub.
 
 Review
 [github-links.md](https://github.com/ayeo-io/compass/blob/main/docs/github-links.md).

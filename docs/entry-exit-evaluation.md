@@ -396,7 +396,7 @@ recorded, or none outside git), `approver`, `role`, `scope`,
 generation it holds while no `approval-withdrawal` names it.
 
 - `ship` is a subject key, so the record never clears guardrail `G5`. A `G5`
-  sign-off is given before code and is not a ship approval (VD-029).
+  sign-off is given before code and is not a ship approval (ADR-095).
 - **Who may approve.** A name in any `approvers:` list of `compass.yml`, else
   the project's owner; any person who is not an agent when the project
   declares neither.

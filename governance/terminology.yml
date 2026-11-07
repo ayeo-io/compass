@@ -1069,6 +1069,17 @@ codes:
     referent: A routing policy rule. Same referent as RP-.
     appears_in: [".compass/work/ (archive)"]
     related: [RP]
+  DL:
+    means: >
+      Delegation id. Names one delegation a person typed with
+      `/compass:delegate`: it lets a named agent record approvals for that
+      person, for the issues and forms it lists, until it expires or the
+      person revokes it. Each use copies the delegation into the issue's
+      `delegations_used:`; a copy whose fields changed since an earlier
+      copy gets a suffix, such as `DL-1@2`.
+    referent: One delegation file in the project's `.compass/delegations` folder.
+    appears_in: [".compass/delegations/DL-<n>.yml", "manifest.yml delegations_used", "human-approval records (via: delegation)"]
+    related: [EV]
 
 # =============================================================================
 # RETIRED VALUES - words a field still reads and no longer writes.

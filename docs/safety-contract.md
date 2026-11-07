@@ -79,7 +79,7 @@ Only a `human-approval` record given for guardrail `G5` meets this approval. A
 record that names another subject - a `check`, `waiver`, `checkpoint`,
 `artifact`, `decisions` or `ship` key, or a `guardrail` other than exactly
 `G5` - was given for that subject and is set aside. A `G5` sign-off is given
-before code and is not the ship approval either (VD-029): a ship approval is
+before code and is not the ship approval either (ADR-095): a ship approval is
 a `human-approval` record with `ship: <slug>` (`compass evidence request
 --ship`, then `/compass:approve`; or `compass evidence approve --ship` at a
 terminal; or an agent under a delegation typed `--for ship` and confirmed

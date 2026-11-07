@@ -50,6 +50,16 @@ Design decision. Numbered within one technical-design.md: what was chosen, what 
 
 **Related:** `ADR`, `design`
 
+### `DL-`
+
+Delegation id. Names one delegation a person typed with `/compass:delegate`: it lets a named agent record approvals for that person, for the issues and forms it lists, until it expires or the person revokes it. Each use copies the delegation into the issue's `delegations_used:`; a copy whose fields changed since an earlier copy gets a suffix, such as `DL-1@2`.
+
+**Refers to:** One delegation file in the project's `.compass/delegations` folder.
+
+**Appears in:** `.compass/delegations/DL-<n>.yml`, `manifest.yml delegations_used`, `human-approval records (via: delegation)`
+
+**Related:** `EV`
+
 ### `EV-`
 
 Evidence id. Identifies one typed record in the issue's evidence registry that clears a quality gate. One record can clear several gates. The accepted types are fixed by the check set; a gate that needs a mechanical type cannot be cleared with a written note.

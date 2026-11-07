@@ -137,6 +137,7 @@ Rules:
 | [ADR-095](ADR-095-compass-reads-the-ship-approval-from-the-merged-pull-request.md) | Compass reads the ship approval from the merged pull request | proposed | with ADR-066, ADR-069, ADR-077, ADR-089, ADR-092 and ADR-094 |
 | [ADR-096](ADR-096-the-issue-record-ships-with-the-code.md) | The issue record ships with the code | proposed | with ADR-089, ADR-094 and ADR-095 |
 | [ADR-097](ADR-097-resident-text-stays-under-600-words-and-each-refusal-names-its-fix.md) | Resident text stays under 600 words and each refusal names its fix | proposed | with ADR-091, ADR-093 and ADR-094 |
+| [ADR-098](ADR-098-compass-migrate-moves-an-8x-project-and-the-legacy-readers-end.md) | Compass migrate moves an 8.x project and the legacy readers end | proposed | with ADR-088, ADR-092, ADR-094, ADR-096 and ADR-097 |
 
 ## Principle → ADR mapping
 

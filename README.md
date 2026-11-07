@@ -106,8 +106,8 @@ security scanning, builds or deployment checks.
 
 Compass chooses the evidence each change owes from its assessment of risk,
 familiarity and size. Every change owes scenarios, a failing test before each
-passing one, a green suite, three reviews and one person's approval at ship.
-The rest depends on the work:
+passing one, a green suite, three reviews and one person's approval at ship
+([safety contract](docs/safety-contract.md)). The rest depends on the work:
 
 | Work | Evidence Compass adds |
 |---|---|
@@ -163,7 +163,8 @@ work that ships code
   which covers the ship approval of a change, each need a code that you
   type back. Compass lists each delegation with no end time at each new
   session start. Every delegated approval is on record, with a copy of the
-  delegation in the issue's manifest, and you can overrule one; overruling a guardrail 5 sign-off does not undo work already landed.
+  delegation in the issue's manifest, and you can overrule one; overruling a
+  guardrail 5 sign-off does not undo work already landed.
 - **Autonomy is a setting, not a promise.** `autonomy: controlled | balanced
   | autonomous` in `compass.yml` says how often a session stops for a person.
   It changes no gate, check or hook.

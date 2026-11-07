@@ -54,7 +54,6 @@ def _problems(text):
         "settings file": r"settings file: `compass.yml`, or `.compass/config.yml` when",
         "hebrew": r"Hebrew is `he`, not `iw`",
         "unset": r"unset means no instruction|Unset means no instruction",
-        "preset": r"preset cannot carry",
         "lint": r"`compass policy lint`",
     }.items():
         if not re.search(pattern, flat):

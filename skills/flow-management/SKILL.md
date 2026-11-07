@@ -1,6 +1,6 @@
 ---
 name: flow-management
-description: Priorities across issues, blockers and the digest. Load when a question spans issues.
+description: Priorities and blockers across issues.
 ---
 
 # Flow Management

@@ -1,6 +1,6 @@
 ---
 name: adaptive-routing
-description: Reading the three scored dimensions for the CLI. Load at the assess stage.
+description: Scoring risk, familiarity and size for the CLI. Load at assess.
 ---
 
 # Adaptive Routing

@@ -1,6 +1,6 @@
 ---
 name: tdd-discipline
-description: The red-green-refactor cycle as Compass runs it, including what to do when a change has no natural failing test. Load at build.
+description: The red-green-refactor cycle, and what to do with no natural failing test. Load at build.
 ---
 
 # TDD Discipline

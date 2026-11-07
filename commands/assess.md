@@ -1,5 +1,5 @@
 ---
-description: Assess risk, familiarity and size, re-assess an issue, or start a spike
+description: Assess an issue, re-assess it, or start a spike
 argument-hint: "<issue description> [--reassess]"
 allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Edit(./.compass/**), Edit(./docs/**), Bash(compass *), Glob, Grep
 ---

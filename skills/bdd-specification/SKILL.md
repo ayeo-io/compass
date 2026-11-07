@@ -1,6 +1,6 @@
 ---
 name: bdd-specification
-description: Writing and checking Given/When/Then acceptance scenarios. Load at specify.
+description: Writing and checking Given/When/Then scenarios. Load at specify.
 ---
 
 # BDD Specification

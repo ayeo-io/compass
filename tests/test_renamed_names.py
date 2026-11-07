@@ -163,22 +163,13 @@ OLD_CHECK = "dor-behav" + "iour-is-gwt"
 NEW_CHECK = "dor-behavior-is-gwt"
 
 
-def _stub_body_lines(text: str) -> list:
-    """The lines of a skill file that follow its frontmatter and hold text."""
-    parts = text.split("---", 2)
-    assert len(parts) == 3, "a skill file opens with frontmatter"
-    return [line for line in parts[2].splitlines() if line.strip()]
-
-
 def test_trc_045():
     new = (ROOT / "skills" / NEW_SKILL / "SKILL.md").read_text(encoding="utf-8")
     assert f"\nname: {NEW_SKILL}\n" in new
-    stub = (ROOT / "skills" / OLD_SKILL / "SKILL.md").read_text(encoding="utf-8")
-    body = _stub_body_lines(stub)
-    assert 1 <= len(body) <= 3, body
-    assert NEW_SKILL in " ".join(body) and "renamed" in " ".join(body), body
-    # A stub that grows past 3 lines of body text is caught by the same reader.
-    assert len(_stub_body_lines(stub + "A second line.\nA third line.\nA fourth line.\n")) > 3
+    # The stub under the old name went in 9.0.0 (#358): its description cost
+    # words on every request. `old_names.py` still maps a project's old name
+    # to the new one until #359.
+    assert not (ROOT / "skills" / OLD_SKILL).exists()
 
     # The stage map, the approaches and the check set name the new skill.
     # The define command and the 8.x approach files went with the path

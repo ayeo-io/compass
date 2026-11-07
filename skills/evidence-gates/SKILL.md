@@ -1,6 +1,6 @@
 ---
 name: evidence-gates
-description: What counts as gate evidence, and how to clear a gate. Load at ship.
+description: What counts as gate evidence. Load at ship.
 ---
 
 # Evidence Gates

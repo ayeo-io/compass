@@ -1,5 +1,5 @@
 ---
-description: Review the change, pass the gates with evidence, and commit
+description: Pass the gates with evidence and commit
 allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: intent-interview
-description: Drawing the intent out of a conversation. Load before the scenarios exist.
+description: Drawing the intent out before scenarios exist.
 ---
 
 # Intent interview

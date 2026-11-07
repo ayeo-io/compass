@@ -1,6 +1,6 @@
 ---
 name: behavior-mapping
-description: Capturing existing behavior as scenarios before changing it. Load at specify on brownfield work with no written behavior.
+description: Capturing existing behavior as scenarios before changing it. Load at specify on brownfield work.
 ---
 
 # Behavior mapping

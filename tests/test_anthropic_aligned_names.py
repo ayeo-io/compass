@@ -12,7 +12,7 @@ tells a caller what to type instead.
 | `agents/architect-lens.md` | `agents/architect.md` | same <!-- vocabulary-scan: allow - the rename table must name the retired filename --> |
 | `commands/roundtable.md` | `commands/consult.md` | an advisor is "consulted mid-turn" <!-- vocabulary-scan: allow - the rename table must name the retired filename --> |
 | `skills/intent-elicitation` | `skills/intent-interview` | their onboarding doc runs an "interview" <!-- vocabulary-scan: allow - the rename table must name the retired directory --> |
-| `skills/blueprint-distillation` | `skills/behaviour-mapping` | distillation means model distillation to this audience <!-- vocabulary-scan: allow - the rename table must name the retired directory --> |
+| `skills/blueprint-distillation` | `skills/behavior-mapping` | distillation means model distillation to this audience <!-- vocabulary-scan: allow - the rename table must name the retired directory --> |
 | `skills/worktree-swarm` | `skills/worktree-multiagent` | swarm is another vendor's framework name <!-- vocabulary-scan: allow - the rename table must name the retired directory --> |
 
 Scenario ids: anthropic-aligned-vocabulary/acceptance-criteria.md
@@ -49,7 +49,9 @@ RENAMED_AGENTS = {
 }
 RENAMED_SKILLS = {
     "intent-elicitation": "intent-interview",
-    "blueprint-distillation": "behaviour-mapping",
+    # Renamed again in 7.0.0 to the US spelling; the stub under the
+    # British name went in 9.0.0 (#358), so the check follows it here.
+    "blueprint-distillation": "behavior-mapping",
     "worktree-swarm": "worktree-multiagent",
 }
 # Retired command name -> replacement. The stub was removed at 4.0.0; the

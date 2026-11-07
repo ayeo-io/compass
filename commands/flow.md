@@ -1,5 +1,5 @@
 ---
-description: Cross-issue view - blockers, owed follow-ups, the digest
+description: Blockers and follow-ups across issues
 argument-hint: "[--digest]"
 allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Bash(compass *), Glob, Grep
 ---

@@ -1,6 +1,6 @@
 ---
 name: systematic-debugging
-description: "Debugging from evidence: read the failure, form one hypothesis, test it. Load on an unexpected failure."
+description: Debugging an unexpected failure from evidence, one hypothesis at a time.
 ---
 
 # Systematic Debugging

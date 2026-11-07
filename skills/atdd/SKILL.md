@@ -1,6 +1,6 @@
 ---
 name: atdd
-description: Acceptance tests in four layers - specification, DSL, driver, system - for a change a real client can observe. Load at specify, build and ship.
+description: Four-layer acceptance tests for a change a client can observe. Load at specify, build and ship.
 ---
 
 # Acceptance tests in four layers

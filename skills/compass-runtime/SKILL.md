@@ -1,6 +1,6 @@
 ---
 name: compass-runtime
-description: What runs each stage of the path, which skill it loads, where issue state lives. Load when an issue begins.
+description: Which skill each stage loads and where issue state lives. Load when an issue begins.
 ---
 
 # Compass - the stage map

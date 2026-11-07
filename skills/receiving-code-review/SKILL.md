@@ -1,6 +1,6 @@
 ---
 name: receiving-code-review
-description: "Answering review comments: check each against the code, push back with reasons, record the outcome."
+description: Answering review comments with evidence and reasons.
 ---
 
 # Receiving Code Review

@@ -1,6 +1,6 @@
 ---
 name: governance-check
-description: Writing a design down and checking it against the guardrails and strategies in force. Load at specify when a change needs a design.
+description: Checking a design against the guardrails and strategies. Load at specify when a change needs a design.
 ---
 
 # Governance Check

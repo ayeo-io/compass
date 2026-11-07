@@ -1,5 +1,5 @@
 ---
-description: Run a change from assessment to a checked result in one session
+description: Run a change from assessment to a checked result
 argument-hint: "<what you want>"
 allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 ---

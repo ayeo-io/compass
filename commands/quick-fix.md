@@ -1,5 +1,5 @@
 ---
-description: Start, red and finish for a change you already know is small
+description: Start, red and finish a small change
 argument-hint: "<what needs fixing>"
 allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 ---

@@ -462,7 +462,7 @@ matches (`cli/compass_pkg/next_step.py`):
 | `human-approval` owed | `compass evidence request --check human-approval-present` |
 | a listed checkpoint with no outcome | `compass evidence request --checkpoint <stage>`, then stop for `/compass:approve` |
 | a path issue with only the three immovable gates pending | `compass quick-fix finish -m "<commit message>" --no-commit -- <test command>` |
-| every gate passes | `compass check`, then `git add -- <the traced files>`, then `compass ship-commit -m "<message>"` |
+| every gate passes | `compass check`, then `git add -- <the traced files>`, then `compass ship-commit -m "<message>"`. When the record is committed with the code, the line leaves out the traced files under the issue folder and the documents folder, because `compass ship-commit` stages them |
 | landed, `ship-approval` owed, none on record | `compass issue link set --pr <n> --issue <slug>` after the merge, or `compass evidence request --ship`, then stop for `/compass:approve`; only the second once the merge is recorded |
 | landed with its record committed with the code, and the issue folder holds a change git has not committed (the merge fields `compass issue link set --pr` wrote) | `compass record commit --issue <slug>` |
 

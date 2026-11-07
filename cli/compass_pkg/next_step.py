@@ -29,7 +29,7 @@ bottom, and the first that matches gives the command:
 | `human-approval` owed | `compass evidence request --check human-approval-present` |
 | a listed checkpoint with no outcome | `compass evidence request --checkpoint <stage>` |
 | a path issue, only the three immovable gates pending | `compass quick-fix finish -m "<commit message>" --no-commit -- <test command>`, with `--candidate ... --client ...` where its green is an in-scope outer-loop green |
-| every gate passes | `compass check, then git add <the traced files>, then compass ship-commit -m "<message>"` |
+| every gate passes | `compass check, then git add <the traced files>, then compass ship-commit -m "<message>"`; in committed mode the traced files under the issue and documents folders are left out, because `compass ship-commit` stages them |
 
 What is owed comes from `evidence_required` on a path issue. An issue assessed
 before the path has no such list, so its owed evidence is read from the records
@@ -129,7 +129,7 @@ def _first_match(task, task_dir, done):
         return f"compass evidence request --checkpoint {stage}, then stop for /compass:approve"
     if on_path and _pending_gate(task):
         return _finish(task_dir)
-    return _ship_commit(task)
+    return _ship_commit(task, task_dir)
 
 
 def ship_approval_command(task, task_dir):
@@ -193,15 +193,33 @@ def _finish(task_dir):
     return FINISH
 
 
-def _ship_commit(task):
+def _ship_commit(task, task_dir):
     """The last step: `compass ship-commit` lands what is staged, and `quick-fix
     finish --no-commit` leaves the change unstaged, so the traced files are
-    staged first. They are named when the issue traces any."""
+    staged first. They are named when the issue traces any. In committed mode
+    `compass ship-commit` stages the issue folder and the documents folder
+    itself (#356), so the line leaves out the traced files under them."""
+    record = _committed_record_folders(task_dir)
     traced = [cf["path"] for cf in _dicts(task.get("changed_files"))
-              if isinstance(cf.get("path"), str) and cf["path"]]
+              if isinstance(cf.get("path"), str) and cf["path"]
+              and not cf["path"].startswith(record)]
     stage = ("git add -- " + " ".join(shlex.quote(p) for p in traced) if traced
              else "stage the changed files")
     return f'compass check, then {stage}, then compass ship-commit -m "<message>"'
+
+
+def _committed_record_folders(task_dir):
+    """The issue folder and the documents folder, relative to the project root
+    and each ending in `/`, when the record is committed with the code; else
+    an empty tuple, which no path starts with."""
+    from compass_pkg import record_mode
+    from compass_pkg.core import docs_dir, find_upwards
+    root = find_upwards(task_dir, ".compass")
+    if not root or record_mode.mode(root, task_dir).mode != record_mode.COMMITTED:
+        return ()
+    folders = (os.path.relpath(os.path.abspath(task_dir), os.path.abspath(root)),
+               docs_dir(task_dir))
+    return tuple(f.replace(os.sep, "/").rstrip("/") + "/" for f in folders)
 
 
 # --- the `next:` line of the verbs that write a record ------------------------------------

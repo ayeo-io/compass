@@ -112,6 +112,16 @@ def _ready(root):
     return root
 
 
+def _finish_next(root):
+    """The `next:` line of `compass quick-fix finish --no-commit` on a fixed issue."""
+    _fixed(root)
+    done = _ok(root, "quick-fix", "finish", "--issue", SLUG, "--no-commit", "-m", "Fix f",
+               "--release-note", "f returns 2", *WHERE, "--", *_pytest())
+    last = done.stdout.splitlines()[-1]
+    assert last.startswith("next: compass check, then "), done.stdout
+    return last
+
+
 def _ship(root, *extra):
     _git(root, "add", "--", "src/f.py")
     return _compass(root, "ship-commit", "--issue", SLUG, "-m", "Fix f", *extra)
@@ -183,6 +193,14 @@ def test_the_commit_holds_both_ignore_files(tmp_path):
     held = set(_files(root))
     assert {".compass/.gitignore", ".compass/work/.gitignore"} <= held, held
     assert _git(root, "status", "--porcelain", "--", ".compass/.gitignore") == ""
+
+
+def test_the_finish_next_line_leaves_the_record_to_ship_commit(tmp_path):
+    """In committed mode `compass ship-commit` stages the documents folder and
+    the issue folder itself, so the `next:` line names only the code to stage."""
+    last = _finish_next(_repo(tmp_path / "repo"))
+    assert "git add -- src/f.py, then" in last, last
+    assert "acceptance-criteria.md" not in last and ".compass/" not in last, last
 
 
 def test_the_manifest_says_landed_with_the_record_and_names_no_commit(tmp_path):
@@ -317,6 +335,14 @@ def test_kept_out_stages_nothing_under_compass_and_names_the_land_commit(tmp_pat
     assert task["land_commit"] == head and "landed_with_record" not in task
     # The trail is written after the `land_commit` write, so it names the commit.
     assert f"in {head}." in (root / TRAIL).read_text()
+
+
+def test_kept_out_the_finish_next_line_names_the_acceptance_criteria(tmp_path):
+    """In kept-out mode nothing stages the documents folder for the person, so
+    the `next:` line names the acceptance criteria with the code."""
+    last = _finish_next(_repo(tmp_path / "repo", compass_yml="record:\n  commit: false\n"))
+    assert re.search(r"git add -- src/f\.py docs/compass/[^ ]*-fix-f/acceptance-criteria\.md, "
+                     r"then compass ship-commit", last), last
 
 
 def test_kept_out_refuses_a_staged_record_path(tmp_path):

@@ -3,7 +3,8 @@
 
 - `compass waiver add --check <id> --reason "..."` writes one waiver to the
   issue's manifest, with the next free id `W-<n>`. It refuses an empty
-  reason, a reason that holds a control character, a check the check set never waives (`never_waived`), a check the
+  reason, a reason that holds a control character, a check the check set never waives (`never_waived`), a check
+  Compass deleted (`check_registry.DELETED_CHECKS`), a check the
   issue's policy does not hold, and a second waiver in force for the same
   check. A new waiver excuses nothing until a person approves it: the agent
   asks with `compass evidence request --waiver W-<n>` and stops.
@@ -15,13 +16,14 @@ Neither verb approves anything, and withdrawing only makes the issue owe
 more, so an agent may run both.
 """
 # DEPENDENCY: standard library (os); compass_pkg.approval_requests, approvals (the
-# issue's approval lock), core, terminal, waiver_records.
+# issue's approval lock), check_registry, core, terminal, waiver_records.
 from __future__ import annotations
 
 import os
 import unicodedata
 
 from compass_pkg import approval_records, approval_requests, approvals, waiver_records
+from compass_pkg.check_registry import DELETED_CHECKS
 from compass_pkg.core import (CompassError, issue_arg, load_manifest, now_iso,
                               resolve_issue_dir, save_manifest)
 from compass_pkg.terminal import say
@@ -49,6 +51,9 @@ def _refuse_add(task, task_dir, check, reason):
     if check in waiver_records.never_waived():
         return (f"{check} is never waived: the check set lists it under never_waived, "
                 f"because a person's sign-off of irreversible work cannot be excused")
+    if check in DELETED_CHECKS:
+        return (f"{check} is a check Compass no longer has, so a waiver of it would excuse "
+                f"nothing, and compass check refuses an issue whose open waiver names one")
     if check not in waiver_records.policy_checks(task_dir):
         return f"this issue's policy holds no check '{check}', so there is nothing to waive"
     held = next((w for w in waiver_records.listed(task)

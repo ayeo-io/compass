@@ -287,6 +287,13 @@ REFUSALS: dict[str, dict[str, str]] = {
     # A Bash command too long for the pre-tool hook to scan before Claude Code
     # stops it (hooks/pre-tool.sh holds the limit). The refusal never quotes the
     # command: it can hold a secret.
+    # `compass check` before it runs any row (`check_cmd.deleted_check_refusal`). Each
+    # offending item is named with the command or edit that clears it, in one line.
+    "names-deleted-check": {
+        "what": "compass check of issue {slug}",
+        "why": "{named} - each names a check Compass no longer has.",
+        "fix": "{fix}; then rerun compass check --issue {slug}.",
+    },
     "bash-command-too-long": {
         "what": "Bash command of {size} bytes",
         "why": "the write guard refuses a command over {limit} bytes because it "
@@ -321,8 +328,10 @@ MAX_PARAM_WORDS = 20
 
 #: A lower cap for a code whose fix line is long, so the refusal stays under
 #: 60 words. The detail of `definition-of-done-open` starts with the open
-#: item's name, which is what the reader needs from it.
-PARAM_WORDS = {"definition-of-done-open": 12}
+#: item's name, which is what the reader needs from it. `names-deleted-check`
+#: lists its items in order: a cut list still names the first ones, and the
+#: rest are named once those are cleared.
+PARAM_WORDS = {"definition-of-done-open": 12, "names-deleted-check": 16}
 
 
 def _cap(value, limit=MAX_PARAM_WORDS) -> str:

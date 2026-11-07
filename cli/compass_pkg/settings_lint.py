@@ -24,7 +24,7 @@ only add to it, and `compass_pkg.tighten` applies them. This module:
 runs it first and resolves nothing when it finds an error.
 """
 # DEPENDENCY: standard library (dataclasses, re, types); compass_pkg.acceptance_strategy,
-# compass_pkg.catalogue_spec, compass_pkg.check_registry (REGISTRY),
+# compass_pkg.catalogue_spec, compass_pkg.check_registry (REGISTRY, DELETED_CHECKS),
 # compass_pkg.evidence_required (TOKENS), compass_pkg.language and
 # compass_pkg.removed_parts.
 from __future__ import annotations
@@ -210,6 +210,7 @@ def _shipped_ids(base):
 def _project_check_problems(value, base):
     if not isinstance(value, list):
         return [("project_checks", "expected a list of `{id, name, command, stage}` checks")]
+    from compass_pkg.check_registry import DELETED_CHECKS
     out = []
     shipped = _shipped_ids(base) | {AGENT_REVIEW}
     seen = set()
@@ -232,6 +233,10 @@ def _project_check_problems(value, base):
             elif check_id in shipped:
                 out.append((f"{path}.id", f"'{check_id}' is the id of a shipped check or "
                                           f"gate; a project check adds one of its own"))
+            elif check_id in DELETED_CHECKS:
+                out.append((f"{path}.id", f"'{check_id}' is the id of a check Compass "
+                                          f"deleted; compass check refuses a project "
+                                          f"check of that id, so give it another id"))
             elif check_id in seen:
                 out.append((f"{path}.id", f"'{check_id}' is the id of an earlier project "
                                           f"check"))

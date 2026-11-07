@@ -101,6 +101,11 @@ FIXTURES = {
     "release-line-missing": dict(slug="a" * 40,
                                  verb="compass ship-commit or compass quick-fix finish"),
     "release-line-heading": dict(slug="a" * 40, verb="compass quick-fix finish"),
+    # A 40-character slug, named twice, and a list and fix of 20 words, more than the 16
+    # the registry keeps for this code, so the 60-word cap is checked where it is tightest.
+    "names-deleted-check": dict(slug="a" * 40,
+                                named=" ".join(f"word{i}" for i in range(20)),
+                                fix=" ".join(f"step{i}" for i in range(20))),
     # Six-digit size, as the longest form of the length refusal.
     "bash-command-too-long": dict(size="240000", limit="98304"),
     # The longest form of the complexity refusal: a count and its limit.

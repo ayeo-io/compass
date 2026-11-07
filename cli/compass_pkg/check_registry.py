@@ -14,8 +14,8 @@ The runtime refusal of a major-version mismatch is not here. It needs the
 versions a stored generation recorded, so it is in `impl_versions`; this
 module only answers "installed major of impl X".
 """
-# DEPENDENCY: standard library (dataclasses, typing) and the check
-# implementations in this package; no third-party code of its own.
+# DEPENDENCY: standard library (dataclasses, typing), the check implementations in
+# this package and `removed_parts` (READY_CHECKS); no third-party code of its own.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -38,6 +38,7 @@ from compass_pkg.checks import (
     _check_spike_no_production_changes, _check_suite_passed)
 from compass_pkg.landed_by import _check_landed_by_resolves
 from compass_pkg.readiness_registry import READINESS  # noqa: F401  (re-exported)
+from compass_pkg.removed_parts import READY_CHECKS
 from compass_pkg.section_checks import _check_nfr_rows_resolved
 from compass_pkg.request_link import _check_request_recorded
 from compass_pkg.ship_approval import _check_ship_approval_present
@@ -186,6 +187,14 @@ REMOVED: dict[str, RemovedCheck] = {
     "contracts-declared": RemovedCheck("9.0.0", None),
     "borrowed-documents-answered": RemovedCheck("9.0.0", None),
 }
+
+#: Every check id Compass no longer has: the removed checks above and the
+#: Definition of Ready checks a path issue does not owe (ADR-092,
+#: `removed_parts.READY_CHECKS`). `compass check` refuses a project check, a list
+#: of checks in `compass.yml` or an open waiver that names one
+#: (`check_cmd.deleted_check_refusal`), so a setting cannot ask for a check that
+#: never runs.
+DELETED_CHECKS: frozenset[str] = frozenset(REMOVED) | frozenset(READY_CHECKS)
 
 # `READINESS` (imported above) holds the readiness signal implementations
 # (ADR-059). They are not checks: they are in neither `REGISTRY` nor `CHECK_FNS`,

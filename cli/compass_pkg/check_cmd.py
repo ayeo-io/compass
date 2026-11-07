@@ -38,7 +38,7 @@ from compass_pkg.landed_by import LANDED_BY_RELAXES, landed_by_holds, _check_lan
 from compass_pkg.check_results import ADVISORY_FAILURE, WAIVED
 from compass_pkg.checks import NOTHING_TO_CHECK, _check_backfills_paid, _check_changed_code_traces, _check_claim_traces, _check_evidence_identity_matches, _check_command_passes, _check_declared_tests_resolve, _check_dod_evidence_typed, _check_gate_evidence, _check_human_approval, _check_no_trusted_rerun, _check_scenario_has_id_and_intent, _check_scenarios_are_executable, _check_scenarios_have_tests, _check_spike_conclusion_present, _check_spike_no_production_changes, _check_suite_passed
 from compass_pkg.binding import _check_evidence_matches_tree
-from compass_pkg.core import FRAMEWORK_ROOT, exit_for_mode, find_governance, load_mode, load_manifest, load_yaml, mode_banner, reading_matches, resolve_issue_dir
+from compass_pkg.core import CompassError, FRAMEWORK_ROOT, exit_for_mode, find_governance, load_mode, load_manifest, load_yaml, mode_banner, reading_matches, resolve_issue_dir
 
 
 
@@ -815,12 +815,68 @@ def _with_replacements(names, impls):
     return names
 
 
+def _deleted_check_items(task, task_dir):
+    """`(named, fix)` for each setting or waiver that names a deleted check
+    (`check_registry.DELETED_CHECKS`), in the order the refusal lists them: the
+    project checks and the check lists of `compass.yml`, then the issue's
+    waivers that are not withdrawn."""
+    from compass_pkg import project_settings, removed_parts, waiver_records
+    from compass_pkg.check_registry import DELETED_CHECKS
+    slug = os.path.basename(os.path.normpath(task_dir))
+    root = project_settings.find_project_root(task_dir)
+    doc = (project_settings.project_file(root) or {}) \
+        if project_settings.compass_yml_counts(root) else {}
+    out = []
+    for entry in doc.get("project_checks") or ():
+        check = entry.get("id") if isinstance(entry, dict) else None
+        if check in DELETED_CHECKS:
+            out.append((f"project check {check} in compass.yml",
+                        f"delete project check {check} from compass.yml"))
+    for catalogue, fields in removed_parts.CHECK_LIST_FIELDS.items():
+        entries = doc.get(catalogue)
+        for entry_id, entry in (entries.items() if isinstance(entries, dict) else ()):
+            if not isinstance(entry, dict):
+                continue
+            changes = entry.get("set")
+            for prefix, holder in ((f"{catalogue}.{entry_id}", entry),
+                                   (f"{catalogue}.{entry_id}.set", changes)):
+                for field in (fields if isinstance(holder, dict) else ()):
+                    for check in removed_parts._items(holder.get(field)):
+                        if check in DELETED_CHECKS:
+                            out.append((f"{check} in {prefix}.{field} of compass.yml",
+                                        f"delete {check} from {prefix}.{field} in "
+                                        f"compass.yml"))
+    for waiver in waiver_records.listed(task):
+        if waiver.get("check") in DELETED_CHECKS and not waiver.get("withdrawn_at"):
+            out.append((f"waiver {waiver.get('id')} of {waiver.get('check')}",
+                        f"run compass waiver withdraw {waiver.get('id')} --issue {slug}"))
+    return out
+
+
+def deleted_check_refusal(task, task_dir):
+    """The `names-deleted-check` refusal, or None. 9.0.0 deleted checks
+    (`check_registry.DELETED_CHECKS`); a setting or an open waiver that still
+    names one asks for a check that never runs, so `compass check` refuses
+    before it runs any row rather than show it as nothing to check (#359)."""
+    from compass_pkg import refusals
+    items = _deleted_check_items(task, task_dir)
+    if not items:
+        return None
+    return refusals.render("names-deleted-check",
+                           slug=os.path.basename(os.path.normpath(task_dir)),
+                           named=", ".join(named for named, _ in items),
+                           fix="; ".join(fix for _, fix in items))
+
+
 def cmd_check(args):
     # The settings are read before anything resolves a configuration, so a
     # conflict between the two settings files is reported as such.
     mode = load_mode()
     task_dir = resolve_issue_dir(args.task)
     task, _ = load_manifest(task_dir)
+    refusal = deleted_check_refusal(task, task_dir)
+    if refusal is not None:
+        raise CompassError(refusal)
     # An unreadable strategy setting is refused before any check runs, as
     # `approach evaluate` refuses it: a typo must not change what is checked.
     from compass_pkg import acceptance_strategy

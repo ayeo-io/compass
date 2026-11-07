@@ -316,7 +316,7 @@ TOP_DESCRIPTIONS = {
     "project_checks.item": "One project check: its `id`, `name`, `command`, `stage` and an "
                            "optional `when`.",
     "project_checks.id": "The check's id, which must not be the id of a shipped check or "
-                         "gate.",
+                         "gate, or of a check Compass deleted.",
     "project_checks.name": "The check's display name.",
     "project_checks.command": "The command `compass check` runs from the project root; exit "
                               "0 passes.",

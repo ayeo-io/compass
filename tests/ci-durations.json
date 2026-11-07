@@ -156,6 +156,7 @@
   "tests/test_delegation_sessions.py": 30.0,
   "tests/test_delegation_tickets.py": 2.0,
   "tests/test_delegation_worktrees.py": 9.0,
+  "tests/test_deleted_check_refused.py": 6.0,
   "tests/test_delivery_board.py": 19.84,
   "tests/test_delivery_record.py": 24.29,
   "tests/test_depth_words.py": 2.73,

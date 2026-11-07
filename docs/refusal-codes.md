@@ -4,8 +4,9 @@ Every reason code the pre-tool hook can refuse with, and the landing refusals
 of `compass ship-commit` and `compass quick-fix finish` (`checkpoint-no-outcome`,
 `release-line-missing` and `release-line-heading`, which `docs/release-line.md`
 describes, and `definition-of-done-open`, which only `compass ship-commit`
-gives), and the refusal of `compass tdd-red` before the scenario sign-off
-(`scenarios-not-approved`), generated from `cli/compass_pkg/refusals.py` by
+gives), the refusal of `compass tdd-red` before the scenario sign-off
+(`scenarios-not-approved`), and the refusal of `compass check` when a setting or
+an open waiver names a deleted check (`names-deleted-check`), generated from `cli/compass_pkg/refusals.py` by
 `compass _refusal --list`. Do not hand-edit the list below - regenerate it after any change to the registry, and
 `tests/test_refusal_registry.py` fails the build if it is out of date.
 
@@ -18,8 +19,8 @@ placeholders to fill, or says what clears the refusal when no command can.
 `tests/test_refusal_fix_commands.py` parses each named command with the CLI's
 own parser. The code that refuses fills a placeholder in braces, such as
 `{slug}`; the reader fills one in angle brackets, such as `<slug>`. A filled
-value is cut to 20 words, and to 12 for `definition-of-done-open`, whose fix
-line is long.
+value is cut to 20 words, to 12 for `definition-of-done-open`, whose fix
+line is long, and to 16 for `names-deleted-check`, which lists each item.
 
 ## When `/compass:approve` cannot name an approver
 
@@ -107,6 +108,12 @@ reason code and are not in the generated list.
 **Blocked:** {target} (tool: {tool})
 **Why:** a delegation is a person's decision, and its folder holds the check for its confirmation code.
 **Fix:** do not read or write these files; the person types /compass:delegate or /compass:revoke.
+
+### `names-deleted-check`
+
+**Blocked:** compass check of issue {slug}
+**Why:** {named} - each names a check Compass no longer has.
+**Fix:** {fix}; then rerun compass check --issue {slug}.
 
 ### `no-acceptance-criteria`
 

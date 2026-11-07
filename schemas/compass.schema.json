@@ -145,7 +145,7 @@
             "type": "string"
           },
           "id": {
-            "description": "The check's id, which must not be the id of a shipped check or gate.",
+            "description": "The check's id, which must not be the id of a shipped check or gate, or of a check Compass deleted.",
             "pattern": "^[A-Za-z][A-Za-z0-9._-]*$",
             "type": "string"
           },

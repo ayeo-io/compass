@@ -503,7 +503,10 @@ Each entry adds one blocking check and one guardrail, both under `id`, that
 run `command` from the project root through the `command-passes`
 implementation. Exit 0 passes.
 
-- `id` must not be the id of a shipped check or gate, nor `agent-review`.
+- `id` must not be the id of a shipped check or gate, nor `agent-review`, nor a
+  check Compass deleted (`check_registry.DELETED_CHECKS`). `compass check`
+  refuses a project whose `project_checks` names a deleted check
+  (`names-deleted-check`, `docs/waivers.md`).
 - `stage` is `build` or `ship`.
 - `when` is optional, in the form `require_evidence` uses.
 - `compass check` runs the command only when `allow_project_commands` is

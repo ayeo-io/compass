@@ -31,6 +31,7 @@ A change with no request to link, such as a typo the maintainer saw, is excused 
 - an empty reason;
 - a reason that holds a control character: an escape sequence, a direction override or a line break. The person is shown the reason, so it must be plain text on one line;
 - a check the check set never waives: `human-approval-present`, `ship-approval-present` and every check of guardrail `G5`, from `never_waived` in `governance/check-set.yml`;
+- a check Compass deleted (`check_registry.DELETED_CHECKS`): a waiver of it would excuse nothing;
 - a check the issue's policy does not hold;
 - a second waiver in force for the same check.
 
@@ -104,6 +105,23 @@ compass waiver withdraw W-1 --issue refund-flow
 A waiver nobody approved is removed, and its pending request is closed. An approved waiver is marked `withdrawn_at`, so its approval stays on record and the check runs again. Withdrawing only makes the issue owe more, so an agent may run it.
 
 A person can also overrule an approval an agent made under a delegation: `/compass:reject <record id> <reason>` writes an `approval-withdrawal` record, and the check runs again.
+
+## A waiver of a deleted check
+
+9.0.0 deleted checks: the eight in `check_registry.REMOVED`, such as `contracts-declared`, and the seven Definition of Ready checks, such as `dor-summary-filled`. `check_registry.DELETED_CHECKS` holds all fifteen. A waiver that names one asks to excuse a check that never runs, so `compass check` refuses the issue with exit 2 before it runs any check:
+
+```text
+Blocked: compass check of issue refund-flow
+Why: waiver W-1 of contracts-declared - each names a check Compass no longer has.
+Fix: run compass waiver withdraw W-1 --issue refund-flow; then rerun compass check --issue refund-flow. [names-deleted-check]
+```
+
+The same refusal names, in this order, each of these in `compass.yml`, with the edit that clears it:
+
+- a `project_checks` entry whose `id` is a deleted check: delete the entry;
+- a list of checks that names a deleted check: `gates.<id>.checks`, or `stages.<id>.entry` or `exit`, written plain, as `{add, remove}` or under `set:`. Delete the check from the list.
+
+A withdrawn waiver does not refuse: it excuses nothing and stays on record. The refusal keeps 16 words of the items and 16 of the fixes, so a long list is cut; once the items it names are cleared, the next run names the rest.
 
 ## Limits
 

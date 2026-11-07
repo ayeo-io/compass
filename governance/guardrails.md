@@ -560,11 +560,33 @@ and `pr-approval`).
 `@7`, which is otherwise a removed setting: such a pin keeps `S17` off until
 #359 writes `acceptance_strategy: off` in its place (ADR-094 open question 7).
 
+## A deleted check
+
+`check_registry.DELETED_CHECKS` holds every check id Compass no longer has: the
+keys of `REMOVED` and the Definition of Ready checks of
+`removed_parts.READY_CHECKS`. A stored generation that lists one still reads it
+as nothing to check (`_removed_fn`). A setting or a waiver that names one is
+different: it asks for a check that never runs. So `compass check` refuses,
+with exit 2 and the code `names-deleted-check`, before it runs any row
+(`check_cmd.deleted_check_refusal`), when:
+
+- a `project_checks` entry of `compass.yml` has the id of a deleted check;
+- a list of checks in `compass.yml`, `gates.<id>.checks` or
+  `stages.<id>.entry` or `exit` (`removed_parts.CHECK_LIST_FIELDS`), names one.
+  This is the one place `compass check` reads a removed catalogue key;
+- a waiver of the issue that is not withdrawn names one.
+
+The refusal names each item with the edit that clears it, or `compass waiver
+withdraw W-<n>` for a waiver. `compass waiver add` refuses a deleted check, and
+the settings lint refuses a project check of that id (`L-SETTING-INVALID`).
+`tests/test_deleted_check_refused.py` covers each case.
+
 ## No locks
 
 9.0.0 has no locks and no unlocks (ADR-094). Nothing sits above the check
 set, so nothing can change an entry a lock would protect: a setting can only
-add to the set, and a removed catalogue key in `compass.yml` is not read.
+add to the set, and a removed catalogue key in `compass.yml` is not read, except
+that a list of checks in one that names a deleted check is refused (above).
 
 - **What no waiver excuses.** `never_waived` in `governance/check-set.yml`
   names the guardrail A human signs off on the irreversible (`G5`) and its

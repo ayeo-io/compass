@@ -69,7 +69,8 @@ why and how to clear it.
   scenario covers. Each becomes a scenario or is recorded with
   `compass scenario descope "<mode>" --reason "<why>"`.
 - Scan the criteria for placeholders, orphan intents, untestable Thens and
-  ambiguous quantifiers, and fix each in place.
+  ambiguous quantifiers, and fix each in place. This self-review is not
+  repeated later.
 - For behavior a real client can observe, load `atdd` (`S17`).
 
 ### Build
@@ -90,8 +91,7 @@ why and how to clear it.
 When `compass next` shows the Ship stage, follow `/compass:ship`: it holds
 the review that passes the gates, and the commit. Commit only when the
 person asks. Until then pass `--no-commit` to `compass quick-fix finish`, and
-say the change is checked, not committed. After the landing, `compass next`
-names the ship approval while it is owed.
+say the change is checked, not committed.
 
 If the change grows past its rating - more files, an unexpected design
 decision, a scenario that needs a new DSL method - stop and run
@@ -102,4 +102,5 @@ decision, a scenario that needs a new DSL method - stop and run
 At the end of specify, hand `acceptance-criteria.md` to the person for a
 cold read. Ask them to look for intent fidelity, untestable Thens, a missing
 failure mode and ambiguous quantifiers. Where the `specify` checkpoint is
-listed, wait for approval; build starts after it. Otherwise say you are going on, and name the autonomy setting.
+listed, wait for approval; build starts after it. Otherwise say you are going
+on, and name the autonomy setting.

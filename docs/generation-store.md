@@ -275,7 +275,13 @@ file is unchanged, and a resolution copies it once: `compass flow` resolves
 every issue on the board.
 
 A project with no `compass.yml` and its own `governance/` copies is resolved
-through the legacy adapter in place of the check set, until #359. The adapter also
+through the legacy adapter in place of the check set, until #359. The copy is the
+whole configuration, so each entry is added as it stands and nothing merges
+(`effective._legacy_config`). A gate the copy places at a legacy stage it does
+not declare is read at the path stage that shows it (`L-STAGE-MAPPED`). The
+provenance names the layer `legacy` and the operation `add`, as 8.x stored it.
+An entry that is not a mapping, names a field its catalogue lacks, or misses a
+required field is refused, with every fault named. The adapter also
 converts the `project:` guardrails of such a copy: each becomes a guardrail gate
 with its own checks and its stage from `checked_at`, and a `command-passes`
 check becomes a check named for the guardrail id and name (`PG-E-command-and-suite`)

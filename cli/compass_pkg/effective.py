@@ -28,12 +28,12 @@ This module also builds the `generation.Resolution` a commit stores, and is
 the one place the existing modules reach the store through
 (`commit_generation`, `record_check_results`, `generation_report`).
 """
-# DEPENDENCY: standard library (dataclasses, datetime, hashlib, os, re, subprocess);
-# compass_pkg.atomic_io, catalogue_check, check_registry, check_set, core, generation,
-# layers (the 8.x issue layer of `pending_config` only), legacy_adapter, merge (the
-# legacy copy only), obligations, project_settings, removed_parts, tighten, word_map.
+# DEPENDENCY: standard library (copy, dataclasses, datetime, hashlib, os, re, subprocess);
+# compass_pkg.atomic_io, catalogue_spec, check_registry, check_set, core, generation,
+# legacy_adapter, obligations, project_settings, removed_parts, tighten, word_map.
 from __future__ import annotations
 
+import copy
 import datetime
 import hashlib
 import os
@@ -41,8 +41,8 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 
-from compass_pkg import (catalogue_check, check_set, generation, layers, legacy_adapter, merge,
-                         project_settings, removed_parts, tighten, word_map)
+from compass_pkg import (check_set, generation, legacy_adapter, project_settings,
+                         removed_parts, tighten, word_map)
 from compass_pkg import obligations, status_words
 from compass_pkg import catalogue_spec as spec
 from compass_pkg.atomic_io import digest
@@ -231,12 +231,21 @@ class EffectiveView:
     def pending_config(self, manifest):
         """True when the manifest's `config:` is not the overlay this
         generation was committed with. 9.0.0 does not read `config:`
-        (ADR-094), so such a `config:` changes nothing, now or at a commit."""
-        try:
-            layer = layers.load_issue_layer(manifest)
-        except CompassError:
+        (ADR-094), so such a `config:` changes nothing, now or at a commit.
+        8.x stored the digest of the overlay as written (`atomic_io.digest`),
+        so the raw `config:` is compared with it. A `config:` that is not a
+        mapping, or that cannot be digested, is never the stored one."""
+        if not isinstance(manifest, dict):
+            try:
+                manifest = load_manifest_mapping(os.fspath(manifest))
+            except (CompassError, OSError, TypeError):
+                return True
+        raw = manifest.get("config") if isinstance(manifest, dict) else None
+        if raw is None:
+            return self.versions.get("issue_overlay_digest") is not None
+        if not isinstance(raw, dict) or _non_text_keys(raw):
             return True
-        return (layer.digest if layer else None) != self.versions.get("issue_overlay_digest")
+        return digest(raw) != self.versions.get("issue_overlay_digest")
 
 
 # --- live resolution ----------------------------------------------------------------
@@ -266,21 +275,116 @@ def _legacy_parent(root):
                  "source": "legacy", "guardrails": guardrails}
 
 
+def _non_text_keys(doc, path=""):
+    """`[(dotted path of the mapping, key)]` for each mapping key in `doc` that
+    is not text. YAML reads an unquoted `on:` or `1:` as a boolean or a number,
+    and a mapping that mixes those with text keys cannot be digested."""
+    found = []
+    if isinstance(doc, dict):
+        for key, value in doc.items():
+            if not isinstance(key, str):
+                found.append((path or "(top level)", key))
+            found += _non_text_keys(value, f"{path}.{key}" if path else str(key))
+    elif isinstance(doc, (list, tuple)):
+        for n, item in enumerate(doc):
+            found += _non_text_keys(item, f"{path}[{n}]")
+    return found
+
+
+_ID = re.compile(spec.ID_PATTERN)
+#: The entry operations of the 8.x merge that change an entry below the layer. A
+#: copy is the whole configuration, so there is none for them to change.
+_CHANGES = ("set", "replace", "remove", "unlock")
+#: The operations that ride on an entry and are not read here: no lock or waiver
+#: exists in 9.0.0 (ADR-094). `locked` is kept where it is a field, as 8.x kept it.
+_IGNORED = ("locked", "waiver")
+
+
+def _legacy_entry_problems(catalogue, entry_id, entry):
+    """What stops one adapted entry being added as it stands, as text that
+    names its key path. These are the faults the 8.x merge refused in a full
+    entry added to an empty configuration."""
+    path = f"{catalogue}.{entry_id}"
+    if not isinstance(entry_id, str) or not _ID.match(entry_id):
+        return [f"{path}: '{entry_id}' is not a valid id "
+                f"(a letter, then letters, digits, '.', '_' or '-')"]
+    if not isinstance(entry, dict):
+        return [f"{path}: expected a mapping"]
+    fields = spec.FIELDS[catalogue]
+    out = [f"{path}.{key}: a copy cannot use {key}" for key in entry if key in _CHANGES]
+    out += [f"{path}.{key}: not a field of {catalogue}" for key in entry
+            if key not in _CHANGES and key not in _IGNORED and key not in fields]
+    out += [f"{path}: a full entry is needed; missing {name}"
+            for name, field_spec in fields.items()
+            if field_spec["required"] and name not in entry]
+    for key, value in entry.items():
+        kind = fields.get(key, {}).get("merge")
+        if (catalogue, key) == ("stages", "mode"):
+            out.append(f"{path}.mode: mode is the issue layer's choice; a copy cannot set it")
+        elif isinstance(value, dict) and (
+                kind == "list" or (kind == "map" and value and set(value) <= {"set", "remove"})):
+            out.append(f"{path}.{key}: a copy writes the value itself, not an operation on it")
+    return out
+
+
 def _legacy_config(doc):
     """`(config, provenance)` of an adapted copy. The copy is the whole
-    configuration: it is read as one layer through the 8.x merge, which maps
-    a gate at a legacy stage to the path stage that shows it (L-STAGE-MAPPED).
-    #359 deletes this with the adapter."""
+    configuration, so each entry is added as it stands and nothing merges
+    (ADR-094). A gate placed at a legacy stage the copy does not declare is read
+    at the path stage that shows it (`removed_parts.with_mapped_stages`,
+    L-STAGE-MAPPED). The provenance names the layer `legacy` and the operation
+    `add` for each entry and field, as the 8.x merge stored them, so a
+    generation committed from a copy keeps its stored shape. #359 deletes this
+    with the adapter."""
     mapped, _ = word_map.map_layer(doc)
     for key in mapped:
         if key in spec.SETTINGS_KEYS:
             raise CompassError(f"legacy: {key} is a settings key and belongs in the "
                                f"project's own compass.yml, never in a parent (ADR-043)")
-    layers.refuse_non_text_keys(mapped, "legacy")
-    errors = catalogue_check.check_layer(mapped, "parent", name="legacy")
+    for where, key in _non_text_keys(mapped):
+        raise CompassError(f"legacy: {where}: {_non_text_key_message(key)} (L-KEY-NOT-TEXT)")
+    # Two spellings of one check that disagree are refused, as the merge refused them.
+    errors = [f"{code} {path}: {message}"
+              for code, path, message in word_map.one_check_conflicts(mapped)]
+    mapped = removed_parts.with_mapped_stages(mapped, {})
+    config, prov = {}, {}
+    for catalogue in spec.CATALOGUES:
+        if catalogue not in mapped:
+            continue
+        entries = mapped[catalogue]
+        if not isinstance(entries, dict):
+            errors.append(f"{catalogue}: expected a mapping keyed by id")
+            continue
+        table = {}
+        for entry_id, entry in entries.items():
+            problems = _legacy_entry_problems(catalogue, entry_id, entry)
+            if problems:
+                errors += problems
+                continue
+            path = f"{catalogue}.{entry_id}"
+            fields = spec.FIELDS[catalogue]
+            table[entry_id] = {key: copy.deepcopy(value) for key, value in entry.items()
+                               if key in fields}
+            prov[path] = {"layer": "legacy", "operation": "add"}
+            for key in table[entry_id]:
+                prov[f"{path}.{key}"] = {"layer": "legacy", "operation": "add"}
+        if table:
+            config[catalogue] = table
     if errors:
         raise CompassError("legacy: " + "; ".join(errors))
-    return merge.apply({}, mapped, "parent", "legacy")
+    return config, prov
+
+
+def _non_text_key_message(key):
+    """What YAML read a non-text key as, and how to write it as text."""
+    if key is None or isinstance(key, bool):
+        kind = "nothing (null)" if key is None else "a boolean"
+        example = {True: "on", False: "off", None: "null"}[key]
+    else:
+        kind = "a number" if isinstance(key, (int, float)) else f"a {type(key).__name__}"
+        example = str(key)
+    return (f"the key {key!r} is not text: YAML read it as {kind}. "
+            f"Quote it, for example \"{example}\":")
 
 
 def _legacy_digest(doc):
@@ -341,7 +445,7 @@ def git_parent_of(doc):
         else None
 
 
-def refuse_git_parent(doc, where=layers.PROJECT_FILE):
+def refuse_git_parent(doc, where=project_settings.COMPASS_YML):
     """Raise `CompassError` when `doc` extends a git parent (L-PARENT-REMOVED)."""
     ref = git_parent_of(doc)
     if ref:
@@ -359,7 +463,7 @@ def project_doc(root):
         return None
     doc = project_settings.settings(root)
     if not isinstance(doc, dict):
-        raise CompassError(f"{os.path.join(root, layers.PROJECT_FILE)}: expected a mapping")
+        raise CompassError(f"{os.path.join(root, project_settings.COMPASS_YML)}: expected a mapping")
     return doc
 
 
@@ -396,7 +500,7 @@ def _refuse_lint_errors(doc, base):
     if errors:
         first = errors[0]
         raise CompassError(
-            f"nothing can be resolved: {layers.PROJECT_FILE} does not pass the lint. First "
+            f"nothing can be resolved: {project_settings.COMPASS_YML} does not pass the lint. First "
             f"error: {first.code} {first.path}: {first.message} ({len(errors)} "
             f"error(s) in all; run `compass policy lint` to see them)")
 
@@ -463,12 +567,12 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
         parent = {"ref": f"compass:checks@{loaded['version'].split('.')[0]}",
                   "version": loaded["version"], "digest": digest(loaded),
                   "sha256": check_set.sha256(), "source": "shipped"}
-    project_path = os.path.join(root, layers.PROJECT_FILE)
+    project_path = os.path.join(root, project_settings.COMPASS_YML)
     versions = {
         "resolver": generation.RESOLVER_VERSION,
         "cli": COMPASS_VERSION,
         "parents": [parent],
-        "project": ({"path": layers.PROJECT_FILE, "digest": digest(tightened),
+        "project": ({"path": project_settings.COMPASS_YML, "digest": digest(tightened),
                      "git_blob": _git_blob(project_path)} if doc is not None else None),
         "issue_overlay_digest": None,
         "implementations": _implementations(resolved.get("checks")),
@@ -496,7 +600,7 @@ def policy_block(root, resolution, resolved_digest):
     digest."""
     details = resolution.details or {}
     legacy = details.get("legacy")
-    settings_path = os.path.join(root, layers.PROJECT_FILE)
+    settings_path = os.path.join(root, project_settings.COMPASS_YML)
     return {
         "check_set": "legacy" if legacy else check_set.ref(),
         "check_set_sha256": None if legacy else check_set.sha256(),
@@ -510,12 +614,7 @@ def policy_block(root, resolution, resolved_digest):
 def _live_view(task_dir, manifest, slug, start=None):
     start = task_dir or start or os.getcwd()
     root = project_settings.find_project_root(start)
-    try:
-        resolution = resolve_live(root, manifest, slug, task_dir)
-    except merge.MergeError as exc:
-        # A command that only reads the configuration gives the way to see the rest.
-        # Only a project's own copy of the governance files merges.
-        raise CompassError(f"{exc}. Run `compass policy lint` to see the cause.")
+    resolution = resolve_live(root, manifest, slug, task_dir)
     return EffectiveView("live", slug, None, resolution.resolved, resolution.versions,
                          resolution.provenance)
 

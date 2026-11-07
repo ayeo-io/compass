@@ -4,7 +4,7 @@ Scenario group F of `docs-compass-artifacts`, first half: the two skill merges
 (TRC-F3), the framework's own documents coming off the adopter's reading path
 (TRC-F4), and the resident cost pinned in a stated unit (TRC-F5).
 
-`tests/test_instruction_volume.py` already pins the totals. This file pins the
+`tests/test_resident_text.py` already pins the totals. This file pins the
 three things that are about SHAPE rather than size: which skills exist, which
 documents a delivery approach points an adopter at, and whether the ceiling
 is expressed in a unit a reader can check against the intake.
@@ -27,7 +27,8 @@ TOKENS_PER_WORD = 1.35
 
 # A target, not a limit, since issue `size-caps-as-targets`: a contract
 # over it passes and pytest warns.
-CONTRACT_WORD_TARGET = 450
+# Lowered to 350 by #358, which cut the contract to 342 words.
+CONTRACT_WORD_TARGET = 350
 
 
 def _words(path):
@@ -237,10 +238,10 @@ def test_trc_f5_the_resident_ceiling_is_stated_in_tokens_as_well_as_words():
     are reported, and the test names its own conversion so a reader can check
     the intake's "about 1k tokens" against a number rather than reconstruct it.
     """
-    volume = (ROOT / "tests" / "test_instruction_volume.py").read_text(
+    volume = (ROOT / "tests" / "test_resident_text.py").read_text(
         encoding="utf-8")
     assert "token" in volume.lower(), (
-        "tests/test_instruction_volume.py pins the resident ceiling in words "
+        "tests/test_resident_text.py pins the resident limit in words "
         "only, so nobody can check it against the intake's target without "
         "doing the conversion by hand")
 

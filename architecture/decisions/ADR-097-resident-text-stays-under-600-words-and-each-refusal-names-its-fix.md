@@ -118,6 +118,20 @@ The cut is small in tokens, and this record says so:
 
 Most of the 63-72% in the issue is the system prompt and tools of Claude Code, which Compass cannot cut. The larger possible effect is on refused calls: the one-command rule and the fix lines. Only a bench run can show it, and #361 is that run.
 
+## As built
+
+Measured on the `358-paths` branch by `tests/test_resident_text.py` (run with `-s` to print the numbers) and by rendering each code of `tests/test_refusal_registry.py` at its longest fixture:
+
+| Measure | Before | After |
+|---|---|---|
+| Resident words, with no names | 703 | 533 |
+| Resident words, as `test_resident_text` counts them | - | 553: contract 342, skill descriptions 134, command descriptions 57, names 20 |
+| Token estimate at 1.35 tokens per word | 949 | 747 |
+| `compass-contract.md` | 64 lines, longest 78 columns, 2,691 characters | 40 lines, longest 79 columns, 2,191 characters |
+| Rendered refusal words, 30 codes | - | 23 to 59, mean 42.7; the cap is under 60 |
+
+The longest refusals are `no-red-on-record` and `delegation-caller-mismatch` at 59 words and `definition-of-done-open` at 58.
+
 ## Alternatives considered
 
 | Alternative | Why considered | Why rejected |

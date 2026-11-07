@@ -45,7 +45,8 @@ AGENTS_MD = ROOT / "AGENTS.md"
 # and pytest warns.
 # Moved to 450 by the ASD-STE100 writing rule (issue `ste100-writing-rule`):
 # 442 words measured.
-CONTRACT_WORD_TARGET = 450
+# Lowered to 350 by #358, which cut the contract to 342 words.
+CONTRACT_WORD_TARGET = 350
 
 
 # ---------------------------------------------------------------------------

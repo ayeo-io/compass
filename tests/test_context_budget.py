@@ -87,7 +87,8 @@ NEW_RULES = {
 # Moved to 2,900 by the ASD-STE100 writing rule (issue `ste100-writing-rule`):
 # 2,873 characters measured, rounded up to the next 50. Every message a
 # session writes to a person depends on it, so it must be resident.
-CONTRACT_TARGET = 2900
+# Lowered to 2,200 by #358, which cut the contract to 2,191 characters.
+CONTRACT_TARGET = 2200
 
 # Set from the rewrite of 2026-10-04 (2,581, 1,476, 1,436 and 1,216
 # characters at 80 columns), with a little room; before it, 2,805, 1,643,
@@ -304,7 +305,7 @@ def test_trc_026():
     """The `language` line is added by the session-start hook, so the shipped
     contract does not grow (issue `language-key-and-us-english`)."""
     text = CONTRACT.read_text(encoding="utf-8")
-    assert len(text) <= 2900
-    assert CONTRACT_TARGET == 2900
+    assert len(text) <= 2200
+    assert CONTRACT_TARGET == 2200
     assert "Write all prose in" not in text
     warn_if_over("compass-contract.md", len(text), CONTRACT_TARGET, "characters")

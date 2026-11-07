@@ -492,6 +492,7 @@ INHERITS_ENVIRONMENT = {
     ("cli/compass_pkg/pull_request_link.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/landed_by.py", "_git_commit_subject"): (1, _GIT),
     ("cli/compass_pkg/landed_by.py", "_git_is_usable"): (1, _GIT),
+    ("cli/compass_pkg/landing.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/lessons.py", "_decider"): (1, _GIT),
     ("cli/compass_pkg/manifest.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/manifest.py", "cmd_land_commit"):

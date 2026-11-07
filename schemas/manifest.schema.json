@@ -192,6 +192,10 @@
       "type": "string",
       "description": "The commit ship-commit made when it marked the issue landed, or, after `compass issue link set --pr` reads a merged pull request, its merge commit on the default branch. evidence-matches-tree compares the newest green's tree_id with this commit's tree. compass check reports, as advice, a land_commit that origin's default branch does not reach."
     },
+    "landed_with_record": {
+      "type": "boolean",
+      "description": "Optional. true when the issue record was committed with the code, so the manifest holds no land_commit. The land commit is then read from git: the newest commit that added the manifest's current land_timestamp line (cli/compass_pkg/landing.py). After a squash merge that is the squash commit."
+    },
     "release_note": {
       "type": "string",
       "description": "The issue's release line: text written for a user, for the release notes. Written only by --release-note on compass acceptance record, compass ship-commit and compass quick-fix finish; the latest write wins. Optional: a landing refuses an issue whose stored configuration sets release_line: true on its approach and that holds none (docs/release-line.md)."

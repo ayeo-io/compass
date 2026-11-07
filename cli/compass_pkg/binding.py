@@ -49,7 +49,7 @@ import stat
 import subprocess
 import tempfile
 
-from compass_pkg import gate_status, status_words
+from compass_pkg import gate_status, landing, status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import CompassError, find_upwards, load_manifest
 from compass_pkg.red_first import load_record
@@ -399,8 +399,8 @@ def _newest_bound_record(task, task_dir):
     return newest
 
 
-def _check_landed(task, root, path, record):
-    land = task.get("land_commit")
+def _check_landed(task, task_dir, root, path, record):
+    land = landing.land_commit(task, task_dir)
     if not land:
         return NOTHING_TO_CHECK, ("landed with no land_commit recorded, so "
                                   "there is no landed tree to compare")
@@ -475,7 +475,7 @@ def _check_evidence_matches_tree(task, task_dir):
     path, record = newest
     root = find_upwards(task_dir, ".compass") or task_dir
     if status_words.is_completed(task):
-        return _check_landed(task, root, path, record)
+        return _check_landed(task, task_dir, root, path, record)
 
     # A removed gate left pending does not hold the check back (`gate_status`).
     ready = gate_status.all_gates_passed(task)

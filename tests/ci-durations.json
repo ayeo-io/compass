@@ -262,6 +262,7 @@
   "tests/test_kept_presets.py": 1.45,
   "tests/test_land_commit.py": 0.79,
   "tests/test_land_commit_from_pr.py": 7.0,
+  "tests/test_land_commit_from_record.py": 3.0,
   "tests/test_land_refusal_advice.py": 24.26,
   "tests/test_landed_by.py": 9.82,
   "tests/test_language_decision_record.py": 0.01,

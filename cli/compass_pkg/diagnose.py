@@ -20,7 +20,7 @@ import glob
 import json
 import os
 
-from compass_pkg import checkpoint_outcomes, lifecycle, status_words, word_map
+from compass_pkg import checkpoint_outcomes, landing, lifecycle, status_words, word_map
 from compass_pkg.stable_ids import (
     APPROACH_SPIKE, REMOVED_GATE_IDS, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS,
     STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
@@ -108,9 +108,10 @@ def _landed_by_items(m):
     return by if isinstance(by, list) else [by] if by else []
 
 
-def _landed_as(m):
-    if m.get("land_commit"):
-        return str(m["land_commit"])
+def _landed_as(m, task_dir):
+    commit = landing.land_commit(m, task_dir)
+    if commit:
+        return str(commit)
     names = []
     for item in _landed_by_items(m):
         if isinstance(item, dict):
@@ -120,9 +121,9 @@ def _landed_as(m):
     return ", ".join(names)
 
 
-def _landed_through(m):
+def _landed_through(m, task_dir):
     """The issues this one landed through, when `landed_by` names any."""
-    if m.get("land_commit"):
+    if landing.land_commit(m, task_dir):
         return ""
     return ", ".join(str(i["issue"]) for i in _landed_by_items(m)
                      if isinstance(i, dict) and i.get("issue"))
@@ -163,7 +164,7 @@ def _stage_records(root, task_dir, m, records):
     review = os.path.join(task_dir, "evidence", "review.md")
     if os.path.isfile(review):
         shown[STAGE_VERIFY].append(_rel(root, review))
-    landed_as = _landed_as(m)
+    landed_as = _landed_as(m, task_dir)
     if landed_as or m.get("land_timestamp"):
         shown[STAGE_SHIP].append(f"{mpath} (landed {landed_as})" if landed_as else f"{mpath} (landed)")
     return shown
@@ -207,7 +208,7 @@ def _timeline(root, task_dir, m, records):
         # Comparing text: both are ISO 8601 UTC, so a later time sorts later.
         events = [(w, f"{what} (after landing)" if w[:19] > landed_at[:19] else what, p)
                   for w, what, p in events]
-        events.append((landed_at, f"landed {_landed_as(m)}".strip(), mpath))
+        events.append((landed_at, f"landed {_landed_as(m, task_dir)}".strip(), mpath))
     return sorted(events)
 
 
@@ -232,7 +233,7 @@ def _deviations(task_dir, m, stages, shown, records):
     # An omission recorded early says nothing about how far the work got.
     reached = max((i for i, s in enumerate(_ORDER)
                    if any(not r.startswith("omitted:") for r in shown[s])), default=-1)
-    through = _landed_through(m)
+    through = _landed_through(m, task_dir)
     if through:
         out.append(f"landed through {through}: its records are in that issue, "
                    f"so this issue's own missing stages are not listed")

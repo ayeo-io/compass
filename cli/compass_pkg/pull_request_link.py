@@ -36,7 +36,7 @@ import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from compass_pkg import issue_link, ship_approval, status_words
+from compass_pkg import issue_link, landing, ship_approval, status_words
 from compass_pkg.check_results import ADVISORY_FAILURE
 from compass_pkg.core import CompassError, find_upwards
 from compass_pkg.github_links import link_base
@@ -258,8 +258,9 @@ def _git(args, root):
 def on_default_branch(task, task_dir):
     """`(passed, detail)`: whether origin's default branch reaches a landed issue's
     `land_commit`. None when there is nothing to judge: the issue has not landed,
-    has no `land_commit`, or the clone records no default branch for origin."""
-    land = task.get("land_commit")
+    has no land commit (`landing.land_commit`), or the clone records no default
+    branch for origin."""
+    land = landing.land_commit(task, task_dir)
     if not status_words.is_completed(task) or not isinstance(land, str) or not land:
         return None
     root = find_upwards(task_dir, ".compass") or task_dir

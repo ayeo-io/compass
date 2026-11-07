@@ -10,7 +10,7 @@ import datetime
 import os
 import subprocess
 
-from compass_pkg import status_words
+from compass_pkg import landing, status_words
 from compass_pkg.check_cmd import cmd_check
 from compass_pkg.core import (COMPASS_SCHEMA_VERSION, COMPASS_VERSION, CompassError, exit_for_mode,
                               find_compass_dir, load_mode, load_yaml, manifest_path, mode_banner,
@@ -69,12 +69,13 @@ def _landed_before(slug, cwd, ref, ref_time):
     checking too much costs time, and checking too little hides a failure.
     """
     try:
-        manifest = load_yaml(os.path.join(resolve_issue_dir(slug), "manifest.yml"))
+        task_dir = resolve_issue_dir(slug)
+        manifest = load_yaml(os.path.join(task_dir, "manifest.yml"))
     except Exception:
         return False
     if not isinstance(manifest, dict):
         return False
-    commit = manifest.get("land_commit")
+    commit = landing.land_commit(manifest, task_dir)
     if isinstance(commit, str) and commit:
         r = subprocess.run(["git", "merge-base", "--is-ancestor", commit, ref],
                            cwd=cwd, capture_output=True, text=True)

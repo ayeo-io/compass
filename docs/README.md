@@ -93,7 +93,7 @@ same commit.
 | `cli/compass_pkg/evidence_required.py`, `cli/compass_pkg/path_writer.py`, `tests/fixtures/compat/v8.0.4-governance.tgz`, `tests/test_path_writer.py`, `tests/test_quick_fix_path.py` | `governance/routing-policy.md` |
 | `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/record_mode.py`, `tests/test_record_mode.py` | `docs/delivery-record.md` |
 | `cli/compass_pkg/checkpoint_outcomes.py` | `docs/checkpoints.md` |
-| `cli/compass_pkg/issue_link.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `tests/fake_gh.py` | `docs/github-links.md` |
+| `cli/compass_pkg/issue_link.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `cli/compass_pkg/landing.py`, `tests/fake_gh.py` | `docs/github-links.md` |
 | `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |
 | `cli/compass_pkg/decisions_taken.py` | `architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md` |
 | `cli/compass_pkg/rendered_blocks.py`, `cli/compass_pkg/issue_detail.py`, `cli/compass_pkg/project_scan.py`, `cli/compass_pkg/migrate_blocks.py`, `cli/compass_pkg/doc_paths.py` | `docs/rendered-blocks.md` |

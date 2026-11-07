@@ -2,7 +2,7 @@
 
 An issue can record the GitHub issue it is linked to and the pull request that carries it. This page is the reference: the command, the pull request and the landing commit, the ship approval read from the merged pull request, how `gh` is run, and the limits.
 
-The code is `cli/compass_pkg/issue_link.py` (the link and the `gh` runner), `cli/compass_pkg/pull_request_link.py` (the pull request, its reviews and `land_commit`), `cli/compass_pkg/ship_approval.py` (which reviews count) and `cli/compass_pkg/github_links.py` (origin's repository and default branch). The tests use a fake `gh` on `PATH`, `tests/fake_gh.py`.
+The code is `cli/compass_pkg/issue_link.py` (the link and the `gh` runner), `cli/compass_pkg/pull_request_link.py` (the pull request, its reviews and `land_commit`), `cli/compass_pkg/landing.py` (the land commit every reader uses), `cli/compass_pkg/ship_approval.py` (which reviews count) and `cli/compass_pkg/github_links.py` (origin's repository and default branch). The tests use a fake `gh` on `PATH`, `tests/fake_gh.py`.
 
 ## The link
 
@@ -30,7 +30,17 @@ compass issue link set --github https://github.com/acme/widgets/issues/42
 
 Run it when the pull request opens, and again after the merge. `compass ship-commit` writes `land_commit` from the commit it made on the branch. A squash merge puts a different commit on the default branch, so without the second run the record names a commit the default branch does not hold.
 
-`compass check` reports a landed issue's `land_commit` that origin's default branch does not reach, as the advisory check `land-commit-on-default-branch`. The default branch is `refs/remotes/origin/HEAD`, as `git clone` records it. The check never fails the run, because a record written before the merge, or a clone that has not fetched, is not wrong work. It adds no row for an issue in flight, an issue with no `land_commit`, or a clone with no `origin/HEAD`.
+### The land commit
+
+Every command that reads the land commit gets it from `landing.land_commit`:
+
+- A stored `land_commit` wins. Every issue landed before 9.0.0 has one, and so has an issue whose record stays out of the code commit.
+- Else, when the issue is completed and its manifest holds `landed_with_record: true`, the land commit is the newest commit, from HEAD, that added the manifest's current `land_timestamp` line (`git log -G`), and whose copy of the manifest still holds it (`git show`). The record was committed with the code, so this is the commit that landed the issue. After a squash merge it is the squash commit on the default branch; after a rebase, the rebased commit; after a merge commit, the branch commit.
+- Else there is none. A shallow clone that does not hold the commit that added the line has none either, and the checks that compare the landed files decline, as they do for a stored commit the clone does not hold.
+
+A manifest without `landed_with_record` is never read from git, so an issue landed with no `land_commit` keeps the verdict "landed with no land_commit recorded".
+
+`compass check` reports a landed issue's land commit that origin's default branch does not reach, as the advisory check `land-commit-on-default-branch`. The default branch is `refs/remotes/origin/HEAD`, as `git clone` records it. The check never fails the run, because a record written before the merge, or a clone that has not fetched, is not wrong work. It adds no row for an issue in flight, an issue with no land commit, or a clone with no `origin/HEAD`. For a committed record the land commit read from git follows the merge, so the row fails only until the clone fetches the merged default branch.
 
 ## The ship approval from the merged pull request
 

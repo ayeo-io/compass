@@ -39,7 +39,7 @@ import textwrap
 
 from compass_pkg.binding import ids_for
 from compass_pkg.check_cmd import cmd_check
-from compass_pkg import candidate_client, retired
+from compass_pkg import candidate_client, landing, retired
 from compass_pkg.path_stages import is_path_issue
 from compass_pkg.stable_ids import (
     APPROACH_DELIVERY, APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY)
@@ -968,7 +968,7 @@ def cmd_quick_fix_finish(args):
         ship_tail_lines = [ln for ln in ship_out.strip().splitlines() if ln.strip()]
         ship_tail = ship_tail_lines[-1] if ship_tail_lines else "commit recorded"
         landed, _ = load_manifest(task_dir)
-        committed_files = _commit_files(landed.get("land_commit"), project_root)
+        committed_files = _commit_files(landing.land_commit(landed, task_dir), project_root)
         traced_now = {cf.get("path") for cf in (landed.get("changed_files")
                                                 or []) if isinstance(cf, dict)}
         untraced = _untraced_since_start(project_root, slug, traced_now)

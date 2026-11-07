@@ -21,6 +21,7 @@ import os
 import re
 import subprocess
 
+from compass_pkg import landing
 from compass_pkg.core import CompassError, load_manifest, resolve_issue_dir, save_manifest
 from compass_pkg.terminal import say
 
@@ -109,7 +110,7 @@ def cmd_issue_link(args):
         fields.update(repo=repo, number=number)
     if pr is not None:
         lines += pull_request_link.apply(task, task.get("issue"), pr)
-        fields.update(pull_request=task["pull_request"], land_commit=task.get("land_commit"))
+        fields.update(pull_request=task["pull_request"], land_commit=landing.land_commit(task, task_dir))
     save_manifest(task, path)
     return say(args, f"{verb}: {lines[0]}", detail=lines[1:] or None, **fields)
 

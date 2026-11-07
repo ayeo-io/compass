@@ -96,7 +96,9 @@ are the build exit list (`dod_due`).
 The check `evidence-matches-tree` judges a landed issue by the newest test
 record's `file_sha256` and `file_modes`: the SHA-256 and the mode of each
 changed file and each declared test as the record saw it, compared with the
-same files in `land_commit` as a checkout writes them. A
+same files in the land commit (`landing.land_commit`: the stored
+`land_commit`, or for a record committed with the code the commit that
+added its `land_timestamp` line) as a checkout writes them. A
 record written before that field is judged by its `changes_id`, as before.
 The CLI writes the same digests, and the digest of each record file, to
 `evidence/SHA256SUMS`, so a reader can check them with `sha256sum -c` and no
@@ -207,8 +209,8 @@ _(none yet - the shipped default guardrails apply as-is)_
   (ADR-092); a stored generation that lists one still judges it.
   A project with neither sees no change.
 - **`land-commit-on-default-branch`** is an advisory row `compass check` adds
-  for a landed issue with a `land_commit`, in a clone that records
-  `origin/HEAD`. It reports a `land_commit` that origin's default branch does
+  for a landed issue with a land commit (`landing.land_commit`), in a clone
+  that records `origin/HEAD`. It reports a land commit that origin's default branch does
   not reach, which a squash merge causes, and names `compass issue link set
   --pr`, which moves `land_commit` to the merge commit. It is in no gate and no
   configuration, and it never fails the run (`docs/github-links.md`).

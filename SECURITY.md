@@ -19,8 +19,12 @@ the advisory is published with it.
 
 ## Supported versions
 
-Only the latest release gets security fixes. Releases are listed at
+Only the latest release gets security fixes, with one exception: Compass
+8.x gets security fixes only, for 90 days after 9.0.0 is released. After
+that, only 9.x is supported. Releases are listed at
 https://github.com/ayeo-io/compass/releases.
+
+`docs/upgrade-9-0-0.md` says how to move an 8.x project to 9.0.0.
 
 ## What Compass runs
 

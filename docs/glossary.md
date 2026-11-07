@@ -534,6 +534,12 @@ A record, written only by its command, of the project's layering test: the test 
 
 **Related:** `isolation-proof`, `test-layer`
 
+### legacy-record
+
+The manifest's `legacy:` key, which `compass migrate` writes when it moves an open 8.x issue onto the four-stage path (ADR-098). It keeps the 8.x records that no 9.0.0 reader of a path issue uses: the stage map, the subtasks, the model tiers, the page ticks, the readiness record, each document entry other than the acceptance criteria, the status fields of the acceptance-criteria entry, and each legacy stage value that migrate rewrote to its path stage. No check reads it, so a reviewer can still see what 8.x recorded and no verdict depends on it.
+
+**Related:** `manifest`, `path`, `generation`
+
 ### lld
 
 Low-level design: the signatures, contracts, file plan and tests of one work unit, in its own document, `low-level-design/U<n>.md`. The planner wrote one per unit of the technical design's Work units table until 9.0.0 removed both documents (ADR-091). Older issues still hold them.

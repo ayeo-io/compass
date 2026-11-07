@@ -34,6 +34,21 @@ Before the release notes name a cost or token ratio, `sdd-bench-9-0-0.md` in
 description and the ayeo.io page are not scanned by any test, so check them
 by hand.
 
+### What changes at 9.0.0
+
+9.0.0 ends the 8.x legacy readers that no compatibility contract needs and
+adds `compass migrate`, which moves an 8.x project to 9.0.0 and keeps its
+evidence (ADR-098). The facts are in `docs/upgrade-9-0-0.md`.
+
+The 9.0.0 release notes must hold this line, as `SECURITY.md` and the upgrade
+guide do:
+
+> Compass 8.x gets security fixes only, for 90 days after 9.0.0 is released.
+> After that, only 9.x is supported.
+
+The release commit adds the end date to `SECURITY.md`.
+`tests/test_upgrade_9_0_0_guide.py` checks that the three files hold the line.
+
 ### What changed at 8.0.0
 
 8.0.0 is a major release because of one change: delegation works across git

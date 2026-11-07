@@ -41,6 +41,10 @@ SKIP_NAMES = {"glossary.md"}
 ALLOWED = {
     "docs/releasing.md": "the upgrade table names each removed command beside "
                          "its replacement",
+    # tests/test_upgrade_9_0_0_guide.py checks the rest of this page: outside
+    # its generated table, every slash command it names must exist.
+    "docs/upgrade-9-0-0.md": "the 9.0.0 upgrade table names each removed slash "
+                             "command beside its replacement",
 }
 
 

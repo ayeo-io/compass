@@ -1,8 +1,16 @@
 # Upgrading to 9.0.0
 
-This page says how to move a project from Compass 8.x to 9.0.0 and keep its evidence. It lists what changes, what breaks, and what to do about it. The plan behind it is #359 [Add compass migrate and the 9.0.0 upgrade guide].
+This page says how to move a project from Compass 8.x to 9.0.0 and keep its evidence. It lists what 9.0.0 removed, what replaces each part, what stays readable and what to do. The decision behind it is `architecture/decisions/ADR-098-compass-migrate-moves-an-8x-project-and-the-legacy-readers-end.md`.
 
-## 2. Run `compass migrate`
+Compass 8.x gets security fixes only, for 90 days after 9.0.0 is released. After that, only 9.x is supported (see "Support" below).
+
+## Before you start
+
+- A project on 6.x or 7.x must upgrade to 8.x first. On 8.x, run `compass policy migrate` to move copied `governance/` files or `.compass/config.yml` into `compass.yml`. 9.0.0 does not have that command.
+- Copy `compass.yml`, `.compass/work` and `docs/compass` to a folder outside the project.
+- Update every checkout and every installed plugin together.
+
+## Run `compass migrate`
 
 `compass migrate` rewrites `compass.yml` for 9.0.0, then moves each open issue that 8.x assessed onto the 9.0.0 four-stage path: assess, specify, build and ship (ADR-092). Run it from the project root:
 
@@ -18,7 +26,7 @@ compass migrate --issue <slug> --apply
 
 ### What it changes in `compass.yml`
 
-9.0.0 does not read a removed key (ADR-094), so deleting one changes no verdict. `compass migrate` deletes each removed key that `removed_parts.REPLACEMENTS` marks as rewritten (the table in `docs/configuration.md`), and writes the setting that carries what the key asked for, where one does:
+9.0.0 does not read a removed key (ADR-094), so deleting one changes no verdict. `compass migrate` deletes each removed key that `removed_parts.REPLACEMENTS` marks as rewritten (the table under "Removed settings" below), and writes the setting that carries what the key asked for, where one does:
 
 | In `compass.yml` | `compass migrate` writes |
 |---|---|
@@ -116,3 +124,195 @@ It refuses one issue, and lists it under "refused", when the issue has a 1.x man
 3. Run `compass migrate --apply`.
 4. Make each edit listed under "settings left for you to edit", then run `compass migrate` again.
 5. Run each `compass issue link set` command the report lists.
+
+## Removed settings
+
+9.0.0 reads none of these `compass.yml` keys. Each stays valid YAML, and `compass policy lint` warns about each with `L-SETTING-REMOVED` and names its replacement. "rewrites it" means `compass migrate` deletes the key and writes the replacement for you. "no" means you edit the file: `compass migrate` leaves the key and names the edit. `docs/configuration.md` explains each replacement setting.
+
+<!-- compass:upgrade-settings-table -->
+| Removed key | Replacement | `compass migrate` |
+|---|---|---|
+| `dimensions` | removed | no |
+| `stages` | removed | no |
+| `rules` | `require_evidence` | rewrites it |
+| `checks` | `project_checks` | rewrites it |
+| `gates` | `signoff_labels` or `project_checks` | rewrites it |
+| `vocabulary` | removed | no |
+| `extends` | removed | no |
+| `extends@6` | `acceptance_strategy: {state: off, reason: ...}` | rewrites it |
+| `extends@7` | `acceptance_strategy: {state: off, reason: ...}` | rewrites it |
+| `extends@8` | removed | rewrites it |
+| `preset` | removed | rewrites it |
+| `preset_index` | removed | rewrites it |
+| `approvers.project-waiver` | removed | rewrites it |
+| `models` | removed | rewrites it |
+| `multiagent` | removed | rewrites it |
+| `living_spec` | removed | rewrites it |
+| `artifacts` | removed | rewrites it |
+| `approaches` | removed | rewrites it |
+| `stages.<id>`: `define`, `refine`, `plan`, `breakdown`, `implement`, `verify` | removed | no |
+| `rules.caps` | removed | no |
+| `checks.<id>`: `dor-summary-filled`, `dor-problem-traces-up`, `dor-behavior-is-gwt`, `dor-traceability-ids`, `dor-affected-surface-named`, `dor-no-open-questions`, `dor-approach-still-fits` | removed | no |
+| `prices` | removed | rewrites it |
+| `github_labels` | removed | rewrites it |
+| `readiness` | removed | rewrites it |
+| `governance_drift` | removed | rewrites it |
+| `github_labels.page` | removed | rewrites it |
+| `project.<id>`: `build_command`, `lint_command`, `format_check_command`, `typecheck_command`, `secret_scan`, `structured_logging` | removed | rewrites it |
+| `rules.floors.rules.RP-FLOOR-002.then.require_phase` | removed | rewrites it |
+| `capabilities.artifact-freshness` | removed | no |
+| `rules.*.force_minimum_approach` | removed | rewrites it |
+| `rules.*.forbid_approach` | removed | rewrites it |
+| `rules.*.never_skip` | removed | rewrites it |
+<!-- /compass:upgrade-settings-table -->
+
+## Removed slash commands
+
+9.0.0 runs every change on one path, assess, specify, build and ship, through `/compass:go` (ADR-092). A removed slash command has no stub file. `/compass:flow` is still shipped.
+
+<!-- compass:upgrade-slash-table -->
+| Removed | Use instead | Decision |
+|---|---|---|
+| `/compass:define`, `/compass:refine`, `/compass:plan` | the specify stage of `/compass:go` | ADR-092 |
+| `/compass:breakdown`, `/compass:implement` | the build stage of `/compass:go` | ADR-092 |
+| `/compass:verify` | the ship stage of `/compass:go`, and `/compass:ship` | ADR-092 |
+| `/compass:intent`, `/compass:position`, `/compass:design`, `/compass:consult` | nothing: the four role entry points have no replacement | ADR-093 |
+<!-- /compass:upgrade-slash-table -->
+
+## Removed verbs and flags
+
+### What breaks
+
+Each command line below exits 2 with the parse error, and the error adds one line that names the replacement.
+
+<!-- compass:upgrade-commands-table -->
+| Removed | Use instead | Decision |
+|---|---|---|
+| `run` | run the stage in your own session | ADR-090 |
+| `issue subtask` | the session builds each unit of the distribution map itself | ADR-090 |
+| `profile` | nothing replaces it | ADR-090 |
+| `approach show --model` | a stage command passes no model | ADR-090 |
+| `approach show --effort` | a stage command passes no effort | ADR-090 |
+| `retro --models` | no subtask records a model tier | ADR-090 |
+| `analyze` | compass check runs the guardrails; no consistency report replaces it | ADR-091 |
+| `issue receipt` | compass approach show lists the issue's gates and compass check judges its evidence | ADR-091 |
+| `issue render` | compass check and compass approach show read the records; no block is written | ADR-091 |
+| `spec sync` | no living spec is derived, so there is nothing to merge and re-derive | ADR-091 |
+| `issue template show` | the one document's template is templates/acceptance-criteria.md | ADR-091 |
+| `issue artifact set` | no document is registered or given a status; compass check reads the records | ADR-091 |
+| `issue artifact-path` | the one document is docs/compass/<created>-<slug>/acceptance-criteria.md | ADR-091 |
+| `evidence approve --artifact` | no document waits for approval; approve a human check with --check | ADR-091 |
+| `evidence request --artifact` | no document waits for approval; ask for a human check with --check | ADR-091 |
+| `plan lint` | no technical design is written, so there is no plan to scan | ADR-091 |
+| `_derive-system-spec` | no living spec is derived; the issue records hold each landed scenario | ADR-091 |
+| `intent ingest` | write the Summary and Intent of acceptance-criteria.md from the brief | ADR-093 |
+| `retro` | sdd-bench is the measurement; compass check and compass approach show read one issue | ADR-093 |
+| `rework-scan` | nothing replaces it | ADR-093 |
+| `issue friction` | nothing replaces it | ADR-093 |
+| `board` | compass flow lists every issue | ADR-093 |
+| `flow --html` | compass flow prints the issues; no page is written | ADR-093 |
+| `issue github sync` | compass issue link set keeps the link; no label is written | ADR-093 |
+| `readiness` | nothing measures the repository; the hooks and compass check guard each change | ADR-093 |
+| `init --readiness` | compass init sets up the project; nothing measures it | ADR-093 |
+| `follow-up add --target` | link the follow-up to a GitHub issue with --github | ADR-093 |
+| `issue configure` | the issue layer was removed; record a waiver with compass waiver add | ADR-094 |
+| `approach evaluate --reset-config` | an issue has no config layer | ADR-094 |
+| `policy diff` | one check set ships; compass policy show prints it with its digest | ADR-094 |
+| `policy update` | one check set ships with each release; nothing to move between | ADR-094 |
+| `preset init` | presets were removed; a project sets tighten-only settings in compass.yml | ADR-094 |
+| `preset test` | presets were removed; a project sets tighten-only settings in compass.yml | ADR-094 |
+| `preset` | presets were removed; a project sets tighten-only settings in compass.yml | ADR-094 |
+| `policy migrate --words` | compass.yml is read as settings only; the upgrade guide names the 9.0.0 settings | ADR-094 |
+| `policy migrate --undo` | run it on 8.x before upgrading; the upgrade guide names the 9.0.0 settings | ADR-094 |
+| `policy migrate` | run compass policy migrate on 8.x; the upgrade guide names the 9.0.0 settings | ADR-094 |
+| `approach evaluate --offline` | git parents were removed; nothing is fetched | ADR-094 |
+| `policy lint --offline` | git parents were removed; nothing is fetched | ADR-094 |
+| `policy show --offline` | git parents were removed; nothing is fetched | ADR-094 |
+| `policy lint --issue` | an issue has no config layer; the classifier was removed | ADR-094 |
+| `policy lint --exhaustive` | an issue has no config layer; the classifier was removed | ADR-094 |
+<!-- /compass:upgrade-commands-table -->
+
+These parts also stopped working in 9.0.0. Each fails as any unknown name or flag does, with no line that names the replacement:
+
+- `quick-fix start --role`. Role is not an assessment dimension (ADR-070), so argparse refuses the flag.
+- `--justify role=` on `approach evaluate --write`. It is refused as a dimension that needs no justification.
+- The old British spelling of the reassessment kind `judgment` in `approach evaluate --kind`.
+- The old British spelling of the check id `dor-behavior-is-gwt`, given to `evidence approve --check`, `evidence request --check` or `evidence review`.
+- The old British spelling of the refusal code `not-initialized`, given to the refusal code lookup.
+- The drift report. `compass approach evaluate` no longer prints `POLICY DRIFT`, and `compass policy lint` no longer compares a governance copy with the shipped files. `policy lint --json` drops the findings `LEGACY-DRIFT`, `LEGACY-DRIFT-UNCOMPARED`, `LEGACY-WAIVER` and `LEGACY-WAIVED`. The `governance_drift` setting is removed (see "Removed settings").
+
+### What changes without breaking
+
+- `compass migrate` is a new verb. In 6.x the same spelling ran what is now `compass issue migrate`, and 7.0.0 removed that spelling. 9.0.0 uses the name for the move from 8.x (ADR-098 open question 18).
+- `compass issue migrate` stays. It still moves a 1.x issue to the 2.0 shape.
+
+## Deleted checks
+
+A stored generation that lists one of these checks still reads it as nothing to check, so an archived issue keeps its verdict. A setting or a waiver that names one is different: it asks for a check that never runs.
+
+<!-- compass:upgrade-checks-table -->
+| Deleted check | Removed in |
+|---|---|
+| `dashboard-current` | 7.0.0 |
+| `multiagent-run-recorded` | 9.0.0 |
+| `consistency-check-passes` | 9.0.0 |
+| `rendered-blocks-current` | 9.0.0 |
+| `artifacts-approved` | 9.0.0 |
+| `design-within-word-ceiling` | 9.0.0 |
+| `contracts-declared` | 9.0.0 |
+| `borrowed-documents-answered` | 9.0.0 |
+| `dor-summary-filled` | 9.0.0 |
+| `dor-problem-traces-up` | 9.0.0 |
+| `dor-behavior-is-gwt` | 9.0.0 |
+| `dor-traceability-ids` | 9.0.0 |
+| `dor-affected-surface-named` | 9.0.0 |
+| `dor-no-open-questions` | 9.0.0 |
+| `dor-approach-still-fits` | 9.0.0 |
+<!-- /compass:upgrade-checks-table -->
+
+`compass check` refuses with exit 2 and the refusal code `names-deleted-check`, before it runs any row, when:
+
+- a `project_checks` entry of `compass.yml` has the id of a deleted check;
+- a list of checks in `compass.yml` (`gates.<id>.checks`, or `stages.<id>.entry` or `exit`) names one;
+- a waiver of the issue that is not withdrawn names one.
+
+The refusal names each item with the edit that clears it, or `compass waiver withdraw W-<n> --issue <slug>` for a waiver. `compass waiver add` refuses a deleted check, and `compass policy lint` refuses a project check of that id (`L-SETTING-INVALID`). `docs/waivers.md` has the details.
+
+## Readers that ended and readers that stay
+
+7.0.0 kept seven readers of old forms until 9.0.0 (`governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`). 9.0.0 deletes a reader only where no archived `compass check` verdict and no compatibility contract needs it. The measurement over this repository's 622 archived issues shows 0 verdict changes.
+
+| Reader | In 9.0.0 |
+|---|---|
+| Old names typed on the command line | ended for the reassessment kind, the check id and the refusal code (see "Removed verbs and flags"). The old size name `standard` is still read, because a compatibility contract types it. |
+| Old words in a stored manifest or generation | still read. 73 archived stored generations hold an old check id or skill name, and the compatibility contracts read old manifest words. |
+| Copied 5.x governance files with no `compass.yml` | still read by every command except `compass migrate`, which refuses the project (`governance-copy-removed`). Not yet settled; see "Not yet settled". |
+| The generated views `governance/routing-policy.yml` and `governance/guardrails.yml` | kept as frozen files since 9.0.0 stopped generating them (ADR-094). Not yet settled. |
+| `.compass/config.yml` when `compass.yml` is absent | still read. `compass migrate` rewrites `compass.yml` only. |
+| Waivers that the 8.x settings migration wrote | ended with the configuration layers that held them (ADR-094). |
+| `--justify role=` and `quick-fix start --role` | ended. A stored role reading in an assessment still reads. |
+
+These readers were never on that list, and they stay:
+
+- The legacy stage names of an 8.x manifest, and their map to the path stages (ADR-092). Every 8.x manifest needs them.
+- `compass issue migrate` and its 1.x readers. A 6.x project runs them through 8.x.
+- The reader of a stored generation, so every archived issue is judged by what it was assessed against.
+- The legacy stage names of a checkpoint outcome, so an old outcome still reads.
+
+## Not yet settled
+
+ADR-098 is proposed. These parts wait for the owner's decision, because each changes what a compatibility contract or a frozen file asserts. Until then they stay as 8.x left them, and none changes an archived verdict:
+
+- whether every command refuses a project with copied governance files and no `compass.yml`, and the generated views and the legacy adapter are deleted (ADR-098 open questions 1 to 3);
+- whether the pre-tool hook stops falling back to `delivery-approach.md` for an issue whose manifest has no `delivery_approach` key (open question 4);
+- when the `extends:` pin of `compass:default@6` or `@7` stops keeping the acceptance strategy `S17` off for a project that did not run `compass migrate` (open question 6);
+- whether the frozen presets `default@6` and `default@7` are deleted (open question 9);
+- whether the old words in a stored manifest or generation stop being read.
+
+## The record
+
+9.0.0 commits an issue's record with its code by default (ADR-096). `compass ship-commit` stages the issue folder, the documents folder and `.compass/work/.gitignore` in the same commit as the change. The record is kept out when `record.commit` is `false`, when `record.remote` is set and `record.commit` is not, when git ignores the issue folder, or outside a git repository. A project whose git ignore rules cover its issue folders stays kept out until it removes those rules. `docs/configuration.md` describes `record`.
+
+## Support
+
+Compass 8.x gets security fixes only, for 90 days after 9.0.0 is released. After that, only 9.x is supported. `SECURITY.md` says how to report a vulnerability.

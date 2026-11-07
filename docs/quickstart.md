@@ -124,7 +124,7 @@ record the project's own rules, run it once from the project root:
 2. **Stops on an older project.** A project that has a
    `.compass/config.yml` or copied `governance/` files from a 5.x version must
    run `compass policy migrate` on Compass 8.x first, because 9.0.0 removed
-   that command. The upgrade guide names the 9.0.0 settings.
+   that command. `docs/upgrade-9-0-0.md` names the 9.0.0 settings.
 3. **Creates `.compass/work/`** - where every issue's state will live. Note
    that `.compass/work/` **is committed** by default, with the code it
    records. It is the audit trail, not temporary files. Its `.gitignore`

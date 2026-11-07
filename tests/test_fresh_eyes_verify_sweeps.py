@@ -352,8 +352,9 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
     # tighten-only-setting and policy-digest; the retired layer terms stay.
     # 118 since ADR-095 added ship-approval, pr-approval, scenario-freeze and
     # delegation-copy. 122 since ADR-096 added trail, request-link,
-    # record-mode and landed-with-record.
-    assert len(terminology["terms"]) == 122, (
+    # record-mode and landed-with-record. 123 since ADR-098 added
+    # legacy-record, the manifest key `compass migrate` writes.
+    assert len(terminology["terms"]) == 123, (
         "governance/terminology.yml gained or lost a term without this count "
         "moving. A vocabulary change is a decision (ADR-012); make it one."
     )

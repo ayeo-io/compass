@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre29
+version: 2.0.0-pre30
 
 terms:
 
@@ -85,6 +85,17 @@ terms:
       squash commit. `compass record commit` commits the fields the merge
       adds later.
     related: [record-mode, trail, ship]
+  legacy-record:
+    means: >
+      The manifest's `legacy:` key, which `compass migrate` writes when it
+      moves an open 8.x issue onto the four-stage path (ADR-098). It keeps
+      the 8.x records that no 9.0.0 reader of a path issue uses: the stage
+      map, the subtasks, the model tiers, the page ticks, the readiness
+      record, each document entry other than the acceptance criteria, the
+      status fields of the acceptance-criteria entry, and each legacy stage
+      value that migrate rewrote to its path stage. No check reads it, so a
+      reviewer can still see what 8.x recorded and no verdict depends on it.
+    related: [manifest, path, generation]
 
   # --- Work hierarchy (GitHub-aligned) --------------------------------------
   epic:

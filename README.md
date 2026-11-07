@@ -94,7 +94,8 @@ To write the scenarios an issue asks for, read
 The shipped guardrails are active from the first command. Project settings
 live in one file, `compass.yml` ([docs/configuration.md](docs/configuration.md)).
 A setting there can only add to the check set; to excuse one check on one
-issue, see [docs/waivers.md](docs/waivers.md). Upgrading from
+issue, see [docs/waivers.md](docs/waivers.md). Upgrading from 8.x? Read
+[docs/upgrade-9-0-0.md](docs/upgrade-9-0-0.md). Upgrading from
 6.x? Read [docs/upgrade-7-0-0.md](docs/upgrade-7-0-0.md); from 5.x, read
 [docs/upgrade-6-0-0.md](docs/upgrade-6-0-0.md) first. To link an issue to
 its GitHub issue and pull request, see [docs/github-links.md](docs/github-links.md).

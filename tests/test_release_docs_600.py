@@ -456,8 +456,9 @@ def test_trc_s11_readme_badges_name_real_targets():
     assert len(BADGE.findall(readme)) == 4, "no badge beyond the four"
     site = yaml.safe_load(_read("mkdocs.yml"))["site_url"]
     assert site == "https://docs.ayeo.io/compass/"
-    assert readme.index("[![") > readme.index("**Adaptive spec-driven development")
-    assert readme.index("[![") < readme.index("> Enough process")
+    # The badges sit between the tagline and the pitch (9.0.0 wording, #360).
+    assert readme.index("[![") > readme.index("**Acceptance-test-driven development for Claude Code")
+    assert readme.index("[![") < readme.index("Compass lets a team under change control")
 
 
 def test_trc_s11_the_scan_reports_a_badge_for_a_missing_workflow():

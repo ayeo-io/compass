@@ -1,19 +1,25 @@
 # Compass
 
-Compass is adaptive spec-driven development for Claude Code. You describe
-the work; Compass scores the risk, familiarity and size of each piece of
-work, new or existing, and a deterministic CLI computes how much process it
-needs from that assessment and the project's policy: one fixed check set,
-with the settings of `compass.yml`. Five
-guardrails apply to all work that ships code, whatever the
-assessment: a recorded passing test run, acceptance criteria before code,
-code traced to a criterion, typed evidence rather than a written claim, and a
-person's approval for a change labelled `auth`, `payments`, `personal-data`
-or `migrations`. A project can add checks of its own, report failures
-without blocking while it tries Compass, or excuse one check on one issue
-with a waiver a person approves. The person's approval cannot be waived. The
+Compass is acceptance-test-driven development for Claude Code, with a record
+a reviewer can check. It lets a team under change control hand code changes
+to an AI agent and still show a reviewer, or an auditor, that the process was
+followed. The acceptance tests are the specification: the agent writes them
+first, and Compass refuses code edits until a failing run is on record. For
+each change, Compass records who asked, what was agreed, the failing run, the
+passing run, who approved and the commit that shipped. Each change leaves one
+plain file, `trail.md`, with a SHA-256 digest for each record. A reviewer
+checks it with `sha256sum -c`, without Compass installed. The
 [safety contract](safety-contract.md) states what each guarantee covers and
 where it stops.
+
+Five guardrails apply to all work that ships code, whatever the assessment:
+a recorded passing test run, acceptance criteria before code, code traced to
+a criterion, typed evidence rather than a written claim, and a person's
+approval for a change labelled `auth`, `payments`, `personal-data` or
+`migrations`. A project can add checks of its own, report failures without
+blocking while it tries Compass, or excuse one check on one issue with a
+waiver a person approves. The person's approval cannot be waived
+([safety contract](safety-contract.md)).
 
 ## Start here
 

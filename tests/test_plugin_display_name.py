@@ -38,9 +38,14 @@ def test_pn_1_the_manifests_carry_the_listing_name_and_author():
 def test_trc_001_the_listings_share_one_description():
     plugin, market, entry = _manifests()
     text = plugin["description"]
-    assert text.startswith("Enough process for the work at hand. No more."), text
+    assert text.startswith("Compass lets a team under change control hand code changes"), text
     assert entry["description"] == text
-    assert market["metadata"]["description"] == "Adaptive spec-driven development for Claude Code."
+    assert market["metadata"]["description"] == (
+        "Acceptance-test-driven development for Claude Code, "
+        "with a record a reviewer can check.")
+    # 9.0.0 runs one path for every change (ADR-092), so the listing must not
+    # say Compass picks an approach.
+    assert "picks the approach" not in text, text
 
 
 def test_trc_001_the_marketplace_entry_is_findable():

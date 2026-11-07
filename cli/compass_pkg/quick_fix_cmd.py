@@ -956,11 +956,9 @@ def cmd_quick_fix_finish(args):
         # A commit is the user's to ask for. With --no-commit the gates and
         # records are complete and the change is left in the working tree.
         if getattr(args, "no_commit", False):
-            # The landing refuses an issue that owes a line and holds none, so the
-            # printed command asks for one unless it is stored (ADR-065).
+            # The same command the `next:` line names, so the two cannot disagree.
             task, _ = load_manifest(task_dir)
-            note_flag = (' --release-note "<release line>"'
-                         if release_line.landing_refusal(task, task_dir) else "")
+            from compass_pkg.next_step import ship_commit_command
             from compass_pkg.next_line import announce
             return announce(args, task_dir, say(
                 args,
@@ -968,7 +966,7 @@ def cmd_quick_fix_finish(args):
                 # The command has a line of its own, so the output layer never cuts it.
                 detail=detail + [
                     "commit   : when asked, stage the traced files, then run",
-                    f"`compass ship-commit --issue {slug} -m \"<message>\"{note_flag}`"],
+                    f"`{ship_commit_command(task, task_dir)}`"],
                 decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
                 committed=False,
             ))

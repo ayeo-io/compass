@@ -247,7 +247,7 @@ def test_finish_no_commit_ends_with_the_next_command(repo):
     # line names the traced files to stage first.
     assert last.startswith("next: compass check, then git add -- "), last
     assert "data/greeting.txt" in last, last
-    assert last.endswith(', then compass ship-commit -m "<message>"'), last
+    assert last.endswith(f', then compass ship-commit --issue {SLUG} -m "<message>"'), last
 
 
 def test_the_finish_next_line_names_the_candidate_and_client_it_needs(repo):

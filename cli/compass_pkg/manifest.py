@@ -294,6 +294,14 @@ def cmd_land_commit(args):
             )
         declared = [cf.get("path") for cf in (head_task.get("changed_files") or [])
                     if isinstance(cf, dict) and cf.get("path")]
+        head_committed = committed_landing.is_committed(head_task_dir)
+        if head_committed:
+            # The landing below stages the issue folder and the documents
+            # folder itself (#356), so a traced file under them, such as the
+            # acceptance criteria, need not be committed yet.
+            record_folders = (f".compass/work/{head_slug}/",
+                              _docs_prefix(head_task, head_slug))
+            declared = [p for p in declared if not p.startswith(record_folders)]
         dirty_or_missing = []
         for path in declared:
             status = _git(["status", "--porcelain", "--", path], cwd).stdout.strip()
@@ -330,7 +338,6 @@ def cmd_land_commit(args):
         # a commit a git hook widened, refused once, must not land when
         # shipped again. `tip_scope.tip_own_paths` passes over a spec-only
         # commit and a merge of the base branch.
-        head_committed = committed_landing.is_committed(head_task_dir)
         if _git(["rev-parse", "--verify", "-q", "HEAD^1"], cwd).returncode == 0:
             added, base_note = tip_own_paths(cwd)
             head_owned, head_artifacts = _land_scope(head_task, head_slug)
@@ -677,6 +684,14 @@ def cmd_land_commit(args):
           f"HEAD {head_before[:8]} -> {head_after[:8]}" + landed_note)
     if "issue marked done" in landed_note:
         _print_waiting(task_dir)
+    elif (not getattr(args, "task", None) and committed and not was_completed
+          and owned and set(staged_now) & owned and not _unmet_gates(_scope_task)):
+        # Only `--issue` lands the record with the code (ADR-096 decision 2).
+        # The commit stands, so the line names the command that lands the
+        # record alone at HEAD, rather than refusing a commit of the code.
+        print(f"  the record of issue '{slug}' is not in this commit, and the issue is "
+              "not marked done, because --issue was not given. To land the record, run")
+        print(f'  `compass ship-commit --issue {slug} -m "<message>"`')
     return 0
 
 

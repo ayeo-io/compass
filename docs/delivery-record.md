@@ -44,7 +44,9 @@ In committed mode, when every gate of the issue has passed:
 7. When no commit is made, the manifest and `trail.md` are put back and the record paths it staged are unstaged.
 8. When a check after the commit fails (a hook put a path outside the scope in the commit, or changed an issue file after the green), the working manifest is put back as it was before the landing and `trail.md` is written again. The output says the commit holds a record that says the issue landed, and that `git reset --soft HEAD^` removes an unpushed commit. The exit code stays 2.
 
-With nothing staged (every file the issue changed is committed already), committed mode commits the record alone, with the `-m` message: "landed at HEAD <id>; the record was committed as <new id>". That commit holds the same code as HEAD.
+With nothing staged (every file the issue changed is committed already), committed mode commits the record alone, with the `-m` message: "landed at HEAD <id>; the record was committed as <new id>". That commit holds the same code as HEAD. The traced files under the issue folder and the documents folder, such as the acceptance criteria, need not be committed yet, because this commit stages them.
+
+Only `--issue` lands the record. `compass ship-commit -m <message>` without it commits the staged code and writes no record. In committed mode, when the current issue's gates have all passed, it is not landed yet and a staged file is one it traces, the output ends with two lines: the record of the issue is not in this commit and the issue is not marked done, and the command that lands the record, `compass ship-commit --issue <slug> -m "<message>"`. The exit code stays 0, because the commit of the code stands.
 
 In committed mode the scope of a ship commit holds the issue folder, the documents folder and both ignore files. In kept-out mode it holds neither the issue folder nor the ignore files, so a record path staged by hand is refused, and nothing under `.compass/` but `.compass/current-task` can ship. Kept-out mode lands as before: `land_commit` is written after the commit, then `trail.md`, so the trail names the commit.
 

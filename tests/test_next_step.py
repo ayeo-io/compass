@@ -172,14 +172,14 @@ ROWS = {
     "every gate passes": (
         dict(scenarios=[SCENARIO], reds=["TRC-001"], greens=["TRC-001"], gates_pass=True),
         "compass check, then stage the changed files, "
-        "then compass ship-commit -m \"<message>\""),
+        f"then compass ship-commit --issue {SLUG} -m \"<message>\""),
     # `compass ship-commit` lands what is staged, so the traced files are named.
     "every gate passes, files traced": (
         dict(scenarios=[SCENARIO], reds=["TRC-001"], greens=["TRC-001"], gates_pass=True,
              raw={"changed_files": [{"path": "greet.py", "scenario": "TRC-001"},
                                     {"path": "my file.py", "scenario": "TRC-001"}]}),
         "compass check, then git add -- greet.py 'my file.py', "
-        "then compass ship-commit -m \"<message>\""),
+        f"then compass ship-commit --issue {SLUG} -m \"<message>\""),
 }
 
 

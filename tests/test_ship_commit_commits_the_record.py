@@ -203,6 +203,30 @@ def test_the_finish_next_line_leaves_the_record_to_ship_commit(tmp_path):
     assert "acceptance-criteria.md" not in last and ".compass/" not in last, last
 
 
+@pytest.mark.parametrize("compass_yml", [None, "record:\n  commit: false\n"],
+                         ids=["committed", "kept-out"])
+def test_the_finish_next_line_names_the_command_its_commit_line_names(tmp_path, compass_yml):
+    """The `next:` line after `compass quick-fix finish --no-commit` ends with the
+    same `compass ship-commit` command as its `commit :` line, in both record
+    modes. Without `--issue` the landing writes no record and does not mark the
+    issue done; without `--release-note` an issue that owes a line is refused."""
+    root = _repo(tmp_path / "repo", compass_yml=compass_yml)
+    _fixed(root)
+    done = _ok(root, "quick-fix", "finish", "--issue", SLUG, "--no-commit", "-m", "Fix f",
+               *WHERE, "--", *_pytest())
+    lines = done.stdout.splitlines()
+    command = (f'compass ship-commit --issue {SLUG} -m "<message>" '
+               '--release-note "<release line>"')
+    assert f"`{command}`" in [ln.strip() for ln in lines], done.stdout
+    assert lines[-1].endswith(f", then {command}"), done.stdout
+
+
+def test_the_finish_next_line_asks_for_no_line_it_holds(tmp_path):
+    """A release line given to `finish` is stored, so the command does not ask again."""
+    last = _finish_next(_repo(tmp_path / "repo"))
+    assert last.endswith(f'then compass ship-commit --issue {SLUG} -m "<message>"'), last
+
+
 def test_the_manifest_says_landed_with_the_record_and_names_no_commit(tmp_path):
     root = _ready(_repo(tmp_path / "repo"))
     assert _ship(root).returncode == 0
@@ -284,6 +308,35 @@ def test_a_refused_landing_leaves_the_record_as_it_was(tmp_path):
     assert (root / RECORD / "manifest.yml").read_bytes() == before
     staged = _git(root, "diff", "--cached", "--name-only").splitlines()
     assert staged == ["src/f.py"], staged
+
+
+def test_a_landing_that_names_no_issue_says_the_record_was_left_out(tmp_path):
+    """Without `--issue` the commit holds only the staged code, so the issue's
+    record is not committed and the issue is not marked done. In committed
+    mode, when the current issue could have landed, the output says so and
+    names the command that lands the record."""
+    root = _ready(_repo(tmp_path / "repo"))
+    _git(root, "add", "--", "src/f.py")
+    done = _compass(root, "ship-commit", "-m", "Fix f")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert _files(root) == ["src/f.py"]
+    assert _manifest(root).get("status") != "done"
+    assert (f"the record of issue '{SLUG}' is not in this commit, and the issue is "
+            "not marked done") in done.stdout, done.stdout
+    assert f'`compass ship-commit --issue {SLUG} -m "<message>"`' in done.stdout, done.stdout
+    # The command it names lands the record.
+    landed = _compass(root, "ship-commit", "--issue", SLUG, "-m", "Land fix-f")
+    assert landed.returncode == 0, landed.stdout + landed.stderr
+    assert _manifest(root)["landed_with_record"] is True
+    # The acceptance criteria were not committed with the code; the record commit holds them.
+    assert any(p.endswith("/acceptance-criteria.md") for p in _files(root)), _files(root)
+
+
+def test_a_landing_that_names_its_issue_gives_no_such_line(tmp_path):
+    root = _ready(_repo(tmp_path / "repo"))
+    done = _ship(root)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "is not in this commit" not in done.stdout, done.stdout
 
 
 def test_nothing_staged_commits_the_record_alone(tmp_path):

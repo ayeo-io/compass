@@ -29,7 +29,7 @@ bottom, and the first that matches gives the command:
 | `human-approval` owed | `compass evidence request --check human-approval-present` |
 | a listed checkpoint with no outcome | `compass evidence request --checkpoint <stage>` |
 | a path issue, only the three immovable gates pending | `compass quick-fix finish -m "<commit message>" --no-commit -- <test command>`, with `--candidate ... --client ...` where its green is an in-scope outer-loop green |
-| every gate passes | `compass check, then git add <the traced files>, then compass ship-commit -m "<message>"`; in committed mode the traced files under the issue and documents folders are left out, because `compass ship-commit` stages them |
+| every gate passes | `compass check, then git add <the traced files>, then compass ship-commit --issue <slug> -m "<message>"`, with `--release-note "<release line>"` when the issue owes a release line and holds none; in committed mode the traced files under the issue and documents folders are left out, because `compass ship-commit` stages them |
 
 What is owed comes from `evidence_required` on a path issue. An issue assessed
 before the path has no such list, so its owed evidence is read from the records
@@ -45,8 +45,8 @@ quick-fix finish` refuses on while it is owed.
 """
 # DEPENDENCY: standard library (os, shlex); compass_pkg.next_line, path_stages, red_first,
 # stable_ids and status_words, and inside functions the readers of
-# acceptance_strategy, checkpoint_outcomes, checks, effective, gate_status, request_link,
-# ship_approval, tdd, tdd_green, waiver_records and item_records, and core, next_cmd and
+# acceptance_strategy, checkpoint_outcomes, checks, effective, gate_status, release_line,
+# request_link, ship_approval, tdd, tdd_green, waiver_records and item_records, and core, next_cmd and
 # terminal for `announce`. It must not import next_cmd at load time: next_cmd imports it.
 from __future__ import annotations
 
@@ -205,7 +205,22 @@ def _ship_commit(task, task_dir):
               and not cf["path"].startswith(record)]
     stage = ("git add -- " + " ".join(shlex.quote(p) for p in traced) if traced
              else "stage the changed files")
-    return f'compass check, then {stage}, then compass ship-commit -m "<message>"'
+    return f"compass check, then {stage}, then {ship_commit_command(task, task_dir)}"
+
+
+def ship_commit_command(task, task_dir):
+    """The `compass ship-commit` command that lands the issue with its record.
+
+    It names `--issue`: without it the landing commits the staged code but
+    writes no record, no `trail.md`, and does not mark the issue done. It asks
+    for `--release-note` when the issue owes a release line and holds none,
+    because the landing refuses that issue (ADR-065). `compass quick-fix finish
+    --no-commit` prints the same command on its `commit :` line."""
+    from compass_pkg import release_line
+    slug = os.path.basename(os.path.normpath(str(task_dir)))
+    note = (' --release-note "<release line>"'
+            if release_line.landing_refusal(task, task_dir) else "")
+    return f'compass ship-commit --issue {slug} -m "<message>"{note}'
 
 
 def _committed_record_folders(task_dir):

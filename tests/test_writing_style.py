@@ -3348,7 +3348,9 @@ _GROWING_REACH = {
     # 116 when 9.0.0 removed `policy diff`, `policy migrate`, `policy update` and
     # `preset test` and their four plain JSON examples (ADR-094).
     # 115 when 9.0.0 removed the classifier and its plain JSON example (ADR-094).
-    "PBW-C4": (lambda path: path.startswith("tests/"), 115),
+    # 122 with the seven case manifests of tests/fixtures/impls/ship-approval-present/
+    # (ADR-095).
+    "PBW-C4": (lambda path: path.startswith("tests/"), 122),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

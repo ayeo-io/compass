@@ -1,13 +1,14 @@
 # Node ids collected from tests/test_compat_configurations.py at commit a3c30fddaf9b70ca80bbdef9b656467a96ebe20a
 # Four ids added by #357 step 6 (ADR-094): the policy migrate, test and update entries now run under B and C, because a removed verb fails to parse the same way under every configuration.
+# Two ids replaced by #357 step 7b (VD-021): the can-fail cases of contracts 1 and 2 under B became checks that B with a tightening routes and owes as configuration A, because no setting B can hold reaches what those contracts observe.
 tests/test_compat_configurations.py::test_the_spelling_map_changes_only_the_three_known_names
 tests/test_compat_configurations.py::test_contract_1_routes_as_the_baseline_under[B]
 tests/test_compat_configurations.py::test_contract_1_routes_as_the_baseline_under[C]
-tests/test_compat_configurations.py::test_contract_1_under_the_configuration_can_fail[B]
+tests/test_compat_configurations.py::test_contract_1_under_b_routes_as_a_even_with_a_tightening
 tests/test_compat_configurations.py::test_contract_1_under_the_configuration_can_fail[C]
 tests/test_compat_configurations.py::test_contract_2_owes_what_it_owed_under[B]
 tests/test_compat_configurations.py::test_contract_2_owes_what_it_owed_under[C]
-tests/test_compat_configurations.py::test_contract_2_under_the_configuration_can_fail[B]
+tests/test_compat_configurations.py::test_contract_2_under_b_owes_as_a_even_with_a_tightening
 tests/test_compat_configurations.py::test_contract_2_under_the_configuration_can_fail[C]
 tests/test_compat_configurations.py::test_contract_3_gives_the_recorded_verdicts_under[B]
 tests/test_compat_configurations.py::test_contract_3_gives_the_recorded_verdicts_under[C]

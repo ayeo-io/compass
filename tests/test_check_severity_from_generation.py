@@ -215,8 +215,8 @@ def test_cs_7_the_shipped_checks_keep_the_verdicts_the_governance_files_give(tmp
 
 def test_cs_7_no_shipped_check_that_can_return_nothing_to_check_declares_fail():
     """A shipped `on_skipped: fail` would turn today's clear result into a failure."""
-    shipped = yaml.safe_load(
-        (ROOT / "governance" / "presets" / "default" / "checks.yml").read_text(encoding="utf-8"))
+    from compass_pkg import check_set
+    shipped = check_set.resolved()
     declining = {name for name, body in shipped["checks"].items()
                  if body.get("on_skipped") == "not-applicable"}
     assert {"scenarios-are-executable", "claim-traces-to-scenario", "command-passes",

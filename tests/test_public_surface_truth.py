@@ -797,6 +797,15 @@ def test_d2_repairs_change_only_retired_names():
     `governance/guardrails.md` (list_items 95 -> 96) gained the bullet "A
     waived check", on the WAIVED row of `compass check`.
 
+    Two were re-baselined by #357, step 8, which deleted the configuration
+    layers, the classifier, the locks and the live preset (ADR-094):
+    `governance/guardrails.md` (list_items 96 -> 79), whose section on locks
+    and conformance became a short "No locks" section, and
+    `governance/routing-policy.md` (list_items 66 -> 50, table_rows 38 -> 33,
+    fences 4 -> 2, one `##` heading fewer), which lost the generator steps of
+    the two views and the section on how the classifier compared two
+    configurations.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

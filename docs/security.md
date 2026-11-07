@@ -69,8 +69,7 @@ only in the cases below, and each one starts only when you ask for it.
   (`github:<owner>/<repo>@<ref>#<sha>`) is refused with `L-PARENT-REMOVED`, and
   no command runs `git` to fetch one: not `compass policy lint`, `compass
   policy show`, `compass approach evaluate --write` or `compass check`. In 8.x
-  the first three fetched a pinned commit that was not cached
-  ([git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md)).
+  the first three fetched a pinned commit that was not cached.
 - **Sends** your delivery record to a git repository you configure, with
   `compass record sync`, which `compass ship-commit` also runs. It happens
   only when `compass.yml` (or `.compass/config.yml` in a project without one)
@@ -86,26 +85,10 @@ only in the cases below, and each one starts only when you ask for it.
 
 ## Git parents
 
-A project can extend a git parent, `github:<owner>/<repo>@<ref>#<sha>`, which
-makes the CLI fetch one pinned commit from a remote. A git parent is data: the
-CLI reads one file, `compass.yml` at the repository root, as strict YAML, and
-runs nothing from the repository. It refuses a settings key (so a parent cannot
-authorise project commands), an `unlock:` and a check implementation outside the
-registry. It refuses a fetched commit that is not the pinned sha, and a
-`compass.yml` that is a symbolic link or larger than 1 MiB.
-
-The fetch runs `git` with an argument list and no shell, only over `https`, with
-hooks off and no prompts. It runs with your own git configuration, so your
-credential helper runs and your `url.*.insteadOf` rules apply. Only `compass
-policy lint`, `policy show` and `compass approach evaluate --write` fetch.
-`compass check` never fetches. Compass
-checks each cached parent against a digest it recorded at fetch, and `compass
-policy lint` fails on a mismatch. That catches an accidental edit of the cache,
-not a deliberate one by someone who can write the cache, because the digest
-is stored next to the file and can be rewritten with it. If you doubt the cache,
-delete `.compass/cache/parents/`.
-Review
-[git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md).
+9.0.0 removed git parents (ADR-094). An `extends:` that names one is refused
+with `L-PARENT-REMOVED`, and no command runs `git` to fetch it, so no remote
+content reaches a configuration. A `.compass/cache/parents/` folder that an
+8.x run left is not read; you can delete it.
 
 ## Calls to GitHub
 

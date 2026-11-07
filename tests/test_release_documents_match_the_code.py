@@ -72,7 +72,7 @@ def test_the_source_scan_finds_the_modules_that_fetch_a_git_parent():
     found = fetching_modules(sources)
     assert found == set(FETCH_MODULES), (
         f"a module now fetches a git parent, or one stopped: {sorted(found)}. "
-        "Name the command in README.md, docs/security.md and docs/git-parents.md.")
+        "Name the command in README.md and docs/security.md.")
 
 
 def test_the_documents_say_no_command_fetches_a_git_parent():
@@ -90,12 +90,8 @@ def test_the_documents_say_no_command_fetches_a_git_parent():
     for removed in ("issue configure", "policy diff", "policy update", "preset test"):
         assert removed not in security, (removed, security)
         assert removed not in readme, (removed, readme)
-    table = _text("docs", "git-parents.md").split("## When Compass fetches", 1)[1]
-    table = _flat(table.split("\n\n", 2)[1])
-    for command in ("policy lint", "approach evaluate --write"):
-        assert command in table, f"docs/git-parents.md does not list {command}"
-    for removed in ("policy update", "policy diff", "preset test"):
-        assert removed not in table, f"docs/git-parents.md still lists {removed}"
+    # The page on git parents went with them (ADR-094).
+    assert not (ROOT / "docs" / "git-parents.md").exists()
 
 
 def test_the_release_notes_say_what_happens_to_a_5x_user_who_does_nothing():

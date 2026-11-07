@@ -68,19 +68,6 @@ LEGACY_TO_PATH = {
     STAGE_VERIFY: STAGE_SHIP, STAGE_SHIP: STAGE_SHIP,
 }
 
-# The model tiers, weakest first. 9.0.0 removed model tiers (ADR-090); the names
-# stay because the `models` setting a project file can still hold is checked
-# against them. `standard` is also a retired approach name.
-TIER_FAST = "fast"
-TIER_STANDARD = "standard"
-TIER_STRONG = "strong"
-MODEL_TIERS = (TIER_FAST, TIER_STANDARD, TIER_STRONG)
-# The effort levels a Claude Code subagent takes, lowest first. `medium` is also a
-# size value; as an effort it names how hard the model works.
-EFFORT_LOW = "low"
-EFFORT_MEDIUM = "medium"
-EFFORT_HIGH = "high"
-EFFORT_LEVELS = (EFFORT_LOW, EFFORT_MEDIUM, EFFORT_HIGH, "xhigh", "max")
 
 GATE_G1 = "G1"
 GATE_G2 = "G2"

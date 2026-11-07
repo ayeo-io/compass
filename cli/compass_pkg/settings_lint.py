@@ -15,18 +15,18 @@ only add to it, and `compass_pkg.tighten` applies them. This module:
 - `integrity(resolved)` is the integrity rule of safety-contract guarantee 2:
   every check names an implementation the CLI holds.
 - `value_problems(doc, base)` is the shape check of the tighten-only
-  settings, which `catalogue_check` also runs on a project layer.
-- `schema_properties()` gives the JSON Schema of the four tighten-only keys
-  that are not layer keys; `catalogue_check.schema()` adds them to
-  `schemas/compass.schema.json`.
+  settings.
+- `schema()` builds the JSON Schema of `compass.yml` from the same keys, so
+  the two cannot drift. `schemas/compass.schema.json` is generated from it,
+  and a test keeps the two equal.
 
 `compass policy lint` runs `lint` on `compass.yml`, and `effective.resolve_live`
 runs it first and resolves nothing when it finds an error.
 """
-# DEPENDENCY: standard library (dataclasses, re, types); compass_pkg.catalogue_check
-# (imported inside `lint`, which imports this module inside its own functions),
+# DEPENDENCY: standard library (dataclasses, re, types); compass_pkg.acceptance_strategy,
 # compass_pkg.catalogue_spec, compass_pkg.check_registry (REGISTRY),
-# compass_pkg.evidence_required (TOKENS) and compass_pkg.removed_parts.
+# compass_pkg.evidence_required (TOKENS), compass_pkg.language and
+# compass_pkg.removed_parts.
 from __future__ import annotations
 
 import re
@@ -359,6 +359,32 @@ def _removed_findings(doc):
     return out
 
 
+def _plain_problems(doc):
+    """`(path, message)` for each malformed value of a setting in `PLAIN_KEYS`
+    that has a closed set of values or a shape of its own."""
+    from compass_pkg import acceptance_strategy, language
+    out = [(key, f"'{doc[key]}' is not one of {', '.join(allowed)}")
+           for key, allowed in (("autonomy", spec.AUTONOMY), ("adoption", spec.ADOPTION))
+           if key in doc and doc[key] not in allowed]
+    if "language" in doc:
+        text = language.problem(doc["language"])
+        if text:
+            out.append(("language", text))
+    if "acceptance_strategy" in doc:
+        text = acceptance_strategy.problem(doc["acceptance_strategy"])
+        if text:
+            out.append(("acceptance_strategy", text))
+    approvers = doc.get("approvers")
+    if approvers is not None:
+        if not isinstance(approvers, dict):
+            out.append(("approvers", "expected a mapping of approver list by kind"))
+        else:
+            out += [(f"approvers.{kind}", f"not an approver list; the lists are "
+                     f"{', '.join(spec.APPROVER_KINDS)} (ADR-039)")
+                    for kind in approvers if kind not in spec.APPROVER_KINDS]
+    return out
+
+
 def _removed_top_keys():
     return {key for key in REMOVED if "." not in key} | {
         key for key in removed_parts.SETTINGS if "." not in key}
@@ -369,7 +395,6 @@ def lint(doc, base=None):
     warnings. `base` is the resolved check set; without it the checks that
     need it (a clash with a shipped id, an assessment value, the integrity
     rule) do not run."""
-    from compass_pkg import catalogue_check
     if not isinstance(doc, dict):
         return [_error("L-SETTING-INVALID", "(top level)",
                        f"expected a mapping, found {type(doc).__name__}")]
@@ -383,9 +408,8 @@ def lint(doc, base=None):
     if isinstance(plain.get("approvers"), dict):
         plain["approvers"] = {k: v for k, v in plain["approvers"].items()
                               if k != "project-waiver"}
-    for text in catalogue_check._check_top_values(plain):
-        path, _, message = text.partition(": ")
-        findings.append(_error("L-SETTING-INVALID", path, message))
+    findings += [_error("L-SETTING-INVALID", path, message)
+                 for path, message in _plain_problems(plain)]
     if "owner" in doc and not (isinstance(doc["owner"], str) and doc["owner"].strip()):
         findings.append(_error("L-SETTING-INVALID", "owner", "expected a person's name"))
     findings += [_error("L-SETTING-INVALID", path, message)
@@ -440,4 +464,61 @@ def schema_properties():
                           "enum": list(spec.PROJECT_CHECK_STAGES)},
                 "when": when("project_checks.when")},
             "required": list(PROJECT_CHECK_REQUIRED), "additionalProperties": False}},
+    }
+
+
+def schema():
+    """The JSON Schema of `compass.yml`: the keys of `KEYS` and nothing else, so
+    an editor marks a removed setting as one the file cannot hold. Every node
+    carries a description from `catalogue_spec.TOP_DESCRIPTIONS`.
+    `schemas/compass.schema.json` is this, written with
+    `json.dumps(schema(), indent=2, sort_keys=True)`."""
+    from compass_pkg import acceptance_strategy
+    top = spec.TOP_DESCRIPTIONS
+    approvers = [kind for kind in spec.APPROVER_KINDS if f"approvers.{kind}" not in REMOVED]
+    capabilities = [name for name in spec.CAPABILITIES
+                    if name not in removed_parts.CAPABILITIES]
+    properties = {
+        "schema": {"description": top["schema"], "type": "integer"},
+        "owner": {"description": top["owner"], "type": "string"},
+        "approvers": {"description": top["approvers"], "type": "object",
+                      "properties": {k: {"description": top[f"approvers.{k}"],
+                                         "type": "array"} for k in approvers},
+                      "additionalProperties": False},
+        "autonomy": {"description": top["autonomy"], "enum": list(spec.AUTONOMY)},
+        "adoption": {"description": top["adoption"], "enum": list(spec.ADOPTION)},
+        "allow_project_commands": {"description": top["allow_project_commands"],
+                                   "type": "boolean"},
+        "enforcement": {"description": top["enforcement"], "type": "object"},
+        "record": {"description": top["record"], "type": "object"},
+        "project": {"description": top["project"], "type": "object", "properties": {
+            "acceptance_support": {
+                "description": top["project.acceptance_support"], "type": "object",
+                "properties": {k: {"description": top[f"project.acceptance_support.{k}"],
+                                   "type": "string"} for k in spec.ACCEPTANCE_SUPPORT},
+                "additionalProperties": False}}},
+        "language": {"description": top["language"], "type": "string"},
+        "governance_drift": {"description": top["governance_drift"],
+                             "enum": list(spec.GOVERNANCE_DRIFT)},
+        "acceptance_strategy": {
+            "description": top["acceptance_strategy"], "type": "object",
+            "properties": {
+                "state": {"description": top["acceptance_strategy.state"],
+                          "enum": list(acceptance_strategy.STATES)},
+                "reason": {"description": top["acceptance_strategy.reason"],
+                           "type": "string"}},
+            "required": ["state"], "additionalProperties": False},
+        "capabilities": {"description": top["capabilities"], "type": "object",
+                         "properties": {c: {"description": top[f"capabilities.{c}"],
+                                            "type": "boolean"} for c in capabilities},
+                         "additionalProperties": False},
+        **schema_properties(),
+    }
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "compass.yml",
+        "description": top[""],
+        "type": "object",
+        "properties": properties,
+        "additionalProperties": False,
     }

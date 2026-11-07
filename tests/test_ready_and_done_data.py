@@ -1,7 +1,7 @@
 """The Definition of Ready and the Definition of Done are data in a preset.
 
-The seven Definition of Done items are `human` checks in
-`governance/presets/default/checks.yml`, the only place their text lives, and
+The seven Definition of Done items are `human` checks in the check set
+(`governance/check-set.yml`, ADR-094), the only place their text lives, and
 the `build` stage's `exit` list holds them. The four-stage path owes no
 Definition of Ready (ADR-092), so the live default declares none of its seven
 checks; the frozen preset `default@7` keeps them in its `plan` stage's `entry`
@@ -16,7 +16,6 @@ Scenario ids: `RD-1` to `RD-8` (issue `ready-and-done-as-data`).
 from __future__ import annotations
 
 import copy
-import importlib
 import re
 import sys
 from pathlib import Path
@@ -26,8 +25,12 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 
-PRESET = ROOT / "governance" / "presets" / "default"
+#: The shipped default: the check set since 9.0.0 (ADR-094), which replaced the
+#: preset directory `governance/presets/default/`.
+PRESET = None
 FROZEN = ROOT / "governance" / "presets" / "default@7"
 CAPABILITY = "entry-exit-evaluation"
 
@@ -76,6 +79,9 @@ def template_items(path: Path, heading: str) -> list[str]:
 
 
 def load_preset(folder: Path = PRESET) -> dict:
+    if folder is None:
+        return {name: shipped(f"{name}.yml")[name] if name != "preset"
+                else shipped("preset.yml") for name in ("checks", "stages", "preset")}
     out = {}
     for name in ("checks", "stages", "preset"):
         doc = yaml.safe_load((folder / f"{name}.yml").read_text(encoding="utf-8"))
@@ -180,18 +186,19 @@ def test_rd_3_the_checks_are_inactive_blocking_and_say_what_a_skipped_stage_retu
 
 
 def test_rd_4_the_views_do_not_name_the_human_checks():
-    views = importlib.import_module("compass_pkg.legacy_views")
-    preset = load_preset()
-    deterministic = {n for n, c in preset["checks"].items() if views.has_implementation(c)}
+    """The two views, frozen since 9.0.0 (ADR-094), name the deterministic checks
+    of the check set and no item of the Definitions of Ready and Done, and no gate
+    of the set lists one."""
+    from compass_pkg import check_set
+    checks = check_set.resolved()
+    deterministic = {n for n, c in checks["checks"].items() if c["kind"] == "deterministic"}
     guardrails = yaml.safe_load((ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8"))
     assert set(guardrails["checks"]) == deterministic
-    generated = views.generate(ROOT)
     for rel in ("governance/routing-policy.yml", "governance/guardrails.yml"):
         text = (ROOT / rel).read_text(encoding="utf-8")
-        assert text == generated[rel], rel
         for check_id in READY_IDS + DONE_IDS:
             assert check_id not in text, f"{rel} names {check_id}"
-    for gate in yaml.safe_load((PRESET / "gates.yml").read_text(encoding="utf-8"))["gates"].values():
+    for gate in checks["gates"].values():
         assert not set(gate.get("checks", [])) & set(READY_IDS + DONE_IDS)
 
 
@@ -216,7 +223,7 @@ def _owed_checks(preset: dict, approaches: dict, approach: str) -> list[str]:
 
 
 def _approaches() -> dict:
-    return yaml.safe_load((PRESET / "approaches.yml").read_text(encoding="utf-8"))["approaches"]
+    return shipped("approaches.yml")["approaches"]
 
 
 def test_rd_6_a_spike_owes_none_of_the_checks_while_the_capability_is_off():
@@ -287,19 +294,6 @@ def test_rd_5_a_drifted_preset_or_template_names_the_item_that_differs():
 
     assert any("has 6 items" in p for p in problems(frozen, ready[:-1], None))
     assert any("has 6 items" in p for p in problems(base, None, done[:-1]))
-
-
-def test_rd_8_the_preset_headers_do_not_claim_the_adapter_wrote_the_files_once():
-    """The preset is the source and its files are edited by hand, so a header
-    that says the adapter wrote them once misleads the next editor."""
-    adapter = (ROOT / "cli" / "compass_pkg" / "legacy_adapter.py").read_text(encoding="utf-8")
-    assert "wrote these files once" not in adapter
-    files = sorted(PRESET.glob("*.yml"))
-    assert len(files) == 11
-    for path in files:
-        header = path.read_text(encoding="utf-8").split("schema:")[0]
-        assert "wrote these files once" not in header, path.name
-        assert "source of the shipped defaults" in header, path.name
 
 
 # --- The Definition of Done names report sections (TRC-001, issue dod-statements-name-sections)

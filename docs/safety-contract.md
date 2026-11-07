@@ -70,9 +70,9 @@ The evidence records the approver, role, decision, time, scope and conditions.
 From 7.0.0, critical risk on its own does not need an approval. Critical-risk
 code that carries none of the four labels can be reverted at merge, and CI,
 review and the other guardrails still gate it. Assess names the four labels
-when risk is critical and none is set. A project that wants an approval for
-every critical-risk change adds critical risk back to the trigger in its
-`compass.yml` (`docs/upgrade-7-0-0.md`); the lock allows a stricter trigger.
+when risk is critical and none is set. A project adds labels to the trigger
+with the tighten-only setting `signoff_labels` in its `compass.yml`, and no
+setting can loosen the trigger (ADR-094).
 An issue assessed before 7.0.0 keeps the trigger stored with it.
 
 Only a `human-approval` record given for guardrail `G5` meets this approval. A
@@ -1333,14 +1333,6 @@ rather than reinterpret. Within a major, compatibility is shown on the corpus
 cases and nowhere else. A change of behavior that no case exercises is not
 detected, and the corpus is small (two cases for each check at first).
 
-**An approval of a waiver is a name and a date, and is not authenticated.** A waiver that loosens the shipped default carries `approved_by` and, for a
-project waiver, `approved_on`. Lint checks a project waiver's approver against the parent's
-`approvers.project-waiver` list, or the owner when the parent sets no such list (an empty list lets nobody approve), and that an issue waiver's
-approval is a record in the issue's evidence. It cannot check that the person
-named gave the approval. Anyone who can edit `compass.yml` can write any name
-and date. Repository permissions and review of the pull request that changes
-`compass.yml` are the control.
-
 **A waiver of one check on one issue is approved like any other subject.** From
 9.0.0 a waiver in an issue's manifest (`compass waiver add`) excuses its one
 check on that issue only once a `human-approval` record names it, given at
@@ -1349,16 +1341,17 @@ comes from a typed `/compass:approve`, a terminal, or an agent under a
 delegation the person typed with `--for waivers` and confirmed with its code.
 No default delegation covers a waiver. The check `human-approval-present` and
 the checks of guardrail `G5` are never waived. The same limits hold as for any
-approval: Compass checks the approver's name against `approvers.waiver`, or the
-owner, and does not authenticate the person, and anyone who can write
-`manifest.yml` can write a record. See `docs/waivers.md`.
+approval: an approval is a name and a date in a record, and it is
+not authenticated. Compass checks the approver's name against `approvers.waiver`,
+or the owner, and anyone who can write `manifest.yml` can write a record. See
+`docs/waivers.md`.
 
-**Conformance is a statement about the configuration, not about the work.** A project that unlocks a framework entry is reported non-conformant on every
-`compass check` and `compass approach show`. The
-line states that the configuration departs from the framework's locks. It does
-not say that any work was done badly, and a project that unlocks nothing is not
-shown to have done good work. A hard lock (guarantee 5) cannot be unlocked at
-all.
+**No project departs from the check set, so there is no conformance line.**
+In 8.x a project that unlocked a framework entry was reported non-conformant.
+9.0.0 has no locks and no unlocks (ADR-094): a setting can only add to the
+check set, so `compass check` and `compass approach show` print no conformance
+line. A waiver excuses one check on one issue and is shown on that check's
+row; the checks of guarantee 5 are never waived.
 
 ### Compass is adaptable, not universal
 

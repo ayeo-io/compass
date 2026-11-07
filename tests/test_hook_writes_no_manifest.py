@@ -147,18 +147,13 @@ def test_a_manifest_with_an_old_usage_block_reads_and_lints_as_before(tmp_path):
 
 def test_the_prices_setting_is_removed_and_lint_names_it():
     """`prices` priced the usage block, which 9.0.0 no longer writes. The key
-    stays valid, the merge drops it, and lint warns once."""
-    from compass_pkg import policy_lint, removed_parts
-    from compass_pkg.layers import Layer
-    import classifier_fixtures
+    stays valid, nothing reads it, and lint warns once."""
+    from compass_pkg import check_set, removed_parts, settings_lint
     assert removed_parts.SETTINGS["prices"][1] == "ADR-093"
-    parent = Layer("default", "parent", {"schema": 1, **classifier_fixtures.base()}, "d")
-    project = Layer("project", "project",
-                    {"schema": 1, "prices": {"model-a": {"input": 3.0}}}, "d")
-    report = policy_lint.lint_chain(parent, project)
-    found = [f for f in report.findings if f.code == "L-SETTING-REMOVED"]
-    assert len(found) == 1, [(f.code, f.path) for f in report.findings]
+    findings = settings_lint.lint({"schema": 1, "prices": {"model-a": {"input": 3.0}}},
+                                  check_set.resolved())
+    found = [f for f in findings if f.code == "L-SETTING-REMOVED"]
+    assert len(found) == 1, [(f.code, f.path) for f in findings]
     assert found[0].level == "warning" and found[0].path == "prices"
     assert "removed in 9.0.0" in found[0].message and "ADR-093" in found[0].message
-    assert not [f for f in report.findings if f.level == "error"], report.findings
-    assert "prices" not in removed_parts.without_removed({"prices": {}, "owner": "x"})
+    assert not [f for f in findings if f.level == "error"], findings

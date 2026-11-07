@@ -23,8 +23,10 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 CLI = ROOT / "cli" / "compass"
-PRESET = ROOT / "governance" / "presets" / "default"
+PRESETS = ROOT / "governance" / "presets"
 sys.path.insert(0, str(ROOT / "cli"))
 
 
@@ -34,13 +36,13 @@ def _run(args, cwd):
 
 
 def _lint_project(layer):
-    from compass_pkg import policy_lint
-    from compass_pkg.layers import Layer
-    sys.path.insert(0, str(ROOT / "tests"))
-    import classifier_fixtures
-    parent = Layer("default", "parent", {"schema": 1, **classifier_fixtures.base()}, "d")
-    project = Layer("project", "project", {"schema": 1, **layer}, "d")
-    return policy_lint.lint_chain(parent, project)
+    """The settings lint of a `compass.yml` that holds `layer`, as a report with
+    `findings` and `errors`. 8.x linted it as a layer over the shipped parent;
+    the removed settings are named the same way since ADR-094."""
+    from types import SimpleNamespace
+    from compass_pkg import check_set, settings_lint
+    found = settings_lint.lint({"schema": 1, **layer}, check_set.resolved())
+    return SimpleNamespace(findings=found, errors=[f for f in found if f.level == "error"])
 
 
 # --- each removed part names its own decision record ------------------------------
@@ -104,22 +106,16 @@ def test_a_stored_generation_that_lists_consistency_check_passes_gains_nothing()
     assert _with_replacements(names, {}) == names
 
 
-def test_lint_accepts_an_old_copy_that_names_consistency_check_passes():
-    from compass_pkg.policy_lint import _removed_check_note
-    note = _removed_check_note("checks.consistency-check-passes", "unknown check")
-    assert "removed in 9.0.0" in note and "None" not in note
-
-
 def test_the_live_default_has_no_verify_analyze_gate_or_rule():
-    gates = yaml.safe_load((PRESET / "gates.yml").read_text(encoding="utf-8"))["gates"]
+    gates = shipped("gates.yml")["gates"]
     assert "verify.analyze" not in gates
-    rules = (PRESET / "rules.yml").read_text(encoding="utf-8")
+    rules = str(shipped("rules.yml"))
     assert "verify.analyze" not in rules
     assert "RP-REQUIRE-001" not in rules and "RP-REQUIRE-002" not in rules
-    checks = yaml.safe_load((PRESET / "checks.yml").read_text(encoding="utf-8"))["checks"]
+    checks = shipped("checks.yml")["checks"]
     assert "consistency-check-passes" not in checks
     # An old manifest can still hold consistency-check evidence, so the type stays.
-    types = yaml.safe_load((PRESET / "evidence-types.yml").read_text(encoding="utf-8"))
+    types = shipped("evidence-types.yml")
     assert "consistency-check" in types["evidence_types"]
 
 
@@ -145,12 +141,15 @@ CRITICAL = {"risk": "critical", "familiarity": "brownfield-mapped", "size": "med
 
 
 def _default_6_policy():
-    """The frozen `default@6` preset, resolved and in the evaluator's form."""
-    from compass_pkg import merge, policy_lint
+    """The frozen `default@6` preset, in the evaluator's form: its catalogues
+    read through the retired-word tables, as a stored generation is read."""
+    from compass_pkg import catalogue_spec, word_map
     from compass_pkg.obligations import policy_adapter
-    parent, _ = policy_lint.load_parent(
-        directory=str(ROOT / "governance" / "presets" / "default@6"))
-    config, _ = merge.apply({}, parent.doc, "parent", "default", {})
+    folder = ROOT / "governance" / "presets" / "default@6"
+    config = word_map.map_layer({
+        name: (yaml.safe_load((folder / f"{name}.yml").read_text(encoding="utf-8"))
+               or {}).get(name) or {}
+        for name in catalogue_spec.CATALOGUES})[0]
     return policy_adapter(config)
 
 
@@ -355,13 +354,13 @@ def test_artifact_freshness_left_off_gets_no_finding():
 
 
 def test_the_live_default_declares_no_artifact_freshness():
-    preset = yaml.safe_load((PRESET / "preset.yml").read_text(encoding="utf-8"))
+    preset = shipped("preset.yml")
     assert "artifact-freshness" not in (preset.get("capabilities") or {}), preset
     # A frozen preset still declares it, so the catalogue keeps the name valid.
     from compass_pkg import catalogue_spec
     assert "artifact-freshness" in catalogue_spec.CAPABILITIES
     for frozen in ("default@6", "default@7"):
-        old = yaml.safe_load((PRESET.parent / frozen / "preset.yml").read_text(encoding="utf-8"))
+        old = yaml.safe_load((PRESETS / frozen / "preset.yml").read_text(encoding="utf-8"))
         assert "artifact-freshness" in old["capabilities"], frozen
 
 
@@ -450,9 +449,9 @@ def test_a_stored_generation_that_lists_rendered_blocks_current_gains_nothing():
 
 
 def test_the_live_default_has_no_rendered_blocks_check():
-    checks = yaml.safe_load((PRESET / "checks.yml").read_text(encoding="utf-8"))["checks"]
+    checks = shipped("checks.yml")["checks"]
     assert "rendered-blocks-current" not in checks
-    gates = yaml.safe_load((PRESET / "gates.yml").read_text(encoding="utf-8"))["gates"]
+    gates = shipped("gates.yml")["gates"]
     assert "rendered-blocks-current" not in gates["G4"]["checks"]
 
 
@@ -536,8 +535,8 @@ def test_a_document_check_is_removed_with_no_replacement(check):
 
 
 def test_the_live_default_declares_no_document_check():
-    checks = yaml.safe_load((PRESET / "checks.yml").read_text(encoding="utf-8"))["checks"]
-    gates = yaml.safe_load((PRESET / "gates.yml").read_text(encoding="utf-8"))["gates"]
+    checks = shipped("checks.yml")["checks"]
+    gates = shipped("gates.yml")["gates"]
     for check in DOCUMENT_CHECKS:
         assert check not in checks, check
         assert check not in gates["G4"]["checks"], check
@@ -686,7 +685,7 @@ def test_a_stage_record_moves_no_document_on(tmp_path):
 # configuration that still declares the map is read as before.
 
 def _live_approaches():
-    return yaml.safe_load((PRESET / "approaches.yml").read_text(encoding="utf-8"))["approaches"]
+    return shipped("approaches.yml")["approaches"]
 
 
 def test_the_stage_modes_owe_the_lists_the_live_approaches_owed():
@@ -766,22 +765,14 @@ def test_a_landing_refuses_nothing_for_a_document_on_disk():
     assert "artifact-rule-not-applied" not in refusals.codes()
 
 
-def test_lint_judges_an_issue_layer_at_its_assessment_alone(tmp_path):
-    from compass_pkg import policy_lint
-    root, task_dir = _positioned_issue(tmp_path)
-    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
-    loaded = policy_lint.load_layers(root, manifest=manifest, task_dir=str(task_dir))
-    assert "artifacts" not in loaded.assessment, loaded.assessment
-
-
 # --- the live default declares no artifact catalogue -----------------------------
 
 def test_the_live_default_declares_no_artifact_catalogue():
-    catalogue = yaml.safe_load((PRESET / "artifacts.yml").read_text(encoding="utf-8"))
+    catalogue = shipped("artifacts.yml")
     assert catalogue["artifacts"] == {}, sorted(catalogue["artifacts"])
     for name, approach in _live_approaches().items():
         assert "artifacts" not in approach, name
-    rules = yaml.safe_load((PRESET / "rules.yml").read_text(encoding="utf-8"))["rules"]
+    rules = shipped("rules.yml")["rules"]
     assert "artifact_rules" not in rules
     found = [rid for rule_set in rules.values() for rid, rule in rule_set["rules"].items()
              if "add_artifact" in (rule.get("then") or {})]
@@ -845,22 +836,3 @@ def test_a_catalogue_that_declares_the_spec_is_still_read_by_its_own_entry(monke
                                       section_checks.NFR_HEADING)
 
 
-@pytest.mark.parametrize("change", [
-    {"technical-design": {"set": {"sections": {"thorough": ["Approach"]}}}},
-    {"runbook": {"file": "runbook.md", "stage": "ship"}},
-])
-def test_a_project_artifacts_key_is_skipped_by_the_merge(change):
-    """A project file written before 9.0.0 can `set` or `add` a document kind. The live
-    default declares none, so the merge leaves the key out instead of refusing the
-    project; `compass policy lint` names it (L-SETTING-REMOVED)."""
-    from compass_pkg import merge
-    parent = {"artifacts": {}, "approaches": {}}
-    config, _ = merge.apply(parent, {"schema": 1, "artifacts": change}, "project", "project")
-    assert config["artifacts"] == {}, config["artifacts"]
-
-
-def test_an_issue_or_parent_artifacts_key_is_still_merged():
-    from compass_pkg import merge
-    with pytest.raises(merge.MergeError, match="M-SET-UNKNOWN"):
-        merge.apply({"artifacts": {}}, {"artifacts": {"technical-design": {
-            "set": {"stage": "plan"}}}}, "parent", "parent")

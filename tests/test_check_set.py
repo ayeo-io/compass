@@ -1,16 +1,13 @@
-"""The fixed check set: its file, its pinned digest and its parity with the default.
+"""The fixed check set: its file, its pinned digest and its shape.
 
 `governance/check-set.yml` holds every check, gate and evidence type Compass
 runs (ADR-094). `cli/compass_pkg/check_set.py` reads it and returns it in the
 shape `generations/<n>/resolved.yml` holds.
 
-While `governance/presets/default/` exists, the tests here compare the two
-sources. The check set resolves to the configuration the 8.x resolver gave the
-default preset for a project with no `compass.yml`, with one difference: the set holds
-no `locked:` field, because no layer sits above it. Every accessor of
-`EffectiveView` that `compass check` and assess read gives the same answer on
-both, and so does `evidence_required.evaluate` on every point of the contract 1
-grid under every subset of the `G5` labels.
+Until #357 step 8 the tests here also compared the set with the 8.x default
+preset, entry by entry and on every point of the contract 1 grid. The preset
+went in step 8, after that comparison held, so only the pin and the shape
+are checked now.
 
 `tests/fixtures/check-set-digests.yml` pins the file's sha256 for each version.
 It is not an owner pin: the change that edits the file raises `version` and
@@ -18,7 +15,6 @@ pins the new digest in the same commit.
 """
 from __future__ import annotations
 
-import copy
 import re
 import shutil
 from pathlib import Path
@@ -26,15 +22,11 @@ from pathlib import Path
 import pytest
 import yaml
 
-import compat_baseline as cb
-from compass_pkg import catalogue_check, check_set, effective
-from compass_pkg import evidence_required as er
+from compass_pkg import catalogue_spec, check_set, effective
 from compass_pkg.core import CompassError
-from compass_pkg.routing import RoutingConflict
 
 ROOT = Path(__file__).resolve().parent.parent
 PINS = ROOT / "tests" / "fixtures" / "check-set-digests.yml"
-PRESET = ROOT / "governance" / "presets" / "default"
 
 
 def _pins():
@@ -51,45 +43,6 @@ def _pin_problem(file, pins):
         return (f"governance/check-set.yml changed, but {PINS.name} still pins {ref} at "
                 f"{pins[ref]}; the file is now {got}. Raise `version` and pin the new digest")
     return None
-
-
-def _without_locked(node):
-    if isinstance(node, dict):
-        return {k: _without_locked(v) for k, v in node.items() if k != "locked"}
-    if isinstance(node, list):
-        return [_without_locked(v) for v in node]
-    return node
-
-
-def _view(resolved):
-    return effective.EffectiveView("live", None, None, resolved, {}, {})
-
-
-def _preset_resolved():
-    """The default preset resolved alone, as 8.x `resolve_live` gave it for a
-    project with no `compass.yml` and no copy of the governance files: the
-    preset's catalogues merged as one parent layer, its capabilities, and its
-    evidence types. Since #357 step 7 the resolver reads the check set, so the
-    preset is resolved here, through the 8.x merge, for as long as it exists."""
-    from compass_pkg import catalogue_spec, layers, merge, policy_lint
-    parent, _ = policy_lint.load_parent()
-    config = merge.resolve(layers.build_chain(parent))[0]
-    evidence = yaml.safe_load((PRESET / "evidence-types.yml").read_text(encoding="utf-8"))
-    return {
-        "capabilities": dict(parent.doc.get("capabilities") or {}),
-        "approach": None,
-        "autonomy": "balanced",
-        "conformance": {"status": "conformant", "unlocked": []},
-        **{name: config[name] for name in catalogue_spec.CATALOGUES if name in config},
-        "evidence_types": evidence["evidence_types"],
-    }
-
-
-@pytest.fixture(scope="module")
-def live():
-    """The default preset as the 8.x resolver gave it for a project with no
-    `compass.yml` and no copy of the governance files."""
-    return _preset_resolved()
 
 
 def test_the_resolver_reads_the_check_set(tmp_path):
@@ -137,10 +90,28 @@ def test_a_new_version_without_a_pin_fails(tmp_path):
 
 # --- the shape ----------------------------------------------------------------------
 
+_TYPES = {"string": str, "list": list, "map": dict, "boolean": bool}
+
+
 def test_the_catalogues_are_well_formed_as_the_shipped_parent_was(checks):
-    doc = {"schema": 1, "capabilities": checks["capabilities"],
-           **{name: checks[name] for name in check_set.CATALOGUES + ("vocabulary",)}}
-    assert catalogue_check.check_layer(doc, "parent") == []
+    """Each entry holds only fields of its catalogue, every required field, and
+    each value of the type the field table gives, as the 8.x layer check of
+    the shipped parent required."""
+    problems = []
+    for name in check_set.CATALOGUES + ("vocabulary",):
+        fields = catalogue_spec.FIELDS[name]
+        for entry_id, entry in checks[name].items():
+            path = f"{name}.{entry_id}"
+            if not re.match(catalogue_spec.ID_PATTERN, entry_id):
+                problems.append(f"{path}: not a valid id")
+            problems += [f"{path}.{k}: not a field" for k in entry if k not in fields]
+            problems += [f"{path}: missing {f}" for f, spec in fields.items()
+                         if spec["required"] and f not in entry]
+            for key, value in entry.items():
+                want = _TYPES.get((fields.get(key) or {}).get("type"))
+                if want is not None and not isinstance(value, want):
+                    problems.append(f"{path}.{key}: expected {want.__name__}")
+    assert problems == []
 
 
 @pytest.mark.parametrize("change, message", [
@@ -166,8 +137,9 @@ def test_a_missing_file_is_refused(tmp_path):
 
 
 def test_never_waived_is_the_hard_lock_of_the_default():
-    preset = yaml.safe_load((PRESET / "preset.yml").read_text(encoding="utf-8"))
-    assert check_set.load()["never_waived"] == preset["locks"]["hard"]
+    """The 8.x default's hard locks (`locks.hard` of the preset 9.0.0 removed),
+    by the decision 2026-10-06-locks-allow-tightening-and-g5-is-hard."""
+    assert check_set.load()["never_waived"] == ["checks.human-approval-present", "gates.G5"]
 
 
 def test_the_optional_agent_review_is_the_block_the_guide_gives_and_does_not_run(checks):
@@ -219,75 +191,7 @@ def test_resolved_is_a_copy(checks):
     assert check_set.resolved()["gates"] == checks["gates"]
 
 
-# --- parity with the live default ---------------------------------------------------
-
-def test_the_set_resolves_to_the_live_default_less_its_locks(live, checks):
-    """The resolved mapping equals the live default's, key by key, once the
-    `locked:` fields are taken out. The live default declares the two empty
-    catalogues `artifacts` and `readiness`; the merge leaves both out, so neither
-    is in either mapping."""
-    assert set(checks) == set(live)
-    assert "artifacts" not in live and "readiness" not in live
-    differ = [key for key in live if _without_locked(live[key]) != checks[key]]
-    assert differ == []
-
-
-def test_the_only_difference_is_the_locked_field_of_checks_and_gates(live, checks):
-    """So nothing else moves: the paths that hold `locked` in the live default are
-    exactly the checks and gates the preset locks, and the set holds none."""
-    def paths(node, where=""):
-        if isinstance(node, dict):
-            found = [where] if "locked" in node else []
-            for key, value in node.items():
-                found += paths(value, f"{where}.{key}" if where else key)
-            return found
-        return []
-    held = paths(live)
-    assert held and all(p.split(".", 1)[0] in ("checks", "gates") for p in held)
-    preset = yaml.safe_load((PRESET / "preset.yml").read_text(encoding="utf-8"))["locks"]
-    assert set(held) == set(preset["hard"]) | {
-        p for p in preset["locked"] if p.split(".", 1)[0] in ("checks", "gates")}
-    assert paths(checks) == []
-
-
-@pytest.mark.parametrize("accessor", [
-    "guardrail_gates", "evaluator_policy", "gate_requirements", "command_checks",
-    "stage_order", "known_ids", "loop_ceiling_rules"])
-def test_every_accessor_compass_check_and_assess_read_is_equal(live, checks, accessor):
-    assert getattr(_view(checks), accessor)() == getattr(_view(live), accessor)()
-
-
-def test_the_gates_checks_and_evidence_types_are_the_live_defaults(live, checks):
-    assert checks["gates"] == _without_locked(live["gates"])
-    assert checks["checks"] == _without_locked(live["checks"])
-    assert checks["evidence_types"] == live["evidence_types"]
+def test_the_gates_checks_and_evidence_types_are_counted():
+    checks = check_set.resolved()
     assert (len(checks["gates"]), len(checks["checks"]), len(checks["evidence_types"])) == \
         (16, 32, 16)
-
-
-def _owed(readings, policy):
-    try:
-        return er.evaluate(copy.deepcopy(readings), policy)
-    except RoutingConflict:
-        return "refused"
-
-
-def test_the_evidence_rows_are_equal_on_every_grid_point(live, checks):
-    """Every row of the contract 1 grid (1,200 assessments) under every subset of
-    the four `G5` labels (16): 19,200 points. On each, `evidence_required.evaluate`
-    gives the same result, refusals included, under the set and the live default."""
-    header, rows = cb.load_routing()
-    grid = [row["assessment"] for row in rows if row["kind"] == "grid"]
-    subsets = list(cb.label_subsets(header["labels"]))
-    ours, theirs = _view(checks).evaluator_policy(), _view(live).evaluator_policy()
-    differ, points = [], 0
-    for assessment in grid:
-        readings = {k: v for k, v in assessment.items() if k != "role"}
-        readings["size"] = cb.SIZE_NOW.get(readings["size"], readings["size"])
-        for labels in subsets:
-            readings["labels"] = labels
-            points += 1
-            if _owed(readings, ours) != _owed(readings, theirs):
-                differ.append(dict(readings))
-    assert points == 19200
-    assert differ == [], f"{len(differ)} of {points} points differ: {differ[:5]}"

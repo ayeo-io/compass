@@ -212,18 +212,13 @@ def test_trc_d3_no_tier_ladder_in_routing_policy():
 
 # ---------------------------------------------------------------------------
 # The five roles are unchanged; no new agent persona was added (`TRC-D4`)
-# Source-of-truth: agents/*.md and the perspectives a document's owner may
-# name. The agent count cannot grow, and the five roles stay the
-# perspectives a session consults; they left the assessment at 7.0.0
-# (ADR-070).
+# Source-of-truth: agents/*.md. The agent count cannot grow. The five roles
+# left the assessment at 7.0.0 (ADR-070).
 # ---------------------------------------------------------------------------
 PRE_TASK_AGENT_FILES = {
     "spec-author.md", "planner.md", "builder.md", "orchestrator.md",
     "verifier.md", "reviewer.md", "router.md",
     "product-owner.md", "product-marketer.md", "architect.md",
-}
-EXPECTED_ROLES = {
-    "engineer", "product-owner", "product-marketer", "designer", "qa",
 }
 
 
@@ -237,12 +232,9 @@ def test_trc_d4_no_new_agent_persona_no_new_role():
     assert not new_agents, (
         f"no new role/lens agent file may be added by this task; observed new: {new_agents}"
     )
-    # The five roles stay the perspectives a document may be owned by
-    from compass_pkg import policy_lint
-    actual_roles = set(policy_lint.PERSPECTIVES)
-    assert actual_roles == EXPECTED_ROLES, (
-        f"the perspectives must remain {EXPECTED_ROLES}; got {actual_roles}"
-    )
+    # The layered lint held the five roles as the perspectives a document kind
+    # may be owned by. 9.0.0 declares no document kind (ADR-091) and removed that
+    # lint with the layers (ADR-094); the role agent files above are what remains.
 
 
 # ---------------------------------------------------------------------------

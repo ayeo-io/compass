@@ -23,6 +23,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
@@ -322,9 +324,7 @@ def test_rps_7_the_cutoff_is_after_every_archived_issue():
 # --- RPS-8: the governance text states the rule --------------------------------------
 
 def test_rps_8_the_check_statement_states_the_per_scenario_rule():
-    import yaml
-    doc = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "checks.yml")
-                         .read_text(encoding="utf-8"))
+    doc = shipped("checks.yml")
     text = " ".join(doc["checks"]["suite-passed"]["statement"].split())
     assert "each scenario" in text
     assert AFTER in text

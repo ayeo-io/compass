@@ -86,16 +86,14 @@ class EffectiveView:
 
     def evaluator_policy(self):
         """The routing policy in the shape `evaluate_route` takes, built from
-        the resolved configuration. `effective` is, with `classify`, one of the
-        two modules that may import `obligations` (ADR-037); readers call this."""
+        the resolved configuration. `effective` is the one module that imports
+        `obligations`; readers call this."""
         policy = obligations.policy_adapter(self.config)
         # The tighten-only settings the evidence evaluator reads: the labels that
         # owe what a `G5` label owes, and the evidence a project adds (ADR-094).
         # A configuration that holds neither adds nothing.
         policy = tighten.with_settings(policy, self.resolved)
-        # The kinds every approach carries, with the stage whose depth each takes. The
-        # classifier prepares its policy from `policy_adapter` and does not see this key,
-        # so a stored generation owes nothing new (I-7).
+        # The kinds every approach carries, with the stage whose depth each takes.
         every = {kind: body.get("stage") for kind, body in (self.config.get("artifacts") or {}).items()
                  if isinstance(body, dict) and body.get("every_approach")}
         if every:
@@ -331,8 +329,8 @@ def _legacy_config(doc):
     """`(config, provenance)` of an adapted copy. The copy is the whole
     configuration, so each entry is added as it stands and nothing merges
     (ADR-094). A gate placed at a legacy stage the copy does not declare is read
-    at the path stage that shows it (`removed_parts.with_mapped_stages`,
-    L-STAGE-MAPPED). The provenance names the layer `legacy` and the operation
+    at the path stage that shows it (`removed_parts.with_mapped_stages`).
+    The provenance names the layer `legacy` and the operation
     `add` for each entry and field, as the 8.x merge stored them, so a
     generation committed from a copy keeps its stored shape. #359 deletes this
     with the adapter."""

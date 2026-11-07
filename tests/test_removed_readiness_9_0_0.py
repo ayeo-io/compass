@@ -21,6 +21,8 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
@@ -73,11 +75,9 @@ def test_compass_init_still_makes_a_project_and_measures_nothing(tmp_path):
 # --- the catalogue --------------------------------------------------------------------
 
 def test_the_shipped_default_declares_no_readiness_signal():
-    doc = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "readiness.yml")
-                         .read_text(encoding="utf-8"))
+    doc = shipped("readiness.yml")
     assert doc == {"schema": 1, "readiness": {}}
-    vocabulary = yaml.safe_load((ROOT / "governance" / "presets" / "default" /
-                                 "vocabulary.yml").read_text(encoding="utf-8"))
+    vocabulary = shipped("vocabulary.yml")
     assert not [k for k in vocabulary["vocabulary"] if k.startswith("readiness.")]
 
 
@@ -109,11 +109,13 @@ OVERRIDE = {"tests-declared-and-under-two-minutes":
 
 
 def _removed_warnings(root):
-    from compass_pkg import policy_lint
-    loaded = policy_lint.load_layers(str(root), read_project=True)
-    result = policy_lint.lint_loaded(loaded)
-    assert result.errors == [], [(e.code, e.path, e.message) for e in result.errors]
-    return {f.path: f.message for f in result.findings if f.code == "L-SETTING-REMOVED"}
+    """The `L-SETTING-REMOVED` findings of `compass policy lint` on the project's
+    `compass.yml`, by path, after checking it holds no error."""
+    from compass_pkg import policy_cmd
+    found = policy_cmd.settings_findings(str(root / "compass.yml"), str(root))
+    errors = [f for f in found if f.level == "error"]
+    assert errors == [], [(e.code, e.path, e.message) for e in errors]
+    return {f.path: f.message for f in found if f.code == "L-SETTING-REMOVED"}
 
 
 def test_a_project_readiness_block_and_commands_are_named_once_each(tmp_path):

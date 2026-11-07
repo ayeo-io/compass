@@ -10,7 +10,6 @@ on the same fixtures.
 from __future__ import annotations
 
 import copy
-import io
 import os
 import sys
 from pathlib import Path
@@ -72,15 +71,6 @@ def rows(monkeypatch):
     return wm
 
 
-def _base():
-    """A parent layer in the old words: size has `standard`, modes are `light`
-    and `full`."""
-    import classifier_fixtures
-    config = classifier_fixtures.base()
-    config["dimensions"]["size"]["values"] = ["small", "standard", "large"]
-    return {"schema": 1, **config}
-
-
 # --- VR-D18: a value that is neither old nor new is still rejected ------------
 
 def test_vr_d18_an_unknown_value_passes_through_the_mapping_unchanged(rows):
@@ -92,27 +82,6 @@ def test_vr_d18_an_unknown_value_passes_through_the_mapping_unchanged(rows):
     assert changes == [("checks.c.set.when.size", "standard", "medium")]
     assert doc["checks"]["c"]["set"]["when"]["size"] == ["standard", "huge"], (
         "map_layer must not change its input")
-
-
-def test_vr_d18_a_rejected_layer_gives_the_same_finding_with_the_mapping_on(
-        monkeypatch):
-    from compass_pkg import layers
-    from compass_pkg.core import CompassError
-    wm = _word_map()
-    doc = {"schema": 1, "checks": {"c": {"set": {
-        "when": {"size": {"at_least": "bogus"}}}}}}
-
-    def finding():
-        with pytest.raises(CompassError) as err:
-            layers.build_chain(parent=copy.deepcopy(_base()), issue=layers.Layer(
-                "issue", "issue", copy.deepcopy(doc), "x"))
-        return str(err.value)
-
-    monkeypatch.setattr(wm, "tables", lambda: {})
-    before = finding()
-    monkeypatch.setattr(wm, "tables", lambda: copy.deepcopy(ROWS))
-    assert finding() == before
-    assert "bogus" in before
 
 
 def test_vr_d18_a_manifest_value_that_is_neither_old_nor_new_is_left_alone(rows):
@@ -153,46 +122,7 @@ def test_vr_d24_a_generation_file_read_on_the_way_is_not_rewritten(rows, tmp_pat
     assert after == before
 
 
-# --- VR-D12 and VR-D13: a parent rule keyed on size standard ------------------
-
-GATE_BY_SIZE = {"schema": 1, "gates": {"G-STD": {
-    "kind": "guardrail", "stage": "verify", "applies_to": {"ships": True},
-    "when": {"size": "standard"}, "checks": ["tests-pass"], "accepts": ["test-run"]}}}
-
-ASSESSMENT = {"risk": "contained", "familiarity": "greenfield", "size": "medium",
-              "labels": []}
-
-
-def _resolve(*parents, layer_kind="parent"):
-    from compass_pkg import layers, merge
-    git = [layers.Layer(f"git-{n}", "parent", copy.deepcopy(doc), f"sha-{n}")
-           for n, doc in enumerate(parents)]
-    chain = layers.build_chain(parent=copy.deepcopy(_base()), extra_parents=git)
-    return merge.resolve(chain)[0]
-
-
-def test_vr_d12_a_parent_gate_keyed_on_size_standard_is_in_force_for_medium(rows):
-    from compass_pkg import obligations
-    config = _resolve(GATE_BY_SIZE)
-    owed = obligations.obligations(config, dict(ASSESSMENT))
-    assert "G-STD" in owed.gate_set, owed.gate_set
-    small = obligations.obligations(config, {**ASSESSMENT, "size": "small"})
-    assert "G-STD" not in small.gate_set
-
-
-def test_vr_d13_a_parent_rule_keyed_on_size_standard_is_still_a_tightening(rows):
-    from compass_pkg import classify
-    base = _resolve()
-    tighter = _resolve(GATE_BY_SIZE)
-    old_words = classify.classify(base, tighter)
-    new_words = classify.classify(base, _resolve(
-        {"schema": 1, "gates": {"G-STD": {
-            **GATE_BY_SIZE["gates"]["G-STD"], "when": {"size": "medium"}}}}))
-    assert old_words.result == new_words.result
-    assert old_words.result != "equivalent", old_words.result
-
-
-# --- VR-D17: digests are of the raw text; stored generations read mapped ------
+# --- VR-D17: stored generations are read mapped ------------------------------
 
 def _write_generation(tmp_path):
     """Generation 1 as an older Compass wrote it: old words in `resolved`."""
@@ -229,54 +159,6 @@ def test_vr_d17_a_stored_generation_is_read_mapped_and_never_rewritten(rows, tmp
     assert generation._same_configuration(
         stored, {"resolved.yml": fresh, "versions.yml": {"issue_overlay_digest": "d"}})
     assert {p.name: p.read_bytes() for p in folder.iterdir()} == before
-
-
-def test_vr_d17_a_layer_digest_is_taken_before_the_old_words_are_mapped(
-        monkeypatch, tmp_path):
-    from compass_pkg import layers
-    wm = _word_map()
-    (tmp_path / ".compass").mkdir()
-    # `ship` is a path stage: a project's change to a legacy stage is not read (ADR-092).
-    raw = {"schema": 1, "stages": {"ship": {"set": {"modes": {
-        "full": {"rank": 3}}}}}, "checks": {"c": {"set": {"when": {"size": "standard"}}}}}
-    (tmp_path / "compass.yml").write_text(yaml.safe_dump(raw), encoding="utf-8")
-
-    monkeypatch.setattr(wm, "tables", lambda: {})
-    unmapped, _ = layers.load_project_layer(tmp_path)
-    monkeypatch.setattr(wm, "tables", lambda: copy.deepcopy(ROWS))
-    mapped, _ = layers.load_project_layer(tmp_path)
-
-    assert mapped.digest == unmapped.digest, "the rename alone must change no digest"
-    assert mapped.doc["stages"]["ship"]["set"]["modes"] == {"thorough": {"rank": 3}}
-    assert unmapped.doc["stages"]["ship"]["set"]["modes"] == {"full": {"rank": 3}}
-    assert mapped.doc["checks"]["c"]["set"]["when"] == {"size": "medium"}
-
-
-def test_vr_d17_an_issue_layer_digest_is_taken_before_mapping(monkeypatch):
-    from compass_pkg import layers
-    wm = _word_map()
-    manifest = {"config": {"stages": {"implement": {"set": {"mode": "full"}}}}}
-
-    monkeypatch.setattr(wm, "tables", lambda: {})
-    unmapped = layers.load_issue_layer(copy.deepcopy(manifest))
-    monkeypatch.setattr(wm, "tables", lambda: copy.deepcopy(ROWS))
-    mapped = layers.load_issue_layer(copy.deepcopy(manifest))
-    assert mapped.digest == unmapped.digest
-    assert mapped.doc["stages"]["implement"]["set"]["mode"] == "thorough"
-
-
-def test_vr_d17_merge_apply_maps_a_layer_that_arrives_unmapped(rows):
-    from compass_pkg import merge
-    parent = rows.map_layer(_base())[0]
-    # The project adds a stage of its own: its change to a legacy stage such as
-    # `verify` is left out since 9.0.0 (ADR-092), and the parent's own modes would
-    # then pass this test with no mapping of the child at all.
-    child = {"schema": 1, "stages": {"review": {"order": 9, "modes": {
-        "full": {"rank": 3}, "light": {"rank": 2}, "reproduce-first": {}}}}}
-    config, _ = merge.apply({}, parent, "parent", "p", {})
-    config, _ = merge.apply(config, child, "project", "c", {})
-    assert set(config["stages"]["review"]["modes"]) == {
-        "thorough", "lightweight", "reproduce-first"}
 
 
 # --- VR-D25: the reverse table ------------------------------------------------
@@ -323,18 +205,6 @@ def test_vr_d25_a_backlog_hold_with_a_parked_record_returns_as_parked(rows):
         old = rows.reverse_manifest({"status": "backlog", **held})
         assert old["status"] == "parked", held
     assert rows.reverse_manifest({"status": "backlog"})["status"] == "queued"
-
-
-# --- VR-D19: the layer changes are kept for the lint advisory -----------------
-
-def test_vr_d19_each_layer_keeps_the_changes_the_mapping_made(rows):
-    from compass_pkg import layers
-    chain = layers.build_chain(parent=copy.deepcopy(_base()))
-    parent = chain[0]
-    assert ("dimensions.size.values", "standard", "medium") in parent.changes
-    lines = rows.advisory_lines(parent)
-    assert any("dimensions.size.values" in line and "medium" in line
-               and "9.0.0" in line for line in lines), lines
 
 
 # --- VR-D21 and VR-D8: the one manifest write path ----------------------------
@@ -573,85 +443,13 @@ def test_vr_d10_a_stored_stage_mode_full_is_read_as_thorough(tmp_path):
         "expedited", "explore", "thorough"], modes.config["stages"]["review"]
 
 
-# --- VR-D11, VR-D15: ranking reads both sides in the new words ------------------
-
-def _old_parent_doc(define):
-    """A parent written before the rename: it sets the regular approach's
-    define stage."""
-    return {"schema": 1, "approaches": {"regular": {"set": {"stages": {
-        "assess": "full", "define": define, "refine": "light", "plan": "full",
-        "breakdown": "multiagent", "implement": "full", "verify": "full",
-        "ship": "full"}}}}}
-
-
-def _classify_chain(doc):
-    # The parent sets the regular approach, which the shipped default no longer
-    # declares since 9.0.0 (ADR-092); the frozen 7.0.0 preset it was pinned over does.
-    from compass_pkg import chain_class, layers, policy_lint
-    shipped, _ = policy_lint.load_parent(
-        directory=Path(__file__).resolve().parent.parent / "governance" / "presets" / "default@7")
-    layer = layers.Layer("git-parent#abc1234", "parent", doc,
-                         layers.layer_digest(doc, "parent"))
-    return chain_class.classify_chain(shipped, [layer], "compass:default@6")[0]
-
-
-def _new_words(doc):
-    table = {"full": "thorough", "light": "lightweight"}
-    doc = copy.deepcopy(doc)
-    stages = doc["approaches"]["regular"]["set"]["stages"]
-    doc["approaches"]["regular"]["set"]["stages"] = {s: table.get(m, m)
-                                                    for s, m in stages.items()}
-    return doc
-
-
-def test_vr_d11_a_parent_pinned_before_the_rename_classifies_as_its_new_words_do():
-    old = _classify_chain(_old_parent_doc("light"))
-    new = _classify_chain(_new_words(_old_parent_doc("light")))
-    assert old["result"] == new["result"] and old["result"] != "incomparable", (old, new)
-    assert old["result"] == "loosening", old["result"]
-    assert old["first_looser"] is not None
-
-
-PROJECT_LIGHTENS = {"schema": 1, "approaches": {"regular": {"set": {"stages": {
-    "define": "lightweight", "implement": "full", "verify": "full"}}}}}
-
-
-def _in_new_words(parent):
-    """The parent layer with its depth words spelt the new way. Only the mode
-    names and the stage weights change: `full` is also an approach name."""
-    parent = copy.deepcopy(parent)
-    table = {"full": "thorough", "light": "lightweight"}
-    for body in parent["stages"].values():
-        body["modes"] = {table.get(mode, mode): spec for mode, spec in body["modes"].items()}
-    for body in parent["approaches"].values():
-        body["stages"] = {stage: table.get(mode, mode) for stage, mode in body["stages"].items()}
-    return parent
-
-
-def _chain_classification(parent, project):
-    """The classification of `project` on `parent`. The change is merged as a git
-    parent: a project layer's change to an approach is left out since 9.0.0
-    (ADR-092)."""
-    from compass_pkg import classify, layers, merge
-    above = merge.resolve(layers.build_chain(parent=copy.deepcopy(parent)))[0]
-    layer = layers.Layer("team", "parent", copy.deepcopy(project), "")
-    below = merge.resolve(layers.build_chain(parent=copy.deepcopy(parent)) + [layer])[0]
-    return classify.classify(above, below)
-
-
-def test_vr_d15_a_project_that_says_lightweight_is_looser_than_a_parent_that_says_full(rows):
-    old_parent = _base()                    # modes light and full; every stage full
-    mixed = _chain_classification(old_parent, PROJECT_LIGHTENS)
-    same = _chain_classification(_in_new_words(old_parent), PROJECT_LIGHTENS)
-    assert mixed.result == "loosening" == same.result, (mixed.result, same.result)
-
-
 # --- VR-D14: an issue layer in the old words ------------------------------------
 
 def _stored_with_mode(root, task_dir, word):
     """Store generation 2 as an 8.x reassess stored it when the issue's layer set
     the mode of assess to `word`: the generation keeps the word as it was written."""
-    from compass_pkg import generation, layers
+    from compass_pkg import generation
+    from compass_pkg.atomic_io import digest
     stored = generation.load(str(task_dir), 1)
     body = {name: {k: v for k, v in stored[name].items()
                    if k not in ("schema", "issue", "generation")}
@@ -661,7 +459,7 @@ def _stored_with_mode(root, task_dir, word):
     overlay = {"stages": {"assess": {"set": {"mode": word}}}}
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
     manifest["config"] = overlay
-    versions = dict(body["versions"], issue_overlay_digest=layers.layer_digest(overlay, "issue"))
+    versions = dict(body["versions"], issue_overlay_digest=digest(overlay))
     generation.commit(str(task_dir), generation.Resolution(
         resolved=resolved, provenance=body["provenance"], versions=versions), manifest)
 
@@ -701,22 +499,6 @@ def test_vr_d19_policy_lint_advises_and_keeps_its_exit_status(tmp_path):
     # words need no advisory: the lint warns about the key in either spelling.
     assert "L-SETTING-REMOVED [project] stages:" in old[1], old[1]
     assert old[2] == new[2] == "", (old[2], new[2])
-
-
-def test_vr_d19_the_advisory_names_the_layer_and_a_git_parent_by_its_sha():
-    from compass_pkg import layers, policy_lint
-    shipped, _ = policy_lint.load_parent()
-    # A git parent's change to the approaches is not read since 9.0.0 (VD-006 of
-    # #351), so the parent adds a stage of its own in the old words.
-    doc = {"schema": 1, "stages": {"review": {"order": 9, "modes": {"light": {"rank": 2}}}}}
-    git = layers.Layer("github:acme/team@1.0.0#abc1234", "parent", doc,
-                       layers.layer_digest(doc, "parent"))
-    report = policy_lint.lint_chain(shipped, None, extra_parents=[git])
-    assert report.ok, report.findings
-    lines = report.advisories
-    assert lines and all("github:acme/team@1.0.0#abc1234" in line for line in lines), lines
-    assert any("stages.review.modes" in line and "lightweight" in line
-               and "9.0.0" in line for line in lines), lines
 
 
 def test_vr_d19_compass_check_prints_no_such_advisory(tmp_path):

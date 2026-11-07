@@ -26,6 +26,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
@@ -261,19 +263,23 @@ def _lint_codes(root):
 
 
 def test_irl_23_default_declares_release_line(tmp_path):
-    approaches = yaml.safe_load((PRESET / "approaches.yml").read_text())["approaches"]
+    approaches = shipped("approaches.yml")["approaches"]
     # The shipped default's one approach that ships is the path (ADR-092).
     assert set(approaches) == {"delivery", "spike"}
     assert approaches["delivery"].get("release_line") is True, approaches["delivery"]
     assert "release_line" not in approaches["spike"], approaches["spike"]
 
-    # The locked spike entry is as it was: its digest over the parsed entry has not moved.
-    assert _entry_digest(approaches["spike"]) == SPIKE_DIGEST, approaches["spike"]
+    # The spike entry is as it was: its digest over the parsed entry has not moved.
+    # The 8.x preset locked it (`locked: true`); the check set holds no lock
+    # (ADR-094), so the field is put back before the pinned digest is compared.
+    assert "locked" not in approaches["spike"]
+    assert _entry_digest(dict(approaches["spike"], locked=True)) == SPIKE_DIGEST, \
+        approaches["spike"]
 
+    # Since 9.0.0 the schema of compass.yml holds the settings only (ADR-094): no
+    # approach entry, so no `release_line` field.
     schema = json.loads((ROOT / "schemas" / "compass.schema.json").read_text())
-    approach_props = _approach_properties(schema)
-    assert approach_props["release_line"] == {"type": "boolean"} or \
-        approach_props["release_line"].get("type") == "boolean", approach_props["release_line"]
+    assert "approaches" not in schema["properties"]
 
     # Since 9.0.0 a project's own file cannot change an approach (ADR-092): lint names
     # the key with the one warning and reports no error, whatever the value.
@@ -285,56 +291,17 @@ def test_irl_23_default_declares_release_line(tmp_path):
         assert [c for c in codes if c[0] and c[0][0] in "LMCK"] == [
             ("L-SETTING-REMOVED", "approaches")], (value, codes, done.stdout)
 
-    # A git parent still can. Setting it true there is no change; setting it false on
-    # delivery is a loosening that needs a waiver.
-    from compass_pkg import policy_lint
-    from compass_pkg.layers import Layer
-    shipped, _ = policy_lint.load_parent()
-    for value, loosening in ((True, False), (False, True)):
-        team = Layer("team", "parent", {"schema": 1, "approaches": {"delivery": {"set": {
-            "release_line": value}}}}, "d")
-        report = policy_lint.lint_chain(shipped, None, extra_parents=(team,))
-        codes = [(f.code, f.path) for f in report.findings]
-        assert (("C-LOOSENING", "approaches.delivery.release_line") in codes) is loosening, (
-            value, codes)
-        if not loosening:
-            assert not [c for c in codes if c[0][0] in "LMCK"], codes
-
-    # The generated views carry a raised version.
+    # The views, frozen since 9.0.0 (ADR-094), carry a raised version.
     for name, before in (("routing-policy.yml", "2.22.0"), ("guardrails.yml", "1.29.0")):
         version = yaml.safe_load((ROOT / "governance" / name).read_text())["version"]
         assert tuple(int(p) for p in version.split(".")) > tuple(
             int(p) for p in before.split(".")), (name, version)
-    done = subprocess.run([sys.executable, str(ROOT / "scripts" / "generate-legacy-views.py"),
-                           "--check"], cwd=ROOT, capture_output=True, text=True)
-    assert done.returncode == 0, done.stdout + done.stderr
-
-
-def _approach_properties(schema):
-    """The properties of one approach entry in the configuration schema."""
-    found = []
-
-    def walk(node):
-        if isinstance(node, dict):
-            props = node.get("properties")
-            if isinstance(props, dict) and "ships" in props and "subtask_ceiling" in props:
-                found.append(props)
-            for value in node.values():
-                walk(value)
-        elif isinstance(node, list):
-            for value in node:
-                walk(value)
-    walk(schema)
-    assert found, "the schema declares no approach entry"
-    return found[0]
 
 
 # --- IRL-1 ----------------------------------------------------------------------------
 
 
-
 # --- IRL-2 ----------------------------------------------------------------------------
-
 
 
 def _named(heading):

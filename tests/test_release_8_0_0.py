@@ -3,9 +3,11 @@
 8.0.0 was the version at which Compass promised to stop reading old words,
 old approach names, copied 5.x governance, the generated governance views and
 `.compass/config.yml`. The owner moved that end to 9.0.0 on 25 October 2026.
-Two places act on the date in code: `waivers.py` turns a LEGACY waiver into an
-error from it, and `old_names.removal_problems()` reports each row as overdue.
-A version bump without the date move would do both.
+Two places acted on the date in code: `waivers.py` turned a LEGACY waiver into
+an error from it, and `old_names.removal_problems()` reports each row as
+overdue. A version bump without the date move would do both. 9.0.0 removed the
+8.x waiver of a configuration layer with the layers (ADR-094), so only the
+second remains.
 
 The scenarios, `TRC-001` to `TRC-005`, are in
 release-8-0-0/acceptance-criteria.md.
@@ -22,8 +24,7 @@ sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
 import test_version_consistency as versions  # noqa: E402
-import waiver_fixtures as fx  # noqa: E402
-from compass_pkg import old_names, waivers  # noqa: E402
+from compass_pkg import old_names  # noqa: E402
 
 RELEASE = "8.0.0"
 
@@ -73,17 +74,11 @@ def test_trc_001_every_version_location_says_8_0_0():
         assert found and set(found) == {current}, (rel, found)
 
 
-def test_trc_002_every_legacy_reader_still_reads_at_8_0_0(monkeypatch):
-    """Scenario `TRC-002`: at 8.0.0 no old-name row is overdue, and a LEGACY
-    waiver gives the warning W-LEGACY, not an error."""
+def test_trc_002_every_legacy_reader_still_reads_at_8_0_0():
+    """Scenario `TRC-002`: at 8.0.0 no old-name row is overdue. The LEGACY
+    waiver of a configuration layer went with the layers in 9.0.0 (ADR-094)."""
     assert old_names.removal_problems(RELEASE) == []
     assert all(r["removed_in"] == "9.0.0" for r in old_names.rows())
-    monkeypatch.setattr(waivers, "COMPASS_VERSION", RELEASE)
-    found, faults = waivers.find(fx.severity_layer(
-        fx.project_waiver(approved_by="LEGACY", approved_on=None)), "project")
-    assert not faults, faults
-    [finding] = waivers.check_shape(found[0], fx.TODAY)
-    assert (finding.code, finding.level) == ("W-LEGACY", "warning"), finding
 
 
 def test_trc_003_no_current_text_ends_an_old_form_at_8_0_0():

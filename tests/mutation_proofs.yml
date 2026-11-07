@@ -1,6 +1,5 @@
-# Mutation proofs for every check under `checks:` in
-# governance/presets/default/checks.yml (governance/guardrails.yml is generated
-# from it).
+# Mutation proofs for every deterministic check under `checks:` in
+# governance/check-set.yml (ADR-094).
 #
 # The mutation-proof strategy in governance/strategies.md accepts a guard only
 # on a demonstrated failure. Here a proof is a pair of tests that run on

@@ -315,8 +315,8 @@ def test_the_assessment_passed_in_is_not_changed(live):
 
 # --- parity with 8.0.4 ------------------------------------------------------------
 
-#: The routing of `S17` each 8.x approach names in the live default preset
-#: (`governance/presets/default/approaches.yml`, `acceptance_strategy`). 8.0.4
+#: The routing of `S17` each 8.x approach named in the live default preset of
+#: 9.0.0 before the preset went (its `acceptance_strategy` field). 8.0.4
 #: itself named none, so every approach that ships read `on` there; the
 #: routings come from 9.0.0, before the approaches were removed.
 ROUTING_OF_APPROACH = {"quick-fix": "existing-dsl", "hotfix": "existing-dsl-isolation",

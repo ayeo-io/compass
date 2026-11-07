@@ -18,7 +18,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
-PRESET = ROOT / "governance" / "presets" / "default"
+#: The shipped default: the check set since 9.0.0 (ADR-094).
+PRESET = None
 # The shipped default declares the four path stages and only the modes its two
 # approaches name since 9.0.0 (ADR-092). The renamed words are in use in the
 # frozen `default@7` preset and the 8.0.4 views, so their presence is read there,
@@ -34,6 +35,9 @@ SPECIAL = {"multiagent", "reproduce-first", "expedited", "explore", "conclude",
 
 
 def _preset(name, folder=PRESET):
+    if folder is None:
+        from check_set_files import shipped
+        return shipped(name)
     return yaml.safe_load((folder / name).read_text(encoding="utf-8"))
 
 
@@ -217,24 +221,6 @@ def test_vr_a4_the_ranks_keep_their_order_under_the_new_names():
                        "thorough-with-follow-up"]
 
 
-def test_vr_a4_the_classifier_ranks_lightweight_below_thorough():
-    import classifier_fixtures as fixtures
-    from compass_pkg import classify
-    parent = fixtures.base()
-    for body in parent["stages"].values():
-        body["modes"] = {"lightweight": {"rank": 2}, "thorough": {"rank": 3},
-                         "reproduce-first": {}}
-    for body in parent["approaches"].values():
-        body["stages"] = {stage: "thorough" for stage in body["stages"]}
-    child = {**parent, "approaches": {name: {**body, "stages": {
-        **body["stages"], "implement": "lightweight"}}
-        for name, body in parent["approaches"].items()}}
-    looser = classify.classify(parent, child)
-    tighter = classify.classify(child, parent)
-    assert looser.result == "loosening", looser.result
-    assert tighter.result == "tightening", tighter.result
-
-
 def test_vr_a4_the_legacy_adapter_ranks_match_the_preset():
     from compass_pkg import legacy_adapter
     assert legacy_adapter.MODE_RANKS == RANKS
@@ -250,8 +236,8 @@ def test_vr_a5_the_special_modes_and_the_two_ends_keep_their_names():
             for mode in stage.get("modes") or {}}
     assert live <= set(RANKS) | SPECIAL, sorted(live - set(RANKS) - SPECIAL)
     assert {"collapsed", "skipped"} <= declared
-    from compass_pkg import catalogue_spec
-    assert catalogue_spec.ARTIFACT_DEPTHS == ("lightweight", "thorough")
+    from compass_pkg import stable_ids
+    assert stable_ids.ARTIFACT_DEPTHS == ("lightweight", "thorough")
 
 
 # --- VR-A6 ---------------------------------------------------------------------

@@ -50,11 +50,12 @@ sys.path.insert(0, str(ROOT / "cli"))
 
 PACKAGE = ROOT / "cli" / "compass_pkg"
 STABLE_IDS = PACKAGE / "stable_ids.py"
-PRESET = ROOT / "governance" / "presets" / "default"
-
-
 def _preset_ids(name, key):
-    return list(yaml.safe_load((PRESET / name).read_text(encoding="utf-8"))[key])
+    """The ids of one catalogue of the shipped default: the check set since 9.0.0
+    (ADR-094), which replaced `governance/presets/default/`."""
+    sys.path.insert(0, str(ROOT / "tests"))
+    from check_set_files import shipped
+    return list(shipped(name)[key])
 
 
 def _load_stable_ids():
@@ -78,7 +79,7 @@ def test_si_1_the_constants_equal_the_default_preset():
     # issue records (ADR-092). The five 8.x approaches keep their constants, which
     # the frozen presets, stored generations and old manifests name.
     assert ids.APPROACH_DELIVERY in approaches
-    frozen = list(yaml.safe_load((PRESET.parent / "default@7" / "approaches.yml")
+    frozen = list(yaml.safe_load((ROOT / "governance" / "presets" / "default@7" / "approaches.yml")
                                  .read_text(encoding="utf-8"))["approaches"])
     assert list(ids.LEGACY_APPROACH_IDS) == frozen
     assert {v for k, v in vars(ids).items() if k.startswith("APPROACH_") and isinstance(v, str)} \
@@ -88,7 +89,8 @@ def test_si_1_the_constants_equal_the_default_preset():
     # The preset declares the four path stages; the legacy ones keep their
     # constants, which the frozen presets and old manifests name.
     assert list(ids.PATH_STAGE_IDS) == stages
-    legacy = _preset_ids("../default@7/stages.yml", "stages")
+    legacy = list(yaml.safe_load((ROOT / "governance" / "presets" / "default@7" / "stages.yml")
+                                 .read_text(encoding="utf-8"))["stages"])
     assert list(ids.STAGE_IDS) == legacy
     assert ids.LEGACY_STAGE_IDS is ids.STAGE_IDS
     assert {v for k, v in vars(ids).items() if k.startswith("STAGE_") and isinstance(v, str)} \
@@ -189,10 +191,6 @@ def test_si_2_the_scanner_finds_ids_in_five_positions_and_skips_text():
 # (module, a code fragment that identifies the line, why it is not an id). The
 # fragment is never a line number. A stale entry fails SI-5.
 ALLOW = (
-    ("classify.py", '"scan": ("one of", ("full",',
-     '"full" is a scan mode (the whole grid was compared), not the approach id'),
-    ("locks.py", 'SCANS = ("footprint", "full")',
-     '"full" is a scan mode (every label in the layer), not the approach id'),
     ("word_map.py", '"full": "thorough"',
      '"full" is the retired stage weight in the in-module copy of the word table'),
     ("word_map.py", 'FALLBACK["size"] = {"standard": "medium"}',

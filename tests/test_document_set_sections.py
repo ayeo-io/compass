@@ -25,7 +25,8 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 # --- U1: Catalogue, templates and headings ---
 
-PRESET = ROOT / "governance" / "presets" / "default" / "artifacts.yml"
+#: The shipped default: the check set since 9.0.0 (ADR-094).
+PRESET = ROOT / "governance" / "check-set.yml"
 TEMPLATES = ROOT / "templates"
 ROLE_HEADING = "How each role reads this file"
 #: The five lines of the role block, as the spec template held them before this change.
@@ -1112,7 +1113,6 @@ def _u4_dependency_lines(root):
 
 # --- U5: owning docs, public surface and this issue's checks ---
 
-U5_PRESET = ROOT / "governance" / "presets" / "default"
 U5_CHECKS = ("nfr-rows-resolved", "contracts-declared")
 U5_SECTIONS = ("Non-functional requirements", "Data and interfaces", "Verification plan",
                "Risks and dependencies")
@@ -1137,7 +1137,7 @@ def _u5_derive(tmp_path):
     """`(glossary, catalogue document)` of a fresh generation in a copy of the files the
     generator reads."""
     mini = tmp_path / "mini"
-    for rel in ("governance/terminology.yml", "governance/presets/default/artifacts.yml",
+    for rel in ("governance/terminology.yml", "governance/presets/default@7/artifacts.yml",
                 "docs/glossary.md", "docs/artifact-catalog.md"):
         target = mini / rel
         target.parent.mkdir(parents=True, exist_ok=True)

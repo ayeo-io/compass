@@ -915,21 +915,6 @@ _register(Rule(
         Exemption("skills/compass-runtime/writing-voice.md", '**"utilize"** - **findable**',
                   _UTILIZE_TELL_REASON),
         Exemption(
-            "cli/compass_pkg/parent_states.py",
-            "- `locally modified`: the cached `compass.yml` no longer",
-            "\"locally modified\" is the name of one of the four parent states, "
-            "shown to people by `compass policy lint` - an identifier "
-            "(section 4), not the verb the word table retires"),
-        Exemption(
-            "docs/git-parents.md", "| `locally modified` | The cached",
-            "\"locally modified\" is the name of one of the four parent states, "
-            "and `S-PARENT-MODIFIED` its finding code - identifiers "
-            "(section 4), not the verb the word table retires"),
-        Exemption(
-            "tests/test_parent_states.py", "| locally modified | the cached",
-            "\"locally modified\" is the name of one of the four parent states "
-            "- an identifier (section 4), not the verb the word table retires"),
-        Exemption(
             "docs/releasing.md", "## Supply-chain stance",
             "\"supply chain\" is the standard security term for this "
             "section's subject, not the verb \"supply\" the word table "
@@ -1101,19 +1086,9 @@ _register(Rule(
         Exemption("governance/guardrails.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"."),
-        Exemption("governance/presets/default/checks.yml", "compass bdd verify",
-                   "compass bdd verify is a CLI verb, not the plain verb; the "
-                   "preset copies the check text from governance/guardrails.yml."),
-        Exemption("governance/presets/default/checks.yml", "attempts: <int>",
-                   "attempts: <int> names the evidence field, not the verb "
-                   "\"attempt\"; the preset copies the check text from "
-                   "governance/guardrails.yml."),
-        Exemption("governance/presets/default/evidence-types.yml", "attempts: <int>",
-                   "attempts: <int> names the evidence field, not the verb "
-                   "\"attempt\"; the preset copies the type text from "
-                   "governance/guardrails.yml."),
-        # The fixed check set (ADR-094) is built from the live preset, so it
-        # carries the same check and type text and the same reasons.
+        # The fixed check set (ADR-094) was built from the 8.x live preset, which
+        # copied the check and type text from governance/guardrails.yml, so it
+        # carries the same text and the same reasons.
         Exemption("governance/check-set.yml", "compass bdd verify",
                    "compass bdd verify is a CLI verb, not the plain verb; the "
                    "check set copies the check text from the preset."),
@@ -2150,6 +2125,36 @@ _REMOVED_IN_9_0_0 = frozenset({
     "tests/fixtures/policy-update-json-example.json",
     "tests/fixtures/policy-migrate-example.json",
     "tests/fixtures/preset-interfaces/policy-test-groups.json",
+    # The configuration layers, the classifier, the locks, the layered lint, the
+    # live preset, the generator of the two views, their docs and their tests
+    # (ADR-094, #357 step 8). The frozen presets name the generator and its
+    # sidecar in their headers and are never edited.
+    "cli/compass_pkg/merge.py", "cli/compass_pkg/parents.py",
+    "cli/compass_pkg/parent_states.py", "cli/compass_pkg/chain_class.py",
+    "cli/compass_pkg/policy_lint.py", "cli/compass_pkg/policy_effective.py",
+    "cli/compass_pkg/catalogue_check.py", "cli/compass_pkg/vocabulary.py",
+    "cli/compass_pkg/locks.py", "cli/compass_pkg/classify.py",
+    "cli/compass_pkg/classify_lists.py", "cli/compass_pkg/json_shape.py",
+    "cli/compass_pkg/legacy_views.py", "cli/compass_pkg/legacy_views_template.py",
+    "cli/compass_pkg/layers.py", "cli/compass_pkg/waivers.py",
+    "scripts/generate-legacy-views.py", "scripts/bench-classifier.py",
+    "governance/legacy-views.yml", "docs/git-parents.md", "docs/waivers-and-locks.md",
+    "governance/presets/default/approaches.yml", "governance/presets/default/artifacts.yml",
+    "governance/presets/default/checks.yml", "governance/presets/default/dimensions.yml",
+    "governance/presets/default/evidence-types.yml", "governance/presets/default/gates.yml",
+    "governance/presets/default/preset.yml", "governance/presets/default/readiness.yml",
+    "governance/presets/default/rules.yml", "governance/presets/default/stages.yml",
+    "governance/presets/default/vocabulary.yml",
+    "tests/test_layers_and_merge.py", "tests/test_parent_chain.py",
+    "tests/test_parent_pin.py", "tests/test_parent_states.py", "tests/test_locks.py",
+    "tests/test_locks_footprint_scan.py", "tests/test_classifier.py",
+    "tests/test_classifier_speed.py", "tests/test_classify_list_parameters.py",
+    "tests/test_obligations.py", "tests/test_policy_lint.py", "tests/test_default_views.py",
+    "tests/test_default_preset.py", "tests/test_preset_digests.py",
+    "tests/test_preset_interfaces.py", "tests/test_artifact_graph.py",
+    "tests/test_waivers.py", "tests/test_vocabulary.py", "tests/parent_fixtures.py",
+    "tests/classifier_fixtures.py", "tests/waiver_fixtures.py",
+    "tests/fixtures/classifier-json-example.json",
 })
 #: Paths 9.0.0 removed that this repository's `compass.yml` still names, keyed by
 #: the path. An agent may not edit `compass.yml`; the owner deletes its readiness
@@ -2163,7 +2168,11 @@ _NAMED_BY_COMPASS_YML_UNTIL_THE_OWNER_EDITS = frozenset({
 _DECISION_RECORD_FOLDERS = ("architecture/decisions/", "governance/decisions/",
                             "templates/architecture/decisions/",
                             "docs/compass/", "examples/", "docs/upgrade-",
-                            "tests/test_public_surface_truth.py")
+                            "tests/test_public_surface_truth.py",
+                            # The frozen presets are kept byte for byte as the
+                            # release that shipped them (ADR-094), headers included.
+                            "governance/presets/default@6/",
+                            "governance/presets/default@7/")
 
 
 def test_pbw_a8_only_the_exact_runtime_record_path_may_be_missing():
@@ -3270,7 +3279,7 @@ _GROWING_REACH = {
     # 14 with the packed routing baseline in tests/fixtures/compat/;
     # 15 with the check-verdict baseline beside it, which is plain JSON;
     # 61 with the 46 check-corpus case labels, which hold a verdict and one line;
-    # 62 with tests/fixtures/classifier-json-example.json, plain JSON;
+    # 62 with the JSON example of the classifier, plain JSON;
     # 63 with the JSON example of `compass policy diff`, plain JSON;
     # 64 with the JSON example of `compass policy migrate`, plain JSON;
     # 65 with the JSON example of `compass policy update`, plain JSON;
@@ -3338,7 +3347,8 @@ _GROWING_REACH = {
     # examples (ADR-094).
     # 116 when 9.0.0 removed `policy diff`, `policy migrate`, `policy update` and
     # `preset test` and their four plain JSON examples (ADR-094).
-    "PBW-C4": (lambda path: path.startswith("tests/"), 116),
+    # 115 when 9.0.0 removed the classifier and its plain JSON example (ADR-094).
+    "PBW-C4": (lambda path: path.startswith("tests/"), 115),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

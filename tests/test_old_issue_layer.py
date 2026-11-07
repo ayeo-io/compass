@@ -64,20 +64,22 @@ def _route_8_0_4(task_dir=None, issue=None, **readings):
 
 def _view_8_0_4(tmp_path, issue_doc, project_doc=None):
     """The view of an issue whose layer is `issue_doc`, resolved over the 8.0.4
-    governance copy and a project layer."""
+    governance copy, as an 8.x generation stored it: the copy's configuration
+    with each stage mode the layer sets written into its stage, and the
+    layer's approach and ceilings beside it. `project_doc` held no catalogue in
+    8.x either, so it adds nothing. 8.x merged the layers; 9.0.0 has no merge
+    (ADR-094), so the stored shape is built here."""
     import compat_baseline as cb
-    from compass_pkg import effective, layers, merge
+    from compass_pkg import effective, word_map
     copy_root = tmp_path / "copy-8-0-4"
     (copy_root / ".compass").mkdir(parents=True, exist_ok=True)
     cb.add_governance_copy(copy_root, source=cb.GOVERNANCE_8_0_4)
-    # The copy in catalogue form, read as the 8.x parent layer it was.
-    doc = effective._legacy_parent(str(copy_root))[0]
-    parent = layers.Layer("legacy", "parent", doc, layers.layer_digest(doc, "parent"))
-    project = layers.Layer("project", "project", project_doc or {"schema": 1}, "p")
-    issue = layers.Layer("issue", "issue", issue_doc, "i")
-    resolved = merge.resolve([parent, project, issue])[0]
+    resolved = effective.legacy_resolved(str(copy_root))
+    issue = word_map.map_layer(copy.deepcopy(issue_doc))[0]
+    for stage, entry in (issue.get("stages") or {}).items():
+        resolved["stages"][stage]["mode"] = entry["set"]["mode"]
     resolved.update({key: issue_doc[key] for key in ("approach", "ceilings") if key in issue_doc})
-    return effective.EffectiveView("live", None, None, resolved, {}), (parent, project, issue)
+    return effective.EffectiveView("live", None, None, resolved, {}), None
 
 
 def _on_the_path(body):
@@ -91,7 +93,8 @@ def _old_issue(tmp_path):
     """An issue at generation 2, which an 8.x reassess committed with the issue
     layer `OVERLAY`: the manifest holds it as `config:`, and the generation
     holds its effect and its digest. Written through the store, as 8.x wrote it."""
-    from compass_pkg import generation, layers
+    from compass_pkg import generation
+    from compass_pkg.atomic_io import digest
     root, task_dir = fx.committed(tmp_path, compass_yml=LAYERED)
     stored = generation.load(str(task_dir), 1)
     body = {name: {k: v for k, v in stored[name].items() if k not in HEADER_KEYS}
@@ -99,7 +102,7 @@ def _old_issue(tmp_path):
     resolved = copy.deepcopy(body["resolved"])
     resolved["stages"]["ship"]["mode"] = "thorough"
     resolved["ceilings"] = dict(OVERLAY["ceilings"])
-    versions = dict(body["versions"], issue_overlay_digest=layers.layer_digest(OVERLAY, "issue"))
+    versions = dict(body["versions"], issue_overlay_digest=digest(OVERLAY))
     manifest = fx.manifest_of(task_dir)
     manifest["config"] = copy.deepcopy(OVERLAY)
     generation.commit(str(task_dir), generation.Resolution(

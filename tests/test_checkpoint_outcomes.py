@@ -488,18 +488,6 @@ HUMAN_DESIGN = {
 }
 
 
-def _entry_text(path, key, indent):
-    lines = (ROOT / path).read_text(encoding="utf-8").splitlines()
-    head = " " * indent + key + ":"
-    start = next(i for i, line in enumerate(lines) if line.startswith(head))
-    out = [lines[start]]
-    for line in lines[start + 1:]:
-        if line.strip() and len(line) - len(line.lstrip()) <= indent:
-            break
-        out.append(line)
-    return "\n".join(out) + "\n"
-
-
 def _check_lines(root, *names):
     """`compass check`'s exit code, and each line that names one of `names` with
     the more deeply indented detail lines under it."""
@@ -537,14 +525,23 @@ def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
     record = approvals[0]
 
     # The locked check, the gate of guardrail `G5` and the hard locks are as the base
-    # commit has them; the `G5` entry is as g5-irreversible-labels left it.
+    # commit has them; the `G5` entry is as g5-irreversible-labels left it. The
+    # check set replaced the preset whose text the fixture holds (ADR-094): it holds
+    # the two entries with no `locked:` field and the hard locks as `never_waived`.
+    import yaml
+    from compass_pkg import check_set
     base = json.loads((FIXTURES / "base-locked-entries.json").read_text())["entries"]
-    assert _entry_text("governance/presets/default/checks.yml", "human-approval-present", 2) \
-        == base["governance/presets/default/checks.yml#human-approval-present"]
-    assert _entry_text("governance/presets/default/gates.yml", "G5", 2) \
-        == base["governance/presets/default/gates.yml#G5"]
-    assert _entry_text("governance/presets/default/preset.yml", "hard", 2) \
-        == base["governance/presets/default/preset.yml#locks.hard"]
+    shipped = check_set.resolved()
+
+    def unlocked(key, entry_id):
+        entry = yaml.safe_load(base[key])[entry_id]
+        assert entry.pop("locked") == "hard", key
+        return entry
+    assert shipped["checks"]["human-approval-present"] == unlocked(
+        "governance/presets/default/checks.yml#human-approval-present", "human-approval-present")
+    assert shipped["gates"]["G5"] == unlocked("governance/presets/default/gates.yml#G5", "G5")
+    assert check_set.load()["never_waived"] == yaml.safe_load(
+        base["governance/presets/default/preset.yml#locks.hard"])["hard"]
 
     # An 8.x issue waiver whose approval names the checkpoint answer takes nothing
     # into effect: the write does not read the issue's `config:` (ADR-094), and

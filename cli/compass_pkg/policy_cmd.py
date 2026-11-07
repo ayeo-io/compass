@@ -22,15 +22,15 @@ Both exit 0 when nothing is wrong, 1 when the lint finds an error, and 2 when
 the command cannot run, because the release scripts, the `Makefile` and CI
 run `lint`.
 """
-# DEPENDENCY: standard library (json, os); compass_pkg.atomic_io, check_set, core,
-# effective, governance, policy_lint (the legacy report only), project_settings,
-# settings_lint, terminal, tighten.
+# DEPENDENCY: standard library (json, os, re); compass_pkg.atomic_io, check_set, core,
+# effective, governance, project_settings, settings_lint, terminal, tighten.
 from __future__ import annotations
 
 import json
 import os
+import re
 
-from compass_pkg import check_set, effective, governance, policy_lint, project_settings
+from compass_pkg import check_set, effective, governance, project_settings
 from compass_pkg import settings_lint, tighten
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
@@ -55,11 +55,74 @@ def _is_framework_root(root):
     return os.path.realpath(root) == os.path.realpath(FRAMEWORK_ROOT)
 
 
+# --- the legacy lint, for a project with its own governance copy -----------------------
+
+_LEGACY_FILE = re.compile(r"^(?:\[([^\]]+)\]|([\w.-]+\.yml):) ")
+
+
+def _legacy_split(text):
+    """`(file, message)` from a legacy error line that starts `[file]` or
+    `file.yml:`, or `("", text)`."""
+    found = _LEGACY_FILE.match(text)
+    return ((found.group(1) or found.group(2)), text[found.end():]) if found else ("", text)
+
+
+def _legacy_finding(code, level, path, message):
+    return {"code": code, "level": level, "layer": "legacy", "path": path,
+            "group": "legacy", "message": message, "detail": None}
+
+
+def legacy_json(errors, drift=None, strict=False):
+    """The `--json` document for a project with no `compass.yml`, from the
+    legacy lint's error lines and its drift report (`governance.DriftReport`).
+    The drift is only looked at when the structure is clean, as the printed
+    lint does. Drift is a warning, and an error when the project makes it
+    strict. The keys are the 8.x ones, so a script that reads `result` and
+    `counts` keeps working."""
+    level = "error" if strict else "warning"
+    out = []
+    for text in errors:
+        path, message = _legacy_split(text)
+        out.append(_legacy_finding("LEGACY-STRUCTURE", "error", path, message))
+    if not errors and drift is not None and not drift.same_dir:
+        if not drift.comparable:
+            out.append(_legacy_finding("LEGACY-DRIFT-UNCOMPARED", "warning", "",
+                                       f"could not compare against the framework's "
+                                       f"governance: {drift.reason}"))
+        else:
+            out += [_legacy_finding("LEGACY-WAIVER", "error", "", text)
+                    for text in drift.waiver_errors]
+            out += [_legacy_finding("LEGACY-WAIVED", "info", rule_id,
+                                    f"waived by this project, a recorded decision and not "
+                                    f"drift: {reason}")
+                    for rule_id, reason in drift.waived]
+            out += [_legacy_finding("LEGACY-DRIFT", level, f"{name}:{rule_id}",
+                                    f"project governance is missing the {kind} {rule_id} "
+                                    f"the framework ships")
+                    for name, rule_id, kind in drift.missing_rules]
+            out += [_legacy_finding("LEGACY-DRIFT", level, f"{name}:{check}",
+                                    f"project governance is missing the check {check} the "
+                                    f"framework ships")
+                    for name, check in drift.missing_checks]
+    out.sort(key=lambda f: (f["path"], f["code"], f["message"]))
+    failed = any(f["level"] == "error" for f in out)
+    return {
+        "schema": JSON_SCHEMA_VERSION,
+        "mode": "legacy",
+        "result": "fail" if failed else "pass",
+        "layers": [{"name": "legacy", "kind": "legacy"}],
+        "stopped_after": "legacy" if errors else None,
+        "counts": {"errors": sum(f["level"] == "error" for f in out),
+                   "warnings": sum(f["level"] == "warning" for f in out)},
+        "findings": out,
+    }
+
+
 def _legacy_report():
     gov = find_governance()
     errors, _ = governance.legacy_structure(gov)
-    return policy_lint.legacy_report(errors, governance.governance_drift(gov),
-                                     governance._drift_is_strict())
+    return legacy_json(errors, governance.governance_drift(gov),
+                       governance._drift_is_strict())
 
 
 # --- the settings lint -----------------------------------------------------------------
@@ -137,7 +200,7 @@ def _lint_framework(args, root):
     except CompassError as exc:
         errors = [str(exc)]
         if resolve_mode(args) == "json":
-            _emit(args, policy_lint.lint_json(policy_lint.legacy_report(errors)), [])
+            _emit(args, legacy_json(errors), [])
         else:
             print("compass policy lint: FAIL")
             for error in errors:
@@ -145,7 +208,7 @@ def _lint_framework(args, root):
         return 1
     findings = settings_findings(os.path.join(root, project_settings.COMPASS_YML), root)
     if resolve_mode(args) == "json":
-        legacy = policy_lint.lint_json(_legacy_report())
+        legacy = _legacy_report()
         mine = _lint_json(findings, mode="framework")
         both = dict(mine, layers=legacy["layers"] + mine["layers"],
                     findings=legacy["findings"] + mine["findings"],
@@ -173,8 +236,8 @@ def run_policy_lint(args):
         if resolve_mode(args) != "json":
             return governance.cmd_policy_lint(args)
         report = _legacy_report()
-        _emit(args, policy_lint.lint_json(report), [])
-        return 0 if report.ok else 1
+        _emit(args, report, [])
+        return 0 if report["result"] == "pass" else 1
     _emit(args, _lint_json(findings), _lint_text(findings))
     return 0 if _ok(findings) else 1
 

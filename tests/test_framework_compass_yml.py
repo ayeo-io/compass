@@ -169,17 +169,20 @@ def test_roa_12_the_override_is_in_map_form_and_keeps_limit_seconds():
 
 
 def _lint(file=None):
-    """The write-time lint of this repository's chain, through the loader
-    `effective.resolve_live` uses, or of `file` read as the project layer."""
-    from compass_pkg import policy_lint
-    loaded = policy_lint.load_layers(str(ROOT), file=file, read_project=True)
-    return policy_lint.lint_loaded(loaded)
+    """The settings lint of this repository's `compass.yml`, or of `file`, as
+    `compass policy lint` runs it, as a report with `findings` and `errors`.
+    `effective.resolve_live` refuses a file this lint finds an error in."""
+    from types import SimpleNamespace
+    from compass_pkg import policy_cmd
+    found = policy_cmd.settings_findings(file or str(ROOT / "compass.yml"), str(ROOT))
+    return SimpleNamespace(findings=found, errors=[f for f in found if f.level == "error"])
 
 
 #: The settings this repository's file still holds that 9.0.0 no longer reads
-#: (ADR-093). Lint names each once with `L-SETTING-REMOVED`, until the owner
+#: (ADR-093), and `extends:` (ADR-094; its pin below @8 still keeps `S17` off
+#: until #359). Lint names each once with `L-SETTING-REMOVED`, until the owner
 #: deletes them from `compass.yml`.
-REMOVED_SETTINGS = {"readiness", "project.build_command", "project.lint_command"}
+REMOVED_SETTINGS = {"extends", "readiness", "project.build_command", "project.lint_command"}
 
 
 def _removed_warnings(result):

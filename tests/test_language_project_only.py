@@ -20,7 +20,8 @@ CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
-from compass_pkg import layers  # noqa: E402
+from compass_pkg import effective  # noqa: E402
+from compass_pkg.core import CompassError  # noqa: E402
 from compass_pkg.atomic_io import load_yaml_strict  # noqa: E402
 from test_framework_compass_yml import disallowed_keys  # noqa: E402
 
@@ -40,13 +41,14 @@ def _run(cwd, *argv, extra_env=None):
 
 
 def test_trc_011(tmp_path):
-    # A local parent: the chain refuses it before anything merges.
+    # A project's own governance copy, the one configuration besides compass.yml
+    # since 9.0.0 (ADR-094), is refused when it holds the key.
     try:
-        layers.build_chain(parent={"schema": 1, "language": "en-US"}, parent_name="local")
-    except layers.CompassError as exc:
+        effective._legacy_config({"schema": 1, "language": "en-US"})
+    except CompassError as exc:
         assert "language" in str(exc) and PARENT_RULE in str(exc), str(exc)
     else:
-        raise AssertionError("a local parent holding language was accepted")
+        raise AssertionError("a governance copy holding language was accepted")
     # A git parent can no longer hold it: 9.0.0 removed git parents (ADR-094),
     # so the lint and `policy show` refuse the `extends:` before any parent is
     # read, and name the code and the fix.
@@ -73,12 +75,14 @@ def _top_level_language(preset_dir):
 
 
 def test_trc_013(tmp_path):
-    folders = [PRESETS / "default", PRESETS / "default@6"]
+    folders = [PRESETS / "default@6", PRESETS / "default@7"]
     for folder in folders:
         assert list(folder.rglob("*.yml")), folder
         assert _top_level_language(folder) == [], folder
+    # The check set, which replaced the live preset in 9.0.0, holds none either.
+    assert "language" not in (ROOT / "governance" / "check-set.yml").read_text(encoding="utf-8")
     planted = tmp_path / "default"
-    shutil.copytree(PRESETS / "default", planted)
+    shutil.copytree(PRESETS / "default@7", planted)
     with open(planted / "preset.yml", "a", encoding="utf-8") as fh:
         fh.write("language: en-US\n")
     assert _top_level_language(planted) == ["preset.yml"]

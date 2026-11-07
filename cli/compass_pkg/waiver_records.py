@@ -33,8 +33,9 @@ Who may approve: the names in `approvers.waiver` of `compass.yml`, else in
 owner, nobody may (`W-NO-OWNER`). The CLI checks a name; it never
 authenticates the person, as for every approval.
 
-A waiver an issue layer holds in `config:` (ADR-039) is not read here: the
-issue layer and `compass_pkg.waivers` keep reading it until the layer goes.
+A waiver an 8.x issue layer held in `config:` (ADR-039) is not read: 9.0.0
+removed the layers (ADR-094). A stored 8.x generation keeps the waivers its
+provenance recorded.
 """
 # DEPENDENCY: standard library (os, re); compass_pkg.approval_records, check_set, core
 # (CompassError, now_iso). compass_pkg.project_settings is imported inside `approvers` to

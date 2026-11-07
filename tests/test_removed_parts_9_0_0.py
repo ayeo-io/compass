@@ -69,13 +69,13 @@ def test_the_removal_line_matches_tokens_not_prefixes():
 # --- a removed compass.yml key -----------------------------------------------------
 
 def _lint_project(layer):
-    from compass_pkg import policy_lint
-    from compass_pkg.layers import Layer
-    sys.path.insert(0, str(ROOT / "tests"))
-    import classifier_fixtures
-    parent = Layer("default", "parent", {"schema": 1, **classifier_fixtures.base()}, "d")
-    project = Layer("project", "project", {"schema": 1, **layer}, "d")
-    return policy_lint.lint_chain(parent, project)
+    """The settings lint of a `compass.yml` that holds `layer`, as a report with
+    `findings`. 8.x linted it as a layer over the shipped parent; the removed
+    settings are named the same way since ADR-094."""
+    from types import SimpleNamespace
+    from compass_pkg import check_set, settings_lint
+    return SimpleNamespace(findings=settings_lint.lint({"schema": 1, **layer},
+                                                       check_set.resolved()))
 
 
 @pytest.mark.parametrize("key,value", [
@@ -113,7 +113,3 @@ def test_a_guardrail_that_lists_the_removed_check_gains_no_replacement():
     assert _with_replacements(names, {}) == names
 
 
-def test_lint_accepts_an_old_copy_that_names_the_removed_check():
-    from compass_pkg.policy_lint import _removed_check_note
-    note = _removed_check_note("checks.multiagent-run-recorded", "unknown check")
-    assert "removed in 9.0.0" in note and "None" not in note

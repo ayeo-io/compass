@@ -5,19 +5,12 @@ evidence, never a claim), **blocking** (a failed guardrail stops the work),
 and **sticky** (slow to add, slower to remove). A guardrail always beats a
 strategy.
 
-This file ships with five **default guardrails** active. A project can *add*
-guardrails below them. The five are locked: `compass policy lint` refuses a
-`compass.yml` that removes or loosens one (`K-LOCK-REFUSED`). A project adds
-its own checks and gates in its `compass.yml`, which extends the shipped
-default (see `docs/configuration.md`). Only a project that copied this file
-under 5.x can omit a shipped guardrail, and `compass check` reports the
-omission. That project keeps running on its copy until `compass policy
-migrate` converts it.
-
-A lock on a key 9.0.0 removed, such as `stages.plan` or an entry of
-`approaches`, is not held. The merge leaves the key out of the project's
-`compass.yml` and of a git parent, and lint names it (`L-SETTING-REMOVED`), so
-`compass policy show` lists no lock for it either.
+This file ships with five **default guardrails** active. Compass runs one
+fixed check set (ADR-094), so no project can remove or loosen one. A project
+can only add to the set, with the tighten-only settings of its `compass.yml`
+(see `docs/configuration.md`). Only a project that copied this file under 5.x
+can omit a shipped guardrail, and `compass check` reports the omission. That
+project keeps running on its copy until #359.
 
 **This document explains; `guardrails.yml` enforces.** The companion
 `governance/guardrails.yml` is the machine-readable authority for *how each
@@ -126,10 +119,11 @@ Critical risk alone does not bring the sign-off (governance decision
 code that carries none of the four labels can be reverted at merge, and CI,
 review and the other guardrails gate it. `compass approach evaluate` names
 the labels when risk is critical and none is set, so an unlabelled migration
-is named at assess. A project that wants the sign-off on every critical-risk
-change sets the trigger to the four labels or `risk: critical` in
-`compass.yml`; `docs/upgrade-7-0-0.md` prints the block. The hard lock refuses
-a looser trigger but allows this stricter one.
+is named at assess. In 8.x a project that wanted the sign-off on every
+critical-risk change set the trigger in `compass.yml`
+(`docs/upgrade-7-0-0.md` prints the block). Since 9.0.0 a project adds labels
+to the trigger with the tighten-only setting `signoff_labels`, and no setting
+can loosen it (ADR-094).
 
 An issue keeps the trigger stored in its generation, so an issue assessed
 before 7.0.0 still needs the sign-off at critical risk.
@@ -489,99 +483,27 @@ of the governance files and no `compass.yml`. That is every new generation and
 every issue with no `generation:` key, the framework's own repository included.
 `compass check` prints `Policy: compass-checks@9.0.0 (sha256 <hex>)` on every
 run, and each generation commit writes the manifest's `policy:` block
-(`docs/generation-store.md`). While `governance/presets/default/` exists,
-`tests/test_check_set.py` checks that the set resolves to the same
-configuration as the 8.x resolver gave the default preset for a project with
-no `compass.yml`, less the `locked:` fields. It compares the guardrails, the
-checks, the evidence types and the evidence each point of the contract 1 grid
-owes.
+(`docs/generation-store.md`). `tests/test_check_set_content.py` checks the
+content of the set: the catalogue names, the stage-mode ranks, the references
+and the checks and evidence types of the frozen `governance/guardrails.yml`.
 
 `acceptance_strategy.pinned_below` still reads `extends: compass:default@6` or
 `@7`, which is otherwise a removed setting: such a pin keeps `S17` off until
 #359 writes `acceptance_strategy: off` in its place (ADR-094 open question 7).
 
-## Locks and conformance
+## No locks
 
-`cli/compass_pkg/locks.py` protects the framework's guarantees when a layer
-changes the shipped default. `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md`
-decides the rules. `compass policy lint` reports a refused change as
-`K-LOCK-REFUSED`, and `compass policy show` prints the resolved configuration.
+9.0.0 has no locks and no unlocks (ADR-094). Nothing sits above the check
+set, so nothing can change an entry a lock would protect: a setting can only
+add to the set, and a removed catalogue key in `compass.yml` is not read.
 
-- **A lock** is `locked: true` or `locked: hard` on an entry. The shipped
-  preset declares the framework locks, and a lower layer cannot remove one. An
-  issue's `config:` cannot lock an entry, and a `locked:` there adds no lock.
-- **The footprint** of a locked entry is what the lock protects:
-  - a check: its compared fields, and its place in each stage list and gate;
-  - a gate: its check set, its accepted evidence types and its stage;
-  - a stage: its existence, its order, and its entry and exit lists;
-  - a rule set: its kind, its hit policy, each rule in it and each rule's
-    effects;
-  - an approach: its existence and its `ships` value.
-- **Enforcement** uses the classifier's comparison, projected to the
-  footprint. A change that is equal or tighter is allowed. A change that
-  loosens the entry, or cannot be compared, is refused with the entry, the
-  lock level, the field, both values and the first assessment where it shows.
-  Removing the stage, changing `when`, detaching a gate, setting `on_skipped:
-  pass`, widening `accepts` or `reviewers`, dropping `approvers`, and changing
-  `params` or a human or judged `statement` are each refused.
-- **A change of vocabulary is a change to the lock.** If a layer drops or
-  renames a dimension value, or closes the label list, so that an assessment a
-  locked gate or check applied to can no longer be made, the lock refuses it.
-  The evaluator is run on the parent at each such assessment to find the locked
-  entries that were in force there.
-- **A rule with an effect that no obligation fact carries** (for example a
-  minimum approach) protects its `when` too, not only its effect, so a change
-  that narrows the rule is refused. A rule that adds a gate, asks for an
-  artifact, blocks a stage or asks for a skill is protected through that fact.
-- **A waiver never excuses a lock refusal.**
-- **An issue's `config:` is enforced at the issue's own assessment.** An issue
-  has one assessment in force, so the comparison runs at that single point and
-  not over the grid. A project layer is still enforced over the grid, because
-  it applies to every assessment the project will see
-  (`architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md`,
-  the amendment of 2026-10-08). Nothing is accepted or refused by the name or
-  weight of an approach: the field table decides at that point. Naming `full`
-  over `regular` is incomparable on the subtask ceiling, and a spike issue
-  that picks `full` loses `spike.conclude` and is refused by a lock. Since 9.0.0
-  no command enforces an issue's `config:`: a reassess does not read it, and
-  `compass issue lint` warns about one that the issue's stored generation was
-  not committed with (ADR-094).
-- **More than eight named labels is still refused, but only the labels a locked
-  entry can read are counted.** The scan keeps a label only where it can reach
-  a fact a lock protects, and drops the labels that only these read:
-  - advisory, bias and ceiling rules, which change what the evaluator reports
-    and which no footprint carries;
-  - a check that no locked stage or gate lists and that is not locked itself;
-  - a gate that is not locked, adds nothing a locked rule set adds, and holds no
-    locked check.
-
-  Labels in floors, shapes, caps, artifact rules and immovable gates always count,
-  because they decide the approach and so the gates in force. Once more than
-  eight labels a locked entry can read are named, every change to the layer is
-  refused, and the refusal reaches the layers below it. An issue's `config:` is
-  enforced at one assessment and names no labels, so this refusal does not reach it. The refusal names the labels counted. To lift it, name no more than
-  eight of them. For a `true` lock an owner-approved unlock also lifts it. For a
-  hard lock nothing else does. An entry or a path the scan does not recognise
-  keeps its labels, so a doubtful case makes the count larger and never smaller.
-  `enforce(..., scan="full")` counts every label in the layer. It is the
-  reference that `tests/test_locks_footprint_scan.py` compares the footprint scan
-  with: both give the same refusals on every lock test case and every approach
-  tried against the shipped policy.
-- **A configuration the evaluator rejects** is refused as well, because no
-  lock can be shown to hold. An unlock cannot help. The configuration needs
-  fixing, and lint reports the fault.
-- **`locked: hard`** applies to the guardrail A human signs off on the
-  irreversible (`G5`) and its check `human-approval-present`. No unlock
-  lifts `G5` and its check, and no waiver excuses them.
-- **An unlock** is `unlock: true` on an entry in `compass.yml`, with a waiver
-  that gives a reason and is approved by the project's `owner`. An issue, a
-  parent or a preset that carries `unlock:` is refused. An unlocked entry is no
-  longer enforced for the project or the issue below it.
+- **What no waiver excuses.** `never_waived` in `governance/check-set.yml`
+  names the guardrail A human signs off on the irreversible (`G5`) and its
+  check `human-approval-present`, the two `locked: hard` entries of 8.x.
+  `compass waiver add` refuses a waiver of either (`docs/waivers.md`).
 - **Conformance.** In 8.x a project that unlocked a framework entry was
   non-conformant, and `compass check` and `compass approach show` said so on
   every run. Since 9.0.0 the resolver reads the check set, where no lock
-  exists, so neither command prints a conformance line (ADR-094).
-
-The report reads `compass.yml` and the shipped default's lock summary. The
-waiver's date and covered revision are checked by the waiver module when it
-lands.
+  exists, so neither command prints a conformance line.
+- **A stored generation** written by 8.x keeps the `locked:` fields and the
+  `conformance` block it stored. They are read as data and enforce nothing.

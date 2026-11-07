@@ -22,27 +22,27 @@ with the layers: `compass policy diff`, `policy update`, `policy migrate`
 A command line that still names a removed verb or flag fails to parse as an
 unknown command, and `line_for` gives the one line the parse error adds.
 Each removed `compass.yml` key and capability stays valid and is not read;
-`compass policy lint` names it through `setting_findings`. A removed key of a
-catalogue (the approaches, a legacy stage, a rule set or a check) is left out
-of a project layer, and of a git parent, by `without_removed` before the merge
-and the schema check read it (`drops_removed`). Each entry names the decision
-record that removed it.
+`compass policy lint` names it through `setting_findings`. Since ADR-094 no
+layer merges, so a removed catalogue key is not read at all.
+`with_mapped_stages` reads a gate that a project's governance copy places at a
+legacy stage at the path stage that shows it. Each entry
+names the decision record that removed it.
 """
 # DEPENDENCY: standard library (copy); compass_pkg.stable_ids (constants only). Imported by
-# compass_pkg.aliases (the parse error), compass_pkg.merge (the catalogue a project layer or
-# a git parent can no longer change), compass_pkg.parents (the git parent's name scheme)
-# and compass_pkg.policy_lint (the removed settings).
+# compass_pkg.aliases (the parse error), compass_pkg.effective (the git parent scheme and
+# the legacy stage mapping of a governance copy), compass_pkg.settings_lint (the removed
+# settings) and compass_pkg.decisions_taken (the removed agent names).
 from __future__ import annotations
 
 import copy
 
-from compass_pkg.stable_ids import (LEGACY_APPROACH_ALIASES, LEGACY_APPROACH_IDS, LEGACY_TO_PATH, STAGE_BREAKDOWN, STAGE_DEFINE,
+from compass_pkg.stable_ids import (LEGACY_TO_PATH, STAGE_BREAKDOWN, STAGE_DEFINE,
                                     STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_VERIFY)
 
 RELEASE = "9.0.0"
 
 #: The start of a git parent's layer name, `github:<owner>/<repo>@<ref>#<sha>`
-#: (`parents.ref_label` writes it). The shipped preset is named `default`.
+#: (8.x `parents.ref_label` wrote it). 9.0.0 refuses one (L-PARENT-REMOVED).
 GIT_PARENT_SCHEME = "github:"
 #: What a project that extends a git parent does now. A team parent can hold
 #: checks its projects owe, so dropping it would lower what each project owes
@@ -54,11 +54,10 @@ GIT_PARENT_FIX = ("Move the checks the team parent adds into the tighten-only se
 
 
 def drops_removed(kind, name):
-    """True when the layer of `kind` named `name` is read without what 9.0.0
-    removed: the project layer, and a git parent. A team's shared `compass.yml`
-    written for 8.x must not stop every project that extends it (VD-006 of
-    #351). The shipped preset and a frozen preset declare their own catalogue,
-    and an issue layer has its own rule (`unheld_stages`)."""
+    """True when `setting_findings` names what 9.0.0 removed from the layer of
+    `kind` named `name`: the project's `compass.yml`, and a git parent. The
+    settings lint passes the project's file only, since 9.0.0 refuses a git
+    parent (ADR-094)."""
     return kind == "project" or (kind == "parent" and isinstance(name, str)
                                  and name.startswith(GIT_PARENT_SCHEME))
 
@@ -173,10 +172,6 @@ COMMANDS = (
 AGENT_NAMES = ("architect", "builder", "orchestrator", "planner", "product-marketer",
                "product-owner", "reviewer", "router", "spec-author", "verifier")
 
-#: The verification note's template, which 9.0.0 deleted (ADR-091): one
-#: rendered block with no `## ` heading. The frozen presets list no heading for
-#: it at `lightweight`, so `compass policy lint` reads the kind as this text.
-SINGLE_BLOCK_TEMPLATE = "<!-- compass:render verification-note -->\n<!-- /compass:render -->\n"
 
 #: The legacy stages the four-stage path does not keep (ADR-092). The path keeps
 #: `assess` and `ship`, so a project can still change those two.
@@ -358,82 +353,6 @@ def _named_checks(doc):
     return found
 
 
-def removed_key(catalogue, entry_id):
-    """The removed `compass.yml` key that the entry `<catalogue>.<entry_id>` falls
-    under, such as `approaches` or `stages.plan`, or None when it is kept."""
-    if catalogue in SETTINGS:
-        return catalogue
-    key = f"{catalogue}.{entry_id}"
-    return key if key in SETTINGS else None
-
-
-def with_removed_from(config, like):
-    """A copy of the resolved configuration `config` in which every removed entry
-    is the one `like` holds (or is absent when `like` has none), and no field that
-    lists checks names a removed check. Two configurations compared after this
-    differ only in what a project layer can still change."""
-    out = copy.deepcopy(config)
-    for catalogue in {key.split(".", 1)[0] for key in SETTINGS}:
-        entries, other = out.get(catalogue), (like.get(catalogue) or {})
-        if catalogue in SETTINGS:
-            if catalogue in like:
-                out[catalogue] = copy.deepcopy(like[catalogue])
-            else:
-                out.pop(catalogue, None)
-            continue
-        if not isinstance(entries, dict):
-            continue
-        for entry_id in set(entries) | set(other):
-            if removed_key(catalogue, entry_id) is None:
-                continue
-            if entry_id in other:
-                entries[entry_id] = copy.deepcopy(other[entry_id])
-            else:
-                entries.pop(entry_id, None)
-    _approach_rules_from(out, like)
-    removed = _removed_checks()
-    for catalogue, fields in CHECK_LIST_FIELDS.items():
-        for entry in (out.get(catalogue) or {}).values():
-            for field in fields:
-                if isinstance(entry, dict) and isinstance(entry.get(field), list):
-                    entry[field] = [item for item in entry[field] if item not in removed]
-    return out
-
-
-def _approach_rules_from(out, like):
-    """Give `out` the approach-picking rules of `like` in place of its own
-    (`APPROACH_RULE_SETS`, `APPROACH_EFFECTS`), with the hit policy each needs."""
-    rules, other = out.get("rules"), like.get("rules") or {}
-    if not isinstance(rules, dict):
-        return
-    for set_id in APPROACH_RULE_SETS:
-        if set_id in other:
-            rules[set_id] = copy.deepcopy(other[set_id])
-        else:
-            rules.pop(set_id, None)
-
-    def picks(rule):
-        then = rule.get("then") if isinstance(rule, dict) else None
-        return isinstance(then, dict) and bool(then) and set(then) <= set(APPROACH_EFFECTS)
-
-    for set_id in set(rules) | set(other):
-        if set_id in APPROACH_RULE_SETS:
-            continue
-        mine, theirs = rules.get(set_id), other.get(set_id)
-        if not isinstance(mine, dict) or not isinstance(mine.get("rules"), dict):
-            continue
-        body = mine["rules"]
-        for rule_id in [r for r, rule in body.items() if picks(rule)]:
-            del body[rule_id]
-        if isinstance(theirs, dict):
-            for rule_id, rule in (theirs.get("rules") or {}).items():
-                if picks(rule):
-                    body[rule_id] = copy.deepcopy(rule)
-                    for effect in rule["then"]:
-                        if effect in (theirs.get("hit") or {}):
-                            mine.setdefault("hit", {})[effect] = theirs["hit"][effect]
-
-
 def _holds(doc, key):
     """True when a project layer holds the removed key `key`."""
     if "." not in key:
@@ -441,71 +360,6 @@ def _holds(doc, key):
     catalogue, entry_id = key.split(".", 1)
     entries = doc.get(catalogue)
     return isinstance(entries, dict) and entry_id in entries
-
-
-def _without_checks(value, removed):
-    """A list field, plain or `{add, remove}`, with the removed check ids left out."""
-    if isinstance(value, list):
-        return [item for item in value if item not in removed]
-    if isinstance(value, dict):
-        return {part: ([item for item in items if item not in removed]
-                       if isinstance(items, list) else items)
-                for part, items in value.items()}
-    return value
-
-
-def _empty(value):
-    return value == [] or (isinstance(value, dict) and not any(value.values()))
-
-
-def without_removed(doc):
-    """A copy of a project layer's document with every removed key left out: a
-    removed top-level key, a removed catalogue entry, and a removed check id in a
-    field that lists checks. A `set:` change that named only removed checks is
-    left out whole, so the inherited list stays as it is. Nothing here judges the
-    value of what it leaves out: a value the old schema refused must not make the
-    project file invalid. Only a layer `drops_removed` names is passed here: the
-    shipped preset, a frozen preset and an issue layer are not."""
-    if not isinstance(doc, dict):
-        return doc
-    out = {key: value for key, value in _without_effects(doc).items() if key not in SETTINGS}
-    removed = _removed_checks()
-    for catalogue in {key.split(".", 1)[0] for key in SETTINGS if "." in key}:
-        entries = out.get(catalogue)
-        if not isinstance(entries, dict):
-            continue
-        out[catalogue] = {entry_id: entry for entry_id, entry in entries.items()
-                          if f"{catalogue}.{entry_id}" not in SETTINGS}
-    for catalogue, fields in CHECK_LIST_FIELDS.items():
-        entries = out.get(catalogue)
-        if not isinstance(entries, dict):
-            continue
-        kept = {}
-        for entry_id, entry in entries.items():
-            if not isinstance(entry, dict):
-                kept[entry_id] = entry
-                continue
-            entry = dict(entry)
-            for field in fields:
-                if field in entry:
-                    entry[field] = _without_checks(entry[field], removed)
-            changes = entry.get("set")
-            if isinstance(changes, dict):
-                changes = dict(changes)
-                for field in fields:
-                    if field in changes:
-                        before = changes[field]
-                        changes[field] = _without_checks(before, removed)
-                        if _empty(changes[field]) and not _empty(before):
-                            del changes[field]
-                if changes or not entry["set"]:
-                    entry["set"] = changes
-                else:
-                    del entry["set"]
-            if entry or not entries[entry_id]:
-                kept[entry_id] = entry
-        out[catalogue] = kept
-    return out
 
 
 def _rule_bodies(doc, set_id, rule_id):
@@ -616,22 +470,6 @@ def _set_approach_effects(set_id, entry, strip):
     return out
 
 
-def _without_effects(doc):
-    if _approach_effects(doc):
-        doc = copy.deepcopy(doc)
-        _approach_effects(doc, strip=True)
-    keys = held_effects(doc)
-    if not keys:
-        return doc
-    out = copy.deepcopy(doc)
-    for key in keys:
-        _, set_id, _, rule_id, _, effect = key.split(".", 5)
-        for body in _rule_bodies(out, set_id, rule_id):
-            if isinstance(body.get("then"), dict):
-                body["then"].pop(effect, None)
-    return out
-
-
 def mapped_stages(doc, config):
     """`(gate id, legacy stage, path stage)` for each gate a layer `doc` places at
     a legacy stage that neither the configuration below it, `config`, nor the
@@ -664,50 +502,6 @@ def with_mapped_stages(doc, config):
         entry = out["gates"][gate_id]
         body = entry.get("set") if isinstance(entry.get("set"), dict) else entry
         body["stage"] = stage
-    return out
-
-
-def unheld_stages(doc, config):
-    """The `stages.<id>` and `checks.<id>` keys of an issue layer `doc` that name a
-    legacy stage or a Definition of Ready check the configuration below it,
-    `config`, does not hold, and `approach` when the layer picks an 8.x approach
-    `config` does not declare. An issue assessed before 9.0.0 can set the mode of a
-    legacy stage or change such a check; over the shipped default, which declares
-    neither (ADR-092), the merge leaves the entry out. Over a stored generation
-    that holds it, it is kept."""
-    out = []
-    for catalogue, removed in (("stages", LEGACY_STAGES), ("checks", READY_CHECKS)):
-        entries = doc.get(catalogue) if isinstance(doc, dict) else None
-        held = (config or {}).get(catalogue) or {}
-        if isinstance(entries, dict):
-            out += [f"{catalogue}.{entry}" for entry in entries
-                    if entry in removed and entry not in held]
-    # An issue's pick of an 8.x approach. Another name is the layer's own fault and
-    # is still refused.
-    approach = doc.get("approach") if isinstance(doc, dict) else None
-    if isinstance(approach, str):
-        name = LEGACY_APPROACH_ALIASES.get(approach, approach)
-        if name in LEGACY_APPROACH_IDS and name not in ((config or {}).get("approaches") or {}):
-            out.append("approach")
-    return out
-
-
-def without_unheld_stages(doc, config):
-    """A copy of the issue layer `doc` without the entries `unheld_stages` names: a
-    legacy stage or a Definition of Ready check the configuration does not hold."""
-    keys = unheld_stages(doc, config)
-    if not keys:
-        return doc
-    out = dict(doc)
-    if "approach" in keys:
-        del out["approach"]
-    for catalogue in ("stages", "checks"):
-        if not isinstance(doc.get(catalogue), dict):
-            continue
-        out[catalogue] = {entry: body for entry, body in doc[catalogue].items()
-                          if f"{catalogue}.{entry}" not in keys}
-        if not out[catalogue]:
-            del out[catalogue]
     return out
 
 

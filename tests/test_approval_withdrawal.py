@@ -4,8 +4,8 @@
 `/compass:reject <record id> <reason>` on a delegated sign-off writes an
 `approval-withdrawal` record. `human-approval-present` 1.2.0 skips a withdrawn
 record while the issue is in flight; on a landed issue the floor of ADR-066
-decision 5 still passes it, reported only. A waiver that names a withdrawn
-approval fails.
+decision 5 still passes it, reported only. A waiver whose approval is
+withdrawn excuses nothing; `tests/test_waiver_records.py` covers it.
 
 Scenario ids: `TRC-F13`, `TRC-F15`. Each test name starts with its scenario id.
 """
@@ -14,7 +14,6 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
@@ -33,7 +32,7 @@ def _type(root, args, command):
 # --- the person overrules a delegated guardrail 5 sign-off (`TRC-F13`) ----------------------
 
 def test_f13_withdrawal_fails_g5_in_flight(tmp_path):
-    from compass_pkg import checks, waivers
+    from compass_pkg import checks
     root = project(tmp_path)
     first = _type(root, f"--agent {ARCHITECT} --until {_soon()} --for g5", "compass:delegate")
     code = re.search(r"confirm (\S+)", first.message).group(1)
@@ -54,11 +53,8 @@ def test_f13_withdrawal_fails_g5_in_flight(tmp_path):
     ok, detail = checks._check_human_approval(manifest_of(root), str(task_dir(root)))
     assert not ok and "withdrawn" in detail, detail
     assert "does not reverse" in result.message, result.message
-    # A waiver that names the withdrawn approval fails.
-    waiver = SimpleNamespace(id="W-1", body={"approved_by": "EV-APPROVAL-G5-1"},
-                             catalogue="checks", entry="x")
-    found = waivers.check_approval(waiver, [OWNER], manifest_of(root)["evidence"], None)
-    assert found and "withdrawn" in str(found[0]), found
+    # A waiver whose approval is withdrawn excuses nothing: tests/test_waiver_records.py
+    # covers it for the 9.0.0 waiver (ADR-094), which replaced the 8.x issue waiver.
 
 
 # --- a withdrawal never fails a landed issue (`TRC-F15`) -----------------------------------

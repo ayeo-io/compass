@@ -2,7 +2,7 @@
 
 A waiver excuses one check on one issue. It needs a reason and a person's approval. This page shows how to ask for one, how a person approves it, and what `compass check` then shows. The decision behind it is ADR-094, the architecture decision record that makes every project run one fixed check set.
 
-A waiver in a project's `compass.yml` or in an issue's `config:` layer is the older form, which `docs/waivers-and-locks.md` describes. It is read until 9.0.0 removes the layers.
+A waiver in a project's `compass.yml` or in an issue's `config:` layer is the 8.x form. 9.0.0 removed the layers that held it (ADR-094): such a waiver is not read, and `compass policy lint` names the key that holds it as a removed setting. A stored 8.x generation keeps the waivers it recorded.
 
 ## Ask for a waiver
 

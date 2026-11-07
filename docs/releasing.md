@@ -190,8 +190,8 @@ copied governance and `.compass/config.yml`) are read in their old words until
   configuration to the installed versions. An implementation major that differs
   from the one a generation recorded is refused, and a check can be advisory.
 - A project can name git parents, singly or in a chain, and each is pinned by
-  sha and judged against the default like any other layer
-  (`docs/git-parents.md`).
+  sha and judged against the default like any other layer. 9.0.0 removed git
+  parents (ADR-094).
 - A check can be judged: it passes on a recorded review (`docs/judged-checks.md`).
   `approvers` name who may approve a waiver, a human check or an exit, and an
   evidence approval is recorded with its approver.
@@ -252,6 +252,12 @@ copied governance and `.compass/config.yml`) are read in their old words until
 
 ### Keeping the previous default major
 
+9.0.0 replaced the live preset with the fixed check set (ADR-094), so no
+release after it keeps a preset folder: a stored generation holds its own
+resolved policy, and `tests/fixtures/check-set-digests.yml` pins each version
+of `governance/check-set.yml`. The two folders kept before then,
+`default@6` and `default@7`, stay as data, frozen. Until 9.0.0 the rule was:
+
 A release that moves the shipped default to a new major (`default@7` after
 `default@6`) must keep the previous major's preset files in
 `governance/presets/default@<major>`, a copy of the last preset that major
@@ -262,10 +268,10 @@ same file. The copy is frozen, so do not edit it. A project on v6.0.1, which shi
 because no record stores what an approval saw. The live default wins for
 its own major. The live preset takes the new major's version at the first change to it after
 the previous major ships, not at the release: from then on the live preset and the
-kept copy no longer share a pin. Pin the
-new preset with `python3 scripts/generate-legacy-views.py --pin`; the old
-pins stay. `tests/test_kept_presets.py` fails when a kept folder does not
-match its pinned digest or when an earlier pinned major is not kept.
+kept copy no longer share a pin. The old pins stay in
+`tests/fixtures/preset-digests.yml`. `tests/test_kept_presets.py` fails when a
+kept folder does not match its pinned digest or when an earlier pinned major is
+not kept.
 
 ### What changed at 5.0.0
 

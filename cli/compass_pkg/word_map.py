@@ -462,14 +462,6 @@ def map_policy(policy, rows=None):
     return out
 
 
-def advisory_lines(layer):
-    """One advisory line per change the mapping made to `layer`, for the lint.
-    It names the layer, the path and the new word."""
-    return [f"advisory: {layer.name}: {path} reads '{old}' as '{new}'; "
-            f"the old word is read until 9.0.0"
-            for path, old, new in getattr(layer, "changes", ())]
-
-
 # --- manifests ----------------------------------------------------------------
 
 def _map_manifest(manifest, rows, changes):

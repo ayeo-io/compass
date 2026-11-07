@@ -1,7 +1,4 @@
-# GENERATED FILE - do not edit by hand. The source is the default preset in
-# governance/presets/default/ and governance/legacy-views.yml. Change those,
-# then regenerate this file with: python3 scripts/generate-legacy-views.py
-# A test fails when this file differs from what that command writes.
+# FROZEN FILE - do not edit. Not generated since 9.0.0 (ADR-094): only the legacy readers read it, until #359.
 # =============================================================================
 # A CHECK DERIVES FROM THIS FILE'S STRUCTURE.
 # tests/plain_language_check.py builds its registry of what each code means from

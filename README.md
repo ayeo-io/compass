@@ -222,7 +222,7 @@ full account is in [docs/security.md](docs/security.md).
   (ADR-094). An `extends:` that names a git parent is refused with
   `L-PARENT-REMOVED`, and no command runs `git` to fetch one: not `compass
   policy lint`, `compass policy show`, `compass approach evaluate --write` or
-  `compass check` ([docs/git-parents.md](docs/git-parents.md) describes 8.x).
+  `compass check`.
 - **Sends** your delivery record to a git repository you configure, with
   `compass record sync`, which `compass ship-commit` also runs. It happens
   only when `compass.yml` names a `record:` remote, and it redacts

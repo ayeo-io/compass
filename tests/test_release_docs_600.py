@@ -11,9 +11,12 @@ Scenario ids: IDR-8 and IDR-9, in the acceptance criteria of the issue
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 
 
 def _read(rel):
@@ -302,8 +305,7 @@ def test_trc_s1_the_plugin_ships_the_governance_prose_the_instructions_name():
 # --- Instructions use evidence types, verbs and fields that exist -------------
 
 def _evidence_types():
-    import yaml
-    preset = yaml.safe_load(_read("governance/presets/default/evidence-types.yml"))
+    preset = shipped("evidence-types.yml")
     return set(preset["evidence_types"])
 
 
@@ -873,10 +875,12 @@ S2_OLD_TEXT = (
 S2_NEW_TEXT = (
     ("governance/README.md", "## A project that copied governance under 5.x"),
     ("governance/README.md", "`compass.yml` cannot hold strategies"),
-    ("governance/guardrails.md", "`K-LOCK-REFUSED`"),
-    ("governance/guardrails.md", "`compass policy show` prints the resolved configuration"),
-    ("governance/routing-policy.md", "Routing changes go in the project's `compass.yml`"),
-    ("governance/routing-policy.md", "reads the same resolved configuration"),
+    # 9.0.0 runs one fixed check set (ADR-094): a project adds to it with the
+    # tighten-only settings of `compass.yml`, and nothing removes or loosens it.
+    ("governance/guardrails.md", "no project can remove or loosen one"),
+    ("governance/guardrails.md", "the tighten-only settings of its `compass.yml`"),
+    ("governance/routing-policy.md", "a project does not change a"),
+    ("governance/routing-policy.md", "reads the resolved configuration"),
 )
 
 

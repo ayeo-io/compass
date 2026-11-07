@@ -24,6 +24,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 
 from test_generation_store import (SLUG, _evaluate_write, _manifest, _project,  # noqa: E402
                                    _run, _write_manifest)
@@ -258,71 +259,6 @@ def test_ee_1_check_runs_a_project_deterministic_check_with_the_capability_off(t
 
 # --- EE-2: the Definition of Done is not owed by an approach that does not ship -------------
 
-def test_ee_2_a_spike_owes_no_done_check_and_a_delivery_owes_all_seven(tmp_path, monkeypatch):
-    from compass_pkg import obligations
-    root, _ = _config_project(tmp_path)
-    config = _view(root, monkeypatch).config
-    on = (CAPABILITY,)
-    spike = obligations.obligations(config, {"risk": "trivial", "familiarity": "greenfield",
-                                             "size": "small", "goal": "exploration"},
-                                    capabilities=on)
-    assert spike.approach == "spike"
-    assert spike.exit["verify"] == ()
-    delivery = obligations.obligations(config, {"risk": "contained",
-                                                "familiarity": "brownfield-mapped",
-                                                "size": "medium", "goal": "delivery"},
-                                       capabilities=on)
-    assert delivery.exit["verify"] == tuple(sorted(DONE_IDS))
-    assert delivery.entry["plan"] == tuple(sorted(READY_IDS))
-
-
-def test_ee_2_a_check_can_name_ships_in_its_when(tmp_path, monkeypatch):
-    from compass_pkg import obligations
-    root, _ = _config_project(tmp_path)
-
-    def mutate(resolved):
-        resolved["checks"]["only-shipping"] = {
-            "statement": "x", "kind": "human", "severity": "blocking",
-            "on_skipped": "fail", "when": {"ships": True}}
-        resolved["checks"]["only-not-shipping"] = {
-            "statement": "y", "kind": "human", "severity": "blocking",
-            "on_skipped": "fail", "when": {"ships": False}}
-        resolved["stages"]["verify"]["exit"] += ["only-shipping", "only-not-shipping"]
-
-    config = _view(root, monkeypatch, mutate).config
-    spike = obligations.obligations(config, {"risk": "trivial", "familiarity": "greenfield",
-                                             "size": "small", "goal": "exploration"})
-    regular = obligations.obligations(config, {"risk": "contained",
-                                               "familiarity": "greenfield",
-                                               "size": "medium"})
-    assert "only-not-shipping" in spike.exit["verify"]
-    assert "only-shipping" not in spike.exit["verify"]
-    assert "only-shipping" in regular.exit["verify"]
-    assert "only-not-shipping" not in regular.exit["verify"]
-
-
-@pytest.mark.parametrize("assessment", [
-    {"risk": "trivial", "familiarity": "greenfield", "size": "small", "goal": "exploration"},
-    {"risk": "contained", "familiarity": "brownfield-mapped", "size": "medium",
-     "goal": "delivery"},
-    {"risk": "trivial", "familiarity": "greenfield", "size": "small", "goal": "delivery"},
-])
-def test_ee_2_the_stage_lists_and_the_obligations_read_ships_alike(
-        tmp_path, monkeypatch, assessment):
-    """Whatever the approach, the checks the evaluator lists as owed are the
-    checks the stage lists run."""
-    from compass_pkg import obligations
-    root, task_dir = _config_project(tmp_path)
-    view = _view(root, monkeypatch)
-    owed = obligations.obligations(view.config, assessment, capabilities=(CAPABILITY,))
-    _write_manifest(task_dir, assessment=assessment, delivery_approach=owed.approach,
-                    current_phase="ship", stages=dict(owed.stage_mode))
-    rows = _rows(view, task_dir)
-    assert {r.check for r in rows if r.side == "exit" and r.stage == "verify"} \
-        == set(owed.exit["verify"])
-    assert {r.check for r in rows if r.side == "entry" and r.stage == "plan"} \
-        == set(owed.entry["plan"])
-
 
 def test_ee_2_a_stored_check_can_use_ships_in_its_when(tmp_path, monkeypatch):
     """A check a stored generation holds can read `ships` in its `when`. A
@@ -360,20 +296,6 @@ def test_ee_2_ships_is_not_a_dimension(tmp_path):
     assert [(f["code"], f["path"]) for f in found] == [("L-SETTING-REMOVED", "dimensions")]
     from compass_pkg import effective
     assert "ships" not in effective.resolve_live(str(root)).resolved["dimensions"]
-
-
-def test_ee_2_the_classifier_sees_the_ships_condition_come_and_go(tmp_path, monkeypatch):
-    from compass_pkg import classify
-    root, _ = _config_project(tmp_path)
-    parent = _view(root, monkeypatch).config
-    child = copy.deepcopy(parent)
-    for check_id in DONE_IDS:
-        del child["checks"][check_id]["when"]
-    on = (CAPABILITY,)
-    tighter = classify.classify(parent, child, parent_capabilities=on, child_capabilities=on)
-    assert tighter.result == "tightening", tighter.reason
-    looser = classify.classify(child, parent, parent_capabilities=on, child_capabilities=on)
-    assert looser.result == "loosening", looser.reason
 
 
 # --- EE-3: a human check is a tick ---------------------------------------------------------
@@ -777,31 +699,6 @@ def test_ee_2_an_unknown_approach_ships_by_default(tmp_path, monkeypatch):
     assert view.listing_assessment({"risk": "trivial"}, None)["ships"] is True
 
 
-def test_ee_2_obligations_read_ships_in_blocking_when_and_in_a_gate_condition(
-        tmp_path, monkeypatch):
-    from compass_pkg import obligations
-    root, _ = _config_project(tmp_path)
-
-    def mutate(resolved):
-        resolved["checks"]["ship-blocks"] = {
-            "statement": "x", "kind": "human", "severity": "blocking",
-            "on_skipped": "fail", "blocking_when": {"ships": True}}
-        resolved["stages"]["verify"]["exit"] += ["ship-blocks"]
-        resolved["gates"]["GX"] = {"kind": "guardrail", "name": "x", "statement": "x",
-                                   "stage": "verify", "checks": [], "when": {"ships": False}}
-
-    config = _view(root, monkeypatch, mutate).config
-    spike = obligations.obligations(config, {"risk": "trivial", "familiarity": "greenfield",
-                                             "size": "small", "goal": "exploration"})
-    regular = obligations.obligations(config, {"risk": "contained",
-                                               "familiarity": "greenfield",
-                                               "size": "medium"})
-    assert spike.checks["ship-blocks"]["severity"] == "advisory"
-    assert regular.checks["ship-blocks"]["severity"] == "blocking"
-    assert "GX" not in regular.gate_set
-    assert "GX" in spike.gate_set
-
-
 def test_ee_2_check_reads_ships_in_a_gate_check_blocking_when(tmp_path):
     root, task_dir = _project(tmp_path, compass_yml={"schema": 1})
     code, out, err = _evaluate_write(root)
@@ -822,9 +719,8 @@ def test_ee_2_check_reads_ships_in_a_gate_check_blocking_when(tmp_path):
 
 
 def test_ee_7_the_shipped_default_names_no_judged_or_evidence_check_in_a_list():
-    preset = ROOT / "governance" / "presets" / "default"
-    checks = yaml.safe_load((preset / "checks.yml").read_text(encoding="utf-8"))["checks"]
-    stages = yaml.safe_load((preset / "stages.yml").read_text(encoding="utf-8"))["stages"]
+    checks = shipped("checks.yml")["checks"]
+    stages = shipped("stages.yml")["stages"]
     listed = [c for body in stages.values() for side in ("entry", "exit")
               for c in body.get(side, [])]
     assert listed
@@ -973,7 +869,6 @@ def test_ee_9_next_names_the_unmet_entry_checks_of_the_current_stage(tmp_path):
 # The receipt also showed each list and its state; 9.0.0 removed it (ADR-091).
 
 
-
 def _project_check_added(severity="blocking"):
     """A deterministic check in the specify entry list, as `_add` takes it. The
     check set has no plan stage since 9.0.0 (ADR-092); an issue assessed before
@@ -1034,8 +929,7 @@ def test_ee_11_dod_evidence_typed_still_runs_with_the_capability_on(tmp_path):
 # --- EE-12: the default preset, help text and owning doc -----------------------------------------
 
 def test_ee_12_every_done_check_carries_the_ships_condition():
-    checks = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "checks.yml")
-                            .read_text(encoding="utf-8"))["checks"]
+    checks = shipped("checks.yml")["checks"]
     frozen = yaml.safe_load((FROZEN / "checks.yml").read_text(encoding="utf-8"))["checks"]
     for check_id in DONE_IDS:
         assert checks[check_id].get("when") == {"ships": True}, check_id

@@ -23,8 +23,7 @@ HOOK = ROOT / "hooks" / "session-start.sh"
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
-from compass_pkg import catalogue_check, language, project_settings  # noqa: E402
-from parent_fixtures import issue_project  # noqa: E402
+from compass_pkg import language, project_settings, settings_lint  # noqa: E402
 
 SENTENCE_START = "`language` in compass.yml"
 GUIDE = "docs/configuration.md"
@@ -33,6 +32,25 @@ GUIDE = "docs/configuration.md"
 REFUSED = ["en_US", "en-", "-en", "en--US", "x-klingon", "e", "english", "zh-yue",
            "zh-cmn-Hans", "en-US-posix", "de-CH-1996", "en-1234", "en-USA", "en-U",
            "en US", "en-US,de", "en-Ü"]
+
+
+def issue_project(tmp_path, extends):
+    """A project whose `compass.yml` extends `extends`, with one open issue.
+    Returns `(project root, issue folder)`. Moved from the git parent fixtures,
+    which went with git parents in 9.0.0 (ADR-094)."""
+    import yaml
+    root = Path(tmp_path) / "project"
+    task_dir = root / ".compass" / "work" / "feature"
+    task_dir.mkdir(parents=True)
+    issue = {"schema_version": "2.0", "issue": "feature", "created": "2026-10-08",
+             "status": "active", "evidence": [],
+             "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
+                            "size": "medium", "goal": "delivery", "labels": []}}
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(issue, sort_keys=False),
+                                           encoding="utf-8")
+    (root / "compass.yml").write_text(yaml.safe_dump({"schema": 1, "extends": extends}),
+                                      encoding="utf-8")
+    return root, task_dir
 
 
 def _env():
@@ -205,7 +223,7 @@ def test_trc_009(tmp_path, monkeypatch):
         raise AssertionError("a network socket was opened")
 
     monkeypatch.setattr(socket, "socket", no_socket)
-    assert catalogue_check.check_layer({"schema": 1, "language": "xx-ZZ"}, "project") == []
+    assert settings_lint.lint({"schema": 1, "language": "xx-ZZ"}) == []
     assert language.canonical("xx-ZZ") == "xx-ZZ"
     monkeypatch.undo()
     code, out = _lint(_with_language(tmp_path, '"xx-ZZ"'))

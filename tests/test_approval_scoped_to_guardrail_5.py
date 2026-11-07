@@ -30,6 +30,8 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
@@ -368,9 +370,14 @@ def test_agf_11_major_1_and_locked_entries_unchanged():
     lock = yaml.safe_load((ROOT / "tests" / "fixtures" / "impls" / "versions.lock.yml")
                           .read_text(encoding="utf-8"))["implementations"][CHECK]
     assert str(lock["version"]).split(".")[0] == "1"
-    preset = ROOT / "governance" / "presets" / "default"
+    # The two entries were the hard locks of the 8.x preset; the check set holds
+    # them with no `locked:` field and names them in `never_waived` (ADR-094), so
+    # the field is put back before the pinned digest is compared.
+    never_waived = shipped("preset.yml")["never_waived"]
     for (name, section, key), digest in LOCKED.items():
-        entry = yaml.safe_load((preset / name).read_text(encoding="utf-8"))[section][key]
+        entry = dict(shipped(name)[section][key])
+        assert f"{section}.{key}" in never_waived, (section, key)
+        entry["locked"] = "hard"
         assert hashlib.sha256(json.dumps(entry, sort_keys=True).encode()).hexdigest() \
             == digest, f"{section}.{key} changed"
 

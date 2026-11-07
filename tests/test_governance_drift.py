@@ -177,23 +177,18 @@ def test_trc_a2_changing_governance_content_without_bumping_its_version_should_f
         entry = pinned[name]
         assert entry.get("version") == version, (
             f"{name} declares version {version} but the pin records "
-            f"{entry.get('version')}. Bump one to match the other:\n"
-            f"  - if the content changed, raise the version in "
-            f"governance/legacy-views.yml (the file {name} is generated from "
-            f"it) and re-record the hash with "
-            f"`python3 scripts/generate-legacy-views.py --pin-hashes`\n"
-            f"  - if it did not, the pin is stale")
+            f"{entry.get('version')}. {name} is frozen since 9.0.0 (ADR-094) and "
+            f"read only by the legacy readers, so neither may move: restore the "
+            f"file from git")
         assert entry.get("sha256") == actual, (
             f"{name} content changed without its version moving.\n"
             f"  declared version: {version}\n"
             f"  pinned  sha256  : {entry.get('sha256')}\n"
             f"  actual  sha256  : {actual}\n"
-            f"{name} is generated from the preset, so do not edit it. Raise "
-            f"`version:` under `routing_policy` or `guardrails` in "
-            f"governance/legacy-views.yml, run "
-            f"`python3 scripts/generate-legacy-views.py`, then "
-            f"`python3 scripts/generate-legacy-views.py --pin-hashes` to update "
-            f"{HASHES.relative_to(ROOT)}.")
+            f"{name} is frozen since 9.0.0 (ADR-094), so do not edit it: only "
+            f"its first line may change. The shipped defaults are in "
+            f"governance/check-set.yml; restore {name} from git, which keeps "
+            f"{HASHES.relative_to(ROOT)} as it is.")
 
 
 # ---------------------------------------------------------------------------

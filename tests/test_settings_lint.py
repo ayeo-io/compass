@@ -15,8 +15,9 @@ from pathlib import Path
 
 import pytest
 
-from compass_pkg import catalogue_check, check_set, effective, settings_lint
+from compass_pkg import check_set, effective, settings_lint
 from compass_pkg.atomic_io import load_yaml_strict
+from compass_pkg.core import CompassError
 
 ROOT = Path(__file__).resolve().parent.parent
 GOOD = {
@@ -202,24 +203,28 @@ def test_a_judged_or_human_check_needs_no_implementation(base):
         "a": {"kind": "judged"}, "b": {"kind": "human"}}}) == []
 
 
-# --- the layer check and the schema ------------------------------------------------
+# --- the settings, a governance copy and the schema ------------------------------
 
-def test_the_project_layer_check_accepts_the_settings_and_refuses_a_bad_shape():
-    assert catalogue_check.check_layer(GOOD, "project") == []
-    errors = catalogue_check.check_layer({"signoff_labels": "billing"}, "project")
-    assert errors == ["signoff_labels: expected a list of label names"]
+def test_the_lint_accepts_the_settings_and_refuses_a_bad_shape():
+    assert settings_lint.lint(GOOD) == []
+    found = settings_lint.lint({"signoff_labels": "billing"})
+    assert [(f.code, f.path, f.message) for f in found] == [
+        ("L-SETTING-INVALID", "signoff_labels", "expected a list of label names")]
 
 
 @pytest.mark.parametrize("key", ["signoff_labels", "require_evidence", "agent_review",
                                  "project_checks"])
-def test_a_parent_cannot_hold_a_tighten_only_setting(key):
-    errors = catalogue_check.check_layer({key: GOOD[key]}, "parent", "default")
-    assert errors and errors[0].startswith(f"{key}: a settings key belongs in the project")
+def test_a_governance_copy_cannot_hold_a_tighten_only_setting(key):
+    """A project's own governance copy is the one configuration besides
+    `compass.yml` (until #359); a setting belongs in `compass.yml` only."""
+    with pytest.raises(CompassError, match=f"legacy: {key} is a settings key and belongs "
+                                           f"in the project's own compass.yml"):
+        effective._legacy_config({key: GOOD[key]})
 
 
 def test_the_committed_schema_holds_the_five_settings():
     schema = json.loads((ROOT / "schemas" / "compass.schema.json").read_text(encoding="utf-8"))
-    assert schema == catalogue_check.schema()
+    assert schema == settings_lint.schema()
     props = schema["properties"]
     for key in ("signoff_labels", "require_evidence", "agent_review", "project_checks",
                 "capabilities"):
@@ -232,7 +237,7 @@ def test_the_committed_schema_holds_the_five_settings():
 
 def test_the_schema_accepts_the_good_file_and_refuses_a_lowering():
     jsonschema = pytest.importorskip("jsonschema")
-    schema = catalogue_check.schema()
+    schema = settings_lint.schema()
     jsonschema.validate(GOOD, schema)
     for bad in ({"require_evidence": [{"add": ["security"], "remove": ["clarity"]}]},
                 {"project_checks": [dict(GOOD["project_checks"][0], severity="advisory")]},

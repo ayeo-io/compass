@@ -1,11 +1,12 @@
-"""The architecture docs name every CLI path that reads templates/."""
+"""The architecture docs name every CLI path that reads templates/.
+
+The one reader, the layered `compass policy lint`, went with the configuration
+layers in 9.0.0 (ADR-094), so no CLI path reads a template and the docs say so."""
 import os
 import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-READERS = {
-    "cli/compass_pkg/policy_lint.py",
-}
+READERS = set()
 # Code that joins the folder name "templates" onto a path.
 JOINS_TEMPLATES = re.compile(r"""["']templates["']""")
 
@@ -29,7 +30,7 @@ def _doc(name):
         return fh.read()
 
 
-def test_cli_reads_templates_through_two_paths():
+def test_no_cli_path_reads_templates():
     assert _readers(ROOT) == READERS
 
 
@@ -40,11 +41,12 @@ def test_scan_reports_a_third_reader(tmp_path):
     assert _readers(str(tmp_path)) == {"cli/compass_pkg/third.py"}
 
 
-def test_docs_name_both_reading_paths():
+def test_docs_say_no_cli_path_reads_templates():
     for name in ("ownership.md", "relations.md"):
         text = _doc(name)
         for path in READERS:
             assert path in text, f"{name} does not name {path}"
+        assert "policy_lint.py" not in text, name
         assert "not consumed" not in text
         assert "never read" not in text
 

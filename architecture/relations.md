@@ -45,7 +45,7 @@ components. Relations are ordered by the calling component.
 | `commands/go.md` | `architecture/decisions/ADR-*.md` | via `architecture-loaded.yml` | the specify stage reads ADR summaries (id, title, status) to avoid re-litigating closed decisions | low |
 | `commands/go.md` | `docs/compass/<created>-<slug>/architecture-notes.md` | file read | the specify stage reads the architect perspective's notes and turns their boundary risks into scenarios | medium |
 | `cli/compass` (`release notes`) | `.compass/work/` and git | file read, `git` read | `compass release notes --since <ref>` reads completed issue manifests with `load_yaml`, the living spec committed at HEAD and at the ref when that revision holds one (a revision made before 9.0.0), and commit reachability; it writes nothing (ADR-065) | low |
-| `templates/<kind>.md` | `cli/compass_pkg/policy_lint.py` | file read | `compass policy lint` reads it to check an artifact kind's sections | low |
+| `templates/<kind>.md` | n/a | reference only | no CLI path reads it since 9.0.0 removed the layered `compass policy lint` (ADR-094) | n/a |
 | `templates/architecture/` | n/a | reference only | no CLI path reads the subfolder; an adopter copies it by hand to bootstrap their own `architecture/` tree | n/a |
 
 ## Prohibited relations

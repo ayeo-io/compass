@@ -19,11 +19,11 @@ import sys
 from pathlib import Path
 
 import pytest
-import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 FRONT_PAGE = ("README.md", "docs/index.md", "docs/quickstart.md")
-PRESET = ROOT / "governance" / "presets" / "default"
 
 _NUMBERS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
             "seven": 7, "eight": 8, "nine": 9, "ten": 10}
@@ -39,10 +39,9 @@ _NOT_A_NAME = {"delivery", "computed", "final", "same", "first", "lighter",
 
 
 def _truth() -> dict:
-    gates = yaml.safe_load((PRESET / "gates.yml").read_text(encoding="utf-8"))["gates"]
-    stages = yaml.safe_load((PRESET / "stages.yml").read_text(encoding="utf-8"))["stages"]
-    approaches = yaml.safe_load(
-        (PRESET / "approaches.yml").read_text(encoding="utf-8"))["approaches"]
+    gates = shipped("gates.yml")["gates"]
+    stages = shipped("stages.yml")["stages"]
+    approaches = shipped("approaches.yml")["approaches"]
     help_text = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "--help"],
                                capture_output=True, text=True, timeout=60).stdout
     verbs = set(re.search(r"\{([a-z,_-]+)\}", help_text).group(1).split(","))

@@ -26,11 +26,12 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg import classify, merge, obligations  # noqa: E402
+from compass_pkg import obligations, word_map  # noqa: E402
 from compass_pkg import catalogue_spec  # noqa: E402
 from compass_pkg.routing import evaluate_route  # noqa: E402
 
-PRESET = ROOT / "governance" / "presets" / "default"
+#: The shipped default: the check set since 9.0.0 (ADR-094).
+PRESET = None
 # The live default declares no document, approach map or artifact rule since 9.0.0
 # (ADR-091). The 7.0.0 preset is frozen with them, and a stored generation still
 # reads them, so the tests of the artifact rules read that preset.
@@ -44,12 +45,18 @@ def _load(path):
 
 
 def _preset_config(folder=PRESET):
-    parts = []
+    """The catalogues of the check set, or of the frozen preset in `folder`, read
+    through the retired-word tables as a stored generation is read."""
+    if folder is None:
+        from compass_pkg import check_set
+        resolved = check_set.resolved()
+        return {name: resolved[name] for name in catalogue_spec.CATALOGUES if resolved.get(name)}
+    config = {}
     for name in catalogue_spec.CATALOGUES:
         part = _load(folder / f"{name}.yml")
-        parts.append({k: v for k, v in part.items() if k != "schema"})
-    config, _ = merge.apply({}, {"schema": 1, **merge.combine(parts)}, "parent", "default")
-    return config
+        if part.get(name):
+            config[name] = part[name]
+    return word_map.map_layer(config)[0]
 
 
 def _policy(folder=PRESET):
@@ -105,7 +112,7 @@ def _project(tmp_path, slug="t", assessment=None, compass_yml=True):
 # --- group A: the shipped vocabulary and the evaluator ----------------------------
 
 def test_trc_a1_the_shipped_default_declares_no_role_dimension():
-    dims = _load(PRESET / "dimensions.yml")["dimensions"]
+    dims = _preset_config()["dimensions"]
     assert "role" not in dims
     assert list(dims) == ["risk", "familiarity", "size", "goal", "urgency", "labels"]
     view = _load(VIEW)
@@ -125,7 +132,7 @@ def _whens(node):
 
 
 def test_trc_a2_the_shipped_rules_hold_no_role_rule_default_or_bias():
-    rules = _load(PRESET / "rules.yml")["rules"]
+    rules = _preset_config()["rules"]
     assert all(s.get("kind") != "role-rules" for s in rules.values())
     assert "role_rules" not in rules and "role_defaults" not in rules
     view = _load(VIEW)
@@ -239,16 +246,6 @@ def test_trc_b4_a_spike_with_a_positioning_document_carries_only_its_own_gate():
     assert result["gates"] == ["spike.conclude"]
 
 
-def test_trc_b6_the_classifier_sees_the_artifact_rules():
-    parent = _preset_config(FROZEN)
-    child = _without_rule(parent, "RP-ART-001")
-    shown = classify.classify(parent, child)
-    assert shown.result == "loosening", shown.reason
-    point = shown.first_looser
-    assert "positioning" in (point.assessment.get("artifacts") or []), point.assessment
-    assert "positioning" in shown.to_json()["grid"]["artifacts"]
-
-
 def _without_rule(config, rule_id):
     out = copy.deepcopy(config)
     for rule_set in out["rules"].values():
@@ -284,8 +281,8 @@ def test_trc_c2_a_stored_6x_configuration_keeps_its_role_rules():
     policy_text, guardrails_text = _six_0_1_texts()
     stored = legacy_adapter.adapt(yaml.safe_load(policy_text),
                                   yaml.safe_load(guardrails_text))
-    owed = obligations.obligations(stored, _assess(role="product-owner"))
-    assert "plan" in owed.blocked_stages
+    owed = evaluate_route(_assess(role="product-owner"), obligations.policy_adapter(stored))
+    assert "plan" in _blocks(owed)
 
 
 def test_trc_c3_a_role_justification_is_accepted_and_not_recorded(tmp_path):
@@ -383,16 +380,6 @@ def test_trc_c8_a_project_that_declares_its_own_role_dimension_may_read_it(tmp_p
         encoding="utf-8")
     code, out, err = _run(root, "policy", "lint")
     assert "M-WHEN-RETIRED" not in out + err, out + err
-
-
-def test_trc_c7_the_retired_rules_table_names_each_replacement():
-    sidecar = _load(ROOT / "governance" / "legacy-views.yml")
-    table = sidecar["routing_policy"]["retired_rules"]
-    assert table["RP-ROLE-001"]["replaced_by"] == "RP-ART-001"
-    assert table["RP-ROLE-002"]["replaced_by"] == "RP-ART-002"
-    assert table["RP-SROLE-001"]["replaced_by"] is None
-    from compass_pkg import retired
-    assert retired.RULES == {k: v["replaced_by"] for k, v in table.items()}
 
 
 # --- group D: the perspectives ---------------------------------------------------

@@ -61,37 +61,22 @@ SHIPPED_KINDS = {
 }
 SIX_FIELDS = ("stage", "owner", "audience", "stands_for", "sections", "depends_on")
 
-#: The live default declares no document kind since 9.0.0 (ADR-091), and a project
-#: layer can no longer change the catalogue. The 7.0.0 preset is frozen with the
-#: catalogue these scenarios checked; a stored generation is filled from it, and a git
-#: parent can still declare one. So the catalogue is read from that preset, and a
-#: change to it is a parent's.
+#: The live default declares no document kind since 9.0.0 (ADR-091), and nothing can
+#: change the catalogue since 9.0.0 (ADR-094). The 7.0.0 preset is frozen with the
+#: catalogue these scenarios checked, and a stored generation is filled from it, so
+#: the catalogue is read from that preset. The scenarios of a parent's change to it
+#: (the lint of a team parent, the merge and the classifier) went with the layers.
 FROZEN = ROOT / "governance" / "presets" / "default@7"
 
 
 def _frozen_doc():
-    """The frozen 7.0.0 preset as one layer document."""
-    from compass_pkg import catalogue_spec, merge
-    parts = []
+    """The frozen 7.0.0 preset as one document: each file holds one catalogue."""
+    from compass_pkg import catalogue_spec
+    doc = {"schema": 1}
     for name in catalogue_spec.CATALOGUES:
         part = yaml.safe_load((FROZEN / f"{name}.yml").read_text(encoding="utf-8"))
-        parts.append({k: v for k, v in part.items() if k != "schema"})
-    return {"schema": 1, **merge.combine(parts)}
-
-
-def _frozen_base():
-    from compass_pkg import merge
-    return merge.apply({}, _frozen_doc(), "parent", "default@7", {})
-
-
-def _lint_team(doc):
-    """`policy lint` findings, as `_words` gives them, for a git parent `doc` over the
-    frozen 7.0.0 preset."""
-    from compass_pkg import policy_lint
-    from compass_pkg.layers import Layer
-    report = policy_lint.lint_chain(Layer("default@7", "parent", _frozen_doc(), "d"), None,
-                                    extra_parents=(Layer("team", "parent", doc, "d"),))
-    return [f"{f.level} {f.path} {f.message}" for f in report.findings]
+        doc.update({k: v for k, v in part.items() if k != "schema"})
+    return doc
 
 
 def _env(home):
@@ -188,14 +173,6 @@ def test_acf_1(tmp_path):
 
 def test_acf_2(tmp_path):
     entry = _charter()
-    del entry["audience"]
-    words = _lint_team({"schema": 1, "artifacts": {"test-charter": entry}})
-    lines = [line for line in words if "test-charter" in line and "audience" in line]
-    assert lines and all(line.startswith("error ") for line in lines), words
-    entry["audience"] = _charter()["audience"]
-    words = _lint_team({"schema": 1, "artifacts": {"test-charter": entry}})
-    assert not [line for line in words if line.startswith("error ")], words
-    assert not [line for line in words if "audience" in line]
     # A project file that declares a kind is left out and named (ADR-091).
     root = _scratch(tmp_path, {"schema": 1, "artifacts": {"test-charter": entry}})
     code, report, text = _lint(root)
@@ -223,82 +200,6 @@ def test_acf_12(tmp_path):
 def test_acf_23(tmp_path):
     assert _frozen_doc()["artifacts"]["distribution-map"]["required_when"] == {
         "subtasks": {"min": 2}}
-    assert not [w for w in _lint_team({"schema": 1}) if w.startswith("error ")]
-    words = _lint_team({"schema": 1, "artifacts": {
-        "distribution-map": {"set": {"required_when": {"phase": {"min": 2}}}}}})
-    assert [line for line in words
-            if line.startswith("error ") and "required_when" in line and "phase" in line], words
-
-
-def test_acf_32(tmp_path):
-    from compass_pkg import merge
-    import copy
-
-    base, provenance = _frozen_base()
-
-    def merged(entry):
-        return merge.apply(copy.deepcopy(base), {"schema": 1, "artifacts": {"test-charter": entry}},
-                           "parent", "team", dict(provenance))
-
-    def refusal(entry):
-        with pytest.raises(merge.MergeError) as raised:
-            merged(entry)
-        return raised.value.errors
-
-    # No sections: refused, naming the kind and the field.
-    no_sections = _charter()
-    del no_sections["sections"]
-    errors = refusal(no_sections)
-    assert [e for e in errors if e[0] == "M-ADD-PARTIAL" and "test-charter" in e[1]
-            and "sections" in e[2]], errors
-    # Only a file name: every required field is named.
-    errors = refusal({"file": "test-charter.md"})
-    text = " ".join(e[2] for e in errors if e[0] == "M-ADD-PARTIAL")
-    for field in ("stage", "owner", "audience", "stands_for", "sections"):
-        assert field in text, (field, errors)
-    # Every field but depends_on is accepted, and depends_on reads as empty.
-    complete = _charter()
-    del complete["depends_on"]
-    config, _ = merged(complete)
-    assert config["artifacts"]["test-charter"].get("depends_on", []) == []
-    # An id the parent holds is refused as before.
-    existing = {"schema": 1, "artifacts": {"technical-design": _charter()}}
-    with pytest.raises(merge.MergeError) as raised:
-        merge.apply(copy.deepcopy(base), existing, "parent", "team", dict(provenance))
-    assert [e for e in raised.value.errors if e[0] == "M-ADD-EXISTS"]
-
-    # A project file is left out by the merge since 9.0.0 (ADR-091), so the command
-    # line reads it.
-    root = _scratch(tmp_path, {"schema": 1, "artifacts": {"test-charter": no_sections}})
-    code, out, err = _cli(root, "policy", "show")
-    assert code == 0 and "M-ADD-PARTIAL" not in out + err, out + err
-
-
-def test_acf_33(tmp_path):
-    import copy
-
-    from compass_pkg import classify, merge
-
-    base, provenance = _frozen_base()
-
-    def verdict(layer):
-        child, _ = merge.apply(copy.deepcopy(base), layer, "parent", "team",
-                               dict(provenance))
-        return classify.classify(base, child).result
-
-    adds = {"test-charter": _charter()}
-    assert verdict({"schema": 1, "artifacts": adds}) == "equivalent"
-    owed = {"schema": 1, "artifacts": adds, "approaches": {
-        "regular": {"set": {"artifacts": {"set": {"test-charter": "lightweight"}}}}}}
-    assert verdict(owed) == "tightening"
-    removed = {"schema": 1, "approaches": {
-        "regular": {"set": {"artifacts": {"remove": ["technical-design"]}}}}}
-    assert verdict(removed) == "loosening"
-    changed = {"schema": 1, "artifacts": {
-        "distribution-map": {"set": {"required_when": {"subtasks": {"min": 3}}}}}}
-    assert verdict(changed) == "incomparable"
-    assert {verdict({"schema": 1, "artifacts": adds}), verdict(owed), verdict(removed),
-            verdict(changed)} <= {"equivalent", "tightening", "loosening", "incomparable"}
 
 
 # --- group B: the skeleton, the templates and the generated documents --------------

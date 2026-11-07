@@ -356,11 +356,11 @@
       2,
       2
     ],
-    "list_items": 96,
+    "list_items": 79,
     "table_rows": 0
   },
   "governance/routing-policy.md": {
-    "fences": 4,
+    "fences": 2,
     "heading_levels": [
       1,
       2,
@@ -377,11 +377,10 @@
       2,
       2,
       2,
-      2,
       2
     ],
-    "list_items": 66,
-    "table_rows": 38
+    "list_items": 50,
+    "table_rows": 33
   },
   "governance/strategies.md": {
     "fences": 0,

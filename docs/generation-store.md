@@ -278,7 +278,7 @@ A project with no `compass.yml` and its own `governance/` copies is resolved
 through the legacy adapter in place of the check set, until #359. The copy is the
 whole configuration, so each entry is added as it stands and nothing merges
 (`effective._legacy_config`). A gate the copy places at a legacy stage it does
-not declare is read at the path stage that shows it (`L-STAGE-MAPPED`). The
+not declare is read at the path stage that shows it. The
 provenance names the layer `legacy` and the operation `add`, as 8.x stored it.
 An entry that is not a mapping, names a field its catalogue lacks, or misses a
 required field is refused, with every fault named. The adapter also

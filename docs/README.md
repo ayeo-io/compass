@@ -36,14 +36,12 @@ the table does not exist, and when a doc in this folder is not listed.
 - [upgrade-7-0-0.md](upgrade-7-0-0.md) - what 7.0.0 changes and what to do about it, one section per change.
 - [upgrade-8-0-0.md](upgrade-8-0-0.md) - what 8.0.0 changes about delegation, and what breaks: the flag form, `--issue` on a delegated approval and the common store.
 - [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it.
-- [waivers-and-locks.md](waivers-and-locks.md) - how an owner writes a waiver, a lock, an unlock, an approver list and a layer in `compass.yml`.
-- [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show` on a layered project: the order of the checks, the finding codes and both JSON shapes.
+- [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show`: the settings lint of `compass.yml`, the legacy lint of a governance copy, the finding codes and both JSON shapes.
 - [check-implementations.md](check-implementations.md) - the version and fixture corpus of each check implementation, the build rule and what a major difference does.
 - [generation-store.md](generation-store.md) - the stored generation of an issue's configuration: its files, the commit order, the states and what reads it.
 - [entry-exit-evaluation.md](entry-exit-evaluation.md) - the capability that evaluates each stage's entry and exit lists: when a list is due, how each kind of check is judged, what `on_skipped` does and where results show.
 - [judged-checks.md](judged-checks.md) - a check of kind `judged`, its review record and `compass evidence review`: what a judged check needs to pass, the four failure causes, how a changed input re-owes the review and the JSON shape.
 - [issue-dependencies.md](issue-dependencies.md) - `depends_on` and `compass issue depends add|remove`: the entry shape, the nine `until` values, when the block counts at implement, what the hook reads and what it costs, the fail-safe cases, the worktree rule and what each reader shows.
-- [git-parents.md](git-parents.md) - a git parent in `extends:`: the pinned spelling, the fetch and cache, what Compass refuses and what an issue records.
 - [security.md](security.md) - what Compass adds to a repository, and how to review it.
 - [portability.md](portability.md) - the adapter boundary, for running Compass outside Claude Code.
 
@@ -69,28 +67,21 @@ same commit.
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
 | `cli/compass_pkg/release_line.py` | `docs/release-line.md` |
 | `cli/compass_pkg/release_notes.py`, `cli/compass_pkg/shipped_issues.py` | `docs/release-notes.md` |
-| `cli/compass_pkg/project_settings.py`, `cli/compass_pkg/tighten.py`, `cli/compass_pkg/settings_lint.py`, `tests/test_tighten.py`, `tests/test_settings_lint.py` | `docs/configuration.md` |
-| `cli/compass_pkg/catalogue_spec.py`, `cli/compass_pkg/catalogue_check.py`, `schemas/compass.schema.json` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
-| `cli/compass_pkg/legacy_adapter.py`, `cli/compass_pkg/legacy_views.py`, `cli/compass_pkg/legacy_views_template.py`, `scripts/generate-legacy-views.py`, `governance/presets/default/`, `tests/fixtures/preset-digests.yml` | `governance/routing-policy.md` |
-| `cli/compass_pkg/vocabulary.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
+| `cli/compass_pkg/project_settings.py`, `cli/compass_pkg/tighten.py`, `cli/compass_pkg/settings_lint.py`, `cli/compass_pkg/catalogue_spec.py`, `schemas/compass.schema.json`, `tests/test_tighten.py`, `tests/test_settings_lint.py` | `docs/configuration.md` |
+| `cli/compass_pkg/legacy_adapter.py`, `governance/presets/default@6/`, `governance/presets/default@7/`, `tests/fixtures/preset-digests.yml` | `governance/routing-policy.md` |
 | `cli/compass_pkg/stable_ids.py`, `cli/compass_pkg/gate_status.py`, `tests/test_stable_ids.py` | `architecture/decisions/ADR-040-stable-ids-live-in-one-module.md` |
 | `cli/compass_pkg/path_stages.py`, `cli/compass_pkg/path_readers.py`, `tests/test_path_stages.py`, `tests/test_path_checks.py` | `architecture/decisions/ADR-092-compass-runs-one-path-of-four-stages.md` |
 | `cli/compass_pkg/atomic_io.py` | `architecture/decisions/ADR-036-an-issue-runs-against-a-stored-generation.md` |
-| `cli/compass_pkg/obligations.py` | `architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md` |
-| `cli/compass_pkg/classify.py`, `cli/compass_pkg/classify_lists.py`, `cli/compass_pkg/json_shape.py`, `scripts/bench-classifier.py` | `governance/routing-policy.md` |
-| `cli/compass_pkg/policy_lint.py`, `cli/compass_pkg/policy_effective.py`, `cli/compass_pkg/policy_cmd.py`, `cli/compass_pkg/readiness_registry.py` | `docs/policy-lint.md` |
+| `cli/compass_pkg/obligations.py` | `governance/routing-policy.md` |
+| `cli/compass_pkg/policy_cmd.py`, `cli/compass_pkg/readiness_registry.py` | `docs/policy-lint.md` |
 | `cli/compass_pkg/generation.py`, `cli/compass_pkg/effective.py`, `cli/compass_pkg/impl_versions.py`, `scripts/bench-evaluate.py` | `docs/generation-store.md` |
 | `scripts/impl-coverage.py`, `tests/fixtures/impls/versions.lock.yml` | `docs/check-implementations.md` |
 | `cli/compass_pkg/issue_depends.py` | `docs/issue-dependencies.md` |
 | `cli/compass_pkg/stage_lists.py`, `cli/compass_pkg/item_records.py`, `cli/compass_pkg/follow_up_cmd.py`, `cli/compass_pkg/doc_sections.py`, `cli/compass_pkg/approval_records.py`, `cli/compass_pkg/approvals.py`, `cli/compass_pkg/approval_requests.py`, `cli/compass_pkg/prompt_approval.py`, `cli/compass_pkg/delegations.py`, `cli/compass_pkg/delegation_tickets.py`, `cli/compass_pkg/worktree_lookup.py`, `cli/compass_pkg/approve_cmd.py`, `tests/test_human_checks.py`, `tests/fixtures/evidence-approve-example.json` | `docs/entry-exit-evaluation.md` |
 | `cli/compass_pkg/artifact_kinds.py`, `cli/compass_pkg/justifications.py`, `templates/*.md` | `docs/artifact-catalog.md` |
 | `cli/compass_pkg/review_records.py`, `cli/compass_pkg/review_cmd.py`, `tests/fixtures/evidence-review-example.json` | `docs/judged-checks.md` |
-| `cli/compass_pkg/parents.py`, `cli/compass_pkg/parent_states.py`, `cli/compass_pkg/chain_class.py` | `docs/git-parents.md` |
-| `cli/compass_pkg/waivers.py` | `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md` |
 | `cli/compass_pkg/waiver_records.py`, `cli/compass_pkg/waiver_cmd.py`, `tests/test_waiver_records.py` | `docs/waivers.md` |
-| `cli/compass_pkg/layers.py`, `cli/compass_pkg/merge.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
-| `cli/compass_pkg/locks.py` | `governance/guardrails.md` |
-| `cli/compass_pkg/check_set.py`, `governance/check-set.yml`, `tests/fixtures/check-set-digests.yml` | `governance/guardrails.md` |
+| `cli/compass_pkg/check_set.py`, `governance/check-set.yml`, `tests/fixtures/check-set-digests.yml`, `tests/test_check_set_content.py` | `governance/guardrails.md` |
 | `cli/compass_pkg/routing.py`, `cli/compass_pkg/g5_label_prompt.py`, `cli/compass_pkg/approach_diagram.py`, `governance/routing-policy.yml`, `approaches/`, `docs/approach-diagram.html` | `governance/routing-policy.md` |
 | `cli/compass_pkg/checks.py`, `cli/compass_pkg/dod_due.py`, `cli/compass_pkg/check_cmd.py`, `cli/compass_pkg/check_registry.py`, `cli/compass_pkg/red_first.py`, `governance/guardrails.yml` | `governance/guardrails.md` |
 | `governance/strategies.md` | `governance/strategies-rationale.md` |

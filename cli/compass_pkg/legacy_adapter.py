@@ -1,26 +1,17 @@
 # compass_pkg.legacy_adapter - today's policy files as one catalogue-form layer
 """Convert a routing policy and a guardrails file into catalogue form.
 
-The shipped defaults move into `governance/presets/default/`, one file per
-catalogue (ADR-042). Until the loader reads that directory, today's two files
-are the only description of the defaults, so the preset is produced from
-them by this adapter, once, and committed. The adapter then stays as the
-bridge for projects that still carry copies of the two files, which are read
-as an overlay of the same form.
+A project that keeps its own copies of `governance/routing-policy.yml` and
+`governance/guardrails.yml`, and has no `compass.yml`, runs on them until
+#359: `effective` reads the copies through `adapt` in place of the check set
+(ADR-094). The compatibility contracts read the 5.6.0 and 8.0.4 copies the
+same way.
 
-It reads data and returns data. It changes no behaviour and no argument:
+It reads data and returns data. It changes no behavior and no argument:
 every value is copied before it is renamed. Old key names are read through
 the migration map the loaders use, so a policy copied before the renames
-converts to the same document as today's.
-
-What the legacy format holds that the catalogue form has no field for goes
-to a sidecar, `legacy.yml`, which only the generator of the legacy files
-reads: each guardrail's full `checked_at` list, the legacy spelling of a
-value or a `when:` key, the order of keys inside a rule, the order of the
-autonomy rows, the fallback approach and the generated rule that stands for
-it, both file versions and `project:`. With the preset it holds every value
-of today's two files, so they can be rebuilt from it. Three things also
-change shape in the catalogue itself:
+converts to the same document as today's. Three things change shape in the
+catalogue:
 
 - the fallback approach (`default_route`) becomes the last rule of the
   `default_shapes` set, matching every assessment;
@@ -28,28 +19,19 @@ change shape in the catalogue itself:
 - a guardrail's `checked_at` keeps its first stage as the gate's `stage`,
   which the design records and does not enforce.
 """
-# DEPENDENCY: PyYAML (bundled); compass_pkg.core, compass_pkg.routing,
-# compass_pkg.catalogue_spec, compass_pkg.stable_ids, compass_pkg.artifact_kinds,
-# compass_pkg.retired, compass_pkg.outside_gate.
+# DEPENDENCY: standard library (copy); compass_pkg.core, compass_pkg.routing,
+# compass_pkg.stable_ids, compass_pkg.artifact_kinds, compass_pkg.outside_gate,
+# compass_pkg.path_stages and compass_pkg.word_map.
 from __future__ import annotations
 
 import copy
-import os
 
-import yaml
-
-from compass_pkg import artifact_kinds, core, outside_gate, removed_parts, retired, stable_ids, word_map
-from compass_pkg.catalogue_spec import CAPABILITIES
+from compass_pkg import artifact_kinds, core, outside_gate, stable_ids, word_map
 from compass_pkg.routing import canonical_routes
 from compass_pkg.path_stages import rename_v1_stage_keys
 from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, GATE_SPIKE_CONCLUDE,
                                     PATH_STAGE_IDS, STAGE_ASSESS, STAGE_BUILD, STAGE_IDS,
                                     STAGE_SHIP, STAGE_VERIFY)
-
-PRESET_ID = "default"
-PRESET_VERSION = "8.0.0"
-PRESET_FILES = ("dimensions", "stages", "approaches", "rules", "checks", "gates",
-                "artifacts", "readiness", "vocabulary")
 
 # The eight stages in the order they run. A stage an approach names that is
 # not here is appended, so an unusual policy still converts.
@@ -102,7 +84,7 @@ HARD_GUARDRAILS = (GATE_G5,)
 # multiagent_check.py, borrowed_docs.py, artifact_status.py and design_size.py (removed in
 # 9.0.0, still named so an old guardrails copy reads as before).
 # The check declared-tests-resolve returns a pass with a note. Every other check
-# fails. `tests/test_obligations.py` replays these verdicts against the archive sample.
+# fails.
 DECLINING_CHECKS = (
     "scenarios-are-executable", "claim-traces-to-scenario", "command-passes",
     "borrowed-documents-answered", "evidence-matches-tree",
@@ -564,20 +546,6 @@ def _humanise(identifier):
     return text[:1].upper() + text[1:]
 
 
-def _shipped_readiness():
-    """`(catalogue, display names)` of the readiness signals, read from the
-    shipped preset. The two legacy files have no readiness entry, so this is the
-    one place the adapter takes a catalogue from the preset it is rebuilding
-    (ADR-059): a project with copied governance has the shipped signals. Since
-    9.0.0 the shipped catalogue is empty (ADR-093), so it has none, and no check
-    reads one."""
-    directory = os.path.join(core.FRAMEWORK_ROOT, "governance", "presets", "default")
-    catalogue = core.load_yaml(os.path.join(directory, "readiness.yml")).get("readiness") or {}
-    names = core.load_yaml(os.path.join(directory, "vocabulary.yml")).get("vocabulary") or {}
-    return catalogue, {key: copy.deepcopy(value) for key, value in names.items()
-                       if key.startswith("readiness.")}
-
-
 def _vocabulary(approaches, stages, checks, gates):
     out = {}
     for name in approaches:
@@ -591,7 +559,6 @@ def _vocabulary(approaches, stages, checks, gates):
         out[f"checks.{name}"] = {
             "name": DISPLAY_NAMES.get(f"checks.{name}", _humanise(name)),
             "aliases": []}
-    out.update(_shipped_readiness()[1])
     return out
 
 
@@ -617,48 +584,18 @@ def _convert(policy, guardrails):
         "checks": checks,
         "gates": gates,
         "artifacts": _artifacts(approaches, rules),
-        "readiness": _shipped_readiness()[0],
+        # The two legacy files have no readiness entry, and 9.0.0 declares no
+        # readiness signal (ADR-093), so a copy's catalogue is empty.
+        "readiness": {},
         "vocabulary": _vocabulary(approaches, stages, checks, gates),
     }
-    table = policy.get("autonomy_checkpoints") or {}
-    views = {
-        "schema": 1,
-        "routing_policy": {
-            "version": policy.get("version"),
-            "default_route": (policy.get("routing_strategies") or {}).get(
-                "default_route", APPROACH_REGULAR),
-            "generated_rules": [_FALLBACK_RULE],
-            "autonomy_checkpoints": {level: list(row) for level, row in table.items()
-                                     if isinstance(row, dict)},
-            "when_keys": notes.policy_when,
-            "rule_key_order": notes.rule_key_order,
-            "legacy_values": notes.legacy_values,
-            # The rule ids 7.0.0 removed and what replaces each, for `policy
-            # migrate`, the merge and the rewrite tool (ADR-070).
-            "retired_rules": {rule_id: {"replaced_by": new, "retired_in": retired.RELEASE}
-                              for rule_id, new in retired.RULES.items()},
-        },
-        "guardrails": {
-            "version": guardrails.get("version"),
-            "project": guardrails.get("project"),
-            "when_keys": notes.guardrail_when,
-            "checked_at": notes.checked_at,
-            "key_order": notes.guardrail_key_order,
-        },
-    }
-    return document, views
+    return document
 
 
 def adapt(policy, guardrails):
     """One layer document in catalogue form from a routing policy and a
     guardrails file: `schema: 1` and the nine catalogues."""
-    return _convert(policy, guardrails)[0]
-
-
-def legacy_views(policy, guardrails):
-    """What the two files hold that the catalogues have no field for, for the
-    generator of the legacy views (`governance/legacy-views.yml`)."""
-    return _convert(policy, guardrails)[1]
+    return _convert(policy, guardrails)
 
 
 def adapt_evidence_types(guardrails):
@@ -668,76 +605,3 @@ def adapt_evidence_types(guardrails):
     return {"schema": 1,
             "evidence_types": {name: {"description": body["description"]}
                                for name, body in types.items()}}
-
-
-def lock_summary(document):
-    """The entries a document locks, by lock level, as `catalogue.id`."""
-    hard, locked = [], []
-    for catalogue in PRESET_FILES:
-        for entry_id, entry in (document.get(catalogue) or {}).items():
-            level = entry.get("locked") if isinstance(entry, dict) else None
-            if level == "hard":
-                hard.append(f"{catalogue}.{entry_id}")
-            elif level:
-                locked.append(f"{catalogue}.{entry_id}")
-    return {"hard": hard, "locked": locked}
-
-
-_HEADER = (
-    "# The shipped default preset: the source of the shipped defaults.\n"
-    "# The two files governance/routing-policy.yml and governance/guardrails.yml\n"
-    "# are generated from these files and governance/legacy-views.yml.\n"
-    "# Change a default here, then run python3 scripts/generate-legacy-views.py.\n"
-    "# Also raise the version in legacy-views.yml, then run the script with --pin\n"
-    "# and again with --pin-hashes, which update the digest and drift fixtures.\n"
-    "# cli/compass_pkg/legacy_adapter.py wrote the first version of these files from\n"
-    "# those two files. The preset is the source now; edit it here.\n")
-
-def _dump(data):
-    return yaml.safe_dump(data, sort_keys=False, default_flow_style=None,
-                          allow_unicode=True, width=100)
-
-
-def preset_files(policy, guardrails):
-    """The preset's ten files as `{file name: text}`."""
-    document = adapt(policy, guardrails)
-    files = {
-        "preset.yml": _HEADER + _dump({
-            "schema": 1, "id": PRESET_ID, "version": PRESET_VERSION,
-            # A capability 9.0.0 removed stays valid and is not shipped (ADR-091).
-            "capabilities": {name: False for name in CAPABILITIES
-                             if name not in removed_parts.CAPABILITIES},
-            "locks": lock_summary(document)}),
-        "evidence-types.yml": _HEADER + _dump(adapt_evidence_types(guardrails)),
-    }
-    for name in PRESET_FILES:
-        files[f"{name}.yml"] = _HEADER + _dump({"schema": 1, name: document[name]})
-    return files
-
-
-_VIEWS_HEADER = (
-    "# What governance/routing-policy.yml and governance/guardrails.yml hold that the\n"
-    "# preset in governance/presets/default/ has no field for: the values the generator\n"
-    "# of those two views needs to rebuild them. Only that generator reads this file.\n"
-    "# It goes with the views at 9.0.0.\n")
-
-
-def legacy_views_text(policy, guardrails):
-    return _VIEWS_HEADER + _dump(legacy_views(policy, guardrails))
-
-
-def write_preset(directory, policy=None, guardrails=None, views_path=None):
-    """Write the preset to `directory`, and the legacy-view values to
-    `views_path`, from today's two files unless given."""
-    governance = os.path.join(core.FRAMEWORK_ROOT, "governance")
-    policy = policy if policy is not None else core.load_yaml(
-        os.path.join(governance, "routing-policy.yml"))
-    guardrails = guardrails if guardrails is not None else core.load_yaml(
-        os.path.join(governance, "guardrails.yml"))
-    os.makedirs(directory, exist_ok=True)
-    for name, text in preset_files(policy, guardrails).items():
-        with open(os.path.join(directory, name), "w", encoding="utf-8") as fh:
-            fh.write(text)
-    views_path = views_path or os.path.join(governance, "legacy-views.yml")
-    with open(views_path, "w", encoding="utf-8") as fh:
-        fh.write(legacy_views_text(policy, guardrails))

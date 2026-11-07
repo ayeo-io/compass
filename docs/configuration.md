@@ -17,8 +17,7 @@ that holds `.compass` or `.git`), and reads the `owner` and `approvers` of
   settings only: Compass runs one fixed check set (ADR-094), and the
   tighten-only settings below are the one way to change what an issue owes.
   A catalog key or `extends:` is a removed setting (see `docs/policy-lint.md`;
-  for waivers and approvers see [waivers.md](waivers.md) and, for the 8.x
-  locks, [waivers-and-locks.md](waivers-and-locks.md)). `/compass:init` writes a minimal one for a new
+  for waivers and approvers see [waivers.md](waivers.md)). `/compass:init` writes a minimal one for a new
   project. `compass policy migrate` on 8.x wrote one for an existing project;
   9.0.0 removed that command (ADR-094).
 - **`.compass/config.yml`** holds the same settings for a project from 5.x that
@@ -251,17 +250,18 @@ project's `compass.yml` can no longer change these parts of the governance:
 - the `require_phase` effect of `RP-FLOOR-002`, which forced the define stage
   to thorough; the path has no stage modes, and the floor keeps its skill.
 
-A file that still holds one keeps working. The merge leaves the part out,
-so a `set:` on a stage the live default no longer declares does not stop
-every command, and its value is not checked. `compass policy lint` names
-each part with `L-SETTING-REMOVED`. Delete it from `compass.yml`.
+A file that still holds one keeps working. Since 9.0.0 the whole catalog
+key is a removed setting and is not read (ADR-094), so a `set:` on a stage the
+check set does not declare stops no command, and its value is not checked.
+`compass policy lint` names the key with `L-SETTING-REMOVED`. Delete it from
+`compass.yml`.
 
-A frozen preset (`default@6`, `default@7`) and a git parent keep their
-approaches, stages, caps and lists, and an issue's stored generation keeps the
-configuration it was assessed with. Resolution reads only the live preset,
-whatever major `extends:` names (decided 2026-10-30), so a project that
-extends `compass:default@6` or `@7` gets the path; `compass policy lint` says
-so with the warning `L-EXTENDS-FROZEN-MAJOR`.
+A frozen preset (`default@6`, `default@7`) keeps its approaches, stages, caps
+and lists as data, and an issue's stored generation keeps the configuration
+it was assessed with. Resolution reads only the check set, whatever major
+`extends:` names (decided 2026-10-30), so a project that extends
+`compass:default@6` or `@7` gets the path; `compass policy lint` names
+`extends:` with `L-SETTING-REMOVED`.
 
 Three more rules keep an older file or issue working:
 
@@ -273,11 +273,10 @@ Three more rules keep an older file or issue working:
   holds it, it is kept. 9.0.0 reads no new issue layer (ADR-094): the manifest's
   `config:` is not read, and `compass issue lint` warns about one that the
   issue's stored generation was not committed with.
-- A gate a project layer, or a copy of the 9.0.0 governance files, places at a
+- A gate a copy of the 9.0.0 governance files places at a
   legacy stage the configuration does not declare is read at the path stage
   that shows it (`define`, `refine`, `plan` at specify; `breakdown`,
-  `implement` at build; `verify` at ship). `compass policy lint` names each
-  with `L-STAGE-MAPPED`. `stages.assess` and `stages.ship` are path stages, so a
+  `implement` at build; `verify` at ship). `stages.assess` and `stages.ship` are path stages, so a
 project can still change them. An `autonomy_checkpoints` table can name the
 path stages `specify`, `build` and `ship` beside the legacy ones; an issue
 assessed before 9.0.0 still waits only at the legacy hand-offs.
@@ -385,10 +384,9 @@ changed setting as advice. The setting is read from `compass.yml`, or
 The strategy ships in the default preset from major 8. A project whose
 `compass.yml` extends `compass:default@6` or `compass:default@7` does not get
 it: assess stores no applicability and `compass check` adds no row for it. A
-project with no `compass.yml`, no `extends:` or a git parent runs on the live
-default and gets it. The setting is the one way to turn the strategy off:
-`compass policy lint` refuses `acceptance_strategy: suspended` on an approach
-that ships.
+project with no `compass.yml` or no `extends:` runs on the check set and gets
+it. The setting is the one way to turn the strategy off: no other setting can
+suspend it on an approach that ships.
 
 ## Tighten-only settings
 
@@ -491,4 +489,8 @@ It gives each finding a code:
 | `L-PARENT-REMOVED` | error | `extends:` names a git parent, which could hold checks this file does not show. Every command that resolves a policy refuses with exit 2 and says what to do: move the team's checks into the five settings above, or stay on 8.x until the 9.0.0 upgrade command (#359) |
 | `L-IMPL-UNKNOWN` | error | the integrity rule: a check, after the settings apply, names an implementation the CLI does not hold |
 
-The JSON Schema in `schemas/compass.schema.json` describes the same shapes.
+The JSON Schema in `schemas/compass.schema.json` describes the same shapes. It
+holds the settings above and nothing else, so an editor marks a removed
+setting as one the file cannot hold. `settings_lint.schema()` generates it,
+with the descriptions in `catalogue_spec.TOP_DESCRIPTIONS`, and
+`tests/test_catalogue_spec.py` keeps the committed file equal to it.

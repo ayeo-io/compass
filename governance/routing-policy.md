@@ -242,8 +242,7 @@ The `loop_ceilings` rules (RP-LOOP-001 to 008) bounded a multiagent run - tries
 per subtask, review rounds, replans and the same error in a row - and the
 unattended headless runner - sessions, minutes and money. 9.0.0 removed both
 (ADR-090), so nothing applies the limits. The rules stay in the policy, read
-by `cli/compass_pkg/loop_ceilings.py`, so the classifier still compares a
-layer that changes one, until the configuration layers are replaced.
+by `cli/compass_pkg/loop_ceilings.py`, and a stored generation keeps them.
 
 ## Model tiers (removed in 9.0.0)
 
@@ -288,104 +287,90 @@ Routing-strategy keys: `lean_toward`, `suggest_artifact`, free-text `biases`.
 
 ## Changing routing
 
-A 6.0.0 project does not edit this file or `routing-policy.yml`, which is
-generated (see "The default preset" below). Routing changes go in the
-project's `compass.yml`; `compass policy lint` checks them and
-`compass policy show` prints the result. A project that copied these files
-under 5.x edits its copy until `compass policy migrate` on 8.x converts it.
+Compass runs one fixed check set (ADR-094), so a project does not change a
+routing rule. `routing-policy.yml` is frozen: no generator writes it, and only
+the legacy readers read it, until #359 (see "The check set and the frozen
+views" below). A project adds to what an issue owes with the tighten-only
+settings of its `compass.yml` (`docs/configuration.md`); `compass policy lint`
+checks them and `compass policy show` prints the check set and the settings
+that tighten it. A project that copied these files under 5.x keeps running
+on its copy until #359.
 
-- **Loosening a routing rule weakens the framework for everyone,
-  quietly.** It needs a waiver that the project's owner approves, and it should
-  be deliberate, logged, ideally reviewed - not a convenience edit mid-issue.
-  If a rule keeps being painful, fix the delivery approach that makes it
-  painful; do not remove the rule.
-- **Routing strategies are meant to be tuned.** `default_shapes` and `biases`
-  are rule sets in the default preset, and a project changes them through
-  `rules:` in its `compass.yml` as the team learns how its work actually
-  distributes. `compass policy lint` reports any change that loosens the
-  default, and that change then needs a waiver. That is the soft layer doing
-  its job.
+- **No setting loosens a routing rule.** A `rules:` key in `compass.yml` is a
+  removed setting and is not read. One check on one issue can be excused by a
+  waiver that a person approves (`docs/waivers.md`).
+- **A project adds evidence, not routes.** `require_evidence` adds evidence
+  tokens for the assessments that match, and `signoff_labels` adds labels that
+  owe what a `G5` label owes.
 
-## The default preset
+## The check set and the frozen views
 
-`governance/presets/default/` holds the same defaults in catalogue form, one
-file per catalogue, with `preset.yml` and `evidence-types.yml`
-(`architecture/decisions/ADR-042-shipped-defaults-live-in-a-preset-directory.md`).
-`cli/compass_pkg/legacy_adapter.py` produced it once from `routing-policy.yml`
-and `guardrails.yml`. The preset is now the source of the shipped defaults, and
-the two files are views generated from it.
+`governance/check-set.yml` holds the shipped defaults in catalogue form, in
+one file (ADR-094). It replaced `governance/presets/default/`, the preset
+directory of ADR-042, which `cli/compass_pkg/legacy_adapter.py` produced once
+from `routing-policy.yml` and `guardrails.yml`. Since 9.0.0 the two files are
+frozen: they were the views generated from the preset, they keep the last
+generated text with a banner that says so, and only the legacy readers read
+them. `cli/compass_pkg/legacy_adapter.py` still converts a project's own copy
+of the two files into catalogue form, until #359.
 
-Each artifact in `artifacts.yml` names the stage that owns it with `stage:`
+Each artifact of a frozen preset's `artifacts.yml` names the stage that owns it with `stage:`
 (`architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md`).
 A stage command that writes a later record approves the artifacts of earlier
 stages. An artifact with no `stage` is owned by ship. The check
 `artifacts-approved` that judged them was removed in 9.0.0 (ADR-091).
-`evidence-types.yml` holds the type `artifact-approval`, which no gate accepts.
+The check set holds the evidence type `artifact-approval`, which no gate accepts.
 `compass approach evaluate --write` merges the registry by kind and round, so every
 round of a kind that repeats survives a reassessment. It never marks a voluntary entry
 (a kind no approach, rule or `every_approach` flag names) as `superseded`
 (`architecture/decisions/ADR-054-an-artifact-kind-can-repeat-keyed-by-round.md`).
 
-The live preset is version 8.0.0; #351 does not raise it, the 9.0.0 release
-does (ADR-092). It declares two approaches, `spike` and `delivery`, and the four
+The check set is version 9.0.0. It declares two approaches, `spike` and `delivery`, and the four
 path stages: assess, specify, build and ship. `delivery` is the fallback of
 `default_shapes` and holds the three immovable gates and a mode per path
 stage, which no reader judges: the path writer computes a delivery issue's
 gates from its evidence. The spike keeps a stage map (assess, build, ship) and
-its own gate. Each gate's `stage:` in `gates.yml` is the path stage where it is
+its own gate. Each gate's `stage:` is the path stage where it is
 judged: `G2` and `G3` at specify, `G1` at build, and `G4`, `G5`, `S1`, `S2` and
-every review gate at ship. The locks hold `stages.assess`, `stages.build`
-(which holds the Definition of Done) and `stages.ship`. The preset carries the
-four-layer acceptance strategy (`S17`): the advisory check
-`acceptance-applicability-agrees` in `checks.yml`, and `acceptance_strategy:
-'on'` on `delivery`; the evidence row decides each issue's routing. An approach
+every review gate at ship. The `build` stage holds the Definition of Done. The
+set carries the four-layer acceptance strategy (`S17`): the advisory check
+`acceptance-applicability-agrees`, and `acceptance_strategy: 'on'` on
+`delivery`; the evidence row decides each issue's routing. An approach
 without the key reads `on` when it ships and `suspended` when it does not, so
-the locked spike entry, which ships nothing, reads `suspended`. The classifier does not compare the field
-(compare kind `never`), because the project setting `acceptance_strategy`
-turns the whole strategy off with no approval. `compass approach evaluate
+the spike entry, which ships nothing, reads `suspended`. The project setting
+`acceptance_strategy` turns the whole strategy off with a reason and no
+approval. `compass approach evaluate
 --write` stores the issue's applicability from it, as the strategy's entry in
 `governance/strategies.md` says. The 7.0.0 preset is kept, byte for byte as v8.0.4 shipped it, in
 `governance/presets/default@7/` as data; resolution reads
-only the live preset, whatever major a project's `extends:` names. So the pin
+only the check set, whatever major a project's `extends:` names. So the pin
 decides instead: a project whose `compass.yml` extends `compass:default@6` or
 `@7` stores no applicability at assess and gets no row from the strategy's
-check. `compass policy lint` refuses `acceptance_strategy: suspended` on an
-approach that ships (`M-ACCEPTANCE-SUSPENDED`); the settings key is the one way
-to turn the strategy off (decided by jed72, 2026-10-30).
+check. No setting can suspend the strategy on an approach that ships; the
+settings key is the one way to turn the strategy off (decided by jed72,
+2026-10-30).
 
-- Change a default in the preset (or in `legacy-views.yml` for a value only the
-  views hold), then run `python3 scripts/generate-legacy-views.py`.
-  Never edit `routing-policy.yml` or `guardrails.yml` by hand: their first
-  lines say so, and `tests/test_default_views.py` fails with the command to
-  run when a view differs from what the generator writes. A changed default
-  also needs the file's `version:` raised, which lives in `legacy-views.yml`
-  under `routing_policy` or `guardrails`, and the content-hash fixture
-  `tests/fixtures/governance-content-hashes.json` re-recorded with
-  `python3 scripts/generate-legacy-views.py --pin-hashes`
-  (`tests/test_governance_drift.py` fails until both are done).
-- `python3 scripts/generate-legacy-views.py --check` writes nothing and exits 1
-  on a stale view.
-- The comments, banner, vocabulary-scan markers and layout of the two views are
-  in `cli/compass_pkg/legacy_views_template.py`. Change a comment there, then
-  regenerate. The values come only from the preset and `legacy-views.yml`.
-- `tests/fixtures/preset-digests.yml` pins a digest for each preset file and
-  for the whole preset. `tests/test_preset_digests.py` fails when a preset file
-  changes without its pin moving; pin again with
-  `python3 scripts/generate-legacy-views.py --pin`. A pin is kept for each
-  preset version, so a re-pin updates the current entry and leaves the
-  earlier ones.
-- The mutation-proof register test and the plain-language check read the
-  checks and the guardrail statements from the preset.
+- Never edit `routing-policy.yml` or `guardrails.yml`: their first line says
+  they are frozen. `tests/fixtures/governance-content-hashes.json` holds a hash
+  of their parsed content, and `tests/test_governance_drift.py` fails when it
+  moves.
+- A change to the defaults is a change to `governance/check-set.yml`, with a
+  raised `version` and a new pin in `tests/fixtures/check-set-digests.yml`
+  (`governance/guardrails.md`).
+- `tests/fixtures/preset-digests.yml` pins a digest for each file of the two
+  frozen presets, and `tests/test_kept_presets.py` fails when a kept folder
+  differs from its pins.
+- The mutation-proof register test reads the checks from the check set.
 
-The preset also holds checks of kind `human`: the seven Definition of Done
-items. The preset is the only place their text lives: 9.0.0 writes no
+The check set also holds checks of kind `human`: the seven Definition of Done
+items. The check set is the only place their text lives: 9.0.0 writes no
 verification report to hold them (ADR-091), and
 `tests/test_ready_and_done_data.py` fails when a statement names a removed
 document. The `build` stage's `exit` list holds them. The four-stage path owes
 no Definition of Ready (ADR-092), so the shipped default declares none of its
 seven checks; the frozen presets keep them in their `plan` entry list, where a
 stored generation still reads them. Each check needs the capability
-`entry-exit-evaluation`, which is off in `default@6`, so `compass check` does
+`entry-exit-evaluation`, which is off by default, so `compass check` does
 not run them and the two views do not name them (a legacy `checks:` entry
 needs an implementation). A Definition of Done check returns `fail`, as
 `dod-evidence-typed` does. Each Definition of Done check says
@@ -400,34 +385,25 @@ none but the acceptance criteria (ADR-091); a stored generation keeps its own
 set. `delivery`, like quick fix, regular, hotfix and full in the frozen
 presets, sets the approach field `release_line: true`: an issue whose stored
 generation sets it owes a release line, and every landing refuses it while its
-manifest's `release_note` holds none (`docs/release-line.md`). The spike, which
-is locked, has no such field. The field is compared `false` below `true`, so a
-project that sets it `false` on an approach that has it loosens the approach
-and needs a waiver (ADR-039). The decision is
+manifest's `release_note` holds none (`docs/release-line.md`). The spike has no
+such field, and no setting can change it (ADR-094). The decision is
 `architecture/decisions/ADR-065-regular-issues-owe-an-intent-and-shipping-issues-record-a-release-line.md`.
 
-`governance/legacy-views.yml` holds what the two files contain that the
-catalogues have no field for. Only the generator of the views reads it, and it
-goes with the views at 9.0.0.
+The legacy adapter converts a copy of the two files with these changes:
 
-The conversion changes these things, and the test rebuilds the two files
-from the preset and `legacy-views.yml` to show nothing is lost:
-
-- `checked_at` keeps its first stage as the gate's `stage`; the full list is
-  in `legacy-views.yml`. The 9.0.0 lists name the path stages: `G1` is
-  checked at build and ship, `G2` at specify and ship, `G3` at specify, build
-  and ship, and `G4` at ship.
+- `checked_at` keeps its first stage as the gate's `stage`. The 9.0.0 lists
+  name the path stages: `G1` is checked at build and ship, `G2` at specify and
+  ship, `G3` at specify, build and ship, and `G4` at ship.
 - The floor effect `force_minimum_route` becomes `force_minimum_approach`
   (ADR-041).
 - Old dimension names and old stage names (`clarify`, `build`, `land`)
-  become the current names. `legacy-views.yml` spells stages with the current
-  names; the migration reads a copy's retired names as the current ones.
+  become the current names; the migration reads a copy's retired names as the
+  current ones.
 - A document named by file (`intent.md`) becomes its id (`intent`).
 - The fallback approach becomes the last rule of `default_shapes`, and the
   `biases` become a rule set with no effect.
 - Each check gets an `on_skipped` value from what it returns when it cannot
-  run. The replay against the archive sample is in
-  `tests/test_obligations.py` and is described below.
+  run.
 
 ## The evidence rows
 
@@ -579,20 +555,18 @@ Two `next:` lines carry a step before the command:
   (`git add -- <files>`) before `compass ship-commit`, which lands what is
   staged. `compass quick-fix finish --no-commit` leaves the change unstaged.
 
-## What a configuration owes an assessment
+## The evaluator input
 
-`cli/compass_pkg/obligations.py` computes the facts the classifier compares
-for one resolved configuration and one assessment: stage modes, entry and
-exit checks, the gate set with each gate's checks and accepted evidence
-types, artifacts and their depth, required skills, blocked stages, required
-artifacts, checkpoints for each autonomy value, ceilings and each active
-check's compared fields. It computes no approach. `policy_adapter` turns the merged
-catalogues into the dictionary `evaluate_route` takes, and the evaluator
-answers. `compass approach evaluate` reads the same resolved configuration: an
-issue's stored generation, or else the `compass.yml` over the shipped default,
-and `--verbose` prints which. Only an issue with no `generation:` in a project
-with no `compass.yml` reads `routing-policy.yml`: the generated view, or in an
-unmigrated 5.x project the project's own copy.
+`cli/compass_pkg/obligations.py` turns a resolved configuration into the
+dictionary `evaluate_route` takes (`policy_adapter`), and hands the evaluator
+an 8.x issue's own layer that a stored generation keeps (`issue_input`). It
+computes no approach: the evaluator answers. `compass approach evaluate` reads
+the resolved configuration: an issue's stored generation, or else the check
+set with the tighten-only settings of `compass.yml`, and `--verbose` prints
+which. An unmigrated 5.x project with no `compass.yml` reads its own copy of
+the governance files through the legacy adapter. The classifier that compared
+two configurations by the facts each owed went with the configuration layers
+in 9.0.0 (ADR-094).
 
 The evaluator took four additions, and a call that uses none of them answers
 as before:
@@ -624,9 +598,8 @@ as before:
   evaluate` reads `issue` only from a generation an 8.x reassess stored with
   one (`EffectiveView.evaluator_issue`), and a manifest's `config:` is not read.
 - `RoutingConflict`, the error class of the two refusals: exploration that a
-  floor would turn into delivery, and an approach a cap forbids. A caller that
-  compares policies treats these as results (`Refused`). Every other error is
-  a fault in an input and raises.
+  floor would turn into delivery, and an approach a cap forbids. Every other
+  error is a fault in an input and raises.
 
 The evaluator applies one hit policy to each effect, and it does not read a
 declared one. `policy_adapter` raises when a rule set declares a different
@@ -634,23 +607,14 @@ hit policy. It also raises for an approach outside the five the evaluator
 knows, and for a `ships` value that differs from the one it assumes. These
 three guards go when the evaluator takes the catalogue form.
 
-Two replays tie the new path to today's behaviour, and each has a planted
-fault that makes it fail:
-
-- The adapted preset gives the 1,200 assessments of the compatibility
-  baseline, their label subsets and the archive assessments the approach
-  today's policy gives them. The two values the catalogues spell differently differ in spelling
-  only: a document is its id (`intent`, not `intent.md`) and a stage is its
-  current name (`ship`, not `land`). The replay takes the stage names from the
-  table in `core`.
-- The preset's `on_skipped` values give today's verdicts on the archive
-  sample for the nine checks that decline. The four checks a `landed_by`
-  pointer stands down (`scenarios-have-tests`, `suite-passed`,
-  `scenario-has-id-and-intent`, `gate-evidence-present`) differ in 16 cases:
-  today they report nothing to check when the pointer holds, and `on_skipped`
-  says `fail`. The caller of the check path applies that relaxation, and the
-  increment that moves `compass check` to the resolved configuration decides
-  where it lives. The test pins the four names and fails on a fifth.
+One replay ties the adapter to the evaluator, in `tests/test_policy_adapter.py`,
+and has a planted fault that makes it fail: the adapted frozen `default@7`
+preset gives the 1,200 assessments of the compatibility baseline, their label
+subsets and the archive assessments the approach the 8.0.4 policy gives them.
+The two values the catalogues spell differently differ in spelling only: a
+document is its id (`intent`, not `intent.md`) and a stage is its current name
+(`ship`, not `land`). The replay takes the stage names from the table in
+`core`.
 
 What the stage-mode rank replay shows:
 
@@ -660,169 +624,3 @@ What the stage-mode rank replay shows:
   because no floor names `implement` and the lift never reaches that stage.
   With one floor added to both paths that names it, the same rank is reported.
 - A dropped floor or gate is reported.
-
-## How two configurations are compared
-
-`cli/compass_pkg/classify.py` compares a child configuration with its parent
-by what each owes, as `architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md`
-decides. It calls `obligations` for both at every point of the assessment grid
-and compares the facts. Given `at=` an assessment, `classify` compares at that
-one point instead (`grid_at`, a grid of one point). The lint, the locks and the
-preview compare an issue's own layer that way, at the issue's own assessment,
-and a project layer over the grid. Nothing reads it yet, so no command prints its
-result. `classify(parent, child)` returns a `Classification`, and the later
-`policy` commands print `json.dumps(classification.to_json(), indent=2)` and
-build their text from the same dictionary.
-
-The grid:
-
-- A closed dimension runs over the union of both configurations' values.
-  Values that no predicate in either configuration can tell apart are one
-  class, and one value of the class is evaluated. The shipped policy has 72
-  grouped closed points and, with its four named labels and the two documents
-  its artifact rules read, 4,608 grouped points of 34,560 raw points. The raw count includes an assessment that omits each
-  optional dimension (`goal` and `urgency` in the shipped preset); the
-  evaluator needs only `risk`, `familiarity` and `size`. An omitted dimension is
-  a value of its own, so a rule that reads it is told apart from every value.
-  `exhaustive=True` runs every raw point. It is an argument of `classify`, and
-  the later `policy` commands expose it as a flag.
-- A value only one configuration accepts is its own class. Where a predicate
-  reads it, the point is `incomparable`. Where none does, the class is left
-  out of the grid, because no assessment holds in both configurations.
-- The named labels are the labels any predicate names, and the named
-  documents are the kinds any `artifacts_any` condition names. Every subset of
-  each is a point. More than eight named labels, or more than four named
-  documents, classify the layer `incomparable` with the count and no scan, even for two configurations that differ in nothing else, except
-  that identical configurations are `equivalent` without a scan.
-- Each fact is compared by the kind the field table gives it
-  (`catalogue_spec.OBLIGATION_FIELDS`). A field the table omits is not
-  compared. A stage only one side has is compared by existence: adding one is
-  `tighter` and removing one is `looser`, even a stage in mode `skipped`. Two
-  modes with one rank, a mode with no rank and a value outside its order cannot
-  be compared. A ceiling's direction is declared in `CEILING_DIRECTIONS` in
-  `catalogue_spec.py`: lower is stricter for the subtask ceiling, the worktree
-  cap and the three budget ceilings (`run_cost_usd`, `run_minutes`,
-  `run_cycles`), and no ceiling at all is the loosest. The four correction
-  loops and a ceiling the table omits have no direction, so any change to
-  them is `incomparable`. A check parameter's direction comes from the check
-  registry. A check that is renamed with an identical definition is
-  `incomparable`, because a check keeps its id.
-  A readiness parameter's direction comes from the readiness registry:
-  `higher`, `lower`, `none` or the direction `equivalent`. `equivalent` is
-  declared on `tests-under-limit.command` only. A changed value of such a
-  parameter is `equal` when both sides name the same implementation, both
-  values are present and both are in the implementation's `choices`, and
-  `incomparable` otherwise; it is never `tighter` or `looser`. The registry
-  refuses `equivalent` on a parameter with no `choices`, the check registry
-  refuses it on every parameter, and a catalogue or preset cannot declare it.
-  A readiness parameter one side leaves out is `incomparable` whatever its
-  direction: the classifier fills in no runtime default, and this rule raised
-  `CLASSIFIER_VERSION` to 5 (governance decision
-  2026-10-14-a-declared-equivalent-parameter-choice-classifies-as-equivalent).
-  An approach's `release_line` is compared at each point for the approach the
-  assessment chose, `false` below `true`, with no field read as `false`, so
-  setting it `false` is `looser`. That rule raised `CLASSIFIER_VERSION` to 6
-  (ADR-065).
-  A check parameter that is a list can declare the direction `superset`. Only
-  `trigger_paths` and `trigger_contents` of `contracts-declared` did, and 9.0.0
-  removed that check (ADR-091), so no shipped check declares it now. The
-  classifier compares each side as a set of exact entries. A `trigger_contents`
-  entry is the pair of path glob and text, compared whole, and the classifier
-  does not judge how broad a glob is. Neither reordering a list nor repeating
-  an entry changes the set, so the change is `equal`. A project list that holds
-  every shipped entry and at least one more is `tighter`, because a trigger
-  path makes the check run, so more entries check more changes. A project list
-  that lacks a shipped entry and adds none is `looser`, because fewer entries
-  check fewer changes. A project list that lacks a shipped entry and adds
-  another is `incomparable`. A list that is missing, is not a list, or holds a
-  malformed entry is `incomparable` and raises no error. The registry refuses
-  `superset` on a parameter that is not a list. `CLASSIFIER_VERSION` is 15
-  since the list rule (ADR-073), the rule that a check a release removed
-  owes nothing (ADR-090), the same rule for a review gate (ADR-091), the
-  rule that a checkpoint table may name a path stage, and the approach
-  `delivery` the evaluator knows (ADR-092).
-- `stages.order` and `gates.stage` are the footprint of a lock, not facts the
-  classifier reads. Reordering an unlocked stage or moving a gate to another
-  stage reads `equivalent` here, and the locks increment compares both.
-
-The verdicts are `equivalent`, `tightening`, `loosening` and `incomparable`.
-A point is `equal`, `tighter`, `looser` or `mixed`.
-
-`Classification.to_json()` is a public document. It has the same fields in
-the same order for every verdict, and a point that does not exist is `null`:
-
-```json
-{"schema": 1, "result": "equivalent", "reason": "every point owes the same",
- "scan": "full", "parent": "default@6", "child": "project",
- "exhaustive": false, "complete": true,
- "grid": {"labels": [], "label_count": 0, "label_cap": 8,
-          "points": 4, "raw_points": 16, "evaluated": 4, "artifacts": []},
- "counts": {"equal": 4, "tighter": 0, "looser": 0, "mixed": 0},
- "first_looser": null, "first_tighter": null, "first_mixed": null}
-```
-
-- `scan` is `full`, `early-exit`, `identical` or `cap`, so a consumer can tell
-  a scan from a shortcut: `identical` compared nothing because the inputs
-  are equal, and `cap` compared nothing because more than eight labels are
-  named. `parent` and `child` are what the caller passed as `parent_name` and
-  `child_name` (or `null`), and the classifier reads them for nothing else.
-
-- A point in `first_looser`, `first_tighter` or `first_mixed` holds
-  `assessment` (the closed dimensions in catalogue order, then `labels`),
-  `represents` (the values the point stands for; `null` is an assessment that
-  omits the dimension), `outcome`, `summary` and
-  `changes`.
-- A change holds `fact`, `field` (a key of the field table, or
-  `evaluation.refused` or `dimensions.values`), `key` (the stage, gate, check,
-  artifact or ceiling it is about, or `null`), `outcome` (`tighter`, `looser`
-  or `incomparable`), and the `parent` and `child` values as plain JSON.
-- `points` is the number of points the run uses, `raw_points` the ungrouped
-  count, and `evaluated` how many were compared. They are 0 when the cap
-  stops the run. `complete` is false when early exit stopped the scan.
-- `JSON_SHAPE` in the module is the shape, `json_shape_errors` checks a
-  document against it, and `tests/fixtures/classifier-json-example.json` is the
-  pinned example. A change to the shape fails `tests/test_classifier.py`, and
-  adding a field raises `schema`.
-
-`scripts/bench-classifier.py` times the grouped grid and, with `--raw`, the
-full grid at four and eight labels. It prints the clock and the CPU time of the
-process, and the CPU time is the figure to read the targets against: the clock
-moves with the load of the machine. The numbers belong in the pull request that
-changes the classifier.
-
-Speed has three targets, on the benchmark machine:
-
-| Case | Target |
-|---|---|
-| A changed layer at the four labels the shipped policy names | 5 s or less |
-| A changed layer at eight labels | 30 s or less |
-| An unchanged layer | no scan |
-
-The measures taken, in this order, and the ones not allowed:
-
-- **A stored classification.** `classify_stored(store, parent, child, ...)`
-  returns the result held in `store` (a mapping the caller owns) when the same
-  two configurations, capabilities, issue layers, directions and scan were
-  classified before. The key (`classification_key`) holds a digest of each side,
-  `CLASSIFIER_VERSION`, and every table the comparison reads, so a changed rule
-  table or registry makes a new key. Raise `CLASSIFIER_VERSION` when a change to
-  the comparison, the grid or the evaluator can change a verdict:
-  `tests/test_classifier_speed.py` pins the functions that decide one, so a
-  change to them fails until the author has decided. An entry that is not a
-  classification is scanned again, and a function passed as `tighter` is never
-  stored. `Classification.from_json` reads a stored document back.
-- **One evaluator call for each side at a point.** The evaluator copies none of
-  the policy it reads (`routing.canonical_view`), evaluates once for all autonomy
-  values (only the checkpoints differ, `routing.route_checkpoints`), and the
-  scan builds each side's policy once (`obligations.Preparation`).
-  Points where both sides owe the same are not compared field by field.
-- Not allowed: sampling the grid, deciding a refusal at the issue's own point,
-  raising the label cap without numbers, and skipping a dimension without a
-  test that proves the skip exact. Each of the other measures the ruling lists
-  (one cache shared across layers, fixed chunks, a progress line) is held back
-  until the numbers need it.
-
-`classify.scan(parent, child, grid, on_point=..., **options)` is the one loop
-over a grid. `classify` and the lock check both run through it, and the
-callback receives each point and the `Scan`, whose `obligations(side,
-assessment)` and `ctx` it can read.

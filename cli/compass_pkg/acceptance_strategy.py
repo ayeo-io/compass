@@ -173,23 +173,6 @@ def pinned_below(project_root):
     return value if found.group(1) == "default" and int(found.group(2)) < FIRST_MAJOR else None
 
 
-def suspended_findings(resolved):
-    """`[(path, message)]` for each approach that ships and sets the routing
-    `suspended`. `compass policy lint` refuses them: that would turn the strategy
-    off with no recorded reason, and the settings key is the one way to turn it
-    off (decided by jed72, 2026-10-30). The spike, which ships nothing, keeps
-    `suspended`."""
-    out = []
-    for approach, body in sorted(((resolved or {}).get("approaches") or {}).items()):
-        if (isinstance(body, dict) and body.get(KEY) == "suspended"
-                and body.get("ships", True) is not False):
-            out.append((f"approaches.{approach}.{KEY}",
-                        f"the {approach} approach ships, so it cannot suspend the "
-                        f"four-layer acceptance strategy; turn the strategy off for the "
-                        f"project with the settings key `{KEY}: {{state: off, reason: <why>}}`"))
-    return out
-
-
 def notice(task_dir):
     """The notice `compass check` gives an issue with no stored block."""
     pinned = pinned_below(_project_root(task_dir))

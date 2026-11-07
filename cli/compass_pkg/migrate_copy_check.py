@@ -149,16 +149,6 @@ def unrestorable_folders(root, label=None, extra=None, project=None):
     return _judge(root, folders, label, project)
 
 
-def unrestorable_files(root, paths, label=None):
-    """Which of `paths`, files below `root`, could `git reset --hard` not put back?
-
-    The same judgement as `unrestorable_folders`, one file at a time:
-    `unrestorable` holds the paths as given. `root` is the project, so it is
-    also the project the outside check reads. `compass policy migrate --words`
-    ran it before 9.0.0 removed that verb (ADR-094); nothing calls it now."""
-    return _judge(root, {path: [path] for path in paths}, label or root, root)
-
-
 def _judge(root, folders, label, project):
     """The judgement of `folders` ({name: [path]}) below `root`: a name is
     unrestorable when git cannot restore one of its paths, and every name is

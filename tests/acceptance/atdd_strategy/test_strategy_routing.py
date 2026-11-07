@@ -17,6 +17,7 @@ import yaml
 
 from tests.acceptance.atdd_strategy import support
 from tests.acceptance.atdd_strategy.support import ROOT
+from tests.check_set_files import shipped
 
 CHECK = "acceptance-applicability-agrees"
 STRATEGY = "four-layer acceptance strategy"
@@ -279,16 +280,13 @@ def test_trc_a19():
     now = yaml.safe_load((ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8"))
     lists = {g["id"]: g["checks"] for g in now["defaults"]}
     assert {g: lists[g] for g in ("G1", "G4")} == before
-    preset = yaml.safe_load(
-        (ROOT / "governance" / "presets" / "default" / "preset.yml").read_text(encoding="utf-8"))
-    locked = [entry for kind in preset["locks"].values() for entry in kind]
+    # No lock exists since 9.0.0 (ADR-094); `never_waived` holds the 8.x hard locks.
+    locked = shipped("preset.yml")["never_waived"]
     for check in support.STRATEGY_CHECKS:
         assert f"checks.{check}" not in locked, check
-    checks = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "checks.yml")
-                            .read_text(encoding="utf-8"))["checks"]
+    checks = shipped("checks.yml")["checks"]
     assert CHECK in checks and not checks[CHECK].get("locked")
-    gates = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "gates.yml")
-                           .read_text(encoding="utf-8"))["gates"]
+    gates = shipped("gates.yml")["gates"]
     assert not [g for g, body in gates.items() if CHECK in (body.get("checks") or [])]
     sentence = "can carry blocking checks that a recorded step-off makes advisory"
     terms = yaml.safe_load((ROOT / "governance" / "terminology.yml").read_text(encoding="utf-8"))
@@ -358,21 +356,16 @@ def test_trc_a23(tmp_path, major, applies):
 def test_trc_a24(tmp_path):
     """A shipping approach cannot suspend the strategy; the spike keeps `suspended`.
 
-    `delivery` is the check set's one shipping approach since 9.0.0 (ADR-092).
-    Lint refuses a resolved `delivery` that suspends it. No configuration can
-    set one: `approaches:` in `compass.yml` is a removed setting, left out
-    with `L-SETTING-REMOVED`, and git parents were removed (ADR-094), so the
-    strategy stays on."""
+    `delivery` is the check set's one shipping approach since 9.0.0 (ADR-092),
+    and it does not suspend the strategy. No configuration can change that:
+    `approaches:` in `compass.yml` is a removed setting, left out with
+    `L-SETTING-REMOVED`, and the layers and git parents were removed with the
+    lint that refused a suspending `delivery` (ADR-094), so the strategy stays on."""
     import sys
     sys.path.insert(0, str(ROOT / "cli"))
     from compass_pkg import acceptance_strategy, check_set
     assert acceptance_strategy.approach_routing(check_set.load(), "spike") == "suspended"
-    config = check_set.resolved()
-    assert acceptance_strategy.suspended_findings(config) == []
-    config["approaches"]["delivery"]["acceptance_strategy"] = "suspended"
-    found = acceptance_strategy.suspended_findings(config)
-    assert [path for path, _ in found] == ["approaches.delivery.acceptance_strategy"], found
-    assert "acceptance_strategy: {state: off, reason:" in found[0][1], found
+    assert acceptance_strategy.approach_routing(check_set.resolved(), "delivery") == "on"
     project = support.Project(tmp_path / "repo")
     (project.root / "compass.yml").write_text(
         "schema: 1\napproaches:\n  delivery:\n    set: {acceptance_strategy: suspended}\n",
@@ -383,7 +376,7 @@ def test_trc_a24(tmp_path):
     assert "M-ACCEPTANCE-SUSPENDED" not in out + err, out + err
     from compass_pkg import effective
     resolved = effective.resolve_live(str(project.root)).resolved
-    assert acceptance_strategy.suspended_findings(resolved) == []
+    assert acceptance_strategy.approach_routing(resolved, "delivery") == "on"
 
 
 def test_trc_a3_a_quick_fix_started_as_validation_costs_nothing(tmp_path):

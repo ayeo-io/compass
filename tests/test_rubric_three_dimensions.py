@@ -17,7 +17,11 @@ import yaml
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT / "cli"))
 
-from compass_pkg.classify import EVALUATOR_REQUIRED  # noqa: E402
+sys.path.insert(0, str(REPO_ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
+# The dimensions the evidence evaluator refuses an assessment without. The
+# classifier held the same tuple until 9.0.0 removed it (ADR-094).
+from compass_pkg.evidence_required import _REQUIRED as EVALUATOR_REQUIRED  # noqa: E402
 
 RUBRIC_FILES = ("approaches/rubric.md", "skills/adaptive-routing/SKILL.md")
 
@@ -63,7 +67,7 @@ def _switches() -> list[str]:
     """The closed dimensions of the shipped default that are not scored. Since 9.0.0
     the shapes read only `goal` (the spike) and the evidence rows read `urgency`
     (ADR-092), so the switches are read from the dimensions catalogue."""
-    dims = yaml.safe_load(_text("governance/presets/default/dimensions.yml"))["dimensions"]
+    dims = shipped("dimensions.yml")["dimensions"]
     return [name for name, body in dims.items()
             if name not in EVALUATOR_REQUIRED and body.get("type") != "set"]
 

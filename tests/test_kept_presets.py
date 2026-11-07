@@ -4,7 +4,10 @@
 `artifact_kinds`, `terminology_cmd`, `readiness_registry` and the
 compatibility tests read them, and a stored generation names them. Each kept
 folder must be the last preset its major shipped, byte for byte, and must match
-the digests pinned in `tests/fixtures/preset-digests.yml`.
+the digests pinned in `tests/fixtures/preset-digests.yml`. The live preset
+went in 9.0.0: the live major is the major of the check set
+(`governance/check-set.yml`), and no frozen copy is made of the 8.x preset,
+because a stored generation holds its own resolved policy.
 
 These checks moved from the tests of `compass policy update`, which 9.0.0
 removed.
@@ -26,18 +29,30 @@ sys.path.insert(0, str(ROOT / "cli"))
 
 def _framework_root(base, version="7.0.0"):
     """A directory shaped like the framework after a release with a next major:
-    `governance/presets/default@6` (the repository's kept folder) and
-    `governance/presets/default`, a copy of it at `version`."""
+    `governance/presets/default@6` (the repository's kept folder) and a check
+    set at `version`."""
     kept = ROOT / "governance" / "presets" / "default@6"
     presets = Path(base) / "governance" / "presets"
     presets.mkdir(parents=True)
     shutil.copytree(kept, presets / "default@6")
-    shutil.copytree(kept, presets / "default")
-    path = presets / "default" / "preset.yml"
-    meta = yaml.safe_load(path.read_text(encoding="utf-8"))
-    meta["version"] = version
-    path.write_text(yaml.safe_dump(meta, sort_keys=False, width=10000), encoding="utf-8")
+    (Path(base) / "governance" / "check-set.yml").write_text(
+        f"id: compass-checks\nversion: {version}\n", encoding="utf-8")
     return Path(base)
+
+
+def _preset_digests(folder):
+    """`(pin key, {"preset": digest, "files": {file name: digest}})` for the
+    preset files in `folder`. The pin key is the preset's id and version. A
+    digest is over parsed content, as `tests/fixtures/preset-digests.yml` pins it."""
+    from compass_pkg import atomic_io
+    folder = Path(folder)
+    parsed = {p.name: yaml.safe_load(p.read_text(encoding="utf-8"))
+              for p in sorted(folder.iterdir()) if p.name.endswith(".yml")}
+    meta = parsed["preset.yml"]
+    return f"{meta['id']}@{meta['version']}", {
+        "preset": atomic_io.digest(parsed),
+        "files": {name: atomic_io.digest(doc) for name, doc in parsed.items()},
+    }
 
 
 def _digest_problems(folder, key, pins):
@@ -45,12 +60,8 @@ def _digest_problems(folder, key, pins):
     pinned under `key`: the file set, each file, then the whole preset. A file
     line names the file. Digests are over parsed content, so a comment-only edit
     gives no line; `_byte_problems` finds that."""
-    import tempfile
-    from compass_pkg import legacy_views
     folder, pin = Path(folder), pins[key]
-    with tempfile.TemporaryDirectory() as scratch:
-        shutil.copytree(folder, Path(scratch) / "governance/presets/default")
-        got_key, got = legacy_views.preset_digests(scratch)
+    got_key, got = _preset_digests(folder)
     problems = []
     if got_key != key:
         problems.append(f"{folder.name}/preset.yml reads {got_key}, not {key}")
@@ -121,7 +132,7 @@ def _kept_problems(root):
         major = int(version.split(".")[0])
         if major not in last or tuple(map(int, version.split("."))) > last[major][0]:
             last[major] = (tuple(map(int, version.split("."))), key)
-    live = yaml.safe_load((root / "governance/presets/default/preset.yml")
+    live = yaml.safe_load((root / "governance/check-set.yml")
                           .read_text(encoding="utf-8"))["version"]
     live_major = int(str(live).split(".")[0])
     problems = []

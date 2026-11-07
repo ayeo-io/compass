@@ -22,6 +22,8 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
@@ -748,9 +750,8 @@ def test_jc_10_the_corpus_has_the_verb_with_its_exit_codes():
 # --- JC-11: a project with no judged check is unchanged --------------------------------
 
 def test_jc_11_the_shipped_default_names_no_judged_or_evidence_check_in_any_list():
-    preset = ROOT / "governance" / "presets" / "default"
-    checks = yaml.safe_load((preset / "checks.yml").read_text(encoding="utf-8"))["checks"]
-    stages = yaml.safe_load((preset / "stages.yml").read_text(encoding="utf-8"))["stages"]
+    checks = shipped("checks.yml")["checks"]
+    stages = shipped("stages.yml")["stages"]
     listed = {c for body in stages.values() for side in ("entry", "exit")
               for c in (body.get(side) or [])}
     assert listed

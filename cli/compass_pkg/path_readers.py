@@ -6,9 +6,7 @@ A path issue is one whose manifest holds `evidence_required`
 modes, and it waits only at the path stages. An issue assessed before 9.0.0
 owes nothing here: its readers keep the rules they had.
 
-These rules are not in `path_stages`, whose source the classifier's verdict
-digest pins (`tests/test_classifier_speed.py`), because none of them decides a
-route.
+These rules are not in `path_stages`, because none of them decides a route.
 """
 # DEPENDENCY: compass_pkg.stable_ids and compass_pkg.path_stages only, so `core`
 # can import it without a cycle.

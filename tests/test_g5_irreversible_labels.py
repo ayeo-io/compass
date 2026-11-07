@@ -26,6 +26,8 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t",
        "-c", "commit.gpgsign=false"]
@@ -213,10 +215,13 @@ def _section(path, start, end):
 
 
 def test_gil_10_the_documents_name_the_same_four_cases():
-    gate = yaml.safe_load((ROOT / "governance/presets/default/gates.yml").read_text())
+    gate = shipped("gates.yml")
     g5 = gate["gates"]["G5"]
     assert g5["when"] == {"labels_any": LABELS}, g5["when"]
-    assert g5["locked"] == "hard" and g5["checks"] == ["human-approval-present"]
+    # The 8.x hard lock on guardrail `G5` is the check set's `never_waived` since
+    # 9.0.0 (ADR-094).
+    assert "gates.G5" in shipped("preset.yml")["never_waived"]
+    assert "locked" not in g5 and g5["checks"] == ["human-approval-present"]
 
     contract = _section("docs/safety-contract.md",
                         "### 5. Irreversible work", "The evidence records")

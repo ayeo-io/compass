@@ -180,19 +180,18 @@ def test_trc_045():
     # A stub that grows past 3 lines of body text is caught by the same reader.
     assert len(_stub_body_lines(stub + "A second line.\nA third line.\nA fourth line.\n")) > 3
 
-    # The stage map, the approaches and the default preset name the new skill.
+    # The stage map, the approaches and the check set name the new skill.
     # The define command and the 8.x approach files went with the path
     # (ADR-092); the stage map loads the skill at specify now.
     named = ["skills/compass-runtime/SKILL.md", "approaches/path.md",
              "approaches/composition-reference.md", "approaches/rubric.md",
-             "governance/presets/default/rules.yml"]
+             "governance/check-set.yml"]
     for rel in named:
         text = (ROOT / rel).read_text(encoding="utf-8")
         assert NEW_SKILL in text and OLD_SKILL not in text, rel
-    # The view generated from the 7.0.0 preset, and the template of its comments.
-    for rel in ("governance/routing-policy.yml", "cli/compass_pkg/legacy_views_template.py"):
-        assert OLD_SKILL not in (ROOT / rel).read_text(encoding="utf-8"), rel
-    for folder in ("commands", "agents", "approaches", "governance/presets/default"):
+    # The view generated from the 7.0.0 preset, frozen since 9.0.0 (ADR-094).
+    assert OLD_SKILL not in (ROOT / "governance/routing-policy.yml").read_text(encoding="utf-8")
+    for folder in ("commands", "agents", "approaches"):
         for path in sorted((ROOT / folder).rglob("*")):
             if path.is_file() and path.suffix in (".md", ".yml"):
                 assert OLD_SKILL not in path.read_text(encoding="utf-8"), path
@@ -300,8 +299,8 @@ def test_trc_047():
     for name in ("checks.yml", "stages.yml"):
         text = (ROOT / "governance" / "presets" / "default@7" / name).read_text(encoding="utf-8")
         assert NEW_CHECK in text and OLD_CHECK not in text, name
-        live = (ROOT / "governance" / "presets" / "default" / name).read_text(encoding="utf-8")
-        assert NEW_CHECK not in live and OLD_CHECK not in live, name
+    live = (ROOT / "governance" / "check-set.yml").read_text(encoding="utf-8")
+    assert NEW_CHECK not in live and OLD_CHECK not in live
     for check_id in (NEW_CHECK, OLD_CHECK):
         for waiver in (False, True):
             with tempfile.TemporaryDirectory() as raw:
@@ -360,7 +359,6 @@ def test_trc_048():
 
 def test_trc_049():
     import tempfile
-    from compass_pkg import legacy_views
     with tempfile.TemporaryDirectory() as raw:
         project = _u5_project(Path(raw), "schema: 1\nextends: compass:default@6\n")
         code, out, err = _run(project, "policy", "lint")
@@ -383,7 +381,6 @@ def test_trc_049():
     assert atomic_io.digest(parsed) == pinned["preset"]
     for name, doc in parsed.items():
         assert atomic_io.digest(doc) == pinned["files"][name], name
-    assert legacy_views.digest_problems(ROOT) == [], legacy_views.digest_problems(ROOT)
 
 
 # --- The state key and the refusal code ---------------------------------------

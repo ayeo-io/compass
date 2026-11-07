@@ -358,7 +358,7 @@ def _sectioned(root, kind, doc, *, generation=True, closed=False, registered=Tru
     Since 9.0.0 a project layer cannot set the catalogue (ADR-091), so `sections` is
     written into the resolution before it is stored. That is the generation an issue
     configured before 9.0.0 still holds."""
-    from compass_pkg import effective, layers
+    from compass_pkg import effective, project_settings
     from compass_pkg.core import load_manifest
 
     _write(root / "compass.yml", yaml.safe_dump({"schema": 1}, sort_keys=False))
@@ -380,7 +380,7 @@ def _sectioned(root, kind, doc, *, generation=True, closed=False, registered=Tru
         manifest = load_manifest(str(task_dir))[0]
         resolution = None
         if sections is not None:
-            resolution = effective.resolve_live(layers.find_project_root(str(task_dir)),
+            resolution = effective.resolve_live(project_settings.find_project_root(str(task_dir)),
                                                 manifest, SLUG, str(task_dir))
             resolution.resolved.setdefault("artifacts", {})[kind] = {"sections": sections}
         effective.commit_generation(str(task_dir), manifest, resolution=resolution)

@@ -11,9 +11,9 @@ set ([configuration.md](configuration.md)). So `policy lint` lints a file of
 settings, and `policy show` names the check set, its digest and the settings
 that tighten it.
 
-The code is `cli/compass_pkg/policy_cmd.py` (the two commands),
-`cli/compass_pkg/settings_lint.py` (the settings lint) and
-`cli/compass_pkg/policy_lint.py` (the report of the legacy lint, until #359).
+The code is `cli/compass_pkg/policy_cmd.py` (the two commands and the JSON
+report of the legacy lint, until #359) and `cli/compass_pkg/settings_lint.py`
+(the settings lint and the schema of `compass.yml`).
 
 ## What `compass policy lint` runs
 

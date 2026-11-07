@@ -93,7 +93,13 @@ def test_trc_a3(tmp_path, kind):
     changed = [r for r in expected["rows"] if r[0] == "backfills-paid"]
     assert changed == [["backfills-paid", "pass"]], changed
     changed[0][1] = "nothing-to-check"
-    assert support.summary(code, document) == expected
+    got = support.summary(code, document)
+    # Since #355 a path issue owes the ship approval, which 8.0.4 did not check. It
+    # has nothing to check until the pull request merges, so it adds one such row.
+    ship = [r for r in got["rows"] if r[0] == "ship-approval-present"]
+    assert ship == [["ship-approval-present", "nothing-to-check"]], ship
+    got["rows"].remove(ship[0])
+    assert got == expected
 
 
 # --- `TRC-A5` ------------------------------------------------------------------------------

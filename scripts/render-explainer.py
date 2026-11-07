@@ -68,8 +68,11 @@ STAGE_OF_TOKEN = {
     "suite-green": "ship", "correctness": "ship", "governance": "ship",
     "traceability": "ship", "regression": "ship", "security": "ship",
     "clarity": "ship", "architecture": "ship", "human-approval": "ship",
+    "ship-approval": "ship",
 }
-# The evidence that is a person's decision at ship, beside the checkpoints.
+# The evidence that is a person's decision at ship, beside the checkpoints. The ship
+# approval every change owes is not one: Compass reads it from the merged pull
+# request's review, so it adds no stop in the session (#355).
 PERSON_AT_SHIP = "human-approval"
 LOOP_SECONDS = 18
 

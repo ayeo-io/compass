@@ -300,7 +300,7 @@ TOP_DESCRIPTIONS = {
                               "`correctness`, `governance`, `traceability`, `regression`, "
                               "`security`, `clarity`, `architecture`, `outer-loop`, `isolation`, "
                               "`layering`, `definition-of-done`, `reproduce-first`, "
-                              "`scenario-approval` or `human-approval`.",
+                              "`scenario-approval`, `human-approval` or `ship-approval`.",
     "agent_review": "Turns on the advisory judged check `agent-review` at the `ship` stage "
                     "(ADR-090 decision 7). `on` or `true` turns it on, and `off` or `false` "
                     "leaves the default, which is off.",

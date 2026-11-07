@@ -540,8 +540,9 @@ def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
     assert shipped["checks"]["human-approval-present"] == unlocked(
         "governance/presets/default/checks.yml#human-approval-present", "human-approval-present")
     assert shipped["gates"]["G5"] == unlocked("governance/presets/default/gates.yml#G5", "G5")
-    assert check_set.load()["never_waived"] == yaml.safe_load(
-        base["governance/presets/default/preset.yml#locks.hard"])["hard"]
+    # #355 added the ship approval, which no waiver excuses either.
+    hard = yaml.safe_load(base["governance/presets/default/preset.yml#locks.hard"])["hard"]
+    assert check_set.load()["never_waived"] == hard[:1] + ["checks.ship-approval-present"] + hard[1:]
 
     # An 8.x issue waiver whose approval names the checkpoint answer takes nothing
     # into effect: the write does not read the issue's `config:` (ADR-094), and

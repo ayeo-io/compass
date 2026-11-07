@@ -50,7 +50,7 @@ def _manifest(root, slug):
 
 #: The evidence every change owes, and the light row's outer loop (ADR-092).
 LIGHT = ["scenarios", "red-before-green", "suite-green", "correctness", "governance",
-         "traceability", "outer-loop"]
+         "traceability", "outer-loop", "ship-approval"]
 
 
 def test_on_the_path_a_labelled_change_owes_the_domain_evidence(repo):

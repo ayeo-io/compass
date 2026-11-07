@@ -30,7 +30,7 @@ GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
 
 #: What a trivial, atomic change owes on the path: the light row (ADR-092).
 LIGHT = ["scenarios", "red-before-green", "suite-green", "correctness", "governance",
-         "traceability", "outer-loop"]
+         "traceability", "outer-loop", "ship-approval"]
 
 
 def _git(root, *args):

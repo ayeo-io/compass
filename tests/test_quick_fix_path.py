@@ -26,7 +26,7 @@ from test_quick_fix_verbs import (  # noqa: F401  (`repo` is a fixture)
 SLUG = "greet-path"
 STANDARD = ["scenarios", "red-before-green", "suite-green", "correctness", "governance",
             "traceability", "regression", "security", "clarity", "outer-loop", "isolation",
-            "layering", "definition-of-done"]
+            "layering", "definition-of-done", "ship-approval"]
 INTENT = "A greeting says hello to the person it names."
 SCENARIO = ("Given the greeting template, when it is read, then it says "
             "'Hello, %s!'.")

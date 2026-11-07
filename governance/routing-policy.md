@@ -424,7 +424,9 @@ The rows, first match wins:
 | `RP-EVID-STANDARD` | any other delivery assessment | every-issue tokens, `regression`, `security`, `clarity`, `definition-of-done` | `on` |
 
 The every-issue tokens are `scenarios`, `red-before-green`, `suite-green`,
-`correctness`, `governance` and `traceability`. The additions to a delivery
+`correctness`, `governance`, `traceability` and `ship-approval`. The
+`ship-approval` token meets no gate: the check `ship-approval-present`, outside
+every gate, reads it (`governance/guardrails.md`). The additions to a delivery
 row:
 
 | Rule | When | Adds |

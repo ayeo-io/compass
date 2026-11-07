@@ -101,6 +101,7 @@ same commit.
 | `cli/compass_pkg/section_checks.py`, `cli/compass_pkg/outside_gate.py`, `cli/compass_pkg/spec_location.py` | `governance/guardrails.md` |
 | `cli/compass_pkg/acceptance_strategy.py`, `cli/compass_pkg/outer_loop.py`, `cli/compass_pkg/candidate_client.py`, `cli/compass_pkg/isolation.py`, `cli/compass_pkg/layering.py`, `cli/compass_pkg/strategy_records.py` | `governance/guardrails.md` |
 | `cli/compass_pkg/support_code.py` | `governance/guardrails.md` (the check and the claim limit) |
+| `cli/compass_pkg/ship_approval.py` | `governance/guardrails.md` |
 | `cli/compass_pkg/migrate.py`, `cli/compass_pkg/migrate_kinds.py`, `cli/compass_pkg/migrate_copy_check.py` | `architecture/decisions/ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md`, `docs/upgrade-7-0-0.md` |
 | `cli/compass_pkg/parse_cache.py` | `architecture/decisions/ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md`, widened by `architecture/decisions/ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md` |
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |

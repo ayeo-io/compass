@@ -118,7 +118,9 @@ def test_ef_2_gate_requirements_equal_the_guardrails_file(tmp_path, monkeypatch)
     legacy = _shipped("guardrails.yml")
     requirements, known = stored.gate_requirements()
     assert requirements == {k: list(v) for k, v in legacy["gate_evidence_requirements"].items()}
-    assert known == set(legacy["evidence_types"])
+    # The frozen file cannot list a type the check set gained after it froze.
+    from check_set_files import ADDED_AFTER_THE_FREEZE
+    assert known == set(legacy["evidence_types"]) | ADDED_AFTER_THE_FREEZE["evidence_types"]
 
 
 def test_ef_2_loop_ceiling_rules_equal_the_policy_file(tmp_path, monkeypatch):

@@ -20,8 +20,9 @@ clears guardrail `G5` (`approval_records.gives_g5`).
 
 - it has a reason and names a check;
 - it is not withdrawn;
-- its check is not one the check set never waives (`never_waived`): the check
-  `human-approval-present` and every check of gate `G5`;
+- its check is not one the check set never waives (`never_waived`): the checks
+  `human-approval-present` and `ship-approval-present`, and every check of gate
+  `G5`;
 - a `human-approval` record names it, holds `decision: approved` and the four
   fields, is for this issue at its current generation, names the same check
   and reason, is by an allowed approver, and no `approval-withdrawal` record

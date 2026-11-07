@@ -239,6 +239,18 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a scenario with its tests removed |
 | `restored` | pass | the same input put right |
 
+### `ship-approval-present` (version 1.0.0)
+
+| Case | Verdict | What the input exercises |
+|---|---|---|
+| `broken` | fail | the input the mutation proof breaks: an issue that owes `ship-approval` whose linked pull request merged with no approval on record |
+| `g5-signoff` | fail | the same merged pull request with only a sign-off of guardrail `G5` on record, which does not count |
+| `in-flight` | nothing-to-check | an issue in flight that owes `ship-approval`, with no merge recorded |
+| `landed-unmerged` | nothing-to-check | a landed issue that owes `ship-approval`, with no merge recorded |
+| `not-owed` | nothing-to-check | a merged pull request on an issue whose `evidence_required` does not list `ship-approval` |
+| `restored` | pass | the merged pull request with a `pr-approval` record for it |
+| `typed` | pass | the merged pull request with a typed `human-approval` record with `ship:` for this issue and generation |
+
 ### `spike-conclusion-present` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |

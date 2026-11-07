@@ -732,3 +732,62 @@ def _(root):
 def _(root):
     task, task_dir = _issue(root, _routed("existing-dsl-isolation"))
     return task, task_dir
+
+
+# --- ship-approval-present (#355) --------------------------------------------------------
+# The two records that count are written by later commands; here they are written by hand.
+
+_SHIP_PR = {"repo": "acme/widgets", "number": 42}
+
+
+def _shipped(extra=None, **changes):
+    body = {"status": "active", "generation": 1,
+            "evidence_required": ["scenarios", "ship-approval"],
+            "pull_request": dict(_SHIP_PR, merged_at="2026-11-07T01:48:47Z"),
+            "evidence": list(extra or [])}
+    body.update(changes)
+    return body
+
+
+def _approved(**record):
+    return dict({"id": "EV-1", "approver": "tidy-dev", "role": "reviewer",
+                 "scope": "the change", "decision": "approved",
+                 "timestamp": "2026-11-07T01:27:26Z", "issue": SLUG, "generation": 1},
+                **record)
+
+
+@case("ship-approval-present", "broken")
+def _(root):
+    return _issue(root, _shipped())
+
+
+@case("ship-approval-present", "restored")
+def _(root):
+    return _issue(root, _shipped([_approved(type="pr-approval",
+                                            pull_request=dict(_SHIP_PR))]))
+
+
+@case("ship-approval-present", "typed")
+def _(root):
+    return _issue(root, _shipped([_approved(type="human-approval", ship=SLUG)]))
+
+
+@case("ship-approval-present", "g5-signoff")
+def _(root):
+    return _issue(root, _shipped([_approved(type="human-approval")]))
+
+
+@case("ship-approval-present", "in-flight")
+def _(root):
+    return _issue(root, _shipped(pull_request=dict(_SHIP_PR)))
+
+
+@case("ship-approval-present", "landed-unmerged")
+def _(root):
+    return _issue(root, _shipped(pull_request=None, status="done", close_reason="completed",
+                                 land_commit="b" * 40))
+
+
+@case("ship-approval-present", "not-owed")
+def _(root):
+    return _issue(root, _shipped(evidence_required=["scenarios"]))

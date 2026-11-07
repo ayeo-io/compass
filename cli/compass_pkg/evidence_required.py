@@ -43,7 +43,8 @@ TOKENS = ("scenarios", "red-before-green", "suite-green",
           "correctness", "governance", "traceability",
           "regression", "security", "clarity", "architecture",
           "outer-loop", "isolation", "layering",
-          "definition-of-done", "reproduce-first", "scenario-approval", "human-approval")
+          "definition-of-done", "reproduce-first", "scenario-approval", "human-approval",
+          "ship-approval")
 
 #: The review gate each token is met by. The other tokens are met by records and
 #: checks, not by a gate (`governance/routing-policy.md`).
@@ -54,9 +55,11 @@ GATE_OF_TOKEN = {"correctness": "verify.correctness", "governance": "verify.gove
 TOKEN_OF_GATE = {gate: token for token, gate in GATE_OF_TOKEN.items()}
 SPIKE_GATE = "spike.conclude"
 
-#: What every delivery issue owes.
+#: What every delivery issue owes. `ship-approval` is a person's approval at ship,
+#: read by the check `ship-approval-present` outside every gate (#355); it meets no
+#: gate, so the gate sets of 8.0.4 do not move.
 EVERY_ISSUE = ("scenarios", "red-before-green", "suite-green",
-               "correctness", "governance", "traceability")
+               "correctness", "governance", "traceability", "ship-approval")
 
 #: The `S17` tokens, each with the routings that owe it. `outer-loop` is owed
 #: wherever the strategy applies.

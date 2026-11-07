@@ -382,6 +382,10 @@ def test_trc_f7_evidence_types_agree_across_surfaces():
         (yaml.safe_load((GOVERNANCE / "guardrails.yml").read_text())
          .get("evidence_types") or {}))
     assert declared, "guardrails.yml declares no evidence types"
+    # The frozen file cannot list a type the check set gained after it froze.
+    sys.path.insert(0, str(ROOT / "tests"))
+    from check_set_files import ADDED_AFTER_THE_FREEZE
+    declared |= ADDED_AFTER_THE_FREEZE["evidence_types"]
 
     schema = json.loads((ROOT / "schemas" / "manifest.schema.json").read_text())
 

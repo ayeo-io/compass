@@ -29,6 +29,9 @@ sys.path.insert(0, str(ROOT / "cli"))
 
 from compass_pkg import catalogue_spec, check_set, legacy_adapter  # noqa: E402
 
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import ADDED_AFTER_THE_FREEZE  # noqa: E402
+
 POLICY = ROOT / "governance" / "routing-policy.yml"
 GUARDRAILS = ROOT / "governance" / "guardrails.yml"
 RANK_RULING = (ROOT / "governance" / "decisions"
@@ -396,7 +399,8 @@ def test_dp_6_every_reference_in_the_preset_resolves():
 def test_dp_6_the_checks_are_the_guardrail_files_registry():
     _, guardrails = _today()
     checks = {n: c for n, c in _preset()["checks"].items() if c["kind"] == "deterministic"}
-    assert set(checks) == set(guardrails["checks"])
+    assert set(checks) == set(guardrails["checks"]) | ADDED_AFTER_THE_FREEZE["checks"]
+    assert not ADDED_AFTER_THE_FREEZE["checks"] & set(guardrails["checks"])
     for name, entry in guardrails["checks"].items():
         assert checks[name]["statement"] == entry["description"]
     blocking = checks["scenarios-are-executable"]
@@ -408,7 +412,9 @@ def test_dp_6_the_checks_are_the_guardrail_files_registry():
 def test_dp_6_the_evidence_types_and_accepted_types_equal_the_guardrails_file():
     _, guardrails = _today()
     types = {"evidence_types": check_set.resolved()["evidence_types"]}
-    assert set(types["evidence_types"]) == set(guardrails["evidence_types"])
+    assert set(types["evidence_types"]) == (set(guardrails["evidence_types"])
+                                            | ADDED_AFTER_THE_FREEZE["evidence_types"])
+    assert not ADDED_AFTER_THE_FREEZE["evidence_types"] & set(guardrails["evidence_types"])
     for name, entry in guardrails["evidence_types"].items():
         assert types["evidence_types"][name]["description"] == entry["description"]
     gates = _preset()["gates"]
@@ -459,6 +465,7 @@ EXPECTED_ON_SKIPPED = {
     "outer-loop-attempts-recorded": "not-applicable",
     "isolation-proven": "not-applicable",
     "layering-test-passed": "not-applicable",
+    "ship-approval-present": "not-applicable",
     "declared-tests-resolve": "pass",
 }
 

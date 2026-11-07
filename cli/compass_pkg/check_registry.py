@@ -39,6 +39,7 @@ from compass_pkg.checks import (
 from compass_pkg.landed_by import _check_landed_by_resolves
 from compass_pkg.readiness_registry import READINESS  # noqa: F401  (re-exported)
 from compass_pkg.section_checks import _check_nfr_rows_resolved
+from compass_pkg.ship_approval import _check_ship_approval_present
 
 CORPUS_ROOT = "tests/fixtures/impls"
 TIGHTER = ("higher", "lower", "none", "superset")
@@ -139,6 +140,8 @@ _ENTRIES = (
     _entry("outer-loop-attempts-recorded", _check_outer_loop_attempts_recorded),
     _entry("isolation-proven", _check_isolation_proven),
     _entry("layering-test-passed", _check_layering_test_passed),
+    # The ship approval every delivery issue owes (#355, VD-029).
+    _entry("ship-approval-present", _check_ship_approval_present),
 )
 
 REGISTRY: dict[str, CheckImpl] = {e.name: e for e in _ENTRIES}

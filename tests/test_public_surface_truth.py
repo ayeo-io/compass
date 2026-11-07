@@ -806,6 +806,10 @@ def test_d2_repairs_change_only_retired_names():
     the two views and the section on how the classifier compared two
     configurations.
 
+    One more was re-baselined by #355, step 2 (the ship approval):
+    `governance/guardrails.md` (list_items 79 -> 83) gained the bullet on the
+    check `ship-approval-present` and its three sub-bullets.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

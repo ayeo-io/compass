@@ -12,7 +12,7 @@ id: compass-checks
 version: 9.0.0
 capabilities: {entry-exit-evaluation: false}
 # No waiver can excuse these.
-never_waived: [checks.human-approval-present, gates.G5]
+never_waived: [checks.human-approval-present, checks.ship-approval-present, gates.G5]
 
 # What an assessment reads, with the order of each ordered dimension.
 dimensions:
@@ -330,6 +330,9 @@ checks:
       note does not count. Declines to check, rather than passing, for an issue the strategy does not
       apply to and on the routings `existing-dsl` and `existing-dsl-isolation` (a small, contained change
       and a live defect).', kind: deterministic, impl: layering-test-passed, severity: blocking, on_skipped: not-applicable}
+  ship-approval-present: {statement: 'A person approved the change at ship: a review approval on the
+      merged pull request, or a typed approval', kind: deterministic, impl: ship-approval-present, severity: blocking,
+    on_skipped: not-applicable}
   spike-conclusion-present: {statement: A spike has a `spike-conclusion` evidence entry with a recorded
       decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue., kind: deterministic,
     impl: spike-conclusion-present, severity: blocking, on_skipped: fail}
@@ -579,6 +582,10 @@ evidence_types:
   approval-withdrawal: {description: 'A person''s withdrawal of a guardrail `G5` sign-off made under a
       delegation, written only by `/compass:reject <record id>`. Names the record in `withdraws`; `human-approval-present`
       then skips that record while the issue is in flight. It reverses nothing already done.'}
+  pr-approval: {description: 'A person''s approving review of the merged pull request, copied from GitHub
+      by `compass issue link set --pr`: the reviewer, the time, the pull request, the review id and URL,
+      and the reviewed commit. It counts only when the reviewer''s latest review before the merge approved,
+      the account is a person and not the pull request''s author. Meets `ship-approval-present`.'}
   checkpoint-approval: {description: 'A person''s answer to one checkpoint hand-off, written only by `compass
       evidence approve --checkpoint`. It never meets guardrail `G5` or a human check.'}
   isolation-proof: {description: 'A record, written only by `compass isolation record`, of the project''s
@@ -700,6 +707,9 @@ names:
     aliases: []
   checks.layering-test-passed:
     name: Layering test passed
+    aliases: []
+  checks.ship-approval-present:
+    name: Ship approval present
     aliases: []
   checks.spike-conclusion-present:
     name: Spike conclusion present

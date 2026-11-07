@@ -594,7 +594,8 @@
           "definition-of-done",
           "reproduce-first",
           "scenario-approval",
-          "human-approval"
+          "human-approval",
+          "ship-approval"
         ]
       },
       "uniqueItems": true,
@@ -632,6 +633,7 @@
               "layering",
               "manual-review",
               "migration-plan",
+              "pr-approval",
               "rollback-plan",
               "security-review",
               "spike-conclusion",
@@ -910,7 +912,10 @@
       "additionalProperties": false,
       "properties": {
         "repo": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/(?!-)(?!\\.{1,2}$)[A-Za-z0-9._-]{1,100}$", "description": "The repository, as owner/repo."},
-        "number": {"type": "integer", "minimum": 1, "maximum": 999999999, "description": "The pull request number in that repository."}
+        "number": {"type": "integer", "minimum": 1, "maximum": 999999999, "description": "The pull request number in that repository."},
+        "merged_at": {"type": "string", "description": "When the pull request merged, as GitHub records it. Written once it has merged; `ship-approval-present` fails while it is set and no ship approval is on record."},
+        "merge_commit": {"type": "string", "description": "The merge commit GitHub recorded for the pull request."},
+        "author": {"type": "string", "description": "The GitHub login of the pull request's author, whose own review never counts as the ship approval."}
       }
     },
     "raised_by": {

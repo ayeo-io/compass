@@ -28,7 +28,7 @@ waivers:
 
 - an empty reason;
 - a reason that holds a control character: an escape sequence, a direction override or a line break. The person is shown the reason, so it must be plain text on one line;
-- a check the check set never waives: `human-approval-present` and every check of guardrail `G5`, from `never_waived` in `governance/check-set.yml`;
+- a check the check set never waives: `human-approval-present`, `ship-approval-present` and every check of guardrail `G5`, from `never_waived` in `governance/check-set.yml`;
 - a check the issue's policy does not hold;
 - a second waiver in force for the same check.
 

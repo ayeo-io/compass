@@ -1,0 +1,2 @@
+verdict: pass
+input: the merged pull request with a typed `human-approval` record with `ship:` for this issue and generation

@@ -138,8 +138,11 @@ def test_a_missing_file_is_refused(tmp_path):
 
 def test_never_waived_is_the_hard_lock_of_the_default():
     """The 8.x default's hard locks (`locks.hard` of the preset 9.0.0 removed),
-    by the decision 2026-10-06-locks-allow-tightening-and-g5-is-hard."""
-    assert check_set.load()["never_waived"] == ["checks.human-approval-present", "gates.G5"]
+    by the decision 2026-10-06-locks-allow-tightening-and-g5-is-hard, and the ship
+    approval of #355: the typed approval is already how a person excuses a
+    missing review."""
+    assert check_set.load()["never_waived"] == ["checks.human-approval-present",
+                                                "checks.ship-approval-present", "gates.G5"]
 
 
 def test_the_optional_agent_review_is_the_block_the_guide_gives_and_does_not_run(checks):
@@ -194,4 +197,4 @@ def test_resolved_is_a_copy(checks):
 def test_the_gates_checks_and_evidence_types_are_counted():
     checks = check_set.resolved()
     assert (len(checks["gates"]), len(checks["checks"]), len(checks["evidence_types"])) == \
-        (16, 32, 16)
+        (16, 33, 17)

@@ -69,6 +69,9 @@ implementations:
   scenarios-have-tests:
     verdict_digest: 3c4e371a588f04aa5cae9422d92ff4d8d811b7ee26252e8547aae97fb4092bcc
     version: 1.0.0
+  ship-approval-present:
+    verdict_digest: 2ce5ee2a5e14a2104d251f5b9d92a3edf863ed888ebc6025409a2e439cd42890
+    version: 1.0.0
   spike-conclusion-present:
     verdict_digest: 692e3eaafa7389de3b91748737a76ea6233c1aa3e4694c4321123b46ca026d63
     version: 1.0.0

@@ -27,9 +27,11 @@ from compass_pkg import evidence_required as er  # noqa: E402
 
 EVERY_ISSUE = ["scenarios", "red-before-green", "suite-green",
                "correctness", "governance", "traceability"]
-LIGHT = EVERY_ISSUE + ["outer-loop"]
+#: The ship approval every delivery row owes (#355); it is last in the manifest's order.
+SHIP = ["ship-approval"]
+LIGHT = EVERY_ISSUE + ["outer-loop"] + SHIP
 STANDARD = EVERY_ISSUE + ["regression", "security", "clarity", "outer-loop", "isolation",
-                          "layering", "definition-of-done"]
+                          "layering", "definition-of-done"] + SHIP
 THREE = ["verify.correctness", "verify.governance", "verify.traceability"]
 LEGACY_ONLY = ("stages", "subtask_ceiling", "max_worktrees", "orchestration")
 

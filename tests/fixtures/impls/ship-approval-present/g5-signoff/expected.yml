@@ -1,0 +1,2 @@
+verdict: fail
+input: the same merged pull request with only a sign-off of guardrail `G5` on record, which does not count

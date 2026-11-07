@@ -23,6 +23,9 @@ from compass_pkg.routing import RoutingConflict, evaluate_route
 
 EVERY_ISSUE = ["scenarios", "red-before-green", "suite-green",
                "correctness", "governance", "traceability"]
+#: The ship approval every delivery row owes (#355). It is the last token in the
+#: manifest's order, so it ends every delivery list.
+SHIP = ["ship-approval"]
 S17_ON = ["outer-loop", "isolation", "layering"]
 
 
@@ -48,7 +51,7 @@ def policy_8_0_4(tmp_path_factory):
 def test_light_row_owes_the_every_issue_evidence_and_the_outer_loop(live):
     out = er.evaluate(_assess(), live)
     assert out["delivery_approach"] == er.APPROACH_DELIVERY == "delivery"
-    assert out["evidence_required"] == EVERY_ISSUE + ["outer-loop"]
+    assert out["evidence_required"] == EVERY_ISSUE + ["outer-loop"] + SHIP
     assert out["gates"] == ["verify.correctness", "verify.governance",
                             "verify.traceability"]
     assert out["acceptance_routing"] == "existing-dsl"
@@ -60,7 +63,7 @@ def test_defect_row_adds_the_old_hotfix_evidence(live):
     out = er.evaluate(_assess(urgency="live-defect", size="atomic"), live)
     assert out["evidence_required"] == EVERY_ISSUE + [
         "regression", "security", "outer-loop", "isolation", "definition-of-done",
-        "reproduce-first"]
+        "reproduce-first"] + SHIP
     assert out["gates"] == ["verify.correctness", "verify.governance",
                             "verify.traceability", "verify.regression",
                             "verify.security"]
@@ -71,7 +74,7 @@ def test_defect_row_adds_the_old_hotfix_evidence(live):
 def test_standard_row_adds_regression_security_clarity_and_the_definition_of_done(live):
     out = er.evaluate(_assess(size="medium"), live)
     assert out["evidence_required"] == EVERY_ISSUE + [
-        "regression", "security", "clarity"] + S17_ON + ["definition-of-done"]
+        "regression", "security", "clarity"] + S17_ON + ["definition-of-done"] + SHIP
     assert out["gates"] == ["verify.correctness", "verify.governance",
                             "verify.traceability", "verify.regression",
                             "verify.security", "verify.clarity"]
@@ -127,7 +130,7 @@ def test_critical_risk_adds_the_architecture_review_and_the_scenario_approval(li
     out = er.evaluate(_assess(risk="critical", size="atomic"), live)
     assert out["evidence_required"] == EVERY_ISSUE + [
         "regression", "security", "clarity", "architecture"] + S17_ON + [
-        "definition-of-done", "scenario-approval"]
+        "definition-of-done", "scenario-approval"] + SHIP
     assert out["gates"][-1] == "verify.architecture"
     assert out["rules_fired"] == ["RP-EVID-STANDARD", "RP-REQUIRE-003", "RP-EVID-SIGNOFF"]
 
@@ -137,7 +140,7 @@ def test_a_g5_label_adds_architecture_scenario_approval_and_human_approval(live,
     out = er.evaluate(_assess(size="atomic", risk="trivial", labels=[label]), live)
     assert out["evidence_required"] == EVERY_ISSUE + [
         "regression", "security", "clarity", "architecture"] + S17_ON + [
-        "definition-of-done", "scenario-approval", "human-approval"]
+        "definition-of-done", "scenario-approval", "human-approval"] + SHIP
     assert out["rules_fired"] == ["RP-EVID-STANDARD", "RP-REQUIRE-004",
                                   "RP-EVID-SIGNOFF", "G5"]
 
@@ -177,7 +180,7 @@ def test_required_evidence_of_the_policy_adds_its_tokens_where_it_matches(live):
         {"id": "RP-SETTING-1", "when": {"risk": "contained"}, "add": ["security"]},
         {"id": "RP-SETTING-2", "when": {"size": "large"}, "add": ["clarity"]}])
     out = er.evaluate(_assess(), policy)
-    assert out["evidence_required"] == EVERY_ISSUE + ["security", "outer-loop"]
+    assert out["evidence_required"] == EVERY_ISSUE + ["security", "outer-loop"] + SHIP
     assert "verify.security" in out["gates"]
     assert out["rules_fired"] == ["RP-EVID-LIGHT", "RP-SETTING-1"]
     assert er.evaluate(_assess(goal="exploration"), policy)["evidence_required"] == []
@@ -284,7 +287,7 @@ def test_a_floor_of_the_configuration_adds_its_gate(live):
         {"id": "P-TWO", "when": {"size": "atomic"}, "add_gate": "verify.claims"},
     ]
     out = er.evaluate(_assess(size="atomic"), policy)
-    assert out["evidence_required"] == EVERY_ISSUE + ["regression", "outer-loop"]
+    assert out["evidence_required"] == EVERY_ISSUE + ["regression", "outer-loop"] + SHIP
     assert out["gates"] == ["verify.correctness", "verify.governance",
                             "verify.traceability", "verify.regression", "verify.claims"]
     assert out["rules_fired"] == ["RP-EVID-LIGHT", "P-ONE", "P-TWO"]

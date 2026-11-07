@@ -15,6 +15,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 
+#: The checks and evidence types the check set gained after
+#: `governance/guardrails.yml` froze in 9.0.0 (its first line says so). The
+#: frozen file cannot list them, and only the legacy readers read it, so a test
+#: that compares the check set with that file leaves them out. #355 added the
+#: ship approval.
+ADDED_AFTER_THE_FREEZE = {"checks": frozenset({"ship-approval-present"}),
+                          "evidence_types": frozenset({"pr-approval"})}
+
 
 def shipped(name):
     """The mapping the preset file `name` (such as `checks.yml`) held, read from

@@ -1,0 +1,2 @@
+verdict: nothing-to-check
+input: a merged pull request on an issue whose `evidence_required` does not list `ship-approval`

@@ -189,7 +189,7 @@
           "add": {
             "description": "The evidence tokens the rule adds, from the closed set the evidence rows use.",
             "items": {
-              "description": "One token: `scenarios`, `red-before-green`, `suite-green`, `correctness`, `governance`, `traceability`, `regression`, `security`, `clarity`, `architecture`, `outer-loop`, `isolation`, `layering`, `definition-of-done`, `reproduce-first`, `scenario-approval` or `human-approval`.",
+              "description": "One token: `scenarios`, `red-before-green`, `suite-green`, `correctness`, `governance`, `traceability`, `regression`, `security`, `clarity`, `architecture`, `outer-loop`, `isolation`, `layering`, `definition-of-done`, `reproduce-first`, `scenario-approval`, `human-approval` or `ship-approval`.",
               "enum": [
                 "scenarios",
                 "red-before-green",
@@ -207,7 +207,8 @@
                 "definition-of-done",
                 "reproduce-first",
                 "scenario-approval",
-                "human-approval"
+                "human-approval",
+                "ship-approval"
               ]
             },
             "minItems": 1,

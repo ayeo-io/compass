@@ -169,6 +169,11 @@ CHECK_GUIDANCE = {
         "do": "Record a passing run of the project's layering test on the current tree.",
         "fix": "Run `compass layering record [--test-path <path>] -- <layering test command>`, or set `project.layering_command`, and fix each breach the test names.",
     },
+    "ship-approval-present": {
+        "why": "Every change gets one person's approval at ship. Compass reads it from the merged pull request's review, or a person types it; a sign-off of guardrail `G5` is given before code and does not count.",
+        "do": "Run `compass issue link set --pr <n>` once merged, or `compass evidence request --ship`.",
+        "fix": "Have a person other than the pull request's author approve it on GitHub before the merge, then run `compass issue link set --pr <n> --issue <slug>`. Without such a review, ask with `compass evidence request --ship` and have the person type `/compass:approve`.",
+    },
     "spike-conclusion-present": {
         "why": "A Spike without a recorded conclusion is just untracked work - the conclusion is what makes the exploration accountable.",
         "do": 'Record the close-out: discard, graduate-to-delivery, or defer.',
@@ -657,7 +662,7 @@ def _outside_gate_pass(run, task, task_dir, refused, checks=None):
     configuration that does not declare a check adds no row for it, so an issue
     stored before the check existed gains it at its next `compass approach
     evaluate --write`."""
-    from compass_pkg import acceptance_strategy
+    from compass_pkg import acceptance_strategy, ship_approval
 
     ran = failed = nothing = advisory = 0
     for check in outside_gate.CHECKS if checks is None else checks:
@@ -668,6 +673,10 @@ def _outside_gate_pass(run, task, task_dir, refused, checks=None):
         if check in acceptance_strategy.CHECKS and acceptance_strategy.stored(task) is None:
             if check == acceptance_strategy.CHECK:
                 run.note("  " + acceptance_strategy.notice(task_dir))
+            continue
+        # Only an issue whose stored `evidence_required` lists the token owes the ship
+        # approval, so an issue assessed before the token gains no row (#355).
+        if check == ship_approval.CHECK and not ship_approval.owed(task):
             continue
         verdict = outside_gate.judged(check, CHECK_FNS.get(check) or _removed_fn(check),
                                       task, task_dir, _judge)

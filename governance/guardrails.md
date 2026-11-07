@@ -388,6 +388,26 @@ _(none yet - the shipped default guardrails apply as-is)_
     9.0.0, `compass check` also names each 8.x waiver of one of the
     strategy's checks that the issue's `config:` holds, with its reason and
     whether the issue's generation approved it.
+- **`ship-approval-present`** is the check of the token `ship-approval`, which
+  every delivery row owes and a spike does not (#355). It declares `severity:
+  blocking` and `on_skipped: not-applicable`, sits in no gate and not in the
+  spike's checks, and no waiver excuses it. `compass check` runs it last of
+  the checks outside every gate and adds no row for an issue whose stored
+  `evidence_required` does not list the token, so an issue assessed before the
+  token gains none. The rules it applies are in
+  `cli/compass_pkg/ship_approval.py`.
+  - It passes on a `pr-approval` record for the pull request the manifest
+    links, or on a `human-approval` record with `ship:` given for this issue
+    and its generation that no `approval-withdrawal` names. A sign-off of
+    guardrail `G5` does not count: it is given at specify, before code exists.
+    The pass names the approver, the time and the record, and says when the
+    review approved an earlier commit than the merged head.
+  - It fails only when the manifest records the pull request as merged
+    (`pull_request.merged_at`) and no approval is on record.
+  - Otherwise it has nothing to check and names the next command: `compass
+    issue link set --pr <n> --issue <slug>` after the merge, or `compass
+    evidence request --ship`. It never refuses a landing, because
+    `ship-commit` lands the issue before its pull request merges.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart
@@ -397,8 +417,8 @@ _(none yet - the shipped default guardrails apply as-is)_
   that names the waiver; ADR-094). It is labelled WAIVED, with the waiver, its
   reason, the approver and the record id, is counted apart and does not fail
   the run. A waiver nobody approved changes nothing and is named in a notice.
-  `human-approval-present` and the rows of guardrail `G5` are never waived.
-  `docs/waivers.md` has the details.
+  `human-approval-present`, `ship-approval-present` and the rows of guardrail
+  `G5` are never waived. `docs/waivers.md` has the details.
 - **The pre-tool hook** enforces red-before-green in service of `G1`. It is
   approach-aware and does not block on a spike.
 - **The review at the `verify` stage**, run in the issue's own session (ADR-090), for the
@@ -472,8 +492,8 @@ and one digest, such as `compass-checks@9.0.0`.
   parsed once while it is unchanged, because every resolution reads it and
   `compass flow` resolves every issue on the board.
 - The set holds no `locked:` field, because no layer sits above it.
-  `never_waived` names the two entries no waiver can excuse: the check
-  `human-approval-present` and the guardrail `G5`.
+  `never_waived` names the three entries no waiver can excuse: the checks
+  `human-approval-present` and `ship-approval-present`, and the guardrail `G5`.
 - `optional` holds entries that run only when a project turns them on. The one
   entry is the advisory agent review of `docs/judged-checks.md`, for the
   setting `agent_review`.
@@ -492,7 +512,8 @@ every issue with no `generation:` key, the framework's own repository included.
 run, and each generation commit writes the manifest's `policy:` block
 (`docs/generation-store.md`). `tests/test_check_set_content.py` checks the
 content of the set: the catalogue names, the stage-mode ranks, the references
-and the checks and evidence types of the frozen `governance/guardrails.yml`.
+and the checks and evidence types of the frozen `governance/guardrails.yml`,
+less those added after it froze (`ship-approval-present` and `pr-approval`).
 
 `acceptance_strategy.pinned_below` still reads `extends: compass:default@6` or
 `@7`, which is otherwise a removed setting: such a pin keeps `S17` off until

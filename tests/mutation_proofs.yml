@@ -107,6 +107,11 @@
   fails: tests/acceptance/atdd_strategy/test_isolation_layering.py::test_trc_f7
   restores: tests/acceptance/atdd_strategy/test_isolation_layering.py::test_trc_f5
 
+- check: ship-approval-present
+  broken: an issue that owes `ship-approval` whose linked pull request merged with no approval on record
+  fails: tests/test_ship_approval_check.py::test_a_merged_pull_request_with_no_approval_fails_and_names_the_typed_approval
+  restores: tests/test_ship_approval_check.py::test_an_approving_review_of_the_linked_pull_request_passes
+
 - check: spike-conclusion-present
   broken: a spike with no conclusion evidence
   fails: tests/test_spike_safety.py::test_spike_without_conclusion_fails

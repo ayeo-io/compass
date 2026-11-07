@@ -396,7 +396,8 @@ def test_the_command_prints_the_path_for_a_delivery_assessment(run_cli, name):
     readings, owed, fired = PATH_TWINS[name]
     data = _evaluate_cli(run_cli, readings)
     assert data["delivery_approach"] == "delivery"
-    assert data["evidence_required"] == owed
+    # Every delivery row also owes the ship approval, last in the manifest's order (#355).
+    assert data["evidence_required"] == owed + ["ship-approval"]
     assert [f["id"] for f in data["policy_rules_fired"]] == fired
     # The gates are derived from the evidence (ADR-092).
     path = er.evaluate(_as_read(readings), cb.policy_8_0_4())

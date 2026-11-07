@@ -73,8 +73,8 @@ def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
     # 31 when 9.0.0 removed multiagent-run-recorded (ADR-090), 30 when it removed
     # consistency-check-passes with `compass analyze` (ADR-091), 29 when it removed
     # rendered-blocks-current with the rendered blocks (ADR-091), 25 when it removed
-    # the four checks of the removed documents (ADR-091).
-    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 25
+    # the four checks of the removed documents (ADR-091), 26 with ship-approval-present (#355).
+    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 26
     for name, entry in check_registry.REGISTRY.items():
         # dod-evidence-typed moved to 2.0.0: its verdict on a ticked page with no record changed.
         # human-approval-present moved to 1.1.0: it counts only an approval given for

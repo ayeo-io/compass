@@ -27,7 +27,7 @@ Each issue's folder (`.compass/work/<slug>/`) is its record. The record mode dec
 */approval-requests/pending/
 ```
 
-In committed mode it also adds `delegations/`, `cache/`, `private/`, `current-task` and `interruptions.log` to `.compass/.gitignore`. A ship commit can hold both ignore files. Exclude `.compass/work/` from formatters: a formatter that rewrites a record file changes a digest `trail.md` states.
+In committed mode it also adds `delegations/`, `cache/`, `private/`, `current-task` and `interruptions.log` to `.compass/.gitignore`. A ship commit in committed mode stages both ignore files, so a clone skips the same files and neither file stays untracked. Exclude `.compass/work/` from formatters: a formatter that rewrites a record file changes a digest `trail.md` states.
 
 ## The landing in each mode
 
@@ -38,7 +38,7 @@ In committed mode, when every gate of the issue has passed:
 1. The refusals and the scope check run as before, and the staged code is checked against the newest green before anything is written.
 2. One manifest save writes status `completed`, `land_timestamp` and `landed_with_record: true`, with the release line as before. It writes no `land_commit`: the manifest cannot hold the id of the commit that holds it. `landing.land_commit` reads that commit from git (`docs/github-links.md`).
 3. It writes `trail.md`.
-4. It completes `.compass/work/.gitignore` and stages the issue folder, the documents folder and that ignore file, each by its path. `git add` skips the files the ignore file names. A folder git ignores as a whole is not staged.
+4. It completes the ignore files and stages the issue folder, the documents folder, `.compass/work/.gitignore` and `.compass/.gitignore`, each by its path. `git add` skips the files the ignore files name. A folder git ignores as a whole is not staged.
 5. Right before each commit try, when a pre-commit step changed a file `trail.md` names, it writes `trail.md` again and stages it, and says so.
 6. It commits. After the commit it compares each sum line of the committed `trail.md` with the file in the commit. A git hook that staged a change during the commit gets one line per file: "a git hook changed <path> during the commit; `trail.md` no longer matches it". The exit code does not change.
 7. When no commit is made, the manifest and `trail.md` are put back and the record paths it staged are unstaged.
@@ -56,7 +56,7 @@ The ship approval, the merge time and the merge commit come after the merge, so 
 
 1. `compass issue link set --pr <n> --issue <slug>` writes the merge fields and the `pr-approval` records (`docs/github-links.md`), then writes `trail.md` again, in both modes. In committed mode it writes no `land_commit`: git gives the land commit. Section 4 of the trail then names the merge commit as the commit to check the code lines at.
 2. In committed mode, on a landed issue, it ends with `next: compass record commit --issue <slug>`. `compass next` names the same command while the issue folder holds a change git has not committed.
-3. `compass record commit --issue <slug> [-m <message>]` writes `trail.md`, stages the issue folder, its documents folder and `.compass/work/.gitignore` (git skips the files that ignore file names), and commits them with the message "Record the merge of <slug>", or the `-m` message. Git's own hooks run; Compass runs no check of its own and calls no network. The person pushes the commit, in a pull request or not.
+3. `compass record commit --issue <slug> [-m <message>]` writes `trail.md`, stages the issue folder, its documents folder and both ignore files (git skips the files they name), and commits them with the message "Record the merge of <slug>", or the `-m` message. Git's own hooks run; Compass runs no check of its own and calls no network. The person pushes the commit, in a pull request or not.
 
 `compass record commit` refuses, and commits nothing, when:
 

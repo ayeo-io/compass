@@ -125,14 +125,19 @@ class Record:
 
     def folders(self):
         """The record's paths that git does not ignore: the issue folder, the
-        documents folder when it exists, and `.compass/work/.gitignore`."""
+        documents folder when it exists, and both ignore files.
+
+        `.compass/.gitignore` holds the per-machine lines `compass init` adds
+        in committed mode. The agent never stages `.compass/`, so without this
+        the file stays untracked and a clone does not skip those files."""
         out = [self.task_dir]
         docs = os.path.join(self.root, docs_dir(self.task_dir))
         if os.path.isdir(docs) and not self._ignored(docs + "/"):
             out.append(docs)
-        ignore = os.path.join(self.root, ".compass", "work", ".gitignore")
-        if os.path.isfile(ignore) and not self._ignored(ignore):
-            out.append(ignore)
+        for ignore in (os.path.join(self.root, ".compass", "work", ".gitignore"),
+                       os.path.join(self.root, ".compass", ".gitignore")):
+            if os.path.isfile(ignore) and not self._ignored(ignore):
+                out.append(ignore)
         return out
 
     def _staged(self):

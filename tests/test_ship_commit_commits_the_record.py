@@ -171,6 +171,20 @@ def test_the_commit_holds_the_code_and_the_record(tmp_path):
     assert _compass(root, "trail", "--check", "--issue", SLUG).returncode == 0
 
 
+def test_the_commit_holds_both_ignore_files(tmp_path):
+    """`compass init` writes the per-machine lines of `.compass/.gitignore` in
+    committed mode. The agent never stages `.compass/`, so the landing stages
+    that file with `.compass/work/.gitignore`: a clone then skips the same
+    per-machine files, and the file is not left untracked."""
+    root = _ready(_repo(tmp_path / "repo"))
+    lines = (root / ".compass" / ".gitignore").read_text().splitlines()
+    assert {"delegations/", "private/", "current-task"} <= set(lines), lines
+    assert _ship(root).returncode == 0
+    held = set(_files(root))
+    assert {".compass/.gitignore", ".compass/work/.gitignore"} <= held, held
+    assert _git(root, "status", "--porcelain", "--", ".compass/.gitignore") == ""
+
+
 def test_the_manifest_says_landed_with_the_record_and_names_no_commit(tmp_path):
     root = _ready(_repo(tmp_path / "repo"))
     assert _ship(root).returncode == 0
@@ -267,7 +281,9 @@ def test_nothing_staged_commits_the_record_alone(tmp_path):
     assert f"landed at HEAD {code[:8]}; the record was committed as {head[:8]}" \
         in done.stdout, done.stdout
     held = _files(root)
-    assert held and all(p.startswith((".compass/work/", "docs/compass/")) for p in held), held
+    # `.compass/.gitignore` is a record file too: the landing stages both ignore files.
+    assert held and all(p.startswith((".compass/work/", "docs/compass/"))
+                        or p == ".compass/.gitignore" for p in held), held
     assert _git(root, "log", "-1", "--format=%s") == "Land fix-f"
     task = _manifest(root)
     assert landing.land_commit(task, str(root / RECORD)) == head

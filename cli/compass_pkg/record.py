@@ -650,8 +650,8 @@ def commit_record(task_dir, message=None):
     merge time and commit, and the `pr-approval` records) come after the
     commit that holds the record, so a committed record needs this second
     commit (#356, ADR-096, plan section 3.5). It writes `trail.md`, stages the
-    issue folder, its documents folder and `.compass/work/.gitignore` (git
-    skips the files that ignore file names), and commits them with git's own
+    issue folder, its documents folder and both ignore files (git skips the
+    files they name), and commits them with git's own
     hooks. Compass runs no check of its own and calls no network.
 
     Raises CompassError, having committed nothing, when the record is kept

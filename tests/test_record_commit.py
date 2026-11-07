@@ -5,8 +5,8 @@ ADR-096, plan section 3.5. In committed mode the ship commit holds the issue
 record, but the ship approval, the merge time and the merge commit come after
 the merge. `compass issue link set --pr <n>` writes them, writes `trail.md`
 again and prints `next: compass record commit --issue <slug>`. That verb
-commits only the record: the issue folder, its documents folder and
-`.compass/work/.gitignore`. It refuses when anything else is staged, when the
+commits only the record: the issue folder, its documents folder and the
+two ignore files, `.compass/work/.gitignore` and `.compass/.gitignore`. It refuses when anything else is staged, when the
 record is kept out, and when the record has no change.
 
 Every `gh` call goes to the fake `gh` (tests/fake_gh.py), so no test reaches
@@ -123,7 +123,8 @@ def test_record_commit_commits_only_the_record(tmp_path):
     assert done.returncode == 0, done.stdout + done.stderr
     assert _head(root) != ship
     held = _files(root)
-    assert held and all(p.startswith(f"{RECORD}/") or p == ".compass/work/.gitignore"
+    assert held and all(p.startswith(f"{RECORD}/")
+                        or p in (".compass/work/.gitignore", ".compass/.gitignore")
                         or p.startswith("docs/compass/") for p in held), held
     assert f"{RECORD}/manifest.yml" in held and TRAIL in held, held
     assert _git(root, "log", "-1", "--format=%s") == f"Record the merge of {SLUG}"
